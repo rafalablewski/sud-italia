@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: #FFF8F0;
+  --color-foreground: #1A1A1A;
+  --color-italia-red: #C8102E;
+  --color-italia-red-dark: #A00D24;
+  --color-italia-green: #008C45;
+  --color-italia-green-dark: #006B35;
+  --color-italia-cream: #FFF8F0;
+  --color-italia-cream-dark: #F5EDDF;
+  --color-italia-gold: #D4A847;
+  --color-italia-gold-dark: #B8922E;
+  --color-italia-dark: #1A1A1A;
+  --color-italia-gray: #6B7280;
+  --color-italia-light-gray: #F3F4F6;
+  --font-heading: Georgia, "Times New Roman", serif;
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-body);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar for menu category nav */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
