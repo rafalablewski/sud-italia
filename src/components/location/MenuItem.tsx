@@ -1,21 +1,12 @@
 "use client";
 
-import { MenuItem as MenuItemType, MenuCategory } from "@/data/types";
+import { MenuItem as MenuItemType } from "@/data/types";
+import { CATEGORY_ICONS, CATEGORY_COLORS } from "@/data/menu-ui";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { formatPrice } from "@/lib/utils";
 import { useCartStore } from "@/store/cart";
-import {
-  Plus,
-  Minus,
-  Check,
-  Pizza,
-  Soup,
-  Salad,
-  Sandwich,
-  Wine,
-  IceCreamCone,
-} from "lucide-react";
+import { Plus, Minus, Check } from "lucide-react";
 import { useState, useEffect } from "react";
 
 interface MenuItemProps {
@@ -28,24 +19,6 @@ const TAG_LABELS: Record<string, { label: string; variant: "green" | "red" | "go
   vegan: { label: "Vegan", variant: "green" },
   spicy: { label: "Spicy", variant: "red" },
   "gluten-free": { label: "GF", variant: "gold" },
-};
-
-const CATEGORY_ICONS: Record<MenuCategory, React.ElementType> = {
-  pizza: Pizza,
-  pasta: Soup,
-  antipasti: Salad,
-  panini: Sandwich,
-  drinks: Wine,
-  desserts: IceCreamCone,
-};
-
-const CATEGORY_COLORS: Record<MenuCategory, string> = {
-  pizza: "bg-red-50 text-italia-red",
-  pasta: "bg-amber-50 text-amber-600",
-  antipasti: "bg-green-50 text-italia-green",
-  panini: "bg-orange-50 text-orange-600",
-  drinks: "bg-purple-50 text-purple-600",
-  desserts: "bg-pink-50 text-pink-600",
 };
 
 export function MenuItemCard({ item, locationSlug }: MenuItemProps) {

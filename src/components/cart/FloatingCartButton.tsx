@@ -15,13 +15,15 @@ export function FloatingCartButton() {
 
   // Animate badge when count changes
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
     if (itemCount !== prevCount.current && itemCount > 0) {
       setAnimateCount(true);
-      const timer = setTimeout(() => setAnimateCount(false), 300);
-      prevCount.current = itemCount;
-      return () => clearTimeout(timer);
+      timer = setTimeout(() => setAnimateCount(false), 300);
     }
     prevCount.current = itemCount;
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
   }, [itemCount]);
 
   if (itemCount === 0) return null;

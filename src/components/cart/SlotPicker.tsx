@@ -72,13 +72,11 @@ export function SlotPicker({ locationSlug, fulfillmentType }: SlotPickerProps) {
     setSelectedSlot(null, null, null);
   }, [fulfillmentType, date, setSelectedSlot]);
 
-  // Date navigation labels
-  const dayLabels = [];
-  for (let i = 0; i <= 6; i++) {
-    if (i === 0) dayLabels.push("Today");
-    else if (i === 1) dayLabels.push("Tomorrow");
-    else dayLabels.push(formatSlotDate(getDateString(i)));
-  }
+  const dayLabels = Array.from({ length: 7 }, (_, i) => {
+    if (i === 0) return "Today";
+    if (i === 1) return "Tomorrow";
+    return formatSlotDate(getDateString(i));
+  });
 
   return (
     <div className="mb-3">

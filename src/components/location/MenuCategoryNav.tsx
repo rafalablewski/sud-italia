@@ -1,29 +1,13 @@
 "use client";
 
 import { MenuCategory, MENU_CATEGORY_LABELS } from "@/data/types";
-import {
-  Pizza,
-  Soup,
-  Salad,
-  Sandwich,
-  Wine,
-  IceCreamCone,
-} from "lucide-react";
+import { CATEGORY_ICONS } from "@/data/menu-ui";
 
 interface MenuCategoryNavProps {
   categories: MenuCategory[];
   activeCategory: MenuCategory;
   onSelect: (category: MenuCategory) => void;
 }
-
-const CATEGORY_ICONS: Record<MenuCategory, React.ElementType> = {
-  pizza: Pizza,
-  pasta: Soup,
-  antipasti: Salad,
-  panini: Sandwich,
-  drinks: Wine,
-  desserts: IceCreamCone,
-};
 
 export function MenuCategoryNav({
   categories,
