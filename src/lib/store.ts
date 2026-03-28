@@ -1,10 +1,11 @@
 import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
+import { kv } from "@vercel/kv";
 import { TimeSlot, Order } from "@/data/types";
 
-const DATA_DIR = process.env.VERCEL
-  ? join("/tmp", ".data")
-  : join(process.cwd(), ".data");
+const DATA_DIR = join(process.cwd(), ".data");
+
+const useKV = !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
 
 // Simple per-file lock to prevent concurrent read-modify-write races
 const locks = new Map<string, Promise<void>>();
@@ -25,6 +26,14 @@ async function ensureDataDir() {
 }
 
 async function readJSON<T>(filename: string, fallback: T): Promise<T> {
+  if (useKV) {
+    try {
+      const data = await kv.get<T>(filename);
+      return data ?? fallback;
+    } catch {
+      return fallback;
+    }
+  }
   await ensureDataDir();
   const filepath = join(DATA_DIR, filename);
   try {
@@ -36,6 +45,10 @@ async function readJSON<T>(filename: string, fallback: T): Promise<T> {
 }
 
 async function writeJSON<T>(filename: string, data: T): Promise<void> {
+  if (useKV) {
+    await kv.set(filename, data);
+    return;
+  }
   await ensureDataDir();
   await writeFile(join(DATA_DIR, filename), JSON.stringify(data, null, 2));
 }
