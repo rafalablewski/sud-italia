@@ -107,7 +107,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
           <p className="text-sm mt-1">Add items from the menu to get started</p>
         </div>
       ) : (
-        <>
+        <div className="flex flex-col flex-1 min-h-0">
           {/* Scrollable items + options area */}
           <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-4">
             {items.map((item) => (
@@ -230,7 +230,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
               Clear cart
             </button>
           </div>
-        </>
+        </div>
       )}
     </Sheet>
   );
