@@ -22,7 +22,8 @@ export default function AdminLoginPage() {
       });
 
       if (!res.ok) {
-        setError("Invalid password");
+        const data = await res.json().catch(() => null);
+        setError(data?.error || "Invalid password");
         return;
       }
 

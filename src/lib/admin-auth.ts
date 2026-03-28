@@ -13,12 +13,8 @@ const sessions = new Set<string>();
 
 export function getAdminPassword(): string {
   if (!process.env.ADMIN_PASSWORD) {
-    if (process.env.NODE_ENV === "production") {
-      throw new Error("ADMIN_PASSWORD environment variable must be set in production.");
-    } else {
-      console.warn("SECURITY WARNING: Using insecure default admin password. Set ADMIN_PASSWORD in your environment.");
-      return "admin123";
-    }
+    console.warn("SECURITY WARNING: ADMIN_PASSWORD not set. Using insecure default. Set ADMIN_PASSWORD in your environment.");
+    return "admin123";
   }
   return process.env.ADMIN_PASSWORD;
 }
