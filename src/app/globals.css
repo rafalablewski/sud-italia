@@ -19,6 +19,11 @@
   --animate-fade-in: fade-in 0.3s ease-out;
   --animate-slide-up: slide-up 0.4s ease-out;
   --animate-scale-in: scale-in 0.2s ease-out;
+  --animate-slide-up-sheet: slide-up-sheet 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+  --animate-shimmer: shimmer 1.5s ease-in-out infinite;
+  --animate-pulse-soft: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-bounce-in: bounce-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  --animate-count-up: count-up 0.3s ease-out;
 }
 
 /* ============================
@@ -38,6 +43,38 @@
 @keyframes scale-in {
   from { opacity: 0; transform: scale(0.95); }
   to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slide-up-sheet {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(1.02); }
+}
+
+@keyframes bounce-in {
+  0% { opacity: 0; transform: scale(0.3); }
+  50% { transform: scale(1.05); }
+  70% { transform: scale(0.95); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes count-up {
+  from { transform: translateY(8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes progress-fill {
+  from { width: 0; }
+  to { width: 100%; }
 }
 
 body {
@@ -442,3 +479,234 @@ select.pub-input {
 .stagger-4 { animation: slide-up 0.4s ease-out 0.2s both; }
 .stagger-5 { animation: slide-up 0.4s ease-out 0.25s both; }
 .stagger-6 { animation: slide-up 0.4s ease-out 0.3s both; }
+
+/* ============================
+   UBER/GRAB-LIKE UX ENHANCEMENTS
+   ============================ */
+
+/* Skeleton loading shimmer */
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 0.5rem;
+}
+
+/* Bottom sheet (mobile cart) */
+.bottom-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(0, 0, 0, 0.5);
+  transition: opacity 0.3s ease;
+}
+
+.bottom-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  max-height: 92vh;
+  background: #fff;
+  border-radius: 1.5rem 1.5rem 0 0;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.15);
+  animation: slide-up-sheet 0.35s cubic-bezier(0.32, 0.72, 0, 1) both;
+  display: flex;
+  flex-direction: column;
+}
+
+.bottom-sheet-handle {
+  width: 2.5rem;
+  height: 0.25rem;
+  border-radius: 9999px;
+  background: #d1d5db;
+  margin: 0.75rem auto;
+  flex-shrink: 0;
+}
+
+/* Floating cart bar (Uber Eats style) */
+.floating-cart-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  padding: 0.75rem 1rem;
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  background: linear-gradient(to top, rgba(255, 248, 240, 1) 80%, rgba(255, 248, 240, 0));
+}
+
+.floating-cart-bar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: var(--color-italia-red);
+  color: #fff;
+  padding: 1rem 1.25rem;
+  border-radius: 1rem;
+  box-shadow: 0 8px 32px rgba(200, 16, 46, 0.35), 0 2px 8px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  min-height: 56px;
+}
+
+.floating-cart-bar-inner:active {
+  transform: scale(0.98);
+  box-shadow: 0 4px 16px rgba(200, 16, 46, 0.3);
+}
+
+/* Item count badge on floating bar */
+.cart-count-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.25);
+  font-weight: 700;
+  font-size: 0.875rem;
+  flex-shrink: 0;
+}
+
+/* Order progress tracker */
+.progress-tracker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  padding: 0 0.5rem;
+}
+
+.progress-tracker::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 2rem;
+  right: 2rem;
+  height: 3px;
+  background: #e5e7eb;
+  transform: translateY(-50%);
+  z-index: 0;
+}
+
+.progress-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  z-index: 1;
+  position: relative;
+}
+
+.progress-step-dot {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  font-weight: 700;
+  transition: all 0.3s ease;
+}
+
+.progress-step-dot.active {
+  background: var(--color-italia-green);
+  color: #fff;
+  box-shadow: 0 0 0 4px rgba(0, 140, 69, 0.15);
+}
+
+.progress-step-dot.completed {
+  background: var(--color-italia-green);
+  color: #fff;
+}
+
+.progress-step-dot.pending {
+  background: #f3f4f6;
+  color: #9ca3af;
+}
+
+.progress-step-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.progress-step.active .progress-step-label {
+  color: var(--color-italia-green);
+}
+
+/* Menu search bar */
+.menu-search {
+  position: relative;
+}
+
+.menu-search-input {
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 2.75rem;
+  border: 2px solid #f3f4f6;
+  border-radius: 1rem;
+  font-size: 0.9375rem;
+  color: var(--color-foreground);
+  background: #fff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.menu-search-input:focus {
+  border-color: var(--color-italia-red);
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(200, 16, 46, 0.08);
+}
+
+.menu-search-input::placeholder { color: #9ca3af; }
+
+.menu-search-icon {
+  position: absolute;
+  left: 0.875rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  pointer-events: none;
+}
+
+/* Menu item entrance animation */
+.menu-item-enter {
+  animation: slide-up 0.35s ease-out both;
+}
+
+/* Category nav pill indicator */
+.category-pill {
+  position: relative;
+  white-space: nowrap;
+  padding: 0.5rem 1.25rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.25s ease;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.category-pill-active {
+  background: var(--color-italia-red);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(200, 16, 46, 0.3);
+}
+
+.category-pill-inactive {
+  color: var(--color-italia-gray);
+  background: transparent;
+}
+
+.category-pill-inactive:hover {
+  background: #f3f4f6;
+  color: var(--color-italia-dark);
+}

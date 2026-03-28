@@ -14,7 +14,7 @@ interface CartDrawerProps {
   onClose: () => void;
 }
 
-const PHONE_PATTERN = /^[+]?[\d\s\-()]{7,}$/;
+const PHONE_PATTERN = /^[\d\s\-()]{7,}$/;
 
 export function CartDrawer({ open, onClose }: CartDrawerProps) {
   const items = useCartStore((s) => s.items);
@@ -68,7 +68,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
           })),
           locationSlug,
           customerName: customerName.trim(),
-          customerPhone: customerPhone.trim(),
+          customerPhone: `+48${customerPhone.trim()}`,
           fulfillmentType,
           slotId: selectedSlotId,
           slotDate: selectedSlotDate,
@@ -98,140 +98,149 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
     }
   };
 
-  return (
-    <Sheet open={open} onClose={onClose} title="Your Order">
-      {items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-64 text-italia-gray">
+  if (items.length === 0) {
+    return (
+      <Sheet open={open} onClose={onClose} title="Your Order">
+        <div className="flex flex-col items-center justify-center py-20 text-italia-gray">
           <ShoppingCart className="h-12 w-12 mb-4 opacity-30" />
           <p className="font-medium text-lg">Your cart is empty</p>
           <p className="text-sm mt-1">Add items from the menu to get started</p>
         </div>
-      ) : (
-        <div className="flex flex-col h-full">
-          {/* Items list */}
-          <div className="flex-1 px-5 overflow-y-auto">
-            {items.map((item) => (
-              <CartItemRow key={item.menuItem.id} item={item} />
-            ))}
+      </Sheet>
+    );
+  }
 
-            {/* Fulfillment type selector */}
-            <div className="mt-4 mb-3">
-              <p className="text-xs font-semibold text-italia-gray uppercase tracking-wide mb-2">
-                How would you like your order?
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => setFulfillmentType("takeout")}
-                  className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
-                    fulfillmentType === "takeout"
-                      ? "border-italia-green bg-italia-green/5 text-italia-green"
-                      : "border-gray-200 text-italia-gray hover:border-gray-300"
-                  }`}
-                >
-                  <Package className="h-4 w-4" />
-                  Takeout
-                </button>
-                <button
-                  onClick={() => setFulfillmentType("delivery")}
-                  className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
-                    fulfillmentType === "delivery"
-                      ? "border-italia-red bg-italia-red/5 text-italia-red"
-                      : "border-gray-200 text-italia-gray hover:border-gray-300"
-                  }`}
-                >
-                  <Truck className="h-4 w-4" />
-                  Delivery
-                </button>
-              </div>
-            </div>
+  return (
+    <Sheet open={open} onClose={onClose} title="Your Order">
+      {/* Items list */}
+      <div className="px-5">
+        {items.map((item) => (
+          <CartItemRow key={item.menuItem.id} item={item} />
+        ))}
+      </div>
 
-            {/* Delivery address */}
-            {fulfillmentType === "delivery" && (
-              <div className="mb-3">
-                <input
-                  type="text"
-                  placeholder="Delivery address"
-                  value={deliveryAddress}
-                  onChange={(e) => setDeliveryAddress(e.target.value)}
-                  className="pub-input min-h-[44px]"
-                />
-              </div>
-            )}
+      {/* Fulfillment type selector */}
+      <div className="px-5 mt-4 mb-3">
+        <p className="text-xs font-semibold text-italia-gray uppercase tracking-wide mb-2">
+          How would you like your order?
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => setFulfillmentType("takeout")}
+            className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
+              fulfillmentType === "takeout"
+                ? "border-italia-green bg-italia-green/5 text-italia-green"
+                : "border-gray-200 text-italia-gray hover:border-gray-300"
+            }`}
+          >
+            <Package className="h-4 w-4" />
+            Takeout
+          </button>
+          <button
+            onClick={() => setFulfillmentType("delivery")}
+            className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
+              fulfillmentType === "delivery"
+                ? "border-italia-red bg-italia-red/5 text-italia-red"
+                : "border-gray-200 text-italia-gray hover:border-gray-300"
+            }`}
+          >
+            <Truck className="h-4 w-4" />
+            Delivery
+          </button>
+        </div>
+      </div>
 
-            {/* Time slot picker */}
-            {locationSlug && (
-              <SlotPicker
-                locationSlug={locationSlug}
-                fulfillmentType={fulfillmentType}
-              />
-            )}
-          </div>
-
-          {/* Checkout footer */}
-          <div className="border-t border-gray-100 p-5 space-y-3 bg-gray-50">
-            <div className="flex gap-3">
-              <input
-                type="text"
-                placeholder="Your name"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                className="flex-1 pub-input min-h-[44px] text-base"
-              />
-              <input
-                type="tel"
-                placeholder="Phone"
-                value={customerPhone}
-                onChange={(e) => handlePhoneChange(e.target.value)}
-                className={`w-[130px] pub-input min-h-[44px] text-base ${
-                  phoneError ? "border-italia-red" : "border-gray-200"
-                }`}
-              />
-            </div>
-            {phoneError && (
-              <p className="text-xs text-italia-red">
-                Please enter a valid phone number
-              </p>
-            )}
-
-            <div className="flex justify-between items-center text-lg font-bold pt-1">
-              <span>Total</span>
-              <span className="text-italia-red">{formatPrice(total)}</span>
-            </div>
-
-            {selectedSlotTime && (
-              <p className="text-xs text-italia-gray text-center">
-                {fulfillmentType === "delivery" ? "Delivery" : "Pickup"} at{" "}
-                <span className="font-semibold text-italia-dark">{selectedSlotTime}</span>
-              </p>
-            )}
-
-            <Button
-              onClick={handleCheckout}
-              disabled={isSubmitting || !canCheckout}
-              className="w-full min-h-[52px]"
-              size="lg"
-            >
-              {isSubmitting
-                ? "Processing..."
-                : !selectedSlotId
-                  ? "Select a time slot"
-                  : canCheckout
-                    ? `Pay ${formatPrice(total)}`
-                    : fulfillmentType === "delivery" && !deliveryAddress.trim()
-                      ? "Enter delivery address"
-                      : "Enter name & phone to order"}
-            </Button>
-
-            <button
-              onClick={() => clearCart()}
-              className="w-full flex items-center justify-center gap-2 text-sm py-2 min-h-[44px] text-italia-gray hover:text-italia-red active:text-italia-red transition-colors"
-            >
-              <Trash2 className="h-4 w-4" />
-              Clear cart
-            </button>
-          </div>
+      {/* Delivery address */}
+      {fulfillmentType === "delivery" && (
+        <div className="px-5 mb-3">
+          <input
+            type="text"
+            placeholder="Delivery address"
+            value={deliveryAddress}
+            onChange={(e) => setDeliveryAddress(e.target.value)}
+            className="pub-input min-h-[44px]"
+          />
         </div>
       )}
+
+      {/* Time slot picker */}
+      {locationSlug && (
+        <div className="px-5">
+          <SlotPicker
+            locationSlug={locationSlug}
+            fulfillmentType={fulfillmentType}
+          />
+        </div>
+      )}
+
+      {/* Checkout footer */}
+      <div className="border-t border-gray-100 p-5 space-y-3 bg-gray-50 mt-2">
+        <div className="space-y-2">
+          <input
+            type="text"
+            placeholder="Your name"
+            value={customerName}
+            onChange={(e) => setCustomerName(e.target.value)}
+            className="pub-input min-h-[44px] text-base"
+          />
+          <div className="flex items-center gap-0">
+            <span className="inline-flex items-center px-3 min-h-[44px] rounded-l-[0.75rem] border-y-[1.5px] border-l-[1.5px] border-r-0 border-[#e5e7eb] bg-gray-50 text-sm font-medium text-italia-gray select-none">
+              +48
+            </span>
+            <input
+              type="tel"
+              placeholder="Phone number"
+              value={customerPhone}
+              onChange={(e) => handlePhoneChange(e.target.value)}
+              className={`pub-input min-h-[44px] text-base rounded-l-none ${
+                phoneError ? "border-italia-red" : ""
+              }`}
+            />
+          </div>
+        </div>
+        {phoneError && (
+          <p className="text-xs text-italia-red">
+            Please enter a valid phone number
+          </p>
+        )}
+
+        <div className="flex justify-between items-center text-lg font-bold pt-1">
+          <span>Total</span>
+          <span className="text-italia-red">{formatPrice(total)}</span>
+        </div>
+
+        {selectedSlotTime && (
+          <p className="text-xs text-italia-gray text-center">
+            {fulfillmentType === "delivery" ? "Delivery" : "Pickup"} at{" "}
+            <span className="font-semibold text-italia-dark">{selectedSlotTime}</span>
+          </p>
+        )}
+
+        <Button
+          onClick={handleCheckout}
+          disabled={isSubmitting || !canCheckout}
+          className="w-full min-h-[52px]"
+          size="lg"
+        >
+          {isSubmitting
+            ? "Processing..."
+            : !selectedSlotId
+              ? "Select a time slot"
+              : canCheckout
+                ? `Pay ${formatPrice(total)}`
+                : fulfillmentType === "delivery" && !deliveryAddress.trim()
+                  ? "Enter delivery address"
+                  : "Enter name & phone to order"}
+        </Button>
+
+        <button
+          onClick={() => clearCart()}
+          className="w-full flex items-center justify-center gap-2 text-sm py-2 min-h-[44px] text-italia-gray hover:text-italia-red active:text-italia-red transition-colors"
+        >
+          <Trash2 className="h-4 w-4" />
+          Clear cart
+        </button>
+      </div>
     </Sheet>
   );
 }
