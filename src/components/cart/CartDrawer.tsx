@@ -153,7 +153,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                   placeholder="Delivery address"
                   value={deliveryAddress}
                   onChange={(e) => setDeliveryAddress(e.target.value)}
-                  className="w-full px-4 py-3 min-h-[44px] border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-italia-red focus:border-transparent"
+                  className="pub-input min-h-[44px]"
                 />
               </div>
             )}
@@ -175,14 +175,14 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                 placeholder="Your name"
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
-                className="flex-1 px-4 py-3 min-h-[44px] border border-gray-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-italia-red focus:border-transparent"
+                className="flex-1 pub-input min-h-[44px] text-base"
               />
               <input
                 type="tel"
                 placeholder="Phone"
                 value={customerPhone}
                 onChange={(e) => handlePhoneChange(e.target.value)}
-                className={`w-[130px] px-4 py-3 min-h-[44px] border rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-italia-red focus:border-transparent ${
+                className={`w-[130px] pub-input min-h-[44px] text-base ${
                   phoneError ? "border-italia-red" : "border-gray-200"
                 }`}
               />

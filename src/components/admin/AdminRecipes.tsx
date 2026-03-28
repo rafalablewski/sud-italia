@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { locations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
+import { formatQty, marginColorClass } from "@/lib/admin-utils";
 import {
   MENU_CATEGORY_LABELS,
   INGREDIENT_CATEGORY_LABELS,
@@ -226,7 +227,7 @@ function RecipesTab() {
                           <span className={`font-semibold ${hasRecipe ? "admin-text" : "text-gray-400"}`}>
                             Cost: {formatPrice(foodCost)}
                           </span>
-                          <span className={`font-bold ${margin >= 65 ? "text-italia-green" : margin >= 50 ? "text-italia-gold-dark" : "text-italia-red"}`}>
+                          <span className={`font-bold ${marginColorClass(margin)}`}>
                             {margin}%
                           </span>
                         </div>

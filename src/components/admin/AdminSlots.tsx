@@ -278,7 +278,7 @@ export function AdminSlots() {
             {draftCount > 0 && (
               <button
                 onClick={handleApproveAll}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-500/80 text-white rounded-xl font-semibold text-sm hover:bg-blue-500 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 glass-btn-blue"
               >
                 <CheckCheck className="h-4 w-4" />
                 Confirm All ({draftCount})
@@ -508,7 +508,7 @@ export function AdminSlots() {
                   type="checkbox"
                   checked={selectedIds.size === slots.length && slots.length > 0}
                   onChange={toggleSelectAll}
-                  className="accent-red-500 h-4 w-4"
+                  className="glass-checkbox"
                 />
                 Select all
               </label>
@@ -540,7 +540,7 @@ export function AdminSlots() {
                         type="checkbox"
                         checked={selectedIds.has(slot.id)}
                         onChange={() => toggleSelect(slot.id)}
-                        className="accent-red-500 h-4 w-4 flex-shrink-0"
+                        className="glass-checkbox flex-shrink-0"
                       />
 
                       <div className="text-xl font-bold font-heading admin-text w-16 flex-shrink-0">
@@ -608,7 +608,7 @@ export function AdminSlots() {
                         {isDraft && (
                           <button
                             onClick={() => handleApprove(slot.id)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/80 text-white rounded-lg text-sm font-medium hover:bg-blue-500 transition-colors"
+                            className="flex items-center gap-1.5 px-3 py-1.5 glass-btn-blue text-sm"
                             title="Approve & confirm slot"
                           >
                             <Check className="h-4 w-4" />

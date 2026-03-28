@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { locations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
+import { formatQty, marginColorClass } from "@/lib/admin-utils";
 import { MENU_CATEGORY_LABELS, type MenuCategory } from "@/data/types";
 import Link from "next/link";
 
@@ -257,7 +258,7 @@ export function AdminMenu() {
                             </div>
                             <div className="text-center">
                               <div className="text-[10px] admin-text-muted">Margin</div>
-                              <span className={`font-bold ${margin >= 65 ? "text-italia-green" : margin >= 50 ? "text-italia-gold-dark" : "text-italia-red"}`}>
+                              <span className={`font-bold ${marginColorClass(margin)}`}>
                                 {margin}%
                               </span>
                             </div>
@@ -308,7 +309,7 @@ export function AdminMenu() {
                                           <tr key={idx} className="border-t border-white/5">
                                             <td className="px-3 py-2 font-medium admin-text">{ri.name}</td>
                                             <td className="px-3 py-2 text-right admin-text">
-                                              {qtyPerPortion % 1 === 0 ? qtyPerPortion : qtyPerPortion.toFixed(3)} {ri.unit}
+                                              {formatQty(qtyPerPortion, ri.unit)}
                                             </td>
                                             <td className="px-3 py-2 text-right admin-text-muted">
                                               {formatPrice(ri.unitCost)}/{ri.unit}
@@ -366,7 +367,7 @@ export function AdminMenu() {
                                   </div>
                                   <div>
                                     <span className="text-xs admin-text-muted">Margin: </span>
-                                    <span className={`font-bold ${margin >= 65 ? "text-italia-green" : margin >= 50 ? "text-italia-gold-dark" : "text-italia-red"}`}>
+                                    <span className={`font-bold ${marginColorClass(margin)}`}>
                                       {margin}%
                                     </span>
                                   </div>

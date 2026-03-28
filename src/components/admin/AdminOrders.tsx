@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { AdminNav } from "./AdminNav";
+import { statusBadgeClass } from "@/lib/admin-utils";
 import { MapPin, Package, Truck, Clock, ClipboardList, RefreshCw } from "lucide-react";
 import { locations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
@@ -10,13 +11,6 @@ import type { Order } from "@/data/types";
 
 const activeLocations = locations.filter((l) => l.isActive);
 
-const STATUS_COLORS: Record<string, string> = {
-  pending: "bg-yellow-500/20 text-yellow-300",
-  confirmed: "bg-blue-500/20 text-blue-300",
-  preparing: "bg-orange-500/20 text-orange-300",
-  ready: "bg-green-500/20 text-green-300",
-  completed: "bg-slate-500/20 text-slate-400",
-};
 
 const STATUS_ORDER: Order["status"][] = ["pending", "confirmed", "preparing", "ready", "completed"];
 
@@ -104,7 +98,7 @@ export function AdminOrders() {
                   <div>
                     <div className="flex items-center gap-3 mb-1">
                       <span className="font-mono text-sm font-bold admin-text">{order.id}</span>
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[order.status] || ""}`}>
+                      <span className={statusBadgeClass(order.status)}>
                         {order.status}
                       </span>
                     </div>

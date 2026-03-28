@@ -21,6 +21,10 @@
   --animate-scale-in: scale-in 0.2s ease-out;
 }
 
+/* ============================
+   BASE
+   ============================ */
+
 @keyframes fade-in {
   from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }
@@ -42,14 +46,75 @@ body {
   font-family: var(--font-body);
 }
 
-html {
-  scroll-behavior: smooth;
-}
+html { scroll-behavior: smooth; }
 
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* === Admin Glassmorphism System === */
+/* ============================
+   PUBLIC SITE — FORM ELEMENTS
+   ============================ */
+
+.pub-input {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--color-foreground);
+  background: #fff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.pub-input:focus {
+  border-color: var(--color-italia-red);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.1);
+}
+
+.pub-input::placeholder { color: #9ca3af; }
+
+.pub-select {
+  padding: 0.625rem 0.875rem;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--color-foreground);
+  background: #fff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+}
+
+.pub-select:focus {
+  border-color: var(--color-italia-red);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.1);
+}
+
+.pub-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-foreground);
+  margin-bottom: 0.375rem;
+}
+
+.pub-card {
+  background: #fff;
+  border: 1px solid #f3f4f6;
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.pub-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+/* ============================
+   ADMIN — GLASSMORPHISM SYSTEM
+   ============================ */
 
 .admin-bg {
   background: linear-gradient(135deg, #0f172a 0%, #1e293b 40%, #1a1a2e 100%);
@@ -72,10 +137,9 @@ html {
   z-index: 0;
 }
 
-.admin-bg > * {
-  position: relative;
-  z-index: 1;
-}
+.admin-bg > * { position: relative; z-index: 1; }
+
+/* --- Glass surfaces --- */
 
 .glass {
   background: rgba(255, 255, 255, 0.06);
@@ -96,6 +160,7 @@ html {
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1rem;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -106,6 +171,15 @@ html {
   transform: translateY(-1px);
 }
 
+/* Cards that shouldn't lift on hover (tables, static content) */
+.glass-card-static {
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1rem;
+}
+
 .glass-nav {
   background: rgba(15, 23, 42, 0.7);
   backdrop-filter: blur(24px);
@@ -113,10 +187,15 @@ html {
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+/* --- Glass form elements --- */
+
 .glass-input {
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.5rem;
   color: #f1f5f9;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
   transition: all 0.2s ease;
 }
 
@@ -127,14 +206,59 @@ html {
   box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.15);
 }
 
-.glass-input::placeholder {
-  color: rgba(255, 255, 255, 0.35);
+.glass-input::placeholder { color: rgba(255, 255, 255, 0.35); }
+
+/* Fix native <select> <option> contrast on dark backgrounds */
+.glass-input option {
+  background: #1e293b;
+  color: #f1f5f9;
 }
 
+.glass-select {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.5rem;
+  color: #f1f5f9;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.glass-select:focus {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(200, 16, 46, 0.5);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.15);
+}
+
+.glass-select option {
+  background: #1e293b;
+  color: #f1f5f9;
+}
+
+.glass-checkbox {
+  accent-color: var(--color-italia-red);
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+}
+
+/* --- Glass buttons --- */
+
 .glass-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #fff;
+  border-radius: 0.75rem;
   background: linear-gradient(135deg, rgba(200, 16, 46, 0.8), rgba(200, 16, 46, 0.6));
   border: 1px solid rgba(200, 16, 46, 0.3);
   transition: all 0.2s ease;
+  cursor: pointer;
 }
 
 .glass-btn:hover {
@@ -143,10 +267,21 @@ html {
   transform: translateY(-1px);
 }
 
+.glass-btn:disabled { opacity: 0.5; pointer-events: none; }
+
 .glass-btn-green {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #fff;
+  border-radius: 0.75rem;
   background: linear-gradient(135deg, rgba(0, 140, 69, 0.8), rgba(0, 140, 69, 0.6));
   border: 1px solid rgba(0, 140, 69, 0.3);
   transition: all 0.2s ease;
+  cursor: pointer;
 }
 
 .glass-btn-green:hover {
@@ -155,20 +290,112 @@ html {
   transform: translateY(-1px);
 }
 
-/* Dark-mode text classes for admin */
+.glass-btn-green:disabled { opacity: 0.5; pointer-events: none; }
+
+.glass-btn-blue {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #fff;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.7), rgba(59, 130, 246, 0.5));
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.glass-btn-blue:hover {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.85), rgba(59, 130, 246, 0.65));
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+  transform: translateY(-1px);
+}
+
+.glass-btn-blue:disabled { opacity: 0.5; pointer-events: none; }
+
+.glass-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #94a3b8;
+  border-radius: 0.75rem;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.glass-btn-ghost:hover {
+  color: #f1f5f9;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.glass-btn-ghost:disabled { opacity: 0.5; pointer-events: none; }
+
+/* --- Admin typography --- */
 .admin-text { color: #f1f5f9; }
 .admin-text-muted { color: #94a3b8; }
-.admin-text-dim { color: #64748b; }
+.admin-text-dim { color: #71717a; }  /* bumped from #64748b for better contrast */
 
-/* Gradient text */
 .gradient-text {
-  background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+  background: linear-gradient(135deg, #f1f5f9, #cbd5e1);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* Staggered animations */
+/* --- Admin status badges --- */
+.badge-pending   { background: rgba(234, 179, 8, 0.15);  color: #fbbf24; }
+.badge-confirmed { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+.badge-preparing { background: rgba(249, 115, 22, 0.15); color: #fb923c; }
+.badge-ready     { background: rgba(34, 197, 94, 0.15);  color: #4ade80; }
+.badge-completed { background: rgba(148, 163, 184, 0.15); color: #94a3b8; }
+.badge-draft     { background: rgba(234, 179, 8, 0.15);  color: #fbbf24; }
+.badge-active    { background: rgba(34, 197, 94, 0.15);  color: #4ade80; }
+
+.badge-success { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
+.badge-warning { background: rgba(234, 179, 8, 0.15); color: #fbbf24; }
+.badge-danger  { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+.badge-info    { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+
+/* --- Admin alert banners --- */
+.alert-success {
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  color: #4ade80;
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.alert-error {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #f87171;
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.alert-info {
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  color: #60a5fa;
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* --- Staggered entry animations --- */
 .stagger-1 { animation: slide-up 0.4s ease-out 0.05s both; }
 .stagger-2 { animation: slide-up 0.4s ease-out 0.1s both; }
 .stagger-3 { animation: slide-up 0.4s ease-out 0.15s both; }
