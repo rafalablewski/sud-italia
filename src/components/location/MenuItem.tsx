@@ -5,8 +5,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { formatPrice } from "@/lib/utils";
 import { useCartStore } from "@/store/cart";
-import { Plus, Check } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Plus, Minus } from "lucide-react";
 
 interface MenuItemProps {
   item: MenuItemType;
@@ -22,17 +21,23 @@ const TAG_LABELS: Record<string, { label: string; variant: "green" | "red" | "go
 
 export function MenuItemCard({ item, locationSlug }: MenuItemProps) {
   const addItem = useCartStore((s) => s.addItem);
-  const [added, setAdded] = useState(false);
+  const removeItem = useCartStore((s) => s.removeItem);
+  const updateQuantity = useCartStore((s) => s.updateQuantity);
+  const cartItems = useCartStore((s) => s.items);
 
-  useEffect(() => {
-    if (!added) return;
-    const timer = setTimeout(() => setAdded(false), 1200);
-    return () => clearTimeout(timer);
-  }, [added]);
+  const cartItem = cartItems.find((i) => i.menuItem.id === item.id);
+  const quantity = cartItem?.quantity ?? 0;
 
   const handleAdd = () => {
     addItem(item, locationSlug);
-    setAdded(true);
+  };
+
+  const handleDecrement = () => {
+    if (quantity <= 1) {
+      removeItem(item.id);
+    } else {
+      updateQuantity(item.id, quantity - 1);
+    }
   };
 
   return (
@@ -59,23 +64,35 @@ export function MenuItemCard({ item, locationSlug }: MenuItemProps) {
         </p>
       </div>
 
-      <Button
-        onClick={handleAdd}
-        variant={added ? "secondary" : "primary"}
-        size="md"
-        className="flex-shrink-0 mt-1 min-h-[44px] min-w-[80px]"
-        disabled={!item.available}
-      >
-        {added ? (
-          <>
-            <Check className="h-5 w-5 mr-1.5" /> Added
-          </>
-        ) : (
-          <>
-            <Plus className="h-5 w-5 mr-1.5" /> Add
-          </>
-        )}
-      </Button>
+      {quantity === 0 ? (
+        <Button
+          onClick={handleAdd}
+          variant="primary"
+          size="md"
+          className="flex-shrink-0 mt-1 min-h-[44px] min-w-[80px]"
+          disabled={!item.available}
+        >
+          <Plus className="h-5 w-5 mr-1.5" /> Add
+        </Button>
+      ) : (
+        <div className="flex items-center gap-1 flex-shrink-0 mt-1">
+          <button
+            onClick={handleDecrement}
+            className="w-9 h-9 flex items-center justify-center rounded-full border-2 border-italia-red text-italia-red hover:bg-italia-red hover:text-white transition-colors font-bold text-lg"
+          >
+            <Minus className="h-4 w-4" />
+          </button>
+          <span className="w-8 text-center font-bold text-italia-dark tabular-nums">
+            {quantity}
+          </span>
+          <button
+            onClick={handleAdd}
+            className="w-9 h-9 flex items-center justify-center rounded-full bg-italia-red text-white hover:bg-italia-red-dark transition-colors font-bold text-lg"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
