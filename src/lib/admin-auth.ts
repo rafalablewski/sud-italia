@@ -5,7 +5,12 @@ export const SESSION_COOKIE = "sud-italia-admin";
 export const SESSION_MAX_AGE = 60 * 60 * 24; // 24 hours
 
 function getSecret(): string {
-  return process.env.SESSION_SECRET || process.env.ADMIN_PASSWORD || "admin123";
+  const secret = process.env.SESSION_SECRET || process.env.ADMIN_PASSWORD;
+  if (secret) {
+    return secret;
+  }
+  console.warn("SECURITY WARNING: SESSION_SECRET and ADMIN_PASSWORD are not set. Using an insecure default secret. Please set SESSION_SECRET in your environment.");
+  return "admin123";
 }
 
 function signPayload(payload: string): string {
