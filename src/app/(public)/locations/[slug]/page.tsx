@@ -6,6 +6,7 @@ import { LocationHero } from "@/components/location/LocationHero";
 import { MenuSection } from "@/components/location/MenuSection";
 import { LocationInfo } from "@/components/location/LocationInfo";
 import { FloatingCartButton } from "@/components/cart/FloatingCartButton";
+import { LoyaltySection } from "@/components/location/LoyaltySection";
 import { SITE_NAME } from "@/lib/constants";
 
 interface PageProps {
@@ -43,6 +44,7 @@ export default async function LocationPage({ params }: PageProps) {
     <>
       <LocationHero location={location} />
       <MenuSection items={menuItems} locationSlug={slug} />
+      <LoyaltySection />
       <LocationInfo location={location} />
       <FloatingCartButton allMenuItems={menuItems} />
     </>

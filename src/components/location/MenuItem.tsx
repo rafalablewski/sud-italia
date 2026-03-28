@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/Button";
 import { MenuItemImage } from "./MenuItemImage";
 import { formatPrice } from "@/lib/utils";
 import { getItemBadges, BADGE_CONFIG, BadgeType } from "@/lib/upsell";
+import { StarRating } from "@/components/rating/StarRating";
+import { getItemRating } from "@/data/ratings";
 import { useCartStore } from "@/store/cart";
 import { Plus, Minus, Check, TrendingUp, Award, Zap, Star } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -42,6 +44,7 @@ export function MenuItemCard({ item, locationSlug }: MenuItemProps) {
   const inCart = quantity > 0;
 
   const badges = getItemBadges(item.id, locationSlug);
+  const itemRating = getItemRating(item.id);
 
   useEffect(() => {
     if (!justAdded) return;
@@ -114,6 +117,11 @@ export function MenuItemCard({ item, locationSlug }: MenuItemProps) {
             <p className="text-sm text-italia-gray mt-1 leading-relaxed line-clamp-2">
               {item.description}
             </p>
+            {itemRating && (
+              <div className="mt-1">
+                <StarRating rating={itemRating.rating} reviewCount={itemRating.count} />
+              </div>
+            )}
           </div>
         </div>
 

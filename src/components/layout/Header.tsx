@@ -7,6 +7,7 @@ import { Menu, X, MapPin } from "lucide-react";
 import { SITE_NAME } from "@/lib/constants";
 import { getActiveLocations } from "@/data/locations";
 import { CartButton } from "@/components/cart/CartButton";
+import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 
 export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -52,11 +53,13 @@ export function Header() {
                 {loc.city}
               </Link>
             ))}
+            <LanguageSwitcher />
             <CartButton />
           </nav>
 
           {/* Mobile: Cart + Hamburger */}
           <div className="flex items-center gap-3 md:hidden">
+            <LanguageSwitcher />
             <CartButton />
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
