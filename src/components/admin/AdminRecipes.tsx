@@ -161,7 +161,7 @@ function RecipesTab() {
           <p className="text-sm admin-text-muted mt-0.5">
             {withRecipeCount} of {menuItems.length} items have recipes
             {withoutRecipeCount > 0 && (
-              <span className="text-italia-red ml-1">({withoutRecipeCount} missing)</span>
+              <span className="admin-red ml-1">({withoutRecipeCount} missing)</span>
             )}
           </p>
         </div>
@@ -372,18 +372,25 @@ function RecipeEditor({
       {/* Ingredient rows */}
       {recipeIngredients.length > 0 && (
         <div className="mb-4 space-y-2">
-          <div className="grid grid-cols-[1fr_100px_80px_80px_36px] gap-3 px-1 text-[10px] font-semibold admin-text-dim uppercase tracking-wider">
+          <div className="grid grid-cols-[1fr_120px_90px_90px_36px] gap-3 px-1 text-[10px] font-semibold admin-text-dim uppercase tracking-wider">
             <span>Ingredient</span>
-            <span>Qty ({"\u00B7"} unit)</span>
-            <span>Waste</span>
-            <span className="text-right">Cost</span>
+            <span>Quantity</span>
+            <span>Waste %</span>
+            <span className="text-right">Line Cost</span>
             <span />
           </div>
           {recipeIngredients.map((ri, idx) => {
             const ing = ingredientMap.get(ri.ingredientId);
             const lineCost = ing ? Math.round(ing.costPerUnit * ri.quantity * (ri.wasteFactor || 1)) : 0;
+
+            // Convert stored value (kg/L) → display value (g/ml)
+            const displayUnit = ing?.unit === "kg" ? "g" : ing?.unit === "L" ? "ml" : (ing?.unit || "");
+            const multiplier = ing?.unit === "kg" || ing?.unit === "L" ? 1000 : 1;
+            const displayQty = ri.quantity ? Math.round(ri.quantity * multiplier * 1000) / 1000 : "";
+            const wasteDisplay = ri.wasteFactor > 1 ? Math.round((ri.wasteFactor - 1) * 100) : "";
+
             return (
-              <div key={idx} className="grid grid-cols-[1fr_100px_80px_80px_36px] gap-3 items-center">
+              <div key={idx} className="grid grid-cols-[1fr_120px_90px_90px_36px] gap-3 items-center">
                 <select
                   value={ri.ingredientId}
                   onChange={(e) => updateIngredient(idx, "ingredientId", e.target.value)}
@@ -398,26 +405,29 @@ function RecipeEditor({
                 <div className="flex items-center gap-1.5">
                   <input
                     type="number"
-                    step="0.001"
+                    step="1"
                     min={0}
-                    value={ri.quantity || ""}
+                    value={displayQty}
                     placeholder="0"
-                    onChange={(e) => updateIngredient(idx, "quantity", parseFloat(e.target.value) || 0)}
+                    onChange={(e) => {
+                      const grams = parseFloat(e.target.value) || 0;
+                      updateIngredient(idx, "quantity", grams / multiplier);
+                    }}
                     className="flex-1 glass-input rounded-lg text-right"
                   />
-                  <span className="text-xs admin-text-dim w-5 text-right">{ing?.unit}</span>
+                  <span className="text-xs admin-text-muted w-6 text-left">{displayUnit}</span>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1.5">
                   <input
                     type="number"
                     step="1"
                     min={0}
-                    value={Math.round((ri.wasteFactor - 1) * 100) || ""}
+                    value={wasteDisplay}
                     placeholder="0"
                     onChange={(e) => updateIngredient(idx, "wasteFactor", 1 + (parseFloat(e.target.value) || 0) / 100)}
                     className="flex-1 glass-input rounded-lg text-right"
                   />
-                  <span className="text-xs admin-text-dim">%</span>
+                  <span className="text-xs admin-text-muted">%</span>
                 </div>
                 <div className="text-right text-sm font-semibold admin-text">
                   {formatPrice(lineCost)}

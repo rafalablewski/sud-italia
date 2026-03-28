@@ -193,7 +193,7 @@ export function AdminDashboard() {
           <div className="lg:col-span-2 glass-card rounded-2xl p-5">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-bold admin-text">Revenue & Profit</h2>
-              <Link href="/admin/reports" className="text-xs text-italia-red font-medium flex items-center gap-1 hover:text-red-300 transition-colors">
+              <Link href="/admin/reports" className="text-xs admin-link font-medium flex items-center gap-1 hover:text-red-200 transition-colors">
                 Full reports <ArrowRight className="h-3 w-3" />
               </Link>
             </div>
@@ -326,7 +326,7 @@ export function AdminDashboard() {
                       <tr key={loc.locationSlug} className="border-b border-white/5 hover:bg-white/3 transition-colors">
                         <td className="py-3 pr-4">
                           <div className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4 text-italia-red" />
+                            <MapPin className="h-4 w-4 admin-red" />
                             <span className="font-semibold admin-text">{loc.city}</span>
                             {loc.locationSlug === best.locationSlug && loc.revenue > 0 && (
                               <span className="px-1.5 py-0.5 bg-amber-500/20 text-amber-400 text-[10px] font-bold rounded-full">TOP</span>
@@ -415,7 +415,7 @@ export function AdminDashboard() {
                   <span className="ml-1 px-2 py-0.5 bg-italia-red/20 text-red-300 text-xs font-bold rounded-full">{activeOrders.length}</span>
                 )}
               </h2>
-              <Link href="/admin/orders" className="text-xs text-italia-red font-medium flex items-center gap-1 hover:text-red-300 transition-colors">
+              <Link href="/admin/orders" className="text-xs admin-link font-medium flex items-center gap-1 hover:text-red-200 transition-colors">
                 All orders <ArrowRight className="h-3 w-3" />
               </Link>
             </div>

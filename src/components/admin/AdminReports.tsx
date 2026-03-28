@@ -176,14 +176,14 @@ export function AdminReports() {
               <SummaryCard
                 label="Total Cost"
                 value={formatPrice(summary.totalCost)}
-                icon={<ArrowDownRight className="h-4 w-4 text-italia-red" />}
+                icon={<ArrowDownRight className="h-4 w-4  admin-red" />}
               />
               <SummaryCard
                 label="Net Profit"
                 value={formatPrice(summary.totalProfit)}
                 icon={summary.totalProfit >= 0
                   ? <ArrowUpRight className="h-4 w-4 text-italia-green" />
-                  : <ArrowDownRight className="h-4 w-4 text-italia-red" />}
+                  : <ArrowDownRight className="h-4 w-4  admin-red" />}
                 highlight={summary.totalProfit >= 0 ? "green" : "red"}
               />
               <SummaryCard
@@ -279,7 +279,7 @@ export function AdminReports() {
                             <td className="px-4 py-3 text-right admin-text-muted">
                               {formatPrice(day.cost)}
                             </td>
-                            <td className={`px-4 py-3 text-right font-semibold ${day.profit >= 0 ? "text-italia-green" : "text-italia-red"}`}>
+                            <td className={`px-4 py-3 text-right font-semibold ${day.profit >= 0 ? "admin-green" : "admin-red"}`}>
                               {formatPrice(day.profit)}
                             </td>
                             <td className="px-4 py-3 text-right">
@@ -311,7 +311,7 @@ export function AdminReports() {
                         <td className="px-4 py-3 admin-text">Total</td>
                         <td className="px-4 py-3 text-right admin-text">{formatPrice(summary.totalRevenue)}</td>
                         <td className="px-4 py-3 text-right admin-text-muted">{formatPrice(summary.totalCost)}</td>
-                        <td className={`px-4 py-3 text-right ${summary.totalProfit >= 0 ? "text-italia-green" : "text-italia-red"}`}>
+                        <td className={`px-4 py-3 text-right ${summary.totalProfit >= 0 ? "admin-green" : "admin-red"}`}>
                           {formatPrice(summary.totalProfit)}
                         </td>
                         <td className="px-4 py-3 text-right admin-text">{summary.profitMargin}%</td>
@@ -361,7 +361,7 @@ export function AdminReports() {
                               <td className="px-4 py-3 font-medium admin-text capitalize">{cat}</td>
                               <td className="px-4 py-3 text-right font-semibold admin-text">{formatPrice(data.revenue)}</td>
                               <td className="px-4 py-3 text-right admin-text-muted">{formatPrice(data.cost)}</td>
-                              <td className={`px-4 py-3 text-right font-semibold ${profit >= 0 ? "text-italia-green" : "text-italia-red"}`}>
+                              <td className={`px-4 py-3 text-right font-semibold ${profit >= 0 ? "admin-green" : "admin-red"}`}>
                                 {formatPrice(profit)}
                               </td>
                               <td className="px-4 py-3 text-right">
@@ -470,7 +470,7 @@ function SummaryCard({
         <span className="text-xs font-semibold admin-text-muted uppercase tracking-wide">{label}</span>
       </div>
       <p className={`text-xl font-bold ${
-        highlight === "green" ? "text-italia-green" : highlight === "red" ? "text-italia-red" : "admin-text"
+        highlight === "green" ? "admin-green" : highlight === "red" ? "admin-red" : "admin-text"
       }`}>
         {value}
       </p>

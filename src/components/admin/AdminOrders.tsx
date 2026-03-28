@@ -145,7 +145,7 @@ export function AdminOrders() {
                   </div>
                   <div className="flex justify-between font-bold text-sm mt-2 pt-2 border-t border-white/8">
                     <span className="admin-text">Total</span>
-                    <span className="text-italia-red">{formatPrice(order.totalAmount)}</span>
+                    <span className="admin-red">{formatPrice(order.totalAmount)}</span>
                   </div>
                 </div>
               </div>

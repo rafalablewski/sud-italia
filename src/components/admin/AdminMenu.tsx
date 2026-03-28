@@ -342,7 +342,7 @@ export function AdminMenu() {
                                             </span>
                                           )}
                                         </td>
-                                        <td className="px-3 py-2 text-right text-italia-red font-bold">
+                                        <td className="px-3 py-2 text-right admin-red font-bold">
                                           {formatPrice(recipe.calculatedCost)}
                                         </td>
                                         <td className="px-3 py-2 text-right text-xs admin-text-muted">100%</td>
@@ -359,7 +359,7 @@ export function AdminMenu() {
                                   </div>
                                   <div>
                                     <span className="text-xs admin-text-muted">Food cost: </span>
-                                    <span className="font-bold text-italia-red">{formatPrice(recipe.calculatedCost)}</span>
+                                    <span className="font-bold admin-red">{formatPrice(recipe.calculatedCost)}</span>
                                   </div>
                                   <div>
                                     <span className="text-xs admin-text-muted">Gross profit: </span>

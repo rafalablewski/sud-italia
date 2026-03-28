@@ -355,7 +355,7 @@ export function AdminSlots() {
             ) : (
               <button
                 onClick={goToday}
-                className="px-2 py-1 text-xs bg-italia-red/10 text-italia-red rounded-lg font-medium hover:bg-italia-red/20 transition-colors"
+                className="px-2 py-1 text-xs bg-italia-red/10 admin-red rounded-lg font-medium hover:bg-italia-red/20 transition-colors"
               >
                 Go to Today
               </button>
@@ -564,7 +564,7 @@ export function AdminSlots() {
                           </span>
                         )}
                         {slot.fulfillmentTypes.includes("delivery") && (
-                          <span className="px-2 py-1 bg-italia-red/10 text-italia-red text-xs font-medium rounded-lg">
+                          <span className="px-2 py-1 bg-italia-red/10 admin-red text-xs font-medium rounded-lg">
                             Delivery
                           </span>
                         )}
@@ -584,7 +584,7 @@ export function AdminSlots() {
                       </div>
 
                       <span className={`text-xs font-semibold flex-shrink-0 ${
-                        spotsLeft === 0 ? "text-italia-red" : spotsLeft <= 3 ? "text-yellow-600" : "text-italia-green"
+                        spotsLeft === 0 ? "admin-red" : spotsLeft <= 3 ? "text-yellow-600" : "admin-green"
                       }`}>
                         {spotsLeft === 0 ? "FULL" : `${spotsLeft} left`}
                       </span>
