@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+const processedEvents = new Set<string>();
+
 export async function POST(req: NextRequest) {
   if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_WEBHOOK_SECRET) {
     return NextResponse.json(
@@ -28,12 +30,19 @@ export async function POST(req: NextRequest) {
       process.env.STRIPE_WEBHOOK_SECRET
     );
 
+    // Idempotency: skip already-processed events
+    if (processedEvents.has(event.id)) {
+      return NextResponse.json({ received: true, duplicate: true });
+    }
+    processedEvents.add(event.id);
+
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
       const { orderId, locationSlug, customerName, customerPhone } =
         session.metadata ?? {};
 
-      // In production, save the order to a database here
+      // In production, check if orderId already exists in database before
+      // creating a new order (for durable idempotency across restarts).
       console.log("Order confirmed:", {
         orderId,
         locationSlug,

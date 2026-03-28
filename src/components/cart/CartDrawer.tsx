@@ -13,6 +13,8 @@ interface CartDrawerProps {
   onClose: () => void;
 }
 
+const PHONE_PATTERN = /^[+]?[\d\s\-()]{7,}$/;
+
 export function CartDrawer({ open, onClose }: CartDrawerProps) {
   const items = useCartStore((s) => s.items);
   const getTotal = useCartStore((s) => s.getTotal);
@@ -21,11 +23,25 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [phoneError, setPhoneError] = useState(false);
 
   const total = getTotal();
+  const isPhoneValid = PHONE_PATTERN.test(customerPhone.trim());
+  const canCheckout = customerName.trim().length > 0 && isPhoneValid;
+
+  const handlePhoneChange = (value: string) => {
+    setCustomerPhone(value);
+    if (phoneError && PHONE_PATTERN.test(value.trim())) {
+      setPhoneError(false);
+    }
+  };
 
   const handleCheckout = async () => {
-    if (!customerName.trim() || !customerPhone.trim()) return;
+    if (!customerName.trim()) return;
+    if (!isPhoneValid) {
+      setPhoneError(true);
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -35,14 +51,11 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
         body: JSON.stringify({
           items: items.map((i) => ({
             id: i.menuItem.id,
-            name: i.menuItem.name,
-            price: i.menuItem.price,
             quantity: i.quantity,
           })),
           locationSlug,
           customerName: customerName.trim(),
           customerPhone: customerPhone.trim(),
-          total,
         }),
       });
 
@@ -57,14 +70,13 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
         onClose();
         window.location.href = `/order-confirmation?orderId=${data.orderId}&location=${locationSlug}`;
       }
-    } catch {
+    } catch (error) {
+      console.error("Checkout failed:", error);
       alert("Something went wrong. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
   };
-
-  const canCheckout = customerName.trim().length > 0 && customerPhone.trim().length > 0;
 
   return (
     <Sheet open={open} onClose={onClose} title="Your Order">
@@ -97,10 +109,17 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                 type="tel"
                 placeholder="Phone"
                 value={customerPhone}
-                onChange={(e) => setCustomerPhone(e.target.value)}
-                className="w-[130px] px-4 py-3 min-h-[44px] border border-gray-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-italia-red focus:border-transparent"
+                onChange={(e) => handlePhoneChange(e.target.value)}
+                className={`w-[130px] px-4 py-3 min-h-[44px] border rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-italia-red focus:border-transparent ${
+                  phoneError ? "border-italia-red" : "border-gray-200"
+                }`}
               />
             </div>
+            {phoneError && (
+              <p className="text-xs text-italia-red">
+                Please enter a valid phone number
+              </p>
+            )}
 
             <div className="flex justify-between items-center text-lg font-bold pt-1">
               <span>Total</span>

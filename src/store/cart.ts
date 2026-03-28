@@ -22,42 +22,45 @@ export const useCartStore = create<CartStore>()(
       locationSlug: null,
 
       addItem: (item: MenuItem, locationSlug: string) => {
-        const state = get();
+        set((state) => {
+          const isNewLocation =
+            state.locationSlug !== null && state.locationSlug !== locationSlug;
+          const currentItems = isNewLocation ? [] : state.items;
 
-        // If cart has items from a different location, clear it first
-        if (state.locationSlug && state.locationSlug !== locationSlug) {
-          set({ items: [], locationSlug: null });
-        }
+          const existing = currentItems.find(
+            (i) => i.menuItem.id === item.id
+          );
 
-        const existing = get().items.find(
-          (i) => i.menuItem.id === item.id
-        );
+          if (existing) {
+            return {
+              items: currentItems.map((i) =>
+                i.menuItem.id === item.id
+                  ? { ...i, quantity: i.quantity + 1 }
+                  : i
+              ),
+              locationSlug,
+            };
+          }
 
-        if (existing) {
-          set({
-            items: get().items.map((i) =>
-              i.menuItem.id === item.id
-                ? { ...i, quantity: i.quantity + 1 }
-                : i
-            ),
-            locationSlug,
-          });
-        } else {
-          set({
+          return {
             items: [
-              ...get().items,
+              ...currentItems,
               { menuItem: item, quantity: 1, locationSlug },
             ],
             locationSlug,
-          });
-        }
+          };
+        });
       },
 
       removeItem: (itemId: string) => {
-        const newItems = get().items.filter((i) => i.menuItem.id !== itemId);
-        set({
-          items: newItems,
-          locationSlug: newItems.length === 0 ? null : get().locationSlug,
+        set((state) => {
+          const newItems = state.items.filter(
+            (i) => i.menuItem.id !== itemId
+          );
+          return {
+            items: newItems,
+            locationSlug: newItems.length === 0 ? null : state.locationSlug,
+          };
         });
       },
 
@@ -66,11 +69,11 @@ export const useCartStore = create<CartStore>()(
           get().removeItem(itemId);
           return;
         }
-        set({
-          items: get().items.map((i) =>
+        set((state) => ({
+          items: state.items.map((i) =>
             i.menuItem.id === itemId ? { ...i, quantity } : i
           ),
-        });
+        }));
       },
 
       clearCart: () => set({ items: [], locationSlug: null }),
