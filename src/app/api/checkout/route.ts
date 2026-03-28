@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate slot exists and has capacity
-    const slot = getSlotById(slotId);
+    const slot = await getSlotById(slotId);
     if (!slot) {
       return NextResponse.json(
         { error: "Time slot not found" },
@@ -109,8 +109,8 @@ export async function POST(req: NextRequest) {
 
     const orderId = generateOrderId();
 
-    // Reserve the slot
-    if (!incrementSlotOrders(slotId)) {
+    // Reserve the slot (atomic with file lock)
+    if (!(await incrementSlotOrders(slotId))) {
       return NextResponse.json(
         { error: "This time slot just filled up. Please select another." },
         { status: 400 }
@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Create order record
-    createOrder({
+    await createOrder({
       id: orderId,
       locationSlug,
       items: orderItems,
@@ -135,7 +135,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Notify admin
-    addNotification({
+    await addNotification({
       type: "new_order",
       title: "New order received",
       message: `${customerName.trim()} — ${formatPrice(calculatedTotal)} — ${fulfillmentType} at ${slotTime}`,
@@ -143,9 +143,9 @@ export async function POST(req: NextRequest) {
     });
 
     // Check if slot is now full and notify
-    const updatedSlot = getSlotById(slotId);
+    const updatedSlot = await getSlotById(slotId);
     if (updatedSlot && updatedSlot.currentOrders >= updatedSlot.maxOrders) {
-      addNotification({
+      await addNotification({
         type: "slot_full",
         title: "Time slot full",
         message: `${slotDate} ${slotTime} slot is now fully booked (${updatedSlot.maxOrders} orders)`,

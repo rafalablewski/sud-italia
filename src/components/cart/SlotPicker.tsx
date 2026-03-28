@@ -28,6 +28,7 @@ export function SlotPicker({ locationSlug, fulfillmentType }: SlotPickerProps) {
   const [dayOffset, setDayOffset] = useState(0);
   const [slots, setSlots] = useState<ClientSlot[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
   const selectedSlotId = useCartStore((s) => s.selectedSlotId);
   const setSelectedSlot = useCartStore((s) => s.setSelectedSlot);
 
@@ -36,24 +37,24 @@ export function SlotPicker({ locationSlug, fulfillmentType }: SlotPickerProps) {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setError(false);
 
     fetch(`/api/slots?location=${locationSlug}&date=${date}&type=${fulfillmentType}`)
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed");
+        return res.json();
+      })
       .then((data) => {
-        if (!cancelled) {
-          setSlots(Array.isArray(data) ? data : []);
-        }
+        if (!cancelled) setSlots(Array.isArray(data) ? data : []);
       })
       .catch(() => {
-        if (!cancelled) setSlots([]);
+        if (!cancelled) { setSlots([]); setError(true); }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [locationSlug, date, fulfillmentType]);
 
   // Clear selection when fulfillment type or date changes
@@ -92,6 +93,10 @@ export function SlotPicker({ locationSlug, fulfillmentType }: SlotPickerProps) {
       {/* Slots grid */}
       {loading ? (
         <div className="text-center py-4 text-sm text-italia-gray">Loading slots...</div>
+      ) : error ? (
+        <div className="text-center py-4 text-sm text-italia-red bg-red-50 rounded-xl">
+          Could not load time slots. Try again later.
+        </div>
       ) : slots.length === 0 ? (
         <div className="text-center py-4 text-sm text-italia-gray bg-gray-50 rounded-xl">
           No available slots for this day

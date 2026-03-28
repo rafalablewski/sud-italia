@@ -23,18 +23,22 @@ const STATUS_ORDER: Order["status"][] = ["pending", "confirmed", "preparing", "r
 export function AdminOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [selectedLocation, setSelectedLocation] = useState("");
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
+    setError("");
     try {
       const params = selectedLocation ? `?location=${selectedLocation}` : "";
       const res = await fetch(`/api/admin/orders${params}`);
       if (res.ok) {
         setOrders(await res.json());
+      } else {
+        setError("Failed to load orders. Please try again.");
       }
-    } catch (err) {
-      console.error("Failed to fetch orders:", err);
+    } catch {
+      setError("Network error. Please check your connection.");
     } finally {
       setLoading(false);
     }
@@ -84,7 +88,12 @@ export function AdminOrders() {
           </select>
         </div>
 
-        {loading ? (
+        {error ? (
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center">
+            <p className="text-italia-red font-medium">{error}</p>
+            <button onClick={fetchOrders} className="mt-2 text-sm text-italia-red underline">Retry</button>
+          </div>
+        ) : loading ? (
           <div className="text-center py-12 text-italia-gray">Loading...</div>
         ) : orders.length === 0 ? (
           <div className="bg-white rounded-2xl p-12 text-center shadow-sm border border-gray-100">

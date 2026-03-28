@@ -85,21 +85,30 @@ export function AdminSlots() {
   };
 
   const handleSubmit = async () => {
+    const fulfillmentTypes: string[] = [];
+    if (newTakeout) fulfillmentTypes.push("takeout");
+    if (newDelivery) fulfillmentTypes.push("delivery");
+    if (fulfillmentTypes.length === 0) return;
+
     setSaving(true);
     try {
       if (bulkMode) {
-        // Create multiple slots from newTime to bulkEndTime
-        const startParts = newTime.split(":").map(Number);
-        const endParts = bulkEndTime.split(":").map(Number);
-        let startMin = startParts[0] * 60 + startParts[1];
-        const endMin = endParts[0] * 60 + endParts[1];
-
-        while (startMin <= endMin) {
-          const h = Math.floor(startMin / 60).toString().padStart(2, "0");
-          const m = (startMin % 60).toString().padStart(2, "0");
-          await handleCreateSlot(`${h}:${m}`);
-          startMin += bulkInterval;
-        }
+        // Single API call for bulk creation
+        await fetch("/api/admin/slots", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            locationSlug: selectedLocation,
+            date: selectedDate,
+            maxOrders: newMaxOrders,
+            fulfillmentTypes,
+            bulk: {
+              startTime: newTime,
+              endTime: bulkEndTime,
+              interval: bulkInterval,
+            },
+          }),
+        });
       } else {
         await handleCreateSlot(newTime);
       }
@@ -318,8 +327,8 @@ export function AdminSlots() {
                     <input
                       type="number"
                       min={slot.currentOrders}
-                      value={slot.maxOrders}
-                      onChange={(e) => handleUpdateMax(slot.id, Number(e.target.value))}
+                      defaultValue={slot.maxOrders}
+                      onBlur={(e) => handleUpdateMax(slot.id, Number(e.target.value))}
                       className="w-14 px-1 py-0.5 border border-gray-200 rounded text-center text-sm"
                     />
                     {" orders"}

@@ -11,14 +11,13 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const order = getOrderById(orderId);
+  const order = await getOrderById(orderId);
 
   if (!order) {
-    return NextResponse.json({
-      id: orderId,
-      status: "confirmed",
-      message: "Your order has been confirmed and is being prepared.",
-    });
+    return NextResponse.json(
+      { error: "Order not found" },
+      { status: 404 }
+    );
   }
 
   return NextResponse.json({

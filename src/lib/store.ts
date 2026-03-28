@@ -1,35 +1,47 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
+import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { TimeSlot, Order } from "@/data/types";
 
 const DATA_DIR = join(process.cwd(), ".data");
 
-function ensureDataDir() {
-  if (!existsSync(DATA_DIR)) {
-    mkdirSync(DATA_DIR, { recursive: true });
+// Simple per-file lock to prevent concurrent read-modify-write races
+const locks = new Map<string, Promise<void>>();
+
+function withLock<T>(filename: string, fn: () => Promise<T>): Promise<T> {
+  const prev = locks.get(filename) ?? Promise.resolve();
+  const next = prev.then(fn, fn); // run fn after previous settles
+  locks.set(filename, next.then(() => {}, () => {})); // swallow so chain continues
+  return next;
+}
+
+async function ensureDataDir() {
+  try {
+    await access(DATA_DIR);
+  } catch {
+    await mkdir(DATA_DIR, { recursive: true });
   }
 }
 
-function readJSON<T>(filename: string, fallback: T): T {
-  ensureDataDir();
+async function readJSON<T>(filename: string, fallback: T): Promise<T> {
+  await ensureDataDir();
   const filepath = join(DATA_DIR, filename);
-  if (!existsSync(filepath)) return fallback;
   try {
-    return JSON.parse(readFileSync(filepath, "utf-8"));
+    const data = await readFile(filepath, "utf-8");
+    return JSON.parse(data);
   } catch {
     return fallback;
   }
 }
 
-function writeJSON<T>(filename: string, data: T): void {
-  ensureDataDir();
-  writeFileSync(join(DATA_DIR, filename), JSON.stringify(data, null, 2));
+async function writeJSON<T>(filename: string, data: T): Promise<void> {
+  await ensureDataDir();
+  await writeFile(join(DATA_DIR, filename), JSON.stringify(data, null, 2));
 }
 
 // --- Time Slots ---
 
-export function getSlots(locationSlug?: string, date?: string): TimeSlot[] {
-  const slots = readJSON<TimeSlot[]>("slots.json", []);
+export async function getSlots(locationSlug?: string, date?: string): Promise<TimeSlot[]> {
+  const slots = await readJSON<TimeSlot[]>("slots.json", []);
   return slots.filter((s) => {
     if (locationSlug && s.locationSlug !== locationSlug) return false;
     if (date && s.date !== date) return false;
@@ -37,53 +49,70 @@ export function getSlots(locationSlug?: string, date?: string): TimeSlot[] {
   });
 }
 
-export function getSlotById(id: string): TimeSlot | undefined {
-  const slots = readJSON<TimeSlot[]>("slots.json", []);
+export async function getSlotById(id: string): Promise<TimeSlot | undefined> {
+  const slots = await readJSON<TimeSlot[]>("slots.json", []);
   return slots.find((s) => s.id === id);
 }
 
-export function createSlot(slot: TimeSlot): TimeSlot {
-  const slots = readJSON<TimeSlot[]>("slots.json", []);
-  slots.push(slot);
-  writeJSON("slots.json", slots);
-  return slot;
+export async function createSlot(slot: TimeSlot): Promise<TimeSlot> {
+  return withLock("slots.json", async () => {
+    const slots = await readJSON<TimeSlot[]>("slots.json", []);
+    slots.push(slot);
+    await writeJSON("slots.json", slots);
+    return slot;
+  });
 }
 
-export function updateSlot(id: string, updates: Partial<TimeSlot>): TimeSlot | null {
-  const slots = readJSON<TimeSlot[]>("slots.json", []);
-  const index = slots.findIndex((s) => s.id === id);
-  if (index === -1) return null;
-  slots[index] = { ...slots[index], ...updates };
-  writeJSON("slots.json", slots);
-  return slots[index];
+export async function createSlotsBulk(newSlots: TimeSlot[]): Promise<TimeSlot[]> {
+  return withLock("slots.json", async () => {
+    const slots = await readJSON<TimeSlot[]>("slots.json", []);
+    slots.push(...newSlots);
+    await writeJSON("slots.json", slots);
+    return newSlots;
+  });
 }
 
-export function deleteSlot(id: string): boolean {
-  const slots = readJSON<TimeSlot[]>("slots.json", []);
-  const filtered = slots.filter((s) => s.id !== id);
-  if (filtered.length === slots.length) return false;
-  writeJSON("slots.json", filtered);
-  return true;
+export async function updateSlot(id: string, updates: Partial<TimeSlot>): Promise<TimeSlot | null> {
+  return withLock("slots.json", async () => {
+    const slots = await readJSON<TimeSlot[]>("slots.json", []);
+    const index = slots.findIndex((s) => s.id === id);
+    if (index === -1) return null;
+    slots[index] = { ...slots[index], ...updates };
+    await writeJSON("slots.json", slots);
+    return slots[index];
+  });
 }
 
-export function incrementSlotOrders(id: string): boolean {
-  const slots = readJSON<TimeSlot[]>("slots.json", []);
-  const slot = slots.find((s) => s.id === id);
-  if (!slot) return false;
-  if (slot.currentOrders >= slot.maxOrders) return false;
-  slot.currentOrders += 1;
-  writeJSON("slots.json", slots);
-  return true;
+export async function deleteSlot(id: string): Promise<boolean> {
+  return withLock("slots.json", async () => {
+    const slots = await readJSON<TimeSlot[]>("slots.json", []);
+    const filtered = slots.filter((s) => s.id !== id);
+    if (filtered.length === slots.length) return false;
+    await writeJSON("slots.json", filtered);
+    return true;
+  });
+}
+
+export async function incrementSlotOrders(id: string): Promise<boolean> {
+  return withLock("slots.json", async () => {
+    const slots = await readJSON<TimeSlot[]>("slots.json", []);
+    const slot = slots.find((s) => s.id === id);
+    if (!slot) return false;
+    if (slot.currentOrders >= slot.maxOrders) return false;
+    slot.currentOrders += 1;
+    await writeJSON("slots.json", slots);
+    return true;
+  });
 }
 
 // --- Available slots for clients ---
 
-export function getAvailableSlots(
+export async function getAvailableSlots(
   locationSlug: string,
   date: string,
   fulfillmentType?: string
-): TimeSlot[] {
-  return getSlots(locationSlug, date).filter((s) => {
+): Promise<TimeSlot[]> {
+  return (await getSlots(locationSlug, date)).filter((s) => {
     if (s.currentOrders >= s.maxOrders) return false;
     if (fulfillmentType && !s.fulfillmentTypes.includes(fulfillmentType as "takeout" | "delivery")) return false;
     return true;
@@ -92,40 +121,44 @@ export function getAvailableSlots(
 
 // --- Orders ---
 
-export function getOrders(locationSlug?: string): Order[] {
-  const orders = readJSON<Order[]>("orders.json", []);
+export async function getOrders(locationSlug?: string): Promise<Order[]> {
+  const orders = await readJSON<Order[]>("orders.json", []);
   if (!locationSlug) return orders;
   return orders.filter((o) => o.locationSlug === locationSlug);
 }
 
-export function getOrderById(id: string): Order | undefined {
-  const orders = readJSON<Order[]>("orders.json", []);
+export async function getOrderById(id: string): Promise<Order | undefined> {
+  const orders = await readJSON<Order[]>("orders.json", []);
   return orders.find((o) => o.id === id);
 }
 
-export function createOrder(order: Order): Order {
-  const orders = readJSON<Order[]>("orders.json", []);
-  orders.push(order);
-  writeJSON("orders.json", orders);
-  return order;
+export async function createOrder(order: Order): Promise<Order> {
+  return withLock("orders.json", async () => {
+    const orders = await readJSON<Order[]>("orders.json", []);
+    orders.push(order);
+    await writeJSON("orders.json", orders);
+    return order;
+  });
 }
 
-export function updateOrderStatus(id: string, status: Order["status"]): Order | null {
-  const orders = readJSON<Order[]>("orders.json", []);
-  const index = orders.findIndex((o) => o.id === id);
-  if (index === -1) return null;
-  orders[index].status = status;
-  writeJSON("orders.json", orders);
-  return orders[index];
+export async function updateOrderStatus(id: string, status: Order["status"]): Promise<Order | null> {
+  return withLock("orders.json", async () => {
+    const orders = await readJSON<Order[]>("orders.json", []);
+    const index = orders.findIndex((o) => o.id === id);
+    if (index === -1) return null;
+    orders[index].status = status;
+    await writeJSON("orders.json", orders);
+    return orders[index];
+  });
 }
 
 // --- Analytics ---
 
 export interface DailyStats {
   date: string;
-  revenue: number; // grosze
-  cost: number; // grosze
-  profit: number; // grosze
+  revenue: number;
+  cost: number;
+  profit: number;
   orderCount: number;
   itemCount: number;
   avgOrderValue: number;
@@ -135,16 +168,15 @@ export interface DailyStats {
   topItems: { name: string; quantity: number; revenue: number }[];
 }
 
-export function getAnalytics(
+export async function getAnalytics(
   locationSlug?: string,
   dateFrom?: string,
   dateTo?: string
-): DailyStats[] {
-  const orders = getOrders(locationSlug).filter(
-    (o) => o.status !== "pending" // only count confirmed+ orders
+): Promise<DailyStats[]> {
+  const orders = (await getOrders(locationSlug)).filter(
+    (o) => o.status !== "pending"
   );
 
-  // Group orders by their slot date
   const byDate = new Map<string, Order[]>();
   for (const order of orders) {
     const date = order.slotDate || order.createdAt.split("T")[0];
@@ -223,7 +255,7 @@ export interface SummaryStats {
   totalRevenue: number;
   totalCost: number;
   totalProfit: number;
-  profitMargin: number; // percentage
+  profitMargin: number;
   totalOrders: number;
   totalItems: number;
   avgOrderValue: number;
@@ -234,12 +266,12 @@ export interface SummaryStats {
   topItems: { name: string; quantity: number; revenue: number }[];
 }
 
-export function getSummary(
+export async function getSummary(
   locationSlug?: string,
   dateFrom?: string,
   dateTo?: string
-): SummaryStats {
-  const dailyStats = getAnalytics(locationSlug, dateFrom, dateTo);
+): Promise<SummaryStats> {
+  const dailyStats = await getAnalytics(locationSlug, dateFrom, dateTo);
 
   let totalRevenue = 0;
   let totalCost = 0;
@@ -308,40 +340,45 @@ export interface Notification {
   read: boolean;
 }
 
-export function getNotifications(): Notification[] {
+export async function getNotifications(): Promise<Notification[]> {
   return readJSON<Notification[]>("notifications.json", []);
 }
 
-export function addNotification(notif: Omit<Notification, "id" | "createdAt" | "read">): Notification {
-  const notifications = readJSON<Notification[]>("notifications.json", []);
-  const entry: Notification = {
-    ...notif,
-    id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
-    createdAt: new Date().toISOString(),
-    read: false,
-  };
-  notifications.unshift(entry); // newest first
-  // Keep only last 100
-  if (notifications.length > 100) notifications.length = 100;
-  writeJSON("notifications.json", notifications);
-  return entry;
+export async function addNotification(notif: Omit<Notification, "id" | "createdAt" | "read">): Promise<Notification> {
+  return withLock("notifications.json", async () => {
+    const notifications = await readJSON<Notification[]>("notifications.json", []);
+    const entry: Notification = {
+      ...notif,
+      id: `notif-${crypto.randomUUID()}`,
+      createdAt: new Date().toISOString(),
+      read: false,
+    };
+    notifications.unshift(entry);
+    if (notifications.length > 100) notifications.length = 100;
+    await writeJSON("notifications.json", notifications);
+    return entry;
+  });
 }
 
-export function markNotificationRead(id: string): boolean {
-  const notifications = readJSON<Notification[]>("notifications.json", []);
-  const notif = notifications.find((n) => n.id === id);
-  if (!notif) return false;
-  notif.read = true;
-  writeJSON("notifications.json", notifications);
-  return true;
+export async function markNotificationRead(id: string): Promise<boolean> {
+  return withLock("notifications.json", async () => {
+    const notifications = await readJSON<Notification[]>("notifications.json", []);
+    const notif = notifications.find((n) => n.id === id);
+    if (!notif) return false;
+    notif.read = true;
+    await writeJSON("notifications.json", notifications);
+    return true;
+  });
 }
 
-export function markAllNotificationsRead(): void {
-  const notifications = readJSON<Notification[]>("notifications.json", []);
-  for (const n of notifications) n.read = true;
-  writeJSON("notifications.json", notifications);
+export async function markAllNotificationsRead(): Promise<void> {
+  return withLock("notifications.json", async () => {
+    const notifications = await readJSON<Notification[]>("notifications.json", []);
+    for (const n of notifications) n.read = true;
+    await writeJSON("notifications.json", notifications);
+  });
 }
 
-export function getUnreadCount(): number {
-  return getNotifications().filter((n) => !n.read).length;
+export async function getUnreadCount(): Promise<number> {
+  return (await getNotifications()).filter((n) => !n.read).length;
 }

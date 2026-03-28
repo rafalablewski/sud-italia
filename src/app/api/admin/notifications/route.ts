@@ -14,10 +14,10 @@ export async function GET(req: NextRequest) {
 
   const countOnly = req.nextUrl.searchParams.get("count");
   if (countOnly === "true") {
-    return NextResponse.json({ unread: getUnreadCount() });
+    return NextResponse.json({ unread: await getUnreadCount() });
   }
 
-  return NextResponse.json(getNotifications());
+  return NextResponse.json(await getNotifications());
 }
 
 export async function PUT(req: NextRequest) {
@@ -28,12 +28,12 @@ export async function PUT(req: NextRequest) {
   const { id, markAll } = await req.json();
 
   if (markAll) {
-    markAllNotificationsRead();
+    await markAllNotificationsRead();
     return NextResponse.json({ success: true });
   }
 
   if (id) {
-    markNotificationRead(id);
+    await markNotificationRead(id);
     return NextResponse.json({ success: true });
   }
 

@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   const from = req.nextUrl.searchParams.get("from") || undefined;
   const to = req.nextUrl.searchParams.get("to") || undefined;
 
-  const summary = getSummary(location, from, to);
+  const summary = await getSummary(location, from, to);
 
   return NextResponse.json(summary);
 }

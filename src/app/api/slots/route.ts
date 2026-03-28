@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const slots = getAvailableSlots(locationSlug, date, fulfillmentType);
+  const slots = await getAvailableSlots(locationSlug, date, fulfillmentType);
 
   // Return only what clients need (hide internal fields)
   const clientSlots = slots.map((s) => ({

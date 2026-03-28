@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   if (authError) return authError;
 
   const locationSlug = req.nextUrl.searchParams.get("location") || undefined;
-  const orders = getOrders(locationSlug);
+  const orders = await getOrders(locationSlug);
 
   // Sort newest first
   orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -39,7 +39,7 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
 
-    const order = updateOrderStatus(orderId, status);
+    const order = await updateOrderStatus(orderId, status);
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
