@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/Button";
 import { useCartStore } from "@/store/cart";
 import { CartItemRow } from "./CartItem";
 import { formatPrice } from "@/lib/utils";
-import { ShoppingCart, Trash2 } from "lucide-react";
+import { ShoppingCart, Trash2, Package, Truck } from "lucide-react";
 import { useState } from "react";
+import { SlotPicker } from "./SlotPicker";
 
 interface CartDrawerProps {
   open: boolean;
@@ -20,6 +21,14 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
   const getTotal = useCartStore((s) => s.getTotal);
   const clearCart = useCartStore((s) => s.clearCart);
   const locationSlug = useCartStore((s) => s.locationSlug);
+  const fulfillmentType = useCartStore((s) => s.fulfillmentType);
+  const setFulfillmentType = useCartStore((s) => s.setFulfillmentType);
+  const selectedSlotId = useCartStore((s) => s.selectedSlotId);
+  const selectedSlotTime = useCartStore((s) => s.selectedSlotTime);
+  const selectedSlotDate = useCartStore((s) => s.selectedSlotDate);
+  const deliveryAddress = useCartStore((s) => s.deliveryAddress);
+  const setDeliveryAddress = useCartStore((s) => s.setDeliveryAddress);
+
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -27,7 +36,11 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
 
   const total = getTotal();
   const isPhoneValid = PHONE_PATTERN.test(customerPhone.trim());
-  const canCheckout = customerName.trim().length > 0 && isPhoneValid;
+  const canCheckout =
+    customerName.trim().length > 0 &&
+    isPhoneValid &&
+    selectedSlotId !== null &&
+    (fulfillmentType !== "delivery" || deliveryAddress.trim().length > 0);
 
   const handlePhoneChange = (value: string) => {
     setCustomerPhone(value);
@@ -56,6 +69,11 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
           locationSlug,
           customerName: customerName.trim(),
           customerPhone: customerPhone.trim(),
+          fulfillmentType,
+          slotId: selectedSlotId,
+          slotDate: selectedSlotDate,
+          slotTime: selectedSlotTime,
+          deliveryAddress: fulfillmentType === "delivery" ? deliveryAddress.trim() : undefined,
         }),
       });
 
@@ -63,12 +81,14 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
 
       if (data.url) {
         window.location.href = data.url;
-      } else {
+      } else if (data.orderId) {
         clearCart();
         setCustomerName("");
         setCustomerPhone("");
         onClose();
         window.location.href = `/order-confirmation?orderId=${data.orderId}&location=${locationSlug}`;
+      } else {
+        alert(data.error || "Something went wrong");
       }
     } catch (error) {
       console.error("Checkout failed:", error);
@@ -93,9 +113,61 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
             {items.map((item) => (
               <CartItemRow key={item.menuItem.id} item={item} />
             ))}
+
+            {/* Fulfillment type selector */}
+            <div className="mt-4 mb-3">
+              <p className="text-xs font-semibold text-italia-gray uppercase tracking-wide mb-2">
+                How would you like your order?
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setFulfillmentType("takeout")}
+                  className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
+                    fulfillmentType === "takeout"
+                      ? "border-italia-green bg-italia-green/5 text-italia-green"
+                      : "border-gray-200 text-italia-gray hover:border-gray-300"
+                  }`}
+                >
+                  <Package className="h-4 w-4" />
+                  Takeout
+                </button>
+                <button
+                  onClick={() => setFulfillmentType("delivery")}
+                  className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
+                    fulfillmentType === "delivery"
+                      ? "border-italia-red bg-italia-red/5 text-italia-red"
+                      : "border-gray-200 text-italia-gray hover:border-gray-300"
+                  }`}
+                >
+                  <Truck className="h-4 w-4" />
+                  Delivery
+                </button>
+              </div>
+            </div>
+
+            {/* Delivery address */}
+            {fulfillmentType === "delivery" && (
+              <div className="mb-3">
+                <input
+                  type="text"
+                  placeholder="Delivery address"
+                  value={deliveryAddress}
+                  onChange={(e) => setDeliveryAddress(e.target.value)}
+                  className="w-full px-4 py-3 min-h-[44px] border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-italia-red focus:border-transparent"
+                />
+              </div>
+            )}
+
+            {/* Time slot picker */}
+            {locationSlug && (
+              <SlotPicker
+                locationSlug={locationSlug}
+                fulfillmentType={fulfillmentType}
+              />
+            )}
           </div>
 
-          {/* Single-step checkout footer — name, phone, and pay all visible */}
+          {/* Checkout footer */}
           <div className="border-t border-gray-100 p-5 space-y-3 bg-gray-50">
             <div className="flex gap-3">
               <input
@@ -126,6 +198,13 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
               <span className="text-italia-red">{formatPrice(total)}</span>
             </div>
 
+            {selectedSlotTime && (
+              <p className="text-xs text-italia-gray text-center">
+                {fulfillmentType === "delivery" ? "Delivery" : "Pickup"} at{" "}
+                <span className="font-semibold text-italia-dark">{selectedSlotTime}</span>
+              </p>
+            )}
+
             <Button
               onClick={handleCheckout}
               disabled={isSubmitting || !canCheckout}
@@ -134,9 +213,13 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
             >
               {isSubmitting
                 ? "Processing..."
-                : canCheckout
-                  ? `Pay ${formatPrice(total)}`
-                  : "Enter name & phone to order"}
+                : !selectedSlotId
+                  ? "Select a time slot"
+                  : canCheckout
+                    ? `Pay ${formatPrice(total)}`
+                    : fulfillmentType === "delivery" && !deliveryAddress.trim()
+                      ? "Enter delivery address"
+                      : "Enter name & phone to order"}
             </Button>
 
             <button

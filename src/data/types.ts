@@ -34,6 +34,7 @@ export interface MenuItem {
   name: string;
   description: string;
   price: number; // in grosze (1/100 PLN), e.g. 2500 = 25.00 PLN
+  cost: number; // food cost in grosze — used for margin/PnL calculations
   category: MenuCategory;
   image?: string;
   tags: ("vegetarian" | "vegan" | "spicy" | "gluten-free")[];
@@ -46,13 +47,31 @@ export interface CartItem {
   locationSlug: string;
 }
 
+export type FulfillmentType = "takeout" | "delivery";
+
+export interface TimeSlot {
+  id: string;
+  locationSlug: string;
+  date: string; // YYYY-MM-DD
+  time: string; // HH:MM
+  maxOrders: number;
+  currentOrders: number;
+  fulfillmentTypes: FulfillmentType[]; // which types this slot supports
+}
+
 export interface Order {
   id: string;
   locationSlug: string;
   items: CartItem[];
   totalAmount: number;
-  status: "pending" | "confirmed" | "preparing" | "ready";
+  status: "pending" | "confirmed" | "preparing" | "ready" | "completed";
   customerName: string;
   customerPhone: string;
+  fulfillmentType: FulfillmentType;
+  deliveryAddress?: string;
+  slotId: string;
+  slotDate: string;
+  slotTime: string;
   createdAt: string;
+  paidAt?: string;
 }

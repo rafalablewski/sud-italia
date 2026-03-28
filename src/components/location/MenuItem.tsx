@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { formatPrice } from "@/lib/utils";
 import { useCartStore } from "@/store/cart";
-import { Plus, Check } from "lucide-react";
+import { Plus, Minus, ShoppingCart, Check } from "lucide-react";
 import { useState, useEffect } from "react";
 
 interface MenuItemProps {
@@ -22,21 +22,42 @@ const TAG_LABELS: Record<string, { label: string; variant: "green" | "red" | "go
 
 export function MenuItemCard({ item, locationSlug }: MenuItemProps) {
   const addItem = useCartStore((s) => s.addItem);
-  const [added, setAdded] = useState(false);
+  const removeItem = useCartStore((s) => s.removeItem);
+  const updateQuantity = useCartStore((s) => s.updateQuantity);
+  const cartItems = useCartStore((s) => s.items);
+  const [justAdded, setJustAdded] = useState(false);
+
+  const cartItem = cartItems.find((i) => i.menuItem.id === item.id);
+  const quantity = cartItem?.quantity ?? 0;
+  const inCart = quantity > 0;
 
   useEffect(() => {
-    if (!added) return;
-    const timer = setTimeout(() => setAdded(false), 1200);
+    if (!justAdded) return;
+    const timer = setTimeout(() => setJustAdded(false), 1500);
     return () => clearTimeout(timer);
-  }, [added]);
+  }, [justAdded]);
 
   const handleAdd = () => {
     addItem(item, locationSlug);
-    setAdded(true);
+    setJustAdded(true);
+  };
+
+  const handleDecrement = () => {
+    if (quantity <= 1) {
+      removeItem(item.id);
+    } else {
+      updateQuantity(item.id, quantity - 1);
+    }
   };
 
   return (
-    <div className="flex items-start justify-between gap-4 p-5 bg-white rounded-2xl border border-gray-100 hover:shadow-sm transition-shadow">
+    <div
+      className={`relative flex items-start justify-between gap-4 p-5 rounded-2xl border transition-all duration-300 ${
+        inCart
+          ? "bg-italia-green/[0.03] border-italia-green/30 border-l-4 border-l-italia-green"
+          : "bg-white border-gray-100 hover:shadow-sm"
+      }`}
+    >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <h3 className="font-heading font-semibold text-italia-dark">
@@ -54,28 +75,57 @@ export function MenuItemCard({ item, locationSlug }: MenuItemProps) {
         <p className="text-sm text-italia-gray mt-1.5 leading-relaxed">
           {item.description}
         </p>
-        <p className="text-lg font-bold text-italia-dark mt-3">
-          {formatPrice(item.price)}
-        </p>
+        <div className="flex items-center gap-3 mt-3">
+          <p className="text-lg font-bold text-italia-dark">
+            {formatPrice(item.price)}
+          </p>
+          {inCart && (
+            <span className="inline-flex items-center gap-1 text-xs font-semibold text-italia-green">
+              <ShoppingCart className="h-3 w-3" />
+              {quantity} in cart
+            </span>
+          )}
+        </div>
       </div>
 
-      <Button
-        onClick={handleAdd}
-        variant={added ? "secondary" : "primary"}
-        size="md"
-        className="flex-shrink-0 mt-1 min-h-[44px] min-w-[80px]"
-        disabled={!item.available}
-      >
-        {added ? (
-          <>
-            <Check className="h-5 w-5 mr-1.5" /> Added
-          </>
-        ) : (
-          <>
+      <div className="flex flex-col items-end gap-2 flex-shrink-0 mt-1">
+        {quantity === 0 ? (
+          <Button
+            onClick={handleAdd}
+            variant="primary"
+            size="md"
+            className="min-h-[44px] min-w-[80px]"
+            disabled={!item.available}
+          >
             <Plus className="h-5 w-5 mr-1.5" /> Add
-          </>
+          </Button>
+        ) : (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleDecrement}
+              className="w-9 h-9 flex items-center justify-center rounded-full border-2 border-italia-red text-italia-red hover:bg-italia-red hover:text-white transition-colors font-bold text-lg"
+            >
+              <Minus className="h-4 w-4" />
+            </button>
+            <span className="w-8 text-center font-bold text-italia-dark tabular-nums">
+              {quantity}
+            </span>
+            <button
+              onClick={handleAdd}
+              className="w-9 h-9 flex items-center justify-center rounded-full bg-italia-red text-white hover:bg-italia-red-dark transition-colors font-bold text-lg"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          </div>
         )}
-      </Button>
+
+        {/* Brief confirmation toast */}
+        {justAdded && (
+          <span className="inline-flex items-center gap-1 px-2 py-1 bg-italia-green text-white text-xs font-semibold rounded-lg animate-fade-in">
+            <Check className="h-3 w-3" /> Added!
+          </span>
+        )}
+      </div>
     </div>
   );
 }
