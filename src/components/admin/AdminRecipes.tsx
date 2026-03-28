@@ -372,12 +372,14 @@ function RecipeEditor({
       {/* Ingredient rows */}
       {recipeIngredients.length > 0 && (
         <div className="mb-4 space-y-2">
-          <div className="grid grid-cols-[1fr_120px_90px_90px_36px] gap-3 px-1 text-[10px] font-semibold admin-text-dim uppercase tracking-wider">
-            <span>Ingredient</span>
-            <span>Quantity</span>
-            <span>Waste %</span>
-            <span className="text-right">Line Cost</span>
-            <span />
+          {/* Header */}
+          <div className="flex items-center gap-2 px-1 text-[10px] font-semibold admin-text-dim uppercase tracking-wider">
+            <div className="flex-1">Ingredient</div>
+            <div className="w-28 text-right">Quantity</div>
+            <div className="w-8" />
+            <div className="w-20 text-right">Waste</div>
+            <div className="w-24 text-right">Line Cost</div>
+            <div className="w-9" />
           </div>
           {recipeIngredients.map((ri, idx) => {
             const ing = ingredientMap.get(ri.ingredientId);
@@ -387,14 +389,15 @@ function RecipeEditor({
             const displayUnit = ing?.unit === "kg" ? "g" : ing?.unit === "L" ? "ml" : (ing?.unit || "");
             const multiplier = ing?.unit === "kg" || ing?.unit === "L" ? 1000 : 1;
             const displayQty = ri.quantity ? Math.round(ri.quantity * multiplier * 1000) / 1000 : "";
-            const wasteDisplay = ri.wasteFactor > 1 ? Math.round((ri.wasteFactor - 1) * 100) : "";
+            const wastePct = Math.round((ri.wasteFactor - 1) * 100);
 
             return (
-              <div key={idx} className="grid grid-cols-[1fr_120px_90px_90px_36px] gap-3 items-center">
+              <div key={idx} className="flex items-center gap-2">
+                {/* Ingredient select */}
                 <select
                   value={ri.ingredientId}
                   onChange={(e) => updateIngredient(idx, "ingredientId", e.target.value)}
-                  className="glass-input rounded-lg"
+                  className="flex-1 glass-input rounded-lg"
                 >
                   {ingredients.map((i) => (
                     <option key={i.id} value={i.id}>
@@ -402,39 +405,44 @@ function RecipeEditor({
                     </option>
                   ))}
                 </select>
-                <div className="flex items-center gap-1.5">
+
+                {/* Quantity input */}
+                <input
+                  type="number"
+                  step="1"
+                  min={0}
+                  value={displayQty}
+                  placeholder="0"
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value) || 0;
+                    updateIngredient(idx, "quantity", val / multiplier);
+                  }}
+                  className="w-28 glass-input rounded-lg text-right"
+                />
+                <span className="text-xs admin-text-muted w-8">{displayUnit}</span>
+
+                {/* Waste % input */}
+                <div className="w-20 flex items-center gap-1">
                   <input
                     type="number"
                     step="1"
                     min={0}
-                    value={displayQty}
-                    placeholder="0"
-                    onChange={(e) => {
-                      const grams = parseFloat(e.target.value) || 0;
-                      updateIngredient(idx, "quantity", grams / multiplier);
-                    }}
-                    className="flex-1 glass-input rounded-lg text-right"
-                  />
-                  <span className="text-xs admin-text-muted w-6 text-left">{displayUnit}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <input
-                    type="number"
-                    step="1"
-                    min={0}
-                    value={wasteDisplay}
-                    placeholder="0"
+                    value={wastePct}
                     onChange={(e) => updateIngredient(idx, "wasteFactor", 1 + (parseFloat(e.target.value) || 0) / 100)}
-                    className="flex-1 glass-input rounded-lg text-right"
+                    className="w-14 glass-input rounded-lg text-right"
                   />
                   <span className="text-xs admin-text-muted">%</span>
                 </div>
-                <div className="text-right text-sm font-semibold admin-text">
+
+                {/* Line cost */}
+                <div className="w-24 text-right text-sm font-semibold admin-text">
                   {formatPrice(lineCost)}
                 </div>
+
+                {/* Delete */}
                 <button
                   onClick={() => removeIngredient(idx)}
-                  className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                  className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                 >
                   <X className="h-4 w-4" />
                 </button>
