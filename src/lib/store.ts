@@ -1,19 +1,38 @@
 import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
-import { kv } from "@vercel/kv";
+import { neon } from "@neondatabase/serverless";
 import { TimeSlot, Order } from "@/data/types";
 
+// --- Storage abstraction: Neon Postgres when DATABASE_URL is set, filesystem fallback for local dev ---
+
 const DATA_DIR = join(process.cwd(), ".data");
+const useDB = !!process.env.DATABASE_URL;
 
-const useKV = !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+function sql() {
+  return neon(process.env.DATABASE_URL!);
+}
 
-// Simple per-file lock to prevent concurrent read-modify-write races
+let dbInitialized = false;
+
+async function ensureDB() {
+  if (dbInitialized) return;
+  const db = sql();
+  await db`
+    CREATE TABLE IF NOT EXISTS kv_store (
+      key TEXT PRIMARY KEY,
+      value JSONB NOT NULL DEFAULT '[]'::jsonb
+    )
+  `;
+  dbInitialized = true;
+}
+
+// Simple per-file lock to prevent concurrent read-modify-write races (filesystem only)
 const locks = new Map<string, Promise<void>>();
 
-function withLock<T>(filename: string, fn: () => Promise<T>): Promise<T> {
-  const prev = locks.get(filename) ?? Promise.resolve();
-  const next = prev.then(fn, fn); // run fn after previous settles
-  locks.set(filename, next.then(() => {}, () => {})); // swallow so chain continues
+function withLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  const prev = locks.get(key) ?? Promise.resolve();
+  const next = prev.then(fn, fn);
+  locks.set(key, next.then(() => {}, () => {}));
   return next;
 }
 
@@ -25,32 +44,40 @@ async function ensureDataDir() {
   }
 }
 
-async function readJSON<T>(filename: string, fallback: T): Promise<T> {
-  if (useKV) {
+async function readJSON<T>(key: string, fallback: T): Promise<T> {
+  if (useDB) {
     try {
-      const data = await kv.get<T>(filename);
-      return data ?? fallback;
-    } catch {
+      await ensureDB();
+      const db = sql();
+      const rows = await db`SELECT value FROM kv_store WHERE key = ${key}`;
+      if (rows.length === 0) return fallback;
+      return rows[0].value as T;
+    } catch (err) {
+      console.error(`DB read error for ${key}:`, err);
       return fallback;
     }
   }
   await ensureDataDir();
-  const filepath = join(DATA_DIR, filename);
   try {
-    const data = await readFile(filepath, "utf-8");
+    const data = await readFile(join(DATA_DIR, key), "utf-8");
     return JSON.parse(data);
   } catch {
     return fallback;
   }
 }
 
-async function writeJSON<T>(filename: string, data: T): Promise<void> {
-  if (useKV) {
-    await kv.set(filename, data);
+async function writeJSON<T>(key: string, data: T): Promise<void> {
+  if (useDB) {
+    await ensureDB();
+    const db = sql();
+    await db`
+      INSERT INTO kv_store (key, value) VALUES (${key}, ${JSON.stringify(data)}::jsonb)
+      ON CONFLICT (key) DO UPDATE SET value = ${JSON.stringify(data)}::jsonb
+    `;
     return;
   }
   await ensureDataDir();
-  await writeFile(join(DATA_DIR, filename), JSON.stringify(data, null, 2));
+  await writeFile(join(DATA_DIR, key), JSON.stringify(data, null, 2));
 }
 
 // --- Time Slots ---
