@@ -83,8 +83,7 @@ export function Sheet({ open, onClose, children, title }: SheetProps) {
               </button>
             </div>
           )}
-          {/* Children manage their own scrolling */}
-          <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 overflow-y-auto overscroll-contain">
             {children}
           </div>
         </div>
@@ -121,8 +120,7 @@ export function Sheet({ open, onClose, children, title }: SheetProps) {
             </button>
           </div>
         )}
-        {/* Children manage their own scrolling */}
-        <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex-1 overflow-y-auto">
           {children}
         </div>
       </div>
