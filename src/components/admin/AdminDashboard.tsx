@@ -396,88 +396,90 @@ export function AdminDashboard() {
         </div>
 
         {/* Slot Utilization + Peak Hours */}
-        {insights && (insights.slotUtilization.length > 0 || insights.peakHours.length > 0) && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Slot Utilization */}
-            {insights.slotUtilization.length > 0 && (
-              <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-                <h2 className="font-bold text-italia-dark mb-1">Slot Utilization</h2>
-                <p className="text-xs text-italia-gray mb-4">How full each time slot gets on average</p>
-                <div className="space-y-2">
-                  {insights.slotUtilization.map((slot) => (
-                    <div key={slot.time} className="flex items-center gap-3">
-                      <span className="w-12 text-sm font-mono font-semibold text-italia-dark">
-                        {slot.time}
-                      </span>
-                      <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden relative">
-                        <div
-                          className={`h-full rounded-full transition-all ${
-                            slot.utilization >= 80
-                              ? "bg-italia-red"
-                              : slot.utilization >= 50
-                                ? "bg-italia-gold"
-                                : "bg-italia-green"
-                          }`}
-                          style={{ width: `${slot.utilization}%` }}
-                        />
-                        <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-italia-dark">
-                          {slot.totalUsed}/{slot.totalCapacity}
-                        </span>
-                      </div>
-                      <span className={`w-10 text-right text-xs font-bold ${
-                        slot.utilization >= 80
-                          ? "text-italia-red"
-                          : slot.utilization >= 50
-                            ? "text-italia-gold-dark"
-                            : "text-italia-green"
-                      }`}>
-                        {slot.utilization}%
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Slot Utilization */}
+          <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+            <h2 className="font-bold text-italia-dark mb-1">Slot Utilization</h2>
+            <p className="text-xs text-italia-gray mb-4">How full each time slot gets on average</p>
+            {insights && insights.slotUtilization.length > 0 ? (
+              <div className="space-y-2">
+                {insights.slotUtilization.map((slot) => (
+                  <div key={slot.time} className="flex items-center gap-3">
+                    <span className="w-12 text-sm font-mono font-semibold text-italia-dark">
+                      {slot.time}
+                    </span>
+                    <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden relative">
+                      <div
+                        className={`h-full rounded-full transition-all ${
+                          slot.utilization >= 80
+                            ? "bg-italia-red"
+                            : slot.utilization >= 50
+                              ? "bg-italia-gold"
+                              : "bg-italia-green"
+                        }`}
+                        style={{ width: `${slot.utilization}%` }}
+                      />
+                      <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-italia-dark">
+                        {slot.totalUsed}/{slot.totalCapacity}
                       </span>
                     </div>
-                  ))}
-                </div>
+                    <span className={`w-10 text-right text-xs font-bold ${
+                      slot.utilization >= 80
+                        ? "text-italia-red"
+                        : slot.utilization >= 50
+                          ? "text-italia-gold-dark"
+                          : "text-italia-green"
+                    }`}>
+                      {slot.utilization}%
+                    </span>
+                  </div>
+                ))}
               </div>
-            )}
-
-            {/* Peak Hours */}
-            {insights.peakHours.length > 0 && (
-              <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-                <h2 className="font-bold text-italia-dark mb-1">Peak Hours</h2>
-                <p className="text-xs text-italia-gray mb-4">Orders and revenue by hour of day</p>
-                <div className="space-y-2">
-                  {(() => {
-                    const maxOrders = Math.max(...insights.peakHours.map((h) => h.orderCount), 1);
-                    return insights.peakHours.map((h) => {
-                      const pct = (h.orderCount / maxOrders) * 100;
-                      return (
-                        <div key={h.hour} className="flex items-center gap-3">
-                          <span className="w-12 text-sm font-mono font-semibold text-italia-dark">
-                            {String(h.hour).padStart(2, "0")}:00
-                          </span>
-                          <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden relative">
-                            <div
-                              className="h-full rounded-full bg-blue-400"
-                              style={{ width: `${pct}%` }}
-                            />
-                            <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-italia-dark">
-                              {h.orderCount} orders
-                            </span>
-                          </div>
-                          <span className="w-20 text-right text-xs font-semibold text-italia-dark">
-                            {formatPrice(h.revenue)}
-                          </span>
-                        </div>
-                      );
-                    });
-                  })()}
-                </div>
-              </div>
+            ) : (
+              <p className="text-sm text-italia-gray py-4 text-center">No active slots in this period. Create and confirm slots to see utilization data.</p>
             )}
           </div>
-        )}
+
+          {/* Peak Hours */}
+          <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+            <h2 className="font-bold text-italia-dark mb-1">Peak Hours</h2>
+            <p className="text-xs text-italia-gray mb-4">Orders and revenue by hour of day</p>
+            {insights && insights.peakHours.length > 0 ? (
+              <div className="space-y-2">
+                {(() => {
+                  const maxOrders = Math.max(...insights.peakHours.map((h) => h.orderCount), 1);
+                  return insights.peakHours.map((h) => {
+                    const pct = (h.orderCount / maxOrders) * 100;
+                    return (
+                      <div key={h.hour} className="flex items-center gap-3">
+                        <span className="w-12 text-sm font-mono font-semibold text-italia-dark">
+                          {String(h.hour).padStart(2, "0")}:00
+                        </span>
+                        <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden relative">
+                          <div
+                            className="h-full rounded-full bg-blue-400"
+                            style={{ width: `${pct}%` }}
+                          />
+                          <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-italia-dark">
+                            {h.orderCount} orders
+                          </span>
+                        </div>
+                        <span className="w-20 text-right text-xs font-semibold text-italia-dark">
+                          {formatPrice(h.revenue)}
+                        </span>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            ) : (
+              <p className="text-sm text-italia-gray py-4 text-center">No orders yet. Peak hours will appear once customers start ordering.</p>
+            )}
+          </div>
+        </div>
 
         {/* Location Comparison */}
-        {insights && insights.locationComparison.length > 1 && (
+        {insights && insights.locationComparison.length > 0 && (
           <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
             <h2 className="font-bold text-italia-dark mb-4">Location Comparison</h2>
             <div className="overflow-x-auto">
@@ -556,71 +558,73 @@ export function AdminDashboard() {
         )}
 
         {/* Repeat Customers + Worst Sellers */}
-        {insights && (insights.repeatCustomers.length > 0 || insights.worstSellers.length > 0) && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Repeat Customers */}
-            {insights.repeatCustomers.length > 0 && (
-              <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-                <h2 className="font-bold text-italia-dark mb-1">Repeat Customers</h2>
-                <p className="text-xs text-italia-gray mb-4">Customers who ordered more than once</p>
-                <div className="space-y-3">
-                  {insights.repeatCustomers.slice(0, 8).map((c, i) => (
-                    <div key={c.phone} className="flex items-center gap-3">
-                      <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                        i < 3 ? "bg-italia-gold/20 text-italia-gold-dark" : "bg-gray-100 text-italia-gray"
-                      }`}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Repeat Customers */}
+          <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+            <h2 className="font-bold text-italia-dark mb-1">Repeat Customers</h2>
+            <p className="text-xs text-italia-gray mb-4">Customers who ordered more than once</p>
+            {insights && insights.repeatCustomers.length > 0 ? (
+              <div className="space-y-3">
+                {insights.repeatCustomers.slice(0, 8).map((c, i) => (
+                  <div key={c.phone} className="flex items-center gap-3">
+                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                      i < 3 ? "bg-italia-gold/20 text-italia-gold-dark" : "bg-gray-100 text-italia-gray"
+                    }`}>
+                      {i + 1}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-italia-dark truncate">{c.name}</p>
+                      <p className="text-xs text-italia-gray">{c.orderCount} orders</p>
+                    </div>
+                    <span className="text-sm font-semibold text-italia-dark">
+                      {formatPrice(c.totalSpent)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-italia-gray py-4 text-center">No repeat customers yet. This will populate as customers place multiple orders.</p>
+            )}
+          </div>
+
+          {/* Worst Sellers */}
+          <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+            <h2 className="font-bold text-italia-dark mb-1">Worst Sellers</h2>
+            <p className="text-xs text-italia-gray mb-4">Least popular items — consider removing or promoting</p>
+            {insights && insights.worstSellers.length > 0 ? (
+              <div className="space-y-3">
+                {insights.worstSellers.map((item, i) => {
+                  const maxQty = insights.worstSellers[insights.worstSellers.length - 1]?.quantity || 1;
+                  const barWidth = (item.quantity / maxQty) * 100;
+                  return (
+                    <div key={item.name} className="flex items-center gap-3">
+                      <span className="w-6 h-6 rounded-full bg-red-50 flex items-center justify-center text-xs font-bold text-italia-red">
                         {i + 1}
                       </span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-italia-dark truncate">{c.name}</p>
-                        <p className="text-xs text-italia-gray">{c.orderCount} orders</p>
-                      </div>
-                      <span className="text-sm font-semibold text-italia-dark">
-                        {formatPrice(c.totalSpent)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Worst Sellers */}
-            {insights.worstSellers.length > 0 && (
-              <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-                <h2 className="font-bold text-italia-dark mb-1">Worst Sellers</h2>
-                <p className="text-xs text-italia-gray mb-4">Least popular items — consider removing or promoting</p>
-                <div className="space-y-3">
-                  {insights.worstSellers.map((item, i) => {
-                    const maxQty = insights.worstSellers[insights.worstSellers.length - 1]?.quantity || 1;
-                    const barWidth = (item.quantity / maxQty) * 100;
-                    return (
-                      <div key={item.name} className="flex items-center gap-3">
-                        <span className="w-6 h-6 rounded-full bg-red-50 flex items-center justify-center text-xs font-bold text-italia-red">
-                          {i + 1}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm font-medium text-italia-dark truncate">{item.name}</span>
-                            <span className="text-sm font-semibold text-italia-dark ml-2">{formatPrice(item.revenue)}</span>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-medium text-italia-dark truncate">{item.name}</span>
+                          <span className="text-sm font-semibold text-italia-dark ml-2">{formatPrice(item.revenue)}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-italia-red/40 rounded-full"
+                              style={{ width: `${barWidth}%` }}
+                            />
                           </div>
-                          <div className="flex items-center gap-2">
-                            <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-italia-red/40 rounded-full"
-                                style={{ width: `${barWidth}%` }}
-                              />
-                            </div>
-                            <span className="text-xs text-italia-gray">{item.quantity} sold</span>
-                          </div>
+                          <span className="text-xs text-italia-gray">{item.quantity} sold</span>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
+                    </div>
+                  );
+                })}
               </div>
+            ) : (
+              <p className="text-sm text-italia-gray py-4 text-center">No sales data yet. Worst sellers will appear once orders come in.</p>
             )}
           </div>
-        )}
+        </div>
 
         {/* Live orders + Notifications */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

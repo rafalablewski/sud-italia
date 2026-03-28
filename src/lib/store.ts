@@ -2,6 +2,7 @@ import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { neon } from "@neondatabase/serverless";
 import { TimeSlot, Order } from "@/data/types";
+import { locations as allLocations } from "@/data/locations";
 
 // --- Storage abstraction: Neon Postgres when DATABASE_URL is set, filesystem fallback for local dev ---
 
@@ -482,8 +483,7 @@ export async function getInsights(dateFrom?: string, dateTo?: string): Promise<I
     .sort((a, b) => a.time.localeCompare(b.time));
 
   // --- Location comparison ---
-  const { locations } = await import("@/data/locations");
-  const activeLocations = locations.filter((l) => l.isActive);
+  const activeLocations = allLocations.filter((l) => l.isActive);
   const locationComparison: LocationComparison[] = [];
 
   for (const loc of activeLocations) {
