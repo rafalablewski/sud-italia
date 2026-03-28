@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { AdminNav } from "./AdminNav";
-import { Save, KeyRound, Truck, ShoppingBag, Phone, Mail } from "lucide-react";
+import { Save, KeyRound, Truck, ShoppingBag, Phone, Mail, Database } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface Settings {
@@ -274,7 +274,68 @@ export function AdminSettings() {
             Note: Changing the password requires the ADMIN_PASSWORD environment variable to be updated in your deployment settings for the change to persist across deploys.
           </p>
         </div>
+
+        {/* Seed Data */}
+        <SeedSection />
       </div>
     </>
+  );
+}
+
+function SeedSection() {
+  const [seeding, setSeeding] = useState(false);
+  const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  const handleSeed = async () => {
+    if (!confirm("This will seed sample ingredients and a Margherita recipe. Existing data with the same IDs will be overwritten. Continue?")) return;
+    setSeeding(true);
+    setResult(null);
+    try {
+      const res = await fetch("/api/admin/seed", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        setResult({
+          success: true,
+          message: `Seeded ${data.ingredientsSeeded} ingredients and Margherita recipe (food cost: ${data.recipe.totalFoodCost}, margin: ${data.recipe.margin})`,
+        });
+      } else {
+        setResult({ success: false, message: data.error || "Seed failed" });
+      }
+    } catch {
+      setResult({ success: false, message: "Network error" });
+    } finally {
+      setSeeding(false);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+      <h2 className="font-bold text-italia-dark mb-2 flex items-center gap-2">
+        <Database className="h-5 w-5 text-italia-gray" />
+        Seed Sample Data
+      </h2>
+      <p className="text-sm text-italia-gray mb-4">
+        Load sample ingredients (with avg Polish market prices) and a complete Margherita pizza recipe to get started.
+      </p>
+
+      {result && (
+        <div className={`mb-4 p-3 rounded-xl text-sm font-medium ${
+          result.success
+            ? "bg-green-50 border border-green-200 text-green-700"
+            : "bg-red-50 border border-red-200 text-italia-red"
+        }`}>
+          {result.message}
+        </div>
+      )}
+
+      <button
+        onClick={handleSeed}
+        disabled={seeding}
+        className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50"
+      >
+        <Database className="h-4 w-4" />
+        {seeding ? "Seeding..." : "Seed Ingredients & Margherita Recipe"}
+      </button>
+    </div>
   );
 }
