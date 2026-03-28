@@ -212,28 +212,45 @@ function RecipesTab() {
                   const recipe = recipeMap.get(item.id);
                   const hasRecipe = !!recipe && (recipe.ingredients?.length ?? 0) > 0;
                   const isExpanded = expandedItem === item.id;
-                  // Use live cost from editor if available, otherwise saved/default
                   const foodCost = liveCosts[item.id] ?? recipe?.calculatedCost ?? item.cost;
-                  const margin = item.price > 0 ? Math.round(((item.price - foodCost) / item.price) * 100) : 0;
+                  const netProfit = item.price - foodCost;
+                  const foodCostPct = item.price > 0 ? Math.round((foodCost / item.price) * 100) : 0;
+                  const marginPct = item.price > 0 ? Math.round((netProfit / item.price) * 100) : 0;
+                  const markupPct = foodCost > 0 ? Math.round((netProfit / foodCost) * 100) : 0;
 
                   return (
                     <div key={item.id} className={`rounded-xl shadow-sm overflow-hidden ${hasRecipe || isExpanded ? "glass-card" : "bg-yellow-500/10 border-2 border-dashed border-yellow-500/30"}`}>
                       <button
                         onClick={() => setExpandedItem(isExpanded ? null : item.id)}
-                        className="w-full flex items-center gap-3 p-4 text-left hover:bg-white/5 transition-colors"
+                        className="w-full flex flex-wrap items-center gap-3 p-4 text-left hover:bg-white/5 transition-colors"
                       >
                         <div className={`p-1.5 rounded-lg ${hasRecipe ? "bg-italia-green/10 text-italia-green" : "bg-yellow-500/20 text-yellow-400"}`}>
                           <FlaskConical className="h-4 w-4" />
                         </div>
-                        <span className="font-semibold admin-text flex-1">{item.name}</span>
-                        <div className="flex items-center gap-4 text-sm">
-                          <span className="admin-text-muted">{formatPrice(item.price)}</span>
-                          <span className={`font-semibold ${hasRecipe || liveCosts[item.id] !== undefined ? "admin-text" : "text-gray-400"}`}>
-                            Cost: {formatPrice(foodCost)}
-                          </span>
-                          <span className={`font-bold ${marginColorClass(margin)}`}>
-                            {margin}%
-                          </span>
+                        <span className="font-semibold admin-text flex-1 min-w-[120px]">{item.name}</span>
+                        <div className="flex items-center gap-3 text-xs">
+                          <div className="text-center px-2">
+                            <div className="admin-text-dim uppercase tracking-wider text-[9px] mb-0.5">Price</div>
+                            <div className="font-semibold admin-text">{formatPrice(item.price)}</div>
+                          </div>
+                          <div className="text-center px-2">
+                            <div className="admin-text-dim uppercase tracking-wider text-[9px] mb-0.5">Food Cost</div>
+                            <div className={`font-semibold ${hasRecipe || liveCosts[item.id] !== undefined ? "admin-red" : "text-gray-500"}`}>
+                              {formatPrice(foodCost)} <span className="admin-text-dim">({foodCostPct}%)</span>
+                            </div>
+                          </div>
+                          <div className="text-center px-2">
+                            <div className="admin-text-dim uppercase tracking-wider text-[9px] mb-0.5">Margin</div>
+                            <div className={`font-bold ${marginColorClass(marginPct)}`}>{marginPct}%</div>
+                          </div>
+                          <div className="text-center px-2">
+                            <div className="admin-text-dim uppercase tracking-wider text-[9px] mb-0.5">Markup</div>
+                            <div className="font-semibold admin-text">{markupPct}%</div>
+                          </div>
+                          <div className="text-center px-2">
+                            <div className="admin-text-dim uppercase tracking-wider text-[9px] mb-0.5">Net Profit</div>
+                            <div className={`font-bold ${netProfit >= 0 ? "text-emerald-400" : "admin-red"}`}>{formatPrice(netProfit)}</div>
+                          </div>
                         </div>
                         {hasRecipe ? (
                           <span className="text-xs text-italia-green font-medium">{recipe.ingredients.length} ing.</span>
@@ -247,6 +264,7 @@ function RecipesTab() {
                         <RecipeEditor
                           menuItemId={item.id}
                           menuItemName={item.name}
+                          sellingPrice={item.price}
                           existingRecipe={recipe}
                           ingredients={ingredients}
                           ingredientMap={ingredientMap}
@@ -273,6 +291,7 @@ function RecipesTab() {
 function RecipeEditor({
   menuItemId,
   menuItemName,
+  sellingPrice,
   existingRecipe,
   ingredients,
   ingredientMap,
@@ -281,6 +300,7 @@ function RecipeEditor({
 }: {
   menuItemId: string;
   menuItemName: string;
+  sellingPrice: number;
   existingRecipe?: RecipeData;
   ingredients: IngredientData[];
   ingredientMap: Map<string, IngredientData>;
@@ -426,31 +446,55 @@ function RecipeEditor({
         className="w-full glass-input rounded-lg mb-4"
       />
 
-      {/* Cost summary bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-white/5 rounded-xl border border-white/10">
-        <div className="flex items-center gap-6 text-sm">
-          <div>
-            <span className="text-xs admin-text-dim block mb-0.5">Recipe total</span>
-            <span className="font-bold admin-text text-base">{formatPrice(Math.round(totalCost))}</span>
+      {/* Financial summary */}
+      {(() => {
+        const netProfit = sellingPrice - costPerPortion;
+        const foodCostPct = sellingPrice > 0 ? Math.round((costPerPortion / sellingPrice) * 100) : 0;
+        const marginPct = sellingPrice > 0 ? Math.round((netProfit / sellingPrice) * 100) : 0;
+        const markupPct = costPerPortion > 0 ? Math.round((netProfit / costPerPortion) * 100) : 0;
+
+        return (
+          <div className="p-4 bg-white/5 rounded-xl border border-white/10 space-y-3">
+            <div className="flex flex-wrap items-end gap-x-6 gap-y-2">
+              <div>
+                <div className="text-[10px] admin-text-dim uppercase tracking-wider mb-0.5">Selling Price</div>
+                <div className="text-lg font-bold admin-text">{formatPrice(sellingPrice)}</div>
+              </div>
+              <div>
+                <div className="text-[10px] admin-text-dim uppercase tracking-wider mb-0.5">Food Cost ({foodCostPct}%)</div>
+                <div className="text-lg font-bold admin-red">{formatPrice(costPerPortion)}</div>
+              </div>
+              <div>
+                <div className="text-[10px] admin-text-dim uppercase tracking-wider mb-0.5">Net Profit</div>
+                <div className={`text-lg font-bold ${netProfit >= 0 ? "text-emerald-400" : "admin-red"}`}>{formatPrice(netProfit)}</div>
+              </div>
+              <div>
+                <div className="text-[10px] admin-text-dim uppercase tracking-wider mb-0.5">Margin</div>
+                <div className={`text-lg font-bold ${marginColorClass(marginPct)}`}>{marginPct}%</div>
+              </div>
+              <div>
+                <div className="text-[10px] admin-text-dim uppercase tracking-wider mb-0.5">Markup</div>
+                <div className="text-lg font-bold admin-text">{markupPct}%</div>
+              </div>
+              <div className="ml-auto">
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="glass-btn-green rounded-lg disabled:opacity-50"
+                >
+                  <Save className="h-4 w-4" />
+                  {saving ? "Saving..." : "Save Recipe"}
+                </button>
+              </div>
+            </div>
+            {yieldPortions > 1 && (
+              <div className="text-xs admin-text-dim">
+                Recipe total: {formatPrice(Math.round(totalCost))} for {yieldPortions} portions
+              </div>
+            )}
           </div>
-          <div>
-            <span className="text-xs admin-text-dim block mb-0.5">Per portion</span>
-            <span className="font-bold text-red-400 text-base">{formatPrice(costPerPortion)}</span>
-          </div>
-          <div>
-            <span className="text-xs admin-text-muted">Ingredients: </span>
-            <span className="font-semibold admin-text">{recipeIngredients.length}</span>
-          </div>
-        </div>
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="flex items-center gap-2 px-4 py-1.5 glass-btn-green text-white rounded-lg text-sm font-semibold disabled:opacity-50"
-        >
-          <Save className="h-4 w-4" />
-          {saving ? "Saving..." : "Save Recipe"}
-        </button>
-      </div>
+        );
+      })()}
     </div>
   );
 }
