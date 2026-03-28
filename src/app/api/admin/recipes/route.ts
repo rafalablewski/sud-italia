@@ -60,7 +60,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing menuItemId" }, { status: 400 });
     }
 
+    // Preserve existing ID on update, generate new one for create
+    const existing = await getRecipe(body.menuItemId);
     const recipe: Recipe = {
+      id: body.id || existing?.id || `rcp-${crypto.randomUUID().slice(0, 8)}`,
       menuItemId: body.menuItemId,
       ingredients: (body.ingredients || []).map((ri: Record<string, unknown>) => ({
         ingredientId: ri.ingredientId,

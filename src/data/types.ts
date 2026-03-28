@@ -89,6 +89,7 @@ export interface RecipeIngredient {
 }
 
 export interface Recipe {
+  id: string;             // e.g. "rcp-a1b2c3d4"
   menuItemId: string;
   ingredients: RecipeIngredient[];
   prepTimeMinutes?: number;
