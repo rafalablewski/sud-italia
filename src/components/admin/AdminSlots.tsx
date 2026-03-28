@@ -47,11 +47,11 @@ interface SlotData {
 const activeLocations = locations.filter((l) => l.isActive);
 
 const ORDER_STATUS_COLORS: Record<string, string> = {
-  pending: "bg-yellow-100 text-yellow-800",
-  confirmed: "bg-blue-100 text-blue-800",
-  preparing: "bg-orange-100 text-orange-800",
-  ready: "bg-green-100 text-green-800",
-  completed: "bg-gray-100 text-gray-600",
+  pending: "bg-yellow-500/20 text-yellow-300",
+  confirmed: "bg-blue-500/20 text-blue-300",
+  preparing: "bg-orange-500/20 text-orange-300",
+  ready: "bg-green-500/20 text-green-300",
+  completed: "bg-gray-500/20 text-gray-300",
 };
 
 function formatDateLabel(dateStr: string): string {
@@ -271,14 +271,14 @@ export function AdminSlots() {
       <div className="max-w-6xl mx-auto p-4 md:p-6">
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
-          <h1 className="text-2xl font-bold font-heading text-italia-dark">
+          <h1 className="text-2xl font-bold font-heading gradient-text">
             Time Slots
           </h1>
           <div className="flex items-center gap-2">
             {draftCount > 0 && (
               <button
                 onClick={handleApproveAll}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-500/80 text-white rounded-xl font-semibold text-sm hover:bg-blue-500 transition-colors"
               >
                 <CheckCheck className="h-4 w-4" />
                 Confirm All ({draftCount})
@@ -287,7 +287,7 @@ export function AdminSlots() {
             {selectedIds.size > 0 && (
               <button
                 onClick={handleBulkDelete}
-                className="flex items-center gap-2 px-4 py-2 bg-italia-red text-white rounded-xl font-semibold text-sm hover:bg-italia-red-dark transition-colors"
+                className="flex items-center gap-2 px-4 py-2 glass-btn text-white rounded-xl font-semibold text-sm"
               >
                 <Trash2 className="h-4 w-4" />
                 Delete Selected ({selectedIds.size})
@@ -295,7 +295,7 @@ export function AdminSlots() {
             )}
             <button
               onClick={() => setShowForm(!showForm)}
-              className="flex items-center gap-2 px-4 py-2 bg-italia-green text-white rounded-xl font-semibold text-sm hover:bg-italia-green-dark transition-colors"
+              className="flex items-center gap-2 px-4 py-2 glass-btn-green text-white rounded-xl font-semibold text-sm"
             >
               <Plus className="h-4 w-4" />
               Add Slot
@@ -306,11 +306,11 @@ export function AdminSlots() {
         {/* Filters: location + date nav */}
         <div className="flex flex-wrap items-center gap-4 mb-6">
           <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-italia-gray" />
+            <MapPin className="h-4 w-4 admin-text-muted" />
             <select
               value={selectedLocation}
               onChange={(e) => setSelectedLocation(e.target.value)}
-              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-italia-red"
+              className="px-3 py-2 glass-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-italia-red"
             >
               {activeLocations.map((loc) => (
                 <option key={loc.slug} value={loc.slug}>
@@ -323,28 +323,28 @@ export function AdminSlots() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => navigateDay(-1)}
-              className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              className="p-2 glass-input rounded-lg hover:bg-white/5 transition-colors"
               title="Previous day"
             >
-              <ChevronLeft className="h-4 w-4 text-italia-gray" />
+              <ChevronLeft className="h-4 w-4 admin-text-muted" />
             </button>
 
             <input
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-italia-red"
+              className="px-3 py-2 glass-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-italia-red"
             />
 
             <button
               onClick={() => navigateDay(1)}
-              className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              className="p-2 glass-input rounded-lg hover:bg-white/5 transition-colors"
               title="Next day"
             >
-              <ChevronRight className="h-4 w-4 text-italia-gray" />
+              <ChevronRight className="h-4 w-4 admin-text-muted" />
             </button>
 
-            <span className="text-sm font-medium text-italia-dark hidden sm:inline">
+            <span className="text-sm font-medium admin-text hidden sm:inline">
               {formatDateLabel(selectedDate)}
             </span>
 
@@ -365,7 +365,7 @@ export function AdminSlots() {
 
         {/* New slot form */}
         {showForm && (
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6">
+          <div className="glass-card rounded-2xl p-6 shadow-sm mb-6">
             <h2 className="font-bold text-lg mb-4">
               New Slot &mdash; {activeLocations.find((l) => l.slug === selectedLocation)?.city} &mdash; {formatDateLabel(selectedDate)}
             </h2>
@@ -376,7 +376,7 @@ export function AdminSlots() {
                   type="checkbox"
                   checked={bulkMode}
                   onChange={(e) => setBulkMode(e.target.checked)}
-                  className="accent-italia-red"
+                  className="accent-red-500"
                 />
                 Bulk create (time range)
               </label>
@@ -384,34 +384,34 @@ export function AdminSlots() {
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
               <div>
-                <label className="block text-xs text-italia-gray mb-1">
+                <label className="block text-xs admin-text-muted mb-1">
                   {bulkMode ? "Start time" : "Time"}
                 </label>
                 <input
                   type="time"
                   value={newTime}
                   onChange={(e) => setNewTime(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                  className="w-full px-3 py-2 glass-input rounded-lg text-sm"
                 />
               </div>
 
               {bulkMode && (
                 <>
                   <div>
-                    <label className="block text-xs text-italia-gray mb-1">End time</label>
+                    <label className="block text-xs admin-text-muted mb-1">End time</label>
                     <input
                       type="time"
                       value={bulkEndTime}
                       onChange={(e) => setBulkEndTime(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                      className="w-full px-3 py-2 glass-input rounded-lg text-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-italia-gray mb-1">Interval (min)</label>
+                    <label className="block text-xs admin-text-muted mb-1">Interval (min)</label>
                     <select
                       value={bulkInterval}
                       onChange={(e) => setBulkInterval(Number(e.target.value))}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                      className="w-full px-3 py-2 glass-input rounded-lg text-sm"
                     >
                       <option value={15}>15 min</option>
                       <option value={30}>30 min</option>
@@ -422,26 +422,26 @@ export function AdminSlots() {
               )}
 
               <div>
-                <label className="block text-xs text-italia-gray mb-1">Max orders per slot</label>
+                <label className="block text-xs admin-text-muted mb-1">Max orders per slot</label>
                 <input
                   type="number"
                   min={1}
                   value={newMaxOrders}
                   onChange={(e) => setNewMaxOrders(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                  className="w-full px-3 py-2 glass-input rounded-lg text-sm"
                 />
               </div>
             </div>
 
             {/* Bulk preview */}
             {bulkMode && bulkPreview.length > 0 && (
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
-                <p className="text-sm font-semibold text-blue-800">
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 mb-4">
+                <p className="text-sm font-semibold text-blue-300">
                   Will create {bulkPreview.length} slot{bulkPreview.length !== 1 ? "s" : ""}, each accepting up to {newMaxOrders} orders:
                 </p>
                 <div className="flex flex-wrap gap-2 mt-2">
                   {bulkPreview.map((t) => (
-                    <span key={t} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-mono rounded-lg">
+                    <span key={t} className="px-2 py-1 bg-blue-100 text-blue-300 text-xs font-mono rounded-lg">
                       {t}
                     </span>
                   ))}
@@ -455,7 +455,7 @@ export function AdminSlots() {
                   type="checkbox"
                   checked={newTakeout}
                   onChange={(e) => setNewTakeout(e.target.checked)}
-                  className="accent-italia-green"
+                  className="accent-emerald-500"
                 />
                 Takeout
               </label>
@@ -464,7 +464,7 @@ export function AdminSlots() {
                   type="checkbox"
                   checked={newDelivery}
                   onChange={(e) => setNewDelivery(e.target.checked)}
-                  className="accent-italia-red"
+                  className="accent-red-500"
                 />
                 Delivery
               </label>
@@ -474,13 +474,13 @@ export function AdminSlots() {
               <button
                 onClick={handleSubmit}
                 disabled={saving || (!newTakeout && !newDelivery)}
-                className="px-6 py-2 bg-italia-green text-white rounded-xl font-semibold text-sm hover:bg-italia-green-dark transition-colors disabled:opacity-50"
+                className="px-6 py-2 glass-btn-green text-white rounded-xl font-semibold text-sm disabled:opacity-50"
               >
                 {saving ? "Creating..." : bulkMode ? `Create ${bulkPreview.length} Slots` : "Create Slot"}
               </button>
               <button
                 onClick={() => setShowForm(false)}
-                className="px-6 py-2 border border-gray-200 rounded-xl text-sm hover:bg-gray-50 transition-colors"
+                className="px-6 py-2 glass-input rounded-xl text-sm hover:bg-white/5 transition-colors"
               >
                 Cancel
               </button>
@@ -490,12 +490,12 @@ export function AdminSlots() {
 
         {/* Slots list */}
         {loading ? (
-          <div className="text-center py-12 text-italia-gray">Loading...</div>
+          <div className="text-center py-12 admin-text-muted">Loading...</div>
         ) : slots.length === 0 ? (
-          <div className="bg-white rounded-2xl p-12 text-center shadow-sm border border-gray-100">
-            <Clock className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-            <p className="text-italia-gray font-medium">No slots for this date</p>
-            <p className="text-sm text-gray-400 mt-1">
+          <div className="glass-card rounded-2xl p-12 text-center shadow-sm">
+            <Clock className="h-12 w-12 mx-auto mb-4 text-slate-600" />
+            <p className="admin-text-muted font-medium">No slots for this date</p>
+            <p className="text-sm text-slate-500 mt-1">
               Click &quot;Add Slot&quot; to create available time slots
             </p>
           </div>
@@ -503,16 +503,16 @@ export function AdminSlots() {
           <>
             {/* Select all / summary bar */}
             <div className="flex items-center gap-3 mb-3 px-1">
-              <label className="flex items-center gap-2 text-sm text-italia-gray cursor-pointer">
+              <label className="flex items-center gap-2 text-sm admin-text-muted cursor-pointer">
                 <input
                   type="checkbox"
                   checked={selectedIds.size === slots.length && slots.length > 0}
                   onChange={toggleSelectAll}
-                  className="accent-italia-red h-4 w-4"
+                  className="accent-red-500 h-4 w-4"
                 />
                 Select all
               </label>
-              <span className="text-xs text-italia-gray">
+              <span className="text-xs admin-text-muted">
                 {slots.length} slot{slots.length !== 1 ? "s" : ""}
                 {draftCount > 0 && ` \u00B7 ${draftCount} draft`}
               </span>
@@ -530,8 +530,8 @@ export function AdminSlots() {
                     key={slot.id}
                     className={`rounded-xl shadow-sm overflow-hidden ${
                       isDraft
-                        ? "bg-yellow-50 border-2 border-dashed border-yellow-300"
-                        : "bg-white border border-gray-100"
+                        ? "bg-yellow-500/10 border-2 border-dashed border-yellow-500/30"
+                        : "glass-card border border-white/10"
                     }`}
                   >
                     {/* Main row */}
@@ -540,19 +540,19 @@ export function AdminSlots() {
                         type="checkbox"
                         checked={selectedIds.has(slot.id)}
                         onChange={() => toggleSelect(slot.id)}
-                        className="accent-italia-red h-4 w-4 flex-shrink-0"
+                        className="accent-red-500 h-4 w-4 flex-shrink-0"
                       />
 
-                      <div className="text-xl font-bold font-heading text-italia-dark w-16 flex-shrink-0">
+                      <div className="text-xl font-bold font-heading admin-text w-16 flex-shrink-0">
                         {formatSlotTime(slot.time)}
                       </div>
 
                       {isDraft ? (
-                        <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-semibold rounded-lg flex-shrink-0">
+                        <span className="px-2 py-1 bg-yellow-500/20 text-yellow-300 text-xs font-semibold rounded-lg flex-shrink-0">
                           Draft
                         </span>
                       ) : (
-                        <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-lg flex-shrink-0">
+                        <span className="px-2 py-1 bg-green-500/20 text-green-300 text-xs font-semibold rounded-lg flex-shrink-0">
                           Active
                         </span>
                       )}
@@ -570,15 +570,15 @@ export function AdminSlots() {
                         )}
                       </div>
 
-                      <div className="text-sm text-italia-gray flex-shrink-0">
-                        <span className="font-semibold text-italia-dark">{slot.currentOrders}</span>
+                      <div className="text-sm admin-text-muted flex-shrink-0">
+                        <span className="font-semibold admin-text">{slot.currentOrders}</span>
                         {" / "}
                         <input
                           type="number"
                           min={slot.currentOrders}
                           defaultValue={slot.maxOrders}
                           onBlur={(e) => handleUpdateMax(slot.id, Number(e.target.value))}
-                          className="w-14 px-1 py-0.5 border border-gray-200 rounded text-center text-sm"
+                          className="w-14 px-1 py-0.5 glass-input rounded text-center text-sm"
                         />
                         {" orders"}
                       </div>
@@ -597,7 +597,7 @@ export function AdminSlots() {
                         {orderCount > 0 && (
                           <button
                             onClick={() => setExpandedId(isExpanded ? null : slot.id)}
-                            className="flex items-center gap-1 px-2 py-1 text-xs text-italia-gray hover:text-italia-dark hover:bg-gray-100 rounded-lg transition-colors"
+                            className="flex items-center gap-1 px-2 py-1 text-xs admin-text-muted hover:text-white hover:bg-white/5 rounded-lg transition-colors"
                           >
                             <User className="h-3.5 w-3.5" />
                             {orderCount} reservation{orderCount !== 1 ? "s" : ""}
@@ -608,7 +608,7 @@ export function AdminSlots() {
                         {isDraft && (
                           <button
                             onClick={() => handleApprove(slot.id)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/80 text-white rounded-lg text-sm font-medium hover:bg-blue-500 transition-colors"
                             title="Approve & confirm slot"
                           >
                             <Check className="h-4 w-4" />
@@ -618,7 +618,7 @@ export function AdminSlots() {
 
                         <button
                           onClick={() => handleDelete(slot.id)}
-                          className="p-2 text-gray-400 hover:text-italia-red transition-colors"
+                          className="p-2 text-slate-500 hover:text-italia-red transition-colors"
                           title="Delete slot"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -628,24 +628,24 @@ export function AdminSlots() {
 
                     {/* Reservation details (expandable) */}
                     {isExpanded && slot.orders && slot.orders.length > 0 && (
-                      <div className="border-t border-gray-100 bg-gray-50/50 px-4 py-3">
+                      <div className="border-t border-white/8 bg-white/4 px-4 py-3">
                         <div className="grid gap-2">
                           {slot.orders.map((order) => (
                             <div
                               key={order.id}
-                              className="flex flex-wrap items-center gap-x-4 gap-y-1 bg-white rounded-lg p-3 border border-gray-100 text-sm"
+                              className="flex flex-wrap items-center gap-x-4 gap-y-1 glass-card rounded-lg p-3 border border-white/10 text-sm"
                             >
                               <div className="flex items-center gap-2 min-w-0">
-                                <User className="h-4 w-4 text-italia-gray flex-shrink-0" />
-                                <span className="font-medium text-italia-dark truncate">
+                                <User className="h-4 w-4 admin-text-muted flex-shrink-0" />
+                                <span className="font-medium admin-text truncate">
                                   {order.customerName}
                                 </span>
-                                <span className="text-xs text-italia-gray">
+                                <span className="text-xs admin-text-muted">
                                   {order.customerPhone}
                                 </span>
                               </div>
 
-                              <div className="flex items-center gap-1 text-xs text-italia-gray">
+                              <div className="flex items-center gap-1 text-xs admin-text-muted">
                                 {order.fulfillmentType === "delivery" ? (
                                   <Truck className="h-3.5 w-3.5" />
                                 ) : (
@@ -654,19 +654,19 @@ export function AdminSlots() {
                                 {order.fulfillmentType}
                               </div>
 
-                              <span className="text-xs text-italia-gray">
+                              <span className="text-xs admin-text-muted">
                                 {order.itemCount} item{order.itemCount !== 1 ? "s" : ""}
                               </span>
 
-                              <span className="font-semibold text-italia-dark text-sm">
+                              <span className="font-semibold admin-text text-sm">
                                 {formatPrice(order.totalAmount)}
                               </span>
 
-                              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${ORDER_STATUS_COLORS[order.status] || "bg-gray-100 text-gray-600"}`}>
+                              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${ORDER_STATUS_COLORS[order.status] || "bg-gray-500/20 text-gray-300"}`}>
                                 {order.status}
                               </span>
 
-                              <span className="text-[10px] text-gray-400 ml-auto">
+                              <span className="text-[10px] text-slate-500 ml-auto">
                                 {new Date(order.createdAt).toLocaleString("en-US", {
                                   month: "short",
                                   day: "numeric",

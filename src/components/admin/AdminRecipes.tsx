@@ -66,11 +66,11 @@ export function AdminRecipes() {
     <>
       <AdminNav />
       <div className="max-w-6xl mx-auto p-4 md:p-6">
-        <div className="flex items-center gap-1 mb-6 bg-gray-100 rounded-xl p-1 w-fit">
+        <div className="flex items-center gap-1 mb-6 bg-white/5 rounded-xl p-1 w-fit border border-white/10">
           <button
             onClick={() => setTab("recipes")}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              tab === "recipes" ? "bg-white text-italia-dark shadow-sm" : "text-italia-gray hover:text-italia-dark"
+              tab === "recipes" ? "bg-white/10 admin-text shadow-sm" : "admin-text-muted hover:admin-text"
             }`}
           >
             <FlaskConical className="h-4 w-4" />
@@ -79,7 +79,7 @@ export function AdminRecipes() {
           <button
             onClick={() => setTab("ingredients")}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              tab === "ingredients" ? "bg-white text-italia-dark shadow-sm" : "text-italia-gray hover:text-italia-dark"
+              tab === "ingredients" ? "bg-white/10 admin-text shadow-sm" : "admin-text-muted hover:admin-text"
             }`}
           >
             <Package className="h-4 w-4" />
@@ -156,8 +156,8 @@ function RecipesTab() {
     <>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div>
-          <h1 className="text-2xl font-bold font-heading text-italia-dark">Recipe Builder</h1>
-          <p className="text-sm text-italia-gray mt-0.5">
+          <h1 className="text-2xl font-bold font-heading gradient-text">Recipe Builder</h1>
+          <p className="text-sm admin-text-muted mt-0.5">
             {withRecipeCount} of {menuItems.length} items have recipes
             {withoutRecipeCount > 0 && (
               <span className="text-italia-red ml-1">({withoutRecipeCount} missing)</span>
@@ -169,39 +169,39 @@ function RecipesTab() {
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 mb-6">
         <div className="flex items-center gap-2">
-          <MapPin className="h-4 w-4 text-italia-gray" />
-          <select value={selectedLocation} onChange={(e) => setSelectedLocation(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-lg text-sm">
+          <MapPin className="h-4 w-4 admin-text-muted" />
+          <select value={selectedLocation} onChange={(e) => setSelectedLocation(e.target.value)} className="px-3 py-2 glass-input rounded-lg text-sm">
             {activeLocations.map((loc) => (
               <option key={loc.slug} value={loc.slug}>{loc.city}</option>
             ))}
           </select>
         </div>
-        <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-lg text-sm">
+        <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="px-3 py-2 glass-input rounded-lg text-sm">
           <option value="">All categories</option>
           {categories.map((cat) => (
             <option key={cat} value={cat}>{MENU_CATEGORY_LABELS[cat]}</option>
           ))}
         </select>
-        <select value={filterHasRecipe} onChange={(e) => setFilterHasRecipe(e.target.value as "" | "yes" | "no")} className="px-3 py-2 border border-gray-200 rounded-lg text-sm">
+        <select value={filterHasRecipe} onChange={(e) => setFilterHasRecipe(e.target.value as "" | "yes" | "no")} className="px-3 py-2 glass-input rounded-lg text-sm">
           <option value="">All items</option>
           <option value="yes">With recipe</option>
           <option value="no">Missing recipe</option>
         </select>
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-italia-gray" />
-          <input type="text" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 admin-text-muted" />
+          <input type="text" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-9 pr-3 py-2 glass-input rounded-lg text-sm" />
         </div>
       </div>
 
       {loading ? (
-        <div className="text-center py-12 text-italia-gray">Loading...</div>
+        <div className="text-center py-12 admin-text-muted">Loading...</div>
       ) : (
         <div className="space-y-8">
           {grouped.map((group) => (
             <div key={group.category}>
-              <h2 className="text-lg font-bold font-heading text-italia-dark mb-3">
+              <h2 className="text-lg font-bold font-heading admin-text mb-3">
                 {group.label}
-                <span className="text-xs font-normal text-italia-gray ml-2">({group.items.length})</span>
+                <span className="text-xs font-normal admin-text-muted ml-2">({group.items.length})</span>
               </h2>
               <div className="space-y-2">
                 {group.items.map((item) => {
@@ -212,18 +212,18 @@ function RecipesTab() {
                   const margin = item.price > 0 ? Math.round(((item.price - foodCost) / item.price) * 100) : 0;
 
                   return (
-                    <div key={item.id} className={`rounded-xl shadow-sm overflow-hidden ${hasRecipe ? "bg-white border border-gray-100" : "bg-yellow-50 border-2 border-dashed border-yellow-300"}`}>
+                    <div key={item.id} className={`rounded-xl shadow-sm overflow-hidden ${hasRecipe ? "glass-card" : "bg-yellow-500/10 border-2 border-dashed border-yellow-500/30"}`}>
                       <button
                         onClick={() => setExpandedItem(isExpanded ? null : item.id)}
-                        className="w-full flex items-center gap-3 p-4 text-left hover:bg-gray-50/50 transition-colors"
+                        className="w-full flex items-center gap-3 p-4 text-left hover:bg-white/5 transition-colors"
                       >
-                        <div className={`p-1.5 rounded-lg ${hasRecipe ? "bg-italia-green/10 text-italia-green" : "bg-yellow-100 text-yellow-600"}`}>
+                        <div className={`p-1.5 rounded-lg ${hasRecipe ? "bg-italia-green/10 text-italia-green" : "bg-yellow-500/20 text-yellow-400"}`}>
                           <FlaskConical className="h-4 w-4" />
                         </div>
-                        <span className="font-semibold text-italia-dark flex-1">{item.name}</span>
+                        <span className="font-semibold admin-text flex-1">{item.name}</span>
                         <div className="flex items-center gap-4 text-sm">
-                          <span className="text-italia-gray">{formatPrice(item.price)}</span>
-                          <span className={`font-semibold ${hasRecipe ? "text-italia-dark" : "text-gray-400"}`}>
+                          <span className="admin-text-muted">{formatPrice(item.price)}</span>
+                          <span className={`font-semibold ${hasRecipe ? "admin-text" : "text-gray-400"}`}>
                             Cost: {formatPrice(foodCost)}
                           </span>
                           <span className={`font-bold ${margin >= 65 ? "text-italia-green" : margin >= 50 ? "text-italia-gold-dark" : "text-italia-red"}`}>
@@ -233,9 +233,9 @@ function RecipesTab() {
                         {hasRecipe ? (
                           <span className="text-xs text-italia-green font-medium">{recipe.ingredients.length} ing.</span>
                         ) : (
-                          <span className="text-xs text-yellow-600 font-medium">No recipe</span>
+                          <span className="text-xs text-yellow-400 font-medium">No recipe</span>
                         )}
-                        {isExpanded ? <ChevronUp className="h-4 w-4 text-italia-gray" /> : <ChevronDown className="h-4 w-4 text-italia-gray" />}
+                        {isExpanded ? <ChevronUp className="h-4 w-4 admin-text-muted" /> : <ChevronDown className="h-4 w-4 admin-text-muted" />}
                       </button>
 
                       {isExpanded && (
@@ -337,26 +337,26 @@ function RecipeEditor({
   };
 
   return (
-    <div className="border-t border-gray-100 bg-gray-50/80 p-4">
+    <div className="border-t border-white/10 bg-white/5 p-4">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="font-semibold text-sm text-italia-dark">Recipe: {menuItemName}</h3>
+        <h3 className="font-semibold text-sm admin-text">Recipe: {menuItemName}</h3>
         <div className="flex items-center gap-3 text-sm">
           <div>
-            <span className="text-xs text-italia-gray">Yield: </span>
-            <input type="number" min={1} value={yieldPortions} onChange={(e) => setYieldPortions(Number(e.target.value) || 1)} className="w-14 px-1 py-0.5 border border-gray-200 rounded text-center text-sm" />
-            <span className="text-xs text-italia-gray"> portions</span>
+            <span className="text-xs admin-text-muted">Yield: </span>
+            <input type="number" min={1} value={yieldPortions} onChange={(e) => setYieldPortions(Number(e.target.value) || 1)} className="w-14 px-1 py-0.5 glass-input rounded text-center text-sm" />
+            <span className="text-xs admin-text-muted"> portions</span>
           </div>
           <div>
-            <span className="text-xs text-italia-gray">Prep: </span>
-            <input type="number" min={0} value={prepTime} onChange={(e) => setPrepTime(Number(e.target.value) || 0)} className="w-14 px-1 py-0.5 border border-gray-200 rounded text-center text-sm" />
-            <span className="text-xs text-italia-gray"> min</span>
+            <span className="text-xs admin-text-muted">Prep: </span>
+            <input type="number" min={0} value={prepTime} onChange={(e) => setPrepTime(Number(e.target.value) || 0)} className="w-14 px-1 py-0.5 glass-input rounded text-center text-sm" />
+            <span className="text-xs admin-text-muted"> min</span>
           </div>
         </div>
       </div>
 
       {recipeIngredients.length > 0 && (
         <div className="mb-3">
-          <div className="grid grid-cols-[1fr_80px_80px_80px_32px] gap-2 mb-1 text-[10px] font-semibold text-italia-gray uppercase px-1">
+          <div className="grid grid-cols-[1fr_80px_80px_80px_32px] gap-2 mb-1 text-[10px] font-semibold admin-text-muted uppercase px-1">
             <span>Ingredient</span>
             <span>Qty</span>
             <span>Waste %</span>
@@ -371,7 +371,7 @@ function RecipeEditor({
                 <select
                   value={ri.ingredientId}
                   onChange={(e) => updateIngredient(idx, "ingredientId", e.target.value)}
-                  className="px-2 py-1.5 border border-gray-200 rounded-lg text-sm"
+                  className="px-2 py-1.5 glass-input rounded-lg text-sm"
                 >
                   {ingredients.map((ing) => (
                     <option key={ing.id} value={ing.id}>{ing.name} ({formatPrice(ing.costPerUnit)}/{ing.unit})</option>
@@ -382,20 +382,20 @@ function RecipeEditor({
                     type="number" step="0.001" min={0}
                     value={ri.quantity || ""}
                     onChange={(e) => updateIngredient(idx, "quantity", parseFloat(e.target.value) || 0)}
-                    className="w-full px-1 py-1.5 border border-gray-200 rounded text-sm text-right" placeholder="0"
+                    className="w-full px-1 py-1.5 glass-input rounded text-sm text-right" placeholder="0"
                   />
-                  <span className="text-[10px] text-italia-gray">{ing?.unit}</span>
+                  <span className="text-[10px] admin-text-muted">{ing?.unit}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <input
                     type="number" step="1" min={0}
                     value={Math.round((ri.wasteFactor - 1) * 100)}
                     onChange={(e) => updateIngredient(idx, "wasteFactor", 1 + (parseFloat(e.target.value) || 0) / 100)}
-                    className="w-full px-1 py-1.5 border border-gray-200 rounded text-sm text-right"
+                    className="w-full px-1 py-1.5 glass-input rounded text-sm text-right"
                   />
-                  <span className="text-[10px] text-italia-gray">%</span>
+                  <span className="text-[10px] admin-text-muted">%</span>
                 </div>
-                <div className="text-right text-sm font-medium text-italia-dark">{formatPrice(lineCost)}</div>
+                <div className="text-right text-sm font-medium admin-text">{formatPrice(lineCost)}</div>
                 <button onClick={() => removeIngredient(idx)} className="p-1 text-gray-400 hover:text-italia-red transition-colors">
                   <X className="h-4 w-4" />
                 </button>
@@ -408,33 +408,33 @@ function RecipeEditor({
       <button
         onClick={addIngredient}
         disabled={ingredients.length === 0}
-        className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-italia-gray border border-dashed border-gray-300 rounded-lg hover:bg-white hover:text-italia-dark transition-colors mb-3 disabled:opacity-50"
+        className="flex items-center gap-1.5 px-3 py-1.5 text-xs admin-text-muted border border-dashed border-white/20 rounded-lg hover:bg-white/5 hover:text-white transition-colors mb-3 disabled:opacity-50"
       >
         <Plus className="h-3.5 w-3.5" />
         {ingredients.length === 0 ? "Add ingredients in the Ingredients Database tab first" : "Add Ingredient"}
       </button>
 
-      <input type="text" placeholder="Recipe notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm mb-3" />
+      <input type="text" placeholder="Recipe notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} className="w-full px-3 py-1.5 glass-input rounded-lg text-sm mb-3" />
 
-      <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-white rounded-xl border border-gray-100">
+      <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-white/5 rounded-xl border border-white/10">
         <div className="flex items-center gap-6 text-sm">
           <div>
-            <span className="text-xs text-italia-gray">Total recipe cost: </span>
-            <span className="font-bold text-italia-dark">{formatPrice(Math.round(totalCost))}</span>
+            <span className="text-xs admin-text-muted">Total recipe cost: </span>
+            <span className="font-bold admin-text">{formatPrice(Math.round(totalCost))}</span>
           </div>
           <div>
-            <span className="text-xs text-italia-gray">Per portion: </span>
+            <span className="text-xs admin-text-muted">Per portion: </span>
             <span className="font-bold text-italia-red">{formatPrice(costPerPortion)}</span>
           </div>
           <div>
-            <span className="text-xs text-italia-gray">Ingredients: </span>
-            <span className="font-semibold text-italia-dark">{recipeIngredients.length}</span>
+            <span className="text-xs admin-text-muted">Ingredients: </span>
+            <span className="font-semibold admin-text">{recipeIngredients.length}</span>
           </div>
         </div>
         <button
           onClick={handleSave}
           disabled={saving}
-          className="flex items-center gap-2 px-4 py-1.5 bg-italia-green text-white rounded-lg text-sm font-semibold hover:bg-italia-green-dark transition-colors disabled:opacity-50"
+          className="flex items-center gap-2 px-4 py-1.5 glass-btn-green text-white rounded-lg text-sm font-semibold disabled:opacity-50"
         >
           <Save className="h-4 w-4" />
           {saving ? "Saving..." : "Save Recipe"}
@@ -527,96 +527,96 @@ function IngredientsTab() {
     <>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div>
-          <h1 className="text-2xl font-bold font-heading text-italia-dark">Ingredients Database</h1>
-          <p className="text-sm text-italia-gray mt-0.5">{ingredients.length} ingredients</p>
+          <h1 className="text-2xl font-bold font-heading gradient-text">Ingredients Database</h1>
+          <p className="text-sm admin-text-muted mt-0.5">{ingredients.length} ingredients</p>
         </div>
-        <button onClick={() => { resetForm(); setShowForm(true); }} className="flex items-center gap-2 px-4 py-2 bg-italia-green text-white rounded-xl font-semibold text-sm hover:bg-italia-green-dark transition-colors">
+        <button onClick={() => { resetForm(); setShowForm(true); }} className="flex items-center gap-2 px-4 py-2 glass-btn-green text-white rounded-xl font-semibold text-sm">
           <Plus className="h-4 w-4" />
           Add Ingredient
         </button>
       </div>
 
       {showForm && (
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-6">
-          <h2 className="font-bold text-lg mb-4">{editingId ? "Edit Ingredient" : "New Ingredient"}</h2>
+        <div className="glass-card rounded-2xl p-5 mb-6">
+          <h2 className="font-bold text-lg mb-4 admin-text">{editingId ? "Edit Ingredient" : "New Ingredient"}</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
             <div className="col-span-2 md:col-span-1">
-              <label className="block text-xs text-italia-gray mb-1">Name *</label>
-              <input type="text" value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="e.g. Fior di Latte Mozzarella" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" autoFocus />
+              <label className="block text-xs admin-text-muted mb-1">Name *</label>
+              <input type="text" value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="e.g. Fior di Latte Mozzarella" className="w-full px-3 py-2 glass-input rounded-lg text-sm" autoFocus />
             </div>
             <div>
-              <label className="block text-xs text-italia-gray mb-1">Category</label>
-              <select value={formCategory} onChange={(e) => setFormCategory(e.target.value as IngredientCategory)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+              <label className="block text-xs admin-text-muted mb-1">Category</label>
+              <select value={formCategory} onChange={(e) => setFormCategory(e.target.value as IngredientCategory)} className="w-full px-3 py-2 glass-input rounded-lg text-sm">
                 {Object.entries(INGREDIENT_CATEGORY_LABELS).map(([val, label]) => (
                   <option key={val} value={val}>{label}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-xs text-italia-gray mb-1">Unit</label>
-              <select value={formUnit} onChange={(e) => setFormUnit(e.target.value as IngredientUnit)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+              <label className="block text-xs admin-text-muted mb-1">Unit</label>
+              <select value={formUnit} onChange={(e) => setFormUnit(e.target.value as IngredientUnit)} className="w-full px-3 py-2 glass-input rounded-lg text-sm">
                 {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-xs text-italia-gray mb-1">Cost per {formUnit} (PLN)</label>
-              <input type="number" step="0.01" value={formCost} onChange={(e) => setFormCost(e.target.value)} placeholder="0.00" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+              <label className="block text-xs admin-text-muted mb-1">Cost per {formUnit} (PLN)</label>
+              <input type="number" step="0.01" value={formCost} onChange={(e) => setFormCost(e.target.value)} placeholder="0.00" className="w-full px-3 py-2 glass-input rounded-lg text-sm" />
             </div>
             <div>
-              <label className="block text-xs text-italia-gray mb-1">Supplier</label>
-              <input type="text" value={formSupplier} onChange={(e) => setFormSupplier(e.target.value)} placeholder="Optional" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+              <label className="block text-xs admin-text-muted mb-1">Supplier</label>
+              <input type="text" value={formSupplier} onChange={(e) => setFormSupplier(e.target.value)} placeholder="Optional" className="w-full px-3 py-2 glass-input rounded-lg text-sm" />
             </div>
           </div>
           <div className="flex gap-3">
-            <button onClick={handleSave} disabled={saving || !formName.trim()} className="px-5 py-2 bg-italia-green text-white rounded-xl font-semibold text-sm disabled:opacity-50">{saving ? "Saving..." : editingId ? "Update" : "Add"}</button>
-            <button onClick={resetForm} className="px-5 py-2 border border-gray-200 rounded-xl text-sm hover:bg-gray-50">Cancel</button>
+            <button onClick={handleSave} disabled={saving || !formName.trim()} className="px-5 py-2 glass-btn-green text-white rounded-xl font-semibold text-sm disabled:opacity-50">{saving ? "Saving..." : editingId ? "Update" : "Add"}</button>
+            <button onClick={resetForm} className="px-5 py-2 border border-white/10 rounded-xl text-sm admin-text-muted hover:bg-white/5">Cancel</button>
           </div>
         </div>
       )}
 
       <div className="flex flex-wrap items-center gap-3 mb-4">
-        <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-lg text-sm">
+        <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="px-3 py-2 glass-input rounded-lg text-sm">
           <option value="">All categories</option>
           {usedCategories.map((cat) => (
             <option key={cat} value={cat}>{INGREDIENT_CATEGORY_LABELS[cat as IngredientCategory]}</option>
           ))}
         </select>
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-italia-gray" />
-          <input type="text" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 admin-text-muted" />
+          <input type="text" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-9 pr-3 py-2 glass-input rounded-lg text-sm" />
         </div>
       </div>
 
       {loading ? (
-        <div className="text-center py-12 text-italia-gray">Loading...</div>
+        <div className="text-center py-12 admin-text-muted">Loading...</div>
       ) : filtered.length === 0 ? (
-        <div className="bg-white rounded-2xl p-12 text-center shadow-sm border border-gray-100">
-          <Package className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-          <p className="text-italia-gray font-medium">No ingredients yet</p>
-          <p className="text-sm text-gray-400 mt-1">Add your ingredients to start building recipes</p>
+        <div className="glass-card rounded-2xl p-12 text-center">
+          <Package className="h-12 w-12 mx-auto mb-4 admin-text-dim" />
+          <p className="admin-text-muted font-medium">No ingredients yet</p>
+          <p className="text-sm admin-text-dim mt-1">Add your ingredients to start building recipes</p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="glass-card rounded-2xl overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 text-left">
-                <th className="px-4 py-3 font-semibold text-italia-gray">Name</th>
-                <th className="px-4 py-3 font-semibold text-italia-gray">Category</th>
-                <th className="px-4 py-3 font-semibold text-italia-gray text-right">Cost / Unit</th>
-                <th className="px-4 py-3 font-semibold text-italia-gray">Supplier</th>
-                <th className="px-4 py-3 font-semibold text-italia-gray w-20" />
+              <tr className="bg-white/5 text-left">
+                <th className="px-4 py-3 font-semibold admin-text-muted">Name</th>
+                <th className="px-4 py-3 font-semibold admin-text-muted">Category</th>
+                <th className="px-4 py-3 font-semibold admin-text-muted text-right">Cost / Unit</th>
+                <th className="px-4 py-3 font-semibold admin-text-muted">Supplier</th>
+                <th className="px-4 py-3 font-semibold admin-text-muted w-20" />
               </tr>
             </thead>
             <tbody>
               {filtered.map((ing) => (
-                <tr key={ing.id} className="border-t border-gray-50 hover:bg-gray-50/50">
-                  <td className="px-4 py-3 font-medium text-italia-dark">{ing.name}</td>
-                  <td className="px-4 py-3"><span className="px-2 py-0.5 bg-gray-100 rounded text-xs">{INGREDIENT_CATEGORY_LABELS[ing.category]}</span></td>
-                  <td className="px-4 py-3 text-right font-semibold text-italia-dark">{formatPrice(ing.costPerUnit)}<span className="text-xs text-italia-gray font-normal">/{ing.unit}</span></td>
-                  <td className="px-4 py-3 text-italia-gray">{ing.supplier || "—"}</td>
+                <tr key={ing.id} className="border-t border-white/5 hover:bg-white/5">
+                  <td className="px-4 py-3 font-medium admin-text">{ing.name}</td>
+                  <td className="px-4 py-3"><span className="px-2 py-0.5 bg-white/10 rounded text-xs admin-text-muted">{INGREDIENT_CATEGORY_LABELS[ing.category]}</span></td>
+                  <td className="px-4 py-3 text-right font-semibold admin-text">{formatPrice(ing.costPerUnit)}<span className="text-xs admin-text-muted font-normal">/{ing.unit}</span></td>
+                  <td className="px-4 py-3 admin-text-muted">{ing.supplier || "—"}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
-                      <button onClick={() => startEdit(ing)} className="px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded">Edit</button>
+                      <button onClick={() => startEdit(ing)} className="px-2 py-1 text-xs text-blue-400 hover:bg-white/5 rounded">Edit</button>
                       <button onClick={() => handleDelete(ing.id)} className="p-1 text-gray-400 hover:text-italia-red"><Trash2 className="h-3.5 w-3.5" /></button>
                     </div>
                   </td>
