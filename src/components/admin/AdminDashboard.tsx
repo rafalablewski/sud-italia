@@ -19,6 +19,10 @@ import {
   BarChart3,
   RefreshCw,
   MapPin,
+  Users,
+  XCircle,
+  AlertTriangle,
+  Layers,
 } from "lucide-react";
 import Link from "next/link";
 import type { Order } from "@/data/types";
@@ -43,6 +47,43 @@ interface SummaryData {
   }[];
   topItems: { name: string; quantity: number; revenue: number }[];
   categoryBreakdown: Record<string, { revenue: number; cost: number; count: number }>;
+}
+
+interface InsightsData {
+  slotUtilization: {
+    time: string;
+    totalCapacity: number;
+    totalUsed: number;
+    utilization: number;
+    slotCount: number;
+  }[];
+  locationComparison: {
+    locationSlug: string;
+    city: string;
+    revenue: number;
+    profit: number;
+    profitMargin: number;
+    orderCount: number;
+    avgOrderValue: number;
+    totalItems: number;
+    avgItemsPerOrder: number;
+    takeoutCount: number;
+    deliveryCount: number;
+    cancelledCount: number;
+    cancellationRate: number;
+  }[];
+  repeatCustomers: {
+    name: string;
+    phone: string;
+    orderCount: number;
+    totalSpent: number;
+    lastOrderDate: string;
+  }[];
+  avgItemsPerOrder: number;
+  worstSellers: { name: string; quantity: number; revenue: number }[];
+  cancelledOrders: number;
+  cancellationRate: number;
+  peakHours: { hour: number; orderCount: number; revenue: number }[];
 }
 
 interface NotificationItem {
@@ -97,6 +138,7 @@ export function AdminDashboard() {
   const [period, setPeriod] = useState("week");
   const [location, setLocation] = useState("");
   const [summary, setSummary] = useState<SummaryData | null>(null);
+  const [insights, setInsights] = useState<InsightsData | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -107,16 +149,18 @@ export function AdminDashboard() {
     const locParam = location ? `&location=${location}` : "";
 
     try {
-      const [summaryRes, ordersRes, notifsRes] = await Promise.all([
+      const [summaryRes, insightsRes, ordersRes, notifsRes] = await Promise.all([
         fetch(`/api/admin/analytics?from=${from}&to=${to}${locParam}`),
+        fetch(`/api/admin/insights?from=${from}&to=${to}`),
         fetch(`/api/admin/orders${location ? `?location=${location}` : ""}`),
         fetch("/api/admin/notifications"),
       ]);
 
       if (summaryRes.ok) setSummary(await summaryRes.json());
+      if (insightsRes.ok) setInsights(await insightsRes.json());
       if (ordersRes.ok) {
         const allOrders = await ordersRes.json();
-        setOrders(allOrders.slice(0, 10)); // latest 10
+        setOrders(allOrders.slice(0, 10));
       }
       if (notifsRes.ok) setNotifications(await notifsRes.json());
     } catch (err) {
@@ -128,7 +172,7 @@ export function AdminDashboard() {
 
   useEffect(() => {
     fetchAll();
-    const interval = setInterval(fetchAll, 30000); // refresh every 30s
+    const interval = setInterval(fetchAll, 30000);
     return () => clearInterval(interval);
   }, [fetchAll]);
 
@@ -205,7 +249,7 @@ export function AdminDashboard() {
           </div>
         </div>
 
-        {/* KPI Cards */}
+        {/* KPI Cards — row 1 */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <KPICard
             label="Revenue"
@@ -232,15 +276,48 @@ export function AdminDashboard() {
           <KPICard
             label="Avg Order"
             value={summary ? formatPrice(summary.avgOrderValue) : "—"}
-            sub={summary ? `${summary.totalItems} items sold` : undefined}
+            sub={insights ? `${insights.avgItemsPerOrder} items/order` : undefined}
             icon={<BarChart3 className="h-5 w-5" />}
             color="gold"
           />
         </div>
 
+        {/* KPI Cards — row 2 (new) */}
+        {insights && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <KPICard
+              label="Repeat Customers"
+              value={insights.repeatCustomers.length.toString()}
+              sub={`out of all customers`}
+              icon={<Users className="h-5 w-5" />}
+              color="blue"
+            />
+            <KPICard
+              label="Items / Order"
+              value={insights.avgItemsPerOrder.toString()}
+              sub="avg across all orders"
+              icon={<Layers className="h-5 w-5" />}
+              color="gold"
+            />
+            <KPICard
+              label="Cancellation Rate"
+              value={`${insights.cancellationRate}%`}
+              sub={`${insights.cancelledOrders} stuck in pending`}
+              icon={<XCircle className="h-5 w-5" />}
+              color={insights.cancellationRate > 10 ? "red" : "green"}
+            />
+            <KPICard
+              label="Worst Seller"
+              value={insights.worstSellers[0]?.name ?? "—"}
+              sub={insights.worstSellers[0] ? `${insights.worstSellers[0].quantity} sold` : undefined}
+              icon={<AlertTriangle className="h-5 w-5" />}
+              color="red"
+            />
+          </div>
+        )}
+
         {/* Revenue chart + Top items */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Mini revenue chart */}
           <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-bold text-italia-dark">Revenue & Profit</h2>
@@ -267,10 +344,7 @@ export function AdminDashboard() {
                           />
                         </div>
                       </div>
-                      <span className="text-[9px] text-italia-gray">
-                        {day.date.slice(8)}
-                      </span>
-                      {/* Tooltip */}
+                      <span className="text-[9px] text-italia-gray">{day.date.slice(8)}</span>
                       <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-italia-dark text-white text-[10px] rounded-lg px-2 py-1.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
                         <div>{formatSlotDate(day.date)}</div>
                         <div>Rev: {formatPrice(day.revenue)}</div>
@@ -296,7 +370,6 @@ export function AdminDashboard() {
             </div>
           </div>
 
-          {/* Top items */}
           <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
             <h2 className="font-bold text-italia-dark mb-4">Top Sellers</h2>
             {summary && summary.topItems.length > 0 ? (
@@ -322,9 +395,235 @@ export function AdminDashboard() {
           </div>
         </div>
 
+        {/* Slot Utilization + Peak Hours */}
+        {insights && (insights.slotUtilization.length > 0 || insights.peakHours.length > 0) && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Slot Utilization */}
+            {insights.slotUtilization.length > 0 && (
+              <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+                <h2 className="font-bold text-italia-dark mb-1">Slot Utilization</h2>
+                <p className="text-xs text-italia-gray mb-4">How full each time slot gets on average</p>
+                <div className="space-y-2">
+                  {insights.slotUtilization.map((slot) => (
+                    <div key={slot.time} className="flex items-center gap-3">
+                      <span className="w-12 text-sm font-mono font-semibold text-italia-dark">
+                        {slot.time}
+                      </span>
+                      <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden relative">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            slot.utilization >= 80
+                              ? "bg-italia-red"
+                              : slot.utilization >= 50
+                                ? "bg-italia-gold"
+                                : "bg-italia-green"
+                          }`}
+                          style={{ width: `${slot.utilization}%` }}
+                        />
+                        <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-italia-dark">
+                          {slot.totalUsed}/{slot.totalCapacity}
+                        </span>
+                      </div>
+                      <span className={`w-10 text-right text-xs font-bold ${
+                        slot.utilization >= 80
+                          ? "text-italia-red"
+                          : slot.utilization >= 50
+                            ? "text-italia-gold-dark"
+                            : "text-italia-green"
+                      }`}>
+                        {slot.utilization}%
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Peak Hours */}
+            {insights.peakHours.length > 0 && (
+              <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+                <h2 className="font-bold text-italia-dark mb-1">Peak Hours</h2>
+                <p className="text-xs text-italia-gray mb-4">Orders and revenue by hour of day</p>
+                <div className="space-y-2">
+                  {(() => {
+                    const maxOrders = Math.max(...insights.peakHours.map((h) => h.orderCount), 1);
+                    return insights.peakHours.map((h) => {
+                      const pct = (h.orderCount / maxOrders) * 100;
+                      return (
+                        <div key={h.hour} className="flex items-center gap-3">
+                          <span className="w-12 text-sm font-mono font-semibold text-italia-dark">
+                            {String(h.hour).padStart(2, "0")}:00
+                          </span>
+                          <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden relative">
+                            <div
+                              className="h-full rounded-full bg-blue-400"
+                              style={{ width: `${pct}%` }}
+                            />
+                            <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-italia-dark">
+                              {h.orderCount} orders
+                            </span>
+                          </div>
+                          <span className="w-20 text-right text-xs font-semibold text-italia-dark">
+                            {formatPrice(h.revenue)}
+                          </span>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Location Comparison */}
+        {insights && insights.locationComparison.length > 1 && (
+          <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+            <h2 className="font-bold text-italia-dark mb-4">Location Comparison</h2>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="text-left py-2 pr-4 font-semibold text-italia-gray">Location</th>
+                    <th className="text-right py-2 px-3 font-semibold text-italia-gray">Revenue</th>
+                    <th className="text-right py-2 px-3 font-semibold text-italia-gray">Profit</th>
+                    <th className="text-right py-2 px-3 font-semibold text-italia-gray">Margin</th>
+                    <th className="text-right py-2 px-3 font-semibold text-italia-gray">Orders</th>
+                    <th className="text-right py-2 px-3 font-semibold text-italia-gray">Avg Order</th>
+                    <th className="text-right py-2 px-3 font-semibold text-italia-gray">Items/Order</th>
+                    <th className="text-center py-2 px-3 font-semibold text-italia-gray">T / D</th>
+                    <th className="text-right py-2 px-3 font-semibold text-italia-gray">Cancel %</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {insights.locationComparison.map((loc) => {
+                    const best = insights.locationComparison.reduce((a, b) =>
+                      a.revenue > b.revenue ? a : b
+                    );
+                    return (
+                      <tr
+                        key={loc.locationSlug}
+                        className="border-b border-gray-50 hover:bg-gray-50/50"
+                      >
+                        <td className="py-3 pr-4">
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-italia-red" />
+                            <span className="font-semibold text-italia-dark">{loc.city}</span>
+                            {loc.locationSlug === best.locationSlug && loc.revenue > 0 && (
+                              <span className="px-1.5 py-0.5 bg-italia-gold/15 text-italia-gold-dark text-[10px] font-bold rounded-full">
+                                TOP
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="text-right py-3 px-3 font-semibold text-italia-dark">
+                          {formatPrice(loc.revenue)}
+                        </td>
+                        <td className={`text-right py-3 px-3 font-semibold ${loc.profit >= 0 ? "text-italia-green" : "text-italia-red"}`}>
+                          {formatPrice(loc.profit)}
+                        </td>
+                        <td className="text-right py-3 px-3">
+                          <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${
+                            loc.profitMargin >= 65
+                              ? "bg-green-100 text-green-700"
+                              : loc.profitMargin >= 50
+                                ? "bg-yellow-100 text-yellow-700"
+                                : "bg-red-100 text-red-700"
+                          }`}>
+                            {loc.profitMargin}%
+                          </span>
+                        </td>
+                        <td className="text-right py-3 px-3 text-italia-dark">{loc.orderCount}</td>
+                        <td className="text-right py-3 px-3 text-italia-dark">{formatPrice(loc.avgOrderValue)}</td>
+                        <td className="text-right py-3 px-3 text-italia-dark">{loc.avgItemsPerOrder}</td>
+                        <td className="text-center py-3 px-3 text-xs text-italia-gray">
+                          {loc.takeoutCount} / {loc.deliveryCount}
+                        </td>
+                        <td className="text-right py-3 px-3">
+                          <span className={`text-xs font-semibold ${
+                            loc.cancellationRate > 10 ? "text-italia-red" : "text-italia-green"
+                          }`}>
+                            {loc.cancellationRate}%
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Repeat Customers + Worst Sellers */}
+        {insights && (insights.repeatCustomers.length > 0 || insights.worstSellers.length > 0) && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Repeat Customers */}
+            {insights.repeatCustomers.length > 0 && (
+              <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+                <h2 className="font-bold text-italia-dark mb-1">Repeat Customers</h2>
+                <p className="text-xs text-italia-gray mb-4">Customers who ordered more than once</p>
+                <div className="space-y-3">
+                  {insights.repeatCustomers.slice(0, 8).map((c, i) => (
+                    <div key={c.phone} className="flex items-center gap-3">
+                      <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                        i < 3 ? "bg-italia-gold/20 text-italia-gold-dark" : "bg-gray-100 text-italia-gray"
+                      }`}>
+                        {i + 1}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-italia-dark truncate">{c.name}</p>
+                        <p className="text-xs text-italia-gray">{c.orderCount} orders</p>
+                      </div>
+                      <span className="text-sm font-semibold text-italia-dark">
+                        {formatPrice(c.totalSpent)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Worst Sellers */}
+            {insights.worstSellers.length > 0 && (
+              <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+                <h2 className="font-bold text-italia-dark mb-1">Worst Sellers</h2>
+                <p className="text-xs text-italia-gray mb-4">Least popular items — consider removing or promoting</p>
+                <div className="space-y-3">
+                  {insights.worstSellers.map((item, i) => {
+                    const maxQty = insights.worstSellers[insights.worstSellers.length - 1]?.quantity || 1;
+                    const barWidth = (item.quantity / maxQty) * 100;
+                    return (
+                      <div key={item.name} className="flex items-center gap-3">
+                        <span className="w-6 h-6 rounded-full bg-red-50 flex items-center justify-center text-xs font-bold text-italia-red">
+                          {i + 1}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-medium text-italia-dark truncate">{item.name}</span>
+                            <span className="text-sm font-semibold text-italia-dark ml-2">{formatPrice(item.revenue)}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-italia-red/40 rounded-full"
+                                style={{ width: `${barWidth}%` }}
+                              />
+                            </div>
+                            <span className="text-xs text-italia-gray">{item.quantity} sold</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Live orders + Notifications */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Live orders */}
           <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-bold text-italia-dark flex items-center gap-2">
@@ -393,7 +692,6 @@ export function AdminDashboard() {
             )}
           </div>
 
-          {/* Notifications */}
           <div id="notifications" className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-bold text-italia-dark flex items-center gap-2">
