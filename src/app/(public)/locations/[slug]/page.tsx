@@ -43,8 +43,8 @@ export default async function LocationPage({ params }: PageProps) {
   return (
     <>
       <LocationHero location={location} />
-      <MenuSection items={menuItems} locationSlug={slug} />
       <LoyaltySection />
+      <MenuSection items={menuItems} locationSlug={slug} />
       <LocationInfo location={location} />
       <FloatingCartButton allMenuItems={menuItems} />
     </>

@@ -39,8 +39,19 @@ export function LoyaltySection() {
   };
 
   return (
-    <section className="py-8 bg-italia-cream">
+    <section id="loyalty" className="py-10 md:py-14 bg-italia-cream">
       <Container>
+        <div className="text-center mb-6">
+          <p className="text-italia-gold-dark font-medium text-sm tracking-[0.15em] uppercase mb-2">
+            Loyalty Program
+          </p>
+          <h2 className="text-2xl sm:text-3xl font-heading font-bold text-italia-dark">
+            Sud Italia Rewards
+          </h2>
+          <p className="mt-2 text-italia-gray max-w-md mx-auto text-sm">
+            Earn points with every order. Unlock tiers, get multipliers, and redeem for free food.
+          </p>
+        </div>
         <div className="max-w-md mx-auto">
           <LoyaltyCard account={account} onLookup={handleLookup} />
         </div>
