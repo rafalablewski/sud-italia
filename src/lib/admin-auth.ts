@@ -9,7 +9,10 @@ function hashToken(token: string): string {
 }
 
 // In-memory session store (resets on server restart — fine for single-instance)
-const sessions = new Set<string>();
+// Use globalThis so the Set is shared across all Next.js module instances
+const sessions: Set<string> =
+  (globalThis as Record<string, unknown>).__sudItaliaSessions as Set<string> ??
+  ((globalThis as Record<string, unknown>).__sudItaliaSessions = new Set<string>(), (globalThis as Record<string, unknown>).__sudItaliaSessions as Set<string>);
 
 export function getAdminPassword(): string {
   if (!process.env.ADMIN_PASSWORD) {
