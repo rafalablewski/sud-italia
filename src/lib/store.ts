@@ -1,7 +1,7 @@
 import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order } from "@/data/types";
+import { TimeSlot, Order, Ingredient, Recipe } from "@/data/types";
 import { locations as allLocations } from "@/data/locations";
 
 // --- Storage abstraction: Neon Postgres when DATABASE_URL is set, filesystem fallback for local dev ---
@@ -727,4 +727,88 @@ export async function updateSettings(updates: Partial<AppSettings>): Promise<App
     await writeJSON("settings.json", merged);
     return merged;
   });
+}
+
+// --- Ingredients ---
+
+export async function getIngredients(): Promise<Ingredient[]> {
+  return readJSON<Ingredient[]>("ingredients.json", []);
+}
+
+export async function saveIngredient(ingredient: Ingredient): Promise<Ingredient> {
+  return withLock("ingredients.json", async () => {
+    const list = await readJSON<Ingredient[]>("ingredients.json", []);
+    const idx = list.findIndex((i) => i.id === ingredient.id);
+    if (idx >= 0) {
+      list[idx] = ingredient;
+    } else {
+      list.push(ingredient);
+    }
+    await writeJSON("ingredients.json", list);
+    return ingredient;
+  });
+}
+
+export async function deleteIngredient(id: string): Promise<boolean> {
+  return withLock("ingredients.json", async () => {
+    const list = await readJSON<Ingredient[]>("ingredients.json", []);
+    const filtered = list.filter((i) => i.id !== id);
+    if (filtered.length === list.length) return false;
+    await writeJSON("ingredients.json", filtered);
+    return true;
+  });
+}
+
+// --- Recipes ---
+
+export async function getRecipes(): Promise<Recipe[]> {
+  return readJSON<Recipe[]>("recipes.json", []);
+}
+
+export async function getRecipe(menuItemId: string): Promise<Recipe | undefined> {
+  const recipes = await readJSON<Recipe[]>("recipes.json", []);
+  return recipes.find((r) => r.menuItemId === menuItemId);
+}
+
+export async function saveRecipe(recipe: Recipe): Promise<Recipe> {
+  return withLock("recipes.json", async () => {
+    const list = await readJSON<Recipe[]>("recipes.json", []);
+    const idx = list.findIndex((r) => r.menuItemId === recipe.menuItemId);
+    if (idx >= 0) {
+      list[idx] = recipe;
+    } else {
+      list.push(recipe);
+    }
+    await writeJSON("recipes.json", list);
+    return recipe;
+  });
+}
+
+export async function deleteRecipe(menuItemId: string): Promise<boolean> {
+  return withLock("recipes.json", async () => {
+    const list = await readJSON<Recipe[]>("recipes.json", []);
+    const filtered = list.filter((r) => r.menuItemId !== menuItemId);
+    if (filtered.length === list.length) return false;
+    await writeJSON("recipes.json", filtered);
+    return true;
+  });
+}
+
+// Calculate food cost from recipe
+export async function calculateFoodCost(menuItemId: string): Promise<number> {
+  const recipe = await getRecipe(menuItemId);
+  if (!recipe || recipe.ingredients.length === 0) return 0;
+
+  const ingredients = await getIngredients();
+  const ingredientMap = new Map(ingredients.map((i) => [i.id, i]));
+
+  let totalCost = 0;
+  for (const ri of recipe.ingredients) {
+    const ing = ingredientMap.get(ri.ingredientId);
+    if (!ing) continue;
+    totalCost += ing.costPerUnit * ri.quantity * (ri.wasteFactor || 1);
+  }
+
+  // Cost per portion
+  return Math.round(totalCost / (recipe.yieldPortions || 1));
 }

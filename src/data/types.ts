@@ -41,6 +41,61 @@ export interface MenuItem {
   available: boolean;
 }
 
+// --- Ingredients & Recipes ---
+
+export type IngredientCategory =
+  | "dairy"
+  | "meat"
+  | "seafood"
+  | "produce"
+  | "dry"
+  | "sauce"
+  | "oil"
+  | "spice"
+  | "bread"
+  | "beverage"
+  | "other";
+
+export const INGREDIENT_CATEGORY_LABELS: Record<IngredientCategory, string> = {
+  dairy: "Dairy",
+  meat: "Meat",
+  seafood: "Seafood",
+  produce: "Produce",
+  dry: "Dry Goods",
+  sauce: "Sauces",
+  oil: "Oils & Fats",
+  spice: "Spices & Herbs",
+  bread: "Bread & Dough",
+  beverage: "Beverages",
+  other: "Other",
+};
+
+export type IngredientUnit = "kg" | "g" | "L" | "ml" | "piece" | "bunch" | "can" | "bottle";
+
+export interface Ingredient {
+  id: string;
+  name: string;
+  category: IngredientCategory;
+  unit: IngredientUnit;
+  costPerUnit: number; // grosze per unit (e.g., 2500 = 25.00 PLN per kg)
+  supplier?: string;
+  notes?: string;
+}
+
+export interface RecipeIngredient {
+  ingredientId: string;
+  quantity: number;       // in the ingredient's unit
+  wasteFactor: number;    // multiplier, e.g. 1.1 = 10% waste/trimming
+}
+
+export interface Recipe {
+  menuItemId: string;
+  ingredients: RecipeIngredient[];
+  prepTimeMinutes?: number;
+  yieldPortions: number;  // how many servings this recipe makes
+  notes?: string;
+}
+
 export interface CartItem {
   menuItem: MenuItem;
   quantity: number;
