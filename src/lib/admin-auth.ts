@@ -1,8 +1,8 @@
 import { cookies } from "next/headers";
 import { createHash, randomBytes } from "crypto";
 
-const SESSION_COOKIE = "sud-italia-admin";
-const SESSION_MAX_AGE = 60 * 60 * 24; // 24 hours
+export const SESSION_COOKIE = "sud-italia-admin";
+export const SESSION_MAX_AGE = 60 * 60 * 24; // 24 hours
 
 function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");

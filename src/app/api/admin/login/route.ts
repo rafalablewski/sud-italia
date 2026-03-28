@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyPassword, createSession, setSessionCookie } from "@/lib/admin-auth";
+import { verifyPassword, createSession, SESSION_COOKIE, SESSION_MAX_AGE } from "@/lib/admin-auth";
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,9 +10,17 @@ export async function POST(req: NextRequest) {
     }
 
     const token = createSession();
-    await setSessionCookie(token);
 
-    return NextResponse.json({ success: true });
+    const response = NextResponse.json({ success: true });
+    response.cookies.set(SESSION_COOKIE, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: SESSION_MAX_AGE,
+      path: "/",
+    });
+
+    return response;
   } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
