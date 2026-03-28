@@ -46,13 +46,31 @@ export interface CartItem {
   locationSlug: string;
 }
 
+export type FulfillmentType = "takeout" | "delivery";
+
+export interface TimeSlot {
+  id: string;
+  locationSlug: string;
+  date: string; // YYYY-MM-DD
+  time: string; // HH:MM
+  maxOrders: number;
+  currentOrders: number;
+  fulfillmentTypes: FulfillmentType[]; // which types this slot supports
+}
+
 export interface Order {
   id: string;
   locationSlug: string;
   items: CartItem[];
   totalAmount: number;
-  status: "pending" | "confirmed" | "preparing" | "ready";
+  status: "pending" | "confirmed" | "preparing" | "ready" | "completed";
   customerName: string;
   customerPhone: string;
+  fulfillmentType: FulfillmentType;
+  deliveryAddress?: string;
+  slotId: string;
+  slotDate: string;
+  slotTime: string;
   createdAt: string;
+  paidAt?: string;
 }

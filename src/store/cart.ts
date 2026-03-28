@@ -2,11 +2,19 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { CartItem, MenuItem } from "@/data/types";
+import { CartItem, MenuItem, FulfillmentType } from "@/data/types";
 
 interface CartStore {
   items: CartItem[];
   locationSlug: string | null;
+  fulfillmentType: FulfillmentType;
+  selectedSlotId: string | null;
+  selectedSlotTime: string | null;
+  selectedSlotDate: string | null;
+  deliveryAddress: string;
+  setFulfillmentType: (type: FulfillmentType) => void;
+  setSelectedSlot: (id: string | null, time: string | null, date: string | null) => void;
+  setDeliveryAddress: (address: string) => void;
   addItem: (item: MenuItem, locationSlug: string) => void;
   removeItem: (itemId: string) => void;
   updateQuantity: (itemId: string, quantity: number) => void;
@@ -20,6 +28,19 @@ export const useCartStore = create<CartStore>()(
     (set, get) => ({
       items: [],
       locationSlug: null,
+      fulfillmentType: "takeout" as FulfillmentType,
+      selectedSlotId: null,
+      selectedSlotTime: null,
+      selectedSlotDate: null,
+      deliveryAddress: "",
+
+      setFulfillmentType: (type: FulfillmentType) =>
+        set({ fulfillmentType: type, selectedSlotId: null, selectedSlotTime: null, selectedSlotDate: null }),
+
+      setSelectedSlot: (id: string | null, time: string | null, date: string | null) =>
+        set({ selectedSlotId: id, selectedSlotTime: time, selectedSlotDate: date }),
+
+      setDeliveryAddress: (address: string) => set({ deliveryAddress: address }),
 
       addItem: (item: MenuItem, locationSlug: string) => {
         set((state) => {
@@ -76,7 +97,16 @@ export const useCartStore = create<CartStore>()(
         }));
       },
 
-      clearCart: () => set({ items: [], locationSlug: null }),
+      clearCart: () =>
+        set({
+          items: [],
+          locationSlug: null,
+          fulfillmentType: "takeout",
+          selectedSlotId: null,
+          selectedSlotTime: null,
+          selectedSlotDate: null,
+          deliveryAddress: "",
+        }),
 
       getTotal: () =>
         get().items.reduce(

@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
-// In production, this would be backed by a database
-// For now, this is a placeholder API that demonstrates the endpoint structure
+import { getOrderById } from "@/lib/store";
 
 export async function GET(req: NextRequest) {
   const orderId = req.nextUrl.searchParams.get("orderId");
@@ -13,39 +11,27 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  // Placeholder response — in production, fetch from database
-  return NextResponse.json({
-    id: orderId,
-    status: "confirmed",
-    message: "Your order has been confirmed and is being prepared.",
-  });
-}
+  const order = getOrderById(orderId);
 
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const { orderId, locationSlug, items, customerName, customerPhone } = body;
-
-    if (!orderId || !locationSlug || !items?.length || !customerName || !customerPhone) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
-    }
-
-    // In production, save to database
-    console.log("New order created:", { orderId, locationSlug, customerName });
-
+  if (!order) {
     return NextResponse.json({
       id: orderId,
-      status: "pending",
-      message: "Order created successfully",
+      status: "confirmed",
+      message: "Your order has been confirmed and is being prepared.",
     });
-  } catch (error) {
-    console.error("Failed to create order:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
   }
+
+  return NextResponse.json({
+    id: order.id,
+    status: order.status,
+    fulfillmentType: order.fulfillmentType,
+    slotTime: order.slotTime,
+    slotDate: order.slotDate,
+    message:
+      order.status === "ready"
+        ? "Your order is ready!"
+        : order.status === "preparing"
+          ? "Your order is being prepared."
+          : "Your order has been confirmed.",
+  });
 }

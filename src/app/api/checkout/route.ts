@@ -1,15 +1,71 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateOrderId } from "@/lib/utils";
 import { getMenu } from "@/data/menus";
+import { getSlotById, incrementSlotOrders, createOrder } from "@/lib/store";
+import { FulfillmentType, CartItem } from "@/data/types";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { items, locationSlug, customerName, customerPhone } = body;
+    const {
+      items,
+      locationSlug,
+      customerName,
+      customerPhone,
+      fulfillmentType,
+      slotId,
+      slotDate,
+      slotTime,
+      deliveryAddress,
+    } = body;
 
     if (!items?.length || !locationSlug || !customerName || !customerPhone) {
       return NextResponse.json(
         { error: "Missing required fields" },
+        { status: 400 }
+      );
+    }
+
+    if (!slotId || !slotDate || !slotTime) {
+      return NextResponse.json(
+        { error: "Please select a time slot" },
+        { status: 400 }
+      );
+    }
+
+    if (!fulfillmentType || !["takeout", "delivery"].includes(fulfillmentType)) {
+      return NextResponse.json(
+        { error: "Invalid fulfillment type" },
+        { status: 400 }
+      );
+    }
+
+    if (fulfillmentType === "delivery" && !deliveryAddress?.trim()) {
+      return NextResponse.json(
+        { error: "Delivery address is required" },
+        { status: 400 }
+      );
+    }
+
+    // Validate slot exists and has capacity
+    const slot = getSlotById(slotId);
+    if (!slot) {
+      return NextResponse.json(
+        { error: "Time slot not found" },
+        { status: 400 }
+      );
+    }
+
+    if (slot.currentOrders >= slot.maxOrders) {
+      return NextResponse.json(
+        { error: "This time slot is full. Please select another." },
+        { status: 400 }
+      );
+    }
+
+    if (!slot.fulfillmentTypes.includes(fulfillmentType as FulfillmentType)) {
+      return NextResponse.json(
+        { error: `This slot does not support ${fulfillmentType}` },
         { status: 400 }
       );
     }
@@ -20,6 +76,7 @@ export async function POST(req: NextRequest) {
 
     let calculatedTotal = 0;
     const verifiedItems: { id: string; name: string; price: number; quantity: number }[] = [];
+    const orderItems: CartItem[] = [];
 
     for (const item of items) {
       const menuItem = menuItemsById.get(item.id);
@@ -42,9 +99,39 @@ export async function POST(req: NextRequest) {
         price: menuItem.price,
         quantity: item.quantity,
       });
+      orderItems.push({
+        menuItem,
+        quantity: item.quantity,
+        locationSlug,
+      });
     }
 
     const orderId = generateOrderId();
+
+    // Reserve the slot
+    if (!incrementSlotOrders(slotId)) {
+      return NextResponse.json(
+        { error: "This time slot just filled up. Please select another." },
+        { status: 400 }
+      );
+    }
+
+    // Create order record
+    createOrder({
+      id: orderId,
+      locationSlug,
+      items: orderItems,
+      totalAmount: calculatedTotal,
+      status: "pending",
+      customerName: customerName.trim(),
+      customerPhone: customerPhone.trim(),
+      fulfillmentType: fulfillmentType as FulfillmentType,
+      deliveryAddress: fulfillmentType === "delivery" ? deliveryAddress.trim() : undefined,
+      slotId,
+      slotDate,
+      slotTime,
+      createdAt: new Date().toISOString(),
+    });
 
     // If Stripe is configured, create a checkout session
     if (process.env.STRIPE_SECRET_KEY) {
@@ -71,13 +158,17 @@ export async function POST(req: NextRequest) {
           locationSlug,
           customerName,
           customerPhone,
+          fulfillmentType,
+          slotId,
+          slotTime,
+          slotDate,
         },
       });
 
-      return NextResponse.json({ url: session.url });
+      return NextResponse.json({ url: session.url, orderId });
     }
 
-    // Fallback: no Stripe configured — return order ID directly
+    // Fallback: no Stripe configured — return order ID directly (demo mode)
     return NextResponse.json({
       orderId,
       total: calculatedTotal,
