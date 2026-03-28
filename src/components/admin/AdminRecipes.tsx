@@ -109,6 +109,9 @@ function RecipesTab() {
   const [filterCategory, setFilterCategory] = useState("");
   const [filterHasRecipe, setFilterHasRecipe] = useState<"" | "yes" | "no">("");
 
+  // Live cost overrides from recipe editors (not yet saved)
+  const [liveCosts, setLiveCosts] = useState<Record<string, number>>({});
+
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
@@ -209,11 +212,12 @@ function RecipesTab() {
                   const recipe = recipeMap.get(item.id);
                   const hasRecipe = !!recipe && (recipe.ingredients?.length ?? 0) > 0;
                   const isExpanded = expandedItem === item.id;
-                  const foodCost = recipe?.calculatedCost ?? item.cost;
+                  // Use live cost from editor if available, otherwise saved/default
+                  const foodCost = liveCosts[item.id] ?? recipe?.calculatedCost ?? item.cost;
                   const margin = item.price > 0 ? Math.round(((item.price - foodCost) / item.price) * 100) : 0;
 
                   return (
-                    <div key={item.id} className={`rounded-xl shadow-sm overflow-hidden ${hasRecipe ? "glass-card" : "bg-yellow-500/10 border-2 border-dashed border-yellow-500/30"}`}>
+                    <div key={item.id} className={`rounded-xl shadow-sm overflow-hidden ${hasRecipe || isExpanded ? "glass-card" : "bg-yellow-500/10 border-2 border-dashed border-yellow-500/30"}`}>
                       <button
                         onClick={() => setExpandedItem(isExpanded ? null : item.id)}
                         className="w-full flex items-center gap-3 p-4 text-left hover:bg-white/5 transition-colors"
@@ -224,7 +228,7 @@ function RecipesTab() {
                         <span className="font-semibold admin-text flex-1">{item.name}</span>
                         <div className="flex items-center gap-4 text-sm">
                           <span className="admin-text-muted">{formatPrice(item.price)}</span>
-                          <span className={`font-semibold ${hasRecipe ? "admin-text" : "text-gray-400"}`}>
+                          <span className={`font-semibold ${hasRecipe || liveCosts[item.id] !== undefined ? "admin-text" : "text-gray-400"}`}>
                             Cost: {formatPrice(foodCost)}
                           </span>
                           <span className={`font-bold ${marginColorClass(margin)}`}>
@@ -247,6 +251,7 @@ function RecipesTab() {
                           ingredients={ingredients}
                           ingredientMap={ingredientMap}
                           onSaved={fetchAll}
+                          onCostChange={(cost) => setLiveCosts((prev) => ({ ...prev, [item.id]: cost }))}
                         />
                       )}
                     </div>
@@ -272,6 +277,7 @@ function RecipeEditor({
   ingredients,
   ingredientMap,
   onSaved,
+  onCostChange,
 }: {
   menuItemId: string;
   menuItemName: string;
@@ -279,6 +285,7 @@ function RecipeEditor({
   ingredients: IngredientData[];
   ingredientMap: Map<string, IngredientData>;
   onSaved: () => void;
+  onCostChange?: (costPerPortion: number) => void;
 }) {
   const [recipeIngredients, setRecipeIngredients] = useState<EnrichedRecipeIngredient[]>(
     existingRecipe?.ingredients ?? []
@@ -312,6 +319,11 @@ function RecipeEditor({
     if (ing) totalCost += ing.costPerUnit * ri.quantity * (ri.wasteFactor || 1);
   }
   const costPerPortion = yieldPortions > 0 ? Math.round(totalCost / yieldPortions) : 0;
+
+  // Report live cost to parent so header row updates instantly
+  useEffect(() => {
+    onCostChange?.(costPerPortion);
+  }, [costPerPortion, onCostChange]);
 
   const handleSave = async () => {
     setSaving(true);
