@@ -34,6 +34,7 @@ export interface MenuItem {
   name: string;
   description: string;
   price: number; // in grosze (1/100 PLN), e.g. 2500 = 25.00 PLN
+  cost: number; // food cost in grosze — used for margin/PnL calculations
   category: MenuCategory;
   image?: string;
   tags: ("vegetarian" | "vegan" | "spicy" | "gluten-free")[];

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateOrderId } from "@/lib/utils";
 import { getMenu } from "@/data/menus";
-import { getSlotById, incrementSlotOrders, createOrder } from "@/lib/store";
+import { getSlotById, incrementSlotOrders, createOrder, addNotification } from "@/lib/store";
 import { FulfillmentType, CartItem } from "@/data/types";
+import { formatPrice } from "@/lib/utils";
 
 export async function POST(req: NextRequest) {
   try {
@@ -132,6 +133,25 @@ export async function POST(req: NextRequest) {
       slotTime,
       createdAt: new Date().toISOString(),
     });
+
+    // Notify admin
+    addNotification({
+      type: "new_order",
+      title: "New order received",
+      message: `${customerName.trim()} — ${formatPrice(calculatedTotal)} — ${fulfillmentType} at ${slotTime}`,
+      locationSlug,
+    });
+
+    // Check if slot is now full and notify
+    const updatedSlot = getSlotById(slotId);
+    if (updatedSlot && updatedSlot.currentOrders >= updatedSlot.maxOrders) {
+      addNotification({
+        type: "slot_full",
+        title: "Time slot full",
+        message: `${slotDate} ${slotTime} slot is now fully booked (${updatedSlot.maxOrders} orders)`,
+        locationSlug,
+      });
+    }
 
     // If Stripe is configured, create a checkout session
     if (process.env.STRIPE_SECRET_KEY) {
