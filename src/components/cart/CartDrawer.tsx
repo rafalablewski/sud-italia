@@ -107,9 +107,9 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
           <p className="text-sm mt-1">Add items from the menu to get started</p>
         </div>
       ) : (
-        <div className="flex flex-col h-full">
-          {/* Items list */}
-          <div className="flex-1 px-5 overflow-y-auto">
+        <>
+          {/* Scrollable items + options area */}
+          <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-4">
             {items.map((item) => (
               <CartItemRow key={item.menuItem.id} item={item} />
             ))}
@@ -167,8 +167,8 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
             )}
           </div>
 
-          {/* Checkout footer */}
-          <div className="border-t border-gray-100 p-5 space-y-3 bg-gray-50">
+          {/* Sticky checkout footer */}
+          <div className="border-t border-gray-100 p-5 space-y-3 bg-gray-50 flex-shrink-0">
             <div className="flex gap-3">
               <input
                 type="text"
@@ -230,7 +230,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
               Clear cart
             </button>
           </div>
-        </div>
+        </>
       )}
     </Sheet>
   );
