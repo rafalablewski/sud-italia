@@ -14,7 +14,7 @@ interface CartDrawerProps {
   onClose: () => void;
 }
 
-const PHONE_PATTERN = /^[+]?[\d\s\-()]{7,}$/;
+const PHONE_PATTERN = /^[\d\s\-()]{7,}$/;
 
 export function CartDrawer({ open, onClose }: CartDrawerProps) {
   const items = useCartStore((s) => s.items);
@@ -68,7 +68,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
           })),
           locationSlug,
           customerName: customerName.trim(),
-          customerPhone: customerPhone.trim(),
+          customerPhone: `+48${customerPhone.trim()}`,
           fulfillmentType,
           slotId: selectedSlotId,
           slotDate: selectedSlotDate,
@@ -175,23 +175,28 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
 
       {/* Checkout footer */}
       <div className="border-t border-gray-100 p-5 space-y-3 bg-gray-50 mt-2">
-        <div className="flex gap-3">
+        <div className="space-y-2">
           <input
             type="text"
             placeholder="Your name"
             value={customerName}
             onChange={(e) => setCustomerName(e.target.value)}
-            className="flex-1 pub-input min-h-[44px] text-base"
+            className="pub-input min-h-[44px] text-base"
           />
-          <input
-            type="tel"
-            placeholder="Phone"
-            value={customerPhone}
-            onChange={(e) => handlePhoneChange(e.target.value)}
-            className={`w-[130px] pub-input min-h-[44px] text-base ${
-              phoneError ? "border-italia-red" : "border-gray-200"
-            }`}
-          />
+          <div className="flex items-center gap-0">
+            <span className="inline-flex items-center px-3 min-h-[44px] rounded-l-[0.75rem] border-y-[1.5px] border-l-[1.5px] border-r-0 border-[#e5e7eb] bg-gray-50 text-sm font-medium text-italia-gray select-none">
+              +48
+            </span>
+            <input
+              type="tel"
+              placeholder="Phone number"
+              value={customerPhone}
+              onChange={(e) => handlePhoneChange(e.target.value)}
+              className={`pub-input min-h-[44px] text-base rounded-l-none ${
+                phoneError ? "border-italia-red" : ""
+              }`}
+            />
+          </div>
         </div>
         {phoneError && (
           <p className="text-xs text-italia-red">
