@@ -125,6 +125,22 @@ export async function updateSlot(id: string, updates: Partial<TimeSlot>): Promis
   });
 }
 
+export async function updateSlotsBulk(ids: string[], updates: Partial<TimeSlot>): Promise<TimeSlot[]> {
+  return withLock("slots.json", async () => {
+    const slots = await readJSON<TimeSlot[]>("slots.json", []);
+    const idSet = new Set(ids);
+    const updated: TimeSlot[] = [];
+    for (const slot of slots) {
+      if (idSet.has(slot.id)) {
+        Object.assign(slot, updates);
+        updated.push(slot);
+      }
+    }
+    await writeJSON("slots.json", slots);
+    return updated;
+  });
+}
+
 export async function deleteSlot(id: string): Promise<boolean> {
   return withLock("slots.json", async () => {
     const slots = await readJSON<TimeSlot[]>("slots.json", []);
@@ -132,6 +148,17 @@ export async function deleteSlot(id: string): Promise<boolean> {
     if (filtered.length === slots.length) return false;
     await writeJSON("slots.json", filtered);
     return true;
+  });
+}
+
+export async function deleteSlotsBulk(ids: string[]): Promise<number> {
+  return withLock("slots.json", async () => {
+    const slots = await readJSON<TimeSlot[]>("slots.json", []);
+    const idSet = new Set(ids);
+    const filtered = slots.filter((s) => !idSet.has(s.id));
+    const deletedCount = slots.length - filtered.length;
+    await writeJSON("slots.json", filtered);
+    return deletedCount;
   });
 }
 
