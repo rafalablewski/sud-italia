@@ -310,7 +310,7 @@ export function AdminSlots() {
             <select
               value={selectedLocation}
               onChange={(e) => setSelectedLocation(e.target.value)}
-              className="px-3 py-2 glass-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-italia-red"
+              className="glass-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-italia-red"
             >
               {activeLocations.map((loc) => (
                 <option key={loc.slug} value={loc.slug}>
@@ -333,7 +333,7 @@ export function AdminSlots() {
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="px-3 py-2 glass-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-italia-red"
+              className="glass-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-italia-red"
             />
 
             <button

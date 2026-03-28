@@ -214,27 +214,55 @@ html { scroll-behavior: smooth; }
   color: #f1f5f9;
 }
 
+/* Select — override native browser chrome */
+.glass-input[data-select],
+select.glass-input,
 .glass-select {
-  background: rgba(255, 255, 255, 0.06);
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  background-size: 1rem;
+  padding-right: 2rem;
+  cursor: pointer;
+}
+
+.glass-select {
+  background-color: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 0.5rem;
   color: #f1f5f9;
-  padding: 0.5rem 0.75rem;
+  padding: 0.5rem 2rem 0.5rem 0.75rem;
   font-size: 0.875rem;
-  cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .glass-select:focus {
-  background: rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 255, 255, 0.1);
   border-color: rgba(200, 16, 46, 0.5);
   outline: none;
   box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.15);
 }
 
-.glass-select option {
+.glass-select option,
+select.glass-input option {
   background: #1e293b;
   color: #f1f5f9;
+  padding: 0.5rem;
+}
+
+/* Public select — same custom arrow treatment */
+select.pub-select,
+select.pub-input {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.625rem center;
+  background-size: 1rem;
+  padding-right: 2.25rem;
+  cursor: pointer;
 }
 
 .glass-checkbox {

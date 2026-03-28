@@ -171,19 +171,19 @@ function RecipesTab() {
       <div className="flex flex-wrap items-center gap-3 mb-6">
         <div className="flex items-center gap-2">
           <MapPin className="h-4 w-4 admin-text-muted" />
-          <select value={selectedLocation} onChange={(e) => setSelectedLocation(e.target.value)} className="px-3 py-2 glass-input rounded-lg text-sm">
+          <select value={selectedLocation} onChange={(e) => setSelectedLocation(e.target.value)} className="glass-input rounded-lg text-sm">
             {activeLocations.map((loc) => (
               <option key={loc.slug} value={loc.slug}>{loc.city}</option>
             ))}
           </select>
         </div>
-        <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="px-3 py-2 glass-input rounded-lg text-sm">
+        <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="glass-input rounded-lg text-sm">
           <option value="">All categories</option>
           {categories.map((cat) => (
             <option key={cat} value={cat}>{MENU_CATEGORY_LABELS[cat]}</option>
           ))}
         </select>
-        <select value={filterHasRecipe} onChange={(e) => setFilterHasRecipe(e.target.value as "" | "yes" | "no")} className="px-3 py-2 glass-input rounded-lg text-sm">
+        <select value={filterHasRecipe} onChange={(e) => setFilterHasRecipe(e.target.value as "" | "yes" | "no")} className="glass-input rounded-lg text-sm">
           <option value="">All items</option>
           <option value="yes">With recipe</option>
           <option value="no">Missing recipe</option>
@@ -338,29 +338,44 @@ function RecipeEditor({
   };
 
   return (
-    <div className="border-t border-white/10 bg-white/5 p-4">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="font-semibold text-sm admin-text">Recipe: {menuItemName}</h3>
-        <div className="flex items-center gap-3 text-sm">
-          <div>
-            <span className="text-xs admin-text-muted">Yield: </span>
-            <input type="number" min={1} value={yieldPortions} onChange={(e) => setYieldPortions(Number(e.target.value) || 1)} className="w-14 px-1 py-0.5 glass-input rounded text-center text-sm" />
-            <span className="text-xs admin-text-muted"> portions</span>
-          </div>
-          <div>
-            <span className="text-xs admin-text-muted">Prep: </span>
-            <input type="number" min={0} value={prepTime} onChange={(e) => setPrepTime(Number(e.target.value) || 0)} className="w-14 px-1 py-0.5 glass-input rounded text-center text-sm" />
-            <span className="text-xs admin-text-muted"> min</span>
-          </div>
+    <div className="border-t border-white/10 bg-white/5 p-5">
+      {/* Header with yield + prep */}
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
+        <h3 className="font-semibold admin-text">Recipe: {menuItemName}</h3>
+        <div className="flex items-center gap-4">
+          <label className="flex items-center gap-2 text-sm">
+            <span className="admin-text-muted">Yield</span>
+            <input
+              type="number"
+              min={1}
+              value={yieldPortions}
+              onChange={(e) => setYieldPortions(Number(e.target.value) || 1)}
+              className="w-16 glass-input rounded-lg text-center"
+            />
+            <span className="admin-text-muted">portions</span>
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <span className="admin-text-muted">Prep</span>
+            <input
+              type="number"
+              min={0}
+              value={prepTime || ""}
+              placeholder="0"
+              onChange={(e) => setPrepTime(Number(e.target.value) || 0)}
+              className="w-16 glass-input rounded-lg text-center"
+            />
+            <span className="admin-text-muted">min</span>
+          </label>
         </div>
       </div>
 
+      {/* Ingredient rows */}
       {recipeIngredients.length > 0 && (
-        <div className="mb-3">
-          <div className="grid grid-cols-[1fr_80px_80px_80px_32px] gap-2 mb-1 text-[10px] font-semibold admin-text-muted uppercase px-1">
+        <div className="mb-4 space-y-2">
+          <div className="grid grid-cols-[1fr_100px_80px_80px_36px] gap-3 px-1 text-[10px] font-semibold admin-text-dim uppercase tracking-wider">
             <span>Ingredient</span>
-            <span>Qty</span>
-            <span>Waste %</span>
+            <span>Qty ({"\u00B7"} unit)</span>
+            <span>Waste</span>
             <span className="text-right">Cost</span>
             <span />
           </div>
@@ -368,36 +383,49 @@ function RecipeEditor({
             const ing = ingredientMap.get(ri.ingredientId);
             const lineCost = ing ? Math.round(ing.costPerUnit * ri.quantity * (ri.wasteFactor || 1)) : 0;
             return (
-              <div key={idx} className="grid grid-cols-[1fr_80px_80px_80px_32px] gap-2 items-center mb-1">
+              <div key={idx} className="grid grid-cols-[1fr_100px_80px_80px_36px] gap-3 items-center">
                 <select
                   value={ri.ingredientId}
                   onChange={(e) => updateIngredient(idx, "ingredientId", e.target.value)}
-                  className="px-2 py-1.5 glass-input rounded-lg text-sm"
+                  className="glass-input rounded-lg"
                 >
-                  {ingredients.map((ing) => (
-                    <option key={ing.id} value={ing.id}>{ing.name} ({formatPrice(ing.costPerUnit)}/{ing.unit})</option>
+                  {ingredients.map((i) => (
+                    <option key={i.id} value={i.id}>
+                      {i.name} — {formatPrice(i.costPerUnit)}/{i.unit}
+                    </option>
                   ))}
                 </select>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1.5">
                   <input
-                    type="number" step="0.001" min={0}
+                    type="number"
+                    step="0.001"
+                    min={0}
                     value={ri.quantity || ""}
+                    placeholder="0"
                     onChange={(e) => updateIngredient(idx, "quantity", parseFloat(e.target.value) || 0)}
-                    className="w-full px-1 py-1.5 glass-input rounded text-sm text-right" placeholder="0"
+                    className="flex-1 glass-input rounded-lg text-right"
                   />
-                  <span className="text-[10px] admin-text-muted">{ing?.unit}</span>
+                  <span className="text-xs admin-text-dim w-5 text-right">{ing?.unit}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <input
-                    type="number" step="1" min={0}
-                    value={Math.round((ri.wasteFactor - 1) * 100)}
+                    type="number"
+                    step="1"
+                    min={0}
+                    value={Math.round((ri.wasteFactor - 1) * 100) || ""}
+                    placeholder="0"
                     onChange={(e) => updateIngredient(idx, "wasteFactor", 1 + (parseFloat(e.target.value) || 0) / 100)}
-                    className="w-full px-1 py-1.5 glass-input rounded text-sm text-right"
+                    className="flex-1 glass-input rounded-lg text-right"
                   />
-                  <span className="text-[10px] admin-text-muted">%</span>
+                  <span className="text-xs admin-text-dim">%</span>
                 </div>
-                <div className="text-right text-sm font-medium admin-text">{formatPrice(lineCost)}</div>
-                <button onClick={() => removeIngredient(idx)} className="p-1 text-gray-400 hover:text-italia-red transition-colors">
+                <div className="text-right text-sm font-semibold admin-text">
+                  {formatPrice(lineCost)}
+                </div>
+                <button
+                  onClick={() => removeIngredient(idx)}
+                  className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                >
                   <X className="h-4 w-4" />
                 </button>
               </div>
@@ -406,26 +434,35 @@ function RecipeEditor({
         </div>
       )}
 
+      {/* Add ingredient */}
       <button
         onClick={addIngredient}
         disabled={ingredients.length === 0}
-        className="flex items-center gap-1.5 px-3 py-1.5 text-xs admin-text-muted border border-dashed border-white/20 rounded-lg hover:bg-white/5 hover:text-white transition-colors mb-3 disabled:opacity-50"
+        className="glass-btn-ghost text-xs mb-4 disabled:opacity-50"
       >
         <Plus className="h-3.5 w-3.5" />
-        {ingredients.length === 0 ? "Add ingredients in the Ingredients Database tab first" : "Add Ingredient"}
+        {ingredients.length === 0 ? "Add ingredients in the Ingredients Database tab first" : "Add ingredient to recipe"}
       </button>
 
-      <input type="text" placeholder="Recipe notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} className="w-full px-3 py-1.5 glass-input rounded-lg text-sm mb-3" />
+      {/* Notes */}
+      <input
+        type="text"
+        placeholder="Recipe notes (optional)"
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+        className="w-full glass-input rounded-lg mb-4"
+      />
 
-      <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-white/5 rounded-xl border border-white/10">
+      {/* Cost summary bar */}
+      <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-white/5 rounded-xl border border-white/10">
         <div className="flex items-center gap-6 text-sm">
           <div>
-            <span className="text-xs admin-text-muted">Total recipe cost: </span>
-            <span className="font-bold admin-text">{formatPrice(Math.round(totalCost))}</span>
+            <span className="text-xs admin-text-dim block mb-0.5">Recipe total</span>
+            <span className="font-bold admin-text text-base">{formatPrice(Math.round(totalCost))}</span>
           </div>
           <div>
-            <span className="text-xs admin-text-muted">Per portion: </span>
-            <span className="font-bold text-italia-red">{formatPrice(costPerPortion)}</span>
+            <span className="text-xs admin-text-dim block mb-0.5">Per portion</span>
+            <span className="font-bold text-red-400 text-base">{formatPrice(costPerPortion)}</span>
           </div>
           <div>
             <span className="text-xs admin-text-muted">Ingredients: </span>
@@ -543,11 +580,11 @@ function IngredientsTab() {
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
             <div className="col-span-2 md:col-span-1">
               <label className="block text-xs admin-text-muted mb-1">Name *</label>
-              <input type="text" value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="e.g. Fior di Latte Mozzarella" className="w-full px-3 py-2 glass-input rounded-lg text-sm" autoFocus />
+              <input type="text" value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="e.g. Fior di Latte Mozzarella" className="w-full glass-input rounded-lg text-sm" autoFocus />
             </div>
             <div>
               <label className="block text-xs admin-text-muted mb-1">Category</label>
-              <select value={formCategory} onChange={(e) => setFormCategory(e.target.value as IngredientCategory)} className="w-full px-3 py-2 glass-input rounded-lg text-sm">
+              <select value={formCategory} onChange={(e) => setFormCategory(e.target.value as IngredientCategory)} className="w-full glass-input rounded-lg text-sm">
                 {Object.entries(INGREDIENT_CATEGORY_LABELS).map(([val, label]) => (
                   <option key={val} value={val}>{label}</option>
                 ))}
@@ -555,17 +592,17 @@ function IngredientsTab() {
             </div>
             <div>
               <label className="block text-xs admin-text-muted mb-1">Unit</label>
-              <select value={formUnit} onChange={(e) => setFormUnit(e.target.value as IngredientUnit)} className="w-full px-3 py-2 glass-input rounded-lg text-sm">
+              <select value={formUnit} onChange={(e) => setFormUnit(e.target.value as IngredientUnit)} className="w-full glass-input rounded-lg text-sm">
                 {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-xs admin-text-muted mb-1">Cost per {formUnit} (PLN)</label>
-              <input type="number" step="0.01" value={formCost} onChange={(e) => setFormCost(e.target.value)} placeholder="0.00" className="w-full px-3 py-2 glass-input rounded-lg text-sm" />
+              <input type="number" step="0.01" value={formCost} onChange={(e) => setFormCost(e.target.value)} placeholder="0.00" className="w-full glass-input rounded-lg text-sm" />
             </div>
             <div>
               <label className="block text-xs admin-text-muted mb-1">Supplier</label>
-              <input type="text" value={formSupplier} onChange={(e) => setFormSupplier(e.target.value)} placeholder="Optional" className="w-full px-3 py-2 glass-input rounded-lg text-sm" />
+              <input type="text" value={formSupplier} onChange={(e) => setFormSupplier(e.target.value)} placeholder="Optional" className="w-full glass-input rounded-lg text-sm" />
             </div>
           </div>
           <div className="flex gap-3">
@@ -576,7 +613,7 @@ function IngredientsTab() {
       )}
 
       <div className="flex flex-wrap items-center gap-3 mb-4">
-        <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="px-3 py-2 glass-input rounded-lg text-sm">
+        <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="glass-input rounded-lg text-sm">
           <option value="">All categories</option>
           {usedCategories.map((cat) => (
             <option key={cat} value={cat}>{INGREDIENT_CATEGORY_LABELS[cat as IngredientCategory]}</option>
