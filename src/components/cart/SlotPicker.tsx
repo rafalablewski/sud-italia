@@ -24,6 +24,16 @@ function getDateString(offset: number): string {
   return d.toISOString().split("T")[0];
 }
 
+function SlotSkeleton() {
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {[...Array(6)].map((_, i) => (
+        <div key={i} className="skeleton h-14 rounded-xl" />
+      ))}
+    </div>
+  );
+}
+
 export function SlotPicker({ locationSlug, fulfillmentType }: SlotPickerProps) {
   const [dayOffset, setDayOffset] = useState(0);
   const [slots, setSlots] = useState<ClientSlot[]>([]);
@@ -62,6 +72,14 @@ export function SlotPicker({ locationSlug, fulfillmentType }: SlotPickerProps) {
     setSelectedSlot(null, null, null);
   }, [fulfillmentType, date, setSelectedSlot]);
 
+  // Date navigation labels
+  const dayLabels = [];
+  for (let i = 0; i <= 6; i++) {
+    if (i === 0) dayLabels.push("Today");
+    else if (i === 1) dayLabels.push("Tomorrow");
+    else dayLabels.push(formatSlotDate(getDateString(i)));
+  }
+
   return (
     <div className="mb-3">
       <p className="text-xs font-semibold text-italia-gray uppercase tracking-wide mb-2">
@@ -69,30 +87,26 @@ export function SlotPicker({ locationSlug, fulfillmentType }: SlotPickerProps) {
         Select time
       </p>
 
-      {/* Date selector */}
-      <div className="flex items-center justify-between mb-2">
-        <button
-          onClick={() => setDayOffset(Math.max(0, dayOffset - 1))}
-          disabled={dayOffset === 0}
-          className="p-1 rounded-lg hover:bg-gray-100 disabled:opacity-30 transition-colors"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </button>
-        <span className="text-sm font-medium text-italia-dark">
-          {dayOffset === 0 ? "Today" : dayOffset === 1 ? "Tomorrow" : formatSlotDate(date)}
-        </span>
-        <button
-          onClick={() => setDayOffset(Math.min(6, dayOffset + 1))}
-          disabled={dayOffset >= 6}
-          className="p-1 rounded-lg hover:bg-gray-100 disabled:opacity-30 transition-colors"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </button>
+      {/* Horizontal scrollable date picker (Grab-style) */}
+      <div className="flex gap-2 overflow-x-auto scrollbar-hide mb-3 -mx-1 px-1">
+        {dayLabels.map((label, i) => (
+          <button
+            key={i}
+            onClick={() => setDayOffset(i)}
+            className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-medium border-2 transition-all ${
+              dayOffset === i
+                ? "border-italia-red bg-italia-red/5 text-italia-red"
+                : "border-gray-200 text-italia-gray hover:border-gray-300"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* Slots grid */}
       {loading ? (
-        <div className="text-center py-4 text-sm text-italia-gray">Loading slots...</div>
+        <SlotSkeleton />
       ) : error ? (
         <div className="text-center py-4 text-sm text-italia-red bg-red-50 rounded-xl">
           Could not load time slots. Try again later.
@@ -105,6 +119,7 @@ export function SlotPicker({ locationSlug, fulfillmentType }: SlotPickerProps) {
         <div className="grid grid-cols-3 gap-2">
           {slots.map((slot) => {
             const isSelected = selectedSlotId === slot.id;
+            const isLow = slot.spotsLeft <= 2;
             return (
               <button
                 key={slot.id}
@@ -122,8 +137,8 @@ export function SlotPicker({ locationSlug, fulfillmentType }: SlotPickerProps) {
                 }`}
               >
                 <span className="block">{slot.time}</span>
-                <span className="block text-[10px] opacity-60">
-                  {slot.spotsLeft} left
+                <span className={`block text-[10px] ${isLow ? "text-italia-red font-semibold" : "opacity-60"}`}>
+                  {isLow ? `Only ${slot.spotsLeft} left!` : `${slot.spotsLeft} left`}
                 </span>
               </button>
             );
