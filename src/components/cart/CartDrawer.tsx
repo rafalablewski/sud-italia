@@ -107,70 +107,68 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
           <p className="text-sm mt-1">Add items from the menu to get started</p>
         </div>
       ) : (
-        <div>
+        <div className="flex flex-col h-full">
           {/* Items list */}
-          <div className="px-5">
+          <div className="flex-1 px-5 overflow-y-auto">
             {items.map((item) => (
               <CartItemRow key={item.menuItem.id} item={item} />
             ))}
-          </div>
 
-          {/* Fulfillment type selector */}
-          <div className="px-5 mt-4 mb-3">
-            <p className="text-xs font-semibold text-italia-gray uppercase tracking-wide mb-2">
-              How would you like your order?
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => setFulfillmentType("takeout")}
-                className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
-                  fulfillmentType === "takeout"
-                    ? "border-italia-green bg-italia-green/5 text-italia-green"
-                    : "border-gray-200 text-italia-gray hover:border-gray-300"
-                }`}
-              >
-                <Package className="h-4 w-4" />
-                Takeout
-              </button>
-              <button
-                onClick={() => setFulfillmentType("delivery")}
-                className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
-                  fulfillmentType === "delivery"
-                    ? "border-italia-red bg-italia-red/5 text-italia-red"
-                    : "border-gray-200 text-italia-gray hover:border-gray-300"
-                }`}
-              >
-                <Truck className="h-4 w-4" />
-                Delivery
-              </button>
+            {/* Fulfillment type selector */}
+            <div className="mt-4 mb-3">
+              <p className="text-xs font-semibold text-italia-gray uppercase tracking-wide mb-2">
+                How would you like your order?
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setFulfillmentType("takeout")}
+                  className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
+                    fulfillmentType === "takeout"
+                      ? "border-italia-green bg-italia-green/5 text-italia-green"
+                      : "border-gray-200 text-italia-gray hover:border-gray-300"
+                  }`}
+                >
+                  <Package className="h-4 w-4" />
+                  Takeout
+                </button>
+                <button
+                  onClick={() => setFulfillmentType("delivery")}
+                  className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
+                    fulfillmentType === "delivery"
+                      ? "border-italia-red bg-italia-red/5 text-italia-red"
+                      : "border-gray-200 text-italia-gray hover:border-gray-300"
+                  }`}
+                >
+                  <Truck className="h-4 w-4" />
+                  Delivery
+                </button>
+              </div>
             </div>
-          </div>
 
-          {/* Delivery address */}
-          {fulfillmentType === "delivery" && (
-            <div className="px-5 mb-3">
-              <input
-                type="text"
-                placeholder="Delivery address"
-                value={deliveryAddress}
-                onChange={(e) => setDeliveryAddress(e.target.value)}
-                className="pub-input min-h-[44px]"
-              />
-            </div>
-          )}
+            {/* Delivery address */}
+            {fulfillmentType === "delivery" && (
+              <div className="mb-3">
+                <input
+                  type="text"
+                  placeholder="Delivery address"
+                  value={deliveryAddress}
+                  onChange={(e) => setDeliveryAddress(e.target.value)}
+                  className="pub-input min-h-[44px]"
+                />
+              </div>
+            )}
 
-          {/* Time slot picker */}
-          {locationSlug && (
-            <div className="px-5">
+            {/* Time slot picker */}
+            {locationSlug && (
               <SlotPicker
                 locationSlug={locationSlug}
                 fulfillmentType={fulfillmentType}
               />
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Checkout footer */}
-          <div className="border-t border-gray-100 p-5 space-y-3 bg-gray-50 mt-2">
+          <div className="border-t border-gray-100 p-5 space-y-3 bg-gray-50">
             <div className="flex gap-3">
               <input
                 type="text"
