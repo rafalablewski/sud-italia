@@ -37,7 +37,7 @@ export default async function LocationPage({ params }: PageProps) {
     notFound();
   }
 
-  const menuItems = getAvailableMenu(slug);
+  const menuItems = await getAvailableMenu(slug);
 
   return (
     <>

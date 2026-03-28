@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateOrderId } from "@/lib/utils";
-import { getMenu } from "@/data/menus";
+import { getMenuWithOverrides } from "@/data/menus";
 import { getSlotById, incrementSlotOrders, createOrder, addNotification } from "@/lib/store";
 import { FulfillmentType, CartItem } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Server-side price lookup — never trust client-provided prices
-    const menuItems = getMenu(locationSlug);
+    const menuItems = await getMenuWithOverrides(locationSlug);
     const menuItemsById = new Map(menuItems.map((item) => [item.id, item]));
 
     let calculatedTotal = 0;

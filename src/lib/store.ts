@@ -664,3 +664,67 @@ export async function markAllNotificationsRead(): Promise<void> {
 export async function getUnreadCount(): Promise<number> {
   return (await getNotifications()).filter((n) => !n.read).length;
 }
+
+// --- Menu Overrides ---
+// Stores admin-made changes to menu items (price, availability, etc.)
+// These get merged on top of the hardcoded menu data.
+
+export interface MenuOverride {
+  price?: number;
+  cost?: number;
+  available?: boolean;
+  name?: string;
+  description?: string;
+}
+
+export async function getMenuOverrides(): Promise<Record<string, MenuOverride>> {
+  return readJSON<Record<string, MenuOverride>>("menu-overrides.json", {});
+}
+
+export async function setMenuOverride(itemId: string, override: MenuOverride): Promise<void> {
+  return withLock("menu-overrides.json", async () => {
+    const overrides = await readJSON<Record<string, MenuOverride>>("menu-overrides.json", {});
+    overrides[itemId] = { ...overrides[itemId], ...override };
+    await writeJSON("menu-overrides.json", overrides);
+  });
+}
+
+export async function setMenuOverridesBulk(updates: Record<string, MenuOverride>): Promise<void> {
+  return withLock("menu-overrides.json", async () => {
+    const overrides = await readJSON<Record<string, MenuOverride>>("menu-overrides.json", {});
+    for (const [id, update] of Object.entries(updates)) {
+      overrides[id] = { ...overrides[id], ...update };
+    }
+    await writeJSON("menu-overrides.json", overrides);
+  });
+}
+
+// --- Settings ---
+
+export interface AppSettings {
+  deliveryFee: number; // in grosze
+  minOrderAmount: number; // in grosze
+  businessPhone: string;
+  businessEmail: string;
+}
+
+const DEFAULT_SETTINGS: AppSettings = {
+  deliveryFee: 1000, // 10.00 PLN
+  minOrderAmount: 3000, // 30.00 PLN
+  businessPhone: "",
+  businessEmail: "",
+};
+
+export async function getSettings(): Promise<AppSettings> {
+  const saved = await readJSON<Partial<AppSettings>>("settings.json", {});
+  return { ...DEFAULT_SETTINGS, ...saved };
+}
+
+export async function updateSettings(updates: Partial<AppSettings>): Promise<AppSettings> {
+  return withLock("settings.json", async () => {
+    const current = await readJSON<Partial<AppSettings>>("settings.json", {});
+    const merged = { ...DEFAULT_SETTINGS, ...current, ...updates };
+    await writeJSON("settings.json", merged);
+    return merged;
+  });
+}

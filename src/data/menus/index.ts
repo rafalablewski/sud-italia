@@ -1,16 +1,28 @@
 import { MenuItem } from "../types";
 import { krakowMenu } from "./krakow";
 import { warszawaMenu } from "./warszawa";
+import { getMenuOverrides } from "@/lib/store";
 
-const menus: Record<string, MenuItem[]> = {
+const baseMenus: Record<string, MenuItem[]> = {
   krakow: krakowMenu,
   warszawa: warszawaMenu,
 };
 
 export function getMenu(locationSlug: string): MenuItem[] {
-  return menus[locationSlug] ?? [];
+  return baseMenus[locationSlug] ?? [];
 }
 
-export function getAvailableMenu(locationSlug: string): MenuItem[] {
-  return getMenu(locationSlug).filter((item) => item.available);
+export async function getMenuWithOverrides(locationSlug: string): Promise<MenuItem[]> {
+  const base = getMenu(locationSlug);
+  const overrides = await getMenuOverrides();
+  return base.map((item) => {
+    const o = overrides[item.id];
+    if (!o) return item;
+    return { ...item, ...o };
+  });
+}
+
+export async function getAvailableMenu(locationSlug: string): Promise<MenuItem[]> {
+  const menu = await getMenuWithOverrides(locationSlug);
+  return menu.filter((item) => item.available);
 }
