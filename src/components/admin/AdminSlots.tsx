@@ -64,7 +64,9 @@ function formatDateLabel(dateStr: string): string {
 }
 
 function isToday(dateStr: string): boolean {
-  return dateStr === new Date().toISOString().split("T")[0];
+  const d = new Date();
+  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return dateStr === today;
 }
 
 export function AdminSlots() {
@@ -72,7 +74,8 @@ export function AdminSlots() {
   const [loading, setLoading] = useState(true);
   const [selectedLocation, setSelectedLocation] = useState(activeLocations[0]?.slug || "");
   const [selectedDate, setSelectedDate] = useState(() => {
-    return new Date().toISOString().split("T")[0];
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   });
 
   // New slot form
@@ -137,13 +140,20 @@ export function AdminSlots() {
 
   // --- Day navigation ---
   const navigateDay = (delta: number) => {
-    const d = new Date(selectedDate + "T00:00:00");
+    const d = new Date(selectedDate + "T12:00:00");
     d.setDate(d.getDate() + delta);
-    setSelectedDate(d.toISOString().split("T")[0]);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    setSelectedDate(`${yyyy}-${mm}-${dd}`);
   };
 
   const goToday = () => {
-    setSelectedDate(new Date().toISOString().split("T")[0]);
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    setSelectedDate(`${yyyy}-${mm}-${dd}`);
   };
 
   // --- Counts ---
