@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { LogIn } from "lucide-react";
 
 export default function AdminLoginPage() {
   const [password, setPassword] = useState("");
@@ -37,12 +38,17 @@ export default function AdminLoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
-        <div className="bg-white rounded-2xl shadow-lg p-8">
-          <h1 className="text-2xl font-bold text-center mb-1 font-heading text-italia-dark">
+      <div className="w-full max-w-sm animate-scale-in">
+        <div className="glass-card rounded-3xl p-8">
+          <div className="flex justify-center mb-5">
+            <span className="w-14 h-14 rounded-2xl bg-gradient-to-br from-italia-red to-italia-red-dark flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-italia-red/25">
+              SI
+            </span>
+          </div>
+          <h1 className="text-2xl font-bold text-center mb-1 font-heading gradient-text">
             Sud Italia
           </h1>
-          <p className="text-italia-gray text-center mb-6 text-sm">
+          <p className="admin-text-dim text-center mb-6 text-sm">
             Admin Panel
           </p>
 
@@ -52,20 +58,27 @@ export default function AdminLoginPage() {
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-italia-red focus:border-transparent"
+              className="w-full px-4 py-3 glass-input rounded-xl text-base"
               autoFocus
             />
 
             {error && (
-              <p className="text-sm text-italia-red text-center">{error}</p>
+              <p className="text-sm text-red-400 text-center bg-red-500/10 rounded-lg py-2">{error}</p>
             )}
 
             <button
               type="submit"
               disabled={loading || !password}
-              className="w-full py-3 bg-italia-red text-white rounded-xl font-semibold hover:bg-italia-red-dark transition-colors disabled:opacity-50"
+              className="w-full py-3 glass-btn text-white rounded-xl font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              {loading ? "Logging in..." : "Log In"}
+              {loading ? (
+                "Logging in..."
+              ) : (
+                <>
+                  <LogIn className="h-4 w-4" />
+                  Log In
+                </>
+              )}
             </button>
           </form>
         </div>

@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
 import { isAuthenticated } from "@/lib/admin-auth";
-import { AdminOrders } from "@/components/admin/AdminOrders";
+import { AdminRecipes } from "@/components/admin/AdminRecipes";
 
-export default async function AdminOrdersPage() {
+export default async function AdminRecipesPage() {
   if (!(await isAuthenticated())) {
     redirect("/admin/login");
   }
 
-  return <AdminOrders />;
+  return <AdminRecipes />;
 }

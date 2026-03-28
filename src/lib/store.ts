@@ -1,16 +1,39 @@
 import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
-import { TimeSlot, Order } from "@/data/types";
+import { neon } from "@neondatabase/serverless";
+import { TimeSlot, Order, Ingredient, Recipe } from "@/data/types";
+import { locations as allLocations } from "@/data/locations";
+
+// --- Storage abstraction: Neon Postgres when DATABASE_URL is set, filesystem fallback for local dev ---
 
 const DATA_DIR = join(process.cwd(), ".data");
+const useDB = !!process.env.DATABASE_URL;
 
-// Simple per-file lock to prevent concurrent read-modify-write races
+function sql() {
+  return neon(process.env.DATABASE_URL!);
+}
+
+let dbInitialized = false;
+
+async function ensureDB() {
+  if (dbInitialized) return;
+  const db = sql();
+  await db`
+    CREATE TABLE IF NOT EXISTS kv_store (
+      key TEXT PRIMARY KEY,
+      value JSONB NOT NULL DEFAULT '[]'::jsonb
+    )
+  `;
+  dbInitialized = true;
+}
+
+// Simple per-file lock to prevent concurrent read-modify-write races (filesystem only)
 const locks = new Map<string, Promise<void>>();
 
-function withLock<T>(filename: string, fn: () => Promise<T>): Promise<T> {
-  const prev = locks.get(filename) ?? Promise.resolve();
-  const next = prev.then(fn, fn); // run fn after previous settles
-  locks.set(filename, next.then(() => {}, () => {})); // swallow so chain continues
+function withLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  const prev = locks.get(key) ?? Promise.resolve();
+  const next = prev.then(fn, fn);
+  locks.set(key, next.then(() => {}, () => {}));
   return next;
 }
 
@@ -22,20 +45,40 @@ async function ensureDataDir() {
   }
 }
 
-async function readJSON<T>(filename: string, fallback: T): Promise<T> {
+async function readJSON<T>(key: string, fallback: T): Promise<T> {
+  if (useDB) {
+    try {
+      await ensureDB();
+      const db = sql();
+      const rows = await db`SELECT value FROM kv_store WHERE key = ${key}`;
+      if (rows.length === 0) return fallback;
+      return rows[0].value as T;
+    } catch (err) {
+      console.error(`DB read error for ${key}:`, err);
+      return fallback;
+    }
+  }
   await ensureDataDir();
-  const filepath = join(DATA_DIR, filename);
   try {
-    const data = await readFile(filepath, "utf-8");
+    const data = await readFile(join(DATA_DIR, key), "utf-8");
     return JSON.parse(data);
   } catch {
     return fallback;
   }
 }
 
-async function writeJSON<T>(filename: string, data: T): Promise<void> {
+async function writeJSON<T>(key: string, data: T): Promise<void> {
+  if (useDB) {
+    await ensureDB();
+    const db = sql();
+    await db`
+      INSERT INTO kv_store (key, value) VALUES (${key}, ${JSON.stringify(data)}::jsonb)
+      ON CONFLICT (key) DO UPDATE SET value = ${JSON.stringify(data)}::jsonb
+    `;
+    return;
+  }
   await ensureDataDir();
-  await writeFile(join(DATA_DIR, filename), JSON.stringify(data, null, 2));
+  await writeFile(join(DATA_DIR, key), JSON.stringify(data, null, 2));
 }
 
 // --- Time Slots ---
@@ -83,6 +126,22 @@ export async function updateSlot(id: string, updates: Partial<TimeSlot>): Promis
   });
 }
 
+export async function updateSlotsBulk(ids: string[], updates: Partial<TimeSlot>): Promise<TimeSlot[]> {
+  return withLock("slots.json", async () => {
+    const slots = await readJSON<TimeSlot[]>("slots.json", []);
+    const idSet = new Set(ids);
+    const updated: TimeSlot[] = [];
+    for (const slot of slots) {
+      if (idSet.has(slot.id)) {
+        Object.assign(slot, updates);
+        updated.push(slot);
+      }
+    }
+    await writeJSON("slots.json", slots);
+    return updated;
+  });
+}
+
 export async function deleteSlot(id: string): Promise<boolean> {
   return withLock("slots.json", async () => {
     const slots = await readJSON<TimeSlot[]>("slots.json", []);
@@ -90,6 +149,17 @@ export async function deleteSlot(id: string): Promise<boolean> {
     if (filtered.length === slots.length) return false;
     await writeJSON("slots.json", filtered);
     return true;
+  });
+}
+
+export async function deleteSlotsBulk(ids: string[]): Promise<number> {
+  return withLock("slots.json", async () => {
+    const slots = await readJSON<TimeSlot[]>("slots.json", []);
+    const idSet = new Set(ids);
+    const filtered = slots.filter((s) => !idSet.has(s.id));
+    const deletedCount = slots.length - filtered.length;
+    await writeJSON("slots.json", filtered);
+    return deletedCount;
   });
 }
 
@@ -113,6 +183,7 @@ export async function getAvailableSlots(
   fulfillmentType?: string
 ): Promise<TimeSlot[]> {
   return (await getSlots(locationSlug, date)).filter((s) => {
+    if ((s.status ?? "active") !== "active") return false;
     if (s.currentOrders >= s.maxOrders) return false;
     if (fulfillmentType && !s.fulfillmentTypes.includes(fulfillmentType as "takeout" | "delivery")) return false;
     return true;
@@ -328,6 +399,217 @@ export async function getSummary(
   };
 }
 
+// --- Insights ---
+
+export interface SlotUtilization {
+  time: string;
+  totalCapacity: number;
+  totalUsed: number;
+  utilization: number; // 0-100
+  slotCount: number;
+}
+
+export interface LocationComparison {
+  locationSlug: string;
+  city: string;
+  revenue: number;
+  profit: number;
+  profitMargin: number;
+  orderCount: number;
+  avgOrderValue: number;
+  totalItems: number;
+  avgItemsPerOrder: number;
+  takeoutCount: number;
+  deliveryCount: number;
+  cancelledCount: number;
+  cancellationRate: number;
+}
+
+export interface CustomerMetric {
+  name: string;
+  phone: string;
+  orderCount: number;
+  totalSpent: number;
+  lastOrderDate: string;
+}
+
+export interface InsightsData {
+  slotUtilization: SlotUtilization[];
+  locationComparison: LocationComparison[];
+  repeatCustomers: CustomerMetric[];
+  avgItemsPerOrder: number;
+  worstSellers: { name: string; quantity: number; revenue: number }[];
+  cancelledOrders: number;
+  cancellationRate: number;
+  peakHours: { hour: number; orderCount: number; revenue: number }[];
+}
+
+export async function getInsights(dateFrom?: string, dateTo?: string): Promise<InsightsData> {
+  const allSlots = await readJSON<TimeSlot[]>("slots.json", []);
+  const allOrders = await readJSON<Order[]>("orders.json", []);
+
+  // Filter by date range
+  const slots = allSlots.filter((s) => {
+    if (dateFrom && s.date < dateFrom) return false;
+    if (dateTo && s.date > dateTo) return false;
+    return true;
+  });
+
+  const orders = allOrders.filter((o) => {
+    const date = o.slotDate || o.createdAt.split("T")[0];
+    if (dateFrom && date < dateFrom) return false;
+    if (dateTo && date > dateTo) return false;
+    return true;
+  });
+
+  // --- Slot utilization by time ---
+  const byTime = new Map<string, { capacity: number; used: number; count: number }>();
+  for (const slot of slots) {
+    if ((slot.status ?? "active") !== "active") continue;
+    const existing = byTime.get(slot.time) || { capacity: 0, used: 0, count: 0 };
+    existing.capacity += slot.maxOrders;
+    existing.used += slot.currentOrders;
+    existing.count += 1;
+    byTime.set(slot.time, existing);
+  }
+  const slotUtilization: SlotUtilization[] = Array.from(byTime.entries())
+    .map(([time, d]) => ({
+      time,
+      totalCapacity: d.capacity,
+      totalUsed: d.used,
+      utilization: d.capacity > 0 ? Math.round((d.used / d.capacity) * 100) : 0,
+      slotCount: d.count,
+    }))
+    .sort((a, b) => a.time.localeCompare(b.time));
+
+  // --- Location comparison ---
+  const activeLocations = allLocations.filter((l) => l.isActive);
+  const locationComparison: LocationComparison[] = [];
+
+  for (const loc of activeLocations) {
+    const locOrders = orders.filter((o) => o.locationSlug === loc.slug);
+    const completed = locOrders.filter((o) => o.status !== "pending");
+    const cancelled = locOrders.filter((o) => o.status === "pending");
+    let revenue = 0;
+    let cost = 0;
+    let totalItems = 0;
+    let takeout = 0;
+    let delivery = 0;
+
+    for (const order of completed) {
+      revenue += order.totalAmount;
+      if (order.fulfillmentType === "takeout") takeout++;
+      else delivery++;
+      for (const ci of order.items) {
+        cost += (ci.menuItem.cost || 0) * ci.quantity;
+        totalItems += ci.quantity;
+      }
+    }
+
+    locationComparison.push({
+      locationSlug: loc.slug,
+      city: loc.city,
+      revenue,
+      profit: revenue - cost,
+      profitMargin: revenue > 0 ? Math.round(((revenue - cost) / revenue) * 100) : 0,
+      orderCount: completed.length,
+      avgOrderValue: completed.length > 0 ? Math.round(revenue / completed.length) : 0,
+      totalItems,
+      avgItemsPerOrder: completed.length > 0 ? Math.round((totalItems / completed.length) * 10) / 10 : 0,
+      takeoutCount: takeout,
+      deliveryCount: delivery,
+      cancelledCount: cancelled.length,
+      cancellationRate: locOrders.length > 0 ? Math.round((cancelled.length / locOrders.length) * 100) : 0,
+    });
+  }
+
+  // --- Repeat customers ---
+  const customerMap = new Map<string, CustomerMetric>();
+  for (const order of orders) {
+    const key = order.customerPhone;
+    const existing = customerMap.get(key);
+    if (existing) {
+      existing.orderCount += 1;
+      existing.totalSpent += order.totalAmount;
+      if (order.createdAt > existing.lastOrderDate) {
+        existing.lastOrderDate = order.createdAt;
+        existing.name = order.customerName;
+      }
+    } else {
+      customerMap.set(key, {
+        name: order.customerName,
+        phone: order.customerPhone,
+        orderCount: 1,
+        totalSpent: order.totalAmount,
+        lastOrderDate: order.createdAt,
+      });
+    }
+  }
+  const repeatCustomers = Array.from(customerMap.values())
+    .filter((c) => c.orderCount > 1)
+    .sort((a, b) => b.orderCount - a.orderCount)
+    .slice(0, 10);
+
+  // --- Avg items per order ---
+  const completedOrders = orders.filter((o) => o.status !== "pending");
+  let totalItemsAll = 0;
+  for (const o of completedOrders) {
+    for (const ci of o.items) totalItemsAll += ci.quantity;
+  }
+  const avgItemsPerOrder = completedOrders.length > 0
+    ? Math.round((totalItemsAll / completedOrders.length) * 10) / 10
+    : 0;
+
+  // --- Worst sellers (all items, sorted ascending by quantity) ---
+  const itemSales = new Map<string, { name: string; quantity: number; revenue: number }>();
+  for (const order of completedOrders) {
+    for (const ci of order.items) {
+      const existing = itemSales.get(ci.menuItem.id);
+      if (existing) {
+        existing.quantity += ci.quantity;
+        existing.revenue += ci.menuItem.price * ci.quantity;
+      } else {
+        itemSales.set(ci.menuItem.id, {
+          name: ci.menuItem.name,
+          quantity: ci.quantity,
+          revenue: ci.menuItem.price * ci.quantity,
+        });
+      }
+    }
+  }
+  const worstSellers = Array.from(itemSales.values())
+    .sort((a, b) => a.quantity - b.quantity)
+    .slice(0, 5);
+
+  // --- Cancellation rate ---
+  const cancelled = orders.filter((o) => o.status === "pending");
+  const cancellationRate = orders.length > 0 ? Math.round((cancelled.length / orders.length) * 100) : 0;
+
+  // --- Peak hours ---
+  const hourMap = new Map<number, { count: number; revenue: number }>();
+  for (const order of completedOrders) {
+    const hour = parseInt(order.slotTime?.split(":")[0] || "0", 10);
+    const existing = hourMap.get(hour) || { count: 0, revenue: 0 };
+    existing.count += 1;
+    existing.revenue += order.totalAmount;
+    hourMap.set(hour, existing);
+  }
+  const peakHours = Array.from(hourMap.entries())
+    .map(([hour, d]) => ({ hour, orderCount: d.count, revenue: d.revenue }))
+    .sort((a, b) => a.hour - b.hour);
+
+  return {
+    slotUtilization,
+    locationComparison,
+    repeatCustomers,
+    avgItemsPerOrder,
+    worstSellers,
+    cancelledOrders: cancelled.length,
+    cancellationRate,
+    peakHours,
+  };
+}
+
 // --- Notifications ---
 
 export interface Notification {
@@ -381,4 +663,152 @@ export async function markAllNotificationsRead(): Promise<void> {
 
 export async function getUnreadCount(): Promise<number> {
   return (await getNotifications()).filter((n) => !n.read).length;
+}
+
+// --- Menu Overrides ---
+// Stores admin-made changes to menu items (price, availability, etc.)
+// These get merged on top of the hardcoded menu data.
+
+export interface MenuOverride {
+  price?: number;
+  cost?: number;
+  available?: boolean;
+  name?: string;
+  description?: string;
+}
+
+export async function getMenuOverrides(): Promise<Record<string, MenuOverride>> {
+  return readJSON<Record<string, MenuOverride>>("menu-overrides.json", {});
+}
+
+export async function setMenuOverride(itemId: string, override: MenuOverride): Promise<void> {
+  return withLock("menu-overrides.json", async () => {
+    const overrides = await readJSON<Record<string, MenuOverride>>("menu-overrides.json", {});
+    overrides[itemId] = { ...overrides[itemId], ...override };
+    await writeJSON("menu-overrides.json", overrides);
+  });
+}
+
+export async function setMenuOverridesBulk(updates: Record<string, MenuOverride>): Promise<void> {
+  return withLock("menu-overrides.json", async () => {
+    const overrides = await readJSON<Record<string, MenuOverride>>("menu-overrides.json", {});
+    for (const [id, update] of Object.entries(updates)) {
+      overrides[id] = { ...overrides[id], ...update };
+    }
+    await writeJSON("menu-overrides.json", overrides);
+  });
+}
+
+// --- Settings ---
+
+export interface AppSettings {
+  deliveryFee: number; // in grosze
+  minOrderAmount: number; // in grosze
+  businessPhone: string;
+  businessEmail: string;
+}
+
+const DEFAULT_SETTINGS: AppSettings = {
+  deliveryFee: 1000, // 10.00 PLN
+  minOrderAmount: 3000, // 30.00 PLN
+  businessPhone: "",
+  businessEmail: "",
+};
+
+export async function getSettings(): Promise<AppSettings> {
+  const saved = await readJSON<Partial<AppSettings>>("settings.json", {});
+  return { ...DEFAULT_SETTINGS, ...saved };
+}
+
+export async function updateSettings(updates: Partial<AppSettings>): Promise<AppSettings> {
+  return withLock("settings.json", async () => {
+    const current = await readJSON<Partial<AppSettings>>("settings.json", {});
+    const merged = { ...DEFAULT_SETTINGS, ...current, ...updates };
+    await writeJSON("settings.json", merged);
+    return merged;
+  });
+}
+
+// --- Ingredients ---
+
+export async function getIngredients(): Promise<Ingredient[]> {
+  return readJSON<Ingredient[]>("ingredients.json", []);
+}
+
+export async function saveIngredient(ingredient: Ingredient): Promise<Ingredient> {
+  return withLock("ingredients.json", async () => {
+    const list = await readJSON<Ingredient[]>("ingredients.json", []);
+    const idx = list.findIndex((i) => i.id === ingredient.id);
+    if (idx >= 0) {
+      list[idx] = ingredient;
+    } else {
+      list.push(ingredient);
+    }
+    await writeJSON("ingredients.json", list);
+    return ingredient;
+  });
+}
+
+export async function deleteIngredient(id: string): Promise<boolean> {
+  return withLock("ingredients.json", async () => {
+    const list = await readJSON<Ingredient[]>("ingredients.json", []);
+    const filtered = list.filter((i) => i.id !== id);
+    if (filtered.length === list.length) return false;
+    await writeJSON("ingredients.json", filtered);
+    return true;
+  });
+}
+
+// --- Recipes ---
+
+export async function getRecipes(): Promise<Recipe[]> {
+  return readJSON<Recipe[]>("recipes.json", []);
+}
+
+export async function getRecipe(menuItemId: string): Promise<Recipe | undefined> {
+  const recipes = await readJSON<Recipe[]>("recipes.json", []);
+  return recipes.find((r) => r.menuItemId === menuItemId);
+}
+
+export async function saveRecipe(recipe: Recipe): Promise<Recipe> {
+  return withLock("recipes.json", async () => {
+    const list = await readJSON<Recipe[]>("recipes.json", []);
+    const idx = list.findIndex((r) => r.menuItemId === recipe.menuItemId);
+    if (idx >= 0) {
+      list[idx] = recipe;
+    } else {
+      list.push(recipe);
+    }
+    await writeJSON("recipes.json", list);
+    return recipe;
+  });
+}
+
+export async function deleteRecipe(menuItemId: string): Promise<boolean> {
+  return withLock("recipes.json", async () => {
+    const list = await readJSON<Recipe[]>("recipes.json", []);
+    const filtered = list.filter((r) => r.menuItemId !== menuItemId);
+    if (filtered.length === list.length) return false;
+    await writeJSON("recipes.json", filtered);
+    return true;
+  });
+}
+
+// Calculate food cost from recipe
+export async function calculateFoodCost(menuItemId: string): Promise<number> {
+  const recipe = await getRecipe(menuItemId);
+  if (!recipe || recipe.ingredients.length === 0) return 0;
+
+  const ingredients = await getIngredients();
+  const ingredientMap = new Map(ingredients.map((i) => [i.id, i]));
+
+  let totalCost = 0;
+  for (const ri of recipe.ingredients) {
+    const ing = ingredientMap.get(ri.ingredientId);
+    if (!ing) continue;
+    totalCost += ing.costPerUnit * ri.quantity * (ri.wasteFactor || 1);
+  }
+
+  // Cost per portion
+  return Math.round(totalCost / (recipe.yieldPortions || 1));
 }
