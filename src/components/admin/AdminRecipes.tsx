@@ -381,74 +381,17 @@ function RecipeEditor({
             <div className="w-24 text-right">Line Cost</div>
             <div className="w-9" />
           </div>
-          {recipeIngredients.map((ri, idx) => {
-            const ing = ingredientMap.get(ri.ingredientId);
-            const lineCost = ing ? Math.round(ing.costPerUnit * ri.quantity * (ri.wasteFactor || 1)) : 0;
-
-            // Convert stored value (kg/L) → display value (g/ml)
-            const displayUnit = ing?.unit === "kg" ? "g" : ing?.unit === "L" ? "ml" : (ing?.unit || "");
-            const multiplier = ing?.unit === "kg" || ing?.unit === "L" ? 1000 : 1;
-            const displayQty = ri.quantity ? Math.round(ri.quantity * multiplier * 1000) / 1000 : "";
-            const wastePct = Math.round((ri.wasteFactor - 1) * 100);
-
-            return (
-              <div key={idx} className="flex items-center gap-2">
-                {/* Ingredient select */}
-                <select
-                  value={ri.ingredientId}
-                  onChange={(e) => updateIngredient(idx, "ingredientId", e.target.value)}
-                  className="flex-1 glass-input rounded-lg"
-                >
-                  {ingredients.map((i) => (
-                    <option key={i.id} value={i.id}>
-                      {i.name} — {formatPrice(i.costPerUnit)}/{i.unit}
-                    </option>
-                  ))}
-                </select>
-
-                {/* Quantity input */}
-                <input
-                  type="number"
-                  step="1"
-                  min={0}
-                  value={displayQty}
-                  placeholder="0"
-                  onChange={(e) => {
-                    const val = parseFloat(e.target.value) || 0;
-                    updateIngredient(idx, "quantity", val / multiplier);
-                  }}
-                  className="w-28 glass-input rounded-lg text-right"
-                />
-                <span className="text-xs admin-text-muted w-8">{displayUnit}</span>
-
-                {/* Waste % input */}
-                <div className="w-20 flex items-center gap-1">
-                  <input
-                    type="number"
-                    step="1"
-                    min={0}
-                    value={wastePct}
-                    onChange={(e) => updateIngredient(idx, "wasteFactor", 1 + (parseFloat(e.target.value) || 0) / 100)}
-                    className="w-14 glass-input rounded-lg text-right"
-                  />
-                  <span className="text-xs admin-text-muted">%</span>
-                </div>
-
-                {/* Line cost */}
-                <div className="w-24 text-right text-sm font-semibold admin-text">
-                  {formatPrice(lineCost)}
-                </div>
-
-                {/* Delete */}
-                <button
-                  onClick={() => removeIngredient(idx)}
-                  className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            );
-          })}
+          {recipeIngredients.map((ri, idx) => (
+            <IngredientRow
+              key={idx}
+              ri={ri}
+              idx={idx}
+              ingredientMap={ingredientMap}
+              ingredients={ingredients}
+              onUpdate={updateIngredient}
+              onRemove={removeIngredient}
+            />
+          ))}
         </div>
       )}
 
@@ -496,6 +439,107 @@ function RecipeEditor({
           {saving ? "Saving..." : "Save Recipe"}
         </button>
       </div>
+    </div>
+  );
+}
+
+// =====================
+// INGREDIENT ROW (isolated state so typing doesn't fight derived values)
+// =====================
+
+function IngredientRow({
+  ri,
+  idx,
+  ingredientMap,
+  ingredients,
+  onUpdate,
+  onRemove,
+}: {
+  ri: EnrichedRecipeIngredient;
+  idx: number;
+  ingredientMap: Map<string, IngredientData>;
+  ingredients: IngredientData[];
+  onUpdate: (idx: number, field: string, value: string | number) => void;
+  onRemove: (idx: number) => void;
+}) {
+  const ing = ingredientMap.get(ri.ingredientId);
+  const displayUnit = ing?.unit === "kg" ? "g" : ing?.unit === "L" ? "ml" : (ing?.unit || "");
+  const multiplier = ing?.unit === "kg" || ing?.unit === "L" ? 1000 : 1;
+
+  // Local state for inputs so typing isn't clobbered by derived value rounding
+  const [qtyStr, setQtyStr] = useState(ri.quantity ? String(Math.round(ri.quantity * multiplier * 1000) / 1000) : "");
+  const [wasteStr, setWasteStr] = useState(String(Math.round((ri.wasteFactor - 1) * 100)));
+
+  // Sync from parent when ingredient changes
+  useEffect(() => {
+    const m = ing?.unit === "kg" || ing?.unit === "L" ? 1000 : 1;
+    setQtyStr(ri.quantity ? String(Math.round(ri.quantity * m * 1000) / 1000) : "");
+    setWasteStr(String(Math.round((ri.wasteFactor - 1) * 100)));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ri.ingredientId]);
+
+  const lineCost = ing ? Math.round(ing.costPerUnit * ri.quantity * (ri.wasteFactor || 1)) : 0;
+
+  return (
+    <div className="flex items-center gap-2">
+      {/* Ingredient select */}
+      <select
+        value={ri.ingredientId}
+        onChange={(e) => onUpdate(idx, "ingredientId", e.target.value)}
+        className="flex-1 glass-input rounded-lg"
+      >
+        {ingredients.map((i) => (
+          <option key={i.id} value={i.id}>
+            {i.name} — {formatPrice(i.costPerUnit)}/{i.unit}
+          </option>
+        ))}
+      </select>
+
+      {/* Quantity */}
+      <input
+        type="number"
+        step="1"
+        min={0}
+        value={qtyStr}
+        placeholder="0"
+        onChange={(e) => {
+          setQtyStr(e.target.value);
+          const val = parseFloat(e.target.value) || 0;
+          onUpdate(idx, "quantity", val / multiplier);
+        }}
+        className="w-28 glass-input rounded-lg text-right"
+      />
+      <span className="text-xs admin-text-muted w-8">{displayUnit}</span>
+
+      {/* Waste % */}
+      <div className="w-20 flex items-center gap-1">
+        <input
+          type="number"
+          step="1"
+          min={0}
+          value={wasteStr}
+          placeholder="0"
+          onChange={(e) => {
+            setWasteStr(e.target.value);
+            onUpdate(idx, "wasteFactor", 1 + (parseFloat(e.target.value) || 0) / 100);
+          }}
+          className="w-14 glass-input rounded-lg text-right"
+        />
+        <span className="text-xs admin-text-muted">%</span>
+      </div>
+
+      {/* Line cost — updates live as qty/waste change */}
+      <div className="w-24 text-right text-sm font-semibold admin-text">
+        {formatPrice(lineCost)}
+      </div>
+
+      {/* Delete */}
+      <button
+        onClick={() => onRemove(idx)}
+        className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+      >
+        <X className="h-4 w-4" />
+      </button>
     </div>
   );
 }
