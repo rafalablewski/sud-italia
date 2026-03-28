@@ -26,14 +26,29 @@ export function MenuSection({ items, locationSlug }: MenuSectionProps) {
     return cats.sort((a, b) => order.indexOf(a) - order.indexOf(b));
   }, [items]);
 
-  const [activeCategory, setActiveCategory] = useState<MenuCategory>(
+  const [activeCategory, setActiveCategory] = useState<MenuCategory | undefined>(
     categories[0]
   );
 
   const filteredItems = useMemo(
-    () => items.filter((i) => i.category === activeCategory && i.available),
+    () =>
+      activeCategory
+        ? items.filter((i) => i.category === activeCategory && i.available)
+        : [],
     [items, activeCategory]
   );
+
+  if (categories.length === 0 || !activeCategory) {
+    return (
+      <section id="menu">
+        <Container className="py-12">
+          <p className="text-center text-italia-gray">
+            No menu items available right now.
+          </p>
+        </Container>
+      </section>
+    );
+  }
 
   return (
     <section id="menu">

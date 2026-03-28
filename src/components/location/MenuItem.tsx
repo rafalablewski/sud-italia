@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { formatPrice } from "@/lib/utils";
 import { useCartStore } from "@/store/cart";
 import { Plus, Check } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface MenuItemProps {
   item: MenuItemType;
@@ -24,10 +24,15 @@ export function MenuItemCard({ item, locationSlug }: MenuItemProps) {
   const addItem = useCartStore((s) => s.addItem);
   const [added, setAdded] = useState(false);
 
+  useEffect(() => {
+    if (!added) return;
+    const timer = setTimeout(() => setAdded(false), 1200);
+    return () => clearTimeout(timer);
+  }, [added]);
+
   const handleAdd = () => {
     addItem(item, locationSlug);
     setAdded(true);
-    setTimeout(() => setAdded(false), 1200);
   };
 
   return (
