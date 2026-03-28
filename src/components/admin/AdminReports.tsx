@@ -374,7 +374,7 @@ export function AdminReports() {
                               <td className="px-4 py-3 text-right admin-text">{data.count}</td>
                               <td className="px-4 py-3 text-right">
                                 <div className="flex items-center justify-end gap-2">
-                                  <div className="w-16 h-2 bg-gray-100 rounded-full overflow-hidden">
+                                  <div className="w-16 h-2 bg-white/10 rounded-full overflow-hidden">
                                     <div
                                       className="h-full bg-italia-red/50 rounded-full"
                                       style={{ width: `${revShare}%` }}
@@ -403,7 +403,7 @@ export function AdminReports() {
                     return (
                       <div key={item.name} className="flex items-center gap-3 p-3 rounded-xl bg-white/5">
                         <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                          i < 3 ? "bg-italia-gold/20 text-italia-gold-dark" : "bg-gray-200 admin-text-muted"
+                          i < 3 ? "bg-italia-gold/20 text-italia-gold-dark" : "bg-white/10 admin-text-muted"
                         }`}>
                           {i + 1}
                         </span>
@@ -413,7 +413,7 @@ export function AdminReports() {
                             <span className="text-sm font-bold admin-text ml-2">{formatPrice(item.revenue)}</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                            <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
                               <div
                                 className="h-full bg-italia-red rounded-full"
                                 style={{ width: `${barWidth}%` }}
@@ -463,7 +463,7 @@ function SummaryCard({
         ? "bg-green-500/10 border-green-500/20"
         : highlight === "red"
           ? "bg-red-500/10 border-red-500/20"
-          : "bg-white border-white/8"
+          : "bg-white/7 border-white/10"
     }`}>
       <div className="flex items-center gap-2 mb-1">
         {icon}
