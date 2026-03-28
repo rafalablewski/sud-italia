@@ -16,18 +16,24 @@
   --color-italia-light-gray: #F3F4F6;
   --font-heading: Georgia, "Times New Roman", serif;
   --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --animate-fade-in: fade-in 0.25s ease-out;
+  --animate-fade-in: fade-in 0.3s ease-out;
+  --animate-slide-up: slide-up 0.4s ease-out;
+  --animate-scale-in: scale-in 0.2s ease-out;
 }
 
 @keyframes fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 body {
@@ -40,11 +46,132 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Custom scrollbar for menu category nav */
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* === Admin Glassmorphism System === */
+
+.admin-bg {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 40%, #1a1a2e 100%);
+  min-height: 100vh;
+  position: relative;
 }
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+
+.admin-bg::before {
+  content: '';
+  position: fixed;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(200, 16, 46, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(0, 140, 69, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 80%, rgba(212, 168, 71, 0.05) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
 }
+
+.admin-bg > * {
+  position: relative;
+  z-index: 1;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-light {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.glass-nav {
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-input {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f1f5f9;
+  transition: all 0.2s ease;
+}
+
+.glass-input:focus {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(200, 16, 46, 0.5);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.15);
+}
+
+.glass-input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.glass-btn {
+  background: linear-gradient(135deg, rgba(200, 16, 46, 0.8), rgba(200, 16, 46, 0.6));
+  border: 1px solid rgba(200, 16, 46, 0.3);
+  transition: all 0.2s ease;
+}
+
+.glass-btn:hover {
+  background: linear-gradient(135deg, rgba(200, 16, 46, 0.9), rgba(200, 16, 46, 0.7));
+  box-shadow: 0 4px 16px rgba(200, 16, 46, 0.3);
+  transform: translateY(-1px);
+}
+
+.glass-btn-green {
+  background: linear-gradient(135deg, rgba(0, 140, 69, 0.8), rgba(0, 140, 69, 0.6));
+  border: 1px solid rgba(0, 140, 69, 0.3);
+  transition: all 0.2s ease;
+}
+
+.glass-btn-green:hover {
+  background: linear-gradient(135deg, rgba(0, 140, 69, 0.9), rgba(0, 140, 69, 0.7));
+  box-shadow: 0 4px 16px rgba(0, 140, 69, 0.3);
+  transform: translateY(-1px);
+}
+
+/* Dark-mode text classes for admin */
+.admin-text { color: #f1f5f9; }
+.admin-text-muted { color: #94a3b8; }
+.admin-text-dim { color: #64748b; }
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Staggered animations */
+.stagger-1 { animation: slide-up 0.4s ease-out 0.05s both; }
+.stagger-2 { animation: slide-up 0.4s ease-out 0.1s both; }
+.stagger-3 { animation: slide-up 0.4s ease-out 0.15s both; }
+.stagger-4 { animation: slide-up 0.4s ease-out 0.2s both; }
+.stagger-5 { animation: slide-up 0.4s ease-out 0.25s both; }
+.stagger-6 { animation: slide-up 0.4s ease-out 0.3s both; }

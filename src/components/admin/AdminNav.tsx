@@ -9,7 +9,7 @@ const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/menu", label: "Menu", icon: UtensilsCrossed },
   { href: "/admin/recipes", label: "Recipes", icon: FlaskConical },
-  { href: "/admin/slots", label: "Time Slots", icon: CalendarDays },
+  { href: "/admin/slots", label: "Slots", icon: CalendarDays },
   { href: "/admin/orders", label: "Orders", icon: ClipboardList },
   { href: "/admin/reports", label: "Reports", icon: BarChart3 },
   { href: "/admin/settings", label: "Settings", icon: Settings },
@@ -37,27 +37,32 @@ export function AdminNav() {
   };
 
   return (
-    <nav className="bg-white border-b border-gray-200 px-4 py-3">
-      <div className="max-w-6xl mx-auto flex items-center justify-between">
-        <div className="flex items-center gap-6">
-          <Link href="/admin" className="font-heading font-bold text-lg text-italia-dark">
-            Sud Italia <span className="text-italia-red">Admin</span>
+    <nav className="glass-nav sticky top-0 z-50 px-4 py-2.5">
+      <div className="max-w-7xl mx-auto flex items-center justify-between">
+        <div className="flex items-center gap-5">
+          <Link href="/admin" className="flex items-center gap-2">
+            <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-italia-red to-italia-red-dark flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-italia-red/20">
+              SI
+            </span>
+            <span className="font-heading font-bold text-base admin-text hidden sm:block">
+              Sud Italia
+            </span>
           </Link>
 
-          <div className="hidden md:flex items-center gap-1">
+          <div className="hidden lg:flex items-center gap-0.5">
             {navItems.map((item) => {
               const isActive = pathname === item.href;
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                     isActive
-                      ? "bg-italia-red text-white"
-                      : "text-italia-gray hover:bg-gray-100"
+                      ? "bg-white/12 text-white shadow-sm shadow-white/5"
+                      : "text-slate-400 hover:text-white hover:bg-white/6"
                   }`}
                 >
-                  <item.icon className="h-4 w-4" />
+                  <item.icon className="h-3.5 w-3.5" />
                   {item.label}
                 </Link>
               );
@@ -65,14 +70,14 @@ export function AdminNav() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <Link
             href="/admin#notifications"
-            className="relative p-2 rounded-lg text-italia-gray hover:bg-gray-100 transition-colors"
+            className="relative p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/6 transition-all duration-200"
           >
-            <Bell className="h-5 w-5" />
+            <Bell className="h-4.5 w-4.5" />
             {unread > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-italia-red text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+              <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 bg-italia-red text-white text-[9px] font-bold rounded-full flex items-center justify-center shadow-lg shadow-italia-red/30 animate-pulse">
                 {unread > 9 ? "9+" : unread}
               </span>
             )}
@@ -80,29 +85,29 @@ export function AdminNav() {
 
           <button
             onClick={handleLogout}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-italia-gray hover:bg-gray-100 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-white/6 transition-all duration-200"
           >
-            <LogOut className="h-4 w-4" />
+            <LogOut className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Logout</span>
           </button>
         </div>
       </div>
 
       {/* Mobile nav */}
-      <div className="flex md:hidden items-center gap-1 mt-2 overflow-x-auto scrollbar-hide">
+      <div className="flex lg:hidden items-center gap-0.5 mt-2 overflow-x-auto scrollbar-hide pb-0.5">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all duration-200 ${
                 isActive
-                  ? "bg-italia-red text-white"
-                  : "text-italia-gray hover:bg-gray-100"
+                  ? "bg-white/12 text-white"
+                  : "text-slate-400 hover:text-white hover:bg-white/6"
               }`}
             >
-              <item.icon className="h-3.5 w-3.5" />
+              <item.icon className="h-3 w-3" />
               {item.label}
             </Link>
           );
