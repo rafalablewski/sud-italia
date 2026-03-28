@@ -57,17 +57,17 @@ export function MenuItemCard({ item, locationSlug }: MenuItemProps) {
       <Button
         onClick={handleAdd}
         variant={added ? "secondary" : "primary"}
-        size="sm"
-        className="flex-shrink-0 mt-1"
+        size="md"
+        className="flex-shrink-0 mt-1 min-h-[44px] min-w-[80px]"
         disabled={!item.available}
       >
         {added ? (
           <>
-            <Check className="h-4 w-4 mr-1" /> Added
+            <Check className="h-5 w-5 mr-1.5" /> Added
           </>
         ) : (
           <>
-            <Plus className="h-4 w-4 mr-1" /> Add
+            <Plus className="h-5 w-5 mr-1.5" /> Add
           </>
         )}
       </Button>

@@ -13,7 +13,7 @@ export function CartButton() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
+        className="relative p-2.5 rounded-lg hover:bg-gray-100 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
         aria-label="Open cart"
       >
         <ShoppingCart className="h-5 w-5 text-italia-dark" />

@@ -5,7 +5,7 @@ import { ChevronDown } from "lucide-react";
 
 export function HeroSection() {
   return (
-    <section className="relative min-h-[90vh] flex items-center bg-gradient-to-br from-italia-dark via-[#2a1a0a] to-italia-dark overflow-hidden">
+    <section className="relative min-h-[60vh] md:min-h-[90vh] flex items-center bg-gradient-to-br from-italia-dark via-[#2a1a0a] to-italia-dark overflow-hidden">
       {/* Decorative elements */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-20 left-10 w-72 h-72 rounded-full bg-italia-red blur-3xl" />
@@ -25,7 +25,7 @@ export function HeroSection() {
           <p className="text-italia-gold font-medium text-sm tracking-[0.2em] uppercase mb-6">
             Authentic Italian Street Food
           </p>
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-heading font-bold text-white leading-[1.1] mb-6">
+          <h1 className="text-3xl sm:text-5xl lg:text-7xl font-heading font-bold text-white leading-[1.1] mb-6">
             A Taste of{" "}
             <span className="text-italia-red">Southern Italy</span>
             <br />

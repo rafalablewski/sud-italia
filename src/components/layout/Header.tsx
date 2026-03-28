@@ -60,7 +60,7 @@ export function Header() {
             <CartButton />
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              className="p-2.5 rounded-lg hover:bg-gray-100 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
             >
               {mobileOpen ? (
                 <X className="h-6 w-6" />

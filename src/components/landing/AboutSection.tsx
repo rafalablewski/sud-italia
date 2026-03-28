@@ -30,7 +30,7 @@ const values = [
 
 export function AboutSection() {
   return (
-    <section id="about" className="py-20 md:py-28 bg-italia-cream">
+    <section id="about" className="hidden md:block py-20 md:py-28 bg-italia-cream">
       <Container>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           {/* Text */}

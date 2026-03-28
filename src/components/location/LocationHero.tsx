@@ -8,7 +8,7 @@ interface LocationHeroProps {
 
 export function LocationHero({ location }: LocationHeroProps) {
   return (
-    <section className="relative bg-gradient-to-br from-italia-dark via-[#2a1a0a] to-italia-dark py-16 md:py-24">
+    <section className="relative bg-gradient-to-br from-italia-dark via-[#2a1a0a] to-italia-dark py-10 md:py-24">
       {/* Decorative */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-10 right-20 w-72 h-72 rounded-full bg-italia-red blur-3xl" />
@@ -29,7 +29,7 @@ export function LocationHero({ location }: LocationHeroProps) {
         <h1 className="text-4xl sm:text-5xl lg:text-6xl font-heading font-bold text-white mb-6">
           {location.name}
         </h1>
-        <p className="text-gray-300 text-lg max-w-2xl leading-relaxed mb-8">
+        <p className="hidden md:block text-gray-300 text-lg max-w-2xl leading-relaxed mb-8">
           {location.description}
         </p>
 

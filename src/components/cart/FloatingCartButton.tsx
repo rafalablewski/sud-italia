@@ -17,10 +17,10 @@ export function FloatingCartButton() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-30 bg-italia-red text-white rounded-full shadow-lg shadow-italia-red/30 flex items-center gap-3 px-5 py-3.5 hover:bg-italia-red-dark transition-colors md:hidden"
+        className="fixed bottom-6 left-4 right-4 z-30 bg-italia-red text-white rounded-2xl shadow-lg shadow-italia-red/30 flex items-center justify-center gap-3 px-6 py-4 min-h-[56px] hover:bg-italia-red-dark transition-colors active:bg-italia-red-dark md:hidden"
       >
         <ShoppingCart className="h-5 w-5" />
-        <span className="font-semibold text-sm">
+        <span className="font-semibold text-base">
           {itemCount} items &middot; {formatPrice(getTotal())}
         </span>
       </button>

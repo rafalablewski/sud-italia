@@ -21,7 +21,6 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showCheckout, setShowCheckout] = useState(false);
 
   const total = getTotal();
 
@@ -52,9 +51,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
       if (data.url) {
         window.location.href = data.url;
       } else {
-        // Fallback: simulate order without Stripe
         clearCart();
-        setShowCheckout(false);
         setCustomerName("");
         setCustomerPhone("");
         onClose();
@@ -67,86 +64,69 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
     }
   };
 
+  const canCheckout = customerName.trim().length > 0 && customerPhone.trim().length > 0;
+
   return (
     <Sheet open={open} onClose={onClose} title="Your Order">
       {items.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-64 text-italia-gray">
           <ShoppingCart className="h-12 w-12 mb-4 opacity-30" />
-          <p className="font-medium">Your cart is empty</p>
+          <p className="font-medium text-lg">Your cart is empty</p>
           <p className="text-sm mt-1">Add items from the menu to get started</p>
         </div>
       ) : (
         <div className="flex flex-col h-full">
-          {/* Items */}
+          {/* Items list */}
           <div className="flex-1 px-5 overflow-y-auto">
             {items.map((item) => (
               <CartItemRow key={item.menuItem.id} item={item} />
             ))}
           </div>
 
-          {/* Footer */}
-          <div className="border-t border-gray-100 p-5 space-y-4 bg-gray-50">
-            {showCheckout ? (
-              <>
-                <div className="space-y-3">
-                  <input
-                    type="text"
-                    placeholder="Your name"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-italia-red focus:border-transparent"
-                  />
-                  <input
-                    type="tel"
-                    placeholder="Phone number"
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-italia-red focus:border-transparent"
-                  />
-                </div>
-                <div className="flex justify-between items-center text-lg font-bold">
-                  <span>Total</span>
-                  <span className="text-italia-red">{formatPrice(total)}</span>
-                </div>
-                <Button
-                  onClick={handleCheckout}
-                  disabled={isSubmitting || !customerName.trim() || !customerPhone.trim()}
-                  className="w-full"
-                  size="lg"
-                >
-                  {isSubmitting ? "Processing..." : `Pay ${formatPrice(total)}`}
-                </Button>
-                <button
-                  onClick={() => setShowCheckout(false)}
-                  className="w-full text-sm text-italia-gray hover:text-italia-dark text-center"
-                >
-                  Back to cart
-                </button>
-              </>
-            ) : (
-              <>
-                <div className="flex justify-between items-center text-lg font-bold">
-                  <span>Total</span>
-                  <span className="text-italia-red">{formatPrice(total)}</span>
-                </div>
-                <Button
-                  onClick={() => setShowCheckout(true)}
-                  className="w-full"
-                  size="lg"
-                >
-                  Proceed to Checkout
-                </Button>
-                <button
-                  onClick={() => {
-                    clearCart();
-                  }}
-                  className="w-full flex items-center justify-center gap-2 text-sm text-italia-gray hover:text-italia-red transition-colors"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  Clear cart
-                </button>
-              </>
-            )}
+          {/* Single-step checkout footer — name, phone, and pay all visible */}
+          <div className="border-t border-gray-100 p-5 space-y-3 bg-gray-50">
+            <div className="flex gap-3">
+              <input
+                type="text"
+                placeholder="Your name"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                className="flex-1 px-4 py-3 min-h-[44px] border border-gray-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-italia-red focus:border-transparent"
+              />
+              <input
+                type="tel"
+                placeholder="Phone"
+                value={customerPhone}
+                onChange={(e) => setCustomerPhone(e.target.value)}
+                className="w-[130px] px-4 py-3 min-h-[44px] border border-gray-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-italia-red focus:border-transparent"
+              />
+            </div>
+
+            <div className="flex justify-between items-center text-lg font-bold pt-1">
+              <span>Total</span>
+              <span className="text-italia-red">{formatPrice(total)}</span>
+            </div>
+
+            <Button
+              onClick={handleCheckout}
+              disabled={isSubmitting || !canCheckout}
+              className="w-full min-h-[52px]"
+              size="lg"
+            >
+              {isSubmitting
+                ? "Processing..."
+                : canCheckout
+                  ? `Pay ${formatPrice(total)}`
+                  : "Enter name & phone to order"}
+            </Button>
+
+            <button
+              onClick={() => clearCart()}
+              className="w-full flex items-center justify-center gap-2 text-sm py-2 min-h-[44px] text-italia-gray hover:text-italia-red active:text-italia-red transition-colors"
+            >
+              <Trash2 className="h-4 w-4" />
+              Clear cart
+            </button>
           </div>
         </div>
       )}

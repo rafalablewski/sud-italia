@@ -14,15 +14,15 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         className={cn(
-          "inline-flex items-center justify-center font-medium transition-colors rounded-lg focus:outline-none focus:ring-2 focus:ring-italia-gold focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none",
+          "inline-flex items-center justify-center font-medium transition-colors rounded-lg focus:outline-none focus:ring-2 focus:ring-italia-gold focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none select-none",
           {
-            "bg-italia-red text-white hover:bg-italia-red-dark":
+            "bg-italia-red text-white hover:bg-italia-red-dark active:bg-italia-red-dark":
               variant === "primary",
-            "bg-italia-green text-white hover:bg-italia-green-dark":
+            "bg-italia-green text-white hover:bg-italia-green-dark active:bg-italia-green-dark":
               variant === "secondary",
-            "border-2 border-italia-red text-italia-red hover:bg-italia-red hover:text-white":
+            "border-2 border-italia-red text-italia-red hover:bg-italia-red hover:text-white active:bg-italia-red active:text-white":
               variant === "outline",
-            "text-italia-dark hover:bg-italia-cream-dark":
+            "text-italia-dark hover:bg-italia-cream-dark active:bg-italia-cream-dark":
               variant === "ghost",
           },
           {
