@@ -6,6 +6,7 @@ import { MenuCategory, MENU_CATEGORY_LABELS } from "@/data/types";
 import { Container } from "@/components/ui/Container";
 import { MenuCategoryNav } from "./MenuCategoryNav";
 import { MenuItemCard } from "./MenuItem";
+import { SurpriseMe } from "./SurpriseMe";
 import { Search, X } from "lucide-react";
 
 interface MenuSectionProps {
@@ -100,6 +101,13 @@ export function MenuSection({ items, locationSlug }: MenuSectionProps) {
       </div>
 
       <Container className="py-8">
+        {/* Surprise Me feature */}
+        {!isSearching && (
+          <div className="mb-6">
+            <SurpriseMe items={items.filter((i) => i.available)} locationSlug={locationSlug} />
+          </div>
+        )}
+
         {isSearching ? (
           <p className="text-sm text-italia-gray mb-4">
             {filteredItems.length} result{filteredItems.length !== 1 ? "s" : ""} for &ldquo;{searchQuery}&rdquo;

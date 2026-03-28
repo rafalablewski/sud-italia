@@ -4,6 +4,7 @@ import { MenuItem as MenuItemType } from "@/data/types";
 import { CATEGORY_ICONS, CATEGORY_COLORS } from "@/data/menu-ui";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { MenuItemImage } from "./MenuItemImage";
 import { formatPrice } from "@/lib/utils";
 import { getItemBadges, BADGE_CONFIG, BadgeType } from "@/lib/upsell";
 import { useCartStore } from "@/store/cart";
@@ -91,10 +92,8 @@ export function MenuItemCard({ item, locationSlug }: MenuItemProps) {
         </div>
       )}
 
-      {/* Food category icon */}
-      <div className={`flex-shrink-0 w-14 h-14 rounded-xl flex items-center justify-center ${iconColor}`}>
-        {Icon && <Icon className="h-7 w-7" />}
-      </div>
+      {/* Food item visual */}
+      <MenuItemImage category={item.category} name={item.name} />
 
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-3">
