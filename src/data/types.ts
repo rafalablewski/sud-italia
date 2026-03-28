@@ -49,6 +49,8 @@ export interface CartItem {
 
 export type FulfillmentType = "takeout" | "delivery";
 
+export type SlotStatus = "draft" | "active";
+
 export interface TimeSlot {
   id: string;
   locationSlug: string;
@@ -57,6 +59,7 @@ export interface TimeSlot {
   maxOrders: number;
   currentOrders: number;
   fulfillmentTypes: FulfillmentType[]; // which types this slot supports
+  status: SlotStatus; // "draft" until admin approves, then "active"
 }
 
 export interface Order {

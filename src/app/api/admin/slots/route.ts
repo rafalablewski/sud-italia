@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAuthenticated } from "@/lib/admin-auth";
 import { getSlots, createSlot, createSlotsBulk, updateSlot, deleteSlot } from "@/lib/store";
-import { FulfillmentType } from "@/data/types";
+import type { FulfillmentType, SlotStatus } from "@/data/types";
 
 const VALID_FULFILLMENT_TYPES = new Set<string>(["takeout", "delivery"]);
 
@@ -64,6 +64,7 @@ export async function POST(req: NextRequest) {
           maxOrders: Number(maxOrders),
           currentOrders: 0,
           fulfillmentTypes: validTypes,
+          status: "draft" as SlotStatus,
         });
         startMin += Number(interval);
       }
@@ -86,6 +87,7 @@ export async function POST(req: NextRequest) {
       maxOrders: Number(maxOrders),
       currentOrders: 0,
       fulfillmentTypes: validTypes,
+      status: "draft",
     });
 
     return NextResponse.json(slot, { status: 201 });

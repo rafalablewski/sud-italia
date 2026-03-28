@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { AdminNav } from "./AdminNav";
-import { Plus, Trash2, Clock, MapPin } from "lucide-react";
+import { Plus, Trash2, Clock, MapPin, Check, CheckCheck } from "lucide-react";
 import { locations } from "@/data/locations";
 import { formatSlotTime } from "@/lib/format";
 
@@ -14,6 +14,7 @@ interface SlotData {
   maxOrders: number;
   currentOrders: number;
   fulfillmentTypes: string[];
+  status: "draft" | "active";
 }
 
 const activeLocations = locations.filter((l) => l.isActive);
@@ -134,6 +135,32 @@ export function AdminSlots() {
     fetchSlots();
   };
 
+  const handleApprove = async (id: string) => {
+    await fetch("/api/admin/slots", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, status: "active" }),
+    });
+    fetchSlots();
+  };
+
+  const handleApproveAll = async () => {
+    const drafts = slots.filter((s) => (s.status ?? "draft") === "draft");
+    if (drafts.length === 0) return;
+    await Promise.all(
+      drafts.map((s) =>
+        fetch("/api/admin/slots", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: s.id, status: "active" }),
+        })
+      )
+    );
+    fetchSlots();
+  };
+
+  const draftCount = slots.filter((s) => (s.status ?? "draft") === "draft").length;
+
   return (
     <>
       <AdminNav />
@@ -142,13 +169,24 @@ export function AdminSlots() {
           <h1 className="text-2xl font-bold font-heading text-italia-dark">
             Time Slots
           </h1>
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="flex items-center gap-2 px-4 py-2 bg-italia-green text-white rounded-xl font-semibold text-sm hover:bg-italia-green-dark transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            Add Slot
-          </button>
+          <div className="flex items-center gap-3">
+            {draftCount > 0 && (
+              <button
+                onClick={handleApproveAll}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 transition-colors"
+              >
+                <CheckCheck className="h-4 w-4" />
+                Confirm All ({draftCount})
+              </button>
+            )}
+            <button
+              onClick={() => setShowForm(!showForm)}
+              className="flex items-center gap-2 px-4 py-2 bg-italia-green text-white rounded-xl font-semibold text-sm hover:bg-italia-green-dark transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              Add Slot
+            </button>
+          </div>
         </div>
 
         {/* Filters */}
@@ -298,52 +336,81 @@ export function AdminSlots() {
           </div>
         ) : (
           <div className="space-y-3">
-            {slots.map((slot) => (
-              <div
-                key={slot.id}
-                className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center justify-between"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="text-xl font-bold font-heading text-italia-dark w-16">
-                    {formatSlotTime(slot.time)}
+            {slots.map((slot) => {
+              const isDraft = (slot.status ?? "draft") === "draft";
+              return (
+                <div
+                  key={slot.id}
+                  className={`rounded-xl p-4 shadow-sm flex items-center justify-between ${
+                    isDraft
+                      ? "bg-yellow-50 border-2 border-dashed border-yellow-300"
+                      : "bg-white border border-gray-100"
+                  }`}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="text-xl font-bold font-heading text-italia-dark w-16">
+                      {formatSlotTime(slot.time)}
+                    </div>
+
+                    {isDraft ? (
+                      <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-semibold rounded-lg">
+                        Draft
+                      </span>
+                    ) : (
+                      <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-lg">
+                        Active
+                      </span>
+                    )}
+
+                    <div className="flex items-center gap-2">
+                      {slot.fulfillmentTypes.includes("takeout") && (
+                        <span className="px-2 py-1 bg-italia-green/10 text-italia-green text-xs font-medium rounded-lg">
+                          Takeout
+                        </span>
+                      )}
+                      {slot.fulfillmentTypes.includes("delivery") && (
+                        <span className="px-2 py-1 bg-italia-red/10 text-italia-red text-xs font-medium rounded-lg">
+                          Delivery
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="text-sm text-italia-gray">
+                      <span className="font-semibold text-italia-dark">{slot.currentOrders}</span>
+                      {" / "}
+                      <input
+                        type="number"
+                        min={slot.currentOrders}
+                        defaultValue={slot.maxOrders}
+                        onBlur={(e) => handleUpdateMax(slot.id, Number(e.target.value))}
+                        className="w-14 px-1 py-0.5 border border-gray-200 rounded text-center text-sm"
+                      />
+                      {" orders"}
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {slot.fulfillmentTypes.includes("takeout") && (
-                      <span className="px-2 py-1 bg-italia-green/10 text-italia-green text-xs font-medium rounded-lg">
-                        Takeout
-                      </span>
+                    {isDraft && (
+                      <button
+                        onClick={() => handleApprove(slot.id)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                        title="Approve & confirm slot"
+                      >
+                        <Check className="h-4 w-4" />
+                        Confirm
+                      </button>
                     )}
-                    {slot.fulfillmentTypes.includes("delivery") && (
-                      <span className="px-2 py-1 bg-italia-red/10 text-italia-red text-xs font-medium rounded-lg">
-                        Delivery
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="text-sm text-italia-gray">
-                    <span className="font-semibold text-italia-dark">{slot.currentOrders}</span>
-                    {" / "}
-                    <input
-                      type="number"
-                      min={slot.currentOrders}
-                      defaultValue={slot.maxOrders}
-                      onBlur={(e) => handleUpdateMax(slot.id, Number(e.target.value))}
-                      className="w-14 px-1 py-0.5 border border-gray-200 rounded text-center text-sm"
-                    />
-                    {" orders"}
+                    <button
+                      onClick={() => handleDelete(slot.id)}
+                      className="p-2 text-gray-400 hover:text-italia-red transition-colors"
+                      title="Delete slot"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
                 </div>
-
-                <button
-                  onClick={() => handleDelete(slot.id)}
-                  className="p-2 text-gray-400 hover:text-italia-red transition-colors"
-                  title="Delete slot"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

@@ -115,6 +115,7 @@ export async function getAvailableSlots(
   fulfillmentType?: string
 ): Promise<TimeSlot[]> {
   return (await getSlots(locationSlug, date)).filter((s) => {
+    if ((s.status ?? "active") !== "active") return false;
     if (s.currentOrders >= s.maxOrders) return false;
     if (fulfillmentType && !s.fulfillmentTypes.includes(fulfillmentType as "takeout" | "delivery")) return false;
     return true;
