@@ -2,7 +2,9 @@ import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { TimeSlot, Order } from "@/data/types";
 
-const DATA_DIR = join(process.cwd(), ".data");
+const DATA_DIR = process.env.VERCEL
+  ? join("/tmp", ".data")
+  : join(process.cwd(), ".data");
 
 // Simple per-file lock to prevent concurrent read-modify-write races
 const locks = new Map<string, Promise<void>>();
