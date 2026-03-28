@@ -5,8 +5,13 @@ import { useCartStore } from "@/store/cart";
 import { useState, useEffect, useRef } from "react";
 import { CartDrawer } from "./CartDrawer";
 import { formatPrice } from "@/lib/utils";
+import { MenuItem } from "@/data/types";
 
-export function FloatingCartButton() {
+interface FloatingCartButtonProps {
+  allMenuItems?: MenuItem[];
+}
+
+export function FloatingCartButton({ allMenuItems = [] }: FloatingCartButtonProps) {
   const [open, setOpen] = useState(false);
   const itemCount = useCartStore((s) => s.getItemCount());
   const getTotal = useCartStore((s) => s.getTotal);
@@ -50,7 +55,7 @@ export function FloatingCartButton() {
           </div>
         </div>
       </div>
-      <CartDrawer open={open} onClose={() => setOpen(false)} />
+      <CartDrawer open={open} onClose={() => setOpen(false)} allMenuItems={allMenuItems} />
     </>
   );
 }

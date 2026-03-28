@@ -4,19 +4,24 @@ import { Sheet } from "@/components/ui/Sheet";
 import { Button } from "@/components/ui/Button";
 import { useCartStore } from "@/store/cart";
 import { CartItemRow } from "./CartItem";
+import { CartUpsell } from "./CartUpsell";
+import { DeliveryProgress } from "./DeliveryProgress";
+import { ComboDealBanner } from "./ComboDealBanner";
 import { formatPrice } from "@/lib/utils";
+import { getCartSuggestions } from "@/lib/upsell";
 import { ShoppingCart, Trash2, Package, Truck } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { SlotPicker } from "./SlotPicker";
 
 interface CartDrawerProps {
   open: boolean;
   onClose: () => void;
+  allMenuItems?: import("@/data/types").MenuItem[];
 }
 
 const PHONE_PATTERN = /^[\d\s\-()]{7,}$/;
 
-export function CartDrawer({ open, onClose }: CartDrawerProps) {
+export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps) {
   const items = useCartStore((s) => s.items);
   const getTotal = useCartStore((s) => s.getTotal);
   const clearCart = useCartStore((s) => s.clearCart);
@@ -41,6 +46,12 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
     isPhoneValid &&
     selectedSlotId !== null &&
     (fulfillmentType !== "delivery" || deliveryAddress.trim().length > 0);
+
+  // Cross-sell suggestions
+  const suggestions = useMemo(
+    () => getCartSuggestions(items, allMenuItems, 3),
+    [items, allMenuItems]
+  );
 
   const handlePhoneChange = (value: string) => {
     setCustomerPhone(value);
@@ -118,6 +129,15 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
           <CartItemRow key={item.menuItem.id} item={item} />
         ))}
       </div>
+
+      {/* Combo deal banner */}
+      <ComboDealBanner cartItems={items} />
+
+      {/* Cross-sell suggestions */}
+      <CartUpsell suggestions={suggestions} />
+
+      {/* Delivery progress bar */}
+      <DeliveryProgress cartTotal={total} fulfillmentType={fulfillmentType} />
 
       {/* Fulfillment type selector */}
       <div className="px-5 mt-4 mb-3">
