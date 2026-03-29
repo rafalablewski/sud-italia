@@ -11,7 +11,15 @@ import {
   RecommendationInsight,
 } from "@/lib/ai-engine";
 import { krakowMenu } from "@/data/menus/krakow";
+import { warszawaMenu } from "@/data/menus/warszawa";
+import { locations as allLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
+
+const LOCATION_MENUS: Record<string, import("@/data/types").MenuItem[]> = {
+  krakow: krakowMenu,
+  warszawa: warszawaMenu,
+};
+const activeLocations = allLocations.filter((l) => l.isActive);
 import {
   Brain,
   TrendingUp,
@@ -60,11 +68,15 @@ const IMPACT_COLORS: Record<string, string> = {
 
 export function AdminAI() {
   const [tab, setTab] = useState<Tab>("forecast");
+  const [selectedLocation, setSelectedLocation] = useState<string>("krakow");
+  const currentMenu = LOCATION_MENUS[selectedLocation] || krakowMenu;
+  const locationName = activeLocations.find((l) => l.slug === selectedLocation)?.city || selectedLocation;
+
   const [forecasts, setForecasts] = useState<DemandForecast[]>(() =>
     generateDemandForecast(7)
   );
   const [priceSuggestions, setPriceSuggestions] = useState<PriceSuggestion[]>(() =>
-    generatePriceSuggestions(krakowMenu)
+    generatePriceSuggestions(currentMenu)
   );
   const [insights] = useState<RecommendationInsight[]>(() =>
     generateInsights()
@@ -75,7 +87,7 @@ export function AdminAI() {
     setRefreshing(true);
     setTimeout(() => {
       setForecasts(generateDemandForecast(7));
-      setPriceSuggestions(generatePriceSuggestions(krakowMenu));
+      setPriceSuggestions(generatePriceSuggestions(currentMenu));
       setRefreshing(false);
     }, 1200);
   };
@@ -102,10 +114,25 @@ export function AdminAI() {
             <div>
               <h1 className="text-xl font-heading font-bold admin-text">AI Command Center</h1>
               <p className="text-sm admin-text-dim">
-                ML-powered insights for your business
+                ML-powered insights for <span className="font-semibold admin-text">{locationName}</span>
               </p>
             </div>
           </div>
+          <div className="flex items-center gap-2">
+            <select
+              value={selectedLocation}
+              onChange={(e) => {
+                setSelectedLocation(e.target.value);
+                const menu = LOCATION_MENUS[e.target.value] || krakowMenu;
+                setForecasts(generateDemandForecast(7));
+                setPriceSuggestions(generatePriceSuggestions(menu));
+              }}
+              className="glass-select text-sm"
+            >
+              {activeLocations.map((loc) => (
+                <option key={loc.slug} value={loc.slug}>{loc.city}</option>
+              ))}
+            </select>
           <button
             onClick={refresh}
             disabled={refreshing}
@@ -114,6 +141,7 @@ export function AdminAI() {
             <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
             {refreshing ? "Analyzing..." : "Refresh Models"}
           </button>
+          </div>
         </div>
 
         {/* Tabs */}
