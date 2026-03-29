@@ -44,7 +44,7 @@ export function Header() {
               About
             </Link>
             <Link
-              href="/#loyalty"
+              href="/rewards"
               className="text-sm font-medium text-italia-gold-dark hover:text-italia-gold transition-colors flex items-center gap-1"
             >
               <Star className="h-3.5 w-3.5" />
@@ -99,7 +99,7 @@ export function Header() {
               About
             </Link>
             <Link
-              href="/#loyalty"
+              href="/rewards"
               onClick={() => setMobileOpen(false)}
               className="flex items-center gap-2 px-3 py-2.5 text-base font-medium text-italia-gold-dark hover:bg-amber-50 rounded-lg"
             >
