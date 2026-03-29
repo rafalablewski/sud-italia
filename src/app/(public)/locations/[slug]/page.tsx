@@ -7,6 +7,7 @@ import { MenuSection } from "@/components/location/MenuSection";
 import { LocationInfo } from "@/components/location/LocationInfo";
 import { FloatingCartButton } from "@/components/cart/FloatingCartButton";
 import { LoyaltySection } from "@/components/location/LoyaltySection";
+import { LiveActivityBar } from "@/components/location/LiveActivityBar";
 import { SITE_NAME } from "@/lib/constants";
 
 interface PageProps {
@@ -43,6 +44,7 @@ export default async function LocationPage({ params }: PageProps) {
   return (
     <>
       <LocationHero location={location} />
+      <LiveActivityBar locationSlug={slug} />
       <LoyaltySection />
       <MenuSection items={menuItems} locationSlug={slug} />
       <LocationInfo location={location} />

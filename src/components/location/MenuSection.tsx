@@ -8,6 +8,10 @@ import { MenuCategoryNav } from "./MenuCategoryNav";
 import { MenuItemCard } from "./MenuItem";
 import { SurpriseMe } from "./SurpriseMe";
 import { SeasonalSpecials } from "./SeasonalSpecials";
+import { ReorderSection } from "./ReorderSection";
+import { SpeedGuarantee } from "./SpeedGuarantee";
+import { ReferralCard } from "@/components/referral/ReferralCard";
+import { AchievementsPanel } from "@/components/gamification/AchievementsPanel";
 import { Search, X } from "lucide-react";
 
 interface MenuSectionProps {
@@ -102,6 +106,12 @@ export function MenuSection({ items, locationSlug }: MenuSectionProps) {
       </div>
 
       <Container className="py-8">
+        {/* Speed guarantee banner */}
+        {!isSearching && <SpeedGuarantee />}
+
+        {/* Reorder from history (American one-tap reorder) */}
+        {!isSearching && <ReorderSection locationSlug={locationSlug} />}
+
         {/* Seasonal specials (Kodawari - limited-time) */}
         {!isSearching && <SeasonalSpecials locationSlug={locationSlug} />}
 
@@ -153,6 +163,13 @@ export function MenuSection({ items, locationSlug }: MenuSectionProps) {
                 Clear search
               </button>
             )}
+          </div>
+        )}
+        {/* Gamification & Referral (below menu) */}
+        {!isSearching && (
+          <div className="mt-10 space-y-6">
+            <AchievementsPanel />
+            <ReferralCard />
           </div>
         )}
       </Container>
