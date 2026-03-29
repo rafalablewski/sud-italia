@@ -8,6 +8,7 @@ import {
   TIER_CONFIG,
   LoyaltyTier,
 } from "@/lib/loyalty";
+import { locations as allLocations } from "@/data/locations";
 import {
   ACHIEVEMENTS,
 } from "@/lib/growth-engine";
@@ -46,6 +47,7 @@ interface MemberRecord {
   orders: number;
   totalSpent: number;
   lastOrder: string;
+  locations?: string[];
 }
 
 // --- Simulated referral data ---
@@ -72,9 +74,12 @@ const MOCK_FAQ = [
   { keyword: "loyalty", response: "Join our Sud Italia Rewards program! Earn 1 point per PLN...", hits: 156 },
 ];
 
+const activeLocations = allLocations.filter((l) => l.isActive);
+
 export function AdminGrowth() {
   const [tab, setTab] = useState<Tab>("loyalty");
   const [memberSearch, setMemberSearch] = useState("");
+  const [locationFilter, setLocationFilter] = useState<string>("all");
   const [settings, setSettings] = useState<LoyaltySettings | null>(null);
   const [members, setMembers] = useState<MemberRecord[]>([]);
   const [saving, setSaving] = useState(false);
@@ -156,11 +161,11 @@ export function AdminGrowth() {
 
   const challenges = settings?.challenges || [];
 
-  const filteredMembers = members.filter(
-    (m) =>
-      m.name.toLowerCase().includes(memberSearch.toLowerCase()) ||
-      m.phone.includes(memberSearch)
-  );
+  const filteredMembers = members.filter((m) => {
+    if (memberSearch && !m.name.toLowerCase().includes(memberSearch.toLowerCase()) && !m.phone.includes(memberSearch)) return false;
+    if (locationFilter !== "all" && m.locations && !m.locations.includes(locationFilter)) return false;
+    return true;
+  });
 
   const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
     { id: "loyalty", label: "Loyalty", icon: Star },
@@ -180,10 +185,20 @@ export function AdminGrowth() {
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500/20 to-blue-500/20 flex items-center justify-center">
             <Rocket className="h-5 w-5 text-green-400" />
           </div>
-          <div>
+          <div className="flex-1">
             <h1 className="text-xl font-heading font-bold admin-text">Growth Management</h1>
             <p className="text-sm admin-text-dim">Manage loyalty, referrals, gamification, and more</p>
           </div>
+          <select
+            value={locationFilter}
+            onChange={(e) => setLocationFilter(e.target.value)}
+            className="glass-select text-sm"
+          >
+            <option value="all">All Locations</option>
+            {activeLocations.map((loc) => (
+              <option key={loc.slug} value={loc.slug}>{loc.city}</option>
+            ))}
+          </select>
         </div>
 
         {/* Quick stats */}
@@ -382,6 +397,7 @@ export function AdminGrowth() {
                       <th className="pb-2 pr-4">Points</th>
                       <th className="pb-2 pr-4">Orders</th>
                       <th className="pb-2 pr-4">Last Order</th>
+                      <th className="pb-2 pr-4">Locations</th>
                       <th className="pb-2">Actions</th>
                     </tr>
                   </thead>
@@ -398,6 +414,19 @@ export function AdminGrowth() {
                         <td className="py-2.5 pr-4 font-semibold text-italia-gold">{m.points}</td>
                         <td className="py-2.5 pr-4">{m.orders}</td>
                         <td className="py-2.5 pr-4 text-xs">{m.lastOrder}</td>
+                        <td className="py-2.5 pr-4">
+                          {m.locations && m.locations.length > 0 ? (
+                            <div className="flex gap-1">
+                              {m.locations.map((loc) => (
+                                <span key={loc} className="badge-info text-[9px] px-1.5 py-0.5 rounded-full font-bold capitalize">
+                                  {loc}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-xs admin-text-dim">—</span>
+                          )}
+                        </td>
                         <td className="py-2.5">
                           <button
                             onClick={() => setPointsModal({ phone: m.phone, name: m.name })}

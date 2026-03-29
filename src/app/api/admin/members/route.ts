@@ -12,6 +12,7 @@ export interface MemberRecord {
   totalSpent: number;
   lastOrder: string;
   source: "order" | "signup";
+  locations: string[]; // which locations they've ordered from
 }
 
 
@@ -42,6 +43,7 @@ export async function GET() {
     const points = Math.floor(totalSpent / 100) + (manualAdj[phone] || 0);
     const latest = orders.sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
 
+    const locations = [...new Set(orders.map((o) => o.locationSlug))];
     memberMap.set(phone, {
       phone,
       name: latest.customerName,
@@ -51,6 +53,7 @@ export async function GET() {
       totalSpent,
       lastOrder: latest.slotDate || latest.createdAt.split("T")[0],
       source: "order",
+      locations,
     });
   }
 
@@ -66,6 +69,7 @@ export async function GET() {
         totalSpent: 0,
         lastOrder: signup.signedUpAt.split("T")[0],
         source: "signup",
+        locations: [],
       });
     }
   }
