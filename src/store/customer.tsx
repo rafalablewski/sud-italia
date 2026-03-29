@@ -13,7 +13,7 @@ export interface CustomerIdentity {
 interface CustomerContextValue {
   customer: CustomerIdentity | null;
   loading: boolean;
-  identify: (phone: string) => Promise<void>;
+  identify: (phone: string, signup?: boolean) => Promise<void>;
   logout: () => void;
 }
 
@@ -38,13 +38,13 @@ export function CustomerProvider({ children }: { children: React.ReactNode }) {
   const [customer, setCustomer] = useState<CustomerIdentity | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const identify = useCallback(async (phone: string) => {
+  const identify = useCallback(async (phone: string, signup: boolean = false) => {
     try {
-      const res = await fetch(`/api/customer/identify?phone=${encodeURIComponent(phone)}`);
+      const url = `/api/customer/identify?phone=${encodeURIComponent(phone)}${signup ? "&signup=true" : ""}`;
+      const res = await fetch(url);
       const data = await res.json();
       if (data.customer) {
         setCustomer(data.customer);
-        // Set cookie so they stay identified
         document.cookie = `sud-italia-customer=${encodeURIComponent(phone)};path=/;max-age=${60 * 60 * 24 * 365};samesite=lax`;
       } else {
         setCustomer(null);

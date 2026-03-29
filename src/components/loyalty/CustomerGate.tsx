@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useCustomer } from "@/store/customer";
-import { Star, LogIn, User, LogOut } from "lucide-react";
+import { Star, LogIn, User, LogOut, UserPlus } from "lucide-react";
 
 interface CustomerGateProps {
   children: React.ReactNode;
@@ -12,7 +12,7 @@ export function CustomerGate({ children }: CustomerGateProps) {
   const { customer, loading, identify, logout } = useCustomer();
   const [phone, setPhone] = useState("");
   const [checking, setChecking] = useState(false);
-  const [error, setError] = useState("");
+  const [notFound, setNotFound] = useState(false);
 
   if (loading) return null;
 
@@ -46,24 +46,29 @@ export function CustomerGate({ children }: CustomerGateProps) {
     );
   }
 
-  // Not identified — show sign-in prompt
-  const handleSubmit = async () => {
+  const getFullPhone = () => {
     const cleaned = phone.replace(/\D/g, "");
-    if (cleaned.length < 7) {
-      setError("Please enter a valid phone number");
-      return;
-    }
+    return cleaned.startsWith("48") ? `+${cleaned}` : `+48${cleaned}`;
+  };
+
+  // Try to sign in with existing orders
+  const handleSignIn = async () => {
+    const cleaned = phone.replace(/\D/g, "");
+    if (cleaned.length < 7) return;
     setChecking(true);
-    setError("");
-    const fullPhone = cleaned.startsWith("48") ? `+${cleaned}` : `+48${cleaned}`;
-    await identify(fullPhone);
+    setNotFound(false);
+    await identify(getFullPhone());
+    // identify sets customer if found; if still null after, show signup option
+    setTimeout(() => setNotFound(true), 300);
     setChecking(false);
-    // If identify didn't find the customer, show error
-    // (the identify function will set customer to null)
-    setTimeout(() => {
-      // Check if still no customer after identify
-      setError("No orders found with this number. Place an order first to join rewards!");
-    }, 500);
+  };
+
+  // Sign up as new member (no prior orders needed)
+  const handleSignUp = async () => {
+    setChecking(true);
+    await identify(getFullPhone(), true);
+    setNotFound(false);
+    setChecking(false);
   };
 
   return (
@@ -75,7 +80,7 @@ export function CustomerGate({ children }: CustomerGateProps) {
         Your Rewards & Achievements
       </h3>
       <p className="text-sm text-italia-gray mb-4">
-        Sign in with your phone number to see your streaks, achievements, and referral code.
+        Enter your phone number to check rewards or join for free.
       </p>
 
       <div className="flex gap-2 max-w-xs mx-auto mb-2">
@@ -87,27 +92,43 @@ export function CustomerGate({ children }: CustomerGateProps) {
             type="tel"
             placeholder="Phone number"
             value={phone}
-            onChange={(e) => { setPhone(e.target.value); setError(""); }}
-            onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+            onChange={(e) => { setPhone(e.target.value); setNotFound(false); }}
+            onKeyDown={(e) => e.key === "Enter" && handleSignIn()}
             className="pub-input min-h-[44px] text-base rounded-l-none flex-1"
           />
         </div>
         <button
-          onClick={handleSubmit}
-          disabled={checking}
-          className="px-4 py-2 bg-italia-gold text-white font-semibold rounded-xl hover:bg-italia-gold-dark transition-colors text-sm min-h-[44px] flex items-center gap-1.5"
+          onClick={handleSignIn}
+          disabled={checking || phone.replace(/\D/g, "").length < 7}
+          className="px-4 py-2 bg-italia-gold text-white font-semibold rounded-xl hover:bg-italia-gold-dark transition-colors text-sm min-h-[44px] flex items-center gap-1.5 disabled:opacity-40"
         >
           <LogIn className="h-4 w-4" />
-          {checking ? "..." : "Sign in"}
+          {checking ? "..." : "Go"}
         </button>
       </div>
 
-      {error && (
-        <p className="text-xs text-italia-gray mt-2">{error}</p>
+      {/* Not found — offer to sign up */}
+      {notFound && !customer && (
+        <div className="mt-3 p-3 bg-white rounded-xl border border-gray-100 max-w-xs mx-auto animate-fade-in">
+          <p className="text-sm text-italia-dark mb-2">
+            New here? Join our rewards program — it&apos;s free!
+          </p>
+          <button
+            onClick={handleSignUp}
+            disabled={checking}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-italia-green text-white font-semibold rounded-xl hover:bg-italia-green-dark transition-colors text-sm"
+          >
+            <UserPlus className="h-4 w-4" />
+            {checking ? "Joining..." : "Join Rewards Program"}
+          </button>
+          <p className="text-[10px] text-italia-gray mt-2">
+            Start earning points immediately. No forms, no password.
+          </p>
+        </div>
       )}
 
       <p className="text-[11px] text-italia-gray/70 mt-3">
-        No account needed — we find you by your order history
+        Just your phone number — no password needed
       </p>
     </div>
   );
