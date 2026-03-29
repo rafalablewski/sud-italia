@@ -4,8 +4,6 @@ import { getLoyaltyMembers, addLoyaltyMember } from "@/lib/store";
 import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 
-const DATA_DIR = join(process.cwd(), ".data");
-
 interface PointAdjustment {
   phone: string;
   amount: number;
@@ -14,42 +12,52 @@ interface PointAdjustment {
   adjustedAt: string;
 }
 
-async function ensureDir() {
-  try { await access(DATA_DIR); } catch { await mkdir(DATA_DIR, { recursive: true }); }
-}
+const FILE_PATH = join(process.cwd(), ".data", "point-adjustments.json");
 
 async function getAdjustments(): Promise<PointAdjustment[]> {
-  await ensureDir();
   try {
-    const data = await readFile(join(DATA_DIR, "point-adjustments.json"), "utf-8");
+    await access(join(process.cwd(), ".data"));
+  } catch {
+    await mkdir(join(process.cwd(), ".data"), { recursive: true });
+  }
+  try {
+    const data = await readFile(FILE_PATH, "utf-8");
     return JSON.parse(data);
   } catch {
     return [];
   }
 }
 
-async function addAdjustment(adj: PointAdjustment): Promise<void> {
-  await ensureDir();
-  const list = await getAdjustments();
-  list.push(adj);
-  await writeFile(join(DATA_DIR, "point-adjustments.json"), JSON.stringify(list, null, 2));
+async function requireAuth() {
+  if (!(await isAuthenticated())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  return null;
 }
 
 export async function POST(req: NextRequest) {
+  const authError = await requireAuth();
+  if (authError) return authError;
+
+  let body;
   try {
-    const authed = await isAuthenticated();
-    if (!authed) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
 
-    const body = await req.json();
-    const { phone, amount, reason } = body;
+  const { phone, amount, reason } = body;
 
-    if (!phone || typeof amount !== "number" || amount === 0) {
-      return NextResponse.json({ error: "Phone and non-zero amount required" }, { status: 400 });
-    }
+  if (!phone || typeof amount !== "number" || amount === 0) {
+    return NextResponse.json({ error: "Phone and non-zero amount required" }, { status: 400 });
+  }
 
-    await addAdjustment({
+  try {
+    // Read existing adjustments
+    const list = await getAdjustments();
+
+    // Add new adjustment
+    list.push({
       phone,
       amount,
       reason: reason || (amount > 0 ? "Manual points added" : "Manual points removed"),
@@ -57,7 +65,10 @@ export async function POST(req: NextRequest) {
       adjustedAt: new Date().toISOString(),
     });
 
-    // Ensure the member exists in the members list
+    // Write back
+    await writeFile(FILE_PATH, JSON.stringify(list, null, 2));
+
+    // Ensure the member exists
     const members = await getLoyaltyMembers();
     if (!members.some((m) => m.phone === phone)) {
       await addLoyaltyMember({
@@ -67,14 +78,17 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const all = await getAdjustments();
-    const total = all
+    // Calculate new total
+    const total = list
       .filter((a) => a.phone === phone)
       .reduce((sum, a) => sum + a.amount, 0);
 
     return NextResponse.json({ phone, manualPoints: total, success: true });
   } catch (error) {
     console.error("Points adjustment error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: `Failed to save: ${error instanceof Error ? error.message : "unknown error"}` },
+      { status: 500 }
+    );
   }
 }
