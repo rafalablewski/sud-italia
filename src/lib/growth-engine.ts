@@ -85,6 +85,31 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: "streak-30", name: "Iron Will", description: "Order every week for 30 weeks", emoji: "💎", pointsReward: 300, category: "streaks" },
 ];
 
+// --- Compute earned achievements from real customer data ---
+
+export function getEarnedAchievements(customer: {
+  ordersCount: number;
+  points: number;
+}): Set<AchievementId> {
+  const earned = new Set<AchievementId>();
+
+  if (customer.ordersCount >= 1) earned.add("first-order");
+  if (customer.ordersCount >= 5) earned.add("loyal-5");
+  if (customer.ordersCount >= 10) earned.add("loyal-10");
+  if (customer.ordersCount >= 25) earned.add("loyal-25");
+
+  // Points-based (500 PLN = 500 points at 1x)
+  if (customer.points >= 500) earned.add("big-spender");
+
+  // The following require detailed order data we don't have in the
+  // customer summary — they remain locked until we add tracking:
+  // pizza-lover, pasta-master, full-menu, early-bird, night-owl,
+  // weekend-warrior, speed-demon, social-butterfly, review-star,
+  // streak-3, streak-7, streak-30
+
+  return earned;
+}
+
 // --- Weekly Challenges ---
 
 export interface Challenge {

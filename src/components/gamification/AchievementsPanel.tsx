@@ -5,22 +5,23 @@ import {
   ACHIEVEMENTS,
   Achievement,
   getActiveChallenges,
+  getEarnedAchievements,
   Challenge,
 } from "@/lib/growth-engine";
+import { useCustomer } from "@/store/customer";
 import { Trophy, Target, Lock, Clock, ChevronDown, ChevronUp, Flame } from "lucide-react";
-
-// Simulated earned achievements — in production, from DB
-const EARNED_IDS = new Set(["first-order", "early-bird"]);
 
 function daysUntil(dateStr: string): number {
   return Math.max(0, Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000));
 }
 
 export function AchievementsPanel() {
+  const { customer } = useCustomer();
   const [expanded, setExpanded] = useState(false);
   const challenges = getActiveChallenges();
-  const earned = ACHIEVEMENTS.filter((a) => EARNED_IDS.has(a.id));
-  const locked = ACHIEVEMENTS.filter((a) => !EARNED_IDS.has(a.id));
+  const earnedIds = getEarnedAchievements(customer || { ordersCount: 0, points: 0 });
+  const earned = ACHIEVEMENTS.filter((a) => earnedIds.has(a.id));
+  const locked = ACHIEVEMENTS.filter((a) => !earnedIds.has(a.id));
   const shown = expanded ? locked : locked.slice(0, 4);
 
   return (

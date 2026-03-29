@@ -16,6 +16,7 @@ import {
   ACHIEVEMENTS,
   getActiveChallenges,
   generateReferralCode,
+  getEarnedAchievements,
   REFERRAL_REWARD,
 } from "@/lib/growth-engine";
 import { COMBO_DEALS } from "@/lib/upsell";
@@ -43,8 +44,6 @@ import {
   Zap,
 } from "lucide-react";
 
-// Simulated earned achievements
-const EARNED_IDS = new Set(["first-order", "early-bird"]);
 
 function daysUntil(dateStr: string): number {
   return Math.max(0, Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000));
@@ -149,8 +148,9 @@ function RewardsDashboard() {
   const challenges = getActiveChallenges();
   const referralCode = generateReferralCode(customer.name);
 
-  const earned = ACHIEVEMENTS.filter((a) => EARNED_IDS.has(a.id));
-  const locked = ACHIEVEMENTS.filter((a) => !EARNED_IDS.has(a.id));
+  const earnedIds = getEarnedAchievements(customer);
+  const earned = ACHIEVEMENTS.filter((a) => earnedIds.has(a.id));
+  const locked = ACHIEVEMENTS.filter((a) => !earnedIds.has(a.id));
 
   const handleCopyCode = async () => {
     try {
