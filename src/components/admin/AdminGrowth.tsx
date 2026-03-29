@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { AdminNav } from "./AdminNav";
 import { formatPrice } from "@/lib/utils";
 import {
@@ -749,8 +750,8 @@ export function AdminGrowth() {
         )}
       </div>
 
-      {/* Points adjustment modal */}
-      {pointsModal && (
+      {/* Points adjustment modal — rendered via portal to escape admin-bg stacking context */}
+      {pointsModal && createPortal(
         <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setPointsModal(null)} />
           <div className="relative bg-[#1e293b] border border-white/15 rounded-2xl shadow-2xl p-6 w-full max-w-sm">
@@ -808,7 +809,8 @@ export function AdminGrowth() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
