@@ -238,7 +238,7 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
           {/* Optional email — subtle, not required */}
           <input
             type="email"
-            placeholder="Email for receipt & offers (optional)"
+            placeholder="Email for exclusive discounts & offers (optional)"
             value={customerEmail}
             onChange={(e) => setCustomerEmail(e.target.value)}
             className="pub-input min-h-[44px] text-sm text-italia-gray"
