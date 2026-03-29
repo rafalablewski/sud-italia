@@ -9,7 +9,7 @@ import { DeliveryProgress } from "./DeliveryProgress";
 import { ComboDealBanner } from "./ComboDealBanner";
 import { LoyaltyEarnPreview } from "./LoyaltyEarnPreview";
 import { formatPrice } from "@/lib/utils";
-import { getCartSuggestions } from "@/lib/upsell";
+import { getCartSuggestions, getActiveComboDeals } from "@/lib/upsell";
 import { ShoppingCart, Trash2, Package, Truck } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { SlotPicker } from "./SlotPicker";
@@ -43,7 +43,13 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [phoneError, setPhoneError] = useState(false);
 
-  const total = getTotal();
+  const subtotal = getTotal();
+
+  // Apply combo deal discount to actual total
+  const comboResult = useMemo(() => getActiveComboDeals(items), [items]);
+  const comboDiscount = comboResult.missingCategories.length === 0 ? comboResult.savings : 0;
+  const total = subtotal - comboDiscount;
+
   const isPhoneValid = PHONE_PATTERN.test(customerPhone.trim());
   const canCheckout =
     customerName.trim().length > 0 &&
@@ -250,6 +256,18 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
           </p>
         )}
 
+        {comboDiscount > 0 && (
+          <div className="space-y-1 pt-1">
+            <div className="flex justify-between items-center text-sm text-italia-gray">
+              <span>Subtotal</span>
+              <span>{formatPrice(subtotal)}</span>
+            </div>
+            <div className="flex justify-between items-center text-sm text-italia-green font-medium">
+              <span>Meal Deal -{comboResult.activeDeal?.discountPercent}%</span>
+              <span>-{formatPrice(comboDiscount)}</span>
+            </div>
+          </div>
+        )}
         <div className="flex justify-between items-center text-lg font-bold pt-1">
           <span>Total</span>
           <span className="text-italia-red">{formatPrice(total)}</span>
