@@ -872,3 +872,32 @@ export async function calculateFoodCost(menuItemId: string): Promise<number> {
   // Cost per portion
   return Math.round(totalCost / (recipe.yieldPortions || 1));
 }
+
+// --- Loyalty Members (phone-only signups without orders) ---
+
+export interface LoyaltyMember {
+  phone: string;
+  name: string;
+  email?: string;
+  signedUpAt: string;
+}
+
+export async function getLoyaltyMembers(): Promise<LoyaltyMember[]> {
+  return readJSON<LoyaltyMember[]>("loyalty-members.json", []);
+}
+
+export async function addLoyaltyMember(member: LoyaltyMember): Promise<LoyaltyMember> {
+  return withLock("loyalty-members.json", async () => {
+    const list = await readJSON<LoyaltyMember[]>("loyalty-members.json", []);
+    // Don't add duplicates
+    if (list.some((m) => m.phone === member.phone)) return member;
+    list.push(member);
+    await writeJSON("loyalty-members.json", list);
+    return member;
+  });
+}
+
+export async function getLoyaltyMember(phone: string): Promise<LoyaltyMember | undefined> {
+  const list = await readJSON<LoyaltyMember[]>("loyalty-members.json", []);
+  return list.find((m) => m.phone === phone);
+}

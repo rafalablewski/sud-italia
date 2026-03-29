@@ -37,14 +37,15 @@ import {
 
 type Tab = "loyalty" | "referral" | "gamification" | "seasonal" | "speed" | "chatbot";
 
-// --- Simulated loyalty members ---
-const MOCK_MEMBERS = [
-  { phone: "+48 123 456 789", name: "Jan Kowalski", points: 680, tier: "silver" as LoyaltyTier, orders: 24, lastOrder: "2026-03-27" },
-  { phone: "+48 987 654 321", name: "Anna Nowak", points: 1820, tier: "gold" as LoyaltyTier, orders: 52, lastOrder: "2026-03-28" },
-  { phone: "+48 555 123 456", name: "Piotr Wiśniewski", points: 120, tier: "bronze" as LoyaltyTier, orders: 6, lastOrder: "2026-03-20" },
-  { phone: "+48 111 222 333", name: "Maria Lewandowska", points: 5200, tier: "platinum" as LoyaltyTier, orders: 89, lastOrder: "2026-03-29" },
-  { phone: "+48 444 555 666", name: "Tomasz Zieliński", points: 45, tier: "bronze" as LoyaltyTier, orders: 2, lastOrder: "2026-03-15" },
-];
+interface MemberRecord {
+  phone: string;
+  name: string;
+  points: number;
+  tier: LoyaltyTier;
+  orders: number;
+  totalSpent: number;
+  lastOrder: string;
+}
 
 // --- Simulated referral data ---
 const MOCK_REFERRALS = [
@@ -74,14 +75,19 @@ export function AdminGrowth() {
   const [tab, setTab] = useState<Tab>("loyalty");
   const [memberSearch, setMemberSearch] = useState("");
   const [settings, setSettings] = useState<LoyaltySettings | null>(null);
+  const [members, setMembers] = useState<MemberRecord[]>([]);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  // Load settings from DB
+  // Load settings + members from DB
   useEffect(() => {
     fetch("/api/admin/growth")
       .then((r) => r.json())
       .then((data) => setSettings(data))
+      .catch(() => {});
+    fetch("/api/admin/members")
+      .then((r) => r.json())
+      .then((data) => setMembers(data.members || []))
       .catch(() => {});
   }, []);
 
@@ -107,7 +113,7 @@ export function AdminGrowth() {
 
   const challenges = settings?.challenges || [];
 
-  const filteredMembers = MOCK_MEMBERS.filter(
+  const filteredMembers = members.filter(
     (m) =>
       m.name.toLowerCase().includes(memberSearch.toLowerCase()) ||
       m.phone.includes(memberSearch)
@@ -140,7 +146,7 @@ export function AdminGrowth() {
         {/* Quick stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           <div className="glass-card p-4">
-            <p className="text-2xl font-bold admin-text">{MOCK_MEMBERS.length}</p>
+            <p className="text-2xl font-bold admin-text">{members.length}</p>
             <p className="text-xs admin-text-dim">Loyalty Members</p>
           </div>
           <div className="glass-card p-4">
@@ -310,7 +316,7 @@ export function AdminGrowth() {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold admin-text flex items-center gap-2">
                   <Users className="h-4 w-4 text-blue-400" />
-                  Members ({MOCK_MEMBERS.length})
+                  Members ({members.length})
                 </h3>
                 <div className="relative">
                   <Search className="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />

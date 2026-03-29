@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getOrders } from "@/lib/store";
+import { getOrders, getLoyaltyMember, addLoyaltyMember } from "@/lib/store";
 
 export async function GET(req: NextRequest) {
   const phone = req.nextUrl.searchParams.get("phone");
-  const signup = req.nextUrl.searchParams.get("signup"); // "true" to create new
+  const signup = req.nextUrl.searchParams.get("signup");
 
   if (!phone) {
     return NextResponse.json({ customer: null });
@@ -16,13 +16,19 @@ export async function GET(req: NextRequest) {
   );
 
   if (customerOrders.length > 0) {
-    // Existing customer — build profile from order history
     const latest = customerOrders.sort(
       (a, b) => b.createdAt.localeCompare(a.createdAt)
     )[0];
 
     const totalSpent = customerOrders.reduce((sum, o) => sum + o.totalAmount, 0);
     const points = Math.floor(totalSpent / 100);
+
+    // Also ensure they're in the members list
+    await addLoyaltyMember({
+      phone,
+      name: latest.customerName,
+      signedUpAt: new Date().toISOString(),
+    });
 
     return NextResponse.json({
       customer: {
@@ -35,8 +41,28 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  // No orders found — if signup=true, create a new rewards member
+  // Check if they signed up without ordering
+  const existing = await getLoyaltyMember(phone);
+  if (existing) {
+    return NextResponse.json({
+      customer: {
+        phone: existing.phone,
+        name: existing.name,
+        ordersCount: 0,
+        points: 0,
+        isNew: false,
+      },
+    });
+  }
+
+  // New signup
   if (signup === "true") {
+    await addLoyaltyMember({
+      phone,
+      name: "New Member",
+      signedUpAt: new Date().toISOString(),
+    });
+
     return NextResponse.json({
       customer: {
         phone,
