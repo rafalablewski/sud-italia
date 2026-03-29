@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getOrders, getLoyaltyMember, addLoyaltyMember } from "@/lib/store";
+import { getOrders, getLoyaltyMember, addLoyaltyMember, getManualPointsTotal } from "@/lib/store";
 
 export async function GET(req: NextRequest) {
   const phone = req.nextUrl.searchParams.get("phone");
@@ -21,7 +21,8 @@ export async function GET(req: NextRequest) {
     )[0];
 
     const totalSpent = customerOrders.reduce((sum, o) => sum + o.totalAmount, 0);
-    const points = Math.floor(totalSpent / 100);
+    const manualPoints = await getManualPointsTotal(phone);
+    const points = Math.floor(totalSpent / 100) + manualPoints;
 
     // Also ensure they're in the members list
     await addLoyaltyMember({
@@ -44,12 +45,13 @@ export async function GET(req: NextRequest) {
   // Check if they signed up without ordering
   const existing = await getLoyaltyMember(phone);
   if (existing) {
+    const manualPoints = await getManualPointsTotal(phone);
     return NextResponse.json({
       customer: {
         phone: existing.phone,
         name: existing.name,
         ordersCount: 0,
-        points: 0,
+        points: manualPoints,
         isNew: false,
       },
     });
