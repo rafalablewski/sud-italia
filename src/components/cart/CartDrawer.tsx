@@ -37,6 +37,7 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
 
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [phoneError, setPhoneError] = useState(false);
 
@@ -86,6 +87,7 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
           slotDate: selectedSlotDate,
           slotTime: selectedSlotTime,
           deliveryAddress: fulfillmentType === "delivery" ? deliveryAddress.trim() : undefined,
+          customerEmail: customerEmail.trim() || undefined,
         }),
       });
 
@@ -220,6 +222,14 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
               }`}
             />
           </div>
+          {/* Optional email — subtle, not required */}
+          <input
+            type="email"
+            placeholder="Email for receipt & offers (optional)"
+            value={customerEmail}
+            onChange={(e) => setCustomerEmail(e.target.value)}
+            className="pub-input min-h-[44px] text-sm text-italia-gray"
+          />
         </div>
         {phoneError && (
           <p className="text-xs text-italia-red">

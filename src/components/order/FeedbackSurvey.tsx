@@ -1,44 +1,82 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { StarRating } from "@/components/rating/StarRating";
 import { Button } from "@/components/ui/Button";
-import { Heart, Send, CheckCircle, MessageSquare } from "lucide-react";
+import { Heart, Send, CheckCircle, MessageSquare, Mail, Star, ChevronDown, ChevronUp } from "lucide-react";
+
+interface OrderItem {
+  name: string;
+  id: string;
+}
 
 interface FeedbackSurveyProps {
   orderId: string;
+  orderItems?: OrderItem[];
 }
 
-type FeedbackStep = "rating" | "details" | "thanks";
+type FeedbackStep = "items" | "overall" | "email" | "thanks";
 
-const FEEDBACK_CATEGORIES = [
-  { id: "taste", label: "Taste", emoji: "😋" },
+const OVERALL_CATEGORIES = [
   { id: "speed", label: "Speed", emoji: "⚡" },
-  { id: "presentation", label: "Presentation", emoji: "🎨" },
-  { id: "value", label: "Value", emoji: "💰" },
   { id: "service", label: "Service", emoji: "😊" },
+  { id: "value", label: "Value for Money", emoji: "💰" },
 ];
 
-export function FeedbackSurvey({ orderId }: FeedbackSurveyProps) {
-  const [step, setStep] = useState<FeedbackStep>("rating");
-  const [overallRating, setOverallRating] = useState(0);
-  const [categoryRatings, setCategoryRatings] = useState<Record<string, number>>({});
+export function FeedbackSurvey({ orderId, orderItems = [] }: FeedbackSurveyProps) {
+  const [step, setStep] = useState<FeedbackStep>("items");
+  const [itemRatings, setItemRatings] = useState<Record<string, number>>({});
+  const [overallRatings, setOverallRatings] = useState<Record<string, number>>({});
   const [comment, setComment] = useState("");
+  const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [fetchedItems, setFetchedItems] = useState<OrderItem[]>(orderItems);
 
-  const handleOverallRate = (rating: number) => {
-    setOverallRating(rating);
-    setStep("details");
+  // If no items passed, fetch them from the order API
+  useEffect(() => {
+    if (fetchedItems.length > 0) return;
+    fetch(`/api/orders?orderId=${orderId}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.order?.items) {
+          setFetchedItems(
+            data.order.items.map((ci: { menuItem: { name: string; id: string } }) => ({
+              name: ci.menuItem.name,
+              id: ci.menuItem.id,
+            }))
+          );
+        }
+      })
+      .catch(() => {});
+  }, [orderId, fetchedItems.length]);
+
+  const handleItemRate = (itemId: string, rating: number) => {
+    setItemRatings((prev) => ({ ...prev, [itemId]: rating }));
   };
 
-  const handleCategoryRate = (category: string, rating: number) => {
-    setCategoryRatings((prev) => ({ ...prev, [category]: rating }));
+  const handleOverallRate = (category: string, rating: number) => {
+    setOverallRatings((prev) => ({ ...prev, [category]: rating }));
   };
+
+  const allItemsRated = fetchedItems.length > 0 && fetchedItems.every((item) => itemRatings[item.id]);
 
   const handleSubmit = async () => {
     setSubmitting(true);
-    // In production, this would POST to an API
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    try {
+      await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId,
+          itemRatings,
+          overallRatings,
+          comment: comment.trim() || undefined,
+          email: email.trim() || undefined,
+        }),
+      });
+    } catch {
+      // Silently fail — don't block the thank you screen
+    }
     setStep("thanks");
     setSubmitting(false);
   };
@@ -50,95 +88,168 @@ export function FeedbackSurvey({ orderId }: FeedbackSurveyProps) {
           <CheckCircle className="h-7 w-7 text-italia-green" />
         </div>
         <h3 className="font-heading font-bold text-lg text-italia-dark mb-1">
-          Thank you for your feedback!
+          Thank you for your review!
         </h3>
         <p className="text-sm text-italia-gray">
-          Your feedback helps us improve. We appreciate every response.
+          Your feedback helps us make every dish better.
         </p>
         <p className="text-xs text-italia-gold-dark font-medium mt-3">
-          +10 loyalty points earned for this review!
+          +10 loyalty points added to your account
         </p>
+        {email && (
+          <p className="text-xs text-italia-green mt-2">
+            We&apos;ll send your receipt and points updates to {email}
+          </p>
+        )}
       </div>
     );
   }
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 p-5 animate-slide-up">
-      {step === "rating" && (
-        <div className="text-center">
-          <div className="flex items-center justify-center gap-2 mb-2">
+      {/* Step 1: Rate each dish you ordered */}
+      {step === "items" && (
+        <div>
+          <div className="flex items-center gap-2 mb-1">
             <Heart className="h-5 w-5 text-italia-red" />
             <h3 className="font-heading font-semibold text-lg text-italia-dark">
-              How was your meal?
+              Rate your dishes
             </h3>
           </div>
-          <p className="text-sm text-italia-gray mb-4">
-            Your honest feedback makes us better
+          <p className="text-xs text-italia-gray mb-4">
+            Tap the stars for each item you ordered
           </p>
-          <div className="flex justify-center">
-            <StarRating
-              rating={overallRating}
-              size="md"
-              interactive
-              onRate={handleOverallRate}
-            />
-          </div>
-          <p className="text-xs text-italia-gray mt-3">
-            Tap a star to rate your experience
-          </p>
+
+          {fetchedItems.length > 0 ? (
+            <div className="space-y-3 mb-4">
+              {fetchedItems.map((item) => (
+                <div
+                  key={item.id}
+                  className={`flex items-center justify-between p-3 rounded-xl border transition-colors ${
+                    itemRatings[item.id]
+                      ? "bg-italia-green/[0.03] border-italia-green/20"
+                      : "bg-gray-50 border-gray-100"
+                  }`}
+                >
+                  <span className="text-sm font-medium text-italia-dark">
+                    {item.name}
+                  </span>
+                  <StarRating
+                    rating={itemRatings[item.id] || 0}
+                    interactive
+                    onRate={(r) => handleItemRate(item.id, r)}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-6 text-center">
+              <p className="text-sm text-italia-gray">Loading your order items...</p>
+            </div>
+          )}
+
+          <Button
+            onClick={() => setStep("overall")}
+            disabled={!allItemsRated}
+            className="w-full min-h-[48px]"
+          >
+            {allItemsRated ? "Next — Rate your experience" : "Rate all items to continue"}
+          </Button>
         </div>
       )}
 
-      {step === "details" && (
+      {/* Step 2: Overall experience + comment */}
+      {step === "overall" && (
         <div>
-          <div className="flex items-center gap-2 mb-4">
-            <MessageSquare className="h-4 w-4 text-italia-red" />
+          <div className="flex items-center gap-2 mb-1">
+            <MessageSquare className="h-5 w-5 text-italia-red" />
             <h3 className="font-heading font-semibold text-italia-dark">
-              Tell us more
+              Overall experience
             </h3>
-            <span className="text-sm text-italia-gray">(optional)</span>
           </div>
+          <p className="text-xs text-italia-gray mb-4">
+            Quick ratings — all optional
+          </p>
 
-          {/* Category ratings */}
           <div className="space-y-3 mb-4">
-            {FEEDBACK_CATEGORIES.map((cat) => (
+            {OVERALL_CATEGORIES.map((cat) => (
               <div key={cat.id} className="flex items-center justify-between">
                 <span className="text-sm text-italia-dark flex items-center gap-2">
                   <span>{cat.emoji}</span>
                   {cat.label}
                 </span>
                 <StarRating
-                  rating={categoryRatings[cat.id] || 0}
+                  rating={overallRatings[cat.id] || 0}
                   interactive
-                  onRate={(r) => handleCategoryRate(cat.id, r)}
+                  onRate={(r) => handleOverallRate(cat.id, r)}
                 />
               </div>
             ))}
           </div>
 
-          {/* Comment */}
           <textarea
             value={comment}
             onChange={(e) => setComment(e.target.value)}
-            placeholder="Any additional comments? We read every one..."
-            className="pub-input min-h-[80px] resize-none text-sm mb-4"
+            placeholder="Anything else you'd like to tell us? (optional)"
+            className="pub-input min-h-[72px] resize-none text-sm mb-4"
             rows={3}
           />
 
           <Button
-            onClick={handleSubmit}
-            disabled={submitting}
+            onClick={() => setStep("email")}
             className="w-full min-h-[48px]"
           >
-            {submitting ? (
-              "Submitting..."
-            ) : (
-              <>
-                <Send className="h-4 w-4 mr-2" />
-                Submit Feedback
-              </>
-            )}
+            Almost done!
           </Button>
+        </div>
+      )}
+
+      {/* Step 3: Optional email — the moment of delight */}
+      {step === "email" && (
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <Mail className="h-5 w-5 text-italia-green" />
+            <h3 className="font-heading font-semibold text-italia-dark">
+              Want your receipt by email?
+            </h3>
+          </div>
+          <p className="text-xs text-italia-gray mb-4">
+            We&apos;ll also send you points updates and exclusive offers. No spam — ever.
+          </p>
+
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="your@email.com (optional)"
+            className="pub-input min-h-[44px] text-base mb-4"
+          />
+
+          <div className="space-y-2">
+            <Button
+              onClick={handleSubmit}
+              disabled={submitting}
+              className="w-full min-h-[48px]"
+            >
+              {submitting ? (
+                "Submitting..."
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  {email.trim() ? "Submit & Send Receipt" : "Submit Review"}
+                </>
+              )}
+            </Button>
+            {!email.trim() && (
+              <button
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="w-full text-sm text-italia-gray hover:text-italia-dark transition-colors py-2"
+              >
+                Skip — just submit my review
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>

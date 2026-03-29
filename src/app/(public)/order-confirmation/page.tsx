@@ -9,7 +9,7 @@ import { OrderTracker } from "@/components/order/OrderTracker";
 import { FeedbackSurvey } from "@/components/order/FeedbackSurvey";
 import { CustomerMilestone } from "@/components/order/CustomerMilestone";
 import { LoyaltyPointsEarned } from "@/components/order/LoyaltyPointsEarned";
-import { CheckCircle, MapPin, ArrowLeft, Share2 } from "lucide-react";
+import { CheckCircle, MapPin, ArrowLeft, Share2, Link2 } from "lucide-react";
 import { getLocation } from "@/data/locations";
 
 function OrderConfirmationContent() {
@@ -85,8 +85,24 @@ function OrderConfirmationContent() {
 
           {/* Feedback survey (Omotenashi + Kaizen) */}
           {orderId && (
-            <div className="mb-8">
+            <div className="mb-6">
               <FeedbackSurvey orderId={orderId} />
+            </div>
+          )}
+
+          {/* Shareable review link */}
+          {orderId && (
+            <div className="mb-8 text-center">
+              <p className="text-xs text-italia-gray flex items-center justify-center gap-1.5">
+                <Link2 className="h-3 w-3" />
+                Review later:{" "}
+                <Link
+                  href={`/review/${orderId}`}
+                  className="text-italia-red font-medium hover:underline"
+                >
+                  suditalia.pl/review/{orderId}
+                </Link>
+              </p>
             </div>
           )}
 
