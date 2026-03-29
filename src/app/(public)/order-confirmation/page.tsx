@@ -6,6 +6,8 @@ import Link from "next/link";
 import { Container } from "@/components/ui/Container";
 import { Button } from "@/components/ui/Button";
 import { OrderTracker } from "@/components/order/OrderTracker";
+import { FeedbackSurvey } from "@/components/order/FeedbackSurvey";
+import { CustomerMilestone } from "@/components/order/CustomerMilestone";
 import { CheckCircle, MapPin, ArrowLeft, Share2 } from "lucide-react";
 import { getLocation } from "@/data/locations";
 
@@ -63,6 +65,18 @@ function OrderConfirmationContent() {
               <p className="text-sm text-italia-gray mt-1">
                 {location.address}
               </p>
+            </div>
+          )}
+
+          {/* Customer milestone (Kansha) */}
+          <div className="mb-6">
+            <CustomerMilestone orderCount={1} customerName="Customer" />
+          </div>
+
+          {/* Feedback survey (Omotenashi + Kaizen) */}
+          {orderId && (
+            <div className="mb-8">
+              <FeedbackSurvey orderId={orderId} />
             </div>
           )}
 

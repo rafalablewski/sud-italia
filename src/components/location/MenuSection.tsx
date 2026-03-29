@@ -7,6 +7,7 @@ import { Container } from "@/components/ui/Container";
 import { MenuCategoryNav } from "./MenuCategoryNav";
 import { MenuItemCard } from "./MenuItem";
 import { SurpriseMe } from "./SurpriseMe";
+import { SeasonalSpecials } from "./SeasonalSpecials";
 import { Search, X } from "lucide-react";
 
 interface MenuSectionProps {
@@ -101,6 +102,9 @@ export function MenuSection({ items, locationSlug }: MenuSectionProps) {
       </div>
 
       <Container className="py-8">
+        {/* Seasonal specials (Kodawari - limited-time) */}
+        {!isSearching && <SeasonalSpecials locationSlug={locationSlug} />}
+
         {/* Surprise Me feature */}
         {!isSearching && (
           <div className="mb-6">

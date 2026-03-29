@@ -9,8 +9,10 @@ import { formatPrice } from "@/lib/utils";
 import { getItemBadges, BADGE_CONFIG, BadgeType } from "@/lib/upsell";
 import { StarRating } from "@/components/rating/StarRating";
 import { getItemRating } from "@/data/ratings";
+import { getItemDetails } from "@/data/kodawari";
+import { ItemDetailDrawer } from "./ItemDetailDrawer";
 import { useCartStore } from "@/store/cart";
-import { Plus, Minus, Check, TrendingUp, Award, Zap, Star } from "lucide-react";
+import { Plus, Minus, Check, TrendingUp, Award, Zap, Star, Clock, Flame, Info } from "lucide-react";
 import { useState, useEffect } from "react";
 
 interface MenuItemProps {
@@ -38,6 +40,7 @@ export function MenuItemCard({ item, locationSlug }: MenuItemProps) {
   const updateQuantity = useCartStore((s) => s.updateQuantity);
   const cartItems = useCartStore((s) => s.items);
   const [justAdded, setJustAdded] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   const cartItem = cartItems.find((i) => i.menuItem.id === item.id);
   const quantity = cartItem?.quantity ?? 0;
@@ -45,6 +48,7 @@ export function MenuItemCard({ item, locationSlug }: MenuItemProps) {
 
   const badges = getItemBadges(item.id, locationSlug);
   const itemRating = getItemRating(item.id);
+  const details = getItemDetails(item.id);
 
   useEffect(() => {
     if (!justAdded) return;
@@ -117,11 +121,33 @@ export function MenuItemCard({ item, locationSlug }: MenuItemProps) {
             <p className="text-sm text-italia-gray mt-1 leading-relaxed line-clamp-2">
               {item.description}
             </p>
-            {itemRating && (
-              <div className="mt-1">
+            {/* Quick details: rating + prep time + calories */}
+            <div className="flex items-center gap-3 mt-1 flex-wrap">
+              {itemRating && (
                 <StarRating rating={itemRating.rating} reviewCount={itemRating.count} />
-              </div>
-            )}
+              )}
+              {details?.prepTimeMinutes && (
+                <span className="flex items-center gap-0.5 text-[11px] text-italia-gray">
+                  <Clock className="h-3 w-3" />
+                  {details.prepTimeMinutes}m
+                </span>
+              )}
+              {details?.nutrition && (
+                <span className="flex items-center gap-0.5 text-[11px] text-italia-gray">
+                  <Flame className="h-3 w-3" />
+                  {details.nutrition.calories} kcal
+                </span>
+              )}
+              {details && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setDetailOpen(true); }}
+                  className="flex items-center gap-0.5 text-[11px] text-italia-red font-medium hover:underline"
+                >
+                  <Info className="h-3 w-3" />
+                  Details
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -178,6 +204,16 @@ export function MenuItemCard({ item, locationSlug }: MenuItemProps) {
           </div>
         </div>
       </div>
+
+      {/* Kodawari detail drawer */}
+      {details && (
+        <ItemDetailDrawer
+          item={item}
+          locationSlug={locationSlug}
+          open={detailOpen}
+          onClose={() => setDetailOpen(false)}
+        />
+      )}
     </div>
   );
 }

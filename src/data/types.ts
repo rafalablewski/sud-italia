@@ -29,6 +29,52 @@ export const MENU_CATEGORY_LABELS: Record<MenuCategory, string> = {
   desserts: "Desserts",
 };
 
+// --- Allergens (EU regulation + Japanese 7 major) ---
+
+export type Allergen =
+  | "gluten"
+  | "dairy"
+  | "eggs"
+  | "fish"
+  | "shellfish"
+  | "nuts"
+  | "peanuts"
+  | "soy"
+  | "celery"
+  | "mustard"
+  | "sesame"
+  | "sulfites"
+  | "lupin"
+  | "molluscs";
+
+export const ALLERGEN_LABELS: Record<Allergen, { en: string; pl: string; emoji: string }> = {
+  gluten: { en: "Gluten", pl: "Gluten", emoji: "🌾" },
+  dairy: { en: "Dairy", pl: "Nabiał", emoji: "🥛" },
+  eggs: { en: "Eggs", pl: "Jaja", emoji: "🥚" },
+  fish: { en: "Fish", pl: "Ryby", emoji: "🐟" },
+  shellfish: { en: "Shellfish", pl: "Skorupiaki", emoji: "🦐" },
+  nuts: { en: "Tree Nuts", pl: "Orzechy", emoji: "🥜" },
+  peanuts: { en: "Peanuts", pl: "Orzeszki ziemne", emoji: "🥜" },
+  soy: { en: "Soy", pl: "Soja", emoji: "🫘" },
+  celery: { en: "Celery", pl: "Seler", emoji: "🥬" },
+  mustard: { en: "Mustard", pl: "Gorczyca", emoji: "🟡" },
+  sesame: { en: "Sesame", pl: "Sezam", emoji: "⚪" },
+  sulfites: { en: "Sulfites", pl: "Siarczyny", emoji: "🍷" },
+  lupin: { en: "Lupin", pl: "Łubin", emoji: "🌿" },
+  molluscs: { en: "Molluscs", pl: "Mięczaki", emoji: "🦑" },
+};
+
+// --- Nutritional Information ---
+
+export interface NutritionInfo {
+  calories: number;      // kcal per serving
+  protein: number;       // grams
+  carbs: number;         // grams
+  fat: number;           // grams
+  fiber?: number;        // grams
+  sodium?: number;       // mg
+}
+
 export interface MenuItem {
   id: string;
   name: string;
@@ -39,6 +85,13 @@ export interface MenuItem {
   image?: string;
   tags: ("vegetarian" | "vegan" | "spicy" | "gluten-free")[];
   available: boolean;
+  // Japanese standard (Kodawari) fields
+  allergens?: Allergen[];
+  nutrition?: NutritionInfo;
+  sourcing?: string;     // e.g. "San Marzano tomatoes from Campania, Italy"
+  prepTimeMinutes?: number;
+  isLimited?: boolean;   // seasonal/limited-time item
+  limitedUntil?: string; // ISO date string
 }
 
 // --- Ingredients & Recipes ---
@@ -118,6 +171,26 @@ export interface TimeSlot {
   status: SlotStatus; // "draft" until admin approves, then "active"
 }
 
+// --- Feedback ---
+
+export interface OrderFeedback {
+  overallRating: number;
+  categoryRatings?: Record<string, number>;
+  comment?: string;
+  submittedAt: string;
+}
+
+// --- Quality Control (Kaizen) ---
+
+export interface QualityCheck {
+  checkedBy?: string;
+  checkedAt?: string;
+  temperatureOk?: boolean;
+  presentationOk?: boolean;
+  accuracyOk?: boolean;
+  notes?: string;
+}
+
 export interface Order {
   id: string;
   locationSlug: string;
@@ -133,4 +206,9 @@ export interface Order {
   slotTime: string;
   createdAt: string;
   paidAt?: string;
+  // Japanese standard additions
+  queuePosition?: number;
+  estimatedReadyAt?: string;
+  feedback?: OrderFeedback;
+  qualityCheck?: QualityCheck;
 }
