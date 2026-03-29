@@ -115,14 +115,11 @@ export function AdminGrowth() {
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            const itemId = item.id;
-                            setSettings((prev) => {
-                              if (!prev) return prev;
-                              const updated = prev.seasonalItems.map((si) =>
-                                si.id === itemId ? { ...si, active: !si.active } : si
-                              );
-                              return { ...prev, seasonalItems: updated };
-                            });
+                            if (!settings) return;
+                            const updated = settings.seasonalItems.map((si) =>
+                              si.id === item.id ? { ...si, active: !si.active } : si
+                            );
+                            saveSettings({ seasonalItems: updated });
                           }}
                           className={`p-1 rounded-lg transition-colors ${item.active ? "text-green-400 bg-green-400/10 hover:bg-green-400/20" : "text-red-400 bg-red-400/10 hover:bg-red-400/20"}`}
                         >
@@ -146,7 +143,7 @@ export function AdminGrowth() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="glass-card p-4"><label className="text-xs admin-text-dim block mb-1">Guarantee Time (min)</label><input type="number" value={settings?.speedGuarantee.maxMinutes || 15} onChange={(e) => setSettings((s) => s ? { ...s, speedGuarantee: { ...s.speedGuarantee, maxMinutes: parseInt(e.target.value) || 15 } } : s)} className="glass-input w-full" /></div>
                 <div className="glass-card p-4"><label className="text-xs admin-text-dim block mb-1">Guarantee Text</label><input type="text" value={settings?.speedGuarantee.guaranteeText || ""} onChange={(e) => setSettings((s) => s ? { ...s, speedGuarantee: { ...s.speedGuarantee, guaranteeText: e.target.value } } : s)} className="glass-input w-full text-xs" /></div>
-                <div className="glass-card p-4"><label className="text-xs admin-text-dim block mb-1">Status</label><button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSettings((s) => s ? { ...s, speedGuarantee: { ...s.speedGuarantee, active: !s.speedGuarantee.active } } : s); }} className={`flex items-center gap-2 mt-1 p-1 rounded-lg ${settings?.speedGuarantee.active ? "text-green-400 bg-green-400/10" : "text-red-400 bg-red-400/10"}`}>{settings?.speedGuarantee.active ? <ToggleRight className="h-6 w-6" /> : <ToggleLeft className="h-6 w-6" />}<span className="text-sm font-medium">{settings?.speedGuarantee.active ? "Active" : "Inactive"}</span></button></div>
+                <div className="glass-card p-4"><label className="text-xs admin-text-dim block mb-1">Status</label><button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!settings) return; saveSettings({ speedGuarantee: { ...settings.speedGuarantee, active: !settings.speedGuarantee.active } }); }} className={`flex items-center gap-2 mt-1 p-1 rounded-lg ${settings?.speedGuarantee.active ? "text-green-400 bg-green-400/10" : "text-red-400 bg-red-400/10"}`}>{settings?.speedGuarantee.active ? <ToggleRight className="h-6 w-6" /> : <ToggleLeft className="h-6 w-6" />}<span className="text-sm font-medium">{settings?.speedGuarantee.active ? "Active" : "Inactive"}</span></button></div>
               </div>
               {settings && <div className="flex gap-2 mt-4"><button onClick={() => saveSettings({ speedGuarantee: settings.speedGuarantee })} disabled={saving} className="glass-btn-green text-xs"><Check className="h-3.5 w-3.5" />{saving ? "Saving..." : "Save Speed Settings"}</button></div>}
             </div>
@@ -162,7 +159,7 @@ export function AdminGrowth() {
                       <span className="text-sm admin-text">{label}</span>
                       <div className="flex items-center gap-2">
                         <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${isVisible ? "badge-active" : "badge-danger"}`}>{isVisible ? "Visible" : "Hidden"}</span>
-                        <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSettings((s) => s ? { ...s, liveActivity: { ...s.liveActivity, [key]: !isVisible } } : s); }} className={`p-1 rounded-lg ${isVisible ? "text-green-400 bg-green-400/10" : "text-red-400 bg-red-400/10"}`}>{isVisible ? <ToggleRight className="h-5 w-5" /> : <ToggleLeft className="h-5 w-5" />}</button>
+                        <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!settings) return; saveSettings({ liveActivity: { ...settings.liveActivity, [key]: !isVisible } }); }} className={`p-1 rounded-lg ${isVisible ? "text-green-400 bg-green-400/10" : "text-red-400 bg-red-400/10"}`}>{isVisible ? <ToggleRight className="h-5 w-5" /> : <ToggleLeft className="h-5 w-5" />}</button>
                       </div>
                     </div>
                   );
@@ -177,7 +174,7 @@ export function AdminGrowth() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="glass-card p-4"><label className="text-xs admin-text-dim block mb-1">Trigger Delay (seconds)</label><input type="number" value={settings?.abandonedCart.delaySeconds ?? 30} onChange={(e) => setSettings((s) => s ? { ...s, abandonedCart: { ...s.abandonedCart, delaySeconds: parseInt(e.target.value) || 30 } } : s)} className="glass-input w-full" /></div>
                 <div className="glass-card p-4"><label className="text-xs admin-text-dim block mb-1">Banner Message</label><input type="text" value={settings?.abandonedCart.message ?? ""} onChange={(e) => setSettings((s) => s ? { ...s, abandonedCart: { ...s.abandonedCart, message: e.target.value } } : s)} className="glass-input w-full text-xs" /></div>
-                <div className="glass-card p-4"><label className="text-xs admin-text-dim block mb-1">Status</label><button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSettings((s) => s ? { ...s, abandonedCart: { ...s.abandonedCart, active: !s.abandonedCart.active } } : s); }} className={`flex items-center gap-2 mt-1 p-1 rounded-lg ${settings?.abandonedCart.active ? "text-green-400 bg-green-400/10" : "text-red-400 bg-red-400/10"}`}>{settings?.abandonedCart.active ? <ToggleRight className="h-6 w-6" /> : <ToggleLeft className="h-6 w-6" />}<span className="text-sm font-medium">{settings?.abandonedCart.active ? "Active" : "Inactive"}</span></button></div>
+                <div className="glass-card p-4"><label className="text-xs admin-text-dim block mb-1">Status</label><button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!settings) return; saveSettings({ abandonedCart: { ...settings.abandonedCart, active: !settings.abandonedCart.active } }); }} className={`flex items-center gap-2 mt-1 p-1 rounded-lg ${settings?.abandonedCart.active ? "text-green-400 bg-green-400/10" : "text-red-400 bg-red-400/10"}`}>{settings?.abandonedCart.active ? <ToggleRight className="h-6 w-6" /> : <ToggleLeft className="h-6 w-6" />}<span className="text-sm font-medium">{settings?.abandonedCart.active ? "Active" : "Inactive"}</span></button></div>
               </div>
               {settings && <div className="flex gap-2 mt-4"><button onClick={() => saveSettings({ abandonedCart: settings.abandonedCart })} disabled={saving} className="glass-btn-green text-xs"><Check className="h-3.5 w-3.5" />{saving ? "Saving..." : "Save Cart Settings"}</button></div>}
             </div>
