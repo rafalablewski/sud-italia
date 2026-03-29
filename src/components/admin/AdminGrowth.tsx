@@ -109,7 +109,7 @@ export function AdminGrowth() {
 
     setAdjusting(true);
     try {
-      await fetch("/api/admin/members/points", {
+      const res = await fetch("/api/admin/members/points", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -118,12 +118,17 @@ export function AdminGrowth() {
           reason: pointsReason.trim() || undefined,
         }),
       });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Failed to adjust points");
+        return;
+      }
       refreshMembers();
       setPointsModal(null);
       setPointsAmount("");
       setPointsReason("");
-    } catch {
-      alert("Failed to adjust points");
+    } catch (err) {
+      alert("Network error — failed to adjust points");
     } finally {
       setAdjusting(false);
     }
