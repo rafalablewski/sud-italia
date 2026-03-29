@@ -744,6 +744,7 @@ export interface LoyaltySettings {
   abandonedCart: { delaySeconds: number; message: string; active: boolean };
   challenges: { id: string; title: string; description: string; target: number; rewardPoints: number; type: string; active: boolean }[];
   seasonalItems: { id: string; name: string; description: string; category: string; price: number; availableUntil: string; badge: string; active: boolean }[];
+  liveActivity: { ordersInLastHour: boolean; currentlyPreparing: boolean; trendingItem: boolean; avgPrepTime: boolean };
 }
 
 const DEFAULT_LOYALTY_SETTINGS: LoyaltySettings = {
@@ -773,6 +774,7 @@ const DEFAULT_LOYALTY_SETTINGS: LoyaltySettings = {
     { id: "s2", name: "Panna Cotta al Limoncello", description: "Limoncello-infused panna cotta with candied lemon zest and Amalfi lemon coulis", category: "desserts", price: 2200, availableUntil: "2026-04-30", badge: "Limited Edition", active: true },
     { id: "s3", name: "Risotto Primavera", description: "Carnaroli rice with asparagus, peas, mint, and shaved Parmigiano Reggiano", category: "pasta", price: 3200, availableUntil: "2026-05-31", badge: "Chef's Creation", active: true },
   ],
+  liveActivity: { ordersInLastHour: true, currentlyPreparing: true, trendingItem: true, avgPrepTime: true },
 };
 
 export async function getLoyaltySettings(): Promise<LoyaltySettings> {

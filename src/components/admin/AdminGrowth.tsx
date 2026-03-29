@@ -55,11 +55,11 @@ const MOCK_REFERRALS = [
   { code: "SUD-MARI-P2L5", owner: "Maria Lewandowska", used: 12, earned: 1200, createdAt: "2025-11-20" },
 ];
 
-// --- Simulated seasonal items ---
-const MOCK_SEASONAL = [
-  { id: "s1", name: "Tartufo Nero", category: "pizza", price: 4500, until: "2026-04-30", active: true },
-  { id: "s2", name: "Panna Cotta al Limoncello", category: "desserts", price: 2200, until: "2026-04-30", active: true },
-  { id: "s3", name: "Risotto Primavera", category: "pasta", price: 3200, until: "2026-05-31", active: true },
+const LIVE_ACTIVITY_KEYS: { key: keyof NonNullable<LoyaltySettings["liveActivity"]>; label: string }[] = [
+  { key: "ordersInLastHour", label: "Orders in last hour" },
+  { key: "currentlyPreparing", label: "Currently preparing" },
+  { key: "trendingItem", label: "Trending item" },
+  { key: "avgPrepTime", label: "Avg prep time" },
 ];
 
 // --- Simulated chatbot FAQ ---
@@ -201,7 +201,7 @@ export function AdminGrowth() {
             <p className="text-xs admin-text-dim">Achievements</p>
           </div>
           <div className="glass-card p-4">
-            <p className="text-2xl font-bold text-purple-400">{MOCK_SEASONAL.length}</p>
+            <p className="text-2xl font-bold text-purple-400">{(settings?.seasonalItems || []).length}</p>
             <p className="text-xs admin-text-dim">Seasonal Items</p>
           </div>
         </div>
@@ -563,7 +563,7 @@ export function AdminGrowth() {
                 </button>
               </div>
               <div className="space-y-2">
-                {MOCK_SEASONAL.map((item) => (
+                {(settings?.seasonalItems || []).map((item, idx) => (
                   <div key={item.id} className="flex items-center justify-between p-4 glass-card">
                     <div>
                       <div className="flex items-center gap-2">
@@ -571,24 +571,38 @@ export function AdminGrowth() {
                         <span className="badge-info text-[10px] px-2 py-0.5 rounded-full font-bold">
                           {item.category}
                         </span>
+                        {!item.active && <span className="badge-danger text-[10px] px-2 py-0.5 rounded-full font-bold">Hidden</span>}
                       </div>
                       <p className="text-xs admin-text-dim mt-0.5">
-                        Available until {item.until}
+                        Available until {item.availableUntil}
                       </p>
                     </div>
                     <div className="flex items-center gap-4">
                       <span className="font-bold admin-text">{formatPrice(item.price)}</span>
-                      <div className="flex items-center gap-2">
-                        <button className="text-green-400 hover:text-green-300">
-                          {item.active ? <ToggleRight className="h-5 w-5" /> : <ToggleLeft className="h-5 w-5" />}
-                        </button>
-                        <button className="text-slate-400 hover:text-white"><Edit3 className="h-3.5 w-3.5" /></button>
-                        <button className="text-slate-400 hover:text-red-400"><Trash2 className="h-3.5 w-3.5" /></button>
-                      </div>
+                      <button
+                        onClick={() => {
+                          setSettings((s) => {
+                            if (!s) return s;
+                            const items = [...s.seasonalItems];
+                            items[idx] = { ...items[idx], active: !items[idx].active };
+                            return { ...s, seasonalItems: items };
+                          });
+                        }}
+                        className={item.active ? "text-green-400 hover:text-green-300" : "text-slate-400 hover:text-slate-300"}
+                      >
+                        {item.active ? <ToggleRight className="h-5 w-5" /> : <ToggleLeft className="h-5 w-5" />}
+                      </button>
                     </div>
                   </div>
                 ))}
               </div>
+              {settings && (
+                <div className="flex gap-2 mt-3">
+                  <button onClick={() => saveSettings({ seasonalItems: settings.seasonalItems })} disabled={saving} className="glass-btn-green text-xs">
+                    <Check className="h-3.5 w-3.5" /> {saving ? "Saving..." : "Save Seasonal Items"}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -657,16 +671,38 @@ export function AdminGrowth() {
                 Live Activity Bar Settings
               </h3>
               <div className="space-y-3">
-                {["Orders in last hour", "Currently preparing", "Trending item", "Avg prep time"].map((label) => (
-                  <div key={label} className="flex items-center justify-between p-3 glass-card">
-                    <span className="text-sm admin-text">{label}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs badge-active px-2 py-0.5 rounded-full font-bold">Visible</span>
-                      <ToggleRight className="h-5 w-5 text-green-400 cursor-pointer" />
+                {LIVE_ACTIVITY_KEYS.map(({ key, label }) => {
+                  const isVisible = settings?.liveActivity?.[key] ?? true;
+                  return (
+                    <div key={key} className="flex items-center justify-between p-3 glass-card">
+                      <span className="text-sm admin-text">{label}</span>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${isVisible ? "badge-active" : "badge-danger"}`}>
+                          {isVisible ? "Visible" : "Hidden"}
+                        </span>
+                        <button
+                          onClick={() => {
+                            setSettings((s) => s ? {
+                              ...s,
+                              liveActivity: { ...s.liveActivity, [key]: !isVisible },
+                            } : s);
+                          }}
+                          className={isVisible ? "text-green-400" : "text-slate-400"}
+                        >
+                          {isVisible ? <ToggleRight className="h-5 w-5" /> : <ToggleLeft className="h-5 w-5" />}
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
+              {settings && (
+                <div className="flex gap-2 mt-3">
+                  <button onClick={() => saveSettings({ liveActivity: settings.liveActivity })} disabled={saving} className="glass-btn-green text-xs">
+                    <Check className="h-3.5 w-3.5" /> {saving ? "Saving..." : "Save Activity Settings"}
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="glass-card-static p-5">
@@ -677,20 +713,53 @@ export function AdminGrowth() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="glass-card p-4">
                   <label className="text-xs admin-text-dim block mb-1">Trigger Delay (seconds)</label>
-                  <input type="number" defaultValue={30} className="glass-input w-full" />
+                  <input
+                    type="number"
+                    value={settings?.abandonedCart.delaySeconds ?? 30}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value) || 30;
+                      setSettings((s) => s ? { ...s, abandonedCart: { ...s.abandonedCart, delaySeconds: val } } : s);
+                    }}
+                    className="glass-input w-full"
+                  />
                 </div>
                 <div className="glass-card p-4">
                   <label className="text-xs admin-text-dim block mb-1">Banner Message</label>
-                  <input type="text" defaultValue="Still hungry? 🍕" className="glass-input w-full text-xs" />
+                  <input
+                    type="text"
+                    value={settings?.abandonedCart.message ?? "Still hungry? 🍕"}
+                    onChange={(e) => {
+                      setSettings((s) => s ? { ...s, abandonedCart: { ...s.abandonedCart, message: e.target.value } } : s);
+                    }}
+                    className="glass-input w-full text-xs"
+                  />
                 </div>
                 <div className="glass-card p-4">
                   <label className="text-xs admin-text-dim block mb-1">Status</label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <ToggleRight className="h-6 w-6 text-green-400" />
-                    <span className="text-sm admin-text font-medium">Active</span>
-                  </div>
+                  <button
+                    onClick={() => {
+                      setSettings((s) => s ? { ...s, abandonedCart: { ...s.abandonedCart, active: !s.abandonedCart.active } } : s);
+                    }}
+                    className="flex items-center gap-2 mt-1"
+                  >
+                    {settings?.abandonedCart.active ? (
+                      <ToggleRight className="h-6 w-6 text-green-400" />
+                    ) : (
+                      <ToggleLeft className="h-6 w-6 text-slate-400" />
+                    )}
+                    <span className="text-sm admin-text font-medium">
+                      {settings?.abandonedCart.active ? "Active" : "Inactive"}
+                    </span>
+                  </button>
                 </div>
               </div>
+              {settings && (
+                <div className="flex gap-2 mt-4">
+                  <button onClick={() => saveSettings({ abandonedCart: settings.abandonedCart })} disabled={saving} className="glass-btn-green text-xs">
+                    <Check className="h-3.5 w-3.5" /> {saving ? "Saving..." : "Save Cart Recovery Settings"}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
