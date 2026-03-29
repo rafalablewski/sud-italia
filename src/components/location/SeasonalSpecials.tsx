@@ -1,9 +1,11 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useCartStore } from "@/store/cart";
 import { formatPrice } from "@/lib/utils";
-import { Plus, Clock, Sparkles, Flame } from "lucide-react";
+import { Plus, Clock, Sparkles } from "lucide-react";
 import { CATEGORY_EMOJI } from "@/data/menu-images";
+import type { MenuCategory } from "@/data/types";
 
 interface SeasonalItem {
   id: string;
@@ -15,37 +17,6 @@ interface SeasonalItem {
   badge: string;
 }
 
-// Simulated seasonal items — in production, these come from admin
-const SEASONAL_ITEMS: SeasonalItem[] = [
-  {
-    id: "seasonal-truffle-pizza",
-    name: "Tartufo Nero",
-    description: "Black truffle cream, fior di latte, Parmigiano, truffle oil, fresh arugula",
-    price: 4500,
-    category: "pizza",
-    availableUntil: "2026-04-30",
-    badge: "Spring Special",
-  },
-  {
-    id: "seasonal-limoncello-panna",
-    name: "Panna Cotta al Limoncello",
-    description: "Limoncello-infused panna cotta with candied lemon zest and Amalfi lemon coulis",
-    price: 2200,
-    category: "desserts",
-    availableUntil: "2026-04-30",
-    badge: "Limited Edition",
-  },
-  {
-    id: "seasonal-spring-risotto",
-    name: "Risotto Primavera",
-    description: "Carnaroli rice with asparagus, peas, mint, and shaved Parmigiano Reggiano",
-    price: 3200,
-    category: "pasta",
-    availableUntil: "2026-05-31",
-    badge: "Chef's Creation",
-  },
-];
-
 function daysUntil(dateStr: string): number {
   const target = new Date(dateStr);
   const now = new Date();
@@ -53,13 +24,17 @@ function daysUntil(dateStr: string): number {
 }
 
 export function SeasonalSpecials({ locationSlug }: { locationSlug: string }) {
+  const [items, setItems] = useState<SeasonalItem[]>([]);
   const addItem = useCartStore((s) => s.addItem);
 
-  const activeItems = SEASONAL_ITEMS.filter(
-    (item) => new Date(item.availableUntil) >= new Date()
-  );
+  useEffect(() => {
+    fetch(`/api/settings/public?location=${locationSlug}`)
+      .then((r) => r.json())
+      .then((data) => setItems(data.seasonalItems || []))
+      .catch(() => {});
+  }, [locationSlug]);
 
-  if (activeItems.length === 0) return null;
+  if (items.length === 0) return null;
 
   return (
     <div className="mb-6">
@@ -72,7 +47,7 @@ export function SeasonalSpecials({ locationSlug }: { locationSlug: string }) {
       </div>
 
       <div className="grid grid-cols-1 gap-3">
-        {activeItems.map((item) => {
+        {items.map((item) => {
           const remaining = daysUntil(item.availableUntil);
           const emoji = CATEGORY_EMOJI[item.category] || "🍽️";
 
@@ -81,7 +56,6 @@ export function SeasonalSpecials({ locationSlug }: { locationSlug: string }) {
               key={item.id}
               className="relative bg-gradient-to-r from-italia-gold/5 to-italia-red/5 rounded-2xl border border-italia-gold/20 p-4 overflow-hidden"
             >
-              {/* Badge */}
               <span className="absolute top-3 right-3 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-italia-gold/15 text-italia-gold-dark">
                 <Sparkles className="h-3 w-3" />
                 {item.badge}
@@ -119,7 +93,7 @@ export function SeasonalSpecials({ locationSlug }: { locationSlug: string }) {
                       description: item.description,
                       price: item.price,
                       cost: Math.round(item.price * 0.3),
-                      category: item.category as import("@/data/types").MenuCategory,
+                      category: item.category as MenuCategory,
                       tags: [],
                       available: true,
                     },

@@ -4,10 +4,13 @@ import { useState, useEffect, useCallback } from "react";
 import { AdminNav } from "./AdminNav";
 import { formatPrice } from "@/lib/utils";
 import type { LoyaltySettings } from "@/lib/store";
+import { locations as allLocations } from "@/data/locations";
 import {
   Rocket, Check, ToggleLeft, ToggleRight, Clock, Sparkles, Zap,
-  TrendingUp, MessageCircle, Edit3, Trash2, Plus,
+  TrendingUp, MessageCircle, Edit3, Trash2, Plus, MapPin,
 } from "lucide-react";
+
+const activeLocations = allLocations.filter((l) => l.isActive);
 
 type Tab = "seasonal" | "speed" | "chatbot";
 
@@ -29,6 +32,7 @@ const MOCK_FAQ = [
 
 export function AdminGrowth() {
   const [tab, setTab] = useState<Tab>("seasonal");
+  const [locationFilter, setLocationFilter] = useState<string>("all");
   const [settings, setSettings] = useState<LoyaltySettings | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -59,10 +63,14 @@ export function AdminGrowth() {
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500/20 to-blue-500/20 flex items-center justify-center">
             <Rocket className="h-5 w-5 text-green-400" />
           </div>
-          <div>
+          <div className="flex-1">
             <h1 className="text-xl font-heading font-bold admin-text">Growth & Operations</h1>
-            <p className="text-sm admin-text-dim">Seasonal menu, speed settings, chatbot — applies to all locations</p>
+            <p className="text-sm admin-text-dim">Seasonal menu, speed settings, chatbot</p>
           </div>
+          <select value={locationFilter} onChange={(e) => setLocationFilter(e.target.value)} className="glass-select text-sm">
+            <option value="all">All Locations</option>
+            {activeLocations.map((loc) => <option key={loc.slug} value={loc.slug}>{loc.city}</option>)}
+          </select>
         </div>
 
         {/* Tabs */}
@@ -83,24 +91,34 @@ export function AdminGrowth() {
                 <button className="glass-btn text-xs"><Plus className="h-3.5 w-3.5" /> Add Item</button>
               </div>
               <div className="space-y-2">
-                {(settings?.seasonalItems || []).map((item, idx) => (
-                  <div key={item.id} className="flex items-center justify-between p-4 glass-card">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold admin-text">{item.name}</p>
-                        <span className="badge-info text-[10px] px-2 py-0.5 rounded-full font-bold">{item.category}</span>
-                        {!item.active && <span className="badge-danger text-[10px] px-2 py-0.5 rounded-full font-bold">Hidden</span>}
+                {(settings?.seasonalItems || [])
+                  .filter((item) => locationFilter === "all" || item.locationSlug === locationFilter || !item.locationSlug)
+                  .map((item) => {
+                    const idx = settings!.seasonalItems.findIndex((s) => s.id === item.id);
+                    return (
+                      <div key={item.id} className="flex items-center justify-between p-4 glass-card">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold admin-text">{item.name}</p>
+                            <span className="badge-info text-[10px] px-2 py-0.5 rounded-full font-bold">{item.category}</span>
+                            {item.locationSlug && (
+                              <span className="badge-confirmed text-[10px] px-2 py-0.5 rounded-full font-bold capitalize flex items-center gap-0.5">
+                                <MapPin className="h-2.5 w-2.5" />{item.locationSlug}
+                              </span>
+                            )}
+                            {!item.active && <span className="badge-danger text-[10px] px-2 py-0.5 rounded-full font-bold">Hidden</span>}
+                          </div>
+                          <p className="text-xs admin-text-dim mt-0.5">Until {item.availableUntil}</p>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <span className="font-bold admin-text">{formatPrice(item.price)}</span>
+                          <button onClick={() => setSettings((s) => { if (!s) return s; const items = [...s.seasonalItems]; items[idx] = { ...items[idx], active: !items[idx].active }; return { ...s, seasonalItems: items }; })} className={item.active ? "text-green-400 hover:text-green-300" : "text-slate-400 hover:text-slate-300"}>
+                            {item.active ? <ToggleRight className="h-5 w-5" /> : <ToggleLeft className="h-5 w-5" />}
+                          </button>
+                        </div>
                       </div>
-                      <p className="text-xs admin-text-dim mt-0.5">Available until {item.availableUntil}</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className="font-bold admin-text">{formatPrice(item.price)}</span>
-                      <button onClick={() => setSettings((s) => { if (!s) return s; const items = [...s.seasonalItems]; items[idx] = { ...items[idx], active: !items[idx].active }; return { ...s, seasonalItems: items }; })} className={item.active ? "text-green-400 hover:text-green-300" : "text-slate-400 hover:text-slate-300"}>
-                        {item.active ? <ToggleRight className="h-5 w-5" /> : <ToggleLeft className="h-5 w-5" />}
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                    );
+                  })}
               </div>
               {settings && <div className="flex gap-2 mt-3"><button onClick={() => saveSettings({ seasonalItems: settings.seasonalItems })} disabled={saving} className="glass-btn-green text-xs"><Check className="h-3.5 w-3.5" />{saving ? "Saving..." : "Save"}</button></div>}
             </div>
