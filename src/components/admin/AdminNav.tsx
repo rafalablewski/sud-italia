@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { CalendarDays, ClipboardList, LayoutDashboard, LogOut, BarChart3, Bell, UtensilsCrossed, FlaskConical, Settings, Brain, Map, Rocket, MessageSquare } from "lucide-react";
+import { CalendarDays, ClipboardList, LayoutDashboard, LogOut, BarChart3, Bell, UtensilsCrossed, FlaskConical, Settings, Brain, Map, Rocket, MessageSquare, Heart } from "lucide-react";
 import { useState, useEffect } from "react";
 
 const navItems = [
@@ -12,6 +12,7 @@ const navItems = [
   { href: "/admin/slots", label: "Slots", icon: CalendarDays },
   { href: "/admin/orders", label: "Orders", icon: ClipboardList },
   { href: "/admin/reports", label: "Reports", icon: BarChart3 },
+  { href: "/admin/loyalty", label: "Loyalty", icon: Heart },
   { href: "/admin/growth", label: "Growth", icon: Rocket },
   { href: "/admin/feedback", label: "Feedback", icon: MessageSquare },
   { href: "/admin/ai", label: "AI", icon: Brain },
