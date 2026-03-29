@@ -129,7 +129,6 @@ export function AdminGrowth() {
                     </div>
                   ))}
               </div>
-              {settings && <div className="flex gap-2 mt-3"><button onClick={() => saveSettings({ seasonalItems: settings.seasonalItems })} disabled={saving} className="glass-btn-green text-xs"><Check className="h-3.5 w-3.5" />{saving ? "Saving..." : "Save"}</button></div>}
             </div>
           </div>
         )}
@@ -145,7 +144,6 @@ export function AdminGrowth() {
                 <div className="glass-card p-4"><label className="text-xs admin-text-dim block mb-1">Guarantee Text</label><input type="text" value={settings?.speedGuarantee.guaranteeText || ""} onChange={(e) => setSettings((s) => s ? { ...s, speedGuarantee: { ...s.speedGuarantee, guaranteeText: e.target.value } } : s)} className="glass-input w-full text-xs" /></div>
                 <div className="glass-card p-4"><label className="text-xs admin-text-dim block mb-1">Status</label><button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!settings) return; saveSettings({ speedGuarantee: { ...settings.speedGuarantee, active: !settings.speedGuarantee.active } }); }} className={`flex items-center gap-2 mt-1 p-1 rounded-lg ${settings?.speedGuarantee.active ? "text-green-400 bg-green-400/10" : "text-red-400 bg-red-400/10"}`}>{settings?.speedGuarantee.active ? <ToggleRight className="h-6 w-6" /> : <ToggleLeft className="h-6 w-6" />}<span className="text-sm font-medium">{settings?.speedGuarantee.active ? "Active" : "Inactive"}</span></button></div>
               </div>
-              {settings && <div className="flex gap-2 mt-4"><button onClick={() => saveSettings({ speedGuarantee: settings.speedGuarantee })} disabled={saving} className="glass-btn-green text-xs"><Check className="h-3.5 w-3.5" />{saving ? "Saving..." : "Save Speed Settings"}</button></div>}
             </div>
 
             {/* Live activity bar */}
@@ -165,7 +163,6 @@ export function AdminGrowth() {
                   );
                 })}
               </div>
-              {settings && <div className="flex gap-2 mt-3"><button onClick={() => saveSettings({ liveActivity: settings.liveActivity })} disabled={saving} className="glass-btn-green text-xs"><Check className="h-3.5 w-3.5" />{saving ? "Saving..." : "Save Activity Settings"}</button></div>}
             </div>
 
             {/* Abandoned cart */}
@@ -176,7 +173,6 @@ export function AdminGrowth() {
                 <div className="glass-card p-4"><label className="text-xs admin-text-dim block mb-1">Banner Message</label><input type="text" value={settings?.abandonedCart.message ?? ""} onChange={(e) => setSettings((s) => s ? { ...s, abandonedCart: { ...s.abandonedCart, message: e.target.value } } : s)} className="glass-input w-full text-xs" /></div>
                 <div className="glass-card p-4"><label className="text-xs admin-text-dim block mb-1">Status</label><button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!settings) return; saveSettings({ abandonedCart: { ...settings.abandonedCart, active: !settings.abandonedCart.active } }); }} className={`flex items-center gap-2 mt-1 p-1 rounded-lg ${settings?.abandonedCart.active ? "text-green-400 bg-green-400/10" : "text-red-400 bg-red-400/10"}`}>{settings?.abandonedCart.active ? <ToggleRight className="h-6 w-6" /> : <ToggleLeft className="h-6 w-6" />}<span className="text-sm font-medium">{settings?.abandonedCart.active ? "Active" : "Inactive"}</span></button></div>
               </div>
-              {settings && <div className="flex gap-2 mt-4"><button onClick={() => saveSettings({ abandonedCart: settings.abandonedCart })} disabled={saving} className="glass-btn-green text-xs"><Check className="h-3.5 w-3.5" />{saving ? "Saving..." : "Save Cart Settings"}</button></div>}
             </div>
           </div>
         )}
