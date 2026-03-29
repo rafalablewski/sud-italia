@@ -1,20 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { AdminNav } from "./AdminNav";
 import { formatPrice } from "@/lib/utils";
 import {
   TIER_CONFIG,
-  REWARDS,
-  TIER_THRESHOLDS,
   LoyaltyTier,
 } from "@/lib/loyalty";
 import {
   ACHIEVEMENTS,
-  getActiveChallenges,
-  REFERRAL_REWARD,
-  SPEED_GUARANTEE,
 } from "@/lib/growth-engine";
+import type { LoyaltySettings } from "@/lib/store";
 import {
   Rocket,
   Star,
@@ -77,7 +73,39 @@ const MOCK_FAQ = [
 export function AdminGrowth() {
   const [tab, setTab] = useState<Tab>("loyalty");
   const [memberSearch, setMemberSearch] = useState("");
-  const challenges = getActiveChallenges();
+  const [settings, setSettings] = useState<LoyaltySettings | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  // Load settings from DB
+  useEffect(() => {
+    fetch("/api/admin/growth")
+      .then((r) => r.json())
+      .then((data) => setSettings(data))
+      .catch(() => {});
+  }, []);
+
+  // Save settings to DB
+  const saveSettings = useCallback(async (updates: Partial<LoyaltySettings>) => {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/admin/growth", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+      const updated = await res.json();
+      setSettings(updated);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch {
+      alert("Failed to save. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  }, []);
+
+  const challenges = settings?.challenges || [];
 
   const filteredMembers = MOCK_MEMBERS.filter(
     (m) =>
@@ -156,32 +184,64 @@ export function AdminGrowth() {
                 <Star className="h-4 w-4 text-italia-gold" />
                 Tier Configuration
               </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {(Object.entries(TIER_CONFIG) as [LoyaltyTier, typeof TIER_CONFIG[LoyaltyTier]][]).map(([tier, config]) => (
-                  <div key={tier} className="glass-card p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${config.color}`}>
-                        {config.label}
-                      </span>
-                      <button className="text-slate-400 hover:text-white">
-                        <Edit3 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                    <p className="text-sm admin-text">{config.multiplier}x multiplier</p>
-                    <p className="text-xs admin-text-dim mt-1">
-                      Threshold: {TIER_THRESHOLDS[tier]} pts
-                    </p>
-                    <div className="mt-2 space-y-1">
-                      {config.perks.map((perk, i) => (
-                        <p key={i} className="text-[10px] admin-text-dim flex items-center gap-1">
-                          <Check className="h-3 w-3 text-green-400 flex-shrink-0" />
-                          {perk}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              {settings && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {(Object.entries(settings.tiers) as [LoyaltyTier, typeof settings.tiers.bronze][]).map(([tier, config]) => {
+                    const display = TIER_CONFIG[tier];
+                    return (
+                      <div key={tier} className="glass-card p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${display.color}`}>
+                            {display.label}
+                          </span>
+                        </div>
+                        <div className="space-y-2">
+                          <div>
+                            <label className="text-[10px] admin-text-dim">Threshold (pts)</label>
+                            <input
+                              type="number"
+                              value={config.threshold}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value) || 0;
+                                setSettings((s) => s ? { ...s, tiers: { ...s.tiers, [tier]: { ...s.tiers[tier], threshold: val } } } : s);
+                              }}
+                              className="glass-input w-full text-xs mt-0.5"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] admin-text-dim">Multiplier</label>
+                            <input
+                              type="number"
+                              step="0.5"
+                              value={config.multiplier}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value) || 1;
+                                setSettings((s) => s ? { ...s, tiers: { ...s.tiers, [tier]: { ...s.tiers[tier], multiplier: val } } } : s);
+                              }}
+                              className="glass-input w-full text-xs mt-0.5"
+                            />
+                          </div>
+                        </div>
+                        <div className="mt-2 space-y-1">
+                          {config.perks.map((perk, i) => (
+                            <p key={i} className="text-[10px] admin-text-dim flex items-center gap-1">
+                              <Check className="h-3 w-3 text-green-400 flex-shrink-0" />
+                              {perk}
+                            </p>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              {settings && (
+                <div className="flex gap-2 mt-4">
+                  <button onClick={() => saveSettings({ tiers: settings.tiers })} disabled={saving} className="glass-btn-green text-xs">
+                    <Check className="h-3.5 w-3.5" /> {saving ? "Saving..." : saved ? "Saved!" : "Save Tier Settings"}
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Rewards catalog */}
@@ -196,20 +256,53 @@ export function AdminGrowth() {
                 </button>
               </div>
               <div className="space-y-2">
-                {REWARDS.map((reward) => (
+                {(settings?.rewards || []).map((reward, idx) => (
                   <div key={reward.id} className="flex items-center justify-between p-3 glass-card">
-                    <div>
+                    <div className="flex-1 min-w-0 mr-3">
                       <p className="text-sm font-semibold admin-text">{reward.name}</p>
                       <p className="text-xs admin-text-dim">{reward.description}</p>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-bold text-italia-gold">{reward.pointsCost} pts</span>
-                      <button className="text-slate-400 hover:text-white"><Edit3 className="h-3.5 w-3.5" /></button>
-                      <button className="text-slate-400 hover:text-red-400"><Trash2 className="h-3.5 w-3.5" /></button>
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          value={reward.pointsCost}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value) || 0;
+                            setSettings((s) => {
+                              if (!s) return s;
+                              const rewards = [...s.rewards];
+                              rewards[idx] = { ...rewards[idx], pointsCost: val };
+                              return { ...s, rewards };
+                            });
+                          }}
+                          className="glass-input w-16 text-xs text-center"
+                        />
+                        <span className="text-xs admin-text-dim">pts</span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setSettings((s) => {
+                            if (!s) return s;
+                            const rewards = s.rewards.filter((_, i) => i !== idx);
+                            return { ...s, rewards };
+                          });
+                        }}
+                        className="text-slate-400 hover:text-red-400"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
                     </div>
                   </div>
                 ))}
               </div>
+              {settings && (
+                <div className="flex gap-2 mt-3">
+                  <button onClick={() => saveSettings({ rewards: settings.rewards })} disabled={saving} className="glass-btn-green text-xs">
+                    <Check className="h-3.5 w-3.5" /> {saving ? "Saving..." : "Save Rewards"}
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Members table */}
@@ -281,12 +374,28 @@ export function AdminGrowth() {
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                 <div className="glass-card p-3">
-                  <p className="text-xs admin-text-dim">Referrer Reward</p>
-                  <p className="text-lg font-bold admin-text">{REFERRAL_REWARD.referrerPoints} pts</p>
+                  <label className="text-xs admin-text-dim block mb-1">Referrer Reward (pts)</label>
+                  <input
+                    type="number"
+                    value={settings?.referral.referrerPoints || 100}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value) || 0;
+                      setSettings((s) => s ? { ...s, referral: { ...s.referral, referrerPoints: val } } : s);
+                    }}
+                    className="glass-input w-full text-sm"
+                  />
                 </div>
                 <div className="glass-card p-3">
-                  <p className="text-xs admin-text-dim">New Customer Discount</p>
-                  <p className="text-lg font-bold admin-text">{REFERRAL_REWARD.refereeDiscountPLN} PLN</p>
+                  <label className="text-xs admin-text-dim block mb-1">New Customer Discount (grosze)</label>
+                  <input
+                    type="number"
+                    value={settings?.referral.refereeDiscountGrosze || 1000}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value) || 0;
+                      setSettings((s) => s ? { ...s, referral: { ...s.referral, refereeDiscountGrosze: val } } : s);
+                    }}
+                    className="glass-input w-full text-sm"
+                  />
                 </div>
                 <div className="glass-card p-3">
                   <p className="text-xs admin-text-dim">Total Referrals</p>
@@ -297,8 +406,8 @@ export function AdminGrowth() {
                   <p className="text-lg font-bold text-italia-gold">{MOCK_REFERRALS.reduce((s, r) => s + r.earned, 0)}</p>
                 </div>
               </div>
-              <button className="glass-btn text-xs">
-                <Edit3 className="h-3.5 w-3.5" /> Edit Reward Amounts
+              <button onClick={() => settings && saveSettings({ referral: settings.referral })} disabled={saving} className="glass-btn-green text-xs">
+                <Check className="h-3.5 w-3.5" /> {saving ? "Saving..." : "Save Referral Settings"}
               </button>
             </div>
 
@@ -444,22 +553,50 @@ export function AdminGrowth() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="glass-card p-4">
                   <label className="text-xs admin-text-dim block mb-1">Guarantee Time (min)</label>
-                  <input type="number" defaultValue={SPEED_GUARANTEE.maxMinutes} className="glass-input w-full" />
+                  <input
+                    type="number"
+                    value={settings?.speedGuarantee.maxMinutes || 15}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value) || 15;
+                      setSettings((s) => s ? { ...s, speedGuarantee: { ...s.speedGuarantee, maxMinutes: val } } : s);
+                    }}
+                    className="glass-input w-full"
+                  />
                 </div>
                 <div className="glass-card p-4">
                   <label className="text-xs admin-text-dim block mb-1">Guarantee Text</label>
-                  <input type="text" defaultValue={SPEED_GUARANTEE.guaranteeText} className="glass-input w-full text-xs" />
+                  <input
+                    type="text"
+                    value={settings?.speedGuarantee.guaranteeText || ""}
+                    onChange={(e) => {
+                      setSettings((s) => s ? { ...s, speedGuarantee: { ...s.speedGuarantee, guaranteeText: e.target.value } } : s);
+                    }}
+                    className="glass-input w-full text-xs"
+                  />
                 </div>
                 <div className="glass-card p-4">
                   <label className="text-xs admin-text-dim block mb-1">Status</label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <ToggleRight className="h-6 w-6 text-green-400" />
-                    <span className="text-sm admin-text font-medium">Active</span>
-                  </div>
+                  <button
+                    onClick={() => {
+                      setSettings((s) => s ? { ...s, speedGuarantee: { ...s.speedGuarantee, active: !s.speedGuarantee.active } } : s);
+                    }}
+                    className="flex items-center gap-2 mt-1"
+                  >
+                    {settings?.speedGuarantee.active ? (
+                      <ToggleRight className="h-6 w-6 text-green-400" />
+                    ) : (
+                      <ToggleLeft className="h-6 w-6 text-slate-400" />
+                    )}
+                    <span className="text-sm admin-text font-medium">
+                      {settings?.speedGuarantee.active ? "Active" : "Inactive"}
+                    </span>
+                  </button>
                 </div>
               </div>
               <div className="flex gap-2 mt-4">
-                <button className="glass-btn-green text-xs"><Check className="h-3.5 w-3.5" /> Save Changes</button>
+                <button onClick={() => settings && saveSettings({ speedGuarantee: settings.speedGuarantee })} disabled={saving} className="glass-btn-green text-xs">
+                  <Check className="h-3.5 w-3.5" /> {saving ? "Saving..." : "Save Speed Settings"}
+                </button>
               </div>
             </div>
 
