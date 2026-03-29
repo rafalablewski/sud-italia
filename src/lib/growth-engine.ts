@@ -168,40 +168,5 @@ export const SPEED_GUARANTEE = {
   disclaimer: "Applies to takeout orders placed during off-peak hours",
 };
 
-// --- Reorder from History ---
-
-export interface PastOrder {
-  orderId: string;
-  date: string;
-  items: { name: string; quantity: number; price: number; id: string }[];
-  total: number;
-  locationSlug: string;
-}
-
-// Simulated past orders — in production, fetched from DB by phone number
-export function getPastOrders(phone: string): PastOrder[] {
-  if (!phone) return [];
-  return [
-    {
-      orderId: "SI-ABC123",
-      date: "2026-03-22",
-      items: [
-        { name: "Margherita", quantity: 1, price: 2800, id: "krk-pizza-margherita" },
-        { name: "Limonata Fresca", quantity: 1, price: 1200, id: "krk-drink-limonata" },
-        { name: "Tiramisù", quantity: 1, price: 1800, id: "krk-dessert-tiramisu" },
-      ],
-      total: 5800,
-      locationSlug: "krakow",
-    },
-    {
-      orderId: "SI-DEF456",
-      date: "2026-03-15",
-      items: [
-        { name: "Diavola", quantity: 2, price: 3200, id: "krk-pizza-diavola" },
-        { name: "Aranciata", quantity: 2, price: 1000, id: "krk-drink-aranciata" },
-      ],
-      total: 8400,
-      locationSlug: "krakow",
-    },
-  ];
-}
+// Reorder history is now fetched from the database via /api/orders/history
+// The customer is identified by a cookie set at checkout (no login needed)

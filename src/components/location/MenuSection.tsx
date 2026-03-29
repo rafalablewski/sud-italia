@@ -110,7 +110,7 @@ export function MenuSection({ items, locationSlug }: MenuSectionProps) {
         {!isSearching && <SpeedGuarantee />}
 
         {/* Reorder from history (American one-tap reorder) */}
-        {!isSearching && <ReorderSection locationSlug={locationSlug} />}
+        {!isSearching && <ReorderSection locationSlug={locationSlug} allMenuItems={items} />}
 
         {/* Seasonal specials (Kodawari - limited-time) */}
         {!isSearching && <SeasonalSpecials locationSlug={locationSlug} />}
