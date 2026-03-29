@@ -93,32 +93,42 @@ export function AdminGrowth() {
               <div className="space-y-2">
                 {(settings?.seasonalItems || [])
                   .filter((item) => locationFilter === "all" || item.locationSlug === locationFilter || !item.locationSlug)
-                  .map((item) => {
-                    const idx = settings!.seasonalItems.findIndex((s) => s.id === item.id);
-                    return (
-                      <div key={item.id} className="flex items-center justify-between p-4 glass-card">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className="font-semibold admin-text">{item.name}</p>
-                            <span className="badge-info text-[10px] px-2 py-0.5 rounded-full font-bold">{item.category}</span>
-                            {item.locationSlug && (
-                              <span className="badge-confirmed text-[10px] px-2 py-0.5 rounded-full font-bold capitalize flex items-center gap-0.5">
-                                <MapPin className="h-2.5 w-2.5" />{item.locationSlug}
-                              </span>
-                            )}
-                            {!item.active && <span className="badge-danger text-[10px] px-2 py-0.5 rounded-full font-bold">Hidden</span>}
-                          </div>
-                          <p className="text-xs admin-text-dim mt-0.5">Until {item.availableUntil}</p>
+                  .map((item) => (
+                    <div key={item.id} className="flex items-center justify-between p-4 glass-card">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold admin-text">{item.name}</p>
+                          <span className="badge-info text-[10px] px-2 py-0.5 rounded-full font-bold">{item.category}</span>
+                          {item.locationSlug && (
+                            <span className="badge-confirmed text-[10px] px-2 py-0.5 rounded-full font-bold capitalize flex items-center gap-0.5">
+                              <MapPin className="h-2.5 w-2.5" />{item.locationSlug}
+                            </span>
+                          )}
+                          {!item.active && <span className="badge-danger text-[10px] px-2 py-0.5 rounded-full font-bold">Hidden</span>}
                         </div>
-                        <div className="flex items-center gap-4">
-                          <span className="font-bold admin-text">{formatPrice(item.price)}</span>
-                          <button onClick={() => setSettings((s) => { if (!s) return s; const items = [...s.seasonalItems]; items[idx] = { ...items[idx], active: !items[idx].active }; return { ...s, seasonalItems: items }; })} className={item.active ? "text-green-400 hover:text-green-300" : "text-slate-400 hover:text-slate-300"}>
-                            {item.active ? <ToggleRight className="h-5 w-5" /> : <ToggleLeft className="h-5 w-5" />}
-                          </button>
-                        </div>
+                        <p className="text-xs admin-text-dim mt-0.5">Until {item.availableUntil}</p>
                       </div>
-                    );
-                  })}
+                      <div className="flex items-center gap-4">
+                        <span className="font-bold admin-text">{formatPrice(item.price)}</span>
+                        <button
+                          onClick={() => {
+                            setSettings((s) => {
+                              if (!s) return s;
+                              return {
+                                ...s,
+                                seasonalItems: s.seasonalItems.map((si) =>
+                                  si.id === item.id ? { ...si, active: !si.active } : si
+                                ),
+                              };
+                            });
+                          }}
+                          className={item.active ? "text-green-400 hover:text-green-300" : "text-slate-400 hover:text-slate-300"}
+                        >
+                          {item.active ? <ToggleRight className="h-5 w-5" /> : <ToggleLeft className="h-5 w-5" />}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
               </div>
               {settings && <div className="flex gap-2 mt-3"><button onClick={() => saveSettings({ seasonalItems: settings.seasonalItems })} disabled={saving} className="glass-btn-green text-xs"><Check className="h-3.5 w-3.5" />{saving ? "Saving..." : "Save"}</button></div>}
             </div>
