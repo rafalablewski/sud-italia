@@ -7,6 +7,7 @@ import { CartItemRow } from "./CartItem";
 import { CartUpsell } from "./CartUpsell";
 import { DeliveryProgress } from "./DeliveryProgress";
 import { ComboDealBanner } from "./ComboDealBanner";
+import { LoyaltyEarnPreview } from "./LoyaltyEarnPreview";
 import { formatPrice } from "@/lib/utils";
 import { getCartSuggestions } from "@/lib/upsell";
 import { ShoppingCart, Trash2, Package, Truck } from "lucide-react";
@@ -91,6 +92,8 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
       const data = await res.json();
 
       if (data.url) {
+        // Loyalty auto-enrollment happens server-side via the checkout API
+        // (phone number is stored with the order in the database)
         window.location.href = data.url;
       } else if (data.orderId) {
         clearCart();
@@ -235,6 +238,9 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
             <span className="font-semibold text-italia-dark">{selectedSlotTime}</span>
           </p>
         )}
+
+        {/* Loyalty points preview — shows what they'll earn */}
+        <LoyaltyEarnPreview cartTotal={total} />
 
         <Button
           onClick={handleCheckout}

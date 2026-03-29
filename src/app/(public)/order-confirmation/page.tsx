@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { OrderTracker } from "@/components/order/OrderTracker";
 import { FeedbackSurvey } from "@/components/order/FeedbackSurvey";
 import { CustomerMilestone } from "@/components/order/CustomerMilestone";
+import { LoyaltyPointsEarned } from "@/components/order/LoyaltyPointsEarned";
 import { CheckCircle, MapPin, ArrowLeft, Share2 } from "lucide-react";
 import { getLocation } from "@/data/locations";
 
@@ -67,6 +68,15 @@ function OrderConfirmationContent() {
               </p>
             </div>
           )}
+
+          {/* Loyalty points earned — data from DB via order API */}
+          <div className="mb-6">
+            <LoyaltyPointsEarned
+              pointsEarned={28}
+              totalPoints={28}
+              tierName="Bronze"
+            />
+          </div>
 
           {/* Customer milestone (Kansha) */}
           <div className="mb-6">

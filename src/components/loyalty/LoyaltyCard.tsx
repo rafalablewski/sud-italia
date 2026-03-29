@@ -16,21 +16,22 @@ import {
   ChevronRight,
   Sparkles,
   Lock,
+  Check,
+  ShoppingBag,
 } from "lucide-react";
 
 interface LoyaltyCardProps {
   account: LoyaltyAccount | null;
-  onLookup: (phone: string) => void;
 }
 
-export function LoyaltyCard({ account, onLookup }: LoyaltyCardProps) {
-  const [phone, setPhone] = useState("");
+export function LoyaltyCard({ account }: LoyaltyCardProps) {
   const [showRewards, setShowRewards] = useState(false);
 
+  // Not enrolled yet — show the value proposition, no forms
   if (!account) {
     return (
       <div className="bg-gradient-to-br from-italia-gold/5 to-italia-red/5 rounded-2xl border border-italia-gold/20 p-5">
-        <div className="flex items-center gap-3 mb-3">
+        <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-xl bg-italia-gold/15 flex items-center justify-center">
             <Star className="h-5 w-5 text-italia-gold" />
           </div>
@@ -39,33 +40,54 @@ export function LoyaltyCard({ account, onLookup }: LoyaltyCardProps) {
               Sud Italia Rewards
             </h3>
             <p className="text-xs text-italia-gray">
-              Earn points with every order
+              No sign-up needed — just order!
             </p>
           </div>
         </div>
-        <p className="text-sm text-italia-gray mb-3">
-          Enter your phone number to check your points balance or join our
-          loyalty program.
-        </p>
-        <div className="flex gap-2">
-          <input
-            type="tel"
-            placeholder="Phone number"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className="pub-input flex-1 min-h-[44px]"
-          />
-          <button
-            onClick={() => onLookup(phone)}
-            className="px-4 py-2 bg-italia-gold text-white font-semibold rounded-xl hover:bg-italia-gold-dark transition-colors text-sm"
-          >
-            Look Up
-          </button>
+
+        <div className="bg-white rounded-xl p-4 border border-gray-100 mb-4">
+          <div className="flex items-start gap-3 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-italia-green/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <Check className="h-4 w-4 text-italia-green" />
+            </div>
+            <div>
+              <p className="font-semibold text-sm text-italia-dark">
+                Automatic enrollment
+              </p>
+              <p className="text-xs text-italia-gray mt-0.5">
+                Place your first order and you&apos;re in. We use your phone number — that&apos;s it. No passwords, no emails, no forms.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2.5">
+            {[
+              { pts: "1 pt / 1 PLN", desc: "Earn points on every order" },
+              { pts: "50 pts", desc: "Free drink" },
+              { pts: "100 pts", desc: "10 PLN off" },
+              { pts: "250 pts", desc: "Free pizza" },
+            ].map((r) => (
+              <div key={r.pts} className="flex items-center gap-2">
+                <span className="text-xs font-bold text-italia-gold bg-italia-gold/10 px-2 py-0.5 rounded-md min-w-[72px] text-center">
+                  {r.pts}
+                </span>
+                <span className="text-xs text-italia-gray">{r.desc}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 text-center justify-center">
+          <ShoppingBag className="h-4 w-4 text-italia-red" />
+          <p className="text-sm font-medium text-italia-dark">
+            Order now to start earning
+          </p>
         </div>
       </div>
     );
   }
 
+  // Enrolled — show their account
   const tier = calculateTier(account.points);
   const tierConfig = TIER_CONFIG[tier];
   const nextTier = getNextTier(tier);
