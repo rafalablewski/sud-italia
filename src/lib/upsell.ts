@@ -55,97 +55,114 @@ export const BADGE_CONFIG: Record<BadgeType, { label: string; color: string }> =
 };
 
 // --- Cross-sell suggestions for the cart ---
+// RULE: Every pizza/pasta MUST get a coffee and dessert suggestion.
+// This is the #1 AOV driver.
 
 export interface UpsellSuggestion {
   item: MenuItem;
   reason: string;
+  priority: number; // lower = shown first
 }
+
+// Preferred cross-sell items per location (deterministic, not random)
+const PREFERRED_COFFEE: Record<string, string> = {
+  krakow: "krk-drink-espresso",
+  warszawa: "waw-drink-espresso",
+};
+
+const PREFERRED_DESSERT: Record<string, string> = {
+  krakow: "krk-dessert-tiramisu",
+  warszawa: "waw-dessert-tiramisu",
+};
+
+const PREFERRED_DRINK: Record<string, string> = {
+  krakow: "krk-drink-limonata",
+  warszawa: "waw-drink-limonata",
+};
 
 export function getCartSuggestions(
   cartItems: CartItem[],
   allMenuItems: MenuItem[],
-  maxSuggestions: number = 3
+  maxSuggestions: number = 4
 ): UpsellSuggestion[] {
-  if (cartItems.length === 0) return [];
+  if (cartItems.length === 0 || allMenuItems.length === 0) return [];
 
   const cartItemIds = new Set(cartItems.map((ci) => ci.menuItem.id));
   const cartCategories = new Set(cartItems.map((ci) => ci.menuItem.category));
+  const locationSlug = cartItems[0]?.locationSlug || "";
 
-  // Find categories we should suggest
-  const suggestCategories = new Set<MenuCategory>();
-  for (const cat of cartCategories) {
-    const targets = CROSS_SELL_MAP[cat] || [];
-    for (const t of targets) {
-      if (!cartCategories.has(t)) suggestCategories.add(t);
-    }
-  }
+  const available = allMenuItems.filter(
+    (m) => m.available && !cartItemIds.has(m.id)
+  );
+  const byId = new Map(available.map((m) => [m.id, m]));
 
-  // Specific rules
   const hasPizzaOrPasta = cartCategories.has("pizza") || cartCategories.has("pasta");
+  const hasPanini = cartCategories.has("panini");
+  const hasMain = hasPizzaOrPasta || hasPanini;
+  const hasCoffee = cartItems.some((ci) => ci.menuItem.id.includes("espresso"));
   const hasDrink = cartCategories.has("drinks");
   const hasDessert = cartCategories.has("desserts");
 
   const suggestions: UpsellSuggestion[] = [];
-  const available = allMenuItems.filter(
-    (m) => m.available && !cartItemIds.has(m.id)
-  );
 
-  // Rule 1: No drink with main → suggest a drink
-  if (hasPizzaOrPasta && !hasDrink) {
-    const drinks = available.filter((m) => m.category === "drinks");
-    if (drinks.length > 0) {
-      const pick = drinks[Math.floor(Math.random() * drinks.length)];
+  // RULE 1: Always suggest espresso with pizza/pasta (highest priority)
+  if (hasMain && !hasCoffee) {
+    const preferredId = PREFERRED_COFFEE[locationSlug];
+    const coffee = preferredId ? byId.get(preferredId) : null;
+    const anyCoffee = coffee || available.find((m) => m.id.includes("espresso"));
+    if (anyCoffee) {
       suggestions.push({
-        item: pick,
-        reason: "Add a drink to complete your meal",
+        item: anyCoffee,
+        reason: "Perfect after your meal — Italian espresso",
+        priority: 1,
       });
     }
   }
 
-  // Rule 2: No dessert with main → suggest a dessert
-  if (hasPizzaOrPasta && !hasDessert) {
-    const desserts = available.filter((m) => m.category === "desserts");
-    if (desserts.length > 0) {
-      const pick = desserts[Math.floor(Math.random() * desserts.length)];
+  // RULE 2: Always suggest dessert with pizza/pasta
+  if (hasMain && !hasDessert) {
+    const preferredId = PREFERRED_DESSERT[locationSlug];
+    const dessert = preferredId ? byId.get(preferredId) : null;
+    const anyDessert = dessert || available.find((m) => m.category === "desserts");
+    if (anyDessert) {
       suggestions.push({
-        item: pick,
-        reason: "Finish with something sweet",
+        item: anyDessert,
+        reason: "Finish with our signature Tiramisù",
+        priority: 2,
       });
     }
   }
 
-  // Rule 3: Fill remaining from suggested categories
-  for (const cat of suggestCategories) {
-    if (suggestions.length >= maxSuggestions) break;
-    if (suggestions.some((s) => s.item.category === cat)) continue;
-    const items = available.filter((m) => m.category === cat);
-    if (items.length > 0) {
-      const pick = items[Math.floor(Math.random() * items.length)];
-      const reason = getReasonForCategory(cat);
-      suggestions.push({ item: pick, reason });
+  // RULE 3: Suggest a refreshing drink if no drink at all
+  if (hasMain && !hasDrink && !hasCoffee) {
+    const preferredId = PREFERRED_DRINK[locationSlug];
+    const drink = preferredId ? byId.get(preferredId) : null;
+    const anyDrink = drink || available.find((m) => m.category === "drinks" && !m.id.includes("espresso"));
+    if (anyDrink) {
+      suggestions.push({
+        item: anyDrink,
+        reason: "Add a refreshing drink to your order",
+        priority: 3,
+      });
     }
   }
 
-  return suggestions.slice(0, maxSuggestions);
-}
-
-function getReasonForCategory(cat: MenuCategory): string {
-  switch (cat) {
-    case "antipasti":
-      return "Start with a classic appetizer";
-    case "pizza":
-      return "Add a pizza to your order";
-    case "pasta":
-      return "Try our handmade pasta";
-    case "drinks":
-      return "Don't forget a refreshing drink";
-    case "desserts":
-      return "Save room for dessert";
-    case "panini":
-      return "Grab a panino for later";
-    default:
-      return "You might also like";
+  // RULE 4: If only drinks/desserts, suggest a main
+  if (!hasMain && (hasDrink || hasDessert)) {
+    const pizza = available.find((m) => m.category === "pizza");
+    if (pizza) {
+      suggestions.push({
+        item: pizza,
+        reason: "Add a pizza to make it a meal",
+        priority: 4,
+      });
+    }
   }
+
+  // Sort by priority and limit
+  return suggestions
+    .sort((a, b) => a.priority - b.priority)
+    .slice(0, maxSuggestions);
 }
 
 // --- Combo / Bundle Deals ---

@@ -11,8 +11,10 @@ import { LoyaltyEarnPreview } from "./LoyaltyEarnPreview";
 import { formatPrice } from "@/lib/utils";
 import { getCartSuggestions } from "@/lib/upsell";
 import { ShoppingCart, Trash2, Package, Truck } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { SlotPicker } from "./SlotPicker";
+import { krakowMenu } from "@/data/menus/krakow";
+import { warszawaMenu } from "@/data/menus/warszawa";
 
 interface CartDrawerProps {
   open: boolean;
@@ -49,10 +51,21 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
     selectedSlotId !== null &&
     (fulfillmentType !== "delivery" || deliveryAddress.trim().length > 0);
 
-  // Cross-sell suggestions
+  // Resolve menu items — use prop if available, otherwise look up by location
+  const resolvedMenuItems = useMemo(() => {
+    if (allMenuItems.length > 0) return allMenuItems;
+    // Fallback: load from hardcoded menus based on cart's location
+    const menus: Record<string, import("@/data/types").MenuItem[]> = {
+      krakow: krakowMenu,
+      warszawa: warszawaMenu,
+    };
+    return locationSlug ? menus[locationSlug] || [] : [];
+  }, [allMenuItems, locationSlug]);
+
+  // Cross-sell suggestions — always have menu items to work with now
   const suggestions = useMemo(
-    () => getCartSuggestions(items, allMenuItems, 3),
-    [items, allMenuItems]
+    () => getCartSuggestions(items, resolvedMenuItems, 4),
+    [items, resolvedMenuItems]
   );
 
   const handlePhoneChange = (value: string) => {
