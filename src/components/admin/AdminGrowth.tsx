@@ -751,9 +751,9 @@ export function AdminGrowth() {
 
       {/* Points adjustment modal */}
       {pointsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setPointsModal(null)} />
-          <div className="relative glass-card p-6 w-full max-w-sm">
+        <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setPointsModal(null)} />
+          <div className="relative bg-[#1e293b] border border-white/15 rounded-2xl shadow-2xl p-6 w-full max-w-sm">
             <h3 className="font-heading font-bold text-lg admin-text mb-1">
               Adjust Points
             </h3>
