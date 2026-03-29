@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { isAuthenticated } from "@/lib/admin-auth";
 import { getOrders, getLoyaltyMembers } from "@/lib/store";
 import { calculateTier, LoyaltyTier } from "@/lib/loyalty";
+import { readFile } from "fs/promises";
+import { join } from "path";
 
 export interface MemberRecord {
   phone: string;
@@ -14,6 +16,20 @@ export interface MemberRecord {
   source: "order" | "signup";
 }
 
+async function getManualAdjustments(): Promise<Record<string, number>> {
+  try {
+    const data = await readFile(join(process.cwd(), ".data", "point-adjustments.json"), "utf-8");
+    const list: { phone: string; amount: number }[] = JSON.parse(data);
+    const byPhone: Record<string, number> = {};
+    for (const adj of list) {
+      byPhone[adj.phone] = (byPhone[adj.phone] || 0) + adj.amount;
+    }
+    return byPhone;
+  } catch {
+    return {};
+  }
+}
+
 export async function GET() {
   if (!(await isAuthenticated())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -21,6 +37,7 @@ export async function GET() {
 
   const allOrders = await getOrders();
   const signups = await getLoyaltyMembers();
+  const manualAdj = await getManualAdjustments();
 
   // Group orders by phone number
   const byPhone = new Map<string, typeof allOrders>();
@@ -37,7 +54,7 @@ export async function GET() {
   for (const [phone, orders] of byPhone) {
     const completed = orders.filter((o) => o.status !== "pending");
     const totalSpent = completed.reduce((sum, o) => sum + o.totalAmount, 0);
-    const points = Math.floor(totalSpent / 100);
+    const points = Math.floor(totalSpent / 100) + (manualAdj[phone] || 0);
     const latest = orders.sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
 
     memberMap.set(phone, {
@@ -58,8 +75,8 @@ export async function GET() {
       memberMap.set(signup.phone, {
         phone: signup.phone,
         name: signup.name,
-        points: 0,
-        tier: "bronze",
+        points: manualAdj[signup.phone] || 0,
+        tier: calculateTier(manualAdj[signup.phone] || 0),
         orders: 0,
         totalSpent: 0,
         lastOrder: signup.signedUpAt.split("T")[0],

@@ -79,17 +79,54 @@ export function AdminGrowth() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  // Points adjustment modal
+  const [pointsModal, setPointsModal] = useState<{ phone: string; name: string } | null>(null);
+  const [pointsAmount, setPointsAmount] = useState("");
+  const [pointsReason, setPointsReason] = useState("");
+  const [adjusting, setAdjusting] = useState(false);
+
+  const refreshMembers = useCallback(() => {
+    fetch("/api/admin/members")
+      .then((r) => r.json())
+      .then((data) => setMembers(data.members || []))
+      .catch(() => {});
+  }, []);
+
   // Load settings + members from DB
   useEffect(() => {
     fetch("/api/admin/growth")
       .then((r) => r.json())
       .then((data) => setSettings(data))
       .catch(() => {});
-    fetch("/api/admin/members")
-      .then((r) => r.json())
-      .then((data) => setMembers(data.members || []))
-      .catch(() => {});
-  }, []);
+    refreshMembers();
+  }, [refreshMembers]);
+
+  const handleAdjustPoints = async () => {
+    if (!pointsModal || !pointsAmount) return;
+    const amount = parseInt(pointsAmount);
+    if (isNaN(amount) || amount === 0) return;
+
+    setAdjusting(true);
+    try {
+      await fetch("/api/admin/members/points", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: pointsModal.phone,
+          amount,
+          reason: pointsReason.trim() || undefined,
+        }),
+      });
+      refreshMembers();
+      setPointsModal(null);
+      setPointsAmount("");
+      setPointsReason("");
+    } catch {
+      alert("Failed to adjust points");
+    } finally {
+      setAdjusting(false);
+    }
+  };
 
   // Save settings to DB
   const saveSettings = useCallback(async (updates: Partial<LoyaltySettings>) => {
@@ -356,10 +393,12 @@ export function AdminGrowth() {
                         <td className="py-2.5 pr-4">{m.orders}</td>
                         <td className="py-2.5 pr-4 text-xs">{m.lastOrder}</td>
                         <td className="py-2.5">
-                          <div className="flex items-center gap-1">
-                            <button className="glass-btn-ghost text-[10px] px-2 py-1">+Points</button>
-                            <button className="glass-btn-ghost text-[10px] px-2 py-1">View</button>
-                          </div>
+                          <button
+                            onClick={() => setPointsModal({ phone: m.phone, name: m.name })}
+                            className="glass-btn-ghost text-[10px] px-2 py-1"
+                          >
+                            +/- Points
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -709,6 +748,68 @@ export function AdminGrowth() {
           </div>
         )}
       </div>
+
+      {/* Points adjustment modal */}
+      {pointsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setPointsModal(null)} />
+          <div className="relative glass-card p-6 w-full max-w-sm">
+            <h3 className="font-heading font-bold text-lg admin-text mb-1">
+              Adjust Points
+            </h3>
+            <p className="text-sm admin-text-dim mb-4">
+              {pointsModal.name} &middot; <span className="font-mono text-xs">{pointsModal.phone}</span>
+            </p>
+
+            <div className="space-y-3 mb-4">
+              <div>
+                <label className="text-xs admin-text-dim block mb-1">Amount (positive to add, negative to remove)</label>
+                <input
+                  type="number"
+                  value={pointsAmount}
+                  onChange={(e) => setPointsAmount(e.target.value)}
+                  placeholder="e.g. 50 or -20"
+                  className="glass-input w-full"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="text-xs admin-text-dim block mb-1">Reason (optional)</label>
+                <input
+                  type="text"
+                  value={pointsReason}
+                  onChange={(e) => setPointsReason(e.target.value)}
+                  placeholder="e.g. Compensation for late order"
+                  className="glass-input w-full text-xs"
+                />
+              </div>
+            </div>
+
+            {pointsAmount && parseInt(pointsAmount) !== 0 && (
+              <p className={`text-sm font-semibold mb-4 ${parseInt(pointsAmount) > 0 ? "text-green-400" : "text-red-400"}`}>
+                {parseInt(pointsAmount) > 0 ? "+" : ""}{pointsAmount} points will be {parseInt(pointsAmount) > 0 ? "added" : "removed"}
+              </p>
+            )}
+
+            <div className="flex gap-2">
+              <button
+                onClick={handleAdjustPoints}
+                disabled={adjusting || !pointsAmount || parseInt(pointsAmount) === 0}
+                className="glass-btn-green flex-1"
+              >
+                <Check className="h-3.5 w-3.5" />
+                {adjusting ? "Saving..." : "Apply"}
+              </button>
+              <button
+                onClick={() => { setPointsModal(null); setPointsAmount(""); setPointsReason(""); }}
+                className="glass-btn-ghost flex-1"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
