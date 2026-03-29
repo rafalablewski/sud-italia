@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { isAuthenticated } from "@/lib/admin-auth";
-import { getOrders, getLoyaltyMembers } from "@/lib/store";
+import { getOrders, getLoyaltyMembers, getAllManualPoints } from "@/lib/store";
 import { calculateTier, LoyaltyTier } from "@/lib/loyalty";
-import { readFile } from "fs/promises";
-import { join } from "path";
 
 export interface MemberRecord {
   phone: string;
@@ -16,19 +14,6 @@ export interface MemberRecord {
   source: "order" | "signup";
 }
 
-async function getManualAdjustments(): Promise<Record<string, number>> {
-  try {
-    const data = await readFile(join(process.cwd(), ".data", "point-adjustments.json"), "utf-8");
-    const list: { phone: string; amount: number }[] = JSON.parse(data);
-    const byPhone: Record<string, number> = {};
-    for (const adj of list) {
-      byPhone[adj.phone] = (byPhone[adj.phone] || 0) + adj.amount;
-    }
-    return byPhone;
-  } catch {
-    return {};
-  }
-}
 
 export async function GET() {
   if (!(await isAuthenticated())) {
@@ -37,7 +22,7 @@ export async function GET() {
 
   const allOrders = await getOrders();
   const signups = await getLoyaltyMembers();
-  const manualAdj = await getManualAdjustments();
+  const manualAdj = await getAllManualPoints();
 
   // Group orders by phone number
   const byPhone = new Map<string, typeof allOrders>();

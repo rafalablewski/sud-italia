@@ -901,3 +901,39 @@ export async function getLoyaltyMember(phone: string): Promise<LoyaltyMember | u
   const list = await readJSON<LoyaltyMember[]>("loyalty-members.json", []);
   return list.find((m) => m.phone === phone);
 }
+
+// --- Point Adjustments (manual add/remove by admin) ---
+
+export interface PointAdjustment {
+  phone: string;
+  amount: number;
+  reason: string;
+  adjustedBy: string;
+  adjustedAt: string;
+}
+
+export async function getPointAdjustments(): Promise<PointAdjustment[]> {
+  return readJSON<PointAdjustment[]>("point-adjustments.json", []);
+}
+
+export async function addPointAdjustment(adj: PointAdjustment): Promise<void> {
+  return withLock("point-adjustments.json", async () => {
+    const list = await readJSON<PointAdjustment[]>("point-adjustments.json", []);
+    list.push(adj);
+    await writeJSON("point-adjustments.json", list);
+  });
+}
+
+export async function getManualPointsTotal(phone: string): Promise<number> {
+  const all = await getPointAdjustments();
+  return all.filter((a) => a.phone === phone).reduce((sum, a) => sum + a.amount, 0);
+}
+
+export async function getAllManualPoints(): Promise<Record<string, number>> {
+  const all = await getPointAdjustments();
+  const byPhone: Record<string, number> = {};
+  for (const adj of all) {
+    byPhone[adj.phone] = (byPhone[adj.phone] || 0) + adj.amount;
+  }
+  return byPhone;
+}
