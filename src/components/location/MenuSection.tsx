@@ -12,6 +12,7 @@ import { ReorderSection } from "./ReorderSection";
 import { SpeedGuarantee } from "./SpeedGuarantee";
 import { ReferralCard } from "@/components/referral/ReferralCard";
 import { AchievementsPanel } from "@/components/gamification/AchievementsPanel";
+import { CustomerGate } from "@/components/loyalty/CustomerGate";
 import { Search, X } from "lucide-react";
 
 interface MenuSectionProps {
@@ -165,11 +166,15 @@ export function MenuSection({ items, locationSlug }: MenuSectionProps) {
             )}
           </div>
         )}
-        {/* Gamification & Referral (below menu) */}
+        {/* Gamification & Referral — only visible to identified customers */}
         {!isSearching && (
-          <div className="mt-10 space-y-6">
-            <AchievementsPanel />
-            <ReferralCard />
+          <div className="mt-10">
+            <CustomerGate>
+              <div className="space-y-6">
+                <AchievementsPanel />
+                <ReferralCard />
+              </div>
+            </CustomerGate>
           </div>
         )}
       </Container>
