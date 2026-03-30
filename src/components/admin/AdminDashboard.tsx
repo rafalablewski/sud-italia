@@ -9,7 +9,7 @@ import {
   TrendingUp, TrendingDown, DollarSign, ShoppingBag, Package,
   Truck, Clock, Bell, CheckCheck, ArrowRight, BarChart3,
   RefreshCw, MapPin, Users, XCircle, AlertTriangle, Layers,
-  Activity,
+  Activity, CalendarDays,
 } from "lucide-react";
 import Link from "next/link";
 import type { Order } from "@/data/types";
@@ -209,12 +209,114 @@ export function AdminDashboard() {
           <KPICard label="Worst Seller" value={insights ? (insights.worstSellers[0]?.name ?? "None") : undefined} sub={insights?.worstSellers[0] ? `${insights.worstSellers[0].quantity} sold` : undefined} icon={<AlertTriangle className="h-5 w-5" />} gradient="from-orange-500/20 to-orange-600/10" iconColor="text-orange-400" loading={!insights} />
         </div>
 
-        {/* Charts row */}
+        {/* Live Orders + Notifications — operational priority, above fold */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 stagger-4">
+          <div className="lg:col-span-2 glass-card rounded-2xl p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-bold admin-text flex items-center gap-2">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400" />
+                </span>
+                Live Orders
+                {activeOrders.length > 0 && (
+                  <span className="ml-1 px-2 py-0.5 bg-italia-red/20 text-red-300 text-xs font-bold rounded-full">{activeOrders.length}</span>
+                )}
+              </h2>
+              <Link href="/admin/orders" className="text-xs admin-link font-medium flex items-center gap-1 hover:text-red-200 transition-colors">
+                All orders <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+            {activeOrders.length === 0 ? (
+              <div className="py-8 text-center">
+                <Clock className="h-8 w-8 mx-auto mb-2 admin-text-dim opacity-40" />
+                <p className="text-sm admin-text-muted">No active orders right now</p>
+                <p className="text-xs admin-text-dim mt-1">New orders will appear here automatically</p>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                {activeOrders.map((order) => (
+                  <div key={order.id} className="flex flex-wrap items-center gap-3 p-3 rounded-xl bg-white/4 border border-white/6 hover:bg-white/6 transition-colors">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="font-mono text-xs font-bold admin-text">{order.id}</span>
+                        <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${STATUS_COLORS[order.status]}`}>{order.status}</span>
+                      </div>
+                      <p className="text-sm admin-text">{order.customerName}</p>
+                      <div className="flex items-center gap-3 text-xs admin-text-dim mt-0.5">
+                        <span className="flex items-center gap-1">{order.fulfillmentType === "delivery" ? <Truck className="h-3 w-3" /> : <Package className="h-3 w-3" />} {order.fulfillmentType}</span>
+                        <span>{order.slotTime}</span>
+                        <span className="font-semibold admin-text">{formatPrice(order.totalAmount)}</span>
+                      </div>
+                    </div>
+                    <select value={order.status} onChange={(e) => handleStatusChange(order.id, e.target.value)} className="glass-input px-2 py-1 rounded-lg text-xs">
+                      <option value="pending">pending</option>
+                      <option value="confirmed">confirmed</option>
+                      <option value="preparing">preparing</option>
+                      <option value="ready">ready</option>
+                      <option value="completed">completed</option>
+                    </select>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div id="notifications" className="glass-card rounded-2xl p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-bold admin-text flex items-center gap-2">
+                <Bell className="h-4 w-4" />
+                Notifications
+                {unreadNotifs.length > 0 && (
+                  <span className="px-2 py-0.5 bg-italia-red text-white text-xs font-bold rounded-full">{unreadNotifs.length}</span>
+                )}
+              </h2>
+              {unreadNotifs.length > 0 && (
+                <button onClick={markAllRead} className="text-xs admin-text-dim hover:text-white flex items-center gap-1 transition-colors">
+                  <CheckCheck className="h-3 w-3" /> Mark all read
+                </button>
+              )}
+            </div>
+            {notifications.length === 0 ? (
+              <div className="py-8 text-center">
+                <Bell className="h-8 w-8 mx-auto mb-2 admin-text-dim opacity-40" />
+                <p className="text-sm admin-text-muted">All caught up</p>
+                <p className="text-xs admin-text-dim mt-1">System alerts will show here</p>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                {notifications.slice(0, 20).map((notif) => (
+                  <div key={notif.id} className={`p-3 rounded-xl border transition-colors ${notif.read ? "bg-white/3 border-white/5" : "bg-blue-500/8 border-blue-500/15"}`}>
+                    <div className="flex items-start gap-2">
+                      <span className={`mt-0.5 w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${NOTIF_ICONS[notif.type] || "bg-white/8 admin-text-dim"}`}>
+                        <Bell className="h-3 w-3" />
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-xs font-semibold admin-text">{notif.title}</p>
+                          <span className="text-[10px] admin-text-dim whitespace-nowrap flex-shrink-0">{timeAgo(notif.createdAt)}</span>
+                        </div>
+                        <p className="text-xs admin-text-dim mt-0.5">{notif.message}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Charts row */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 stagger-5">
           {/* Revenue chart */}
           <div className="lg:col-span-2 glass-card rounded-2xl p-5">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold admin-text">Revenue & Profit</h2>
+              <div>
+                <h2 className="font-bold admin-text">Revenue & Profit</h2>
+                {summary && summary.dailyStats.length > 0 && (
+                  <p className="text-xs admin-text-dim mt-0.5">{summary.dailyStats.length} day{summary.dailyStats.length !== 1 ? "s" : ""} of data</p>
+                )}
+              </div>
               <Link href="/admin/reports" className="text-xs admin-link font-medium flex items-center gap-1 hover:text-red-200 transition-colors">
                 Full reports <ArrowRight className="h-3 w-3" />
               </Link>
@@ -249,8 +351,20 @@ export function AdminDashboard() {
                   );
                 })}
               </div>
+            ) : !summary ? (
+              <div className="h-40 flex items-end gap-1">
+                {Array.from({ length: 14 }).map((_, i) => (
+                  <div key={i} className="flex-1 bg-white/5 rounded-t-sm animate-pulse" style={{ height: `${20 + Math.random() * 60}%` }} />
+                ))}
+              </div>
             ) : (
-              <div className="h-40 flex items-center justify-center text-sm admin-text-muted">No data for this period</div>
+              <div className="h-40 flex items-center justify-center">
+                <div className="text-center">
+                  <BarChart3 className="h-8 w-8 mx-auto mb-2 admin-text-dim opacity-40" />
+                  <p className="text-sm admin-text-muted">No revenue data for this period</p>
+                  <p className="text-xs admin-text-dim mt-1">Try selecting a wider date range</p>
+                </div>
+              </div>
             )}
             <div className="flex items-center gap-4 mt-3 text-xs admin-text-dim">
               <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-italia-red/20" /> Revenue</span>
@@ -266,24 +380,45 @@ export function AdminDashboard() {
                 {summary.topItems.slice(0, 6).map((item, i) => (
                   <div key={item.name} className="flex items-center gap-3">
                     <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                      i < 3 ? "bg-amber-500/20 text-amber-400" : "bg-white/8 admin-text-dim"
+                      i === 0 ? "bg-amber-500/25 text-amber-300" : i < 3 ? "bg-amber-500/15 text-amber-400" : "bg-white/8 admin-text-dim"
                     }`}>{i + 1}</span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium admin-text truncate">{item.name}</p>
+                      <p className={`text-sm font-medium admin-text truncate ${i === 0 ? "font-semibold" : ""}`}>{item.name}</p>
                       <p className="text-xs admin-text-dim">{item.quantity} sold</p>
                     </div>
                     <span className="text-sm font-semibold admin-text">{formatPrice(item.revenue)}</span>
                   </div>
                 ))}
               </div>
-            ) : <p className="text-sm admin-text-muted">No data yet</p>}
+            ) : !summary ? (
+              <div className="space-y-3">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-full bg-white/8 animate-pulse" />
+                    <div className="flex-1 space-y-1.5">
+                      <div className="h-4 w-28 bg-white/8 rounded animate-pulse" />
+                      <div className="h-3 w-16 bg-white/5 rounded animate-pulse" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-4 text-center">
+                <p className="text-sm admin-text-muted">No sales data yet</p>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Slot Utilization + Peak Hours */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 stagger-5">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 stagger-6">
           <div className="glass-card rounded-2xl p-5">
-            <h2 className="font-bold admin-text mb-1">Slot Utilization</h2>
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="font-bold admin-text">Slot Utilization</h2>
+              <Link href="/admin/slots" className="text-xs admin-link font-medium flex items-center gap-1 hover:text-red-200 transition-colors">
+                Manage slots <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
             <p className="text-xs admin-text-dim mb-4">Fill rate per time slot</p>
             {insights && insights.slotUtilization.length > 0 ? (
               <div className="space-y-2">
@@ -298,7 +433,13 @@ export function AdminDashboard() {
                   </div>
                 ))}
               </div>
-            ) : <p className="text-sm admin-text-muted py-4 text-center">No active slots yet</p>}
+            ) : (
+              <div className="py-4 text-center">
+                <CalendarDays className="h-8 w-8 mx-auto mb-2 admin-text-dim opacity-40" />
+                <p className="text-sm admin-text-muted">No active slots</p>
+                <p className="text-xs admin-text-dim mt-1">Configure time slots in Slot management</p>
+              </div>
+            )}
           </div>
 
           <div className="glass-card rounded-2xl p-5">
@@ -320,25 +461,34 @@ export function AdminDashboard() {
                   ));
                 })()}
               </div>
-            ) : <p className="text-sm admin-text-muted py-4 text-center">No orders yet</p>}
+            ) : (
+              <div className="py-4 text-center">
+                <Clock className="h-8 w-8 mx-auto mb-2 admin-text-dim opacity-40" />
+                <p className="text-sm admin-text-muted">No order data yet</p>
+                <p className="text-xs admin-text-dim mt-1">Peak hours appear after orders come in</p>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Location Comparison */}
         {insights && insights.locationComparison.length > 0 && (
-          <div className="glass-card rounded-2xl p-5 stagger-5">
-            <h2 className="font-bold admin-text mb-4">Location Comparison</h2>
-            <div className="overflow-x-auto">
+          <div className="glass-card rounded-2xl p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-bold admin-text">Location Comparison</h2>
+              <span className="text-xs admin-text-dim">{insights.locationComparison.length} location{insights.locationComparison.length !== 1 ? "s" : ""}</span>
+            </div>
+            <div className="overflow-x-auto -mx-5 px-5">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-white/8">
-                    <th className="text-left py-2 pr-4 font-semibold admin-text-dim">Location</th>
-                    <th className="text-right py-2 px-3 font-semibold admin-text-dim">Revenue</th>
-                    <th className="text-right py-2 px-3 font-semibold admin-text-dim">Profit</th>
-                    <th className="text-right py-2 px-3 font-semibold admin-text-dim">Margin</th>
-                    <th className="text-right py-2 px-3 font-semibold admin-text-dim">Orders</th>
-                    <th className="text-right py-2 px-3 font-semibold admin-text-dim">Avg Order</th>
-                    <th className="text-center py-2 px-3 font-semibold admin-text-dim">T / D</th>
+                    <th className="text-left py-2 pr-4 font-semibold admin-text-dim text-xs uppercase tracking-wider">Location</th>
+                    <th className="text-right py-2 px-3 font-semibold admin-text-dim text-xs uppercase tracking-wider">Revenue</th>
+                    <th className="text-right py-2 px-3 font-semibold admin-text-dim text-xs uppercase tracking-wider">Profit</th>
+                    <th className="text-right py-2 px-3 font-semibold admin-text-dim text-xs uppercase tracking-wider">Margin</th>
+                    <th className="text-right py-2 px-3 font-semibold admin-text-dim text-xs uppercase tracking-wider">Orders</th>
+                    <th className="text-right py-2 px-3 font-semibold admin-text-dim text-xs uppercase tracking-wider">Avg Order</th>
+                    <th className="text-center py-2 px-3 font-semibold admin-text-dim text-xs uppercase tracking-wider">T / D</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -373,9 +523,14 @@ export function AdminDashboard() {
         )}
 
         {/* Repeat Customers + Worst Sellers */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 stagger-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="glass-card rounded-2xl p-5">
-            <h2 className="font-bold admin-text mb-1">Repeat Customers</h2>
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="font-bold admin-text">Repeat Customers</h2>
+              <Link href="/admin/loyalty" className="text-xs admin-link font-medium flex items-center gap-1 hover:text-red-200 transition-colors">
+                Loyalty <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
             <p className="text-xs admin-text-dim mb-4">Ordered more than once</p>
             {insights && insights.repeatCustomers.length > 0 ? (
               <div className="space-y-3">
@@ -390,11 +545,22 @@ export function AdminDashboard() {
                   </div>
                 ))}
               </div>
-            ) : <p className="text-sm admin-text-muted py-4 text-center">No repeat customers yet</p>}
+            ) : (
+              <div className="py-4 text-center">
+                <Users className="h-8 w-8 mx-auto mb-2 admin-text-dim opacity-40" />
+                <p className="text-sm admin-text-muted">No repeat customers yet</p>
+                <p className="text-xs admin-text-dim mt-1">Customers who order again will appear here</p>
+              </div>
+            )}
           </div>
 
           <div className="glass-card rounded-2xl p-5">
-            <h2 className="font-bold admin-text mb-1">Worst Sellers</h2>
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="font-bold admin-text">Worst Sellers</h2>
+              <Link href="/admin/menu" className="text-xs admin-link font-medium flex items-center gap-1 hover:text-red-200 transition-colors">
+                Edit menu <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
             <p className="text-xs admin-text-dim mb-4">Consider removing or promoting</p>
             {insights && insights.worstSellers.length > 0 ? (
               <div className="space-y-3">
@@ -419,98 +585,10 @@ export function AdminDashboard() {
                   );
                 })}
               </div>
-            ) : <p className="text-sm admin-text-muted py-4 text-center">No sales data yet</p>}
-          </div>
-        </div>
-
-        {/* Live Orders + Notifications */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2 glass-card rounded-2xl p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold admin-text flex items-center gap-2">
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400" />
-                </span>
-                Live Orders
-                {activeOrders.length > 0 && (
-                  <span className="ml-1 px-2 py-0.5 bg-italia-red/20 text-red-300 text-xs font-bold rounded-full">{activeOrders.length}</span>
-                )}
-              </h2>
-              <Link href="/admin/orders" className="text-xs admin-link font-medium flex items-center gap-1 hover:text-red-200 transition-colors">
-                All orders <ArrowRight className="h-3 w-3" />
-              </Link>
-            </div>
-            {activeOrders.length === 0 ? (
-              <div className="py-8 text-center text-sm admin-text-muted">
-                <Clock className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                No active orders
-              </div>
             ) : (
-              <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                {activeOrders.map((order) => (
-                  <div key={order.id} className="flex flex-wrap items-center gap-3 p-3 rounded-xl bg-white/4 border border-white/6 hover:bg-white/6 transition-colors">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="font-mono text-xs font-bold admin-text">{order.id}</span>
-                        <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${STATUS_COLORS[order.status]}`}>{order.status}</span>
-                      </div>
-                      <p className="text-sm admin-text">{order.customerName}</p>
-                      <div className="flex items-center gap-3 text-xs admin-text-dim mt-0.5">
-                        <span className="flex items-center gap-1">{order.fulfillmentType === "delivery" ? <Truck className="h-3 w-3" /> : <Package className="h-3 w-3" />}{order.fulfillmentType}</span>
-                        <span>{order.slotTime}</span>
-                        <span className="font-semibold admin-text">{formatPrice(order.totalAmount)}</span>
-                      </div>
-                    </div>
-                    <select value={order.status} onChange={(e) => handleStatusChange(order.id, e.target.value)} className="glass-input px-2 py-1 rounded-lg text-xs">
-                      <option value="pending">pending</option>
-                      <option value="confirmed">confirmed</option>
-                      <option value="preparing">preparing</option>
-                      <option value="ready">ready</option>
-                      <option value="completed">completed</option>
-                    </select>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div id="notifications" className="glass-card rounded-2xl p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold admin-text flex items-center gap-2">
-                <Bell className="h-4 w-4" />
-                Notifications
-                {unreadNotifs.length > 0 && (
-                  <span className="px-2 py-0.5 bg-italia-red text-white text-xs font-bold rounded-full">{unreadNotifs.length}</span>
-                )}
-              </h2>
-              {unreadNotifs.length > 0 && (
-                <button onClick={markAllRead} className="text-xs admin-text-dim hover:text-white flex items-center gap-1 transition-colors">
-                  <CheckCheck className="h-3 w-3" /> Mark all read
-                </button>
-              )}
-            </div>
-            {notifications.length === 0 ? (
-              <div className="py-8 text-center text-sm admin-text-muted">
-                <Bell className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                No notifications yet
-              </div>
-            ) : (
-              <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                {notifications.slice(0, 20).map((notif) => (
-                  <div key={notif.id} className={`p-3 rounded-xl border transition-colors ${notif.read ? "bg-white/3 border-white/5" : "bg-blue-500/8 border-blue-500/15"}`}>
-                    <div className="flex items-start gap-2">
-                      <span className={`mt-0.5 w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${NOTIF_ICONS[notif.type] || "bg-white/8 admin-text-dim"}`}>
-                        <Bell className="h-3 w-3" />
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold admin-text">{notif.title}</p>
-                        <p className="text-xs admin-text-dim mt-0.5">{notif.message}</p>
-                        <p className="text-[10px] text-slate-600 mt-1">{timeAgo(notif.createdAt)}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+              <div className="py-4 text-center">
+                <AlertTriangle className="h-8 w-8 mx-auto mb-2 admin-text-dim opacity-40" />
+                <p className="text-sm admin-text-muted">No sales data yet</p>
               </div>
             )}
           </div>
@@ -519,14 +597,17 @@ export function AdminDashboard() {
         {/* Category Breakdown */}
         {summary && Object.keys(summary.categoryBreakdown).length > 0 && (
           <div className="glass-card rounded-2xl p-5">
-            <h2 className="font-bold admin-text mb-4">Revenue by Category</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-bold admin-text">Revenue by Category</h2>
+              <span className="text-xs admin-text-dim">{Object.keys(summary.categoryBreakdown).length} categories</span>
+            </div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
               {Object.entries(summary.categoryBreakdown)
                 .sort(([, a], [, b]) => b.revenue - a.revenue)
-                .map(([cat, data]) => {
+                .map(([cat, data], i) => {
                   const margin = data.revenue > 0 ? Math.round(((data.revenue - data.cost) / data.revenue) * 100) : 0;
                   return (
-                    <div key={cat} className="p-3 rounded-xl bg-white/5 hover:bg-white/8 transition-colors">
+                    <div key={cat} className={`p-3 rounded-xl hover:bg-white/8 transition-colors ${i === 0 ? "bg-white/8 border border-white/10" : "bg-white/5"}`}>
                       <p className="text-xs font-semibold admin-text-dim uppercase tracking-wide">{cat}</p>
                       <p className="text-lg font-bold admin-text mt-1">{formatPrice(data.revenue)}</p>
                       <div className="flex items-center justify-between mt-1">
