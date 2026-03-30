@@ -26,11 +26,14 @@ interface MemberRecord {
   locations?: string[];
 }
 
-const MOCK_REFERRALS = [
-  { code: "SUD-ANNA-X4B2", owner: "Anna Nowak", used: 7, earned: 700, createdAt: "2026-01-15" },
-  { code: "SUD-JAN-M9K1", owner: "Jan Kowalski", used: 3, earned: 300, createdAt: "2026-02-10" },
-  { code: "SUD-MARI-P2L5", owner: "Maria Lewandowska", used: 12, earned: 1200, createdAt: "2025-11-20" },
-];
+interface ReferralRecord {
+  code: string;
+  owner: string;
+  ownerPhone: string;
+  used: number;
+  earned: number;
+  createdAt: string;
+}
 
 const activeLocations = allLocations.filter((l) => l.isActive);
 
@@ -46,6 +49,28 @@ export function AdminLoyalty() {
   const [pointsAmount, setPointsAmount] = useState("");
   const [pointsReason, setPointsReason] = useState("");
   const [adjusting, setAdjusting] = useState(false);
+  const [referrals, setReferrals] = useState<ReferralRecord[]>([]);
+  const [referralsLoading, setReferralsLoading] = useState(true);
+
+  const refreshReferrals = useCallback(() => {
+    setReferralsLoading(true);
+    fetch("/api/admin/referrals")
+      .then((r) => r.json())
+      .then((d) => setReferrals(d.referrals || []))
+      .catch(() => {})
+      .finally(() => setReferralsLoading(false));
+  }, []);
+
+  const handleDeleteReferral = async (code: string) => {
+    try {
+      const res = await fetch("/api/admin/referrals", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      });
+      if (res.ok) refreshReferrals();
+    } catch {}
+  };
 
   const refreshMembers = useCallback(() => {
     fetch("/api/admin/members").then((r) => r.json()).then((d) => setMembers(d.members || [])).catch(() => {});
@@ -54,7 +79,8 @@ export function AdminLoyalty() {
   useEffect(() => {
     fetch("/api/admin/growth").then((r) => r.json()).then((d) => setSettings(d)).catch(() => {});
     refreshMembers();
-  }, [refreshMembers]);
+    refreshReferrals();
+  }, [refreshMembers, refreshReferrals]);
 
   const saveSettings = useCallback(async (updates: Partial<LoyaltySettings>) => {
     setSaving(true);
@@ -119,7 +145,7 @@ export function AdminLoyalty() {
         {/* Quick stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           <div className="glass-card p-4"><p className="text-2xl font-bold admin-text">{filteredMembers.length}</p><p className="text-xs admin-text-dim">Members</p></div>
-          <div className="glass-card p-4"><p className="text-2xl font-bold text-green-400">{MOCK_REFERRALS.reduce((s, r) => s + r.used, 0)}</p><p className="text-xs admin-text-dim">Referral Conversions</p></div>
+          <div className="glass-card p-4"><p className="text-2xl font-bold text-green-400">{referrals.reduce((s, r) => s + r.used, 0)}</p><p className="text-xs admin-text-dim">Referral Conversions</p></div>
           <div className="glass-card p-4"><p className="text-2xl font-bold text-italia-gold">{ACHIEVEMENTS.length}</p><p className="text-xs admin-text-dim">Achievements</p></div>
           <div className="glass-card p-4"><p className="text-2xl font-bold text-purple-400">{challenges.length}</p><p className="text-xs admin-text-dim">Active Challenges</p></div>
         </div>
@@ -214,21 +240,27 @@ export function AdminLoyalty() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                 <div className="glass-card p-3"><label className="text-xs admin-text-dim block mb-1">Referrer Reward (pts)</label><input type="number" value={settings?.referral.referrerPoints || 100} onChange={(e) => setSettings((s) => s ? { ...s, referral: { ...s.referral, referrerPoints: parseInt(e.target.value) || 0 } } : s)} className="glass-input w-full text-sm" /></div>
                 <div className="glass-card p-3"><label className="text-xs admin-text-dim block mb-1">New Customer Discount (grosze)</label><input type="number" value={settings?.referral.refereeDiscountGrosze || 1000} onChange={(e) => setSettings((s) => s ? { ...s, referral: { ...s.referral, refereeDiscountGrosze: parseInt(e.target.value) || 0 } } : s)} className="glass-input w-full text-sm" /></div>
-                <div className="glass-card p-3"><p className="text-xs admin-text-dim">Total Referrals</p><p className="text-lg font-bold text-green-400">{MOCK_REFERRALS.reduce((s, r) => s + r.used, 0)}</p></div>
-                <div className="glass-card p-3"><p className="text-xs admin-text-dim">Points Awarded</p><p className="text-lg font-bold text-italia-gold">{MOCK_REFERRALS.reduce((s, r) => s + r.earned, 0)}</p></div>
+                <div className="glass-card p-3"><p className="text-xs admin-text-dim">Total Referrals</p><p className="text-lg font-bold text-green-400">{referrals.reduce((s, r) => s + r.used, 0)}</p></div>
+                <div className="glass-card p-3"><p className="text-xs admin-text-dim">Points Awarded</p><p className="text-lg font-bold text-italia-gold">{referrals.reduce((s, r) => s + r.earned, 0)}</p></div>
               </div>
               <button onClick={() => settings && saveSettings({ referral: settings.referral })} disabled={saving} className="glass-btn-green text-xs"><Check className="h-3.5 w-3.5" />{saving ? "Saving..." : "Save Referral Settings"}</button>
             </div>
             <div className="glass-card-static p-5">
               <h3 className="font-semibold admin-text mb-3">Active Referral Codes</h3>
-              <div className="space-y-2">
-                {MOCK_REFERRALS.map((r) => (
-                  <div key={r.code} className="flex items-center justify-between p-3 glass-card">
-                    <div><p className="font-mono text-sm font-bold admin-text">{r.code}</p><p className="text-xs admin-text-dim">{r.owner} &middot; {r.createdAt}</p></div>
-                    <div className="flex items-center gap-4"><div className="text-right"><p className="text-sm font-bold text-green-400">{r.used} uses</p><p className="text-xs admin-text-dim">{r.earned} pts</p></div><button className="text-slate-400 hover:text-red-400"><X className="h-4 w-4" /></button></div>
-                  </div>
-                ))}
-              </div>
+              {referralsLoading ? (
+                <div className="flex items-center justify-center py-8"><Clock className="h-5 w-5 text-slate-400 animate-spin" /><span className="ml-2 text-sm admin-text-dim">Loading referrals...</span></div>
+              ) : referrals.length === 0 ? (
+                <p className="text-sm admin-text-dim text-center py-6">No referral codes yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {referrals.map((r) => (
+                    <div key={r.code} className="flex items-center justify-between p-3 glass-card">
+                      <div><p className="font-mono text-sm font-bold admin-text">{r.code}</p><p className="text-xs admin-text-dim">{r.owner} &middot; {r.createdAt}</p></div>
+                      <div className="flex items-center gap-4"><div className="text-right"><p className="text-sm font-bold text-green-400">{r.used} uses</p><p className="text-xs admin-text-dim">{r.earned} pts</p></div><button onClick={() => handleDeleteReferral(r.code)} className="text-slate-400 hover:text-red-400"><X className="h-4 w-4" /></button></div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}

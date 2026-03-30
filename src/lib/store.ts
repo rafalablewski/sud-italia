@@ -939,3 +939,118 @@ export async function getAllManualPoints(): Promise<Record<string, number>> {
   }
   return byPhone;
 }
+
+// --- Referrals ---
+
+export interface Referral {
+  code: string;
+  owner: string;
+  ownerPhone: string;
+  used: number;
+  earned: number;
+  createdAt: string;
+}
+
+export async function getReferrals(): Promise<Referral[]> {
+  return readJSON<Referral[]>("referrals.json", []);
+}
+
+export async function addReferral(referral: Referral): Promise<Referral> {
+  return withLock("referrals.json", async () => {
+    const list = await readJSON<Referral[]>("referrals.json", []);
+    if (list.some((r) => r.code === referral.code)) return referral;
+    list.push(referral);
+    await writeJSON("referrals.json", list);
+    return referral;
+  });
+}
+
+export async function deleteReferral(code: string): Promise<void> {
+  return withLock("referrals.json", async () => {
+    const list = await readJSON<Referral[]>("referrals.json", []);
+    const filtered = list.filter((r) => r.code !== code);
+    await writeJSON("referrals.json", filtered);
+  });
+}
+
+// --- Feedback ---
+
+export interface FeedbackEntry {
+  id: string;
+  orderId: string;
+  customerName: string;
+  customerPhone: string;
+  locationSlug: string;
+  date: string;
+  overallRating: number;
+  categoryRatings: Record<string, number>;
+  comment: string;
+  status: "new" | "reviewed" | "responded";
+}
+
+export async function getFeedback(): Promise<FeedbackEntry[]> {
+  return readJSON<FeedbackEntry[]>("feedback.json", []);
+}
+
+export async function saveFeedback(entry: FeedbackEntry): Promise<FeedbackEntry> {
+  return withLock("feedback.json", async () => {
+    const list = await readJSON<FeedbackEntry[]>("feedback.json", []);
+    const idx = list.findIndex((f) => f.id === entry.id);
+    if (idx >= 0) {
+      list[idx] = entry;
+    } else {
+      list.push(entry);
+    }
+    await writeJSON("feedback.json", list);
+    return entry;
+  });
+}
+
+export async function updateFeedbackStatus(id: string, status: FeedbackEntry["status"]): Promise<FeedbackEntry | null> {
+  return withLock("feedback.json", async () => {
+    const list = await readJSON<FeedbackEntry[]>("feedback.json", []);
+    const idx = list.findIndex((f) => f.id === id);
+    if (idx === -1) return null;
+    list[idx].status = status;
+    await writeJSON("feedback.json", list);
+    return list[idx];
+  });
+}
+
+// ── Chatbot FAQ ──────────────────────────────────────────────
+
+export interface ChatbotFaq {
+  id: string;
+  keyword: string;
+  response: string;
+  hits: number;
+}
+
+export async function getChatbotFaqs(): Promise<ChatbotFaq[]> {
+  return readJSON<ChatbotFaq[]>("chatbot-faq.json", []);
+}
+
+export async function saveChatbotFaq(faq: ChatbotFaq): Promise<ChatbotFaq> {
+  return withLock("chatbot-faq.json", async () => {
+    const list = await readJSON<ChatbotFaq[]>("chatbot-faq.json", []);
+    const idx = list.findIndex((f) => f.id === faq.id);
+    if (idx >= 0) {
+      list[idx] = faq;
+    } else {
+      list.push(faq);
+    }
+    await writeJSON("chatbot-faq.json", list);
+    return faq;
+  });
+}
+
+export async function deleteChatbotFaq(id: string): Promise<boolean> {
+  return withLock("chatbot-faq.json", async () => {
+    const list = await readJSON<ChatbotFaq[]>("chatbot-faq.json", []);
+    const idx = list.findIndex((f) => f.id === id);
+    if (idx === -1) return false;
+    list.splice(idx, 1);
+    await writeJSON("chatbot-faq.json", list);
+    return true;
+  });
+}
