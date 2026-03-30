@@ -9,6 +9,7 @@ import {
   TrendingUp, TrendingDown, DollarSign, ShoppingBag, Package,
   Truck, Clock, Bell, CheckCheck, ArrowRight, BarChart3,
   RefreshCw, MapPin, Users, XCircle, AlertTriangle, Layers,
+  Activity,
 } from "lucide-react";
 import Link from "next/link";
 import type { Order } from "@/data/types";
@@ -119,9 +120,17 @@ export function AdminDashboard() {
     fetchAll();
   };
 
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+
+  useEffect(() => {
+    if (!loading) setLastRefresh(new Date());
+  }, [loading]);
+
   const maxRevenue = summary ? Math.max(...summary.dailyStats.map((d) => d.revenue), 1) : 1;
   const activeOrders = orders.filter((o) => o.status !== "completed");
   const unreadNotifs = notifications.filter((n) => !n.read);
+
+  const periodLabel = period === "today" ? "Today" : period === "week" ? "Last 7 days" : period === "month" ? "Last 30 days" : "Last year";
 
   return (
     <>
@@ -129,7 +138,21 @@ export function AdminDashboard() {
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-5">
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-3 stagger-1">
-          <h1 className="text-2xl font-bold font-heading gradient-text">Dashboard</h1>
+          <div>
+            <h1 className="text-2xl font-bold font-heading gradient-text">Dashboard</h1>
+            <p className="text-xs admin-text-dim mt-1 flex items-center gap-2">
+              <Activity className="h-3 w-3" />
+              <span>{periodLabel}</span>
+              <span className="text-white/20">·</span>
+              <span>Updated {timeAgo(lastRefresh.toISOString())}</span>
+              {activeOrders.length > 0 && (
+                <>
+                  <span className="text-white/20">·</span>
+                  <span className="text-emerald-400 font-medium">{activeOrders.length} active order{activeOrders.length !== 1 ? "s" : ""}</span>
+                </>
+              )}
+            </p>
+          </div>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-2">
               <MapPin className="h-4 w-4 admin-text-dim" />
@@ -161,7 +184,8 @@ export function AdminDashboard() {
             </div>
             <button
               onClick={fetchAll}
-              className="p-2 rounded-lg glass text-slate-400 hover:text-white hover:bg-white/10 transition-all duration-200"
+              disabled={loading}
+              className="p-2 rounded-lg glass text-slate-400 hover:text-white hover:bg-white/10 transition-all duration-200 disabled:opacity-50"
               title="Refresh"
             >
               <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
@@ -171,21 +195,19 @@ export function AdminDashboard() {
 
         {/* KPI Row 1 */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 stagger-2">
-          <KPICard label="Revenue" value={summary ? formatPrice(summary.totalRevenue) : "—"} icon={<DollarSign className="h-5 w-5" />} gradient="from-emerald-500/20 to-emerald-600/10" iconColor="text-emerald-400" />
-          <KPICard label="Profit" value={summary ? formatPrice(summary.totalProfit) : "—"} sub={summary ? `${summary.profitMargin}% margin` : undefined} icon={summary && summary.totalProfit >= 0 ? <TrendingUp className="h-5 w-5" /> : <TrendingDown className="h-5 w-5" />} gradient={summary && summary.totalProfit >= 0 ? "from-green-500/20 to-green-600/10" : "from-red-500/20 to-red-600/10"} iconColor={summary && summary.totalProfit >= 0 ? "text-green-400" : "text-red-400"} />
-          <KPICard label="Orders" value={summary ? summary.totalOrders.toString() : "—"} sub={summary ? `${summary.takeoutCount} takeout / ${summary.deliveryCount} delivery` : undefined} icon={<ShoppingBag className="h-5 w-5" />} gradient="from-blue-500/20 to-blue-600/10" iconColor="text-blue-400" />
-          <KPICard label="Avg Order" value={summary ? formatPrice(summary.avgOrderValue) : "—"} sub={insights ? `${insights.avgItemsPerOrder} items/order` : undefined} icon={<BarChart3 className="h-5 w-5" />} gradient="from-amber-500/20 to-amber-600/10" iconColor="text-amber-400" />
+          <KPICard label="Revenue" value={summary ? formatPrice(summary.totalRevenue) : undefined} icon={<DollarSign className="h-5 w-5" />} gradient="from-emerald-500/20 to-emerald-600/10" iconColor="text-emerald-400" loading={!summary} />
+          <KPICard label="Profit" value={summary ? formatPrice(summary.totalProfit) : undefined} sub={summary ? `${summary.profitMargin}% margin` : undefined} icon={summary && summary.totalProfit >= 0 ? <TrendingUp className="h-5 w-5" /> : <TrendingDown className="h-5 w-5" />} gradient={summary && summary.totalProfit >= 0 ? "from-green-500/20 to-green-600/10" : "from-red-500/20 to-red-600/10"} iconColor={summary && summary.totalProfit >= 0 ? "text-green-400" : "text-red-400"} loading={!summary} />
+          <KPICard label="Orders" value={summary ? summary.totalOrders.toString() : undefined} sub={summary ? `${summary.takeoutCount} takeout · ${summary.deliveryCount} delivery` : undefined} icon={<ShoppingBag className="h-5 w-5" />} gradient="from-blue-500/20 to-blue-600/10" iconColor="text-blue-400" loading={!summary} />
+          <KPICard label="Avg Order" value={summary ? formatPrice(summary.avgOrderValue) : undefined} sub={insights ? `${insights.avgItemsPerOrder} items/order` : undefined} icon={<BarChart3 className="h-5 w-5" />} gradient="from-amber-500/20 to-amber-600/10" iconColor="text-amber-400" loading={!summary} />
         </div>
 
         {/* KPI Row 2 */}
-        {insights && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 stagger-3">
-            <KPICard label="Repeat Customers" value={insights.repeatCustomers.length.toString()} icon={<Users className="h-5 w-5" />} gradient="from-violet-500/20 to-violet-600/10" iconColor="text-violet-400" />
-            <KPICard label="Items / Order" value={insights.avgItemsPerOrder.toString()} sub="basket size" icon={<Layers className="h-5 w-5" />} gradient="from-cyan-500/20 to-cyan-600/10" iconColor="text-cyan-400" />
-            <KPICard label="Cancellation" value={`${insights.cancellationRate}%`} sub={`${insights.cancelledOrders} pending`} icon={<XCircle className="h-5 w-5" />} gradient={insights.cancellationRate > 10 ? "from-red-500/20 to-red-600/10" : "from-emerald-500/20 to-emerald-600/10"} iconColor={insights.cancellationRate > 10 ? "text-red-400" : "text-emerald-400"} />
-            <KPICard label="Worst Seller" value={insights.worstSellers[0]?.name ?? "—"} sub={insights.worstSellers[0] ? `${insights.worstSellers[0].quantity} sold` : undefined} icon={<AlertTriangle className="h-5 w-5" />} gradient="from-orange-500/20 to-orange-600/10" iconColor="text-orange-400" />
-          </div>
-        )}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 stagger-3">
+          <KPICard label="Repeat Customers" value={insights ? insights.repeatCustomers.length.toString() : undefined} icon={<Users className="h-5 w-5" />} gradient="from-violet-500/20 to-violet-600/10" iconColor="text-violet-400" loading={!insights} />
+          <KPICard label="Items / Order" value={insights ? insights.avgItemsPerOrder.toString() : undefined} sub="basket size" icon={<Layers className="h-5 w-5" />} gradient="from-cyan-500/20 to-cyan-600/10" iconColor="text-cyan-400" loading={!insights} />
+          <KPICard label="Cancellation" value={insights ? `${insights.cancellationRate}%` : undefined} sub={insights ? `${insights.cancelledOrders} cancelled` : undefined} icon={<XCircle className="h-5 w-5" />} gradient={insights && insights.cancellationRate > 10 ? "from-red-500/20 to-red-600/10" : "from-emerald-500/20 to-emerald-600/10"} iconColor={insights && insights.cancellationRate > 10 ? "text-red-400" : "text-emerald-400"} loading={!insights} />
+          <KPICard label="Worst Seller" value={insights ? (insights.worstSellers[0]?.name ?? "None") : undefined} sub={insights?.worstSellers[0] ? `${insights.worstSellers[0].quantity} sold` : undefined} icon={<AlertTriangle className="h-5 w-5" />} gradient="from-orange-500/20 to-orange-600/10" iconColor="text-orange-400" loading={!insights} />
+        </div>
 
         {/* Charts row */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 stagger-4">
@@ -522,9 +544,9 @@ export function AdminDashboard() {
   );
 }
 
-function KPICard({ label, value, sub, icon, gradient, iconColor }: {
-  label: string; value: string; sub?: string; icon: React.ReactNode;
-  gradient: string; iconColor: string;
+function KPICard({ label, value, sub, icon, gradient, iconColor, loading }: {
+  label: string; value?: string; sub?: string; icon: React.ReactNode;
+  gradient: string; iconColor: string; loading?: boolean;
 }) {
   return (
     <div className="glass-card rounded-2xl p-4">
@@ -534,8 +556,17 @@ function KPICard({ label, value, sub, icon, gradient, iconColor }: {
         </span>
         <span className="text-[11px] font-semibold admin-text-dim uppercase tracking-wider">{label}</span>
       </div>
-      <p className="text-xl font-bold admin-text">{value}</p>
-      {sub && <p className="text-xs admin-text-dim mt-0.5">{sub}</p>}
+      {loading || !value ? (
+        <div className="space-y-1.5">
+          <div className="h-6 w-24 bg-white/8 rounded-md animate-pulse" />
+          <div className="h-3.5 w-16 bg-white/5 rounded-md animate-pulse" />
+        </div>
+      ) : (
+        <>
+          <p className="text-xl font-bold admin-text">{value}</p>
+          {sub && <p className="text-xs admin-text-dim mt-0.5">{sub}</p>}
+        </>
+      )}
     </div>
   );
 }
