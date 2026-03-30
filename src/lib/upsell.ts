@@ -216,13 +216,14 @@ export function getActiveComboDeals(cartItems: CartItem[]): {
     const missing = deal.categories.filter((c) => !cartCategories.has(c));
     const progress = matched.length / deal.categories.length;
 
+    // Calculate savings based only on items that form the combo, not the full cart
+    const comboItemsTotal = cartItems
+      .filter((ci) => deal.categories.includes(ci.menuItem.category))
+      .reduce((sum, ci) => sum + ci.menuItem.price * ci.quantity, 0);
+
     if (matched.length >= 1 && missing.length > 0) {
-      const cartTotal = cartItems.reduce(
-        (sum, ci) => sum + ci.menuItem.price * ci.quantity,
-        0
-      );
       const potentialSavings = Math.round(
-        cartTotal * (deal.discountPercent / 100)
+        comboItemsTotal * (deal.discountPercent / 100)
       );
 
       return {
@@ -234,13 +235,9 @@ export function getActiveComboDeals(cartItems: CartItem[]): {
     }
 
     if (missing.length === 0 && cartItems.length >= deal.minItems) {
-      const cartTotal = cartItems.reduce(
-        (sum, ci) => sum + ci.menuItem.price * ci.quantity,
-        0
-      );
       return {
         activeDeal: deal,
-        savings: Math.round(cartTotal * (deal.discountPercent / 100)),
+        savings: Math.round(comboItemsTotal * (deal.discountPercent / 100)),
         missingCategories: [],
         progress: 1,
       };

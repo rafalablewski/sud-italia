@@ -4,6 +4,7 @@ import { useState } from "react";
 import {
   LoyaltyAccount,
   TIER_CONFIG,
+  TIER_THRESHOLDS,
   REWARDS,
   calculateTier,
   pointsToNextTier,
@@ -140,8 +141,8 @@ export function LoyaltyCard({ account }: LoyaltyCardProps) {
               className="h-full bg-gradient-to-r from-italia-gold to-italia-red rounded-full transition-all duration-500"
               style={{
                 width: `${Math.min(
-                  ((account.points - (tier === "bronze" ? 0 : tier === "silver" ? 500 : 1500)) /
-                    toNext) *
+                  ((account.points - TIER_THRESHOLDS[tier]) /
+                    (TIER_THRESHOLDS[nextTier] - TIER_THRESHOLDS[tier])) *
                     100,
                   100
                 )}%`,

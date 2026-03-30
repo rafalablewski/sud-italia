@@ -124,7 +124,7 @@ function OrderConfirmationContent() {
                     title: "My Sud Italia Order",
                     text: `I just ordered from Sud Italia${location ? ` in ${location.city}` : ""}! 🍕`,
                     url: window.location.href,
-                  }).catch(() => {});
+                  }).catch((err) => console.error("Share failed:", err));
                 }
               }}
             >

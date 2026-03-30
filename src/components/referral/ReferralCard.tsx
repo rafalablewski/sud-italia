@@ -24,7 +24,7 @@ export function ReferralCard() {
         title: "Get 10 PLN off at Sud Italia!",
         text: `Use my code ${code} for ${REFERRAL_REWARD.refereeDiscountPLN} PLN off your first order at Sud Italia! Authentic Neapolitan pizza & pasta 🍕`,
         url: `https://suditalia.pl?ref=${code}`,
-      }).catch(() => {});
+      }).catch((err) => console.error("Share failed:", err));
     }
   };
 

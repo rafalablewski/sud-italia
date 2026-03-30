@@ -54,7 +54,7 @@ export const REWARDS = [
   { id: "10-off", name: "10 PLN Off", pointsCost: 100, description: "Discount on your next order" },
   { id: "free-dessert", name: "Free Dessert", pointsCost: 120, description: "Any dessert from the menu" },
   { id: "free-pizza", name: "Free Pizza", pointsCost: 250, description: "Any pizza from the menu" },
-  { id: "25-off", name: "25 PLN Off", pointsCost: 200, description: "Big discount on your next order" },
+  { id: "25-off", name: "25 PLN Off", pointsCost: 250, description: "Big discount on your next order" },
 ];
 
 export function calculateTier(totalPoints: number): LoyaltyTier {

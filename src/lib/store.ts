@@ -759,7 +759,7 @@ const DEFAULT_LOYALTY_SETTINGS: LoyaltySettings = {
     { id: "10-off", name: "10 PLN Off", pointsCost: 100, description: "Discount on your next order", active: true },
     { id: "free-dessert", name: "Free Dessert", pointsCost: 120, description: "Any dessert from the menu", active: true },
     { id: "free-pizza", name: "Free Pizza", pointsCost: 250, description: "Any pizza from the menu", active: true },
-    { id: "25-off", name: "25 PLN Off", pointsCost: 200, description: "Big discount on your next order", active: true },
+    { id: "25-off", name: "25 PLN Off", pointsCost: 250, description: "Big discount on your next order", active: true },
   ],
   referral: { referrerPoints: 100, refereeDiscountGrosze: 1000, active: true },
   speedGuarantee: { maxMinutes: 15, guaranteeText: "Ready in 15 minutes or your next drink is free", active: true },

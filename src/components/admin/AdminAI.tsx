@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { AdminNav } from "./AdminNav";
 import {
   generateDemandForecast,
@@ -35,8 +35,6 @@ import {
   Minus,
   Sparkles,
   RefreshCw,
-  Target,
-  Zap,
   BarChart3,
   Megaphone,
   UtensilsCrossed,
@@ -92,8 +90,8 @@ export function AdminAI() {
     }, 1200);
   };
 
-  const totalExpectedOrders = forecasts.reduce((sum, f) => sum + f.expectedOrders, 0);
-  const avgConfidence = forecasts.reduce((sum, f) => sum + f.confidence, 0) / forecasts.length;
+  const totalExpectedOrders = useMemo(() => forecasts.reduce((sum, f) => sum + f.expectedOrders, 0), [forecasts]);
+  const avgConfidence = useMemo(() => (forecasts.length > 0 ? forecasts.reduce((sum, f) => sum + f.confidence, 0) / forecasts.length : 0), [forecasts]);
 
   const tabs = [
     { id: "forecast" as const, label: "Demand Forecast", icon: BarChart3 },
