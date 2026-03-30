@@ -134,6 +134,188 @@ function SignInSection() {
   );
 }
 
+function ProfileSection() {
+  const { customer, updateProfile } = useCustomer();
+  const [editing, setEditing] = useState(false);
+  const [firstName, setFirstName] = useState(customer?.name || "");
+  const [lastName, setLastName] = useState(customer?.lastName || "");
+  const [nickname, setNickname] = useState(customer?.nickname || "");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  if (!customer) return null;
+
+  const handleSave = async () => {
+    setSaving(true);
+    const ok = await updateProfile({
+      name: firstName.trim() || customer.name,
+      lastName: lastName.trim(),
+      nickname: nickname.trim(),
+    });
+    setSaving(false);
+    if (ok) {
+      setSaved(true);
+      setEditing(false);
+      setTimeout(() => setSaved(false), 2000);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="font-heading font-bold text-lg text-italia-dark flex items-center gap-2">
+          <User className="h-5 w-5 text-italia-gray" />
+          My Profile
+        </h2>
+        {!editing && (
+          <button
+            onClick={() => setEditing(true)}
+            className="text-xs font-medium text-italia-red hover:text-italia-red-dark transition-colors"
+          >
+            Edit
+          </button>
+        )}
+        {saved && (
+          <span className="flex items-center gap-1 text-xs text-italia-green font-medium">
+            <Check className="h-3 w-3" /> Saved
+          </span>
+        )}
+      </div>
+
+      {editing ? (
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs text-italia-gray block mb-1">First name</label>
+            <input
+              type="text"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              className="pub-input min-h-[44px] text-sm"
+              placeholder="First name"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-italia-gray block mb-1">Last name</label>
+            <input
+              type="text"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              className="pub-input min-h-[44px] text-sm"
+              placeholder="Last name"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-italia-gray block mb-1">Nickname</label>
+            <input
+              type="text"
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              className="pub-input min-h-[44px] text-sm"
+              placeholder="What should we call you?"
+            />
+          </div>
+          <div className="flex gap-2 pt-1">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex-1 px-4 py-2.5 bg-italia-red text-white font-semibold rounded-xl hover:bg-italia-red-dark transition-colors text-sm disabled:opacity-50"
+            >
+              {saving ? "Saving..." : "Save"}
+            </button>
+            <button
+              onClick={() => {
+                setEditing(false);
+                setFirstName(customer.name);
+                setLastName(customer.lastName || "");
+                setNickname(customer.nickname || "");
+              }}
+              className="px-4 py-2.5 text-sm text-italia-gray hover:text-italia-dark transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <p className="text-[11px] text-italia-gray">First name</p>
+            <p className="text-sm font-medium text-italia-dark">{customer.name}</p>
+          </div>
+          <div>
+            <p className="text-[11px] text-italia-gray">Last name</p>
+            <p className="text-sm font-medium text-italia-dark">{customer.lastName || "—"}</p>
+          </div>
+          <div>
+            <p className="text-[11px] text-italia-gray">Nickname</p>
+            <p className="text-sm font-medium text-italia-dark">{customer.nickname || "—"}</p>
+          </div>
+          <div>
+            <p className="text-[11px] text-italia-gray">Phone</p>
+            <p className="text-sm font-medium text-italia-dark">{customer.phone}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LoyaltyCardSection() {
+  const { customer } = useCustomer();
+  if (!customer) return null;
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-4">
+      <h2 className="font-heading font-bold text-lg text-italia-dark flex items-center gap-2">
+        <Sparkles className="h-5 w-5 text-italia-gold" />
+        Loyalty Card
+      </h2>
+
+      {/* QR Code Placeholder */}
+      <div className="flex flex-col items-center py-6 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+        <div className="w-32 h-32 bg-white rounded-lg border border-gray-200 flex items-center justify-center mb-3 relative">
+          <div className="grid grid-cols-5 gap-[3px]">
+            {Array.from({ length: 25 }).map((_, i) => (
+              <div
+                key={i}
+                className={`w-4 h-4 rounded-sm ${
+                  [0,1,2,4,5,6,10,12,14,18,19,20,22,23,24].includes(i)
+                    ? "bg-italia-dark"
+                    : "bg-gray-100"
+                }`}
+              />
+            ))}
+          </div>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm">
+              <span className="text-[10px] font-bold text-italia-red">SI</span>
+            </div>
+          </div>
+        </div>
+        <p className="text-xs text-italia-gray font-medium">
+          Show at pickup to earn points
+        </p>
+        <p className="text-[10px] text-italia-gray/50 mt-1">
+          QR scanning — coming soon
+        </p>
+      </div>
+
+      {/* Apple Wallet Placeholder */}
+      <button
+        disabled
+        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-black text-white font-medium rounded-xl opacity-60 cursor-not-allowed relative"
+      >
+        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
+        </svg>
+        Add to Apple Wallet
+        <span className="absolute -top-2 -right-2 px-2 py-0.5 text-[10px] font-bold bg-italia-gold text-white rounded-full">
+          Soon
+        </span>
+      </button>
+    </div>
+  );
+}
+
 function RewardsDashboard() {
   const { customer, logout } = useCustomer();
   const [copiedCode, setCopiedCode] = useState(false);
@@ -193,7 +375,9 @@ function RewardsDashboard() {
                   <User className="h-6 w-6 text-white/80" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-heading font-bold">{customer.name}</h1>
+                  <h1 className="text-xl font-heading font-bold">
+                    {customer.nickname || customer.name}
+                  </h1>
                   <p className="text-sm text-white/50">{customer.phone}</p>
                 </div>
               </div>
@@ -282,6 +466,12 @@ function RewardsDashboard() {
         {/* === OVERVIEW TAB === */}
         {activeTab === "overview" && (
           <div className="space-y-6">
+            {/* Profile + Loyalty Card */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <ProfileSection />
+              <LoyaltyCardSection />
+            </div>
+
             {/* Streak */}
             <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-2xl border border-orange-200/30 p-5 flex items-center gap-4">
               <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white flex-shrink-0">

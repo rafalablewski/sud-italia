@@ -5,6 +5,8 @@ import { useState, useEffect, createContext, useContext, useCallback } from "rea
 export interface CustomerIdentity {
   phone: string;
   name: string;
+  lastName?: string;
+  nickname?: string;
   email?: string;
   ordersCount: number;
   points: number;
@@ -14,6 +16,7 @@ interface CustomerContextValue {
   customer: CustomerIdentity | null;
   loading: boolean;
   identify: (phone: string, signup?: boolean) => Promise<void>;
+  updateProfile: (updates: { name?: string; lastName?: string; nickname?: string }) => Promise<boolean>;
   logout: () => void;
 }
 
@@ -21,6 +24,7 @@ const CustomerContext = createContext<CustomerContextValue>({
   customer: null,
   loading: true,
   identify: async () => {},
+  updateProfile: async () => false,
   logout: () => {},
 });
 
@@ -54,6 +58,25 @@ export function CustomerProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const updateProfile = useCallback(async (updates: { name?: string; lastName?: string; nickname?: string }): Promise<boolean> => {
+    try {
+      const res = await fetch("/api/customer/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+      if (!res.ok) return false;
+      const data = await res.json();
+      if (data.customer) {
+        setCustomer((prev) => prev ? { ...prev, ...data.customer } : prev);
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }, []);
+
   const logout = useCallback(() => {
     setCustomer(null);
     document.cookie = "sud-italia-customer=;path=/;max-age=0";
@@ -70,7 +93,7 @@ export function CustomerProvider({ children }: { children: React.ReactNode }) {
   }, [identify]);
 
   return (
-    <CustomerContext.Provider value={{ customer, loading, identify, logout }}>
+    <CustomerContext.Provider value={{ customer, loading, identify, updateProfile, logout }}>
       {children}
     </CustomerContext.Provider>
   );

@@ -31,10 +31,15 @@ export async function GET(req: NextRequest) {
       signedUpAt: new Date().toISOString(),
     });
 
+    // Fetch member record for profile fields
+    const member = await getLoyaltyMember(phone);
+
     return NextResponse.json({
       customer: {
         phone,
-        name: latest.customerName,
+        name: member?.name || latest.customerName,
+        lastName: member?.lastName || "",
+        nickname: member?.nickname || "",
         ordersCount: customerOrders.length,
         points,
         isNew: false,
@@ -50,6 +55,8 @@ export async function GET(req: NextRequest) {
       customer: {
         phone: existing.phone,
         name: existing.name,
+        lastName: existing.lastName || "",
+        nickname: existing.nickname || "",
         ordersCount: 0,
         points: manualPoints,
         isNew: false,
@@ -69,6 +76,8 @@ export async function GET(req: NextRequest) {
       customer: {
         phone,
         name: "New Member",
+        lastName: "",
+        nickname: "",
         ordersCount: 0,
         points: 0,
         isNew: true,

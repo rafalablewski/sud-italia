@@ -880,6 +880,8 @@ export async function calculateFoodCost(menuItemId: string): Promise<number> {
 export interface LoyaltyMember {
   phone: string;
   name: string;
+  lastName?: string;
+  nickname?: string;
   email?: string;
   signedUpAt: string;
 }
@@ -902,6 +904,20 @@ export async function addLoyaltyMember(member: LoyaltyMember): Promise<LoyaltyMe
 export async function getLoyaltyMember(phone: string): Promise<LoyaltyMember | undefined> {
   const list = await readJSON<LoyaltyMember[]>("loyalty-members.json", []);
   return list.find((m) => m.phone === phone);
+}
+
+export async function updateLoyaltyMember(
+  phone: string,
+  updates: Partial<Pick<LoyaltyMember, "name" | "lastName" | "nickname" | "email">>
+): Promise<LoyaltyMember | null> {
+  return withLock("loyalty-members.json", async () => {
+    const list = await readJSON<LoyaltyMember[]>("loyalty-members.json", []);
+    const index = list.findIndex((m) => m.phone === phone);
+    if (index === -1) return null;
+    list[index] = { ...list[index], ...updates };
+    await writeJSON("loyalty-members.json", list);
+    return list[index];
+  });
 }
 
 // --- Point Adjustments (manual add/remove by admin) ---
@@ -1057,5 +1073,51 @@ export async function deleteChatbotFaq(id: string): Promise<boolean> {
     list.splice(idx, 1);
     await writeJSON("chatbot-faq.json", list);
     return true;
+  });
+}
+
+// --- Upsell / Cross-Sell Settings (per-location) ---
+
+export interface LocationComboDeal {
+  id: string;
+  name: string;
+  description: string;
+  categories: string[];
+  discountPercent: number;
+  minItems: number;
+  active: boolean;
+}
+
+export interface LocationUpsellConfig {
+  popularItems: string[];
+  staffPicks: string[];
+  preferredCoffee: string;
+  preferredDessert: string;
+  preferredDrink: string;
+  combos: LocationComboDeal[];
+}
+
+export type UpsellSettings = Record<string, LocationUpsellConfig>;
+
+export async function getUpsellSettings(): Promise<UpsellSettings> {
+  return readJSON<UpsellSettings>("upsell-settings.json", {});
+}
+
+export async function updateUpsellSettings(settings: UpsellSettings): Promise<UpsellSettings> {
+  return withLock("upsell-settings.json", async () => {
+    await writeJSON("upsell-settings.json", settings);
+    return settings;
+  });
+}
+
+export async function updateLocationUpsell(
+  locationSlug: string,
+  config: LocationUpsellConfig
+): Promise<UpsellSettings> {
+  return withLock("upsell-settings.json", async () => {
+    const settings = await readJSON<UpsellSettings>("upsell-settings.json", {});
+    settings[locationSlug] = config;
+    await writeJSON("upsell-settings.json", settings);
+    return settings;
   });
 }

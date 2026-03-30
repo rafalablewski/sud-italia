@@ -9,12 +9,13 @@ import { DeliveryProgress } from "./DeliveryProgress";
 import { ComboDealBanner } from "./ComboDealBanner";
 import { LoyaltyEarnPreview } from "./LoyaltyEarnPreview";
 import { formatPrice } from "@/lib/utils";
-import { getCartSuggestions, getActiveComboDeals } from "@/lib/upsell";
-import { ShoppingCart, Trash2, Package, Truck } from "lucide-react";
+import { getCartSuggestions, getActiveComboDeals, UpsellConfig } from "@/lib/upsell";
+import { ShoppingCart, Trash2, Package, Truck, Star } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { SlotPicker } from "./SlotPicker";
 import { krakowMenu } from "@/data/menus/krakow";
 import { warszawaMenu } from "@/data/menus/warszawa";
+import { useCustomer } from "@/store/customer";
 
 interface CartDrawerProps {
   open: boolean;
@@ -37,16 +38,28 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
   const deliveryAddress = useCartStore((s) => s.deliveryAddress);
   const setDeliveryAddress = useCartStore((s) => s.setDeliveryAddress);
 
+  const { customer: loyaltyCustomer } = useCustomer();
+
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [phoneError, setPhoneError] = useState(false);
 
+  // Fetch location-specific upsell config from admin settings
+  const [upsellConfig, setUpsellConfig] = useState<UpsellConfig | null>(null);
+  useEffect(() => {
+    if (!locationSlug) return;
+    fetch(`/api/settings/upsell?location=${locationSlug}`)
+      .then((r) => r.json())
+      .then((data) => { if (data) setUpsellConfig(data); })
+      .catch(() => {});
+  }, [locationSlug]);
+
   const subtotal = getTotal();
 
   // Apply combo deal discount to actual total
-  const comboResult = useMemo(() => getActiveComboDeals(items), [items]);
+  const comboResult = useMemo(() => getActiveComboDeals(items, upsellConfig), [items, upsellConfig]);
   const comboDiscount = comboResult.missingCategories.length === 0 ? comboResult.savings : 0;
   const total = subtotal - comboDiscount;
 
@@ -56,6 +69,17 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
     isPhoneValid &&
     selectedSlotId !== null &&
     (fulfillmentType !== "delivery" || deliveryAddress.trim().length > 0);
+
+  // Pre-fill checkout fields from loyalty identity
+  useEffect(() => {
+    if (loyaltyCustomer) {
+      if (!customerName) setCustomerName(loyaltyCustomer.name);
+      if (!customerPhone) {
+        const phone = loyaltyCustomer.phone.replace(/^\+48/, "");
+        setCustomerPhone(phone);
+      }
+    }
+  }, [loyaltyCustomer]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Resolve menu items — use prop if available, otherwise look up by location
   const resolvedMenuItems = useMemo(() => {
@@ -70,8 +94,8 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
 
   // Cross-sell suggestions — always have menu items to work with now
   const suggestions = useMemo(
-    () => getCartSuggestions(items, resolvedMenuItems, 4),
-    [items, resolvedMenuItems]
+    () => getCartSuggestions(items, resolvedMenuItems, 4, upsellConfig),
+    [items, resolvedMenuItems, upsellConfig]
   );
 
   const handlePhoneChange = (value: string) => {
@@ -152,6 +176,26 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
         {items.map((item) => (
           <CartItemRow key={item.menuItem.id} item={item} />
         ))}
+      </div>
+
+      {/* Loyalty status banner */}
+      <div className="px-5 mt-3">
+        {loyaltyCustomer ? (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-italia-gold/8 border border-italia-gold/15">
+            <Star className="h-4 w-4 text-italia-gold flex-shrink-0" />
+            <p className="text-xs text-italia-dark">
+              Earning points as <span className="font-semibold">{loyaltyCustomer.name.split(" ")[0]}</span>
+              <span className="text-italia-gold-dark font-bold ml-1">{loyaltyCustomer.points} pts</span>
+            </p>
+          </div>
+        ) : (
+          <a href="/rewards" className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-50 border border-gray-100 hover:bg-italia-gold/5 transition-colors">
+            <Star className="h-4 w-4 text-italia-gray flex-shrink-0" />
+            <p className="text-xs text-italia-gray">
+              <span className="font-medium text-italia-dark">Sign in to earn points</span> on this order
+            </p>
+          </a>
+        )}
       </div>
 
       {/* Combo deal banner */}

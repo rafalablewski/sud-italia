@@ -11,9 +11,9 @@ const CROSS_SELL_MAP: Record<MenuCategory, MenuCategory[]> = {
   desserts: ["drinks"],
 };
 
-// --- Popular item IDs per location (simulated social proof) ---
+// --- Default popular item IDs per location (used when no admin config exists) ---
 
-const POPULAR_ITEMS: Record<string, string[]> = {
+const DEFAULT_POPULAR_ITEMS: Record<string, string[]> = {
   krakow: [
     "krk-pizza-margherita",
     "krk-pizza-diavola",
@@ -30,7 +30,7 @@ const POPULAR_ITEMS: Record<string, string[]> = {
   ],
 };
 
-const STAFF_PICKS: Record<string, string[]> = {
+const DEFAULT_STAFF_PICKS: Record<string, string[]> = {
   krakow: ["krk-pizza-quattro-formaggi", "krk-anti-burrata", "krk-pasta-pesto"],
   warszawa: ["waw-pizza-napoli", "waw-anti-burrata", "waw-pasta-cacio-pepe"],
 };
@@ -39,10 +39,34 @@ const NEW_ITEMS: string[] = [];
 
 export type BadgeType = "popular" | "staff-pick" | "new" | "best-value";
 
-export function getItemBadges(itemId: string, locationSlug: string): BadgeType[] {
+// Configurable upsell config shape (matches LocationUpsellConfig from store)
+export interface UpsellConfig {
+  popularItems?: string[];
+  staffPicks?: string[];
+  preferredCoffee?: string;
+  preferredDessert?: string;
+  preferredDrink?: string;
+  combos?: {
+    id: string;
+    name: string;
+    description: string;
+    categories: string[];
+    discountPercent: number;
+    minItems: number;
+    active: boolean;
+  }[];
+}
+
+export function getItemBadges(
+  itemId: string,
+  locationSlug: string,
+  config?: UpsellConfig | null
+): BadgeType[] {
   const badges: BadgeType[] = [];
-  if (POPULAR_ITEMS[locationSlug]?.includes(itemId)) badges.push("popular");
-  if (STAFF_PICKS[locationSlug]?.includes(itemId)) badges.push("staff-pick");
+  const popular = config?.popularItems || DEFAULT_POPULAR_ITEMS[locationSlug] || [];
+  const staffPicks = config?.staffPicks || DEFAULT_STAFF_PICKS[locationSlug] || [];
+  if (popular.includes(itemId)) badges.push("popular");
+  if (staffPicks.includes(itemId)) badges.push("staff-pick");
   if (NEW_ITEMS.includes(itemId)) badges.push("new");
   return badges;
 }
@@ -64,18 +88,18 @@ export interface UpsellSuggestion {
   priority: number; // lower = shown first
 }
 
-// Preferred cross-sell items per location (deterministic, not random)
-const PREFERRED_COFFEE: Record<string, string> = {
+// Default preferred cross-sell items per location
+const DEFAULT_PREFERRED_COFFEE: Record<string, string> = {
   krakow: "krk-drink-espresso",
   warszawa: "waw-drink-espresso",
 };
 
-const PREFERRED_DESSERT: Record<string, string> = {
+const DEFAULT_PREFERRED_DESSERT: Record<string, string> = {
   krakow: "krk-dessert-tiramisu",
   warszawa: "waw-dessert-tiramisu",
 };
 
-const PREFERRED_DRINK: Record<string, string> = {
+const DEFAULT_PREFERRED_DRINK: Record<string, string> = {
   krakow: "krk-drink-limonata",
   warszawa: "waw-drink-limonata",
 };
@@ -83,7 +107,8 @@ const PREFERRED_DRINK: Record<string, string> = {
 export function getCartSuggestions(
   cartItems: CartItem[],
   allMenuItems: MenuItem[],
-  maxSuggestions: number = 4
+  maxSuggestions: number = 4,
+  config?: UpsellConfig | null
 ): UpsellSuggestion[] {
   if (cartItems.length === 0 || allMenuItems.length === 0) return [];
 
@@ -103,12 +128,16 @@ export function getCartSuggestions(
   const hasDrink = cartCategories.has("drinks");
   const hasDessert = cartCategories.has("desserts");
 
+  // Use admin config if available, otherwise defaults
+  const prefCoffee = config?.preferredCoffee || DEFAULT_PREFERRED_COFFEE[locationSlug];
+  const prefDessert = config?.preferredDessert || DEFAULT_PREFERRED_DESSERT[locationSlug];
+  const prefDrink = config?.preferredDrink || DEFAULT_PREFERRED_DRINK[locationSlug];
+
   const suggestions: UpsellSuggestion[] = [];
 
   // RULE 1: Always suggest espresso with pizza/pasta (highest priority)
   if (hasMain && !hasCoffee) {
-    const preferredId = PREFERRED_COFFEE[locationSlug];
-    const coffee = preferredId ? byId.get(preferredId) : null;
+    const coffee = prefCoffee ? byId.get(prefCoffee) : null;
     const anyCoffee = coffee || available.find((m) => m.id.includes("espresso"));
     if (anyCoffee) {
       suggestions.push({
@@ -121,8 +150,7 @@ export function getCartSuggestions(
 
   // RULE 2: Always suggest dessert with pizza/pasta
   if (hasMain && !hasDessert) {
-    const preferredId = PREFERRED_DESSERT[locationSlug];
-    const dessert = preferredId ? byId.get(preferredId) : null;
+    const dessert = prefDessert ? byId.get(prefDessert) : null;
     const anyDessert = dessert || available.find((m) => m.category === "desserts");
     if (anyDessert) {
       suggestions.push({
@@ -135,8 +163,7 @@ export function getCartSuggestions(
 
   // RULE 3: Suggest a refreshing drink if no drink at all
   if (hasMain && !hasDrink && !hasCoffee) {
-    const preferredId = PREFERRED_DRINK[locationSlug];
-    const drink = preferredId ? byId.get(preferredId) : null;
+    const drink = prefDrink ? byId.get(prefDrink) : null;
     const anyDrink = drink || available.find((m) => m.category === "drinks" && !m.id.includes("espresso"));
     if (anyDrink) {
       suggestions.push({
@@ -176,7 +203,8 @@ export interface ComboDeal {
   minItems: number;
 }
 
-export const COMBO_DEALS: ComboDeal[] = [
+// Default combos (used when no admin config exists for the location)
+export const DEFAULT_COMBO_DEALS: ComboDeal[] = [
   {
     id: "meal-deal",
     name: "Meal Deal",
@@ -203,15 +231,31 @@ export const COMBO_DEALS: ComboDeal[] = [
   },
 ];
 
-export function getActiveComboDeals(cartItems: CartItem[]): {
+// Keep backward-compatible export
+export const COMBO_DEALS = DEFAULT_COMBO_DEALS;
+
+export function getActiveComboDeals(
+  cartItems: CartItem[],
+  config?: UpsellConfig | null
+): {
   activeDeal: ComboDeal | null;
   savings: number;
   missingCategories: MenuCategory[];
   progress: number;
 } {
+  // Resolve combos: use admin config if available, otherwise defaults
+  const combos: ComboDeal[] = config?.combos
+    ? config.combos
+        .filter((c) => c.active)
+        .map((c) => ({
+          ...c,
+          categories: c.categories as MenuCategory[],
+        }))
+    : DEFAULT_COMBO_DEALS;
+
   const cartCategories = new Set(cartItems.map((ci) => ci.menuItem.category));
 
-  for (const deal of COMBO_DEALS) {
+  for (const deal of combos) {
     const matched = deal.categories.filter((c) => cartCategories.has(c));
     const missing = deal.categories.filter((c) => !cartCategories.has(c));
     const progress = matched.length / deal.categories.length;

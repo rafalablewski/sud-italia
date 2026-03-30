@@ -3,15 +3,17 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Container } from "@/components/ui/Container";
-import { Menu, X, MapPin, Star } from "lucide-react";
+import { Menu, X, MapPin, Star, User } from "lucide-react";
 import { SITE_NAME } from "@/lib/constants";
 import { getActiveLocations } from "@/data/locations";
 import { CartButton } from "@/components/cart/CartButton";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
+import { useCustomer } from "@/store/customer";
 
 export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const locations = getActiveLocations();
+  const { customer } = useCustomer();
 
   return (
     <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-gray-100">
@@ -43,13 +45,30 @@ export function Header() {
             >
               About
             </Link>
-            <Link
-              href="/rewards"
-              className="text-sm font-medium text-italia-gold-dark hover:text-italia-gold transition-colors flex items-center gap-1"
-            >
-              <Star className="h-3.5 w-3.5" />
-              Rewards
-            </Link>
+            {customer ? (
+              <Link
+                href="/rewards"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-italia-gold/10 hover:bg-italia-gold/20 transition-colors"
+              >
+                <div className="w-6 h-6 rounded-full bg-italia-gold/20 flex items-center justify-center">
+                  <User className="h-3.5 w-3.5 text-italia-gold-dark" />
+                </div>
+                <span className="text-sm font-semibold text-italia-gold-dark">
+                  {customer.name.split(" ")[0]}
+                </span>
+                <span className="text-[11px] font-bold text-italia-gold bg-italia-gold/15 px-2 py-0.5 rounded-full">
+                  {customer.points} pts
+                </span>
+              </Link>
+            ) : (
+              <Link
+                href="/rewards"
+                className="text-sm font-medium text-italia-gold-dark hover:text-italia-gold transition-colors flex items-center gap-1"
+              >
+                <Star className="h-3.5 w-3.5" />
+                Rewards
+              </Link>
+            )}
             {locations.map((loc) => (
               <Link
                 key={loc.slug}
@@ -98,14 +117,30 @@ export function Header() {
             >
               About
             </Link>
-            <Link
-              href="/rewards"
-              onClick={() => setMobileOpen(false)}
-              className="flex items-center gap-2 px-3 py-2.5 text-base font-medium text-italia-gold-dark hover:bg-amber-50 rounded-lg"
-            >
-              <Star className="h-4 w-4" />
-              Rewards
-            </Link>
+            {customer ? (
+              <Link
+                href="/rewards"
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center gap-3 px-3 py-2.5 text-base font-medium text-italia-gold-dark hover:bg-amber-50 rounded-lg"
+              >
+                <div className="w-8 h-8 rounded-full bg-italia-gold/15 flex items-center justify-center flex-shrink-0">
+                  <User className="h-4 w-4 text-italia-gold-dark" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="block text-sm font-semibold text-italia-dark truncate">{customer.name.split(" ")[0]}</span>
+                  <span className="block text-xs text-italia-gold-dark">{customer.points} pts earned</span>
+                </div>
+              </Link>
+            ) : (
+              <Link
+                href="/rewards"
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center gap-2 px-3 py-2.5 text-base font-medium text-italia-gold-dark hover:bg-amber-50 rounded-lg"
+              >
+                <Star className="h-4 w-4" />
+                Rewards
+              </Link>
+            )}
             <div className="border-t border-gray-100 pt-2 mt-2">
               {locations.map((loc) => (
                 <Link
