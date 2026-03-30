@@ -35,7 +35,11 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "Feedback not found" }, { status: 404 });
     }
     return NextResponse.json(updated);
-  } catch {
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+    }
+    console.error("PUT /api/admin/feedback error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

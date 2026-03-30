@@ -965,11 +965,16 @@ export async function addReferral(referral: Referral): Promise<Referral> {
   });
 }
 
-export async function deleteReferral(code: string): Promise<void> {
+export async function deleteReferral(code: string): Promise<boolean> {
   return withLock("referrals.json", async () => {
     const list = await readJSON<Referral[]>("referrals.json", []);
+    const initialLength = list.length;
     const filtered = list.filter((r) => r.code !== code);
+    if (filtered.length === initialLength) {
+      return false;
+    }
     await writeJSON("referrals.json", filtered);
+    return true;
   });
 }
 

@@ -69,7 +69,9 @@ export function AdminLoyalty() {
         body: JSON.stringify({ code }),
       });
       if (res.ok) refreshReferrals();
-    } catch {}
+    } catch (err) {
+      console.error("Failed to delete referral:", err);
+    }
   };
 
   const refreshMembers = useCallback(() => {

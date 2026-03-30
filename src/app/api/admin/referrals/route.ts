@@ -26,9 +26,13 @@ export async function DELETE(req: NextRequest) {
     if (!code) {
       return NextResponse.json({ error: "Missing referral code" }, { status: 400 });
     }
-    await deleteReferral(code);
+    const deleted = await deleteReferral(code);
+    if (!deleted) {
+      return NextResponse.json({ error: "Referral not found" }, { status: 404 });
+    }
     return NextResponse.json({ success: true });
-  } catch {
+  } catch (error) {
+    console.error("DELETE /api/admin/referrals error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
