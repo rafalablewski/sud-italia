@@ -21,23 +21,28 @@ const LIVE_ACTIVITY_KEYS: { key: keyof NonNullable<LoyaltySettings["liveActivity
   { key: "avgPrepTime", label: "Avg prep time" },
 ];
 
-const MOCK_FAQ = [
-  { keyword: "menu", response: "We serve authentic Neapolitan pizza, fresh pasta, antipasti...", hits: 342 },
-  { keyword: "hours", response: "Our hours vary by location: Kraków: Mon-Thu 11-21...", hits: 218 },
-  { keyword: "delivery", response: "Yes, we offer delivery! Minimum order 30 PLN...", hits: 189 },
-  { keyword: "vegetarian", response: "We have great vegetarian options! Try our Margherita...", hits: 134 },
-  { keyword: "allergen", response: "For specific allergen information, please ask our staff...", hits: 87 },
-  { keyword: "loyalty", response: "Join our Sud Italia Rewards program! Earn 1 point per PLN...", hits: 156 },
-];
+interface ChatbotFaq {
+  id: string;
+  keyword: string;
+  response: string;
+  hits: number;
+}
 
 export function AdminGrowth() {
   const [tab, setTab] = useState<Tab>("seasonal");
   const [locationFilter, setLocationFilter] = useState<string>("all");
   const [settings, setSettings] = useState<LoyaltySettings | null>(null);
   const [saving, setSaving] = useState(false);
+  const [faqs, setFaqs] = useState<ChatbotFaq[]>([]);
+  const [faqsLoading, setFaqsLoading] = useState(true);
 
   useEffect(() => {
     fetch("/api/admin/growth").then((r) => r.json()).then((d) => setSettings(d)).catch(() => {});
+    fetch("/api/admin/chatbot-faq")
+      .then((r) => r.json())
+      .then((d) => setFaqs(d))
+      .catch(() => {})
+      .finally(() => setFaqsLoading(false));
   }, []);
 
   const saveSettings = useCallback(async (updates: Partial<LoyaltySettings>) => {
@@ -183,15 +188,26 @@ export function AdminGrowth() {
             <div className="glass-card-static p-5">
               <div className="flex items-center justify-between mb-4"><h3 className="font-semibold admin-text flex items-center gap-2"><MessageCircle className="h-4 w-4 text-italia-green" />Chatbot Responses</h3><button className="glass-btn text-xs"><Plus className="h-3.5 w-3.5" /> Add Response</button></div>
               <div className="space-y-2">
-                {MOCK_FAQ.map((faq) => (
-                  <div key={faq.keyword} className="glass-card p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2"><span className="px-2 py-0.5 rounded-lg bg-italia-green/10 text-green-400 text-xs font-bold">{faq.keyword}</span><span className="text-xs admin-text-dim">{faq.hits} hits</span></div>
-                      <div className="flex items-center gap-2"><button className="text-slate-400 hover:text-white"><Edit3 className="h-3.5 w-3.5" /></button><button className="text-slate-400 hover:text-red-400"><Trash2 className="h-3.5 w-3.5" /></button></div>
-                    </div>
-                    <p className="text-xs admin-text-muted line-clamp-2">{faq.response}</p>
+                {faqsLoading ? (
+                  <div className="text-center py-8">
+                    <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-white/20 border-t-white/60" />
+                    <p className="text-sm admin-text-dim mt-2">Loading chatbot responses...</p>
                   </div>
-                ))}
+                ) : faqs.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-sm admin-text-dim">No chatbot responses yet. Click "Add Response" to create one.</p>
+                  </div>
+                ) : (
+                  faqs.map((faq) => (
+                    <div key={faq.id} className="glass-card p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2"><span className="px-2 py-0.5 rounded-lg bg-italia-green/10 text-green-400 text-xs font-bold">{faq.keyword}</span><span className="text-xs admin-text-dim">{faq.hits} hits</span></div>
+                        <div className="flex items-center gap-2"><button className="text-slate-400 hover:text-white"><Edit3 className="h-3.5 w-3.5" /></button><button className="text-slate-400 hover:text-red-400"><Trash2 className="h-3.5 w-3.5" /></button></div>
+                      </div>
+                      <p className="text-xs admin-text-muted line-clamp-2">{faq.response}</p>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
             <div className="glass-card-static p-5">

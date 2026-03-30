@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AdminNav } from "./AdminNav";
 import {
   MessageSquare,
@@ -31,69 +31,6 @@ interface FeedbackEntry {
   status: "new" | "reviewed" | "responded";
 }
 
-const MOCK_FEEDBACK: FeedbackEntry[] = [
-  {
-    id: "fb-1",
-    orderId: "SI-ABC123",
-    customerName: "Jan Kowalski",
-    customerPhone: "+48 123 456 789",
-    locationSlug: "krakow",
-    date: "2026-03-28",
-    overallRating: 5,
-    categoryRatings: { taste: 5, speed: 4, presentation: 5, value: 5, service: 5 },
-    comment: "Best pizza in Kraków! The Margherita was perfect. Will definitely come back.",
-    status: "new",
-  },
-  {
-    id: "fb-2",
-    orderId: "SI-DEF456",
-    customerName: "Anna Nowak",
-    customerPhone: "+48 987 654 321",
-    locationSlug: "warszawa",
-    date: "2026-03-27",
-    overallRating: 4,
-    categoryRatings: { taste: 5, speed: 3, presentation: 4, value: 4, service: 4 },
-    comment: "Food was excellent but had to wait 20 minutes. A bit long for takeout.",
-    status: "reviewed",
-  },
-  {
-    id: "fb-3",
-    orderId: "SI-GHI789",
-    customerName: "Piotr Wiśniewski",
-    customerPhone: "+48 555 123 456",
-    locationSlug: "krakow",
-    date: "2026-03-26",
-    overallRating: 3,
-    categoryRatings: { taste: 4, speed: 2, presentation: 3, value: 3, service: 3 },
-    comment: "Carbonara was decent but lukewarm when I received it. Delivery took too long.",
-    status: "responded",
-  },
-  {
-    id: "fb-4",
-    orderId: "SI-JKL012",
-    customerName: "Maria Lewandowska",
-    customerPhone: "+48 111 222 333",
-    locationSlug: "warszawa",
-    date: "2026-03-25",
-    overallRating: 5,
-    categoryRatings: { taste: 5, speed: 5, presentation: 5, value: 4, service: 5 },
-    comment: "Amazing! The truffle pizza was out of this world. Staff were so friendly!",
-    status: "new",
-  },
-  {
-    id: "fb-5",
-    orderId: "SI-MNO345",
-    customerName: "Tomasz Zieliński",
-    customerPhone: "+48 444 555 666",
-    locationSlug: "krakow",
-    date: "2026-03-24",
-    overallRating: 2,
-    categoryRatings: { taste: 3, speed: 1, presentation: 2, value: 2, service: 2 },
-    comment: "Order was wrong — got Diavola instead of Margherita. Had to wait again for the correction.",
-    status: "new",
-  },
-];
-
 const STATUS_BADGE: Record<string, string> = {
   new: "badge-warning",
   reviewed: "badge-info",
@@ -115,25 +52,97 @@ function StarDisplay({ rating }: { rating: number }) {
   );
 }
 
+function SkeletonCard() {
+  return (
+    <div className="glass-card p-5 animate-pulse">
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <div className="h-4 w-32 bg-white/10 rounded mb-2" />
+          <div className="h-3 w-48 bg-white/10 rounded" />
+        </div>
+        <div className="h-4 w-20 bg-white/10 rounded" />
+      </div>
+      <div className="flex gap-3 mb-3">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <div key={i} className="h-6 w-16 bg-white/10 rounded-lg" />
+        ))}
+      </div>
+      <div className="h-4 w-full bg-white/10 rounded mb-2" />
+      <div className="h-4 w-3/4 bg-white/10 rounded" />
+    </div>
+  );
+}
+
+function SkeletonStat() {
+  return (
+    <div className="glass-card p-4 animate-pulse">
+      <div className="h-7 w-12 bg-white/10 rounded mb-1" />
+      <div className="h-3 w-20 bg-white/10 rounded" />
+    </div>
+  );
+}
+
 export function AdminFeedback() {
+  const [feedback, setFeedback] = useState<FeedbackEntry[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "new" | "reviewed" | "responded">("all");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const filtered = MOCK_FEEDBACK.filter((f) => {
+  useEffect(() => {
+    fetch("/api/admin/feedback")
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch feedback");
+        return res.json();
+      })
+      .then((data: FeedbackEntry[]) => {
+        setFeedback(data);
+      })
+      .catch((err) => {
+        console.error("Error fetching feedback:", err);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  const filtered = feedback.filter((f) => {
     if (filter !== "all" && f.status !== filter) return false;
     if (searchQuery && !f.customerName.toLowerCase().includes(searchQuery.toLowerCase()) && !f.comment.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });
 
-  const avgRating = MOCK_FEEDBACK.reduce((s, f) => s + f.overallRating, 0) / MOCK_FEEDBACK.length;
-  const categoryAvgs: Record<string, number> = {};
+  const avgRating = feedback.length > 0
+    ? feedback.reduce((s, f) => s + f.overallRating, 0) / feedback.length
+    : 0;
+
   const categories = ["taste", "speed", "presentation", "value", "service"];
+  const categoryAvgs: Record<string, number> = {};
   for (const cat of categories) {
-    categoryAvgs[cat] = MOCK_FEEDBACK.reduce((s, f) => s + (f.categoryRatings[cat] || 0), 0) / MOCK_FEEDBACK.length;
+    const entries = feedback.filter((f) => f.categoryRatings[cat] != null);
+    categoryAvgs[cat] = entries.length > 0
+      ? entries.reduce((s, f) => s + (f.categoryRatings[cat] || 0), 0) / entries.length
+      : 0;
   }
 
-  const newCount = MOCK_FEEDBACK.filter((f) => f.status === "new").length;
-  const lowRating = MOCK_FEEDBACK.filter((f) => f.overallRating <= 2).length;
+  const newCount = feedback.filter((f) => f.status === "new").length;
+  const lowRating = feedback.filter((f) => f.overallRating <= 2).length;
+  const respondedCount = feedback.filter((f) => f.status === "responded").length;
+  const responseRate = feedback.length > 0
+    ? Math.round((respondedCount / feedback.length) * 100)
+    : 0;
+
+  async function handleUpdateStatus(id: string, status: FeedbackEntry["status"]) {
+    try {
+      const res = await fetch("/api/admin/feedback", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status }),
+      });
+      if (!res.ok) throw new Error("Failed to update");
+      const updated: FeedbackEntry = await res.json();
+      setFeedback((prev) => prev.map((f) => (f.id === id ? updated : f)));
+    } catch (err) {
+      console.error("Error updating feedback status:", err);
+    }
+  }
 
   return (
     <>
@@ -152,26 +161,42 @@ export function AdminFeedback() {
 
         {/* Stats row */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
-          <div className="glass-card p-4">
-            <p className="text-2xl font-bold text-italia-gold">{avgRating.toFixed(1)}</p>
-            <p className="text-xs admin-text-dim">Average Rating</p>
-          </div>
-          <div className="glass-card p-4">
-            <p className="text-2xl font-bold admin-text">{MOCK_FEEDBACK.length}</p>
-            <p className="text-xs admin-text-dim">Total Reviews</p>
-          </div>
-          <div className="glass-card p-4">
-            <p className="text-2xl font-bold text-amber-400">{newCount}</p>
-            <p className="text-xs admin-text-dim">Awaiting Review</p>
-          </div>
-          <div className="glass-card p-4">
-            <p className="text-2xl font-bold text-red-400">{lowRating}</p>
-            <p className="text-xs admin-text-dim">Low Ratings (≤2)</p>
-          </div>
-          <div className="glass-card p-4">
-            <p className="text-2xl font-bold text-green-400">92%</p>
-            <p className="text-xs admin-text-dim">Response Rate</p>
-          </div>
+          {loading ? (
+            <>
+              <SkeletonStat />
+              <SkeletonStat />
+              <SkeletonStat />
+              <SkeletonStat />
+              <SkeletonStat />
+            </>
+          ) : (
+            <>
+              <div className="glass-card p-4">
+                <p className="text-2xl font-bold text-italia-gold">
+                  {feedback.length > 0 ? avgRating.toFixed(1) : "\u2014"}
+                </p>
+                <p className="text-xs admin-text-dim">Average Rating</p>
+              </div>
+              <div className="glass-card p-4">
+                <p className="text-2xl font-bold admin-text">{feedback.length}</p>
+                <p className="text-xs admin-text-dim">Total Reviews</p>
+              </div>
+              <div className="glass-card p-4">
+                <p className="text-2xl font-bold text-amber-400">{newCount}</p>
+                <p className="text-xs admin-text-dim">Awaiting Review</p>
+              </div>
+              <div className="glass-card p-4">
+                <p className="text-2xl font-bold text-red-400">{lowRating}</p>
+                <p className="text-xs admin-text-dim">Low Ratings (&le;2)</p>
+              </div>
+              <div className="glass-card p-4">
+                <p className="text-2xl font-bold text-green-400">
+                  {feedback.length > 0 ? `${responseRate}%` : "\u2014"}
+                </p>
+                <p className="text-xs admin-text-dim">Response Rate</p>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Category breakdown */}
@@ -180,26 +205,38 @@ export function AdminFeedback() {
             <TrendingUp className="h-4 w-4 text-blue-400" />
             Category Averages
           </h3>
-          <div className="grid grid-cols-5 gap-4">
-            {categories.map((cat) => {
-              const avg = categoryAvgs[cat];
-              const isLow = avg < 3.5;
-              return (
+          {loading ? (
+            <div className="grid grid-cols-5 gap-4 animate-pulse">
+              {categories.map((cat) => (
                 <div key={cat} className="text-center">
-                  <p className={`text-xl font-bold ${isLow ? "text-red-400" : "text-green-400"}`}>
-                    {avg.toFixed(1)}
-                  </p>
-                  <p className="text-xs admin-text-dim capitalize">{cat}</p>
-                  <div className="w-full h-1 bg-white/10 rounded-full mt-1 overflow-hidden">
-                    <div
-                      className={`h-full rounded-full ${isLow ? "bg-red-400" : "bg-green-400"}`}
-                      style={{ width: `${(avg / 5) * 100}%` }}
-                    />
-                  </div>
+                  <div className="h-6 w-10 bg-white/10 rounded mx-auto mb-1" />
+                  <div className="h-3 w-16 bg-white/10 rounded mx-auto mb-1" />
+                  <div className="w-full h-1 bg-white/10 rounded-full mt-1" />
                 </div>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-5 gap-4">
+              {categories.map((cat) => {
+                const avg = categoryAvgs[cat];
+                const isLow = avg < 3.5;
+                return (
+                  <div key={cat} className="text-center">
+                    <p className={`text-xl font-bold ${feedback.length === 0 ? "admin-text-dim" : isLow ? "text-red-400" : "text-green-400"}`}>
+                      {feedback.length > 0 ? avg.toFixed(1) : "\u2014"}
+                    </p>
+                    <p className="text-xs admin-text-dim capitalize">{cat}</p>
+                    <div className="w-full h-1 bg-white/10 rounded-full mt-1 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${isLow ? "bg-red-400" : "bg-green-400"}`}
+                        style={{ width: `${(avg / 5) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Filter + search */}
@@ -238,68 +275,89 @@ export function AdminFeedback() {
 
         {/* Feedback list */}
         <div className="space-y-3">
-          {filtered.map((fb) => (
-            <div key={fb.id} className={`glass-card p-5 ${fb.overallRating <= 2 ? "border-l-2 border-l-red-400" : ""}`}>
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="font-semibold admin-text">{fb.customerName}</p>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${STATUS_BADGE[fb.status]}`}>
-                        {fb.status}
-                      </span>
-                    </div>
-                    <p className="text-xs admin-text-dim">
-                      {fb.locationSlug} &middot; {fb.date} &middot; Order {fb.orderId}
-                    </p>
-                  </div>
-                </div>
-                <StarDisplay rating={fb.overallRating} />
-              </div>
-
-              {/* Category mini-ratings */}
-              <div className="flex gap-3 mb-3 flex-wrap">
-                {Object.entries(fb.categoryRatings).map(([cat, rating]) => (
-                  <span
-                    key={cat}
-                    className={`text-[10px] px-2 py-1 rounded-lg font-medium ${
-                      rating >= 4
-                        ? "bg-green-500/10 text-green-400"
-                        : rating >= 3
-                          ? "bg-amber-500/10 text-amber-400"
-                          : "bg-red-500/10 text-red-400"
-                    }`}
-                  >
-                    {cat}: {rating}/5
-                  </span>
-                ))}
-              </div>
-
-              {/* Comment */}
-              <p className="text-sm admin-text-muted leading-relaxed mb-3">
-                &ldquo;{fb.comment}&rdquo;
+          {loading ? (
+            <>
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </>
+          ) : filtered.length === 0 ? (
+            <div className="glass-card p-8 text-center">
+              <MessageSquare className="h-8 w-8 text-slate-500 mx-auto mb-2" />
+              <p className="admin-text-dim text-sm">
+                {feedback.length === 0 ? "No feedback yet." : "No feedback matches your filters."}
               </p>
-
-              {/* Actions */}
-              <div className="flex items-center gap-2">
-                {fb.status === "new" && (
-                  <>
-                    <button className="glass-btn-green text-xs">
-                      <Check className="h-3.5 w-3.5" /> Mark Reviewed
-                    </button>
-                    <button className="glass-btn-blue text-xs">
-                      <Reply className="h-3.5 w-3.5" /> Respond
-                    </button>
-                  </>
-                )}
-                {fb.overallRating <= 2 && (
-                  <button className="glass-btn text-xs">
-                    <AlertTriangle className="h-3.5 w-3.5" /> Flag for Follow-up
-                  </button>
-                )}
-              </div>
             </div>
-          ))}
+          ) : (
+            filtered.map((fb) => (
+              <div key={fb.id} className={`glass-card p-5 ${fb.overallRating <= 2 ? "border-l-2 border-l-red-400" : ""}`}>
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold admin-text">{fb.customerName}</p>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${STATUS_BADGE[fb.status]}`}>
+                          {fb.status}
+                        </span>
+                      </div>
+                      <p className="text-xs admin-text-dim">
+                        {fb.locationSlug} &middot; {fb.date} &middot; Order {fb.orderId}
+                      </p>
+                    </div>
+                  </div>
+                  <StarDisplay rating={fb.overallRating} />
+                </div>
+
+                {/* Category mini-ratings */}
+                <div className="flex gap-3 mb-3 flex-wrap">
+                  {Object.entries(fb.categoryRatings).map(([cat, rating]) => (
+                    <span
+                      key={cat}
+                      className={`text-[10px] px-2 py-1 rounded-lg font-medium ${
+                        rating >= 4
+                          ? "bg-green-500/10 text-green-400"
+                          : rating >= 3
+                            ? "bg-amber-500/10 text-amber-400"
+                            : "bg-red-500/10 text-red-400"
+                      }`}
+                    >
+                      {cat}: {rating}/5
+                    </span>
+                  ))}
+                </div>
+
+                {/* Comment */}
+                <p className="text-sm admin-text-muted leading-relaxed mb-3">
+                  &ldquo;{fb.comment}&rdquo;
+                </p>
+
+                {/* Actions */}
+                <div className="flex items-center gap-2">
+                  {fb.status === "new" && (
+                    <>
+                      <button
+                        className="glass-btn-green text-xs"
+                        onClick={() => handleUpdateStatus(fb.id, "reviewed")}
+                      >
+                        <Check className="h-3.5 w-3.5" /> Mark Reviewed
+                      </button>
+                      <button
+                        className="glass-btn-blue text-xs"
+                        onClick={() => handleUpdateStatus(fb.id, "responded")}
+                      >
+                        <Reply className="h-3.5 w-3.5" /> Respond
+                      </button>
+                    </>
+                  )}
+                  {fb.overallRating <= 2 && (
+                    <button className="glass-btn text-xs">
+                      <AlertTriangle className="h-3.5 w-3.5" /> Flag for Follow-up
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </>

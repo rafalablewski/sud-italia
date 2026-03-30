@@ -5,20 +5,42 @@ import { usePathname, useRouter } from "next/navigation";
 import { CalendarDays, ClipboardList, LayoutDashboard, LogOut, BarChart3, Bell, UtensilsCrossed, FlaskConical, Settings, Brain, Map, Rocket, MessageSquare, Heart } from "lucide-react";
 import { useState, useEffect } from "react";
 
-const navItems = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/menu", label: "Menu", icon: UtensilsCrossed },
-  { href: "/admin/recipes", label: "Recipes", icon: FlaskConical },
-  { href: "/admin/slots", label: "Slots", icon: CalendarDays },
-  { href: "/admin/orders", label: "Orders", icon: ClipboardList },
-  { href: "/admin/reports", label: "Reports", icon: BarChart3 },
-  { href: "/admin/loyalty", label: "Loyalty", icon: Heart },
-  { href: "/admin/growth", label: "Growth", icon: Rocket },
-  { href: "/admin/feedback", label: "Feedback", icon: MessageSquare },
-  { href: "/admin/ai", label: "AI", icon: Brain },
-  { href: "/admin/expansion", label: "Expansion", icon: Map },
-  { href: "/admin/settings", label: "Settings", icon: Settings },
+const navGroups = [
+  {
+    label: "Overview",
+    items: [
+      { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+    ],
+  },
+  {
+    label: "Operations",
+    items: [
+      { href: "/admin/menu", label: "Menu", icon: UtensilsCrossed },
+      { href: "/admin/recipes", label: "Recipes", icon: FlaskConical },
+      { href: "/admin/slots", label: "Slots", icon: CalendarDays },
+      { href: "/admin/orders", label: "Orders", icon: ClipboardList },
+    ],
+  },
+  {
+    label: "Analytics",
+    items: [
+      { href: "/admin/reports", label: "Reports", icon: BarChart3 },
+      { href: "/admin/loyalty", label: "Loyalty", icon: Heart },
+      { href: "/admin/growth", label: "Growth", icon: Rocket },
+      { href: "/admin/feedback", label: "Feedback", icon: MessageSquare },
+    ],
+  },
+  {
+    label: "System",
+    items: [
+      { href: "/admin/ai", label: "AI", icon: Brain },
+      { href: "/admin/expansion", label: "Expansion", icon: Map },
+      { href: "/admin/settings", label: "Settings", icon: Settings },
+    ],
+  },
 ];
+
+const navItems = navGroups.flatMap((g) => g.items);
 
 export function AdminNav() {
   const pathname = usePathname();
@@ -55,23 +77,30 @@ export function AdminNav() {
           </Link>
 
           <div className="hidden lg:flex items-center gap-0.5">
-            {navItems.map((item) => {
-              const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    isActive
-                      ? "bg-white/12 text-white shadow-sm shadow-white/5"
-                      : "text-slate-400 hover:text-white hover:bg-white/6"
-                  }`}
-                >
-                  <item.icon className="h-3.5 w-3.5" />
-                  {item.label}
-                </Link>
-              );
-            })}
+            {navGroups.map((group, gi) => (
+              <div key={group.label} className="flex items-center gap-0.5">
+                {gi > 0 && (
+                  <span className="w-px h-5 bg-white/10 mx-1.5" />
+                )}
+                {group.items.map((item) => {
+                  const isActive = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                        isActive
+                          ? "bg-white/12 text-white shadow-sm shadow-white/5"
+                          : "text-slate-400 hover:text-white hover:bg-white/6"
+                      }`}
+                    >
+                      <item.icon className="h-3.5 w-3.5" />
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            ))}
           </div>
         </div>
 
