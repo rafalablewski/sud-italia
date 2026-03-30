@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { AdminNav } from "./AdminNav";
 import { TrendingUp, MapPin, Star, Coffee, IceCream, GlassWater, Plus, Trash2, Check, Save } from "lucide-react";
 import { krakowMenu } from "@/data/menus/krakow";
 import { warszawaMenu } from "@/data/menus/warszawa";
@@ -355,15 +356,20 @@ export function AdminUpsell() {
 
   if (loading) {
     return (
-      <div className="max-w-5xl mx-auto p-6">
-        <div className="glass-card p-12 text-center">
-          <p className="admin-text animate-pulse">Loading upsell settings...</p>
+      <>
+        <AdminNav />
+        <div className="max-w-5xl mx-auto p-6">
+          <div className="glass-card p-12 text-center">
+            <p className="admin-text animate-pulse">Loading upsell settings...</p>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   return (
+    <>
+    <AdminNav />
     <div className="max-w-5xl mx-auto p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -479,5 +485,6 @@ export function AdminUpsell() {
         />
       </div>
     </div>
+    </>
   );
 }
