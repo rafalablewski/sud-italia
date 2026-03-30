@@ -185,15 +185,34 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      return NextResponse.json({ url: session.url, orderId });
+      const stripeResponse = NextResponse.json({ url: session.url, orderId });
+      stripeResponse.cookies.set("sud-italia-customer", customerPhone.trim(), {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 60 * 60 * 24 * 365,
+        path: "/",
+      });
+      return stripeResponse;
     }
 
     // Fallback: no Stripe configured — return order ID directly (demo mode)
-    return NextResponse.json({
+    const response = NextResponse.json({
       orderId,
       total: calculatedTotal,
       message: "Order placed successfully (demo mode — no payment configured)",
     });
+
+    // Set cookie so we recognize this customer on next visit (no login needed)
+    response.cookies.set("sud-italia-customer", customerPhone.trim(), {
+      httpOnly: false, // needs to be readable client-side for reorder
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 365, // 1 year
+      path: "/",
+    });
+
+    return response;
   } catch (error) {
     console.error("Checkout error:", error);
     return NextResponse.json(

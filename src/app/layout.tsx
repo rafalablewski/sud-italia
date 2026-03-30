@@ -17,6 +17,12 @@ export const metadata: Metadata = {
     "pizza Kraków",
     "pizza Warszawa",
   ],
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: SITE_NAME,
+  },
 };
 
 export default function RootLayout({
@@ -25,7 +31,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full">
+    <html lang="pl" className="h-full">
       <body className="min-h-full flex flex-col antialiased">
         {children}
       </body>

@@ -729,6 +729,68 @@ export async function updateSettings(updates: Partial<AppSettings>): Promise<App
   });
 }
 
+// --- Growth & Loyalty Settings ---
+
+export interface LoyaltySettings {
+  tiers: {
+    bronze: { threshold: number; multiplier: number; perks: string[] };
+    silver: { threshold: number; multiplier: number; perks: string[] };
+    gold: { threshold: number; multiplier: number; perks: string[] };
+    platinum: { threshold: number; multiplier: number; perks: string[] };
+  };
+  rewards: { id: string; name: string; pointsCost: number; description: string; active: boolean }[];
+  referral: { referrerPoints: number; refereeDiscountGrosze: number; active: boolean };
+  speedGuarantee: { maxMinutes: number; guaranteeText: string; active: boolean };
+  abandonedCart: { delaySeconds: number; message: string; active: boolean };
+  challenges: { id: string; title: string; description: string; target: number; rewardPoints: number; type: string; active: boolean }[];
+  seasonalItems: { id: string; name: string; description: string; category: string; price: number; availableUntil: string; badge: string; active: boolean; locationSlug?: string }[];
+  liveActivity: { ordersInLastHour: boolean; currentlyPreparing: boolean; trendingItem: boolean; avgPrepTime: boolean };
+}
+
+const DEFAULT_LOYALTY_SETTINGS: LoyaltySettings = {
+  tiers: {
+    bronze: { threshold: 0, multiplier: 1, perks: ["1 point per 1 PLN spent"] },
+    silver: { threshold: 500, multiplier: 1.5, perks: ["1.5x points multiplier", "Free birthday dessert"] },
+    gold: { threshold: 1500, multiplier: 2, perks: ["2x points multiplier", "Priority ordering", "Free delivery"] },
+    platinum: { threshold: 5000, multiplier: 3, perks: ["3x points multiplier", "Exclusive menu items", "VIP events"] },
+  },
+  rewards: [
+    { id: "free-drink", name: "Free Drink", pointsCost: 50, description: "Any drink from the menu", active: true },
+    { id: "10-off", name: "10 PLN Off", pointsCost: 100, description: "Discount on your next order", active: true },
+    { id: "free-dessert", name: "Free Dessert", pointsCost: 120, description: "Any dessert from the menu", active: true },
+    { id: "free-pizza", name: "Free Pizza", pointsCost: 250, description: "Any pizza from the menu", active: true },
+    { id: "25-off", name: "25 PLN Off", pointsCost: 250, description: "Big discount on your next order", active: true },
+  ],
+  referral: { referrerPoints: 100, refereeDiscountGrosze: 1000, active: true },
+  speedGuarantee: { maxMinutes: 15, guaranteeText: "Ready in 15 minutes or your next drink is free", active: true },
+  abandonedCart: { delaySeconds: 30, message: "Still hungry? 🍕", active: true },
+  challenges: [
+    { id: "ch-pasta-week", title: "Pasta Week", description: "Order any pasta dish 2 times this week", target: 2, rewardPoints: 40, type: "category", active: true },
+    { id: "ch-bring-friend", title: "Bring a Friend", description: "Refer 1 friend who places an order", target: 1, rewardPoints: 50, type: "referral", active: true },
+    { id: "ch-triple-order", title: "Hat Trick", description: "Place 3 orders this week", target: 3, rewardPoints: 60, type: "order-count", active: true },
+  ],
+  seasonalItems: [
+    { id: "s1", name: "Tartufo Nero", description: "Black truffle cream, fior di latte, Parmigiano, truffle oil, fresh arugula", category: "pizza", price: 4500, availableUntil: "2026-04-30", badge: "Spring Special", active: true, locationSlug: "krakow" },
+    { id: "s2", name: "Panna Cotta al Limoncello", description: "Limoncello-infused panna cotta with candied lemon zest and Amalfi lemon coulis", category: "desserts", price: 2200, availableUntil: "2026-04-30", badge: "Limited Edition", active: true, locationSlug: "krakow" },
+    { id: "s3", name: "Risotto Primavera", description: "Carnaroli rice with asparagus, peas, mint, and shaved Parmigiano Reggiano", category: "pasta", price: 3200, availableUntil: "2026-05-31", badge: "Chef's Creation", active: true, locationSlug: "warszawa" },
+  ],
+  liveActivity: { ordersInLastHour: true, currentlyPreparing: true, trendingItem: true, avgPrepTime: true },
+};
+
+export async function getLoyaltySettings(): Promise<LoyaltySettings> {
+  const saved = await readJSON<Partial<LoyaltySettings>>("loyalty-settings.json", {});
+  return { ...DEFAULT_LOYALTY_SETTINGS, ...saved };
+}
+
+export async function updateLoyaltySettings(updates: Partial<LoyaltySettings>): Promise<LoyaltySettings> {
+  return withLock("loyalty-settings.json", async () => {
+    const current = await readJSON<Partial<LoyaltySettings>>("loyalty-settings.json", {});
+    const merged = { ...DEFAULT_LOYALTY_SETTINGS, ...current, ...updates };
+    await writeJSON("loyalty-settings.json", merged);
+    return merged;
+  });
+}
+
 // --- Ingredients ---
 
 export async function getIngredients(): Promise<Ingredient[]> {
@@ -811,4 +873,69 @@ export async function calculateFoodCost(menuItemId: string): Promise<number> {
 
   // Cost per portion
   return Math.round(totalCost / (recipe.yieldPortions || 1));
+}
+
+// --- Loyalty Members (phone-only signups without orders) ---
+
+export interface LoyaltyMember {
+  phone: string;
+  name: string;
+  email?: string;
+  signedUpAt: string;
+}
+
+export async function getLoyaltyMembers(): Promise<LoyaltyMember[]> {
+  return readJSON<LoyaltyMember[]>("loyalty-members.json", []);
+}
+
+export async function addLoyaltyMember(member: LoyaltyMember): Promise<LoyaltyMember> {
+  return withLock("loyalty-members.json", async () => {
+    const list = await readJSON<LoyaltyMember[]>("loyalty-members.json", []);
+    // Don't add duplicates
+    if (list.some((m) => m.phone === member.phone)) return member;
+    list.push(member);
+    await writeJSON("loyalty-members.json", list);
+    return member;
+  });
+}
+
+export async function getLoyaltyMember(phone: string): Promise<LoyaltyMember | undefined> {
+  const list = await readJSON<LoyaltyMember[]>("loyalty-members.json", []);
+  return list.find((m) => m.phone === phone);
+}
+
+// --- Point Adjustments (manual add/remove by admin) ---
+
+export interface PointAdjustment {
+  phone: string;
+  amount: number;
+  reason: string;
+  adjustedBy: string;
+  adjustedAt: string;
+}
+
+export async function getPointAdjustments(): Promise<PointAdjustment[]> {
+  return readJSON<PointAdjustment[]>("point-adjustments.json", []);
+}
+
+export async function addPointAdjustment(adj: PointAdjustment): Promise<void> {
+  return withLock("point-adjustments.json", async () => {
+    const list = await readJSON<PointAdjustment[]>("point-adjustments.json", []);
+    list.push(adj);
+    await writeJSON("point-adjustments.json", list);
+  });
+}
+
+export async function getManualPointsTotal(phone: string): Promise<number> {
+  const all = await getPointAdjustments();
+  return all.filter((a) => a.phone === phone).reduce((sum, a) => sum + a.amount, 0);
+}
+
+export async function getAllManualPoints(): Promise<Record<string, number>> {
+  const all = await getPointAdjustments();
+  const byPhone: Record<string, number> = {};
+  for (const adj of all) {
+    byPhone[adj.phone] = (byPhone[adj.phone] || 0) + adj.amount;
+  }
+  return byPhone;
 }

@@ -4,19 +4,27 @@ import { Sheet } from "@/components/ui/Sheet";
 import { Button } from "@/components/ui/Button";
 import { useCartStore } from "@/store/cart";
 import { CartItemRow } from "./CartItem";
+import { CartUpsell } from "./CartUpsell";
+import { DeliveryProgress } from "./DeliveryProgress";
+import { ComboDealBanner } from "./ComboDealBanner";
+import { LoyaltyEarnPreview } from "./LoyaltyEarnPreview";
 import { formatPrice } from "@/lib/utils";
+import { getCartSuggestions, getActiveComboDeals } from "@/lib/upsell";
 import { ShoppingCart, Trash2, Package, Truck } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { SlotPicker } from "./SlotPicker";
+import { krakowMenu } from "@/data/menus/krakow";
+import { warszawaMenu } from "@/data/menus/warszawa";
 
 interface CartDrawerProps {
   open: boolean;
   onClose: () => void;
+  allMenuItems?: import("@/data/types").MenuItem[];
 }
 
 const PHONE_PATTERN = /^[\d\s\-()]{7,}$/;
 
-export function CartDrawer({ open, onClose }: CartDrawerProps) {
+export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps) {
   const items = useCartStore((s) => s.items);
   const getTotal = useCartStore((s) => s.getTotal);
   const clearCart = useCartStore((s) => s.clearCart);
@@ -31,16 +39,40 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
 
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [phoneError, setPhoneError] = useState(false);
 
-  const total = getTotal();
+  const subtotal = getTotal();
+
+  // Apply combo deal discount to actual total
+  const comboResult = useMemo(() => getActiveComboDeals(items), [items]);
+  const comboDiscount = comboResult.missingCategories.length === 0 ? comboResult.savings : 0;
+  const total = subtotal - comboDiscount;
+
   const isPhoneValid = PHONE_PATTERN.test(customerPhone.trim());
   const canCheckout =
     customerName.trim().length > 0 &&
     isPhoneValid &&
     selectedSlotId !== null &&
     (fulfillmentType !== "delivery" || deliveryAddress.trim().length > 0);
+
+  // Resolve menu items — use prop if available, otherwise look up by location
+  const resolvedMenuItems = useMemo(() => {
+    if (allMenuItems.length > 0) return allMenuItems;
+    // Fallback: load from hardcoded menus based on cart's location
+    const menus: Record<string, import("@/data/types").MenuItem[]> = {
+      krakow: krakowMenu,
+      warszawa: warszawaMenu,
+    };
+    return locationSlug ? menus[locationSlug] || [] : [];
+  }, [allMenuItems, locationSlug]);
+
+  // Cross-sell suggestions — always have menu items to work with now
+  const suggestions = useMemo(
+    () => getCartSuggestions(items, resolvedMenuItems, 4),
+    [items, resolvedMenuItems]
+  );
 
   const handlePhoneChange = (value: string) => {
     setCustomerPhone(value);
@@ -74,12 +106,15 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
           slotDate: selectedSlotDate,
           slotTime: selectedSlotTime,
           deliveryAddress: fulfillmentType === "delivery" ? deliveryAddress.trim() : undefined,
+          customerEmail: customerEmail.trim() || undefined,
         }),
       });
 
       const data = await res.json();
 
       if (data.url) {
+        // Loyalty auto-enrollment happens server-side via the checkout API
+        // (phone number is stored with the order in the database)
         window.location.href = data.url;
       } else if (data.orderId) {
         clearCart();
@@ -118,6 +153,15 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
           <CartItemRow key={item.menuItem.id} item={item} />
         ))}
       </div>
+
+      {/* Combo deal banner */}
+      <ComboDealBanner cartItems={items} />
+
+      {/* Cross-sell suggestions */}
+      <CartUpsell suggestions={suggestions} />
+
+      {/* Delivery progress bar */}
+      <DeliveryProgress cartTotal={total} fulfillmentType={fulfillmentType} />
 
       {/* Fulfillment type selector */}
       <div className="px-5 mt-4 mb-3">
@@ -197,6 +241,14 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
               }`}
             />
           </div>
+          {/* Optional email — subtle, not required */}
+          <input
+            type="email"
+            placeholder="Email for exclusive discounts & offers (optional)"
+            value={customerEmail}
+            onChange={(e) => setCustomerEmail(e.target.value)}
+            className="pub-input min-h-[44px] text-sm text-italia-gray"
+          />
         </div>
         {phoneError && (
           <p className="text-xs text-italia-red">
@@ -204,6 +256,18 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
           </p>
         )}
 
+        {comboDiscount > 0 && (
+          <div className="space-y-1 pt-1">
+            <div className="flex justify-between items-center text-sm text-italia-gray">
+              <span>Subtotal</span>
+              <span>{formatPrice(subtotal)}</span>
+            </div>
+            <div className="flex justify-between items-center text-sm text-italia-green font-medium">
+              <span>Meal Deal -{comboResult.activeDeal?.discountPercent}%</span>
+              <span>-{formatPrice(comboDiscount)}</span>
+            </div>
+          </div>
+        )}
         <div className="flex justify-between items-center text-lg font-bold pt-1">
           <span>Total</span>
           <span className="text-italia-red">{formatPrice(total)}</span>
@@ -215,6 +279,9 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
             <span className="font-semibold text-italia-dark">{selectedSlotTime}</span>
           </p>
         )}
+
+        {/* Loyalty points preview — shows what they'll earn */}
+        <LoyaltyEarnPreview cartTotal={total} />
 
         <Button
           onClick={handleCheckout}

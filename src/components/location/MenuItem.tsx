@@ -4,9 +4,15 @@ import { MenuItem as MenuItemType } from "@/data/types";
 import { CATEGORY_ICONS, CATEGORY_COLORS } from "@/data/menu-ui";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { MenuItemImage } from "./MenuItemImage";
 import { formatPrice } from "@/lib/utils";
+import { getItemBadges, BADGE_CONFIG, BadgeType } from "@/lib/upsell";
+import { StarRating } from "@/components/rating/StarRating";
+import { getItemRating } from "@/data/ratings";
+import { getItemDetails } from "@/data/kodawari";
+import { ItemDetailDrawer } from "./ItemDetailDrawer";
 import { useCartStore } from "@/store/cart";
-import { Plus, Minus, Check } from "lucide-react";
+import { Plus, Minus, Check, TrendingUp, Award, Zap, Star, Clock, Flame, Info } from "lucide-react";
 import { useState, useEffect } from "react";
 
 interface MenuItemProps {
@@ -21,16 +27,28 @@ const TAG_LABELS: Record<string, { label: string; variant: "green" | "red" | "go
   "gluten-free": { label: "GF", variant: "gold" },
 };
 
+const BADGE_ICONS: Record<BadgeType, React.ElementType> = {
+  popular: TrendingUp,
+  "staff-pick": Award,
+  new: Zap,
+  "best-value": Star,
+};
+
 export function MenuItemCard({ item, locationSlug }: MenuItemProps) {
   const addItem = useCartStore((s) => s.addItem);
   const removeItem = useCartStore((s) => s.removeItem);
   const updateQuantity = useCartStore((s) => s.updateQuantity);
   const cartItems = useCartStore((s) => s.items);
   const [justAdded, setJustAdded] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   const cartItem = cartItems.find((i) => i.menuItem.id === item.id);
   const quantity = cartItem?.quantity ?? 0;
   const inCart = quantity > 0;
+
+  const badges = getItemBadges(item.id, locationSlug);
+  const itemRating = getItemRating(item.id);
+  const details = getItemDetails(item.id);
 
   useEffect(() => {
     if (!justAdded) return;
@@ -62,10 +80,27 @@ export function MenuItemCard({ item, locationSlug }: MenuItemProps) {
           : "bg-white border-gray-100 hover:shadow-md hover:border-gray-200"
       }`}
     >
-      {/* Food category icon */}
-      <div className={`flex-shrink-0 w-14 h-14 rounded-xl flex items-center justify-center ${iconColor}`}>
-        {Icon && <Icon className="h-7 w-7" />}
-      </div>
+      {/* Social proof badge ribbon */}
+      {badges.length > 0 && (
+        <div className="absolute -top-2 right-3 flex gap-1">
+          {badges.map((badge) => {
+            const config = BADGE_CONFIG[badge];
+            const BadgeIcon = BADGE_ICONS[badge];
+            return (
+              <span
+                key={badge}
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${config.color} shadow-sm`}
+              >
+                <BadgeIcon className="h-3 w-3" />
+                {config.label}
+              </span>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Food item visual */}
+      <MenuItemImage category={item.category} name={item.name} />
 
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-3">
@@ -86,6 +121,33 @@ export function MenuItemCard({ item, locationSlug }: MenuItemProps) {
             <p className="text-sm text-italia-gray mt-1 leading-relaxed line-clamp-2">
               {item.description}
             </p>
+            {/* Quick details: rating + prep time + calories */}
+            <div className="flex items-center gap-3 mt-1 flex-wrap">
+              {itemRating && (
+                <StarRating rating={itemRating.rating} reviewCount={itemRating.count} />
+              )}
+              {details?.prepTimeMinutes && (
+                <span className="flex items-center gap-0.5 text-[11px] text-italia-gray">
+                  <Clock className="h-3 w-3" />
+                  {details.prepTimeMinutes}m
+                </span>
+              )}
+              {details?.nutrition && (
+                <span className="flex items-center gap-0.5 text-[11px] text-italia-gray">
+                  <Flame className="h-3 w-3" />
+                  {details.nutrition.calories} kcal
+                </span>
+              )}
+              {details && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setDetailOpen(true); }}
+                  className="flex items-center gap-0.5 text-[11px] text-italia-red font-medium hover:underline"
+                >
+                  <Info className="h-3 w-3" />
+                  Details
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -142,6 +204,16 @@ export function MenuItemCard({ item, locationSlug }: MenuItemProps) {
           </div>
         </div>
       </div>
+
+      {/* Kodawari detail drawer */}
+      {details && (
+        <ItemDetailDrawer
+          item={item}
+          locationSlug={locationSlug}
+          open={detailOpen}
+          onClose={() => setDetailOpen(false)}
+        />
+      )}
     </div>
   );
 }

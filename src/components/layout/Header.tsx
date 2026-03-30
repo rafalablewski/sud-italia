@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Container } from "@/components/ui/Container";
-import { Menu, X, MapPin } from "lucide-react";
+import { Menu, X, MapPin, Star } from "lucide-react";
 import { SITE_NAME } from "@/lib/constants";
 import { getActiveLocations } from "@/data/locations";
 import { CartButton } from "@/components/cart/CartButton";
+import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 
 export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -42,6 +43,13 @@ export function Header() {
             >
               About
             </Link>
+            <Link
+              href="/rewards"
+              className="text-sm font-medium text-italia-gold-dark hover:text-italia-gold transition-colors flex items-center gap-1"
+            >
+              <Star className="h-3.5 w-3.5" />
+              Rewards
+            </Link>
             {locations.map((loc) => (
               <Link
                 key={loc.slug}
@@ -52,11 +60,13 @@ export function Header() {
                 {loc.city}
               </Link>
             ))}
+            <LanguageSwitcher />
             <CartButton />
           </nav>
 
           {/* Mobile: Cart + Hamburger */}
           <div className="flex items-center gap-3 md:hidden">
+            <LanguageSwitcher />
             <CartButton />
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
@@ -87,6 +97,14 @@ export function Header() {
               className="block px-3 py-2.5 text-base font-medium text-italia-gray hover:text-italia-dark hover:bg-gray-50 rounded-lg"
             >
               About
+            </Link>
+            <Link
+              href="/rewards"
+              onClick={() => setMobileOpen(false)}
+              className="flex items-center gap-2 px-3 py-2.5 text-base font-medium text-italia-gold-dark hover:bg-amber-50 rounded-lg"
+            >
+              <Star className="h-4 w-4" />
+              Rewards
             </Link>
             <div className="border-t border-gray-100 pt-2 mt-2">
               {locations.map((loc) => (

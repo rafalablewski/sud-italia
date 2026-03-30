@@ -6,6 +6,13 @@ import { MenuCategory, MENU_CATEGORY_LABELS } from "@/data/types";
 import { Container } from "@/components/ui/Container";
 import { MenuCategoryNav } from "./MenuCategoryNav";
 import { MenuItemCard } from "./MenuItem";
+import { SurpriseMe } from "./SurpriseMe";
+import { SeasonalSpecials } from "./SeasonalSpecials";
+import { ReorderSection } from "./ReorderSection";
+import { SpeedGuarantee } from "./SpeedGuarantee";
+import { ReferralCard } from "@/components/referral/ReferralCard";
+import { AchievementsPanel } from "@/components/gamification/AchievementsPanel";
+import { CustomerGate } from "@/components/loyalty/CustomerGate";
 import { Search, X } from "lucide-react";
 
 interface MenuSectionProps {
@@ -100,6 +107,22 @@ export function MenuSection({ items, locationSlug }: MenuSectionProps) {
       </div>
 
       <Container className="py-8">
+        {/* Speed guarantee banner */}
+        {!isSearching && <SpeedGuarantee />}
+
+        {/* Reorder from history (American one-tap reorder) */}
+        {!isSearching && <ReorderSection locationSlug={locationSlug} allMenuItems={items} />}
+
+        {/* Seasonal specials (Kodawari - limited-time) */}
+        {!isSearching && <SeasonalSpecials locationSlug={locationSlug} />}
+
+        {/* Surprise Me feature */}
+        {!isSearching && (
+          <div className="mb-6">
+            <SurpriseMe items={items.filter((i) => i.available)} locationSlug={locationSlug} />
+          </div>
+        )}
+
         {isSearching ? (
           <p className="text-sm text-italia-gray mb-4">
             {filteredItems.length} result{filteredItems.length !== 1 ? "s" : ""} for &ldquo;{searchQuery}&rdquo;
@@ -141,6 +164,17 @@ export function MenuSection({ items, locationSlug }: MenuSectionProps) {
                 Clear search
               </button>
             )}
+          </div>
+        )}
+        {/* Gamification & Referral — only visible to identified customers */}
+        {!isSearching && (
+          <div className="mt-10">
+            <CustomerGate>
+              <div className="space-y-6">
+                <AchievementsPanel />
+                <ReferralCard />
+              </div>
+            </CustomerGate>
           </div>
         )}
       </Container>

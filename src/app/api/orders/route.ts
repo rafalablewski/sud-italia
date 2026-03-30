@@ -21,6 +21,16 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json({
+    order: {
+      id: order.id,
+      status: order.status,
+      fulfillmentType: order.fulfillmentType,
+      slotTime: order.slotTime,
+      slotDate: order.slotDate,
+      totalAmount: order.totalAmount,
+      items: order.items,
+    },
+    // Legacy fields for backward compatibility
     id: order.id,
     status: order.status,
     fulfillmentType: order.fulfillmentType,
