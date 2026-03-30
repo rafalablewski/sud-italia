@@ -19,6 +19,7 @@ const navGroups = [
       { href: "/admin/recipes", label: "Recipes", icon: FlaskConical },
       { href: "/admin/slots", label: "Slots", icon: CalendarDays },
       { href: "/admin/orders", label: "Orders", icon: ClipboardList },
+      { href: "/admin/upsell", label: "Upsell", icon: TrendingUp },
     ],
   },
   {
@@ -27,7 +28,6 @@ const navGroups = [
       { href: "/admin/reports", label: "Reports", icon: BarChart3 },
       { href: "/admin/loyalty", label: "Loyalty", icon: Heart },
       { href: "/admin/growth", label: "Growth", icon: Rocket },
-      { href: "/admin/upsell", label: "Upsell", icon: TrendingUp },
       { href: "/admin/feedback", label: "Feedback", icon: MessageSquare },
     ],
   },
