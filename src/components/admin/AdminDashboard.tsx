@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import type { Order } from "@/data/types";
+import { LocationTabs } from "./LocationTabs";
 
 const activeLocations = locations.filter((l) => l.isActive);
 
@@ -139,7 +140,7 @@ export function AdminDashboard() {
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold font-heading gradient-text">Dashboard</h1>
+            <h1 className="text-2xl font-bold font-heading admin-text">Dashboard</h1>
             <p className="text-xs admin-text-dim mt-1 flex items-center gap-2">
               <Activity className="h-3 w-3" />
               <span>{periodLabel}</span>
@@ -154,20 +155,8 @@ export function AdminDashboard() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 admin-text-dim" />
-              <select
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                className="glass-input px-3 py-1.5 rounded-lg text-sm"
-              >
-                <option value="">All locations</option>
-                {activeLocations.map((l) => (
-                  <option key={l.slug} value={l.slug}>{l.city}</option>
-                ))}
-              </select>
-            </div>
-            <div className="flex glass rounded-lg overflow-hidden">
+            <LocationTabs value={location} onChange={setLocation} includeAll />
+            <div className="flex glass rounded-md overflow-hidden">
               {["today", "week", "month", "year"].map((p) => (
                 <button
                   key={p}

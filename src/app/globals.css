@@ -225,6 +225,15 @@ html { scroll-behavior: smooth; }
 
 .glass-input::placeholder { color: rgba(255, 255, 255, 0.35); }
 
+.glass-input[type="date"] {
+  color-scheme: dark;
+}
+
+.glass-input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.7);
+  cursor: pointer;
+}
+
 /* Fix native <select> <option> contrast on dark backgrounds */
 .glass-input option {
   background: #1e293b;

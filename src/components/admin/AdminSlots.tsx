@@ -18,6 +18,7 @@ import {
   User,
 } from "lucide-react";
 import { locations } from "@/data/locations";
+import { LocationTabs } from "./LocationTabs";
 import { formatSlotTime } from "@/lib/format";
 import { formatPrice } from "@/lib/utils";
 
@@ -271,7 +272,7 @@ export function AdminSlots() {
       <div className="max-w-6xl mx-auto p-4 md:p-6">
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
-          <h1 className="text-2xl font-bold font-heading gradient-text">
+          <h1 className="text-2xl font-bold font-heading admin-text">
             Time Slots
           </h1>
           <div className="flex items-center gap-2">
@@ -305,20 +306,7 @@ export function AdminSlots() {
 
         {/* Filters: location + date nav */}
         <div className="flex flex-wrap items-center gap-4 mb-6">
-          <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 admin-text-muted" />
-            <select
-              value={selectedLocation}
-              onChange={(e) => setSelectedLocation(e.target.value)}
-              className="glass-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-italia-red"
-            >
-              {activeLocations.map((loc) => (
-                <option key={loc.slug} value={loc.slug}>
-                  {loc.city}
-                </option>
-              ))}
-            </select>
-          </div>
+          <LocationTabs value={selectedLocation} onChange={setSelectedLocation} />
 
           <div className="flex items-center gap-2">
             <button
@@ -333,7 +321,7 @@ export function AdminSlots() {
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="glass-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-italia-red"
+              className="glass-input rounded-lg text-sm "
             />
 
             <button

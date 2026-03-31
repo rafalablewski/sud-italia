@@ -3,8 +3,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { AdminNav } from "./AdminNav";
 import { statusBadgeClass } from "@/lib/admin-utils";
-import { MapPin, Package, Truck, Clock, ClipboardList, RefreshCw } from "lucide-react";
+import { Package, Truck, Clock, ClipboardList, RefreshCw, MapPin } from "lucide-react";
 import { locations } from "@/data/locations";
+import { LocationTabs } from "./LocationTabs";
 import { formatPrice } from "@/lib/utils";
 import { formatSlotDate } from "@/lib/format";
 import type { Order } from "@/data/types";
@@ -53,29 +54,19 @@ export function AdminOrders() {
     <>
       <AdminNav />
       <div className="max-w-6xl mx-auto p-4 md:p-6">
-        <div className="flex items-center justify-between mb-6 stagger-1">
-          <h1 className="text-2xl font-bold font-heading gradient-text">Orders</h1>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold font-heading admin-text">Orders</h1>
           <button
             onClick={fetchOrders}
-            className="flex items-center gap-2 px-4 py-2 glass rounded-lg text-sm admin-text-muted hover:admin-text hover:bg-white/8 transition-all"
+            className="glass-btn-ghost flex items-center gap-2"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             Refresh
           </button>
         </div>
 
-        <div className="flex items-center gap-2 mb-6 stagger-2">
-          <MapPin className="h-4 w-4 admin-text-dim" />
-          <select
-            value={selectedLocation}
-            onChange={(e) => setSelectedLocation(e.target.value)}
-            className="glass-input px-3 py-2 rounded-lg text-sm"
-          >
-            <option value="">All locations</option>
-            {activeLocations.map((loc) => (
-              <option key={loc.slug} value={loc.slug}>{loc.city}</option>
-            ))}
-          </select>
+        <div className="mb-6">
+          <LocationTabs value={selectedLocation} onChange={setSelectedLocation} includeAll />
         </div>
 
         {error ? (

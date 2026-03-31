@@ -5,6 +5,7 @@ import { AdminNav } from "./AdminNav";
 import { formatPrice } from "@/lib/utils";
 import type { LoyaltySettings } from "@/lib/store";
 import { locations as allLocations } from "@/data/locations";
+import { LocationTabs } from "./LocationTabs";
 import {
   Rocket, Check, ToggleLeft, ToggleRight, Clock, Sparkles, Zap,
   TrendingUp, MessageCircle, Edit3, Trash2, Plus, MapPin,
@@ -72,10 +73,7 @@ export function AdminGrowth() {
             <h1 className="text-xl font-heading font-bold admin-text">Growth & Operations</h1>
             <p className="text-sm admin-text-dim">Seasonal menu, speed settings, chatbot</p>
           </div>
-          <select value={locationFilter} onChange={(e) => setLocationFilter(e.target.value)} className="glass-select text-sm">
-            <option value="all">All Locations</option>
-            {activeLocations.map((loc) => <option key={loc.slug} value={loc.slug}>{loc.city}</option>)}
-          </select>
+          <LocationTabs value={locationFilter === "all" ? "" : locationFilter} onChange={(v) => setLocationFilter(v || "all")} includeAll />
         </div>
 
         {/* Tabs */}

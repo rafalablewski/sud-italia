@@ -160,7 +160,7 @@ function RecipesTab() {
     <>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div>
-          <h1 className="text-2xl font-bold font-heading gradient-text">Recipe Builder</h1>
+          <h1 className="text-2xl font-bold font-heading admin-text">Recipe Builder</h1>
           <p className="text-sm admin-text-muted mt-0.5">
             {withRecipeCount} of {menuItems.length} items have recipes
             {withoutRecipeCount > 0 && (
@@ -683,7 +683,7 @@ function IngredientsTab() {
     <>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div>
-          <h1 className="text-2xl font-bold font-heading gradient-text">Ingredients Database</h1>
+          <h1 className="text-2xl font-bold font-heading admin-text">Ingredients Database</h1>
           <p className="text-sm admin-text-muted mt-0.5">{ingredients.length} ingredients</p>
         </div>
         <button onClick={() => { resetForm(); setShowForm(true); }} className="flex items-center gap-2 px-4 py-2 glass-btn-green text-white rounded-lg font-semibold text-sm">

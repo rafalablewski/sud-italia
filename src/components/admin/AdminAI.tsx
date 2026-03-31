@@ -13,6 +13,7 @@ import {
 import { krakowMenu } from "@/data/menus/krakow";
 import { warszawaMenu } from "@/data/menus/warszawa";
 import { locations as allLocations } from "@/data/locations";
+import { LocationTabs } from "./LocationTabs";
 import { formatPrice } from "@/lib/utils";
 
 const LOCATION_MENUS: Record<string, import("@/data/types").MenuItem[]> = {
@@ -117,20 +118,15 @@ export function AdminAI() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <select
+            <LocationTabs
               value={selectedLocation}
-              onChange={(e) => {
-                setSelectedLocation(e.target.value);
-                const menu = LOCATION_MENUS[e.target.value] || krakowMenu;
+              onChange={(slug) => {
+                setSelectedLocation(slug);
+                const menu = LOCATION_MENUS[slug] || krakowMenu;
                 setForecasts(generateDemandForecast(7));
                 setPriceSuggestions(generatePriceSuggestions(menu));
               }}
-              className="glass-select text-sm"
-            >
-              {activeLocations.map((loc) => (
-                <option key={loc.slug} value={loc.slug}>{loc.city}</option>
-              ))}
-            </select>
+            />
           <button
             onClick={refresh}
             disabled={refreshing}

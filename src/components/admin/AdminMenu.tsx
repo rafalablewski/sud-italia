@@ -6,6 +6,7 @@ import {
   MapPin, Eye, EyeOff, Save, Search, Pencil, X, Check,
 } from "lucide-react";
 import { locations } from "@/data/locations";
+import { LocationTabs } from "./LocationTabs";
 import { formatPrice } from "@/lib/utils";
 import { MENU_CATEGORY_LABELS, type MenuCategory } from "@/data/types";
 
@@ -128,7 +129,7 @@ export function AdminMenu() {
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
           <div>
-            <h1 className="text-2xl font-bold font-heading gradient-text">Menu</h1>
+            <h1 className="text-2xl font-bold font-heading admin-text">Menu</h1>
             <p className="text-sm admin-text-muted mt-0.5">
               {items.length} items
               {unavailableCount > 0 && ` \u00B7 ${unavailableCount} hidden from customers`}
@@ -152,14 +153,7 @@ export function AdminMenu() {
 
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-3 mb-6">
-          <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 admin-text-muted" />
-            <select value={selectedLocation} onChange={(e) => setSelectedLocation(e.target.value)} className="glass-input rounded-lg">
-              {activeLocations.map((loc) => (
-                <option key={loc.slug} value={loc.slug}>{loc.city}</option>
-              ))}
-            </select>
-          </div>
+          <LocationTabs value={selectedLocation} onChange={setSelectedLocation} />
           <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="glass-input rounded-lg">
             <option value="">All categories</option>
             {categories.map((cat) => (

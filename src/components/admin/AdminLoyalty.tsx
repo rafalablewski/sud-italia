@@ -6,6 +6,7 @@ import { AdminNav } from "./AdminNav";
 import { formatPrice } from "@/lib/utils";
 import { TIER_CONFIG, LoyaltyTier } from "@/lib/loyalty";
 import { locations as allLocations } from "@/data/locations";
+import { LocationTabs } from "./LocationTabs";
 import { ACHIEVEMENTS, getEarnedAchievements } from "@/lib/growth-engine";
 import type { LoyaltySettings } from "@/lib/store";
 import {
@@ -138,10 +139,7 @@ export function AdminLoyalty() {
             <h1 className="text-xl font-heading font-bold admin-text">Loyalty & Rewards</h1>
             <p className="text-sm admin-text-dim">Members, tiers, referrals, achievements</p>
           </div>
-          <select value={locationFilter} onChange={(e) => setLocationFilter(e.target.value)} className="glass-select text-sm">
-            <option value="all">All Locations</option>
-            {activeLocations.map((loc) => <option key={loc.slug} value={loc.slug}>{loc.city}</option>)}
-          </select>
+          <LocationTabs value={locationFilter === "all" ? "" : locationFilter} onChange={(v) => setLocationFilter(v || "all")} includeAll />
         </div>
 
         {/* Quick stats */}
