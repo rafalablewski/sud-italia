@@ -141,13 +141,17 @@ function OrderConfirmationContent() {
             )}
             <Button
               variant="ghost"
-              onClick={() => {
+              onClick={async () => {
+                const shareData = {
+                  title: "My Sud Italia Order",
+                  text: `I just ordered from Sud Italia${location ? ` in ${location.city}` : ""}!`,
+                  url: window.location.href,
+                };
                 if (navigator.share) {
-                  navigator.share({
-                    title: "My Sud Italia Order",
-                    text: `I just ordered from Sud Italia${location ? ` in ${location.city}` : ""}! 🍕`,
-                    url: window.location.href,
-                  }).catch((err) => console.error("Share failed:", err));
+                  navigator.share(shareData).catch(() => {});
+                } else {
+                  await navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`);
+                  (document.activeElement as HTMLElement)?.blur();
                 }
               }}
             >

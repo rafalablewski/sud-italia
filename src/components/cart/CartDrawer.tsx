@@ -43,6 +43,7 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
+  const [specialInstructions, setSpecialInstructions] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [phoneError, setPhoneError] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
@@ -132,6 +133,7 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
           slotTime: selectedSlotTime,
           deliveryAddress: fulfillmentType === "delivery" ? deliveryAddress.trim() : undefined,
           customerEmail: customerEmail.trim() || undefined,
+          specialInstructions: specialInstructions.trim() || undefined,
         }),
       });
 
@@ -311,6 +313,15 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
             onChange={(e) => setCustomerEmail(e.target.value)}
             className="pub-input min-h-[44px] text-sm text-italia-gray"
           />
+          <label className="sr-only" htmlFor="checkout-notes">Special instructions</label>
+          <textarea
+            id="checkout-notes"
+            placeholder="Special instructions (allergies, doorbell code, etc.)"
+            value={specialInstructions}
+            onChange={(e) => setSpecialInstructions(e.target.value)}
+            rows={2}
+            className="pub-input min-h-[44px] text-sm text-italia-gray resize-none"
+          />
         </div>
         {phoneError && (
           <p className="text-xs text-italia-red">
@@ -321,19 +332,25 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
 
       {/* Sticky pay bar */}
       <div className="sticky bottom-0 border-t border-gray-100 px-5 py-4 bg-white shadow-[0_-4px_16px_rgba(0,0,0,0.06)] space-y-3">
-        {comboDiscount > 0 && (
-          <div className="space-y-1 pt-1">
-            <div className="flex justify-between items-center text-sm text-italia-gray">
-              <span>Subtotal</span>
-              <span>{formatPrice(subtotal)}</span>
-            </div>
-            <div className="flex justify-between items-center text-sm text-italia-green font-medium">
-              <span>Meal Deal -{comboResult.activeDeal?.discountPercent}%</span>
+        <div className="space-y-1">
+          <div className="flex justify-between items-center text-sm text-italia-gray">
+            <span>Subtotal</span>
+            <span>{formatPrice(subtotal)}</span>
+          </div>
+          {comboDiscount > 0 && (
+            <div className="flex justify-between items-center text-sm font-medium text-italia-green">
+              <span>{comboResult.activeDeal?.name} -{comboResult.activeDeal?.discountPercent}%</span>
               <span>-{formatPrice(comboDiscount)}</span>
             </div>
-          </div>
-        )}
-        <div className="flex justify-between items-center text-lg font-bold pt-1">
+          )}
+          {fulfillmentType === "delivery" && (
+            <div className="flex justify-between items-center text-sm text-italia-gray">
+              <span>Delivery</span>
+              <span>{total >= 6000 ? <span className="text-italia-green font-medium">Free</span> : "10,00 PLN"}</span>
+            </div>
+          )}
+        </div>
+        <div className="flex justify-between items-center text-lg font-bold border-t border-gray-100 pt-2">
           <span>Total</span>
           <span className="text-italia-red">{formatPrice(total)}</span>
         </div>

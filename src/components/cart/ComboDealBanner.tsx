@@ -52,8 +52,8 @@ export function ComboDealBanner({ cartItems }: ComboDealBannerProps) {
               </span>
             </div>
             {isComplete ? (
-              <p className="text-xs text-italia-green mt-1">
-                You save {formatPrice(savings)} with this combo!
+              <p className="text-sm text-italia-green font-semibold mt-1">
+                You&apos;re saving {formatPrice(savings)}!
               </p>
             ) : (
               <p className="text-xs text-italia-gray mt-1">

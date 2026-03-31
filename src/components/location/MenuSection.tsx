@@ -35,6 +35,14 @@ export function MenuSection({ items, locationSlug }: MenuSectionProps) {
     return cats.sort((a, b) => order.indexOf(a) - order.indexOf(b));
   }, [items]);
 
+  const itemCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const item of items.filter((i) => i.available)) {
+      counts[item.category] = (counts[item.category] || 0) + 1;
+    }
+    return counts;
+  }, [items]);
+
   const [activeCategory, setActiveCategory] = useState<MenuCategory | undefined>(
     categories[0]
   );
@@ -102,6 +110,7 @@ export function MenuSection({ items, locationSlug }: MenuSectionProps) {
               categories={categories}
               activeCategory={activeCategory!}
               onSelect={setActiveCategory}
+              itemCounts={itemCounts}
             />
           )}
         </div>

@@ -201,6 +201,7 @@ export interface Order {
   customerPhone: string;
   fulfillmentType: FulfillmentType;
   deliveryAddress?: string;
+  specialInstructions?: string;
   slotId: string;
   slotDate: string;
   slotTime: string;
