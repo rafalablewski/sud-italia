@@ -45,6 +45,7 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
   const [customerEmail, setCustomerEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [phoneError, setPhoneError] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   // Fetch location-specific upsell config from admin settings
   const [upsellConfig, setUpsellConfig] = useState<UpsellConfig | null>(null);
@@ -147,11 +148,10 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
         onClose();
         window.location.href = `/order-confirmation?orderId=${data.orderId}&location=${locationSlug}`;
       } else {
-        alert(data.error || "Something went wrong");
+        setCheckoutError(data.error || "Something went wrong. Please try again.");
       }
-    } catch (error) {
-      console.error("Checkout failed:", error);
-      alert("Something went wrong. Please try again.");
+    } catch {
+      setCheckoutError("Connection error. Please check your internet and try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -288,7 +288,7 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
           {/* Optional email — subtle, not required */}
           <input
             type="email"
-            placeholder="Email for exclusive discounts & offers (optional)"
+            placeholder="Email for order receipt + 10% off next order"
             value={customerEmail}
             onChange={(e) => setCustomerEmail(e.target.value)}
             className="pub-input min-h-[44px] text-sm text-italia-gray"
@@ -327,8 +327,18 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
         {/* Loyalty points preview — shows what they'll earn */}
         <LoyaltyEarnPreview cartTotal={total} />
 
+        {checkoutError && (
+          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700 flex items-start gap-2">
+            <span className="text-red-500 mt-0.5 flex-shrink-0">!</span>
+            <div>
+              <p>{checkoutError}</p>
+              <button onClick={() => setCheckoutError(null)} className="text-xs text-red-500 underline mt-1">Dismiss</button>
+            </div>
+          </div>
+        )}
+
         <Button
-          onClick={handleCheckout}
+          onClick={() => { setCheckoutError(null); handleCheckout(); }}
           disabled={isSubmitting || !canCheckout}
           className="w-full min-h-[52px]"
           size="lg"

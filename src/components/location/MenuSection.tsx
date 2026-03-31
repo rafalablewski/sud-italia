@@ -106,12 +106,16 @@ export function MenuSection({ items, locationSlug }: MenuSectionProps) {
         </div>
       </div>
 
-      <Container className="py-8">
+      {/* Reorder from history — first thing returning customers see */}
+      {!isSearching && (
+        <Container className="pt-6">
+          <ReorderSection locationSlug={locationSlug} allMenuItems={items} />
+        </Container>
+      )}
+
+      <Container className="py-6">
         {/* Speed guarantee banner */}
         {!isSearching && <SpeedGuarantee />}
-
-        {/* Reorder from history (American one-tap reorder) */}
-        {!isSearching && <ReorderSection locationSlug={locationSlug} allMenuItems={items} />}
 
         {/* Seasonal specials (Kodawari - limited-time) */}
         {!isSearching && <SeasonalSpecials locationSlug={locationSlug} />}
