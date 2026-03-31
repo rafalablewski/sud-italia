@@ -269,8 +269,9 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
         </div>
       )}
 
-      {/* Checkout footer */}
-      <div className="border-t border-gray-100 p-5 space-y-3 bg-gray-50 mt-2">
+      {/* Customer details section */}
+      <div className="border-t border-gray-100 p-5 space-y-3 bg-gray-50">
+        <p className="text-xs font-semibold text-italia-gray uppercase tracking-wide">Your details</p>
         <div className="space-y-2">
           <label className="sr-only" htmlFor="checkout-name">Your name</label>
           <input
@@ -316,7 +317,10 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
             Please enter a valid phone number
           </p>
         )}
+      </div>
 
+      {/* Sticky pay bar */}
+      <div className="sticky bottom-0 border-t border-gray-100 px-5 py-4 bg-white shadow-[0_-4px_16px_rgba(0,0,0,0.06)] space-y-3">
         {comboDiscount > 0 && (
           <div className="space-y-1 pt-1">
             <div className="flex justify-between items-center text-sm text-italia-gray">

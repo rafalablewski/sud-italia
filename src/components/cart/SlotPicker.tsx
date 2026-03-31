@@ -113,12 +113,15 @@ export function SlotPicker({ locationSlug, fulfillmentType }: SlotPickerProps) {
       {loading ? (
         <SlotSkeleton />
       ) : error ? (
-        <div className="text-center py-4 text-sm text-italia-red bg-red-50 rounded-xl">
-          Could not load time slots. Try again later.
+        <div className="text-center py-5 bg-red-50/50 rounded-xl border border-red-100">
+          <Clock className="h-5 w-5 text-italia-red mx-auto mb-2" />
+          <p className="text-sm text-italia-red font-medium">Couldn&apos;t load time slots</p>
+          <p className="text-xs text-italia-gray mt-1">Please try again in a moment</p>
         </div>
       ) : slots.length === 0 ? (
-        <div className="text-center py-5 bg-gray-50 rounded-xl">
-          <p className="text-sm text-italia-gray mb-2">No available slots for this day</p>
+        <div className="text-center py-6 bg-gray-50 rounded-xl border border-gray-100">
+          <Clock className="h-5 w-5 text-italia-gray mx-auto mb-2" />
+          <p className="text-sm font-medium text-italia-dark mb-1">Fully booked for this day</p>
           {dayOffset < 6 && (
             <button
               onClick={() => setDayOffset(dayOffset + 1)}

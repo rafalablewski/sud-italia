@@ -48,7 +48,7 @@ export function CartUpsell({ suggestions }: CartUpsellProps) {
                 if (locationSlug) addItem(suggestion.item, locationSlug);
                 setDismissed((prev) => new Set(prev).add(suggestion.item.id));
               }}
-              className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg bg-italia-red text-white hover:bg-italia-red-dark transition-colors active:scale-95"
+              className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-lg bg-italia-red text-white hover:bg-italia-red-dark transition-colors active:scale-95"
             >
               <Plus className="h-4 w-4" />
             </button>

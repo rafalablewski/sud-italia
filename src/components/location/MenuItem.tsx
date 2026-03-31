@@ -71,13 +71,16 @@ export function MenuItemCard({ item, locationSlug }: MenuItemProps) {
 
   const Icon = CATEGORY_ICONS[item.category];
   const iconColor = CATEGORY_COLORS[item.category] || "bg-gray-50 text-gray-500";
+  const isPopular = badges.includes("popular");
 
   return (
     <div
       className={`relative flex gap-4 p-4 rounded-2xl border transition-all duration-300 ${
         inCart
           ? "bg-italia-green/[0.03] border-italia-green/30 shadow-sm shadow-italia-green/5"
-          : "bg-white border-gray-100 hover:shadow-md hover:border-gray-200"
+          : isPopular
+            ? "bg-white border-italia-gold/20 shadow-sm hover:shadow-md hover:border-italia-gold/30"
+            : "bg-white border-gray-100 hover:shadow-md hover:border-gray-200"
       }`}
     >
       {/* Social proof badge ribbon */}
@@ -118,7 +121,7 @@ export function MenuItemCard({ item, locationSlug }: MenuItemProps) {
                 ) : null;
               })}
             </div>
-            <p className="text-sm text-italia-gray mt-1 leading-relaxed line-clamp-2">
+            <p className="text-sm text-italia-gray mt-1 leading-relaxed line-clamp-3">
               {item.description}
             </p>
             {/* Quick details: rating + prep time + calories */}
@@ -186,7 +189,7 @@ export function MenuItemCard({ item, locationSlug }: MenuItemProps) {
               <div className="flex items-center gap-0.5 bg-gray-50 rounded-xl p-0.5">
                 <button
                   onClick={handleDecrement}
-                  className="w-9 h-9 flex items-center justify-center rounded-lg bg-white border border-gray-200 text-italia-red hover:bg-red-50 transition-colors shadow-sm"
+                  className="w-10 h-10 flex items-center justify-center rounded-lg bg-white border border-gray-200 text-italia-red hover:bg-red-50 transition-colors shadow-sm"
                 >
                   <Minus className="h-4 w-4" />
                 </button>
@@ -195,7 +198,7 @@ export function MenuItemCard({ item, locationSlug }: MenuItemProps) {
                 </span>
                 <button
                   onClick={handleAdd}
-                  className="w-9 h-9 flex items-center justify-center rounded-lg bg-italia-red text-white hover:bg-italia-red-dark transition-colors shadow-sm"
+                  className="w-10 h-10 flex items-center justify-center rounded-lg bg-italia-red text-white hover:bg-italia-red-dark transition-colors shadow-sm"
                 >
                   <Plus className="h-4 w-4" />
                 </button>
