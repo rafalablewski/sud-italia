@@ -149,7 +149,7 @@ export function AdminDashboard() {
               {activeOrders.length > 0 && (
                 <>
                   <span className="text-white/20">·</span>
-                  <span className="text-emerald-400 font-medium">{activeOrders.length} active order{activeOrders.length !== 1 ? "s" : ""}</span>
+                  <span className="admin-green font-medium">{activeOrders.length} active order{activeOrders.length !== 1 ? "s" : ""}</span>
                 </>
               )}
             </p>
@@ -206,7 +206,7 @@ export function AdminDashboard() {
                 <span className="inline-flex rounded-full h-2 w-2 bg-emerald-400" />
                 Live Orders
                 {activeOrders.length > 0 && (
-                  <span className="ml-1 px-2 py-0.5 bg-italia-red/20 text-red-300 text-xs font-bold rounded">{activeOrders.length}</span>
+                  <span className="ml-1 px-2 py-0.5 bg-italia-red/20 admin-red text-xs font-bold rounded">{activeOrders.length}</span>
                 )}
               </h2>
               <Link href="/admin/orders" className="text-xs admin-link font-medium flex items-center gap-1 hover:text-red-200 transition-colors">

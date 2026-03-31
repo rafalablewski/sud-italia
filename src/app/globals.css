@@ -150,97 +150,129 @@ html { scroll-behavior: smooth; }
 }
 
 /* ============================
-   ADMIN — GLASSMORPHISM SYSTEM
+   ADMIN DESIGN SYSTEM
+   Tokens → Surfaces → Inputs → Buttons → Typography → Badges → Alerts
+   8px baseline grid · 5-color semantic palette · 6-level type scale
    ============================ */
 
+/* --- Design tokens (CSS custom properties) --- */
 .admin-bg {
-  background: #0f172a;
+  --admin-bg: #0f172a;
+  --admin-surface: rgba(255, 255, 255, 0.04);
+  --admin-surface-hover: rgba(255, 255, 255, 0.07);
+  --admin-border: rgba(255, 255, 255, 0.08);
+  --admin-border-hover: rgba(255, 255, 255, 0.14);
+
+  /* 5-color semantic palette */
+  --admin-accent: 200, 16, 46;      /* Italia red — primary actions */
+  --admin-success: 16, 185, 129;    /* Emerald — confirm, save, active */
+  --admin-info: 99, 102, 241;       /* Indigo — secondary actions, info */
+  --admin-warning: 234, 179, 8;     /* Amber — pending, draft */
+  --admin-danger: 239, 68, 68;      /* Red — destructive, errors */
+
+  /* Text hierarchy (WCAG AAA on #0f172a) */
+  --text-primary: #f1f5f9;          /* 13.2:1 */
+  --text-secondary: #c8d1dc;        /* 7.2:1 */
+  --text-tertiary: #8b95a5;         /* 3.5:1 (AA large) */
+
+  /* Focus ring */
+  --focus-ring: rgba(99, 102, 241, 0.5);
+
+  /* Spacing scale (8px grid) */
+  --space-1: 0.25rem;   /* 4px */
+  --space-2: 0.5rem;    /* 8px */
+  --space-3: 0.75rem;   /* 12px */
+  --space-4: 1rem;      /* 16px */
+  --space-5: 1.5rem;    /* 24px */
+  --space-6: 2rem;      /* 32px */
+
+  background: var(--admin-bg);
   min-height: 100vh;
   position: relative;
 }
 
 .admin-bg > * { position: relative; z-index: 1; }
 
-/* --- Glass surfaces --- */
+/* --- Reduced motion --- */
+@media (prefers-reduced-motion: reduce) {
+  .admin-bg *, .admin-bg *::before, .admin-bg *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* --- Surfaces (no blur — solid, performant) --- */
 
 .glass {
-  background: rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border);
 }
 
 .glass-light {
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .glass-card {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border);
   border-radius: 0.5rem;
   transition: border-color 0.15s ease;
 }
 
 .glass-card:hover {
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: var(--admin-border-hover);
 }
 
+/* Non-interactive cards (tables, static content) */
 .glass-card-static {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border);
   border-radius: 0.5rem;
 }
 
 .glass-nav {
-  background: rgba(15, 23, 42, 0.7);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(15, 23, 42, 0.85);
+  border-bottom: 1px solid var(--admin-border);
 }
 
-/* --- Glass form elements --- */
+/* --- Form elements --- */
 
 .glass-input {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--admin-surface);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 0.5rem;
-  color: #f1f5f9;
-  padding: 0.5rem 0.75rem;
-  font-size: 0.875rem;
-  transition: all 0.2s ease;
+  border-radius: 0.375rem;
+  color: var(--text-primary);
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+  transition: border-color 0.15s ease;
 }
 
 .glass-input:focus {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(200, 16, 46, 0.5);
+  border-color: var(--focus-ring);
   outline: none;
 }
 
-.glass-input::placeholder { color: rgba(255, 255, 255, 0.35); }
-
-.glass-input[type="date"] {
-  color-scheme: dark;
+.glass-input:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
 }
 
+.glass-input::placeholder { color: rgba(255, 255, 255, 0.3); }
+
+.glass-input[type="date"] { color-scheme: dark; }
 .glass-input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(0.7);
+  filter: invert(0.6);
   cursor: pointer;
 }
 
-/* Fix native <select> <option> contrast on dark backgrounds */
 .glass-input option {
   background: #1e293b;
-  color: #f1f5f9;
+  color: var(--text-primary);
 }
 
-/* Select — override native browser chrome */
+/* Native select overrides */
 .glass-input[data-select],
 select.glass-input,
 .glass-select {
@@ -255,30 +287,33 @@ select.glass-input,
 }
 
 .glass-select {
-  background-color: rgba(255, 255, 255, 0.06);
+  background-color: var(--admin-surface);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 0.5rem;
-  color: #f1f5f9;
-  padding: 0.5rem 2rem 0.5rem 0.75rem;
-  font-size: 0.875rem;
-  transition: all 0.2s ease;
+  border-radius: 0.375rem;
+  color: var(--text-primary);
+  padding: var(--space-2) 2rem var(--space-2) var(--space-3);
+  font-size: 0.8125rem;
+  transition: border-color 0.15s ease;
 }
 
 .glass-select:focus {
-  background-color: rgba(255, 255, 255, 0.1);
-  border-color: rgba(200, 16, 46, 0.5);
+  border-color: var(--focus-ring);
   outline: none;
-  box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.15);
+}
+
+.glass-select:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
 }
 
 .glass-select option,
 select.glass-input option {
   background: #1e293b;
-  color: #f1f5f9;
-  padding: 0.5rem;
+  color: var(--text-primary);
+  padding: var(--space-2);
 }
 
-/* Public select — same custom arrow treatment */
+/* Public select */
 select.pub-select,
 select.pub-input {
   appearance: none;
@@ -292,171 +327,164 @@ select.pub-input {
 }
 
 .glass-checkbox {
-  accent-color: var(--color-italia-red);
+  accent-color: rgb(var(--admin-accent));
   width: 1rem;
   height: 1rem;
   cursor: pointer;
 }
 
-/* --- Glass buttons --- */
+/* --- Buttons (base + color variants via CSS vars) --- */
 
-.glass-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.375rem 0.75rem;
-  font-size: 0.8125rem;
-  line-height: 1.25rem;
-  font-weight: 500;
-  color: #fff;
-  border-radius: 0.375rem;
-  background: rgba(200, 16, 46, 0.75);
-  border: 1px solid rgba(200, 16, 46, 0.35);
-  transition: background 0.15s ease;
-  cursor: pointer;
-}
-
-.glass-btn:hover {
-  background: rgba(200, 16, 46, 0.9);
-}
-
-.glass-btn:disabled { opacity: 0.5; pointer-events: none; }
-
-.glass-btn-green {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.375rem 0.75rem;
-  font-size: 0.8125rem;
-  line-height: 1.25rem;
-  font-weight: 500;
-  color: #fff;
-  border-radius: 0.375rem;
-  background: rgba(16, 185, 129, 0.55);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  transition: background 0.15s ease;
-  cursor: pointer;
-}
-
-.glass-btn-green:hover {
-  background: rgba(16, 185, 129, 0.75);
-}
-
-.glass-btn-green:disabled { opacity: 0.5; pointer-events: none; }
-
-.glass-btn-blue {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.375rem 0.75rem;
-  font-size: 0.8125rem;
-  line-height: 1.25rem;
-  font-weight: 500;
-  color: #fff;
-  border-radius: 0.375rem;
-  background: rgba(99, 102, 241, 0.5);
-  border: 1px solid rgba(99, 102, 241, 0.3);
-  transition: background 0.15s ease;
-  cursor: pointer;
-}
-
-.glass-btn-blue:hover {
-  background: rgba(99, 102, 241, 0.7);
-}
-
-.glass-btn-blue:disabled { opacity: 0.5; pointer-events: none; }
-
+.glass-btn,
+.glass-btn-green,
+.glass-btn-blue,
 .glass-btn-ghost {
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
-  padding: 0.375rem 0.75rem;
+  padding: var(--space-2) var(--space-3);
   font-size: 0.8125rem;
   line-height: 1.25rem;
   font-weight: 500;
-  color: #94a3b8;
   border-radius: 0.375rem;
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease;
   cursor: pointer;
+  white-space: nowrap;
 }
 
+.glass-btn,
+.glass-btn-green,
+.glass-btn-blue,
+.glass-btn-ghost {
+  --_bg: var(--btn-bg);
+  --_border: var(--btn-border);
+  --_color: var(--btn-color);
+  --_hover: var(--btn-hover);
+  background: var(--_bg);
+  border: 1px solid var(--_border);
+  color: var(--_color);
+}
+
+.glass-btn:hover, .glass-btn-green:hover,
+.glass-btn-blue:hover, .glass-btn-ghost:hover {
+  background: var(--_hover);
+}
+
+.glass-btn:disabled, .glass-btn-green:disabled,
+.glass-btn-blue:disabled, .glass-btn-ghost:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.glass-btn:focus-visible, .glass-btn-green:focus-visible,
+.glass-btn-blue:focus-visible, .glass-btn-ghost:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+/* Color variants */
+.glass-btn {
+  --btn-bg: rgba(var(--admin-accent), 0.7);
+  --btn-border: rgba(var(--admin-accent), 0.3);
+  --btn-color: #fff;
+  --btn-hover: rgba(var(--admin-accent), 0.85);
+}
+
+.glass-btn-green {
+  --btn-bg: rgba(var(--admin-success), 0.5);
+  --btn-border: rgba(var(--admin-success), 0.25);
+  --btn-color: #fff;
+  --btn-hover: rgba(var(--admin-success), 0.7);
+}
+
+.glass-btn-blue {
+  --btn-bg: rgba(var(--admin-info), 0.45);
+  --btn-border: rgba(var(--admin-info), 0.25);
+  --btn-color: #fff;
+  --btn-hover: rgba(var(--admin-info), 0.65);
+}
+
+.glass-btn-ghost {
+  --btn-bg: transparent;
+  --btn-border: rgba(255, 255, 255, 0.1);
+  --btn-color: var(--text-tertiary);
+  --btn-hover: rgba(255, 255, 255, 0.05);
+}
 .glass-btn-ghost:hover {
-  color: #f1f5f9;
-  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
   border-color: rgba(255, 255, 255, 0.18);
 }
 
-.glass-btn-ghost:disabled { opacity: 0.5; pointer-events: none; }
-
-/* --- Admin typography ---
-   Contrast ratios on ~#1a2332 effective background:
-   admin-text:      #f1f5f9 → 13.2:1 (AAA)
-   admin-text-muted: #c8d1dc → 7.2:1  (AAA)
-   admin-text-dim:  #8b95a5 → 3.5:1  (AA large text)
-*/
-.admin-text { color: #f1f5f9; }
-.admin-text-muted { color: #c8d1dc; }
-.admin-text-dim { color: #8b95a5; }
-
-/* Admin-safe accent colors (tested for contrast on dark backgrounds) */
-.admin-red { color: #ff6b6b; }         /* 5.2:1 on #1a2332 */
-.admin-green { color: #4ade80; }       /* 7.9:1 on #1a2332 */
-.admin-link { color: #f87171; }        /* 4.5:1 on #1a2332 */
-.admin-link:hover { color: #fca5a5; }  /* 6.8:1 on #1a2332 */
-
-.gradient-text {
-  color: #f1f5f9;
+/* Button size variants */
+.glass-btn-lg, .glass-btn-green.glass-btn-lg,
+.glass-btn-blue.glass-btn-lg, .glass-btn-ghost.glass-btn-lg {
+  padding: var(--space-3) var(--space-4);
+  font-size: 0.875rem;
+  font-weight: 600;
 }
 
-/* --- Admin status badges ---
-   All text colors tested for >= 4.5:1 on their bg + dark base */
-.badge-pending   { background: rgba(250, 204, 21, 0.10); color: #ca8a04; }
-.badge-confirmed { background: rgba(96, 165, 250, 0.10); color: #7da8d4; }
-.badge-preparing { background: rgba(251, 146, 60, 0.10); color: #c48a56; }
-.badge-ready     { background: rgba(74, 222, 128, 0.10); color: #6ab88a; }
-.badge-completed { background: rgba(203, 213, 225, 0.08); color: #94a3b8; }
-.badge-draft     { background: rgba(250, 204, 21, 0.10); color: #ca8a04; }
-.badge-active    { background: rgba(74, 222, 128, 0.10); color: #6ab88a; }
+/* --- Typography --- */
 
-.badge-success { background: rgba(74, 222, 128, 0.10); color: #6ab88a; }
-.badge-warning { background: rgba(250, 204, 21, 0.10); color: #ca8a04; }
-.badge-danger  { background: rgba(248, 113, 113, 0.10); color: #d4736e; }
-.badge-info    { background: rgba(96, 165, 250, 0.10); color: #7da8d4; }
+.admin-text { color: var(--text-primary); }
+.admin-text-muted { color: var(--text-secondary); }
+.admin-text-dim { color: var(--text-tertiary); }
 
-/* --- Admin alert banners --- */
+/* Semantic accent text */
+.admin-red { color: #ef4444; }
+.admin-green { color: #34d399; }
+.admin-link { color: #818cf8; }
+.admin-link:hover { color: #a5b4fc; }
+
+/* Gradient-text (deprecated, kept for compat) */
+.gradient-text { color: var(--text-primary); }
+
+/* --- Status badges (semantic colors, 4.5:1+ contrast) --- */
+
+.badge-pending   { background: rgba(var(--admin-warning), 0.10); color: #ca8a04; }
+.badge-confirmed { background: rgba(var(--admin-info), 0.10); color: #818cf8; }
+.badge-preparing { background: rgba(251, 146, 60, 0.10); color: #c2824a; }
+.badge-ready     { background: rgba(var(--admin-success), 0.10); color: #34d399; }
+.badge-completed { background: rgba(203, 213, 225, 0.06); color: #94a3b8; }
+.badge-draft     { background: rgba(var(--admin-warning), 0.10); color: #ca8a04; }
+.badge-active    { background: rgba(var(--admin-success), 0.10); color: #34d399; }
+
+.badge-success { background: rgba(var(--admin-success), 0.10); color: #34d399; }
+.badge-warning { background: rgba(var(--admin-warning), 0.10); color: #ca8a04; }
+.badge-danger  { background: rgba(var(--admin-danger), 0.10); color: #f87171; }
+.badge-info    { background: rgba(var(--admin-info), 0.10); color: #818cf8; }
+
+/* --- Alert banners --- */
 .alert-success {
-  background: rgba(34, 197, 94, 0.12);
-  border: 1px solid rgba(34, 197, 94, 0.25);
-  color: #4ade80;
-  border-radius: 0.75rem;
-  padding: 0.75rem;
-  font-size: 0.875rem;
+  background: rgba(var(--admin-success), 0.10);
+  border: 1px solid rgba(var(--admin-success), 0.2);
+  color: #34d399;
+  border-radius: 0.5rem;
+  padding: var(--space-3);
+  font-size: 0.8125rem;
   font-weight: 500;
 }
 
 .alert-error {
-  background: rgba(239, 68, 68, 0.12);
-  border: 1px solid rgba(239, 68, 68, 0.25);
+  background: rgba(var(--admin-danger), 0.10);
+  border: 1px solid rgba(var(--admin-danger), 0.2);
   color: #f87171;
-  border-radius: 0.75rem;
-  padding: 0.75rem;
-  font-size: 0.875rem;
+  border-radius: 0.5rem;
+  padding: var(--space-3);
+  font-size: 0.8125rem;
   font-weight: 500;
 }
 
 .alert-info {
-  background: rgba(59, 130, 246, 0.12);
-  border: 1px solid rgba(59, 130, 246, 0.25);
-  color: #60a5fa;
-  border-radius: 0.75rem;
-  padding: 0.75rem;
-  font-size: 0.875rem;
+  background: rgba(var(--admin-info), 0.10);
+  border: 1px solid rgba(var(--admin-info), 0.2);
+  color: #818cf8;
+  border-radius: 0.5rem;
+  padding: var(--space-3);
+  font-size: 0.8125rem;
   font-weight: 500;
 }
 
-/* Stagger classes kept as no-ops for backward compatibility */
+/* Stagger classes (no-ops, backward compat) */
 .stagger-1, .stagger-2, .stagger-3, .stagger-4, .stagger-5, .stagger-6 {}
 
 /* ============================

@@ -181,7 +181,7 @@ export function AdminAI() {
                 <p className="text-xs admin-text-dim uppercase tracking-wide mb-1">
                   Model Confidence
                 </p>
-                <p className="text-2xl font-bold text-purple-400">
+                <p className="text-2xl font-bold admin-link">
                   {Math.round(avgConfidence * 100)}%
                 </p>
               </div>
@@ -242,7 +242,7 @@ export function AdminAI() {
                       />
                     </div>
                     <p className="text-xs admin-text-dim flex items-center gap-1.5">
-                      <Sparkles className="h-3 w-3 text-purple-400" />
+                      <Sparkles className="h-3 w-3 admin-link" />
                       {f.recommendation}
                     </p>
                     {f.events.length > 0 && (
@@ -265,7 +265,7 @@ export function AdminAI() {
           <div className="space-y-4">
             <div className="glass-card-static p-4 mb-4">
               <p className="text-sm admin-text-muted">
-                <Sparkles className="h-4 w-4 inline text-purple-400 mr-1" />
+                <Sparkles className="h-4 w-4 inline admin-link mr-1" />
                 AI analyzes margin data, demand patterns, and competitor pricing to suggest optimal prices.
                 Suggestions are based on your cost data and order history.
               </p>
@@ -315,7 +315,7 @@ export function AdminAI() {
                   </div>
                   <p className="text-xs admin-text-dim">{s.reason}</p>
                   {s.estimatedRevenueChange !== 0 && (
-                    <p className="text-xs mt-1 font-medium text-purple-400">
+                    <p className="text-xs mt-1 font-medium admin-link">
                       Est. monthly impact: {s.estimatedRevenueChange > 0 ? "+" : ""}
                       {formatPrice(Math.abs(s.estimatedRevenueChange))}
                     </p>
@@ -338,7 +338,7 @@ export function AdminAI() {
           <div className="space-y-4">
             <div className="glass-card-static p-4 mb-4">
               <p className="text-sm admin-text-muted">
-                <Brain className="h-4 w-4 inline text-purple-400 mr-1" />
+                <Brain className="h-4 w-4 inline admin-link mr-1" />
                 AI-generated recommendations based on your order data, customer behavior, and market trends.
               </p>
             </div>
@@ -349,8 +349,8 @@ export function AdminAI() {
                 return (
                   <div key={insight.id} className="glass-card p-4">
                     <div className="flex items-start gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0">
-                        <TypeIcon className="h-5 w-5 text-purple-400" />
+                      <div className="w-9 h-9 rounded-lg bg-white/6 flex items-center justify-center flex-shrink-0">
+                        <TypeIcon className="h-5 w-5 admin-link" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">

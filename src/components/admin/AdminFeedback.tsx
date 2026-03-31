@@ -186,11 +186,11 @@ export function AdminFeedback() {
                 <p className="text-xs admin-text-dim">Awaiting Review</p>
               </div>
               <div className="glass-card p-4">
-                <p className="text-2xl font-bold text-red-400">{lowRating}</p>
+                <p className="text-2xl font-bold admin-red">{lowRating}</p>
                 <p className="text-xs admin-text-dim">Low Ratings (&le;2)</p>
               </div>
               <div className="glass-card p-4">
-                <p className="text-2xl font-bold text-green-400">
+                <p className="text-2xl font-bold admin-green">
                   {feedback.length > 0 ? `${responseRate}%` : "\u2014"}
                 </p>
                 <p className="text-xs admin-text-dim">Response Rate</p>
@@ -222,7 +222,7 @@ export function AdminFeedback() {
                 const isLow = avg < 3.5;
                 return (
                   <div key={cat} className="text-center">
-                    <p className={`text-xl font-bold ${feedback.length === 0 ? "admin-text-dim" : isLow ? "text-red-400" : "text-green-400"}`}>
+                    <p className={`text-xl font-bold ${feedback.length === 0 ? "admin-text-dim" : isLow ? "admin-red" : "admin-green"}`}>
                       {feedback.length > 0 ? avg.toFixed(1) : "\u2014"}
                     </p>
                     <p className="text-xs admin-text-dim capitalize">{cat}</p>
@@ -315,10 +315,10 @@ export function AdminFeedback() {
                       key={cat}
                       className={`text-[10px] px-2 py-1 rounded-lg font-medium ${
                         rating >= 4
-                          ? "bg-green-500/10 text-green-400"
+                          ? "bg-green-500/10 admin-green"
                           : rating >= 3
                             ? "bg-amber-500/10 text-amber-400"
-                            : "bg-red-500/10 text-red-400"
+                            : "bg-red-500/10 admin-red"
                       }`}
                     >
                       {cat}: {rating}/5

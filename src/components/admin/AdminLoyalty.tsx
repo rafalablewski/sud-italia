@@ -238,10 +238,10 @@ export function AdminLoyalty() {
             <div className="glass-card-static p-5">
               <h3 className="font-semibold admin-text mb-3 flex items-center gap-2"><Share2 className="h-4 w-4 text-italia-red" />Referral Program Settings</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                <div className="glass-card p-3"><label className="text-xs admin-text-dim block mb-1">Referrer Reward (pts)</label><input type="number" value={settings?.referral.referrerPoints || 100} onChange={(e) => setSettings((s) => s ? { ...s, referral: { ...s.referral, referrerPoints: parseInt(e.target.value) || 0 } } : s)} className="glass-input w-full text-sm" /></div>
-                <div className="glass-card p-3"><label className="text-xs admin-text-dim block mb-1">New Customer Discount (grosze)</label><input type="number" value={settings?.referral.refereeDiscountGrosze || 1000} onChange={(e) => setSettings((s) => s ? { ...s, referral: { ...s.referral, refereeDiscountGrosze: parseInt(e.target.value) || 0 } } : s)} className="glass-input w-full text-sm" /></div>
-                <div className="glass-card p-3"><p className="text-xs admin-text-dim">Total Referrals</p><p className="text-lg font-bold text-green-400">{referrals.reduce((s, r) => s + r.used, 0)}</p></div>
-                <div className="glass-card p-3"><p className="text-xs admin-text-dim">Points Awarded</p><p className="text-lg font-bold text-italia-gold">{referrals.reduce((s, r) => s + r.earned, 0)}</p></div>
+                <div className="glass-card p-4"><label className="text-xs admin-text-dim block mb-1">Referrer Reward (pts)</label><input type="number" value={settings?.referral.referrerPoints || 100} onChange={(e) => setSettings((s) => s ? { ...s, referral: { ...s.referral, referrerPoints: parseInt(e.target.value) || 0 } } : s)} className="glass-input w-full text-sm" /></div>
+                <div className="glass-card p-4"><label className="text-xs admin-text-dim block mb-1">New Customer Discount (grosze)</label><input type="number" value={settings?.referral.refereeDiscountGrosze || 1000} onChange={(e) => setSettings((s) => s ? { ...s, referral: { ...s.referral, refereeDiscountGrosze: parseInt(e.target.value) || 0 } } : s)} className="glass-input w-full text-sm" /></div>
+                <div className="glass-card p-4"><p className="text-xs admin-text-dim">Total Referrals</p><p className="text-lg font-bold admin-green">{referrals.reduce((s, r) => s + r.used, 0)}</p></div>
+                <div className="glass-card p-4"><p className="text-xs admin-text-dim">Points Awarded</p><p className="text-lg font-bold admin-text">{referrals.reduce((s, r) => s + r.earned, 0)}</p></div>
               </div>
               <button onClick={() => settings && saveSettings({ referral: settings.referral })} disabled={saving} className="glass-btn-green"><Check className="h-3.5 w-3.5" />{saving ? "Saving..." : "Save Referral Settings"}</button>
             </div>
@@ -296,16 +296,42 @@ export function AdminLoyalty() {
 
       {/* Points modal */}
       {pointsModal && createPortal(
-        <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setPointsModal(null)} />
-          <div className="relative bg-[#1e293b] border border-white/15 rounded-lg shadow-2xl p-4 sm:p-6 w-full max-w-sm mx-4 sm:mx-auto">
-            <h3 className="font-heading font-bold text-lg admin-text mb-1">Adjust Points</h3>
+        <div
+          className="fixed inset-0 flex items-center justify-center p-4"
+          style={{ zIndex: 9999 }}
+          onKeyDown={(e) => { if (e.key === "Escape") { setPointsModal(null); setPointsAmount(""); setPointsReason(""); } }}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Adjust points"
+        >
+          <div className="absolute inset-0 bg-black/70" onClick={() => setPointsModal(null)} />
+          <div className="relative bg-[#0f172a] border border-white/12 rounded-lg shadow-2xl p-5 w-full max-w-sm mx-4 sm:mx-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-heading font-semibold admin-text">Adjust Points</h3>
+              <button
+                onClick={() => { setPointsModal(null); setPointsAmount(""); setPointsReason(""); }}
+                className="p-1 rounded admin-text-dim hover:admin-text transition-colors"
+                aria-label="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
             <p className="text-sm admin-text-dim mb-4">{pointsModal.name} &middot; <span className="font-mono text-xs">{pointsModal.phone}</span></p>
             <div className="space-y-3 mb-4">
-              <div><label className="text-xs admin-text-dim block mb-1">Amount (positive to add, negative to remove)</label><input type="number" value={pointsAmount} onChange={(e) => setPointsAmount(e.target.value)} placeholder="e.g. 50 or -20" className="glass-input w-full" autoFocus /></div>
-              <div><label className="text-xs admin-text-dim block mb-1">Reason (optional)</label><input type="text" value={pointsReason} onChange={(e) => setPointsReason(e.target.value)} placeholder="e.g. Compensation" className="glass-input w-full text-xs" /></div>
+              <div>
+                <label className="text-xs admin-text-dim block mb-1">Amount (positive to add, negative to remove)</label>
+                <input type="number" value={pointsAmount} onChange={(e) => setPointsAmount(e.target.value)} placeholder="e.g. 50 or -20" className="glass-input w-full" autoFocus />
+              </div>
+              <div>
+                <label className="text-xs admin-text-dim block mb-1">Reason (optional)</label>
+                <input type="text" value={pointsReason} onChange={(e) => setPointsReason(e.target.value)} placeholder="e.g. Compensation" className="glass-input w-full" />
+              </div>
             </div>
-            {pointsAmount && parseInt(pointsAmount) !== 0 && <p className={`text-sm font-semibold mb-4 ${parseInt(pointsAmount) > 0 ? "text-green-400" : "text-red-400"}`}>{parseInt(pointsAmount) > 0 ? "+" : ""}{pointsAmount} points</p>}
+            {pointsAmount && parseInt(pointsAmount) !== 0 && (
+              <p className={`text-sm font-medium mb-4 ${parseInt(pointsAmount) > 0 ? "admin-green" : "admin-red"}`}>
+                {parseInt(pointsAmount) > 0 ? "+" : ""}{pointsAmount} points
+              </p>
+            )}
             <div className="flex gap-2">
               <button onClick={handleAdjustPoints} disabled={adjusting || !pointsAmount || parseInt(pointsAmount) === 0} className="glass-btn-green flex-1"><Check className="h-3.5 w-3.5" />{adjusting ? "Saving..." : "Apply"}</button>
               <button onClick={() => { setPointsModal(null); setPointsAmount(""); setPointsReason(""); }} className="glass-btn-ghost flex-1">Cancel</button>
