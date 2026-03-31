@@ -125,7 +125,7 @@ export function AdminMenu() {
   return (
     <>
       <AdminNav />
-      <div className="max-w-6xl mx-auto p-4 md:p-6">
+      <div className="max-w-7xl mx-auto p-4 md:p-6">
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
           <div>

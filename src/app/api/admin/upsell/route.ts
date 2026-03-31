@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAuthenticated } from "@/lib/admin-auth";
 import { getUpsellSettings, updateLocationUpsell } from "@/lib/store";
+import { locations } from "@/data/locations";
+
+const validSlugs = new Set(locations.map((l) => l.slug));
 
 export async function GET() {
   if (!(await isAuthenticated())) {
@@ -21,6 +24,14 @@ export async function PUT(req: NextRequest) {
 
   if (!locationSlug || !config) {
     return NextResponse.json({ error: "Missing locationSlug or config" }, { status: 400 });
+  }
+
+  if (!validSlugs.has(locationSlug)) {
+    return NextResponse.json({ error: "Invalid location" }, { status: 400 });
+  }
+
+  if (!Array.isArray(config.combos)) {
+    return NextResponse.json({ error: "Invalid config: combos must be an array" }, { status: 400 });
   }
 
   const settings = await updateLocationUpsell(locationSlug, config);

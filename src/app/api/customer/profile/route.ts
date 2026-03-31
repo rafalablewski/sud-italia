@@ -20,13 +20,13 @@ export async function PUT(req: NextRequest) {
   const body = await req.json();
   const updates: Record<string, string> = {};
 
-  if (typeof body.name === "string" && body.name.trim()) {
+  if (typeof body.name === "string" && body.name.trim() && body.name.trim().length <= 100) {
     updates.name = body.name.trim();
   }
-  if (typeof body.lastName === "string") {
+  if (typeof body.lastName === "string" && body.lastName.trim().length <= 100) {
     updates.lastName = body.lastName.trim();
   }
-  if (typeof body.nickname === "string") {
+  if (typeof body.nickname === "string" && body.nickname.trim().length <= 50) {
     updates.nickname = body.nickname.trim();
   }
 

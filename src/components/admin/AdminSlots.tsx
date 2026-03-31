@@ -48,10 +48,10 @@ interface SlotData {
 const activeLocations = locations.filter((l) => l.isActive);
 
 const ORDER_STATUS_COLORS: Record<string, string> = {
-  pending: "bg-yellow-500/20 text-yellow-300",
-  confirmed: "bg-blue-500/20 text-blue-300",
-  preparing: "bg-orange-500/20 text-orange-300",
-  ready: "bg-green-500/20 text-green-300",
+  pending: "badge-pending",
+  confirmed: "badge-confirmed",
+  preparing: "badge-preparing",
+  ready: "badge-ready",
   completed: "bg-gray-500/20 text-gray-300",
 };
 
@@ -269,7 +269,7 @@ export function AdminSlots() {
   return (
     <>
       <AdminNav />
-      <div className="max-w-6xl mx-auto p-4 md:p-6">
+      <div className="max-w-7xl mx-auto p-4 md:p-6">
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
           <h1 className="text-2xl font-bold font-heading admin-text">
@@ -481,7 +481,7 @@ export function AdminSlots() {
           <div className="text-center py-12 admin-text-muted">Loading...</div>
         ) : slots.length === 0 ? (
           <div className="glass-card rounded-lg p-12 text-center shadow-sm">
-            <Clock className="h-12 w-12 mx-auto mb-4 text-slate-600" />
+            <Clock className="h-8 w-8 mx-auto mb-3 text-slate-600" />
             <p className="admin-text-muted font-medium">No slots for this date</p>
             <p className="text-sm text-slate-500 mt-1">
               Click &quot;Add Slot&quot; to create available time slots
@@ -536,11 +536,11 @@ export function AdminSlots() {
                       </div>
 
                       {isDraft ? (
-                        <span className="px-2 py-1 bg-yellow-500/20 text-yellow-300 text-xs font-semibold rounded-lg flex-shrink-0">
+                        <span className="badge-draft px-2 py-1 text-xs font-semibold rounded-lg flex-shrink-0">
                           Draft
                         </span>
                       ) : (
-                        <span className="px-2 py-1 bg-green-500/20 text-green-300 text-xs font-semibold rounded-lg flex-shrink-0">
+                        <span className="badge-active px-2 py-1 text-xs font-semibold rounded-lg flex-shrink-0">
                           Active
                         </span>
                       )}

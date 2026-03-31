@@ -49,19 +49,19 @@ interface NotificationItem {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  pending: "bg-yellow-500/20 text-yellow-300",
-  confirmed: "bg-blue-500/20 text-blue-300",
-  preparing: "bg-orange-500/20 text-orange-300",
-  ready: "bg-green-500/20 text-green-300",
-  completed: "bg-slate-500/20 text-slate-400",
+  pending: "badge-pending",
+  confirmed: "badge-confirmed",
+  preparing: "badge-preparing",
+  ready: "badge-ready",
+  completed: "badge-completed",
 };
 
 const NOTIF_ICONS: Record<string, string> = {
-  new_order: "bg-blue-500/20 text-blue-400",
-  slot_full: "bg-orange-500/20 text-orange-400",
-  daily_summary: "bg-green-500/20 text-green-400",
-  low_slots: "bg-yellow-500/20 text-yellow-400",
-  order_status: "bg-purple-500/20 text-purple-400",
+  new_order: "badge-info",
+  slot_full: "badge-warning",
+  daily_summary: "badge-success",
+  low_slots: "badge-warning",
+  order_status: "badge-info",
 };
 
 function getDateRange(period: string): { from: string; to: string } {

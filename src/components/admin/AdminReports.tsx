@@ -421,7 +421,7 @@ export function AdminReports() {
             {/* Empty state */}
             {summary.dailyStats.length === 0 && (
               <div className="glass-card rounded-lg border border-white/10 p-12 text-center shadow-sm">
-                <ShoppingBag className="h-12 w-12 mx-auto mb-4 text-slate-600" />
+                <ShoppingBag className="h-8 w-8 mx-auto mb-3 text-slate-600" />
                 <p className="text-lg font-medium admin-text-muted">No data for this period</p>
                 <p className="text-sm text-slate-500 mt-1">
                   Orders will appear here once customers start placing them

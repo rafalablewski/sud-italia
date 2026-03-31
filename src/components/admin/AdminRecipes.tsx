@@ -66,7 +66,7 @@ export function AdminRecipes() {
   return (
     <>
       <AdminNav />
-      <div className="max-w-6xl mx-auto p-4 md:p-6">
+      <div className="max-w-7xl mx-auto p-4 md:p-6">
         <div className="flex items-center gap-1 mb-6 bg-white/5 rounded-lg p-1 w-fit border border-white/10">
           <button
             onClick={() => setTab("recipes")}
@@ -747,7 +747,7 @@ function IngredientsTab() {
         <div className="text-center py-12 admin-text-muted">Loading...</div>
       ) : filtered.length === 0 ? (
         <div className="glass-card rounded-lg p-12 text-center">
-          <Package className="h-12 w-12 mx-auto mb-4 admin-text-dim" />
+          <Package className="h-8 w-8 mx-auto mb-3 admin-text-dim" />
           <p className="admin-text-muted font-medium">No ingredients yet</p>
           <p className="text-sm admin-text-dim mt-1">Add your ingredients to start building recipes</p>
         </div>
