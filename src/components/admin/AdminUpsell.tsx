@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { AdminNav } from "./AdminNav";
-import { TrendingUp, MapPin, Star, Coffee, IceCream, GlassWater, Plus, Trash2, Check, Save } from "lucide-react";
+import { LocationTabs } from "./LocationTabs";
+import { TrendingUp, Star, Coffee, IceCream, GlassWater, Plus, Trash2, Check, Save } from "lucide-react";
 import { krakowMenu } from "@/data/menus/krakow";
 import { warszawaMenu } from "@/data/menus/warszawa";
 import type { MenuItem, MenuCategory } from "@/data/types";
@@ -402,25 +403,7 @@ export function AdminUpsell() {
       </div>
 
       {/* Location tabs */}
-      <div className="flex gap-2">
-        {LOCATIONS.map((l) => (
-          <button
-            key={l.slug}
-            onClick={() => setActiveLocation(l.slug)}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              activeLocation === l.slug
-                ? "bg-white/12 text-white border border-white/20 shadow-sm"
-                : "text-slate-400 border border-transparent hover:text-white hover:bg-white/6"
-            }`}
-          >
-            <MapPin className="h-4 w-4" />
-            {l.name}
-            {settings[l.slug] && (
-              <span className="w-2 h-2 rounded-full bg-emerald-400" title="Configured" />
-            )}
-          </button>
-        ))}
-      </div>
+      <LocationTabs value={activeLocation} onChange={setActiveLocation} />
 
       {/* Cross-sell preferences */}
       <div className="glass-card p-6 space-y-5">

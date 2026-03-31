@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { AdminNav } from "./AdminNav";
+import { LocationTabs } from "./LocationTabs";
 import {
   Plus, Trash2, Save, Search, X, FlaskConical, Package,
-  ChevronDown, ChevronUp, MapPin,
+  ChevronDown, ChevronUp,
 } from "lucide-react";
 import { locations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
@@ -172,14 +173,7 @@ function RecipesTab() {
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 mb-6">
-        <div className="flex items-center gap-2">
-          <MapPin className="h-4 w-4 admin-text-muted" />
-          <select value={selectedLocation} onChange={(e) => setSelectedLocation(e.target.value)} className="glass-input rounded-lg text-sm">
-            {activeLocations.map((loc) => (
-              <option key={loc.slug} value={loc.slug}>{loc.city}</option>
-            ))}
-          </select>
-        </div>
+        <LocationTabs value={selectedLocation} onChange={setSelectedLocation} />
         <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="glass-input rounded-lg text-sm">
           <option value="">All categories</option>
           {categories.map((cat) => (
