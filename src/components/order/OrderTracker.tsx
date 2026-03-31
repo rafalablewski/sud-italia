@@ -24,7 +24,7 @@ const STATUS_STEPS = [
   { key: "ready", label: "Ready", icon: ShoppingBag, description: "Your order is ready!" },
 ] as const;
 
-type TrackerStatus = "pending" | "confirmed" | "preparing" | "ready" | "completed";
+type TrackerStatus = "pending" | "confirmed" | "preparing" | "ready" | "completed" | "cancelled";
 
 function getStepIndex(status: TrackerStatus): number {
   switch (status) {

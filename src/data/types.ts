@@ -196,7 +196,7 @@ export interface Order {
   locationSlug: string;
   items: CartItem[];
   totalAmount: number;
-  status: "pending" | "confirmed" | "preparing" | "ready" | "completed";
+  status: "pending" | "confirmed" | "preparing" | "ready" | "completed" | "cancelled";
   customerName: string;
   customerPhone: string;
   fulfillmentType: FulfillmentType;

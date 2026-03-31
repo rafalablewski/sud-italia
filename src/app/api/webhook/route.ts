@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { updateOrderStatus } from "@/lib/store";
 
 const processedEvents = new Set<string>();
 
@@ -38,19 +39,22 @@ export async function POST(req: NextRequest) {
 
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
-      const { orderId, locationSlug, customerName, customerPhone } =
-        session.metadata ?? {};
+      const { orderId } = session.metadata ?? {};
 
-      // In production, check if orderId already exists in database before
-      // creating a new order (for durable idempotency across restarts).
-      console.log("Order confirmed:", {
-        orderId,
-        locationSlug,
-        customerName,
-        customerPhone,
-        amountTotal: session.amount_total,
-        paymentStatus: session.payment_status,
-      });
+      if (orderId && session.payment_status === "paid") {
+        await updateOrderStatus(orderId, "confirmed");
+      }
+    }
+
+    if (event.type === "checkout.session.expired" || event.type === "payment_intent.payment_failed") {
+      const session = event.data.object;
+      const metadata = "metadata" in session ? session.metadata : null;
+      const orderId = metadata?.orderId;
+
+      if (orderId) {
+        // Mark order as cancelled and release the slot
+        await updateOrderStatus(orderId, "cancelled");
+      }
     }
 
     return NextResponse.json({ received: true });

@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
 import { Container } from "@/components/ui/Container";
 import { Button } from "@/components/ui/Button";
@@ -11,12 +11,35 @@ import { CustomerMilestone } from "@/components/order/CustomerMilestone";
 import { LoyaltyPointsEarned } from "@/components/order/LoyaltyPointsEarned";
 import { CheckCircle, MapPin, ArrowLeft, Share2, Link2 } from "lucide-react";
 import { getLocation } from "@/data/locations";
+import { useCustomer } from "@/store/customer";
+import { calculateTier } from "@/lib/loyalty";
 
 function OrderConfirmationContent() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
   const locationSlug = searchParams.get("location");
   const location = locationSlug ? getLocation(locationSlug) : null;
+  const { customer } = useCustomer();
+
+  // Fetch real order data for points calculation
+  const [orderData, setOrderData] = useState<{ totalAmount: number; itemCount: number } | null>(null);
+  useEffect(() => {
+    if (!orderId) return;
+    fetch(`/api/orders?id=${orderId}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data && data.totalAmount) {
+          setOrderData({ totalAmount: data.totalAmount, itemCount: data.items?.length || 0 });
+        }
+      })
+      .catch(() => {});
+  }, [orderId]);
+
+  const pointsEarned = orderData ? Math.floor(orderData.totalAmount / 100) : 0;
+  const totalPoints = customer?.points ? customer.points + pointsEarned : pointsEarned;
+  const tierName = customer ? calculateTier(totalPoints) : calculateTier(pointsEarned);
+  const orderCount = customer?.ordersCount || 1;
+  const customerName = customer?.name || "Customer";
 
   return (
     <section className="py-10 md:py-16">
@@ -69,18 +92,18 @@ function OrderConfirmationContent() {
             </div>
           )}
 
-          {/* Loyalty points earned — data from DB via order API */}
+          {/* Loyalty points earned — calculated from real order data */}
           <div className="mb-6">
             <LoyaltyPointsEarned
-              pointsEarned={28}
-              totalPoints={28}
-              tierName="Bronze"
+              pointsEarned={pointsEarned}
+              totalPoints={totalPoints}
+              tierName={tierName.charAt(0).toUpperCase() + tierName.slice(1)}
             />
           </div>
 
-          {/* Customer milestone (Kansha) */}
+          {/* Customer milestone */}
           <div className="mb-6">
-            <CustomerMilestone orderCount={1} customerName="Customer" />
+            <CustomerMilestone orderCount={orderCount} customerName={customerName} />
           </div>
 
           {/* Feedback survey (Omotenashi + Kaizen) */}

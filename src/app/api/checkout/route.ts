@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateOrderId } from "@/lib/utils";
 import { getMenuWithOverrides } from "@/data/menus";
-import { getSlotById, incrementSlotOrders, createOrder, addNotification } from "@/lib/store";
+import { getSlotById, incrementSlotOrders, createOrder, addNotification, getUpsellSettings } from "@/lib/store";
 import { FulfillmentType, CartItem } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
+import { getActiveComboDeals } from "@/lib/upsell";
 
 export async function POST(req: NextRequest) {
   try {
@@ -106,6 +107,13 @@ export async function POST(req: NextRequest) {
         locationSlug,
       });
     }
+
+    // Server-side combo discount validation
+    const upsellSettings = await getUpsellSettings();
+    const locationConfig = upsellSettings[locationSlug] || null;
+    const comboResult = getActiveComboDeals(orderItems, locationConfig);
+    const comboDiscount = comboResult.missingCategories.length === 0 ? comboResult.savings : 0;
+    calculatedTotal = calculatedTotal - comboDiscount;
 
     const orderId = generateOrderId();
 
