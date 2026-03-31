@@ -76,15 +76,26 @@ export function MenuItemCard({ item, locationSlug }: MenuItemProps) {
   return (
     <div
       className={`relative flex gap-4 p-4 rounded-2xl border transition-all duration-300 ${
-        inCart
-          ? "bg-italia-green/[0.03] border-italia-green/30 shadow-sm shadow-italia-green/5"
-          : isPopular
-            ? "bg-white border-italia-gold/20 shadow-sm hover:shadow-md hover:border-italia-gold/30"
-            : "bg-white border-gray-100 hover:shadow-md hover:border-gray-200"
+        !item.available
+          ? "bg-gray-50 border-gray-100 opacity-60"
+          : inCart
+            ? "bg-italia-green/[0.03] border-italia-green/30 shadow-sm shadow-italia-green/5"
+            : isPopular
+              ? "bg-white border-italia-gold/20 shadow-sm hover:shadow-md hover:border-italia-gold/30"
+              : "bg-white border-gray-100 hover:shadow-md hover:border-gray-200"
       }`}
     >
+      {/* Unavailable overlay */}
+      {!item.available && (
+        <div className="absolute top-3 right-3">
+          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide bg-gray-200 text-gray-500">
+            Unavailable
+          </span>
+        </div>
+      )}
+
       {/* Social proof badge ribbon */}
-      {badges.length > 0 && (
+      {item.available && badges.length > 0 && (
         <div className="absolute -top-2 right-3 flex gap-1">
           {badges.map((badge) => {
             const config = BADGE_CONFIG[badge];

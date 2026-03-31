@@ -14,7 +14,9 @@ import { ComboDealsPreview } from "./ComboDealsPreview";
 import { ReferralCard } from "@/components/referral/ReferralCard";
 import { AchievementsPanel } from "@/components/gamification/AchievementsPanel";
 import { CustomerGate } from "@/components/loyalty/CustomerGate";
-import { Search, X } from "lucide-react";
+import { getItemBadges } from "@/lib/upsell";
+import { getItemRating } from "@/data/ratings";
+import { Search, X, ArrowUpDown } from "lucide-react";
 
 interface MenuSectionProps {
   items: MenuItem[];
@@ -47,26 +49,38 @@ export function MenuSection({ items, locationSlug }: MenuSectionProps) {
     categories[0]
   );
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"default" | "price-low" | "price-high" | "rating">("default");
 
   const isSearching = searchQuery.trim().length > 0;
 
   const filteredItems = useMemo(() => {
     const available = items.filter((i) => i.available);
+    let result: MenuItem[];
 
     if (isSearching) {
       const q = searchQuery.toLowerCase().trim();
-      return available.filter(
+      result = available.filter(
         (i) =>
           i.name.toLowerCase().includes(q) ||
           i.description.toLowerCase().includes(q) ||
           i.tags.some((t) => t.toLowerCase().includes(q))
       );
+    } else {
+      result = activeCategory
+        ? available.filter((i) => i.category === activeCategory)
+        : [];
     }
 
-    return activeCategory
-      ? available.filter((i) => i.category === activeCategory)
-      : [];
-  }, [items, activeCategory, searchQuery, isSearching]);
+    if (sortBy === "price-low") return [...result].sort((a, b) => a.price - b.price);
+    if (sortBy === "price-high") return [...result].sort((a, b) => b.price - a.price);
+    if (sortBy === "rating") return [...result].sort((a, b) => (getItemRating(b.id)?.rating || 0) - (getItemRating(a.id)?.rating || 0));
+    // "default" — popular items first, then alphabetical
+    return [...result].sort((a, b) => {
+      const aPop = getItemBadges(a.id, locationSlug).includes("popular") ? 0 : 1;
+      const bPop = getItemBadges(b.id, locationSlug).includes("popular") ? 0 : 1;
+      return aPop - bPop || a.name.localeCompare(b.name);
+    });
+  }, [items, activeCategory, searchQuery, isSearching, sortBy, locationSlug]);
 
   if (categories.length === 0 || (!activeCategory && !isSearching)) {
     return (
@@ -104,15 +118,28 @@ export function MenuSection({ items, locationSlug }: MenuSectionProps) {
             )}
           </div>
 
-          {/* Category pills (hidden when searching) */}
-          {!isSearching && (
+          {/* Sort + Category pills */}
+          <div className="flex items-center justify-between gap-2 mb-1">
+            {!isSearching && (
             <MenuCategoryNav
               categories={categories}
               activeCategory={activeCategory!}
               onSelect={setActiveCategory}
               itemCounts={itemCounts}
             />
-          )}
+            )}
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+              className="flex-shrink-0 text-xs text-italia-gray bg-white border border-gray-200 rounded-lg px-2 py-1.5 min-h-[36px]"
+              aria-label="Sort menu items"
+            >
+              <option value="default">Popular first</option>
+              <option value="price-low">Price: low → high</option>
+              <option value="price-high">Price: high → low</option>
+              <option value="rating">Highest rated</option>
+            </select>
+          </div>
         </div>
       </div>
 

@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { locations } from "@/data/locations";
 import { MapPin, Clock, ArrowRight, Pizza } from "lucide-react";
+import { NotifyMeForm } from "./NotifyMeForm";
 
 export function LocationsGrid() {
   return (
@@ -87,9 +88,10 @@ export function LocationsGrid() {
                       </Button>
                     </Link>
                   ) : (
-                    <Button disabled className="w-full opacity-60 min-h-[48px]">
-                      Coming Soon
-                    </Button>
+                    <div className="space-y-2">
+                      <p className="text-xs text-italia-gray text-center">Get notified when we open</p>
+                      <NotifyMeForm city={location.city} />
+                    </div>
                   )}
                 </CardContent>
               </Card>
