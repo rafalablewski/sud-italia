@@ -118,6 +118,7 @@ export function SlotPicker({ locationSlug, fulfillmentType }: SlotPickerProps) {
           {slots.map((slot) => {
             const isSelected = selectedSlotId === slot.id;
             const isLow = slot.spotsLeft <= 2;
+            const isCritical = slot.spotsLeft === 1;
             return (
               <button
                 key={slot.id}
@@ -128,15 +129,21 @@ export function SlotPicker({ locationSlug, fulfillmentType }: SlotPickerProps) {
                     isSelected ? null : date
                   )
                 }
-                className={`px-3 py-2 rounded-xl text-sm font-medium border-2 transition-all ${
+                className={`px-3 py-2.5 rounded-xl text-sm font-medium border-2 transition-all ${
                   isSelected
                     ? "border-italia-red bg-italia-red/5 text-italia-red"
-                    : "border-gray-200 text-italia-dark hover:border-gray-300"
+                    : isCritical
+                      ? "border-red-300 bg-red-50 text-italia-dark hover:border-red-400"
+                      : isLow
+                        ? "border-amber-200 text-italia-dark hover:border-amber-300"
+                        : "border-gray-200 text-italia-dark hover:border-gray-300"
                 }`}
               >
                 <span className="block">{slot.time}</span>
-                <span className={`block text-[10px] ${isLow ? "text-italia-red font-semibold" : "opacity-60"}`}>
-                  {isLow ? `Only ${slot.spotsLeft} left!` : `${slot.spotsLeft} left`}
+                <span className={`block text-[10px] mt-0.5 ${
+                  isCritical ? "text-red-600 font-bold" : isLow ? "text-amber-600 font-semibold" : "text-italia-gray"
+                }`}>
+                  {isCritical ? "Last spot!" : isLow ? `Only ${slot.spotsLeft} left` : `${slot.spotsLeft} spots`}
                 </span>
               </button>
             );

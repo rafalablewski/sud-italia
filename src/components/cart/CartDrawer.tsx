@@ -160,10 +160,18 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
   if (items.length === 0) {
     return (
       <Sheet open={open} onClose={onClose} title="Your Order">
-        <div className="flex flex-col items-center justify-center py-20 text-italia-gray">
-          <ShoppingCart className="h-12 w-12 mb-4 opacity-30" />
-          <p className="font-medium text-lg">Your cart is empty</p>
-          <p className="text-sm mt-1">Add items from the menu to get started</p>
+        <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+          <div className="w-20 h-20 rounded-full bg-italia-cream flex items-center justify-center mb-5">
+            <span className="text-4xl">🍕</span>
+          </div>
+          <p className="font-heading font-bold text-xl text-italia-dark mb-2">Your next meal is waiting</p>
+          <p className="text-sm text-italia-gray mb-6">Browse the menu and add your favorites to get started</p>
+          <button
+            onClick={onClose}
+            className="px-6 py-3 bg-italia-red text-white font-semibold rounded-xl hover:bg-italia-red-dark transition-colors text-sm"
+          >
+            Browse Menu
+          </button>
         </div>
       </Sheet>
     );
