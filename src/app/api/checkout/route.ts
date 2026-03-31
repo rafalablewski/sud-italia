@@ -167,7 +167,10 @@ export async function POST(req: NextRequest) {
       const stripeClient = new stripe(process.env.STRIPE_SECRET_KEY);
 
       const session = await stripeClient.checkout.sessions.create({
-        payment_method_types: ["card", "p24"],
+        // BLIK: Add "blik" to payment_method_types when Stripe BLIK is enabled
+        // Requires: Stripe account with BLIK capability enabled for PLN
+        // See: https://docs.stripe.com/payments/blik
+        payment_method_types: ["card", "p24", "blik"],
         line_items: verifiedItems.map((item) => ({
           price_data: {
             currency: "pln",

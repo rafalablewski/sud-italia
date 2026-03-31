@@ -30,7 +30,7 @@ const values = [
 
 export function AboutSection() {
   return (
-    <section id="about" className="hidden md:block py-20 md:py-28 bg-italia-cream">
+    <section id="about" className="py-12 md:py-28 bg-italia-cream">
       <Container>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           {/* Text */}
@@ -46,9 +46,9 @@ export function AboutSection() {
             <div className="space-y-4 text-italia-gray leading-relaxed">
               <p>
                 Sud Italia was born from a simple dream: to share the authentic
-                flavors of Southern Italy with Poland. Founded by xyz, a group
-                of food enthusiasts with deep roots in Italian culinary
-                tradition, we started with a single food truck in Krak&oacute;w.
+                flavors of Southern Italy with Poland. A group of food
+                enthusiasts with deep roots in Italian culinary tradition,
+                we started with a single food truck in Krak&oacute;w.
               </p>
               <p>
                 Today, we&apos;re growing across Poland, bringing our signature

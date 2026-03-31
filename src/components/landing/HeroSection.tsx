@@ -26,19 +26,19 @@ export function HeroSection() {
       <Container className="relative z-10 py-20">
         <div className="max-w-3xl">
           <p className="text-italia-gold font-medium text-sm tracking-[0.2em] uppercase mb-6 stagger-1">
-            Authentic Italian Street Food
+            Neapolitan Pizza Food Trucks
           </p>
           <h1 className="text-3xl sm:text-5xl lg:text-7xl font-heading font-bold text-white leading-[1.1] mb-6 stagger-2">
-            A Taste of{" "}
-            <span className="text-italia-red">Southern Italy</span>
+            Order{" "}
+            <span className="text-italia-red">Authentic Pizza</span>
             <br />
-            on the Streets of{" "}
-            <span className="text-italia-green">Poland</span>
+            Ready in{" "}
+            <span className="text-italia-green">15 Minutes</span>
           </h1>
           <p className="text-lg sm:text-xl text-gray-300 leading-relaxed mb-10 max-w-xl stagger-3">
-            Neapolitan pizza, fresh handmade pasta, and classic Italian street
-            food — crafted with love and served from our food trucks across
-            Poland by xyz.
+            Order online from our food trucks in Kraków and Warsaw.
+            Neapolitan pizza, fresh pasta, and Italian street food —
+            ready in 15 minutes.
           </p>
 
           {/* Quick location picker (Uber/Grab style) */}
