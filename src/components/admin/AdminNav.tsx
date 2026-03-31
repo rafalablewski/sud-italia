@@ -69,7 +69,7 @@ export function AdminNav() {
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         <div className="flex items-center gap-5">
           <Link href="/admin" className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-italia-red to-italia-red-dark flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-italia-red/20">
+            <span className="w-8 h-8 rounded-md bg-italia-red flex items-center justify-center text-white font-bold text-sm">
               SI
             </span>
             <span className="font-heading font-bold text-base admin-text hidden sm:block">
@@ -112,7 +112,7 @@ export function AdminNav() {
           >
             <Bell className="h-4.5 w-4.5" />
             {unread > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 bg-italia-red text-white text-[9px] font-bold rounded-full flex items-center justify-center shadow-lg shadow-italia-red/30 animate-pulse">
+              <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 bg-italia-red text-white text-[9px] font-bold rounded flex items-center justify-center">
                 {unread > 9 ? "9+" : unread}
               </span>
             )}

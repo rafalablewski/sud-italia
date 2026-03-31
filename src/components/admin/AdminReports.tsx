@@ -202,7 +202,7 @@ export function AdminReports() {
 
             {/* PnL chart — stacked bar */}
             {summary.dailyStats.length > 0 && (
-              <div className="glass-card rounded-2xl border border-white/10 p-5 shadow-sm">
+              <div className="glass-card rounded-lg border border-white/10 p-5 shadow-sm">
                 <h2 className="font-bold admin-text mb-4">Daily PnL Breakdown</h2>
                 <div className="flex items-end gap-px h-48 mb-2">
                   {summary.dailyStats.map((day) => {
@@ -244,7 +244,7 @@ export function AdminReports() {
 
             {/* Daily breakdown table */}
             {summary.dailyStats.length > 0 && (
-              <div className="glass-card rounded-2xl border border-white/10 overflow-hidden">
+              <div className="glass-card rounded-lg border border-white/10 overflow-hidden">
                 <div className="p-5 border-b border-white/8">
                   <h2 className="font-bold admin-text">Daily Breakdown</h2>
                 </div>
@@ -330,7 +330,7 @@ export function AdminReports() {
 
             {/* Category PnL */}
             {Object.keys(summary.categoryBreakdown).length > 0 && (
-              <div className="glass-card rounded-2xl border border-white/10 overflow-hidden">
+              <div className="glass-card rounded-lg border border-white/10 overflow-hidden">
                 <div className="p-5 border-b border-white/8">
                   <h2 className="font-bold admin-text">Category PnL</h2>
                 </div>
@@ -394,14 +394,14 @@ export function AdminReports() {
 
             {/* Top items */}
             {summary.topItems.length > 0 && (
-              <div className="glass-card rounded-2xl border border-white/10 p-5 shadow-sm">
+              <div className="glass-card rounded-lg border border-white/10 p-5 shadow-sm">
                 <h2 className="font-bold admin-text mb-4">Top 10 Best Sellers</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {summary.topItems.map((item, i) => {
                     const maxQty = summary.topItems[0]?.quantity || 1;
                     const barWidth = (item.quantity / maxQty) * 100;
                     return (
-                      <div key={item.name} className="flex items-center gap-3 p-3 rounded-xl bg-white/5">
+                      <div key={item.name} className="flex items-center gap-3 p-3 rounded-lg bg-white/5">
                         <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
                           i < 3 ? "bg-italia-gold/20 text-italia-gold-dark" : "bg-white/10 admin-text-muted"
                         }`}>
@@ -431,7 +431,7 @@ export function AdminReports() {
 
             {/* Empty state */}
             {summary.dailyStats.length === 0 && (
-              <div className="glass-card rounded-2xl border border-white/10 p-12 text-center shadow-sm">
+              <div className="glass-card rounded-lg border border-white/10 p-12 text-center shadow-sm">
                 <ShoppingBag className="h-12 w-12 mx-auto mb-4 text-slate-600" />
                 <p className="text-lg font-medium admin-text-muted">No data for this period</p>
                 <p className="text-sm text-slate-500 mt-1">
@@ -458,7 +458,7 @@ function SummaryCard({
   highlight?: "green" | "red";
 }) {
   return (
-    <div className={`rounded-2xl border p-4 shadow-sm ${
+    <div className={`rounded-lg border p-4 shadow-sm ${
       highlight === "green"
         ? "bg-green-500/10 border-green-500/20"
         : highlight === "red"

@@ -106,8 +106,8 @@ export function AdminAI() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 flex items-center justify-center">
-              <Brain className="h-5 w-5 text-purple-400" />
+            <div className="w-9 h-9 rounded-md bg-white/6 flex items-center justify-center">
+              <Brain className="h-5 w-5 text-slate-400" />
             </div>
             <div>
               <h1 className="text-xl font-heading font-bold admin-text">AI Command Center</h1>
@@ -143,7 +143,7 @@ export function AdminAI() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 p-1 glass rounded-xl w-fit">
+        <div className="flex gap-1 mb-6 p-1 glass rounded-lg w-fit">
           {tabs.map((t) => (
             <button
               key={t.id}

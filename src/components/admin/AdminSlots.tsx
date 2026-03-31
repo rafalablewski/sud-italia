@@ -287,7 +287,7 @@ export function AdminSlots() {
             {selectedIds.size > 0 && (
               <button
                 onClick={handleBulkDelete}
-                className="flex items-center gap-2 px-4 py-2 glass-btn text-white rounded-xl font-semibold text-sm"
+                className="flex items-center gap-2 px-4 py-2 glass-btn text-white rounded-lg font-semibold text-sm"
               >
                 <Trash2 className="h-4 w-4" />
                 Delete Selected ({selectedIds.size})
@@ -295,7 +295,7 @@ export function AdminSlots() {
             )}
             <button
               onClick={() => setShowForm(!showForm)}
-              className="flex items-center gap-2 px-4 py-2 glass-btn-green text-white rounded-xl font-semibold text-sm"
+              className="flex items-center gap-2 px-4 py-2 glass-btn-green text-white rounded-lg font-semibold text-sm"
             >
               <Plus className="h-4 w-4" />
               Add Slot
@@ -365,7 +365,7 @@ export function AdminSlots() {
 
         {/* New slot form */}
         {showForm && (
-          <div className="glass-card rounded-2xl p-6 shadow-sm mb-6">
+          <div className="glass-card rounded-lg p-6 shadow-sm mb-6">
             <h2 className="font-bold text-lg mb-4">
               New Slot &mdash; {activeLocations.find((l) => l.slug === selectedLocation)?.city} &mdash; {formatDateLabel(selectedDate)}
             </h2>
@@ -435,7 +435,7 @@ export function AdminSlots() {
 
             {/* Bulk preview */}
             {bulkMode && bulkPreview.length > 0 && (
-              <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 mb-4">
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mb-4">
                 <p className="text-sm font-semibold text-blue-300">
                   Will create {bulkPreview.length} slot{bulkPreview.length !== 1 ? "s" : ""}, each accepting up to {newMaxOrders} orders:
                 </p>
@@ -474,13 +474,13 @@ export function AdminSlots() {
               <button
                 onClick={handleSubmit}
                 disabled={saving || (!newTakeout && !newDelivery)}
-                className="px-6 py-2 glass-btn-green text-white rounded-xl font-semibold text-sm disabled:opacity-50"
+                className="px-6 py-2 glass-btn-green text-white rounded-lg font-semibold text-sm disabled:opacity-50"
               >
                 {saving ? "Creating..." : bulkMode ? `Create ${bulkPreview.length} Slots` : "Create Slot"}
               </button>
               <button
                 onClick={() => setShowForm(false)}
-                className="px-6 py-2 glass-input rounded-xl text-sm hover:bg-white/5 transition-colors"
+                className="px-6 py-2 glass-input rounded-lg text-sm hover:bg-white/5 transition-colors"
               >
                 Cancel
               </button>
@@ -492,7 +492,7 @@ export function AdminSlots() {
         {loading ? (
           <div className="text-center py-12 admin-text-muted">Loading...</div>
         ) : slots.length === 0 ? (
-          <div className="glass-card rounded-2xl p-12 text-center shadow-sm">
+          <div className="glass-card rounded-lg p-12 text-center shadow-sm">
             <Clock className="h-12 w-12 mx-auto mb-4 text-slate-600" />
             <p className="admin-text-muted font-medium">No slots for this date</p>
             <p className="text-sm text-slate-500 mt-1">
@@ -528,7 +528,7 @@ export function AdminSlots() {
                 return (
                   <div
                     key={slot.id}
-                    className={`rounded-xl shadow-sm overflow-hidden ${
+                    className={`rounded-lg shadow-sm overflow-hidden ${
                       isDraft
                         ? "bg-yellow-500/10 border-2 border-dashed border-yellow-500/30"
                         : "glass-card border border-white/10"

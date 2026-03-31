@@ -118,11 +118,11 @@ export function AdminSettings() {
         <h1 className="text-2xl font-bold font-heading gradient-text">Settings</h1>
 
         {/* Business Settings */}
-        <div className="glass-card rounded-2xl border border-white/10 p-6 shadow-sm">
+        <div className="glass-card rounded-lg border border-white/10 p-6 shadow-sm">
           <h2 className="font-bold admin-text mb-4">Business Configuration</h2>
 
           {saved && (
-            <div className="mb-4 p-3 bg-green-500/20 border border-green-500/30 rounded-xl text-sm text-green-300 font-medium">
+            <div className="mb-4 p-3 bg-green-500/20 border border-green-500/30 rounded-lg text-sm text-green-300 font-medium">
               Settings saved successfully.
             </div>
           )}
@@ -195,7 +195,7 @@ export function AdminSettings() {
             <button
               onClick={handleSaveSettings}
               disabled={saving}
-              className="flex items-center gap-2 px-5 py-2 glass-btn-green text-white rounded-xl font-semibold text-sm disabled:opacity-50"
+              className="flex items-center gap-2 px-5 py-2 glass-btn-green text-white rounded-lg font-semibold text-sm disabled:opacity-50"
             >
               <Save className="h-4 w-4" />
               {saving ? "Saving..." : "Save Settings"}
@@ -204,20 +204,20 @@ export function AdminSettings() {
         </div>
 
         {/* Change Password */}
-        <div className="glass-card rounded-2xl border border-white/10 p-6 shadow-sm">
+        <div className="glass-card rounded-lg border border-white/10 p-6 shadow-sm">
           <h2 className="font-bold admin-text mb-4 flex items-center gap-2">
             <KeyRound className="h-5 w-5 admin-text-muted" />
             Change Password
           </h2>
 
           {passwordSaved && (
-            <div className="mb-4 p-3 bg-green-500/20 border border-green-500/30 rounded-xl text-sm text-green-300 font-medium">
+            <div className="mb-4 p-3 bg-green-500/20 border border-green-500/30 rounded-lg text-sm text-green-300 font-medium">
               Password changed. Redirecting to login...
             </div>
           )}
 
           {passwordError && (
-            <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-xl text-sm text-red-400 font-medium">
+            <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-sm text-red-400 font-medium">
               {passwordError}
             </div>
           )}
@@ -263,7 +263,7 @@ export function AdminSettings() {
             <button
               onClick={handleChangePassword}
               disabled={changingPassword || !currentPassword || !newPassword}
-              className="flex items-center gap-2 px-5 py-2 glass-btn text-white rounded-xl font-semibold text-sm disabled:opacity-50"
+              className="flex items-center gap-2 px-5 py-2 glass-btn text-white rounded-lg font-semibold text-sm disabled:opacity-50"
             >
               <KeyRound className="h-4 w-4" />
               {changingPassword ? "Changing..." : "Change Password"}
@@ -309,7 +309,7 @@ function SeedSection() {
   };
 
   return (
-    <div className="glass-card rounded-2xl border border-white/10 p-6 shadow-sm">
+    <div className="glass-card rounded-lg border border-white/10 p-6 shadow-sm">
       <h2 className="font-bold admin-text mb-2 flex items-center gap-2">
         <Database className="h-5 w-5 admin-text-muted" />
         Seed Sample Data
@@ -319,7 +319,7 @@ function SeedSection() {
       </p>
 
       {result && (
-        <div className={`mb-4 p-3 rounded-xl text-sm font-medium ${
+        <div className={`mb-4 p-3 rounded-lg text-sm font-medium ${
           result.success
             ? "bg-green-500/20 border border-green-500/30 text-green-300"
             : "bg-red-500/20 border border-red-500/30 text-red-400"
@@ -331,7 +331,7 @@ function SeedSection() {
       <button
         onClick={handleSeed}
         disabled={seeding}
-        className="flex items-center gap-2 px-5 py-2 bg-blue-500/80 text-white rounded-xl font-semibold text-sm hover:bg-blue-500 transition-colors disabled:opacity-50"
+        className="flex items-center gap-2 px-5 py-2 bg-blue-500/80 text-white rounded-lg font-semibold text-sm hover:bg-blue-500 transition-colors disabled:opacity-50"
       >
         <Database className="h-4 w-4" />
         {seeding ? "Seeding..." : "Seed Ingredients & Margherita Recipe"}

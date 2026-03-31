@@ -138,7 +138,7 @@ export function AdminMenu() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="glass-btn-green rounded-xl disabled:opacity-50"
+              className="glass-btn-green rounded-lg disabled:opacity-50"
             >
               <Save className="h-4 w-4" />
               {saving ? "Saving..." : `Save Changes (${Object.keys(changes).length})`}
@@ -195,7 +195,7 @@ export function AdminMenu() {
                     return (
                       <div
                         key={item.id}
-                        className={`rounded-xl overflow-hidden transition-all ${
+                        className={`rounded-lg overflow-hidden transition-all ${
                           !isAvailable
                             ? "bg-white/4 border border-white/8 opacity-50"
                             : hasItemChanges

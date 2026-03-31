@@ -95,8 +95,8 @@ export function AdminExpansion() {
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-italia-red/20 to-italia-gold/20 flex items-center justify-center">
-            <Map className="h-5 w-5 text-italia-gold" />
+          <div className="w-9 h-9 rounded-md bg-white/6 flex items-center justify-center">
+            <Map className="h-5 w-5 text-slate-400" />
           </div>
           <div>
             <h1 className="text-xl font-heading font-bold admin-text">
@@ -134,7 +134,7 @@ export function AdminExpansion() {
             <button
               key={pillar.id}
               onClick={() => setActivePillar(pillar.id)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
                 activePillar === pillar.id
                   ? "bg-white/12 text-white shadow-sm border border-white/10"
                   : "text-slate-400 hover:text-white hover:bg-white/6"

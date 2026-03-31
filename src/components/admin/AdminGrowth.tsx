@@ -65,8 +65,8 @@ export function AdminGrowth() {
       <AdminNav />
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500/20 to-blue-500/20 flex items-center justify-center">
-            <Rocket className="h-5 w-5 text-green-400" />
+          <div className="w-9 h-9 rounded-md bg-white/6 flex items-center justify-center">
+            <Rocket className="h-5 w-5 text-slate-400" />
           </div>
           <div className="flex-1">
             <h1 className="text-xl font-heading font-bold admin-text">Growth & Operations</h1>
@@ -81,7 +81,7 @@ export function AdminGrowth() {
         {/* Tabs */}
         <div className="flex gap-1 mb-6 overflow-x-auto scrollbar-hide pb-1">
           {tabs.map((t) => (
-            <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${tab === t.id ? "bg-white/12 text-white shadow-sm border border-white/10" : "text-slate-400 hover:text-white hover:bg-white/6"}`}>
+            <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${tab === t.id ? "bg-white/12 text-white shadow-sm border border-white/10" : "text-slate-400 hover:text-white hover:bg-white/6"}`}>
               <t.icon className="h-4 w-4" />{t.label}
             </button>
           ))}
@@ -213,7 +213,7 @@ export function AdminGrowth() {
             <div className="glass-card-static p-5">
               <h3 className="font-semibold admin-text mb-3">Chatbot Settings</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="glass-card p-4"><label className="text-xs admin-text-dim block mb-1">Welcome Message</label><textarea defaultValue="Ciao! 👋 I'm the Sud Italia assistant." className="glass-input w-full text-xs h-20 resize-none" /></div>
+                <div className="glass-card p-4"><label className="text-xs admin-text-dim block mb-1">Welcome Message</label><textarea defaultValue="Ciao! I'm the Sud Italia assistant." className="glass-input w-full text-xs h-20 resize-none" /></div>
                 <div className="glass-card p-4"><label className="text-xs admin-text-dim block mb-1">Default Response</label><textarea defaultValue="I'd be happy to help! I can answer questions about our menu, locations, hours..." className="glass-input w-full text-xs h-20 resize-none" /></div>
               </div>
               <div className="flex gap-2 mt-4"><button className="glass-btn-green text-xs"><Check className="h-3.5 w-3.5" /> Save Chatbot Settings</button></div>

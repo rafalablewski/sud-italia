@@ -131,8 +131,8 @@ export function AdminLoyalty() {
       <AdminNav />
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-italia-gold/20 to-italia-red/20 flex items-center justify-center">
-            <Heart className="h-5 w-5 text-italia-gold" />
+          <div className="w-9 h-9 rounded-md bg-white/6 flex items-center justify-center">
+            <Heart className="h-5 w-5 text-slate-400" />
           </div>
           <div className="flex-1">
             <h1 className="text-xl font-heading font-bold admin-text">Loyalty & Rewards</h1>
@@ -155,7 +155,7 @@ export function AdminLoyalty() {
         {/* Tabs */}
         <div className="flex gap-1 mb-6 overflow-x-auto scrollbar-hide pb-1">
           {tabs.map((t) => (
-            <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${tab === t.id ? "bg-white/12 text-white shadow-sm border border-white/10" : "text-slate-400 hover:text-white hover:bg-white/6"}`}>
+            <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${tab === t.id ? "bg-white/12 text-white shadow-sm border border-white/10" : "text-slate-400 hover:text-white hover:bg-white/6"}`}>
               <t.icon className="h-4 w-4" />{t.label}
             </button>
           ))}
@@ -286,7 +286,7 @@ export function AdminLoyalty() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {ACHIEVEMENTS.map((a) => (
                   <div key={a.id} className="flex items-center justify-between p-3 glass-card">
-                    <div className="flex items-center gap-2"><span className="text-xl">{a.emoji}</span><div><p className="text-sm font-semibold admin-text">{a.name}</p><p className="text-[10px] admin-text-dim">{a.description}</p></div></div>
+                    <div className="flex items-center gap-2"><span className="w-7 h-7 rounded-md bg-white/6 flex items-center justify-center text-sm flex-shrink-0">{a.emoji}</span><div><p className="text-sm font-semibold admin-text">{a.name}</p><p className="text-[10px] admin-text-dim">{a.description}</p></div></div>
                     <div className="flex items-center gap-2"><span className="text-xs font-bold text-italia-gold">+{a.pointsReward}</span><button className="text-slate-400 hover:text-white"><Edit3 className="h-3 w-3" /></button></div>
                   </div>
                 ))}
@@ -300,7 +300,7 @@ export function AdminLoyalty() {
       {pointsModal && createPortal(
         <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setPointsModal(null)} />
-          <div className="relative bg-[#1e293b] border border-white/15 rounded-2xl shadow-2xl p-6 w-full max-w-sm">
+          <div className="relative bg-[#1e293b] border border-white/15 rounded-lg shadow-2xl p-6 w-full max-w-sm">
             <h3 className="font-heading font-bold text-lg admin-text mb-1">Adjust Points</h3>
             <p className="text-sm admin-text-dim mb-4">{pointsModal.name} &middot; <span className="font-mono text-xs">{pointsModal.phone}</span></p>
             <div className="space-y-3 mb-4">

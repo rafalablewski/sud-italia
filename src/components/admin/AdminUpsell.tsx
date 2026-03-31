@@ -375,7 +375,7 @@ export function AdminUpsell() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-heading font-bold admin-text flex items-center gap-3">
-            <TrendingUp className="h-7 w-7 text-italia-gold" />
+            <TrendingUp className="h-6 w-6 text-slate-400" />
             Upsell & Cross-Sell
           </h1>
           <p className="text-sm text-slate-400 mt-1">
@@ -407,7 +407,7 @@ export function AdminUpsell() {
           <button
             key={l.slug}
             onClick={() => setActiveLocation(l.slug)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
               activeLocation === l.slug
                 ? "bg-white/12 text-white border border-white/20 shadow-sm"
                 : "text-slate-400 border border-transparent hover:text-white hover:bg-white/6"

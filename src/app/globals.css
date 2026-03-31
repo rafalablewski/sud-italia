@@ -154,24 +154,9 @@ html { scroll-behavior: smooth; }
    ============================ */
 
 .admin-bg {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 40%, #1a1a2e 100%);
+  background: #0f172a;
   min-height: 100vh;
   position: relative;
-}
-
-.admin-bg::before {
-  content: '';
-  position: fixed;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background:
-    radial-gradient(ellipse at 20% 50%, rgba(200, 16, 46, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 20%, rgba(0, 140, 69, 0.06) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 80%, rgba(212, 168, 71, 0.05) 0%, transparent 50%);
-  pointer-events: none;
-  z-index: 0;
 }
 
 .admin-bg > * { position: relative; z-index: 1; }
@@ -193,28 +178,24 @@ html { scroll-behavior: smooth; }
 }
 
 .glass-card {
-  background: rgba(255, 255, 255, 0.07);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 1rem;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.5rem;
+  transition: border-color 0.15s ease;
 }
 
 .glass-card:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.18);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
-/* Cards that shouldn't lift on hover (tables, static content) */
 .glass-card-static {
-  background: rgba(255, 255, 255, 0.07);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.5rem;
 }
 
 .glass-nav {
@@ -237,10 +218,9 @@ html { scroll-behavior: smooth; }
 }
 
 .glass-input:focus {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
   border-color: rgba(200, 16, 46, 0.5);
   outline: none;
-  box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.15);
 }
 
 .glass-input::placeholder { color: rgba(255, 255, 255, 0.35); }
@@ -319,17 +299,15 @@ select.pub-input {
   font-size: 0.875rem;
   font-weight: 600;
   color: #fff;
-  border-radius: 0.75rem;
-  background: linear-gradient(135deg, rgba(200, 16, 46, 0.8), rgba(200, 16, 46, 0.6));
-  border: 1px solid rgba(200, 16, 46, 0.3);
-  transition: all 0.2s ease;
+  border-radius: 0.375rem;
+  background: rgba(200, 16, 46, 0.8);
+  border: 1px solid rgba(200, 16, 46, 0.4);
+  transition: background 0.15s ease;
   cursor: pointer;
 }
 
 .glass-btn:hover {
-  background: linear-gradient(135deg, rgba(200, 16, 46, 0.9), rgba(200, 16, 46, 0.7));
-  box-shadow: 0 4px 16px rgba(200, 16, 46, 0.3);
-  transform: translateY(-1px);
+  background: rgba(200, 16, 46, 0.95);
 }
 
 .glass-btn:disabled { opacity: 0.5; pointer-events: none; }
@@ -342,17 +320,15 @@ select.pub-input {
   font-size: 0.875rem;
   font-weight: 600;
   color: #fff;
-  border-radius: 0.75rem;
-  background: linear-gradient(135deg, rgba(0, 140, 69, 0.8), rgba(0, 140, 69, 0.6));
-  border: 1px solid rgba(0, 140, 69, 0.3);
-  transition: all 0.2s ease;
+  border-radius: 0.375rem;
+  background: rgba(0, 140, 69, 0.8);
+  border: 1px solid rgba(0, 140, 69, 0.4);
+  transition: background 0.15s ease;
   cursor: pointer;
 }
 
 .glass-btn-green:hover {
-  background: linear-gradient(135deg, rgba(0, 140, 69, 0.9), rgba(0, 140, 69, 0.7));
-  box-shadow: 0 4px 16px rgba(0, 140, 69, 0.3);
-  transform: translateY(-1px);
+  background: rgba(0, 140, 69, 0.95);
 }
 
 .glass-btn-green:disabled { opacity: 0.5; pointer-events: none; }
@@ -365,17 +341,15 @@ select.pub-input {
   font-size: 0.875rem;
   font-weight: 600;
   color: #fff;
-  border-radius: 0.75rem;
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.7), rgba(59, 130, 246, 0.5));
-  border: 1px solid rgba(59, 130, 246, 0.3);
-  transition: all 0.2s ease;
+  border-radius: 0.375rem;
+  background: rgba(59, 130, 246, 0.7);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  transition: background 0.15s ease;
   cursor: pointer;
 }
 
 .glass-btn-blue:hover {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.85), rgba(59, 130, 246, 0.65));
-  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
-  transform: translateY(-1px);
+  background: rgba(59, 130, 246, 0.9);
 }
 
 .glass-btn-blue:disabled { opacity: 0.5; pointer-events: none; }
@@ -388,10 +362,10 @@ select.pub-input {
   font-size: 0.875rem;
   font-weight: 500;
   color: #94a3b8;
-  border-radius: 0.75rem;
+  border-radius: 0.375rem;
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   cursor: pointer;
 }
 
@@ -420,10 +394,7 @@ select.pub-input {
 .admin-link:hover { color: #fca5a5; }  /* 6.8:1 on #1a2332 */
 
 .gradient-text {
-  background: linear-gradient(135deg, #f1f5f9, #cbd5e1);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #f1f5f9;
 }
 
 /* --- Admin status badges ---
@@ -472,13 +443,8 @@ select.pub-input {
   font-weight: 500;
 }
 
-/* --- Staggered entry animations --- */
-.stagger-1 { animation: slide-up 0.4s ease-out 0.05s both; }
-.stagger-2 { animation: slide-up 0.4s ease-out 0.1s both; }
-.stagger-3 { animation: slide-up 0.4s ease-out 0.15s both; }
-.stagger-4 { animation: slide-up 0.4s ease-out 0.2s both; }
-.stagger-5 { animation: slide-up 0.4s ease-out 0.25s both; }
-.stagger-6 { animation: slide-up 0.4s ease-out 0.3s both; }
+/* Stagger classes kept as no-ops for backward compatibility */
+.stagger-1, .stagger-2, .stagger-3, .stagger-4, .stagger-5, .stagger-6 {}
 
 /* ============================
    UBER/GRAB-LIKE UX ENHANCEMENTS

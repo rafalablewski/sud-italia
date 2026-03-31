@@ -137,7 +137,7 @@ export function AdminDashboard() {
       <AdminNav />
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-5">
         {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-3 stagger-1">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold font-heading gradient-text">Dashboard</h1>
             <p className="text-xs admin-text-dim mt-1 flex items-center gap-2">
@@ -194,33 +194,30 @@ export function AdminDashboard() {
         </div>
 
         {/* KPI Row 1 */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 stagger-2">
-          <KPICard label="Revenue" value={summary ? formatPrice(summary.totalRevenue) : undefined} icon={<DollarSign className="h-5 w-5" />} gradient="from-emerald-500/20 to-emerald-600/10" iconColor="text-emerald-400" loading={!summary} />
-          <KPICard label="Profit" value={summary ? formatPrice(summary.totalProfit) : undefined} sub={summary ? `${summary.profitMargin}% margin` : undefined} icon={summary && summary.totalProfit >= 0 ? <TrendingUp className="h-5 w-5" /> : <TrendingDown className="h-5 w-5" />} gradient={summary && summary.totalProfit >= 0 ? "from-green-500/20 to-green-600/10" : "from-red-500/20 to-red-600/10"} iconColor={summary && summary.totalProfit >= 0 ? "text-green-400" : "text-red-400"} loading={!summary} />
-          <KPICard label="Orders" value={summary ? summary.totalOrders.toString() : undefined} sub={summary ? `${summary.takeoutCount} takeout · ${summary.deliveryCount} delivery` : undefined} icon={<ShoppingBag className="h-5 w-5" />} gradient="from-blue-500/20 to-blue-600/10" iconColor="text-blue-400" loading={!summary} />
-          <KPICard label="Avg Order" value={summary ? formatPrice(summary.avgOrderValue) : undefined} sub={insights ? `${insights.avgItemsPerOrder} items/order` : undefined} icon={<BarChart3 className="h-5 w-5" />} gradient="from-amber-500/20 to-amber-600/10" iconColor="text-amber-400" loading={!summary} />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <KPICard label="Revenue" value={summary ? formatPrice(summary.totalRevenue) : undefined} icon={<DollarSign className="h-4 w-4" />} iconColor="text-slate-400" loading={!summary} />
+          <KPICard label="Profit" value={summary ? formatPrice(summary.totalProfit) : undefined} sub={summary ? `${summary.profitMargin}% margin` : undefined} icon={summary && summary.totalProfit >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />} iconColor={summary && summary.totalProfit >= 0 ? "text-emerald-400" : "text-red-400"} loading={!summary} />
+          <KPICard label="Orders" value={summary ? summary.totalOrders.toString() : undefined} sub={summary ? `${summary.takeoutCount} takeout · ${summary.deliveryCount} delivery` : undefined} icon={<ShoppingBag className="h-4 w-4" />} iconColor="text-slate-400" loading={!summary} />
+          <KPICard label="Avg Order" value={summary ? formatPrice(summary.avgOrderValue) : undefined} sub={insights ? `${insights.avgItemsPerOrder} items/order` : undefined} icon={<BarChart3 className="h-4 w-4" />} iconColor="text-slate-400" loading={!summary} />
         </div>
 
         {/* KPI Row 2 */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 stagger-3">
-          <KPICard label="Repeat Customers" value={insights ? insights.repeatCustomers.length.toString() : undefined} icon={<Users className="h-5 w-5" />} gradient="from-violet-500/20 to-violet-600/10" iconColor="text-violet-400" loading={!insights} />
-          <KPICard label="Items / Order" value={insights ? insights.avgItemsPerOrder.toString() : undefined} sub="basket size" icon={<Layers className="h-5 w-5" />} gradient="from-cyan-500/20 to-cyan-600/10" iconColor="text-cyan-400" loading={!insights} />
-          <KPICard label="Cancellation" value={insights ? `${insights.cancellationRate}%` : undefined} sub={insights ? `${insights.cancelledOrders} cancelled` : undefined} icon={<XCircle className="h-5 w-5" />} gradient={insights && insights.cancellationRate > 10 ? "from-red-500/20 to-red-600/10" : "from-emerald-500/20 to-emerald-600/10"} iconColor={insights && insights.cancellationRate > 10 ? "text-red-400" : "text-emerald-400"} loading={!insights} />
-          <KPICard label="Worst Seller" value={insights ? (insights.worstSellers[0]?.name ?? "None") : undefined} sub={insights?.worstSellers[0] ? `${insights.worstSellers[0].quantity} sold` : undefined} icon={<AlertTriangle className="h-5 w-5" />} gradient="from-orange-500/20 to-orange-600/10" iconColor="text-orange-400" loading={!insights} />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <KPICard label="Repeat Customers" value={insights ? insights.repeatCustomers.length.toString() : undefined} icon={<Users className="h-4 w-4" />} iconColor="text-slate-400" loading={!insights} />
+          <KPICard label="Items / Order" value={insights ? insights.avgItemsPerOrder.toString() : undefined} sub="basket size" icon={<Layers className="h-4 w-4" />} iconColor="text-slate-400" loading={!insights} />
+          <KPICard label="Cancellation" value={insights ? `${insights.cancellationRate}%` : undefined} sub={insights ? `${insights.cancelledOrders} cancelled` : undefined} icon={<XCircle className="h-4 w-4" />} iconColor={insights && insights.cancellationRate > 10 ? "text-red-400" : "text-emerald-400"} loading={!insights} />
+          <KPICard label="Worst Seller" value={insights ? (insights.worstSellers[0]?.name ?? "None") : undefined} sub={insights?.worstSellers[0] ? `${insights.worstSellers[0].quantity} sold` : undefined} icon={<AlertTriangle className="h-4 w-4" />} iconColor="text-slate-400" loading={!insights} />
         </div>
 
         {/* Live Orders + Notifications — operational priority, above fold */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 stagger-4">
-          <div className="lg:col-span-2 glass-card rounded-2xl p-5">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2 glass-card p-5">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-bold admin-text flex items-center gap-2">
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400" />
-                </span>
+                <span className="inline-flex rounded-full h-2 w-2 bg-emerald-400" />
                 Live Orders
                 {activeOrders.length > 0 && (
-                  <span className="ml-1 px-2 py-0.5 bg-italia-red/20 text-red-300 text-xs font-bold rounded-full">{activeOrders.length}</span>
+                  <span className="ml-1 px-2 py-0.5 bg-italia-red/20 text-red-300 text-xs font-bold rounded">{activeOrders.length}</span>
                 )}
               </h2>
               <Link href="/admin/orders" className="text-xs admin-link font-medium flex items-center gap-1 hover:text-red-200 transition-colors">
@@ -236,11 +233,11 @@ export function AdminDashboard() {
             ) : (
               <div className="space-y-2 max-h-[400px] overflow-y-auto">
                 {activeOrders.map((order) => (
-                  <div key={order.id} className="flex flex-wrap items-center gap-3 p-3 rounded-xl bg-white/4 border border-white/6 hover:bg-white/6 transition-colors">
+                  <div key={order.id} className="flex flex-wrap items-center gap-3 p-3 rounded-lg bg-white/4 border border-white/6 hover:bg-white/6 transition-colors">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
                         <span className="font-mono text-xs font-bold admin-text">{order.id}</span>
-                        <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${STATUS_COLORS[order.status]}`}>{order.status}</span>
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${STATUS_COLORS[order.status]}`}>{order.status}</span>
                       </div>
                       <p className="text-sm admin-text">{order.customerName}</p>
                       <div className="flex items-center gap-3 text-xs admin-text-dim mt-0.5">
@@ -262,7 +259,7 @@ export function AdminDashboard() {
             )}
           </div>
 
-          <div id="notifications" className="glass-card rounded-2xl p-5">
+          <div id="notifications" className="glass-card p-5">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-bold admin-text flex items-center gap-2">
                 <Bell className="h-4 w-4" />
@@ -286,9 +283,9 @@ export function AdminDashboard() {
             ) : (
               <div className="space-y-2 max-h-[400px] overflow-y-auto">
                 {notifications.slice(0, 20).map((notif) => (
-                  <div key={notif.id} className={`p-3 rounded-xl border transition-colors ${notif.read ? "bg-white/3 border-white/5" : "bg-blue-500/8 border-blue-500/15"}`}>
+                  <div key={notif.id} className={`p-3 rounded-lg border transition-colors ${notif.read ? "bg-white/3 border-white/5" : "bg-blue-500/8 border-blue-500/15"}`}>
                     <div className="flex items-start gap-2">
-                      <span className={`mt-0.5 w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${NOTIF_ICONS[notif.type] || "bg-white/8 admin-text-dim"}`}>
+                      <span className={`mt-0.5 w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 ${NOTIF_ICONS[notif.type] || "bg-white/8 admin-text-dim"}`}>
                         <Bell className="h-3 w-3" />
                       </span>
                       <div className="flex-1 min-w-0">
@@ -307,9 +304,9 @@ export function AdminDashboard() {
         </div>
 
         {/* Charts row */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 stagger-5">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Revenue chart */}
-          <div className="lg:col-span-2 glass-card rounded-2xl p-5">
+          <div className="lg:col-span-2 glass-card p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="font-bold admin-text">Revenue & Profit</h2>
@@ -373,13 +370,13 @@ export function AdminDashboard() {
           </div>
 
           {/* Top Sellers */}
-          <div className="glass-card rounded-2xl p-5">
+          <div className="glass-card p-5">
             <h2 className="font-bold admin-text mb-4">Top Sellers</h2>
             {summary && summary.topItems.length > 0 ? (
               <div className="space-y-3">
                 {summary.topItems.slice(0, 6).map((item, i) => (
                   <div key={item.name} className="flex items-center gap-3">
-                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                    <span className={`w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold ${
                       i === 0 ? "bg-amber-500/25 text-amber-300" : i < 3 ? "bg-amber-500/15 text-amber-400" : "bg-white/8 admin-text-dim"
                     }`}>{i + 1}</span>
                     <div className="flex-1 min-w-0">
@@ -394,7 +391,7 @@ export function AdminDashboard() {
               <div className="space-y-3">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <div key={i} className="flex items-center gap-3">
-                    <div className="w-6 h-6 rounded-full bg-white/8 animate-pulse" />
+                    <div className="w-6 h-6 rounded-md bg-white/8 animate-pulse" />
                     <div className="flex-1 space-y-1.5">
                       <div className="h-4 w-28 bg-white/8 rounded animate-pulse" />
                       <div className="h-3 w-16 bg-white/5 rounded animate-pulse" />
@@ -411,8 +408,8 @@ export function AdminDashboard() {
         </div>
 
         {/* Slot Utilization + Peak Hours */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 stagger-6">
-          <div className="glass-card rounded-2xl p-5">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="glass-card p-5">
             <div className="flex items-center justify-between mb-1">
               <h2 className="font-bold admin-text">Slot Utilization</h2>
               <Link href="/admin/slots" className="text-xs admin-link font-medium flex items-center gap-1 hover:text-red-200 transition-colors">
@@ -442,7 +439,7 @@ export function AdminDashboard() {
             )}
           </div>
 
-          <div className="glass-card rounded-2xl p-5">
+          <div className="glass-card p-5">
             <h2 className="font-bold admin-text mb-1">Peak Hours</h2>
             <p className="text-xs admin-text-dim mb-4">Orders by hour of day</p>
             {insights && insights.peakHours.length > 0 ? (
@@ -473,7 +470,7 @@ export function AdminDashboard() {
 
         {/* Location Comparison */}
         {insights && insights.locationComparison.length > 0 && (
-          <div className="glass-card rounded-2xl p-5">
+          <div className="glass-card p-5">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-bold admin-text">Location Comparison</h2>
               <span className="text-xs admin-text-dim">{insights.locationComparison.length} location{insights.locationComparison.length !== 1 ? "s" : ""}</span>
@@ -524,7 +521,7 @@ export function AdminDashboard() {
 
         {/* Repeat Customers + Worst Sellers */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="glass-card rounded-2xl p-5">
+          <div className="glass-card p-5">
             <div className="flex items-center justify-between mb-1">
               <h2 className="font-bold admin-text">Repeat Customers</h2>
               <Link href="/admin/loyalty" className="text-xs admin-link font-medium flex items-center gap-1 hover:text-red-200 transition-colors">
@@ -536,7 +533,7 @@ export function AdminDashboard() {
               <div className="space-y-3">
                 {insights.repeatCustomers.slice(0, 8).map((c, i) => (
                   <div key={c.phone} className="flex items-center gap-3">
-                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${i < 3 ? "bg-amber-500/20 text-amber-400" : "bg-white/8 admin-text-dim"}`}>{i + 1}</span>
+                    <span className={`w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold ${i < 3 ? "bg-amber-500/20 text-amber-400" : "bg-white/8 admin-text-dim"}`}>{i + 1}</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium admin-text truncate">{c.name}</p>
                       <p className="text-xs admin-text-dim">{c.orderCount} orders</p>
@@ -554,7 +551,7 @@ export function AdminDashboard() {
             )}
           </div>
 
-          <div className="glass-card rounded-2xl p-5">
+          <div className="glass-card p-5">
             <div className="flex items-center justify-between mb-1">
               <h2 className="font-bold admin-text">Worst Sellers</h2>
               <Link href="/admin/menu" className="text-xs admin-link font-medium flex items-center gap-1 hover:text-red-200 transition-colors">
@@ -568,7 +565,7 @@ export function AdminDashboard() {
                   const maxQty = insights.worstSellers[insights.worstSellers.length - 1]?.quantity || 1;
                   return (
                     <div key={item.name} className="flex items-center gap-3">
-                      <span className="w-6 h-6 rounded-full bg-red-500/15 flex items-center justify-center text-xs font-bold text-red-400">{i + 1}</span>
+                      <span className="w-6 h-6 rounded-md bg-red-500/15 flex items-center justify-center text-xs font-bold text-red-400">{i + 1}</span>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-sm font-medium admin-text truncate">{item.name}</span>
@@ -596,7 +593,7 @@ export function AdminDashboard() {
 
         {/* Category Breakdown */}
         {summary && Object.keys(summary.categoryBreakdown).length > 0 && (
-          <div className="glass-card rounded-2xl p-5">
+          <div className="glass-card p-5">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-bold admin-text">Revenue by Category</h2>
               <span className="text-xs admin-text-dim">{Object.keys(summary.categoryBreakdown).length} categories</span>
@@ -607,7 +604,7 @@ export function AdminDashboard() {
                 .map(([cat, data], i) => {
                   const margin = data.revenue > 0 ? Math.round(((data.revenue - data.cost) / data.revenue) * 100) : 0;
                   return (
-                    <div key={cat} className={`p-3 rounded-xl hover:bg-white/8 transition-colors ${i === 0 ? "bg-white/8 border border-white/10" : "bg-white/5"}`}>
+                    <div key={cat} className={`p-3 rounded-lg hover:bg-white/8 transition-colors ${i === 0 ? "bg-white/8 border border-white/10" : "bg-white/5"}`}>
                       <p className="text-xs font-semibold admin-text-dim uppercase tracking-wide">{cat}</p>
                       <p className="text-lg font-bold admin-text mt-1">{formatPrice(data.revenue)}</p>
                       <div className="flex items-center justify-between mt-1">
@@ -625,22 +622,22 @@ export function AdminDashboard() {
   );
 }
 
-function KPICard({ label, value, sub, icon, gradient, iconColor, loading }: {
+function KPICard({ label, value, sub, icon, iconColor, loading }: {
   label: string; value?: string; sub?: string; icon: React.ReactNode;
-  gradient: string; iconColor: string; loading?: boolean;
+  gradient?: string; iconColor: string; loading?: boolean;
 }) {
   return (
-    <div className="glass-card rounded-2xl p-4">
-      <div className="flex items-center gap-3 mb-2">
-        <span className={`w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br ${gradient} ${iconColor}`}>
+    <div className="glass-card p-4">
+      <div className="flex items-center gap-2.5 mb-2">
+        <span className={`w-8 h-8 rounded-md flex items-center justify-center bg-white/6 ${iconColor}`}>
           {icon}
         </span>
         <span className="text-[11px] font-semibold admin-text-dim uppercase tracking-wider">{label}</span>
       </div>
       {loading || !value ? (
         <div className="space-y-1.5">
-          <div className="h-6 w-24 bg-white/8 rounded-md animate-pulse" />
-          <div className="h-3.5 w-16 bg-white/5 rounded-md animate-pulse" />
+          <div className="h-6 w-24 bg-white/8 rounded animate-pulse" />
+          <div className="h-3.5 w-16 bg-white/5 rounded animate-pulse" />
         </div>
       ) : (
         <>

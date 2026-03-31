@@ -150,8 +150,8 @@ export function AdminFeedback() {
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center">
-            <MessageSquare className="h-5 w-5 text-amber-400" />
+          <div className="w-9 h-9 rounded-md bg-white/6 flex items-center justify-center">
+            <MessageSquare className="h-5 w-5 text-slate-400" />
           </div>
           <div>
             <h1 className="text-xl font-heading font-bold admin-text">Customer Feedback</h1>
@@ -241,7 +241,7 @@ export function AdminFeedback() {
 
         {/* Filter + search */}
         <div className="flex items-center gap-3 mb-4">
-          <div className="flex gap-1 p-1 glass rounded-xl">
+          <div className="flex gap-1 p-1 glass rounded-lg">
             {(["all", "new", "reviewed", "responded"] as const).map((f) => (
               <button
                 key={f}

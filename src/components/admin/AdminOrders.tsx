@@ -57,7 +57,7 @@ export function AdminOrders() {
           <h1 className="text-2xl font-bold font-heading gradient-text">Orders</h1>
           <button
             onClick={fetchOrders}
-            className="flex items-center gap-2 px-4 py-2 glass rounded-xl text-sm admin-text-muted hover:admin-text hover:bg-white/8 transition-all"
+            className="flex items-center gap-2 px-4 py-2 glass rounded-lg text-sm admin-text-muted hover:admin-text hover:bg-white/8 transition-all"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             Refresh
@@ -79,21 +79,21 @@ export function AdminOrders() {
         </div>
 
         {error ? (
-          <div className="glass-card rounded-2xl p-6 text-center border-red-500/20">
+          <div className="glass-card rounded-lg p-6 text-center border-red-500/20">
             <p className="text-red-400 font-medium">{error}</p>
             <button onClick={fetchOrders} className="mt-2 text-sm text-red-400 underline">Retry</button>
           </div>
         ) : loading ? (
           <div className="text-center py-12 admin-text-muted">Loading...</div>
         ) : orders.length === 0 ? (
-          <div className="glass-card rounded-2xl p-12 text-center">
+          <div className="glass-card rounded-lg p-12 text-center">
             <ClipboardList className="h-12 w-12 mx-auto mb-4 text-slate-600" />
             <p className="admin-text-muted font-medium">No orders yet</p>
           </div>
         ) : (
           <div className="space-y-3">
             {orders.map((order) => (
-              <div key={order.id} className="glass-card rounded-xl p-5">
+              <div key={order.id} className="glass-card rounded-lg p-5">
                 <div className="flex flex-wrap items-start justify-between gap-4 mb-3">
                   <div>
                     <div className="flex items-center gap-3 mb-1">

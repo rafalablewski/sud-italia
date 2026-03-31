@@ -67,7 +67,7 @@ export function AdminRecipes() {
     <>
       <AdminNav />
       <div className="max-w-6xl mx-auto p-4 md:p-6">
-        <div className="flex items-center gap-1 mb-6 bg-white/5 rounded-xl p-1 w-fit border border-white/10">
+        <div className="flex items-center gap-1 mb-6 bg-white/5 rounded-lg p-1 w-fit border border-white/10">
           <button
             onClick={() => setTab("recipes")}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -219,7 +219,7 @@ function RecipesTab() {
                   const markupPct = foodCost > 0 ? Math.round((netProfit / foodCost) * 100) : 0;
 
                   return (
-                    <div key={item.id} className={`rounded-xl shadow-sm overflow-hidden ${hasRecipe || isExpanded ? "glass-card" : "bg-yellow-500/10 border-2 border-dashed border-yellow-500/30"}`}>
+                    <div key={item.id} className={`rounded-lg shadow-sm overflow-hidden ${hasRecipe || isExpanded ? "glass-card" : "bg-yellow-500/10 border-2 border-dashed border-yellow-500/30"}`}>
                       <button
                         onClick={() => setExpandedItem(isExpanded ? null : item.id)}
                         className="w-full flex flex-wrap items-center gap-3 p-4 text-left hover:bg-white/5 transition-colors"
@@ -454,7 +454,7 @@ function RecipeEditor({
         const markupPct = costPerPortion > 0 ? Math.round((netProfit / costPerPortion) * 100) : 0;
 
         return (
-          <div className="p-4 bg-white/5 rounded-xl border border-white/10 space-y-3">
+          <div className="p-4 bg-white/5 rounded-lg border border-white/10 space-y-3">
             <div className="flex flex-wrap items-end gap-x-6 gap-y-2">
               <div>
                 <div className="text-[10px] admin-text-dim uppercase tracking-wider mb-0.5">Selling Price</div>
@@ -686,14 +686,14 @@ function IngredientsTab() {
           <h1 className="text-2xl font-bold font-heading gradient-text">Ingredients Database</h1>
           <p className="text-sm admin-text-muted mt-0.5">{ingredients.length} ingredients</p>
         </div>
-        <button onClick={() => { resetForm(); setShowForm(true); }} className="flex items-center gap-2 px-4 py-2 glass-btn-green text-white rounded-xl font-semibold text-sm">
+        <button onClick={() => { resetForm(); setShowForm(true); }} className="flex items-center gap-2 px-4 py-2 glass-btn-green text-white rounded-lg font-semibold text-sm">
           <Plus className="h-4 w-4" />
           Add Ingredient
         </button>
       </div>
 
       {showForm && (
-        <div className="glass-card rounded-2xl p-5 mb-6">
+        <div className="glass-card rounded-lg p-5 mb-6">
           <h2 className="font-bold text-lg mb-4 admin-text">{editingId ? "Edit Ingredient" : "New Ingredient"}</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
             <div className="col-span-2 md:col-span-1">
@@ -724,8 +724,8 @@ function IngredientsTab() {
             </div>
           </div>
           <div className="flex gap-3">
-            <button onClick={handleSave} disabled={saving || !formName.trim()} className="px-5 py-2 glass-btn-green text-white rounded-xl font-semibold text-sm disabled:opacity-50">{saving ? "Saving..." : editingId ? "Update" : "Add"}</button>
-            <button onClick={resetForm} className="px-5 py-2 border border-white/10 rounded-xl text-sm admin-text-muted hover:bg-white/5">Cancel</button>
+            <button onClick={handleSave} disabled={saving || !formName.trim()} className="px-5 py-2 glass-btn-green text-white rounded-lg font-semibold text-sm disabled:opacity-50">{saving ? "Saving..." : editingId ? "Update" : "Add"}</button>
+            <button onClick={resetForm} className="px-5 py-2 border border-white/10 rounded-lg text-sm admin-text-muted hover:bg-white/5">Cancel</button>
           </div>
         </div>
       )}
@@ -746,13 +746,13 @@ function IngredientsTab() {
       {loading ? (
         <div className="text-center py-12 admin-text-muted">Loading...</div>
       ) : filtered.length === 0 ? (
-        <div className="glass-card rounded-2xl p-12 text-center">
+        <div className="glass-card rounded-lg p-12 text-center">
           <Package className="h-12 w-12 mx-auto mb-4 admin-text-dim" />
           <p className="admin-text-muted font-medium">No ingredients yet</p>
           <p className="text-sm admin-text-dim mt-1">Add your ingredients to start building recipes</p>
         </div>
       ) : (
-        <div className="glass-card rounded-2xl overflow-hidden">
+        <div className="glass-card rounded-lg overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-white/5 text-left">
