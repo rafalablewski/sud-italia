@@ -264,31 +264,40 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
       {/* Checkout footer */}
       <div className="border-t border-gray-100 p-5 space-y-3 bg-gray-50 mt-2">
         <div className="space-y-2">
+          <label className="sr-only" htmlFor="checkout-name">Your name</label>
           <input
+            id="checkout-name"
             type="text"
             placeholder="Your name"
             value={customerName}
             onChange={(e) => setCustomerName(e.target.value)}
             className="pub-input min-h-[44px] text-base"
+            autoComplete="name"
           />
           <div className="flex items-center gap-0">
-            <span className="inline-flex items-center px-3 min-h-[44px] rounded-l-[0.75rem] border-y-[1.5px] border-l-[1.5px] border-r-0 border-[#e5e7eb] bg-gray-50 text-sm font-medium text-italia-gray select-none">
+            <label className="sr-only" htmlFor="checkout-phone">Phone number</label>
+            <span className="inline-flex items-center px-3 min-h-[44px] rounded-l-[0.75rem] border-y-[1.5px] border-l-[1.5px] border-r-0 border-[#e5e7eb] bg-gray-50 text-sm font-medium text-italia-gray select-none" aria-hidden="true">
               +48
             </span>
             <input
+              id="checkout-phone"
               type="tel"
               placeholder="Phone number"
               value={customerPhone}
               onChange={(e) => handlePhoneChange(e.target.value)}
+              autoComplete="tel"
               className={`pub-input min-h-[44px] text-base rounded-l-none ${
                 phoneError ? "border-italia-red" : ""
               }`}
             />
           </div>
-          {/* Optional email — subtle, not required */}
+          {/* Optional email */}
+          <label className="sr-only" htmlFor="checkout-email">Email address</label>
           <input
+            id="checkout-email"
             type="email"
             placeholder="Email for order receipt + 10% off next order"
+            autoComplete="email"
             value={customerEmail}
             onChange={(e) => setCustomerEmail(e.target.value)}
             className="pub-input min-h-[44px] text-sm text-italia-gray"

@@ -41,8 +41,52 @@ export default async function LocationPage({ params }: PageProps) {
 
   const menuItems = await getAvailableMenu(slug);
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FoodEstablishment",
+    name: location.name,
+    description: location.description,
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: location.address,
+      addressLocality: location.city,
+      addressCountry: "PL",
+    },
+    geo: {
+      "@type": "GeoCoordinates",
+      latitude: location.coordinates.lat,
+      longitude: location.coordinates.lng,
+    },
+    servesCuisine: "Neapolitan Pizza",
+    priceRange: "$$",
+    hasMenu: {
+      "@type": "Menu",
+      hasMenuSection: [...new Set(menuItems.map((i) => i.category))].map((cat) => ({
+        "@type": "MenuSection",
+        name: cat.charAt(0).toUpperCase() + cat.slice(1),
+        hasMenuItem: menuItems
+          .filter((i) => i.category === cat)
+          .slice(0, 5)
+          .map((i) => ({
+            "@type": "MenuItem",
+            name: i.name,
+            description: i.description,
+            offers: {
+              "@type": "Offer",
+              price: (i.price / 100).toFixed(2),
+              priceCurrency: "PLN",
+            },
+          })),
+      })),
+    },
+  };
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <LocationHero location={location} />
       <LiveActivityBar locationSlug={slug} />
       <LoyaltySection />

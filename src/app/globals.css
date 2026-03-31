@@ -9,8 +9,8 @@
   --color-italia-green-dark: #006B35;
   --color-italia-cream: #FFF8F0;
   --color-italia-cream-dark: #F5EDDF;
-  --color-italia-gold: #D4A847;
-  --color-italia-gold-dark: #B8922E;
+  --color-italia-gold: #B8922E;
+  --color-italia-gold-dark: #9A7A24;
   --color-italia-dark: #1A1A1A;
   --color-italia-gray: #6B7280;
   --color-italia-light-gray: #F3F4F6;
@@ -29,6 +29,22 @@
 /* ============================
    BASE
    ============================ */
+
+/* Accessibility: visible focus outlines for keyboard navigation */
+*:focus-visible {
+  outline: 2px solid var(--color-italia-red);
+  outline-offset: 2px;
+}
+
+/* Accessibility: respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 
 @keyframes fade-in {
   from { opacity: 0; transform: translateY(-4px); }
