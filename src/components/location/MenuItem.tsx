@@ -124,6 +124,12 @@ export function MenuItemCard({ item, locationSlug }: MenuItemProps) {
             <p className="text-sm text-italia-gray mt-1 leading-relaxed line-clamp-3">
               {item.description}
             </p>
+            {/* Pairing hint for main courses */}
+            {(item.category === "pizza" || item.category === "pasta") && isPopular && (
+              <p className="text-[11px] text-italia-gold mt-1 font-medium">
+                Pairs perfectly with espresso & tiramisù
+              </p>
+            )}
             {/* Quick details: rating + prep time + calories */}
             <div className="flex items-center gap-3 mt-1 flex-wrap">
               {itemRating && (
