@@ -103,30 +103,14 @@ export function AdminAI() {
   return (
     <>
       <AdminNav />
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-md bg-white/6 flex items-center justify-center">
-              <Brain className="h-5 w-5 text-slate-400" />
-            </div>
-            <div>
-              <h1 className="text-xl font-heading font-bold admin-text">AI Command Center</h1>
-              <p className="text-sm admin-text-dim">
-                ML-powered insights for <span className="font-semibold admin-text">{locationName}</span>
-              </p>
-            </div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-heading font-bold admin-text">AI Command Center</h1>
+            <p className="text-sm admin-text-dim mt-1">ML-powered insights for {locationName}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <LocationTabs
-              value={selectedLocation}
-              onChange={(slug) => {
-                setSelectedLocation(slug);
-                const menu = LOCATION_MENUS[slug] || krakowMenu;
-                setForecasts(generateDemandForecast(7));
-                setPriceSuggestions(generatePriceSuggestions(menu));
-              }}
-            />
           <button
             onClick={refresh}
             disabled={refreshing}
@@ -138,8 +122,18 @@ export function AdminAI() {
           </div>
         </div>
 
+        <LocationTabs
+          value={selectedLocation}
+          onChange={(slug) => {
+            setSelectedLocation(slug);
+            const menu = LOCATION_MENUS[slug] || krakowMenu;
+            setForecasts(generateDemandForecast(7));
+            setPriceSuggestions(generatePriceSuggestions(menu));
+          }}
+        />
+
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 p-1 glass rounded-lg w-fit">
+        <div className="flex gap-1 p-1 glass rounded-lg w-fit">
           {tabs.map((t) => (
             <button
               key={t.id}

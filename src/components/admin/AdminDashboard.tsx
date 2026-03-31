@@ -136,26 +136,17 @@ export function AdminDashboard() {
   return (
     <>
       <AdminNav />
-      <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-5">
+      <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold font-heading admin-text">Dashboard</h1>
-            <p className="text-xs admin-text-dim mt-1 flex items-center gap-2">
-              <Activity className="h-3 w-3" />
-              <span>{periodLabel}</span>
-              <span className="text-white/20">·</span>
-              <span>Updated {timeAgo(lastRefresh.toISOString())}</span>
-              {activeOrders.length > 0 && (
-                <>
-                  <span className="text-white/20">·</span>
-                  <span className="admin-green font-medium">{activeOrders.length} active order{activeOrders.length !== 1 ? "s" : ""}</span>
-                </>
-              )}
+            <h1 className="text-2xl font-heading font-bold admin-text">Dashboard</h1>
+            <p className="text-sm admin-text-dim mt-1">
+              {periodLabel} · Updated {timeAgo(lastRefresh.toISOString())}
+              {activeOrders.length > 0 && ` · ${activeOrders.length} active order${activeOrders.length !== 1 ? "s" : ""}`}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <LocationTabs value={location} onChange={setLocation} includeAll />
             <div className="flex gap-1">
               {["today", "week", "month", "year"].map((p) => (
                 <button
@@ -181,6 +172,8 @@ export function AdminDashboard() {
             </button>
           </div>
         </div>
+
+        <LocationTabs value={location} onChange={setLocation} includeAll />
 
         {/* KPI Row 1 */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

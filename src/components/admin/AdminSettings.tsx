@@ -115,7 +115,10 @@ export function AdminSettings() {
     <>
       <AdminNav />
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
-        <h1 className="text-2xl font-bold font-heading admin-text">Settings</h1>
+        <div>
+          <h1 className="text-2xl font-heading font-bold admin-text">Settings</h1>
+          <p className="text-sm admin-text-dim mt-1">Business configuration, delivery, and security</p>
+        </div>
 
         {/* Business Settings */}
         <div className="glass-card rounded-lg border border-white/10 p-6 shadow-sm">

@@ -67,8 +67,8 @@ export function AdminRecipes() {
   return (
     <>
       <AdminNav />
-      <div className="max-w-7xl mx-auto p-4 md:p-6">
-        <div className="flex items-center gap-1 mb-6 bg-white/5 rounded-lg p-1 w-fit border border-white/10">
+      <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
+        <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1 w-fit border border-white/10">
           <button
             onClick={() => setTab("recipes")}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${

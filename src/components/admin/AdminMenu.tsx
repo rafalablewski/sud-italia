@@ -125,34 +125,27 @@ export function AdminMenu() {
   return (
     <>
       <AdminNav />
-      <div className="max-w-7xl mx-auto p-4 md:p-6">
+      <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
         {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold font-heading admin-text">Menu</h1>
-            <p className="text-sm admin-text-muted mt-0.5">
-              {items.length} items
-              {unavailableCount > 0 && ` \u00B7 ${unavailableCount} hidden from customers`}
+            <h1 className="text-2xl font-heading font-bold admin-text">Menu</h1>
+            <p className="text-sm admin-text-dim mt-1">
+              {items.length} items{unavailableCount > 0 && ` · ${unavailableCount} hidden from customers`}
             </p>
           </div>
           {hasChanges && (
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="glass-btn-green disabled:opacity-50"
-            >
+            <button onClick={handleSave} disabled={saving} className="glass-btn-green">
               <Save className="h-4 w-4" />
               {saving ? "Saving..." : `Save Changes (${Object.keys(changes).length})`}
             </button>
           )}
         </div>
 
-        {saved && (
-          <div className="alert-success mb-4">Menu updated.</div>
-        )}
+        {saved && <div className="alert-success">Menu updated.</div>}
 
         {/* Filters */}
-        <div className="flex flex-wrap items-center gap-3 mb-6">
+        <div className="flex flex-wrap items-center gap-3">
           <LocationTabs value={selectedLocation} onChange={setSelectedLocation} />
           <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="glass-input rounded-lg">
             <option value="">All categories</option>

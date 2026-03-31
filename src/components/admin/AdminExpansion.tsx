@@ -92,24 +92,17 @@ export function AdminExpansion() {
   return (
     <>
       <AdminNav />
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-9 h-9 rounded-md bg-white/6 flex items-center justify-center">
-            <Map className="h-5 w-5 text-slate-400" />
-          </div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-xl font-heading font-bold admin-text">
-              Expansion Strategy
-            </h1>
-            <p className="text-sm admin-text-dim">
-              Path to #1 Pizza Truck Chain in Poland
-            </p>
+            <h1 className="text-2xl font-heading font-bold admin-text">Expansion Strategy</h1>
+            <p className="text-sm admin-text-dim mt-1">Path to #1 Pizza Truck Chain in Poland</p>
           </div>
         </div>
 
         {/* KPI row */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="glass-card p-4">
             <p className="text-2xl font-bold admin-text">2</p>
             <p className="text-xs admin-text-dim">Active Locations</p>
@@ -129,7 +122,7 @@ export function AdminExpansion() {
         </div>
 
         {/* Pillar selector */}
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide mb-6 pb-1">
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
           {PILLARS.map((pillar) => (
             <button
               key={pillar.id}

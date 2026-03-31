@@ -269,12 +269,13 @@ export function AdminSlots() {
   return (
     <>
       <AdminNav />
-      <div className="max-w-7xl mx-auto p-4 md:p-6">
+      <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
         {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
-          <h1 className="text-2xl font-bold font-heading admin-text">
-            Time Slots
-          </h1>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-heading font-bold admin-text">Time Slots</h1>
+            <p className="text-sm admin-text-dim mt-1">Manage pickup and delivery time windows</p>
+          </div>
           <div className="flex items-center gap-2">
             {draftCount > 0 && (
               <button
@@ -305,7 +306,7 @@ export function AdminSlots() {
         </div>
 
         {/* Filters: location + date nav */}
-        <div className="flex flex-wrap items-center gap-4 mb-6">
+        <div className="flex flex-wrap items-center gap-4">
           <LocationTabs value={selectedLocation} onChange={setSelectedLocation} />
 
           <div className="flex items-center gap-2">

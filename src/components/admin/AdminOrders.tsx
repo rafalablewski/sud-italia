@@ -53,21 +53,19 @@ export function AdminOrders() {
   return (
     <>
       <AdminNav />
-      <div className="max-w-7xl mx-auto p-4 md:p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold font-heading admin-text">Orders</h1>
-          <button
-            onClick={fetchOrders}
-            className="glass-btn-ghost flex items-center gap-2"
-          >
+      <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-heading font-bold admin-text">Orders</h1>
+            <p className="text-sm admin-text-dim mt-1">Manage and track customer orders</p>
+          </div>
+          <button onClick={fetchOrders} className="glass-btn-ghost">
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             Refresh
           </button>
         </div>
 
-        <div className="mb-6">
-          <LocationTabs value={selectedLocation} onChange={setSelectedLocation} includeAll />
-        </div>
+        <LocationTabs value={selectedLocation} onChange={setSelectedLocation} includeAll />
 
         {error ? (
           <div className="glass-card rounded-lg p-6 text-center border-red-500/20">

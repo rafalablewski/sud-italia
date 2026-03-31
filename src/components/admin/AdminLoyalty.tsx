@@ -130,20 +130,18 @@ export function AdminLoyalty() {
   return (
     <>
       <AdminNav />
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-9 h-9 rounded-md bg-white/6 flex items-center justify-center">
-            <Heart className="h-5 w-5 text-slate-400" />
+      <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-heading font-bold admin-text">Loyalty & Rewards</h1>
+            <p className="text-sm admin-text-dim mt-1">Members, tiers, referrals, achievements</p>
           </div>
-          <div className="flex-1">
-            <h1 className="text-xl font-heading font-bold admin-text">Loyalty & Rewards</h1>
-            <p className="text-sm admin-text-dim">Members, tiers, referrals, achievements</p>
-          </div>
-          <LocationTabs value={locationFilter === "all" ? "" : locationFilter} onChange={(v) => setLocationFilter(v || "all")} includeAll />
         </div>
 
+        <LocationTabs value={locationFilter === "all" ? "" : locationFilter} onChange={(v) => setLocationFilter(v || "all")} includeAll />
+
         {/* Quick stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
           <div className="glass-card p-4"><p className="text-2xl font-bold admin-text">{filteredMembers.length}</p><p className="text-xs admin-text-dim">Members</p></div>
           <div className="glass-card p-4"><p className="text-2xl font-bold text-green-400">{referrals.reduce((s, r) => s + r.used, 0)}</p><p className="text-xs admin-text-dim">Referral Conversions</p></div>
           <div className="glass-card p-4"><p className="text-2xl font-bold text-italia-gold">{ACHIEVEMENTS.length}</p><p className="text-xs admin-text-dim">Achievements</p></div>
@@ -151,7 +149,7 @@ export function AdminLoyalty() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 overflow-x-auto scrollbar-hide pb-1">
+        <div className="flex gap-1 overflow-x-auto scrollbar-hide pb-1">
           {tabs.map((t) => (
             <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium whitespace-nowrap transition-colors ${tab === t.id ? "bg-white/12 text-white shadow-sm border border-white/10" : "text-slate-400 hover:text-white hover:bg-white/6"}`}>
               <t.icon className="h-4 w-4" />{t.label}

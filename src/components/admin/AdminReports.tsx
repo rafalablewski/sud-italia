@@ -116,13 +116,13 @@ export function AdminReports() {
     <>
       <AdminNav />
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
-        {/* Header with filters */}
+        {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-bold font-heading admin-text">
-            Revenue & PnL Reports
-          </h1>
+          <div>
+            <h1 className="text-2xl font-heading font-bold admin-text">Revenue & PnL Reports</h1>
+            <p className="text-sm admin-text-dim mt-1">Financial performance and analytics</p>
+          </div>
           <div className="flex flex-wrap items-center gap-3">
-            <LocationTabs value={location} onChange={setLocation} includeAll />
             <div className="flex items-center gap-2 text-sm">
               <input
                 type="date"
@@ -148,6 +148,8 @@ export function AdminReports() {
             </button>
           </div>
         </div>
+
+        <LocationTabs value={location} onChange={setLocation} includeAll />
 
         {loading ? (
           <div className="text-center py-12 admin-text-muted">Loading...</div>
