@@ -353,7 +353,7 @@ export function AdminSlots() {
 
         {/* New slot form */}
         {showForm && (
-          <div className="glass-card rounded-lg p-6 shadow-sm mb-6">
+          <div className="glass-card rounded-lg p-4 sm:p-6 shadow-sm mb-6">
             <h2 className="font-bold text-lg mb-4">
               New Slot &mdash; {activeLocations.find((l) => l.slug === selectedLocation)?.city} &mdash; {formatDateLabel(selectedDate)}
             </h2>
@@ -370,7 +370,7 @@ export function AdminSlots() {
               </label>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
               <div>
                 <label className="block text-xs admin-text-muted mb-1">
                   {bulkMode ? "Start time" : "Time"}

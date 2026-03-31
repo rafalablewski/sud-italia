@@ -143,7 +143,7 @@ export function AdminLoyalty() {
         </div>
 
         {/* Quick stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           <div className="glass-card p-4"><p className="text-2xl font-bold admin-text">{filteredMembers.length}</p><p className="text-xs admin-text-dim">Members</p></div>
           <div className="glass-card p-4"><p className="text-2xl font-bold text-green-400">{referrals.reduce((s, r) => s + r.used, 0)}</p><p className="text-xs admin-text-dim">Referral Conversions</p></div>
           <div className="glass-card p-4"><p className="text-2xl font-bold text-italia-gold">{ACHIEVEMENTS.length}</p><p className="text-xs admin-text-dim">Achievements</p></div>
@@ -167,7 +167,7 @@ export function AdminLoyalty() {
               <h3 className="font-semibold admin-text mb-4 flex items-center gap-2"><Star className="h-4 w-4 text-italia-gold" />Tier Configuration</h3>
               {settings && (
                 <>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                     {(Object.entries(settings.tiers) as [LoyaltyTier, typeof settings.tiers.bronze][]).map(([tier, config]) => {
                       const display = TIER_CONFIG[tier];
                       return (
@@ -237,7 +237,7 @@ export function AdminLoyalty() {
           <div className="space-y-4">
             <div className="glass-card-static p-5">
               <h3 className="font-semibold admin-text mb-3 flex items-center gap-2"><Share2 className="h-4 w-4 text-italia-red" />Referral Program Settings</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-4">
                 <div className="glass-card p-3"><label className="text-xs admin-text-dim block mb-1">Referrer Reward (pts)</label><input type="number" value={settings?.referral.referrerPoints || 100} onChange={(e) => setSettings((s) => s ? { ...s, referral: { ...s.referral, referrerPoints: parseInt(e.target.value) || 0 } } : s)} className="glass-input w-full text-sm" /></div>
                 <div className="glass-card p-3"><label className="text-xs admin-text-dim block mb-1">New Customer Discount (grosze)</label><input type="number" value={settings?.referral.refereeDiscountGrosze || 1000} onChange={(e) => setSettings((s) => s ? { ...s, referral: { ...s.referral, refereeDiscountGrosze: parseInt(e.target.value) || 0 } } : s)} className="glass-input w-full text-sm" /></div>
                 <div className="glass-card p-3"><p className="text-xs admin-text-dim">Total Referrals</p><p className="text-lg font-bold text-green-400">{referrals.reduce((s, r) => s + r.used, 0)}</p></div>
@@ -298,7 +298,7 @@ export function AdminLoyalty() {
       {pointsModal && createPortal(
         <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setPointsModal(null)} />
-          <div className="relative bg-[#1e293b] border border-white/15 rounded-lg shadow-2xl p-6 w-full max-w-sm">
+          <div className="relative bg-[#1e293b] border border-white/15 rounded-lg shadow-2xl p-4 sm:p-6 w-full max-w-sm mx-4 sm:mx-auto">
             <h3 className="font-heading font-bold text-lg admin-text mb-1">Adjust Points</h3>
             <p className="text-sm admin-text-dim mb-4">{pointsModal.name} &middot; <span className="font-mono text-xs">{pointsModal.phone}</span></p>
             <div className="space-y-3 mb-4">

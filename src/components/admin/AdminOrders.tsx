@@ -118,9 +118,9 @@ export function AdminOrders() {
                     {formatSlotDate(order.slotDate)} at {order.slotTime}
                   </span>
                   {order.deliveryAddress && (
-                    <span className="flex items-center gap-1">
-                      <MapPin className="h-4 w-4" />
-                      {order.deliveryAddress}
+                    <span className="flex items-center gap-1 min-w-0">
+                      <MapPin className="h-4 w-4 flex-shrink-0" />
+                      <span className="truncate">{order.deliveryAddress}</span>
                     </span>
                   )}
                 </div>

@@ -17,7 +17,7 @@ export function LocationTabs({ value, onChange, includeAll = false }: LocationTa
     : activeLocations.map((l) => ({ slug: l.slug, city: l.city }));
 
   return (
-    <div className="flex gap-1">
+    <div className="flex gap-1 overflow-x-auto scrollbar-hide">
       {options.map((l) => (
         <button
           key={l.slug}

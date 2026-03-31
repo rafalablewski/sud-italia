@@ -117,7 +117,7 @@ export function AdminAI() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <LocationTabs
               value={selectedLocation}
               onChange={(slug) => {
@@ -160,7 +160,7 @@ export function AdminAI() {
         {tab === "forecast" && (
           <div className="space-y-4">
             {/* Summary cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="glass-card p-4">
                 <p className="text-xs admin-text-dim uppercase tracking-wide mb-1">
                   7-Day Forecast

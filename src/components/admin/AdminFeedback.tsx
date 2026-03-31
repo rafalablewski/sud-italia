@@ -206,7 +206,7 @@ export function AdminFeedback() {
             Category Averages
           </h3>
           {loading ? (
-            <div className="grid grid-cols-5 gap-4 animate-pulse">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 animate-pulse">
               {categories.map((cat) => (
                 <div key={cat} className="text-center">
                   <div className="h-6 w-10 bg-white/10 rounded mx-auto mb-1" />
@@ -216,7 +216,7 @@ export function AdminFeedback() {
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
               {categories.map((cat) => {
                 const avg = categoryAvgs[cat];
                 const isLow = avg < 3.5;

@@ -89,7 +89,7 @@ export function AdminNav() {
                     <Link
                       key={item.href}
                       href={item.href}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                         isActive
                           ? "bg-white/12 text-white shadow-sm shadow-white/5"
                           : "text-slate-400 hover:text-white hover:bg-white/6"
@@ -136,7 +136,7 @@ export function AdminNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all duration-200 ${
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all duration-200 ${
                 isActive
                   ? "bg-white/12 text-white"
                   : "text-slate-400 hover:text-white hover:bg-white/6"

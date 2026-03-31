@@ -154,7 +154,7 @@ export function AdminDashboard() {
               )}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <LocationTabs value={location} onChange={setLocation} includeAll />
             <div className="flex gap-1">
               {["today", "week", "month", "year"].map((p) => (
@@ -587,7 +587,7 @@ export function AdminDashboard() {
               <h2 className="font-bold admin-text">Revenue by Category</h2>
               <span className="text-xs admin-text-dim">{Object.keys(summary.categoryBreakdown).length} categories</span>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
               {Object.entries(summary.categoryBreakdown)
                 .sort(([, a], [, b]) => b.revenue - a.revenue)
                 .map(([cat, data], i) => {

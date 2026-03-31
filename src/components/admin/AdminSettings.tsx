@@ -139,7 +139,7 @@ export function AdminSettings() {
                   step="0.01"
                   value={settings ? (settings.deliveryFee / 100).toFixed(2) : ""}
                   onChange={(e) => setSettings((s) => s ? { ...s, deliveryFee: Math.round(parseFloat(e.target.value || "0") * 100) } : s)}
-                  className="w-full px-3 py-2 glass-input rounded-lg text-sm"
+                  className="w-full px-3 py-2 glass-input rounded-lg text-sm min-h-[44px]"
                 />
                 <span className="text-sm admin-text-muted">PLN</span>
               </div>
@@ -156,7 +156,7 @@ export function AdminSettings() {
                   step="0.01"
                   value={settings ? (settings.minOrderAmount / 100).toFixed(2) : ""}
                   onChange={(e) => setSettings((s) => s ? { ...s, minOrderAmount: Math.round(parseFloat(e.target.value || "0") * 100) } : s)}
-                  className="w-full px-3 py-2 glass-input rounded-lg text-sm"
+                  className="w-full px-3 py-2 glass-input rounded-lg text-sm min-h-[44px]"
                 />
                 <span className="text-sm admin-text-muted">PLN</span>
               </div>
@@ -172,7 +172,7 @@ export function AdminSettings() {
                 placeholder="+48 123 456 789"
                 value={settings?.businessPhone || ""}
                 onChange={(e) => setSettings((s) => s ? { ...s, businessPhone: e.target.value } : s)}
-                className="w-full px-3 py-2 glass-input rounded-lg text-sm"
+                className="w-full px-3 py-2 glass-input rounded-lg text-sm min-h-[44px]"
               />
             </div>
 
@@ -186,7 +186,7 @@ export function AdminSettings() {
                 placeholder="info@suditalia.pl"
                 value={settings?.businessEmail || ""}
                 onChange={(e) => setSettings((s) => s ? { ...s, businessEmail: e.target.value } : s)}
-                className="w-full px-3 py-2 glass-input rounded-lg text-sm"
+                className="w-full px-3 py-2 glass-input rounded-lg text-sm min-h-[44px]"
               />
             </div>
           </div>
@@ -231,7 +231,7 @@ export function AdminSettings() {
                 type="password"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                className="w-full px-3 py-2 glass-input rounded-lg text-sm"
+                className="w-full px-3 py-2 glass-input rounded-lg text-sm min-h-[44px]"
               />
             </div>
 
@@ -243,7 +243,7 @@ export function AdminSettings() {
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full px-3 py-2 glass-input rounded-lg text-sm"
+                className="w-full px-3 py-2 glass-input rounded-lg text-sm min-h-[44px]"
                 placeholder="Min. 6 characters"
               />
             </div>
@@ -256,7 +256,7 @@ export function AdminSettings() {
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-3 py-2 glass-input rounded-lg text-sm"
+                className="w-full px-3 py-2 glass-input rounded-lg text-sm min-h-[44px]"
               />
             </div>
 

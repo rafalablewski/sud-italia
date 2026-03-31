@@ -244,7 +244,7 @@ function ComboEditor({
               className="glass-input text-sm w-full"
             />
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <div>
                 <label className="text-[10px] text-slate-400 block mb-1">Discount %</label>
                 <input
@@ -372,7 +372,7 @@ export function AdminUpsell() {
     <AdminNav />
     <div className="max-w-5xl mx-auto p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-heading font-bold admin-text flex items-center gap-3">
             <TrendingUp className="h-6 w-6 text-slate-400" />
@@ -432,7 +432,7 @@ export function AdminUpsell() {
           These items are suggested when a customer adds a main course to their cart.
         </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <ItemSingleSelect
             items={loc.menu.filter((m) => m.category === "drinks")}
             value={config.preferredCoffee}
