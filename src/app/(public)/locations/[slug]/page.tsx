@@ -28,6 +28,18 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title: `${location.name} | ${SITE_NAME}`,
     description: location.shortDescription,
+    openGraph: {
+      type: "website",
+      locale: "pl_PL",
+      siteName: SITE_NAME,
+      title: `${location.name} — Order Neapolitan Pizza`,
+      description: location.shortDescription,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${location.name} | ${SITE_NAME}`,
+      description: location.shortDescription,
+    },
   };
 }
 

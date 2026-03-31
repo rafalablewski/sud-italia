@@ -23,6 +23,18 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: SITE_NAME,
   },
+  openGraph: {
+    type: "website",
+    locale: "pl_PL",
+    siteName: SITE_NAME,
+    title: `${SITE_NAME} | Authentic Neapolitan Pizza in Poland`,
+    description: SITE_DESCRIPTION,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${SITE_NAME} | Authentic Neapolitan Pizza`,
+    description: SITE_DESCRIPTION,
+  },
 };
 
 export default function RootLayout({

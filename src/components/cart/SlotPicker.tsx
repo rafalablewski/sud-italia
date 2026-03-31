@@ -67,10 +67,17 @@ export function SlotPicker({ locationSlug, fulfillmentType }: SlotPickerProps) {
     return () => { cancelled = true; };
   }, [locationSlug, date, fulfillmentType]);
 
-  // Clear selection when fulfillment type or date changes
+  // Clear selection only if selected slot is not available in new list
   useEffect(() => {
-    setSelectedSlot(null, null, null);
-  }, [fulfillmentType, date, setSelectedSlot]);
+    if (selectedSlotId && slots.length > 0) {
+      const stillAvailable = slots.some((s) => s.id === selectedSlotId);
+      if (!stillAvailable) {
+        setSelectedSlot(null, null, null);
+      }
+    } else if (slots.length === 0 && !loading) {
+      setSelectedSlot(null, null, null);
+    }
+  }, [slots, loading, selectedSlotId, setSelectedSlot]);
 
   const dayLabels = Array.from({ length: 7 }, (_, i) => {
     if (i === 0) return "Today";
@@ -110,8 +117,16 @@ export function SlotPicker({ locationSlug, fulfillmentType }: SlotPickerProps) {
           Could not load time slots. Try again later.
         </div>
       ) : slots.length === 0 ? (
-        <div className="text-center py-4 text-sm text-italia-gray bg-gray-50 rounded-xl">
-          No available slots for this day
+        <div className="text-center py-5 bg-gray-50 rounded-xl">
+          <p className="text-sm text-italia-gray mb-2">No available slots for this day</p>
+          {dayOffset < 6 && (
+            <button
+              onClick={() => setDayOffset(dayOffset + 1)}
+              className="text-sm font-medium text-italia-red hover:underline"
+            >
+              Try {formatSlotDate(getDateString(dayOffset + 1))} →
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-3 gap-2">

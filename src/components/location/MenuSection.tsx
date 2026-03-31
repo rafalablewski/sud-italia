@@ -10,6 +10,7 @@ import { SurpriseMe } from "./SurpriseMe";
 import { SeasonalSpecials } from "./SeasonalSpecials";
 import { ReorderSection } from "./ReorderSection";
 import { SpeedGuarantee } from "./SpeedGuarantee";
+import { ComboDealsPreview } from "./ComboDealsPreview";
 import { ReferralCard } from "@/components/referral/ReferralCard";
 import { AchievementsPanel } from "@/components/gamification/AchievementsPanel";
 import { CustomerGate } from "@/components/loyalty/CustomerGate";
@@ -116,6 +117,9 @@ export function MenuSection({ items, locationSlug }: MenuSectionProps) {
       <Container className="py-6">
         {/* Speed guarantee banner */}
         {!isSearching && <SpeedGuarantee />}
+
+        {/* Combo deals discovery (visible before browsing) */}
+        {!isSearching && <ComboDealsPreview locationSlug={locationSlug} />}
 
         {/* Seasonal specials (Kodawari - limited-time) */}
         {!isSearching && <SeasonalSpecials locationSlug={locationSlug} />}
