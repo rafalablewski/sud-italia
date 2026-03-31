@@ -179,7 +179,7 @@ function ComboEditor({
     onChange([
       ...combos,
       {
-        id: `combo-${Date.now()}`,
+        id: `combo-${crypto.randomUUID()}`,
         name: "New Combo",
         description: "",
         categories: ["pizza", "drinks"],
@@ -220,7 +220,7 @@ function ComboEditor({
                   onClick={() => updateCombo(i, { active: !combo.active })}
                   className={`w-10 h-5 rounded-full transition-colors relative ${combo.active ? "bg-emerald-500" : "bg-white/15"}`}
                 >
-                  <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${combo.active ? "left-5.5" : "left-0.5"}`} />
+                  <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${combo.active ? "left-[22px]" : "left-0.5"}`} />
                 </button>
                 <input
                   type="text"
@@ -342,11 +342,12 @@ export function AdminUpsell() {
     setSaving(true);
     const configToSave = settings[activeLocation] || getDefaultConfig(activeLocation);
     try {
-      await fetch("/api/admin/upsell", {
+      const res = await fetch("/api/admin/upsell", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ locationSlug: activeLocation, config: configToSave }),
       });
+      if (!res.ok) throw new Error("Failed to save");
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch {
