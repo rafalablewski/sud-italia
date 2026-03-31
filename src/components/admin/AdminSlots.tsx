@@ -279,7 +279,7 @@ export function AdminSlots() {
             {draftCount > 0 && (
               <button
                 onClick={handleApproveAll}
-                className="flex items-center gap-2 px-4 py-2 glass-btn-blue"
+                className="flex items-center gap-2 glass-btn-blue"
               >
                 <CheckCheck className="h-4 w-4" />
                 Confirm All ({draftCount})
@@ -288,7 +288,7 @@ export function AdminSlots() {
             {selectedIds.size > 0 && (
               <button
                 onClick={handleBulkDelete}
-                className="flex items-center gap-2 px-4 py-2 glass-btn text-white rounded-lg font-semibold text-sm"
+                className="flex items-center gap-2 px-4 py-2 glass-btn"
               >
                 <Trash2 className="h-4 w-4" />
                 Delete Selected ({selectedIds.size})
@@ -296,7 +296,7 @@ export function AdminSlots() {
             )}
             <button
               onClick={() => setShowForm(!showForm)}
-              className="flex items-center gap-2 px-4 py-2 glass-btn-green text-white rounded-lg font-semibold text-sm"
+              className="flex items-center gap-2 glass-btn-green"
             >
               <Plus className="h-4 w-4" />
               Add Slot
@@ -311,7 +311,7 @@ export function AdminSlots() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => navigateDay(-1)}
-              className="p-2 glass-input rounded-lg hover:bg-white/5 transition-colors"
+              className="glass-btn-ghost p-1.5"
               title="Previous day"
             >
               <ChevronLeft className="h-4 w-4 admin-text-muted" />
@@ -326,7 +326,7 @@ export function AdminSlots() {
 
             <button
               onClick={() => navigateDay(1)}
-              className="p-2 glass-input rounded-lg hover:bg-white/5 transition-colors"
+              className="glass-btn-ghost p-1.5"
               title="Next day"
             >
               <ChevronRight className="h-4 w-4 admin-text-muted" />
@@ -343,7 +343,7 @@ export function AdminSlots() {
             ) : (
               <button
                 onClick={goToday}
-                className="px-2 py-1 text-xs bg-italia-red/10 admin-red rounded-lg font-medium hover:bg-italia-red/20 transition-colors"
+                className="glass-btn-ghost"
               >
                 Go to Today
               </button>
@@ -462,13 +462,13 @@ export function AdminSlots() {
               <button
                 onClick={handleSubmit}
                 disabled={saving || (!newTakeout && !newDelivery)}
-                className="px-6 py-2 glass-btn-green text-white rounded-lg font-semibold text-sm disabled:opacity-50"
+                className="glass-btn-green disabled:opacity-50"
               >
                 {saving ? "Creating..." : bulkMode ? `Create ${bulkPreview.length} Slots` : "Create Slot"}
               </button>
               <button
                 onClick={() => setShowForm(false)}
-                className="px-6 py-2 glass-input rounded-lg text-sm hover:bg-white/5 transition-colors"
+                className="glass-btn-ghost"
               >
                 Cancel
               </button>

@@ -70,7 +70,7 @@ export function AdminRecipes() {
         <div className="flex items-center gap-1 mb-6 bg-white/5 rounded-lg p-1 w-fit border border-white/10">
           <button
             onClick={() => setTab("recipes")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
               tab === "recipes" ? "bg-white/10 admin-text shadow-sm" : "admin-text-muted hover:admin-text"
             }`}
           >
@@ -79,7 +79,7 @@ export function AdminRecipes() {
           </button>
           <button
             onClick={() => setTab("ingredients")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
               tab === "ingredients" ? "bg-white/10 admin-text shadow-sm" : "admin-text-muted hover:admin-text"
             }`}
           >
@@ -724,8 +724,8 @@ function IngredientsTab() {
             </div>
           </div>
           <div className="flex gap-3">
-            <button onClick={handleSave} disabled={saving || !formName.trim()} className="px-5 py-2 glass-btn-green text-white rounded-lg font-semibold text-sm disabled:opacity-50">{saving ? "Saving..." : editingId ? "Update" : "Add"}</button>
-            <button onClick={resetForm} className="px-5 py-2 border border-white/10 rounded-lg text-sm admin-text-muted hover:bg-white/5">Cancel</button>
+            <button onClick={handleSave} disabled={saving || !formName.trim()} className="glass-btn-green disabled:opacity-50">{saving ? "Saving..." : editingId ? "Update" : "Add"}</button>
+            <button onClick={resetForm} className="glass-btn-ghost">Cancel</button>
           </div>
         </div>
       )}

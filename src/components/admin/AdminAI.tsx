@@ -144,7 +144,7 @@ export function AdminAI() {
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                 tab === t.id
                   ? "bg-white/12 text-white shadow-sm"
                   : "text-slate-400 hover:text-white hover:bg-white/6"
@@ -321,10 +321,10 @@ export function AdminAI() {
                     </p>
                   )}
                   <div className="flex gap-2 mt-3">
-                    <button className="glass-btn-green text-xs px-3 py-1">
+                    <button className="glass-btn-green">
                       Apply
                     </button>
-                    <button className="glass-btn-ghost text-xs px-3 py-1">
+                    <button className="glass-btn-ghost">
                       Dismiss
                     </button>
                   </div>

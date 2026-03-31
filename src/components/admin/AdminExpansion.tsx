@@ -134,7 +134,7 @@ export function AdminExpansion() {
             <button
               key={pillar.id}
               onClick={() => setActivePillar(pillar.id)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium whitespace-nowrap transition-colors ${
                 activePillar === pillar.id
                   ? "bg-white/12 text-white shadow-sm border border-white/10"
                   : "text-slate-400 hover:text-white hover:bg-white/6"

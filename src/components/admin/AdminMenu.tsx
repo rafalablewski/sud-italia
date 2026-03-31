@@ -139,7 +139,7 @@ export function AdminMenu() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="glass-btn-green rounded-lg disabled:opacity-50"
+              className="glass-btn-green disabled:opacity-50"
             >
               <Save className="h-4 w-4" />
               {saving ? "Saving..." : `Save Changes (${Object.keys(changes).length})`}

@@ -195,7 +195,7 @@ export function AdminSettings() {
             <button
               onClick={handleSaveSettings}
               disabled={saving}
-              className="flex items-center gap-2 px-5 py-2 glass-btn-green text-white rounded-lg font-semibold text-sm disabled:opacity-50"
+              className="glass-btn-green flex items-center gap-2 disabled:opacity-50"
             >
               <Save className="h-4 w-4" />
               {saving ? "Saving..." : "Save Settings"}
@@ -263,7 +263,7 @@ export function AdminSettings() {
             <button
               onClick={handleChangePassword}
               disabled={changingPassword || !currentPassword || !newPassword}
-              className="flex items-center gap-2 px-5 py-2 glass-btn text-white rounded-lg font-semibold text-sm disabled:opacity-50"
+              className="glass-btn flex items-center gap-2 disabled:opacity-50"
             >
               <KeyRound className="h-4 w-4" />
               {changingPassword ? "Changing..." : "Change Password"}
@@ -331,7 +331,7 @@ function SeedSection() {
       <button
         onClick={handleSeed}
         disabled={seeding}
-        className="flex items-center gap-2 px-5 py-2 bg-blue-500/80 text-white rounded-lg font-semibold text-sm hover:bg-blue-500 transition-colors disabled:opacity-50"
+        className="glass-btn-blue flex items-center gap-2 disabled:opacity-50"
       >
         <Database className="h-4 w-4" />
         {seeding ? "Seeding..." : "Seed Ingredients & Margherita Recipe"}

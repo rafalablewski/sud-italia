@@ -205,7 +205,7 @@ function ComboEditor({
         <label className="text-xs font-semibold admin-text uppercase tracking-wide">Combo Deals</label>
         <button
           onClick={addCombo}
-          className="glass-btn text-xs flex items-center gap-1 px-3 py-1.5"
+          className="glass-btn"
         >
           <Plus className="h-3 w-3" /> Add Combo
         </button>
@@ -407,7 +407,7 @@ export function AdminUpsell() {
           <button
             key={l.slug}
             onClick={() => setActiveLocation(l.slug)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
               activeLocation === l.slug
                 ? "bg-white/12 text-white border border-white/20 shadow-sm"
                 : "text-slate-400 border border-transparent hover:text-white hover:bg-white/6"

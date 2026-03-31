@@ -153,7 +153,7 @@ export function AdminLoyalty() {
         {/* Tabs */}
         <div className="flex gap-1 mb-6 overflow-x-auto scrollbar-hide pb-1">
           {tabs.map((t) => (
-            <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${tab === t.id ? "bg-white/12 text-white shadow-sm border border-white/10" : "text-slate-400 hover:text-white hover:bg-white/6"}`}>
+            <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium whitespace-nowrap transition-colors ${tab === t.id ? "bg-white/12 text-white shadow-sm border border-white/10" : "text-slate-400 hover:text-white hover:bg-white/6"}`}>
               <t.icon className="h-4 w-4" />{t.label}
             </button>
           ))}
@@ -182,14 +182,14 @@ export function AdminLoyalty() {
                       );
                     })}
                   </div>
-                  <div className="flex gap-2 mt-4"><button onClick={() => saveSettings({ tiers: settings.tiers })} disabled={saving} className="glass-btn-green text-xs"><Check className="h-3.5 w-3.5" />{saving ? "Saving..." : saved ? "Saved!" : "Save Tiers"}</button></div>
+                  <div className="flex gap-2 mt-4"><button onClick={() => saveSettings({ tiers: settings.tiers })} disabled={saving} className="glass-btn-green"><Check className="h-3.5 w-3.5" />{saving ? "Saving..." : saved ? "Saved!" : "Save Tiers"}</button></div>
                 </>
               )}
             </div>
 
             {/* Rewards */}
             <div className="glass-card-static p-5">
-              <div className="flex items-center justify-between mb-4"><h3 className="font-semibold admin-text flex items-center gap-2"><Gift className="h-4 w-4 text-italia-red" />Rewards Catalog</h3><button className="glass-btn text-xs"><Plus className="h-3.5 w-3.5" /> Add Reward</button></div>
+              <div className="flex items-center justify-between mb-4"><h3 className="font-semibold admin-text flex items-center gap-2"><Gift className="h-4 w-4 text-italia-red" />Rewards Catalog</h3><button className="glass-btn"><Plus className="h-3.5 w-3.5" /> Add Reward</button></div>
               <div className="space-y-2">
                 {(settings?.rewards || []).map((reward, idx) => (
                   <div key={reward.id} className="flex items-center justify-between p-3 glass-card">
@@ -201,7 +201,7 @@ export function AdminLoyalty() {
                   </div>
                 ))}
               </div>
-              {settings && <div className="flex gap-2 mt-3"><button onClick={() => saveSettings({ rewards: settings.rewards })} disabled={saving} className="glass-btn-green text-xs"><Check className="h-3.5 w-3.5" />{saving ? "Saving..." : "Save Rewards"}</button></div>}
+              {settings && <div className="flex gap-2 mt-3"><button onClick={() => saveSettings({ rewards: settings.rewards })} disabled={saving} className="glass-btn-green"><Check className="h-3.5 w-3.5" />{saving ? "Saving..." : "Save Rewards"}</button></div>}
             </div>
 
             {/* Members */}
@@ -243,7 +243,7 @@ export function AdminLoyalty() {
                 <div className="glass-card p-3"><p className="text-xs admin-text-dim">Total Referrals</p><p className="text-lg font-bold text-green-400">{referrals.reduce((s, r) => s + r.used, 0)}</p></div>
                 <div className="glass-card p-3"><p className="text-xs admin-text-dim">Points Awarded</p><p className="text-lg font-bold text-italia-gold">{referrals.reduce((s, r) => s + r.earned, 0)}</p></div>
               </div>
-              <button onClick={() => settings && saveSettings({ referral: settings.referral })} disabled={saving} className="glass-btn-green text-xs"><Check className="h-3.5 w-3.5" />{saving ? "Saving..." : "Save Referral Settings"}</button>
+              <button onClick={() => settings && saveSettings({ referral: settings.referral })} disabled={saving} className="glass-btn-green"><Check className="h-3.5 w-3.5" />{saving ? "Saving..." : "Save Referral Settings"}</button>
             </div>
             <div className="glass-card-static p-5">
               <h3 className="font-semibold admin-text mb-3">Active Referral Codes</h3>
@@ -269,7 +269,7 @@ export function AdminLoyalty() {
         {tab === "gamification" && (
           <div className="space-y-4">
             <div className="glass-card-static p-5">
-              <div className="flex items-center justify-between mb-4"><h3 className="font-semibold admin-text flex items-center gap-2"><Target className="h-4 w-4 text-italia-red" />Weekly Challenges</h3><button className="glass-btn text-xs"><Plus className="h-3.5 w-3.5" /> New Challenge</button></div>
+              <div className="flex items-center justify-between mb-4"><h3 className="font-semibold admin-text flex items-center gap-2"><Target className="h-4 w-4 text-italia-red" />Weekly Challenges</h3><button className="glass-btn"><Plus className="h-3.5 w-3.5" /> New Challenge</button></div>
               <div className="space-y-2">
                 {challenges.map((ch) => (
                   <div key={ch.id} className="flex items-center justify-between p-3 glass-card">
@@ -280,7 +280,7 @@ export function AdminLoyalty() {
               </div>
             </div>
             <div className="glass-card-static p-5">
-              <div className="flex items-center justify-between mb-4"><h3 className="font-semibold admin-text flex items-center gap-2"><Trophy className="h-4 w-4 text-italia-gold" />Achievements ({ACHIEVEMENTS.length})</h3><button className="glass-btn text-xs"><Plus className="h-3.5 w-3.5" /> New Achievement</button></div>
+              <div className="flex items-center justify-between mb-4"><h3 className="font-semibold admin-text flex items-center gap-2"><Trophy className="h-4 w-4 text-italia-gold" />Achievements ({ACHIEVEMENTS.length})</h3><button className="glass-btn"><Plus className="h-3.5 w-3.5" /> New Achievement</button></div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {ACHIEVEMENTS.map((a) => (
                   <div key={a.id} className="flex items-center justify-between p-3 glass-card">

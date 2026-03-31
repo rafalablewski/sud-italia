@@ -79,7 +79,7 @@ export function AdminGrowth() {
         {/* Tabs */}
         <div className="flex gap-1 mb-6 overflow-x-auto scrollbar-hide pb-1">
           {tabs.map((t) => (
-            <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${tab === t.id ? "bg-white/12 text-white shadow-sm border border-white/10" : "text-slate-400 hover:text-white hover:bg-white/6"}`}>
+            <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium whitespace-nowrap transition-colors ${tab === t.id ? "bg-white/12 text-white shadow-sm border border-white/10" : "text-slate-400 hover:text-white hover:bg-white/6"}`}>
               <t.icon className="h-4 w-4" />{t.label}
             </button>
           ))}
@@ -91,7 +91,7 @@ export function AdminGrowth() {
             <div className="glass-card-static p-5">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold admin-text flex items-center gap-2"><Sparkles className="h-4 w-4 text-italia-gold" />Seasonal / Limited-Time Items</h3>
-                <button className="glass-btn text-xs"><Plus className="h-3.5 w-3.5" /> Add Item</button>
+                <button className="glass-btn"><Plus className="h-3.5 w-3.5" /> Add Item</button>
               </div>
               <div className="space-y-2">
                 {(settings?.seasonalItems || [])
@@ -184,7 +184,7 @@ export function AdminGrowth() {
         {tab === "chatbot" && (
           <div className="space-y-4">
             <div className="glass-card-static p-5">
-              <div className="flex items-center justify-between mb-4"><h3 className="font-semibold admin-text flex items-center gap-2"><MessageCircle className="h-4 w-4 text-italia-green" />Chatbot Responses</h3><button className="glass-btn text-xs"><Plus className="h-3.5 w-3.5" /> Add Response</button></div>
+              <div className="flex items-center justify-between mb-4"><h3 className="font-semibold admin-text flex items-center gap-2"><MessageCircle className="h-4 w-4 text-italia-green" />Chatbot Responses</h3><button className="glass-btn"><Plus className="h-3.5 w-3.5" /> Add Response</button></div>
               <div className="space-y-2">
                 {faqsLoading ? (
                   <div className="text-center py-8">
@@ -214,7 +214,7 @@ export function AdminGrowth() {
                 <div className="glass-card p-4"><label className="text-xs admin-text-dim block mb-1">Welcome Message</label><textarea defaultValue="Ciao! I'm the Sud Italia assistant." className="glass-input w-full text-xs h-20 resize-none" /></div>
                 <div className="glass-card p-4"><label className="text-xs admin-text-dim block mb-1">Default Response</label><textarea defaultValue="I'd be happy to help! I can answer questions about our menu, locations, hours..." className="glass-input w-full text-xs h-20 resize-none" /></div>
               </div>
-              <div className="flex gap-2 mt-4"><button className="glass-btn-green text-xs"><Check className="h-3.5 w-3.5" /> Save Chatbot Settings</button></div>
+              <div className="flex gap-2 mt-4"><button className="glass-btn-green"><Check className="h-3.5 w-3.5" /> Save Chatbot Settings</button></div>
             </div>
           </div>
         )}

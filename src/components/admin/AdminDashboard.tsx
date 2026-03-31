@@ -156,15 +156,15 @@ export function AdminDashboard() {
           </div>
           <div className="flex items-center gap-2">
             <LocationTabs value={location} onChange={setLocation} includeAll />
-            <div className="flex glass rounded-md overflow-hidden">
+            <div className="flex gap-1">
               {["today", "week", "month", "year"].map((p) => (
                 <button
                   key={p}
                   onClick={() => setPeriod(p)}
-                  className={`px-3 py-1.5 text-sm font-medium transition-all duration-200 ${
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                     period === p
-                      ? "bg-white/15 text-white"
-                      : "text-slate-400 hover:text-white hover:bg-white/5"
+                      ? "bg-white/10 text-white border border-white/12"
+                      : "text-slate-400 border border-transparent hover:text-slate-200 hover:bg-white/5"
                   }`}
                 >
                   {p === "today" ? "Today" : p === "week" ? "7D" : p === "month" ? "30D" : "1Y"}
@@ -174,7 +174,7 @@ export function AdminDashboard() {
             <button
               onClick={fetchAll}
               disabled={loading}
-              className="p-2 rounded-lg glass text-slate-400 hover:text-white hover:bg-white/10 transition-all duration-200 disabled:opacity-50"
+              className="glass-btn-ghost p-1.5"
               title="Refresh"
             >
               <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />

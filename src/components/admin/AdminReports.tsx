@@ -141,7 +141,7 @@ export function AdminReports() {
             <button
               onClick={handleExportCSV}
               disabled={!summary || summary.dailyStats.length === 0}
-              className="flex items-center gap-1.5 px-3 py-1.5 glass-btn-green text-white rounded-lg text-sm font-medium disabled:opacity-50"
+              className="glass-btn-green flex items-center gap-1.5 disabled:opacity-50"
             >
               <Download className="h-4 w-4" />
               Export CSV

@@ -246,7 +246,7 @@ export function AdminFeedback() {
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                   filter === f
                     ? "bg-white/12 text-white"
                     : "text-slate-400 hover:text-white"
@@ -336,13 +336,13 @@ export function AdminFeedback() {
                   {fb.status === "new" && (
                     <>
                       <button
-                        className="glass-btn-green text-xs"
+                        className="glass-btn-green"
                         onClick={() => handleUpdateStatus(fb.id, "reviewed")}
                       >
                         <Check className="h-3.5 w-3.5" /> Mark Reviewed
                       </button>
                       <button
-                        className="glass-btn-blue text-xs"
+                        className="glass-btn-blue"
                         onClick={() => handleUpdateStatus(fb.id, "responded")}
                       >
                         <Reply className="h-3.5 w-3.5" /> Respond
@@ -350,7 +350,7 @@ export function AdminFeedback() {
                     </>
                   )}
                   {fb.overallRating <= 2 && (
-                    <button className="glass-btn text-xs">
+                    <button className="glass-btn">
                       <AlertTriangle className="h-3.5 w-3.5" /> Flag for Follow-up
                     </button>
                   )}
