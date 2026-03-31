@@ -248,14 +248,19 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
         </div>
       </div>
 
-      {/* Delivery address */}
+      {/* Delivery address — TODO: integrate Google Places Autocomplete
+           When NEXT_PUBLIC_GOOGLE_PLACES_KEY is set, replace this input with
+           a Places Autocomplete component. See: https://developers.google.com/maps/documentation/places/web-service/autocomplete */}
       {fulfillmentType === "delivery" && (
         <div className="px-5 mb-3">
+          <label className="sr-only" htmlFor="checkout-address">Delivery address</label>
           <input
+            id="checkout-address"
             type="text"
-            placeholder="Delivery address"
+            placeholder="Street address, apt/building, city"
             value={deliveryAddress}
             onChange={(e) => setDeliveryAddress(e.target.value)}
+            autoComplete="street-address"
             className="pub-input min-h-[44px]"
           />
         </div>
