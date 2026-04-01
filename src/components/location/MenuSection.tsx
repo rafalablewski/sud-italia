@@ -58,13 +58,13 @@ export function MenuSection({ items, locationSlug }: MenuSectionProps) {
     categories[0]
   );
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<MenuSortValue>("default");
+  const [sortBy, setSortBy] = useState<MenuSortValue>("price-low");
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const sortMenuRef = useRef<HTMLDivElement>(null);
 
   const isSearching = searchQuery.trim().length > 0;
   const sortLabel =
-    MENU_SORT_OPTIONS.find((o) => o.value === sortBy)?.label ?? "Popular first";
+    MENU_SORT_OPTIONS.find((o) => o.value === sortBy)?.label ?? "Price: low → high";
 
   useEffect(() => {
     if (!sortMenuOpen) return;
