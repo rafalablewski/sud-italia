@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { MenuItem } from "@/data/types";
 import { MenuCategory, MENU_CATEGORY_LABELS } from "@/data/types";
 import { Container } from "@/components/ui/Container";
@@ -16,7 +16,16 @@ import { AchievementsPanel } from "@/components/gamification/AchievementsPanel";
 import { CustomerGate } from "@/components/loyalty/CustomerGate";
 import { getItemBadges } from "@/lib/upsell";
 import { getItemRating } from "@/data/ratings";
-import { Search, X, ArrowUpDown } from "lucide-react";
+import { Search, X, ArrowUpDown, Check } from "lucide-react";
+
+type MenuSortValue = "default" | "price-low" | "price-high" | "rating";
+
+const MENU_SORT_OPTIONS: { value: MenuSortValue; label: string }[] = [
+  { value: "default", label: "Popular first" },
+  { value: "price-low", label: "Price: low → high" },
+  { value: "price-high", label: "Price: high → low" },
+  { value: "rating", label: "Highest rated" },
+];
 
 interface MenuSectionProps {
   items: MenuItem[];
@@ -49,9 +58,32 @@ export function MenuSection({ items, locationSlug }: MenuSectionProps) {
     categories[0]
   );
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<"default" | "price-low" | "price-high" | "rating">("default");
+  const [sortBy, setSortBy] = useState<MenuSortValue>("default");
+  const [sortMenuOpen, setSortMenuOpen] = useState(false);
+  const sortMenuRef = useRef<HTMLDivElement>(null);
 
   const isSearching = searchQuery.trim().length > 0;
+  const sortLabel =
+    MENU_SORT_OPTIONS.find((o) => o.value === sortBy)?.label ?? "Popular first";
+
+  useEffect(() => {
+    if (!sortMenuOpen) return;
+    const onPointerDown = (e: MouseEvent | TouchEvent) => {
+      const el = sortMenuRef.current;
+      if (el && !el.contains(e.target as Node)) setSortMenuOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSortMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("touchstart", onPointerDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("touchstart", onPointerDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [sortMenuOpen]);
 
   const filteredItems = useMemo(() => {
     const available = items.filter((i) => i.available);
@@ -119,26 +151,66 @@ export function MenuSection({ items, locationSlug }: MenuSectionProps) {
           </div>
 
           {/* Sort + Category pills */}
-          <div className="flex items-center justify-between gap-2 mb-1">
+          <div
+            className={`flex items-center gap-2 mb-1 ${
+              isSearching ? "justify-end" : "justify-between"
+            }`}
+          >
             {!isSearching && (
-            <MenuCategoryNav
-              categories={categories}
-              activeCategory={activeCategory!}
-              onSelect={setActiveCategory}
-              itemCounts={itemCounts}
-            />
+              <MenuCategoryNav
+                categories={categories}
+                activeCategory={activeCategory!}
+                onSelect={setActiveCategory}
+                itemCounts={itemCounts}
+              />
             )}
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-              className="flex-shrink-0 text-xs text-italia-gray bg-white border border-gray-200 rounded-lg px-2 py-1.5 min-h-[36px]"
-              aria-label="Sort menu items"
-            >
-              <option value="default">Popular first</option>
-              <option value="price-low">Price: low → high</option>
-              <option value="price-high">Price: high → low</option>
-              <option value="rating">Highest rated</option>
-            </select>
+            <div className="relative flex-shrink-0" ref={sortMenuRef}>
+              <button
+                type="button"
+                onClick={() => setSortMenuOpen((o) => !o)}
+                className={`category-pill category-pill-inactive !p-0 h-10 w-10 min-w-10 shrink-0 justify-center rounded-full transition-shadow ${
+                  sortMenuOpen ? "ring-2 ring-italia-red/25 bg-gray-50" : ""
+                }`}
+                aria-expanded={sortMenuOpen}
+                aria-haspopup="listbox"
+                aria-label={`Sort menu: ${sortLabel}`}
+              >
+                <ArrowUpDown className="h-4 w-4" aria-hidden />
+              </button>
+              {sortMenuOpen && (
+                <div
+                  className="absolute right-0 top-[calc(100%+0.35rem)] z-30 min-w-[14.5rem] rounded-xl border border-gray-100 bg-white py-1 shadow-lg shadow-black/[0.06]"
+                  role="listbox"
+                  aria-label="Sort options"
+                >
+                  {MENU_SORT_OPTIONS.map((opt) => {
+                    const selected = sortBy === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        role="option"
+                        aria-selected={selected}
+                        className={`flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-sm transition-colors ${
+                          selected
+                            ? "bg-red-50 font-medium text-italia-red"
+                            : "text-italia-dark hover:bg-gray-50"
+                        }`}
+                        onClick={() => {
+                          setSortBy(opt.value);
+                          setSortMenuOpen(false);
+                        }}
+                      >
+                        <span>{opt.label}</span>
+                        {selected && (
+                          <Check className="h-4 w-4 shrink-0 text-italia-red" aria-hidden />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
