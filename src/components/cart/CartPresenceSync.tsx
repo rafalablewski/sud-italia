@@ -6,6 +6,8 @@ import { isCartPresenceEnabled } from "@/lib/cart-presence-config";
 import { getOrCreateCartVisitorId } from "@/lib/cart-visitor-id";
 
 const DEBOUNCE_MS = 2500;
+/** Empty snapshots remove the guest from the kitchen board; debounce so brief flicker / multi-tab races do not wipe presence immediately. */
+const CLEAR_DEBOUNCE_MS = 3500;
 const HEARTBEAT_MS = 90_000;
 
 async function postSnapshot(
@@ -48,7 +50,8 @@ async function postSnapshot(
  * relying only on NEXT_PUBLIC inlined at build time).
  */
 export function CartPresenceSync() {
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const snapshotTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastLocationRef = useRef<string | null>(null);
   const [serverAllowsPresence, setServerAllowsPresence] = useState<boolean | null>(null);
 
@@ -74,33 +77,50 @@ export function CartPresenceSync() {
 
   const schedule = useCallback(() => {
     if (!mayPost) return;
-    if (timerRef.current) clearTimeout(timerRef.current);
+    if (snapshotTimerRef.current) {
+      clearTimeout(snapshotTimerRef.current);
+      snapshotTimerRef.current = null;
+    }
 
     const { items, locationSlug } = useCartStore.getState();
 
     if (items.length > 0 && locationSlug) {
       lastLocationRef.current = locationSlug;
-    }
-
-    if (items.length === 0 || !locationSlug) {
-      const loc = lastLocationRef.current;
-      if (loc) {
-        void postSnapshot(loc, [], 0);
-        lastLocationRef.current = null;
+      if (clearTimerRef.current) {
+        clearTimeout(clearTimerRef.current);
+        clearTimerRef.current = null;
       }
+      snapshotTimerRef.current = setTimeout(() => {
+        snapshotTimerRef.current = null;
+        const s = useCartStore.getState();
+        if (s.items.length === 0 || !s.locationSlug) return;
+        void postSnapshot(
+          s.locationSlug,
+          s.items.map((i) => ({ id: i.menuItem.id, quantity: i.quantity })),
+          s.getTotal()
+        );
+      }, DEBOUNCE_MS);
       return;
     }
 
-    timerRef.current = setTimeout(() => {
-      timerRef.current = null;
-      const s = useCartStore.getState();
-      if (s.items.length === 0 || !s.locationSlug) return;
-      void postSnapshot(
-        s.locationSlug,
-        s.items.map((i) => ({ id: i.menuItem.id, quantity: i.quantity })),
-        s.getTotal()
-      );
-    }, DEBOUNCE_MS);
+    // Inconsistent local state (items but no slug): do not clear remote presence.
+    if (items.length > 0 && !locationSlug) {
+      return;
+    }
+
+    // Empty cart: debounce clear so a stray empty tick does not wipe Redis.
+    if (items.length === 0) {
+      const loc = lastLocationRef.current;
+      if (!loc) return;
+      if (clearTimerRef.current) clearTimeout(clearTimerRef.current);
+      clearTimerRef.current = setTimeout(() => {
+        clearTimerRef.current = null;
+        const s = useCartStore.getState();
+        if (s.items.length > 0) return;
+        void postSnapshot(loc, [], 0);
+        lastLocationRef.current = null;
+      }, CLEAR_DEBOUNCE_MS);
+    }
   }, [mayPost]);
 
   useEffect(() => {
@@ -123,7 +143,8 @@ export function CartPresenceSync() {
     }, HEARTBEAT_MS);
 
     return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
+      if (snapshotTimerRef.current) clearTimeout(snapshotTimerRef.current);
+      if (clearTimerRef.current) clearTimeout(clearTimerRef.current);
       clearInterval(heartbeat);
       unsub();
       unsubHydration?.();
