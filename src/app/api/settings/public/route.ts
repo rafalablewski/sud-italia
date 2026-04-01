@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isCartPresenceEnabled } from "@/lib/cart-presence-config";
 import { getLoyaltySettings } from "@/lib/store";
 
 // Public endpoint — returns only non-sensitive settings needed by the frontend
@@ -12,6 +13,8 @@ export async function GET(req: NextRequest) {
     .filter((item) => !location || !item.locationSlug || item.locationSlug === location);
 
   return NextResponse.json({
+    /** Server runtime flag so browsers post snapshots even if NEXT_PUBLIC was missing at build time. */
+    cartPresenceEnabled: isCartPresenceEnabled(),
     liveActivity: settings.liveActivity,
     speedGuarantee: {
       active: settings.speedGuarantee.active,

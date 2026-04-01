@@ -1,45 +1,79 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useCartStore } from "@/store/cart";
 import { isCartPresenceEnabled } from "@/lib/cart-presence-config";
 import { getOrCreateCartVisitorId } from "@/lib/cart-visitor-id";
 
 const DEBOUNCE_MS = 2500;
+const HEARTBEAT_MS = 90_000;
 
-async function postSnapshot(locationSlug: string, items: { id: string; quantity: number }[], totalCents: number) {
-  if (!isCartPresenceEnabled()) return;
-
+async function postSnapshot(
+  locationSlug: string,
+  items: { id: string; quantity: number }[],
+  totalCents: number
+) {
   const visitorId = getOrCreateCartVisitorId();
   if (!visitorId) return;
 
-  try {
-    await fetch("/api/cart/presence", {
+  const body = JSON.stringify({
+    visitorId,
+    locationSlug,
+    items,
+    totalCents,
+  });
+
+  const send = () =>
+    fetch("/api/cart/presence", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        visitorId,
-        locationSlug,
-        items,
-        totalCents,
-      }),
+      body,
       keepalive: true,
     });
+
+  try {
+    let res = await send();
+    if (res.status === 429) {
+      await new Promise((r) => setTimeout(r, 1200));
+      res = await send();
+    }
   } catch {
     // ignore network errors
   }
 }
 
 /**
- * Subscribes to cart changes and sends debounced snapshots when
- * NEXT_PUBLIC_ENABLE_CART_PRESENCE allows (see cart-presence-config).
+ * Subscribes to cart changes and sends debounced snapshots when the server
+ * allows cart presence (see /api/settings/public cartPresenceEnabled — avoids
+ * relying only on NEXT_PUBLIC inlined at build time).
  */
 export function CartPresenceSync() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastLocationRef = useRef<string | null>(null);
+  const [serverAllowsPresence, setServerAllowsPresence] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/settings/public", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((data: { cartPresenceEnabled?: boolean }) => {
+        if (cancelled) return;
+        setServerAllowsPresence(data.cartPresenceEnabled === true);
+      })
+      .catch(() => {
+        if (!cancelled) setServerAllowsPresence(isCartPresenceEnabled());
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const mayPost =
+    serverAllowsPresence === true ||
+    (serverAllowsPresence === null && isCartPresenceEnabled());
 
   const schedule = useCallback(() => {
-    if (!isCartPresenceEnabled()) return;
+    if (!mayPost) return;
     if (timerRef.current) clearTimeout(timerRef.current);
 
     const { items, locationSlug } = useCartStore.getState();
@@ -67,22 +101,34 @@ export function CartPresenceSync() {
         s.getTotal()
       );
     }, DEBOUNCE_MS);
-  }, []);
+  }, [mayPost]);
 
   useEffect(() => {
-    if (!isCartPresenceEnabled()) return;
+    if (!mayPost) return;
 
     schedule();
     const unsub = useCartStore.subscribe(schedule);
     const unsubHydration = useCartStore.persist.onFinishHydration(() => {
       schedule();
     });
+
+    const heartbeat = setInterval(() => {
+      const s = useCartStore.getState();
+      if (s.items.length === 0 || !s.locationSlug) return;
+      void postSnapshot(
+        s.locationSlug,
+        s.items.map((i) => ({ id: i.menuItem.id, quantity: i.quantity })),
+        s.getTotal()
+      );
+    }, HEARTBEAT_MS);
+
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
+      clearInterval(heartbeat);
       unsub();
       unsubHydration?.();
     };
-  }, [schedule]);
+  }, [mayPost, schedule]);
 
   return null;
 }
