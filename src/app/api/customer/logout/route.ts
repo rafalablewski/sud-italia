@@ -7,12 +7,5 @@ export async function POST() {
     maxAge: 0,
     sameSite: "lax",
   });
-  res.cookies.set("sud-italia-number-owner", "", {
-    path: "/",
-    maxAge: 0,
-    sameSite: "lax",
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-  });
   return res;
 }

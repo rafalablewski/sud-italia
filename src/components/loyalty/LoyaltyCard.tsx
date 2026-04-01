@@ -56,13 +56,12 @@ export function LoyaltyCard({ account }: LoyaltyCardProps) {
                 How points attach
               </p>
               <p className="text-xs text-italia-gray mt-0.5">
-                Points go to the mobile number on each order — one wallet per number,
-                no app password. Sign in on Rewards to show your balance on this
-                phone.
+                Points follow the phone you use at checkout. Sign in on Rewards with
+                that number to see your balance — no app password.
               </p>
               <p className="text-[11px] text-italia-gray/80 mt-2 leading-snug">
-                Several people on one device? Enter (or sign in with) the number of
-                whoever should earn points for that order.
+                Family? Create a wallet on Rewards (up to four numbers) so everyone’s
+                orders pool together after each person confirms their invite.
               </p>
             </div>
           </div>

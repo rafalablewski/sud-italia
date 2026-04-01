@@ -3,7 +3,7 @@ import { join } from "path";
 import { neon } from "@neondatabase/serverless";
 import { TimeSlot, Order, Ingredient, Recipe } from "@/data/types";
 import { locations as allLocations } from "@/data/locations";
-import { MAX_HOUSEHOLD_EXTRA_LABELS } from "@/lib/constants";
+import { WALLET_MAX_PHONES } from "@/lib/constants";
 import { normalizePlPhoneE164, phonesEqualPl } from "@/lib/phone";
 
 // --- Storage abstraction: Neon Postgres when DATABASE_URL is set, filesystem fallback for local dev ---
@@ -1001,47 +1001,6 @@ export interface LoyaltyMember {
   nickname?: string;
   email?: string;
   signedUpAt: string;
-  /** Up to 3 extra family members who can earn on the same number (owner redeems). */
-  householdLabels?: string[];
-  /** Set when number owner completes SMS-style verification (OTP). */
-  ownerVerifiedAt?: string;
-}
-
-type HouseholdOtpMap = Record<string, { code: string; expiresAt: string }>;
-
-async function readHouseholdOtps(): Promise<HouseholdOtpMap> {
-  return readJSON<HouseholdOtpMap>("household-otp.json", {});
-}
-
-export async function storeHouseholdOtp(phone: string, code: string): Promise<void> {
-  const canonical = normalizePlPhoneE164(phone) || phone.trim();
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
-  return withLock("household-otp.json", async () => {
-    const map = await readHouseholdOtps();
-    map[canonical] = { code, expiresAt };
-    await writeJSON("household-otp.json", map);
-  });
-}
-
-export async function verifyAndConsumeHouseholdOtp(
-  phone: string,
-  code: string
-): Promise<boolean> {
-  const canonical = normalizePlPhoneE164(phone) || phone.trim();
-  const trimmed = code.trim();
-  return withLock("household-otp.json", async () => {
-    const map = await readHouseholdOtps();
-    const entry = map[canonical];
-    if (!entry || entry.code !== trimmed) return false;
-    if (new Date(entry.expiresAt) < new Date()) {
-      delete map[canonical];
-      await writeJSON("household-otp.json", map);
-      return false;
-    }
-    delete map[canonical];
-    await writeJSON("household-otp.json", map);
-    return true;
-  });
 }
 
 export async function getLoyaltyMembers(): Promise<LoyaltyMember[]> {
@@ -1085,48 +1044,295 @@ export async function updateLoyaltyMember(
   });
 }
 
-export async function setLoyaltyMemberHouseholdLabels(
-  phone: string,
-  labels: string[]
-): Promise<LoyaltyMember | null> {
-  const cleaned = labels
-    .map((s) => String(s).trim())
-    .filter(Boolean)
-    .slice(0, MAX_HOUSEHOLD_EXTRA_LABELS);
-  const canonical = normalizePlPhoneE164(phone) || phone.trim();
-  return withLock("loyalty-members.json", async () => {
-    const list = await readJSON<LoyaltyMember[]>("loyalty-members.json", []);
-    const idx = list.findIndex((m) => phonesEqualPl(m.phone, canonical));
-    if (idx === -1) return null;
-    list[idx] = { ...list[idx], householdLabels: cleaned };
-    await writeJSON("loyalty-members.json", list);
-    return list[idx];
+// --- Family wallets (up to WALLET_MAX_PHONES phones, shared earn, invite + confirm) ---
+
+export type WalletMemberStatus = "pending" | "active";
+
+export interface WalletMemberEntry {
+  phone: string;
+  status: WalletMemberStatus;
+  invitedAt?: string;
+  confirmedAt?: string;
+}
+
+export interface FamilyWallet {
+  id: string;
+  headPhone: string;
+  createdAt: string;
+  members: WalletMemberEntry[];
+}
+
+type WalletInviteOtpMap = Record<
+  string,
+  { code: string; expiresAt: string; walletId: string }
+>;
+
+async function readWalletInviteOtps(): Promise<WalletInviteOtpMap> {
+  return readJSON<WalletInviteOtpMap>("wallet-invite-otp.json", {});
+}
+
+export async function storeWalletInviteOtp(
+  inviteePhone: string,
+  walletId: string,
+  code: string
+): Promise<void> {
+  const canonical = normalizePlPhoneE164(inviteePhone) || inviteePhone.trim();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+  return withLock("wallet-invite-otp.json", async () => {
+    const map = await readWalletInviteOtps();
+    map[canonical] = { code, expiresAt, walletId };
+    await writeJSON("wallet-invite-otp.json", map);
   });
 }
 
-export async function markLoyaltyMemberOwnerVerified(
-  phone: string
-): Promise<LoyaltyMember | null> {
-  const canonical = normalizePlPhoneE164(phone) || phone.trim();
-  const now = new Date().toISOString();
-  return withLock("loyalty-members.json", async () => {
-    const list = await readJSON<LoyaltyMember[]>("loyalty-members.json", []);
-    const idx = list.findIndex((m) => phonesEqualPl(m.phone, canonical));
-    if (idx === -1) {
-      const created: LoyaltyMember = {
-        phone: canonical,
-        name: "Verified Owner",
-        signedUpAt: now,
-        ownerVerifiedAt: now,
-      };
-      list.push(created);
-      await writeJSON("loyalty-members.json", list);
-      return created;
+export async function verifyAndConsumeWalletInviteOtp(
+  inviteePhone: string,
+  code: string
+): Promise<string | null> {
+  const canonical = normalizePlPhoneE164(inviteePhone) || inviteePhone.trim();
+  const trimmed = code.trim();
+  return withLock("wallet-invite-otp.json", async () => {
+    const map = await readWalletInviteOtps();
+    const entry = map[canonical];
+    if (!entry || entry.code !== trimmed) return null;
+    if (new Date(entry.expiresAt) < new Date()) {
+      delete map[canonical];
+      await writeJSON("wallet-invite-otp.json", map);
+      return null;
     }
-    list[idx] = { ...list[idx], ownerVerifiedAt: now };
-    await writeJSON("loyalty-members.json", list);
-    return list[idx];
+    const { walletId } = entry;
+    delete map[canonical];
+    await writeJSON("wallet-invite-otp.json", map);
+    return walletId;
   });
+}
+
+export async function getFamilyWallets(): Promise<FamilyWallet[]> {
+  return readJSON<FamilyWallet[]>("wallets.json", []);
+}
+
+export async function findWalletByPhone(phone: string): Promise<FamilyWallet | null> {
+  const canonical = normalizePlPhoneE164(phone) || phone.trim();
+  const wallets = await getFamilyWallets();
+  for (const w of wallets) {
+    for (const m of w.members) {
+      if (phonesEqualPl(m.phone, canonical)) return w;
+    }
+  }
+  return null;
+}
+
+export async function createFamilyWallet(headPhone: string): Promise<FamilyWallet | null> {
+  const canonical = normalizePlPhoneE164(headPhone) || headPhone.trim();
+  return withLock("wallets.json", async () => {
+    const list = await readJSON<FamilyWallet[]>("wallets.json", []);
+    for (const w of list) {
+      for (const m of w.members) {
+        if (phonesEqualPl(m.phone, canonical)) return null;
+      }
+    }
+    const now = new Date().toISOString();
+    const wallet: FamilyWallet = {
+      id: `fw-${crypto.randomUUID()}`,
+      headPhone: canonical,
+      createdAt: now,
+      members: [
+        {
+          phone: canonical,
+          status: "active",
+          confirmedAt: now,
+        },
+      ],
+    };
+    list.push(wallet);
+    await writeJSON("wallets.json", list);
+    return wallet;
+  });
+}
+
+export type InviteWalletMemberResult =
+  | { ok: true; invitee: string; resent: boolean }
+  | { error: string };
+
+export async function inviteFamilyWalletMember(
+  walletId: string,
+  headPhone: string,
+  inviteeRaw: string
+): Promise<InviteWalletMemberResult> {
+  const invitee = normalizePlPhoneE164(inviteeRaw) || inviteeRaw.trim();
+  const head = normalizePlPhoneE164(headPhone) || headPhone.trim();
+  if (!invitee) return { error: "Invalid phone number" };
+  if (phonesEqualPl(invitee, head)) return { error: "Cannot invite yourself" };
+
+  return withLock("wallets.json", async () => {
+    const list = await readJSON<FamilyWallet[]>("wallets.json", []);
+    const w = list.find((x) => x.id === walletId);
+    if (!w) return { error: "Wallet not found" };
+    if (!phonesEqualPl(w.headPhone, head)) return { error: "Only the wallet owner can invite" };
+
+    const existingIdx = w.members.findIndex((mem) => phonesEqualPl(mem.phone, invitee));
+    if (existingIdx >= 0) {
+      const mem = w.members[existingIdx];
+      if (mem.status === "active") return { error: "This number is already in the wallet" };
+      await writeJSON("wallets.json", list);
+      return { ok: true, invitee, resent: true };
+    }
+
+    if (w.members.length >= WALLET_MAX_PHONES) {
+      return { error: `Wallet is full (max ${WALLET_MAX_PHONES} numbers)` };
+    }
+
+    for (const other of list) {
+      if (other.id === walletId) continue;
+      if (other.members.some((mem) => phonesEqualPl(mem.phone, invitee))) {
+        return { error: "This number is already in another wallet" };
+      }
+    }
+
+    const now = new Date().toISOString();
+    w.members.push({
+      phone: invitee,
+      status: "pending",
+      invitedAt: now,
+    });
+    await writeJSON("wallets.json", list);
+    return { ok: true, invitee, resent: false };
+  });
+}
+
+export type ConfirmWalletMemberResult =
+  | { ok: true; wallet: FamilyWallet }
+  | { error: string };
+
+export async function confirmFamilyWalletMember(
+  inviteePhone: string,
+  code: string
+): Promise<ConfirmWalletMemberResult> {
+  const canonical = normalizePlPhoneE164(inviteePhone) || inviteePhone.trim();
+  const walletId = await verifyAndConsumeWalletInviteOtp(canonical, code);
+  if (!walletId) return { error: "Invalid or expired code" };
+
+  return withLock("wallets.json", async () => {
+    const list = await readJSON<FamilyWallet[]>("wallets.json", []);
+    const w = list.find((x) => x.id === walletId);
+    if (!w) return { error: "Wallet not found" };
+    const m = w.members.find((mem) => phonesEqualPl(mem.phone, canonical));
+    if (!m) return { error: "No invitation for this number" };
+    if (m.status === "active") return { error: "Already confirmed" };
+    m.status = "active";
+    m.confirmedAt = new Date().toISOString();
+    await writeJSON("wallets.json", list);
+    return { ok: true, wallet: w };
+  });
+}
+
+export async function removeFamilyWalletMember(
+  walletId: string,
+  headPhone: string,
+  targetRaw: string
+): Promise<{ ok: true } | { error: string }> {
+  const head = normalizePlPhoneE164(headPhone) || headPhone.trim();
+  const target = normalizePlPhoneE164(targetRaw) || targetRaw.trim();
+  if (phonesEqualPl(target, head)) return { error: "Cannot remove the wallet owner" };
+
+  return withLock("wallets.json", async () => {
+    const list = await readJSON<FamilyWallet[]>("wallets.json", []);
+    const w = list.find((x) => x.id === walletId);
+    if (!w) return { error: "Wallet not found" };
+    if (!phonesEqualPl(w.headPhone, head)) return { error: "Only the wallet owner can remove members" };
+    const idx = w.members.findIndex((mem) => phonesEqualPl(mem.phone, target));
+    if (idx === -1) return { error: "Member not found" };
+    w.members.splice(idx, 1);
+    await writeJSON("wallets.json", list);
+    return { ok: true };
+  });
+}
+
+export async function leaveFamilyWallet(
+  walletId: string,
+  memberPhone: string
+): Promise<{ ok: true } | { error: string }> {
+  const phone = normalizePlPhoneE164(memberPhone) || memberPhone.trim();
+  return withLock("wallets.json", async () => {
+    const list = await readJSON<FamilyWallet[]>("wallets.json", []);
+    const w = list.find((x) => x.id === walletId);
+    if (!w) return { error: "Wallet not found" };
+    if (phonesEqualPl(w.headPhone, phone)) {
+      return { error: "The owner cannot leave the wallet" };
+    }
+    const idx = w.members.findIndex((mem) => phonesEqualPl(mem.phone, phone));
+    if (idx === -1) return { error: "Not a member" };
+    w.members.splice(idx, 1);
+    await writeJSON("wallets.json", list);
+    return { ok: true };
+  });
+}
+
+// --- Wallet + solo redemptions (ledger) ---
+
+export interface WalletRedemption {
+  id: string;
+  /** null = solo account (not in an active wallet) */
+  walletId: string | null;
+  phone: string;
+  points: number;
+  rewardId: string;
+  createdAt: string;
+}
+
+export async function getWalletRedemptions(): Promise<WalletRedemption[]> {
+  return readJSON<WalletRedemption[]>("wallet-redemptions.json", []);
+}
+
+function sumSoloRedemptionsForPhone(
+  redemptions: WalletRedemption[],
+  phone: string
+): number {
+  return redemptions
+    .filter(
+      (r) =>
+        r.walletId === null &&
+        phonesEqualPl(r.phone, phone)
+    )
+    .reduce((s, r) => s + r.points, 0);
+}
+
+function sumWalletRedemptions(redemptions: WalletRedemption[], walletId: string): number {
+  return redemptions
+    .filter((r) => r.walletId === walletId)
+    .reduce((s, r) => s + r.points, 0);
+}
+
+function sumMemberWalletRedemptions(
+  redemptions: WalletRedemption[],
+  walletId: string,
+  phone: string
+): number {
+  return redemptions
+    .filter(
+      (r) =>
+        r.walletId === walletId && phonesEqualPl(r.phone, phone)
+    )
+    .reduce((s, r) => s + r.points, 0);
+}
+
+/** Order-based points (1 pt / 1 PLN) + count of non-pending orders for one phone. */
+export function computeOrderPointsForPhone(
+  phone: string,
+  orders: Order[]
+): { orderPoints: number; ordersCount: number } {
+  const canonical = normalizePlPhoneE164(phone) || phone.trim();
+  const customerOrders = orders.filter(
+    (o) =>
+      o.customerPhone &&
+      phonesEqualPl(o.customerPhone, canonical) &&
+      o.status !== "pending"
+  );
+  const totalSpent = customerOrders.reduce((sum, o) => sum + o.totalAmount, 0);
+  return {
+    orderPoints: Math.floor(totalSpent / 100),
+    ordersCount: customerOrders.length,
+  };
 }
 
 // --- Point Adjustments (manual add/remove by admin) ---
@@ -1159,6 +1365,293 @@ export async function getManualPointsTotal(phone: string): Promise<number> {
       canonical ? phonesEqualPl(a.phone, canonical) : a.phone.trim() === phone.trim()
     )
     .reduce((sum, a) => sum + a.amount, 0);
+}
+
+async function earnedPointsForPhone(phone: string, orders: Order[]): Promise<number> {
+  const { orderPoints } = computeOrderPointsForPhone(phone, orders);
+  const manual = await getManualPointsTotal(phone);
+  return orderPoints + manual;
+}
+
+export interface CustomerWalletPayload {
+  id: string;
+  role: "head" | "member";
+  myStatus: WalletMemberStatus;
+  poolEarned: number;
+  spendablePool: number;
+  myContributedPoints: number;
+  headRedeemCap: number;
+  memberRedeemCap: number;
+  members: { phone: string; status: WalletMemberStatus; isHead: boolean; contributedPoints: number }[];
+}
+
+export interface ResolveCustomerLoyaltyResult {
+  ordersCount: number;
+  /** Lifetime earned for tier (pool for active wallet members, else solo). */
+  points: number;
+  /** Max points this session can redeem right now. */
+  spendablePoints: number;
+  wallet: CustomerWalletPayload | null;
+}
+
+export async function resolveCustomerLoyalty(
+  phone: string,
+  allOrders?: Order[]
+): Promise<ResolveCustomerLoyaltyResult> {
+  const canonical = normalizePlPhoneE164(phone) || phone.trim();
+  const orders = allOrders ?? (await getOrders());
+  const redemptions = await getWalletRedemptions();
+
+  const { orderPoints, ordersCount } = computeOrderPointsForPhone(canonical, orders);
+  const manualPoints = await getManualPointsTotal(canonical);
+  const soloEarned = orderPoints + manualPoints;
+
+  const wallet = await findWalletByPhone(canonical);
+  if (!wallet) {
+    const soloRed = sumSoloRedemptionsForPhone(redemptions, canonical);
+    return {
+      ordersCount,
+      points: soloEarned,
+      spendablePoints: Math.max(0, soloEarned - soloRed),
+      wallet: null,
+    };
+  }
+
+  const entry = wallet.members.find((m) => phonesEqualPl(m.phone, canonical));
+  if (!entry) {
+    const soloRed = sumSoloRedemptionsForPhone(redemptions, canonical);
+    return {
+      ordersCount,
+      points: soloEarned,
+      spendablePoints: Math.max(0, soloEarned - soloRed),
+      wallet: null,
+    };
+  }
+
+  const isHead = phonesEqualPl(wallet.headPhone, canonical);
+
+  if (entry.status === "pending") {
+    const soloRed = sumSoloRedemptionsForPhone(redemptions, canonical);
+    const membersPayload: CustomerWalletPayload["members"] = await Promise.all(
+      wallet.members.map(async (m) => ({
+        phone: m.phone,
+        status: m.status,
+        isHead: phonesEqualPl(m.phone, wallet.headPhone),
+        contributedPoints: await earnedPointsForPhone(m.phone, orders),
+      }))
+    );
+    return {
+      ordersCount,
+      points: soloEarned,
+      spendablePoints: Math.max(0, soloEarned - soloRed),
+      wallet: {
+        id: wallet.id,
+        role: isHead ? "head" : "member",
+        myStatus: "pending",
+        poolEarned: 0,
+        spendablePool: 0,
+        myContributedPoints: soloEarned,
+        headRedeemCap: 0,
+        memberRedeemCap: Math.max(0, soloEarned - soloRed),
+        members: membersPayload,
+      },
+    };
+  }
+
+  const activePhones = wallet.members
+    .filter((m) => m.status === "active")
+    .map((m) => m.phone);
+
+  let poolEarned = 0;
+  for (const p of activePhones) {
+    poolEarned += await earnedPointsForPhone(p, orders);
+  }
+
+  const totalWalletRed = sumWalletRedemptions(redemptions, wallet.id);
+  const spendablePool = Math.max(0, poolEarned - totalWalletRed);
+
+  const myContributedPoints = soloEarned;
+  const myWalletRed = sumMemberWalletRedemptions(redemptions, wallet.id, canonical);
+  const memberRedeemCap = Math.min(
+    spendablePool,
+    Math.max(0, myContributedPoints - myWalletRed)
+  );
+  const headRedeemCap = spendablePool;
+  const spendablePoints = isHead ? headRedeemCap : memberRedeemCap;
+
+  const membersPayload: CustomerWalletPayload["members"] = await Promise.all(
+    wallet.members.map(async (m) => {
+      const contrib = await earnedPointsForPhone(m.phone, orders);
+      return {
+        phone: m.phone,
+        status: m.status,
+        isHead: phonesEqualPl(m.phone, wallet.headPhone),
+        contributedPoints: contrib,
+      };
+    })
+  );
+
+  return {
+    ordersCount,
+    points: poolEarned,
+    spendablePoints,
+    wallet: {
+      id: wallet.id,
+      role: isHead ? "head" : "member",
+      myStatus: "active",
+      poolEarned,
+      spendablePool,
+      myContributedPoints,
+      headRedeemCap,
+      memberRedeemCap,
+      members: membersPayload,
+    },
+  };
+}
+
+export async function redeemLoyaltyReward(
+  phone: string,
+  rewardId: string,
+  pointsCost: number
+): Promise<{ ok: true } | { error: string }> {
+  if (!Number.isFinite(pointsCost) || pointsCost <= 0) {
+    return { error: "Invalid points" };
+  }
+
+  const canonical = normalizePlPhoneE164(phone) || phone.trim();
+  const ctx = await resolveCustomerLoyalty(canonical);
+
+  if (pointsCost > ctx.spendablePoints) {
+    return { error: "Not enough points to redeem" };
+  }
+
+  return withLock("wallet-redemptions.json", async () => {
+    const list = await readJSON<WalletRedemption[]>("wallet-redemptions.json", []);
+    const ctx2 = await resolveCustomerLoyalty(canonical);
+    if (pointsCost > ctx2.spendablePoints) {
+      return { error: "Not enough points to redeem" };
+    }
+    let wid: string | null = null;
+    if (ctx2.wallet && ctx2.wallet.myStatus === "active") {
+      wid = ctx2.wallet.id;
+    }
+    list.push({
+      id: `r-${crypto.randomUUID()}`,
+      walletId: wid,
+      phone: canonical,
+      points: pointsCost,
+      rewardId,
+      createdAt: new Date().toISOString(),
+    });
+    await writeJSON("wallet-redemptions.json", list);
+    return { ok: true };
+  });
+}
+
+// --- Admin: family wallets + redemption ledger (support / ops) ---
+
+export interface AdminWalletMemberSummary {
+  phone: string;
+  status: WalletMemberStatus;
+  isHead: boolean;
+  contributedPoints: number;
+}
+
+export interface AdminWalletSummary {
+  id: string;
+  headPhone: string;
+  createdAt: string;
+  memberCount: number;
+  poolEarned: number;
+  spendablePool: number;
+  totalRedeemed: number;
+  members: AdminWalletMemberSummary[];
+}
+
+export async function getAdminWalletSummaries(): Promise<AdminWalletSummary[]> {
+  const wallets = await getFamilyWallets();
+  const orders = await getOrders();
+  const redemptions = await getWalletRedemptions();
+  const summaries: AdminWalletSummary[] = [];
+
+  for (const w of wallets) {
+    const activePhones = w.members
+      .filter((m) => m.status === "active")
+      .map((m) => m.phone);
+    let poolEarned = 0;
+    const members: AdminWalletMemberSummary[] = [];
+    for (const m of w.members) {
+      const contrib = await earnedPointsForPhone(m.phone, orders);
+      members.push({
+        phone: m.phone,
+        status: m.status,
+        isHead: phonesEqualPl(m.phone, w.headPhone),
+        contributedPoints: contrib,
+      });
+    }
+    for (const p of activePhones) {
+      poolEarned += await earnedPointsForPhone(p, orders);
+    }
+    const totalRedeemed = redemptions
+      .filter((r) => r.walletId === w.id)
+      .reduce((s, r) => s + r.points, 0);
+    const spendablePool = Math.max(0, poolEarned - totalRedeemed);
+    summaries.push({
+      id: w.id,
+      headPhone: w.headPhone,
+      createdAt: w.createdAt,
+      memberCount: w.members.length,
+      poolEarned,
+      spendablePool,
+      totalRedeemed,
+      members,
+    });
+  }
+  return summaries;
+}
+
+export async function adminDeleteFamilyWallet(walletId: string): Promise<boolean> {
+  return withLock("wallets.json", async () => {
+    const list = await readJSON<FamilyWallet[]>("wallets.json", []);
+    const next = list.filter((x) => x.id !== walletId);
+    if (next.length === list.length) return false;
+    await writeJSON("wallets.json", next);
+    return true;
+  });
+}
+
+export async function adminForceRemoveWalletMember(
+  walletId: string,
+  targetRaw: string
+): Promise<{ ok: true } | { error: string }> {
+  const target = normalizePlPhoneE164(targetRaw) || targetRaw.trim();
+  return withLock("wallets.json", async () => {
+    const list = await readJSON<FamilyWallet[]>("wallets.json", []);
+    const w = list.find((x) => x.id === walletId);
+    if (!w) return { error: "Wallet not found" };
+    if (phonesEqualPl(target, w.headPhone)) {
+      return {
+        error: "Cannot remove wallet head — dissolve the wallet instead",
+      };
+    }
+    const idx = w.members.findIndex((mem) => phonesEqualPl(mem.phone, target));
+    if (idx === -1) return { error: "Member not found" };
+    w.members.splice(idx, 1);
+    await writeJSON("wallets.json", list);
+    return { ok: true };
+  });
+}
+
+/** Removes a ledger row; restores customer spendable balance logic on next identify. */
+export async function adminVoidWalletRedemption(id: string): Promise<boolean> {
+  const trimmed = id.trim();
+  return withLock("wallet-redemptions.json", async () => {
+    const list = await readJSON<WalletRedemption[]>("wallet-redemptions.json", []);
+    const next = list.filter((r) => r.id !== trimmed);
+    if (next.length === list.length) return false;
+    await writeJSON("wallet-redemptions.json", next);
+    return true;
+  });
 }
 
 export async function getAllManualPoints(): Promise<Record<string, number>> {

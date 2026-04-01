@@ -2,6 +2,27 @@
 
 import { useState, useEffect, createContext, useContext, useCallback } from "react";
 
+export type WalletMemberStatus = "pending" | "active";
+
+export interface CustomerWalletMember {
+  phone: string;
+  status: WalletMemberStatus;
+  isHead: boolean;
+  contributedPoints: number;
+}
+
+export interface CustomerWallet {
+  id: string;
+  role: "head" | "member";
+  myStatus: WalletMemberStatus;
+  poolEarned: number;
+  spendablePool: number;
+  myContributedPoints: number;
+  headRedeemCap: number;
+  memberRedeemCap: number;
+  members: CustomerWalletMember[];
+}
+
 export interface CustomerIdentity {
   phone: string;
   name: string;
@@ -9,12 +30,12 @@ export interface CustomerIdentity {
   nickname?: string;
   email?: string;
   ordersCount: number;
+  /** Lifetime / tier points (shared pool when in an active wallet). */
   points: number;
+  /** Points you can spend on rewards right now (head vs member rules applied). */
+  spendablePoints: number;
   isNew?: boolean;
-  /** True when httpOnly owner cookie matches this phone (OTP verified). */
-  isNumberOwner?: boolean;
-  /** Up to 3 extra family member names earning on this number. */
-  householdLabels?: string[];
+  wallet?: CustomerWallet | null;
 }
 
 interface CustomerContextValue {
@@ -43,6 +64,14 @@ function getPhoneFromCookie(): string | null {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
+function parseWallet(raw: unknown): CustomerWallet | null | undefined {
+  if (raw === null) return null;
+  if (!raw || typeof raw !== "object") return undefined;
+  const w = raw as Record<string, unknown>;
+  if (typeof w.id !== "string") return undefined;
+  return raw as CustomerWallet;
+}
+
 export function CustomerProvider({ children }: { children: React.ReactNode }) {
   const [customer, setCustomer] = useState<CustomerIdentity | null>(null);
   const [loading, setLoading] = useState(true);
@@ -54,12 +83,24 @@ export function CustomerProvider({ children }: { children: React.ReactNode }) {
       const data = await res.json();
       if (data.customer) {
         const c = data.customer;
+        const spendable =
+          typeof c.spendablePoints === "number" && Number.isFinite(c.spendablePoints)
+            ? c.spendablePoints
+            : typeof c.points === "number"
+              ? c.points
+              : 0;
+        const walletParsed = parseWallet(c.wallet);
         setCustomer({
-          ...c,
-          isNumberOwner: c.isNumberOwner === true,
-          householdLabels: Array.isArray(c.householdLabels)
-            ? c.householdLabels
-            : [],
+          phone: c.phone,
+          name: c.name,
+          lastName: c.lastName || "",
+          nickname: c.nickname || "",
+          email: c.email,
+          ordersCount: typeof c.ordersCount === "number" ? c.ordersCount : 0,
+          points: typeof c.points === "number" ? c.points : 0,
+          spendablePoints: spendable,
+          isNew: c.isNew === true,
+          wallet: walletParsed === undefined ? null : walletParsed,
         });
         const cookiePhone = c.phone || phone;
         document.cookie = `sud-italia-customer=${encodeURIComponent(cookiePhone)};path=/;max-age=${60 * 60 * 24 * 365};samesite=lax`;
@@ -100,7 +141,6 @@ export function CustomerProvider({ children }: { children: React.ReactNode }) {
     document.cookie = "sud-italia-customer=;path=/;max-age=0";
   }, []);
 
-  // Auto-identify from cookie on mount
   useEffect(() => {
     const phone = getPhoneFromCookie();
     if (phone) {
