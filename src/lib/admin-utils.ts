@@ -36,6 +36,7 @@ export function statusBadgeClass(status: string): string {
     preparing: "badge-preparing",
     ready: "badge-ready",
     completed: "badge-completed",
+    cancelled: "badge-cancelled",
     draft: "badge-draft",
     active: "badge-active",
   };

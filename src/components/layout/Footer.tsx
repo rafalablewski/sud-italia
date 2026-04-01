@@ -107,8 +107,16 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-gray-800 mt-10 pt-8 text-center text-gray-500 text-sm">
-          &copy; {year} {SITE_NAME} by {COMPANY_NAME}. All rights reserved.
+        <div className="border-t border-gray-800 mt-10 pt-8 flex flex-col sm:flex-row items-center justify-center gap-2 text-gray-500 text-sm">
+          <span>
+            &copy; {year} {SITE_NAME} by {COMPANY_NAME}. All rights reserved.
+          </span>
+          <span className="hidden sm:inline" aria-hidden>
+            &middot;
+          </span>
+          <Link href="/privacy" className="hover:text-white transition-colors underline-offset-2 hover:underline">
+            Privacy
+          </Link>
         </div>
       </Container>
     </footer>

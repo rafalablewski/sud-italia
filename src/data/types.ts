@@ -191,12 +191,24 @@ export interface QualityCheck {
   notes?: string;
 }
 
+/** Single source of truth for order lifecycle statuses (kitchen + API validation). */
+export const ORDER_STATUSES = [
+  "pending",
+  "confirmed",
+  "preparing",
+  "ready",
+  "completed",
+  "cancelled",
+] as const;
+
+export type OrderStatus = (typeof ORDER_STATUSES)[number];
+
 export interface Order {
   id: string;
   locationSlug: string;
   items: CartItem[];
   totalAmount: number;
-  status: "pending" | "confirmed" | "preparing" | "ready" | "completed" | "cancelled";
+  status: OrderStatus;
   customerName: string;
   customerPhone: string;
   fulfillmentType: FulfillmentType;

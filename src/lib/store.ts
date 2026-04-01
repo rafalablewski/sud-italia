@@ -2,7 +2,12 @@ import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { neon } from "@neondatabase/serverless";
 import { TimeSlot, Order, Ingredient, Recipe } from "@/data/types";
-import { locations as allLocations } from "@/data/locations";
+import { getActiveLocations, locations as allLocations } from "@/data/locations";
+import { getUpstashRedis } from "@/lib/upstash-redis";
+import {
+  getCartPresenceForLocationRedis,
+  upsertCartPresenceRedis,
+} from "@/lib/cart-presence-redis";
 import { WALLET_MAX_PHONES } from "@/lib/constants";
 import { normalizePlPhoneE164, phonesEqualPl } from "@/lib/phone";
 
@@ -255,6 +260,119 @@ export async function deleteOrder(id: string): Promise<boolean> {
     await removeNotificationsForOrder(id);
   }
   return removed;
+}
+
+// --- Cart presence (optional live “spy” for kitchen; see cart-presence-config) ---
+
+const CART_PRESENCE_TTL_MS = 3 * 60 * 1000;
+const CART_PRESENCE_RL_MS = 2000;
+const CART_PRESENCE_RL_KEY = "cart_presence_rl.json";
+
+function cartPresenceStorageKey(locationSlug: string): string {
+  return `cart_presence_${locationSlug}.json`;
+}
+
+export type CartPresenceLine = { id: string; quantity: number };
+
+export type CartPresenceRow = {
+  visitorId: string;
+  items: CartPresenceLine[];
+  totalCents: number;
+  lastSeenAt: number;
+};
+
+type CartPresenceFile = Record<
+  string,
+  {
+    items: CartPresenceLine[];
+    totalCents: number;
+    updatedAt: number;
+  }
+>;
+
+function pruneStalePresence(map: CartPresenceFile, now: number): CartPresenceFile {
+  const out: CartPresenceFile = {};
+  for (const [visitorId, row] of Object.entries(map)) {
+    if (now - row.updatedAt > CART_PRESENCE_TTL_MS) continue;
+    if (!row.items?.length) continue;
+    out[visitorId] = row;
+  }
+  return out;
+}
+
+export async function getCartPresenceForLocation(locationSlug: string): Promise<CartPresenceRow[]> {
+  const redis = getUpstashRedis();
+  if (redis) {
+    return getCartPresenceForLocationRedis(redis, locationSlug);
+  }
+
+  const key = cartPresenceStorageKey(locationSlug);
+  const raw = await readJSON<CartPresenceFile>(key, {});
+  const now = Date.now();
+  const pruned = pruneStalePresence(raw, now);
+  if (Object.keys(pruned).length !== Object.keys(raw).length) {
+    await writeJSON(key, pruned);
+  }
+  return Object.entries(pruned)
+    .map(([visitorId, v]) => ({
+      visitorId,
+      items: v.items,
+      totalCents: v.totalCents,
+      lastSeenAt: v.updatedAt,
+    }))
+    .sort((a, b) => b.lastSeenAt - a.lastSeenAt);
+}
+
+export type UpsertCartPresenceResult = "ok" | "rate_limited";
+
+export async function upsertCartPresence(
+  locationSlug: string,
+  visitorId: string,
+  items: CartPresenceLine[],
+  totalCents: number
+): Promise<UpsertCartPresenceResult> {
+  const redis = getUpstashRedis();
+  if (redis) {
+    return upsertCartPresenceRedis(redis, locationSlug, visitorId, items, totalCents);
+  }
+
+  const allowed = await withLock(CART_PRESENCE_RL_KEY, async () => {
+    const now = Date.now();
+    const map = await readJSON<Record<string, number>>(CART_PRESENCE_RL_KEY, {});
+    const last = map[visitorId] ?? 0;
+    if (now - last < CART_PRESENCE_RL_MS) return false;
+    map[visitorId] = now;
+    const cutoff = now - 60 * 60 * 1000;
+    for (const k of Object.keys(map)) {
+      if ((map[k] ?? 0) < cutoff) delete map[k];
+    }
+    await writeJSON(CART_PRESENCE_RL_KEY, map);
+    return true;
+  });
+  if (!allowed) return "rate_limited";
+
+  const key = cartPresenceStorageKey(locationSlug);
+  await withLock(key, async () => {
+    const now = Date.now();
+    const raw = await readJSON<CartPresenceFile>(key, {});
+    const next = pruneStalePresence(raw, now);
+    if (items.length === 0) {
+      delete next[visitorId];
+    } else {
+      next[visitorId] = {
+        items,
+        totalCents,
+        updatedAt: now,
+      };
+    }
+    await writeJSON(key, next);
+  });
+  return "ok";
+}
+
+/** True if slug is an active location (cart presence only for open locations). */
+export function isActiveLocationSlug(slug: string): boolean {
+  return getActiveLocations().some((l) => l.slug === slug);
 }
 
 // --- Analytics ---
