@@ -17,7 +17,6 @@ import {
   Truck,
   Star,
   Clock,
-  AlertCircle,
   Check,
 } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
@@ -58,10 +57,7 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [phoneError, setPhoneError] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
-  const [slotFomo, setSlotFomo] = useState<{
-    anyLow: boolean;
-    selectedSpots: number | null;
-  } | null>(null);
+  const [slotFomo, setSlotFomo] = useState<{ anyLow: boolean } | null>(null);
   // Fetch location-specific upsell config from admin settings
   const [upsellConfig, setUpsellConfig] = useState<UpsellConfig | null>(null);
   useEffect(() => {
@@ -91,12 +87,7 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
         const anyLow = list.some(
           (s: { spotsLeft: number }) => s.spotsLeft <= 2
         );
-        let selectedSpots: number | null = null;
-        if (selectedSlotId) {
-          const sel = list.find((s: { id: string }) => s.id === selectedSlotId);
-          selectedSpots = sel ? sel.spotsLeft : null;
-        }
-        setSlotFomo({ anyLow, selectedSpots });
+        setSlotFomo({ anyLow });
       })
       .catch(() => {
         if (!cancelled) setSlotFomo(null);
@@ -104,14 +95,7 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
     return () => {
       cancelled = true;
     };
-  }, [
-    open,
-    locationSlug,
-    items.length,
-    selectedSlotDate,
-    selectedSlotId,
-    fulfillmentType,
-  ]);
+  }, [open, locationSlug, items.length, selectedSlotDate, fulfillmentType]);
 
   const subtotal = getTotal();
 
@@ -356,8 +340,6 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
           />
           {slotFomo &&
             (() => {
-              const t = selectedSlotTime || "your time";
-
               if (!selectedSlotId) {
                 // Low-stock warning already shown inside SlotPicker; avoid duplicate amber banner.
                 if (slotFomo.anyLow) {
@@ -384,40 +366,7 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
                 );
               }
 
-              if (slotFomo.selectedSpots === 1) {
-                return (
-                  <div
-                    className="mt-2 flex items-start gap-2.5 rounded-xl border border-red-200/90 bg-red-50/90 px-3 py-2.5"
-                    role="status"
-                  >
-                    <AlertCircle
-                      className="h-4 w-4 flex-shrink-0 text-red-600 mt-0.5"
-                      aria-hidden
-                    />
-                    <p className="text-xs font-semibold text-red-950 leading-snug">
-                      Last spot at {t} — checkout soon to secure it.
-                    </p>
-                  </div>
-                );
-              }
-
-              if (slotFomo.selectedSpots === 2) {
-                return (
-                  <div
-                    className="mt-2 flex items-start gap-2.5 rounded-xl border border-amber-200/80 bg-amber-50 px-3 py-2.5"
-                    role="status"
-                  >
-                    <AlertCircle
-                      className="h-4 w-4 flex-shrink-0 text-amber-700 mt-0.5"
-                      aria-hidden
-                    />
-                    <p className="text-xs font-medium text-amber-950 leading-snug">
-                      Only 2 spots left at {t}.
-                    </p>
-                  </div>
-                );
-              }
-
+              // Per-slot scarcity ("Only 2 left", "Last spot!") is already on the slot button.
               return (
                 <div
                   className="mt-2 flex items-start gap-2.5 rounded-xl border border-italia-green/20 bg-italia-green/5 px-3 py-2.5"
