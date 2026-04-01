@@ -10,7 +10,16 @@ import { ComboDealBanner } from "./ComboDealBanner";
 import { LoyaltyEarnPreview } from "./LoyaltyEarnPreview";
 import { formatPrice } from "@/lib/utils";
 import { getCartSuggestions, getActiveComboDeals, UpsellConfig } from "@/lib/upsell";
-import { ShoppingCart, Trash2, Package, Truck, Star } from "lucide-react";
+import {
+  ShoppingCart,
+  Trash2,
+  Package,
+  Truck,
+  Star,
+  Clock,
+  AlertCircle,
+  Check,
+} from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { SlotPicker } from "./SlotPicker";
 import { krakowMenu } from "@/data/menus/krakow";
@@ -336,33 +345,100 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
             locationSlug={locationSlug}
             fulfillmentType={fulfillmentType}
           />
-          {slotFomo && (
-            <p
-              className={`text-xs mt-2 leading-snug ${
-                selectedSlotId &&
-                slotFomo.selectedSpots !== null &&
-                slotFomo.selectedSpots <= 2
-                  ? "text-amber-800 font-medium"
-                  : "text-italia-gray"
-              }`}
-            >
-              {(() => {
-                if (!selectedSlotId) {
-                  return slotFomo.anyLow
-                    ? "Some times today are almost full — pick your slot below."
-                    : "Popular pickup windows fill up fast — choose your time below.";
+          {slotFomo &&
+            (() => {
+              const t = selectedSlotTime || "your time";
+
+              if (!selectedSlotId) {
+                if (slotFomo.anyLow) {
+                  return (
+                    <div
+                      className="mt-2 flex items-start gap-2.5 rounded-xl border border-amber-200/80 bg-amber-50 px-3 py-2.5"
+                      role="status"
+                    >
+                      <AlertCircle
+                        className="h-4 w-4 flex-shrink-0 text-amber-700 mt-0.5"
+                        aria-hidden
+                      />
+                      <p className="text-xs font-medium text-amber-950 leading-snug">
+                        Some times today are almost full — pick your slot below.
+                      </p>
+                    </div>
+                  );
                 }
-                const t = selectedSlotTime || "your time";
-                if (slotFomo.selectedSpots === 1) {
-                  return `Last spot at ${t} — checkout soon to hold it.`;
-                }
-                if (slotFomo.selectedSpots === 2) {
-                  return `Only 2 spots left at ${t}.`;
-                }
-                return "Complete checkout to confirm your pickup time.";
-              })()}
-            </p>
-          )}
+                return (
+                  <div
+                    className="mt-2 flex items-start gap-2.5 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5"
+                    role="status"
+                  >
+                    <Clock
+                      className="h-4 w-4 flex-shrink-0 text-italia-red mt-0.5"
+                      aria-hidden
+                    />
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-italia-dark leading-snug">
+                        Pick your pickup time
+                      </p>
+                      <p className="text-[11px] text-italia-gray mt-1 leading-relaxed">
+                        Popular pickup windows fill up fast — choose yours below.
+                      </p>
+                    </div>
+                  </div>
+                );
+              }
+
+              if (slotFomo.selectedSpots === 1) {
+                return (
+                  <div
+                    className="mt-2 flex items-start gap-2.5 rounded-xl border border-red-200/90 bg-red-50/90 px-3 py-2.5"
+                    role="status"
+                  >
+                    <AlertCircle
+                      className="h-4 w-4 flex-shrink-0 text-red-600 mt-0.5"
+                      aria-hidden
+                    />
+                    <p className="text-xs font-semibold text-red-950 leading-snug">
+                      Last spot at {t} — checkout soon to secure it.
+                    </p>
+                  </div>
+                );
+              }
+
+              if (slotFomo.selectedSpots === 2) {
+                return (
+                  <div
+                    className="mt-2 flex items-start gap-2.5 rounded-xl border border-amber-200/80 bg-amber-50 px-3 py-2.5"
+                    role="status"
+                  >
+                    <AlertCircle
+                      className="h-4 w-4 flex-shrink-0 text-amber-700 mt-0.5"
+                      aria-hidden
+                    />
+                    <p className="text-xs font-medium text-amber-950 leading-snug">
+                      Only 2 spots left at {t}.
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <div
+                  className="mt-2 flex items-start gap-2.5 rounded-xl border border-italia-green/20 bg-italia-green/5 px-3 py-2.5"
+                  role="status"
+                >
+                  <Check
+                    className="h-4 w-4 flex-shrink-0 text-italia-green mt-0.5"
+                    aria-hidden
+                  />
+                  <p className="text-xs leading-snug text-italia-dark">
+                    <span className="font-semibold">Time selected.</span>{" "}
+                    <span className="text-italia-gray font-normal">
+                      Complete checkout to confirm your pickup window.
+                    </span>
+                  </p>
+                </div>
+              );
+            })()}
         </div>
       )}
 
