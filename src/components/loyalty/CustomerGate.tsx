@@ -20,25 +20,31 @@ export function CustomerGate({ children }: CustomerGateProps) {
   if (customer) {
     return (
       <div>
-        {/* Identity bar */}
-        <div className="flex items-center justify-between mb-4 p-3 bg-italia-green/5 rounded-xl border border-italia-green/15">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-italia-green/15 flex items-center justify-center">
-              <User className="h-4 w-4 text-italia-green" />
+        <div className="relative isolate mb-3 flex items-center justify-between overflow-hidden rounded-2xl border border-black/[0.06] bg-white/45 px-4 py-2.5 shadow-sm backdrop-blur-xl backdrop-saturate-150">
+          <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-white/60 to-transparent pointer-events-none" aria-hidden />
+          <div className="relative flex min-w-0 items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/[0.05]">
+              <User className="h-4 w-4 text-black/45" strokeWidth={1.75} aria-hidden />
             </div>
-            <div>
-              <p className="text-sm font-semibold text-italia-dark">{customer.name}</p>
-              <p className="text-[11px] text-italia-gray">
-                {customer.points} pts &middot; {customer.ordersCount} orders
+            <div className="min-w-0">
+              <p className="truncate font-sans text-[15px] font-semibold tracking-[-0.02em] text-black/85">
+                {customer.name}
+              </p>
+              <p className="font-sans text-[12px] text-black/40">
+                {customer.points.toLocaleString()} pts · {customer.ordersCount}{" "}
+                {customer.ordersCount === 1 ? "order" : "orders"}
               </p>
             </div>
           </div>
           <button
+            type="button"
             onClick={logout}
-            className="text-xs text-italia-gray hover:text-italia-dark flex items-center gap-1 transition-colors"
+            className="relative shrink-0 rounded-lg px-2 py-1.5 font-sans text-[12px] font-medium text-black/45 transition-colors hover:bg-black/[0.05] hover:text-black/70"
           >
-            <LogOut className="h-3 w-3" />
-            Sign out
+            <span className="flex items-center gap-1.5">
+              <LogOut className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
+              Sign out
+            </span>
           </button>
         </div>
         {children}
