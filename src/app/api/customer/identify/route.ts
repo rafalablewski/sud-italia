@@ -1,6 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getOrders, getLoyaltyMember, addLoyaltyMember, getManualPointsTotal } from "@/lib/store";
+import { cookies } from "next/headers";
+import {
+  getOrders,
+  getLoyaltyMember,
+  addLoyaltyMember,
+  getManualPointsTotal,
+  type LoyaltyMember,
+} from "@/lib/store";
 import { normalizePlPhoneE164, phonesEqualPl } from "@/lib/phone";
+
+async function withHouseholdFlags<T extends Record<string, unknown>>(
+  phone: string,
+  customer: T,
+  memberHint?: LoyaltyMember | null
+) {
+  const cookieStore = await cookies();
+  const ownerRaw = cookieStore.get("sud-italia-number-owner")?.value;
+  const ownerDecoded = ownerRaw
+    ? normalizePlPhoneE164(decodeURIComponent(ownerRaw)) ??
+      decodeURIComponent(ownerRaw).trim()
+    : null;
+  const isNumberOwner = !!(
+    ownerDecoded && phonesEqualPl(ownerDecoded, phone)
+  );
+  const member = memberHint ?? (await getLoyaltyMember(phone));
+  return {
+    ...customer,
+    isNumberOwner,
+    householdLabels: member?.householdLabels ?? [],
+  };
+}
 
 export async function GET(req: NextRequest) {
   const phoneRaw = req.nextUrl.searchParams.get("phone");
@@ -15,7 +44,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ customer: null });
   }
 
-  // Find all orders by this phone number (match any legacy stored format)
   const allOrders = await getOrders();
   const customerOrders = allOrders.filter(
     (o) => phonesEqualPl(o.customerPhone, phone) && o.status !== "pending"
@@ -30,18 +58,16 @@ export async function GET(req: NextRequest) {
     const manualPoints = await getManualPointsTotal(phone);
     const points = Math.floor(totalSpent / 100) + manualPoints;
 
-    // Also ensure they're in the members list
     await addLoyaltyMember({
       phone,
       name: latest.customerName,
       signedUpAt: new Date().toISOString(),
     });
 
-    // Fetch member record for profile fields
     const member = await getLoyaltyMember(phone);
 
     return NextResponse.json({
-      customer: {
+      customer: await withHouseholdFlags(phone, {
         phone,
         name: member?.name || latest.customerName,
         lastName: member?.lastName || "",
@@ -49,16 +75,15 @@ export async function GET(req: NextRequest) {
         ordersCount: customerOrders.length,
         points,
         isNew: false,
-      },
+      }, member),
     });
   }
 
-  // Check if they signed up without ordering
   const existing = await getLoyaltyMember(phone);
   if (existing) {
     const manualPoints = await getManualPointsTotal(phone);
     return NextResponse.json({
-      customer: {
+      customer: await withHouseholdFlags(phone, {
         phone: existing.phone,
         name: existing.name,
         lastName: existing.lastName || "",
@@ -66,20 +91,20 @@ export async function GET(req: NextRequest) {
         ordersCount: 0,
         points: manualPoints,
         isNew: false,
-      },
+      }, existing),
     });
   }
 
-  // New signup
   if (signup === "true") {
     await addLoyaltyMember({
       phone,
       name: "New Member",
       signedUpAt: new Date().toISOString(),
     });
+    const member = await getLoyaltyMember(phone);
 
     return NextResponse.json({
-      customer: {
+      customer: await withHouseholdFlags(phone, {
         phone,
         name: "New Member",
         lastName: "",
@@ -87,7 +112,7 @@ export async function GET(req: NextRequest) {
         ordersCount: 0,
         points: 0,
         isNew: true,
-      },
+      }, member),
     });
   }
 

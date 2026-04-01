@@ -3,6 +3,7 @@ import { join } from "path";
 import { neon } from "@neondatabase/serverless";
 import { TimeSlot, Order, Ingredient, Recipe } from "@/data/types";
 import { locations as allLocations } from "@/data/locations";
+import { MAX_HOUSEHOLD_EXTRA_LABELS } from "@/lib/constants";
 import { normalizePlPhoneE164, phonesEqualPl } from "@/lib/phone";
 
 // --- Storage abstraction: Neon Postgres when DATABASE_URL is set, filesystem fallback for local dev ---
@@ -1000,6 +1001,47 @@ export interface LoyaltyMember {
   nickname?: string;
   email?: string;
   signedUpAt: string;
+  /** Up to 3 extra family members who can earn on the same number (owner redeems). */
+  householdLabels?: string[];
+  /** Set when number owner completes SMS-style verification (OTP). */
+  ownerVerifiedAt?: string;
+}
+
+type HouseholdOtpMap = Record<string, { code: string; expiresAt: string }>;
+
+async function readHouseholdOtps(): Promise<HouseholdOtpMap> {
+  return readJSON<HouseholdOtpMap>("household-otp.json", {});
+}
+
+export async function storeHouseholdOtp(phone: string, code: string): Promise<void> {
+  const canonical = normalizePlPhoneE164(phone) || phone.trim();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+  return withLock("household-otp.json", async () => {
+    const map = await readHouseholdOtps();
+    map[canonical] = { code, expiresAt };
+    await writeJSON("household-otp.json", map);
+  });
+}
+
+export async function verifyAndConsumeHouseholdOtp(
+  phone: string,
+  code: string
+): Promise<boolean> {
+  const canonical = normalizePlPhoneE164(phone) || phone.trim();
+  const trimmed = code.trim();
+  return withLock("household-otp.json", async () => {
+    const map = await readHouseholdOtps();
+    const entry = map[canonical];
+    if (!entry || entry.code !== trimmed) return false;
+    if (new Date(entry.expiresAt) < new Date()) {
+      delete map[canonical];
+      await writeJSON("household-otp.json", map);
+      return false;
+    }
+    delete map[canonical];
+    await writeJSON("household-otp.json", map);
+    return true;
+  });
 }
 
 export async function getLoyaltyMembers(): Promise<LoyaltyMember[]> {
@@ -1040,6 +1082,50 @@ export async function updateLoyaltyMember(
     list[index] = { ...list[index], ...updates };
     await writeJSON("loyalty-members.json", list);
     return list[index];
+  });
+}
+
+export async function setLoyaltyMemberHouseholdLabels(
+  phone: string,
+  labels: string[]
+): Promise<LoyaltyMember | null> {
+  const cleaned = labels
+    .map((s) => String(s).trim())
+    .filter(Boolean)
+    .slice(0, MAX_HOUSEHOLD_EXTRA_LABELS);
+  const canonical = normalizePlPhoneE164(phone) || phone.trim();
+  return withLock("loyalty-members.json", async () => {
+    const list = await readJSON<LoyaltyMember[]>("loyalty-members.json", []);
+    const idx = list.findIndex((m) => phonesEqualPl(m.phone, canonical));
+    if (idx === -1) return null;
+    list[idx] = { ...list[idx], householdLabels: cleaned };
+    await writeJSON("loyalty-members.json", list);
+    return list[idx];
+  });
+}
+
+export async function markLoyaltyMemberOwnerVerified(
+  phone: string
+): Promise<LoyaltyMember | null> {
+  const canonical = normalizePlPhoneE164(phone) || phone.trim();
+  const now = new Date().toISOString();
+  return withLock("loyalty-members.json", async () => {
+    const list = await readJSON<LoyaltyMember[]>("loyalty-members.json", []);
+    const idx = list.findIndex((m) => phonesEqualPl(m.phone, canonical));
+    if (idx === -1) {
+      const created: LoyaltyMember = {
+        phone: canonical,
+        name: "Verified Owner",
+        signedUpAt: now,
+        ownerVerifiedAt: now,
+      };
+      list.push(created);
+      await writeJSON("loyalty-members.json", list);
+      return created;
+    }
+    list[idx] = { ...list[idx], ownerVerifiedAt: now };
+    await writeJSON("loyalty-members.json", list);
+    return list[idx];
   });
 }
 

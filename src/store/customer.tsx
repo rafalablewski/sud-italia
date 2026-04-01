@@ -10,6 +10,11 @@ export interface CustomerIdentity {
   email?: string;
   ordersCount: number;
   points: number;
+  isNew?: boolean;
+  /** True when httpOnly owner cookie matches this phone (OTP verified). */
+  isNumberOwner?: boolean;
+  /** Up to 3 extra family member names earning on this number. */
+  householdLabels?: string[];
 }
 
 interface CustomerContextValue {
@@ -17,7 +22,7 @@ interface CustomerContextValue {
   loading: boolean;
   identify: (phone: string, signup?: boolean) => Promise<void>;
   updateProfile: (updates: { name?: string; lastName?: string; nickname?: string }) => Promise<boolean>;
-  logout: () => void;
+  logout: () => void | Promise<void>;
 }
 
 const CustomerContext = createContext<CustomerContextValue>({
@@ -48,8 +53,15 @@ export function CustomerProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch(url);
       const data = await res.json();
       if (data.customer) {
-        setCustomer(data.customer);
-        const cookiePhone = data.customer.phone || phone;
+        const c = data.customer;
+        setCustomer({
+          ...c,
+          isNumberOwner: c.isNumberOwner === true,
+          householdLabels: Array.isArray(c.householdLabels)
+            ? c.householdLabels
+            : [],
+        });
+        const cookiePhone = c.phone || phone;
         document.cookie = `sud-italia-customer=${encodeURIComponent(cookiePhone)};path=/;max-age=${60 * 60 * 24 * 365};samesite=lax`;
       } else {
         setCustomer(null);
@@ -78,7 +90,12 @@ export function CustomerProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    try {
+      await fetch("/api/customer/logout", { method: "POST" });
+    } catch {
+      /* ignore */
+    }
     setCustomer(null);
     document.cookie = "sud-italia-customer=;path=/;max-age=0";
   }, []);

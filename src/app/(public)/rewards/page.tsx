@@ -20,6 +20,7 @@ import {
   REFERRAL_REWARD,
 } from "@/lib/growth-engine";
 import { COMBO_DEALS } from "@/lib/upsell";
+import { HouseholdOwnerPanel } from "@/components/loyalty/HouseholdOwnerPanel";
 import {
   Star,
   Trophy,
@@ -466,6 +467,8 @@ function RewardsDashboard() {
         {/* === OVERVIEW TAB === */}
         {activeTab === "overview" && (
           <div className="space-y-6">
+            <HouseholdOwnerPanel />
+
             {/* Profile + Loyalty Card */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <ProfileSection />
@@ -582,7 +585,9 @@ function RewardsDashboard() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {REWARDS.map((reward) => {
-                const canRedeem = customer.points >= reward.pointsCost;
+                const hasPoints = customer.points >= reward.pointsCost;
+                const isOwner = customer.isNumberOwner === true;
+                const canRedeem = hasPoints && isOwner;
                 return (
                   <div key={reward.id} className={`rounded-2xl border p-5 transition-all ${canRedeem ? "bg-white border-italia-gold/30 shadow-sm" : "bg-gray-50 border-gray-100"}`}>
                     <div className="flex items-start justify-between mb-3">
@@ -594,9 +599,17 @@ function RewardsDashboard() {
                     <h3 className="font-heading font-semibold text-italia-dark text-lg mb-1">{reward.name}</h3>
                     <p className="text-sm text-italia-gray mb-4">{reward.description}</p>
                     {canRedeem ? (
-                      <button className="w-full px-4 py-2.5 bg-italia-gold text-white font-semibold rounded-xl hover:bg-italia-gold-dark transition-colors">
+                      <button type="button" className="w-full px-4 py-2.5 bg-italia-gold text-white font-semibold rounded-xl hover:bg-italia-gold-dark transition-colors">
                         Redeem Now
                       </button>
+                    ) : hasPoints && !isOwner ? (
+                      <div className="flex flex-col gap-1 text-sm text-amber-900 bg-amber-50 border border-amber-200/80 rounded-xl px-3 py-2.5">
+                        <span className="flex items-center gap-2 font-medium">
+                          <Lock className="h-4 w-4 flex-shrink-0" />
+                          Verify number ownership to redeem
+                        </span>
+                        <span className="text-xs text-amber-800/90">Overview → Family on this number → Send code</span>
+                      </div>
                     ) : (
                       <div className="flex items-center justify-center gap-2 text-sm text-italia-gray py-2.5">
                         <Lock className="h-4 w-4" />
@@ -660,6 +673,20 @@ function RewardsDashboard() {
         {/* === OFFERS TAB === */}
         {activeTab === "offers" && (
           <div className="space-y-6">
+            {customer.isNumberOwner !== true && (
+              <div className="rounded-2xl border border-amber-200/80 bg-amber-50/90 p-6 text-center">
+                <Lock className="h-8 w-8 text-amber-700 mx-auto mb-3" />
+                <p className="font-heading font-semibold text-italia-dark mb-1">
+                  Exclusive offers are for the verified number holder
+                </p>
+                <p className="text-sm text-italia-gray">
+                  Open the Overview tab and complete &ldquo;Family on this number&rdquo; verification to unlock this section.
+                </p>
+              </div>
+            )}
+
+            {customer.isNumberOwner === true && (
+            <>
             {/* Active combos */}
             <div>
               <h2 className="font-heading font-bold text-lg text-italia-dark mb-3 flex items-center gap-2">
@@ -735,6 +762,8 @@ function RewardsDashboard() {
                 <Share2 className="h-4 w-4" /> Share Code
               </button>
             </div>
+            </>
+            )}
           </div>
         )}
       </Container>

@@ -61,6 +61,7 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
     anyLow: boolean;
     selectedSpots: number | null;
   } | null>(null);
+  const [householdOrderingFor, setHouseholdOrderingFor] = useState("");
 
   // Fetch location-specific upsell config from admin settings
   const [upsellConfig, setUpsellConfig] = useState<UpsellConfig | null>(null);
@@ -113,6 +114,10 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
     fulfillmentType,
   ]);
 
+  useEffect(() => {
+    if (items.length === 0) setHouseholdOrderingFor("");
+  }, [items.length]);
+
   const subtotal = getTotal();
 
   // Apply combo deal discount to actual total
@@ -121,6 +126,19 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
   const total = subtotal - comboDiscount;
 
   const isPhoneValid = PHONE_PATTERN.test(customerPhone.trim());
+
+  const digitsForCompare = (raw: string) => {
+    const d = raw.replace(/\D/g, "");
+    if (d.length >= 11 && d.startsWith("48")) return d;
+    if (d.length >= 9) return `48${d.slice(-9)}`;
+    return d;
+  };
+  const checkoutMatchesLoyaltyPhone =
+    !!loyaltyCustomer &&
+    isPhoneValid &&
+    digitsForCompare(customerPhone) ===
+      digitsForCompare(loyaltyCustomer.phone);
+
   const canCheckout =
     customerFirstName.trim().length > 0 &&
     customerLastName.trim().length > 0 &&
@@ -204,6 +222,10 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
           deliveryAddress: fulfillmentType === "delivery" ? deliveryAddress.trim() : undefined,
           customerEmail: customerEmail.trim() || undefined,
           specialInstructions: specialInstructions.trim() || undefined,
+          householdOrderingFor:
+            checkoutMatchesLoyaltyPhone && householdOrderingFor.trim()
+              ? householdOrderingFor.trim()
+              : undefined,
         }),
       });
 
@@ -489,6 +511,36 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
               }`}
             />
           </div>
+
+          {checkoutMatchesLoyaltyPhone && (
+            <div>
+              <label
+                className="block text-xs font-semibold text-italia-gray mb-1"
+                htmlFor="checkout-household-for"
+              >
+                Points for
+              </label>
+              <select
+                id="checkout-household-for"
+                value={householdOrderingFor}
+                onChange={(e) => setHouseholdOrderingFor(e.target.value)}
+                className="pub-input min-h-[40px] text-sm w-full"
+              >
+                <option value="">
+                  Primary ({loyaltyCustomer?.name?.split(/\s+/)[0] ?? "account"})
+                </option>
+                {(loyaltyCustomer?.householdLabels ?? []).map((label) => (
+                  <option key={label} value={label}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[10px] text-italia-gray mt-1">
+                Same phone, shared balance — pick who this order is for.
+              </p>
+            </div>
+          )}
+
           {/* Optional email */}
           <label className="sr-only" htmlFor="checkout-email">Email address</label>
           <input
@@ -543,12 +595,6 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
         </div>
 
         <div className="mt-1.5 flex flex-col gap-1 empty:hidden">
-          {selectedSlotTime && (
-            <p className="text-xs text-italia-gray text-left">
-              {fulfillmentType === "delivery" ? "Delivery" : "Pickup"} at{" "}
-              <span className="font-semibold text-italia-dark">{selectedSlotTime}</span>
-            </p>
-          )}
           <LoyaltyEarnPreview cartTotal={total} />
         </div>
 

@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
       slotDate,
       slotTime,
       deliveryAddress,
+      householdOrderingFor,
     } = body;
 
     if (!items?.length || !locationSlug || !customerName || !customerPhone) {
@@ -134,6 +135,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const householdLabel =
+      typeof householdOrderingFor === "string" && householdOrderingFor.trim()
+        ? householdOrderingFor.trim().slice(0, 80)
+        : undefined;
+
     // Create order record
     await createOrder({
       id: orderId,
@@ -145,17 +151,20 @@ export async function POST(req: NextRequest) {
       customerPhone: phoneE164,
       fulfillmentType: fulfillmentType as FulfillmentType,
       deliveryAddress: fulfillmentType === "delivery" ? deliveryAddress.trim() : undefined,
+      householdOrderingFor: householdLabel,
       slotId,
       slotDate,
       slotTime,
       createdAt: new Date().toISOString(),
     });
 
+    const householdNote = householdLabel ? ` · for: ${householdLabel}` : "";
+
     // Notify admin
     await addNotification({
       type: "new_order",
       title: "New order received",
-      message: `${customerName.trim()} — ${formatPrice(calculatedTotal)} — ${fulfillmentType} at ${slotTime} · ${orderId}`,
+      message: `${customerName.trim()} — ${formatPrice(calculatedTotal)} — ${fulfillmentType} at ${slotTime} · ${orderId}${householdNote}`,
       locationSlug,
       orderId,
     });
@@ -203,6 +212,7 @@ export async function POST(req: NextRequest) {
           slotId,
           slotTime,
           slotDate,
+          ...(householdLabel ? { householdOrderingFor: householdLabel } : {}),
         },
       });
 

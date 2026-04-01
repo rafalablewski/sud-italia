@@ -202,6 +202,8 @@ export interface Order {
   fulfillmentType: FulfillmentType;
   deliveryAddress?: string;
   specialInstructions?: string;
+  /** Optional: which household member this order earns points for (same phone wallet). */
+  householdOrderingFor?: string;
   slotId: string;
   slotDate: string;
   slotTime: string;
