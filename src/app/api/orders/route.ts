@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getOrderById } from "@/lib/store";
 
 export async function GET(req: NextRequest) {
-  const orderId = req.nextUrl.searchParams.get("orderId");
+  const orderId =
+    req.nextUrl.searchParams.get("orderId") ?? req.nextUrl.searchParams.get("id");
 
   if (!orderId) {
     return NextResponse.json(
@@ -33,6 +34,8 @@ export async function GET(req: NextRequest) {
     // Legacy fields for backward compatibility
     id: order.id,
     status: order.status,
+    totalAmount: order.totalAmount,
+    items: order.items,
     fulfillmentType: order.fulfillmentType,
     slotTime: order.slotTime,
     slotDate: order.slotDate,

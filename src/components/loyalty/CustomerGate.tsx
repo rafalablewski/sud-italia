@@ -122,13 +122,14 @@ export function CustomerGate({ children }: CustomerGateProps) {
             {checking ? "Joining..." : "Join Rewards Program"}
           </button>
           <p className="text-[10px] text-italia-gray mt-2">
-            Start earning points immediately. No forms, no password.
+            Links this device to your number for Rewards. Points still come from
+            orders placed with that phone — no password.
           </p>
         </div>
       )}
 
       <p className="text-[11px] text-italia-gray/70 mt-3">
-        Just your phone number — no password needed
+        Your number is your rewards account on this site — no password
       </p>
     </div>
   );

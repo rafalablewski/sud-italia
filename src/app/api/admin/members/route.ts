@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { isAuthenticated } from "@/lib/admin-auth";
 import { getOrders, getLoyaltyMembers, getAllManualPoints } from "@/lib/store";
 import { calculateTier, LoyaltyTier } from "@/lib/loyalty";
+import { normalizePlPhoneE164, sumManualPointsForPhone } from "@/lib/phone";
 
 export interface MemberRecord {
   phone: string;
@@ -25,13 +26,14 @@ export async function GET() {
   const signups = await getLoyaltyMembers();
   const manualAdj = await getAllManualPoints();
 
-  // Group orders by phone number
+  // Group orders by normalized phone
   const byPhone = new Map<string, typeof allOrders>();
   for (const order of allOrders) {
     if (!order.customerPhone) continue;
-    const list = byPhone.get(order.customerPhone) || [];
+    const key = normalizePlPhoneE164(order.customerPhone) || order.customerPhone.trim();
+    const list = byPhone.get(key) || [];
     list.push(order);
-    byPhone.set(order.customerPhone, list);
+    byPhone.set(key, list);
   }
 
   const memberMap = new Map<string, MemberRecord>();
@@ -40,12 +42,12 @@ export async function GET() {
   for (const [phone, orders] of byPhone) {
     const completed = orders.filter((o) => o.status !== "pending");
     const totalSpent = completed.reduce((sum, o) => sum + o.totalAmount, 0);
-    const points = Math.floor(totalSpent / 100) + (manualAdj[phone] || 0);
+    const points = Math.floor(totalSpent / 100) + sumManualPointsForPhone(phone, manualAdj);
     const latest = orders.sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
 
     const locations = [...new Set(orders.map((o) => o.locationSlug))];
     memberMap.set(phone, {
-      phone,
+      phone: normalizePlPhoneE164(latest.customerPhone) || phone,
       name: latest.customerName,
       points,
       tier: calculateTier(points),
@@ -59,12 +61,14 @@ export async function GET() {
 
   // Members from phone-only signups (who haven't ordered yet)
   for (const signup of signups) {
-    if (!memberMap.has(signup.phone)) {
-      memberMap.set(signup.phone, {
-        phone: signup.phone,
+    const signupKey = normalizePlPhoneE164(signup.phone) || signup.phone.trim();
+    if (!memberMap.has(signupKey)) {
+      const manual = sumManualPointsForPhone(signup.phone, manualAdj);
+      memberMap.set(signupKey, {
+        phone: signupKey,
         name: signup.name,
-        points: manualAdj[signup.phone] || 0,
-        tier: calculateTier(manualAdj[signup.phone] || 0),
+        points: manual,
+        tier: calculateTier(manual),
         orders: 0,
         totalSpent: 0,
         lastOrder: signup.signedUpAt.split("T")[0],

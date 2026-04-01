@@ -24,6 +24,7 @@ interface ItemDetailDrawerProps {
   locationSlug: string;
   open: boolean;
   onClose: () => void;
+  popularThisWeek?: boolean;
 }
 
 function NutritionBar({
@@ -64,6 +65,7 @@ export function ItemDetailDrawer({
   locationSlug,
   open,
   onClose,
+  popularThisWeek = false,
 }: ItemDetailDrawerProps) {
   const addItem = useCartStore((s) => s.addItem);
   const details = getItemDetails(item.id);
@@ -97,6 +99,17 @@ export function ItemDetailDrawer({
               <div className="mt-1">
                 <StarRating rating={rating.rating} reviewCount={rating.count} />
               </div>
+            )}
+            {(item.isLimited || item.limitedUntil) && (
+              <p className="text-xs text-italia-red font-medium mt-2 flex items-center gap-1">
+                <Clock className="h-3 w-3 flex-shrink-0" />
+                Limited on the menu — order before it rotates off.
+              </p>
+            )}
+            {popularThisWeek && (
+              <p className="text-xs text-amber-800 font-medium mt-2">
+                Ordered often at this location this week (real sales).
+              </p>
             )}
           </div>
         </div>

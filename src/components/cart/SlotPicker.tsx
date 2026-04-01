@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useCartStore } from "@/store/cart";
-import { Clock, ChevronLeft, ChevronRight } from "lucide-react";
+import { Clock, AlertCircle } from "lucide-react";
 import { formatSlotDate } from "@/lib/format";
 import { FulfillmentType } from "@/data/types";
 
@@ -132,41 +132,51 @@ export function SlotPicker({ locationSlug, fulfillmentType }: SlotPickerProps) {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-2">
-          {slots.map((slot) => {
-            const isSelected = selectedSlotId === slot.id;
-            const isLow = slot.spotsLeft <= 2;
-            const isCritical = slot.spotsLeft === 1;
-            return (
-              <button
-                key={slot.id}
-                onClick={() =>
-                  setSelectedSlot(
-                    isSelected ? null : slot.id,
-                    isSelected ? null : slot.time,
-                    isSelected ? null : date
-                  )
-                }
-                className={`px-3 py-2.5 rounded-xl text-sm font-medium border-2 transition-all ${
-                  isSelected
-                    ? "border-italia-red bg-italia-red/5 text-italia-red"
-                    : isCritical
-                      ? "border-red-300 bg-red-50 text-italia-dark hover:border-red-400"
-                      : isLow
-                        ? "border-amber-200 text-italia-dark hover:border-amber-300"
-                        : "border-gray-200 text-italia-dark hover:border-gray-300"
-                }`}
-              >
-                <span className="block">{slot.time}</span>
-                <span className={`block text-[10px] mt-0.5 ${
-                  isCritical ? "text-red-600 font-bold" : isLow ? "text-amber-600 font-semibold" : "text-italia-gray"
-                }`}>
-                  {isCritical ? "Last spot!" : isLow ? `Only ${slot.spotsLeft} left` : `${slot.spotsLeft} spots`}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+        <>
+          {slots.some((s) => s.spotsLeft <= 2) && (
+            <div className="flex items-start gap-2 mb-2 px-3 py-2 rounded-xl bg-amber-50 border border-amber-200/80 text-amber-900">
+              <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" aria-hidden />
+              <p className="text-xs font-medium leading-snug">
+                Some pickup times on this day are almost full — grab yours before they&apos;re gone.
+              </p>
+            </div>
+          )}
+          <div className="grid grid-cols-3 gap-2">
+            {slots.map((slot) => {
+              const isSelected = selectedSlotId === slot.id;
+              const isLow = slot.spotsLeft <= 2;
+              const isCritical = slot.spotsLeft === 1;
+              return (
+                <button
+                  key={slot.id}
+                  onClick={() =>
+                    setSelectedSlot(
+                      isSelected ? null : slot.id,
+                      isSelected ? null : slot.time,
+                      isSelected ? null : date
+                    )
+                  }
+                  className={`px-3 py-2.5 rounded-xl text-sm font-medium border-2 transition-all ${
+                    isSelected
+                      ? "border-italia-red bg-italia-red/5 text-italia-red"
+                      : isCritical
+                        ? "border-red-300 bg-red-50 text-italia-dark hover:border-red-400"
+                        : isLow
+                          ? "border-amber-200 text-italia-dark hover:border-amber-300"
+                          : "border-gray-200 text-italia-dark hover:border-gray-300"
+                  }`}
+                >
+                  <span className="block">{slot.time}</span>
+                  <span className={`block text-[10px] mt-0.5 ${
+                    isCritical ? "text-red-600 font-bold" : isLow ? "text-amber-600 font-semibold" : "text-italia-gray"
+                  }`}>
+                    {isCritical ? "Last spot!" : isLow ? `Only ${slot.spotsLeft} left` : `${slot.spotsLeft} spots`}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </>
       )}
     </div>
   );

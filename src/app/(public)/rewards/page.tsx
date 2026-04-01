@@ -20,6 +20,7 @@ import {
   REFERRAL_REWARD,
 } from "@/lib/growth-engine";
 import { COMBO_DEALS } from "@/lib/upsell";
+import { FamilyWalletPanel } from "@/components/loyalty/FamilyWalletPanel";
 import {
   Star,
   Trophy,
@@ -317,8 +318,9 @@ function LoyaltyCardSection() {
 }
 
 function RewardsDashboard() {
-  const { customer, logout } = useCustomer();
+  const { customer, logout, identify } = useCustomer();
   const [copiedCode, setCopiedCode] = useState(false);
+  const [redeemingId, setRedeemingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"overview" | "rewards" | "achievements" | "offers">("overview");
 
   if (!customer) return null;
@@ -349,6 +351,25 @@ function RewardsDashboard() {
         text: `Use my code ${referralCode} for ${REFERRAL_REWARD.refereeDiscountPLN} PLN off your first order at Sud Italia!`,
         url: `https://suditalia.pl?ref=${referralCode}`,
       }).catch(() => {});
+    }
+  };
+
+  const handleRedeem = async (rewardId: string) => {
+    setRedeemingId(rewardId);
+    try {
+      const res = await fetch("/api/customer/wallet/redeem", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rewardId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        window.alert(data.error || "Could not redeem");
+        return;
+      }
+      await identify(customer.phone);
+    } finally {
+      setRedeemingId(null);
     }
   };
 
@@ -392,7 +413,13 @@ function RewardsDashboard() {
                 <p className="text-4xl md:text-5xl font-heading font-bold text-italia-gold">
                   {customer.points.toLocaleString()}
                 </p>
-                <p className="text-sm text-white/50 mt-1">points earned</p>
+                <p className="text-sm text-white/50 mt-1">points earned (tier)</p>
+                <p className="text-xs text-white/40 mt-0.5">
+                  Available to spend:{" "}
+                  <span className="text-white/70 font-semibold">
+                    {customer.spendablePoints.toLocaleString()} pts
+                  </span>
+                </p>
               </div>
               <div className="text-right">
                 <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold ${tierConfig.color}`}>
@@ -466,6 +493,8 @@ function RewardsDashboard() {
         {/* === OVERVIEW TAB === */}
         {activeTab === "overview" && (
           <div className="space-y-6">
+            <FamilyWalletPanel />
+
             {/* Profile + Loyalty Card */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <ProfileSection />
@@ -576,13 +605,17 @@ function RewardsDashboard() {
         {activeTab === "rewards" && (
           <div className="space-y-6">
             <div className="bg-italia-cream rounded-2xl p-4 text-center">
-              <p className="text-sm text-italia-gray">Your balance</p>
+              <p className="text-sm text-italia-gray">Your balance (tier)</p>
               <p className="text-3xl font-heading font-bold text-italia-gold">{customer.points.toLocaleString()} pts</p>
+              <p className="text-xs text-italia-gray mt-1">
+                Available to spend:{" "}
+                <span className="font-semibold text-italia-dark">{customer.spendablePoints.toLocaleString()} pts</span>
+              </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {REWARDS.map((reward) => {
-                const canRedeem = customer.points >= reward.pointsCost;
+                const canRedeem = customer.spendablePoints >= reward.pointsCost;
                 return (
                   <div key={reward.id} className={`rounded-2xl border p-5 transition-all ${canRedeem ? "bg-white border-italia-gold/30 shadow-sm" : "bg-gray-50 border-gray-100"}`}>
                     <div className="flex items-start justify-between mb-3">
@@ -594,13 +627,18 @@ function RewardsDashboard() {
                     <h3 className="font-heading font-semibold text-italia-dark text-lg mb-1">{reward.name}</h3>
                     <p className="text-sm text-italia-gray mb-4">{reward.description}</p>
                     {canRedeem ? (
-                      <button className="w-full px-4 py-2.5 bg-italia-gold text-white font-semibold rounded-xl hover:bg-italia-gold-dark transition-colors">
-                        Redeem Now
+                      <button
+                        type="button"
+                        disabled={redeemingId === reward.id}
+                        onClick={() => handleRedeem(reward.id)}
+                        className="w-full px-4 py-2.5 bg-italia-gold text-white font-semibold rounded-xl hover:bg-italia-gold-dark transition-colors disabled:opacity-50"
+                      >
+                        {redeemingId === reward.id ? "Redeeming…" : "Redeem Now"}
                       </button>
                     ) : (
                       <div className="flex items-center justify-center gap-2 text-sm text-italia-gray py-2.5">
                         <Lock className="h-4 w-4" />
-                        Need {reward.pointsCost - customer.points} more pts
+                        Need {Math.max(0, reward.pointsCost - customer.spendablePoints)} more pts
                       </div>
                     )}
                   </div>

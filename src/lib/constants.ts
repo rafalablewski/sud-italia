@@ -12,3 +12,6 @@ export const SOCIAL_LINKS = {
 
 export const CONTACT_EMAIL = "hello@suditalia.pl";
 export const CONTACT_PHONE = "+48 123 456 789";
+
+/** Max distinct phone numbers in one family wallet (shared pool). */
+export const WALLET_MAX_PHONES = 4;
