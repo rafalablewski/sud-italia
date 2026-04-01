@@ -155,8 +155,9 @@ export async function POST(req: NextRequest) {
     await addNotification({
       type: "new_order",
       title: "New order received",
-      message: `${customerName.trim()} — ${formatPrice(calculatedTotal)} — ${fulfillmentType} at ${slotTime}`,
+      message: `${customerName.trim()} — ${formatPrice(calculatedTotal)} — ${fulfillmentType} at ${slotTime} · ${orderId}`,
       locationSlug,
+      orderId,
     });
 
     // Check if slot is now full and notify

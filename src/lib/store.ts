@@ -247,8 +247,11 @@ export async function deleteOrder(id: string): Promise<boolean> {
     await writeJSON("orders.json", orders);
     return true;
   });
-  if (removed && slotId) {
-    await decrementSlotOrders(slotId);
+  if (removed) {
+    if (slotId) {
+      await decrementSlotOrders(slotId);
+    }
+    await removeNotificationsForOrder(id);
   }
   return removed;
 }
@@ -664,6 +667,8 @@ export interface Notification {
   title: string;
   message: string;
   locationSlug?: string;
+  /** When set (e.g. new_order), removed when the order is deleted from admin. */
+  orderId?: string;
   createdAt: string;
   read: boolean;
 }
@@ -704,6 +709,28 @@ export async function markAllNotificationsRead(): Promise<void> {
     const notifications = await readJSON<Notification[]>("notifications.json", []);
     for (const n of notifications) n.read = true;
     await writeJSON("notifications.json", notifications);
+  });
+}
+
+export async function deleteNotification(id: string): Promise<boolean> {
+  return withLock("notifications.json", async () => {
+    const notifications = await readJSON<Notification[]>("notifications.json", []);
+    const idx = notifications.findIndex((n) => n.id === id);
+    if (idx === -1) return false;
+    notifications.splice(idx, 1);
+    await writeJSON("notifications.json", notifications);
+    return true;
+  });
+}
+
+/** Drop notifications tied to an order (by orderId). */
+export async function removeNotificationsForOrder(orderId: string): Promise<number> {
+  return withLock("notifications.json", async () => {
+    const notifications = await readJSON<Notification[]>("notifications.json", []);
+    const before = notifications.length;
+    const next = notifications.filter((n) => n.orderId !== orderId);
+    await writeJSON("notifications.json", next);
+    return before - next.length;
   });
 }
 

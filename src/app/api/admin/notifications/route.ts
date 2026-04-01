@@ -5,6 +5,7 @@ import {
   markNotificationRead,
   markAllNotificationsRead,
   getUnreadCount,
+  deleteNotification,
 } from "@/lib/store";
 
 export async function GET(req: NextRequest) {
@@ -38,4 +39,24 @@ export async function PUT(req: NextRequest) {
   }
 
   return NextResponse.json({ error: "Missing id or markAll" }, { status: 400 });
+}
+
+export async function DELETE(req: NextRequest) {
+  if (!(await isAuthenticated())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const { id } = await req.json();
+    if (!id || typeof id !== "string") {
+      return NextResponse.json({ error: "Missing notification id" }, { status: 400 });
+    }
+    const ok = await deleteNotification(id);
+    if (!ok) {
+      return NextResponse.json({ error: "Notification not found" }, { status: 404 });
+    }
+    return NextResponse.json({ success: true });
+  } catch {
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  }
 }

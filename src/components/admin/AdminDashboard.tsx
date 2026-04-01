@@ -9,7 +9,7 @@ import {
   TrendingUp, TrendingDown, DollarSign, ShoppingBag, Package,
   Truck, Clock, Bell, CheckCheck, ArrowRight, BarChart3,
   RefreshCw, MapPin, Users, XCircle, AlertTriangle, Layers,
-  Activity, CalendarDays,
+  Activity, CalendarDays, Trash2,
 } from "lucide-react";
 import Link from "next/link";
 import type { Order } from "@/data/types";
@@ -46,7 +46,7 @@ interface InsightsData {
 
 interface NotificationItem {
   id: string; type: string; title: string; message: string;
-  locationSlug?: string; createdAt: string; read: boolean;
+  locationSlug?: string; orderId?: string; createdAt: string; read: boolean;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -115,6 +115,17 @@ export function AdminDashboard() {
   const markAllRead = async () => {
     await fetch("/api/admin/notifications", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ markAll: true }) });
     setNotifications((n) => n.map((x) => ({ ...x, read: true })));
+  };
+
+  const deleteNotif = async (id: string) => {
+    const res = await fetch("/api/admin/notifications", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    if (res.ok) {
+      setNotifications((n) => n.filter((x) => x.id !== id));
+    }
   };
 
   const handleStatusChange = async (orderId: string, status: string) => {
@@ -301,6 +312,15 @@ export function AdminDashboard() {
                         </div>
                         <p className="text-xs admin-text-dim mt-0.5">{notif.message}</p>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => deleteNotif(notif.id)}
+                        className="p-1.5 rounded-md text-slate-500 hover:text-red-400 hover:bg-red-500/10 flex-shrink-0 transition-colors"
+                        title="Delete notification"
+                        aria-label="Delete notification"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
                     </div>
                   </div>
                 ))}
