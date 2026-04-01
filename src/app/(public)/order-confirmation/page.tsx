@@ -9,7 +9,7 @@ import { OrderTracker } from "@/components/order/OrderTracker";
 import { FeedbackSurvey } from "@/components/order/FeedbackSurvey";
 import { CustomerMilestone } from "@/components/order/CustomerMilestone";
 import { LoyaltyPointsEarned } from "@/components/order/LoyaltyPointsEarned";
-import { CheckCircle, MapPin, ArrowLeft, Share2, Link2 } from "lucide-react";
+import { CheckCircle, MapPin, ArrowLeft, Share2, Link2, Sparkles, Users } from "lucide-react";
 import { getLocation } from "@/data/locations";
 import { useCustomer } from "@/store/customer";
 import { calculateTier } from "@/lib/loyalty";
@@ -104,6 +104,41 @@ function OrderConfirmationContent() {
               tierName={tierName.charAt(0).toUpperCase() + tierName.slice(1)}
             />
           </div>
+
+          {/* Honest FOMO: next order + referrals (no fake stats) */}
+          {location && (
+            <div className="mb-6 rounded-2xl border border-italia-gold/25 bg-gradient-to-br from-italia-gold/8 to-italia-red/5 p-4">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-white/80 border border-italia-gold/20 flex items-center justify-center">
+                  <Sparkles className="h-5 w-5 text-italia-gold-dark" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-italia-dark">
+                    Limited-time menu items go fast
+                  </p>
+                  <p className="text-xs text-italia-gray mt-1 leading-relaxed">
+                    Seasonal specials rotate — grab them on your next order before they&apos;re gone.
+                  </p>
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 mt-3 text-sm">
+                    <Link
+                      href={`/locations/${location.slug}#menu`}
+                      className="font-semibold text-italia-red hover:underline"
+                    >
+                      Browse menu
+                    </Link>
+                    <span className="text-italia-gray hidden sm:inline">·</span>
+                    <Link
+                      href="/rewards"
+                      className="inline-flex items-center gap-1 font-semibold text-italia-green hover:underline"
+                    >
+                      <Users className="h-3.5 w-3.5" />
+                      Invite friends — earn points
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Customer milestone */}
           <div className="mb-6">

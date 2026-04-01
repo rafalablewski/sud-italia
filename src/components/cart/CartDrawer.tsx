@@ -48,6 +48,10 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [phoneError, setPhoneError] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [slotFomo, setSlotFomo] = useState<{
+    anyLow: boolean;
+    selectedSpots: number | null;
+  } | null>(null);
 
   // Fetch location-specific upsell config from admin settings
   const [upsellConfig, setUpsellConfig] = useState<UpsellConfig | null>(null);
@@ -58,6 +62,47 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
       .then((data) => { if (data) setUpsellConfig(data); })
       .catch(() => {});
   }, [locationSlug]);
+
+  // Slot scarcity for honest FOMO (same data as SlotPicker)
+  useEffect(() => {
+    if (!open || !locationSlug || items.length === 0) {
+      setSlotFomo(null);
+      return;
+    }
+    const date =
+      selectedSlotDate ?? new Date().toISOString().split("T")[0];
+    let cancelled = false;
+    fetch(
+      `/api/slots?location=${encodeURIComponent(locationSlug)}&date=${encodeURIComponent(date)}&type=${fulfillmentType}`
+    )
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        const list = Array.isArray(data) ? data : [];
+        const anyLow = list.some(
+          (s: { spotsLeft: number }) => s.spotsLeft <= 2
+        );
+        let selectedSpots: number | null = null;
+        if (selectedSlotId) {
+          const sel = list.find((s: { id: string }) => s.id === selectedSlotId);
+          selectedSpots = sel ? sel.spotsLeft : null;
+        }
+        setSlotFomo({ anyLow, selectedSpots });
+      })
+      .catch(() => {
+        if (!cancelled) setSlotFomo(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    open,
+    locationSlug,
+    items.length,
+    selectedSlotDate,
+    selectedSlotId,
+    fulfillmentType,
+  ]);
 
   const subtotal = getTotal();
 
@@ -291,6 +336,33 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
             locationSlug={locationSlug}
             fulfillmentType={fulfillmentType}
           />
+          {slotFomo && (
+            <p
+              className={`text-xs mt-2 leading-snug ${
+                selectedSlotId &&
+                slotFomo.selectedSpots !== null &&
+                slotFomo.selectedSpots <= 2
+                  ? "text-amber-800 font-medium"
+                  : "text-italia-gray"
+              }`}
+            >
+              {(() => {
+                if (!selectedSlotId) {
+                  return slotFomo.anyLow
+                    ? "Some times today are almost full — pick your slot below."
+                    : "Popular pickup windows fill up fast — choose your time below.";
+                }
+                const t = selectedSlotTime || "your time";
+                if (slotFomo.selectedSpots === 1) {
+                  return `Last spot at ${t} — checkout soon to hold it.`;
+                }
+                if (slotFomo.selectedSpots === 2) {
+                  return `Only 2 spots left at ${t}.`;
+                }
+                return "Complete checkout to confirm your pickup time.";
+              })()}
+            </p>
+          )}
         </div>
       )}
 

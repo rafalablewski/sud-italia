@@ -6,6 +6,7 @@ import { MenuCategory, MENU_CATEGORY_LABELS } from "@/data/types";
 import { Container } from "@/components/ui/Container";
 import { MenuCategoryNav } from "./MenuCategoryNav";
 import { MenuItemCard } from "./MenuItem";
+import { MenuFomoMicroLine } from "./MenuFomoMicroLine";
 import { SurpriseMe } from "./SurpriseMe";
 import { SeasonalSpecials } from "./SeasonalSpecials";
 import { ReorderSection } from "./ReorderSection";
@@ -61,6 +62,7 @@ export function MenuSection({ items, locationSlug }: MenuSectionProps) {
   const [sortBy, setSortBy] = useState<MenuSortValue>("price-low");
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const sortMenuRef = useRef<HTMLDivElement>(null);
+  const [hotThisWeekIds, setHotThisWeekIds] = useState<Set<string>>(new Set());
 
   const isSearching = searchQuery.trim().length > 0;
   const sortLabel =
@@ -84,6 +86,24 @@ export function MenuSection({ items, locationSlug }: MenuSectionProps) {
       document.removeEventListener("keydown", onKey);
     };
   }, [sortMenuOpen]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(
+      `/api/menu/item-popularity?location=${encodeURIComponent(locationSlug)}`
+    )
+      .then((r) => r.json())
+      .then((data: { itemIds?: string[] }) => {
+        if (cancelled) return;
+        setHotThisWeekIds(new Set(data.itemIds ?? []));
+      })
+      .catch(() => {
+        if (!cancelled) setHotThisWeekIds(new Set());
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [locationSlug]);
 
   const filteredItems = useMemo(() => {
     const available = items.filter((i) => i.available);
@@ -149,6 +169,8 @@ export function MenuSection({ items, locationSlug }: MenuSectionProps) {
               </button>
             )}
           </div>
+
+          <MenuFomoMicroLine locationSlug={locationSlug} />
 
           {/* Sort + Category pills */}
           <div
@@ -259,6 +281,7 @@ export function MenuSection({ items, locationSlug }: MenuSectionProps) {
               <MenuItemCard
                 item={item}
                 locationSlug={locationSlug}
+                popularThisWeek={hotThisWeekIds.has(item.id)}
               />
             </div>
           ))}
