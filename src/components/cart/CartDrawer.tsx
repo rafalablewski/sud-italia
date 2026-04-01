@@ -132,11 +132,17 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
   useEffect(() => {
     if (loyaltyCustomer) {
       if (!customerFirstName && !customerLastName) {
-        if (loyaltyCustomer.lastName) {
-          setCustomerFirstName(loyaltyCustomer.name);
-          setCustomerLastName(loyaltyCustomer.lastName);
+        const fullName = loyaltyCustomer.name.trim();
+        const lastName = (loyaltyCustomer.lastName || "").trim();
+
+        if (lastName) {
+          const firstName = fullName.endsWith(lastName)
+            ? fullName.slice(0, fullName.length - lastName.length).trim()
+            : fullName;
+          setCustomerFirstName(firstName);
+          setCustomerLastName(lastName);
         } else {
-          const parts = loyaltyCustomer.name.trim().split(/\s+/);
+          const parts = fullName.split(/\s+/);
           setCustomerFirstName(parts[0] || "");
           setCustomerLastName(parts.slice(1).join(" ") || "");
         }
