@@ -91,7 +91,7 @@ export function KitchenOrderBoard({ locationName, slug }: Props) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={fetchOrders} className="glass-btn-ghost flex items-center gap-2">
+            <button type="button" onClick={() => void fetchOrders()} className="glass-btn-ghost flex items-center gap-2">
               <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
               Refresh
             </button>
@@ -111,7 +111,7 @@ export function KitchenOrderBoard({ locationName, slug }: Props) {
         {error ? (
           <div className="glass-card rounded-lg p-6 text-center border-red-500/20">
             <p className="text-red-400 font-medium">{error}</p>
-            <button type="button" onClick={fetchOrders} className="mt-2 text-sm text-red-400 underline">
+            <button type="button" onClick={() => void fetchOrders()} className="mt-2 text-sm text-red-400 underline">
               Retry
             </button>
           </div>
