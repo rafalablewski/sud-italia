@@ -340,7 +340,7 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
 
       {/* Time slot picker */}
       {locationSlug && (
-        <div className="px-5">
+        <div className="px-5 mb-5 sm:mb-6">
           <SlotPicker
             locationSlug={locationSlug}
             fulfillmentType={fulfillmentType}
@@ -443,7 +443,7 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
       )}
 
       {/* Customer details section */}
-      <div className="border-t border-gray-100 px-4 py-3 sm:px-5 sm:py-4 space-y-2 bg-gray-50">
+      <div className="border-t border-gray-100 px-4 pt-4 pb-3 sm:px-5 sm:pt-5 sm:pb-4 space-y-2 bg-gray-50">
         <p className="text-xs font-semibold text-italia-gray uppercase tracking-wide">Your details</p>
         <div className="space-y-1.5">
           <div className="grid grid-cols-2 gap-2">
