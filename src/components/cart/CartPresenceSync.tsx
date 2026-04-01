@@ -3,46 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useCartStore } from "@/store/cart";
 import { isCartPresenceEnabled } from "@/lib/cart-presence-config";
-import { getOrCreateCartVisitorId } from "@/lib/cart-visitor-id";
+import { postCartPresenceToServer } from "@/lib/cart-presence-post-client";
 
 const DEBOUNCE_MS = 2500;
 /** Empty snapshots remove the guest from the kitchen board; debounce so brief flicker / multi-tab races do not wipe presence immediately. */
 const CLEAR_DEBOUNCE_MS = 3500;
 const HEARTBEAT_MS = 90_000;
-
-async function postSnapshot(
-  locationSlug: string,
-  items: { id: string; quantity: number }[],
-  totalCents: number
-) {
-  const visitorId = getOrCreateCartVisitorId();
-  if (!visitorId) return;
-
-  const body = JSON.stringify({
-    visitorId,
-    locationSlug,
-    items,
-    totalCents,
-  });
-
-  const send = () =>
-    fetch("/api/cart/presence", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body,
-      keepalive: true,
-    });
-
-  try {
-    let res = await send();
-    if (res.status === 429) {
-      await new Promise((r) => setTimeout(r, 1200));
-      res = await send();
-    }
-  } catch {
-    // ignore network errors
-  }
-}
 
 /**
  * Subscribes to cart changes and sends debounced snapshots when the server
@@ -94,7 +60,7 @@ export function CartPresenceSync() {
         snapshotTimerRef.current = null;
         const s = useCartStore.getState();
         if (s.items.length === 0 || !s.locationSlug) return;
-        void postSnapshot(
+        void postCartPresenceToServer(
           s.locationSlug,
           s.items.map((i) => ({ id: i.menuItem.id, quantity: i.quantity })),
           s.getTotal()
@@ -117,7 +83,7 @@ export function CartPresenceSync() {
         clearTimerRef.current = null;
         const s = useCartStore.getState();
         if (s.items.length > 0) return;
-        void postSnapshot(loc, [], 0);
+        void postCartPresenceToServer(loc, [], 0);
         lastLocationRef.current = null;
       }, CLEAR_DEBOUNCE_MS);
     }
@@ -135,7 +101,7 @@ export function CartPresenceSync() {
     const heartbeat = setInterval(() => {
       const s = useCartStore.getState();
       if (s.items.length === 0 || !s.locationSlug) return;
-      void postSnapshot(
+      void postCartPresenceToServer(
         s.locationSlug,
         s.items.map((i) => ({ id: i.menuItem.id, quantity: i.quantity })),
         s.getTotal()
@@ -148,6 +114,14 @@ export function CartPresenceSync() {
       clearInterval(heartbeat);
       unsub();
       unsubHydration?.();
+
+      // Checkout calls clearCart() then full-page navigation; debounced clear is cancelled
+      // before it runs — flush empty snapshot so live carts drop as soon as the order exists.
+      if (!mayPost) return;
+      const s = useCartStore.getState();
+      if (s.items.length > 0) return;
+      const loc = lastLocationRef.current;
+      if (loc) void postCartPresenceToServer(loc, [], 0);
     };
   }, [mayPost, schedule]);
 

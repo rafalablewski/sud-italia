@@ -25,6 +25,7 @@ import { SlotPicker } from "./SlotPicker";
 import { krakowMenu } from "@/data/menus/krakow";
 import { warszawaMenu } from "@/data/menus/warszawa";
 import { useCustomer } from "@/store/customer";
+import { postCartPresenceToServer } from "@/lib/cart-presence-post-client";
 
 interface CartDrawerProps {
   open: boolean;
@@ -220,7 +221,9 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
         // (phone number is stored with the order in the database)
         window.location.href = data.url;
       } else if (data.orderId) {
+        const presenceSlug = locationSlug;
         clearCart();
+        if (presenceSlug) void postCartPresenceToServer(presenceSlug, [], 0);
         setCustomerFirstName("");
         setCustomerLastName("");
         setCustomerPhone("");
