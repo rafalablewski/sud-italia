@@ -12,8 +12,7 @@ import { SeasonalSpecials } from "./SeasonalSpecials";
 import { ReorderSection } from "./ReorderSection";
 import { SpeedGuarantee } from "./SpeedGuarantee";
 import { ComboDealsPreview } from "./ComboDealsPreview";
-import { ReferralCard } from "@/components/referral/ReferralCard";
-import { AchievementsPanel } from "@/components/gamification/AchievementsPanel";
+import { RewardsLocationTeaser } from "@/components/location/RewardsLocationTeaser";
 import { CustomerGate } from "@/components/loyalty/CustomerGate";
 import { getItemBadges } from "@/lib/upsell";
 import { getItemRating } from "@/data/ratings";
@@ -305,14 +304,11 @@ export function MenuSection({ items, locationSlug }: MenuSectionProps) {
             )}
           </div>
         )}
-        {/* Gamification & Referral — only visible to identified customers */}
+        {/* Rewards teaser — full gamification lives on /rewards */}
         {!isSearching && (
           <div className="mt-10">
             <CustomerGate>
-              <div className="space-y-6">
-                <AchievementsPanel />
-                <ReferralCard />
-              </div>
+              <RewardsLocationTeaser />
             </CustomerGate>
           </div>
         )}
