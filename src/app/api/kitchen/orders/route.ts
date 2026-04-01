@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getKitchenSession } from "@/lib/kitchen-auth";
 import { getOrders, getOrderById, updateOrderStatus } from "@/lib/store";
-import type { Order } from "@/data/types";
+import { ORDER_STATUSES } from "@/data/types";
 
 async function requireKitchenSession(): Promise<
   { error: NextResponse; session: null } | { error: null; session: { slug: string } }
@@ -37,15 +37,7 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "Missing orderId or status" }, { status: 400 });
     }
 
-    const validStatuses: Order["status"][] = [
-      "pending",
-      "confirmed",
-      "preparing",
-      "ready",
-      "completed",
-      "cancelled",
-    ];
-    if (!validStatuses.includes(status)) {
+    if (!(ORDER_STATUSES as readonly string[]).includes(status)) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
 

@@ -461,6 +461,7 @@ select.pub-input {
 .badge-preparing { background: rgba(251, 146, 60, 0.10); color: #c2824a; }
 .badge-ready     { background: rgba(var(--admin-success), 0.10); color: #34d399; }
 .badge-completed { background: rgba(203, 213, 225, 0.06); color: #94a3b8; }
+.badge-cancelled { background: rgba(var(--admin-danger), 0.12); color: #f87171; }
 .badge-draft     { background: rgba(var(--admin-warning), 0.10); color: #ca8a04; }
 .badge-active    { background: rgba(var(--admin-success), 0.10); color: #34d399; }
 

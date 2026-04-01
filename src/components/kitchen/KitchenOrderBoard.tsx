@@ -18,14 +18,12 @@ import {
 import type { KitchenCartPresenceEntry } from "@/lib/cart-presence-kitchen";
 import { formatPrice } from "@/lib/utils";
 import { formatSlotDate } from "@/lib/format";
-import type { Order } from "@/data/types";
+import { ORDER_STATUSES, type Order } from "@/data/types";
 
 type Props = {
   locationName: string;
   slug: string;
 };
-
-const STATUS_ORDER: Order["status"][] = ["pending", "confirmed", "preparing", "ready", "completed"];
 
 function formatSeenAgo(ms: number): string {
   const s = Math.floor((Date.now() - ms) / 1000);
@@ -176,7 +174,7 @@ export function KitchenOrderBoard({ locationName, slug }: Props) {
   }, [router, slug, fetchLiveCarts]);
 
   useEffect(() => {
-    const id = setInterval(() => fetchOrders({ silent: true }), 30_000);
+    const id = setInterval(() => fetchOrders({ silent: true }), 10_000);
     return () => clearInterval(id);
   }, [fetchOrders]);
 
@@ -319,14 +317,11 @@ export function KitchenOrderBoard({ locationName, slug }: Props) {
                     onChange={(e) => handleStatusChange(order.id, e.target.value)}
                     className="glass-input px-3 py-1.5 rounded-lg text-sm"
                   >
-                    {STATUS_ORDER.map((s) => (
+                    {ORDER_STATUSES.map((s) => (
                       <option key={s} value={s}>
                         {s}
                       </option>
                     ))}
-                    {order.status === "cancelled" && (
-                      <option value="cancelled">cancelled</option>
-                    )}
                   </select>
                 </div>
 

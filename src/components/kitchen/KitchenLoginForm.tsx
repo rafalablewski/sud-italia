@@ -62,9 +62,8 @@ export function KitchenLoginForm({ slug, locationName }: Props) {
           <form onSubmit={handleSubmit} className="space-y-4">
             <input
               type="text"
-              inputMode="numeric"
               autoComplete="username"
-              placeholder="Staff ID"
+              placeholder="Staff name"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="w-full px-4 py-3 glass-input rounded-xl text-base"
@@ -73,7 +72,7 @@ export function KitchenLoginForm({ slug, locationName }: Props) {
             <input
               type="password"
               autoComplete="current-password"
-              placeholder="Password"
+              placeholder="Location password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-3 glass-input rounded-xl text-base"

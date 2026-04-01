@@ -1,19 +1,72 @@
 import { cookies } from "next/headers";
 import { createHmac, timingSafeEqual } from "crypto";
+import { getSessionSigningSecret } from "@/lib/session-secret";
 import { getActiveLocations } from "@/data/locations";
 
 export const KITCHEN_SESSION_COOKIE = "sud-italia-kitchen";
 export const KITCHEN_SESSION_MAX_AGE = 60 * 60 * 24; // 24 hours
 
 function getSecret(): string {
-  const secret = process.env.SESSION_SECRET || process.env.ADMIN_PASSWORD;
-  if (secret) {
-    return secret;
+  return getSessionSigningSecret();
+}
+
+let kitchenPasswordsCache: Record<string, string> | null | undefined;
+
+/**
+ * Per-location passwords from env JSON, e.g.
+ * KITCHEN_PASSWORDS={"krakow":"secret-one","warszawa":"secret-two"}
+ */
+function kitchenPasswordMap(): Record<string, string> | null {
+  if (kitchenPasswordsCache !== undefined) return kitchenPasswordsCache;
+  const raw = process.env.KITCHEN_PASSWORDS?.trim();
+  if (!raw) {
+    kitchenPasswordsCache = null;
+    return null;
   }
-  console.warn(
-    "SECURITY WARNING: SESSION_SECRET and ADMIN_PASSWORD are not set. Using an insecure default secret. Please set SESSION_SECRET in your environment."
-  );
-  return "admin123";
+  try {
+    const o = JSON.parse(raw) as unknown;
+    if (!o || typeof o !== "object") {
+      kitchenPasswordsCache = null;
+      return null;
+    }
+    const out: Record<string, string> = {};
+    for (const [k, v] of Object.entries(o as Record<string, unknown>)) {
+      if (typeof v === "string" && v.length > 0) out[k] = v;
+    }
+    kitchenPasswordsCache = Object.keys(out).length > 0 ? out : null;
+  } catch {
+    kitchenPasswordsCache = null;
+  }
+  return kitchenPasswordsCache;
+}
+
+const PASSWORD_COMPARE_PEPPER = "sud-italia-kitchen-pw-v1";
+
+function passwordMatches(expected: string, provided: string): boolean {
+  const digest = (s: string) =>
+    createHmac("sha256", PASSWORD_COMPARE_PEPPER).update(s, "utf8").digest();
+  const a = digest(expected);
+  const b = digest(provided);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
+/**
+ * Validates staff login for a location. Password must match KITCHEN_PASSWORDS[slug].
+ * Username must be non-empty (display / audit only).
+ */
+export function verifyKitchenCredentials(
+  slug: string,
+  username: string,
+  password: string
+): boolean {
+  const loc = getActiveLocations().find((l) => l.slug === slug);
+  if (!loc) return false;
+  if (username.trim().length === 0 || password.length === 0) return false;
+
+  const expected = kitchenPasswordMap()?.[slug];
+  if (!expected) return false;
+
+  return passwordMatches(expected, password);
 }
 
 function signPayload(payload: string): string {
@@ -51,24 +104,6 @@ function verifyKitchenToken(token: string): { slug: string } | null {
   if (now - issuedAt >= KITCHEN_SESSION_MAX_AGE) return null;
 
   return { slug };
-}
-
-/** Returns slug if credentials match this location's staff index (1-based among active locations). */
-export function verifyKitchenCredentials(
-  slug: string,
-  username: string,
-  password: string
-): boolean {
-  const active = getActiveLocations();
-  const loc = active.find((l) => l.slug === slug);
-  if (!loc) return false;
-
-  if (username !== password) return false;
-
-  const n = parseInt(username, 10);
-  if (isNaN(n) || n < 1 || n > active.length) return false;
-
-  return active[n - 1].slug === slug;
 }
 
 export async function getKitchenSession(): Promise<{ slug: string } | null> {

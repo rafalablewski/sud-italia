@@ -1,16 +1,12 @@
 import { cookies } from "next/headers";
 import { createHmac, timingSafeEqual } from "crypto";
+import { getSessionSigningSecret } from "@/lib/session-secret";
 
 export const SESSION_COOKIE = "sud-italia-admin";
 export const SESSION_MAX_AGE = 60 * 60 * 24; // 24 hours
 
 function getSecret(): string {
-  const secret = process.env.SESSION_SECRET || process.env.ADMIN_PASSWORD;
-  if (secret) {
-    return secret;
-  }
-  console.warn("SECURITY WARNING: SESSION_SECRET and ADMIN_PASSWORD are not set. Using an insecure default secret. Please set SESSION_SECRET in your environment.");
-  return "admin123";
+  return getSessionSigningSecret();
 }
 
 function signPayload(payload: string): string {
@@ -50,11 +46,13 @@ function verifyToken(token: string): boolean {
 }
 
 export function getAdminPassword(): string {
-  if (!process.env.ADMIN_PASSWORD) {
-    console.warn("SECURITY WARNING: ADMIN_PASSWORD not set. Using insecure default. Set ADMIN_PASSWORD in your environment.");
-    return "admin123";
+  const p = process.env.ADMIN_PASSWORD;
+  if (p && p.length > 0) return p;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("ADMIN_PASSWORD must be set in production.");
   }
-  return process.env.ADMIN_PASSWORD;
+  console.warn("ADMIN_PASSWORD not set; using local dev default. Set ADMIN_PASSWORD before deploying.");
+  return "admin123";
 }
 
 export function verifyPassword(password: string): boolean {
