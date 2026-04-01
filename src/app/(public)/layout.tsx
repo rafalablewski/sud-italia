@@ -2,6 +2,7 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { ChatWidget } from "@/components/chat/ChatWidget";
 import { AbandonedCartWrapper } from "@/components/cart/AbandonedCartWrapper";
+import { CartPresenceSync } from "@/components/cart/CartPresenceSync";
 import { CustomerProvider } from "@/store/customer";
 
 export default function PublicLayout({
@@ -16,6 +17,7 @@ export default function PublicLayout({
       <Footer />
       <ChatWidget />
       <AbandonedCartWrapper />
+      <CartPresenceSync />
     </CustomerProvider>
   );
 }
