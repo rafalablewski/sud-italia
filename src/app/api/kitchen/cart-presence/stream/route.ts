@@ -30,7 +30,8 @@ export async function GET(req: NextRequest) {
   const encoder = new TextEncoder();
 
   if (!isCartPresenceEnabled()) {
-    const body = `data: ${JSON.stringify([])}\n\n`;
+    const payload = JSON.stringify({ enabled: false, carts: [] as unknown[] });
+    const body = `data: ${payload}\n\n`;
     return new Response(encoder.encode(body), { headers: SSE_HEADERS });
   }
 
@@ -42,11 +43,11 @@ export async function GET(req: NextRequest) {
       const sendIfChanged = async () => {
         if (closed) return;
         try {
-          const rows = await getKitchenCartPresenceEntries(slug);
-          const json = JSON.stringify(rows);
-          if (json !== lastJson) {
-            lastJson = json;
-            controller.enqueue(encoder.encode(`data: ${json}\n\n`));
+          const carts = await getKitchenCartPresenceEntries(slug);
+          const payload = JSON.stringify({ enabled: true, carts });
+          if (payload !== lastJson) {
+            lastJson = payload;
+            controller.enqueue(encoder.encode(`data: ${payload}\n\n`));
           }
         } catch {
           /* ignore */

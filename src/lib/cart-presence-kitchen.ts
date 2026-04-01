@@ -1,18 +1,12 @@
 import { getMenuWithOverrides } from "@/data/menus";
 import { getCartPresenceForLocation } from "@/lib/store";
+import type { KitchenCartPresenceEntry } from "@/lib/kitchen-cart-presence-payload";
 
-export type KitchenCartPresenceItem = {
-  id: string;
-  quantity: number;
-  name: string;
-};
-
-export type KitchenCartPresenceEntry = {
-  visitorId: string;
-  items: KitchenCartPresenceItem[];
-  totalCents: number;
-  lastSeenAt: number;
-};
+export type { KitchenCartPresenceEntry } from "@/lib/kitchen-cart-presence-payload";
+export type {
+  KitchenCartPresenceItem,
+  KitchenCartPresencePayload,
+} from "@/lib/kitchen-cart-presence-payload";
 
 export async function getKitchenCartPresenceEntries(
   locationSlug: string

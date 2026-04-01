@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { getKitchenSession } from "@/lib/kitchen-auth";
 import { isCartPresenceEnabled } from "@/lib/cart-presence-config";
-import {
-  getKitchenCartPresenceEntries,
-  type KitchenCartPresenceEntry,
-  type KitchenCartPresenceItem,
-} from "@/lib/cart-presence-kitchen";
+import { getKitchenCartPresenceEntries } from "@/lib/cart-presence-kitchen";
+import type {
+  KitchenCartPresenceEntry,
+  KitchenCartPresenceItem,
+  KitchenCartPresencePayload,
+} from "@/lib/kitchen-cart-presence-payload";
 
-export type { KitchenCartPresenceEntry, KitchenCartPresenceItem };
+export type { KitchenCartPresenceEntry, KitchenCartPresenceItem, KitchenCartPresencePayload };
 
 export async function GET() {
   const session = await getKitchenSession();
@@ -16,9 +17,11 @@ export async function GET() {
   }
 
   if (!isCartPresenceEnabled()) {
-    return NextResponse.json([] satisfies KitchenCartPresenceEntry[]);
+    const body: KitchenCartPresencePayload = { enabled: false, carts: [] };
+    return NextResponse.json(body);
   }
 
-  const enriched = await getKitchenCartPresenceEntries(session.slug);
-  return NextResponse.json(enriched);
+  const carts = await getKitchenCartPresenceEntries(session.slug);
+  const body: KitchenCartPresencePayload = { enabled: true, carts };
+  return NextResponse.json(body);
 }

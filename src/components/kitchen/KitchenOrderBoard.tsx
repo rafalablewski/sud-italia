@@ -15,7 +15,10 @@ import {
   ChefHat,
   ShoppingBag,
 } from "lucide-react";
-import type { KitchenCartPresenceEntry } from "@/lib/cart-presence-kitchen";
+import {
+  parseKitchenCartPresencePayload,
+  type KitchenCartPresenceEntry,
+} from "@/lib/kitchen-cart-presence-payload";
 import { formatPrice } from "@/lib/utils";
 import { formatSlotDate } from "@/lib/format";
 import { ORDER_STATUSES, type Order } from "@/data/types";
@@ -40,6 +43,15 @@ export function KitchenOrderBoard({ locationName, slug }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [liveCarts, setLiveCarts] = useState<KitchenCartPresenceEntry[]>([]);
+  /** null = not loaded yet (avoid flashing wrong empty message). */
+  const [cartPresenceEnabled, setCartPresenceEnabled] = useState<boolean | null>(null);
+
+  const applyPresencePayload = useCallback((raw: unknown) => {
+    const parsed = parseKitchenCartPresencePayload(raw);
+    if (!parsed) return;
+    setCartPresenceEnabled(parsed.enabled);
+    setLiveCarts(parsed.carts);
+  }, []);
 
   const fetchLiveCarts = useCallback(async () => {
     try {
@@ -49,12 +61,12 @@ export function KitchenOrderBoard({ locationName, slug }: Props) {
         return;
       }
       if (res.ok) {
-        setLiveCarts(await res.json());
+        applyPresencePayload(await res.json());
       }
     } catch {
       /* ignore */
     }
-  }, [router, slug]);
+  }, [router, slug, applyPresencePayload]);
 
   const fetchOrders = useCallback(
     async (opts?: { silent?: boolean }) => {
@@ -144,7 +156,7 @@ export function KitchenOrderBoard({ locationName, slug }: Props) {
                 const raw = line.slice(5).trimStart();
                 if (!raw) continue;
                 try {
-                  setLiveCarts(JSON.parse(raw) as KitchenCartPresenceEntry[]);
+                  applyPresencePayload(JSON.parse(raw));
                 } catch {
                   /* ignore */
                 }
@@ -171,7 +183,7 @@ export function KitchenOrderBoard({ locationName, slug }: Props) {
       stopped = true;
       ac.abort();
     };
-  }, [router, slug, fetchLiveCarts]);
+  }, [router, slug, fetchLiveCarts, applyPresencePayload]);
 
   useEffect(() => {
     const id = setInterval(() => fetchOrders({ silent: true }), 10_000);
@@ -255,9 +267,15 @@ export function KitchenOrderBoard({ locationName, slug }: Props) {
               </div>
               {liveCarts.length === 0 ? (
                 <p className="text-sm admin-text-muted">
-                  No active carts for this location. Enable with{" "}
-                  <code className="text-xs bg-black/30 px-1 rounded">NEXT_PUBLIC_ENABLE_CART_PRESENCE=true</code> on
-                  the server (on by default in development).
+                  {cartPresenceEnabled === false ? (
+                    <>
+                      Live cart snapshots are off. Set{" "}
+                      <code className="text-xs bg-black/30 px-1 rounded">NEXT_PUBLIC_ENABLE_CART_PRESENCE=true</code>{" "}
+                      on the server and redeploy (on by default in development).
+                    </>
+                  ) : (
+                    "No open carts on the website for this location right now. (Placed orders appear below.)"
+                  )}
                 </p>
               ) : (
                 <ul className="space-y-4">

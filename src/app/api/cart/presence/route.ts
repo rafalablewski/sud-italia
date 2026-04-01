@@ -7,9 +7,7 @@ import {
   type CartPresenceLine,
 } from "@/lib/store";
 import { notifyCartPresence } from "@/lib/cart-presence-broadcast";
-
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+import { isVisitorUuidV4 } from "@/lib/uuid-v4";
 
 function normalizeItemsForLocation(
   slug: string,
@@ -46,8 +44,9 @@ export async function POST(req: NextRequest) {
     const visitorId = body?.visitorId;
     const locationSlug = body?.locationSlug;
     const rawItems = body?.items;
+    const rawLineCount = Array.isArray(rawItems) ? rawItems.length : 0;
 
-    if (typeof visitorId !== "string" || !UUID_RE.test(visitorId)) {
+    if (typeof visitorId !== "string" || !isVisitorUuidV4(visitorId)) {
       return NextResponse.json({ error: "Invalid visitor id" }, { status: 400 });
     }
     if (typeof locationSlug !== "string" || !locationSlug) {
@@ -67,7 +66,12 @@ export async function POST(req: NextRequest) {
 
     notifyCartPresence(locationSlug);
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      lineCount: items.length,
+      itemsAccepted: items.length > 0,
+      itemsDropped: rawLineCount > 0 && items.length === 0,
+    });
   } catch {
     return NextResponse.json({ error: "Bad request" }, { status: 400 });
   }
