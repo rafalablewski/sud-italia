@@ -40,7 +40,8 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
 
   const { customer: loyaltyCustomer } = useCustomer();
 
-  const [customerName, setCustomerName] = useState("");
+  const [customerFirstName, setCustomerFirstName] = useState("");
+  const [customerLastName, setCustomerLastName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [specialInstructions, setSpecialInstructions] = useState("");
@@ -67,7 +68,8 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
 
   const isPhoneValid = PHONE_PATTERN.test(customerPhone.trim());
   const canCheckout =
-    customerName.trim().length > 0 &&
+    customerFirstName.trim().length > 0 &&
+    customerLastName.trim().length > 0 &&
     isPhoneValid &&
     selectedSlotId !== null &&
     (fulfillmentType !== "delivery" || deliveryAddress.trim().length > 0);
@@ -75,7 +77,16 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
   // Pre-fill checkout fields from loyalty identity
   useEffect(() => {
     if (loyaltyCustomer) {
-      if (!customerName) setCustomerName(loyaltyCustomer.name);
+      if (!customerFirstName && !customerLastName) {
+        if (loyaltyCustomer.lastName) {
+          setCustomerFirstName(loyaltyCustomer.name);
+          setCustomerLastName(loyaltyCustomer.lastName);
+        } else {
+          const parts = loyaltyCustomer.name.trim().split(/\s+/);
+          setCustomerFirstName(parts[0] || "");
+          setCustomerLastName(parts.slice(1).join(" ") || "");
+        }
+      }
       if (!customerPhone) {
         const phone = loyaltyCustomer.phone.replace(/^\+48/, "");
         setCustomerPhone(phone);
@@ -108,11 +119,16 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
   };
 
   const handleCheckout = async () => {
-    if (!customerName.trim()) return;
+    if (!customerFirstName.trim() || !customerLastName.trim()) return;
     if (!isPhoneValid) {
       setPhoneError(true);
       return;
     }
+
+    const customerName = [customerFirstName, customerLastName]
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .join(" ");
 
     setIsSubmitting(true);
     try {
@@ -125,7 +141,7 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
             quantity: i.quantity,
           })),
           locationSlug,
-          customerName: customerName.trim(),
+          customerName,
           customerPhone: `+48${customerPhone.trim()}`,
           fulfillmentType,
           slotId: selectedSlotId,
@@ -145,7 +161,8 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
         window.location.href = data.url;
       } else if (data.orderId) {
         clearCart();
-        setCustomerName("");
+        setCustomerFirstName("");
+        setCustomerLastName("");
         setCustomerPhone("");
         onClose();
         window.location.href = `/order-confirmation?orderId=${data.orderId}&location=${locationSlug}`;
@@ -277,22 +294,38 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
       )}
 
       {/* Customer details section */}
-      <div className="border-t border-gray-100 p-5 space-y-3 bg-gray-50">
+      <div className="border-t border-gray-100 px-4 py-3 sm:px-5 sm:py-4 space-y-2 bg-gray-50">
         <p className="text-xs font-semibold text-italia-gray uppercase tracking-wide">Your details</p>
-        <div className="space-y-2">
-          <label className="sr-only" htmlFor="checkout-name">Your name</label>
-          <input
-            id="checkout-name"
-            type="text"
-            placeholder="Your name"
-            value={customerName}
-            onChange={(e) => setCustomerName(e.target.value)}
-            className="pub-input min-h-[44px] text-base"
-            autoComplete="name"
-          />
+        <div className="space-y-1.5">
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="sr-only" htmlFor="checkout-first-name">First name</label>
+              <input
+                id="checkout-first-name"
+                type="text"
+                placeholder="First name"
+                value={customerFirstName}
+                onChange={(e) => setCustomerFirstName(e.target.value)}
+                className="pub-input min-h-[40px] text-sm"
+                autoComplete="given-name"
+              />
+            </div>
+            <div>
+              <label className="sr-only" htmlFor="checkout-last-name">Last name</label>
+              <input
+                id="checkout-last-name"
+                type="text"
+                placeholder="Last name"
+                value={customerLastName}
+                onChange={(e) => setCustomerLastName(e.target.value)}
+                className="pub-input min-h-[40px] text-sm"
+                autoComplete="family-name"
+              />
+            </div>
+          </div>
           <div className="flex items-center gap-0">
             <label className="sr-only" htmlFor="checkout-phone">Phone number</label>
-            <span className="inline-flex items-center px-3 min-h-[44px] rounded-l-[0.75rem] border-y-[1.5px] border-l-[1.5px] border-r-0 border-[#e5e7eb] bg-gray-50 text-sm font-medium text-italia-gray select-none" aria-hidden="true">
+            <span className="inline-flex items-center px-2.5 min-h-[40px] rounded-l-[0.75rem] border-y-[1.5px] border-l-[1.5px] border-r-0 border-[#e5e7eb] bg-gray-50 text-sm font-medium text-italia-gray select-none" aria-hidden="true">
               +48
             </span>
             <input
@@ -302,7 +335,7 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
               value={customerPhone}
               onChange={(e) => handlePhoneChange(e.target.value)}
               autoComplete="tel"
-              className={`pub-input min-h-[44px] text-base rounded-l-none ${
+              className={`pub-input min-h-[40px] text-sm rounded-l-none ${
                 phoneError ? "border-italia-red" : ""
               }`}
             />
@@ -312,11 +345,11 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
           <input
             id="checkout-email"
             type="email"
-            placeholder="Email for order receipt + 10% off next order"
+            placeholder="Email (receipt + 10% off next order)"
             autoComplete="email"
             value={customerEmail}
             onChange={(e) => setCustomerEmail(e.target.value)}
-            className="pub-input min-h-[44px] text-sm text-italia-gray"
+            className="pub-input min-h-[40px] text-sm text-italia-gray"
           />
           <label className="sr-only" htmlFor="checkout-notes">Special instructions</label>
           <textarea
@@ -325,7 +358,7 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
             value={specialInstructions}
             onChange={(e) => setSpecialInstructions(e.target.value)}
             rows={2}
-            className="pub-input min-h-[44px] text-sm text-italia-gray resize-none"
+            className="pub-input min-h-[52px] py-2 text-sm text-italia-gray resize-none leading-snug"
           />
         </div>
         {phoneError && (
@@ -336,7 +369,7 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
       </div>
 
       {/* Sticky pay bar */}
-      <div className="sticky bottom-0 border-t border-gray-100 px-5 py-4 bg-white shadow-[0_-4px_16px_rgba(0,0,0,0.06)] space-y-3">
+      <div className="sticky bottom-0 border-t border-gray-100 px-4 py-3 sm:px-5 sm:py-4 bg-white shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
         <div className="space-y-1">
           <div className="flex justify-between items-center text-sm text-italia-gray">
             <span>Subtotal</span>
@@ -354,24 +387,24 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
               <span>{total >= 6000 ? <span className="text-italia-green font-medium">Free</span> : "10,00 PLN"}</span>
             </div>
           )}
-        </div>
-        <div className="flex justify-between items-center text-lg font-bold border-t border-gray-100 pt-2">
-          <span>Total</span>
-          <span className="text-italia-red">{formatPrice(total)}</span>
+          <div className="flex justify-between items-center text-lg font-bold border-t border-gray-100 pt-2">
+            <span>Total</span>
+            <span className="text-italia-red">{formatPrice(total)}</span>
+          </div>
         </div>
 
-        {selectedSlotTime && (
-          <p className="text-xs text-italia-gray text-center">
-            {fulfillmentType === "delivery" ? "Delivery" : "Pickup"} at{" "}
-            <span className="font-semibold text-italia-dark">{selectedSlotTime}</span>
-          </p>
-        )}
-
-        {/* Loyalty points preview — shows what they'll earn */}
-        <LoyaltyEarnPreview cartTotal={total} />
+        <div className="mt-1.5 flex flex-col gap-1 empty:hidden">
+          {selectedSlotTime && (
+            <p className="text-xs text-italia-gray text-left">
+              {fulfillmentType === "delivery" ? "Delivery" : "Pickup"} at{" "}
+              <span className="font-semibold text-italia-dark">{selectedSlotTime}</span>
+            </p>
+          )}
+          <LoyaltyEarnPreview cartTotal={total} />
+        </div>
 
         {checkoutError && (
-          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700 flex items-start gap-2">
+          <div className="mt-2 bg-red-50 border border-red-200 rounded-xl px-3 py-2 text-sm text-red-700 flex items-start gap-2">
             <span className="text-red-500 mt-0.5 flex-shrink-0">!</span>
             <div>
               <p>{checkoutError}</p>
@@ -383,8 +416,8 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
         <Button
           onClick={() => { setCheckoutError(null); handleCheckout(); }}
           disabled={isSubmitting || !canCheckout}
-          className="w-full min-h-[52px]"
-          size="lg"
+          className="w-full min-h-[48px] mt-3"
+          size="md"
         >
           {isSubmitting
             ? "Processing..."
@@ -398,10 +431,11 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
         </Button>
 
         <button
+          type="button"
           onClick={() => clearCart()}
-          className="w-full flex items-center justify-center gap-2 text-sm py-2 min-h-[44px] text-italia-gray hover:text-italia-red active:text-italia-red transition-colors"
+          className="w-full flex items-center justify-center gap-1.5 text-xs py-1.5 mt-1.5 text-italia-gray hover:text-italia-red active:text-italia-red transition-colors"
         >
-          <Trash2 className="h-4 w-4" />
+          <Trash2 className="h-3.5 w-3.5 flex-shrink-0" />
           Clear cart
         </button>
       </div>

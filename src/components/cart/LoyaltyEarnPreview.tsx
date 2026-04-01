@@ -16,8 +16,8 @@ export function LoyaltyEarnPreview({ cartTotal }: LoyaltyEarnPreviewProps) {
   if (pointsToEarn <= 0) return null;
 
   return (
-    <div className="flex items-center justify-center gap-2 py-2">
-      <Star className="h-3.5 w-3.5 text-italia-gold fill-italia-gold" />
+    <div className="flex items-center justify-start gap-2 py-0.5">
+      <Star className="h-3.5 w-3.5 text-italia-gold fill-italia-gold flex-shrink-0" />
       <p className="text-xs text-italia-gray">
         You&apos;ll earn{" "}
         <span className="font-bold text-italia-gold-dark">{pointsToEarn} points</span>
