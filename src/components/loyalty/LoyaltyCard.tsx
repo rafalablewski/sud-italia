@@ -41,7 +41,7 @@ export function LoyaltyCard({ account }: LoyaltyCardProps) {
               Sud Italia Rewards
             </h3>
             <p className="text-xs text-italia-gray">
-              No sign-up needed — just order!
+              Your checkout phone is your personal rewards ID.
             </p>
           </div>
         </div>
@@ -53,10 +53,16 @@ export function LoyaltyCard({ account }: LoyaltyCardProps) {
             </div>
             <div>
               <p className="font-semibold text-sm text-italia-dark">
-                Automatic enrollment
+                How points attach
               </p>
               <p className="text-xs text-italia-gray mt-0.5">
-                Place your first order and you&apos;re in. We use your phone number — that&apos;s it. No passwords, no emails, no forms.
+                Points go to the mobile number on each order — one wallet per number,
+                no app password. Sign in on Rewards to show your balance on this
+                phone.
+              </p>
+              <p className="text-[11px] text-italia-gray/80 mt-2 leading-snug">
+                Several people on one device? Enter (or sign in with) the number of
+                whoever should earn points for that order.
               </p>
             </div>
           </div>

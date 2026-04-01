@@ -6,11 +6,9 @@ import { LoyaltyCard } from "@/components/loyalty/LoyaltyCard";
 import { LoyaltyAccount } from "@/lib/loyalty";
 
 export function LoyaltySection() {
-  // Account is loaded when:
-  // 1. Customer enters phone at checkout → auto-enrolled server-side
-  // 2. Returning customer recognized from order data in DB
-  // The LoyaltyCard now shows the value prop (no form), and the
-  // actual enrollment happens silently at checkout via the API.
+  // Points accrue per phone number on completed orders (see identify API).
+  // LoyaltyCard explains: checkout phone = rewards wallet; Rewards sign-in
+  // only links this browser to a number for balance UI and prefill.
   const [account] = useState<LoyaltyAccount | null>(null);
 
   return (
@@ -24,7 +22,8 @@ export function LoyaltySection() {
             Sud Italia Rewards
           </h2>
           <p className="mt-2 text-italia-gray max-w-md mx-auto text-sm">
-            No sign-up. No forms. Just order and earn points automatically.
+            One rewards balance per phone number. Use that number at checkout — no
+            password. Sign in on Rewards to see points on this device.
           </p>
         </div>
         <div className="max-w-md mx-auto">

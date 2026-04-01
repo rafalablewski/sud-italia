@@ -219,7 +219,9 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
           <a href="/rewards" className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-50 border border-gray-100 hover:bg-italia-gold/5 transition-colors">
             <Star className="h-4 w-4 text-italia-gray flex-shrink-0" />
             <p className="text-xs text-italia-gray">
-              <span className="font-medium text-italia-dark">Sign in to earn points</span> on this order
+              <span className="font-medium text-italia-dark">Rewards use your checkout phone</span>
+              {" "}
+              — not this browser. Sign in to see your balance here and pre-fill details.
             </p>
           </a>
         )}
