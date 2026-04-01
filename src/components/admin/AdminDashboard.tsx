@@ -9,7 +9,7 @@ import {
   TrendingUp, TrendingDown, DollarSign, ShoppingBag, Package,
   Truck, Clock, Bell, CheckCheck, ArrowRight, BarChart3,
   RefreshCw, MapPin, Users, XCircle, AlertTriangle, Layers,
-  Activity, CalendarDays,
+  Activity, CalendarDays, Trash2, Eraser,
 } from "lucide-react";
 import Link from "next/link";
 import type { Order } from "@/data/types";
@@ -37,6 +37,7 @@ interface InsightsData {
   locationComparison: { locationSlug: string; city: string; revenue: number; profit: number; profitMargin: number; orderCount: number; avgOrderValue: number; totalItems: number; avgItemsPerOrder: number; takeoutCount: number; deliveryCount: number; cancelledCount: number; cancellationRate: number }[];
   repeatCustomers: { name: string; phone: string; orderCount: number; totalSpent: number; lastOrderDate: string }[];
   avgItemsPerOrder: number;
+  topSellers: { name: string; quantity: number; revenue: number }[];
   worstSellers: { name: string; quantity: number; revenue: number }[];
   cancelledOrders: number;
   cancellationRate: number;
@@ -45,7 +46,7 @@ interface InsightsData {
 
 interface NotificationItem {
   id: string; type: string; title: string; message: string;
-  locationSlug?: string; createdAt: string; read: boolean;
+  locationSlug?: string; orderId?: string; createdAt: string; read: boolean;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -116,12 +117,52 @@ export function AdminDashboard() {
     setNotifications((n) => n.map((x) => ({ ...x, read: true })));
   };
 
+  const deleteNotif = async (id: string) => {
+    const res = await fetch("/api/admin/notifications", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    if (res.ok) {
+      setNotifications((n) => n.filter((x) => x.id !== id));
+    }
+  };
+
+  const pruneOrphanOrderNotifs = async () => {
+    if (
+      !window.confirm(
+        "Remove new-order notifications that do not match any existing order? Other notification types are kept."
+      )
+    ) {
+      return;
+    }
+    setPruneNotifsHint(null);
+    try {
+      const res = await fetch("/api/admin/notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pruneOrphanNewOrders: true }),
+      });
+      const data = (await res.json()) as { removed?: number; error?: string };
+      if (!res.ok) {
+        setPruneNotifsHint(data.error || "Could not clean up.");
+        return;
+      }
+      setPruneNotifsHint(`Removed ${data.removed ?? 0} orphan new-order alert(s).`);
+      setTimeout(() => setPruneNotifsHint(null), 8000);
+      await fetchAll();
+    } catch {
+      setPruneNotifsHint("Network error.");
+    }
+  };
+
   const handleStatusChange = async (orderId: string, status: string) => {
     await fetch("/api/admin/orders", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderId, status }) });
     fetchAll();
   };
 
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const [pruneNotifsHint, setPruneNotifsHint] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading) setLastRefresh(new Date());
@@ -188,7 +229,30 @@ export function AdminDashboard() {
           <KPICard label="Repeat Customers" value={insights ? insights.repeatCustomers.length.toString() : undefined} icon={<Users className="h-4 w-4" />} iconColor="text-slate-400" loading={!insights} />
           <KPICard label="Items / Order" value={insights ? insights.avgItemsPerOrder.toString() : undefined} sub="basket size" icon={<Layers className="h-4 w-4" />} iconColor="text-slate-400" loading={!insights} />
           <KPICard label="Cancellation" value={insights ? `${insights.cancellationRate}%` : undefined} sub={insights ? `${insights.cancelledOrders} cancelled` : undefined} icon={<XCircle className="h-4 w-4" />} iconColor={insights && insights.cancellationRate > 10 ? "text-red-400" : "text-emerald-400"} loading={!insights} />
-          <KPICard label="Worst Seller" value={insights ? (insights.worstSellers[0]?.name ?? "None") : undefined} sub={insights?.worstSellers[0] ? `${insights.worstSellers[0].quantity} sold` : undefined} icon={<AlertTriangle className="h-4 w-4" />} iconColor="text-slate-400" loading={!insights} />
+          <KPICard
+            label={insights?.worstSellers[0] ? "Slowest mover" : "Top seller"}
+            value={
+              insights
+                ? (insights.worstSellers[0]?.name ?? insights.topSellers[0]?.name ?? "None")
+                : undefined
+            }
+            sub={
+              insights?.worstSellers[0]
+                ? `${insights.worstSellers[0].quantity} sold`
+                : insights?.topSellers[0]
+                  ? `${insights.topSellers[0].quantity} sold`
+                  : undefined
+            }
+            icon={
+              insights?.worstSellers[0] ? (
+                <AlertTriangle className="h-4 w-4" />
+              ) : (
+                <TrendingUp className="h-4 w-4" />
+              )
+            }
+            iconColor={insights?.worstSellers[0] ? "text-slate-400" : "text-emerald-400"}
+            loading={!insights}
+          />
         </div>
 
         {/* Live Orders + Notifications — operational priority, above fold */}
@@ -250,12 +314,27 @@ export function AdminDashboard() {
                   <span className="px-2 py-0.5 bg-italia-red text-white text-xs font-bold rounded-full">{unreadNotifs.length}</span>
                 )}
               </h2>
-              {unreadNotifs.length > 0 && (
-                <button onClick={markAllRead} className="text-xs admin-text-dim hover:text-white flex items-center gap-1 transition-colors">
-                  <CheckCheck className="h-3 w-3" /> Mark all read
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={pruneOrphanOrderNotifs}
+                  className="text-xs admin-text-dim hover:text-amber-200 flex items-center gap-1 transition-colors"
+                  title="Delete new-order alerts for orders that no longer exist"
+                >
+                  <Eraser className="h-3 w-3" /> Remove orphan order alerts
                 </button>
-              )}
+                {unreadNotifs.length > 0 && (
+                  <button type="button" onClick={markAllRead} className="text-xs admin-text-dim hover:text-white flex items-center gap-1 transition-colors">
+                    <CheckCheck className="h-3 w-3" /> Mark all read
+                  </button>
+                )}
+              </div>
             </div>
+            {pruneNotifsHint && (
+              <p className={`text-xs mb-3 ${pruneNotifsHint.includes("Removed") ? "text-emerald-400/90" : "text-red-400/90"}`}>
+                {pruneNotifsHint}
+              </p>
+            )}
             {notifications.length === 0 ? (
               <div className="py-8 text-center">
                 <Bell className="h-8 w-8 mx-auto mb-2 admin-text-dim opacity-40" />
@@ -277,6 +356,15 @@ export function AdminDashboard() {
                         </div>
                         <p className="text-xs admin-text-dim mt-0.5">{notif.message}</p>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => deleteNotif(notif.id)}
+                        className="p-1.5 rounded-md text-slate-500 hover:text-red-400 hover:bg-red-500/10 flex-shrink-0 transition-colors"
+                        title="Delete notification"
+                        aria-label="Delete notification"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -535,12 +623,18 @@ export function AdminDashboard() {
 
           <div className="glass-card p-5">
             <div className="flex items-center justify-between mb-1">
-              <h2 className="font-bold admin-text">Worst Sellers</h2>
+              <h2 className="font-bold admin-text">
+                {insights && insights.worstSellers.length > 0 ? "Slowest movers" : "Top sellers"}
+              </h2>
               <Link href="/admin/menu" className="text-xs admin-link font-medium flex items-center gap-1 hover:text-red-200 transition-colors">
                 Edit menu <ArrowRight className="h-3 w-3" />
               </Link>
             </div>
-            <p className="text-xs admin-text-dim mb-4">Consider removing or promoting</p>
+            <p className="text-xs admin-text-dim mb-4">
+              {insights && insights.worstSellers.length > 0
+                ? "Compared across menu items that sold in this period"
+                : "By quantity sold in this period"}
+            </p>
             {insights && insights.worstSellers.length > 0 ? (
               <div className="space-y-3">
                 {insights.worstSellers.map((item, i) => {
@@ -564,9 +658,32 @@ export function AdminDashboard() {
                   );
                 })}
               </div>
+            ) : insights && insights.topSellers.length > 0 ? (
+              <div className="space-y-3">
+                {insights.topSellers.map((item, i) => {
+                  const maxQty = insights.topSellers[0]?.quantity || 1;
+                  return (
+                    <div key={item.name} className="flex items-center gap-3">
+                      <span className="w-6 h-6 rounded-md bg-emerald-500/15 flex items-center justify-center text-xs font-bold text-emerald-400">{i + 1}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-medium admin-text truncate">{item.name}</span>
+                          <span className="text-sm font-semibold admin-text ml-2">{formatPrice(item.revenue)}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                            <div className="h-full bg-emerald-500/40 rounded-full" style={{ width: `${(item.quantity / maxQty) * 100}%` }} />
+                          </div>
+                          <span className="text-xs admin-text-dim">{item.quantity} sold</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             ) : (
               <div className="py-4 text-center">
-                <AlertTriangle className="h-8 w-8 mx-auto mb-2 admin-text-dim opacity-40" />
+                <BarChart3 className="h-8 w-8 mx-auto mb-2 admin-text-dim opacity-40" />
                 <p className="text-sm admin-text-muted">No sales data yet</p>
               </div>
             )}

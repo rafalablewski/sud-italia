@@ -8,13 +8,18 @@ import { TIER_CONFIG, LoyaltyTier } from "@/lib/loyalty";
 import { locations as allLocations } from "@/data/locations";
 import { LocationTabs } from "./LocationTabs";
 import { ACHIEVEMENTS, getEarnedAchievements } from "@/lib/growth-engine";
-import type { LoyaltySettings } from "@/lib/store";
+import type {
+  AdminWalletSummary,
+  LoyaltySettings,
+  WalletRedemption,
+} from "@/lib/store";
 import {
   Star, Gift, Trophy, Target, Users, Share2, Edit3, Trash2, Plus, Check, X,
-  ToggleLeft, ToggleRight, Clock, Sparkles, Flame, Search, Heart,
+  ToggleLeft, ToggleRight, Clock, Sparkles, Flame, Search, Heart, Wallet,
+  ChevronDown, ChevronRight,
 } from "lucide-react";
 
-type Tab = "loyalty" | "referral" | "gamification";
+type Tab = "loyalty" | "referral" | "gamification" | "wallets";
 
 interface MemberRecord {
   phone: string;
@@ -53,6 +58,44 @@ export function AdminLoyalty() {
   const [referrals, setReferrals] = useState<ReferralRecord[]>([]);
   const [referralsLoading, setReferralsLoading] = useState(true);
 
+  const [walletSummaries, setWalletSummaries] = useState<AdminWalletSummary[]>([]);
+  const [phoneToWalletId, setPhoneToWalletId] = useState<Record<string, string>>({});
+  const [walletsLoading, setWalletsLoading] = useState(false);
+  const [expandedWalletId, setExpandedWalletId] = useState<string | null>(null);
+  const [redemptions, setRedemptions] = useState<WalletRedemption[]>([]);
+  const [redemptionsLoading, setRedemptionsLoading] = useState(false);
+  const [redeemFilterWallet, setRedeemFilterWallet] = useState("");
+  const [redeemFilterPhone, setRedeemFilterPhone] = useState("");
+  const [walletActionBusy, setWalletActionBusy] = useState(false);
+  const [confirmDissolve, setConfirmDissolve] = useState<string | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState<{ walletId: string; phone: string } | null>(null);
+  const [confirmVoid, setConfirmVoid] = useState<string | null>(null);
+
+  const refreshWallets = useCallback(() => {
+    setWalletsLoading(true);
+    fetch("/api/admin/wallets")
+      .then((r) => r.json())
+      .then((d) => {
+        setWalletSummaries(d.wallets || []);
+        setPhoneToWalletId(d.phoneToWalletId || {});
+      })
+      .catch(() => {})
+      .finally(() => setWalletsLoading(false));
+  }, []);
+
+  const refreshRedemptions = useCallback(() => {
+    setRedemptionsLoading(true);
+    const q = new URLSearchParams();
+    if (redeemFilterWallet.trim()) q.set("walletId", redeemFilterWallet.trim());
+    if (redeemFilterPhone.trim()) q.set("phone", redeemFilterPhone.trim());
+    q.set("limit", "200");
+    fetch(`/api/admin/wallet-redemptions?${q}`)
+      .then((r) => r.json())
+      .then((d) => setRedemptions(d.redemptions || []))
+      .catch(() => setRedemptions([]))
+      .finally(() => setRedemptionsLoading(false));
+  }, [redeemFilterWallet, redeemFilterPhone]);
+
   const refreshReferrals = useCallback(() => {
     setReferralsLoading(true);
     fetch("/api/admin/referrals")
@@ -83,7 +126,13 @@ export function AdminLoyalty() {
     fetch("/api/admin/growth").then((r) => r.json()).then((d) => setSettings(d)).catch(() => {});
     refreshMembers();
     refreshReferrals();
-  }, [refreshMembers, refreshReferrals]);
+    refreshWallets();
+  }, [refreshMembers, refreshReferrals, refreshWallets]);
+
+  useEffect(() => {
+    if (tab !== "wallets") return;
+    refreshRedemptions();
+  }, [tab, refreshRedemptions]);
 
   const saveSettings = useCallback(async (updates: Partial<LoyaltySettings>) => {
     setSaving(true);
@@ -123,9 +172,82 @@ export function AdminLoyalty() {
 
   const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
     { id: "loyalty", label: "Loyalty", icon: Star },
+    { id: "wallets", label: "Family wallets", icon: Wallet },
     { id: "referral", label: "Referrals", icon: Share2 },
     { id: "gamification", label: "Gamification", icon: Trophy },
   ];
+
+  const shortWalletId = (id: string) =>
+    id.length > 14 ? `${id.slice(0, 10)}…` : id;
+
+  const handleDissolveWallet = async () => {
+    if (!confirmDissolve) return;
+    setWalletActionBusy(true);
+    try {
+      const res = await fetch("/api/admin/wallets", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ walletId: confirmDissolve }),
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        alert(d.error || "Failed");
+        return;
+      }
+      setConfirmDissolve(null);
+      refreshWallets();
+      refreshMembers();
+    } finally {
+      setWalletActionBusy(false);
+    }
+  };
+
+  const handleRemoveMember = async () => {
+    if (!confirmRemove) return;
+    setWalletActionBusy(true);
+    try {
+      const res = await fetch("/api/admin/wallets/remove-member", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          walletId: confirmRemove.walletId,
+          phone: confirmRemove.phone,
+        }),
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        alert(d.error || "Failed");
+        return;
+      }
+      setConfirmRemove(null);
+      refreshWallets();
+      refreshMembers();
+    } finally {
+      setWalletActionBusy(false);
+    }
+  };
+
+  const handleVoidRedemption = async () => {
+    if (!confirmVoid) return;
+    setWalletActionBusy(true);
+    try {
+      const res = await fetch("/api/admin/wallet-redemptions", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: confirmVoid }),
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        alert(d.error || "Failed");
+        return;
+      }
+      setConfirmVoid(null);
+      refreshRedemptions();
+      refreshWallets();
+    } finally {
+      setWalletActionBusy(false);
+    }
+  };
 
   return (
     <>
@@ -210,12 +332,15 @@ export function AdminLoyalty() {
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead><tr className="text-left admin-text-dim text-xs uppercase tracking-wide border-b border-white/5"><th className="pb-2 pr-4">Customer</th><th className="pb-2 pr-4">Phone</th><th className="pb-2 pr-4">Tier</th><th className="pb-2 pr-4">Points</th><th className="pb-2 pr-4">Orders</th><th className="pb-2 pr-4">Locations</th><th className="pb-2">Actions</th></tr></thead>
+                  <thead><tr className="text-left admin-text-dim text-xs uppercase tracking-wide border-b border-white/5"><th className="pb-2 pr-4">Customer</th><th className="pb-2 pr-4">Phone</th><th className="pb-2 pr-4">Wallet</th><th className="pb-2 pr-4">Tier</th><th className="pb-2 pr-4">Points</th><th className="pb-2 pr-4">Orders</th><th className="pb-2 pr-4">Locations</th><th className="pb-2">Actions</th></tr></thead>
                   <tbody>
                     {filteredMembers.map((m) => (
                       <tr key={m.phone} className="border-t border-white/5 admin-text-muted">
                         <td className="py-2.5 pr-4 font-medium admin-text">{m.name}</td>
                         <td className="py-2.5 pr-4 font-mono text-xs">{m.phone}</td>
+                        <td className="py-2.5 pr-4 font-mono text-[10px] text-slate-400 max-w-[100px] truncate" title={phoneToWalletId[m.phone] || ""}>
+                          {phoneToWalletId[m.phone] ? shortWalletId(phoneToWalletId[m.phone]) : "—"}
+                        </td>
                         <td className="py-2.5 pr-4"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${TIER_CONFIG[m.tier].color}`}>{TIER_CONFIG[m.tier].label}</span></td>
                         <td className="py-2.5 pr-4 font-semibold text-italia-gold">{m.points}</td>
                         <td className="py-2.5 pr-4">{m.orders}</td>
@@ -226,6 +351,169 @@ export function AdminLoyalty() {
                   </tbody>
                 </table>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* FAMILY WALLETS TAB */}
+        {tab === "wallets" && (
+          <div className="space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm admin-text-dim max-w-2xl">
+                View pooled balances, dissolve wallets, or remove members. Void redemptions to correct mistaken rewards (restores spendable points).
+              </p>
+              <button type="button" onClick={() => { refreshWallets(); refreshRedemptions(); }} className="glass-btn text-xs" disabled={walletsLoading}>
+                Refresh
+              </button>
+            </div>
+
+            <div className="glass-card-static p-5">
+              <h3 className="font-semibold admin-text mb-3 flex items-center gap-2">
+                <Wallet className="h-4 w-4 text-italia-gold" />
+                Wallets ({walletSummaries.length})
+              </h3>
+              {walletsLoading && walletSummaries.length === 0 ? (
+                <div className="flex items-center gap-2 py-8 text-sm admin-text-dim">
+                  <Clock className="h-4 w-4 animate-spin" /> Loading…
+                </div>
+              ) : walletSummaries.length === 0 ? (
+                <p className="text-sm admin-text-dim py-4">No family wallets yet.</p>
+              ) : (
+                <div className="overflow-x-auto space-y-2">
+                  {walletSummaries.map((w) => {
+                    const open = expandedWalletId === w.id;
+                    return (
+                      <div key={w.id} className="glass-card border border-white/8 overflow-hidden">
+                        <div className="flex flex-wrap items-center gap-2 p-3">
+                          <button
+                            type="button"
+                            onClick={() => setExpandedWalletId(open ? null : w.id)}
+                            className="p-1 rounded admin-text-dim hover:admin-text"
+                            aria-expanded={open}
+                          >
+                            {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          </button>
+                          <span className="font-mono text-xs text-slate-400 flex-1 min-w-0 truncate" title={w.id}>{w.id}</span>
+                          <span className="text-xs admin-text-dim">Head</span>
+                          <span className="font-mono text-xs admin-text">{w.headPhone}</span>
+                          <span className="text-xs admin-text-dim">{w.memberCount} members</span>
+                          <span className="text-xs font-semibold text-italia-gold">{w.poolEarned} pool</span>
+                          <span className="text-xs text-green-400">{w.spendablePool} spendable</span>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDissolve(w.id)}
+                            className="glass-btn-ghost text-[10px] px-2 py-1 text-red-300 hover:text-red-200"
+                          >
+                            Dissolve
+                          </button>
+                        </div>
+                        {open && (
+                          <div className="border-t border-white/8 px-3 pb-3 pt-2">
+                            <p className="text-[10px] admin-text-dim mb-2">Created {w.createdAt} · Redeemed out of pool: {w.totalRedeemed} pts</p>
+                            <table className="w-full text-xs">
+                              <thead>
+                                <tr className="text-left admin-text-dim uppercase">
+                                  <th className="pb-1 pr-2">Phone</th>
+                                  <th className="pb-1 pr-2">Role</th>
+                                  <th className="pb-1 pr-2">Status</th>
+                                  <th className="pb-1 pr-2">Contributed</th>
+                                  <th className="pb-1">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {w.members.map((m) => (
+                                  <tr key={m.phone} className="border-t border-white/5">
+                                    <td className="py-1.5 pr-2 font-mono">{m.phone}</td>
+                                    <td className="py-1.5 pr-2">{m.isHead ? "Head" : "Member"}</td>
+                                    <td className="py-1.5 pr-2">{m.status}</td>
+                                    <td className="py-1.5 pr-2 font-semibold text-italia-gold">{m.contributedPoints}</td>
+                                    <td className="py-1.5">
+                                      {!m.isHead ? (
+                                        <button
+                                          type="button"
+                                          onClick={() => setConfirmRemove({ walletId: w.id, phone: m.phone })}
+                                          className="text-[10px] text-red-300 hover:text-red-200 underline"
+                                        >
+                                          Remove
+                                        </button>
+                                      ) : (
+                                        <span className="admin-text-dim">—</span>
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="glass-card-static p-5">
+              <h3 className="font-semibold admin-text mb-3">Redemption ledger</h3>
+              <div className="flex flex-wrap gap-2 mb-3">
+                <input
+                  type="text"
+                  placeholder="Filter wallet id"
+                  value={redeemFilterWallet}
+                  onChange={(e) => setRedeemFilterWallet(e.target.value)}
+                  className="glass-input text-xs w-48"
+                />
+                <input
+                  type="text"
+                  placeholder="Filter phone"
+                  value={redeemFilterPhone}
+                  onChange={(e) => setRedeemFilterPhone(e.target.value)}
+                  className="glass-input text-xs w-40"
+                />
+                <button type="button" onClick={refreshRedemptions} className="glass-btn text-xs">
+                  Apply filters
+                </button>
+              </div>
+              {redemptionsLoading ? (
+                <p className="text-sm admin-text-dim py-4">Loading redemptions…</p>
+              ) : redemptions.length === 0 ? (
+                <p className="text-sm admin-text-dim py-4">No rows match.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="text-left admin-text-dim uppercase border-b border-white/5">
+                        <th className="pb-2 pr-2">When</th>
+                        <th className="pb-2 pr-2">Phone</th>
+                        <th className="pb-2 pr-2">Wallet</th>
+                        <th className="pb-2 pr-2">Pts</th>
+                        <th className="pb-2 pr-2">Reward</th>
+                        <th className="pb-2">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {redemptions.map((r) => (
+                        <tr key={r.id} className="border-t border-white/5 admin-text-muted">
+                          <td className="py-2 pr-2 whitespace-nowrap">{r.createdAt.slice(0, 19)}</td>
+                          <td className="py-2 pr-2 font-mono">{r.phone}</td>
+                          <td className="py-2 pr-2 font-mono">{r.walletId ?? "solo"}</td>
+                          <td className="py-2 pr-2">{r.points}</td>
+                          <td className="py-2 pr-2">{r.rewardId}</td>
+                          <td className="py-2">
+                            <button
+                              type="button"
+                              onClick={() => setConfirmVoid(r.id)}
+                              className="text-red-300 hover:text-red-200 underline"
+                            >
+                              Void
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -338,6 +626,72 @@ export function AdminLoyalty() {
         </div>,
         document.body
       )}
+
+      {(confirmDissolve || confirmRemove || confirmVoid) &&
+        createPortal(
+          <div
+            className="fixed inset-0 flex items-center justify-center p-4"
+            style={{ zIndex: 9999 }}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div
+              className="absolute inset-0 bg-black/70"
+              onClick={() => {
+                if (!walletActionBusy) {
+                  setConfirmDissolve(null);
+                  setConfirmRemove(null);
+                  setConfirmVoid(null);
+                }
+              }}
+            />
+            <div className="relative bg-[#0f172a] border border-white/12 rounded-lg shadow-2xl p-5 w-full max-w-md mx-4">
+              <h3 className="font-heading font-semibold admin-text mb-2">Confirm</h3>
+              {confirmDissolve && (
+                <p className="text-sm admin-text-dim mb-4">
+                  Dissolve wallet <span className="font-mono text-xs">{shortWalletId(confirmDissolve)}</span>? Members revert to solo loyalty; orders are not deleted.
+                </p>
+              )}
+              {confirmRemove && (
+                <p className="text-sm admin-text-dim mb-4">
+                  Remove <span className="font-mono text-xs">{confirmRemove.phone}</span> from this wallet?
+                </p>
+              )}
+              {confirmVoid && (
+                <p className="text-sm admin-text-dim mb-4">
+                  Void redemption <span className="font-mono text-xs">{shortWalletId(confirmVoid)}</span>? Spendable points will increase for affected customers.
+                </p>
+              )}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={walletActionBusy}
+                  onClick={() => {
+                    if (confirmDissolve) void handleDissolveWallet();
+                    else if (confirmRemove) void handleRemoveMember();
+                    else if (confirmVoid) void handleVoidRedemption();
+                  }}
+                  className="glass-btn flex-1 bg-red-900/40 border-red-500/30 text-red-200"
+                >
+                  {walletActionBusy ? "…" : "Confirm"}
+                </button>
+                <button
+                  type="button"
+                  disabled={walletActionBusy}
+                  onClick={() => {
+                    setConfirmDissolve(null);
+                    setConfirmRemove(null);
+                    setConfirmVoid(null);
+                  }}
+                  className="glass-btn-ghost flex-1"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </>
   );
 }

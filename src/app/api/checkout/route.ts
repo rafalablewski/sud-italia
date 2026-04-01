@@ -5,6 +5,7 @@ import { getSlotById, incrementSlotOrders, createOrder, addNotification, getUpse
 import { FulfillmentType, CartItem } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
 import { getActiveComboDeals } from "@/lib/upsell";
+import { normalizePlPhoneE164 } from "@/lib/phone";
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,6 +25,14 @@ export async function POST(req: NextRequest) {
     if (!items?.length || !locationSlug || !customerName || !customerPhone) {
       return NextResponse.json(
         { error: "Missing required fields" },
+        { status: 400 }
+      );
+    }
+
+    const phoneE164 = normalizePlPhoneE164(String(customerPhone));
+    if (!phoneE164) {
+      return NextResponse.json(
+        { error: "Invalid Polish phone number" },
         { status: 400 }
       );
     }
@@ -133,7 +142,7 @@ export async function POST(req: NextRequest) {
       totalAmount: calculatedTotal,
       status: "pending",
       customerName: customerName.trim(),
-      customerPhone: customerPhone.trim(),
+      customerPhone: phoneE164,
       fulfillmentType: fulfillmentType as FulfillmentType,
       deliveryAddress: fulfillmentType === "delivery" ? deliveryAddress.trim() : undefined,
       slotId,
@@ -146,8 +155,9 @@ export async function POST(req: NextRequest) {
     await addNotification({
       type: "new_order",
       title: "New order received",
-      message: `${customerName.trim()} — ${formatPrice(calculatedTotal)} — ${fulfillmentType} at ${slotTime}`,
+      message: `${customerName.trim()} — ${formatPrice(calculatedTotal)} — ${fulfillmentType} at ${slotTime} · ${orderId}`,
       locationSlug,
+      orderId,
     });
 
     // Check if slot is now full and notify
@@ -188,7 +198,7 @@ export async function POST(req: NextRequest) {
           orderId,
           locationSlug,
           customerName,
-          customerPhone,
+          customerPhone: phoneE164,
           fulfillmentType,
           slotId,
           slotTime,
@@ -197,7 +207,7 @@ export async function POST(req: NextRequest) {
       });
 
       const stripeResponse = NextResponse.json({ url: session.url, orderId });
-      stripeResponse.cookies.set("sud-italia-customer", customerPhone.trim(), {
+      stripeResponse.cookies.set("sud-italia-customer", phoneE164, {
         httpOnly: false,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
@@ -215,7 +225,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Set cookie so we recognize this customer on next visit (no login needed)
-    response.cookies.set("sud-italia-customer", customerPhone.trim(), {
+    response.cookies.set("sud-italia-customer", phoneE164, {
       httpOnly: false, // needs to be readable client-side for reorder
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",

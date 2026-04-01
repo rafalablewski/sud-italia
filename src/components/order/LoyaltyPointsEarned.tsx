@@ -32,7 +32,7 @@ export function LoyaltyPointsEarned({
         </span>
       </p>
       <p className="text-[11px] text-italia-gray/70 mt-1">
-        Points added automatically — no registration needed
+        Credited to the phone number on this order — same number, same balance.
       </p>
     </div>
   );

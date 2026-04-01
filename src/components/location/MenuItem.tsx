@@ -18,6 +18,8 @@ import { useState, useEffect } from "react";
 interface MenuItemProps {
   item: MenuItemType;
   locationSlug: string;
+  /** From real 7-day order counts at this location */
+  popularThisWeek?: boolean;
 }
 
 const TAG_LABELS: Record<string, { label: string; variant: "green" | "red" | "gold" | "default" }> = {
@@ -34,7 +36,11 @@ const BADGE_ICONS: Record<BadgeType, React.ElementType> = {
   "best-value": Star,
 };
 
-export function MenuItemCard({ item, locationSlug }: MenuItemProps) {
+export function MenuItemCard({
+  item,
+  locationSlug,
+  popularThisWeek = false,
+}: MenuItemProps) {
   const addItem = useCartStore((s) => s.addItem);
   const removeItem = useCartStore((s) => s.removeItem);
   const updateQuantity = useCartStore((s) => s.updateQuantity);
@@ -95,8 +101,14 @@ export function MenuItemCard({ item, locationSlug }: MenuItemProps) {
       )}
 
       {/* Social proof badge ribbon */}
-      {item.available && badges.length > 0 && (
-        <div className="absolute -top-2 right-3 flex gap-1">
+      {item.available && (badges.length > 0 || popularThisWeek) && (
+        <div className="absolute -top-2 right-3 flex flex-wrap justify-end gap-1 max-w-[min(100%,14rem)]">
+          {popularThisWeek && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-amber-100 text-amber-900 border border-amber-200/80 shadow-sm">
+              <Flame className="h-3 w-3" />
+              Hot this week
+            </span>
+          )}
           {badges.map((badge) => {
             const config = BADGE_CONFIG[badge];
             const BadgeIcon = BADGE_ICONS[badge];
@@ -232,6 +244,7 @@ export function MenuItemCard({ item, locationSlug }: MenuItemProps) {
           locationSlug={locationSlug}
           open={detailOpen}
           onClose={() => setDetailOpen(false)}
+          popularThisWeek={popularThisWeek}
         />
       )}
     </div>

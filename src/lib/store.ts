@@ -3,6 +3,8 @@ import { join } from "path";
 import { neon } from "@neondatabase/serverless";
 import { TimeSlot, Order, Ingredient, Recipe } from "@/data/types";
 import { locations as allLocations } from "@/data/locations";
+import { WALLET_MAX_PHONES } from "@/lib/constants";
+import { normalizePlPhoneE164, phonesEqualPl } from "@/lib/phone";
 
 // --- Storage abstraction: Neon Postgres when DATABASE_URL is set, filesystem fallback for local dev ---
 
@@ -175,6 +177,18 @@ export async function incrementSlotOrders(id: string): Promise<boolean> {
   });
 }
 
+/** Release one slot booking (e.g. when an order is removed). */
+export async function decrementSlotOrders(id: string): Promise<boolean> {
+  return withLock("slots.json", async () => {
+    const slots = await readJSON<TimeSlot[]>("slots.json", []);
+    const slot = slots.find((s) => s.id === id);
+    if (!slot) return false;
+    slot.currentOrders = Math.max(0, slot.currentOrders - 1);
+    await writeJSON("slots.json", slots);
+    return true;
+  });
+}
+
 // --- Available slots for clients ---
 
 export async function getAvailableSlots(
@@ -221,6 +235,26 @@ export async function updateOrderStatus(id: string, status: Order["status"]): Pr
     await writeJSON("orders.json", orders);
     return orders[index];
   });
+}
+
+export async function deleteOrder(id: string): Promise<boolean> {
+  let slotId: string | undefined;
+  const removed = await withLock("orders.json", async () => {
+    const orders = await readJSON<Order[]>("orders.json", []);
+    const index = orders.findIndex((o) => o.id === id);
+    if (index === -1) return false;
+    slotId = orders[index].slotId;
+    orders.splice(index, 1);
+    await writeJSON("orders.json", orders);
+    return true;
+  });
+  if (removed) {
+    if (slotId) {
+      await decrementSlotOrders(slotId);
+    }
+    await removeNotificationsForOrder(id);
+  }
+  return removed;
 }
 
 // --- Analytics ---
@@ -438,6 +472,9 @@ export interface InsightsData {
   locationComparison: LocationComparison[];
   repeatCustomers: CustomerMetric[];
   avgItemsPerOrder: number;
+  /** Best-selling SKUs in the period (by quantity). */
+  topSellers: { name: string; quantity: number; revenue: number }[];
+  /** Slowest movers — only when at least 2 different menu items sold (otherwise empty). */
   worstSellers: { name: string; quantity: number; revenue: number }[];
   cancelledOrders: number;
   cancellationRate: number;
@@ -488,8 +525,11 @@ export async function getInsights(dateFrom?: string, dateTo?: string): Promise<I
 
   for (const loc of activeLocations) {
     const locOrders = orders.filter((o) => o.locationSlug === loc.slug);
-    const completed = locOrders.filter((o) => o.status !== "pending");
-    const cancelled = locOrders.filter((o) => o.status === "pending");
+    // Revenue / KPIs: exclude unpaid queue (pending) and voided orders (cancelled)
+    const completed = locOrders.filter(
+      (o) => o.status !== "pending" && o.status !== "cancelled"
+    );
+    const cancelled = locOrders.filter((o) => o.status === "cancelled");
     let revenue = 0;
     let cost = 0;
     let totalItems = 0;
@@ -526,7 +566,7 @@ export async function getInsights(dateFrom?: string, dateTo?: string): Promise<I
   // --- Repeat customers ---
   const customerMap = new Map<string, CustomerMetric>();
   for (const order of orders) {
-    const key = order.customerPhone;
+    const key = normalizePlPhoneE164(order.customerPhone) ?? order.customerPhone;
     const existing = customerMap.get(key);
     if (existing) {
       existing.orderCount += 1;
@@ -551,7 +591,9 @@ export async function getInsights(dateFrom?: string, dateTo?: string): Promise<I
     .slice(0, 10);
 
   // --- Avg items per order ---
-  const completedOrders = orders.filter((o) => o.status !== "pending");
+  const completedOrders = orders.filter(
+    (o) => o.status !== "pending" && o.status !== "cancelled"
+  );
   let totalItemsAll = 0;
   for (const o of completedOrders) {
     for (const ci of o.items) totalItemsAll += ci.quantity;
@@ -577,13 +619,20 @@ export async function getInsights(dateFrom?: string, dateTo?: string): Promise<I
       }
     }
   }
-  const worstSellers = Array.from(itemSales.values())
-    .sort((a, b) => a.quantity - b.quantity)
+  const salesList = Array.from(itemSales.values());
+  const topSellers = [...salesList]
+    .sort((a, b) => b.quantity - a.quantity)
     .slice(0, 5);
+  // "Worst" only when there is another SKU to compare against
+  const worstSellers =
+    itemSales.size >= 2
+      ? [...salesList].sort((a, b) => a.quantity - b.quantity).slice(0, 5)
+      : [];
 
-  // --- Cancellation rate ---
-  const cancelled = orders.filter((o) => o.status === "pending");
-  const cancellationRate = orders.length > 0 ? Math.round((cancelled.length / orders.length) * 100) : 0;
+  // --- Cancellation rate (actual cancelled status, not "pending" new orders) ---
+  const cancelled = orders.filter((o) => o.status === "cancelled");
+  const cancellationRate =
+    orders.length > 0 ? Math.round((cancelled.length / orders.length) * 100) : 0;
 
   // --- Peak hours ---
   const hourMap = new Map<number, { count: number; revenue: number }>();
@@ -603,6 +652,7 @@ export async function getInsights(dateFrom?: string, dateTo?: string): Promise<I
     locationComparison,
     repeatCustomers,
     avgItemsPerOrder,
+    topSellers,
     worstSellers,
     cancelledOrders: cancelled.length,
     cancellationRate,
@@ -618,6 +668,8 @@ export interface Notification {
   title: string;
   message: string;
   locationSlug?: string;
+  /** When set (e.g. new_order), removed when the order is deleted from admin. */
+  orderId?: string;
   createdAt: string;
   read: boolean;
 }
@@ -658,6 +710,71 @@ export async function markAllNotificationsRead(): Promise<void> {
     const notifications = await readJSON<Notification[]>("notifications.json", []);
     for (const n of notifications) n.read = true;
     await writeJSON("notifications.json", notifications);
+  });
+}
+
+export async function deleteNotification(id: string): Promise<boolean> {
+  return withLock("notifications.json", async () => {
+    const notifications = await readJSON<Notification[]>("notifications.json", []);
+    const idx = notifications.findIndex((n) => n.id === id);
+    if (idx === -1) return false;
+    notifications.splice(idx, 1);
+    await writeJSON("notifications.json", notifications);
+    return true;
+  });
+}
+
+/** True if this notification is for the given order (stored id and/or order id in message for legacy rows). */
+function notificationMatchesOrder(n: Notification, orderId: string): boolean {
+  if (!orderId) return false;
+  if (n.orderId === orderId) return true;
+  if (n.type === "new_order" && n.message.includes(orderId)) return true;
+  return false;
+}
+
+/** Drop notifications tied to an order (by orderId field and/or message text for legacy rows). */
+export async function removeNotificationsForOrder(orderId: string): Promise<number> {
+  return withLock("notifications.json", async () => {
+    const notifications = await readJSON<Notification[]>("notifications.json", []);
+    const before = notifications.length;
+    const next = notifications.filter((n) => !notificationMatchesOrder(n, orderId));
+    await writeJSON("notifications.json", next);
+    return before - next.length;
+  });
+}
+
+const ORDER_ID_IN_MESSAGE = /SI-[A-Z0-9]+-[A-Z0-9]+/gi;
+
+/**
+ * Remove new_order notifications that don't reference any existing order
+ * (missing/stale orderId, or SI-… in message not in orders list).
+ */
+export async function pruneOrphanNewOrderNotifications(): Promise<number> {
+  const orders = await getOrders();
+  const orderIds = new Set(orders.map((o) => o.id.toUpperCase()));
+
+  return withLock("notifications.json", async () => {
+    const notifications = await readJSON<Notification[]>("notifications.json", []);
+    const before = notifications.length;
+
+    const next = notifications.filter((n) => {
+      if (n.type !== "new_order") return true;
+
+      if (n.orderId?.trim() && orderIds.has(n.orderId.toUpperCase())) {
+        return true;
+      }
+
+      const refs = n.message.match(ORDER_ID_IN_MESSAGE) || [];
+      const unique = [...new Set(refs.map((r) => r.toUpperCase()))];
+      for (const ref of unique) {
+        if (orderIds.has(ref)) return true;
+      }
+
+      return false;
+    });
+
+    await writeJSON("notifications.json", next);
+    return before - next.length;
   });
 }
 
@@ -891,33 +1008,331 @@ export async function getLoyaltyMembers(): Promise<LoyaltyMember[]> {
 }
 
 export async function addLoyaltyMember(member: LoyaltyMember): Promise<LoyaltyMember> {
+  const canonical = normalizePlPhoneE164(member.phone) || member.phone.trim();
+  const toSave: LoyaltyMember = { ...member, phone: canonical };
   return withLock("loyalty-members.json", async () => {
     const list = await readJSON<LoyaltyMember[]>("loyalty-members.json", []);
-    // Don't add duplicates
-    if (list.some((m) => m.phone === member.phone)) return member;
-    list.push(member);
+    if (list.some((m) => phonesEqualPl(m.phone, canonical))) return toSave;
+    list.push(toSave);
     await writeJSON("loyalty-members.json", list);
-    return member;
+    return toSave;
   });
 }
 
 export async function getLoyaltyMember(phone: string): Promise<LoyaltyMember | undefined> {
   const list = await readJSON<LoyaltyMember[]>("loyalty-members.json", []);
-  return list.find((m) => m.phone === phone);
+  const canonical = normalizePlPhoneE164(phone);
+  if (canonical) {
+    const hit = list.find((m) => phonesEqualPl(m.phone, canonical));
+    if (hit) return hit;
+  }
+  return list.find((m) => m.phone === phone.trim());
 }
 
 export async function updateLoyaltyMember(
   phone: string,
   updates: Partial<Pick<LoyaltyMember, "name" | "lastName" | "nickname" | "email">>
 ): Promise<LoyaltyMember | null> {
+  const canonical = normalizePlPhoneE164(phone) || phone.trim();
   return withLock("loyalty-members.json", async () => {
     const list = await readJSON<LoyaltyMember[]>("loyalty-members.json", []);
-    const index = list.findIndex((m) => m.phone === phone);
+    const index = list.findIndex((m) => phonesEqualPl(m.phone, canonical));
     if (index === -1) return null;
     list[index] = { ...list[index], ...updates };
     await writeJSON("loyalty-members.json", list);
     return list[index];
   });
+}
+
+// --- Family wallets (up to WALLET_MAX_PHONES phones, shared earn, invite + confirm) ---
+
+export type WalletMemberStatus = "pending" | "active";
+
+export interface WalletMemberEntry {
+  phone: string;
+  status: WalletMemberStatus;
+  invitedAt?: string;
+  confirmedAt?: string;
+}
+
+export interface FamilyWallet {
+  id: string;
+  headPhone: string;
+  createdAt: string;
+  members: WalletMemberEntry[];
+}
+
+type WalletInviteOtpMap = Record<
+  string,
+  { code: string; expiresAt: string; walletId: string }
+>;
+
+async function readWalletInviteOtps(): Promise<WalletInviteOtpMap> {
+  return readJSON<WalletInviteOtpMap>("wallet-invite-otp.json", {});
+}
+
+export async function storeWalletInviteOtp(
+  inviteePhone: string,
+  walletId: string,
+  code: string
+): Promise<void> {
+  const canonical = normalizePlPhoneE164(inviteePhone) || inviteePhone.trim();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+  return withLock("wallet-invite-otp.json", async () => {
+    const map = await readWalletInviteOtps();
+    map[canonical] = { code, expiresAt, walletId };
+    await writeJSON("wallet-invite-otp.json", map);
+  });
+}
+
+export async function verifyAndConsumeWalletInviteOtp(
+  inviteePhone: string,
+  code: string
+): Promise<string | null> {
+  const canonical = normalizePlPhoneE164(inviteePhone) || inviteePhone.trim();
+  const trimmed = code.trim();
+  return withLock("wallet-invite-otp.json", async () => {
+    const map = await readWalletInviteOtps();
+    const entry = map[canonical];
+    if (!entry || entry.code !== trimmed) return null;
+    if (new Date(entry.expiresAt) < new Date()) {
+      delete map[canonical];
+      await writeJSON("wallet-invite-otp.json", map);
+      return null;
+    }
+    const { walletId } = entry;
+    delete map[canonical];
+    await writeJSON("wallet-invite-otp.json", map);
+    return walletId;
+  });
+}
+
+export async function getFamilyWallets(): Promise<FamilyWallet[]> {
+  return readJSON<FamilyWallet[]>("wallets.json", []);
+}
+
+export async function findWalletByPhone(phone: string): Promise<FamilyWallet | null> {
+  const canonical = normalizePlPhoneE164(phone) || phone.trim();
+  const wallets = await getFamilyWallets();
+  for (const w of wallets) {
+    for (const m of w.members) {
+      if (phonesEqualPl(m.phone, canonical)) return w;
+    }
+  }
+  return null;
+}
+
+export async function createFamilyWallet(headPhone: string): Promise<FamilyWallet | null> {
+  const canonical = normalizePlPhoneE164(headPhone) || headPhone.trim();
+  return withLock("wallets.json", async () => {
+    const list = await readJSON<FamilyWallet[]>("wallets.json", []);
+    for (const w of list) {
+      for (const m of w.members) {
+        if (phonesEqualPl(m.phone, canonical)) return null;
+      }
+    }
+    const now = new Date().toISOString();
+    const wallet: FamilyWallet = {
+      id: `fw-${crypto.randomUUID()}`,
+      headPhone: canonical,
+      createdAt: now,
+      members: [
+        {
+          phone: canonical,
+          status: "active",
+          confirmedAt: now,
+        },
+      ],
+    };
+    list.push(wallet);
+    await writeJSON("wallets.json", list);
+    return wallet;
+  });
+}
+
+export type InviteWalletMemberResult =
+  | { ok: true; invitee: string; resent: boolean }
+  | { error: string };
+
+export async function inviteFamilyWalletMember(
+  walletId: string,
+  headPhone: string,
+  inviteeRaw: string
+): Promise<InviteWalletMemberResult> {
+  const invitee = normalizePlPhoneE164(inviteeRaw) || inviteeRaw.trim();
+  const head = normalizePlPhoneE164(headPhone) || headPhone.trim();
+  if (!invitee) return { error: "Invalid phone number" };
+  if (phonesEqualPl(invitee, head)) return { error: "Cannot invite yourself" };
+
+  return withLock("wallets.json", async () => {
+    const list = await readJSON<FamilyWallet[]>("wallets.json", []);
+    const w = list.find((x) => x.id === walletId);
+    if (!w) return { error: "Wallet not found" };
+    if (!phonesEqualPl(w.headPhone, head)) return { error: "Only the wallet owner can invite" };
+
+    const existingIdx = w.members.findIndex((mem) => phonesEqualPl(mem.phone, invitee));
+    if (existingIdx >= 0) {
+      const mem = w.members[existingIdx];
+      if (mem.status === "active") return { error: "This number is already in the wallet" };
+      await writeJSON("wallets.json", list);
+      return { ok: true, invitee, resent: true };
+    }
+
+    if (w.members.length >= WALLET_MAX_PHONES) {
+      return { error: `Wallet is full (max ${WALLET_MAX_PHONES} numbers)` };
+    }
+
+    for (const other of list) {
+      if (other.id === walletId) continue;
+      if (other.members.some((mem) => phonesEqualPl(mem.phone, invitee))) {
+        return { error: "This number is already in another wallet" };
+      }
+    }
+
+    const now = new Date().toISOString();
+    w.members.push({
+      phone: invitee,
+      status: "pending",
+      invitedAt: now,
+    });
+    await writeJSON("wallets.json", list);
+    return { ok: true, invitee, resent: false };
+  });
+}
+
+export type ConfirmWalletMemberResult =
+  | { ok: true; wallet: FamilyWallet }
+  | { error: string };
+
+export async function confirmFamilyWalletMember(
+  inviteePhone: string,
+  code: string
+): Promise<ConfirmWalletMemberResult> {
+  const canonical = normalizePlPhoneE164(inviteePhone) || inviteePhone.trim();
+  const walletId = await verifyAndConsumeWalletInviteOtp(canonical, code);
+  if (!walletId) return { error: "Invalid or expired code" };
+
+  return withLock("wallets.json", async () => {
+    const list = await readJSON<FamilyWallet[]>("wallets.json", []);
+    const w = list.find((x) => x.id === walletId);
+    if (!w) return { error: "Wallet not found" };
+    const m = w.members.find((mem) => phonesEqualPl(mem.phone, canonical));
+    if (!m) return { error: "No invitation for this number" };
+    if (m.status === "active") return { error: "Already confirmed" };
+    m.status = "active";
+    m.confirmedAt = new Date().toISOString();
+    await writeJSON("wallets.json", list);
+    return { ok: true, wallet: w };
+  });
+}
+
+export async function removeFamilyWalletMember(
+  walletId: string,
+  headPhone: string,
+  targetRaw: string
+): Promise<{ ok: true } | { error: string }> {
+  const head = normalizePlPhoneE164(headPhone) || headPhone.trim();
+  const target = normalizePlPhoneE164(targetRaw) || targetRaw.trim();
+  if (phonesEqualPl(target, head)) return { error: "Cannot remove the wallet owner" };
+
+  return withLock("wallets.json", async () => {
+    const list = await readJSON<FamilyWallet[]>("wallets.json", []);
+    const w = list.find((x) => x.id === walletId);
+    if (!w) return { error: "Wallet not found" };
+    if (!phonesEqualPl(w.headPhone, head)) return { error: "Only the wallet owner can remove members" };
+    const idx = w.members.findIndex((mem) => phonesEqualPl(mem.phone, target));
+    if (idx === -1) return { error: "Member not found" };
+    w.members.splice(idx, 1);
+    await writeJSON("wallets.json", list);
+    return { ok: true };
+  });
+}
+
+export async function leaveFamilyWallet(
+  walletId: string,
+  memberPhone: string
+): Promise<{ ok: true } | { error: string }> {
+  const phone = normalizePlPhoneE164(memberPhone) || memberPhone.trim();
+  return withLock("wallets.json", async () => {
+    const list = await readJSON<FamilyWallet[]>("wallets.json", []);
+    const w = list.find((x) => x.id === walletId);
+    if (!w) return { error: "Wallet not found" };
+    if (phonesEqualPl(w.headPhone, phone)) {
+      return { error: "The owner cannot leave the wallet" };
+    }
+    const idx = w.members.findIndex((mem) => phonesEqualPl(mem.phone, phone));
+    if (idx === -1) return { error: "Not a member" };
+    w.members.splice(idx, 1);
+    await writeJSON("wallets.json", list);
+    return { ok: true };
+  });
+}
+
+// --- Wallet + solo redemptions (ledger) ---
+
+export interface WalletRedemption {
+  id: string;
+  /** null = solo account (not in an active wallet) */
+  walletId: string | null;
+  phone: string;
+  points: number;
+  rewardId: string;
+  createdAt: string;
+}
+
+export async function getWalletRedemptions(): Promise<WalletRedemption[]> {
+  return readJSON<WalletRedemption[]>("wallet-redemptions.json", []);
+}
+
+function sumSoloRedemptionsForPhone(
+  redemptions: WalletRedemption[],
+  phone: string
+): number {
+  return redemptions
+    .filter(
+      (r) =>
+        r.walletId === null &&
+        phonesEqualPl(r.phone, phone)
+    )
+    .reduce((s, r) => s + r.points, 0);
+}
+
+function sumWalletRedemptions(redemptions: WalletRedemption[], walletId: string): number {
+  return redemptions
+    .filter((r) => r.walletId === walletId)
+    .reduce((s, r) => s + r.points, 0);
+}
+
+function sumMemberWalletRedemptions(
+  redemptions: WalletRedemption[],
+  walletId: string,
+  phone: string
+): number {
+  return redemptions
+    .filter(
+      (r) =>
+        r.walletId === walletId && phonesEqualPl(r.phone, phone)
+    )
+    .reduce((s, r) => s + r.points, 0);
+}
+
+/** Order-based points (1 pt / 1 PLN) + count of non-pending orders for one phone. */
+export function computeOrderPointsForPhone(
+  phone: string,
+  orders: Order[]
+): { orderPoints: number; ordersCount: number } {
+  const canonical = normalizePlPhoneE164(phone) || phone.trim();
+  const customerOrders = orders.filter(
+    (o) =>
+      o.customerPhone &&
+      phonesEqualPl(o.customerPhone, canonical) &&
+      o.status !== "pending"
+  );
+  const totalSpent = customerOrders.reduce((sum, o) => sum + o.totalAmount, 0);
+  return {
+    orderPoints: Math.floor(totalSpent / 100),
+    ordersCount: customerOrders.length,
+  };
 }
 
 // --- Point Adjustments (manual add/remove by admin) ---
@@ -944,7 +1359,299 @@ export async function addPointAdjustment(adj: PointAdjustment): Promise<void> {
 
 export async function getManualPointsTotal(phone: string): Promise<number> {
   const all = await getPointAdjustments();
-  return all.filter((a) => a.phone === phone).reduce((sum, a) => sum + a.amount, 0);
+  const canonical = normalizePlPhoneE164(phone);
+  return all
+    .filter((a) =>
+      canonical ? phonesEqualPl(a.phone, canonical) : a.phone.trim() === phone.trim()
+    )
+    .reduce((sum, a) => sum + a.amount, 0);
+}
+
+async function earnedPointsForPhone(phone: string, orders: Order[]): Promise<number> {
+  const { orderPoints } = computeOrderPointsForPhone(phone, orders);
+  const manual = await getManualPointsTotal(phone);
+  return orderPoints + manual;
+}
+
+export interface CustomerWalletPayload {
+  id: string;
+  role: "head" | "member";
+  myStatus: WalletMemberStatus;
+  poolEarned: number;
+  spendablePool: number;
+  myContributedPoints: number;
+  headRedeemCap: number;
+  memberRedeemCap: number;
+  members: { phone: string; status: WalletMemberStatus; isHead: boolean; contributedPoints: number }[];
+}
+
+export interface ResolveCustomerLoyaltyResult {
+  ordersCount: number;
+  /** Lifetime earned for tier (pool for active wallet members, else solo). */
+  points: number;
+  /** Max points this session can redeem right now. */
+  spendablePoints: number;
+  wallet: CustomerWalletPayload | null;
+}
+
+export async function resolveCustomerLoyalty(
+  phone: string,
+  allOrders?: Order[]
+): Promise<ResolveCustomerLoyaltyResult> {
+  const canonical = normalizePlPhoneE164(phone) || phone.trim();
+  const orders = allOrders ?? (await getOrders());
+  const redemptions = await getWalletRedemptions();
+
+  const { orderPoints, ordersCount } = computeOrderPointsForPhone(canonical, orders);
+  const manualPoints = await getManualPointsTotal(canonical);
+  const soloEarned = orderPoints + manualPoints;
+
+  const wallet = await findWalletByPhone(canonical);
+  if (!wallet) {
+    const soloRed = sumSoloRedemptionsForPhone(redemptions, canonical);
+    return {
+      ordersCount,
+      points: soloEarned,
+      spendablePoints: Math.max(0, soloEarned - soloRed),
+      wallet: null,
+    };
+  }
+
+  const entry = wallet.members.find((m) => phonesEqualPl(m.phone, canonical));
+  if (!entry) {
+    const soloRed = sumSoloRedemptionsForPhone(redemptions, canonical);
+    return {
+      ordersCount,
+      points: soloEarned,
+      spendablePoints: Math.max(0, soloEarned - soloRed),
+      wallet: null,
+    };
+  }
+
+  const isHead = phonesEqualPl(wallet.headPhone, canonical);
+
+  if (entry.status === "pending") {
+    const soloRed = sumSoloRedemptionsForPhone(redemptions, canonical);
+    const membersPayload: CustomerWalletPayload["members"] = await Promise.all(
+      wallet.members.map(async (m) => ({
+        phone: m.phone,
+        status: m.status,
+        isHead: phonesEqualPl(m.phone, wallet.headPhone),
+        contributedPoints: await earnedPointsForPhone(m.phone, orders),
+      }))
+    );
+    return {
+      ordersCount,
+      points: soloEarned,
+      spendablePoints: Math.max(0, soloEarned - soloRed),
+      wallet: {
+        id: wallet.id,
+        role: isHead ? "head" : "member",
+        myStatus: "pending",
+        poolEarned: 0,
+        spendablePool: 0,
+        myContributedPoints: soloEarned,
+        headRedeemCap: 0,
+        memberRedeemCap: Math.max(0, soloEarned - soloRed),
+        members: membersPayload,
+      },
+    };
+  }
+
+  const activePhones = wallet.members
+    .filter((m) => m.status === "active")
+    .map((m) => m.phone);
+
+  let poolEarned = 0;
+  for (const p of activePhones) {
+    poolEarned += await earnedPointsForPhone(p, orders);
+  }
+
+  const totalWalletRed = sumWalletRedemptions(redemptions, wallet.id);
+  const spendablePool = Math.max(0, poolEarned - totalWalletRed);
+
+  const myContributedPoints = soloEarned;
+  const myWalletRed = sumMemberWalletRedemptions(redemptions, wallet.id, canonical);
+  const memberRedeemCap = Math.min(
+    spendablePool,
+    Math.max(0, myContributedPoints - myWalletRed)
+  );
+  const headRedeemCap = spendablePool;
+  const spendablePoints = isHead ? headRedeemCap : memberRedeemCap;
+
+  const membersPayload: CustomerWalletPayload["members"] = await Promise.all(
+    wallet.members.map(async (m) => {
+      const contrib = await earnedPointsForPhone(m.phone, orders);
+      return {
+        phone: m.phone,
+        status: m.status,
+        isHead: phonesEqualPl(m.phone, wallet.headPhone),
+        contributedPoints: contrib,
+      };
+    })
+  );
+
+  return {
+    ordersCount,
+    points: poolEarned,
+    spendablePoints,
+    wallet: {
+      id: wallet.id,
+      role: isHead ? "head" : "member",
+      myStatus: "active",
+      poolEarned,
+      spendablePool,
+      myContributedPoints,
+      headRedeemCap,
+      memberRedeemCap,
+      members: membersPayload,
+    },
+  };
+}
+
+export async function redeemLoyaltyReward(
+  phone: string,
+  rewardId: string,
+  pointsCost: number
+): Promise<{ ok: true } | { error: string }> {
+  if (!Number.isFinite(pointsCost) || pointsCost <= 0) {
+    return { error: "Invalid points" };
+  }
+
+  const canonical = normalizePlPhoneE164(phone) || phone.trim();
+  const ctx = await resolveCustomerLoyalty(canonical);
+
+  if (pointsCost > ctx.spendablePoints) {
+    return { error: "Not enough points to redeem" };
+  }
+
+  return withLock("wallet-redemptions.json", async () => {
+    const list = await readJSON<WalletRedemption[]>("wallet-redemptions.json", []);
+    const ctx2 = await resolveCustomerLoyalty(canonical);
+    if (pointsCost > ctx2.spendablePoints) {
+      return { error: "Not enough points to redeem" };
+    }
+    let wid: string | null = null;
+    if (ctx2.wallet && ctx2.wallet.myStatus === "active") {
+      wid = ctx2.wallet.id;
+    }
+    list.push({
+      id: `r-${crypto.randomUUID()}`,
+      walletId: wid,
+      phone: canonical,
+      points: pointsCost,
+      rewardId,
+      createdAt: new Date().toISOString(),
+    });
+    await writeJSON("wallet-redemptions.json", list);
+    return { ok: true };
+  });
+}
+
+// --- Admin: family wallets + redemption ledger (support / ops) ---
+
+export interface AdminWalletMemberSummary {
+  phone: string;
+  status: WalletMemberStatus;
+  isHead: boolean;
+  contributedPoints: number;
+}
+
+export interface AdminWalletSummary {
+  id: string;
+  headPhone: string;
+  createdAt: string;
+  memberCount: number;
+  poolEarned: number;
+  spendablePool: number;
+  totalRedeemed: number;
+  members: AdminWalletMemberSummary[];
+}
+
+export async function getAdminWalletSummaries(): Promise<AdminWalletSummary[]> {
+  const wallets = await getFamilyWallets();
+  const orders = await getOrders();
+  const redemptions = await getWalletRedemptions();
+  const summaries: AdminWalletSummary[] = [];
+
+  for (const w of wallets) {
+    const activePhones = w.members
+      .filter((m) => m.status === "active")
+      .map((m) => m.phone);
+    let poolEarned = 0;
+    const members: AdminWalletMemberSummary[] = [];
+    for (const m of w.members) {
+      const contrib = await earnedPointsForPhone(m.phone, orders);
+      members.push({
+        phone: m.phone,
+        status: m.status,
+        isHead: phonesEqualPl(m.phone, w.headPhone),
+        contributedPoints: contrib,
+      });
+    }
+    for (const p of activePhones) {
+      poolEarned += await earnedPointsForPhone(p, orders);
+    }
+    const totalRedeemed = redemptions
+      .filter((r) => r.walletId === w.id)
+      .reduce((s, r) => s + r.points, 0);
+    const spendablePool = Math.max(0, poolEarned - totalRedeemed);
+    summaries.push({
+      id: w.id,
+      headPhone: w.headPhone,
+      createdAt: w.createdAt,
+      memberCount: w.members.length,
+      poolEarned,
+      spendablePool,
+      totalRedeemed,
+      members,
+    });
+  }
+  return summaries;
+}
+
+export async function adminDeleteFamilyWallet(walletId: string): Promise<boolean> {
+  return withLock("wallets.json", async () => {
+    const list = await readJSON<FamilyWallet[]>("wallets.json", []);
+    const next = list.filter((x) => x.id !== walletId);
+    if (next.length === list.length) return false;
+    await writeJSON("wallets.json", next);
+    return true;
+  });
+}
+
+export async function adminForceRemoveWalletMember(
+  walletId: string,
+  targetRaw: string
+): Promise<{ ok: true } | { error: string }> {
+  const target = normalizePlPhoneE164(targetRaw) || targetRaw.trim();
+  return withLock("wallets.json", async () => {
+    const list = await readJSON<FamilyWallet[]>("wallets.json", []);
+    const w = list.find((x) => x.id === walletId);
+    if (!w) return { error: "Wallet not found" };
+    if (phonesEqualPl(target, w.headPhone)) {
+      return {
+        error: "Cannot remove wallet head — dissolve the wallet instead",
+      };
+    }
+    const idx = w.members.findIndex((mem) => phonesEqualPl(mem.phone, target));
+    if (idx === -1) return { error: "Member not found" };
+    w.members.splice(idx, 1);
+    await writeJSON("wallets.json", list);
+    return { ok: true };
+  });
+}
+
+/** Removes a ledger row; restores customer spendable balance logic on next identify. */
+export async function adminVoidWalletRedemption(id: string): Promise<boolean> {
+  const trimmed = id.trim();
+  return withLock("wallet-redemptions.json", async () => {
+    const list = await readJSON<WalletRedemption[]>("wallet-redemptions.json", []);
+    const next = list.filter((r) => r.id !== trimmed);
+    if (next.length === list.length) return false;
+    await writeJSON("wallet-redemptions.json", next);
+    return true;
+  });
 }
 
 export async function getAllManualPoints(): Promise<Record<string, number>> {

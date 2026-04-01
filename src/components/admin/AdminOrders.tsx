@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { AdminNav } from "./AdminNav";
 import { statusBadgeClass } from "@/lib/admin-utils";
-import { Package, Truck, Clock, ClipboardList, RefreshCw, MapPin } from "lucide-react";
+import { Package, Truck, Clock, ClipboardList, RefreshCw, MapPin, Trash2 } from "lucide-react";
 import { locations } from "@/data/locations";
 import { LocationTabs } from "./LocationTabs";
 import { formatPrice } from "@/lib/utils";
@@ -20,6 +20,7 @@ export function AdminOrders() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedLocation, setSelectedLocation] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
@@ -48,6 +49,35 @@ export function AdminOrders() {
       body: JSON.stringify({ orderId, status }),
     });
     fetchOrders();
+  };
+
+  const handleDeleteOrder = async (orderId: string) => {
+    if (
+      !window.confirm(
+        "Delete this order permanently? This cannot be undone. The time slot will be freed if the slot still exists."
+      )
+    ) {
+      return;
+    }
+    setDeletingId(orderId);
+    try {
+      const res = await fetch("/api/admin/orders", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError((data as { error?: string }).error || "Could not delete order.");
+        return;
+      }
+      setError("");
+      await fetchOrders();
+    } catch {
+      setError("Network error while deleting.");
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   return (
@@ -95,15 +125,27 @@ export function AdminOrders() {
                       {order.customerName} &middot; {order.customerPhone}
                     </p>
                   </div>
-                  <select
-                    value={order.status}
-                    onChange={(e) => handleStatusChange(order.id, e.target.value)}
-                    className="glass-input px-3 py-1.5 rounded-lg text-sm"
-                  >
-                    {STATUS_ORDER.map((s) => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <select
+                      value={order.status}
+                      onChange={(e) => handleStatusChange(order.id, e.target.value)}
+                      className="glass-input px-3 py-1.5 rounded-lg text-sm"
+                    >
+                      {STATUS_ORDER.map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteOrder(order.id)}
+                      disabled={deletingId === order.id}
+                      className="glass-input px-3 py-1.5 rounded-lg text-sm text-red-400 hover:bg-red-500/10 border-red-500/20 disabled:opacity-50 inline-flex items-center gap-1.5"
+                      title="Delete order from database"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      {deletingId === order.id ? "…" : "Delete"}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-4 text-sm admin-text-muted mb-3">

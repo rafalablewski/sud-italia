@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getLoyaltyMember, updateLoyaltyMember } from "@/lib/store";
 import { cookies } from "next/headers";
+import { normalizePlPhoneE164 } from "@/lib/phone";
 
 export async function PUT(req: NextRequest) {
   const cookieStore = await cookies();
@@ -10,7 +11,9 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const phone = decodeURIComponent(phoneCookie.value);
+  const phone =
+    normalizePlPhoneE164(decodeURIComponent(phoneCookie.value)) ??
+    decodeURIComponent(phoneCookie.value).trim();
   const member = await getLoyaltyMember(phone);
 
   if (!member) {
