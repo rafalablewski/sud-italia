@@ -12,8 +12,6 @@ import { SeasonalSpecials } from "./SeasonalSpecials";
 import { ReorderSection } from "./ReorderSection";
 import { SpeedGuarantee } from "./SpeedGuarantee";
 import { ComboDealsPreview } from "./ComboDealsPreview";
-import { RewardsLocationTeaser } from "@/components/location/RewardsLocationTeaser";
-import { CustomerGate } from "@/components/loyalty/CustomerGate";
 import { getItemBadges } from "@/lib/upsell";
 import { getItemRating } from "@/data/ratings";
 import { Search, X, ArrowUpDown, Check } from "lucide-react";
@@ -302,14 +300,6 @@ export function MenuSection({ items, locationSlug }: MenuSectionProps) {
                 Clear search
               </button>
             )}
-          </div>
-        )}
-        {/* Rewards teaser — full gamification lives on /rewards */}
-        {!isSearching && (
-          <div className="mt-10">
-            <CustomerGate>
-              <RewardsLocationTeaser />
-            </CustomerGate>
           </div>
         )}
       </Container>
