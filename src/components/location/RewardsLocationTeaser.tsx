@@ -1,30 +1,32 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, Flame, Gift, Target } from "lucide-react";
+import { ChevronRight, Flame, Gift, Star, Target } from "lucide-react";
 import { useCustomer } from "@/store/customer";
 
 const previewRows = [
   {
     icon: Target,
     label: "Weekly challenges",
-    hint: "Limited-time goals",
+    hint: "Limited-time goals and bonus points",
+    iconWrap: "bg-italia-red/10 text-italia-red",
   },
   {
     icon: Flame,
     label: "Streaks & achievements",
-    hint: "Unlock as you order",
+    hint: "Unlock badges as you order",
+    iconWrap: "bg-italia-gold/15 text-italia-gold-dark",
   },
   {
     icon: Gift,
     label: "Referral rewards",
-    hint: "Share with friends",
+    hint: "Share your code — you both win",
+    iconWrap: "bg-italia-red/10 text-italia-red",
   },
 ] as const;
 
 /**
- * Location menu: compact frosted card that invites customers to /rewards.
- * Intentionally does not embed AchievementsPanel — avoids blurry duplicates and heavy layout.
+ * Location menu: compact card in the same visual language as LoyaltyCard / location promos.
  */
 export function RewardsLocationTeaser() {
   const { customer } = useCustomer();
@@ -32,84 +34,58 @@ export function RewardsLocationTeaser() {
   return (
     <Link
       href="/rewards"
-      className="group relative isolate block overflow-hidden rounded-[1.25rem] outline-none transition-[transform,box-shadow] duration-300 ease-out focus-visible:ring-2 focus-visible:ring-black/20 focus-visible:ring-offset-2 focus-visible:ring-offset-italia-cream hover:shadow-lg active:scale-[0.99]"
-      aria-label="Open Sud Italia Rewards — weekly challenges, achievements, streaks and referral program"
+      className="group block rounded-2xl border border-italia-gold/20 bg-gradient-to-br from-italia-gold/5 to-italia-red/5 p-5 outline-none transition-all hover:border-italia-gold/35 hover:shadow-md focus-visible:ring-2 focus-visible:ring-italia-red focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+      aria-label="Open Sud Italia Rewards — challenges, achievements, streaks and referral program"
     >
-      {/* Layered glass surface */}
-      <div
-        className="absolute inset-0 rounded-[1.25rem] bg-gradient-to-br from-white/90 via-white/55 to-white/30 shadow-[0_1px_0_0_rgba(255,255,255,0.8)_inset,0_8px_32px_-8px_rgba(0,0,0,0.12)]"
-        aria-hidden
-      />
-      <div
-        className="absolute inset-0 rounded-[1.25rem] border border-black/[0.06] bg-white/25 backdrop-blur-2xl backdrop-saturate-150"
-        aria-hidden
-      />
-      <div
-        className="absolute -top-24 -right-16 h-48 w-48 rounded-full bg-italia-red/[0.06] blur-3xl"
-        aria-hidden
-      />
-      <div
-        className="absolute -bottom-20 -left-10 h-40 w-56 rounded-full bg-italia-gold/[0.08] blur-3xl"
-        aria-hidden
-      />
-
-      <div className="relative px-5 py-5 sm:px-6 sm:py-6">
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0 space-y-1">
-            <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.14em] text-black/40">
-              Sud Italia
-            </p>
-            <h3 className="font-sans text-xl font-semibold tracking-[-0.02em] text-black/88 sm:text-[1.35rem]">
-              Rewards
-            </h3>
-            {customer ? (
-              <p className="font-sans text-[13px] leading-snug text-black/45">
-                <span className="font-medium text-black/55">
-                  {customer.points.toLocaleString()} pts
-                </span>
-                <span className="mx-1.5 text-black/25">·</span>
-                {customer.ordersCount}{" "}
-                {customer.ordersCount === 1 ? "order" : "orders"}
-              </p>
-            ) : (
-              <p className="font-sans text-[13px] leading-snug text-black/45">
-                Your full dashboard lives here
-              </p>
-            )}
-          </div>
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/[0.05] text-black/35 transition-all duration-300 group-hover:bg-black/[0.08] group-hover:text-black/55">
-            <ChevronRight
-              className="h-[18px] w-[18px] transition-transform duration-300 group-hover:translate-x-0.5"
-              strokeWidth={2}
-              aria-hidden
-            />
-          </div>
+      <div className="flex items-start gap-3 mb-4">
+        <div className="w-10 h-10 rounded-xl bg-italia-gold/15 flex items-center justify-center flex-shrink-0">
+          <Star className="h-5 w-5 text-italia-gold" aria-hidden />
         </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-italia-gold-dark font-medium text-xs tracking-[0.12em] uppercase mb-0.5">
+            Loyalty
+          </p>
+          <h3 className="font-heading font-semibold text-lg text-italia-dark leading-tight">
+            Sud Italia Rewards
+          </h3>
+          {customer ? (
+            <p className="text-xs text-italia-gray mt-1">
+              <span className="font-semibold text-italia-gold-dark">
+                {customer.points.toLocaleString()} pts
+              </span>
+              <span className="mx-1">·</span>
+              {customer.ordersCount} {customer.ordersCount === 1 ? "order" : "orders"}
+            </p>
+          ) : (
+            <p className="text-xs text-italia-gray mt-1">
+              Challenges, streaks &amp; referral — all on your rewards page
+            </p>
+          )}
+        </div>
+      </div>
 
-        <ul className="mt-5 space-y-0.5" role="list">
-          {previewRows.map(({ icon: Icon, label, hint }) => (
-            <li
-              key={label}
-              className="flex items-center gap-3 rounded-xl px-2 py-2.5 transition-colors duration-200 group-hover:bg-black/[0.02]"
+      <div className="bg-white rounded-xl border border-gray-100 p-3.5 space-y-1">
+        {previewRows.map(({ icon: Icon, label, hint, iconWrap }) => (
+          <div
+            key={label}
+            className="flex items-center gap-3 rounded-lg px-1 py-2 transition-colors group-hover:bg-gray-50/80"
+          >
+            <span
+              className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg ${iconWrap}`}
             >
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-black/[0.04] text-black/40">
-                <Icon className="h-[18px] w-[18px]" strokeWidth={1.75} aria-hidden />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block font-sans text-[15px] font-medium tracking-[-0.01em] text-black/80">
-                  {label}
-                </span>
-                <span className="block font-sans text-[12px] leading-tight text-black/38">
-                  {hint}
-                </span>
-              </span>
-            </li>
-          ))}
-        </ul>
+              <Icon className="h-4 w-4" aria-hidden />
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-italia-dark leading-snug">{label}</p>
+              <p className="text-[11px] text-italia-gray leading-snug">{hint}</p>
+            </div>
+          </div>
+        ))}
+      </div>
 
-        <p className="mt-4 border-t border-black/[0.06] pt-4 font-sans text-[12px] leading-relaxed text-black/42">
-          Tap to open your rewards hub — same experience as signing in on the Rewards page.
-        </p>
+      <div className="mt-4 flex items-center justify-center gap-2 text-sm font-medium text-italia-dark">
+        <span className="text-italia-red group-hover:underline">Open rewards dashboard</span>
+        <ChevronRight className="h-4 w-4 text-italia-red transition-transform group-hover:translate-x-0.5" aria-hidden />
       </div>
     </Link>
   );
