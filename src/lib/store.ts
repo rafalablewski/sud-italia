@@ -3,6 +3,7 @@ import { join } from "path";
 import { neon } from "@neondatabase/serverless";
 import { TimeSlot, Order, Ingredient, Recipe } from "@/data/types";
 import { locations as allLocations } from "@/data/locations";
+import { normalizePlPhoneE164, phonesEqualPl } from "@/lib/phone";
 
 // --- Storage abstraction: Neon Postgres when DATABASE_URL is set, filesystem fallback for local dev ---
 
@@ -175,6 +176,18 @@ export async function incrementSlotOrders(id: string): Promise<boolean> {
   });
 }
 
+/** Release one slot booking (e.g. when an order is removed). */
+export async function decrementSlotOrders(id: string): Promise<boolean> {
+  return withLock("slots.json", async () => {
+    const slots = await readJSON<TimeSlot[]>("slots.json", []);
+    const slot = slots.find((s) => s.id === id);
+    if (!slot) return false;
+    slot.currentOrders = Math.max(0, slot.currentOrders - 1);
+    await writeJSON("slots.json", slots);
+    return true;
+  });
+}
+
 // --- Available slots for clients ---
 
 export async function getAvailableSlots(
@@ -221,6 +234,23 @@ export async function updateOrderStatus(id: string, status: Order["status"]): Pr
     await writeJSON("orders.json", orders);
     return orders[index];
   });
+}
+
+export async function deleteOrder(id: string): Promise<boolean> {
+  let slotId: string | undefined;
+  const removed = await withLock("orders.json", async () => {
+    const orders = await readJSON<Order[]>("orders.json", []);
+    const index = orders.findIndex((o) => o.id === id);
+    if (index === -1) return false;
+    slotId = orders[index].slotId;
+    orders.splice(index, 1);
+    await writeJSON("orders.json", orders);
+    return true;
+  });
+  if (removed && slotId) {
+    await decrementSlotOrders(slotId);
+  }
+  return removed;
 }
 
 // --- Analytics ---
@@ -438,6 +468,9 @@ export interface InsightsData {
   locationComparison: LocationComparison[];
   repeatCustomers: CustomerMetric[];
   avgItemsPerOrder: number;
+  /** Best-selling SKUs in the period (by quantity). */
+  topSellers: { name: string; quantity: number; revenue: number }[];
+  /** Slowest movers — only when at least 2 different menu items sold (otherwise empty). */
   worstSellers: { name: string; quantity: number; revenue: number }[];
   cancelledOrders: number;
   cancellationRate: number;
@@ -488,8 +521,11 @@ export async function getInsights(dateFrom?: string, dateTo?: string): Promise<I
 
   for (const loc of activeLocations) {
     const locOrders = orders.filter((o) => o.locationSlug === loc.slug);
-    const completed = locOrders.filter((o) => o.status !== "pending");
-    const cancelled = locOrders.filter((o) => o.status === "pending");
+    // Revenue / KPIs: exclude unpaid queue (pending) and voided orders (cancelled)
+    const completed = locOrders.filter(
+      (o) => o.status !== "pending" && o.status !== "cancelled"
+    );
+    const cancelled = locOrders.filter((o) => o.status === "cancelled");
     let revenue = 0;
     let cost = 0;
     let totalItems = 0;
@@ -526,7 +562,7 @@ export async function getInsights(dateFrom?: string, dateTo?: string): Promise<I
   // --- Repeat customers ---
   const customerMap = new Map<string, CustomerMetric>();
   for (const order of orders) {
-    const key = order.customerPhone;
+    const key = normalizePlPhoneE164(order.customerPhone) ?? order.customerPhone;
     const existing = customerMap.get(key);
     if (existing) {
       existing.orderCount += 1;
@@ -551,7 +587,9 @@ export async function getInsights(dateFrom?: string, dateTo?: string): Promise<I
     .slice(0, 10);
 
   // --- Avg items per order ---
-  const completedOrders = orders.filter((o) => o.status !== "pending");
+  const completedOrders = orders.filter(
+    (o) => o.status !== "pending" && o.status !== "cancelled"
+  );
   let totalItemsAll = 0;
   for (const o of completedOrders) {
     for (const ci of o.items) totalItemsAll += ci.quantity;
@@ -577,13 +615,20 @@ export async function getInsights(dateFrom?: string, dateTo?: string): Promise<I
       }
     }
   }
-  const worstSellers = Array.from(itemSales.values())
-    .sort((a, b) => a.quantity - b.quantity)
+  const salesList = Array.from(itemSales.values());
+  const topSellers = [...salesList]
+    .sort((a, b) => b.quantity - a.quantity)
     .slice(0, 5);
+  // "Worst" only when there is another SKU to compare against
+  const worstSellers =
+    itemSales.size >= 2
+      ? [...salesList].sort((a, b) => a.quantity - b.quantity).slice(0, 5)
+      : [];
 
-  // --- Cancellation rate ---
-  const cancelled = orders.filter((o) => o.status === "pending");
-  const cancellationRate = orders.length > 0 ? Math.round((cancelled.length / orders.length) * 100) : 0;
+  // --- Cancellation rate (actual cancelled status, not "pending" new orders) ---
+  const cancelled = orders.filter((o) => o.status === "cancelled");
+  const cancellationRate =
+    orders.length > 0 ? Math.round((cancelled.length / orders.length) * 100) : 0;
 
   // --- Peak hours ---
   const hourMap = new Map<number, { count: number; revenue: number }>();
@@ -603,6 +648,7 @@ export async function getInsights(dateFrom?: string, dateTo?: string): Promise<I
     locationComparison,
     repeatCustomers,
     avgItemsPerOrder,
+    topSellers,
     worstSellers,
     cancelledOrders: cancelled.length,
     cancellationRate,
@@ -891,28 +937,35 @@ export async function getLoyaltyMembers(): Promise<LoyaltyMember[]> {
 }
 
 export async function addLoyaltyMember(member: LoyaltyMember): Promise<LoyaltyMember> {
+  const canonical = normalizePlPhoneE164(member.phone) || member.phone.trim();
+  const toSave: LoyaltyMember = { ...member, phone: canonical };
   return withLock("loyalty-members.json", async () => {
     const list = await readJSON<LoyaltyMember[]>("loyalty-members.json", []);
-    // Don't add duplicates
-    if (list.some((m) => m.phone === member.phone)) return member;
-    list.push(member);
+    if (list.some((m) => phonesEqualPl(m.phone, canonical))) return toSave;
+    list.push(toSave);
     await writeJSON("loyalty-members.json", list);
-    return member;
+    return toSave;
   });
 }
 
 export async function getLoyaltyMember(phone: string): Promise<LoyaltyMember | undefined> {
   const list = await readJSON<LoyaltyMember[]>("loyalty-members.json", []);
-  return list.find((m) => m.phone === phone);
+  const canonical = normalizePlPhoneE164(phone);
+  if (canonical) {
+    const hit = list.find((m) => phonesEqualPl(m.phone, canonical));
+    if (hit) return hit;
+  }
+  return list.find((m) => m.phone === phone.trim());
 }
 
 export async function updateLoyaltyMember(
   phone: string,
   updates: Partial<Pick<LoyaltyMember, "name" | "lastName" | "nickname" | "email">>
 ): Promise<LoyaltyMember | null> {
+  const canonical = normalizePlPhoneE164(phone) || phone.trim();
   return withLock("loyalty-members.json", async () => {
     const list = await readJSON<LoyaltyMember[]>("loyalty-members.json", []);
-    const index = list.findIndex((m) => m.phone === phone);
+    const index = list.findIndex((m) => phonesEqualPl(m.phone, canonical));
     if (index === -1) return null;
     list[index] = { ...list[index], ...updates };
     await writeJSON("loyalty-members.json", list);
@@ -944,7 +997,12 @@ export async function addPointAdjustment(adj: PointAdjustment): Promise<void> {
 
 export async function getManualPointsTotal(phone: string): Promise<number> {
   const all = await getPointAdjustments();
-  return all.filter((a) => a.phone === phone).reduce((sum, a) => sum + a.amount, 0);
+  const canonical = normalizePlPhoneE164(phone);
+  return all
+    .filter((a) =>
+      canonical ? phonesEqualPl(a.phone, canonical) : a.phone.trim() === phone.trim()
+    )
+    .reduce((sum, a) => sum + a.amount, 0);
 }
 
 export async function getAllManualPoints(): Promise<Record<string, number>> {

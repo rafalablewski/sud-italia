@@ -25,20 +25,24 @@ function OrderConfirmationContent() {
   const [orderData, setOrderData] = useState<{ totalAmount: number; itemCount: number } | null>(null);
   useEffect(() => {
     if (!orderId) return;
-    fetch(`/api/orders?id=${orderId}`)
+    fetch(`/api/orders?orderId=${encodeURIComponent(orderId)}`)
       .then((r) => r.json())
       .then((data) => {
-        if (data && data.totalAmount) {
-          setOrderData({ totalAmount: data.totalAmount, itemCount: data.items?.length || 0 });
+        const totalAmount = data?.order?.totalAmount ?? data?.totalAmount;
+        const itemCount = data?.order?.items?.length ?? data?.items?.length ?? 0;
+        if (typeof totalAmount === "number") {
+          setOrderData({ totalAmount, itemCount });
         }
       })
       .catch(() => {});
   }, [orderId]);
 
   const pointsEarned = orderData ? Math.floor(orderData.totalAmount / 100) : 0;
-  const totalPoints = customer?.points ? customer.points + pointsEarned : pointsEarned;
-  const tierName = customer ? calculateTier(totalPoints) : calculateTier(pointsEarned);
-  const orderCount = customer?.ordersCount || 1;
+  const priorPoints = customer?.points ?? 0;
+  const totalPoints = priorPoints + pointsEarned;
+  const tierName = calculateTier(totalPoints);
+  // API ordersCount excludes the current order while it is still "pending"; +1 = this checkout.
+  const orderCount = customer != null ? (customer.ordersCount ?? 0) + 1 : 1;
   const customerName = customer?.name || "Customer";
 
   return (

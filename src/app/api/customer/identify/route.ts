@@ -1,18 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOrders, getLoyaltyMember, addLoyaltyMember, getManualPointsTotal } from "@/lib/store";
+import { normalizePlPhoneE164, phonesEqualPl } from "@/lib/phone";
 
 export async function GET(req: NextRequest) {
-  const phone = req.nextUrl.searchParams.get("phone");
+  const phoneRaw = req.nextUrl.searchParams.get("phone");
   const signup = req.nextUrl.searchParams.get("signup");
 
+  if (!phoneRaw) {
+    return NextResponse.json({ customer: null });
+  }
+
+  const phone = normalizePlPhoneE164(phoneRaw);
   if (!phone) {
     return NextResponse.json({ customer: null });
   }
 
-  // Find all orders by this phone number
+  // Find all orders by this phone number (match any legacy stored format)
   const allOrders = await getOrders();
   const customerOrders = allOrders.filter(
-    (o) => o.customerPhone === phone && o.status !== "pending"
+    (o) => phonesEqualPl(o.customerPhone, phone) && o.status !== "pending"
   );
 
   if (customerOrders.length > 0) {

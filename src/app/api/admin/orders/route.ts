@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAuthenticated } from "@/lib/admin-auth";
-import { getOrders, updateOrderStatus } from "@/lib/store";
+import { getOrders, updateOrderStatus, deleteOrder } from "@/lib/store";
 import { Order } from "@/data/types";
 
 async function requireAuth() {
@@ -45,6 +45,28 @@ export async function PUT(req: NextRequest) {
     }
 
     return NextResponse.json(order);
+  } catch {
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  const authError = await requireAuth();
+  if (authError) return authError;
+
+  try {
+    const { orderId } = await req.json();
+
+    if (!orderId || typeof orderId !== "string") {
+      return NextResponse.json({ error: "Missing orderId" }, { status: 400 });
+    }
+
+    const ok = await deleteOrder(orderId);
+    if (!ok) {
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

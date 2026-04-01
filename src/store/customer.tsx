@@ -49,7 +49,8 @@ export function CustomerProvider({ children }: { children: React.ReactNode }) {
       const data = await res.json();
       if (data.customer) {
         setCustomer(data.customer);
-        document.cookie = `sud-italia-customer=${encodeURIComponent(phone)};path=/;max-age=${60 * 60 * 24 * 365};samesite=lax`;
+        const cookiePhone = data.customer.phone || phone;
+        document.cookie = `sud-italia-customer=${encodeURIComponent(cookiePhone)};path=/;max-age=${60 * 60 * 24 * 365};samesite=lax`;
       } else {
         setCustomer(null);
       }

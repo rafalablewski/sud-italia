@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOrders } from "@/lib/store";
+import { normalizePlPhoneE164, phonesEqualPl } from "@/lib/phone";
 
 export async function GET(req: NextRequest) {
-  const phone = req.nextUrl.searchParams.get("phone");
+  const phoneRaw = req.nextUrl.searchParams.get("phone");
 
+  if (!phoneRaw) {
+    return NextResponse.json({ orders: [] });
+  }
+
+  const phone = normalizePlPhoneE164(phoneRaw);
   if (!phone) {
     return NextResponse.json({ orders: [] });
   }
@@ -13,7 +19,7 @@ export async function GET(req: NextRequest) {
   const customerOrders = allOrders
     .filter(
       (o) =>
-        o.customerPhone === phone &&
+        phonesEqualPl(o.customerPhone, phone) &&
         o.status !== "pending" // only confirmed+ orders
     )
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))

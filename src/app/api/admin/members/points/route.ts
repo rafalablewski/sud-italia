@@ -6,6 +6,7 @@ import {
   addPointAdjustment,
   getManualPointsTotal,
 } from "@/lib/store";
+import { normalizePlPhoneE164, phonesEqualPl } from "@/lib/phone";
 
 async function requireAuth() {
   if (!(await isAuthenticated())) {
@@ -31,9 +32,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Phone and non-zero amount required" }, { status: 400 });
   }
 
+  const phoneE164 = normalizePlPhoneE164(String(phone));
+  if (!phoneE164) {
+    return NextResponse.json({ error: "Invalid Polish phone number" }, { status: 400 });
+  }
+
   try {
     await addPointAdjustment({
-      phone,
+      phone: phoneE164,
       amount,
       reason: reason || (amount > 0 ? "Manual points added" : "Manual points removed"),
       adjustedBy: "admin",
@@ -42,16 +48,16 @@ export async function POST(req: NextRequest) {
 
     // Ensure the member exists
     const members = await getLoyaltyMembers();
-    if (!members.some((m) => m.phone === phone)) {
+    if (!members.some((m) => phonesEqualPl(m.phone, phoneE164))) {
       await addLoyaltyMember({
-        phone,
+        phone: phoneE164,
         name: "Member",
         signedUpAt: new Date().toISOString(),
       });
     }
 
-    const total = await getManualPointsTotal(phone);
-    return NextResponse.json({ phone, manualPoints: total, success: true });
+    const total = await getManualPointsTotal(phoneE164);
+    return NextResponse.json({ phone: phoneE164, manualPoints: total, success: true });
   } catch (error) {
     console.error("Points adjustment error:", error);
     return NextResponse.json(
