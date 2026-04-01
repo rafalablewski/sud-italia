@@ -1,7 +1,6 @@
 "use client";
 
 import { MenuItem as MenuItemType } from "@/data/types";
-import { CATEGORY_ICONS, CATEGORY_COLORS } from "@/data/menu-ui";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { MenuItemImage } from "./MenuItemImage";
@@ -75,13 +74,18 @@ export function MenuItemCard({
     }
   };
 
-  const Icon = CATEGORY_ICONS[item.category];
-  const iconColor = CATEGORY_COLORS[item.category] || "bg-gray-50 text-gray-500";
   const isPopular = badges.includes("popular");
+
+  const hasMetaStrip = Boolean(
+    itemRating ||
+      details?.prepTimeMinutes ||
+      details?.nutrition ||
+      details
+  );
 
   return (
     <div
-      className={`relative flex gap-4 p-4 rounded-2xl border transition-all duration-300 ${
+      className={`relative flex flex-col gap-3 p-4 rounded-2xl border transition-all duration-300 ${
         !item.available
           ? "bg-gray-50 border-gray-100 opacity-60"
           : inCart
@@ -125,115 +129,118 @@ export function MenuItemCard({
         </div>
       )}
 
-      {/* Food item visual */}
-      <MenuItemImage category={item.category} name={item.name} />
-
-      <div className="flex-1 min-w-0">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="font-heading font-semibold text-italia-dark">
-                {item.name}
-              </h3>
-              {item.tags.map((tag) => {
-                const t = TAG_LABELS[tag];
-                return t ? (
-                  <Badge key={tag} variant={t.variant}>
-                    {t.label}
-                  </Badge>
-                ) : null;
-              })}
-            </div>
-            <p className="text-sm text-italia-gray mt-1 leading-relaxed line-clamp-3">
-              {item.description}
-            </p>
-            {/* Pairing hint for main courses */}
-            {(item.category === "pizza" || item.category === "pasta") && isPopular && (
-              <p className="text-[11px] text-italia-gold mt-1 font-medium">
-                Pairs perfectly with espresso & tiramisù
-              </p>
-            )}
-            {/* Quick details: rating + prep time + calories */}
-            <div className="flex items-center gap-3 mt-1 flex-wrap">
-              {itemRating && (
-                <StarRating rating={itemRating.rating} reviewCount={itemRating.count} />
-              )}
-              {details?.prepTimeMinutes && (
-                <span className="flex items-center gap-0.5 text-[11px] text-italia-gray">
-                  <Clock className="h-3 w-3" />
-                  {details.prepTimeMinutes}m
-                </span>
-              )}
-              {details?.nutrition && (
-                <span className="flex items-center gap-0.5 text-[11px] text-italia-gray">
-                  <Flame className="h-3 w-3" />
-                  {details.nutrition.calories} kcal
-                </span>
-              )}
-              {details && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); setDetailOpen(true); }}
-                  className="flex items-center gap-0.5 text-[11px] text-italia-red font-medium hover:underline"
-                >
-                  <Info className="h-3 w-3" />
-                  Details
-                </button>
-              )}
-            </div>
-          </div>
+      {/* Row 1: thumbnail + title, description, pairing (full text width beside image) */}
+      <div className="flex gap-4 items-start">
+        <div className="flex-shrink-0 self-center">
+          <MenuItemImage category={item.category} name={item.name} />
         </div>
-
-        <div className="flex items-center justify-between mt-3">
-          <p className="text-lg font-bold text-italia-dark">
-            {formatPrice(item.price)}
-          </p>
-
-          <div className="flex items-center gap-2">
-            {/* Quantity in cart indicator */}
-            {inCart && !justAdded && (
-              <span className="text-xs font-semibold text-italia-green animate-fade-in">
-                {quantity} in cart
-              </span>
-            )}
-
-            {/* Added confirmation */}
-            {justAdded && (
-              <span className="inline-flex items-center gap-1 px-2 py-1 bg-italia-green text-white text-xs font-semibold rounded-lg animate-bounce-in">
-                <Check className="h-3 w-3" /> Added!
-              </span>
-            )}
-
-            {/* Quantity controls */}
-            {quantity === 0 ? (
-              <Button
-                onClick={handleAdd}
-                variant="primary"
-                size="sm"
-                className="min-h-[40px] min-w-[72px] rounded-xl"
-                disabled={!item.available}
-              >
-                <Plus className="h-4 w-4 mr-1" /> Add
-              </Button>
-            ) : (
-              <div className="flex items-center gap-0.5 bg-gray-50 rounded-xl p-0.5">
-                <button
-                  onClick={handleDecrement}
-                  className="w-10 h-10 flex items-center justify-center rounded-lg bg-white border border-gray-200 text-italia-red hover:bg-red-50 transition-colors shadow-sm"
-                >
-                  <Minus className="h-4 w-4" />
-                </button>
-                <span className="w-8 text-center font-bold text-italia-dark tabular-nums text-sm">
-                  {quantity}
-                </span>
-                <button
-                  onClick={handleAdd}
-                  className="w-10 h-10 flex items-center justify-center rounded-lg bg-italia-red text-white hover:bg-italia-red-dark transition-colors shadow-sm"
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
-              </div>
-            )}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="font-heading font-semibold text-italia-dark">
+              {item.name}
+            </h3>
+            {item.tags.map((tag) => {
+              const t = TAG_LABELS[tag];
+              return t ? (
+                <Badge key={tag} variant={t.variant}>
+                  {t.label}
+                </Badge>
+              ) : null;
+            })}
           </div>
+          <p className="text-sm text-italia-gray mt-1 leading-relaxed line-clamp-3">
+            {item.description}
+          </p>
+          {(item.category === "pizza" || item.category === "pasta") && isPopular && (
+            <p className="text-[11px] text-italia-gold mt-1 font-medium">
+              Pairs perfectly with espresso & tiramisù
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Row 2: full-width meta strip (rating, time, kcal, Details) */}
+      {hasMetaStrip && (
+        <div className="flex items-center gap-3 flex-wrap border-t border-gray-100 pt-3">
+          {itemRating && (
+            <StarRating rating={itemRating.rating} reviewCount={itemRating.count} />
+          )}
+          {details?.prepTimeMinutes && (
+            <span className="flex items-center gap-0.5 text-[11px] text-italia-gray">
+              <Clock className="h-3 w-3" aria-hidden />
+              {details.prepTimeMinutes}m
+            </span>
+          )}
+          {details?.nutrition && (
+            <span className="flex items-center gap-0.5 text-[11px] text-italia-gray">
+              <Flame className="h-3 w-3" aria-hidden />
+              {details.nutrition.calories} kcal
+            </span>
+          )}
+          {details && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setDetailOpen(true);
+              }}
+              className="flex items-center gap-0.5 text-[11px] text-italia-red font-medium hover:underline"
+            >
+              <Info className="h-3 w-3" aria-hidden />
+              Details
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Row 3: price + cart actions */}
+      <div className="flex items-center justify-between">
+        <p className="text-lg font-bold text-italia-dark">
+          {formatPrice(item.price)}
+        </p>
+
+        <div className="flex items-center gap-2">
+          {inCart && !justAdded && (
+            <span className="text-xs font-semibold text-italia-green animate-fade-in">
+              {quantity} in cart
+            </span>
+          )}
+
+          {justAdded && (
+            <span className="inline-flex items-center gap-1 px-2 py-1 bg-italia-green text-white text-xs font-semibold rounded-lg animate-bounce-in">
+              <Check className="h-3 w-3" /> Added!
+            </span>
+          )}
+
+          {quantity === 0 ? (
+            <Button
+              onClick={handleAdd}
+              variant="primary"
+              size="sm"
+              className="min-h-[40px] min-w-[72px] rounded-xl"
+              disabled={!item.available}
+            >
+              <Plus className="h-4 w-4 mr-1" /> Add
+            </Button>
+          ) : (
+            <div className="flex items-center gap-0.5 bg-gray-50 rounded-xl p-0.5">
+              <button
+                onClick={handleDecrement}
+                className="w-10 h-10 flex items-center justify-center rounded-lg bg-white border border-gray-200 text-italia-red hover:bg-red-50 transition-colors shadow-sm"
+              >
+                <Minus className="h-4 w-4" />
+              </button>
+              <span className="w-8 text-center font-bold text-italia-dark tabular-nums text-sm">
+                {quantity}
+              </span>
+              <button
+                onClick={handleAdd}
+                className="w-10 h-10 flex items-center justify-center rounded-lg bg-italia-red text-white hover:bg-italia-red-dark transition-colors shadow-sm"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
