@@ -359,21 +359,9 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
               const t = selectedSlotTime || "your time";
 
               if (!selectedSlotId) {
+                // Low-stock warning already shown inside SlotPicker; avoid duplicate amber banner.
                 if (slotFomo.anyLow) {
-                  return (
-                    <div
-                      className="mt-2 flex items-start gap-2.5 rounded-xl border border-amber-200/80 bg-amber-50 px-3 py-2.5"
-                      role="status"
-                    >
-                      <AlertCircle
-                        className="h-4 w-4 flex-shrink-0 text-amber-700 mt-0.5"
-                        aria-hidden
-                      />
-                      <p className="text-xs font-medium text-amber-950 leading-snug">
-                        Some times today are almost full — pick your slot below.
-                      </p>
-                    </div>
-                  );
+                  return null;
                 }
                 return (
                   <div
