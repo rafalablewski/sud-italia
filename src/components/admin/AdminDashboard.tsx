@@ -9,7 +9,7 @@ import {
   TrendingUp, TrendingDown, DollarSign, ShoppingBag, Package,
   Truck, Clock, Bell, CheckCheck, ArrowRight, BarChart3,
   RefreshCw, MapPin, Users, XCircle, AlertTriangle, Layers,
-  Activity, CalendarDays, Trash2,
+  Activity, CalendarDays, Trash2, Eraser,
 } from "lucide-react";
 import Link from "next/link";
 import type { Order } from "@/data/types";
@@ -128,12 +128,41 @@ export function AdminDashboard() {
     }
   };
 
+  const pruneOrphanOrderNotifs = async () => {
+    if (
+      !window.confirm(
+        "Remove new-order notifications that do not match any existing order? Other notification types are kept."
+      )
+    ) {
+      return;
+    }
+    setPruneNotifsHint(null);
+    try {
+      const res = await fetch("/api/admin/notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pruneOrphanNewOrders: true }),
+      });
+      const data = (await res.json()) as { removed?: number; error?: string };
+      if (!res.ok) {
+        setPruneNotifsHint(data.error || "Could not clean up.");
+        return;
+      }
+      setPruneNotifsHint(`Removed ${data.removed ?? 0} orphan new-order alert(s).`);
+      setTimeout(() => setPruneNotifsHint(null), 8000);
+      await fetchAll();
+    } catch {
+      setPruneNotifsHint("Network error.");
+    }
+  };
+
   const handleStatusChange = async (orderId: string, status: string) => {
     await fetch("/api/admin/orders", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderId, status }) });
     fetchAll();
   };
 
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const [pruneNotifsHint, setPruneNotifsHint] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading) setLastRefresh(new Date());
@@ -285,12 +314,27 @@ export function AdminDashboard() {
                   <span className="px-2 py-0.5 bg-italia-red text-white text-xs font-bold rounded-full">{unreadNotifs.length}</span>
                 )}
               </h2>
-              {unreadNotifs.length > 0 && (
-                <button onClick={markAllRead} className="text-xs admin-text-dim hover:text-white flex items-center gap-1 transition-colors">
-                  <CheckCheck className="h-3 w-3" /> Mark all read
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={pruneOrphanOrderNotifs}
+                  className="text-xs admin-text-dim hover:text-amber-200 flex items-center gap-1 transition-colors"
+                  title="Delete new-order alerts for orders that no longer exist"
+                >
+                  <Eraser className="h-3 w-3" /> Remove orphan order alerts
                 </button>
-              )}
+                {unreadNotifs.length > 0 && (
+                  <button type="button" onClick={markAllRead} className="text-xs admin-text-dim hover:text-white flex items-center gap-1 transition-colors">
+                    <CheckCheck className="h-3 w-3" /> Mark all read
+                  </button>
+                )}
+              </div>
             </div>
+            {pruneNotifsHint && (
+              <p className={`text-xs mb-3 ${pruneNotifsHint.includes("Removed") ? "text-emerald-400/90" : "text-red-400/90"}`}>
+                {pruneNotifsHint}
+              </p>
+            )}
             {notifications.length === 0 ? (
               <div className="py-8 text-center">
                 <Bell className="h-8 w-8 mx-auto mb-2 admin-text-dim opacity-40" />

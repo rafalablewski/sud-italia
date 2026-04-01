@@ -723,12 +723,55 @@ export async function deleteNotification(id: string): Promise<boolean> {
   });
 }
 
-/** Drop notifications tied to an order (by orderId). */
+/** True if this notification is for the given order (stored id and/or order id in message for legacy rows). */
+function notificationMatchesOrder(n: Notification, orderId: string): boolean {
+  if (!orderId) return false;
+  if (n.orderId === orderId) return true;
+  if (n.type === "new_order" && n.message.includes(orderId)) return true;
+  return false;
+}
+
+/** Drop notifications tied to an order (by orderId field and/or message text for legacy rows). */
 export async function removeNotificationsForOrder(orderId: string): Promise<number> {
   return withLock("notifications.json", async () => {
     const notifications = await readJSON<Notification[]>("notifications.json", []);
     const before = notifications.length;
-    const next = notifications.filter((n) => n.orderId !== orderId);
+    const next = notifications.filter((n) => !notificationMatchesOrder(n, orderId));
+    await writeJSON("notifications.json", next);
+    return before - next.length;
+  });
+}
+
+const ORDER_ID_IN_MESSAGE = /SI-[A-Z0-9]+-[A-Z0-9]+/gi;
+
+/**
+ * Remove new_order notifications that don't reference any existing order
+ * (missing/stale orderId, or SI-… in message not in orders list).
+ */
+export async function pruneOrphanNewOrderNotifications(): Promise<number> {
+  const orders = await getOrders();
+  const orderIds = new Set(orders.map((o) => o.id.toUpperCase()));
+
+  return withLock("notifications.json", async () => {
+    const notifications = await readJSON<Notification[]>("notifications.json", []);
+    const before = notifications.length;
+
+    const next = notifications.filter((n) => {
+      if (n.type !== "new_order") return true;
+
+      if (n.orderId?.trim() && orderIds.has(n.orderId.toUpperCase())) {
+        return true;
+      }
+
+      const refs = n.message.match(ORDER_ID_IN_MESSAGE) || [];
+      const unique = [...new Set(refs.map((r) => r.toUpperCase()))];
+      for (const ref of unique) {
+        if (orderIds.has(ref)) return true;
+      }
+
+      return false;
+    });
+
     await writeJSON("notifications.json", next);
     return before - next.length;
   });
