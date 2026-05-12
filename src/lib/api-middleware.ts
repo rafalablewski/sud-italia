@@ -1,0 +1,172 @@
+import { NextRequest, NextResponse } from "next/server";
+import {
+  type AdminRole,
+  getCurrentAdminUser,
+  hasLocationAccess,
+  LOCATION_SCOPE_ALL,
+  ROLE_RANK,
+} from "@/lib/admin-auth";
+import { logger } from "@/lib/logger";
+
+/**
+ * Drop-in wrapper for /api/admin/* route handlers. Replaces the
+ * `isAuthenticated()` call at the top of ~70 admin routes with a single
+ * declaration that also enforces role and per-location tenancy.
+ *
+ * Today every admin route trusts whatever ?location=<slug> the caller sends.
+ * A Kraków-only staff session can call `/api/admin/orders?location=warszawa`
+ * and the API returns Warszawa orders. The audit flagged this as
+ * filter-based-not-enforced tenancy. withAdmin closes that hole when the
+ * route declares a `locationParam`.
+ *
+ * Example usage:
+ *
+ *   // Route with a ?location= query param and a role gate.
+ *   export const GET = withAdmin(
+ *     { roles: ["staff"], locationParam: "location" },
+ *     async (req, _ctx, { user, locationSlug }) => {
+ *       // user.role, user.id, locationSlug ("krakow" etc) all enforced
+ *       return NextResponse.json({ ... });
+ *     },
+ *   );
+ *
+ *   // Dynamic route with the location embedded in a path param.
+ *   export const PATCH = withAdmin<{ params: Promise<{ slug: string }> }>(
+ *     {
+ *       roles: ["manager"],
+ *       locationParam: async (_req, ctx) => (await ctx.params).slug,
+ *     },
+ *     async (req, ctx, { user, locationSlug }) => { ... },
+ *   );
+ *
+ *   // Cross-location route (HQ rollup) — pin to owner only.
+ *   export const GET = withAdmin(
+ *     { roles: ["owner"] },
+ *     async (req, _ctx, { user }) => { ... },
+ *   );
+ */
+
+export interface AdminAuthContext {
+  user: {
+    id: string;
+    name: string;
+    email?: string;
+    role: AdminRole;
+  };
+  /** The location slug enforced for this request, or null when not scoped. */
+  locationSlug: string | null;
+}
+
+type LocationExtractor<RouteCtx> = (
+  req: NextRequest,
+  ctx: RouteCtx,
+) => string | null | Promise<string | null>;
+
+export interface WithAdminOptions<RouteCtx> {
+  /**
+   * If set, requires the session role to be at least as privileged as the
+   * least-privileged role in this list. Omit for any-authenticated.
+   */
+  roles?: AdminRole[];
+  /**
+   * If set, the route is treated as scoped to a single location and
+   * requireLocationAccess is enforced. Accepts either a query/searchParam
+   * name or a custom extractor (for path params, JSON body fields, etc).
+   *
+   * Omit for routes that legitimately span all locations — but pair such
+   * routes with `roles: ["owner"]` so a scoped staff user can't see all
+   * locations' data.
+   */
+  locationParam?: string | LocationExtractor<RouteCtx>;
+}
+
+export type AdminRouteHandler<RouteCtx> = (
+  req: NextRequest,
+  ctx: RouteCtx,
+  auth: AdminAuthContext,
+) => Promise<Response> | Response;
+
+function unauthorized(): NextResponse {
+  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+}
+
+function forbidden(message: string): NextResponse {
+  return NextResponse.json({ error: message }, { status: 403 });
+}
+
+async function resolveLocationSlug<RouteCtx>(
+  param: string | LocationExtractor<RouteCtx>,
+  req: NextRequest,
+  ctx: RouteCtx,
+): Promise<string | null> {
+  if (typeof param === "function") return param(req, ctx);
+  const raw = req.nextUrl.searchParams.get(param);
+  if (!raw) return null;
+  const trimmed = raw.trim().toLowerCase();
+  // Sanity-check the shape — slugs are alphanum + hyphen. A request with
+  // ?location=*  must not collapse to the wildcard.
+  if (!/^[a-z0-9-]+$/.test(trimmed)) return null;
+  return trimmed;
+}
+
+export function withAdmin<RouteCtx = Record<string, never>>(
+  opts: WithAdminOptions<RouteCtx>,
+  handler: AdminRouteHandler<RouteCtx>,
+): (req: NextRequest, ctx: RouteCtx) => Promise<Response> {
+  return async (req, ctx) => {
+    const user = await getCurrentAdminUser();
+    if (!user) return unauthorized();
+
+    if (opts.roles && opts.roles.length > 0) {
+      const minRank = Math.min(...opts.roles.map((r) => ROLE_RANK[r]));
+      if (ROLE_RANK[user.role] < minRank) {
+        return forbidden(`Requires role ${opts.roles.join("|")}`);
+      }
+    }
+
+    let locationSlug: string | null = null;
+    if (opts.locationParam !== undefined) {
+      locationSlug = await resolveLocationSlug(opts.locationParam, req, ctx);
+      if (!locationSlug) {
+        // Route declared it scopes by location but the caller didn't supply
+        // one. 400 is the right code — without a slug there's nothing to
+        // authorize against.
+        return NextResponse.json(
+          { error: "Missing required location parameter" },
+          { status: 400 },
+        );
+      }
+      const allowed = await hasLocationAccess(locationSlug);
+      if (!allowed) {
+        return forbidden(
+          `Session is not authorized for location "${locationSlug}"`,
+        );
+      }
+    }
+
+    try {
+      return await handler(req, ctx, { user, locationSlug });
+    } catch (err) {
+      // The handler itself is responsible for catching its own expected
+      // errors; this is the last-ditch net so a thrown error doesn't leak a
+      // stack trace to the client. Mirrors the existing try/catch idiom in
+      // most of the admin routes.
+      logger.error(
+        "withAdmin handler threw",
+        {
+          route: req.nextUrl.pathname,
+          method: req.method,
+          userId: user.id,
+          locationSlug,
+        },
+        err,
+      );
+      return NextResponse.json(
+        { error: "Internal server error" },
+        { status: 500 },
+      );
+    }
+  };
+}
+
+export { LOCATION_SCOPE_ALL };

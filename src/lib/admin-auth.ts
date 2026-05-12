@@ -176,7 +176,7 @@ export async function clearSession(): Promise<void> {
 
 export type AdminRole = "owner" | "manager" | "staff" | "kitchen";
 
-const ROLE_RANK: Record<AdminRole, number> = {
+export const ROLE_RANK: Record<AdminRole, number> = {
   owner: 100,
   manager: 50,
   staff: 20,
