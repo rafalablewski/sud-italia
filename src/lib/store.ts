@@ -2330,6 +2330,7 @@ export async function saveStaff(
       locationSlug: input.locationSlug,
       hourlyRateGrosze: input.hourlyRateGrosze,
       hireDate: input.hireDate,
+      dob: input.dob,
       status: input.status,
       notes: input.notes,
       createdAt: input.createdAt ?? new Date().toISOString(),

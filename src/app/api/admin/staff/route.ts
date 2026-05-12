@@ -38,6 +38,7 @@ async function upsertStaff(req: NextRequest) {
       locationSlug: body.locationSlug,
       hourlyRateGrosze: Math.max(0, Number(body.hourlyRateGrosze) || 0),
       hireDate: body.hireDate,
+      dob: body.dob,
       status: body.status,
       notes: body.notes,
     });

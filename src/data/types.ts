@@ -10,6 +10,9 @@ export interface Location {
   hours: { day: string; open: string; close: string }[];
   isActive: boolean;
   currency: "PLN";
+  /** When true, Polish Labor Code §190 prohibits under-18 staff from working
+   *  during the location's open hours. Drives scheduling-rule warnings. */
+  servesAlcohol?: boolean;
 }
 
 export type MenuCategory =
@@ -404,6 +407,9 @@ export interface StaffMember {
   /** Hourly rate in grosze. */
   hourlyRateGrosze: number;
   hireDate?: string;
+  /** ISO date of birth (YYYY-MM-DD). Used by scheduling rules to enforce
+   *  under-18 / alcohol-hours restrictions per Polish Labor Code. */
+  dob?: string;
   status: StaffStatus;
   notes?: string;
   createdAt: string;

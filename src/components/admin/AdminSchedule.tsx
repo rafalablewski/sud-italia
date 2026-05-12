@@ -161,12 +161,32 @@ export function AdminSchedule() {
         locationSlug: pageLoc,
       }),
     });
+    const data = await res.json().catch(() => ({}));
     if (res.ok) {
-      toast.success(input.id ? "Shift updated" : "Shift created");
+      // Surface scheduling-rule warnings (48 h cap, < 11 h rest, missing DOB)
+      // even on a successful save — they don't block the shift but the
+      // manager needs to see them.
+      const warnings = Array.isArray(data?.warnings) ? data.warnings : [];
+      if (warnings.length > 0) {
+        toast.warning(
+          input.id ? "Shift updated with warnings" : "Shift created with warnings",
+          warnings.map((w: { message: string }) => w.message).join(" · "),
+        );
+      } else {
+        toast.success(input.id ? "Shift updated" : "Shift created");
+      }
       await fetchAll();
       return true;
     }
-    toast.error("Could not save shift");
+    // 409 = blocked by an `error`-severity violation (double-booking, under-18).
+    if (res.status === 409 && Array.isArray(data?.violations)) {
+      const msg = data.violations
+        .map((v: { message: string }) => v.message)
+        .join(" · ");
+      toast.error("Shift violates scheduling rules", msg);
+    } else {
+      toast.error("Could not save shift", data?.error);
+    }
     return false;
   };
 
