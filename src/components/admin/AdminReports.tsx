@@ -6,6 +6,7 @@ import {
   Coins,
   DollarSign,
   Download,
+  HandCoins,
   PiggyBank,
   Receipt,
   ShoppingCart,
@@ -116,16 +117,27 @@ export function AdminReports() {
 
   const [summary, setSummary] = useState<SummaryData | null>(null);
   const [prevSummary, setPrevSummary] = useState<SummaryData | null>(null);
+  const [tipReport, setTipReport] = useState<{
+    days: { date: string; tipGrosze: number; tippedOrders: number }[];
+    totals: {
+      totalTipGrosze: number;
+      totalTippedOrders: number;
+      averageTipRate: number;
+      averageTipPerOrder: number;
+    };
+  } | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
       const locParam = location ? `&location=${location}` : "";
-      const [a] = await Promise.all([
+      const [a, tips] = await Promise.all([
         fetch(`/api/admin/analytics?from=${from}&to=${to}${locParam}`).then((r) => (r.ok ? r.json() : null)),
+        fetch(`/api/admin/reports/tips?from=${from}&to=${to}${locParam}`).then((r) => (r.ok ? r.json() : null)),
       ]);
       setSummary(a);
+      setTipReport(tips);
 
       // Previous-window delta computation
       const days = (new Date(to).getTime() - new Date(from).getTime()) / 86_400_000 + 1;
@@ -349,6 +361,18 @@ export function AdminReports() {
           delta={pctDelta(k.aov, k.aovPrev)}
           icon={Receipt}
           tone="success"
+        />
+        <KpiCard
+          label="Tips"
+          value={(tipReport?.totals.totalTipGrosze ?? 0) / 100}
+          format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
+          icon={HandCoins}
+          tone="success"
+          hint={
+            tipReport && tipReport.totals.totalTippedOrders > 0
+              ? `${tipReport.totals.totalTippedOrders} tipped orders · avg ${formatPrice(tipReport.totals.averageTipPerOrder)} (${(tipReport.totals.averageTipRate * 100).toFixed(1)}% of revenue)`
+              : "No tips in this window"
+          }
         />
       </section>
 

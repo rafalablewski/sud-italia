@@ -308,6 +308,9 @@ export interface Order {
   refund?: OrderRefund;
   /** Set when Stripe sent a `charge.dispute.created`. Drives the AdminOrders dispute badge. */
   dispute?: OrderDispute;
+  /** Optional tip captured at checkout (grosze). Goes to Stripe as a separate
+   *  line item so receipts show "Items 28 zł + Tip 3 zł = 31 zł" cleanly. */
+  tipAmount?: number;
 }
 
 // --- Inventory (per-location stock for an ingredient) ---

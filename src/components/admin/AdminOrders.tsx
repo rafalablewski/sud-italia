@@ -741,6 +741,12 @@ function OrderDetail({ order, onClose, onStatusChange, onRequestDelete, onReques
                   <span className="mono">{formatPrice(delta)}</span>
                 </div>
               )}
+              {order.tipAmount && order.tipAmount > 0 ? (
+                <div>
+                  <span className="v2-muted">Tip</span>
+                  <span className="mono">{formatPrice(order.tipAmount)}</span>
+                </div>
+              ) : null}
               <div className="v2-detail-total">
                 <span>Total</span>
                 <span className="mono">{formatPrice(order.totalAmount)}</span>

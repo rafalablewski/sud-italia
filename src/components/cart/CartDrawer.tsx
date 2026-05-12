@@ -123,7 +123,9 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
   // Apply combo deal discount to actual total
   const comboResult = useMemo(() => getActiveComboDeals(items, upsellConfig), [items, upsellConfig]);
   const comboDiscount = comboResult.missingCategories.length === 0 ? comboResult.savings : 0;
-  const total = subtotal - comboDiscount;
+  const tipAmount = useCartStore((s) => s.tipAmount);
+  const setTipAmount = useCartStore((s) => s.setTipAmount);
+  const total = subtotal - comboDiscount + tipAmount;
 
   const isPhoneValid = PHONE_PATTERN.test(customerPhone.trim());
 
@@ -218,6 +220,7 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
           deliveryAddress: fulfillmentType === "delivery" ? deliveryAddress.trim() : undefined,
           customerEmail: customerEmail.trim() || undefined,
           specialInstructions: specialInstructions.trim() || undefined,
+          tipAmount: tipAmount > 0 ? tipAmount : undefined,
         }),
       });
 
@@ -514,6 +517,15 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
         )}
       </div>
 
+      {/* Tip picker — optional gratuity. Tied to cart subtotal so the
+           preset percentages always look right; custom amount in zł for
+           anyone who prefers absolute. */}
+      <TipPicker
+        subtotalGrosze={subtotal - comboDiscount}
+        valueGrosze={tipAmount}
+        onChange={setTipAmount}
+      />
+
       {/* Sticky pay bar */}
       <div className="sticky bottom-0 border-t border-gray-100 px-4 py-3 sm:px-5 sm:py-4 bg-white shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
         <div className="space-y-1">
@@ -525,6 +537,12 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
             <div className="flex justify-between items-center text-sm font-medium text-italia-green">
               <span>{comboResult.activeDeal?.name} -{comboResult.activeDeal?.discountPercent}%</span>
               <span>-{formatPrice(comboDiscount)}</span>
+            </div>
+          )}
+          {tipAmount > 0 && (
+            <div className="flex justify-between items-center text-sm text-italia-gray">
+              <span>Tip</span>
+              <span>{formatPrice(tipAmount)}</span>
             </div>
           )}
           {fulfillmentType === "delivery" && (
@@ -582,5 +600,112 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
         </button>
       </div>
     </Sheet>
+  );
+}
+
+/**
+ * Tip presets (10 / 15 / 20%) plus a custom-zł input. Stored in grosze on the
+ * Zustand cart so it survives a refresh and gets cleared on checkout. The
+ * picker computes preset percentages off `subtotalGrosze` (post-discount,
+ * pre-tip) so toggling between presets feels stable.
+ */
+function TipPicker({
+  subtotalGrosze,
+  valueGrosze,
+  onChange,
+}: {
+  subtotalGrosze: number;
+  valueGrosze: number;
+  onChange: (g: number) => void;
+}) {
+  const presets = [0.1, 0.15, 0.2];
+  const presetValues = presets.map((p) => Math.round(subtotalGrosze * p));
+  const [customMode, setCustomMode] = useState(
+    valueGrosze > 0 && !presetValues.includes(valueGrosze),
+  );
+  const [customStr, setCustomStr] = useState(
+    valueGrosze > 0 && !presetValues.includes(valueGrosze)
+      ? (valueGrosze / 100).toFixed(2)
+      : "",
+  );
+
+  if (subtotalGrosze <= 0) return null;
+
+  return (
+    <div className="px-5 pt-3">
+      <p className="text-xs font-semibold text-italia-gray uppercase tracking-wide mb-2">
+        Add a tip — optional
+      </p>
+      <div className="grid grid-cols-5 gap-1.5">
+        <button
+          type="button"
+          onClick={() => {
+            setCustomMode(false);
+            onChange(0);
+          }}
+          className={`px-2 py-2 text-xs font-medium rounded-lg border transition-colors ${
+            valueGrosze === 0 && !customMode
+              ? "border-italia-red bg-italia-red/5 text-italia-red"
+              : "border-gray-200 text-italia-gray hover:border-gray-300"
+          }`}
+        >
+          None
+        </button>
+        {presets.map((p, i) => {
+          const g = presetValues[i];
+          const selected = !customMode && valueGrosze === g && g > 0;
+          return (
+            <button
+              key={p}
+              type="button"
+              onClick={() => {
+                setCustomMode(false);
+                onChange(g);
+              }}
+              className={`flex flex-col items-center justify-center px-2 py-2 text-xs font-medium rounded-lg border transition-colors ${
+                selected
+                  ? "border-italia-red bg-italia-red/5 text-italia-red"
+                  : "border-gray-200 text-italia-gray hover:border-gray-300"
+              }`}
+            >
+              <span>{Math.round(p * 100)}%</span>
+              <span className="text-[10px] opacity-70">{(g / 100).toFixed(2)} zł</span>
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          onClick={() => {
+            setCustomMode(true);
+            onChange(Math.round(parseFloat(customStr || "0") * 100));
+          }}
+          className={`px-2 py-2 text-xs font-medium rounded-lg border transition-colors ${
+            customMode
+              ? "border-italia-red bg-italia-red/5 text-italia-red"
+              : "border-gray-200 text-italia-gray hover:border-gray-300"
+          }`}
+        >
+          Custom
+        </button>
+      </div>
+      {customMode && (
+        <div className="mt-2 flex items-center gap-2">
+          <span className="text-xs text-italia-gray">zł</span>
+          <input
+            type="number"
+            min="0"
+            step="0.50"
+            inputMode="decimal"
+            value={customStr}
+            onChange={(e) => {
+              setCustomStr(e.target.value);
+              onChange(Math.round(parseFloat(e.target.value || "0") * 100));
+            }}
+            placeholder="0.00"
+            className="pub-input min-h-[36px] text-sm"
+          />
+        </div>
+      )}
+    </div>
   );
 }
