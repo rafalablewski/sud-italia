@@ -620,8 +620,8 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
                 <div className="v2-rcp-table">
                   <div className="v2-rcp-row-head" role="presentation" aria-hidden>
                     <span>Ingredient</span>
-                    <span>Quantity</span>
-                    <span title="Waste / trim loss as a percentage of the raw weight. 5% means you lose 5 g out of every 100 g.">
+                    <span>Qty</span>
+                    <span title="Waste / trim loss as a percentage of the raw weight. 5% = lose 5 g out of every 100 g.">
                       Waste
                     </span>
                     <span>Cost</span>
@@ -663,15 +663,15 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
                           trailingAdornment={<span className="v2-muted">%</span>}
                         />
                         <span className="tabular v2-rcp-cost">{formatPrice(lineCost(r))}</span>
-                        <Button
-                          size="sm"
-                          variant="ghost"
+                        <button
+                          type="button"
+                          className="v2-rcp-remove"
                           onClick={() => removeRow(r.ingredientId)}
                           aria-label={`Remove ${r.name ?? r.ingredientId}`}
                           title={`Remove ${r.name ?? r.ingredientId}`}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        </button>
                       </li>
                     ))}
                   </ul>

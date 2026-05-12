@@ -2357,32 +2357,41 @@ html { scroll-behavior: smooth; }
 }
 @media (max-width: 720px) { .v2-recipe-summary { grid-template-columns: 1fr; } }
 
-/* Ingredients table. Tighter columns so the Cost column never gets clipped
-   inside the dialog. Native number-input spinners are hidden — the
-   visual noise made the table feel cluttered and the columns hard to
-   scan. */
+/* Ingredients table. Designed to read as a data table, not a stack of
+   form fields: number cells are borderless plain text until the user
+   hovers or focuses them, and the row gets a subtle hover bg so the
+   eye tracks across cells naturally. The trash button is opacity-0
+   until row hover so it doesn't compete with the data. */
 .v2-rcp-table { display: flex; flex-direction: column; }
 .v2-rcp-rows { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; }
 .v2-rcp-row,
 .v2-rcp-row-head {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 96px 84px 84px 28px;
+  grid-template-columns: minmax(0, 1fr) 84px 72px 80px 24px;
   align-items: center;
   column-gap: 12px;
-  padding: 8px 0;
 }
-.v2-rcp-row + .v2-rcp-row { border-top: 1px solid var(--border); }
+.v2-rcp-row {
+  padding: 4px 8px;
+  margin: 0 -8px;
+  border-radius: var(--radius-sm);
+  transition: background var(--duration-fast);
+}
+.v2-rcp-row + .v2-rcp-row { border-top: 1px solid var(--border); border-radius: 0; }
+.v2-rcp-row:hover { background: var(--surface-2); }
 .v2-rcp-row-head {
-  padding: 0 0 8px;
+  padding: 0 8px 8px;
+  margin: 0 -8px 4px;
   font-size: var(--text-2xs);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--fg-subtle);
   font-weight: 600;
   border-bottom: 1px solid var(--border);
-  margin-bottom: 4px;
 }
 .v2-rcp-row-head > span { display: inline-flex; align-items: center; gap: 4px; }
+.v2-rcp-row-head > span:nth-child(2),
+.v2-rcp-row-head > span:nth-child(3),
 .v2-rcp-row-head > span:nth-child(4) { justify-content: flex-end; }
 @media (max-width: 720px) {
   .v2-rcp-row,
@@ -2405,13 +2414,26 @@ html { scroll-behavior: smooth; }
   font-variant-numeric: tabular-nums;
 }
 
-/* Compact number-input variant used inside .v2-rcp-row. Hides the native
-   spinner so the row reads cleanly and the values left-align inside a
-   tight box. Keep accessibility: spinners still respond to arrow keys. */
+/* Borderless inline number editor inside .v2-rcp-row. The wrapper sheds
+   its background + border until the row is hovered or the cell is
+   focused. Spinners stay hidden so the table reads tabular. */
+.v2-rcp-row .v2-field { gap: 0; }
+.v2-rcp-row .v2-input-wrap {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+.v2-rcp-row:hover .v2-input-wrap { border-color: var(--border); }
+.v2-rcp-row .v2-input-wrap:focus-within {
+  background: var(--surface-1);
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--border-focus) 22%, transparent);
+}
 .v2-input.v2-rcp-num {
-  padding: 6px 8px;
+  padding: 4px 8px;
   font-size: var(--text-sm);
   text-align: right;
+  font-variant-numeric: tabular-nums;
   -moz-appearance: textfield;
   appearance: textfield;
 }
@@ -2419,6 +2441,38 @@ html { scroll-behavior: smooth; }
 .v2-input.v2-rcp-num::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
+}
+.v2-rcp-row .v2-input-adorn-trailing {
+  padding: 0 8px 0 2px;
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+}
+
+/* Subtle, hover-revealed delete button. Plain text-button instead of a
+   full ghost-button so it doesn't carry its own padding box; opacity
+   ramps up only when the row is hovered or the button is focused, so
+   the resting state of the table is calm. */
+.v2-rcp-remove {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--fg-subtle);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--duration-fast), color var(--duration-fast), background var(--duration-fast);
+}
+.v2-rcp-row:hover .v2-rcp-remove,
+.v2-rcp-remove:focus-visible { opacity: 1; }
+.v2-rcp-remove:hover { color: var(--danger); background: var(--danger-soft); }
+@media (max-width: 720px) {
+  .v2-rcp-remove { opacity: 1; }
 }
 
 .v2-rcp-add {
