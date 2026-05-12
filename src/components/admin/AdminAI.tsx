@@ -295,9 +295,9 @@ export function AdminAI() {
     <div className="v2-page">
       <header className="v2-page-header">
         <div className="v2-page-title-row">
-          <h1 className="v2-page-title">AI insights</h1>
+          <h1 className="v2-page-title">Insights</h1>
           <p className="v2-page-subtitle">
-            Forecasts, anomalies, reorder suggestions, staffing tips — all computed from real orders + stock data.
+            Heuristic forecasts, anomaly checks, reorder suggestions and staffing tips computed from real orders + stock data. No ML model is in the loop yet.
           </p>
         </div>
         <Tabs
@@ -311,7 +311,7 @@ export function AdminAI() {
             { value: "faq", label: "Chatbot FAQ", icon: <MessageSquare className="h-3.5 w-3.5" />, count: faqs.length },
           ]}
           variant="pill"
-          ariaLabel="AI section"
+          ariaLabel="Insights section"
         />
       </header>
 

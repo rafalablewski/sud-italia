@@ -170,20 +170,22 @@ Format note: tables are split per category for readability. **Priority** is P0 (
 
 ### 1.10 Data & AI (the brutal section)
 
-| Claimed | Reality | What Should Exist | Priority | Benchmark |
-|---|---|---|---|---|
-| `/admin/ai` "Demand Forecast" | Hardcoded `weekend × 1.3 ± random(±6)`, 72% confidence string is literal | **Real time-series model** (Prophet / NeuralProphet / N-BEATS), per-item per-location, daily retrain, MAPE tracked, holdout reported | P1 | Lightspeed Insights, BlueCart Forecast |
-| `/admin/ai` "Dynamic Pricing" | Pure margin rule (`if margin < 60% suggest +5–8%`) | **Price elasticity model** per item using natural variance + A/B + competitor scraping | P2 | Toast Menu Insights, Sysco Cake |
-| `/admin/ai` "FAQ" | Static Q&A stored in DB, no retrieval | **RAG-based customer chatbot** using own menu + policies + order history, with handoff to staff | P1 | Intercom Fin, Ada |
-| — | — | **AI Copilot in admin** ("show me yesterday's worst-margin item by truck") — natural language → SQL → chart | P1 | Hex Magic, Linear AI |
-| — | — | **Anomaly detection** (sudden drop in coffee attach rate, sudden waste spike, geographic anomaly in customer signup) | P1 | Anodot, Sisu |
-| — | — | **Autonomous recommendations engine** that *acts*, not just *suggests* (auto-adjust slot capacity, auto-86 sold-out items, auto-draft PO) | P2 | Toast Tides, Olo |
-| — | — | **Multi-agent system** (Forecast Agent → Procurement Agent → Schedule Agent → Marketing Agent, mediated by a Manager Agent) | P3 | LangGraph, CrewAI |
-| — | — | **Predictive staffing** (next-week schedule pre-filled from forecast + skill graph + budget) | P1 | 7shifts AI |
-| — | — | **AI menu engineering** (Boston matrix per item: Star / Plowhorse / Puzzle / Dog with weekly migration) | P1 | Menu Engineering, MarginEdge |
-| — | — | **Sentiment NLP on feedback comments** (currently `/admin/feedback` shows comments raw, no aggregation) | P0 | AWS Comprehend, simple OpenAI call |
+| Claimed | Reality | What Should Exist | Priority | Benchmark | Status |
+|---|---|---|---|---|---|
+| `/admin/ai` "Demand Forecast" | Hardcoded `weekend × 1.3 ± random(±6)`, 72% confidence string is literal | **Real time-series model** (Prophet / NeuralProphet / N-BEATS), per-item per-location, daily retrain, MAPE tracked, holdout reported | P1 | Lightspeed Insights, BlueCart Forecast | ✗ Not fixed — needs real model + training pipeline. Page renamed and honestly relabelled as "Insights / Heuristics" (see below) |
+| `/admin/ai` "Dynamic Pricing" | Pure margin rule (`if margin < 60% suggest +5–8%`) | **Price elasticity model** per item using natural variance + A/B + competitor scraping | P2 | Toast Menu Insights, Sysco Cake | ✗ Not fixed — needs elasticity estimation + A/B framework |
+| `/admin/ai` "FAQ" | Static Q&A stored in DB, no retrieval | **RAG-based customer chatbot** using own menu + policies + order history, with handoff to staff | P1 | Intercom Fin, Ada | ✗ Not fixed — needs embeddings + RAG + handoff |
+| — | — | **AI Copilot in admin** ("show me yesterday's worst-margin item by truck") — natural language → SQL → chart | P1 | Hex Magic, Linear AI | ✗ Not fixed — needs NL→SQL with schema grounding |
+| — | — | **Anomaly detection** (sudden drop in coffee attach rate, sudden waste spike, geographic anomaly in customer signup) | P1 | Anodot, Sisu | ✗ Not fixed — needs metric registry + detector |
+| — | — | **Autonomous recommendations engine** that *acts*, not just *suggests* (auto-adjust slot capacity, auto-86 sold-out items, auto-draft PO) | P2 | Toast Tides, Olo | ✗ Not fixed — needs approval-gated action layer |
+| — | — | **Multi-agent system** (Forecast Agent → Procurement Agent → Schedule Agent → Marketing Agent, mediated by a Manager Agent) | P3 | LangGraph, CrewAI | ✗ Not fixed — research-grade build |
+| — | — | **Predictive staffing** (next-week schedule pre-filled from forecast + skill graph + budget) | P1 | 7shifts AI | ✗ Not fixed — depends on forecast + skill matrix |
+| — | — | **AI menu engineering** (Boston matrix per item: Star / Plowhorse / Puzzle / Dog with weekly migration) | P1 | Menu Engineering, MarginEdge | ✗ Not fixed — quadrant calc + weekly job |
+| — | — | **Sentiment NLP on feedback comments** (currently `/admin/feedback` shows comments raw, no aggregation) | P0 | AWS Comprehend, simple OpenAI call | ✗ Not fixed — needs LLM/sentiment endpoint + aggregation |
 
 The most important admission this audit can offer: **stop calling the current `/admin/ai` page "AI". Either ship real models or rename it "Insights & Heuristics".** Sophisticated buyers, investors, partners, and future hires will spot this in five minutes, and it costs more credibility than the marketing gain is worth.
+
+✓ **Honesty rename done** — the sidebar entry is now **"Insights"** (was "AI Insights"), the page H1 is now **"Insights"** (was "AI insights"), and the subtitle explicitly notes "No ML model is in the loop yet." Page path `/admin/ai` left untouched to avoid redirect work; URL is internal-only and not investor-facing.
 
 ### 1.11 Enterprise & Platform Features
 
