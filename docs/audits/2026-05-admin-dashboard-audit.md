@@ -137,20 +137,20 @@ Format note: tables are split per category for readability. **Priority** is P0 (
 
 ### 1.8 CRM & Growth
 
-| Existing | Missing | Why It Matters | Priority | Benchmark |
-|---|---|---|---|---|
-| `/admin/customers` list + detail; manual notes; LTV / order count | **RFM segmentation** (Recency, Frequency, Monetary) with cohort definitions saved | The single most valuable CRM primitive; absent | P1 | Klaviyo, Bloomreach |
-| — | **Behavioral segments** (lapsed Margherita lovers, weekday lunchers, family wallets, festival-only customers) | Without segments, every campaign is a blast | P1 | Klaviyo, Bond Brand Loyalty |
-| — | **Churn-risk model** (probability score per customer + reason) | A model with even 60% AUC saves 18–25% of would-be churn | P2 | Optimove, Voyado |
-| — | **Customer journey builder** (drag-drop: trigger → wait → action → branch) | Manual campaign send is 2015; journey orchestration is 2026 baseline | P1 | Braze, Iterable |
-| — | **SMS / email / push campaign builder** with A/B + holdout | Today there is no way to send a campaign at all | P0 | Klaviyo, Attentive |
-| — | **Personalization engine** (per-customer hero item, per-customer upsell on cart) | Generic upsell rules in `src/lib/upsell.ts` leave 8–14% on the table | P1 | Dynamic Yield, Insider |
-| — | **Influencer / UGC tracking** (referral code per creator, attributable redemption) | Pizza brands run almost entirely on micro-influencer + UGC in Poland; not having attribution = wasted spend | P1 | GRIN, Aspire |
-| — | **Birthday / anniversary / first-order-anniversary triggers** | Trivial revenue lift (3–5%); table-stakes | P1 | Any CRM |
-| — | **WhatsApp Business API integration** | Polish customers use WhatsApp more than email for restaurants | P1 | Twilio, MessageBird |
-| Loyalty tiers, points, rewards, family wallets, referral codes | **Tier-up automation** with celebration moment + push | Currently a tier change is a silent DB update | P1 | Starbucks, Punchh |
-| — | **Points expiry rules + tier downgrade rules** | A loyalty program with no expiry is a one-way liability on the balance sheet | P1 | Loyalty Lion, Punchh |
-| — | **Reward elasticity testing** (does "free coffee" or "10 PLN off" drive more reactivation?) | This is the entire science of loyalty | P2 | Bond, Antavo |
+| Existing | Missing | Why It Matters | Priority | Benchmark | Status |
+|---|---|---|---|---|---|
+| `/admin/customers` list + detail; manual notes; LTV / order count | **RFM segmentation** (Recency, Frequency, Monetary) with cohort definitions saved | The single most valuable CRM primitive; absent | P1 | Klaviyo, Bloomreach | ✗ Not fixed — needs RFM scoring job + saved-segment entity |
+| — | **Behavioral segments** (lapsed Margherita lovers, weekday lunchers, family wallets, festival-only customers) | Without segments, every campaign is a blast | P1 | Klaviyo, Bond Brand Loyalty | ✗ Not fixed — depends on segment engine |
+| — | **Churn-risk model** (probability score per customer + reason) | A model with even 60% AUC saves 18–25% of would-be churn | P2 | Optimove, Voyado | ✗ Not fixed — model training |
+| — | **Customer journey builder** (drag-drop: trigger → wait → action → branch) | Manual campaign send is 2015; journey orchestration is 2026 baseline | P1 | Braze, Iterable | ✗ Not fixed — orchestration engine + editor |
+| — | **SMS / email / push campaign builder** with A/B + holdout | Today there is no way to send a campaign at all | P0 | Klaviyo, Attentive | ✗ Not fixed — needs ESP/SMS provider + builder UI |
+| — | **Personalization engine** (per-customer hero item, per-customer upsell on cart) | Generic upsell rules in `src/lib/upsell.ts` leave 8–14% on the table | P1 | Dynamic Yield, Insider | ✗ Not fixed — needs per-customer affinity model |
+| — | **Influencer / UGC tracking** (referral code per creator, attributable redemption) | Pizza brands run almost entirely on micro-influencer + UGC in Poland; not having attribution = wasted spend | P1 | GRIN, Aspire | ✗ Not fixed — creator-code entity + attribution |
+| — | **Birthday / anniversary / first-order-anniversary triggers** | Trivial revenue lift (3–5%); table-stakes | P1 | Any CRM | ✗ Not fixed — no DOB field on customer; needs cron + send pipeline |
+| — | **WhatsApp Business API integration** | Polish customers use WhatsApp more than email for restaurants | P1 | Twilio, MessageBird | ✗ Not fixed — needs WABA provider + templated messages |
+| Loyalty tiers, points, rewards, family wallets, referral codes | **Tier-up automation** with celebration moment + push | Currently a tier change is a silent DB update | P1 | Starbucks, Punchh | ✗ Not fixed — needs tier-change hook + push send |
+| — | **Points expiry rules + tier downgrade rules** | A loyalty program with no expiry is a one-way liability on the balance sheet | P1 | Loyalty Lion, Punchh | ✗ Not fixed — needs expiry policy + nightly recalc |
+| — | **Reward elasticity testing** (does "free coffee" or "10 PLN off" drive more reactivation?) | This is the entire science of loyalty | P2 | Bond, Antavo | ✗ Not fixed — needs A/B framework |
 
 ### 1.9 Financials
 
