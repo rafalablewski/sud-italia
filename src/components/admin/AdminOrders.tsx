@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useAdminOrdersStream } from "@/lib/useAdminOrdersStream";
 import {
   Banknote,
   Clock,
@@ -87,8 +88,6 @@ export function AdminOrders() {
   const { location } = useAdminLocation();
   const toast = useToast();
 
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [view, setView] = useState<"kanban" | "table">("kanban");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -98,25 +97,15 @@ export function AdminOrders() {
   const [refundingId, setRefundingId] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
 
-  const fetchOrders = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/admin/orders${location ? `?location=${location}` : ""}`);
-      if (res.ok) {
-        const data: Order[] = await res.json();
-        setOrders(data);
-      }
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [location]);
-
+  // Stream-backed orders (SSE with REST fallback). The local `orders` mirror
+  // exists so optimistic mutations (status change, delete, refund) feel
+  // instant; the next SSE frame reconciles.
+  const { orders: streamedOrders, loading, refresh } = useAdminOrdersStream(location);
+  const [orders, setOrders] = useState<Order[]>([]);
   useEffect(() => {
-    setLoading(true);
-    fetchOrders();
-    const t = setInterval(fetchOrders, 30_000);
-    return () => clearInterval(t);
-  }, [fetchOrders]);
+    setOrders(streamedOrders);
+    setRefreshing(false);
+  }, [streamedOrders]);
 
   // Allow other pages (or the command palette) to deep-link to a specific
   // order via /admin/orders#ORDER_ID
@@ -222,7 +211,7 @@ export function AdminOrders() {
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchOrders();
+    refresh();
   };
 
   return (

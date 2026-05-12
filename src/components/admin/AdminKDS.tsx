@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useAdminOrdersStream } from "@/lib/useAdminOrdersStream";
 import {
   Bell,
   BellOff,
@@ -84,13 +85,23 @@ export function AdminKDS() {
   const { location } = useAdminLocation();
   const toast = useToast();
 
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
   const [station, setStation] = useState<MenuCategory | "all">("all");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [soundOn, setSoundOn] = useState(true);
   const [paused, setPaused] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+
+  // Live order stream — SSE with REST fallback. Replaces the old 5 s polling
+  // loop. We mirror the stream into a local copy so optimistic updates from
+  // advance/recall feel instant; the next SSE frame reconciles either way.
+  const { orders: streamedOrders, refresh } = useAdminOrdersStream(location, { paused });
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setOrders(streamedOrders.filter((o) => ACTIVE_STATUSES.includes(o.status)));
+    setLoading(false);
+  }, [streamedOrders]);
   // Cooks bump tickets by mistake constantly. We keep the last 5 bumps in
   // memory so a "Recall" tray on the right side can put one back on the
   // expo column in a single click — within the 60 s window where this is
@@ -101,25 +112,6 @@ export function AdminKDS() {
 
   const knownIdsRef = useRef<Set<string>>(new Set());
   const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  const fetchOrders = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/admin/orders${location ? `?location=${location}` : ""}`);
-      if (!res.ok) return;
-      const data: Order[] = await res.json();
-      setOrders(data.filter((o) => ACTIVE_STATUSES.includes(o.status)));
-    } finally {
-      setLoading(false);
-    }
-  }, [location]);
-
-  useEffect(() => {
-    setLoading(true);
-    fetchOrders();
-    if (paused) return;
-    const t = setInterval(fetchOrders, 5_000);
-    return () => clearInterval(t);
-  }, [fetchOrders, paused]);
 
   // Tick every second for live timers
   useEffect(() => {
@@ -247,7 +239,7 @@ export function AdminKDS() {
           <h1 className="v2-page-title">Kitchen Display</h1>
           <p className="v2-page-subtitle">
             {location ? `${location.toUpperCase()} · ` : "All locations · "}
-            Live tickets · auto-refresh 5s
+            Live tickets · streaming updates
           </p>
         </div>
         <div className="v2-page-actions">
@@ -279,7 +271,7 @@ export function AdminKDS() {
             variant="secondary"
             size="sm"
             leadingIcon={<RefreshCw className="h-3.5 w-3.5" />}
-            onClick={fetchOrders}
+            onClick={refresh}
           >
             Refresh
           </Button>

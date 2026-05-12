@@ -242,7 +242,7 @@ The most important admission this audit can offer: **stop calling the current `/
 | **Keyboard-driven** | total | strong | strong | n/a | partial (only page navigation) | ✗ Not fixed — global `J/K/E/U` model not yet wired |
 | **Cognitive load on first open** | low | low | low | medium | **medium-high** (25 sidebar items, no role-based collapse) | ✗ Partially out of date — sidebar is already grouped into ~9 sections (`nav.config.ts`) but role-based collapsing not done |
 | **Time to one critical action** (e.g. "find this customer's last order") | ~3 s | ~5 s | ~6 s | ~5 s | **~12–18 s** (navigate → customers → search → click → orders tab) | ✓ Partly fixed by command palette (jump directly to a customer in ~3 s); deep "last order" link still missing |
-| **Real-time feedback** | live | live | live | live (sub-200 ms) | **2–3 s polling** | ✗ Not fixed — no WebSocket/SSE introduced this session |
+| **Real-time feedback** | live | live | live | live (sub-200 ms) | **SSE streaming on orders + KDS** | ✓ Fixed — `GET /api/admin/orders/stream` delivers per-mutation SSE frames (2 s server-side debounce, only emits on JSON change). `useAdminOrdersStream` hook handles reconnect + REST fallback when EventSource drops. Polling intervals removed from AdminOrders (was 30 s) and AdminKDS (was 5 s). |
 | **Empty states / first-run** | excellent | excellent | excellent | excellent | **untested; many pages render with no data and feel broken** | ✗ Not fixed — system-wide pass deferred |
 | **Error states** | recoverable, helpful | recoverable, helpful | recoverable | recoverable | **toast-only; no in-context recovery** | ✗ Not fixed — error-boundary + inline recovery deferred |
 
@@ -581,7 +581,7 @@ A trillion-dollar operator does not buy software. It builds an operating system 
 5. Add `Cmd+K` universal command palette that finds orders, customers, items, suppliers, not just pages. — ✓ **Already fixed prior to this audit** — `CommandPalette.tsx` + `/api/admin/search` return orders, customers, menu items, ingredients. The audit row is out of date
 6. Add a single "next 60 minutes" widget to `/admin` showing upcoming slot load + alerts. — ✗ Not fixed
 7. Add per-user login (email + password) wrapped around existing HMAC; record actor on every audit-log entry. — ✗ Not fixed
-8. Add WebSocket (or Vercel-compatible SSE) for KDS and orders; remove the 2-second polling. — ✗ Not fixed
+8. Add WebSocket (or Vercel-compatible SSE) for KDS and orders; remove the 2-second polling. — ✓ Fixed — SSE endpoint `/api/admin/orders/stream` plus `useAdminOrdersStream` (graceful REST fallback) replace the polling loops in AdminOrders and AdminKDS.
 9. Add `react-hot-keys` + `J/K/E/Backspace/U` keyboard model on the orders list. — ✗ Not fixed
 10. Add explicit empty / skeleton / error states to every list page (currently many pages render half-broken on no-data). — ✗ Not fixed
 
