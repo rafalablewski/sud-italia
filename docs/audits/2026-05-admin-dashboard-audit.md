@@ -79,18 +79,18 @@ Format note: tables are split per category for readability. **Priority** is P0 (
 
 ### 1.4 Food-Truck Specific Systems
 
-| Existing | Missing | Why It Matters | Priority | Benchmark |
-|---|---|---|---|---|
-| `/admin/truck` with events + routes (manual, static) | **Predictive route optimization** using historical sales × weather × event calendar × competitor density | A pizza truck's location is its #1 unit-economics lever; this is the entire game | P0 | Roambee, Routific, Onfleet |
-| — | **AI event recommendations** (city festival API, sport-event API, school calendars, Pol-Met weather) | The system should propose Saturday's pitch, not wait for an operator | P1 | Bandsintown for B2B, Eventbrite API |
-| — | **Geofenced flash promotions** ("you're within 500 m of Truck #3, free coffee with any pizza") | Geofence pushes convert 4–7× standard push notifications | P1 | Braze, Airship, Iterable |
-| — | **Live GPS tracking on truck** with customer-facing ETA ("truck arrives in 4 min") | Customers expect Uber-style live tracking; not having it is now a complaint, not a delight | P0 | Square, Bringg |
-| — | **Weather-linked menu / pricing** (cold rain → soup-of-day surfaces, hot day → cold drink pricing optimized) | Trivial demand sensing; ~3–6% topline at zero cost | P1 | WeatherAlpha, ClimateAI |
-| — | **Local demand heatmap** (where do customers come from, where are they ordering from but not getting served) | A demand map identifies the truck's next pitch; without it you guess | P2 | Foursquare, SafeGraph |
-| — | **Fuel & mileage logging** with per-event P&L | Trucks burn 40–80 PLN/h of diesel idling; this is invisible today | P1 | Samsara, Geotab |
-| — | **Mobile-network failover** (Starlink Mini, dual SIM, offline cache) | A single LTE outage at peak Saturday = full revenue loss | P0 | Cradlepoint, Peplink |
-| — | **Permits & pitches calendar** (which permit, which pitch, which dates, renewal alerts) | Operating without a current pitch permit is a 5–10k PLN fine + closure | P0 | Custom + ComplianceHR |
-| — | **Generator & gas-bottle telemetry** | Running out of LPG mid-Saturday is unrecoverable | P2 | Otodata |
+| Existing | Missing | Why It Matters | Priority | Benchmark | Status |
+|---|---|---|---|---|---|
+| `/admin/truck` with events + routes (manual, static) | **Predictive route optimization** using historical sales × weather × event calendar × competitor density | A pizza truck's location is its #1 unit-economics lever; this is the entire game | P0 | Roambee, Routific, Onfleet | ✗ Not fixed — requires VRP solver + historical data |
+| — | **AI event recommendations** (city festival API, sport-event API, school calendars, Pol-Met weather) | The system should propose Saturday's pitch, not wait for an operator | P1 | Bandsintown for B2B, Eventbrite API | ✗ Not fixed — needs external API contracts |
+| — | **Geofenced flash promotions** ("you're within 500 m of Truck #3, free coffee with any pizza") | Geofence pushes convert 4–7× standard push notifications | P1 | Braze, Airship, Iterable | ✗ Not fixed — needs geofence engine + customer-app push |
+| — | **Live GPS tracking on truck** with customer-facing ETA ("truck arrives in 4 min") | Customers expect Uber-style live tracking; not having it is now a complaint, not a delight | P0 | Square, Bringg | ✗ Not fixed — needs in-cab tracker + ETA service |
+| — | **Weather-linked menu / pricing** (cold rain → soup-of-day surfaces, hot day → cold drink pricing optimized) | Trivial demand sensing; ~3–6% topline at zero cost | P1 | WeatherAlpha, ClimateAI | ✗ Not fixed — needs weather feed + price/menu rules engine |
+| — | **Local demand heatmap** (where do customers come from, where are they ordering from but not getting served) | A demand map identifies the truck's next pitch; without it you guess | P2 | Foursquare, SafeGraph | ✗ Not fixed — needs paid location-data feed |
+| — | **Fuel & mileage logging** with per-event P&L | Trucks burn 40–80 PLN/h of diesel idling; this is invisible today | P1 | Samsara, Geotab | ✗ Not fixed — needs CAN-bus / driver-app logging |
+| — | **Mobile-network failover** (Starlink Mini, dual SIM, offline cache) | A single LTE outage at peak Saturday = full revenue loss | P0 | Cradlepoint, Peplink | ✗ Not fixed — hardware/network ops |
+| — | **Permits & pitches calendar** (which permit, which pitch, which dates, renewal alerts) | Operating without a current pitch permit is a 5–10k PLN fine + closure | P0 | Custom + ComplianceHR | ✗ Not fixed — new module |
+| — | **Generator & gas-bottle telemetry** | Running out of LPG mid-Saturday is unrecoverable | P2 | Otodata | ✗ Not fixed — IoT hardware |
 
 ### 1.5 Inventory & Supply Chain
 
