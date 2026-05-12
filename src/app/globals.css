@@ -2378,7 +2378,14 @@ html { scroll-behavior: smooth; }
   .v2-rcp-row { grid-template-columns: 1fr 1fr; row-gap: 6px; }
   .v2-rcp-row > .v2-rcp-name { grid-column: 1 / -1; }
 }
-.v2-rcp-name { font-weight: 500; color: var(--fg); }
+.v2-rcp-name {
+  font-weight: 500;
+  color: var(--fg);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .v2-rcp-cost { text-align: right; font-weight: 600; color: var(--fg); }
 
 .v2-rcp-add {

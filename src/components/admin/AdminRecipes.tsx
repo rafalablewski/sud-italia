@@ -96,10 +96,16 @@ function displayStep(unit: string | undefined): string {
   return "1";
 }
 
-/** "5% waste" preview from a wasteFactor like 1.05. */
-function wastePercent(wf: number): string {
-  if (!Number.isFinite(wf) || wf <= 1) return "0%";
-  return `${Math.round((wf - 1) * 100)}%`;
+/** Convert a wasteFactor (1.00–2.00) to the percent integer the input shows. */
+function factorToPercent(wf: number): number {
+  if (!Number.isFinite(wf) || wf <= 1) return 0;
+  return Math.round((wf - 1) * 100);
+}
+
+/** Convert a percent input value back to the wasteFactor stored on the row. */
+function percentToFactor(pct: number): number {
+  if (!Number.isFinite(pct) || pct <= 0) return 1;
+  return 1 + pct / 100;
 }
 
 interface RecipeData {
@@ -595,8 +601,8 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
                   >
                     <span>Ingredient</span>
                     <span>Quantity</span>
-                    <span title="Waste / trim multiplier. 1.00 = no waste, 1.05 = 5% trim loss, 1.10 = 10%.">
-                      Waste ×
+                    <span title="Waste / trim loss as a percentage of the raw weight. 5% means you lose 5 g out of every 100 g.">
+                      Waste
                     </span>
                     <span style={{ justifyContent: "flex-end" }}>Cost</span>
                     <span aria-hidden />
@@ -604,7 +610,9 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
                   <ul className="v2-rcp-rows">
                     {rows.map((r) => (
                       <li key={r.ingredientId} className="v2-rcp-row">
-                        <span className="v2-rcp-name">{r.name ?? r.ingredientId}</span>
+                        <span className="v2-rcp-name" title={r.name ?? r.ingredientId}>
+                          {r.name ?? r.ingredientId}
+                        </span>
                         <Input
                           type="number"
                           step={displayStep(r.unit)}
@@ -620,19 +628,17 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
                         />
                         <Input
                           type="number"
-                          step="0.01"
-                          min="1"
-                          max="2"
-                          value={r.wasteFactor}
+                          step="1"
+                          min="0"
+                          max="100"
+                          value={factorToPercent(r.wasteFactor)}
                           onChange={(e) =>
-                            updateRow(r.ingredientId, { wasteFactor: Number(e.target.value) })
+                            updateRow(r.ingredientId, {
+                              wasteFactor: percentToFactor(Number(e.target.value)),
+                            })
                           }
-                          aria-label="Waste factor"
-                          trailingAdornment={
-                            <span className="v2-muted" title="Waste / trim loss percentage">
-                              {wastePercent(r.wasteFactor)}
-                            </span>
-                          }
+                          aria-label="Waste percentage"
+                          trailingAdornment={<span className="v2-muted">%</span>}
                         />
                         <span className="tabular v2-rcp-cost">{formatPrice(lineCost(r))}</span>
                         <Button
