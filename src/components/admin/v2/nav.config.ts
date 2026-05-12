@@ -9,6 +9,7 @@ import {
   BarChart3,
   Boxes,
   Building2,
+  CalendarCheck2,
   HardHat,
   Heart,
   History,
@@ -117,6 +118,7 @@ export const NAV_SECTIONS: NavSection[] = [
     label: "System",
     items: [
       { href: "/admin/users", label: "Users & roles", icon: ShieldCheck },
+      { href: "/admin/compliance", label: "Compliance", icon: CalendarCheck2 },
       { href: "/admin/audit-log", label: "Audit log", icon: History },
       { href: "/admin/settings", label: "Settings", icon: Settings, shortcut: "," },
     ],

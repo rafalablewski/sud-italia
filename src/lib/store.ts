@@ -1,7 +1,7 @@
 import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser } from "@/data/types";
+import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem } from "@/data/types";
 import { getActiveLocations, locations as allLocations } from "@/data/locations";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -2681,5 +2681,53 @@ export async function appendAuditLog(input: Omit<AuditLogEntry, "id" | "occurred
       : list;
     await writeJSON("audit-log.json", trimmed);
     return entry;
+  });
+}
+
+// --- Compliance calendar -----------------------------------------------------
+
+export async function getComplianceItems(locationSlug?: string): Promise<ComplianceItem[]> {
+  const all = await readJSON<ComplianceItem[]>("compliance.json", []);
+  const filtered = locationSlug ? all.filter((c) => c.locationSlug === locationSlug) : all;
+  // Renewing-soonest first so the dashboard tile pulls the most urgent items
+  // without re-sorting on the client.
+  return filtered.slice().sort((a, b) => a.expiresAt.localeCompare(b.expiresAt));
+}
+
+export async function saveComplianceItem(
+  input: Omit<ComplianceItem, "id" | "createdAt" | "updatedAt"> & {
+    id?: string;
+    createdAt?: string;
+  },
+): Promise<ComplianceItem> {
+  return withLock("compliance.json", async () => {
+    const list = await readJSON<ComplianceItem[]>("compliance.json", []);
+    const now = new Date().toISOString();
+    const item: ComplianceItem = {
+      id: input.id || `cmp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      locationSlug: input.locationSlug,
+      kind: input.kind,
+      title: input.title,
+      expiresAt: input.expiresAt,
+      lastRenewedAt: input.lastRenewedAt,
+      notes: input.notes,
+      createdAt: input.createdAt ?? now,
+      updatedAt: now,
+    };
+    const i = list.findIndex((c) => c.id === item.id);
+    if (i >= 0) list[i] = item;
+    else list.push(item);
+    await writeJSON("compliance.json", list);
+    return item;
+  });
+}
+
+export async function deleteComplianceItem(id: string): Promise<boolean> {
+  return withLock("compliance.json", async () => {
+    const list = await readJSON<ComplianceItem[]>("compliance.json", []);
+    const filtered = list.filter((c) => c.id !== id);
+    if (filtered.length === list.length) return false;
+    await writeJSON("compliance.json", filtered);
+    return true;
   });
 }

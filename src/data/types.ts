@@ -497,6 +497,46 @@ export interface ExpansionChecklist {
   updatedAt: string;
 }
 
+// --- Compliance calendar (licences, inspections, insurance) ---
+
+export const COMPLIANCE_KINDS = [
+  "alcohol_license",
+  "fire_inspection",
+  "sanepid",
+  "insurance",
+  "gas_inspection",
+  "lease",
+  "other",
+] as const;
+
+export type ComplianceKind = (typeof COMPLIANCE_KINDS)[number];
+
+export const COMPLIANCE_KIND_LABELS: Record<ComplianceKind, string> = {
+  alcohol_license: "Alcohol license",
+  fire_inspection: "Fire inspection",
+  sanepid: "SANEPID",
+  insurance: "Insurance",
+  gas_inspection: "Gas inspection",
+  lease: "Lease",
+  other: "Other",
+};
+
+export interface ComplianceItem {
+  id: string;
+  locationSlug: string;
+  kind: ComplianceKind;
+  /** Human-friendly title — e.g. "Concession alcohol license (Stary Rynek)". */
+  title: string;
+  /** ISO date when the document/license expires. */
+  expiresAt: string;
+  /** ISO date the document was last renewed, if known. */
+  lastRenewedAt?: string;
+  /** Optional internal/contact notes (renewal procedure, lawyer contact, etc.). */
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // --- Admin users + roles ---
 
 export type AdminRole = "owner" | "manager" | "staff" | "kitchen";
