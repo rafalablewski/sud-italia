@@ -4,6 +4,7 @@ import {
   createSession,
   SESSION_COOKIE,
   SESSION_MAX_AGE,
+  LOCATION_SCOPE_ALL,
 } from "@/lib/admin-auth";
 import { appendAuditLog, getAdminUsers } from "@/lib/store";
 
@@ -29,6 +30,11 @@ export async function POST(req: NextRequest) {
     let userId = "admin";
     let auditActor = "admin";
     let resolvedRole: string | undefined;
+    // Owners + shared-password sessions get unrestricted scope; non-owners
+    // with a locationSlug get scoped to that one slug. AdminUser only models
+    // one slug per user today — Phase 3 will widen this to comma-joined
+    // multi-location membership when the franchisee model lands.
+    let locationScope: string = LOCATION_SCOPE_ALL;
 
     if (typeof email === "string" && email.trim().length > 0) {
       const normalized = email.trim().toLowerCase();
@@ -43,19 +49,31 @@ export async function POST(req: NextRequest) {
       userId = hit.id;
       auditActor = hit.email || hit.id;
       resolvedRole = hit.role;
+      if (hit.role !== "owner" && hit.locationSlug) {
+        locationScope = hit.locationSlug;
+      }
     }
 
-    const token = createSession(userId);
+    const token = createSession(userId, locationScope);
 
     await appendAuditLog({
       actor: auditActor,
       action: "auth.login",
       entityType: "admin_user",
       entityId: userId,
-      after: { boundUser: userId !== "admin", role: resolvedRole ?? "owner_shim" },
+      after: {
+        boundUser: userId !== "admin",
+        role: resolvedRole ?? "owner_shim",
+        locationScope,
+      },
     });
 
-    const response = NextResponse.json({ success: true, userId, role: resolvedRole ?? "owner" });
+    const response = NextResponse.json({
+      success: true,
+      userId,
+      role: resolvedRole ?? "owner",
+      locationScope,
+    });
     response.cookies.set(SESSION_COOKIE, token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
