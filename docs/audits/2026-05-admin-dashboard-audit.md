@@ -67,15 +67,15 @@ Format note: tables are split per category for readability. **Priority** is P0 (
 
 ### 1.3 Kitchen Systems
 
-| Existing | Missing | Why It Matters | Priority | Benchmark |
-|---|---|---|---|---|
-| Prep timer color zones (≤12 m / 12–25 m / >25 m) | **Per-item prep duration** sourced from recipe + station actuals; dynamic re-baseline weekly | Hardcoded SLA windows lie about reality; you need rolling p50/p95 per item | P1 | Toast, Olo Rails |
-| Station filter | **Station throughput analytics** (tickets/hour, idle %, bottleneck heatmap by hour-of-day) | Without bottleneck data, hiring/scheduling is guesswork | P1 | Toast KDS Analytics |
-| Recipes have `prepTimeMinutes` field | **Automated batch routing** (batch 4 doughs at once, route to all open tickets) | Pizza is a batchable workflow; treating each ticket independently loses 18–25% throughput | P1 | Galley, Plate IQ |
-| — | **Computer-vision quality control** (dough size, char level, topping coverage) | Pizza quality drift is the #1 churn driver in QSR pizza; CV QC ships in 2026–27 | P3 | Domino's DOM Pizza Checker, KitchenRobotics |
-| — | **AI kitchen assistant** ("you're 12 minutes behind, recommend pausing online slot 14:00") | A passive timer cannot recommend; a model can | P2 | SevenRooms, Toast Tides |
-| — | **Recall function** on KDS (the order I just bumped — bring it back) | Without recall, a bumped-but-incomplete ticket is functionally lost | P0 | Toast, every KDS |
-| — | **Item-86 propagation** (mark sold-out in KDS → menu → online → kiosk in <2 s) | Selling sold-out items is the #1 cause of refunds and 1-star reviews | P0 | Toast, Square |
+| Existing | Missing | Why It Matters | Priority | Benchmark | Status |
+|---|---|---|---|---|---|
+| Prep timer color zones (≤12 m / 12–25 m / >25 m) | **Per-item prep duration** sourced from recipe + station actuals; dynamic re-baseline weekly | Hardcoded SLA windows lie about reality; you need rolling p50/p95 per item | P1 | Toast, Olo Rails | ✗ Not fixed — requires actuals collection + percentile retraining job |
+| Station filter | **Station throughput analytics** (tickets/hour, idle %, bottleneck heatmap by hour-of-day) | Without bottleneck data, hiring/scheduling is guesswork | P1 | Toast KDS Analytics | ✗ Not fixed — needs station-level event capture + heatmap UI |
+| Recipes have `prepTimeMinutes` field | **Automated batch routing** (batch 4 doughs at once, route to all open tickets) | Pizza is a batchable workflow; treating each ticket independently loses 18–25% throughput | P1 | Galley, Plate IQ | ✗ Not fixed — batching algorithm + KDS UI rework |
+| — | **Computer-vision quality control** (dough size, char level, topping coverage) | Pizza quality drift is the #1 churn driver in QSR pizza; CV QC ships in 2026–27 | P3 | Domino's DOM Pizza Checker, KitchenRobotics | ✗ Not fixed — requires camera hardware + CV model |
+| — | **AI kitchen assistant** ("you're 12 minutes behind, recommend pausing online slot 14:00") | A passive timer cannot recommend; a model can | P2 | SevenRooms, Toast Tides | ✗ Not fixed — needs LLM/heuristic recommender + slot-throttling API |
+| — | **Recall function** on KDS (the order I just bumped — bring it back) | Without recall, a bumped-but-incomplete ticket is functionally lost | P0 | Toast, every KDS | ✗ Not fixed — needs status-rewind endpoint + KDS UI affordance |
+| — | **Item-86 propagation** (mark sold-out in KDS → menu → online → kiosk in <2 s) | Selling sold-out items is the #1 cause of refunds and 1-star reviews | P0 | Toast, Square | ✗ Not fixed — requires `availability` field + cross-surface SSE/WebSocket propagation |
 
 ### 1.4 Food-Truck Specific Systems
 
