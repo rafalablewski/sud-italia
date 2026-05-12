@@ -9,6 +9,7 @@ import { ShellContext, type ShellOverlays } from "./ShellContext";
 import { ShortcutsHelp } from "./ShortcutsHelp";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
+import { ToastProvider } from "./ui/Toast";
 import { useShortcuts } from "./hooks/useShortcuts";
 import { ALL_NAV_ITEMS } from "./nav.config";
 
@@ -74,6 +75,7 @@ export function AdminShell({ children }: Props) {
   return (
     <AdminLocationProvider>
       <ShellContext.Provider value={ctxValue}>
+        <ToastProvider>
         <div className="v2-shell">
           <Sidebar />
 
@@ -99,6 +101,7 @@ export function AdminShell({ children }: Props) {
           />
           <ShortcutsHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
         </div>
+        </ToastProvider>
       </ShellContext.Provider>
     </AdminLocationProvider>
   );
