@@ -11,6 +11,7 @@ import {
   Building2,
   HardHat,
   Heart,
+  History,
   PackageSearch,
   Rocket,
   MessageSquare,
@@ -116,6 +117,7 @@ export const NAV_SECTIONS: NavSection[] = [
     label: "System",
     items: [
       { href: "/admin/users", label: "Users & roles", icon: ShieldCheck },
+      { href: "/admin/audit-log", label: "Audit log", icon: History },
       { href: "/admin/settings", label: "Settings", icon: Settings, shortcut: "," },
     ],
   },

@@ -262,7 +262,7 @@ The most important admission this audit can offer: **stop calling the current `/
 12. **Heavy color, low contrast in some surfaces.** Italian red on glass-blur passes WCAG AA only marginally. AAA fails on small text. — ✗ Not fixed — contrast pass deferred.
 13. **No skeleton states.** Fetches show spinners; perceived performance suffers. — ✗ Not fixed — `Skeleton` primitive + per-page wiring deferred.
 14. **No offline indicator.** A truck with bad LTE has no idea its writes aren't landing. — ✗ Not fixed — needs online/offline listener + status pill.
-15. **No "what changed" diff** on records. Audit log shows actions but not field-level diffs in the UI. — ✗ Not fixed — needs before/after capture in audit-log writes + diff renderer.
+15. **No "what changed" diff** on records. Audit log shows actions but not field-level diffs in the UI. — ✓ Fixed — new `/admin/audit-log` page (`src/components/admin/AuditLog.tsx`) lists every entry with filters (group / search) and an expand-to-diff row. `DiffRenderer` walks `before` / `after`, classifies each key as added / removed / changed, and renders side-by-side with red/green colouring. Added to nav under System.
 
 ### 2.3 Redesign Proposals
 
