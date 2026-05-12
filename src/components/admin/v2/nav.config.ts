@@ -15,6 +15,7 @@ import {
   Rocket,
   MessageSquare,
   TrendingUp,
+  Truck,
   Brain,
   Map,
   Settings,
@@ -97,6 +98,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/admin/growth", label: "Campaigns", icon: Rocket },
       { href: "/admin/upsell", label: "Upsell", icon: TrendingUp },
+      { href: "/admin/truck", label: "Truck ops", icon: Truck },
     ],
   },
   {

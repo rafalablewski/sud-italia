@@ -2536,6 +2536,14 @@ html { scroll-behavior: smooth; }
 .v2-schedule-shift-del:hover { color: var(--danger); background: var(--danger-soft); }
 
 /* ============================
+   ADMIN v2 — TRUCK STOPS LIST
+   ============================ */
+
+.v2-stop-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; font-size: var(--text-sm); }
+.v2-stop-list li { display: flex; align-items: baseline; gap: 8px; }
+.v2-stop-num { color: var(--fg-subtle); font-variant-numeric: tabular-nums; min-width: 18px; }
+
+/* ============================
    ADMIN DESIGN SYSTEM (LEGACY — being migrated to v2)
    Tokens → Surfaces → Inputs → Buttons → Typography → Badges → Alerts
    8px baseline grid · 5-color semantic palette · 6-level type scale

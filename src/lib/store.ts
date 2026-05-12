@@ -1,7 +1,7 @@
 import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch } from "@/data/types";
+import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent } from "@/data/types";
 import { getActiveLocations, locations as allLocations } from "@/data/locations";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -2356,5 +2356,88 @@ export async function recordTimePunch(input: Omit<TimePunch, "id" | "occurredAt"
     list.push(punch);
     await writeJSON("time-punches.json", list);
     return punch;
+  });
+}
+
+// --- Truck operations ---
+
+export async function getTruckRoutes(locationSlug?: string): Promise<TruckRoute[]> {
+  const all = await readJSON<TruckRoute[]>("truck-routes.json", []);
+  return locationSlug ? all.filter((r) => r.locationSlug === locationSlug) : all;
+}
+
+export async function saveTruckRoute(input: Omit<TruckRoute, "id" | "createdAt"> & { id?: string; createdAt?: string }): Promise<TruckRoute> {
+  return withLock("truck-routes.json", async () => {
+    const list = await readJSON<TruckRoute[]>("truck-routes.json", []);
+    const route: TruckRoute = {
+      id: input.id || `rt-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      name: input.name,
+      locationSlug: input.locationSlug,
+      description: input.description,
+      stops: input.stops,
+      createdAt: input.createdAt ?? new Date().toISOString(),
+    };
+    const i = list.findIndex((r) => r.id === route.id);
+    if (i >= 0) list[i] = route;
+    else list.push(route);
+    await writeJSON("truck-routes.json", list);
+    return route;
+  });
+}
+
+export async function deleteTruckRoute(id: string): Promise<boolean> {
+  return withLock("truck-routes.json", async () => {
+    const list = await readJSON<TruckRoute[]>("truck-routes.json", []);
+    const filtered = list.filter((r) => r.id !== id);
+    if (filtered.length === list.length) return false;
+    await writeJSON("truck-routes.json", filtered);
+    return true;
+  });
+}
+
+export async function getTruckEvents(filters?: {
+  locationSlug?: string;
+  from?: string;
+  to?: string;
+}): Promise<TruckEvent[]> {
+  const all = await readJSON<TruckEvent[]>("truck-events.json", []);
+  let list = all;
+  if (filters?.locationSlug) list = list.filter((e) => e.locationSlug === filters.locationSlug);
+  if (filters?.from) list = list.filter((e) => e.date >= filters.from!);
+  if (filters?.to) list = list.filter((e) => e.date <= filters.to!);
+  return list.slice().sort((a, b) => b.date.localeCompare(a.date));
+}
+
+export async function saveTruckEvent(input: Omit<TruckEvent, "id" | "createdAt"> & { id?: string; createdAt?: string }): Promise<TruckEvent> {
+  return withLock("truck-events.json", async () => {
+    const list = await readJSON<TruckEvent[]>("truck-events.json", []);
+    const event: TruckEvent = {
+      id: input.id || `te-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      routeId: input.routeId,
+      locationSlug: input.locationSlug,
+      name: input.name,
+      date: input.date,
+      expectedAttendance: input.expectedAttendance,
+      actualRevenueGrosze: input.actualRevenueGrosze,
+      actualOrders: input.actualOrders,
+      notes: input.notes,
+      status: input.status,
+      createdAt: input.createdAt ?? new Date().toISOString(),
+    };
+    const i = list.findIndex((e) => e.id === event.id);
+    if (i >= 0) list[i] = event;
+    else list.push(event);
+    await writeJSON("truck-events.json", list);
+    return event;
+  });
+}
+
+export async function deleteTruckEvent(id: string): Promise<boolean> {
+  return withLock("truck-events.json", async () => {
+    const list = await readJSON<TruckEvent[]>("truck-events.json", []);
+    const filtered = list.filter((e) => e.id !== id);
+    if (filtered.length === list.length) return false;
+    await writeJSON("truck-events.json", filtered);
+    return true;
   });
 }

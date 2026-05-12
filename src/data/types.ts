@@ -352,3 +352,40 @@ export interface TimePunch {
   /** Optional shift this punch is associated with. */
   shiftId?: string;
 }
+
+// --- Truck operations ---
+
+export interface TruckStop {
+  name: string;
+  /** Optional decimal lat/lng for map placement. */
+  lat?: number;
+  lng?: number;
+  startTime?: string;
+  endTime?: string;
+}
+
+export interface TruckRoute {
+  id: string;
+  name: string;
+  locationSlug: string;
+  description?: string;
+  stops: TruckStop[];
+  createdAt: string;
+}
+
+export type TruckEventStatus = "scheduled" | "live" | "done" | "cancelled";
+
+export interface TruckEvent {
+  id: string;
+  routeId?: string;
+  locationSlug: string;
+  name: string;
+  date: string; // YYYY-MM-DD
+  expectedAttendance?: number;
+  actualRevenueGrosze?: number;
+  actualOrders?: number;
+  /** Free-form notes (weather, road closures, etc). */
+  notes?: string;
+  status: TruckEventStatus;
+  createdAt: string;
+}
