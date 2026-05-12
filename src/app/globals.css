@@ -2427,6 +2427,28 @@ html { scroll-behavior: smooth; }
 }
 
 /* ============================
+   ADMIN v2 — LOYALTY (wallets list)
+   ============================ */
+
+.v2-wallets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+.v2-wallet-title { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+.v2-wallet-members { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.v2-wallet-members li {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 8px;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+}
+
+/* ============================
    ADMIN DESIGN SYSTEM (LEGACY — being migrated to v2)
    Tokens → Surfaces → Inputs → Buttons → Typography → Badges → Alerts
    8px baseline grid · 5-color semantic palette · 6-level type scale
