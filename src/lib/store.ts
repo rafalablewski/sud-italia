@@ -1,7 +1,7 @@
 import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent } from "@/data/types";
+import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist } from "@/data/types";
 import { getActiveLocations, locations as allLocations } from "@/data/locations";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -2439,5 +2439,28 @@ export async function deleteTruckEvent(id: string): Promise<boolean> {
     if (filtered.length === list.length) return false;
     await writeJSON("truck-events.json", filtered);
     return true;
+  });
+}
+
+// --- Expansion readiness checklist ---
+
+export async function getExpansionChecklists(): Promise<ExpansionChecklist[]> {
+  return readJSON<ExpansionChecklist[]>("expansion-checklists.json", []);
+}
+
+export async function getExpansionChecklist(locationSlug: string): Promise<ExpansionChecklist | null> {
+  const list = await getExpansionChecklists();
+  return list.find((c) => c.locationSlug === locationSlug) ?? null;
+}
+
+export async function saveExpansionChecklist(input: Omit<ExpansionChecklist, "updatedAt">): Promise<ExpansionChecklist> {
+  return withLock("expansion-checklists.json", async () => {
+    const list = await readJSON<ExpansionChecklist[]>("expansion-checklists.json", []);
+    const checklist: ExpansionChecklist = { ...input, updatedAt: new Date().toISOString() };
+    const i = list.findIndex((c) => c.locationSlug === input.locationSlug);
+    if (i >= 0) list[i] = checklist;
+    else list.push(checklist);
+    await writeJSON("expansion-checklists.json", list);
+    return checklist;
   });
 }

@@ -389,3 +389,23 @@ export interface TruckEvent {
   status: TruckEventStatus;
   createdAt: string;
 }
+
+// --- Expansion readiness checklist (per prospective location) ---
+
+export interface ExpansionChecklistItem {
+  id: string;
+  label: string;
+  done: boolean;
+  category: "legal" | "site" | "supply" | "people" | "ops" | "marketing";
+  notes?: string;
+}
+
+export interface ExpansionChecklist {
+  locationSlug: string;
+  /** Free-form name when the slug refers to a planned but not-yet-active location. */
+  city?: string;
+  items: ExpansionChecklistItem[];
+  notes?: string;
+  /** ISO timestamp of last edit. */
+  updatedAt: string;
+}
