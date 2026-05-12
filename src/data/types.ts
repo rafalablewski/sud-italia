@@ -409,3 +409,20 @@ export interface ExpansionChecklist {
   /** ISO timestamp of last edit. */
   updatedAt: string;
 }
+
+// --- Audit log ---
+
+export interface AuditLogEntry {
+  id: string;
+  /** Actor identifier (e.g. "admin" today; phase 24 introduces named users). */
+  actor: string;
+  /** Action performed, e.g. "settings.update", "orders.status_change". */
+  action: string;
+  /** Optional entity reference, e.g. order id or menu item id. */
+  entityType?: string;
+  entityId?: string;
+  /** Snapshot of what changed — kept JSON-stringifiable. */
+  before?: unknown;
+  after?: unknown;
+  occurredAt: string;
+}

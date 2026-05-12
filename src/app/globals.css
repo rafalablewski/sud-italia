@@ -2612,6 +2612,8 @@ html { scroll-behavior: smooth; }
 }
 .v2-exp-item:hover { background: var(--surface-hover); }
 
+.v2-form-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
 /* ============================
    ADMIN DESIGN SYSTEM (LEGACY — being migrated to v2)
    Tokens → Surfaces → Inputs → Buttons → Typography → Badges → Alerts

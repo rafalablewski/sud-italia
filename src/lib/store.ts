@@ -1,7 +1,7 @@
 import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist } from "@/data/types";
+import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry } from "@/data/types";
 import { getActiveLocations, locations as allLocations } from "@/data/locations";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -2462,5 +2462,45 @@ export async function saveExpansionChecklist(input: Omit<ExpansionChecklist, "up
     else list.push(checklist);
     await writeJSON("expansion-checklists.json", list);
     return checklist;
+  });
+}
+
+// --- Audit log ---
+
+export async function getAuditLog(filters?: {
+  action?: string;
+  entityType?: string;
+  limit?: number;
+}): Promise<AuditLogEntry[]> {
+  const all = await readJSON<AuditLogEntry[]>("audit-log.json", []);
+  let list = all.slice().sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
+  if (filters?.action) list = list.filter((e) => e.action === filters.action);
+  if (filters?.entityType) list = list.filter((e) => e.entityType === filters.entityType);
+  if (filters?.limit) list = list.slice(0, filters.limit);
+  return list;
+}
+
+const AUDIT_LOG_MAX_ENTRIES = 1000;
+
+export async function appendAuditLog(input: Omit<AuditLogEntry, "id" | "occurredAt"> & { occurredAt?: string }): Promise<AuditLogEntry> {
+  return withLock("audit-log.json", async () => {
+    const list = await readJSON<AuditLogEntry[]>("audit-log.json", []);
+    const entry: AuditLogEntry = {
+      id: `al-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      actor: input.actor,
+      action: input.action,
+      entityType: input.entityType,
+      entityId: input.entityId,
+      before: input.before,
+      after: input.after,
+      occurredAt: input.occurredAt ?? new Date().toISOString(),
+    };
+    list.push(entry);
+    // Trim to last N to keep file small
+    const trimmed = list.length > AUDIT_LOG_MAX_ENTRIES
+      ? list.slice(list.length - AUDIT_LOG_MAX_ENTRIES)
+      : list;
+    await writeJSON("audit-log.json", trimmed);
+    return entry;
   });
 }
