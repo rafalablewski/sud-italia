@@ -48,14 +48,20 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(result);
 }
 
-/** Builds menu-name lookup across every active location so audit entries
- * include the human-readable item name without forcing the caller to send it. */
+/** Menu-name lookup across every active location so audit entries include
+ * the human-readable item name without forcing the caller to send it.
+ * Menu data is static (seed code), so the result never changes within a
+ * single Node process — cached at module scope to keep PUT requests fast
+ * as the chain scales out to more trucks / SKUs. */
+let cachedMenuItemNames: Map<string, string> | null = null;
 function buildMenuItemNames(): Map<string, string> {
+  if (cachedMenuItemNames) return cachedMenuItemNames;
   const lookup = new Map<string, string>();
   for (const loc of locations) {
     if (!loc.isActive) continue;
     for (const item of getMenu(loc.slug)) lookup.set(item.id, item.name);
   }
+  cachedMenuItemNames = lookup;
   return lookup;
 }
 
