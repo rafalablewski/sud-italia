@@ -107,7 +107,7 @@ export const NAV_SECTIONS: NavSection[] = [
     label: "Intelligence",
     items: [
       { href: "/admin/locations", label: "Multi-location", icon: Map },
-      { href: "/admin/ai", label: "AI Insights", icon: Brain },
+      { href: "/admin/ai", label: "Insights", icon: Brain },
       { href: "/admin/expansion", label: "Expansion", icon: Map },
     ],
   },
