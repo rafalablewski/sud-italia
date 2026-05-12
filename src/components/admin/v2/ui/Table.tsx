@@ -31,9 +31,26 @@ interface Props<R> {
   empty?: ReactNode;
   /** Smaller row padding. */
   density?: "default" | "compact";
+  /** Enables a checkbox column. Parent owns the Set of selected ids. */
+  selectable?: boolean;
+  /** Set of selected row ids (when selectable=true). */
+  selectedIds?: ReadonlySet<string>;
+  /** Called whenever the selected set changes. Receives a fresh Set. */
+  onSelectionChange?: (next: Set<string>) => void;
 }
 
-export function Table<R>({ rows, columns, rowKey, defaultSort, onRowClick, empty, density = "default" }: Props<R>) {
+export function Table<R>({
+  rows,
+  columns,
+  rowKey,
+  defaultSort,
+  onRowClick,
+  empty,
+  density = "default",
+  selectable,
+  selectedIds,
+  onSelectionChange,
+}: Props<R>) {
   const [sort, setSort] = useState<{ key: string; dir: "asc" | "desc" } | null>(defaultSort ?? null);
 
   const sorted = useMemo(() => {
@@ -67,11 +84,45 @@ export function Table<R>({ rows, columns, rowKey, defaultSort, onRowClick, empty
     });
   };
 
+  const allIds = useMemo(() => sorted.map((r) => rowKey(r)), [sorted, rowKey]);
+  const selectedCount = selectedIds
+    ? allIds.reduce((n, id) => n + (selectedIds.has(id) ? 1 : 0), 0)
+    : 0;
+  const allSelected = selectable && allIds.length > 0 && selectedCount === allIds.length;
+  const someSelected = selectable && selectedCount > 0 && !allSelected;
+
+  const toggleRow = (id: string) => {
+    if (!onSelectionChange) return;
+    const next = new Set(selectedIds ?? []);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    onSelectionChange(next);
+  };
+
+  const toggleAll = () => {
+    if (!onSelectionChange) return;
+    if (allSelected) onSelectionChange(new Set());
+    else onSelectionChange(new Set(allIds));
+  };
+
   return (
     <div className={`v2-table-wrap v2-table-${density}`}>
       <table className="v2-table">
         <thead>
           <tr>
+            {selectable && (
+              <th className="v2-th v2-th-left" style={{ width: "2.25rem" }}>
+                <input
+                  type="checkbox"
+                  aria-label={allSelected ? "Deselect all" : "Select all"}
+                  checked={!!allSelected}
+                  ref={(el) => {
+                    if (el) el.indeterminate = !!someSelected;
+                  }}
+                  onChange={toggleAll}
+                />
+              </th>
+            )}
             {columns.map((c) => {
               const sortable = !!c.sortValue;
               const isSorted = sort?.key === c.key;
@@ -110,27 +161,48 @@ export function Table<R>({ rows, columns, rowKey, defaultSort, onRowClick, empty
         <tbody>
           {sorted.length === 0 ? (
             <tr>
-              <td colSpan={columns.length} className="v2-td-empty">
+              <td colSpan={columns.length + (selectable ? 1 : 0)} className="v2-td-empty">
                 {empty ?? "No results"}
               </td>
             </tr>
           ) : (
-            sorted.map((row) => (
-              <tr
-                key={rowKey(row)}
-                onClick={onRowClick ? () => onRowClick(row) : undefined}
-                className={onRowClick ? "v2-tr-clickable" : ""}
-              >
-                {columns.map((c) => (
-                  <td
-                    key={c.key}
-                    className={`v2-td v2-td-${c.align ?? "left"} ${c.sticky ? "is-sticky" : ""}`}
-                  >
-                    {c.cell(row)}
-                  </td>
-                ))}
-              </tr>
-            ))
+            sorted.map((row) => {
+              const id = rowKey(row);
+              const isSelected = selectable && selectedIds?.has(id);
+              return (
+                <tr
+                  key={id}
+                  onClick={onRowClick ? () => onRowClick(row) : undefined}
+                  className={`${onRowClick ? "v2-tr-clickable" : ""} ${isSelected ? "v2-tr-selected" : ""}`.trim()}
+                  style={isSelected ? { background: "rgba(185, 28, 28, 0.04)" } : undefined}
+                >
+                  {selectable && (
+                    <td
+                      className="v2-td v2-td-left"
+                      onClick={(e) => {
+                        // Don't trigger row-click when toggling the checkbox.
+                        e.stopPropagation();
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        aria-label={isSelected ? "Deselect row" : "Select row"}
+                        checked={!!isSelected}
+                        onChange={() => toggleRow(id)}
+                      />
+                    </td>
+                  )}
+                  {columns.map((c) => (
+                    <td
+                      key={c.key}
+                      className={`v2-td v2-td-${c.align ?? "left"} ${c.sticky ? "is-sticky" : ""}`}
+                    >
+                      {c.cell(row)}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })
           )}
         </tbody>
       </table>

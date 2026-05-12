@@ -86,6 +86,8 @@ export function AdminMenu() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<MenuCategory | "all">("all");
   const [editing, setEditing] = useState<MenuItemData | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const fetchMenu = useCallback(async () => {
     setLoading(true);
@@ -127,6 +129,43 @@ export function AdminMenu() {
     } else {
       toast.success(next ? "Item available" : "Item hidden", item.name);
     }
+  };
+
+  const bulkSetAvailability = async (available: boolean) => {
+    if (selectedIds.size === 0) return;
+    setBulkBusy(true);
+    try {
+      const updates: Record<string, { available: boolean }> = {};
+      for (const id of selectedIds) updates[id] = { available };
+      const res = await fetch("/api/admin/menu", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: updates }),
+      });
+      if (res.ok) {
+        setItems((arr) =>
+          arr.map((i) => (selectedIds.has(i.id) ? { ...i, available, _hasOverride: true } : i)),
+        );
+        toast.success(
+          available ? "Items marked available" : "Items 86'd",
+          `${selectedIds.size} ${selectedIds.size === 1 ? "item" : "items"} updated.`,
+        );
+        setSelectedIds(new Set());
+      } else {
+        toast.error("Could not bulk update");
+      }
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
 
   const saveEdit = async (id: string, change: { price?: number; description?: string }) => {
@@ -233,6 +272,41 @@ export function AdminMenu() {
         />
       </div>
 
+      {selectedIds.size > 0 && (
+        <div
+          style={{
+            position: "sticky",
+            top: "0.5rem",
+            zIndex: 10,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "0.75rem",
+            padding: "0.5rem 0.75rem",
+            margin: "0 0 0.5rem",
+            borderRadius: "0.5rem",
+            background: "var(--v2-surface, #ffffff)",
+            border: "1px solid var(--v2-border, #e5e7eb)",
+            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.06)",
+          }}
+        >
+          <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>
+            {selectedIds.size} selected
+          </span>
+          <div style={{ display: "flex", gap: "0.375rem" }}>
+            <Button size="sm" variant="ghost" disabled={bulkBusy} onClick={() => bulkSetAvailability(false)}>
+              86 selected
+            </Button>
+            <Button size="sm" variant="ghost" disabled={bulkBusy} onClick={() => bulkSetAvailability(true)}>
+              Mark available
+            </Button>
+            <Button size="sm" variant="ghost" disabled={bulkBusy} onClick={() => setSelectedIds(new Set())}>
+              Clear
+            </Button>
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <div className="v2-page-loading">Loading menu…</div>
       ) : filtered.length === 0 ? (
@@ -269,11 +343,20 @@ export function AdminMenu() {
                 <ul className="v2-mng-list">
                   {list.map((item) => {
                     const margin = marginPct(item.price, item.cost);
+                    const isSelected = selectedIds.has(item.id);
                     return (
                       <li
                         key={item.id}
                         className={`v2-mng-row v2-mng-row-menu ${item.available ? "" : "is-off"}`}
+                        style={isSelected ? { background: "rgba(185, 28, 28, 0.04)" } : undefined}
                       >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelected(item.id)}
+                          aria-label={isSelected ? `Deselect ${item.name}` : `Select ${item.name}`}
+                          style={{ marginRight: "0.5rem" }}
+                        />
                         <button
                           type="button"
                           onClick={() => toggleAvailability(item)}

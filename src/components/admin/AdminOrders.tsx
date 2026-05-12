@@ -116,6 +116,12 @@ export function AdminOrders() {
     if (orders.some((o) => o.id === hash)) setDetailId(hash);
   }, [orders]);
 
+  // Bulk-selection state for the table view. Cleared whenever the visible
+  // row set changes (filter / location / status switch) to avoid acting on
+  // hidden rows by accident.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+
   const handleStatusChange = async (orderId: string, status: OrderStatus) => {
     setUpdating(orderId);
     try {
@@ -300,7 +306,66 @@ export function AdminOrders() {
           updating={updating}
         />
       ) : (
-        <OrdersTable rows={filtered} onOpen={setDetailId} />
+        <OrdersTable
+          rows={filtered}
+          onOpen={setDetailId}
+          selectedIds={selectedIds}
+          onSelectionChange={setSelectedIds}
+        />
+      )}
+
+      {view === "table" && selectedIds.size > 0 && (
+        <BulkActionsBar
+          count={selectedIds.size}
+          busy={bulkBusy}
+          onClear={() => setSelectedIds(new Set())}
+          onAction={async (kind) => {
+            setBulkBusy(true);
+            const ids = [...selectedIds];
+            try {
+              const results = await Promise.all(
+                ids.map(async (id) => {
+                  if (kind === "delete") {
+                    const r = await fetch("/api/admin/orders", {
+                      method: "DELETE",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ orderId: id }),
+                    });
+                    return r.ok;
+                  }
+                  const status: OrderStatus = kind === "cancel" ? "cancelled" : "completed";
+                  const r = await fetch("/api/admin/orders", {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ orderId: id, status }),
+                  });
+                  return r.ok;
+                }),
+              );
+              const ok = results.filter(Boolean).length;
+              const failed = results.length - ok;
+              if (kind === "delete") {
+                setOrders((arr) => arr.filter((o) => !selectedIds.has(o.id) || !results[ids.indexOf(o.id)]));
+              } else {
+                setOrders((arr) =>
+                  arr.map((o) =>
+                    selectedIds.has(o.id) && results[ids.indexOf(o.id)]
+                      ? { ...o, status: kind === "cancel" ? "cancelled" : "completed" }
+                      : o,
+                  ),
+                );
+              }
+              if (failed === 0) {
+                toast.success(`Bulk ${kind} done`, `${ok} order${ok === 1 ? "" : "s"} updated.`);
+              } else {
+                toast.warning(`Bulk ${kind} partial`, `${ok} ok · ${failed} failed.`);
+              }
+              setSelectedIds(new Set());
+            } finally {
+              setBulkBusy(false);
+            }
+          }}
+        />
       )}
 
       <OrderDetail
@@ -444,9 +509,11 @@ function KanbanCard({ order, onOpen, onAdvance, isUpdating }: KanbanCardProps) {
 interface TableProps {
   rows: Order[];
   onOpen: (id: string) => void;
+  selectedIds: ReadonlySet<string>;
+  onSelectionChange: (next: Set<string>) => void;
 }
 
-function OrdersTable({ rows, onOpen }: TableProps) {
+function OrdersTable({ rows, onOpen, selectedIds, onSelectionChange }: TableProps) {
   const cols: Column<Order>[] = [
     {
       key: "id",
@@ -538,6 +605,9 @@ function OrdersTable({ rows, onOpen }: TableProps) {
       rowKey={(o) => o.id}
       defaultSort={{ key: "age", dir: "asc" }}
       onRowClick={(o) => onOpen(o.id)}
+      selectable
+      selectedIds={selectedIds}
+      onSelectionChange={onSelectionChange}
     />
   );
 }
@@ -855,6 +925,64 @@ interface RefundDialogProps {
     reasonCode: RefundReasonCode;
     notes?: string;
   }) => Promise<{ ok: boolean; error?: string }>;
+}
+
+type BulkKind = "complete" | "cancel" | "delete";
+
+/**
+ * Sticky bulk-action strip shown above the OrderDetail when one or more
+ * rows are selected in the table view. Three actions today (mark
+ * completed, cancel, delete); each fans out to per-id API calls in
+ * parallel and toasts a summary including any partial failures.
+ */
+function BulkActionsBar({
+  count,
+  busy,
+  onClear,
+  onAction,
+}: {
+  count: number;
+  busy: boolean;
+  onClear: () => void;
+  onAction: (kind: BulkKind) => void | Promise<void>;
+}) {
+  return (
+    <div
+      style={{
+        position: "sticky",
+        top: "0.5rem",
+        zIndex: 10,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: "0.75rem",
+        padding: "0.5rem 0.75rem",
+        margin: "0 0 0.5rem",
+        borderRadius: "0.5rem",
+        background: "var(--v2-surface, #ffffff)",
+        border: "1px solid var(--v2-border, #e5e7eb)",
+        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.06)",
+      }}
+    >
+      <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>
+        {count} selected
+      </span>
+      <div style={{ display: "flex", gap: "0.375rem" }}>
+        <Button size="sm" variant="ghost" disabled={busy} onClick={() => onAction("complete")}>
+          Mark completed
+        </Button>
+        <Button size="sm" variant="ghost" disabled={busy} onClick={() => onAction("cancel")}>
+          Cancel
+        </Button>
+        <Button size="sm" variant="danger" disabled={busy} onClick={() => onAction("delete")}>
+          Delete
+        </Button>
+        <Button size="sm" variant="ghost" disabled={busy} onClick={onClear}>
+          Clear
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 function RefundDialog({ order, onClose, onSubmit }: RefundDialogProps) {
