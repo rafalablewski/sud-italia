@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAuthenticated } from "@/lib/admin-auth";
-import { getSettings, updateSettings } from "@/lib/store";
+import { appendAuditLog, getSettings, updateSettings } from "@/lib/store";
 
 async function requireAuth() {
   if (!(await isAuthenticated())) {
@@ -21,8 +21,16 @@ export async function PUT(req: NextRequest) {
   if (authError) return authError;
 
   try {
+    const before = await getSettings();
     const updates = await req.json();
     const settings = await updateSettings(updates);
+    await appendAuditLog({
+      actor: "admin",
+      action: "settings.update",
+      entityType: "settings",
+      before,
+      after: settings,
+    });
     return NextResponse.json(settings);
   } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

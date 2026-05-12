@@ -1,9 +1,28 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { AdminNav } from "./AdminNav";
-import { Save, KeyRound, Truck, ShoppingBag, Phone, Mail, Database } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  History,
+  KeyRound,
+  Phone,
+  Save,
+  ShieldCheck,
+  Sprout,
+  Truck,
+} from "lucide-react";
+import { useToast } from "./v2/ui/Toast";
+import {
+  Badge,
+  Button,
+  Card,
+  CardBody,
+  CardHeader,
+  EmptyState,
+  Input,
+  Tabs,
+  Table,
+  type Column,
+} from "./v2/ui";
 
 interface Settings {
   deliveryFee: number;
@@ -12,333 +31,364 @@ interface Settings {
   businessEmail: string;
 }
 
+interface AuditEntry {
+  id: string;
+  actor: string;
+  action: string;
+  entityType?: string;
+  entityId?: string;
+  before?: unknown;
+  after?: unknown;
+  occurredAt: string;
+}
+
+type TabKey = "general" | "security" | "audit" | "danger";
+
+function fmtTime(iso: string): string {
+  try {
+    return new Date(iso).toLocaleString();
+  } catch {
+    return iso;
+  }
+}
+
 export function AdminSettings() {
-  const router = useRouter();
+  const toast = useToast();
+  const [tab, setTab] = useState<TabKey>("general");
+
   const [settings, setSettings] = useState<Settings | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [deliveryFeeStr, setDeliveryFeeStr] = useState("0.00");
+  const [minOrderStr, setMinOrderStr] = useState("0.00");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+
+  const [audit, setAudit] = useState<AuditEntry[]>([]);
+  const [auditLoading, setAuditLoading] = useState(true);
 
   // Password change
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [passwordError, setPasswordError] = useState("");
-  const [passwordSaved, setPasswordSaved] = useState(false);
-  const [changingPassword, setChangingPassword] = useState(false);
+  const [oldPw, setOldPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [pwBusy, setPwBusy] = useState(false);
 
-  useEffect(() => {
-    fetch("/api/admin/settings")
-      .then((r) => r.json())
-      .then(setSettings)
-      .catch(console.error)
-      .finally(() => setLoading(false));
+  const fetchSettings = useCallback(async () => {
+    const res = await fetch("/api/admin/settings");
+    if (!res.ok) return;
+    const data: Settings = await res.json();
+    setSettings(data);
+    setDeliveryFeeStr((data.deliveryFee / 100).toFixed(2));
+    setMinOrderStr((data.minOrderAmount / 100).toFixed(2));
+    setPhone(data.businessPhone ?? "");
+    setEmail(data.businessEmail ?? "");
   }, []);
 
-  const handleSaveSettings = async () => {
-    if (!settings) return;
+  const fetchAudit = useCallback(async () => {
+    setAuditLoading(true);
+    try {
+      const res = await fetch("/api/admin/audit-log?limit=200");
+      if (res.ok) {
+        const data = await res.json();
+        setAudit(Array.isArray(data) ? data : []);
+      }
+    } finally {
+      setAuditLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSettings();
+    fetchAudit();
+  }, [fetchSettings, fetchAudit]);
+
+  const saveGeneral = async () => {
     setSaving(true);
-    setSaved(false);
     try {
       const res = await fetch("/api/admin/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(settings),
+        body: JSON.stringify({
+          deliveryFee: Math.round(parseFloat(deliveryFeeStr || "0") * 100),
+          minOrderAmount: Math.round(parseFloat(minOrderStr || "0") * 100),
+          businessPhone: phone.trim(),
+          businessEmail: email.trim(),
+        }),
       });
       if (res.ok) {
-        setSettings(await res.json());
-        setSaved(true);
+        toast.success("Settings saved");
+        await Promise.all([fetchSettings(), fetchAudit()]);
+      } else {
+        toast.error("Could not save");
       }
     } finally {
       setSaving(false);
     }
   };
 
-  const handleChangePassword = async () => {
-    setPasswordError("");
-    setPasswordSaved(false);
-
-    if (!newPassword || newPassword.length < 6) {
-      setPasswordError("Password must be at least 6 characters");
+  const changePassword = async () => {
+    if (!oldPw || !newPw) {
+      toast.warning("Provide both passwords");
       return;
     }
-    if (newPassword !== confirmPassword) {
-      setPasswordError("Passwords do not match");
+    if (newPw.length < 8) {
+      toast.warning("New password must be 8+ characters");
       return;
     }
-
-    setChangingPassword(true);
+    setPwBusy(true);
     try {
-      // Verify current password
-      const verifyRes = await fetch("/api/admin/login", {
+      // Verify current password using the existing login endpoint
+      const verify = await fetch("/api/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: currentPassword }),
+        body: JSON.stringify({ password: oldPw }),
       });
-
-      if (!verifyRes.ok) {
-        setPasswordError("Current password is incorrect");
+      if (!verify.ok) {
+        toast.error("Current password is incorrect");
         return;
       }
-
-      // Save new password via settings
+      // Persist new password via settings.adminPassword field
       const res = await fetch("/api/admin/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ _newPassword: newPassword }),
+        body: JSON.stringify({ adminPassword: newPw }),
       });
-
       if (res.ok) {
-        setPasswordSaved(true);
-        setCurrentPassword("");
-        setNewPassword("");
-        setConfirmPassword("");
-        // Log out and redirect to login
-        await fetch("/api/admin/logout", { method: "POST" });
-        setTimeout(() => router.push("/admin/login"), 1500);
-      }
-    } finally {
-      setChangingPassword(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <>
-        <AdminNav />
-        <div className="max-w-7xl mx-auto p-6 text-center admin-text-muted py-12">Loading...</div>
-      </>
-    );
-  }
-
-  return (
-    <>
-      <AdminNav />
-      <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
-        <div>
-          <h1 className="text-2xl font-heading font-bold admin-text">Settings</h1>
-          <p className="text-sm admin-text-dim mt-1">Business configuration, delivery, and security</p>
-        </div>
-
-        {/* Business Settings */}
-        <div className="glass-card rounded-lg border border-white/10 p-6 shadow-sm">
-          <h2 className="font-bold admin-text mb-4">Business Configuration</h2>
-
-          {saved && (
-            <div className="mb-4 p-3 bg-green-500/20 border border-green-500/30 rounded-lg text-sm text-green-300 font-medium">
-              Settings saved successfully.
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium admin-text mb-1.5">
-                <Truck className="h-4 w-4 admin-text-muted" />
-                Delivery Fee
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  step="0.01"
-                  value={settings ? (settings.deliveryFee / 100).toFixed(2) : ""}
-                  onChange={(e) => setSettings((s) => s ? { ...s, deliveryFee: Math.round(parseFloat(e.target.value || "0") * 100) } : s)}
-                  className="w-full px-3 py-2 glass-input rounded-lg text-sm min-h-[44px]"
-                />
-                <span className="text-sm admin-text-muted">PLN</span>
-              </div>
-            </div>
-
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium admin-text mb-1.5">
-                <ShoppingBag className="h-4 w-4 admin-text-muted" />
-                Minimum Order
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  step="0.01"
-                  value={settings ? (settings.minOrderAmount / 100).toFixed(2) : ""}
-                  onChange={(e) => setSettings((s) => s ? { ...s, minOrderAmount: Math.round(parseFloat(e.target.value || "0") * 100) } : s)}
-                  className="w-full px-3 py-2 glass-input rounded-lg text-sm min-h-[44px]"
-                />
-                <span className="text-sm admin-text-muted">PLN</span>
-              </div>
-            </div>
-
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium admin-text mb-1.5">
-                <Phone className="h-4 w-4 admin-text-muted" />
-                Business Phone
-              </label>
-              <input
-                type="tel"
-                placeholder="+48 123 456 789"
-                value={settings?.businessPhone || ""}
-                onChange={(e) => setSettings((s) => s ? { ...s, businessPhone: e.target.value } : s)}
-                className="w-full px-3 py-2 glass-input rounded-lg text-sm min-h-[44px]"
-              />
-            </div>
-
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium admin-text mb-1.5">
-                <Mail className="h-4 w-4 admin-text-muted" />
-                Business Email
-              </label>
-              <input
-                type="email"
-                placeholder="info@suditalia.pl"
-                value={settings?.businessEmail || ""}
-                onChange={(e) => setSettings((s) => s ? { ...s, businessEmail: e.target.value } : s)}
-                className="w-full px-3 py-2 glass-input rounded-lg text-sm min-h-[44px]"
-              />
-            </div>
-          </div>
-
-          <div className="mt-5 flex justify-end">
-            <button
-              onClick={handleSaveSettings}
-              disabled={saving}
-              className="glass-btn-green flex items-center gap-2 disabled:opacity-50"
-            >
-              <Save className="h-4 w-4" />
-              {saving ? "Saving..." : "Save Settings"}
-            </button>
-          </div>
-        </div>
-
-        {/* Change Password */}
-        <div className="glass-card rounded-lg border border-white/10 p-6 shadow-sm">
-          <h2 className="font-bold admin-text mb-4 flex items-center gap-2">
-            <KeyRound className="h-5 w-5 admin-text-muted" />
-            Change Password
-          </h2>
-
-          {passwordSaved && (
-            <div className="mb-4 p-3 bg-green-500/20 border border-green-500/30 rounded-lg text-sm text-green-300 font-medium">
-              Password changed. Redirecting to login...
-            </div>
-          )}
-
-          {passwordError && (
-            <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-sm text-red-400 font-medium">
-              {passwordError}
-            </div>
-          )}
-
-          <div className="space-y-4 max-w-sm">
-            <div>
-              <label className="block text-sm font-medium admin-text mb-1.5">
-                Current Password
-              </label>
-              <input
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                className="w-full px-3 py-2 glass-input rounded-lg text-sm min-h-[44px]"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium admin-text mb-1.5">
-                New Password
-              </label>
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full px-3 py-2 glass-input rounded-lg text-sm min-h-[44px]"
-                placeholder="Min. 6 characters"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium admin-text mb-1.5">
-                Confirm New Password
-              </label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-3 py-2 glass-input rounded-lg text-sm min-h-[44px]"
-              />
-            </div>
-
-            <button
-              onClick={handleChangePassword}
-              disabled={changingPassword || !currentPassword || !newPassword}
-              className="glass-btn flex items-center gap-2 disabled:opacity-50"
-            >
-              <KeyRound className="h-4 w-4" />
-              {changingPassword ? "Changing..." : "Change Password"}
-            </button>
-          </div>
-
-          <p className="mt-4 text-xs admin-text-muted">
-            Note: Changing the password requires the ADMIN_PASSWORD environment variable to be updated in your deployment settings for the change to persist across deploys.
-          </p>
-        </div>
-
-        {/* Seed Data */}
-        <SeedSection />
-      </div>
-    </>
-  );
-}
-
-function SeedSection() {
-  const [seeding, setSeeding] = useState(false);
-  const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
-
-  const handleSeed = async () => {
-    if (!confirm("This will seed sample ingredients and a Margherita recipe. Existing data with the same IDs will be overwritten. Continue?")) return;
-    setSeeding(true);
-    setResult(null);
-    try {
-      const res = await fetch("/api/admin/seed", { method: "POST" });
-      const data = await res.json();
-      if (res.ok) {
-        setResult({
-          success: true,
-          message: `Seeded ${data.ingredientsSeeded} ingredients and Margherita recipe (food cost: ${data.recipe.totalFoodCost}, margin: ${data.recipe.margin})`,
-        });
+        toast.success("Password updated", "You'll need to log in again on your next visit.");
+        setOldPw("");
+        setNewPw("");
+        await fetchAudit();
       } else {
-        setResult({ success: false, message: data.error || "Seed failed" });
+        toast.error("Could not update password");
       }
-    } catch {
-      setResult({ success: false, message: "Network error" });
     } finally {
-      setSeeding(false);
+      setPwBusy(false);
     }
   };
 
-  return (
-    <div className="glass-card rounded-lg border border-white/10 p-6 shadow-sm">
-      <h2 className="font-bold admin-text mb-2 flex items-center gap-2">
-        <Database className="h-5 w-5 admin-text-muted" />
-        Seed Sample Data
-      </h2>
-      <p className="text-sm admin-text-muted mb-4">
-        Load sample ingredients (with avg Polish market prices) and a complete Margherita pizza recipe to get started.
-      </p>
+  const seedDevData = async () => {
+    if (!confirm("Seed development data? This is a no-op in production and only fills demo orders/slots in dev.")) return;
+    const res = await fetch("/api/admin/seed", { method: "POST" });
+    if (res.ok) {
+      toast.success("Demo data seeded");
+    } else {
+      const data = await res.json().catch(() => ({}));
+      toast.error("Could not seed", (data as { error?: string }).error);
+    }
+  };
 
-      {result && (
-        <div className={`mb-4 p-3 rounded-lg text-sm font-medium ${
-          result.success
-            ? "bg-green-500/20 border border-green-500/30 text-green-300"
-            : "bg-red-500/20 border border-red-500/30 text-red-400"
-        }`}>
-          {result.message}
+  const auditCols: Column<AuditEntry>[] = [
+    {
+      key: "when",
+      header: "When",
+      cell: (e) => <span className="v2-muted">{fmtTime(e.occurredAt)}</span>,
+      sortValue: (e) => e.occurredAt,
+      width: "180px",
+    },
+    {
+      key: "actor",
+      header: "Actor",
+      cell: (e) => <Badge tone="neutral" variant="soft">{e.actor}</Badge>,
+      sortValue: (e) => e.actor,
+    },
+    {
+      key: "action",
+      header: "Action",
+      cell: (e) => <span className="mono">{e.action}</span>,
+      sortValue: (e) => e.action,
+    },
+    {
+      key: "entity",
+      header: "Entity",
+      cell: (e) =>
+        e.entityType ? (
+          <span className="v2-cell-stack">
+            <span>{e.entityType}</span>
+            {e.entityId && <span className="v2-cell-sub mono">{e.entityId}</span>}
+          </span>
+        ) : (
+          <span className="v2-muted">—</span>
+        ),
+    },
+    {
+      key: "summary",
+      header: "Change",
+      cell: (e) => {
+        if (e.action === "orders.status_change") {
+          const next = (e.after as { status?: string } | undefined)?.status;
+          return <span>→ {next ?? "—"}</span>;
+        }
+        if (e.action === "settings.update") {
+          return <span className="v2-muted">settings updated</span>;
+        }
+        return <span className="v2-muted">—</span>;
+      },
+    },
+  ];
+
+  const summaryByAction = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const e of audit) m.set(e.action, (m.get(e.action) ?? 0) + 1);
+    return Array.from(m.entries()).sort((a, b) => b[1] - a[1]);
+  }, [audit]);
+
+  return (
+    <div className="v2-page">
+      <header className="v2-page-header">
+        <div className="v2-page-title-row">
+          <h1 className="v2-page-title">Settings</h1>
+          <p className="v2-page-subtitle">Account, business config, and the audit trail of administrative changes.</p>
         </div>
+        <Tabs
+          value={tab}
+          onChange={(v) => setTab(v as TabKey)}
+          tabs={[
+            { value: "general", label: "General", icon: <Truck className="h-3.5 w-3.5" /> },
+            { value: "security", label: "Security", icon: <KeyRound className="h-3.5 w-3.5" /> },
+            { value: "audit", label: "Audit log", icon: <History className="h-3.5 w-3.5" />, count: audit.length },
+            { value: "danger", label: "Advanced", icon: <ShieldCheck className="h-3.5 w-3.5" /> },
+          ]}
+          variant="pill"
+          ariaLabel="Settings section"
+        />
+      </header>
+
+      {tab === "general" && (
+        <Card>
+          <CardHeader title="Business & delivery" description="Customer-facing fees, contact details." />
+          <CardBody>
+            <div className="v2-stack-12">
+              <div className="v2-form-row-2">
+                <Input
+                  label="Delivery fee"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={deliveryFeeStr}
+                  onChange={(e) => setDeliveryFeeStr(e.target.value)}
+                  trailingAdornment={<span className="v2-muted">zł</span>}
+                />
+                <Input
+                  label="Minimum order"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={minOrderStr}
+                  onChange={(e) => setMinOrderStr(e.target.value)}
+                  trailingAdornment={<span className="v2-muted">zł</span>}
+                />
+              </div>
+              <div className="v2-form-row-2">
+                <Input
+                  label="Business phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  leadingAdornment={<Phone className="h-3.5 w-3.5" />}
+                />
+                <Input
+                  label="Business email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+              <div className="v2-form-actions">
+                <Button variant="primary" leadingIcon={<Save className="h-3.5 w-3.5" />} onClick={saveGeneral} loading={saving} disabled={!settings}>
+                  Save settings
+                </Button>
+              </div>
+            </div>
+          </CardBody>
+        </Card>
       )}
 
-      <button
-        onClick={handleSeed}
-        disabled={seeding}
-        className="glass-btn-blue flex items-center gap-2 disabled:opacity-50"
-      >
-        <Database className="h-4 w-4" />
-        {seeding ? "Seeding..." : "Seed Ingredients & Margherita Recipe"}
-      </button>
+      {tab === "security" && (
+        <Card>
+          <CardHeader title="Admin password" description="Rotate the master password used by the legacy single-user login. Phase 24 introduces per-user accounts." />
+          <CardBody>
+            <div className="v2-stack-12">
+              <Input
+                label="Current password"
+                type="password"
+                value={oldPw}
+                onChange={(e) => setOldPw(e.target.value)}
+                autoComplete="current-password"
+              />
+              <Input
+                label="New password (8+ chars)"
+                type="password"
+                value={newPw}
+                onChange={(e) => setNewPw(e.target.value)}
+                autoComplete="new-password"
+              />
+              <div className="v2-form-actions">
+                <Button variant="primary" leadingIcon={<KeyRound className="h-3.5 w-3.5" />} onClick={changePassword} loading={pwBusy}>
+                  Update password
+                </Button>
+              </div>
+            </div>
+          </CardBody>
+        </Card>
+      )}
+
+      {tab === "audit" && (
+        <>
+          <section className="v2-kpi-grid">
+            {summaryByAction.slice(0, 4).map(([action, count]) => (
+              <div key={action} className="v2-kpi">
+                <div className="v2-kpi-top">
+                  <div className="v2-kpi-label">{action}</div>
+                </div>
+                <div className="v2-kpi-value-row">
+                  <span className="v2-kpi-value tabular">{count.toLocaleString()}</span>
+                </div>
+                <div className="v2-kpi-foot">
+                  <span className="v2-kpi-hint">events in log</span>
+                </div>
+              </div>
+            ))}
+          </section>
+
+          {auditLoading ? (
+            <div className="v2-page-loading">Loading audit log…</div>
+          ) : audit.length === 0 ? (
+            <Card>
+              <CardBody>
+                <EmptyState
+                  icon={History}
+                  title="No audit entries yet"
+                  description="Changes to settings, order statuses, deletions, and other sensitive actions appear here as they happen."
+                />
+              </CardBody>
+            </Card>
+          ) : (
+            <Card padding="none">
+              <CardBody>
+                <Table rows={audit} columns={auditCols} rowKey={(e) => e.id} defaultSort={{ key: "when", dir: "desc" }} />
+              </CardBody>
+            </Card>
+          )}
+        </>
+      )}
+
+      {tab === "danger" && (
+        <Card>
+          <CardHeader title="Advanced" description="Operational utilities. Use with care." />
+          <CardBody>
+            <div className="v2-stack-12">
+              <div>
+                <h3 className="v2-section-h">Seed development data</h3>
+                <p className="v2-muted">
+                  In local dev (where DATABASE_URL is unset), this fills <code>orders.json</code> and{" "}
+                  <code>slots.json</code> with realistic sample data so screens aren't empty. No-op in production.
+                </p>
+                <Button variant="secondary" leadingIcon={<Sprout className="h-3.5 w-3.5" />} onClick={seedDevData}>
+                  Seed demo data
+                </Button>
+              </div>
+            </div>
+          </CardBody>
+        </Card>
+      )}
     </div>
   );
 }

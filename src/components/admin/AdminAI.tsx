@@ -1,380 +1,596 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
-import { AdminNav } from "./AdminNav";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  generateDemandForecast,
-  generatePriceSuggestions,
-  generateInsights,
-  DemandForecast,
-  PriceSuggestion,
-  RecommendationInsight,
-} from "@/lib/ai-engine";
-import { krakowMenu } from "@/data/menus/krakow";
-import { warszawaMenu } from "@/data/menus/warszawa";
-import { locations as allLocations } from "@/data/locations";
-import { LocationTabs } from "./LocationTabs";
+  AlertTriangle,
+  Boxes,
+  Brain,
+  CheckCircle2,
+  ChefHat,
+  Coins,
+  Lightbulb,
+  MessageSquare,
+  Plus,
+  Sparkles,
+  TrendingDown,
+  TrendingUp,
+  Trash2,
+} from "lucide-react";
+import { useAdminLocation } from "./v2/LocationContext";
+import { useToast } from "./v2/ui/Toast";
+import {
+  Badge,
+  Button,
+  Card,
+  CardBody,
+  CardHeader,
+  Dialog,
+  EmptyState,
+  Input,
+  Tabs,
+  Table,
+  Textarea,
+  type Column,
+} from "./v2/ui";
+import { AreaChart, KpiCard } from "./v2/charts";
 import { formatPrice } from "@/lib/utils";
 
-const LOCATION_MENUS: Record<string, import("@/data/types").MenuItem[]> = {
-  krakow: krakowMenu,
-  warszawa: warszawaMenu,
-};
-const activeLocations = allLocations.filter((l) => l.isActive);
-import {
-  Brain,
-  TrendingUp,
-  DollarSign,
-  Lightbulb,
-  Cloud,
-  Sun,
-  CloudRain,
-  Snowflake,
-  CloudSun,
-  ArrowUp,
-  ArrowDown,
-  Minus,
-  Sparkles,
-  RefreshCw,
-  BarChart3,
-  Megaphone,
-  UtensilsCrossed,
-  Settings2,
-} from "lucide-react";
+interface DailyStats {
+  date: string;
+  revenue: number;
+  cost: number;
+  profit: number;
+  orderCount: number;
+  itemCount: number;
+  avgOrderValue: number;
+  takeoutCount: number;
+  deliveryCount: number;
+  topItems: { name: string; quantity: number; revenue: number }[];
+}
 
-type Tab = "forecast" | "pricing" | "insights";
+interface SummaryData {
+  totalRevenue: number;
+  totalOrders: number;
+  dailyStats: DailyStats[];
+  topItems: { name: string; quantity: number; revenue: number }[];
+}
 
-const WEATHER_ICONS: Record<string, React.ElementType> = {
-  Sunny: Sun,
-  Cloudy: Cloud,
-  Rainy: CloudRain,
-  Snowy: Snowflake,
-  "Partly Cloudy": CloudSun,
-};
+interface InsightsData {
+  peakHours: { hour: number; orderCount: number; revenue: number }[];
+}
 
-const TYPE_ICONS: Record<string, React.ElementType> = {
-  upsell: TrendingUp,
-  menu: UtensilsCrossed,
-  operations: Settings2,
-  marketing: Megaphone,
-};
+interface StockRow {
+  ingredientId: string;
+  locationSlug: string;
+  onHand: number;
+  parLevel: number;
+  reorderPoint: number;
+  unit: string;
+  costPerUnit: number;
+  name: string;
+}
 
-const IMPACT_COLORS: Record<string, string> = {
-  high: "badge-danger",
-  medium: "badge-warning",
-  low: "badge-info",
-};
+interface FaqRow {
+  id: string;
+  keyword: string;
+  response: string;
+  hits?: number;
+}
+
+type TabKey = "forecast" | "anomalies" | "reorder" | "staffing" | "faq";
+
+function isoDate(d: Date): string {
+  return d.toISOString().split("T")[0];
+}
+
+function daysAgo(n: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return isoDate(d);
+}
+
+function rollingAverage(values: number[], window: number): number[] {
+  const out: number[] = [];
+  for (let i = 0; i < values.length; i++) {
+    const start = Math.max(0, i - window + 1);
+    const slice = values.slice(start, i + 1);
+    out.push(slice.reduce((acc, v) => acc + v, 0) / slice.length);
+  }
+  return out;
+}
 
 export function AdminAI() {
-  const [tab, setTab] = useState<Tab>("forecast");
-  const [selectedLocation, setSelectedLocation] = useState<string>("krakow");
-  const currentMenu = LOCATION_MENUS[selectedLocation] || krakowMenu;
-  const locationName = activeLocations.find((l) => l.slug === selectedLocation)?.city || selectedLocation;
+  const { location } = useAdminLocation();
+  const toast = useToast();
+  const [tab, setTab] = useState<TabKey>("forecast");
 
-  const [forecasts, setForecasts] = useState<DemandForecast[]>(() =>
-    generateDemandForecast(7)
-  );
-  const [priceSuggestions, setPriceSuggestions] = useState<PriceSuggestion[]>(() =>
-    generatePriceSuggestions(currentMenu)
-  );
-  const [insights] = useState<RecommendationInsight[]>(() =>
-    generateInsights()
-  );
-  const [refreshing, setRefreshing] = useState(false);
+  const [summary, setSummary] = useState<SummaryData | null>(null);
+  const [insights, setInsights] = useState<InsightsData | null>(null);
+  const [stock, setStock] = useState<StockRow[]>([]);
+  const [faqs, setFaqs] = useState<FaqRow[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const refresh = () => {
-    setRefreshing(true);
-    setTimeout(() => {
-      setForecasts(generateDemandForecast(7));
-      setPriceSuggestions(generatePriceSuggestions(currentMenu));
-      setRefreshing(false);
-    }, 1200);
+  const [faqDialog, setFaqDialog] = useState<{ open: boolean; faq: FaqRow | null }>({ open: false, faq: null });
+
+  const fetchAll = useCallback(async () => {
+    setLoading(true);
+    try {
+      const from = daysAgo(28);
+      const to = isoDate(new Date());
+      const locParam = location ? `&location=${location}` : "";
+      const [a, ins, s, f] = await Promise.all([
+        fetch(`/api/admin/analytics?from=${from}&to=${to}${locParam}`).then((r) => (r.ok ? r.json() : null)),
+        fetch(`/api/admin/insights?from=${from}&to=${to}`).then((r) => (r.ok ? r.json() : null)),
+        fetch(`/api/admin/stock${location ? `?location=${location}` : ""}`).then((r) => (r.ok ? r.json() : [])),
+        fetch(`/api/admin/chatbot-faq`).then((r) => (r.ok ? r.json() : [])),
+      ]);
+      setSummary(a);
+      setInsights(ins);
+      setStock(Array.isArray(s) ? s : []);
+      setFaqs(Array.isArray(f) ? f : []);
+    } finally {
+      setLoading(false);
+    }
+  }, [location]);
+
+  useEffect(() => {
+    fetchAll();
+  }, [fetchAll]);
+
+  // --- Demand forecast: 7-day moving average + naive next-7-day projection ---
+  const forecast = useMemo(() => {
+    const daily = summary?.dailyStats ?? [];
+    if (daily.length === 0) return { rows: [], trend: 0 };
+    const ordersByDate = new Map(daily.map((d) => [d.date, d.orderCount]));
+    const dates = Array.from(ordersByDate.keys()).sort();
+    const values = dates.map((d) => ordersByDate.get(d) || 0);
+    const ma = rollingAverage(values, 7);
+
+    // Project: use most recent MA value across the next 7 days
+    const lastMa = ma[ma.length - 1] ?? 0;
+    const projected: { date: string; actual?: number; ma?: number; forecast?: number }[] = dates.map((d, i) => ({
+      date: d,
+      actual: values[i],
+      ma: Math.round(ma[i] * 10) / 10,
+    }));
+
+    const lastDate = dates[dates.length - 1];
+    if (lastDate) {
+      for (let i = 1; i <= 7; i++) {
+        const d = new Date(lastDate);
+        d.setDate(d.getDate() + i);
+        projected.push({ date: isoDate(d), forecast: Math.round(lastMa * 10) / 10 });
+      }
+    }
+
+    // Trend: slope of last 7 days vs prior 7 days
+    const last7 = values.slice(-7).reduce((a, b) => a + b, 0);
+    const prev7 = values.slice(-14, -7).reduce((a, b) => a + b, 0);
+    const trend = prev7 > 0 ? ((last7 - prev7) / prev7) * 100 : 0;
+
+    return { rows: projected, trend };
+  }, [summary]);
+
+  // --- Anomalies: today vs trailing 28-day average ---
+  const anomalies = useMemo(() => {
+    const daily = summary?.dailyStats ?? [];
+    if (daily.length < 14) return [];
+    const sorted = [...daily].sort((a, b) => a.date.localeCompare(b.date));
+    const last = sorted[sorted.length - 1];
+    const priorWindow = sorted.slice(-29, -1);
+    if (priorWindow.length === 0 || !last) return [];
+
+    function flag(metric: keyof DailyStats, label: string, format: (n: number) => string): { label: string; current: string; expected: string; deltaPct: number; tone: "danger" | "warning" | "success" } | null {
+      const current = Number(last[metric] ?? 0);
+      const avg = priorWindow.reduce((acc, d) => acc + Number(d[metric] ?? 0), 0) / priorWindow.length;
+      if (avg === 0) return null;
+      const deltaPct = ((current - avg) / avg) * 100;
+      if (Math.abs(deltaPct) < 20) return null;
+      const tone = deltaPct > 30 ? "success" : deltaPct < -30 ? "danger" : "warning";
+      return {
+        label,
+        current: format(current),
+        expected: format(avg),
+        deltaPct,
+        tone,
+      };
+    }
+
+    const out: NonNullable<ReturnType<typeof flag>>[] = [];
+    const r = flag("revenue", "Revenue", (n) => formatPrice(Math.round(n)));
+    if (r) out.push(r);
+    const o = flag("orderCount", "Orders", (n) => Math.round(n).toLocaleString());
+    if (o) out.push(o);
+    const a = flag("avgOrderValue", "Avg order value", (n) => formatPrice(Math.round(n)));
+    if (a) out.push(a);
+    return out;
+  }, [summary]);
+
+  // --- Reorder suggestions: stock at/below reorder point ---
+  const reorderRows = useMemo(() => {
+    const ingredientUsage = new Map<string, number>(); // last-28-day quantity used per ingredient (best-effort: not directly available; use 0 fallback)
+    // We approximate "velocity" via parLevel since we don't track recipe consumption rollup here yet.
+    return stock
+      .filter((s) => s.onHand <= s.reorderPoint)
+      .map((s) => {
+        const suggested = Math.max(0, s.parLevel - s.onHand);
+        const cost = Math.round(suggested * s.costPerUnit);
+        return {
+          ...s,
+          suggested,
+          estCost: cost,
+          velocityHint: ingredientUsage.get(s.ingredientId) ?? 0,
+        };
+      })
+      .sort((a, b) => b.estCost - a.estCost);
+  }, [stock]);
+
+  // --- Staffing suggestion: rank hours by demand and recommend coverage ---
+  const staffingRows = useMemo(() => {
+    const peakHours = insights?.peakHours ?? [];
+    if (peakHours.length === 0) return [];
+    return peakHours
+      .slice()
+      .sort((a, b) => b.orderCount - a.orderCount)
+      .slice(0, 6)
+      .map((p) => ({
+        hour: `${String(p.hour).padStart(2, "0")}:00`,
+        orderCount: p.orderCount,
+        revenue: p.revenue,
+        suggestedHeadcount: p.orderCount > 30 ? 4 : p.orderCount > 15 ? 3 : 2,
+      }));
+  }, [insights]);
+
+  const totalReorderCost = reorderRows.reduce((acc, r) => acc + r.estCost, 0);
+
+  // --- FAQ CRUD ---
+  const upsertFaq = async (faq: FaqRow) => {
+    const res = await fetch("/api/admin/chatbot-faq", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(faq),
+    });
+    if (res.ok) {
+      toast.success("FAQ saved");
+      setFaqDialog({ open: false, faq: null });
+      await fetchAll();
+    } else {
+      toast.error("Could not save FAQ");
+    }
   };
 
-  const totalExpectedOrders = useMemo(() => forecasts.reduce((sum, f) => sum + f.expectedOrders, 0), [forecasts]);
-  const avgConfidence = useMemo(() => (forecasts.length > 0 ? forecasts.reduce((sum, f) => sum + f.confidence, 0) / forecasts.length : 0), [forecasts]);
+  const deleteFaq = async (id: string) => {
+    const res = await fetch(`/api/admin/chatbot-faq?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+    if (res.ok) {
+      setFaqs((arr) => arr.filter((f) => f.id !== id));
+      toast.success("FAQ removed");
+    }
+  };
 
-  const tabs = [
-    { id: "forecast" as const, label: "Demand Forecast", icon: BarChart3 },
-    { id: "pricing" as const, label: "Dynamic Pricing", icon: DollarSign },
-    { id: "insights" as const, label: "AI Insights", icon: Lightbulb },
+  const faqCols: Column<FaqRow>[] = [
+    { key: "keyword", header: "Keyword", cell: (f) => <span className="mono">{f.keyword}</span>, sortValue: (f) => f.keyword },
+    {
+      key: "response",
+      header: "Response",
+      cell: (f) => <span className="v2-fb-comment">{f.response}</span>,
+    },
+    { key: "hits", header: "Hits", align: "right", cell: (f) => (f.hits ?? 0).toLocaleString(), sortValue: (f) => f.hits ?? 0 },
+    {
+      key: "actions",
+      header: "",
+      cell: (f) => (
+        <div className="v2-row-actions">
+          <Button size="sm" variant="ghost" onClick={() => setFaqDialog({ open: true, faq: f })}>
+            Edit
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => deleteFaq(f.id)}>
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      ),
+    },
   ];
 
   return (
-    <>
-      <AdminNav />
-      <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
-        {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-heading font-bold admin-text">AI Command Center</h1>
-            <p className="text-sm admin-text-dim mt-1">ML-powered insights for {locationName}</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={refresh}
-            disabled={refreshing}
-            className="glass-btn-blue"
-          >
-            <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-            {refreshing ? "Analyzing..." : "Refresh Models"}
-          </button>
-          </div>
+    <div className="v2-page">
+      <header className="v2-page-header">
+        <div className="v2-page-title-row">
+          <h1 className="v2-page-title">AI insights</h1>
+          <p className="v2-page-subtitle">
+            Forecasts, anomalies, reorder suggestions, staffing tips — all computed from real orders + stock data.
+          </p>
         </div>
-
-        <LocationTabs
-          value={selectedLocation}
-          onChange={(slug) => {
-            setSelectedLocation(slug);
-            const menu = LOCATION_MENUS[slug] || krakowMenu;
-            setForecasts(generateDemandForecast(7));
-            setPriceSuggestions(generatePriceSuggestions(menu));
-          }}
+        <Tabs
+          value={tab}
+          onChange={(v) => setTab(v as TabKey)}
+          tabs={[
+            { value: "forecast", label: "Forecast", icon: <TrendingUp className="h-3.5 w-3.5" /> },
+            { value: "anomalies", label: "Anomalies", icon: <AlertTriangle className="h-3.5 w-3.5" />, count: anomalies.length },
+            { value: "reorder", label: "Reorder", icon: <Boxes className="h-3.5 w-3.5" />, count: reorderRows.length },
+            { value: "staffing", label: "Staffing", icon: <ChefHat className="h-3.5 w-3.5" /> },
+            { value: "faq", label: "Chatbot FAQ", icon: <MessageSquare className="h-3.5 w-3.5" />, count: faqs.length },
+          ]}
+          variant="pill"
+          ariaLabel="AI section"
         />
+      </header>
 
-        {/* Tabs */}
-        <div className="flex gap-1 p-1 glass rounded-lg w-fit">
-          {tabs.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                tab === t.id
-                  ? "bg-white/12 text-white shadow-sm"
-                  : "text-slate-400 hover:text-white hover:bg-white/6"
-              }`}
-            >
-              <t.icon className="h-4 w-4" />
-              {t.label}
-            </button>
-          ))}
-        </div>
+      {loading ? (
+        <div className="v2-page-loading">Computing insights…</div>
+      ) : tab === "forecast" ? (
+        <>
+          <section className="v2-kpi-grid">
+            <KpiCard
+              label="Orders trend (week-over-week)"
+              value={forecast.trend}
+              display={`${forecast.trend > 0 ? "+" : ""}${forecast.trend.toFixed(1)}%`}
+              icon={forecast.trend >= 0 ? TrendingUp : TrendingDown}
+              tone={forecast.trend >= 0 ? "success" : "danger"}
+              hint="Last 7d vs prior 7d"
+            />
+            <KpiCard
+              label="Forecast next 7 days"
+              value={Math.round(((forecast.rows.find((r) => r.forecast)?.forecast ?? 0) * 7))}
+              icon={Sparkles}
+              tone="info"
+              hint="Orders, projected from 7-day moving average"
+            />
+            <KpiCard
+              label="Revenue (28d)"
+              value={(summary?.totalRevenue ?? 0) / 100}
+              format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
+              icon={Coins}
+              tone="brand"
+            />
+            <KpiCard
+              label="Best-seller"
+              value={0}
+              display={summary?.topItems?.[0]?.name ?? "—"}
+              icon={CheckCircle2}
+              tone="success"
+              hint={summary?.topItems?.[0] ? `${summary.topItems[0].quantity} sold` : undefined}
+            />
+          </section>
 
-        {/* Tab content */}
-        {tab === "forecast" && (
-          <div className="space-y-4">
-            {/* Summary cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="glass-card p-4">
-                <p className="text-xs admin-text-dim uppercase tracking-wide mb-1">
-                  7-Day Forecast
-                </p>
-                <p className="text-2xl font-bold admin-text">
-                  {totalExpectedOrders} orders
-                </p>
-              </div>
-              <div className="glass-card p-4">
-                <p className="text-xs admin-text-dim uppercase tracking-wide mb-1">
-                  Avg Daily
-                </p>
-                <p className="text-2xl font-bold admin-text">
-                  {Math.round(totalExpectedOrders / 7)} orders
-                </p>
-              </div>
-              <div className="glass-card p-4">
-                <p className="text-xs admin-text-dim uppercase tracking-wide mb-1">
-                  Model Confidence
-                </p>
-                <p className="text-2xl font-bold admin-link">
-                  {Math.round(avgConfidence * 100)}%
-                </p>
-              </div>
-            </div>
-
-            {/* Daily forecasts */}
-            <div className="space-y-3">
-              {forecasts.map((f) => {
-                const WeatherIcon = WEATHER_ICONS[f.weather] || Cloud;
-                return (
-                  <div key={f.date} className="glass-card p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <div>
-                          <p className="font-semibold admin-text">{f.dayOfWeek}</p>
-                          <p className="text-xs admin-text-dim">{f.date}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-1.5 text-sm admin-text-muted">
-                          <WeatherIcon className="h-4 w-4" />
-                          {f.weather}
-                        </div>
-                        <div className="text-right">
-                          <p className="text-lg font-bold admin-text">
-                            {f.expectedOrders}
-                          </p>
-                          <p className="text-[10px] admin-text-dim">expected orders</p>
-                        </div>
-                      </div>
-                    </div>
-                    {/* Category breakdown bar */}
-                    <div className="flex h-2 rounded-full overflow-hidden mb-2">
-                      <div
-                        className="bg-italia-red"
-                        style={{ width: `${(f.categoryBreakdown.pizza / f.expectedOrders) * 100}%` }}
-                        title={`Pizza: ${f.categoryBreakdown.pizza}`}
-                      />
-                      <div
-                        className="bg-amber-500"
-                        style={{ width: `${(f.categoryBreakdown.pasta / f.expectedOrders) * 100}%` }}
-                        title={`Pasta: ${f.categoryBreakdown.pasta}`}
-                      />
-                      <div
-                        className="bg-italia-green"
-                        style={{ width: `${(f.categoryBreakdown.antipasti / f.expectedOrders) * 100}%` }}
-                        title={`Antipasti: ${f.categoryBreakdown.antipasti}`}
-                      />
-                      <div
-                        className="bg-blue-500"
-                        style={{ width: `${(f.categoryBreakdown.drinks / f.expectedOrders) * 100}%` }}
-                        title={`Drinks: ${f.categoryBreakdown.drinks}`}
-                      />
-                      <div
-                        className="bg-pink-500"
-                        style={{ width: `${(f.categoryBreakdown.desserts / f.expectedOrders) * 100}%` }}
-                        title={`Desserts: ${f.categoryBreakdown.desserts}`}
-                      />
-                    </div>
-                    <p className="text-xs admin-text-dim flex items-center gap-1.5">
-                      <Sparkles className="h-3 w-3 admin-link" />
-                      {f.recommendation}
-                    </p>
-                    {f.events.length > 0 && (
-                      <div className="flex gap-1.5 mt-2">
-                        {f.events.map((e) => (
-                          <span key={e} className="badge-info text-[10px] px-2 py-0.5 rounded-full font-medium">
-                            {e}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+          <Card>
+            <CardHeader title="Demand forecast" description="Actual vs 7-day moving average vs naive projection for the next 7 days" />
+            <CardBody>
+              {forecast.rows.length === 0 ? (
+                <EmptyState icon={Brain} title="Not enough data" description="Forecast appears once orders accumulate." compact />
+              ) : (
+                <AreaChart
+                  data={forecast.rows as Array<Record<string, unknown>>}
+                  xKey="date"
+                  series={[
+                    { key: "actual", label: "Actual orders" },
+                    { key: "ma", label: "7-day MA" },
+                    { key: "forecast", label: "Forecast" },
+                  ]}
+                  height={300}
+                  xFormat={(v) => String(v).slice(5)}
+                />
+              )}
+            </CardBody>
+          </Card>
+        </>
+      ) : tab === "anomalies" ? (
+        anomalies.length === 0 ? (
+          <Card>
+            <CardBody>
+              <EmptyState
+                icon={CheckCircle2}
+                title="Nothing unusual today"
+                description="Today's metrics are within ±20% of the trailing 28-day average."
+              />
+            </CardBody>
+          </Card>
+        ) : (
+          <div className="v2-rewards-grid">
+            {anomalies.map((a) => (
+              <Card key={a.label}>
+                <CardHeader
+                  title={a.label}
+                  description={`Expected ~${a.expected} · today ${a.current}`}
+                  actions={
+                    <Badge tone={a.tone} variant="soft" dot>
+                      {a.deltaPct > 0 ? "+" : ""}{a.deltaPct.toFixed(0)}%
+                    </Badge>
+                  }
+                />
+              </Card>
+            ))}
           </div>
-        )}
-
-        {tab === "pricing" && (
-          <div className="space-y-4">
-            <div className="glass-card-static p-4 mb-4">
-              <p className="text-sm admin-text-muted">
-                <Sparkles className="h-4 w-4 inline admin-link mr-1" />
-                AI analyzes margin data, demand patterns, and competitor pricing to suggest optimal prices.
-                Suggestions are based on your cost data and order history.
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              {priceSuggestions.map((s) => (
-                <div key={s.itemId} className="glass-card p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <p className="font-semibold admin-text">{s.itemName}</p>
-                      <p className="text-xs admin-text-dim">
-                        Confidence: {Math.round(s.confidence * 100)}%
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <p className="text-sm admin-text-dim">Current</p>
-                        <p className="font-bold admin-text">
-                          {formatPrice(s.currentPrice)}
-                        </p>
-                      </div>
-                      <div className="flex items-center">
-                        {s.impact === "increase" ? (
-                          <ArrowUp className="h-5 w-5 text-green-400" />
-                        ) : s.impact === "decrease" ? (
-                          <ArrowDown className="h-5 w-5 text-amber-400" />
-                        ) : (
-                          <Minus className="h-5 w-5 text-slate-400" />
-                        )}
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm admin-text-dim">Suggested</p>
-                        <p
-                          className={`font-bold ${
-                            s.impact === "increase"
-                              ? "text-green-400"
-                              : s.impact === "decrease"
-                                ? "text-amber-400"
-                                : "admin-text"
-                          }`}
-                        >
-                          {formatPrice(s.suggestedPrice)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <p className="text-xs admin-text-dim">{s.reason}</p>
-                  {s.estimatedRevenueChange !== 0 && (
-                    <p className="text-xs mt-1 font-medium admin-link">
-                      Est. monthly impact: {s.estimatedRevenueChange > 0 ? "+" : ""}
-                      {formatPrice(Math.abs(s.estimatedRevenueChange))}
-                    </p>
-                  )}
-                  <div className="flex gap-2 mt-3">
-                    <button className="glass-btn-green">
-                      Apply
-                    </button>
-                    <button className="glass-btn-ghost">
-                      Dismiss
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+        )
+      ) : tab === "reorder" ? (
+        reorderRows.length === 0 ? (
+          <Card>
+            <CardBody>
+              <EmptyState
+                icon={Boxes}
+                title="Nothing to reorder"
+                description="All tracked SKUs are above their reorder point."
+              />
+            </CardBody>
+          </Card>
+        ) : (
+          <>
+            <section className="v2-kpi-grid">
+              <KpiCard label="SKUs to reorder" value={reorderRows.length} icon={Boxes} tone="warning" higherIsBetter={false} />
+              <KpiCard
+                label="Estimated PO cost"
+                value={totalReorderCost / 100}
+                format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
+                icon={Coins}
+                tone="brand"
+                hint="To restock to par level"
+              />
+            </section>
+            <Card padding="none">
+              <CardHeader title="Suggested reorder" description="Stock at or below reorder point. Quantity = par − on-hand." actions={<Lightbulb className="h-4 w-4 v2-muted" />} />
+              <CardBody>
+                <Table
+                  rows={reorderRows}
+                  columns={[
+                    { key: "name", header: "Ingredient", cell: (r) => r.name, sortValue: (r) => r.name },
+                    { key: "onhand", header: "On hand", align: "right", cell: (r) => `${r.onHand} ${r.unit}`, sortValue: (r) => r.onHand },
+                    { key: "par", header: "Par", align: "right", cell: (r) => `${r.parLevel} ${r.unit}`, sortValue: (r) => r.parLevel },
+                    {
+                      key: "suggested",
+                      header: "Order",
+                      align: "right",
+                      cell: (r) => <span className="tabular">{`${r.suggested} ${r.unit}`}</span>,
+                      sortValue: (r) => r.suggested,
+                    },
+                    {
+                      key: "cost",
+                      header: "Est. cost",
+                      align: "right",
+                      cell: (r) => formatPrice(r.estCost),
+                      sortValue: (r) => r.estCost,
+                    },
+                  ]}
+                  rowKey={(r) => r.ingredientId}
+                  defaultSort={{ key: "cost", dir: "desc" }}
+                />
+              </CardBody>
+            </Card>
+          </>
+        )
+      ) : tab === "staffing" ? (
+        staffingRows.length === 0 ? (
+          <Card>
+            <CardBody>
+              <EmptyState
+                icon={ChefHat}
+                title="Need more order history"
+                description="Staffing suggestions appear once we know peak-hour demand."
+              />
+            </CardBody>
+          </Card>
+        ) : (
+          <Card padding="none">
+            <CardHeader
+              title="Suggested coverage"
+              description="Hours of peak demand and a baseline headcount recommendation. Adjust based on prep complexity per item."
+              actions={<ChefHat className="h-4 w-4 v2-muted" />}
+            />
+            <CardBody>
+              <Table
+                rows={staffingRows}
+                columns={[
+                  { key: "hour", header: "Hour", cell: (r) => <span className="mono">{r.hour}</span>, sortValue: (r) => r.hour },
+                  { key: "orders", header: "Orders", align: "right", cell: (r) => r.orderCount, sortValue: (r) => r.orderCount },
+                  { key: "revenue", header: "Revenue", align: "right", cell: (r) => formatPrice(r.revenue), sortValue: (r) => r.revenue },
+                  {
+                    key: "headcount",
+                    header: "Suggested headcount",
+                    align: "right",
+                    cell: (r) => (
+                      <Badge tone={r.suggestedHeadcount >= 4 ? "danger" : r.suggestedHeadcount === 3 ? "warning" : "success"} variant="soft">
+                        {r.suggestedHeadcount}
+                      </Badge>
+                    ),
+                    sortValue: (r) => r.suggestedHeadcount,
+                  },
+                ]}
+                rowKey={(r) => r.hour}
+                defaultSort={{ key: "orders", dir: "desc" }}
+              />
+            </CardBody>
+          </Card>
+        )
+      ) : (
+        // FAQ tab
+        <>
+          <div className="v2-filters">
+            <h2 className="v2-section-h">Chatbot FAQ</h2>
+            <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setFaqDialog({ open: true, faq: null })}>
+              New FAQ
+            </Button>
           </div>
-        )}
+          {faqs.length === 0 ? (
+            <Card>
+              <CardBody>
+                <EmptyState
+                  icon={MessageSquare}
+                  title="No FAQ entries"
+                  description="Add keyword → response pairs to power the customer site chatbot."
+                  action={
+                    <Button variant="primary" onClick={() => setFaqDialog({ open: true, faq: null })}>
+                      New FAQ
+                    </Button>
+                  }
+                />
+              </CardBody>
+            </Card>
+          ) : (
+            <Card padding="none">
+              <CardBody>
+                <Table rows={faqs} columns={faqCols} rowKey={(f) => f.id} defaultSort={{ key: "hits", dir: "desc" }} />
+              </CardBody>
+            </Card>
+          )}
+        </>
+      )}
 
-        {tab === "insights" && (
-          <div className="space-y-4">
-            <div className="glass-card-static p-4 mb-4">
-              <p className="text-sm admin-text-muted">
-                <Brain className="h-4 w-4 inline admin-link mr-1" />
-                AI-generated recommendations based on your order data, customer behavior, and market trends.
-              </p>
-            </div>
+      <FaqDialog
+        state={faqDialog}
+        onClose={() => setFaqDialog({ open: false, faq: null })}
+        onSubmit={upsertFaq}
+      />
+    </div>
+  );
+}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {insights.map((insight) => {
-                const TypeIcon = TYPE_ICONS[insight.type] || Lightbulb;
-                return (
-                  <div key={insight.id} className="glass-card p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-white/6 flex items-center justify-center flex-shrink-0">
-                        <TypeIcon className="h-5 w-5 admin-link" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="font-semibold text-sm admin-text">
-                            {insight.title}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${IMPACT_COLORS[insight.impact]}`}>
-                            {insight.impact} impact
-                          </span>
-                          <span className="text-[10px] px-2 py-0.5 rounded-full font-medium badge-info">
-                            {insight.effort} effort
-                          </span>
-                        </div>
-                        <p className="text-xs admin-text-dim leading-relaxed">
-                          {insight.description}
-                        </p>
-                        <p className="text-xs font-semibold text-green-400 mt-2">
-                          {insight.estimatedRevenue}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+interface FaqDialogProps {
+  state: { open: boolean; faq: FaqRow | null };
+  onClose: () => void;
+  onSubmit: (faq: FaqRow) => Promise<void> | void;
+}
+
+function FaqDialog({ state, onClose, onSubmit }: FaqDialogProps) {
+  const [keyword, setKeyword] = useState("");
+  const [response, setResponse] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!state.open) return;
+    setKeyword(state.faq?.keyword ?? "");
+    setResponse(state.faq?.response ?? "");
+    setBusy(false);
+  }, [state]);
+
+  if (!state.open) return <Dialog open={false} onClose={onClose} />;
+
+  const submit = async () => {
+    if (!keyword.trim() || !response.trim()) return;
+    setBusy(true);
+    await onSubmit({
+      id: state.faq?.id ?? `faq-${Date.now().toString(36)}`,
+      keyword: keyword.trim(),
+      response: response.trim(),
+      hits: state.faq?.hits,
+    });
+    setBusy(false);
+  };
+
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      size="md"
+      title={state.faq ? "Edit FAQ" : "New FAQ"}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={busy}>Cancel</Button>
+          <Button variant="primary" onClick={submit} loading={busy}>{state.faq ? "Save" : "Create"}</Button>
+        </>
+      }
+    >
+      <div className="v2-stack-12">
+        <Input label="Keyword / trigger" value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="e.g. 'opening hours'" />
+        <Textarea label="Bot response" rows={4} value={response} onChange={(e) => setResponse(e.target.value)} />
       </div>
-    </>
+    </Dialog>
   );
 }

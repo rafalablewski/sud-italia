@@ -1,7 +1,7 @@
 import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, Recipe } from "@/data/types";
+import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser } from "@/data/types";
 import { getActiveLocations, locations as allLocations } from "@/data/locations";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -1944,5 +1944,602 @@ export async function updateLocationUpsell(
     settings[locationSlug] = config;
     await writeJSON("upsell-settings.json", settings);
     return settings;
+  });
+}
+
+// --- Inventory: stock levels + movements (per location) ---
+
+export async function getIngredientStock(
+  locationSlug?: string,
+): Promise<IngredientStock[]> {
+  const all = await readJSON<IngredientStock[]>("ingredient-stock.json", []);
+  if (!locationSlug) return all;
+  return all.filter((s) => s.locationSlug === locationSlug);
+}
+
+export async function getStockForIngredient(
+  ingredientId: string,
+  locationSlug: string,
+): Promise<IngredientStock | null> {
+  const all = await readJSON<IngredientStock[]>("ingredient-stock.json", []);
+  return all.find((s) => s.ingredientId === ingredientId && s.locationSlug === locationSlug) ?? null;
+}
+
+export async function upsertIngredientStock(
+  input: Omit<IngredientStock, "updatedAt"> & { updatedAt?: string },
+): Promise<IngredientStock> {
+  return withLock("ingredient-stock.json", async () => {
+    const list = await readJSON<IngredientStock[]>("ingredient-stock.json", []);
+    const i = list.findIndex(
+      (s) => s.ingredientId === input.ingredientId && s.locationSlug === input.locationSlug,
+    );
+    const row: IngredientStock = {
+      ...input,
+      updatedAt: new Date().toISOString(),
+    };
+    if (i >= 0) list[i] = row;
+    else list.push(row);
+    await writeJSON("ingredient-stock.json", list);
+    return row;
+  });
+}
+
+export async function deleteIngredientStock(
+  ingredientId: string,
+  locationSlug: string,
+): Promise<boolean> {
+  return withLock("ingredient-stock.json", async () => {
+    const list = await readJSON<IngredientStock[]>("ingredient-stock.json", []);
+    const filtered = list.filter(
+      (s) => !(s.ingredientId === ingredientId && s.locationSlug === locationSlug),
+    );
+    if (filtered.length === list.length) return false;
+    await writeJSON("ingredient-stock.json", filtered);
+    return true;
+  });
+}
+
+export async function getStockMovements(filters?: {
+  locationSlug?: string;
+  ingredientId?: string;
+  limit?: number;
+}): Promise<StockMovement[]> {
+  const all = await readJSON<StockMovement[]>("stock-movements.json", []);
+  let list = all;
+  if (filters?.locationSlug) list = list.filter((m) => m.locationSlug === filters.locationSlug);
+  if (filters?.ingredientId) list = list.filter((m) => m.ingredientId === filters.ingredientId);
+  list = list.slice().sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
+  if (filters?.limit) list = list.slice(0, filters.limit);
+  return list;
+}
+
+/**
+ * Atomically appends a movement record and applies the delta to the matching
+ * stock row (creating it with defaults if it doesn't exist yet). Both stores
+ * are locked to keep onHand consistent with the movement log.
+ */
+export async function createStockMovement(input: Omit<StockMovement, "id" | "occurredAt"> & {
+  occurredAt?: string;
+}): Promise<StockMovement> {
+  const movement: StockMovement = {
+    id: `mv-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+    occurredAt: input.occurredAt ?? new Date().toISOString(),
+    ingredientId: input.ingredientId,
+    locationSlug: input.locationSlug,
+    type: input.type,
+    quantity: input.quantity,
+    costImpact: input.costImpact,
+    reason: input.reason,
+    byUser: input.byUser,
+  };
+
+  await withLock("stock-movements.json", async () => {
+    const list = await readJSON<StockMovement[]>("stock-movements.json", []);
+    list.push(movement);
+    await writeJSON("stock-movements.json", list);
+  });
+
+  await withLock("ingredient-stock.json", async () => {
+    const list = await readJSON<IngredientStock[]>("ingredient-stock.json", []);
+    const i = list.findIndex(
+      (s) => s.ingredientId === input.ingredientId && s.locationSlug === input.locationSlug,
+    );
+    if (i >= 0) {
+      list[i] = {
+        ...list[i],
+        onHand: list[i].onHand + input.quantity,
+        updatedAt: movement.occurredAt,
+      };
+    } else {
+      list.push({
+        ingredientId: input.ingredientId,
+        locationSlug: input.locationSlug,
+        onHand: Math.max(0, input.quantity),
+        parLevel: 0,
+        reorderPoint: 0,
+        updatedAt: movement.occurredAt,
+      });
+    }
+    await writeJSON("ingredient-stock.json", list);
+  });
+
+  return movement;
+}
+
+// --- Suppliers ---
+
+export async function getSuppliers(): Promise<Supplier[]> {
+  return readJSON<Supplier[]>("suppliers.json", []);
+}
+
+export async function getSupplier(id: string): Promise<Supplier | null> {
+  const list = await readJSON<Supplier[]>("suppliers.json", []);
+  return list.find((s) => s.id === id) ?? null;
+}
+
+export async function saveSupplier(input: Omit<Supplier, "id" | "createdAt"> & { id?: string; createdAt?: string }): Promise<Supplier> {
+  return withLock("suppliers.json", async () => {
+    const list = await readJSON<Supplier[]>("suppliers.json", []);
+    const supplier: Supplier = {
+      id: input.id || `sup-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      name: input.name,
+      contactName: input.contactName,
+      email: input.email,
+      phone: input.phone,
+      leadTimeDays: input.leadTimeDays,
+      notes: input.notes,
+      createdAt: input.createdAt ?? new Date().toISOString(),
+    };
+    const i = list.findIndex((s) => s.id === supplier.id);
+    if (i >= 0) list[i] = supplier;
+    else list.push(supplier);
+    await writeJSON("suppliers.json", list);
+    return supplier;
+  });
+}
+
+export async function deleteSupplier(id: string): Promise<boolean> {
+  return withLock("suppliers.json", async () => {
+    const list = await readJSON<Supplier[]>("suppliers.json", []);
+    const filtered = list.filter((s) => s.id !== id);
+    if (filtered.length === list.length) return false;
+    await writeJSON("suppliers.json", filtered);
+    return true;
+  });
+}
+
+// --- Purchase Orders ---
+
+export async function getPurchaseOrders(filters?: {
+  locationSlug?: string;
+  status?: PurchaseOrderStatus;
+  supplierId?: string;
+}): Promise<PurchaseOrder[]> {
+  const all = await readJSON<PurchaseOrder[]>("purchase-orders.json", []);
+  let list = all;
+  if (filters?.locationSlug) list = list.filter((p) => p.locationSlug === filters.locationSlug);
+  if (filters?.status) list = list.filter((p) => p.status === filters.status);
+  if (filters?.supplierId) list = list.filter((p) => p.supplierId === filters.supplierId);
+  return list.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export async function getPurchaseOrder(id: string): Promise<PurchaseOrder | null> {
+  const list = await readJSON<PurchaseOrder[]>("purchase-orders.json", []);
+  return list.find((p) => p.id === id) ?? null;
+}
+
+export async function savePurchaseOrder(
+  input: Omit<PurchaseOrder, "id" | "createdAt" | "totalCents"> & { id?: string; createdAt?: string },
+): Promise<PurchaseOrder> {
+  return withLock("purchase-orders.json", async () => {
+    const list = await readJSON<PurchaseOrder[]>("purchase-orders.json", []);
+    const totalCents = input.lines.reduce(
+      (acc, l) => acc + Math.round(l.quantity * l.unitCost),
+      0,
+    );
+    const po: PurchaseOrder = {
+      id: input.id || `po-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      supplierId: input.supplierId,
+      locationSlug: input.locationSlug,
+      status: input.status,
+      lines: input.lines,
+      totalCents,
+      expectedAt: input.expectedAt,
+      receivedAt: input.receivedAt,
+      notes: input.notes,
+      createdAt: input.createdAt ?? new Date().toISOString(),
+      createdBy: input.createdBy,
+    };
+    const i = list.findIndex((p) => p.id === po.id);
+    if (i >= 0) list[i] = po;
+    else list.push(po);
+    await writeJSON("purchase-orders.json", list);
+    return po;
+  });
+}
+
+/**
+ * Mark a PO as received and atomically post receive movements to the stock
+ * log for every line. Idempotent: if the PO is already "received" no new
+ * movements are written.
+ */
+export async function receivePurchaseOrder(id: string, byUser?: string): Promise<PurchaseOrder | null> {
+  const po = await getPurchaseOrder(id);
+  if (!po) return null;
+  if (po.status === "received") return po;
+
+  for (const line of po.lines) {
+    await createStockMovement({
+      ingredientId: line.ingredientId,
+      locationSlug: po.locationSlug,
+      type: "receive",
+      quantity: line.quantity,
+      costImpact: Math.round(line.quantity * line.unitCost),
+      reason: `PO ${po.id}`,
+      byUser,
+    });
+  }
+
+  return savePurchaseOrder({
+    ...po,
+    status: "received",
+    receivedAt: new Date().toISOString(),
+  });
+}
+
+export async function updatePurchaseOrderStatus(id: string, status: PurchaseOrderStatus): Promise<PurchaseOrder | null> {
+  const po = await getPurchaseOrder(id);
+  if (!po) return null;
+  if (status === "received") return receivePurchaseOrder(id);
+  return savePurchaseOrder({ ...po, status });
+}
+
+export async function deletePurchaseOrder(id: string): Promise<boolean> {
+  return withLock("purchase-orders.json", async () => {
+    const list = await readJSON<PurchaseOrder[]>("purchase-orders.json", []);
+    const filtered = list.filter((p) => p.id !== id);
+    if (filtered.length === list.length) return false;
+    await writeJSON("purchase-orders.json", filtered);
+    return true;
+  });
+}
+
+// --- CRM (customer notes) ---
+
+export async function getCustomerNotes(phone?: string): Promise<CustomerNote[]> {
+  const all = await readJSON<CustomerNote[]>("customer-notes.json", []);
+  const list = phone ? all.filter((n) => n.phone === phone) : all;
+  return list.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export async function addCustomerNote(
+  input: Omit<CustomerNote, "id" | "createdAt"> & { createdAt?: string },
+): Promise<CustomerNote> {
+  return withLock("customer-notes.json", async () => {
+    const list = await readJSON<CustomerNote[]>("customer-notes.json", []);
+    const note: CustomerNote = {
+      id: `note-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      phone: input.phone,
+      body: input.body,
+      tags: input.tags,
+      authoredBy: input.authoredBy,
+      createdAt: input.createdAt ?? new Date().toISOString(),
+    };
+    list.push(note);
+    await writeJSON("customer-notes.json", list);
+    return note;
+  });
+}
+
+export async function deleteCustomerNote(id: string): Promise<boolean> {
+  return withLock("customer-notes.json", async () => {
+    const list = await readJSON<CustomerNote[]>("customer-notes.json", []);
+    const filtered = list.filter((n) => n.id !== id);
+    if (filtered.length === list.length) return false;
+    await writeJSON("customer-notes.json", filtered);
+    return true;
+  });
+}
+
+// --- Staff / HR ---
+
+export async function getStaff(locationSlug?: string): Promise<StaffMember[]> {
+  const all = await readJSON<StaffMember[]>("staff.json", []);
+  return locationSlug ? all.filter((s) => s.locationSlug === locationSlug) : all;
+}
+
+export async function saveStaff(
+  input: Omit<StaffMember, "id" | "createdAt"> & { id?: string; createdAt?: string },
+): Promise<StaffMember> {
+  return withLock("staff.json", async () => {
+    const list = await readJSON<StaffMember[]>("staff.json", []);
+    const member: StaffMember = {
+      id: input.id || `staff-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      name: input.name,
+      phone: input.phone,
+      email: input.email,
+      role: input.role,
+      locationSlug: input.locationSlug,
+      hourlyRateGrosze: input.hourlyRateGrosze,
+      hireDate: input.hireDate,
+      status: input.status,
+      notes: input.notes,
+      createdAt: input.createdAt ?? new Date().toISOString(),
+    };
+    const i = list.findIndex((s) => s.id === member.id);
+    if (i >= 0) list[i] = member;
+    else list.push(member);
+    await writeJSON("staff.json", list);
+    return member;
+  });
+}
+
+export async function deleteStaff(id: string): Promise<boolean> {
+  return withLock("staff.json", async () => {
+    const list = await readJSON<StaffMember[]>("staff.json", []);
+    const filtered = list.filter((s) => s.id !== id);
+    if (filtered.length === list.length) return false;
+    await writeJSON("staff.json", filtered);
+    return true;
+  });
+}
+
+export async function getShifts(filters?: {
+  locationSlug?: string;
+  staffId?: string;
+  from?: string;
+  to?: string;
+}): Promise<Shift[]> {
+  const all = await readJSON<Shift[]>("shifts.json", []);
+  let list = all;
+  if (filters?.locationSlug) list = list.filter((s) => s.locationSlug === filters.locationSlug);
+  if (filters?.staffId) list = list.filter((s) => s.staffId === filters.staffId);
+  if (filters?.from) list = list.filter((s) => s.endAt >= filters.from!);
+  if (filters?.to) list = list.filter((s) => s.startAt <= filters.to!);
+  return list.slice().sort((a, b) => a.startAt.localeCompare(b.startAt));
+}
+
+export async function saveShift(input: Omit<Shift, "id"> & { id?: string }): Promise<Shift> {
+  return withLock("shifts.json", async () => {
+    const list = await readJSON<Shift[]>("shifts.json", []);
+    const shift: Shift = {
+      id: input.id || `shift-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      staffId: input.staffId,
+      locationSlug: input.locationSlug,
+      startAt: input.startAt,
+      endAt: input.endAt,
+      role: input.role,
+      status: input.status,
+      notes: input.notes,
+    };
+    const i = list.findIndex((s) => s.id === shift.id);
+    if (i >= 0) list[i] = shift;
+    else list.push(shift);
+    await writeJSON("shifts.json", list);
+    return shift;
+  });
+}
+
+export async function deleteShift(id: string): Promise<boolean> {
+  return withLock("shifts.json", async () => {
+    const list = await readJSON<Shift[]>("shifts.json", []);
+    const filtered = list.filter((s) => s.id !== id);
+    if (filtered.length === list.length) return false;
+    await writeJSON("shifts.json", filtered);
+    return true;
+  });
+}
+
+export async function getTimePunches(filters?: {
+  staffId?: string;
+  from?: string;
+  to?: string;
+}): Promise<TimePunch[]> {
+  const all = await readJSON<TimePunch[]>("time-punches.json", []);
+  let list = all;
+  if (filters?.staffId) list = list.filter((p) => p.staffId === filters.staffId);
+  if (filters?.from) list = list.filter((p) => p.occurredAt >= filters.from!);
+  if (filters?.to) list = list.filter((p) => p.occurredAt <= filters.to!);
+  return list.slice().sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
+}
+
+export async function recordTimePunch(input: Omit<TimePunch, "id" | "occurredAt"> & { occurredAt?: string }): Promise<TimePunch> {
+  return withLock("time-punches.json", async () => {
+    const list = await readJSON<TimePunch[]>("time-punches.json", []);
+    const punch: TimePunch = {
+      id: `pn-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      staffId: input.staffId,
+      type: input.type,
+      shiftId: input.shiftId,
+      occurredAt: input.occurredAt ?? new Date().toISOString(),
+    };
+    list.push(punch);
+    await writeJSON("time-punches.json", list);
+    return punch;
+  });
+}
+
+// --- Truck operations ---
+
+export async function getTruckRoutes(locationSlug?: string): Promise<TruckRoute[]> {
+  const all = await readJSON<TruckRoute[]>("truck-routes.json", []);
+  return locationSlug ? all.filter((r) => r.locationSlug === locationSlug) : all;
+}
+
+export async function saveTruckRoute(input: Omit<TruckRoute, "id" | "createdAt"> & { id?: string; createdAt?: string }): Promise<TruckRoute> {
+  return withLock("truck-routes.json", async () => {
+    const list = await readJSON<TruckRoute[]>("truck-routes.json", []);
+    const route: TruckRoute = {
+      id: input.id || `rt-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      name: input.name,
+      locationSlug: input.locationSlug,
+      description: input.description,
+      stops: input.stops,
+      createdAt: input.createdAt ?? new Date().toISOString(),
+    };
+    const i = list.findIndex((r) => r.id === route.id);
+    if (i >= 0) list[i] = route;
+    else list.push(route);
+    await writeJSON("truck-routes.json", list);
+    return route;
+  });
+}
+
+export async function deleteTruckRoute(id: string): Promise<boolean> {
+  return withLock("truck-routes.json", async () => {
+    const list = await readJSON<TruckRoute[]>("truck-routes.json", []);
+    const filtered = list.filter((r) => r.id !== id);
+    if (filtered.length === list.length) return false;
+    await writeJSON("truck-routes.json", filtered);
+    return true;
+  });
+}
+
+export async function getTruckEvents(filters?: {
+  locationSlug?: string;
+  from?: string;
+  to?: string;
+}): Promise<TruckEvent[]> {
+  const all = await readJSON<TruckEvent[]>("truck-events.json", []);
+  let list = all;
+  if (filters?.locationSlug) list = list.filter((e) => e.locationSlug === filters.locationSlug);
+  if (filters?.from) list = list.filter((e) => e.date >= filters.from!);
+  if (filters?.to) list = list.filter((e) => e.date <= filters.to!);
+  return list.slice().sort((a, b) => b.date.localeCompare(a.date));
+}
+
+export async function saveTruckEvent(input: Omit<TruckEvent, "id" | "createdAt"> & { id?: string; createdAt?: string }): Promise<TruckEvent> {
+  return withLock("truck-events.json", async () => {
+    const list = await readJSON<TruckEvent[]>("truck-events.json", []);
+    const event: TruckEvent = {
+      id: input.id || `te-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      routeId: input.routeId,
+      locationSlug: input.locationSlug,
+      name: input.name,
+      date: input.date,
+      expectedAttendance: input.expectedAttendance,
+      actualRevenueGrosze: input.actualRevenueGrosze,
+      actualOrders: input.actualOrders,
+      notes: input.notes,
+      status: input.status,
+      createdAt: input.createdAt ?? new Date().toISOString(),
+    };
+    const i = list.findIndex((e) => e.id === event.id);
+    if (i >= 0) list[i] = event;
+    else list.push(event);
+    await writeJSON("truck-events.json", list);
+    return event;
+  });
+}
+
+export async function deleteTruckEvent(id: string): Promise<boolean> {
+  return withLock("truck-events.json", async () => {
+    const list = await readJSON<TruckEvent[]>("truck-events.json", []);
+    const filtered = list.filter((e) => e.id !== id);
+    if (filtered.length === list.length) return false;
+    await writeJSON("truck-events.json", filtered);
+    return true;
+  });
+}
+
+// --- Expansion readiness checklist ---
+
+export async function getExpansionChecklists(): Promise<ExpansionChecklist[]> {
+  return readJSON<ExpansionChecklist[]>("expansion-checklists.json", []);
+}
+
+export async function getExpansionChecklist(locationSlug: string): Promise<ExpansionChecklist | null> {
+  const list = await getExpansionChecklists();
+  return list.find((c) => c.locationSlug === locationSlug) ?? null;
+}
+
+export async function saveExpansionChecklist(input: Omit<ExpansionChecklist, "updatedAt">): Promise<ExpansionChecklist> {
+  return withLock("expansion-checklists.json", async () => {
+    const list = await readJSON<ExpansionChecklist[]>("expansion-checklists.json", []);
+    const checklist: ExpansionChecklist = { ...input, updatedAt: new Date().toISOString() };
+    const i = list.findIndex((c) => c.locationSlug === input.locationSlug);
+    if (i >= 0) list[i] = checklist;
+    else list.push(checklist);
+    await writeJSON("expansion-checklists.json", list);
+    return checklist;
+  });
+}
+
+// --- Audit log ---
+
+export async function getAuditLog(filters?: {
+  action?: string;
+  entityType?: string;
+  limit?: number;
+}): Promise<AuditLogEntry[]> {
+  const all = await readJSON<AuditLogEntry[]>("audit-log.json", []);
+  let list = all.slice().sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
+  if (filters?.action) list = list.filter((e) => e.action === filters.action);
+  if (filters?.entityType) list = list.filter((e) => e.entityType === filters.entityType);
+  if (filters?.limit) list = list.slice(0, filters.limit);
+  return list;
+}
+
+// --- Admin users ---
+
+export async function getAdminUsers(): Promise<AdminUser[]> {
+  return readJSON<AdminUser[]>("admin-users.json", []);
+}
+
+export async function saveAdminUser(
+  input: Omit<AdminUser, "id" | "createdAt"> & { id?: string; createdAt?: string },
+): Promise<AdminUser> {
+  return withLock("admin-users.json", async () => {
+    const list = await readJSON<AdminUser[]>("admin-users.json", []);
+    const user: AdminUser = {
+      id: input.id || `usr-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      name: input.name,
+      email: input.email,
+      role: input.role,
+      status: input.status,
+      locationSlug: input.locationSlug,
+      notes: input.notes,
+      createdAt: input.createdAt ?? new Date().toISOString(),
+    };
+    const i = list.findIndex((u) => u.id === user.id);
+    if (i >= 0) list[i] = user;
+    else list.push(user);
+    await writeJSON("admin-users.json", list);
+    return user;
+  });
+}
+
+export async function deleteAdminUser(id: string): Promise<boolean> {
+  return withLock("admin-users.json", async () => {
+    const list = await readJSON<AdminUser[]>("admin-users.json", []);
+    const filtered = list.filter((u) => u.id !== id);
+    if (filtered.length === list.length) return false;
+    await writeJSON("admin-users.json", filtered);
+    return true;
+  });
+}
+
+const AUDIT_LOG_MAX_ENTRIES = 1000;
+
+export async function appendAuditLog(input: Omit<AuditLogEntry, "id" | "occurredAt"> & { occurredAt?: string }): Promise<AuditLogEntry> {
+  return withLock("audit-log.json", async () => {
+    const list = await readJSON<AuditLogEntry[]>("audit-log.json", []);
+    const entry: AuditLogEntry = {
+      id: `al-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      actor: input.actor,
+      action: input.action,
+      entityType: input.entityType,
+      entityId: input.entityId,
+      before: input.before,
+      after: input.after,
+      occurredAt: input.occurredAt ?? new Date().toISOString(),
+    };
+    list.push(entry);
+    // Trim to last N to keep file small
+    const trimmed = list.length > AUDIT_LOG_MAX_ENTRIES
+      ? list.slice(list.length - AUDIT_LOG_MAX_ENTRIES)
+      : list;
+    await writeJSON("audit-log.json", trimmed);
+    return entry;
   });
 }

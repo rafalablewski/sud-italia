@@ -1,22 +1,31 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { AdminNav } from "./AdminNav";
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  CheckCircle2,
+  Frown,
+  MapPin,
   MessageSquare,
-  Star,
-  ThumbsUp,
-  ThumbsDown,
-  AlertTriangle,
-  Filter,
-  ChevronDown,
-  Reply,
-  Check,
-  Flame,
-  Clock,
-  TrendingUp,
   Search,
+  Smile,
+  Star,
 } from "lucide-react";
+import { useAdminLocation } from "./v2/LocationContext";
+import { useToast } from "./v2/ui/Toast";
+import {
+  Badge,
+  Button,
+  Card,
+  CardBody,
+  CardHeader,
+  EmptyState,
+  Input,
+  Tabs,
+  Table,
+  type Column,
+} from "./v2/ui";
+import { BarChart, KpiCard, PieChart } from "./v2/charts";
 
 interface FeedbackEntry {
   id: string;
@@ -31,332 +40,345 @@ interface FeedbackEntry {
   status: "new" | "reviewed" | "responded";
 }
 
-const STATUS_BADGE: Record<string, string> = {
-  new: "badge-warning",
-  reviewed: "badge-info",
-  responded: "badge-active",
+type StatusFilter = "all" | FeedbackEntry["status"];
+type RatingFilter = "all" | "1" | "2" | "3" | "4" | "5";
+
+const STATUS_LABEL: Record<FeedbackEntry["status"], string> = {
+  new: "New",
+  reviewed: "Reviewed",
+  responded: "Responded",
 };
 
-function StarDisplay({ rating }: { rating: number }) {
-  return (
-    <div className="flex items-center gap-0.5">
-      {[1, 2, 3, 4, 5].map((s) => (
-        <Star
-          key={s}
-          className={`h-3.5 w-3.5 ${
-            s <= rating ? "fill-italia-gold text-italia-gold" : "text-slate-600"
-          }`}
-        />
-      ))}
-    </div>
-  );
+const STATUS_TONE: Record<FeedbackEntry["status"], "warning" | "info" | "success"> = {
+  new: "warning",
+  reviewed: "info",
+  responded: "success",
+};
+
+function ratingTone(r: number): "success" | "info" | "warning" | "danger" {
+  if (r >= 5) return "success";
+  if (r >= 4) return "info";
+  if (r >= 3) return "warning";
+  return "danger";
 }
 
-function SkeletonCard() {
-  return (
-    <div className="glass-card p-5 animate-pulse">
-      <div className="flex items-start justify-between mb-3">
-        <div>
-          <div className="h-4 w-32 bg-white/10 rounded mb-2" />
-          <div className="h-3 w-48 bg-white/10 rounded" />
-        </div>
-        <div className="h-4 w-20 bg-white/10 rounded" />
-      </div>
-      <div className="flex gap-3 mb-3">
-        {[1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="h-6 w-16 bg-white/10 rounded-lg" />
-        ))}
-      </div>
-      <div className="h-4 w-full bg-white/10 rounded mb-2" />
-      <div className="h-4 w-3/4 bg-white/10 rounded" />
-    </div>
-  );
+function sentiment(r: number): "positive" | "neutral" | "negative" {
+  if (r >= 4) return "positive";
+  if (r >= 3) return "neutral";
+  return "negative";
 }
 
-function SkeletonStat() {
-  return (
-    <div className="glass-card p-4 animate-pulse">
-      <div className="h-7 w-12 bg-white/10 rounded mb-1" />
-      <div className="h-3 w-20 bg-white/10 rounded" />
-    </div>
-  );
+function fmtDate(iso?: string): string {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleString();
+  } catch {
+    return iso;
+  }
 }
 
 export function AdminFeedback() {
-  const [feedback, setFeedback] = useState<FeedbackEntry[]>([]);
+  const { location } = useAdminLocation();
+  const toast = useToast();
+  const [list, setList] = useState<FeedbackEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"all" | "new" | "reviewed" | "responded">("all");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [ratingFilter, setRatingFilter] = useState<RatingFilter>("all");
 
-  useEffect(() => {
-    fetch("/api/admin/feedback")
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch feedback");
-        return res.json();
-      })
-      .then((data: FeedbackEntry[]) => {
-        setFeedback(data);
-      })
-      .catch((err) => {
-        console.error("Error fetching feedback:", err);
-      })
-      .finally(() => setLoading(false));
+  const fetchAll = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admin/feedback");
+      if (res.ok) {
+        const data = await res.json();
+        setList(Array.isArray(data) ? data : []);
+      }
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const filtered = feedback.filter((f) => {
-    if (filter !== "all" && f.status !== filter) return false;
-    if (searchQuery && !f.customerName.toLowerCase().includes(searchQuery.toLowerCase()) && !f.comment.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    return true;
-  });
+  useEffect(() => {
+    fetchAll();
+  }, [fetchAll]);
 
-  const avgRating = feedback.length > 0
-    ? feedback.reduce((s, f) => s + f.overallRating, 0) / feedback.length
-    : 0;
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return list.filter((f) => {
+      if (location && f.locationSlug !== location) return false;
+      if (statusFilter !== "all" && f.status !== statusFilter) return false;
+      if (ratingFilter !== "all" && f.overallRating !== Number(ratingFilter)) return false;
+      if (!q) return true;
+      return (
+        f.customerName.toLowerCase().includes(q) ||
+        f.customerPhone.includes(q) ||
+        f.orderId.toLowerCase().includes(q) ||
+        f.comment.toLowerCase().includes(q)
+      );
+    });
+  }, [list, query, statusFilter, ratingFilter, location]);
 
-  const categories = ["taste", "speed", "presentation", "value", "service"];
-  const categoryAvgs: Record<string, number> = {};
-  for (const cat of categories) {
-    const entries = feedback.filter((f) => f.categoryRatings[cat] != null);
-    categoryAvgs[cat] = entries.length > 0
-      ? entries.reduce((s, f) => s + (f.categoryRatings[cat] || 0), 0) / entries.length
-      : 0;
-  }
+  const totals = useMemo(() => {
+    const rated = list.filter((f) => f.overallRating > 0);
+    const sum = rated.reduce((acc, f) => acc + f.overallRating, 0);
+    const avg = rated.length > 0 ? sum / rated.length : 0;
+    const sentimentCounts = { positive: 0, neutral: 0, negative: 0 };
+    for (const f of rated) sentimentCounts[sentiment(f.overallRating)]++;
+    const ratingDist = [1, 2, 3, 4, 5].map((star) => ({
+      rating: `${star}★`,
+      count: rated.filter((f) => f.overallRating === star).length,
+    }));
+    const newCount = list.filter((f) => f.status === "new").length;
+    return { avg, total: rated.length, sentimentCounts, ratingDist, newCount };
+  }, [list]);
 
-  const newCount = feedback.filter((f) => f.status === "new").length;
-  const lowRating = feedback.filter((f) => f.overallRating <= 2).length;
-  const respondedCount = feedback.filter((f) => f.status === "responded").length;
-  const responseRate = feedback.length > 0
-    ? Math.round((respondedCount / feedback.length) * 100)
-    : 0;
+  const statusCounts = useMemo(() => {
+    const c = { all: list.length, new: 0, reviewed: 0, responded: 0 };
+    for (const f of list) c[f.status]++;
+    return c;
+  }, [list]);
 
-  async function handleUpdateStatus(id: string, status: FeedbackEntry["status"]) {
-    try {
-      const res = await fetch("/api/admin/feedback", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, status }),
-      });
-      if (!res.ok) throw new Error("Failed to update");
-      const updated: FeedbackEntry = await res.json();
-      setFeedback((prev) => prev.map((f) => (f.id === id ? updated : f)));
-    } catch (err) {
-      console.error("Error updating feedback status:", err);
+  const updateStatus = async (id: string, status: FeedbackEntry["status"]) => {
+    const res = await fetch("/api/admin/feedback", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, status }),
+    });
+    if (res.ok) {
+      setList((arr) => arr.map((f) => (f.id === id ? { ...f, status } : f)));
+      toast.success(`Marked ${STATUS_LABEL[status].toLowerCase()}`);
+    } else {
+      toast.error("Could not update status");
     }
-  }
+  };
+
+  const cols: Column<FeedbackEntry>[] = [
+    {
+      key: "rating",
+      header: "Rating",
+      cell: (f) => (
+        <Badge tone={ratingTone(f.overallRating)} variant="soft">
+          <Star className="h-3 w-3" /> {f.overallRating}
+        </Badge>
+      ),
+      sortValue: (f) => f.overallRating,
+      width: "90px",
+    },
+    {
+      key: "customer",
+      header: "Customer",
+      cell: (f) => (
+        <Link href={`/admin/customers/${encodeURIComponent(f.customerPhone)}`} className="v2-link-cell">
+          <div className="v2-cell-stack">
+            <span>{f.customerName || "Guest"}</span>
+            <span className="v2-cell-sub mono">{f.customerPhone}</span>
+          </div>
+        </Link>
+      ),
+      sortValue: (f) => f.customerName,
+    },
+    {
+      key: "order",
+      header: "Order",
+      cell: (f) => (
+        <Link href={`/admin/orders#${f.orderId}`} className="v2-link-cell mono">
+          {f.orderId.slice(-6).toUpperCase()}
+        </Link>
+      ),
+    },
+    {
+      key: "loc",
+      header: "Location",
+      cell: (f) => (
+        <Badge tone="neutral" variant="outline" icon={<MapPin className="h-3 w-3" />}>
+          {f.locationSlug}
+        </Badge>
+      ),
+      sortValue: (f) => f.locationSlug,
+    },
+    {
+      key: "comment",
+      header: "Comment",
+      cell: (f) => (
+        <span className="v2-fb-comment">
+          {f.comment ? `"${f.comment}"` : <span className="v2-muted">No comment</span>}
+        </span>
+      ),
+    },
+    {
+      key: "date",
+      header: "When",
+      cell: (f) => <span className="v2-muted">{fmtDate(f.date)}</span>,
+      sortValue: (f) => f.date,
+    },
+    {
+      key: "status",
+      header: "Status",
+      cell: (f) => (
+        <Badge tone={STATUS_TONE[f.status]} variant="soft" dot>
+          {STATUS_LABEL[f.status]}
+        </Badge>
+      ),
+      sortValue: (f) => f.status,
+    },
+    {
+      key: "actions",
+      header: "",
+      cell: (f) => (
+        <div className="v2-row-actions">
+          {f.status !== "reviewed" && (
+            <Button size="sm" variant="ghost" onClick={() => updateStatus(f.id, "reviewed")}>
+              Mark reviewed
+            </Button>
+          )}
+          {f.status !== "responded" && (
+            <Button size="sm" variant="ghost" leadingIcon={<CheckCircle2 className="h-3.5 w-3.5" />} onClick={() => updateStatus(f.id, "responded")}>
+              Mark responded
+            </Button>
+          )}
+        </div>
+      ),
+    },
+  ];
+
+  const sentimentSlices = [
+    { name: "Positive", value: totals.sentimentCounts.positive, color: "var(--success)" },
+    { name: "Neutral", value: totals.sentimentCounts.neutral, color: "var(--warning)" },
+    { name: "Negative", value: totals.sentimentCounts.negative, color: "var(--danger)" },
+  ].filter((s) => s.value > 0);
 
   return (
-    <>
-      <AdminNav />
-      <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
-        {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-heading font-bold admin-text">Customer Feedback</h1>
-            <p className="text-sm admin-text-dim mt-1">Reviews, ratings, and quality tracking</p>
-          </div>
+    <div className="v2-page">
+      <header className="v2-page-header">
+        <div className="v2-page-title-row">
+          <h1 className="v2-page-title">Customer feedback</h1>
+          <p className="v2-page-subtitle">
+            Per-order ratings + comments. Stay on top of negative scores — every "new" row is a customer to call back.
+          </p>
         </div>
+      </header>
 
-        {/* Stats row */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-          {loading ? (
-            <>
-              <SkeletonStat />
-              <SkeletonStat />
-              <SkeletonStat />
-              <SkeletonStat />
-              <SkeletonStat />
-            </>
-          ) : (
-            <>
-              <div className="glass-card p-4">
-                <p className="text-2xl font-bold text-italia-gold">
-                  {feedback.length > 0 ? avgRating.toFixed(1) : "\u2014"}
-                </p>
-                <p className="text-xs admin-text-dim">Average Rating</p>
-              </div>
-              <div className="glass-card p-4">
-                <p className="text-2xl font-bold admin-text">{feedback.length}</p>
-                <p className="text-xs admin-text-dim">Total Reviews</p>
-              </div>
-              <div className="glass-card p-4">
-                <p className="text-2xl font-bold text-amber-400">{newCount}</p>
-                <p className="text-xs admin-text-dim">Awaiting Review</p>
-              </div>
-              <div className="glass-card p-4">
-                <p className="text-2xl font-bold admin-red">{lowRating}</p>
-                <p className="text-xs admin-text-dim">Low Ratings (&le;2)</p>
-              </div>
-              <div className="glass-card p-4">
-                <p className="text-2xl font-bold admin-green">
-                  {feedback.length > 0 ? `${responseRate}%` : "\u2014"}
-                </p>
-                <p className="text-xs admin-text-dim">Response Rate</p>
-              </div>
-            </>
-          )}
+      <section className="v2-kpi-grid">
+        <KpiCard
+          label="Avg rating"
+          value={totals.avg}
+          display={totals.avg ? `${totals.avg.toFixed(2)} ★` : "—"}
+          icon={Star}
+          tone={ratingTone(totals.avg)}
+          hint={`${totals.total} responses`}
+        />
+        <KpiCard
+          label="Positive (≥4★)"
+          value={totals.sentimentCounts.positive}
+          icon={Smile}
+          tone="success"
+        />
+        <KpiCard
+          label="Negative (≤2★)"
+          value={totals.sentimentCounts.negative}
+          icon={Frown}
+          tone="danger"
+          higherIsBetter={false}
+        />
+        <KpiCard
+          label="Awaiting review"
+          value={totals.newCount}
+          icon={MessageSquare}
+          tone="warning"
+          higherIsBetter={false}
+        />
+      </section>
+
+      <section className="v2-grid-2">
+        <Card>
+          <CardHeader title="Rating distribution" />
+          <CardBody>
+            {totals.ratingDist.every((r) => r.count === 0) ? (
+              <EmptyState icon={Star} title="No ratings yet" compact />
+            ) : (
+              <BarChart
+                data={totals.ratingDist}
+                xKey="rating"
+                series={[{ key: "count", label: "Responses" }]}
+                height={220}
+              />
+            )}
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader title="Sentiment mix" description="Positive ≥4★ · Neutral 3★ · Negative ≤2★" />
+          <CardBody>
+            {sentimentSlices.length === 0 ? (
+              <EmptyState icon={Smile} title="No sentiment data" compact />
+            ) : (
+              <PieChart data={sentimentSlices} format={(n, name) => `${n} ${name.toLowerCase()}`} />
+            )}
+          </CardBody>
+        </Card>
+      </section>
+
+      <div className="v2-filters">
+        <div className="v2-filter-search">
+          <Input
+            placeholder="Search by name, phone, order id, or comment…"
+            leadingAdornment={<Search className="h-3.5 w-3.5" />}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
         </div>
-
-        {/* Category breakdown */}
-        <div className="glass-card-static p-5 mb-6">
-          <h3 className="font-semibold admin-text mb-3 flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-blue-400" />
-            Category Averages
-          </h3>
-          {loading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 animate-pulse">
-              {categories.map((cat) => (
-                <div key={cat} className="text-center">
-                  <div className="h-6 w-10 bg-white/10 rounded mx-auto mb-1" />
-                  <div className="h-3 w-16 bg-white/10 rounded mx-auto mb-1" />
-                  <div className="w-full h-1 bg-white/10 rounded-full mt-1" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-              {categories.map((cat) => {
-                const avg = categoryAvgs[cat];
-                const isLow = avg < 3.5;
-                return (
-                  <div key={cat} className="text-center">
-                    <p className={`text-xl font-bold ${feedback.length === 0 ? "admin-text-dim" : isLow ? "admin-red" : "admin-green"}`}>
-                      {feedback.length > 0 ? avg.toFixed(1) : "\u2014"}
-                    </p>
-                    <p className="text-xs admin-text-dim capitalize">{cat}</p>
-                    <div className="w-full h-1 bg-white/10 rounded-full mt-1 overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${isLow ? "bg-red-400" : "bg-green-400"}`}
-                        style={{ width: `${(avg / 5) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Filter + search */}
-        <div className="flex items-center gap-3 mb-4">
-          <div className="flex gap-1 p-1 glass rounded-lg">
-            {(["all", "new", "reviewed", "responded"] as const).map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                  filter === f
-                    ? "bg-white/12 text-white"
-                    : "text-slate-400 hover:text-white"
-                }`}
-              >
-                {f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}
-                {f === "new" && newCount > 0 && (
-                  <span className="ml-1 bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded-full text-[9px] font-bold">
-                    {newCount}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-          <div className="relative flex-1 max-w-xs">
-            <Search className="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search feedback..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="glass-input pl-8 text-xs w-full"
-            />
-          </div>
-        </div>
-
-        {/* Feedback list */}
-        <div className="space-y-3">
-          {loading ? (
-            <>
-              <SkeletonCard />
-              <SkeletonCard />
-              <SkeletonCard />
-            </>
-          ) : filtered.length === 0 ? (
-            <div className="glass-card p-8 text-center">
-              <MessageSquare className="h-8 w-8 text-slate-500 mx-auto mb-2" />
-              <p className="admin-text-dim text-sm">
-                {feedback.length === 0 ? "No feedback yet." : "No feedback matches your filters."}
-              </p>
-            </div>
-          ) : (
-            filtered.map((fb) => (
-              <div key={fb.id} className={`glass-card p-5 ${fb.overallRating <= 2 ? "border-l-2 border-l-red-400" : ""}`}>
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold admin-text">{fb.customerName}</p>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${STATUS_BADGE[fb.status]}`}>
-                          {fb.status}
-                        </span>
-                      </div>
-                      <p className="text-xs admin-text-dim">
-                        {fb.locationSlug} &middot; {fb.date} &middot; Order {fb.orderId}
-                      </p>
-                    </div>
-                  </div>
-                  <StarDisplay rating={fb.overallRating} />
-                </div>
-
-                {/* Category mini-ratings */}
-                <div className="flex gap-3 mb-3 flex-wrap">
-                  {Object.entries(fb.categoryRatings).map(([cat, rating]) => (
-                    <span
-                      key={cat}
-                      className={`text-[10px] px-2 py-1 rounded-lg font-medium ${
-                        rating >= 4
-                          ? "bg-green-500/10 admin-green"
-                          : rating >= 3
-                            ? "bg-amber-500/10 text-amber-400"
-                            : "bg-red-500/10 admin-red"
-                      }`}
-                    >
-                      {cat}: {rating}/5
-                    </span>
-                  ))}
-                </div>
-
-                {/* Comment */}
-                <p className="text-sm admin-text-muted leading-relaxed mb-3">
-                  &ldquo;{fb.comment}&rdquo;
-                </p>
-
-                {/* Actions */}
-                <div className="flex items-center gap-2">
-                  {fb.status === "new" && (
-                    <>
-                      <button
-                        className="glass-btn-green"
-                        onClick={() => handleUpdateStatus(fb.id, "reviewed")}
-                      >
-                        <Check className="h-3.5 w-3.5" /> Mark Reviewed
-                      </button>
-                      <button
-                        className="glass-btn-blue"
-                        onClick={() => handleUpdateStatus(fb.id, "responded")}
-                      >
-                        <Reply className="h-3.5 w-3.5" /> Respond
-                      </button>
-                    </>
-                  )}
-                  {fb.overallRating <= 2 && (
-                    <button className="glass-btn">
-                      <AlertTriangle className="h-3.5 w-3.5" /> Flag for Follow-up
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
+        <Tabs
+          value={statusFilter}
+          onChange={(v) => setStatusFilter(v as StatusFilter)}
+          tabs={[
+            { value: "all", label: "All", count: statusCounts.all },
+            { value: "new", label: "New", count: statusCounts.new },
+            { value: "reviewed", label: "Reviewed", count: statusCounts.reviewed },
+            { value: "responded", label: "Responded", count: statusCounts.responded },
+          ]}
+          variant="pill"
+          ariaLabel="Status filter"
+        />
+        <Tabs
+          value={ratingFilter}
+          onChange={(v) => setRatingFilter(v as RatingFilter)}
+          tabs={[
+            { value: "all", label: "All ★" },
+            { value: "5", label: "5" },
+            { value: "4", label: "4" },
+            { value: "3", label: "3" },
+            { value: "2", label: "2" },
+            { value: "1", label: "1" },
+          ]}
+          variant="pill"
+          ariaLabel="Rating filter"
+        />
       </div>
-    </>
+
+      {loading ? (
+        <div className="v2-page-loading">Loading feedback…</div>
+      ) : filtered.length === 0 ? (
+        <Card>
+          <CardBody>
+            <EmptyState
+              icon={MessageSquare}
+              title={list.length === 0 ? "No feedback yet" : "No matches"}
+              description={
+                list.length === 0
+                  ? "Customers leave ratings after pickup or delivery via the post-order link."
+                  : "Try widening the filters."
+              }
+            />
+          </CardBody>
+        </Card>
+      ) : (
+        <Card padding="none">
+          <CardBody>
+            <Table rows={filtered} columns={cols} rowKey={(f) => f.id} defaultSort={{ key: "date", dir: "desc" }} />
+          </CardBody>
+        </Card>
+      )}
+    </div>
   );
 }

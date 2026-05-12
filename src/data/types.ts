@@ -225,3 +225,220 @@ export interface Order {
   feedback?: OrderFeedback;
   qualityCheck?: QualityCheck;
 }
+
+// --- Inventory (per-location stock for an ingredient) ---
+
+export interface IngredientStock {
+  ingredientId: string;
+  locationSlug: string;
+  /** Current quantity on hand, in the ingredient's unit. */
+  onHand: number;
+  /** Target stock level — guides receive quantities. */
+  parLevel: number;
+  /** Below this number, generate a low-stock alert. */
+  reorderPoint: number;
+  /** ISO timestamp of the last manual stocktake. */
+  lastCountedAt?: string;
+  lastCountedBy?: string;
+  updatedAt: string;
+}
+
+export type StockMovementType = "receive" | "waste" | "consume" | "adjust";
+
+export interface StockMovement {
+  id: string;
+  ingredientId: string;
+  locationSlug: string;
+  type: StockMovementType;
+  /** Signed delta applied to onHand (negative for waste/consume/adjust-). */
+  quantity: number;
+  /** Optional cost impact in grosze (e.g. waste valuation). */
+  costImpact?: number;
+  reason?: string;
+  occurredAt: string;
+  byUser?: string;
+}
+
+// --- Suppliers + Purchase Orders ---
+
+export interface Supplier {
+  id: string;
+  name: string;
+  contactName?: string;
+  email?: string;
+  phone?: string;
+  /** Typical days between PO send and delivery. */
+  leadTimeDays?: number;
+  notes?: string;
+  createdAt: string;
+}
+
+export type PurchaseOrderStatus = "draft" | "sent" | "received" | "cancelled";
+
+export interface PurchaseOrderLine {
+  ingredientId: string;
+  quantity: number;
+  /** Per-unit cost in grosze (snapshot at PO time). */
+  unitCost: number;
+}
+
+export interface PurchaseOrder {
+  id: string;
+  supplierId: string;
+  locationSlug: string;
+  status: PurchaseOrderStatus;
+  lines: PurchaseOrderLine[];
+  totalCents: number;
+  expectedAt?: string;
+  receivedAt?: string;
+  notes?: string;
+  createdAt: string;
+  createdBy?: string;
+}
+
+// --- CRM ---
+
+export interface CustomerNote {
+  id: string;
+  /** Canonical E.164 PL phone — the customer key. */
+  phone: string;
+  body: string;
+  tags?: string[];
+  authoredBy?: string;
+  createdAt: string;
+}
+
+// --- Staff / HR ---
+
+export type StaffRole = "manager" | "kitchen" | "front" | "driver";
+export type StaffStatus = "active" | "inactive";
+
+export interface StaffMember {
+  id: string;
+  name: string;
+  phone?: string;
+  email?: string;
+  role: StaffRole;
+  locationSlug: string;
+  /** Hourly rate in grosze. */
+  hourlyRateGrosze: number;
+  hireDate?: string;
+  status: StaffStatus;
+  notes?: string;
+  createdAt: string;
+}
+
+export type ShiftStatus = "scheduled" | "in-progress" | "done" | "missed";
+
+export interface Shift {
+  id: string;
+  staffId: string;
+  locationSlug: string;
+  /** ISO start timestamp. */
+  startAt: string;
+  /** ISO end timestamp. */
+  endAt: string;
+  role: StaffRole;
+  status: ShiftStatus;
+  notes?: string;
+}
+
+export interface TimePunch {
+  id: string;
+  staffId: string;
+  /** ISO timestamp of the punch. */
+  occurredAt: string;
+  type: "clock-in" | "clock-out";
+  /** Optional shift this punch is associated with. */
+  shiftId?: string;
+}
+
+// --- Truck operations ---
+
+export interface TruckStop {
+  name: string;
+  /** Optional decimal lat/lng for map placement. */
+  lat?: number;
+  lng?: number;
+  startTime?: string;
+  endTime?: string;
+}
+
+export interface TruckRoute {
+  id: string;
+  name: string;
+  locationSlug: string;
+  description?: string;
+  stops: TruckStop[];
+  createdAt: string;
+}
+
+export type TruckEventStatus = "scheduled" | "live" | "done" | "cancelled";
+
+export interface TruckEvent {
+  id: string;
+  routeId?: string;
+  locationSlug: string;
+  name: string;
+  date: string; // YYYY-MM-DD
+  expectedAttendance?: number;
+  actualRevenueGrosze?: number;
+  actualOrders?: number;
+  /** Free-form notes (weather, road closures, etc). */
+  notes?: string;
+  status: TruckEventStatus;
+  createdAt: string;
+}
+
+// --- Expansion readiness checklist (per prospective location) ---
+
+export interface ExpansionChecklistItem {
+  id: string;
+  label: string;
+  done: boolean;
+  category: "legal" | "site" | "supply" | "people" | "ops" | "marketing";
+  notes?: string;
+}
+
+export interface ExpansionChecklist {
+  locationSlug: string;
+  /** Free-form name when the slug refers to a planned but not-yet-active location. */
+  city?: string;
+  items: ExpansionChecklistItem[];
+  notes?: string;
+  /** ISO timestamp of last edit. */
+  updatedAt: string;
+}
+
+// --- Admin users + roles ---
+
+export type AdminRole = "owner" | "manager" | "staff" | "kitchen";
+export type AdminUserStatus = "active" | "disabled";
+
+export interface AdminUser {
+  id: string;
+  name: string;
+  email?: string;
+  role: AdminRole;
+  status: AdminUserStatus;
+  locationSlug?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+// --- Audit log ---
+
+export interface AuditLogEntry {
+  id: string;
+  /** Actor identifier (e.g. "admin" today; phase 24 introduces named users). */
+  actor: string;
+  /** Action performed, e.g. "settings.update", "orders.status_change". */
+  action: string;
+  /** Optional entity reference, e.g. order id or menu item id. */
+  entityType?: string;
+  entityId?: string;
+  /** Snapshot of what changed — kept JSON-stringifiable. */
+  before?: unknown;
+  after?: unknown;
+  occurredAt: string;
+}

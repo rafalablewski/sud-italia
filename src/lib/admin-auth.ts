@@ -85,3 +85,34 @@ export async function clearSession(): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.delete(SESSION_COOKIE);
 }
+
+/**
+ * Role helpers (phase 24). The current cookie-based session only knows
+ * "is the user the admin or not" — there's no per-user identity yet, so every
+ * authenticated request is treated as having the "owner" role. The
+ * /admin/users page can record planned per-user roles, and future work can
+ * bind cookies to specific user ids without changing the API surface here.
+ */
+export type AdminRole = "owner" | "manager" | "staff" | "kitchen";
+
+const ROLE_RANK: Record<AdminRole, number> = {
+  owner: 100,
+  manager: 50,
+  staff: 20,
+  kitchen: 10,
+};
+
+export async function getCurrentRole(): Promise<AdminRole | null> {
+  return (await isAuthenticated()) ? "owner" : null;
+}
+
+/**
+ * Returns true when the current session has at least one of the allowed
+ * roles. Routes that need a role gate should call this AND `isAuthenticated`.
+ */
+export async function hasRole(allowed: AdminRole[]): Promise<boolean> {
+  const role = await getCurrentRole();
+  if (!role) return false;
+  const minRank = Math.min(...allowed.map((r) => ROLE_RANK[r]));
+  return ROLE_RANK[role] >= minRank;
+}

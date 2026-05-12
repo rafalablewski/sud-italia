@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAuthenticated } from "@/lib/admin-auth";
-import { getOrders, updateOrderStatus, deleteOrder } from "@/lib/store";
+import { appendAuditLog, getOrders, updateOrderStatus, deleteOrder } from "@/lib/store";
 import { Order } from "@/data/types";
 
 async function requireAuth() {
@@ -34,7 +34,7 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "Missing orderId or status" }, { status: 400 });
     }
 
-    const validStatuses: Order["status"][] = ["pending", "confirmed", "preparing", "ready", "completed"];
+    const validStatuses: Order["status"][] = ["pending", "confirmed", "preparing", "ready", "completed", "cancelled"];
     if (!validStatuses.includes(status)) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
@@ -43,6 +43,14 @@ export async function PUT(req: NextRequest) {
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
+
+    await appendAuditLog({
+      actor: "admin",
+      action: "orders.status_change",
+      entityType: "order",
+      entityId: orderId,
+      after: { status },
+    });
 
     return NextResponse.json(order);
   } catch {
@@ -65,6 +73,13 @@ export async function DELETE(req: NextRequest) {
     if (!ok) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
+
+    await appendAuditLog({
+      actor: "admin",
+      action: "orders.delete",
+      entityType: "order",
+      entityId: orderId,
+    });
 
     return NextResponse.json({ ok: true });
   } catch {
