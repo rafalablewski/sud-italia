@@ -189,24 +189,24 @@ The most important admission this audit can offer: **stop calling the current `/
 
 ### 1.11 Enterprise & Platform Features
 
-| Existing | Missing | Why It Matters | Priority | Benchmark |
-|---|---|---|---|---|
-| `AdminRole` enum defined; `hasRole()` function | **Actual RBAC enforcement** on every page + every API route + every field | Owner/manager/staff/kitchen tier is in the type system and *not enforced anywhere* | P0 | Linear, Stripe, every enterprise SaaS |
-| Single-password HMAC session | **Per-user authentication** (email + password, magic link, OAuth) | Cannot identify "who deleted that order" today | P0 | NextAuth, Clerk, WorkOS |
-| — | **SSO / SAML / OIDC** | Required by every enterprise / franchise buyer | P2 | WorkOS, Auth0 |
-| — | **2FA / TOTP / WebAuthn** | Polish data-protection authority (UODO) considers this baseline for personal-data systems | P1 | Authy, WebAuthn |
-| Audit log at `/admin/settings` | **Tamper-evident audit log** (append-only, hash-chained, exportable, filterable) | Current log is a JSON file an admin can edit | P1 | AWS CloudTrail, Vanta |
-| — | **API gateway** with API keys, rate limits, quotas per integration | Today every integration would call your raw routes | P1 | Kong, Stripe |
-| — | **Webhook subscription system** for partners ("subscribe to order.created") | Stripe webhooks consumed but none exposed | P1 | Stripe, Svix |
-| — | **Event bus / event sourcing** (every state change is an event, replayable) | Without events, "real-time" is impossible and audit is partial | P2 | Kafka, Inngest, Trigger.dev |
-| — | **Multi-tenant architecture** (one DB, many brands/franchisees, row-level security) | Required for franchise scale | P3 | Supabase RLS, Postgres RLS |
-| — | **Observability stack** (Sentry, OpenTelemetry, structured logs, dashboards) | Today an error in production is invisible until a customer complains | P0 | Sentry, Datadog, Grafana |
-| — | **CI/CD with tests, type-check, lint, preview deploys, smoke** | Currently no tests, no gate | P0 | Vercel + GitHub Actions |
-| — | **SOC2 control mapping** (access reviews, change mgmt, vendor mgmt, incident response) | Any partner integration > 50k EUR ARR will demand SOC2 | P2 | Vanta, Drata |
-| — | **GDPR rights workflow** (data access request, deletion request, portability) | Polish customers have legal right to request these; manual fulfillment is illegal at scale | P0 | Custom + Vanta |
-| — | **Data residency policy** (EU-only, no US transfer) | Polish UODO + EU GDPR | P1 | Custom |
-| — | **Feature-flag system** (LaunchDarkly-style for menu changes, AI rollouts, location rollouts) | Currently every change is global | P1 | LaunchDarkly, GrowthBook |
-| — | **Secrets management** (rotated keys, KMS, HSM for HMAC secret) | `ADMIN_PASSWORD` env var rotation is unclear | P1 | Doppler, AWS Secrets Manager |
+| Existing | Missing | Why It Matters | Priority | Benchmark | Status |
+|---|---|---|---|---|---|
+| `AdminRole` enum defined; `hasRole()` function | **Actual RBAC enforcement** on every page + every API route + every field | Owner/manager/staff/kitchen tier is in the type system and *not enforced anywhere* | P0 | Linear, Stripe, every enterprise SaaS | ✗ Not fixed — `getCurrentRole()` still returns `"owner"` for every authenticated session (`src/lib/admin-auth.ts:106`); needs per-user identity binding before `hasRole` is meaningful |
+| Single-password HMAC session | **Per-user authentication** (email + password, magic link, OAuth) | Cannot identify "who deleted that order" today | P0 | NextAuth, Clerk, WorkOS | ✗ Not fixed — major auth refactor |
+| — | **SSO / SAML / OIDC** | Required by every enterprise / franchise buyer | P2 | WorkOS, Auth0 | ✗ Not fixed — depends on per-user auth |
+| — | **2FA / TOTP / WebAuthn** | Polish data-protection authority (UODO) considers this baseline for personal-data systems | P1 | Authy, WebAuthn | ✗ Not fixed — depends on per-user auth |
+| Audit log at `/admin/settings` | **Tamper-evident audit log** (append-only, hash-chained, exportable, filterable) | Current log is a JSON file an admin can edit | P1 | AWS CloudTrail, Vanta | ✗ Not fixed — needs hash-chain + export |
+| — | **API gateway** with API keys, rate limits, quotas per integration | Today every integration would call your raw routes | P1 | Kong, Stripe | ✗ Not fixed — needs gateway layer |
+| — | **Webhook subscription system** for partners ("subscribe to order.created") | Stripe webhooks consumed but none exposed | P1 | Stripe, Svix | ✗ Not fixed — needs subscriber registry + dispatcher |
+| — | **Event bus / event sourcing** (every state change is an event, replayable) | Without events, "real-time" is impossible and audit is partial | P2 | Kafka, Inngest, Trigger.dev | ✗ Not fixed — fundamental arch shift |
+| — | **Multi-tenant architecture** (one DB, many brands/franchisees, row-level security) | Required for franchise scale | P3 | Supabase RLS, Postgres RLS | ✗ Not fixed — fundamental arch shift |
+| — | **Observability stack** (Sentry, OpenTelemetry, structured logs, dashboards) | Today an error in production is invisible until a customer complains | P0 | Sentry, Datadog, Grafana | ✗ Not fixed — needs DSN/account setup + SDK install |
+| — | **CI/CD with tests, type-check, lint, preview deploys, smoke** | Currently no tests, no gate | P0 | Vercel + GitHub Actions | ✗ Not fixed — no `.github/workflows/` exists; no `*.test.*` files exist (confirmed) |
+| — | **SOC2 control mapping** (access reviews, change mgmt, vendor mgmt, incident response) | Any partner integration > 50k EUR ARR will demand SOC2 | P2 | Vanta, Drata | ✗ Not fixed — compliance program |
+| — | **GDPR rights workflow** (data access request, deletion request, portability) | Polish customers have legal right to request these; manual fulfillment is illegal at scale | P0 | Custom + Vanta | ✗ Not fixed — DSAR/deletion endpoints + ticketing |
+| — | **Data residency policy** (EU-only, no US transfer) | Polish UODO + EU GDPR | P1 | Custom | ✗ Not fixed — policy + region pinning |
+| — | **Feature-flag system** (LaunchDarkly-style for menu changes, AI rollouts, location rollouts) | Currently every change is global | P1 | LaunchDarkly, GrowthBook | ✗ Not fixed — needs flag service + SDK |
+| — | **Secrets management** (rotated keys, KMS, HSM for HMAC secret) | `ADMIN_PASSWORD` env var rotation is unclear | P1 | Doppler, AWS Secrets Manager | ✗ Not fixed — secret-manager onboarding |
 
 ---
 
