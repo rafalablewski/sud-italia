@@ -201,7 +201,7 @@ Format note: tables are split per category for readability. **Priority** is P0 (
 | — | — | **Multi-agent system** (Forecast Agent → Procurement Agent → Schedule Agent → Marketing Agent, mediated by a Manager Agent) | P3 | LangGraph, CrewAI | ✗ Not fixed — research-grade build |
 | — | — | **Predictive staffing** (next-week schedule pre-filled from forecast + skill graph + budget) | P1 | 7shifts AI | ✗ Not fixed — depends on forecast + skill matrix |
 | — | — | **AI menu engineering** (Boston matrix per item: Star / Plowhorse / Puzzle / Dog with weekly migration) | P1 | Menu Engineering, MarginEdge | ✗ Not fixed — quadrant calc + weekly job |
-| — | — | **Sentiment NLP on feedback comments** (currently `/admin/feedback` shows comments raw, no aggregation) | P0 | AWS Comprehend, simple OpenAI call | ✗ Not fixed — needs LLM/sentiment endpoint + aggregation |
+| — | — | **Sentiment NLP on feedback comments** (currently `/admin/feedback` shows comments raw, no aggregation) | P0 | AWS Comprehend, simple OpenAI call | ✓ Fixed — `@anthropic-ai/sdk` installed; new `src/lib/sentiment.ts` calls Claude Haiku 4.5 in batches of ≤50, returns `{sentiment, themes[]}` per entry, persisted to `FeedbackEntry`. New `POST /api/admin/feedback/analyze` is the trigger (manual button + cron-friendly). AdminFeedback renders sentiment + theme badges inline and a "Top themes this week" panel with avg rating per theme. Requires `ANTHROPIC_API_KEY` env. |
 
 The most important admission this audit can offer: **stop calling the current `/admin/ai` page "AI". Either ship real models or rename it "Insights & Heuristics".** Sophisticated buyers, investors, partners, and future hires will spot this in five minutes, and it costs more credibility than the marketing gain is worth.
 

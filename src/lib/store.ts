@@ -1854,6 +1854,9 @@ export async function deleteReferral(code: string): Promise<boolean> {
 
 // --- Feedback ---
 
+export const FEEDBACK_SENTIMENTS = ["positive", "neutral", "negative"] as const;
+export type FeedbackSentiment = (typeof FEEDBACK_SENTIMENTS)[number];
+
 export interface FeedbackEntry {
   id: string;
   orderId: string;
@@ -1865,6 +1868,12 @@ export interface FeedbackEntry {
   categoryRatings: Record<string, number>;
   comment: string;
   status: "new" | "reviewed" | "responded";
+  /** Set by the sentiment analyzer. Absent until the analyze endpoint runs. */
+  sentiment?: FeedbackSentiment;
+  /** Short normalized topic tags: "dough quality", "speed", "staff friendliness". */
+  themes?: string[];
+  /** ISO timestamp of the last sentiment scan. */
+  analyzedAt?: string;
 }
 
 export async function getFeedback(): Promise<FeedbackEntry[]> {
@@ -1893,6 +1902,32 @@ export async function updateFeedbackStatus(id: string, status: FeedbackEntry["st
     list[idx].status = status;
     await writeJSON("feedback.json", list);
     return list[idx];
+  });
+}
+
+/**
+ * Persist sentiment-analysis results for one or more feedback entries. Used
+ * by the analyze endpoint to write Claude's batch output back without
+ * touching customer-controlled fields (comment, rating).
+ */
+export async function setFeedbackAnalysis(
+  updates: { id: string; sentiment: FeedbackSentiment; themes: string[] }[],
+): Promise<number> {
+  return withLock("feedback.json", async () => {
+    const list = await readJSON<FeedbackEntry[]>("feedback.json", []);
+    const byId = new Map(updates.map((u) => [u.id, u]));
+    const now = new Date().toISOString();
+    let n = 0;
+    for (const entry of list) {
+      const u = byId.get(entry.id);
+      if (!u) continue;
+      entry.sentiment = u.sentiment;
+      entry.themes = u.themes;
+      entry.analyzedAt = now;
+      n++;
+    }
+    await writeJSON("feedback.json", list);
+    return n;
   });
 }
 
