@@ -2544,6 +2544,23 @@ html { scroll-behavior: smooth; }
 .v2-stop-num { color: var(--fg-subtle); font-variant-numeric: tabular-nums; min-width: 18px; }
 
 /* ============================
+   ADMIN v2 — MULTI-LOCATION
+   ============================ */
+
+.v2-loc-stats { display: flex; flex-direction: column; gap: 8px; }
+.v2-loc-stat-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+}
+.v2-loc-stat-label { display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-sm); color: var(--fg-muted); }
+.v2-loc-stat-value { display: inline-flex; align-items: center; gap: 8px; font-size: var(--text-md); font-weight: 600; color: var(--fg); }
+
+/* ============================
    ADMIN DESIGN SYSTEM (LEGACY — being migrated to v2)
    Tokens → Surfaces → Inputs → Buttons → Typography → Badges → Alerts
    8px baseline grid · 5-color semantic palette · 6-level type scale
