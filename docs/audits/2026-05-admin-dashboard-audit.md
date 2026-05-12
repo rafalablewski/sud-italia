@@ -126,14 +126,14 @@ Format note: tables are split per category for readability. **Priority** is P0 (
 
 ### 1.7 Delivery Ecosystem
 
-| Existing | Missing | Why It Matters | Priority | Benchmark |
-|---|---|---|---|---|
-| Single-channel: own Stripe checkout | **Aggregator integration** (Pyszne.pl, Glovo, Bolt Food, Uber Eats) with unified order ingestion | 40–60% of Polish pizza delivery flows through aggregators; not being on them = market exclusion | P0 | Otter, Deliverect, Cuboh |
-| — | **Per-channel menu** (different price on Glovo to absorb 28% commission) | Single menu means you either underprice owned or overprice aggregators | P0 | Deliverect |
-| — | **Delivery profitability engine** (per-order: distance × time × commission × packaging) | Aggregator orders can be **margin-negative**; without per-order P&L you don't know | P0 | Otter Profitability, MarginEdge |
-| — | **Prep-time synchronization** (push real prep time to aggregator vs default 30 min) | Wrong prep time = courier arrives at cold food OR waits 12 min ⇒ both kill rating | P1 | Deliverect |
-| Internal dispatch via `/admin/truck` routes (static) | **Dispatch optimization** (vehicle-routing problem, dynamic re-routing, courier app) | At >25 orders/h, manual dispatch is mathematically worse than any solver | P1 | Onfleet, Bringg, Routific |
-| — | **Ghost-kitchen / virtual-brand support** (one truck → multiple menu brands) | Common 2025+ play: same dough, different brand on aggregator | P2 | CloudKitchens, Reef |
+| Existing | Missing | Why It Matters | Priority | Benchmark | Status |
+|---|---|---|---|---|---|
+| Single-channel: own Stripe checkout | **Aggregator integration** (Pyszne.pl, Glovo, Bolt Food, Uber Eats) with unified order ingestion | 40–60% of Polish pizza delivery flows through aggregators; not being on them = market exclusion | P0 | Otter, Deliverect, Cuboh | ✗ Not fixed — requires partner API contracts (Deliverect/Otter or direct) |
+| — | **Per-channel menu** (different price on Glovo to absorb 28% commission) | Single menu means you either underprice owned or overprice aggregators | P0 | Deliverect | ✗ Not fixed — needs channel-aware price overrides |
+| — | **Delivery profitability engine** (per-order: distance × time × commission × packaging) | Aggregator orders can be **margin-negative**; without per-order P&L you don't know | P0 | Otter Profitability, MarginEdge | ✗ Not fixed — needs commission table + distance/time inputs |
+| — | **Prep-time synchronization** (push real prep time to aggregator vs default 30 min) | Wrong prep time = courier arrives at cold food OR waits 12 min ⇒ both kill rating | P1 | Deliverect | ✗ Not fixed — bound to aggregator integration |
+| Internal dispatch via `/admin/truck` routes (static) | **Dispatch optimization** (vehicle-routing problem, dynamic re-routing, courier app) | At >25 orders/h, manual dispatch is mathematically worse than any solver | P1 | Onfleet, Bringg, Routific | ✗ Not fixed — VRP solver + courier app |
+| — | **Ghost-kitchen / virtual-brand support** (one truck → multiple menu brands) | Common 2025+ play: same dough, different brand on aggregator | P2 | CloudKitchens, Reef | ✗ Not fixed — multi-brand menu schema |
 
 ### 1.8 CRM & Growth
 
