@@ -603,98 +603,108 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
             />
           </section>
 
-          <Card padding="none">
-            <CardHeader
-              title="Ingredients"
-              description={`${rows.length} ingredient${rows.length === 1 ? "" : "s"} · cost recomputes live as you edit.`}
-            />
-            <CardBody>
-              {rows.length === 0 ? (
+          {/* Ingredients table — uses the same `v2-mng-section` class system
+              as the Menu page so the section header (icon + name + count) +
+              row padding + hover + bold names all match exactly. */}
+          <section className="v2-mng-section" data-variant="recipe-edit">
+            {rows.length === 0 ? (
+              <div style={{ padding: "12px 14px" }}>
                 <EmptyState
                   icon={Coins}
                   title="No ingredients yet"
                   description="Pick one from the dropdown below to start building the recipe."
                   compact
                 />
-              ) : (
-                <div className="v2-rcp-table">
-                  <div className="v2-rcp-row-head" role="presentation" aria-hidden>
-                    <span>Ingredient</span>
-                    <span>Qty</span>
-                    <span title="Waste / trim loss as a percentage of the raw weight. 5% = lose 5 g out of every 100 g.">
-                      Waste
-                    </span>
-                    <span>Cost</span>
-                    <span aria-hidden />
-                  </div>
-                  <ul className="v2-rcp-rows">
-                    {rows.map((r) => (
-                      <li key={r.ingredientId} className="v2-rcp-row">
-                        <span className="v2-rcp-name" title={r.name ?? r.ingredientId}>
-                          {r.name ?? r.ingredientId}
-                        </span>
-                        <Input
-                          type="number"
-                          step={displayStep(r.unit)}
-                          min="0"
-                          value={toDisplayQty(r.quantity, r.unit)}
-                          onChange={(e) =>
-                            updateRow(r.ingredientId, {
-                              quantity: fromDisplayQty(Number(e.target.value), r.unit),
-                            })
-                          }
-                          aria-label="Quantity"
-                          className="v2-rcp-num"
-                          trailingAdornment={<span className="v2-muted">{displayUnit(r.unit)}</span>}
-                        />
-                        <Input
-                          type="number"
-                          step="1"
-                          min="0"
-                          max="100"
-                          value={factorToPercent(r.wasteFactor)}
-                          onChange={(e) =>
-                            updateRow(r.ingredientId, {
-                              wasteFactor: percentToFactor(Number(e.target.value)),
-                            })
-                          }
-                          aria-label="Waste percentage"
-                          className="v2-rcp-num"
-                          trailingAdornment={<span className="v2-muted">%</span>}
-                        />
-                        <span className="tabular v2-rcp-cost">{formatPrice(lineCost(r))}</span>
-                        <button
-                          type="button"
-                          className="v2-rcp-remove"
-                          onClick={() => removeRow(r.ingredientId)}
-                          aria-label={`Remove ${r.name ?? r.ingredientId}`}
-                          title={`Remove ${r.name ?? r.ingredientId}`}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              <div className="v2-rcp-add">
-                <Select
-                  value={pickerIngId}
-                  onChange={(e) => setPickerIngId(e.target.value)}
-                  aria-label="Add ingredient"
-                  placeholder="Pick an ingredient…"
-                  options={availableIngredients.map((i) => ({
-                    value: i.id,
-                    label: `${i.name} · ${formatPrice(i.costPerUnit)}/${i.unit}`,
-                  }))}
-                />
-                <Button leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={addIngredient} disabled={!pickerIngId}>
-                  Add to recipe
-                </Button>
               </div>
-            </CardBody>
-          </Card>
+            ) : (
+              <>
+                <header className="v2-mng-section-header">
+                  <span className="v2-mng-section-eyebrow">
+                    <Coins className="h-3.5 w-3.5" aria-hidden />
+                    <span className="v2-mng-section-name">Ingredients</span>
+                    <span className="v2-mng-section-count">{rows.length}</span>
+                  </span>
+                  <span className="v2-mng-col">Qty</span>
+                  <span
+                    className="v2-mng-col"
+                    title="Waste / trim loss as a percentage of the raw weight. 5% = lose 5 g out of every 100 g."
+                  >
+                    Waste
+                  </span>
+                  <span className="v2-mng-col">Cost</span>
+                  <span aria-hidden />
+                </header>
+                <ul className="v2-mng-list">
+                  {rows.map((r) => (
+                    <li key={r.ingredientId} className="v2-mng-row v2-mng-row-recipe">
+                      <div className="v2-mng-row-main">
+                        <div className="v2-mng-row-headline">
+                          <span className="v2-mng-row-name" title={r.name ?? r.ingredientId}>
+                            {r.name ?? r.ingredientId}
+                          </span>
+                        </div>
+                      </div>
+                      <Input
+                        type="number"
+                        step={displayStep(r.unit)}
+                        min="0"
+                        value={toDisplayQty(r.quantity, r.unit)}
+                        onChange={(e) =>
+                          updateRow(r.ingredientId, {
+                            quantity: fromDisplayQty(Number(e.target.value), r.unit),
+                          })
+                        }
+                        aria-label="Quantity"
+                        className="v2-rcp-num"
+                        trailingAdornment={<span className="v2-muted">{displayUnit(r.unit)}</span>}
+                      />
+                      <Input
+                        type="number"
+                        step="1"
+                        min="0"
+                        max="100"
+                        value={factorToPercent(r.wasteFactor)}
+                        onChange={(e) =>
+                          updateRow(r.ingredientId, {
+                            wasteFactor: percentToFactor(Number(e.target.value)),
+                          })
+                        }
+                        aria-label="Waste percentage"
+                        className="v2-rcp-num"
+                        trailingAdornment={<span className="v2-muted">%</span>}
+                      />
+                      <span className="tabular v2-rcp-cost">{formatPrice(lineCost(r))}</span>
+                      <button
+                        type="button"
+                        className="v2-rcp-remove"
+                        onClick={() => removeRow(r.ingredientId)}
+                        aria-label={`Remove ${r.name ?? r.ingredientId}`}
+                        title={`Remove ${r.name ?? r.ingredientId}`}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </section>
+
+          <div className="v2-rcp-add">
+            <Select
+              value={pickerIngId}
+              onChange={(e) => setPickerIngId(e.target.value)}
+              aria-label="Add ingredient"
+              placeholder="Pick an ingredient…"
+              options={availableIngredients.map((i) => ({
+                value: i.id,
+                label: `${i.name} · ${formatPrice(i.costPerUnit)}/${i.unit}`,
+              }))}
+            />
+            <Button leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={addIngredient} disabled={!pickerIngId}>
+              Add to recipe
+            </Button>
+          </div>
 
           <div className="v2-form-row-2">
             <Input
