@@ -589,10 +589,9 @@ function LocationTable({ rows }: { rows: LocationComparison[] }) {
       key: "city",
       header: "Location",
       cell: (r) => (
-        <span className="v2-loc-cell">
-          <span className="v2-loc-cell-dot" aria-hidden />
-          <span>{r.city}</span>
-        </span>
+        <Badge tone="neutral" variant="outline" icon={<MapPin className="h-3 w-3" />}>
+          {r.city}
+        </Badge>
       ),
       sortValue: (r) => r.city,
     },
