@@ -352,10 +352,10 @@ export function AdminMenu() {
                       >
                         <input
                           type="checkbox"
+                          className="v2-mng-select"
                           checked={isSelected}
                           onChange={() => toggleSelected(item.id)}
                           aria-label={isSelected ? `Deselect ${item.name}` : `Select ${item.name}`}
-                          style={{ marginRight: "0.5rem" }}
                         />
                         <button
                           type="button"

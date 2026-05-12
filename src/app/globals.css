@@ -2138,8 +2138,15 @@ html { scroll-behavior: smooth; }
 }
 
 .v2-mng-section[data-variant="menu"] {
-  --mng-grid: 20px minmax(0, 1fr) 84px 84px 56px 28px;
-  --mng-cols-start: 3;
+  --mng-grid: 20px 20px minmax(0, 1fr) 84px 84px 56px 28px;
+  --mng-cols-start: 4;
+}
+.v2-mng-select {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  cursor: pointer;
+  accent-color: var(--brand);
 }
 .v2-mng-section[data-variant="recipes"] {
   --mng-grid: minmax(0, 1fr) 84px 84px 56px 88px;
