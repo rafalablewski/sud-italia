@@ -35,18 +35,18 @@ Format note: tables are split per category for readability. **Priority** is P0 (
 
 ### 1.1 Operations & SOP
 
-| Existing | Missing | Why It Matters | Priority | Benchmark |
-|---|---|---|---|---|
-| `/admin/expansion` checklist (15 items, static, no owners/dates) | **Owner + due date + dependency graph** on every checklist item; document attachments; sign-off | A 15-item flat list cannot run a real opening — Toast/Sysco openings have 200+ task dependencies | P1 | Asana for Restaurants, Toast Onboarding |
-| — | **Shift handover system** (end-of-shift cash count, waste log, manager comment, photo evidence) | Without handover, accountability vanishes between shifts; #1 source of theft and morale collapse | P0 | Jolt, 7shifts, McDonald's eRDM |
-| Audit log read-only at `/admin/settings` (100 entries) | **SOP / playbook library** with versioned procedures (open, close, deep clean, recall) | "How do we close on Sunday?" cannot be a tribal-knowledge question at 4 trucks; it's existential at 40 | P0 | McDonald's OpsBook, Jolt Lists |
-| — | **Incident reporting** (slip, burn, complaint, food safety, near-miss) with photo + workflow | Insurance + regulator + legal demand a paper trail; without it, every incident is uninsurable | P0 | SafetyCulture (iAuditor) |
-| — | **HACCP / food-safety temperature logs** (probe readings, walk-in temps, holding bins, frequency-scheduled) | EU 852/2004 and Polish SANEPID require continuous HACCP records; missing this is a closure risk | P0 | Testo Saveris, Cooper Atkins |
-| — | **Compliance calendar** (license renewals, insurance, fire inspection, gas inspection, alcohol license) | Lapsed licenses close stores; the cost of one missed renewal is greater than this entire system | P0 | ComplianceHR, Toast |
-| — | **Opening / closing checklists with timestamp + signature** | Currently nothing forces an opening procedure; staff just open | P1 | Jolt |
-| — | **Maintenance ticket system** (oven down, freezer over-temp, POS frozen) with photo, severity, vendor SLA | Reactive maintenance costs 3–4× preventive; without a system you cannot trend equipment failures | P1 | Limble, UpKeep |
-| — | **Equipment telemetry / IoT** (fridge temp, oven temp, hood ampere draw) | A walk-in freezer failing overnight costs 8–20k PLN of inventory | P2 | Cooper-Atkins, Therma |
-| — | **Pest/cleaning log** with scheduled cadence + photo proof | SANEPID inspections require this evidence; verbal "we cleaned" is unenforceable | P1 | SafetyCulture |
+| Existing | Missing | Why It Matters | Priority | Benchmark | Status |
+|---|---|---|---|---|---|
+| `/admin/expansion` checklist (15 items, static, no owners/dates) | **Owner + due date + dependency graph** on every checklist item; document attachments; sign-off | A 15-item flat list cannot run a real opening — Toast/Sysco openings have 200+ task dependencies | P1 | Asana for Restaurants, Toast Onboarding | ✗ Not fixed — owner/due-date schema extension + dependency-graph UI is a multi-week build outside this session's scope |
+| — | **Shift handover system** (end-of-shift cash count, waste log, manager comment, photo evidence) | Without handover, accountability vanishes between shifts; #1 source of theft and morale collapse | P0 | Jolt, 7shifts, McDonald's eRDM | ✗ Not fixed — new module (schema, API, UI, photo upload pipeline) |
+| Audit log read-only at `/admin/settings` (100 entries) | **SOP / playbook library** with versioned procedures (open, close, deep clean, recall) | "How do we close on Sunday?" cannot be a tribal-knowledge question at 4 trucks; it's existential at 40 | P0 | McDonald's OpsBook, Jolt Lists | ✗ Not fixed — needs versioned doc store + role-targeted reader |
+| — | **Incident reporting** (slip, burn, complaint, food safety, near-miss) with photo + workflow | Insurance + regulator + legal demand a paper trail; without it, every incident is uninsurable | P0 | SafetyCulture (iAuditor) | ✗ Not fixed — workflow engine + storage out of session scope |
+| — | **HACCP / food-safety temperature logs** (probe readings, walk-in temps, holding bins, frequency-scheduled) | EU 852/2004 and Polish SANEPID require continuous HACCP records; missing this is a closure risk | P0 | Testo Saveris, Cooper Atkins | ✗ Not fixed — requires IoT probe integration + SANEPID export schema |
+| — | **Compliance calendar** (license renewals, insurance, fire inspection, gas inspection, alcohol license) | Lapsed licenses close stores; the cost of one missed renewal is greater than this entire system | P0 | ComplianceHR, Toast | ✗ Not fixed — new module |
+| — | **Opening / closing checklists with timestamp + signature** | Currently nothing forces an opening procedure; staff just open | P1 | Jolt | ✗ Not fixed — needs e-signature + per-shift scheduler |
+| — | **Maintenance ticket system** (oven down, freezer over-temp, POS frozen) with photo, severity, vendor SLA | Reactive maintenance costs 3–4× preventive; without a system you cannot trend equipment failures | P1 | Limble, UpKeep | ✗ Not fixed — new module |
+| — | **Equipment telemetry / IoT** (fridge temp, oven temp, hood ampere draw) | A walk-in freezer failing overnight costs 8–20k PLN of inventory | P2 | Cooper-Atkins, Therma | ✗ Not fixed — requires hardware sensors |
+| — | **Pest/cleaning log** with scheduled cadence + photo proof | SANEPID inspections require this evidence; verbal "we cleaned" is unenforceable | P1 | SafetyCulture | ✗ Not fixed — new module |
 
 ### 1.2 POS & Order Flow
 
