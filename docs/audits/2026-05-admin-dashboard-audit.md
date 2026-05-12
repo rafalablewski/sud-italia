@@ -366,39 +366,39 @@ The following 72 features are scoped by realistic time horizon (2026 = ship in 1
 
 ### 3.5 Geo-Intelligence & Logistics
 
-| # | Feature | Description | Impact | Difficulty | Strategic | Moat | Horizon |
-|---|---|---|---|---|---|---|---|
-| 29 | **Live truck telemetry** | GPS, fuel, oven temp, generator state, hood ampere, LPG bottle level — single Grafana dashboard. | 4 | 3 | 4 | medium | 2026 |
-| 30 | **Customer-facing live truck map** | Public map of where each truck is, ETA, current queue length. | 4 | 2 | 3 | low | 2026 |
-| 31 | **Autonomous route optimizer** | VRP solver computes daily routes given forecast, fuel cost, permits, traffic. | 5 | 4 | 5 | very high | 2027 |
-| 32 | **Drone-delivery integration** | API to Manna / Wing for last-mile in dense events. Out of EU regulation today, plausible by 2028. | 3 | 5 | 4 | high | 2028+ |
-| 33 | **Sidewalk-robot delivery** | Starship / Yandex Eda robots; API plug-in. | 3 | 4 | 3 | medium | 2028+ |
-| 34 | **Geofenced pricing & promo** | Promo automatically lifts as customer enters 500 m radius of a truck. | 4 | 3 | 4 | high | 2026 |
-| 35 | **Pitch yield analyzer** | Per-pitch P&L (revenue − fuel − permit − labor) and recommendation to keep / drop / re-time. | 5 | 3 | 5 | high | 2026 |
+| # | Feature | Description | Impact | Difficulty | Strategic | Moat | Horizon | Status |
+|---|---|---|---|---|---|---|---|---|
+| 29 | **Live truck telemetry** | GPS, fuel, oven temp, generator state, hood ampere, LPG bottle level — single Grafana dashboard. | 4 | 3 | 4 | medium | 2026 | ✗ Future — hardware + pipeline |
+| 30 | **Customer-facing live truck map** | Public map of where each truck is, ETA, current queue length. | 4 | 2 | 3 | low | 2026 | ✗ Future — needs telemetry feed first |
+| 31 | **Autonomous route optimizer** | VRP solver computes daily routes given forecast, fuel cost, permits, traffic. | 5 | 4 | 5 | very high | 2027 | ✗ Future — VRP solver |
+| 32 | **Drone-delivery integration** | API to Manna / Wing for last-mile in dense events. Out of EU regulation today, plausible by 2028. | 3 | 5 | 4 | high | 2028+ | ✗ Future — regulation + API |
+| 33 | **Sidewalk-robot delivery** | Starship / Yandex Eda robots; API plug-in. | 3 | 4 | 3 | medium | 2028+ | ✗ Future — robot API |
+| 34 | **Geofenced pricing & promo** | Promo automatically lifts as customer enters 500 m radius of a truck. | 4 | 3 | 4 | high | 2026 | ✗ Future — geofence engine + push |
+| 35 | **Pitch yield analyzer** | Per-pitch P&L (revenue − fuel − permit − labor) and recommendation to keep / drop / re-time. | 5 | 3 | 5 | high | 2026 | ✗ Future — needs fuel/permit fields + P&L roll-up |
 
 ### 3.6 IoT & Smart Kitchen
 
-| # | Feature | Description | Impact | Difficulty | Strategic | Moat | Horizon |
-|---|---|---|---|---|---|---|---|
-| 36 | **Smart oven integration** | Networked deck oven exposes temp/door/load; KDS pipes prep into the oven's preheat schedule. | 4 | 4 | 4 | high | 2027 |
-| 37 | **Smart scale + auto-portioning** | Connected scale weighs dough/cheese, logs variance to recipe, prevents over-portioning (#1 margin leak in pizza). | 5 | 3 | 4 | high | 2026 |
-| 38 | **Walk-in temp monitoring** | Continuous logging with HACCP-compliant export + SMS alert on excursion. | 4 | 2 | 3 | medium | 2026 |
-| 39 | **Hood / fire-suppression telemetry** | Required by insurance for autonomous-status; alert on filter saturation. | 3 | 3 | 3 | medium | 2027 |
-| 40 | **POS-printer-less ticketing** | KDS replaces paper entirely; printers only for customer receipts and tax fiscal where required. | 3 | 2 | 3 | low | 2026 |
-| 41 | **Robotic dough rolling** (e.g., Picnic, Picpie integration) | Connected pizza-robot APIs are emerging; integration spec ready when hardware lands. | 4 | 5 | 4 | high | 2028+ |
+| # | Feature | Description | Impact | Difficulty | Strategic | Moat | Horizon | Status |
+|---|---|---|---|---|---|---|---|---|
+| 36 | **Smart oven integration** | Networked deck oven exposes temp/door/load; KDS pipes prep into the oven's preheat schedule. | 4 | 4 | 4 | high | 2027 | ✗ Future — vendor API + hardware |
+| 37 | **Smart scale + auto-portioning** | Connected scale weighs dough/cheese, logs variance to recipe, prevents over-portioning (#1 margin leak in pizza). | 5 | 3 | 4 | high | 2026 | ✗ Future — BLE/Wi-Fi scale + ingest |
+| 38 | **Walk-in temp monitoring** | Continuous logging with HACCP-compliant export + SMS alert on excursion. | 4 | 2 | 3 | medium | 2026 | ✗ Future — IoT probe |
+| 39 | **Hood / fire-suppression telemetry** | Required by insurance for autonomous-status; alert on filter saturation. | 3 | 3 | 3 | medium | 2027 | ✗ Future — sensor + alert |
+| 40 | **POS-printer-less ticketing** | KDS replaces paper entirely; printers only for customer receipts and tax fiscal where required. | 3 | 2 | 3 | low | 2026 | ✗ Future — depends on Polish fiscal-receipt rules |
+| 41 | **Robotic dough rolling** (e.g., Picnic, Picpie integration) | Connected pizza-robot APIs are emerging; integration spec ready when hardware lands. | 4 | 5 | 4 | high | 2028+ | ✗ Future — robot vendor API |
 
 ### 3.7 Customer Experience 2027+
 
-| # | Feature | Description | Impact | Difficulty | Strategic | Moat | Horizon |
-|---|---|---|---|---|---|---|---|
-| 42 | **Hyper-personalized landing page** | Customer arrives via SMS link → personalized hero (their favorite + a complementary new item). | 4 | 3 | 4 | medium | 2026 |
-| 43 | **Family Wallet 2.0** | Shared payment + shared points + sub-budgets ("kids can spend max 30 PLN") + push to parent on redemption. | 4 | 3 | 4 | high | 2027 |
-| 44 | **Subscription pizza** ("Pizza Pass") | Monthly fee for X pies/month, claimable across trucks. | 5 | 2 | 5 | high | 2026 |
-| 45 | **WhatsApp-native ordering** | Order via WhatsApp message, including image-to-cart ("send me this pizza" + photo). | 5 | 4 | 5 | very high | 2027 |
-| 46 | **AR menu** | Phone camera over the menu board → 3D pizza preview, ingredient drill-down, allergens highlighted. | 3 | 4 | 3 | medium | 2028+ |
-| 47 | **Anonymous emotion-based recommendation** | Opt-in camera at kiosk reads mood → recommends comfort food on a frown. (GDPR-bounded.) | 3 | 5 | 3 | medium | 2028+ |
-| 48 | **Loyalty NFT / token wallet** | Optional on-chain loyalty for power users; redeemable across partner brands. | 2 | 4 | 2 | low | 2028+ |
-| 49 | **Voice-clone hosts** | Trucks get a unique brand voice that confirms orders by SMS audio. | 2 | 3 | 2 | low | 2028+ |
+| # | Feature | Description | Impact | Difficulty | Strategic | Moat | Horizon | Status |
+|---|---|---|---|---|---|---|---|---|
+| 42 | **Hyper-personalized landing page** | Customer arrives via SMS link → personalized hero (their favorite + a complementary new item). | 4 | 3 | 4 | medium | 2026 | ✗ Future — needs personalization engine (§1.8) |
+| 43 | **Family Wallet 2.0** | Shared payment + shared points + sub-budgets ("kids can spend max 30 PLN") + push to parent on redemption. | 4 | 3 | 4 | high | 2027 | ✗ Future — needs sub-budget + push pipeline |
+| 44 | **Subscription pizza** ("Pizza Pass") | Monthly fee for X pies/month, claimable across trucks. | 5 | 2 | 5 | high | 2026 | ✗ Future — Stripe subscription + entitlement |
+| 45 | **WhatsApp-native ordering** | Order via WhatsApp message, including image-to-cart ("send me this pizza" + photo). | 5 | 4 | 5 | very high | 2027 | ✗ Future — WABA + vision model |
+| 46 | **AR menu** | Phone camera over the menu board → 3D pizza preview, ingredient drill-down, allergens highlighted. | 3 | 4 | 3 | medium | 2028+ | ✗ Future — WebXR/3D models |
+| 47 | **Anonymous emotion-based recommendation** | Opt-in camera at kiosk reads mood → recommends comfort food on a frown. (GDPR-bounded.) | 3 | 5 | 3 | medium | 2028+ | ✗ Future — kiosk + DPIA |
+| 48 | **Loyalty NFT / token wallet** | Optional on-chain loyalty for power users; redeemable across partner brands. | 2 | 4 | 2 | low | 2028+ | ✗ Future — on-chain integration |
+| 49 | **Voice-clone hosts** | Trucks get a unique brand voice that confirms orders by SMS audio. | 2 | 3 | 2 | low | 2028+ | ✗ Future — voice cloning + audio MMS |
 
 ### 3.8 Operations Simulation & Digital Twin
 
