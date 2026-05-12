@@ -1825,6 +1825,141 @@ html { scroll-behavior: smooth; }
 .admin-bg:has(.v2-page) > * { z-index: auto; }
 
 /* ============================
+   ADMIN v2 — ORDERS (Kanban + table + detail)
+   ============================ */
+
+/* Filter bar above the orders list */
+.v2-filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.v2-filter-search { flex: 1; min-width: 220px; max-width: 380px; }
+
+/* Cell helpers used across tables */
+.v2-cell-stack { display: flex; flex-direction: column; line-height: 1.2; }
+.v2-cell-sub { font-size: var(--text-2xs); color: var(--fg-subtle); }
+.v2-inline { display: inline-flex; align-items: center; gap: 4px; }
+
+/* Kanban */
+.v2-kanban {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(220px, 1fr));
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+@media (max-width: 1200px) {
+  .v2-kanban { grid-template-columns: repeat(5, 240px); }
+}
+
+.v2-kanban-col {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  min-height: 240px;
+  max-height: calc(100vh - 240px);
+}
+.v2-kanban-col-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.v2-kanban-col-count {
+  font-size: var(--text-2xs);
+  color: var(--fg-subtle);
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+}
+.v2-kanban-col-body { padding: 8px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.v2-kanban-col-empty { padding: 16px 8px; text-align: center; color: var(--fg-subtle); font-size: var(--text-xs); }
+
+.v2-kanban-card {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+  transition: border-color var(--duration-fast), box-shadow var(--duration-fast), transform var(--duration-fast);
+}
+.v2-kanban-card:hover { border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
+.v2-kanban-card:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 1px; }
+.v2-kanban-card-top { display: flex; justify-content: space-between; align-items: center; }
+.v2-kanban-card-id { font-size: var(--text-xs); color: var(--fg-muted); font-weight: 600; letter-spacing: 0.04em; }
+.v2-kanban-card-time { font-size: var(--text-2xs); color: var(--fg-subtle); }
+.v2-kanban-card-customer { font-size: var(--text-sm); font-weight: 600; color: var(--fg); }
+.v2-kanban-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: var(--text-2xs);
+  color: var(--fg-muted);
+}
+.v2-kanban-card-meta span { display: inline-flex; align-items: center; gap: 3px; }
+.v2-kanban-card-loc { text-transform: capitalize; }
+.v2-kanban-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+.v2-kanban-card-total { font-size: var(--text-base); font-weight: 600; color: var(--fg); }
+
+/* Detail dialog */
+.v2-detail-title { display: inline-flex; align-items: center; gap: 8px; }
+.v2-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 720px) { .v2-detail-grid { grid-template-columns: 1fr; } }
+
+.v2-detail-row {
+  display: grid;
+  grid-template-columns: 16px 90px 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: var(--text-sm);
+  color: var(--fg);
+}
+.v2-detail-row + .v2-detail-row { border-top: 1px solid var(--border); }
+.v2-detail-row-block { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.v2-detail-key { color: var(--fg-subtle); font-size: var(--text-xs); }
+.v2-detail-notes { color: var(--fg-muted); white-space: pre-wrap; }
+
+.v2-detail-items { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.v2-detail-items li {
+  display: grid;
+  grid-template-columns: 30px 1fr auto;
+  gap: 6px;
+  font-size: var(--text-sm);
+  color: var(--fg);
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+}
+.v2-detail-item-qty { color: var(--fg-subtle); font-variant-numeric: tabular-nums; }
+.v2-detail-item-price { color: var(--fg); }
+
+.v2-detail-totals { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+.v2-detail-totals > div { display: flex; justify-content: space-between; font-size: var(--text-sm); }
+.v2-detail-total {
+  font-weight: 600;
+  font-size: var(--text-md);
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+
+.v2-detail-status-actions { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+
+/* ============================
    ADMIN DESIGN SYSTEM (LEGACY — being migrated to v2)
    Tokens → Surfaces → Inputs → Buttons → Typography → Badges → Alerts
    8px baseline grid · 5-color semantic palette · 6-level type scale
