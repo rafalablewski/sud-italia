@@ -1586,6 +1586,130 @@ html { scroll-behavior: smooth; }
 @media (prefers-reduced-motion: reduce) { .v2-toast { animation: none; } }
 
 /* ============================
+   ADMIN v2 — CHARTS + KPI
+   ============================ */
+
+/* Chart tooltip (shared across Recharts wrappers) */
+.v2-chart-tooltip {
+  background: var(--surface-1);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 8px 10px;
+  font-size: var(--text-xs);
+  color: var(--fg);
+  min-width: 140px;
+}
+.v2-chart-tooltip-label {
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+  margin-bottom: 6px;
+}
+.v2-chart-tooltip ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.v2-chart-tooltip li { display: flex; align-items: center; gap: 6px; }
+.v2-chart-tooltip-swatch { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+.v2-chart-tooltip-name { color: var(--fg-muted); flex: 1; }
+.v2-chart-tooltip-value { color: var(--fg); font-weight: 600; font-variant-numeric: tabular-nums; font-family: var(--font-mono); }
+
+/* Heatmap (custom SVG/grid) */
+.v2-heatmap {
+  --v2-heat: var(--brand);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--text-2xs);
+  color: var(--fg-muted);
+}
+.v2-heatmap-row { display: flex; align-items: stretch; gap: 2px; }
+.v2-heatmap-head { font-weight: 600; color: var(--fg-subtle); }
+.v2-heatmap-corner { width: 56px; }
+.v2-heatmap-x-label { flex: 1; text-align: center; padding: 2px 0; }
+.v2-heatmap-y-label { width: 56px; padding-right: 8px; display: flex; align-items: center; justify-content: flex-end; }
+.v2-heatmap-cell {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in oklab, var(--v2-heat) calc(var(--v2-heat-t) * 90%), var(--surface-2));
+  color: color-mix(in oklab, var(--fg) 80%, var(--bg) 20%);
+  border-radius: var(--radius-xs);
+  min-width: 0;
+  cursor: default;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+  transition: outline var(--duration-fast);
+}
+.v2-heatmap-cell:hover { outline: 1px solid var(--border-strong); }
+.v2-heatmap-cell span { font-size: 10px; }
+
+/* KPI card */
+.v2-kpi {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 132px;
+  transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+}
+.v2-kpi:hover { border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
+.v2-kpi-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.v2-kpi-label {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--fg-subtle);
+  letter-spacing: 0.02em;
+}
+.v2-kpi-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.v2-kpi-tone-neutral { background: var(--surface-3); color: var(--fg-muted); }
+.v2-kpi-tone-brand { background: var(--brand-soft); color: var(--brand); }
+.v2-kpi-tone-info { background: var(--info-soft); color: var(--info); }
+.v2-kpi-tone-success { background: var(--success-soft); color: var(--success); }
+.v2-kpi-tone-warning { background: var(--warning-soft); color: var(--warning); }
+.v2-kpi-tone-danger { background: var(--danger-soft); color: var(--danger); }
+
+.v2-kpi-value-row { display: flex; align-items: baseline; gap: 4px; }
+.v2-kpi-value {
+  font-size: var(--text-3xl);
+  font-weight: 600;
+  color: var(--fg);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  font-feature-settings: "tnum", "cv11";
+}
+.v2-kpi-unit { font-size: var(--text-base); color: var(--fg-muted); font-weight: 500; }
+
+.v2-kpi-foot { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; min-height: 30px; }
+.v2-kpi-meta { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.v2-kpi-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.v2-kpi-delta-up { background: var(--success-soft); color: var(--success); }
+.v2-kpi-delta-down { background: var(--danger-soft); color: var(--danger); }
+.v2-kpi-delta-flat { background: var(--surface-3); color: var(--fg-subtle); }
+.v2-kpi-hint { font-size: var(--text-2xs); color: var(--fg-subtle); }
+.v2-kpi-spark { width: 96px; flex-shrink: 0; opacity: 0.85; }
+
+/* ============================
    ADMIN DESIGN SYSTEM (LEGACY — being migrated to v2)
    Tokens → Surfaces → Inputs → Buttons → Typography → Badges → Alerts
    8px baseline grid · 5-color semantic palette · 6-level type scale
