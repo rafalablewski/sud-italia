@@ -295,3 +295,15 @@ export interface PurchaseOrder {
   createdAt: string;
   createdBy?: string;
 }
+
+// --- CRM ---
+
+export interface CustomerNote {
+  id: string;
+  /** Canonical E.164 PL phone — the customer key. */
+  phone: string;
+  body: string;
+  tags?: string[];
+  authoredBy?: string;
+  createdAt: string;
+}

@@ -2353,6 +2353,80 @@ html { scroll-behavior: smooth; }
 }
 
 /* ============================
+   ADMIN v2 — CRM (customers + notes)
+   ============================ */
+
+.v2-link-cell { color: var(--fg); text-decoration: none; display: inline-block; }
+.v2-link-cell:hover { color: var(--brand); }
+
+.v2-link-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+  text-decoration: none;
+  margin-bottom: 6px;
+}
+.v2-link-back:hover { color: var(--fg); }
+
+.v2-notes-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.v2-note {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.v2-note-body { font-size: var(--text-sm); color: var(--fg); white-space: pre-wrap; line-height: 1.5; }
+.v2-note-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: var(--text-xs);
+  flex-wrap: wrap;
+}
+.v2-note-delete {
+  background: transparent;
+  border: 0;
+  color: var(--fg-subtle);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: var(--radius-xs);
+}
+.v2-note-delete:hover { color: var(--danger); background: var(--danger-soft); }
+
+.v2-chip-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 480px) { .v2-chip-grid { grid-template-columns: 1fr; } }
+
+.v2-card-desc {
+  font-size: var(--text-2xs);
+  color: var(--fg-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.v2-redeem-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.v2-redeem-list li {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+}
+
+/* ============================
    ADMIN DESIGN SYSTEM (LEGACY — being migrated to v2)
    Tokens → Surfaces → Inputs → Buttons → Typography → Badges → Alerts
    8px baseline grid · 5-color semantic palette · 6-level type scale

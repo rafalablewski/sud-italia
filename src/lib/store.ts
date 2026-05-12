@@ -1,7 +1,7 @@
 import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus } from "@/data/types";
+import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote } from "@/data/types";
 import { getActiveLocations, locations as allLocations } from "@/data/locations";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -2200,6 +2200,43 @@ export async function deletePurchaseOrder(id: string): Promise<boolean> {
     const filtered = list.filter((p) => p.id !== id);
     if (filtered.length === list.length) return false;
     await writeJSON("purchase-orders.json", filtered);
+    return true;
+  });
+}
+
+// --- CRM (customer notes) ---
+
+export async function getCustomerNotes(phone?: string): Promise<CustomerNote[]> {
+  const all = await readJSON<CustomerNote[]>("customer-notes.json", []);
+  const list = phone ? all.filter((n) => n.phone === phone) : all;
+  return list.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export async function addCustomerNote(
+  input: Omit<CustomerNote, "id" | "createdAt"> & { createdAt?: string },
+): Promise<CustomerNote> {
+  return withLock("customer-notes.json", async () => {
+    const list = await readJSON<CustomerNote[]>("customer-notes.json", []);
+    const note: CustomerNote = {
+      id: `note-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      phone: input.phone,
+      body: input.body,
+      tags: input.tags,
+      authoredBy: input.authoredBy,
+      createdAt: input.createdAt ?? new Date().toISOString(),
+    };
+    list.push(note);
+    await writeJSON("customer-notes.json", list);
+    return note;
+  });
+}
+
+export async function deleteCustomerNote(id: string): Promise<boolean> {
+  return withLock("customer-notes.json", async () => {
+    const list = await readJSON<CustomerNote[]>("customer-notes.json", []);
+    const filtered = list.filter((n) => n.id !== id);
+    if (filtered.length === list.length) return false;
+    await writeJSON("customer-notes.json", filtered);
     return true;
   });
 }

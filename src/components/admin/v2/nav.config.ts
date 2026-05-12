@@ -16,6 +16,7 @@ import {
   Brain,
   Map,
   Settings,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 
@@ -70,6 +71,7 @@ export const NAV_SECTIONS: NavSection[] = [
     id: "customers",
     label: "Customers",
     items: [
+      { href: "/admin/customers", label: "Customers", icon: Users, shortcut: "c" },
       { href: "/admin/loyalty", label: "Loyalty", icon: Heart, shortcut: "l" },
       { href: "/admin/feedback", label: "Feedback", icon: MessageSquare },
     ],
