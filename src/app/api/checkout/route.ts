@@ -13,8 +13,20 @@ import {
   computeCheckoutHash,
   getCachedCheckout,
 } from "@/lib/idempotency";
+import { enforceRateLimit, getClientIp } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
+  // Public endpoint — rate-limited by client IP. 10 attempts per minute is
+  // generous enough for a slow checkout retry but blocks card-stuffing /
+  // session-flooding abuse.
+  const rl = await enforceRateLimit({
+    key: "checkout",
+    id: getClientIp(req),
+    limit: 10,
+    windowSec: 60,
+  });
+  if (rl) return rl;
+
   try {
     const body = await req.json();
     const {

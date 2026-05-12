@@ -7,6 +7,7 @@ import {
   LOCATION_SCOPE_ALL,
 } from "@/lib/admin-auth";
 import { appendAuditLog, getAdminUsers } from "@/lib/store";
+import { enforceRateLimit, getClientIp } from "@/lib/rate-limit";
 
 /**
  * Shared-password login extended with an optional `email`.
@@ -19,6 +20,18 @@ import { appendAuditLog, getAdminUsers } from "@/lib/store";
  *   returns the per-user role and `hasRole()` actually enforces.
  */
 export async function POST(req: NextRequest) {
+  // 5/min/IP blocks password-guessing without hurting a real operator who
+  // mistypes their password a few times. Failed and successful attempts
+  // both count to the limit — keeps the math simple and discourages enumerating
+  // valid emails.
+  const rl = await enforceRateLimit({
+    key: "admin-login",
+    id: getClientIp(req),
+    limit: 5,
+    windowSec: 60,
+  });
+  if (rl) return rl;
+
   try {
     const body = await req.json().catch(() => ({}));
     const { password, email } = body as { password?: string; email?: string };
