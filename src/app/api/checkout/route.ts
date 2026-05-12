@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHash } from "crypto";
 import { generateOrderId } from "@/lib/utils";
 import { getMenuWithOverrides } from "@/data/menus";
 import { getSlotById, incrementSlotOrders, createOrder, addNotification, getUpsellSettings } from "@/lib/store";
@@ -7,6 +8,11 @@ import { formatPrice } from "@/lib/utils";
 import { getActiveComboDeals } from "@/lib/upsell";
 import { normalizePlPhoneE164 } from "@/lib/phone";
 import { logger } from "@/lib/logger";
+import {
+  cacheCheckout,
+  computeCheckoutHash,
+  getCachedCheckout,
+} from "@/lib/idempotency";
 
 export async function POST(req: NextRequest) {
   try {
@@ -58,6 +64,37 @@ export async function POST(req: NextRequest) {
         { error: "Delivery address is required" },
         { status: 400 }
       );
+    }
+
+    // Idempotency: when the client sends an Idempotency-Key header (typically
+    // generated once per checkout attempt and reused across retries), we hash
+    // it together with the payload that defines "same checkout". A cache hit
+    // returns the original Stripe session URL + orderId, so a double-clicked
+    // submit or a flaky-network retry can't oversell the slot or create a
+    // duplicate Stripe charge.
+    const idempotencyKey = req.headers.get("idempotency-key")?.trim() || null;
+    let idempotencyHash: string | null = null;
+    if (idempotencyKey) {
+      const cartFingerprint = JSON.stringify(
+        (items as { id: string; quantity: number; notes?: string }[])
+          .map((it) => ({ id: it.id, quantity: it.quantity, notes: it.notes ?? "" }))
+          .sort((a, b) => a.id.localeCompare(b.id)),
+      );
+      const cartHash = createHash("sha256").update(cartFingerprint).digest("hex");
+      idempotencyHash = computeCheckoutHash(
+        idempotencyKey,
+        locationSlug,
+        slotId,
+        cartHash,
+      );
+      const cached = await getCachedCheckout(idempotencyHash);
+      if (cached) {
+        return NextResponse.json({
+          url: cached.stripeSessionUrl || undefined,
+          orderId: cached.orderId,
+          duplicate: true,
+        });
+      }
     }
 
     // Validate slot exists and has capacity
@@ -198,52 +235,69 @@ export async function POST(req: NextRequest) {
       const stripe = (await import("stripe")).default;
       const stripeClient = new stripe(process.env.STRIPE_SECRET_KEY);
 
-      const session = await stripeClient.checkout.sessions.create({
-        // BLIK: Add "blik" to payment_method_types when Stripe BLIK is enabled
-        // Requires: Stripe account with BLIK capability enabled for PLN
-        // See: https://docs.stripe.com/payments/blik
-        payment_method_types: ["card", "p24", "blik"],
-        line_items: [
-          ...verifiedItems.map((item) => ({
-            price_data: {
-              currency: "pln",
-              product_data: {
-                name: item.name,
-                ...(item.notes ? { description: item.notes } : {}),
-              },
-              unit_amount: item.price,
-            },
-            quantity: item.quantity,
-          })),
-          // Tip as a separate line item so the customer's receipt reads
-          // "Items 28 zł · Tip 3 zł · Total 31 zł" cleanly.
-          ...(tipAmount > 0
-            ? [
-                {
-                  price_data: {
-                    currency: "pln",
-                    product_data: { name: "Tip / Napiwek" },
-                    unit_amount: tipAmount,
-                  },
-                  quantity: 1,
+      const session = await stripeClient.checkout.sessions.create(
+        {
+          // BLIK: Add "blik" to payment_method_types when Stripe BLIK is enabled
+          // Requires: Stripe account with BLIK capability enabled for PLN
+          // See: https://docs.stripe.com/payments/blik
+          payment_method_types: ["card", "p24", "blik"],
+          line_items: [
+            ...verifiedItems.map((item) => ({
+              price_data: {
+                currency: "pln",
+                product_data: {
+                  name: item.name,
+                  ...(item.notes ? { description: item.notes } : {}),
                 },
-              ]
-            : []),
-        ],
-        mode: "payment",
-        success_url: `${process.env.NEXT_PUBLIC_BASE_URL || req.nextUrl.origin}/order-confirmation?orderId=${orderId}&location=${locationSlug}&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || req.nextUrl.origin}/locations/${locationSlug}`,
-        metadata: {
+                unit_amount: item.price,
+              },
+              quantity: item.quantity,
+            })),
+            // Tip as a separate line item so the customer's receipt reads
+            // "Items 28 zł · Tip 3 zł · Total 31 zł" cleanly.
+            ...(tipAmount > 0
+              ? [
+                  {
+                    price_data: {
+                      currency: "pln",
+                      product_data: { name: "Tip / Napiwek" },
+                      unit_amount: tipAmount,
+                    },
+                    quantity: 1,
+                  },
+                ]
+              : []),
+          ],
+          mode: "payment",
+          success_url: `${process.env.NEXT_PUBLIC_BASE_URL || req.nextUrl.origin}/order-confirmation?orderId=${orderId}&location=${locationSlug}&session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || req.nextUrl.origin}/locations/${locationSlug}`,
+          metadata: {
+            orderId,
+            locationSlug,
+            customerName,
+            customerPhone: phoneE164,
+            fulfillmentType,
+            slotId,
+            slotTime,
+            slotDate,
+          },
+        },
+        // Belt + suspenders: Stripe's own idempotency on session.create. If two
+        // identical retries somehow slip past our DB check (e.g. arriving on
+        // different lambdas within the same millisecond), Stripe returns the
+        // same session for the same key for 24 hours.
+        idempotencyHash ? { idempotencyKey: idempotencyHash } : undefined,
+      );
+
+      if (idempotencyHash && session.url) {
+        await cacheCheckout({
+          idempotencyHash,
+          stripeSessionId: session.id,
+          stripeSessionUrl: session.url,
           orderId,
           locationSlug,
-          customerName,
-          customerPhone: phoneE164,
-          fulfillmentType,
-          slotId,
-          slotTime,
-          slotDate,
-        },
-      });
+        });
+      }
 
       const stripeResponse = NextResponse.json({ url: session.url, orderId });
       stripeResponse.cookies.set("sud-italia-customer", phoneE164, {
