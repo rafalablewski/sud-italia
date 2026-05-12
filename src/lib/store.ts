@@ -10,6 +10,7 @@ import {
 } from "@/lib/cart-presence-redis";
 import { WALLET_MAX_PHONES } from "@/lib/constants";
 import { normalizePlPhoneE164, phonesEqualPl } from "@/lib/phone";
+import { logger } from "@/lib/logger";
 
 // --- Storage abstraction: Neon Postgres when DATABASE_URL is set, filesystem fallback for local dev ---
 
@@ -61,7 +62,7 @@ async function readJSON<T>(key: string, fallback: T): Promise<T> {
       if (rows.length === 0) return fallback;
       return rows[0].value as T;
     } catch (err) {
-      console.error(`DB read error for ${key}:`, err);
+      logger.error("DB read failed", { key, layer: "store.readJSON" }, err);
       return fallback;
     }
   }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAuthenticated } from "@/lib/admin-auth";
 import { appendAuditLog, getOrderById, updateOrder } from "@/lib/store";
+import { logger } from "@/lib/logger";
 import {
   REFUND_REASON_CODES,
   type OrderRefund,
@@ -114,7 +115,17 @@ export async function POST(
       });
       stripeRefundId = refund.id;
     } catch (err) {
-      console.error("Stripe refund failed:", err);
+      logger.error(
+        "Stripe refund failed",
+        {
+          route: "POST /api/admin/orders/[id]/refund",
+          orderId,
+          paymentIntentId: order.stripePaymentIntentId,
+          amount: refundAmount,
+          reasonCode,
+        },
+        err,
+      );
       return NextResponse.json(
         {
           error:

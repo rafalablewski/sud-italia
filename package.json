@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",
+    "@sentry/nextjs": "^10.53.0",
     "@stripe/stripe-js": "^9.0.0",
     "@upstash/redis": "^1.37.0",
     "clsx": "^2.1.1",

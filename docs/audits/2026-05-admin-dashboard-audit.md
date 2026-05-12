@@ -220,7 +220,7 @@ The most important admission this audit can offer: **stop calling the current `/
 | — | **Webhook subscription system** for partners ("subscribe to order.created") | Stripe webhooks consumed but none exposed | P1 | Stripe, Svix | ✗ Not fixed — needs subscriber registry + dispatcher |
 | — | **Event bus / event sourcing** (every state change is an event, replayable) | Without events, "real-time" is impossible and audit is partial | P2 | Kafka, Inngest, Trigger.dev | ✗ Not fixed — fundamental arch shift |
 | — | **Multi-tenant architecture** (one DB, many brands/franchisees, row-level security) | Required for franchise scale | P3 | Supabase RLS, Postgres RLS | ✗ Not fixed — fundamental arch shift |
-| — | **Observability stack** (Sentry, OpenTelemetry, structured logs, dashboards) | Today an error in production is invisible until a customer complains | P0 | Sentry, Datadog, Grafana | ✗ Not fixed — needs DSN/account setup + SDK install |
+| — | **Observability stack** (Sentry, OpenTelemetry, structured logs, dashboards) | Today an error in production is invisible until a customer complains | P0 | Sentry, Datadog, Grafana | ✓ Partial — `@sentry/nextjs` installed; client/server/edge init files gated on `SENTRY_DSN` (no-op without it); `next.config.ts` wraps with `withSentryConfig` only when DSN is set. New `src/lib/logger.ts` emits JSON-per-line structured logs (level/msg/time/error.stack/...context) and mirrors errors+warnings to Sentry. Critical paths migrated: webhook, checkout, refund, `store.readJSON`. Still ✗: OpenTelemetry traces + Datadog/Grafana dashboards. |
 | — | **CI/CD with tests, type-check, lint, preview deploys, smoke** | Currently no tests, no gate | P0 | Vercel + GitHub Actions | ✗ Not fixed — no `.github/workflows/` exists; no `*.test.*` files exist (confirmed) |
 | — | **SOC2 control mapping** (access reviews, change mgmt, vendor mgmt, incident response) | Any partner integration > 50k EUR ARR will demand SOC2 | P2 | Vanta, Drata | ✗ Not fixed — compliance program |
 | — | **GDPR rights workflow** (data access request, deletion request, portability) | Polish customers have legal right to request these; manual fulfillment is illegal at scale | P0 | Custom + Vanta | ✗ Not fixed — DSAR/deletion endpoints + ticketing |
@@ -574,7 +574,7 @@ A trillion-dollar operator does not buy software. It builds an operating system 
 
 ### 5.3 Top 10 Fastest Wins (≤ 2 weeks each)
 
-1. Add Sentry + structured logging + at least 30 unit tests covering `store.ts` and pricing logic. — ✗ Not fixed (no `*.test.*` files, no Sentry import)
+1. Add Sentry + structured logging + at least 30 unit tests covering `store.ts` and pricing logic. — ✓ Partial — `@sentry/nextjs` installed and gated on `SENTRY_DSN`; `src/lib/logger.ts` ships structured JSON logs wired into the webhook / checkout / refund / store read paths. Still ✗: unit tests covering `store.ts` and pricing logic.
 2. Rename `/admin/ai` to `Insights` until real models ship; remove "AI" labels from heuristics. — ✓ **Fixed this session** — sidebar label, page H1, subtitle, and aria-label all relabelled. Subtitle explicitly states no ML model is in the loop yet
 3. Add bulk actions (multi-select + bulk status / bulk delete) on orders and stock. — ✗ Not fixed
 4. Add CSV export to every list view (orders, customers, members, stock, shifts). — ✗ Not fixed

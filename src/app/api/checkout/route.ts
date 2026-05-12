@@ -6,6 +6,7 @@ import { FulfillmentType, CartItem } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
 import { getActiveComboDeals } from "@/lib/upsell";
 import { normalizePlPhoneE164 } from "@/lib/phone";
+import { logger } from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
   try {
@@ -247,7 +248,7 @@ export async function POST(req: NextRequest) {
 
     return response;
   } catch (error) {
-    console.error("Checkout error:", error);
+    logger.error("Checkout request failed", { route: "POST /api/checkout" }, error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

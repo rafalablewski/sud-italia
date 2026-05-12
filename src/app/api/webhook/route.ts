@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { updateOrder, updateOrderStatus } from "@/lib/store";
+import { logger } from "@/lib/logger";
 
 const processedEvents = new Set<string>();
 
@@ -71,7 +72,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ received: true });
   } catch (err) {
-    console.error("Webhook error:", err);
+    logger.error("Stripe webhook verification failed", { route: "POST /api/webhook" }, err);
     return NextResponse.json(
       { error: "Webhook verification failed" },
       { status: 400 }
