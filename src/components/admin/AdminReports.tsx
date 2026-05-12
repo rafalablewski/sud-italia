@@ -304,6 +304,19 @@ export function AdminReports() {
           <Button variant="secondary" leadingIcon={<Download className="h-3.5 w-3.5" />} onClick={handleExport} disabled={!summary}>
             Export CSV
           </Button>
+          <Button
+            variant="secondary"
+            leadingIcon={<Download className="h-3.5 w-3.5" />}
+            onClick={() => {
+              // Trigger a same-tab navigation to the JPK endpoint — the
+              // Content-Disposition header makes the browser download it.
+              const locParam = location ? `&location=${location}` : "";
+              window.location.href = `/api/admin/reports/jpk?from=${from}&to=${to}${locParam}`;
+            }}
+            title="Download JPK_V7M XML for the selected date range (Polish VAT mandatory file)."
+          >
+            Export JPK_V7M
+          </Button>
         </div>
       </header>
 
