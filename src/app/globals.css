@@ -2449,6 +2449,25 @@ html { scroll-behavior: smooth; }
 }
 
 /* ============================
+   ADMIN v2 — GROWTH
+   ============================ */
+
+.v2-section-h { margin: 0; font-size: var(--text-md); font-weight: 600; color: var(--fg); flex: 1; }
+
+.v2-rewards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.v2-reward-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 8px 16px 12px;
+  border-top: 1px solid var(--border);
+}
+
+.v2-tiers-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+
+.v2-checkbox-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+
+/* ============================
    ADMIN DESIGN SYSTEM (LEGACY — being migrated to v2)
    Tokens → Surfaces → Inputs → Buttons → Typography → Badges → Alerts
    8px baseline grid · 5-color semantic palette · 6-level type scale

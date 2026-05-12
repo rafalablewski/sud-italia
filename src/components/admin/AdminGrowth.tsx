@@ -1,222 +1,506 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { AdminNav } from "./AdminNav";
-import { formatPrice } from "@/lib/utils";
-import type { LoyaltySettings } from "@/lib/store";
-import { locations as allLocations } from "@/data/locations";
-import { LocationTabs } from "./LocationTabs";
+import { useCallback, useEffect, useState } from "react";
 import {
-  Rocket, Check, ToggleLeft, ToggleRight, Clock, Sparkles, Zap,
-  TrendingUp, MessageCircle, Edit3, Trash2, Plus, MapPin,
+  Award,
+  Coins,
+  Crown,
+  Gem,
+  Gift,
+  Heart,
+  Rocket,
+  Shield,
+  Star,
+  Trophy,
+  Users,
 } from "lucide-react";
+import { formatPrice } from "@/lib/utils";
+import { useToast } from "./v2/ui/Toast";
+import {
+  Badge,
+  Button,
+  Card,
+  CardBody,
+  CardHeader,
+  Dialog,
+  EmptyState,
+  Input,
+  Table,
+  Tabs,
+  Textarea,
+  type Column,
+} from "./v2/ui";
+import { KpiCard } from "./v2/charts";
 
-const activeLocations = allLocations.filter((l) => l.isActive);
-
-type Tab = "seasonal" | "speed" | "chatbot";
-
-const LIVE_ACTIVITY_KEYS: { key: keyof NonNullable<LoyaltySettings["liveActivity"]>; label: string }[] = [
-  { key: "ordersInLastHour", label: "Orders in last hour" },
-  { key: "currentlyPreparing", label: "Currently preparing" },
-  { key: "trendingItem", label: "Trending item" },
-  { key: "avgPrepTime", label: "Avg prep time" },
-];
-
-interface ChatbotFaq {
-  id: string;
-  keyword: string;
-  response: string;
-  hits: number;
+interface Tier {
+  threshold: number;
+  multiplier: number;
+  perks: string[];
 }
 
+interface Reward {
+  id: string;
+  name: string;
+  pointsCost: number;
+  description: string;
+  active: boolean;
+}
+
+interface ReferralConfig {
+  referrerPoints: number;
+  refereeDiscountGrosze: number;
+  active: boolean;
+}
+
+interface LoyaltySettings {
+  tiers: {
+    bronze: Tier;
+    silver: Tier;
+    gold: Tier;
+    platinum: Tier;
+  };
+  rewards: Reward[];
+  referral: ReferralConfig;
+  liveActivity: {
+    ordersInLastHour: boolean;
+    currentlyPreparing: boolean;
+    trendingItem: boolean;
+    avgPrepTime: boolean;
+  };
+}
+
+interface ReferralRow {
+  code: string;
+  owner: string;
+  ownerPhone: string;
+  used: number;
+  earned: number;
+  createdAt: string;
+}
+
+type TabKey = "rewards" | "tiers" | "referrals" | "live";
+
+const TIER_KEYS = ["bronze", "silver", "gold", "platinum"] as const;
+
+const TIER_ICON = {
+  bronze: Shield,
+  silver: Award,
+  gold: Crown,
+  platinum: Gem,
+} as const;
+
 export function AdminGrowth() {
-  const [tab, setTab] = useState<Tab>("seasonal");
-  const [locationFilter, setLocationFilter] = useState<string>("all");
+  const toast = useToast();
   const [settings, setSettings] = useState<LoyaltySettings | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [faqs, setFaqs] = useState<ChatbotFaq[]>([]);
-  const [faqsLoading, setFaqsLoading] = useState(true);
+  const [referrals, setReferrals] = useState<ReferralRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<TabKey>("rewards");
+  const [editingReward, setEditingReward] = useState<Reward | null>(null);
+
+  const fetchAll = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [g, r] = await Promise.all([
+        fetch("/api/admin/growth").then((res) => (res.ok ? res.json() : null)),
+        fetch("/api/admin/referrals").then((res) => (res.ok ? res.json() : { referrals: [] })),
+      ]);
+      setSettings(g);
+      setReferrals(Array.isArray(r.referrals) ? r.referrals : []);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    fetch("/api/admin/growth").then((r) => r.json()).then((d) => setSettings(d)).catch(() => {});
-    fetch("/api/admin/chatbot-faq")
-      .then((r) => r.json())
-      .then((d) => setFaqs(d))
-      .catch(() => {})
-      .finally(() => setFaqsLoading(false));
-  }, []);
+    fetchAll();
+  }, [fetchAll]);
 
-  const saveSettings = useCallback(async (updates: Partial<LoyaltySettings>) => {
-    setSaving(true);
-    try {
-      const res = await fetch("/api/admin/growth", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updates) });
-      setSettings(await res.json());
-    } catch { alert("Failed to save."); }
-    finally { setSaving(false); }
-  }, []);
+  const persist = async (updates: Partial<LoyaltySettings>) => {
+    const res = await fetch("/api/admin/growth", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updates),
+    });
+    if (res.ok) {
+      const fresh = await res.json();
+      setSettings(fresh);
+      toast.success("Saved");
+      return true;
+    }
+    toast.error("Could not save");
+    return false;
+  };
 
-  const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
-    { id: "seasonal", label: "Seasonal Menu", icon: Sparkles },
-    { id: "speed", label: "Speed & Activity", icon: Zap },
-    { id: "chatbot", label: "Chatbot", icon: MessageCircle },
+  const toggleReward = async (rewardId: string) => {
+    if (!settings) return;
+    const rewards = settings.rewards.map((r) =>
+      r.id === rewardId ? { ...r, active: !r.active } : r,
+    );
+    setSettings({ ...settings, rewards });
+    await persist({ rewards });
+  };
+
+  const upsertReward = async (reward: Reward) => {
+    if (!settings) return;
+    const exists = settings.rewards.some((r) => r.id === reward.id);
+    const rewards = exists
+      ? settings.rewards.map((r) => (r.id === reward.id ? reward : r))
+      : [...settings.rewards, reward];
+    setSettings({ ...settings, rewards });
+    const ok = await persist({ rewards });
+    if (ok) setEditingReward(null);
+  };
+
+  const deleteReward = async (rewardId: string) => {
+    if (!settings) return;
+    const rewards = settings.rewards.filter((r) => r.id !== rewardId);
+    setSettings({ ...settings, rewards });
+    await persist({ rewards });
+  };
+
+  const updateTier = async (key: typeof TIER_KEYS[number], patch: Partial<Tier>) => {
+    if (!settings) return;
+    const tiers = { ...settings.tiers, [key]: { ...settings.tiers[key], ...patch } };
+    setSettings({ ...settings, tiers });
+    await persist({ tiers });
+  };
+
+  const updateReferral = async (patch: Partial<ReferralConfig>) => {
+    if (!settings) return;
+    const referral = { ...settings.referral, ...patch };
+    setSettings({ ...settings, referral });
+    await persist({ referral });
+  };
+
+  const toggleLive = async (key: keyof LoyaltySettings["liveActivity"]) => {
+    if (!settings) return;
+    const liveActivity = { ...settings.liveActivity, [key]: !settings.liveActivity[key] };
+    setSettings({ ...settings, liveActivity });
+    await persist({ liveActivity });
+  };
+
+  const deleteReferralCode = async (code: string) => {
+    const res = await fetch("/api/admin/referrals", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code }),
+    });
+    if (res.ok) {
+      setReferrals((arr) => arr.filter((r) => r.code !== code));
+      toast.success("Code removed");
+    }
+  };
+
+  const refTotals = {
+    totalCodes: referrals.length,
+    totalUses: referrals.reduce((acc, r) => acc + r.used, 0),
+    totalEarned: referrals.reduce((acc, r) => acc + r.earned, 0),
+  };
+
+  const refCols: Column<ReferralRow>[] = [
+    { key: "code", header: "Code", cell: (r) => <span className="mono">{r.code}</span>, sortValue: (r) => r.code },
+    { key: "owner", header: "Owner", cell: (r) => r.owner, sortValue: (r) => r.owner },
+    { key: "phone", header: "Phone", cell: (r) => <span className="mono">{r.ownerPhone}</span> },
+    { key: "used", header: "Uses", align: "right", cell: (r) => r.used.toLocaleString(), sortValue: (r) => r.used },
+    { key: "earned", header: "Earned pts", align: "right", cell: (r) => r.earned.toLocaleString(), sortValue: (r) => r.earned },
+    {
+      key: "actions",
+      header: "",
+      cell: (r) => (
+        <Button size="sm" variant="ghost" onClick={() => deleteReferralCode(r.code)}>
+          Remove
+        </Button>
+      ),
+    },
   ];
 
-  return (
-    <>
-      <AdminNav />
-      <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-heading font-bold admin-text">Growth & Operations</h1>
-            <p className="text-sm admin-text-dim mt-1">Seasonal menu, speed settings, chatbot</p>
+  if (loading || !settings) {
+    return (
+      <div className="v2-page">
+        <header className="v2-page-header">
+          <div className="v2-page-title-row">
+            <h1 className="v2-page-title">Growth</h1>
           </div>
-        </div>
-
-        <LocationTabs value={locationFilter === "all" ? "" : locationFilter} onChange={(v) => setLocationFilter(v || "all")} includeAll />
-
-        {/* Tabs */}
-        <div className="flex gap-1 overflow-x-auto scrollbar-hide pb-1">
-          {tabs.map((t) => (
-            <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium whitespace-nowrap transition-colors ${tab === t.id ? "bg-white/12 text-white shadow-sm border border-white/10" : "text-slate-400 hover:text-white hover:bg-white/6"}`}>
-              <t.icon className="h-4 w-4" />{t.label}
-            </button>
-          ))}
-        </div>
-
-        {/* SEASONAL TAB */}
-        {tab === "seasonal" && (
-          <div className="space-y-4">
-            <div className="glass-card-static p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold admin-text flex items-center gap-2"><Sparkles className="h-4 w-4 text-italia-gold" />Seasonal / Limited-Time Items</h3>
-                <button className="glass-btn"><Plus className="h-3.5 w-3.5" /> Add Item</button>
-              </div>
-              <div className="space-y-2">
-                {(settings?.seasonalItems || [])
-                  .filter((item) => locationFilter === "all" || item.locationSlug === locationFilter || !item.locationSlug)
-                  .map((item) => (
-                    <div key={item.id} className="flex items-center justify-between p-4 glass-card">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-semibold admin-text">{item.name}</p>
-                          <span className="badge-info text-[10px] px-2 py-0.5 rounded-full font-bold">{item.category}</span>
-                          {item.locationSlug && (
-                            <span className="badge-confirmed text-[10px] px-2 py-0.5 rounded-full font-bold capitalize flex items-center gap-0.5">
-                              <MapPin className="h-2.5 w-2.5" />{item.locationSlug}
-                            </span>
-                          )}
-                          {!item.active && <span className="badge-danger text-[10px] px-2 py-0.5 rounded-full font-bold">Hidden</span>}
-                        </div>
-                        <p className="text-xs admin-text-dim mt-0.5">Until {item.availableUntil}</p>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <span className="font-bold admin-text">{formatPrice(item.price)}</span>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            if (!settings) return;
-                            const updated = settings.seasonalItems.map((si) =>
-                              si.id === item.id ? { ...si, active: !si.active } : si
-                            );
-                            saveSettings({ seasonalItems: updated });
-                          }}
-                          className={`p-1 rounded-lg transition-colors ${item.active ? "text-green-400 bg-green-400/10 hover:bg-green-400/20" : "text-red-400 bg-red-400/10 hover:bg-red-400/20"}`}
-                        >
-                          {item.active ? <ToggleRight className="h-6 w-6" /> : <ToggleLeft className="h-6 w-6" />}
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* SPEED TAB */}
-        {tab === "speed" && (
-          <div className="space-y-4">
-            {/* Speed guarantee */}
-            <div className="glass-card-static p-5">
-              <h3 className="font-semibold admin-text mb-4 flex items-center gap-2"><Zap className="h-4 w-4 text-yellow-400" />Speed Guarantee</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="glass-card p-4"><label className="text-xs admin-text-dim block mb-1">Guarantee Time (min)</label><input type="number" value={settings?.speedGuarantee.maxMinutes || 15} onChange={(e) => setSettings((s) => s ? { ...s, speedGuarantee: { ...s.speedGuarantee, maxMinutes: parseInt(e.target.value) || 15 } } : s)} className="glass-input w-full" /></div>
-                <div className="glass-card p-4"><label className="text-xs admin-text-dim block mb-1">Guarantee Text</label><input type="text" value={settings?.speedGuarantee.guaranteeText || ""} onChange={(e) => setSettings((s) => s ? { ...s, speedGuarantee: { ...s.speedGuarantee, guaranteeText: e.target.value } } : s)} className="glass-input w-full text-xs" /></div>
-                <div className="glass-card p-4"><label className="text-xs admin-text-dim block mb-1">Status</label><button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!settings) return; saveSettings({ speedGuarantee: { ...settings.speedGuarantee, active: !settings.speedGuarantee.active } }); }} className={`flex items-center gap-2 mt-1 p-1 rounded-lg ${settings?.speedGuarantee.active ? "text-green-400 bg-green-400/10" : "text-red-400 bg-red-400/10"}`}>{settings?.speedGuarantee.active ? <ToggleRight className="h-6 w-6" /> : <ToggleLeft className="h-6 w-6" />}<span className="text-sm font-medium">{settings?.speedGuarantee.active ? "Active" : "Inactive"}</span></button></div>
-              </div>
-            </div>
-
-            {/* Live activity bar */}
-            <div className="glass-card-static p-5">
-              <h3 className="font-semibold admin-text mb-3 flex items-center gap-2"><TrendingUp className="h-4 w-4 text-blue-400" />Live Activity Bar</h3>
-              <div className="space-y-3">
-                {LIVE_ACTIVITY_KEYS.map(({ key, label }) => {
-                  const isVisible = settings?.liveActivity?.[key] ?? true;
-                  return (
-                    <div key={key} className="flex items-center justify-between p-3 glass-card">
-                      <span className="text-sm admin-text">{label}</span>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${isVisible ? "badge-active" : "badge-danger"}`}>{isVisible ? "Visible" : "Hidden"}</span>
-                        <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!settings) return; saveSettings({ liveActivity: { ...settings.liveActivity, [key]: !isVisible } }); }} className={`p-1 rounded-lg ${isVisible ? "text-green-400 bg-green-400/10" : "text-red-400 bg-red-400/10"}`}>{isVisible ? <ToggleRight className="h-5 w-5" /> : <ToggleLeft className="h-5 w-5" />}</button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Abandoned cart */}
-            <div className="glass-card-static p-5">
-              <h3 className="font-semibold admin-text mb-3 flex items-center gap-2"><Clock className="h-4 w-4 text-orange-400" />Abandoned Cart Recovery</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="glass-card p-4"><label className="text-xs admin-text-dim block mb-1">Trigger Delay (seconds)</label><input type="number" value={settings?.abandonedCart.delaySeconds ?? 30} onChange={(e) => setSettings((s) => s ? { ...s, abandonedCart: { ...s.abandonedCart, delaySeconds: parseInt(e.target.value) || 30 } } : s)} className="glass-input w-full" /></div>
-                <div className="glass-card p-4"><label className="text-xs admin-text-dim block mb-1">Banner Message</label><input type="text" value={settings?.abandonedCart.message ?? ""} onChange={(e) => setSettings((s) => s ? { ...s, abandonedCart: { ...s.abandonedCart, message: e.target.value } } : s)} className="glass-input w-full text-xs" /></div>
-                <div className="glass-card p-4"><label className="text-xs admin-text-dim block mb-1">Status</label><button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!settings) return; saveSettings({ abandonedCart: { ...settings.abandonedCart, active: !settings.abandonedCart.active } }); }} className={`flex items-center gap-2 mt-1 p-1 rounded-lg ${settings?.abandonedCart.active ? "text-green-400 bg-green-400/10" : "text-red-400 bg-red-400/10"}`}>{settings?.abandonedCart.active ? <ToggleRight className="h-6 w-6" /> : <ToggleLeft className="h-6 w-6" />}<span className="text-sm font-medium">{settings?.abandonedCart.active ? "Active" : "Inactive"}</span></button></div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* CHATBOT TAB */}
-        {tab === "chatbot" && (
-          <div className="space-y-4">
-            <div className="glass-card-static p-5">
-              <div className="flex items-center justify-between mb-4"><h3 className="font-semibold admin-text flex items-center gap-2"><MessageCircle className="h-4 w-4 text-italia-green" />Chatbot Responses</h3><button className="glass-btn"><Plus className="h-3.5 w-3.5" /> Add Response</button></div>
-              <div className="space-y-2">
-                {faqsLoading ? (
-                  <div className="text-center py-8">
-                    <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-white/20 border-t-white/60" />
-                    <p className="text-sm admin-text-dim mt-2">Loading chatbot responses...</p>
-                  </div>
-                ) : faqs.length === 0 ? (
-                  <div className="text-center py-8">
-                    <p className="text-sm admin-text-dim">No chatbot responses yet. Click "Add Response" to create one.</p>
-                  </div>
-                ) : (
-                  faqs.map((faq) => (
-                    <div key={faq.id} className="glass-card p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2"><span className="px-2 py-0.5 rounded-lg bg-italia-green/10 text-green-400 text-xs font-bold">{faq.keyword}</span><span className="text-xs admin-text-dim">{faq.hits} hits</span></div>
-                        <div className="flex items-center gap-2"><button className="text-slate-400 hover:text-white"><Edit3 className="h-3.5 w-3.5" /></button><button className="text-slate-400 hover:text-red-400"><Trash2 className="h-3.5 w-3.5" /></button></div>
-                      </div>
-                      <p className="text-xs admin-text-muted line-clamp-2">{faq.response}</p>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-            <div className="glass-card-static p-5">
-              <h3 className="font-semibold admin-text mb-3">Chatbot Settings</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="glass-card p-4"><label className="text-xs admin-text-dim block mb-1">Welcome Message</label><textarea defaultValue="Ciao! I'm the Sud Italia assistant." className="glass-input w-full text-xs h-20 resize-none" /></div>
-                <div className="glass-card p-4"><label className="text-xs admin-text-dim block mb-1">Default Response</label><textarea defaultValue="I'd be happy to help! I can answer questions about our menu, locations, hours..." className="glass-input w-full text-xs h-20 resize-none" /></div>
-              </div>
-              <div className="flex gap-2 mt-4"><button className="glass-btn-green"><Check className="h-3.5 w-3.5" /> Save Chatbot Settings</button></div>
-            </div>
-          </div>
-        )}
+        </header>
+        <div className="v2-page-loading">Loading growth settings…</div>
       </div>
-    </>
+    );
+  }
+
+  return (
+    <div className="v2-page">
+      <header className="v2-page-header">
+        <div className="v2-page-title-row">
+          <h1 className="v2-page-title">Growth engine</h1>
+          <p className="v2-page-subtitle">
+            Tier thresholds, redeemable rewards, referral mechanics, and the customer-site live-activity widgets.
+          </p>
+        </div>
+        <Tabs
+          value={tab}
+          onChange={(v) => setTab(v as TabKey)}
+          tabs={[
+            { value: "rewards", label: "Rewards", icon: <Gift className="h-3.5 w-3.5" /> },
+            { value: "tiers", label: "Tiers", icon: <Crown className="h-3.5 w-3.5" /> },
+            { value: "referrals", label: "Referrals", icon: <Users className="h-3.5 w-3.5" /> },
+            { value: "live", label: "Live widgets", icon: <Rocket className="h-3.5 w-3.5" /> },
+          ]}
+          variant="pill"
+          ariaLabel="Growth section"
+        />
+      </header>
+
+      <section className="v2-kpi-grid">
+        <KpiCard label="Active rewards" value={settings.rewards.filter((r) => r.active).length} icon={Gift} tone="success" hint={`${settings.rewards.length} total`} />
+        <KpiCard label="Referral codes" value={refTotals.totalCodes} icon={Users} tone="info" hint={`${refTotals.totalUses} uses`} />
+        <KpiCard label="Referral points awarded" value={refTotals.totalEarned} icon={Coins} tone="brand" />
+        <KpiCard label="Top tier reward" value={Math.max(0, ...settings.rewards.map((r) => r.pointsCost))} icon={Star} tone="warning" hint="Highest redemption cost (pts)" />
+      </section>
+
+      {tab === "rewards" && (
+        <>
+          <div className="v2-filters">
+            <h2 className="v2-section-h">Redeemable rewards</h2>
+            <Button variant="primary" leadingIcon={<Trophy className="h-3.5 w-3.5" />} onClick={() => setEditingReward({ id: "", name: "", description: "", pointsCost: 100, active: true })}>
+              New reward
+            </Button>
+          </div>
+          {settings.rewards.length === 0 ? (
+            <Card><CardBody><EmptyState icon={Gift} title="No rewards" /></CardBody></Card>
+          ) : (
+            <div className="v2-rewards-grid">
+              {settings.rewards.map((r) => (
+                <Card key={r.id}>
+                  <CardHeader
+                    title={r.name}
+                    description={r.description}
+                    actions={
+                      <Badge tone={r.active ? "success" : "neutral"} variant="soft" dot>
+                        {r.active ? "Active" : "Disabled"}
+                      </Badge>
+                    }
+                  />
+                  <CardBody>
+                    <div className="v2-summary-row">
+                      <span className="v2-muted">Cost</span>
+                      <span className="tabular v2-summary-val">{r.pointsCost.toLocaleString()} pts</span>
+                    </div>
+                  </CardBody>
+                  <div className="v2-reward-actions">
+                    <Button size="sm" variant="ghost" onClick={() => toggleReward(r.id)}>
+                      {r.active ? "Disable" : "Enable"}
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setEditingReward(r)}>
+                      Edit
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => deleteReward(r.id)}>
+                      Delete
+                    </Button>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {tab === "tiers" && (
+        <div className="v2-tiers-grid">
+          {TIER_KEYS.map((k) => {
+            const Icon = TIER_ICON[k];
+            const tier = settings.tiers[k];
+            return (
+              <Card key={k}>
+                <CardHeader
+                  title={
+                    <span className="v2-inline">
+                      <Icon className="h-4 w-4 v2-muted" />
+                      <span style={{ textTransform: "capitalize" }}>{k}</span>
+                    </span>
+                  }
+                  description={`Earn at ${tier.threshold.toLocaleString()} pts spent`}
+                />
+                <CardBody>
+                  <div className="v2-stack-12">
+                    <Input
+                      label="Threshold (lifetime PLN)"
+                      type="number"
+                      min="0"
+                      value={tier.threshold}
+                      onChange={(e) => updateTier(k, { threshold: Number(e.target.value) || 0 })}
+                    />
+                    <Input
+                      label="Points multiplier"
+                      type="number"
+                      step="0.1"
+                      min="1"
+                      value={tier.multiplier}
+                      onChange={(e) => updateTier(k, { multiplier: Number(e.target.value) || 1 })}
+                    />
+                    <Textarea
+                      label="Perks (one per line)"
+                      rows={3}
+                      value={tier.perks.join("\n")}
+                      onChange={(e) => updateTier(k, { perks: e.target.value.split("\n").map((s) => s.trim()).filter(Boolean) })}
+                    />
+                  </div>
+                </CardBody>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {tab === "referrals" && (
+        <>
+          <Card>
+            <CardHeader title="Referral mechanics" description="Reward both sides when a customer brings a friend." />
+            <CardBody>
+              <div className="v2-stack-12">
+                <label className="v2-toggle">
+                  <input
+                    type="checkbox"
+                    checked={settings.referral.active}
+                    onChange={() => updateReferral({ active: !settings.referral.active })}
+                  />
+                  <span>{settings.referral.active ? "Active" : "Disabled"}</span>
+                </label>
+                <div className="v2-form-row-2">
+                  <Input
+                    label="Referrer bonus (points)"
+                    type="number"
+                    min="0"
+                    value={settings.referral.referrerPoints}
+                    onChange={(e) => updateReferral({ referrerPoints: Number(e.target.value) || 0 })}
+                  />
+                  <Input
+                    label="Referee discount"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={(settings.referral.refereeDiscountGrosze / 100).toFixed(2)}
+                    onChange={(e) => updateReferral({ refereeDiscountGrosze: Math.round(parseFloat(e.target.value || "0") * 100) })}
+                    trailingAdornment={<span className="v2-muted">zł</span>}
+                  />
+                </div>
+              </div>
+            </CardBody>
+          </Card>
+
+          <Card padding="none">
+            <CardHeader
+              title="Existing codes"
+              description={`${referrals.length} code${referrals.length === 1 ? "" : "s"} in circulation · ${refTotals.totalUses} uses · ${formatPrice(refTotals.totalEarned * 100)} of points awarded`}
+            />
+            <CardBody>
+              {referrals.length === 0 ? (
+                <EmptyState icon={Heart} title="No referral codes yet" description="Codes are created automatically when customers tap Share on the rewards screen." compact />
+              ) : (
+                <Table rows={referrals} columns={refCols} rowKey={(r) => r.code} defaultSort={{ key: "used", dir: "desc" }} />
+              )}
+            </CardBody>
+          </Card>
+        </>
+      )}
+
+      {tab === "live" && (
+        <Card>
+          <CardHeader title="Live activity widgets" description="Customer-site signals that build social proof." />
+          <CardBody>
+            <ul className="v2-checkbox-list">
+              {(
+                [
+                  ["ordersInLastHour", "Orders in last hour pill"],
+                  ["currentlyPreparing", "Currently preparing badge"],
+                  ["trendingItem", "Trending item indicator"],
+                  ["avgPrepTime", "Average prep time pill"],
+                ] as const
+              ).map(([k, label]) => (
+                <li key={k}>
+                  <label className="v2-toggle">
+                    <input
+                      type="checkbox"
+                      checked={settings.liveActivity[k]}
+                      onChange={() => toggleLive(k)}
+                    />
+                    <span>{label}</span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+          </CardBody>
+        </Card>
+      )}
+
+      <RewardDialog
+        reward={editingReward}
+        onClose={() => setEditingReward(null)}
+        onSubmit={upsertReward}
+      />
+    </div>
+  );
+}
+
+interface RewardDialogProps {
+  reward: Reward | null;
+  onClose: () => void;
+  onSubmit: (reward: Reward) => Promise<void> | void;
+}
+
+function RewardDialog({ reward, onClose, onSubmit }: RewardDialogProps) {
+  const [name, setName] = useState("");
+  const [desc, setDesc] = useState("");
+  const [points, setPoints] = useState(100);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!reward) return;
+    setName(reward.name);
+    setDesc(reward.description);
+    setPoints(reward.pointsCost);
+    setBusy(false);
+  }, [reward]);
+
+  if (!reward) return <Dialog open={false} onClose={onClose} />;
+
+  const submit = async () => {
+    if (!name.trim()) return;
+    setBusy(true);
+    const id = reward.id || name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-{2,}/g, "-").replace(/^-|-$/g, "");
+    await onSubmit({
+      id,
+      name: name.trim(),
+      description: desc.trim(),
+      pointsCost: Math.max(0, points),
+      active: reward.active,
+    });
+    setBusy(false);
+  };
+
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      size="md"
+      title={reward.id ? `Edit ${reward.name}` : "New reward"}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={busy}>Cancel</Button>
+          <Button variant="primary" onClick={submit} loading={busy}>{reward.id ? "Save" : "Create"}</Button>
+        </>
+      }
+    >
+      <div className="v2-stack-12">
+        <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Free espresso" />
+        <Textarea label="Description" rows={2} value={desc} onChange={(e) => setDesc(e.target.value)} />
+        <Input
+          label="Cost (points)"
+          type="number"
+          min="0"
+          value={points}
+          onChange={(e) => setPoints(Number(e.target.value) || 0)}
+        />
+      </div>
+    </Dialog>
   );
 }
