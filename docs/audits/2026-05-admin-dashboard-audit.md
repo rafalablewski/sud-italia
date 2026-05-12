@@ -94,18 +94,18 @@ Format note: tables are split per category for readability. **Priority** is P0 (
 
 ### 1.5 Inventory & Supply Chain
 
-| Existing | Missing | Why It Matters | Priority | Benchmark |
-|---|---|---|---|---|
-| Stock + par + reorder, movements (receive/waste/consume/adjust) | **Predictive procurement** (forecast next 7-day depletion × supplier lead time → auto-generated draft PO) | Manual reordering wastes 4–6 hours/week and overshoots by 18–25% | P1 | BlueCart, MarketMan |
-| Supplier CRUD, PO CRUD with lines | **Auto-receive from invoice OCR** (photograph delivery slip, line-match against PO, flag variance) | Receiving by hand is the #2 source of inventory shrink | P1 | xtraCHEF, MarginEdge |
-| Cost snapshot per line | **Commodity-price tracking** (flour, mozzarella, tomato — by source, with hedge alerts) | Italian flour & mozzarella prices swing 18–30% YoY; no visibility = no margin defense | P1 | Buyers Edge, Stable.ag |
-| — | **Supplier bidding / RFQ** (3 suppliers quote on same SKU list) | Single-sourcing every SKU leaves 4–8% margin on the table | P2 | BlueCart |
-| — | **3-way match** (PO ↔ goods receipt ↔ invoice) with auto-reconciliation | Without 3-way match, vendors short-ship undetected | P1 | MarginEdge, Restaurant365 |
-| — | **Smart waste classification** (overproduction / spoilage / drop / customer return / prep error) with photo | "Waste 12 units" is unactionable; "spoilage of fior di latte 12 units on Tuesdays" identifies a delivery cadence problem | P1 | Leanpath, Winnow |
-| — | **Variance alerts** (theoretical vs actual usage per item) | Daily variance is the only theft-detection mechanism that scales | P0 | Restaurant365 |
-| — | **Shelf-life / FIFO enforcement** with computer-vision-readable date labels | Margherita pizza is dough + cheese + tomato — all 4–7 day shelf life | P1 | OrcaScan, Galley |
-| — | **IoT scale / fridge sensors** for continuous count | Manual counts are wrong by 8–15% within 48 hours | P3 | Apption, Therma |
-| — | **Recipe yield testing workflow** (cook 10 doughs, measure actuals, adjust waste factor) | The `wasteFactor` field exists but has no testing protocol | P2 | Galley |
+| Existing | Missing | Why It Matters | Priority | Benchmark | Status |
+|---|---|---|---|---|---|
+| Stock + par + reorder, movements (receive/waste/consume/adjust) | **Predictive procurement** (forecast next 7-day depletion × supplier lead time → auto-generated draft PO) | Manual reordering wastes 4–6 hours/week and overshoots by 18–25% | P1 | BlueCart, MarketMan | ✗ Not fixed — needs forecast model on top of stock movements |
+| Supplier CRUD, PO CRUD with lines | **Auto-receive from invoice OCR** (photograph delivery slip, line-match against PO, flag variance) | Receiving by hand is the #2 source of inventory shrink | P1 | xtraCHEF, MarginEdge | ✗ Not fixed — needs OCR (Document AI / Textract / Mindee) integration |
+| Cost snapshot per line | **Commodity-price tracking** (flour, mozzarella, tomato — by source, with hedge alerts) | Italian flour & mozzarella prices swing 18–30% YoY; no visibility = no margin defense | P1 | Buyers Edge, Stable.ag | ✗ Not fixed — needs commodity feed |
+| — | **Supplier bidding / RFQ** (3 suppliers quote on same SKU list) | Single-sourcing every SKU leaves 4–8% margin on the table | P2 | BlueCart | ✗ Not fixed — needs RFQ workflow + supplier portal |
+| — | **3-way match** (PO ↔ goods receipt ↔ invoice) with auto-reconciliation | Without 3-way match, vendors short-ship undetected | P1 | MarginEdge, Restaurant365 | ✗ Not fixed — needs GR/invoice entities + reconcile job |
+| — | **Smart waste classification** (overproduction / spoilage / drop / customer return / prep error) with photo | "Waste 12 units" is unactionable; "spoilage of fior di latte 12 units on Tuesdays" identifies a delivery cadence problem | P1 | Leanpath, Winnow | ✗ Not fixed — schema (`reason`, `photoUrl`) + UI |
+| — | **Variance alerts** (theoretical vs actual usage per item) | Daily variance is the only theft-detection mechanism that scales | P0 | Restaurant365 | ✗ Not fixed — needs theoretical-usage calc from recipes × sales |
+| — | **Shelf-life / FIFO enforcement** with computer-vision-readable date labels | Margherita pizza is dough + cheese + tomato — all 4–7 day shelf life | P1 | OrcaScan, Galley | ✗ Not fixed — needs lot tracking + CV/label scan |
+| — | **IoT scale / fridge sensors** for continuous count | Manual counts are wrong by 8–15% within 48 hours | P3 | Apption, Therma | ✗ Not fixed — IoT hardware |
+| — | **Recipe yield testing workflow** (cook 10 doughs, measure actuals, adjust waste factor) | The `wasteFactor` field exists but has no testing protocol | P2 | Galley | ✗ Not fixed — needs yield-test entity + workflow UI |
 
 ### 1.6 Staff & HR
 
