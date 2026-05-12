@@ -318,51 +318,51 @@ The following 72 features are scoped by realistic time horizon (2026 = ship in 1
 
 ### 3.1 Autonomous Operations Layer
 
-| # | Feature | Description | Impact | Difficulty | Strategic | Moat | Horizon |
-|---|---|---|---|---|---|---|---|
-| 1 | **AI Restaurant Manager** | Single agent that reads forecast + inventory + staff + weather and produces a morning brief: target revenue, expected stock-outs, recommended schedule edits, suggested pitches. Run daily 06:00. | 5 | 4 | 5 | very high | 2026 |
-| 2 | **AI Kitchen Orchestrator** | Live agent that re-orders the KDS queue every 90 s to maximize on-time delivery; can route prep to alternate stations; can request manager approval to pause online slot. | 5 | 4 | 5 | high | 2026 |
-| 3 | **AI CFO** | Daily P&L narrative, anomaly flagging, cash projection, vendor renegotiation suggestions. | 4 | 3 | 5 | high | 2026 |
-| 4 | **AI Procurement Agent** | Reads par + sales forecast + price feed, drafts POs for owner approval, negotiates rebates via email. | 5 | 4 | 4 | high | 2027 |
-| 5 | **AI Marketing Agent** | Generates weekly email/SMS/WhatsApp/IG campaign drafts per segment, holdouts included, owner one-click approval. | 4 | 3 | 4 | medium | 2026 |
-| 6 | **AI Hiring Agent** | Drafts job posts, screens applicants from Pracuj.pl / OLX, schedules interviews, references SANEPID requirement. | 3 | 3 | 3 | medium | 2027 |
-| 7 | **Multi-agent debate orchestrator** | Forecast Agent vs Cost Agent vs Marketing Agent debate proposed pricing change before manager sees it. | 3 | 5 | 5 | very high | 2028+ |
-| 8 | **Autonomous truck dispatcher** | Optimizes which truck goes where each day given forecast, weather, permits, fuel cost. Pushes plan to drivers' phones. | 5 | 4 | 5 | very high | 2027 |
+| # | Feature | Description | Impact | Difficulty | Strategic | Moat | Horizon | Status |
+|---|---|---|---|---|---|---|---|---|
+| 1 | **AI Restaurant Manager** | Single agent that reads forecast + inventory + staff + weather and produces a morning brief: target revenue, expected stock-outs, recommended schedule edits, suggested pitches. Run daily 06:00. | 5 | 4 | 5 | very high | 2026 | ✗ Future — LLM + tools layer not built |
+| 2 | **AI Kitchen Orchestrator** | Live agent that re-orders the KDS queue every 90 s to maximize on-time delivery; can route prep to alternate stations; can request manager approval to pause online slot. | 5 | 4 | 5 | high | 2026 | ✗ Future — depends on real-time queue + agent loop |
+| 3 | **AI CFO** | Daily P&L narrative, anomaly flagging, cash projection, vendor renegotiation suggestions. | 4 | 3 | 5 | high | 2026 | ✗ Future — depends on real-time P&L (§1.9) |
+| 4 | **AI Procurement Agent** | Reads par + sales forecast + price feed, drafts POs for owner approval, negotiates rebates via email. | 5 | 4 | 4 | high | 2027 | ✗ Future — depends on forecast + price feed |
+| 5 | **AI Marketing Agent** | Generates weekly email/SMS/WhatsApp/IG campaign drafts per segment, holdouts included, owner one-click approval. | 4 | 3 | 4 | medium | 2026 | ✗ Future — depends on campaign builder (§1.8) |
+| 6 | **AI Hiring Agent** | Drafts job posts, screens applicants from Pracuj.pl / OLX, schedules interviews, references SANEPID requirement. | 3 | 3 | 3 | medium | 2027 | ✗ Future — needs job-board API contracts |
+| 7 | **Multi-agent debate orchestrator** | Forecast Agent vs Cost Agent vs Marketing Agent debate proposed pricing change before manager sees it. | 3 | 5 | 5 | very high | 2028+ | ✗ Future — research-grade |
+| 8 | **Autonomous truck dispatcher** | Optimizes which truck goes where each day given forecast, weather, permits, fuel cost. Pushes plan to drivers' phones. | 5 | 4 | 5 | very high | 2027 | ✗ Future — VRP solver + driver app |
 
 ### 3.2 Computer Vision
 
-| # | Feature | Description | Impact | Difficulty | Strategic | Moat | Horizon |
-|---|---|---|---|---|---|---|---|
-| 9 | **Pizza quality CV** | Camera over the conveyor or counter scores each pizza on char, dough size, topping coverage, plating; rejects below threshold; trends quality per cook. | 4 | 5 | 5 | very high | 2027 |
-| 10 | **Inventory CV (fridge cam)** | Camera in walk-in counts visible SKUs every 5 min; auto-adjusts on-hand; flags theft. | 4 | 5 | 4 | high | 2028+ |
-| 11 | **Waste CV (bin cam)** | Camera over the waste bin classifies discarded items by SKU and reason. | 4 | 4 | 4 | high | 2027 |
-| 12 | **Counter / queue CV** | Counts walk-up customers vs converted orders → measures conversion at the truck window. | 4 | 4 | 3 | medium | 2027 |
-| 13 | **Customer emotion analytics** | Anonymous emotion scoring at pickup ("smiled / neutral / frowned"). With opt-in signage for GDPR. | 3 | 5 | 3 | medium | 2028+ |
-| 14 | **Receipt / invoice OCR** | Photograph a paper invoice → 3-way match to PO. | 4 | 3 | 3 | low | 2026 |
-| 15 | **Hand-hygiene CV** | Camera detects hand-wash compliance against HACCP schedule. | 3 | 5 | 4 | medium | 2028+ |
+| # | Feature | Description | Impact | Difficulty | Strategic | Moat | Horizon | Status |
+|---|---|---|---|---|---|---|---|---|
+| 9 | **Pizza quality CV** | Camera over the conveyor or counter scores each pizza on char, dough size, topping coverage, plating; rejects below threshold; trends quality per cook. | 4 | 5 | 5 | very high | 2027 | ✗ Future — camera hardware + CV model |
+| 10 | **Inventory CV (fridge cam)** | Camera in walk-in counts visible SKUs every 5 min; auto-adjusts on-hand; flags theft. | 4 | 5 | 4 | high | 2028+ | ✗ Future — IoT cam + CV model |
+| 11 | **Waste CV (bin cam)** | Camera over the waste bin classifies discarded items by SKU and reason. | 4 | 4 | 4 | high | 2027 | ✗ Future — camera + classifier |
+| 12 | **Counter / queue CV** | Counts walk-up customers vs converted orders → measures conversion at the truck window. | 4 | 4 | 3 | medium | 2027 | ✗ Future — needs camera + counting model |
+| 13 | **Customer emotion analytics** | Anonymous emotion scoring at pickup ("smiled / neutral / frowned"). With opt-in signage for GDPR. | 3 | 5 | 3 | medium | 2028+ | ✗ Future — DPIA + signage + model |
+| 14 | **Receipt / invoice OCR** | Photograph a paper invoice → 3-way match to PO. | 4 | 3 | 3 | low | 2026 | ✗ Future — OCR provider integration |
+| 15 | **Hand-hygiene CV** | Camera detects hand-wash compliance against HACCP schedule. | 3 | 5 | 4 | medium | 2028+ | ✗ Future — camera + HACCP workflow |
 
 ### 3.3 Voice AI
 
-| # | Feature | Description | Impact | Difficulty | Strategic | Moat | Horizon |
-|---|---|---|---|---|---|---|---|
-| 16 | **Voice-driven KDS** | "Margherita ready, table 4" → KDS bumps the right ticket. Hands-free for cooks. | 4 | 3 | 4 | high | 2026 |
-| 17 | **Phone-order AI cashier** | Customer calls the truck, AI takes the order in Polish, books slot, takes payment by SMS link. | 5 | 4 | 5 | very high | 2027 |
-| 18 | **In-truck voice manager** | Manager: *"Add 4 pasta to 14:15 Glovo channel and reduce dine-in slot by 4."* | 4 | 4 | 4 | high | 2027 |
-| 19 | **Inventory voice count** | "Count 12 fior di latte" while walking the walk-in. | 3 | 2 | 2 | low | 2026 |
-| 20 | **Customer voicebot for support** | Polish-language voicebot handles order status, refund requests, complaints, with human handoff. | 4 | 3 | 4 | medium | 2027 |
+| # | Feature | Description | Impact | Difficulty | Strategic | Moat | Horizon | Status |
+|---|---|---|---|---|---|---|---|---|
+| 16 | **Voice-driven KDS** | "Margherita ready, table 4" → KDS bumps the right ticket. Hands-free for cooks. | 4 | 3 | 4 | high | 2026 | ✗ Future — Polish STT + KDS action layer |
+| 17 | **Phone-order AI cashier** | Customer calls the truck, AI takes the order in Polish, books slot, takes payment by SMS link. | 5 | 4 | 5 | very high | 2027 | ✗ Future — telephony + Polish voice agent |
+| 18 | **In-truck voice manager** | Manager: *"Add 4 pasta to 14:15 Glovo channel and reduce dine-in slot by 4."* | 4 | 4 | 4 | high | 2027 | ✗ Future — voice + tool-calling agent |
+| 19 | **Inventory voice count** | "Count 12 fior di latte" while walking the walk-in. | 3 | 2 | 2 | low | 2026 | ✗ Future — STT + stock adjust API |
+| 20 | **Customer voicebot for support** | Polish-language voicebot handles order status, refund requests, complaints, with human handoff. | 4 | 3 | 4 | medium | 2027 | ✗ Future — telephony + agent + handoff |
 
 ### 3.4 Predictive & Demand-Sensing
 
-| # | Feature | Description | Impact | Difficulty | Strategic | Moat | Horizon |
-|---|---|---|---|---|---|---|---|
-| 21 | **Hyperlocal demand heatmap** | Cell-tower / Google Mobility / Foursquare signal → demand by 100 m grid. Drives pitch selection. | 5 | 5 | 5 | very high | 2027 |
-| 22 | **Event-aware demand model** | Ingests Pol-Met weather, Spectacle events, school calendar, holiday calendar → demand by hour, by item. | 5 | 4 | 5 | high | 2026 |
-| 23 | **Real elasticity model** | Replaces `/admin/ai`'s margin heuristic with per-item PED estimated from natural price variance + structured A/B. | 4 | 4 | 4 | high | 2026 |
-| 24 | **Item-level shelf-life prediction** | Predicts probability that fior di latte received Monday survives to Wednesday given temp logs. | 4 | 4 | 3 | medium | 2027 |
-| 25 | **Churn-risk scoring** | Per-customer probability with intervention recommendation; auto-triggered campaign. | 4 | 3 | 4 | medium | 2026 |
-| 26 | **No-show prediction (slots)** | Probability a pre-order is collected → over-book like an airline. | 3 | 3 | 3 | medium | 2027 |
-| 27 | **Weather-linked dynamic menu** | Cold rain auto-pins soup; hot day auto-promotes Aperol Spritz; pricing nudge. | 3 | 2 | 3 | low | 2026 |
-| 28 | **Festival match-maker** | Scrapes 30 Polish event APIs and ranks fit-score (footfall × pizza-affinity × competition density × permit feasibility) for the next 90 days. | 5 | 4 | 5 | very high | 2027 |
+| # | Feature | Description | Impact | Difficulty | Strategic | Moat | Horizon | Status |
+|---|---|---|---|---|---|---|---|---|
+| 21 | **Hyperlocal demand heatmap** | Cell-tower / Google Mobility / Foursquare signal → demand by 100 m grid. Drives pitch selection. | 5 | 5 | 5 | very high | 2027 | ✗ Future — paid location-data feed |
+| 22 | **Event-aware demand model** | Ingests Pol-Met weather, Spectacle events, school calendar, holiday calendar → demand by hour, by item. | 5 | 4 | 5 | high | 2026 | ✗ Future — feeds + model |
+| 23 | **Real elasticity model** | Replaces `/admin/ai`'s margin heuristic with per-item PED estimated from natural price variance + structured A/B. | 4 | 4 | 4 | high | 2026 | ✗ Future — PED estimation + A/B |
+| 24 | **Item-level shelf-life prediction** | Predicts probability that fior di latte received Monday survives to Wednesday given temp logs. | 4 | 4 | 3 | medium | 2027 | ✗ Future — needs HACCP temp logs (§1.1) |
+| 25 | **Churn-risk scoring** | Per-customer probability with intervention recommendation; auto-triggered campaign. | 4 | 3 | 4 | medium | 2026 | ✗ Future — churn model |
+| 26 | **No-show prediction (slots)** | Probability a pre-order is collected → over-book like an airline. | 3 | 3 | 3 | medium | 2027 | ✗ Future — no-show classifier |
+| 27 | **Weather-linked dynamic menu** | Cold rain auto-pins soup; hot day auto-promotes Aperol Spritz; pricing nudge. | 3 | 2 | 3 | low | 2026 | ✗ Future — weather feed + rules engine |
+| 28 | **Festival match-maker** | Scrapes 30 Polish event APIs and ranks fit-score (footfall × pizza-affinity × competition density × permit feasibility) for the next 90 days. | 5 | 4 | 5 | very high | 2027 | ✗ Future — event-API scrapers + scorer |
 
 ### 3.5 Geo-Intelligence & Logistics
 
