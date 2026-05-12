@@ -563,7 +563,7 @@ export function AdminDashboard() {
       </section>
 
       <section>
-        <Card padding="none">
+        <Card>
           <CardHeader
             title="Location performance"
             description="Side-by-side benchmark for active locations"
@@ -589,9 +589,10 @@ function LocationTable({ rows }: { rows: LocationComparison[] }) {
       key: "city",
       header: "Location",
       cell: (r) => (
-        <Badge tone="neutral" variant="outline" icon={<MapPin className="h-3 w-3" />}>
-          {r.city}
-        </Badge>
+        <span className="v2-loc-cell">
+          <span className="v2-loc-cell-dot" aria-hidden />
+          <span>{r.city}</span>
+        </span>
       ),
       sortValue: (r) => r.city,
     },

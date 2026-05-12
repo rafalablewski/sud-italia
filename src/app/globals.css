@@ -1830,10 +1830,8 @@ html { scroll-behavior: smooth; }
 .v2-alert-message { font-size: var(--text-xs); color: var(--fg-muted); line-height: 1.4; }
 
 /* Location-cell helper (dashboard table) */
-/* `.v2-loc-cell` was a one-off red-dot location cell on the dashboard's
-   Location performance table; removed in favour of the standard
-   `<Badge icon={MapPin}>` pattern used by AdminFeedback / Customers /
-   Orders. */
+.v2-loc-cell { display: inline-flex; align-items: center; gap: 8px; font-weight: 500; }
+.v2-loc-cell-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--brand); }
 
 /* Page-content reset for the rewritten admin pages so the legacy .admin-bg
    wrapper from layout.tsx doesn't force a dark background on light theme.
