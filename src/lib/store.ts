@@ -1,7 +1,7 @@
 import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry } from "@/data/types";
+import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser } from "@/data/types";
 import { getActiveLocations, locations as allLocations } from "@/data/locations";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -2478,6 +2478,45 @@ export async function getAuditLog(filters?: {
   if (filters?.entityType) list = list.filter((e) => e.entityType === filters.entityType);
   if (filters?.limit) list = list.slice(0, filters.limit);
   return list;
+}
+
+// --- Admin users ---
+
+export async function getAdminUsers(): Promise<AdminUser[]> {
+  return readJSON<AdminUser[]>("admin-users.json", []);
+}
+
+export async function saveAdminUser(
+  input: Omit<AdminUser, "id" | "createdAt"> & { id?: string; createdAt?: string },
+): Promise<AdminUser> {
+  return withLock("admin-users.json", async () => {
+    const list = await readJSON<AdminUser[]>("admin-users.json", []);
+    const user: AdminUser = {
+      id: input.id || `usr-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      name: input.name,
+      email: input.email,
+      role: input.role,
+      status: input.status,
+      locationSlug: input.locationSlug,
+      notes: input.notes,
+      createdAt: input.createdAt ?? new Date().toISOString(),
+    };
+    const i = list.findIndex((u) => u.id === user.id);
+    if (i >= 0) list[i] = user;
+    else list.push(user);
+    await writeJSON("admin-users.json", list);
+    return user;
+  });
+}
+
+export async function deleteAdminUser(id: string): Promise<boolean> {
+  return withLock("admin-users.json", async () => {
+    const list = await readJSON<AdminUser[]>("admin-users.json", []);
+    const filtered = list.filter((u) => u.id !== id);
+    if (filtered.length === list.length) return false;
+    await writeJSON("admin-users.json", filtered);
+    return true;
+  });
 }
 
 const AUDIT_LOG_MAX_ENTRIES = 1000;

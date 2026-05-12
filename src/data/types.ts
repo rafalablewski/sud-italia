@@ -410,6 +410,22 @@ export interface ExpansionChecklist {
   updatedAt: string;
 }
 
+// --- Admin users + roles ---
+
+export type AdminRole = "owner" | "manager" | "staff" | "kitchen";
+export type AdminUserStatus = "active" | "disabled";
+
+export interface AdminUser {
+  id: string;
+  name: string;
+  email?: string;
+  role: AdminRole;
+  status: AdminUserStatus;
+  locationSlug?: string;
+  notes?: string;
+  createdAt: string;
+}
+
 // --- Audit log ---
 
 export interface AuditLogEntry {

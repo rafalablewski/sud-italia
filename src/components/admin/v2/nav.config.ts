@@ -19,6 +19,7 @@ import {
   Brain,
   Map,
   Settings,
+  ShieldCheck,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -113,7 +114,10 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     id: "system",
     label: "System",
-    items: [{ href: "/admin/settings", label: "Settings", icon: Settings, shortcut: "," }],
+    items: [
+      { href: "/admin/users", label: "Users & roles", icon: ShieldCheck },
+      { href: "/admin/settings", label: "Settings", icon: Settings, shortcut: "," },
+    ],
   },
 ];
 
