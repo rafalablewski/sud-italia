@@ -402,46 +402,46 @@ The following 72 features are scoped by realistic time horizon (2026 = ship in 1
 
 ### 3.8 Operations Simulation & Digital Twin
 
-| # | Feature | Description | Impact | Difficulty | Strategic | Moat | Horizon |
-|---|---|---|---|---|---|---|---|
-| 50 | **Operational digital twin** | Run a simulation of tomorrow's Saturday given weather × event × staff × menu mix. Surfaces bottlenecks before they hurt. | 5 | 5 | 5 | very high | 2028+ |
-| 51 | **Stress-test mode** | "Simulate 4× lunch volume" → identifies the first 3 stations / SKUs to fail. | 4 | 4 | 4 | high | 2027 |
-| 52 | **Counterfactual analyzer** | "What if Margherita had been priced at 32 PLN last week?" → simulated revenue, units, attach rate. | 4 | 5 | 5 | very high | 2028+ |
-| 53 | **Scenario planner** ("if Wrocław opens in Q4") | Plug in capex / opex / forecast → cash-flow & break-even. | 5 | 3 | 4 | medium | 2026 |
-| 54 | **Menu engineering simulator** | Drop / re-price an item and see modeled cannibalization on the rest of the menu. | 4 | 5 | 4 | high | 2027 |
+| # | Feature | Description | Impact | Difficulty | Strategic | Moat | Horizon | Status |
+|---|---|---|---|---|---|---|---|---|
+| 50 | **Operational digital twin** | Run a simulation of tomorrow's Saturday given weather × event × staff × menu mix. Surfaces bottlenecks before they hurt. | 5 | 5 | 5 | very high | 2028+ | ✗ Future — simulation engine |
+| 51 | **Stress-test mode** | "Simulate 4× lunch volume" → identifies the first 3 stations / SKUs to fail. | 4 | 4 | 4 | high | 2027 | ✗ Future — depends on digital twin |
+| 52 | **Counterfactual analyzer** | "What if Margherita had been priced at 32 PLN last week?" → simulated revenue, units, attach rate. | 4 | 5 | 5 | very high | 2028+ | ✗ Future — causal model |
+| 53 | **Scenario planner** ("if Wrocław opens in Q4") | Plug in capex / opex / forecast → cash-flow & break-even. | 5 | 3 | 4 | medium | 2026 | ✗ Future — scenario model |
+| 54 | **Menu engineering simulator** | Drop / re-price an item and see modeled cannibalization on the rest of the menu. | 4 | 5 | 4 | high | 2027 | ✗ Future — cross-elasticity model |
 
 ### 3.9 Wearables & Floor Tech
 
-| # | Feature | Description | Impact | Difficulty | Strategic | Moat | Horizon |
-|---|---|---|---|---|---|---|---|
-| 55 | **Smartwatch KDS** | Cook wears watch; vibrates on new ticket; tap to bump. | 4 | 3 | 3 | medium | 2027 |
-| 56 | **Manager smartwatch alerts** | Critical alerts (low stock, kitchen SLA breach, payment failure) push to Apple Watch / Wear OS. | 4 | 2 | 3 | low | 2026 |
-| 57 | **AR glasses for new-hire training** | XReal/Meta glasses guide a new cook through dough stretch and topping placement. | 3 | 5 | 4 | high | 2028+ |
-| 58 | **Headset comms (cook ↔ window)** | Voice channel between station & order window, with auto-transcription into the order record. | 3 | 3 | 3 | medium | 2027 |
+| # | Feature | Description | Impact | Difficulty | Strategic | Moat | Horizon | Status |
+|---|---|---|---|---|---|---|---|---|
+| 55 | **Smartwatch KDS** | Cook wears watch; vibrates on new ticket; tap to bump. | 4 | 3 | 3 | medium | 2027 | ✗ Future — watch app + KDS push |
+| 56 | **Manager smartwatch alerts** | Critical alerts (low stock, kitchen SLA breach, payment failure) push to Apple Watch / Wear OS. | 4 | 2 | 3 | low | 2026 | ✗ Future — needs alert engine first |
+| 57 | **AR glasses for new-hire training** | XReal/Meta glasses guide a new cook through dough stretch and topping placement. | 3 | 5 | 4 | high | 2028+ | ✗ Future — AR hardware + content |
+| 58 | **Headset comms (cook ↔ window)** | Voice channel between station & order window, with auto-transcription into the order record. | 3 | 3 | 3 | medium | 2027 | ✗ Future — comms + STT |
 
 ### 3.10 Financial Intelligence 2027+
 
-| # | Feature | Description | Impact | Difficulty | Strategic | Moat | Horizon |
-|---|---|---|---|---|---|---|---|
-| 59 | **Real-time contribution margin per order** | Visible at order completion. | 5 | 3 | 5 | high | 2026 |
-| 60 | **Channel-mix optimizer** | "Glovo is loss-leading at >35% commission; suggest lifting Glovo prices by 8% or pausing during peak own-channel hours." | 5 | 4 | 5 | very high | 2027 |
-| 61 | **Dynamic delivery fee** | Surge during high-demand windows; subsidy during low-demand. | 4 | 3 | 4 | medium | 2026 |
-| 62 | **Automated VAT / JPK_V7 generation** | Polish tax-office-ready monthly export. | 5 | 3 | 3 | medium | 2026 |
-| 63 | **Cash-handling AI** | Detects suspicious patterns in cash float reconciliations. | 4 | 4 | 4 | high | 2027 |
-| 64 | **Vendor invoice negotiator** | LLM that drafts vendor-rebate emails given purchase volume; humans approve. | 4 | 3 | 4 | high | 2027 |
-| 65 | **Investor dashboard** | Public read-only link with TTM, cohorts, contribution margin, cash runway. | 3 | 2 | 3 | low | 2026 |
+| # | Feature | Description | Impact | Difficulty | Strategic | Moat | Horizon | Status |
+|---|---|---|---|---|---|---|---|---|
+| 59 | **Real-time contribution margin per order** | Visible at order completion. | 5 | 3 | 5 | high | 2026 | ✗ Future — needs per-order COGS calc |
+| 60 | **Channel-mix optimizer** | "Glovo is loss-leading at >35% commission; suggest lifting Glovo prices by 8% or pausing during peak own-channel hours." | 5 | 4 | 5 | very high | 2027 | ✗ Future — depends on channel integration (§1.7) |
+| 61 | **Dynamic delivery fee** | Surge during high-demand windows; subsidy during low-demand. | 4 | 3 | 4 | medium | 2026 | ✗ Future — surge-pricing engine |
+| 62 | **Automated VAT / JPK_V7 generation** | Polish tax-office-ready monthly export. | 5 | 3 | 3 | medium | 2026 | ✗ Future — JPK_V7 schema mapping |
+| 63 | **Cash-handling AI** | Detects suspicious patterns in cash float reconciliations. | 4 | 4 | 4 | high | 2027 | ✗ Future — depends on cash-mgmt module (§1.9) |
+| 64 | **Vendor invoice negotiator** | LLM that drafts vendor-rebate emails given purchase volume; humans approve. | 4 | 3 | 4 | high | 2027 | ✗ Future — LLM + email-send pipeline |
+| 65 | **Investor dashboard** | Public read-only link with TTM, cohorts, contribution margin, cash runway. | 3 | 2 | 3 | low | 2026 | ✗ Future — public read-only surface |
 
 ### 3.11 Platform & Marketplace 2028+
 
-| # | Feature | Description | Impact | Difficulty | Strategic | Moat | Horizon |
-|---|---|---|---|---|---|---|---|
-| 66 | **Franchise marketplace** | Approved franchisees buy a SUD truck-in-a-box: hardware, software, training, supply contracts. | 5 | 5 | 5 | very high | 2028+ |
-| 67 | **Multi-tenant white-label** | The same platform sells to other Polish multi-unit operators. | 5 | 5 | 5 | very high | 2028+ |
-| 68 | **App marketplace** | Third-party developers extend (e.g., a Pyszne plug-in, a HACCP plug-in). | 4 | 5 | 5 | very high | 2028+ |
-| 69 | **Open API + webhook platform** | Public-facing API for partners; SUD becomes infrastructure, not an app. | 4 | 4 | 5 | very high | 2027 |
-| 70 | **Embedded payments** | Earn interchange on transactions across the whole platform (Stripe-Connect-style). | 5 | 4 | 5 | very high | 2027 |
-| 71 | **Embedded finance** | Working-capital advances for franchisees against future revenue (Toast Capital model). | 5 | 5 | 5 | very high | 2028+ |
-| 72 | **Procurement co-op** | Aggregate flour/mozzarella demand across all platform tenants → block-buy rebates. | 5 | 4 | 5 | very high | 2028+ |
+| # | Feature | Description | Impact | Difficulty | Strategic | Moat | Horizon | Status |
+|---|---|---|---|---|---|---|---|---|
+| 66 | **Franchise marketplace** | Approved franchisees buy a SUD truck-in-a-box: hardware, software, training, supply contracts. | 5 | 5 | 5 | very high | 2028+ | ✗ Future — depends on multi-tenant + franchise org |
+| 67 | **Multi-tenant white-label** | The same platform sells to other Polish multi-unit operators. | 5 | 5 | 5 | very high | 2028+ | ✗ Future — fundamental arch shift |
+| 68 | **App marketplace** | Third-party developers extend (e.g., a Pyszne plug-in, a HACCP plug-in). | 4 | 5 | 5 | very high | 2028+ | ✗ Future — SDK + portal |
+| 69 | **Open API + webhook platform** | Public-facing API for partners; SUD becomes infrastructure, not an app. | 4 | 4 | 5 | very high | 2027 | ✗ Future — API gateway + docs |
+| 70 | **Embedded payments** | Earn interchange on transactions across the whole platform (Stripe-Connect-style). | 5 | 4 | 5 | very high | 2027 | ✗ Future — Stripe Connect onboarding |
+| 71 | **Embedded finance** | Working-capital advances for franchisees against future revenue (Toast Capital model). | 5 | 5 | 5 | very high | 2028+ | ✗ Future — capital partner + regulation |
+| 72 | **Procurement co-op** | Aggregate flour/mozzarella demand across all platform tenants → block-buy rebates. | 5 | 4 | 5 | very high | 2028+ | ✗ Future — depends on multi-tenant + supplier contracts |
 
 ---
 
