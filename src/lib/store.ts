@@ -1,7 +1,7 @@
 import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement } from "@/data/types";
+import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus } from "@/data/types";
 import { getActiveLocations, locations as allLocations } from "@/data/locations";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -2064,4 +2064,142 @@ export async function createStockMovement(input: Omit<StockMovement, "id" | "occ
   });
 
   return movement;
+}
+
+// --- Suppliers ---
+
+export async function getSuppliers(): Promise<Supplier[]> {
+  return readJSON<Supplier[]>("suppliers.json", []);
+}
+
+export async function getSupplier(id: string): Promise<Supplier | null> {
+  const list = await readJSON<Supplier[]>("suppliers.json", []);
+  return list.find((s) => s.id === id) ?? null;
+}
+
+export async function saveSupplier(input: Omit<Supplier, "id" | "createdAt"> & { id?: string; createdAt?: string }): Promise<Supplier> {
+  return withLock("suppliers.json", async () => {
+    const list = await readJSON<Supplier[]>("suppliers.json", []);
+    const supplier: Supplier = {
+      id: input.id || `sup-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      name: input.name,
+      contactName: input.contactName,
+      email: input.email,
+      phone: input.phone,
+      leadTimeDays: input.leadTimeDays,
+      notes: input.notes,
+      createdAt: input.createdAt ?? new Date().toISOString(),
+    };
+    const i = list.findIndex((s) => s.id === supplier.id);
+    if (i >= 0) list[i] = supplier;
+    else list.push(supplier);
+    await writeJSON("suppliers.json", list);
+    return supplier;
+  });
+}
+
+export async function deleteSupplier(id: string): Promise<boolean> {
+  return withLock("suppliers.json", async () => {
+    const list = await readJSON<Supplier[]>("suppliers.json", []);
+    const filtered = list.filter((s) => s.id !== id);
+    if (filtered.length === list.length) return false;
+    await writeJSON("suppliers.json", filtered);
+    return true;
+  });
+}
+
+// --- Purchase Orders ---
+
+export async function getPurchaseOrders(filters?: {
+  locationSlug?: string;
+  status?: PurchaseOrderStatus;
+  supplierId?: string;
+}): Promise<PurchaseOrder[]> {
+  const all = await readJSON<PurchaseOrder[]>("purchase-orders.json", []);
+  let list = all;
+  if (filters?.locationSlug) list = list.filter((p) => p.locationSlug === filters.locationSlug);
+  if (filters?.status) list = list.filter((p) => p.status === filters.status);
+  if (filters?.supplierId) list = list.filter((p) => p.supplierId === filters.supplierId);
+  return list.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export async function getPurchaseOrder(id: string): Promise<PurchaseOrder | null> {
+  const list = await readJSON<PurchaseOrder[]>("purchase-orders.json", []);
+  return list.find((p) => p.id === id) ?? null;
+}
+
+export async function savePurchaseOrder(
+  input: Omit<PurchaseOrder, "id" | "createdAt" | "totalCents"> & { id?: string; createdAt?: string },
+): Promise<PurchaseOrder> {
+  return withLock("purchase-orders.json", async () => {
+    const list = await readJSON<PurchaseOrder[]>("purchase-orders.json", []);
+    const totalCents = input.lines.reduce(
+      (acc, l) => acc + Math.round(l.quantity * l.unitCost),
+      0,
+    );
+    const po: PurchaseOrder = {
+      id: input.id || `po-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      supplierId: input.supplierId,
+      locationSlug: input.locationSlug,
+      status: input.status,
+      lines: input.lines,
+      totalCents,
+      expectedAt: input.expectedAt,
+      receivedAt: input.receivedAt,
+      notes: input.notes,
+      createdAt: input.createdAt ?? new Date().toISOString(),
+      createdBy: input.createdBy,
+    };
+    const i = list.findIndex((p) => p.id === po.id);
+    if (i >= 0) list[i] = po;
+    else list.push(po);
+    await writeJSON("purchase-orders.json", list);
+    return po;
+  });
+}
+
+/**
+ * Mark a PO as received and atomically post receive movements to the stock
+ * log for every line. Idempotent: if the PO is already "received" no new
+ * movements are written.
+ */
+export async function receivePurchaseOrder(id: string, byUser?: string): Promise<PurchaseOrder | null> {
+  const po = await getPurchaseOrder(id);
+  if (!po) return null;
+  if (po.status === "received") return po;
+
+  for (const line of po.lines) {
+    await createStockMovement({
+      ingredientId: line.ingredientId,
+      locationSlug: po.locationSlug,
+      type: "receive",
+      quantity: line.quantity,
+      costImpact: Math.round(line.quantity * line.unitCost),
+      reason: `PO ${po.id}`,
+      byUser,
+    });
+  }
+
+  return savePurchaseOrder({
+    ...po,
+    status: "received",
+    receivedAt: new Date().toISOString(),
+  });
+}
+
+export async function updatePurchaseOrderStatus(id: string, status: PurchaseOrderStatus): Promise<PurchaseOrder | null> {
+  const po = await getPurchaseOrder(id);
+  if (!po) return null;
+  if (status === "received") return receivePurchaseOrder(id);
+  return savePurchaseOrder({ ...po, status });
+}
+
+export async function deletePurchaseOrder(id: string): Promise<boolean> {
+  return withLock("purchase-orders.json", async () => {
+    const list = await readJSON<PurchaseOrder[]>("purchase-orders.json", []);
+    const filtered = list.filter((p) => p.id !== id);
+    if (filtered.length === list.length) return false;
+    await writeJSON("purchase-orders.json", filtered);
+    return true;
+  });
 }

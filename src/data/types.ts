@@ -258,3 +258,40 @@ export interface StockMovement {
   occurredAt: string;
   byUser?: string;
 }
+
+// --- Suppliers + Purchase Orders ---
+
+export interface Supplier {
+  id: string;
+  name: string;
+  contactName?: string;
+  email?: string;
+  phone?: string;
+  /** Typical days between PO send and delivery. */
+  leadTimeDays?: number;
+  notes?: string;
+  createdAt: string;
+}
+
+export type PurchaseOrderStatus = "draft" | "sent" | "received" | "cancelled";
+
+export interface PurchaseOrderLine {
+  ingredientId: string;
+  quantity: number;
+  /** Per-unit cost in grosze (snapshot at PO time). */
+  unitCost: number;
+}
+
+export interface PurchaseOrder {
+  id: string;
+  supplierId: string;
+  locationSlug: string;
+  status: PurchaseOrderStatus;
+  lines: PurchaseOrderLine[];
+  totalCents: number;
+  expectedAt?: string;
+  receivedAt?: string;
+  notes?: string;
+  createdAt: string;
+  createdBy?: string;
+}

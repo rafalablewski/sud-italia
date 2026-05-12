@@ -7,7 +7,9 @@ import {
   CalendarDays,
   BarChart3,
   Boxes,
+  Building2,
   Heart,
+  PackageSearch,
   Rocket,
   MessageSquare,
   TrendingUp,
@@ -60,6 +62,8 @@ export const NAV_SECTIONS: NavSection[] = [
     label: "Inventory",
     items: [
       { href: "/admin/inventory", label: "Stock", icon: Boxes, shortcut: "i" },
+      { href: "/admin/suppliers", label: "Suppliers", icon: Building2 },
+      { href: "/admin/purchase-orders", label: "Purchase orders", icon: PackageSearch, shortcut: "p" },
     ],
   },
   {
