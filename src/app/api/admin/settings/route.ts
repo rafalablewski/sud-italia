@@ -1,38 +1,31 @@
-import { NextRequest, NextResponse } from "next/server";
-import { isAuthenticated } from "@/lib/admin-auth";
+import { NextResponse } from "next/server";
+import { withAdmin } from "@/lib/api-middleware";
 import { appendAuditLog, getSettings, updateSettings } from "@/lib/store";
 
-async function requireAuth() {
-  if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  return null;
-}
+// Brand-level settings touch the public landing page + analytics scope.
+// Reads open to any-auth; writes are owner-only.
 
-export async function GET() {
-  const authError = await requireAuth();
-  if (authError) return authError;
-
+export const GET = withAdmin({}, async () => {
   return NextResponse.json(await getSettings());
-}
+});
 
-export async function PUT(req: NextRequest) {
-  const authError = await requireAuth();
-  if (authError) return authError;
-
-  try {
-    const before = await getSettings();
-    const updates = await req.json();
-    const settings = await updateSettings(updates);
-    await appendAuditLog({
-      actor: "admin",
-      action: "settings.update",
-      entityType: "settings",
-      before,
-      after: settings,
-    });
-    return NextResponse.json(settings);
-  } catch {
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
-}
+export const PUT = withAdmin(
+  { roles: ["owner"] },
+  async (req, _ctx, { user }) => {
+    try {
+      const before = await getSettings();
+      const updates = await req.json();
+      const settings = await updateSettings(updates);
+      await appendAuditLog({
+        actor: user.email || user.id,
+        action: "settings.update",
+        entityType: "settings",
+        before,
+        after: settings,
+      });
+      return NextResponse.json(settings);
+    } catch {
+      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    }
+  },
+);
