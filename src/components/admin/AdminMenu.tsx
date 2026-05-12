@@ -4,11 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Eye,
   EyeOff,
-  Filter,
   MapPin,
   Pencil,
   Search,
-  Tag,
   UtensilsCrossed,
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
@@ -17,7 +15,6 @@ import { getActiveLocations } from "@/data/locations";
 import { useAdminLocation } from "./v2/LocationContext";
 import { useToast } from "./v2/ui/Toast";
 import {
-  Badge,
   Button,
   Card,
   CardBody,
@@ -245,7 +242,6 @@ export function AdminMenu() {
               <CardHeader
                 title={MENU_CATEGORY_LABELS[cat]}
                 description={`${list.length} item${list.length === 1 ? "" : "s"}`}
-                actions={<Filter className="h-4 w-4 v2-muted" aria-hidden />}
               />
               <CardBody>
                 <ul className="v2-menu-list">
@@ -263,51 +259,41 @@ export function AdminMenu() {
                           aria-label={item.available ? "Mark sold out" : "Mark available"}
                           title={item.available ? "Mark sold out" : "Mark available"}
                         >
-                          {item.available ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                          {item.available ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                         </button>
 
                         <div className="v2-menu-row-main">
                           <div className="v2-menu-row-headline">
                             <span className="v2-menu-row-name">{item.name}</span>
                             {item._hasOverride && (
-                              <Badge tone="info" variant="soft">
-                                Overridden
-                              </Badge>
+                              <span className="v2-menu-tag v2-menu-tag-override">Overridden</span>
                             )}
                             {item.tags.map((t) => (
-                              <Badge key={t} tone="neutral" variant="soft" icon={<Tag className="h-3 w-3" />}>
-                                {t}
-                              </Badge>
+                              <span key={t} className="v2-menu-tag">{t}</span>
                             ))}
                           </div>
                           <p className="v2-menu-row-desc">{item.description}</p>
                         </div>
 
                         <div className="v2-menu-row-numbers">
-                          <div className="v2-menu-num">
-                            <div className="v2-menu-num-label">Price</div>
-                            <div className="v2-menu-num-value tabular">{formatPrice(item.price)}</div>
-                          </div>
-                          <div className="v2-menu-num">
-                            <div className="v2-menu-num-label">Cost</div>
-                            <div className="v2-menu-num-value tabular">{formatPrice(item.cost)}</div>
-                          </div>
-                          <div className="v2-menu-num">
-                            <div className="v2-menu-num-label">Margin</div>
-                            <Badge tone={marginTone(margin)} variant="soft">
-                              {margin}%
-                            </Badge>
-                          </div>
+                          <span className="v2-menu-price tabular">{formatPrice(item.price)}</span>
+                          <span
+                            className={`v2-menu-margin v2-menu-margin-${marginTone(margin)} tabular`}
+                            title={`Cost ${formatPrice(item.cost)} · margin ${margin}%`}
+                          >
+                            {margin}%
+                          </span>
                         </div>
 
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          leadingIcon={<Pencil className="h-3.5 w-3.5" />}
+                        <button
+                          type="button"
+                          className="v2-menu-edit"
                           onClick={() => setEditing(item)}
+                          aria-label={`Edit ${item.name}`}
+                          title="Edit"
                         >
-                          Edit
-                        </Button>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
                       </li>
                     );
                   })}
