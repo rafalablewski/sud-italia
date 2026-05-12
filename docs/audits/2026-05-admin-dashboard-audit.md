@@ -214,35 +214,35 @@ The most important admission this audit can offer: **stop calling the current `/
 
 ### 2.1 Honest UX Benchmark vs Best-in-Class
 
-| Dimension | Linear | Stripe | Notion | Toast | **Sud Italia today** |
-|---|---|---|---|---|---|
-| **Navigation speed** (keystroke to any object) | 1 (Cmd+K) | 1 | 1 | 2 (touch) | 2 (palette switches pages only, not objects) |
-| **Information density** (signal/cm²) | high | very high | medium | very high | **medium-low** (lots of glass card padding, oversize headings) |
-| **Mobile workflow** | first-class | first-class | first-class | first-class (KDS-on-tablet) | **responsive ≠ designed-for-mobile**; no mobile-shift dashboard |
-| **Keyboard-driven** | total | strong | strong | n/a | partial (only page navigation) |
-| **Cognitive load on first open** | low | low | low | medium | **medium-high** (25 sidebar items, no role-based collapse) |
-| **Time to one critical action** (e.g. "find this customer's last order") | ~3 s | ~5 s | ~6 s | ~5 s | **~12–18 s** (navigate → customers → search → click → orders tab) |
-| **Real-time feedback** | live | live | live | live (sub-200 ms) | **2–3 s polling** |
-| **Empty states / first-run** | excellent | excellent | excellent | excellent | **untested; many pages render with no data and feel broken** |
-| **Error states** | recoverable, helpful | recoverable, helpful | recoverable | recoverable | **toast-only; no in-context recovery** |
+| Dimension | Linear | Stripe | Notion | Toast | **Sud Italia today** | Status (May 2026) |
+|---|---|---|---|---|---|---|
+| **Navigation speed** (keystroke to any object) | 1 (Cmd+K) | 1 | 1 | 2 (touch) | 2 (palette switches pages only, not objects) | ✓ Audit row out of date — `CommandPalette.tsx` + `/api/admin/search` already return orders, customers, menu items and ingredients, not just pages |
+| **Information density** (signal/cm²) | high | very high | medium | very high | **medium-low** (lots of glass card padding, oversize headings) | ✗ Not fixed — design-system pass (typography scale + card padding) deferred |
+| **Mobile workflow** | first-class | first-class | first-class | first-class (KDS-on-tablet) | **responsive ≠ designed-for-mobile**; no mobile-shift dashboard | ✗ Not fixed — needs dedicated mobile shell |
+| **Keyboard-driven** | total | strong | strong | n/a | partial (only page navigation) | ✗ Not fixed — global `J/K/E/U` model not yet wired |
+| **Cognitive load on first open** | low | low | low | medium | **medium-high** (25 sidebar items, no role-based collapse) | ✗ Partially out of date — sidebar is already grouped into ~9 sections (`nav.config.ts`) but role-based collapsing not done |
+| **Time to one critical action** (e.g. "find this customer's last order") | ~3 s | ~5 s | ~6 s | ~5 s | **~12–18 s** (navigate → customers → search → click → orders tab) | ✓ Partly fixed by command palette (jump directly to a customer in ~3 s); deep "last order" link still missing |
+| **Real-time feedback** | live | live | live | live (sub-200 ms) | **2–3 s polling** | ✗ Not fixed — no WebSocket/SSE introduced this session |
+| **Empty states / first-run** | excellent | excellent | excellent | excellent | **untested; many pages render with no data and feel broken** | ✗ Not fixed — system-wide pass deferred |
+| **Error states** | recoverable, helpful | recoverable, helpful | recoverable | recoverable | **toast-only; no in-context recovery** | ✗ Not fixed — error-boundary + inline recovery deferred |
 
 ### 2.2 Specific UX Defects Found
 
-1. **The sidebar is a flat list of 25 items** masquerading as 12 sections. A line cook will never use `/admin/expansion` or `/admin/ai`; an owner rarely uses `/admin/kds`. There is no role-based collapsing.
-2. **Every page reloads on location switch** instead of refetching in place. Context is lost on every location change.
-3. **No global "current state of the business" widget.** Every page shows its own scope; nothing summarizes "are we okay right now". Toast's home screen is *"orders open: 12, kitchen avg: 14 m, low-stock: 3, staff clocked-in: 6"*. SUD's dashboard shows *historical* metrics.
-4. **No "next 60 minutes" view.** The single most valuable view in any restaurant is the next hour. Slots, orders coming due, staff scheduled, items at risk of 86 — nowhere in the product.
-5. **No bulk actions anywhere.** Cancel 4 orders? 4 clicks per order. Re-price 12 menu items? 12 modals.
-6. **Modals everywhere; sheets nowhere.** Every edit is a centered modal that hides context. Linear and Stripe moved to side-sheets and inline editing in 2022.
-7. **Forms validate on submit.** Stripe-grade forms validate on blur with inline guidance and disabled submit states.
-8. **No undo.** Every destructive action is permanent. `Cmd+Z` toast undo is a 2014 idea (Gmail) and still missing.
-9. **No saved views / saved filters.** Every analyst rebuilds the same date range every morning.
-10. **Charts are decorative.** None of the dashboard charts are drill-downable; clicking does nothing.
-11. **Cards over tables.** A glassmorphism card is beautiful for 6 items, hostile for 600. The customers page will collapse at 5,000 rows because there is no virtualization.
-12. **Heavy color, low contrast in some surfaces.** Italian red on glass-blur passes WCAG AA only marginally. AAA fails on small text.
-13. **No skeleton states.** Fetches show spinners; perceived performance suffers.
-14. **No offline indicator.** A truck with bad LTE has no idea its writes aren't landing.
-15. **No "what changed" diff** on records. Audit log shows actions but not field-level diffs in the UI.
+1. **The sidebar is a flat list of 25 items** masquerading as 12 sections. A line cook will never use `/admin/expansion` or `/admin/ai`; an owner rarely uses `/admin/kds`. There is no role-based collapsing. — ✗ Partially out of date: `src/components/admin/v2/nav.config.ts` already declares 9 named sections (Overview / Operations / Inventory / People / Customers / Finance / Marketing / Intelligence / System); role-based collapsing still ✗ Not fixed.
+2. **Every page reloads on location switch** instead of refetching in place. Context is lost on every location change. — ✗ Not fixed — full client-side refetch on `locationSlug` change not yet wired into shared layout.
+3. **No global "current state of the business" widget.** Every page shows its own scope; nothing summarizes "are we okay right now". Toast's home screen is *"orders open: 12, kitchen avg: 14 m, low-stock: 3, staff clocked-in: 6"*. SUD's dashboard shows *historical* metrics. — ✗ Not fixed — new live tile required.
+4. **No "next 60 minutes" view.** The single most valuable view in any restaurant is the next hour. Slots, orders coming due, staff scheduled, items at risk of 86 — nowhere in the product. — ✗ Not fixed — composite widget pulling from slots/orders/staff/stock deferred.
+5. **No bulk actions anywhere.** Cancel 4 orders? 4 clicks per order. Re-price 12 menu items? 12 modals. — ✗ Not fixed — multi-select + bulk-action toolbar deferred.
+6. **Modals everywhere; sheets nowhere.** Every edit is a centered modal that hides context. Linear and Stripe moved to side-sheets and inline editing in 2022. — ✗ Not fixed — `Sheet` primitive not introduced this session.
+7. **Forms validate on submit.** Stripe-grade forms validate on blur with inline guidance and disabled submit states. — ✗ Not fixed — needs validation library + per-page wiring.
+8. **No undo.** Every destructive action is permanent. `Cmd+Z` toast undo is a 2014 idea (Gmail) and still missing. — ✗ Not fixed — undo controller + per-action inverse-ops deferred.
+9. **No saved views / saved filters.** Every analyst rebuilds the same date range every morning. — ✗ Not fixed — needs per-user `savedView` entity.
+10. **Charts are decorative.** None of the dashboard charts are drill-downable; clicking does nothing. — ✗ Not fixed — click-through handlers + filter routing deferred.
+11. **Cards over tables.** A glassmorphism card is beautiful for 6 items, hostile for 600. The customers page will collapse at 5,000 rows because there is no virtualization. — ✗ Not fixed — virtualized table (react-virtual / TanStack Virtual) not introduced.
+12. **Heavy color, low contrast in some surfaces.** Italian red on glass-blur passes WCAG AA only marginally. AAA fails on small text. — ✗ Not fixed — contrast pass deferred.
+13. **No skeleton states.** Fetches show spinners; perceived performance suffers. — ✗ Not fixed — `Skeleton` primitive + per-page wiring deferred.
+14. **No offline indicator.** A truck with bad LTE has no idea its writes aren't landing. — ✗ Not fixed — needs online/offline listener + status pill.
+15. **No "what changed" diff** on records. Audit log shows actions but not field-level diffs in the UI. — ✗ Not fixed — needs before/after capture in audit-log writes + diff renderer.
 
 ### 2.3 Redesign Proposals
 
@@ -298,6 +298,17 @@ Each zone is one keystroke (`Cmd+1..5`). Sidebar collapses by role.
 - Answer (`"what's our coffee attach rate yesterday by truck?"`).
 - Act (`"86 fior di latte at Kraków for the rest of the day"` → with explicit confirm).
 - Recommend (`"slots 14:00–15:00 are filling fast and Saturday is forecast warm; raise capacity?"`).
+
+#### 2.3 Status of redesign proposals
+
+| Proposal | Status |
+|---|---|
+| 5-zone IA (`NOW / PEOPLE / KITCHEN / TEAM / BUSINESS`) | ✗ Not fixed — current nav uses a similar but different 9-section grouping (`nav.config.ts`); zone collapse + `Cmd+1..5` not wired |
+| Live command-center dashboard (next-60-min + alerts + copilot) | ✗ Not fixed — composite live tile deferred |
+| Widget hierarchy (Tier 1/2/3) | ✗ Not fixed — depends on command-center build |
+| Keyboard model `O / C / S / G / ? / J / K / E / Backspace / U` | ✗ Not fixed — global hotkey controller not introduced |
+| Mobile-first manager-on-truck shell | ✗ Not fixed — dedicated mobile shell deferred |
+| AI-native page-level copilot input | ✗ Not fixed — depends on real model + tool-calling layer |
 
 ---
 
