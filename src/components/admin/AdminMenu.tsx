@@ -1,16 +1,35 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { AdminNav } from "./AdminNav";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  MapPin, Eye, EyeOff, Save, Search, Pencil, X, Check,
+  Eye,
+  EyeOff,
+  Filter,
+  MapPin,
+  Pencil,
+  Search,
+  Tag,
+  UtensilsCrossed,
 } from "lucide-react";
-import { locations } from "@/data/locations";
-import { LocationTabs } from "./LocationTabs";
 import { formatPrice } from "@/lib/utils";
 import { MENU_CATEGORY_LABELS, type MenuCategory } from "@/data/types";
+import { getActiveLocations } from "@/data/locations";
+import { useAdminLocation } from "./v2/LocationContext";
+import { useToast } from "./v2/ui/Toast";
+import {
+  Badge,
+  Button,
+  Card,
+  CardBody,
+  CardHeader,
+  Dialog,
+  EmptyState,
+  Input,
+  Select,
+  Tabs,
+  Textarea,
+} from "./v2/ui";
 
-const activeLocations = locations.filter((l) => l.isActive);
 const CATEGORY_ORDER: MenuCategory[] = ["pizza", "pasta", "antipasti", "panini", "drinks", "desserts"];
 
 interface MenuItemData {
@@ -25,267 +44,362 @@ interface MenuItemData {
   _hasOverride: boolean;
 }
 
-interface PendingChange {
-  price?: number;
-  available?: boolean;
-  description?: string;
+const activeLocations = getActiveLocations();
+const FALLBACK_LOC = activeLocations[0]?.slug ?? "krakow";
+
+function marginPct(price: number, cost: number): number {
+  if (price <= 0) return 0;
+  return Math.round(((price - cost) / price) * 100);
+}
+
+function marginTone(margin: number): "danger" | "warning" | "success" {
+  if (margin < 50) return "danger";
+  if (margin < 65) return "warning";
+  return "success";
 }
 
 export function AdminMenu() {
-  const [selectedLocation, setSelectedLocation] = useState(activeLocations[0]?.slug || "");
+  const { location: globalLoc } = useAdminLocation();
+  const toast = useToast();
+
+  // Menu is always for a single location — fall back to first active loc when
+  // "All locations" is selected in the sidebar (the menu endpoint requires a
+  // specific location).
+  const [pageLoc, setPageLoc] = useState<string>(globalLoc || FALLBACK_LOC);
+  useEffect(() => {
+    if (globalLoc) setPageLoc(globalLoc);
+  }, [globalLoc]);
+
   const [items, setItems] = useState<MenuItemData[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [filterCategory, setFilterCategory] = useState("");
-  const [changes, setChanges] = useState<Record<string, PendingChange>>({});
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [editingDesc, setEditingDesc] = useState<string | null>(null);
-  const [editingPrice, setEditingPrice] = useState<string | null>(null);
+  const [category, setCategory] = useState<MenuCategory | "all">("all");
+  const [editing, setEditing] = useState<MenuItemData | null>(null);
 
   const fetchMenu = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/menu?location=${selectedLocation}`);
-      if (res.ok) setItems(await res.json());
-    } catch (err) {
-      console.error("Failed to fetch menu:", err);
+      const res = await fetch(`/api/admin/menu?location=${pageLoc}`);
+      if (res.ok) {
+        const data: MenuItemData[] = await res.json();
+        setItems(data);
+      }
     } finally {
       setLoading(false);
     }
-  }, [selectedLocation]);
+  }, [pageLoc]);
 
   useEffect(() => {
     fetchMenu();
-    setChanges({});
-    setSaved(false);
-    setEditingDesc(null);
-    setEditingPrice(null);
-  }, [selectedLocation, fetchMenu]);
+  }, [fetchMenu]);
 
-  const hasChanges = Object.keys(changes).length > 0;
-
-  const setChange = (id: string, field: keyof PendingChange, value: number | boolean | string) => {
-    setChanges((prev) => {
-      const current = prev[id] || {};
-      const updated = { ...current, [field]: value };
-      return { ...prev, [id]: updated };
-    });
-    setSaved(false);
-  };
-
-  const toggleAvailability = (id: string) => {
-    const item = items.find((i) => i.id === id);
-    if (!item) return;
-    const pending = changes[id];
-    const currentValue = pending?.available ?? item.available;
-    setChange(id, "available", !currentValue);
-  };
-
-  const handleSave = async () => {
-    if (!hasChanges) return;
-    setSaving(true);
-    try {
-      await fetch("/api/admin/menu", {
+  const persistChange = useCallback(
+    async (id: string, change: { price?: number; available?: boolean; description?: string }) => {
+      const res = await fetch("/api/admin/menu", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: changes }),
+        body: JSON.stringify({ items: { [id]: change } }),
       });
-      setSaved(true);
-      setChanges({});
-      setEditingDesc(null);
-      setEditingPrice(null);
-      fetchMenu();
-    } finally {
-      setSaving(false);
+      return res.ok;
+    },
+    [],
+  );
+
+  const toggleAvailability = async (item: MenuItemData) => {
+    const next = !item.available;
+    // Optimistic
+    setItems((arr) => arr.map((i) => (i.id === item.id ? { ...i, available: next, _hasOverride: true } : i)));
+    const ok = await persistChange(item.id, { available: next });
+    if (!ok) {
+      toast.error("Could not save", "Reverting availability.");
+      setItems((arr) => arr.map((i) => (i.id === item.id ? { ...i, available: !next } : i)));
+    } else {
+      toast.success(next ? "Item available" : "Item hidden", item.name);
     }
   };
 
-  // Filter & group
-  const filteredItems = items.filter((item) => {
-    if (filterCategory && item.category !== filterCategory) return false;
-    if (search) {
-      const q = search.toLowerCase();
-      return item.name.toLowerCase().includes(q) || item.description.toLowerCase().includes(q);
+  const saveEdit = async (id: string, change: { price?: number; description?: string }) => {
+    const ok = await persistChange(id, change);
+    if (ok) {
+      setItems((arr) =>
+        arr.map((i) =>
+          i.id === id
+            ? {
+                ...i,
+                ...(change.price !== undefined ? { price: change.price } : {}),
+                ...(change.description !== undefined ? { description: change.description } : {}),
+                _hasOverride: true,
+              }
+            : i,
+        ),
+      );
+      toast.success("Menu item updated");
+      setEditing(null);
+    } else {
+      toast.error("Save failed", "Try again.");
     }
-    return true;
-  });
+  };
 
-  const categories = CATEGORY_ORDER.filter((cat) => items.some((i) => i.category === cat));
-  const groupedItems = categories
-    .map((cat) => ({
-      category: cat,
-      label: MENU_CATEGORY_LABELS[cat],
-      items: filteredItems.filter((i) => i.category === cat),
-    }))
-    .filter((g) => g.items.length > 0);
+  // --- Derived ---
+  const categories = useMemo(
+    () => CATEGORY_ORDER.filter((c) => items.some((i) => i.category === c)),
+    [items],
+  );
 
-  const unavailableCount = items.filter((i) => (changes[i.id]?.available ?? i.available) === false).length;
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return items.filter((i) => {
+      if (category !== "all" && i.category !== category) return false;
+      if (!q) return true;
+      return (
+        i.name.toLowerCase().includes(q) ||
+        i.description.toLowerCase().includes(q) ||
+        i.tags.some((t) => t.toLowerCase().includes(q))
+      );
+    });
+  }, [items, search, category]);
+
+  const grouped = useMemo(() => {
+    const m = new Map<MenuCategory, MenuItemData[]>();
+    for (const i of filtered) {
+      const arr = m.get(i.category) || [];
+      arr.push(i);
+      m.set(i.category, arr);
+    }
+    return Array.from(m.entries());
+  }, [filtered]);
+
+  const unavailableCount = items.filter((i) => !i.available).length;
+
+  const locOptions = activeLocations.map((l) => ({ value: l.slug, label: l.city }));
 
   return (
-    <>
-      <AdminNav />
-      <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
-        {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-heading font-bold admin-text">Menu</h1>
-            <p className="text-sm admin-text-dim mt-1">
-              {items.length} items{unavailableCount > 0 && ` · ${unavailableCount} hidden from customers`}
-            </p>
-          </div>
-          {hasChanges && (
-            <button onClick={handleSave} disabled={saving} className="glass-btn-green">
-              <Save className="h-4 w-4" />
-              {saving ? "Saving..." : `Save Changes (${Object.keys(changes).length})`}
-            </button>
-          )}
+    <div className="v2-page">
+      <header className="v2-page-header">
+        <div className="v2-page-title-row">
+          <h1 className="v2-page-title">Menu</h1>
+          <p className="v2-page-subtitle">
+            {items.length} items
+            {unavailableCount > 0 && ` · ${unavailableCount} hidden from customers`}
+          </p>
         </div>
-
-        {saved && <div className="alert-success">Menu updated.</div>}
-
-        {/* Filters */}
-        <div className="flex flex-wrap items-center gap-3">
-          <LocationTabs value={selectedLocation} onChange={setSelectedLocation} />
-          <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="glass-input rounded-lg">
-            <option value="">All categories</option>
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>{MENU_CATEGORY_LABELS[cat]}</option>
-            ))}
-          </select>
-          <div className="relative flex-1 min-w-0">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 admin-text-muted" />
-            <input type="text" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-9 pr-3 py-2 glass-input rounded-lg" />
+        <div className="v2-page-actions">
+          <div className="v2-field-inline">
+            <MapPin className="h-3.5 w-3.5 v2-muted" />
+            <Select
+              value={pageLoc}
+              onChange={(e) => setPageLoc(e.target.value)}
+              options={locOptions}
+              aria-label="Editing location"
+            />
           </div>
         </div>
+      </header>
 
-        {/* Items */}
-        {loading ? (
-          <div className="text-center py-12 admin-text-muted">Loading...</div>
-        ) : (
-          <div className="space-y-8">
-            {groupedItems.map((group) => (
-              <div key={group.category}>
-                <h2 className="text-lg font-bold font-heading admin-text mb-3">
-                  {group.label}
-                  <span className="text-xs font-normal admin-text-muted ml-2">({group.items.length})</span>
-                </h2>
-                <div className="space-y-2">
-                  {group.items.map((item) => {
-                    const isAvailable = changes[item.id]?.available ?? item.available;
-                    const currentDesc = changes[item.id]?.description ?? item.description;
-                    const currentPrice = changes[item.id]?.price ?? item.price;
-                    const isEditingDesc = editingDesc === item.id;
-                    const isEditingPrice = editingPrice === item.id;
-                    const hasItemChanges = !!changes[item.id];
+      <div className="v2-filters">
+        <div className="v2-filter-search">
+          <Input
+            placeholder="Search items, descriptions, tags…"
+            leadingAdornment={<Search className="h-3.5 w-3.5" />}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            aria-label="Search menu"
+          />
+        </div>
+        <Tabs
+          value={category}
+          onChange={(v) => setCategory(v as MenuCategory | "all")}
+          tabs={[
+            { value: "all", label: "All", count: items.length },
+            ...categories.map((c) => ({
+              value: c,
+              label: MENU_CATEGORY_LABELS[c],
+              count: items.filter((i) => i.category === c).length,
+            })),
+          ]}
+          variant="pill"
+          ariaLabel="Category filter"
+        />
+      </div>
 
+      {loading ? (
+        <div className="v2-page-loading">Loading menu…</div>
+      ) : filtered.length === 0 ? (
+        <Card>
+          <CardBody>
+            <EmptyState
+              icon={UtensilsCrossed}
+              title={items.length === 0 ? "No menu items" : "No matches"}
+              description={
+                items.length === 0
+                  ? "Menu data lives in src/data/menus/*.ts. Add items there to see them here."
+                  : "Clear the search or pick another category."
+              }
+            />
+          </CardBody>
+        </Card>
+      ) : (
+        <div className="v2-menu-groups">
+          {grouped.map(([cat, list]) => (
+            <Card key={cat} padding="none">
+              <CardHeader
+                title={MENU_CATEGORY_LABELS[cat]}
+                description={`${list.length} item${list.length === 1 ? "" : "s"}`}
+                actions={<Filter className="h-4 w-4 v2-muted" aria-hidden />}
+              />
+              <CardBody>
+                <ul className="v2-menu-list">
+                  {list.map((item) => {
+                    const margin = marginPct(item.price, item.cost);
                     return (
-                      <div
+                      <li
                         key={item.id}
-                        className={`rounded-lg overflow-hidden transition-all ${
-                          !isAvailable
-                            ? "bg-white/4 border border-white/8 opacity-50"
-                            : hasItemChanges
-                              ? "glass-card border-blue-500/30"
-                              : "glass-card"
-                        }`}
+                        className={`v2-menu-row ${item.available ? "" : "is-off"}`}
                       >
-                        <div className="flex items-start gap-3 p-4">
-                          {/* Availability toggle */}
-                          <button
-                            onClick={() => toggleAvailability(item.id)}
-                            className={`p-2 rounded-lg transition-colors flex-shrink-0 mt-0.5 ${
-                              isAvailable ? "bg-emerald-500/15 text-emerald-400" : "bg-white/10 text-slate-500"
-                            }`}
-                            title={isAvailable ? "Mark sold out" : "Mark available"}
-                          >
-                            {isAvailable ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
-                          </button>
+                        <button
+                          type="button"
+                          onClick={() => toggleAvailability(item)}
+                          className={`v2-menu-toggle ${item.available ? "is-on" : "is-off"}`}
+                          aria-label={item.available ? "Mark sold out" : "Mark available"}
+                          title={item.available ? "Mark sold out" : "Mark available"}
+                        >
+                          {item.available ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                        </button>
 
-                          {/* Name + description */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-semibold admin-text">{item.name}</span>
-                              {item.tags.map((tag) => (
-                                <span key={tag} className="px-1.5 py-0.5 bg-white/10 admin-text-dim text-[10px] font-medium rounded">{tag}</span>
-                              ))}
-                              {hasItemChanges && (
-                                <span className="px-1.5 py-0.5 bg-blue-500/15 text-blue-400 text-[10px] font-semibold rounded">Unsaved</span>
-                              )}
-                            </div>
-
-                            {/* Description — inline editable */}
-                            {isEditingDesc ? (
-                              <div className="flex items-start gap-2 mt-1">
-                                <textarea
-                                  value={currentDesc}
-                                  onChange={(e) => setChange(item.id, "description", e.target.value)}
-                                  className="flex-1 glass-input rounded-lg text-sm min-h-[60px] resize-y"
-                                  autoFocus
-                                />
-                                <button
-                                  onClick={() => setEditingDesc(null)}
-                                  className="p-1.5 rounded-lg text-emerald-400 hover:bg-emerald-500/10 transition-colors"
-                                  title="Done editing"
-                                >
-                                  <Check className="h-4 w-4" />
-                                </button>
-                              </div>
-                            ) : (
-                              <div className="group flex items-start gap-1.5">
-                                <p className="text-sm admin-text-muted leading-relaxed">{currentDesc}</p>
-                                <button
-                                  onClick={() => setEditingDesc(item.id)}
-                                  className="p-1 rounded text-transparent group-hover:text-slate-500 hover:!text-blue-400 transition-colors flex-shrink-0"
-                                  title="Edit description"
-                                >
-                                  <Pencil className="h-3.5 w-3.5" />
-                                </button>
-                              </div>
+                        <div className="v2-menu-row-main">
+                          <div className="v2-menu-row-headline">
+                            <span className="v2-menu-row-name">{item.name}</span>
+                            {item._hasOverride && (
+                              <Badge tone="info" variant="soft">
+                                Overridden
+                              </Badge>
                             )}
+                            {item.tags.map((t) => (
+                              <Badge key={t} tone="neutral" variant="soft" icon={<Tag className="h-3 w-3" />}>
+                                {t}
+                              </Badge>
+                            ))}
                           </div>
+                          <p className="v2-menu-row-desc">{item.description}</p>
+                        </div>
 
-                          {/* Price — click to edit */}
-                          <div className="flex-shrink-0 text-right">
-                            {isEditingPrice ? (
-                              <div className="flex items-center gap-1.5">
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  value={(currentPrice / 100).toFixed(2)}
-                                  onChange={(e) => setChange(item.id, "price", Math.round(parseFloat(e.target.value || "0") * 100))}
-                                  className="w-24 glass-input rounded-lg text-right text-lg"
-                                  autoFocus
-                                  onBlur={() => setEditingPrice(null)}
-                                  onKeyDown={(e) => e.key === "Enter" && setEditingPrice(null)}
-                                />
-                                <span className="text-xs admin-text-dim">PLN</span>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => setEditingPrice(item.id)}
-                                className="group/price text-right"
-                                title="Click to edit price"
-                              >
-                                <div className="text-lg font-bold admin-text group-hover/price:text-blue-400 transition-colors">
-                                  {formatPrice(currentPrice)}
-                                </div>
-                                <div className="text-[10px] admin-text-dim opacity-0 group-hover/price:opacity-100 transition-opacity">
-                                  click to edit
-                                </div>
-                              </button>
-                            )}
+                        <div className="v2-menu-row-numbers">
+                          <div className="v2-menu-num">
+                            <div className="v2-menu-num-label">Price</div>
+                            <div className="v2-menu-num-value tabular">{formatPrice(item.price)}</div>
+                          </div>
+                          <div className="v2-menu-num">
+                            <div className="v2-menu-num-label">Cost</div>
+                            <div className="v2-menu-num-value tabular">{formatPrice(item.cost)}</div>
+                          </div>
+                          <div className="v2-menu-num">
+                            <div className="v2-menu-num-label">Margin</div>
+                            <Badge tone={marginTone(margin)} variant="soft">
+                              {margin}%
+                            </Badge>
                           </div>
                         </div>
-                      </div>
+
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          leadingIcon={<Pencil className="h-3.5 w-3.5" />}
+                          onClick={() => setEditing(item)}
+                        >
+                          Edit
+                        </Button>
+                      </li>
                     );
                   })}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+                </ul>
+              </CardBody>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      <EditItemDialog
+        item={editing}
+        onClose={() => setEditing(null)}
+        onSave={saveEdit}
+      />
+    </div>
+  );
+}
+
+interface EditDialogProps {
+  item: MenuItemData | null;
+  onClose: () => void;
+  onSave: (id: string, change: { price?: number; description?: string }) => Promise<void> | void;
+}
+
+function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
+  const [priceStr, setPriceStr] = useState("0.00");
+  const [desc, setDesc] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (item) {
+      setPriceStr((item.price / 100).toFixed(2));
+      setDesc(item.description);
+      setBusy(false);
+    }
+  }, [item]);
+
+  if (!item) {
+    return <Dialog open={false} onClose={onClose} />;
+  }
+
+  const submit = async () => {
+    const price = Math.round(parseFloat(priceStr || "0") * 100);
+    const change: { price?: number; description?: string } = {};
+    if (price !== item.price) change.price = price;
+    if (desc !== item.description) change.description = desc;
+    if (Object.keys(change).length === 0) {
+      onClose();
+      return;
+    }
+    setBusy(true);
+    await onSave(item.id, change);
+    setBusy(false);
+  };
+
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      size="md"
+      title={`Edit ${item.name}`}
+      description="Changes apply to this location only via the override system. Reset by clearing the override in the database."
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={busy}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={submit} loading={busy}>
+            Save changes
+          </Button>
+        </>
+      }
+    >
+      <div className="v2-stack-12">
+        <Input
+          label="Price (PLN)"
+          type="number"
+          step="0.01"
+          min="0"
+          value={priceStr}
+          onChange={(e) => setPriceStr(e.target.value)}
+          trailingAdornment={<span className="v2-muted">zł</span>}
+          description={`Food cost: ${formatPrice(item.cost)} · Current margin: ${marginPct(item.price, item.cost)}%`}
+        />
+        <Textarea
+          label="Description"
+          value={desc}
+          onChange={(e) => setDesc(e.target.value)}
+          rows={4}
+        />
       </div>
-    </>
+    </Dialog>
   );
 }

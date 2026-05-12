@@ -2094,6 +2094,63 @@ html { scroll-behavior: smooth; }
 }
 
 /* ============================
+   ADMIN v2 — MENU
+   ============================ */
+
+.v2-field-inline { display: inline-flex; align-items: center; gap: 8px; }
+.v2-field-inline .v2-field { margin: 0; }
+.v2-field-inline .v2-select-wrap { min-width: 160px; }
+
+.v2-stack-12 { display: flex; flex-direction: column; gap: 12px; }
+
+.v2-menu-groups { display: flex; flex-direction: column; gap: 16px; }
+.v2-menu-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+
+.v2-menu-row {
+  display: grid;
+  grid-template-columns: 36px 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 4px;
+  border-top: 1px solid var(--border);
+  transition: opacity var(--duration-fast);
+}
+.v2-menu-row:first-child { border-top: 0; }
+.v2-menu-row.is-off { opacity: 0.55; }
+
+@media (max-width: 720px) {
+  .v2-menu-row { grid-template-columns: 36px 1fr; row-gap: 6px; }
+  .v2-menu-row > .v2-menu-row-numbers,
+  .v2-menu-row > button { grid-column: 1 / -1; }
+}
+
+.v2-menu-toggle {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--fg-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background var(--duration-fast), color var(--duration-fast), border-color var(--duration-fast);
+}
+.v2-menu-toggle.is-on { background: var(--success-soft); color: var(--success); border-color: color-mix(in oklab, var(--success) 35%, transparent); }
+.v2-menu-toggle:hover { border-color: var(--border-strong); }
+
+.v2-menu-row-main { min-width: 0; }
+.v2-menu-row-headline { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 2px; }
+.v2-menu-row-name { font-weight: 600; color: var(--fg); font-size: var(--text-base); }
+.v2-menu-row-desc { margin: 0; font-size: var(--text-xs); color: var(--fg-muted); line-height: 1.45; }
+
+.v2-menu-row-numbers { display: inline-flex; align-items: center; gap: 16px; }
+.v2-menu-num { display: flex; flex-direction: column; align-items: flex-end; min-width: 64px; }
+.v2-menu-num-label { font-size: var(--text-2xs); color: var(--fg-subtle); letter-spacing: 0.04em; text-transform: uppercase; }
+.v2-menu-num-value { font-size: var(--text-base); color: var(--fg); font-weight: 600; }
+
+/* ============================
    ADMIN DESIGN SYSTEM (LEGACY — being migrated to v2)
    Tokens → Surfaces → Inputs → Buttons → Typography → Badges → Alerts
    8px baseline grid · 5-color semantic palette · 6-level type scale
