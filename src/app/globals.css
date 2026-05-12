@@ -2468,6 +2468,21 @@ html { scroll-behavior: smooth; }
 .v2-checkbox-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
 
 /* ============================
+   ADMIN v2 — FEEDBACK
+   ============================ */
+
+.v2-fb-comment {
+  display: inline-block;
+  max-width: 360px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-style: italic;
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+}
+
+/* ============================
    ADMIN DESIGN SYSTEM (LEGACY — being migrated to v2)
    Tokens → Surfaces → Inputs → Buttons → Typography → Badges → Alerts
    8px baseline grid · 5-color semantic palette · 6-level type scale
