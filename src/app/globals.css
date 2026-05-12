@@ -2637,14 +2637,12 @@ html { scroll-behavior: smooth; }
 }
 @media (max-width: 480px) { .v2-chip-grid { grid-template-columns: 1fr; } }
 
-.v2-card-desc {
-  font-size: var(--text-2xs);
-  color: var(--fg-subtle);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-weight: 600;
-  margin-bottom: 4px;
-}
+/* The original `.v2-card-desc` rule lives near the top of this file with
+   sentence-case, text-xs styling. A later duplicate here was forcing
+   uppercase + 2xs + bold on every CardHeader description across the
+   admin ("PICK A SINGLE TRUCK...", "DAILY TOTALS IN ZŁ OVER THE LAST 7
+   DAYS", etc.), which screamed at the user. Removed — descriptions
+   now render sentence-case as authored. */
 
 .v2-redeem-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
 .v2-redeem-list li {
