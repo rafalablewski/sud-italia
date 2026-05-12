@@ -129,6 +129,15 @@ export function AdminInventory() {
   const [stock, setStock] = useState<StockRow[]>([]);
   const [ingredients, setIngredients] = useState<IngredientLite[]>([]);
   const [movements, setMovements] = useState<Movement[]>([]);
+  const [variance, setVariance] = useState<{
+    name: string;
+    unit: string;
+    theoreticalUsage: number;
+    actualUsage: number;
+    variance: number;
+    variancePercent: number;
+    varianceCostGrosze: number;
+  }[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -143,14 +152,16 @@ export function AdminInventory() {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [s, i, m] = await Promise.all([
+      const [s, i, m, v] = await Promise.all([
         fetch(`/api/admin/stock?location=${pageLoc}`).then((r) => (r.ok ? r.json() : [])),
         fetch(`/api/admin/ingredients`).then((r) => (r.ok ? r.json() : [])),
         fetch(`/api/admin/stock-movements?location=${pageLoc}&limit=50`).then((r) => (r.ok ? r.json() : [])),
+        fetch(`/api/admin/inventory/variance?location=${pageLoc}`).then((r) => (r.ok ? r.json() : null)),
       ]);
       setStock(Array.isArray(s) ? s : []);
       setIngredients(Array.isArray(i) ? i : []);
       setMovements(Array.isArray(m) ? m : []);
+      setVariance(v && Array.isArray(v.rows) ? v.rows : []);
     } finally {
       setLoading(false);
     }
@@ -412,6 +423,8 @@ export function AdminInventory() {
           higherIsBetter={false}
         />
       </section>
+
+      <VarianceCard rows={variance} />
 
       <div className="v2-filters">
         <div className="v2-filter-search">
@@ -804,5 +817,96 @@ function AddIngredientDialog({ open, untracked, onClose, onSubmit }: AddIngredie
         </div>
       </div>
     </Dialog>
+  );
+}
+
+interface VarianceRow {
+  name: string;
+  unit: string;
+  theoreticalUsage: number;
+  actualUsage: number;
+  variance: number;
+  variancePercent: number;
+  varianceCostGrosze: number;
+}
+
+/**
+ * Variance alert card: theoretical (recipe × sold) vs actual (consume + waste)
+ * consumption over the last 7 days. Positive variance ⇒ shrink / theft /
+ * over-portioning. We only surface the worst 5 rows and only when there's
+ * actually variance to show, so the card stays out of the way when ops
+ * are clean.
+ */
+function VarianceCard({ rows }: { rows: VarianceRow[] }) {
+  const flagged = rows.filter((r) => Math.abs(r.variancePercent) >= 5).slice(0, 5);
+  if (flagged.length === 0) {
+    // Show a quiet "all green" card when we have recipes + sales but no variance
+    // worth surfacing. Skip entirely when the dataset is empty.
+    if (rows.length === 0) return null;
+    return (
+      <Card>
+        <CardHeader
+          title="Inventory variance"
+          description="Theoretical (recipe × sold) vs actual (consume + waste) over the last 7 days."
+        />
+        <CardBody>
+          <EmptyState
+            icon={Boxes}
+            title="No significant variance"
+            description={`All ${rows.length} tracked ingredients are within ±5% of theoretical. Recipes and stock movements look consistent.`}
+            compact
+          />
+        </CardBody>
+      </Card>
+    );
+  }
+  return (
+    <Card>
+      <CardHeader
+        title="Inventory variance — last 7 days"
+        description="Theoretical (recipe × sold) vs actual (consume + waste). Positive variance is the canonical shrink / over-portion signal."
+      />
+      <CardBody>
+        <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+          {flagged.map((r) => {
+            const overconsumed = r.variance > 0;
+            const tone: "danger" | "warning" | "success" =
+              Math.abs(r.variancePercent) > 25
+                ? "danger"
+                : overconsumed
+                  ? "warning"
+                  : "success";
+            return (
+              <li
+                key={r.name}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "minmax(0, 1.4fr) 1fr 1fr auto",
+                  gap: "0.75rem",
+                  alignItems: "center",
+                  padding: "0.5rem 0",
+                  borderTop: "1px solid var(--v2-border, #e5e7eb)",
+                  fontSize: "0.875rem",
+                }}
+              >
+                <span style={{ fontWeight: 500 }}>{r.name}</span>
+                <span className="v2-muted">
+                  theory {r.theoreticalUsage}
+                  {r.unit}
+                </span>
+                <span className="v2-muted">
+                  actual {r.actualUsage}
+                  {r.unit}
+                </span>
+                <Badge tone={tone} variant="soft">
+                  {overconsumed ? "+" : ""}
+                  {r.variancePercent}% · {(r.varianceCostGrosze / 100).toLocaleString("pl-PL", { signDisplay: "exceptZero" })} zł
+                </Badge>
+              </li>
+            );
+          })}
+        </ul>
+      </CardBody>
+    </Card>
   );
 }
