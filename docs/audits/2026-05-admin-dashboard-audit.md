@@ -109,20 +109,20 @@ Format note: tables are split per category for readability. **Priority** is P0 (
 
 ### 1.6 Staff & HR
 
-| Existing | Missing | Why It Matters | Priority | Benchmark |
-|---|---|---|---|---|
-| `/admin/staff` (CRUD, hourly rate, location), `/admin/schedule` (shifts), time punches in/out | **Conflict detection** (double-booked, under 18 in alcohol hours, exceeded 48 h/week per EU 2003/88/EC) | Polish Labor Code violations carry per-event fines; a scheduling bug is a legal liability | P0 | 7shifts, Deputy, Homebase |
-| — | **AI auto-scheduler** that ingests forecast demand + skill matrix + availability + budget cap | Manual scheduling burns 6–10 manager hours/week and is provably worse than ML | P1 | 7shifts AI, HotSchedules |
-| — | **Geofenced clock-in** (must be within 100 m of truck) | Time-punch fraud is the #1 labor leak; geofence eliminates it | P1 | Deputy, Homebase |
-| — | **Biometric attendance** (face or fingerprint) | Polish GDPR-compatible biometric punch removes buddy-punching entirely | P2 | Hubstaff, BioTime |
-| — | **Labor cost % of revenue live tile** | Without live labor %, managers cannot send people home when it's slow | P0 | Toast Labor, 7shifts |
-| — | **Tip pooling / declared tips / tip allocation** with audit trail | Polish tronc/napiwki rules exist; manual pooling creates disputes | P1 | Toast Tips, Kickfin |
-| — | **LMS / training tracking** (certificates: SANEPID, fire, alcohol, first aid) with expiry alerts | Lapsed SANEPID = inspection failure | P1 | Typsy, Wisetail |
-| — | **Performance scoring** (units/hour, avg ticket, upsell ratio per server) | Toast/Square have made this a baseline expectation since 2021 | P1 | Toast, Olo |
-| — | **Shift-swap marketplace** (peer-to-peer with manager approval) | Without it, swaps are WhatsApp chaos; with it, attrition drops 8–12% | P1 | 7shifts, Deputy |
-| — | **Burnout / churn risk model** (overtime trend, complaint count, no-show rate) | Predicting attrition 30 days out saves 4–6k PLN/replacement | P2 | Lattice, Visier |
-| — | **Onboarding / offboarding workflow** with document collection, equipment issuance | Compliance + asset recovery; today nothing is tracked | P1 | BambooHR, Rippling |
-| — | **Wage breach detection** (paid below national minimum after tip adjustment) | Polish minimum wage 2026 ≈ 4666 PLN; underpayment is a state fine | P0 | Custom rule engine |
+| Existing | Missing | Why It Matters | Priority | Benchmark | Status |
+|---|---|---|---|---|---|
+| `/admin/staff` (CRUD, hourly rate, location), `/admin/schedule` (shifts), time punches in/out | **Conflict detection** (double-booked, under 18 in alcohol hours, exceeded 48 h/week per EU 2003/88/EC) | Polish Labor Code violations carry per-event fines; a scheduling bug is a legal liability | P0 | 7shifts, Deputy, Homebase | ✗ Not fixed — needs rule engine + DOB field + weekly-hour calc |
+| — | **AI auto-scheduler** that ingests forecast demand + skill matrix + availability + budget cap | Manual scheduling burns 6–10 manager hours/week and is provably worse than ML | P1 | 7shifts AI, HotSchedules | ✗ Not fixed — needs forecast + ILP/heuristic solver |
+| — | **Geofenced clock-in** (must be within 100 m of truck) | Time-punch fraud is the #1 labor leak; geofence eliminates it | P1 | Deputy, Homebase | ✗ Not fixed — needs mobile client + geolocation API |
+| — | **Biometric attendance** (face or fingerprint) | Polish GDPR-compatible biometric punch removes buddy-punching entirely | P2 | Hubstaff, BioTime | ✗ Not fixed — hardware + DPIA |
+| — | **Labor cost % of revenue live tile** | Without live labor %, managers cannot send people home when it's slow | P0 | Toast Labor, 7shifts | ✗ Not fixed — needs real-time payroll-cost aggregator |
+| — | **Tip pooling / declared tips / tip allocation** with audit trail | Polish tronc/napiwki rules exist; manual pooling creates disputes | P1 | Toast Tips, Kickfin | ✗ Not fixed — new module |
+| — | **LMS / training tracking** (certificates: SANEPID, fire, alcohol, first aid) with expiry alerts | Lapsed SANEPID = inspection failure | P1 | Typsy, Wisetail | ✗ Not fixed — new module (cert entity + expiry job + notifications) |
+| — | **Performance scoring** (units/hour, avg ticket, upsell ratio per server) | Toast/Square have made this a baseline expectation since 2021 | P1 | Toast, Olo | ✗ Not fixed — needs server-attribution on order lines |
+| — | **Shift-swap marketplace** (peer-to-peer with manager approval) | Without it, swaps are WhatsApp chaos; with it, attrition drops 8–12% | P1 | 7shifts, Deputy | ✗ Not fixed — swap-request entity + approval flow |
+| — | **Burnout / churn risk model** (overtime trend, complaint count, no-show rate) | Predicting attrition 30 days out saves 4–6k PLN/replacement | P2 | Lattice, Visier | ✗ Not fixed — needs trained model + features |
+| — | **Onboarding / offboarding workflow** with document collection, equipment issuance | Compliance + asset recovery; today nothing is tracked | P1 | BambooHR, Rippling | ✗ Not fixed — new module |
+| — | **Wage breach detection** (paid below national minimum after tip adjustment) | Polish minimum wage 2026 ≈ 4666 PLN; underpayment is a state fine | P0 | Custom rule engine | ✗ Not fixed — needs payroll aggregator + minimum-wage constant + alert |
 
 ### 1.7 Delivery Ecosystem
 
