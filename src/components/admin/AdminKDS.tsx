@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useAdminOrdersStream } from "@/lib/useAdminOrdersStream";
 import {
   Bell,
   BellOff,
@@ -12,6 +13,7 @@ import {
   PauseCircle,
   PlayCircle,
   RefreshCw,
+  RotateCcw,
   Timer,
   Truck,
   Package,
@@ -83,35 +85,33 @@ export function AdminKDS() {
   const { location } = useAdminLocation();
   const toast = useToast();
 
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
   const [station, setStation] = useState<MenuCategory | "all">("all");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [soundOn, setSoundOn] = useState(true);
   const [paused, setPaused] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
-  const knownIdsRef = useRef<Set<string>>(new Set());
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  const fetchOrders = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/admin/orders${location ? `?location=${location}` : ""}`);
-      if (!res.ok) return;
-      const data: Order[] = await res.json();
-      setOrders(data.filter((o) => ACTIVE_STATUSES.includes(o.status)));
-    } finally {
-      setLoading(false);
-    }
-  }, [location]);
+  // Live order stream — SSE with REST fallback. Replaces the old 5 s polling
+  // loop. We mirror the stream into a local copy so optimistic updates from
+  // advance/recall feel instant; the next SSE frame reconciles either way.
+  const { orders: streamedOrders, refresh } = useAdminOrdersStream(location, { paused });
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
-    fetchOrders();
-    if (paused) return;
-    const t = setInterval(fetchOrders, 5_000);
-    return () => clearInterval(t);
-  }, [fetchOrders, paused]);
+    setOrders(streamedOrders.filter((o) => ACTIVE_STATUSES.includes(o.status)));
+    setLoading(false);
+  }, [streamedOrders]);
+  // Cooks bump tickets by mistake constantly. We keep the last 5 bumps in
+  // memory so a "Recall" tray on the right side can put one back on the
+  // expo column in a single click — within the 60 s window where this is
+  // most useful. Older bumps quietly fall out of the list.
+  const [bumpHistory, setBumpHistory] = useState<
+    { orderId: string; label: string; bumpedAt: number }[]
+  >([]);
+
+  const knownIdsRef = useRef<Set<string>>(new Set());
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Tick every second for live timers
   useEffect(() => {
@@ -162,6 +162,16 @@ export function AdminKDS() {
       if (res.ok) {
         if (next === "completed") {
           toast.success("Order bumped", `${o.customerName || "Guest"} · ${o.id.slice(-6).toUpperCase()}`);
+          setBumpHistory((arr) =>
+            [
+              {
+                orderId: o.id,
+                label: `${o.customerName || "Guest"} · ${o.id.slice(-6).toUpperCase()}`,
+                bumpedAt: Date.now(),
+              },
+              ...arr.filter((e) => e.orderId !== o.id),
+            ].slice(0, 5),
+          );
           setOrders((arr) => arr.filter((x) => x.id !== o.id));
         } else {
           setOrders((arr) => arr.map((x) => (x.id === o.id ? { ...x, status: next } : x)));
@@ -169,6 +179,36 @@ export function AdminKDS() {
       } else {
         toast.error("Could not advance", "Try refreshing the queue.");
       }
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const recall = async (orderId: string) => {
+    setUpdatingId(orderId);
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/recall`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        const recalled: Order = await res.json();
+        // Reinsert into the active list so it shows up on the expo column
+        // again; the next polling tick would catch it anyway but this keeps
+        // the UI feeling instant.
+        setOrders((arr) => {
+          const without = arr.filter((x) => x.id !== recalled.id);
+          return ACTIVE_STATUSES.includes(recalled.status)
+            ? [...without, recalled]
+            : without;
+        });
+        setBumpHistory((arr) => arr.filter((e) => e.orderId !== orderId));
+        toast.success("Order recalled", "Back on the expo column.");
+      } else {
+        const data: { error?: string } = await res.json().catch(() => ({}));
+        toast.error("Could not recall", data.error || "Try again in a moment.");
+      }
+    } catch {
+      toast.error("Could not recall", "Network error. Try again.");
     } finally {
       setUpdatingId(null);
     }
@@ -199,7 +239,7 @@ export function AdminKDS() {
           <h1 className="v2-page-title">Kitchen Display</h1>
           <p className="v2-page-subtitle">
             {location ? `${location.toUpperCase()} · ` : "All locations · "}
-            Live tickets · auto-refresh 5s
+            Live tickets · streaming updates
           </p>
         </div>
         <div className="v2-page-actions">
@@ -231,12 +271,48 @@ export function AdminKDS() {
             variant="secondary"
             size="sm"
             leadingIcon={<RefreshCw className="h-3.5 w-3.5" />}
-            onClick={fetchOrders}
+            onClick={refresh}
           >
             Refresh
           </Button>
         </div>
       </header>
+
+      {bumpHistory.length > 0 && (
+        <div
+          role="region"
+          aria-label="Recently bumped"
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: "0.5rem",
+            padding: "0.5rem 0.75rem",
+            margin: "0.5rem 0 0.25rem",
+            borderRadius: "0.5rem",
+            background: "var(--surface-2)",
+            border: "1px solid var(--border)",
+            fontSize: "0.8125rem",
+          }}
+        >
+          <span style={{ fontWeight: 600, color: "var(--fg-muted)" }}>
+            <RotateCcw className="h-3.5 w-3.5" style={{ display: "inline", marginRight: "0.375rem", verticalAlign: "-2px" }} />
+            Just bumped:
+          </span>
+          {bumpHistory.map((entry) => (
+            <Button
+              key={entry.orderId}
+              size="sm"
+              variant="ghost"
+              disabled={updatingId === entry.orderId}
+              onClick={() => recall(entry.orderId)}
+              title={`Recall ${entry.label} to the expo column`}
+            >
+              {entry.label} · Recall
+            </Button>
+          ))}
+        </div>
+      )}
 
       {/* Decorative quick-stats above the board */}
       <section className="v2-kds-stats">
@@ -378,9 +454,25 @@ function Ticket({ order, stationFilter, onAdvance, isUpdating, nowMs }: TicketPr
               <div className="v2-ticket-station-label">{MENU_CATEGORY_LABELS[cat]}</div>
               <ul>
                 {items.map((ci, i) => (
-                  <li key={`${ci.menuItem.id}-${i}`}>
+                  <li key={`${ci.menuItem.id}-${i}`} style={{ flexWrap: "wrap" }}>
                     <span className="v2-ticket-qty">{ci.quantity}×</span>
                     <span className="v2-ticket-name">{ci.menuItem.name}</span>
+                    {ci.notes && (
+                      <span
+                        className="v2-ticket-item-note"
+                        style={{
+                          width: "100%",
+                          marginLeft: "1.5rem",
+                          marginTop: "0.125rem",
+                          fontSize: "0.75rem",
+                          fontWeight: 600,
+                          color: "var(--danger)",
+                          letterSpacing: "0.01em",
+                        }}
+                      >
+                        ⚠ {ci.notes}
+                      </span>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -391,7 +483,7 @@ function Ticket({ order, stationFilter, onAdvance, isUpdating, nowMs }: TicketPr
 
       {order.specialInstructions && (
         <div className="v2-ticket-notes">
-          <span className="v2-ticket-notes-label">Notes</span>
+          <span className="v2-ticket-notes-label">Order notes</span>
           <span>{order.specialInstructions}</span>
         </div>
       )}

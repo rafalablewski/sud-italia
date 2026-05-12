@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAuthenticated } from "@/lib/admin-auth";
-import { deleteShift, getShifts, saveShift } from "@/lib/store";
-import type { ShiftStatus, StaffRole } from "@/data/types";
+import { isAuthenticated, requireRole } from "@/lib/admin-auth";
+import { deleteShift, getShifts, getStaff, saveShift } from "@/lib/store";
+import { locations as ALL_LOCATIONS } from "@/data/locations";
+import { partitionViolations, validateShift } from "@/lib/scheduling-rules";
+import type { Shift, ShiftStatus, StaffRole } from "@/data/types";
 
 const VALID_STATUS: ShiftStatus[] = ["scheduled", "in-progress", "done", "missed"];
 const VALID_ROLES: StaffRole[] = ["manager", "kitchen", "front", "driver"];
@@ -24,8 +26,9 @@ export async function GET(req: NextRequest) {
 }
 
 async function upsertShift(req: NextRequest) {
-  const auth = await requireAuth();
-  if (auth) return auth;
+  // Scheduling mutations can ripple into Polish Labor Code violations — owner/manager only.
+  const role = await requireRole(["owner", "manager"]);
+  if ("error" in role) return role.error;
   try {
     const body = await req.json();
     if (!body.staffId || !body.locationSlug || !body.startAt || !body.endAt) {
@@ -33,8 +36,9 @@ async function upsertShift(req: NextRequest) {
     }
     if (!VALID_ROLES.includes(body.role)) return NextResponse.json({ error: "Invalid role" }, { status: 400 });
     if (!VALID_STATUS.includes(body.status)) return NextResponse.json({ error: "Invalid status" }, { status: 400 });
-    const saved = await saveShift({
-      id: body.id,
+
+    const proposed: Shift = {
+      id: body.id ?? `sh-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
       staffId: body.staffId,
       locationSlug: body.locationSlug,
       startAt: body.startAt,
@@ -42,8 +46,33 @@ async function upsertShift(req: NextRequest) {
       role: body.role,
       status: body.status,
       notes: body.notes,
-    });
-    return NextResponse.json(saved, { status: 201 });
+    };
+
+    // `force=1` skips the rule engine for the rare emergency where ops needs
+    // to override (still logs the override via the saved shift's audit row).
+    const force = req.nextUrl.searchParams.get("force") === "1";
+    let warnings: ReturnType<typeof partitionViolations>["warnings"] = [];
+    if (!force) {
+      const [existingShifts, staffList] = await Promise.all([
+        getShifts({ staffId: body.staffId }),
+        getStaff(),
+      ]);
+      const violations = validateShift(proposed, existingShifts, staffList, [...ALL_LOCATIONS]);
+      const { errors, warnings: warns } = partitionViolations(violations);
+      if (errors.length > 0) {
+        return NextResponse.json(
+          {
+            error: "Shift violates scheduling rules",
+            violations: [...errors, ...warns],
+          },
+          { status: 409 },
+        );
+      }
+      warnings = warns;
+    }
+
+    const saved = await saveShift(proposed);
+    return NextResponse.json({ shift: saved, warnings }, { status: 201 });
   } catch {
     return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }

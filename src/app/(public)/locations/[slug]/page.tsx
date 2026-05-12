@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { locations, getLocation } from "@/data/locations";
-import { getAvailableMenu } from "@/data/menus";
+import { getMenuWithOverrides } from "@/data/menus";
 import { LocationHero } from "@/components/location/LocationHero";
 import { MenuSection } from "@/components/location/MenuSection";
 import { LocationInfo } from "@/components/location/LocationInfo";
@@ -51,7 +51,13 @@ export default async function LocationPage({ params }: PageProps) {
     notFound();
   }
 
-  const menuItems = await getAvailableMenu(slug);
+  // We pass the full menu (incl. currently-unavailable items) so the client
+  // can flip availability live when admin 86's an item without a full reload.
+  // The structured-data block + cart fallbacks still respect availability.
+  const fullMenu = await getMenuWithOverrides(slug);
+  const menuItems = fullMenu.filter((i) => i.available);
+  const initialAvailability: Record<string, boolean> = {};
+  for (const item of fullMenu) initialAvailability[item.id] = item.available;
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -102,7 +108,11 @@ export default async function LocationPage({ params }: PageProps) {
       <LocationHero location={location} />
       <LiveActivityBar locationSlug={slug} />
       <LoyaltySection />
-      <MenuSection items={menuItems} locationSlug={slug} />
+      <MenuSection
+        items={fullMenu}
+        locationSlug={slug}
+        initialAvailability={initialAvailability}
+      />
       <LocationInfo location={location} />
       <FloatingCartButton allMenuItems={menuItems} />
     </>

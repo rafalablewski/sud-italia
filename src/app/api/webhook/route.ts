@@ -1,5 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { updateOrderStatus } from "@/lib/store";
+import {
+  getOrderByStripePaymentIntent,
+  updateOrder,
+  updateOrderStatus,
+} from "@/lib/store";
+import { logger } from "@/lib/logger";
+import type { DisputeStatus, OrderDispute } from "@/data/types";
+
+/** Stripe's dispute event payload — picks just the fields we persist. */
+interface StripeDispute {
+  id: string;
+  status: string;
+  reason: string;
+  amount: number;
+  created: number;
+  payment_intent: string | { id: string } | null;
+}
 
 const processedEvents = new Set<string>();
 
@@ -42,7 +58,19 @@ export async function POST(req: NextRequest) {
       const { orderId } = session.metadata ?? {};
 
       if (orderId && session.payment_status === "paid") {
-        await updateOrderStatus(orderId, "confirmed");
+        // Capture the Stripe correlation ids so admin refunds can target the
+        // original charge later. `payment_intent` may be a string id or an
+        // expanded object depending on the API version.
+        const paymentIntentId =
+          typeof session.payment_intent === "string"
+            ? session.payment_intent
+            : session.payment_intent?.id;
+        await updateOrder(orderId, {
+          status: "confirmed",
+          paidAt: new Date().toISOString(),
+          stripeSessionId: session.id,
+          stripePaymentIntentId: paymentIntentId ?? undefined,
+        });
       }
     }
 
@@ -57,9 +85,66 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // --- Dispute / chargeback lifecycle -----------------------------------
+    // Stripe sends `charge.dispute.created` the moment a customer files a
+    // chargeback. Ignoring it loses the dispute by default (issuer rules);
+    // surfacing it on the order detail gives the operator a fighting chance.
+    if (
+      event.type === "charge.dispute.created" ||
+      event.type === "charge.dispute.updated" ||
+      event.type === "charge.dispute.closed" ||
+      event.type === "charge.dispute.funds_withdrawn" ||
+      event.type === "charge.dispute.funds_reinstated"
+    ) {
+      const dispute = event.data.object as unknown as StripeDispute;
+      const paymentIntentId =
+        typeof dispute.payment_intent === "string"
+          ? dispute.payment_intent
+          : dispute.payment_intent?.id;
+
+      if (paymentIntentId) {
+        const order = await getOrderByStripePaymentIntent(paymentIntentId);
+        if (order) {
+          const now = new Date().toISOString();
+          const status = dispute.status as DisputeStatus;
+          const isClosed = status === "won" || status === "lost" || status === "warning_closed";
+          const record: OrderDispute = {
+            stripeDisputeId: dispute.id,
+            status,
+            reason: dispute.reason,
+            amount: dispute.amount,
+            createdAt: order.dispute?.createdAt
+              ?? new Date(dispute.created * 1000).toISOString(),
+            updatedAt: now,
+            closedAt: isClosed
+              ? (order.dispute?.closedAt ?? now)
+              : undefined,
+          };
+          await updateOrder(order.id, { dispute: record });
+
+          // Page the operator. `logger.error` mirrors to Sentry, which is the
+          // right severity for "we are about to lose money."
+          logger.error("Stripe dispute event", {
+            route: "POST /api/webhook",
+            stripeEvent: event.type,
+            orderId: order.id,
+            disputeId: dispute.id,
+            disputeStatus: status,
+            reason: dispute.reason,
+            amount: dispute.amount,
+          });
+        } else {
+          logger.warn("Dispute event for unknown order", {
+            paymentIntentId,
+            disputeId: dispute.id,
+          });
+        }
+      }
+    }
+
     return NextResponse.json({ received: true });
   } catch (err) {
-    console.error("Webhook error:", err);
+    logger.error("Stripe webhook verification failed", { route: "POST /api/webhook" }, err);
     return NextResponse.json(
       { error: "Webhook verification failed" },
       { status: 400 }

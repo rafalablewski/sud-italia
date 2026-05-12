@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { AdminNav } from "./AdminNav";
 import { LocationTabs } from "./LocationTabs";
-import { TrendingUp, Star, Coffee, IceCream, GlassWater, Plus, Trash2, Check, Save } from "lucide-react";
+import { Star, Coffee, IceCream, GlassWater, Plus, Trash2, Check, Save } from "lucide-react";
 import { krakowMenu } from "@/data/menus/krakow";
 import { warszawaMenu } from "@/data/menus/warszawa";
 import type { MenuItem, MenuCategory } from "@/data/types";
@@ -358,50 +357,41 @@ export function AdminUpsell() {
 
   if (loading) {
     return (
-      <>
-        <AdminNav />
-        <div className="max-w-7xl mx-auto p-6">
-          <div className="glass-card p-12 text-center">
-            <p className="admin-text animate-pulse">Loading upsell settings...</p>
-          </div>
-        </div>
-      </>
+      <div className="v2-page">
+        <div className="v2-page-loading">Loading upsell settings…</div>
+      </div>
     );
   }
 
   return (
-    <>
-    <AdminNav />
-    <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-heading font-bold admin-text flex items-center gap-3">
-            <TrendingUp className="h-6 w-6 text-slate-400" />
-            Upsell & Cross-Sell
-          </h1>
-          <p className="text-sm text-slate-400 mt-1">
-            Configure suggestions, popular items, and combo deals per location
+    <div className="v2-page">
+      <header className="v2-page-header">
+        <div className="v2-page-title-row">
+          <h1 className="v2-page-title">Upsell & Cross-Sell</h1>
+          <p className="v2-page-subtitle">
+            Configure suggestions, popular items, and combo deals per location.
           </p>
         </div>
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="glass-btn flex items-center gap-2 px-5 py-2.5 font-semibold"
-        >
-          {saved ? (
-            <>
-              <Check className="h-4 w-4 text-emerald-400" />
-              <span className="text-emerald-400">Saved</span>
-            </>
-          ) : (
-            <>
-              <Save className="h-4 w-4" />
-              {saving ? "Saving..." : "Save Changes"}
-            </>
-          )}
-        </button>
-      </div>
+        <div className="v2-page-actions">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="v2-btn v2-btn-primary v2-btn-sm"
+          >
+            {saved ? (
+              <>
+                <Check className="h-3.5 w-3.5" />
+                Saved
+              </>
+            ) : (
+              <>
+                <Save className="h-3.5 w-3.5" />
+                {saving ? "Saving…" : "Save changes"}
+              </>
+            )}
+          </button>
+        </div>
+      </header>
 
       {/* Location tabs */}
       <LocationTabs value={activeLocation} onChange={setActiveLocation} />
@@ -469,6 +459,5 @@ export function AdminUpsell() {
         />
       </div>
     </div>
-    </>
   );
 }

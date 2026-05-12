@@ -25,6 +25,7 @@ import { krakowMenu } from "@/data/menus/krakow";
 import { warszawaMenu } from "@/data/menus/warszawa";
 import { useCustomer } from "@/store/customer";
 import { postCartPresenceToServer } from "@/lib/cart-presence-post-client";
+import { useLiveMenuAvailability } from "@/lib/useLiveMenuAvailability";
 
 interface CartDrawerProps {
   open: boolean;
@@ -97,12 +98,34 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
     };
   }, [open, locationSlug, items.length, selectedSlotDate, fulfillmentType]);
 
+  // Live availability map for the cart's location — flips item-86 toggles
+  // through to the cart drawer within one polling interval so customers can
+  // remove unavailable items before they hit "Pay".
+  const availabilitySeed = useMemo(() => {
+    const seed: Record<string, boolean> = {};
+    for (const i of items) seed[i.menuItem.id] = true;
+    return seed;
+  }, [items]);
+  const liveAvailability = useLiveMenuAvailability(
+    locationSlug || "",
+    availabilitySeed,
+  );
+  const unavailableItems = useMemo(
+    () =>
+      items.filter(
+        (i) => liveAvailability[i.menuItem.id] === false,
+      ),
+    [items, liveAvailability],
+  );
+
   const subtotal = getTotal();
 
   // Apply combo deal discount to actual total
   const comboResult = useMemo(() => getActiveComboDeals(items, upsellConfig), [items, upsellConfig]);
   const comboDiscount = comboResult.missingCategories.length === 0 ? comboResult.savings : 0;
-  const total = subtotal - comboDiscount;
+  const tipAmount = useCartStore((s) => s.tipAmount);
+  const setTipAmount = useCartStore((s) => s.setTipAmount);
+  const total = subtotal - comboDiscount + tipAmount;
 
   const isPhoneValid = PHONE_PATTERN.test(customerPhone.trim());
 
@@ -111,6 +134,7 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
     customerLastName.trim().length > 0 &&
     isPhoneValid &&
     selectedSlotId !== null &&
+    unavailableItems.length === 0 &&
     (fulfillmentType !== "delivery" || deliveryAddress.trim().length > 0);
 
   // Pre-fill checkout fields from loyalty identity
@@ -184,6 +208,7 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
           items: items.map((i) => ({
             id: i.menuItem.id,
             quantity: i.quantity,
+            notes: i.notes,
           })),
           locationSlug,
           customerName,
@@ -195,6 +220,7 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
           deliveryAddress: fulfillmentType === "delivery" ? deliveryAddress.trim() : undefined,
           customerEmail: customerEmail.trim() || undefined,
           specialInstructions: specialInstructions.trim() || undefined,
+          tipAmount: tipAmount > 0 ? tipAmount : undefined,
         }),
       });
 
@@ -245,11 +271,38 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
 
   return (
     <Sheet open={open} onClose={onClose} title="Your Order">
+      {unavailableItems.length > 0 && (
+        <div className="mx-5 mt-3 mb-1 rounded-xl border border-italia-red/30 bg-italia-red/5 px-3 py-2.5">
+          <p className="text-xs font-semibold text-italia-red leading-snug">
+            {unavailableItems.length === 1
+              ? `"${unavailableItems[0].menuItem.name}" just sold out`
+              : `${unavailableItems.length} items just sold out`}
+          </p>
+          <p className="text-[11px] text-italia-gray mt-0.5">
+            Remove {unavailableItems.length === 1 ? "it" : "them"} below to continue.
+          </p>
+        </div>
+      )}
+
       {/* Items list */}
       <div className="px-5">
-        {items.map((item) => (
-          <CartItemRow key={item.menuItem.id} item={item} />
-        ))}
+        {items.map((item) => {
+          const soldOut = liveAvailability[item.menuItem.id] === false;
+          return (
+            <div
+              key={item.menuItem.id}
+              className={soldOut ? "opacity-60" : ""}
+              data-soldout={soldOut ? "true" : undefined}
+            >
+              <CartItemRow item={item} />
+              {soldOut && (
+                <p className="-mt-2 mb-3 text-[11px] font-medium text-italia-red">
+                  Sold out — remove to continue
+                </p>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* Loyalty status banner */}
@@ -464,6 +517,15 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
         )}
       </div>
 
+      {/* Tip picker — optional gratuity. Tied to cart subtotal so the
+           preset percentages always look right; custom amount in zł for
+           anyone who prefers absolute. */}
+      <TipPicker
+        subtotalGrosze={subtotal - comboDiscount}
+        valueGrosze={tipAmount}
+        onChange={setTipAmount}
+      />
+
       {/* Sticky pay bar */}
       <div className="sticky bottom-0 border-t border-gray-100 px-4 py-3 sm:px-5 sm:py-4 bg-white shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
         <div className="space-y-1">
@@ -475,6 +537,12 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
             <div className="flex justify-between items-center text-sm font-medium text-italia-green">
               <span>{comboResult.activeDeal?.name} -{comboResult.activeDeal?.discountPercent}%</span>
               <span>-{formatPrice(comboDiscount)}</span>
+            </div>
+          )}
+          {tipAmount > 0 && (
+            <div className="flex justify-between items-center text-sm text-italia-gray">
+              <span>Tip</span>
+              <span>{formatPrice(tipAmount)}</span>
             </div>
           )}
           {fulfillmentType === "delivery" && (
@@ -511,13 +579,15 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
         >
           {isSubmitting
             ? "Processing..."
-            : !selectedSlotId
-              ? "Select a time slot"
-              : canCheckout
-                ? `Pay ${formatPrice(total)}`
-                : fulfillmentType === "delivery" && !deliveryAddress.trim()
-                  ? "Enter delivery address"
-                  : "Enter name & phone to order"}
+            : unavailableItems.length > 0
+              ? "Remove sold-out items"
+              : !selectedSlotId
+                ? "Select a time slot"
+                : canCheckout
+                  ? `Pay ${formatPrice(total)}`
+                  : fulfillmentType === "delivery" && !deliveryAddress.trim()
+                    ? "Enter delivery address"
+                    : "Enter name & phone to order"}
         </Button>
 
         <button
@@ -530,5 +600,112 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
         </button>
       </div>
     </Sheet>
+  );
+}
+
+/**
+ * Tip presets (10 / 15 / 20%) plus a custom-zł input. Stored in grosze on the
+ * Zustand cart so it survives a refresh and gets cleared on checkout. The
+ * picker computes preset percentages off `subtotalGrosze` (post-discount,
+ * pre-tip) so toggling between presets feels stable.
+ */
+function TipPicker({
+  subtotalGrosze,
+  valueGrosze,
+  onChange,
+}: {
+  subtotalGrosze: number;
+  valueGrosze: number;
+  onChange: (g: number) => void;
+}) {
+  const presets = [0.1, 0.15, 0.2];
+  const presetValues = presets.map((p) => Math.round(subtotalGrosze * p));
+  const [customMode, setCustomMode] = useState(
+    valueGrosze > 0 && !presetValues.includes(valueGrosze),
+  );
+  const [customStr, setCustomStr] = useState(
+    valueGrosze > 0 && !presetValues.includes(valueGrosze)
+      ? (valueGrosze / 100).toFixed(2)
+      : "",
+  );
+
+  if (subtotalGrosze <= 0) return null;
+
+  return (
+    <div className="px-5 pt-3">
+      <p className="text-xs font-semibold text-italia-gray uppercase tracking-wide mb-2">
+        Add a tip — optional
+      </p>
+      <div className="grid grid-cols-5 gap-1.5">
+        <button
+          type="button"
+          onClick={() => {
+            setCustomMode(false);
+            onChange(0);
+          }}
+          className={`px-2 py-2 text-xs font-medium rounded-lg border transition-colors ${
+            valueGrosze === 0 && !customMode
+              ? "border-italia-red bg-italia-red/5 text-italia-red"
+              : "border-gray-200 text-italia-gray hover:border-gray-300"
+          }`}
+        >
+          None
+        </button>
+        {presets.map((p, i) => {
+          const g = presetValues[i];
+          const selected = !customMode && valueGrosze === g && g > 0;
+          return (
+            <button
+              key={p}
+              type="button"
+              onClick={() => {
+                setCustomMode(false);
+                onChange(g);
+              }}
+              className={`flex flex-col items-center justify-center px-2 py-2 text-xs font-medium rounded-lg border transition-colors ${
+                selected
+                  ? "border-italia-red bg-italia-red/5 text-italia-red"
+                  : "border-gray-200 text-italia-gray hover:border-gray-300"
+              }`}
+            >
+              <span>{Math.round(p * 100)}%</span>
+              <span className="text-[10px] opacity-70">{(g / 100).toFixed(2)} zł</span>
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          onClick={() => {
+            setCustomMode(true);
+            onChange(Math.round(parseFloat(customStr || "0") * 100));
+          }}
+          className={`px-2 py-2 text-xs font-medium rounded-lg border transition-colors ${
+            customMode
+              ? "border-italia-red bg-italia-red/5 text-italia-red"
+              : "border-gray-200 text-italia-gray hover:border-gray-300"
+          }`}
+        >
+          Custom
+        </button>
+      </div>
+      {customMode && (
+        <div className="mt-2 flex items-center gap-2">
+          <span className="text-xs text-italia-gray">zł</span>
+          <input
+            type="number"
+            min="0"
+            step="0.50"
+            inputMode="decimal"
+            value={customStr}
+            onChange={(e) => {
+              setCustomStr(e.target.value);
+              onChange(Math.round(parseFloat(e.target.value || "0") * 100));
+            }}
+            placeholder="0.00"
+            className="pub-input min-h-[36px] text-sm"
+          />
+        </div>
+      )}
+    </div>
   );
 }

@@ -1,7 +1,7 @@
 import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser } from "@/data/types";
+import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop } from "@/data/types";
 import { getActiveLocations, locations as allLocations } from "@/data/locations";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -10,6 +10,7 @@ import {
 } from "@/lib/cart-presence-redis";
 import { WALLET_MAX_PHONES } from "@/lib/constants";
 import { normalizePlPhoneE164, phonesEqualPl } from "@/lib/phone";
+import { logger } from "@/lib/logger";
 
 // --- Storage abstraction: Neon Postgres when DATABASE_URL is set, filesystem fallback for local dev ---
 
@@ -61,7 +62,7 @@ async function readJSON<T>(key: string, fallback: T): Promise<T> {
       if (rows.length === 0) return fallback;
       return rows[0].value as T;
     } catch (err) {
-      console.error(`DB read error for ${key}:`, err);
+      logger.error("DB read failed", { key, layer: "store.readJSON" }, err);
       return fallback;
     }
   }
@@ -222,6 +223,19 @@ export async function getOrderById(id: string): Promise<Order | undefined> {
   return orders.find((o) => o.id === id);
 }
 
+/**
+ * Find an order by its Stripe payment-intent id. Used by the dispute webhook
+ * (the `Dispute` object references a `charge` + `payment_intent` but no
+ * order-level metadata, so we lean on `stripePaymentIntentId` captured at
+ * checkout-completed time).
+ */
+export async function getOrderByStripePaymentIntent(
+  paymentIntentId: string,
+): Promise<Order | undefined> {
+  const orders = await readJSON<Order[]>("orders.json", []);
+  return orders.find((o) => o.stripePaymentIntentId === paymentIntentId);
+}
+
 export async function createOrder(order: Order): Promise<Order> {
   return withLock("orders.json", async () => {
     const orders = await readJSON<Order[]>("orders.json", []);
@@ -237,6 +251,25 @@ export async function updateOrderStatus(id: string, status: Order["status"]): Pr
     const index = orders.findIndex((o) => o.id === id);
     if (index === -1) return null;
     orders[index].status = status;
+    await writeJSON("orders.json", orders);
+    return orders[index];
+  });
+}
+
+/**
+ * Patch arbitrary fields on an order. Used by the Stripe webhook (to capture
+ * session / payment-intent ids) and by the refund flow (to attach the refund
+ * record). Identity fields are stripped to prevent accidental rewrites.
+ */
+export async function updateOrder(
+  id: string,
+  patch: Partial<Omit<Order, "id" | "createdAt">>,
+): Promise<Order | null> {
+  return withLock("orders.json", async () => {
+    const orders = await readJSON<Order[]>("orders.json", []);
+    const index = orders.findIndex((o) => o.id === id);
+    if (index === -1) return null;
+    orders[index] = { ...orders[index], ...patch };
     await writeJSON("orders.json", orders);
     return orders[index];
   });
@@ -934,6 +967,25 @@ export async function setMenuOverridesBulk(updates: Record<string, MenuOverride>
   });
 }
 
+/** Drop the override rows for the given menu-item ids, reverting them to
+ *  the static seed values. Used by the AdminMenu "Reset overrides" bulk
+ *  action. Returns the count of rows actually removed. */
+export async function clearMenuOverrides(ids: string[]): Promise<number> {
+  if (ids.length === 0) return 0;
+  return withLock("menu-overrides.json", async () => {
+    const overrides = await readJSON<Record<string, MenuOverride>>("menu-overrides.json", {});
+    let removed = 0;
+    for (const id of ids) {
+      if (id in overrides) {
+        delete overrides[id];
+        removed++;
+      }
+    }
+    if (removed > 0) await writeJSON("menu-overrides.json", overrides);
+    return removed;
+  });
+}
+
 // --- Settings ---
 
 export interface AppSettings {
@@ -1119,6 +1171,8 @@ export interface LoyaltyMember {
   nickname?: string;
   email?: string;
   signedUpAt: string;
+  /** Optional ISO date of birth (YYYY-MM-DD). Powers birthday trigger campaigns. */
+  dob?: string;
 }
 
 export async function getLoyaltyMembers(): Promise<LoyaltyMember[]> {
@@ -1149,7 +1203,7 @@ export async function getLoyaltyMember(phone: string): Promise<LoyaltyMember | u
 
 export async function updateLoyaltyMember(
   phone: string,
-  updates: Partial<Pick<LoyaltyMember, "name" | "lastName" | "nickname" | "email">>
+  updates: Partial<Pick<LoyaltyMember, "name" | "lastName" | "nickname" | "email" | "dob">>
 ): Promise<LoyaltyMember | null> {
   const canonical = normalizePlPhoneE164(phone) || phone.trim();
   return withLock("loyalty-members.json", async () => {
@@ -1821,6 +1875,9 @@ export async function deleteReferral(code: string): Promise<boolean> {
 
 // --- Feedback ---
 
+export const FEEDBACK_SENTIMENTS = ["positive", "neutral", "negative"] as const;
+export type FeedbackSentiment = (typeof FEEDBACK_SENTIMENTS)[number];
+
 export interface FeedbackEntry {
   id: string;
   orderId: string;
@@ -1832,6 +1889,12 @@ export interface FeedbackEntry {
   categoryRatings: Record<string, number>;
   comment: string;
   status: "new" | "reviewed" | "responded";
+  /** Set by the sentiment analyzer. Absent until the analyze endpoint runs. */
+  sentiment?: FeedbackSentiment;
+  /** Short normalized topic tags: "dough quality", "speed", "staff friendliness". */
+  themes?: string[];
+  /** ISO timestamp of the last sentiment scan. */
+  analyzedAt?: string;
 }
 
 export async function getFeedback(): Promise<FeedbackEntry[]> {
@@ -1860,6 +1923,32 @@ export async function updateFeedbackStatus(id: string, status: FeedbackEntry["st
     list[idx].status = status;
     await writeJSON("feedback.json", list);
     return list[idx];
+  });
+}
+
+/**
+ * Persist sentiment-analysis results for one or more feedback entries. Used
+ * by the analyze endpoint to write Claude's batch output back without
+ * touching customer-controlled fields (comment, rating).
+ */
+export async function setFeedbackAnalysis(
+  updates: { id: string; sentiment: FeedbackSentiment; themes: string[] }[],
+): Promise<number> {
+  return withLock("feedback.json", async () => {
+    const list = await readJSON<FeedbackEntry[]>("feedback.json", []);
+    const byId = new Map(updates.map((u) => [u.id, u]));
+    const now = new Date().toISOString();
+    let n = 0;
+    for (const entry of list) {
+      const u = byId.get(entry.id);
+      if (!u) continue;
+      entry.sentiment = u.sentiment;
+      entry.themes = u.themes;
+      entry.analyzedAt = now;
+      n++;
+    }
+    await writeJSON("feedback.json", list);
+    return n;
   });
 }
 
@@ -2262,6 +2351,7 @@ export async function saveStaff(
       locationSlug: input.locationSlug,
       hourlyRateGrosze: input.hourlyRateGrosze,
       hireDate: input.hireDate,
+      dob: input.dob,
       status: input.status,
       notes: input.notes,
       createdAt: input.createdAt ?? new Date().toISOString(),
@@ -2357,6 +2447,77 @@ export async function recordTimePunch(input: Omit<TimePunch, "id" | "occurredAt"
     await writeJSON("time-punches.json", list);
     return punch;
   });
+}
+
+/**
+ * Compute realised labour cost (grosze) over an arbitrary window by pairing
+ * clock-in / clock-out punches per staff member and multiplying worked hours
+ * by each member's hourly rate. Open shifts (clock-in without a matching
+ * clock-out) are extended to `now` so the "labour today so far" tile reflects
+ * staff currently on the floor.
+ *
+ * Punches outside the window still affect the pairing when they straddle a
+ * boundary — we slice the worked seconds down to the requested range so
+ * mid-shift snapshots don't double-count.
+ */
+export async function getLaborCostInRange(
+  locationSlug: string | undefined,
+  fromIso: string,
+  toIso: string,
+  now: Date = new Date(),
+): Promise<{ laborGrosze: number; openShifts: number }> {
+  const fromMs = new Date(fromIso).getTime();
+  const toMs = new Date(toIso).getTime();
+  const nowMs = now.getTime();
+
+  const staff = await getStaff(locationSlug);
+  const staffById = new Map(staff.map((s) => [s.id, s]));
+  const punches = await getTimePunches({
+    // Pull a generous window so we catch a clock-in that started before
+    // `from` and is still open. Cap at 7 days back to keep the read bounded.
+    from: new Date(fromMs - 7 * 24 * 60 * 60 * 1000).toISOString(),
+  });
+
+  // Group oldest-first so the pair walk reads naturally.
+  const byStaff = new Map<string, TimePunch[]>();
+  for (const p of punches) {
+    if (!staffById.has(p.staffId)) continue;
+    (byStaff.get(p.staffId) ?? byStaff.set(p.staffId, []).get(p.staffId)!).push(p);
+  }
+  for (const arr of byStaff.values()) {
+    arr.sort((a, b) => a.occurredAt.localeCompare(b.occurredAt));
+  }
+
+  let laborGrosze = 0;
+  let openShifts = 0;
+
+  for (const [staffId, arr] of byStaff) {
+    const member = staffById.get(staffId)!;
+    let inAt: number | null = null;
+    for (const p of arr) {
+      const t = new Date(p.occurredAt).getTime();
+      if (p.type === "clock-in") {
+        inAt = t;
+      } else if (p.type === "clock-out" && inAt !== null) {
+        const startedAt = Math.max(inAt, fromMs);
+        const endedAt = Math.min(t, toMs);
+        if (endedAt > startedAt) {
+          laborGrosze += ((endedAt - startedAt) / 1000 / 3600) * member.hourlyRateGrosze;
+        }
+        inAt = null;
+      }
+    }
+    if (inAt !== null) {
+      openShifts++;
+      const startedAt = Math.max(inAt, fromMs);
+      const endedAt = Math.min(nowMs, toMs);
+      if (endedAt > startedAt) {
+        laborGrosze += ((endedAt - startedAt) / 1000 / 3600) * member.hourlyRateGrosze;
+      }
+    }
+  }
+
+  return { laborGrosze: Math.round(laborGrosze), openShifts };
 }
 
 // --- Truck operations ---
@@ -2541,5 +2702,208 @@ export async function appendAuditLog(input: Omit<AuditLogEntry, "id" | "occurred
       : list;
     await writeJSON("audit-log.json", trimmed);
     return entry;
+  });
+}
+
+// --- Compliance calendar -----------------------------------------------------
+
+export async function getComplianceItems(locationSlug?: string): Promise<ComplianceItem[]> {
+  const all = await readJSON<ComplianceItem[]>("compliance.json", []);
+  const filtered = locationSlug ? all.filter((c) => c.locationSlug === locationSlug) : all;
+  // Renewing-soonest first so the dashboard tile pulls the most urgent items
+  // without re-sorting on the client.
+  return filtered.slice().sort((a, b) => a.expiresAt.localeCompare(b.expiresAt));
+}
+
+export async function saveComplianceItem(
+  input: Omit<ComplianceItem, "id" | "createdAt" | "updatedAt"> & {
+    id?: string;
+    createdAt?: string;
+  },
+): Promise<ComplianceItem> {
+  return withLock("compliance.json", async () => {
+    const list = await readJSON<ComplianceItem[]>("compliance.json", []);
+    const now = new Date().toISOString();
+    const item: ComplianceItem = {
+      id: input.id || `cmp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      locationSlug: input.locationSlug,
+      kind: input.kind,
+      title: input.title,
+      expiresAt: input.expiresAt,
+      lastRenewedAt: input.lastRenewedAt,
+      notes: input.notes,
+      createdAt: input.createdAt ?? now,
+      updatedAt: now,
+    };
+    const i = list.findIndex((c) => c.id === item.id);
+    if (i >= 0) list[i] = item;
+    else list.push(item);
+    await writeJSON("compliance.json", list);
+    return item;
+  });
+}
+
+// --- GDPR erasure -------------------------------------------------------
+
+/**
+ * Redact every order belonging to a phone number. Used by the GDPR delete
+ * flow — order rows stay for accounting, but customerName / address /
+ * specialInstructions are wiped and customerPhone is rewritten to a
+ * deterministic tombstone so reconciliation tooling still groups them.
+ */
+export async function gdprRedactOrders(canonicalPhone: string, tombstone: string): Promise<number> {
+  return withLock("orders.json", async () => {
+    const list = await readJSON<Order[]>("orders.json", []);
+    let touched = 0;
+    for (const o of list) {
+      if (phonesEqualPl(o.customerPhone, canonicalPhone)) {
+        o.customerName = "[GDPR_REDACTED]";
+        o.customerPhone = tombstone;
+        o.deliveryAddress = undefined;
+        o.specialInstructions = undefined;
+        touched++;
+      }
+    }
+    if (touched > 0) await writeJSON("orders.json", list);
+    return touched;
+  });
+}
+
+export async function gdprRemoveCustomerNotes(canonicalPhone: string): Promise<number> {
+  return withLock("customer-notes.json", async () => {
+    const list = await readJSON<CustomerNote[]>("customer-notes.json", []);
+    const next = list.filter((n) => !phonesEqualPl(n.phone, canonicalPhone));
+    const removed = list.length - next.length;
+    if (removed > 0) await writeJSON("customer-notes.json", next);
+    return removed;
+  });
+}
+
+export async function gdprRemoveLoyaltyMember(canonicalPhone: string): Promise<boolean> {
+  return withLock("loyalty-members.json", async () => {
+    const list = await readJSON<{ phone: string }[]>("loyalty-members.json", []);
+    const next = list.filter((m) => !phonesEqualPl(m.phone, canonicalPhone));
+    if (next.length === list.length) return false;
+    await writeJSON("loyalty-members.json", next);
+    return true;
+  });
+}
+
+export async function gdprRedactFeedback(canonicalPhone: string, tombstone: string): Promise<number> {
+  return withLock("feedback.json", async () => {
+    const list = await readJSON<FeedbackEntry[]>("feedback.json", []);
+    let touched = 0;
+    for (const f of list) {
+      if (phonesEqualPl(f.customerPhone, canonicalPhone)) {
+        f.customerName = "[GDPR_REDACTED]";
+        f.customerPhone = tombstone;
+        touched++;
+      }
+    }
+    if (touched > 0) await writeJSON("feedback.json", list);
+    return touched;
+  });
+}
+
+// --- Cash sessions ------------------------------------------------------
+
+export async function getCashSessions(locationSlug?: string): Promise<CashSession[]> {
+  const all = await readJSON<CashSession[]>("cash-sessions.json", []);
+  const list = locationSlug ? all.filter((s) => s.locationSlug === locationSlug) : all;
+  // Most recent first so the UI doesn't have to re-sort.
+  return list.slice().sort((a, b) => b.openedAt.localeCompare(a.openedAt));
+}
+
+export async function getCashSessionById(id: string): Promise<CashSession | undefined> {
+  const all = await readJSON<CashSession[]>("cash-sessions.json", []);
+  return all.find((s) => s.id === id);
+}
+
+/** Find the open session (no closedAt) for a location, if any. Only one open
+ *  session per location is supported — opening a second 409s. */
+export async function getOpenCashSession(locationSlug: string): Promise<CashSession | undefined> {
+  const all = await readJSON<CashSession[]>("cash-sessions.json", []);
+  return all.find((s) => s.locationSlug === locationSlug && !s.closedAt);
+}
+
+export async function openCashSession(input: {
+  locationSlug: string;
+  openingFloat: number;
+  openedBy: string;
+  notes?: string;
+}): Promise<CashSession | { error: "already_open"; existing: CashSession }> {
+  return withLock("cash-sessions.json", async () => {
+    const all = await readJSON<CashSession[]>("cash-sessions.json", []);
+    const open = all.find((s) => s.locationSlug === input.locationSlug && !s.closedAt);
+    if (open) return { error: "already_open" as const, existing: open };
+    const session: CashSession = {
+      id: `cash-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      locationSlug: input.locationSlug,
+      openedAt: new Date().toISOString(),
+      openingFloat: Math.max(0, Math.round(input.openingFloat)),
+      openedBy: input.openedBy,
+      drops: [],
+      notes: input.notes,
+    };
+    all.push(session);
+    await writeJSON("cash-sessions.json", all);
+    return session;
+  });
+}
+
+export async function appendCashDrop(
+  sessionId: string,
+  drop: Omit<CashDrop, "id" | "at"> & { at?: string },
+): Promise<CashSession | null> {
+  return withLock("cash-sessions.json", async () => {
+    const all = await readJSON<CashSession[]>("cash-sessions.json", []);
+    const idx = all.findIndex((s) => s.id === sessionId);
+    if (idx === -1) return null;
+    if (all[idx].closedAt) return null;
+    const entry: CashDrop = {
+      id: `drop-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      amountGrosze: Math.round(drop.amountGrosze),
+      kind: drop.kind,
+      at: drop.at ?? new Date().toISOString(),
+      notes: drop.notes,
+      actor: drop.actor,
+    };
+    all[idx].drops.push(entry);
+    await writeJSON("cash-sessions.json", all);
+    return all[idx];
+  });
+}
+
+export async function closeCashSession(
+  sessionId: string,
+  closingCountGrosze: number,
+  closedBy: string,
+  notes?: string,
+): Promise<CashSession | null> {
+  return withLock("cash-sessions.json", async () => {
+    const all = await readJSON<CashSession[]>("cash-sessions.json", []);
+    const idx = all.findIndex((s) => s.id === sessionId);
+    if (idx === -1) return null;
+    if (all[idx].closedAt) return null;
+    const session = all[idx];
+    const expected =
+      session.openingFloat + session.drops.reduce((acc, d) => acc + d.amountGrosze, 0);
+    session.closingCountGrosze = Math.max(0, Math.round(closingCountGrosze));
+    session.closedAt = new Date().toISOString();
+    session.closedBy = closedBy;
+    session.varianceGrosze = session.closingCountGrosze - expected;
+    if (notes) session.notes = notes;
+    await writeJSON("cash-sessions.json", all);
+    return session;
+  });
+}
+
+export async function deleteComplianceItem(id: string): Promise<boolean> {
+  return withLock("compliance.json", async () => {
+    const list = await readJSON<ComplianceItem[]>("compliance.json", []);
+    const filtered = list.filter((c) => c.id !== id);
+    if (filtered.length === list.length) return false;
+    await writeJSON("compliance.json", filtered);
+    return true;
   });
 }

@@ -1722,7 +1722,7 @@ html { scroll-behavior: smooth; }
 .v2-kpi-delta-up { background: var(--success-soft); color: var(--success); }
 .v2-kpi-delta-down { background: var(--danger-soft); color: var(--danger); }
 .v2-kpi-delta-flat { background: var(--surface-3); color: var(--fg-subtle); }
-.v2-kpi-hint { font-size: var(--text-2xs); color: var(--fg-subtle); }
+.v2-kpi-hint { font-size: var(--text-2xs); color: var(--fg-subtle); line-height: 1.4; white-space: normal; word-break: break-word; }
 .v2-kpi-spark { width: 96px; flex-shrink: 0; opacity: 0.85; }
 
 /* ============================
@@ -2138,11 +2138,24 @@ html { scroll-behavior: smooth; }
 }
 
 .v2-mng-section[data-variant="menu"] {
-  --mng-grid: 20px minmax(0, 1fr) 84px 84px 56px 28px;
-  --mng-cols-start: 3;
+  --mng-grid: 20px 20px minmax(0, 1fr) 84px 84px 56px 28px;
+  --mng-cols-start: 4;
+}
+.v2-mng-select {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  cursor: pointer;
+  accent-color: var(--brand);
 }
 .v2-mng-section[data-variant="recipes"] {
   --mng-grid: minmax(0, 1fr) 84px 84px 56px 88px;
+  --mng-cols-start: 2;
+}
+/* Recipe editor's ingredients table: name | Qty | Waste | Cost | trash.
+   Reuses the menu's section-header + row chrome for visual consistency. */
+.v2-mng-section[data-variant="recipe-edit"] {
+  --mng-grid: minmax(0, 1fr) 96px 84px 88px 24px;
   --mng-cols-start: 2;
 }
 
@@ -2339,28 +2352,90 @@ html { scroll-behavior: smooth; }
    ============================ */
 
 
+/* Three summary tiles at the top of the recipe editor. Uses the standard
+   `KpiCard` primitive — keeps the look consistent with AdminDashboard /
+   AdminReports / AdminInventory and lets the same tone bands tell the
+   story (margin colour-codes itself). */
 .v2-recipe-summary {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
-@media (max-width: 640px) { .v2-recipe-summary { grid-template-columns: 1fr; } }
-.v2-summary-row { display: flex; align-items: center; justify-content: space-between; }
-.v2-summary-val { font-weight: 600; color: var(--fg); }
+@media (max-width: 720px) { .v2-recipe-summary { grid-template-columns: 1fr; } }
 
-.v2-rcp-rows { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
-.v2-rcp-row {
-  display: grid;
-  grid-template-columns: 1fr 120px 110px 90px 32px;
+/* Recipe ingredients table — reuses .v2-mng-section + .v2-mng-row chrome so
+   row padding, hover, bold names, and section-header eyebrow all match the
+   Menu page exactly. The recipe-specific bits below are limited to the
+   borderless inline-edit number cells and the hover-revealed trash. */
+
+/* Recipe rows: right-align the inline cells (Qty / Waste / Cost / trash). */
+.v2-mng-row-recipe > .v2-rcp-cost { justify-self: end; }
+.v2-rcp-cost {
+  text-align: right;
+  font-weight: 600;
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Borderless inline number editor inside a recipe row. The wrapper sheds
+   its background + border until the row is hovered or the cell is
+   focused. Spinners stay hidden so the table reads tabular. */
+.v2-mng-row-recipe .v2-field { gap: 0; }
+.v2-mng-row-recipe .v2-input-wrap {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+.v2-mng-row-recipe:hover .v2-input-wrap { border-color: var(--border); }
+.v2-mng-row-recipe .v2-input-wrap:focus-within {
+  background: var(--surface-1);
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--border-focus) 22%, transparent);
+}
+.v2-input.v2-rcp-num {
+  padding: 4px 8px;
+  font-size: var(--text-sm);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.v2-input.v2-rcp-num::-webkit-outer-spin-button,
+.v2-input.v2-rcp-num::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.v2-mng-row-recipe .v2-input-adorn-trailing {
+  padding: 0 8px 0 2px;
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+}
+
+/* Subtle, hover-revealed delete button. Mirrors how the Menu row's edit
+   pencil sits at the right edge — calm at rest, opacity-1 on row hover
+   or keyboard focus. */
+.v2-rcp-remove {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--fg-subtle);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--duration-fast), color var(--duration-fast), background var(--duration-fast);
 }
+.v2-mng-row-recipe:hover .v2-rcp-remove,
+.v2-rcp-remove:focus-visible { opacity: 1; }
+.v2-rcp-remove:hover { color: var(--danger); background: var(--danger-soft); }
 @media (max-width: 720px) {
-  .v2-rcp-row { grid-template-columns: 1fr 1fr; row-gap: 6px; }
-  .v2-rcp-row > .v2-rcp-name { grid-column: 1 / -1; }
+  .v2-rcp-remove { opacity: 1; }
 }
-.v2-rcp-name { font-weight: 500; color: var(--fg); }
-.v2-rcp-cost { text-align: right; font-weight: 600; color: var(--fg); }
 
 .v2-rcp-add {
   display: grid;
@@ -2562,14 +2637,12 @@ html { scroll-behavior: smooth; }
 }
 @media (max-width: 480px) { .v2-chip-grid { grid-template-columns: 1fr; } }
 
-.v2-card-desc {
-  font-size: var(--text-2xs);
-  color: var(--fg-subtle);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-weight: 600;
-  margin-bottom: 4px;
-}
+/* The original `.v2-card-desc` rule lives near the top of this file with
+   sentence-case, text-xs styling. A later duplicate here was forcing
+   uppercase + 2xs + bold on every CardHeader description across the
+   admin ("PICK A SINGLE TRUCK...", "DAILY TOTALS IN ZŁ OVER THE LAST 7
+   DAYS", etc.), which screamed at the user. Removed — descriptions
+   now render sentence-case as authored. */
 
 .v2-redeem-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
 .v2-redeem-list li {

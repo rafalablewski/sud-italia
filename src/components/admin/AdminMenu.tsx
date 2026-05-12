@@ -86,6 +86,8 @@ export function AdminMenu() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<MenuCategory | "all">("all");
   const [editing, setEditing] = useState<MenuItemData | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const fetchMenu = useCallback(async () => {
     setLoading(true);
@@ -127,6 +129,106 @@ export function AdminMenu() {
     } else {
       toast.success(next ? "Item available" : "Item hidden", item.name);
     }
+  };
+
+  const bulkSetAvailability = async (available: boolean) => {
+    if (selectedIds.size === 0) return;
+    setBulkBusy(true);
+    try {
+      const updates: Record<string, { available: boolean }> = {};
+      for (const id of selectedIds) updates[id] = { available };
+      const res = await fetch("/api/admin/menu", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: updates }),
+      });
+      if (res.ok) {
+        setItems((arr) =>
+          arr.map((i) => (selectedIds.has(i.id) ? { ...i, available, _hasOverride: true } : i)),
+        );
+        toast.success(
+          available ? "Items marked available" : "Items 86'd",
+          `${selectedIds.size} ${selectedIds.size === 1 ? "item" : "items"} updated.`,
+        );
+        setSelectedIds(new Set());
+      } else {
+        toast.error("Could not bulk update");
+      }
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  /** Reverts the selected items to their static seed values by dropping
+   *  any override row. Used by the "Reset overrides" bulk action. */
+  const bulkResetOverrides = async () => {
+    if (selectedIds.size === 0) return;
+    setBulkBusy(true);
+    try {
+      const ids = [...selectedIds];
+      const res = await fetch("/api/admin/menu/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reset", ids }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        toast.success(
+          "Overrides reset",
+          `${data.affected} item${data.affected === 1 ? "" : "s"} reverted to seed values.`,
+        );
+        setSelectedIds(new Set());
+        await fetchMenu();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast.error("Could not reset", data?.error);
+      }
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  /** Copies the selected items' price/cost/description overrides to the
+   *  matching items in another location, matched by name. */
+  const bulkCloneToLocation = async (targetSlug: string) => {
+    if (selectedIds.size === 0) return;
+    setBulkBusy(true);
+    try {
+      const ids = [...selectedIds];
+      const res = await fetch("/api/admin/menu/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "clone_to", ids, target: targetSlug }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const targetLabel =
+          activeLocations.find((l) => l.slug === targetSlug)?.city ?? targetSlug;
+        const msg = data.unmatched > 0
+          ? `${data.matched} cloned to ${targetLabel} · ${data.unmatched} skipped (no matching name).`
+          : `${data.matched} cloned to ${targetLabel}.`;
+        if (data.matched > 0) {
+          toast.success("Cloned across locations", msg);
+        } else {
+          toast.warning("Nothing cloned", msg);
+        }
+        setSelectedIds(new Set());
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast.error("Could not clone", data?.error);
+      }
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
 
   const saveEdit = async (id: string, change: { price?: number; description?: string }) => {
@@ -233,6 +335,64 @@ export function AdminMenu() {
         />
       </div>
 
+      {selectedIds.size > 0 && (
+        <div
+          style={{
+            position: "sticky",
+            top: "0.5rem",
+            zIndex: 10,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "0.75rem",
+            padding: "0.5rem 0.75rem",
+            margin: "0 0 0.5rem",
+            borderRadius: "0.5rem",
+            background: "var(--surface-1)",
+            border: "1px solid var(--border)",
+            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.06)",
+          }}
+        >
+          <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>
+            {selectedIds.size} selected
+          </span>
+          <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
+            <Button size="sm" variant="ghost" disabled={bulkBusy} onClick={() => bulkSetAvailability(true)}>
+              Mark available
+            </Button>
+            <Button size="sm" variant="ghost" disabled={bulkBusy} onClick={() => bulkSetAvailability(false)}>
+              86 (hide)
+            </Button>
+            {activeLocations
+              .filter((l) => l.slug !== pageLoc)
+              .map((l) => (
+                <Button
+                  key={l.slug}
+                  size="sm"
+                  variant="ghost"
+                  disabled={bulkBusy}
+                  onClick={() => bulkCloneToLocation(l.slug)}
+                  title={`Copy the selected items' price / cost / description overrides to matching items in ${l.city}.`}
+                >
+                  Clone → {l.city}
+                </Button>
+              ))}
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={bulkBusy}
+              onClick={bulkResetOverrides}
+              title="Drop any custom price / cost / description / availability for the selected items — reverts to seed values."
+            >
+              Reset overrides
+            </Button>
+            <Button size="sm" variant="ghost" disabled={bulkBusy} onClick={() => setSelectedIds(new Set())}>
+              Clear
+            </Button>
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <div className="v2-page-loading">Loading menu…</div>
       ) : filtered.length === 0 ? (
@@ -269,11 +429,20 @@ export function AdminMenu() {
                 <ul className="v2-mng-list">
                   {list.map((item) => {
                     const margin = marginPct(item.price, item.cost);
+                    const isSelected = selectedIds.has(item.id);
                     return (
                       <li
                         key={item.id}
                         className={`v2-mng-row v2-mng-row-menu ${item.available ? "" : "is-off"}`}
+                        style={isSelected ? { background: "var(--brand-soft)" } : undefined}
                       >
+                        <input
+                          type="checkbox"
+                          className="v2-mng-select"
+                          checked={isSelected}
+                          onChange={() => toggleSelected(item.id)}
+                          aria-label={isSelected ? `Deselect ${item.name}` : `Select ${item.name}`}
+                        />
                         <button
                           type="button"
                           onClick={() => toggleAvailability(item)}

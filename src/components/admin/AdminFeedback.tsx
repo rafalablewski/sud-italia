@@ -9,6 +9,7 @@ import {
   MessageSquare,
   Search,
   Smile,
+  Sparkles,
   Star,
 } from "lucide-react";
 import { useAdminLocation } from "./v2/LocationContext";
@@ -27,6 +28,8 @@ import {
 } from "./v2/ui";
 import { BarChart, KpiCard, PieChart } from "./v2/charts";
 
+type AiSentiment = "positive" | "neutral" | "negative";
+
 interface FeedbackEntry {
   id: string;
   orderId: string;
@@ -38,7 +41,18 @@ interface FeedbackEntry {
   categoryRatings: Record<string, number>;
   comment: string;
   status: "new" | "reviewed" | "responded";
+  /** AI-assigned sentiment (from /api/admin/feedback/analyze). */
+  sentiment?: AiSentiment;
+  /** AI-extracted theme tags. */
+  themes?: string[];
+  analyzedAt?: string;
 }
+
+const SENTIMENT_TONE: Record<AiSentiment, "success" | "warning" | "danger"> = {
+  positive: "success",
+  neutral: "warning",
+  negative: "danger",
+};
 
 type StatusFilter = "all" | FeedbackEntry["status"];
 type RatingFilter = "all" | "1" | "2" | "3" | "4" | "5";
@@ -85,6 +99,7 @@ export function AdminFeedback() {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [ratingFilter, setRatingFilter] = useState<RatingFilter>("all");
+  const [analyzing, setAnalyzing] = useState(false);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -138,6 +153,58 @@ export function AdminFeedback() {
     for (const f of list) c[f.status]++;
     return c;
   }, [list]);
+
+  // Aggregate AI themes from the last 7 days of analyzed feedback so the
+  // admin sees "what's trending this week" rather than all-time noise.
+  const topThemes = useMemo(() => {
+    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const counts = new Map<string, { count: number; rating: number }>();
+    for (const f of list) {
+      if (!f.themes || !f.themes.length) continue;
+      if (location && f.locationSlug !== location) continue;
+      const t = new Date(f.date).getTime();
+      if (Number.isFinite(t) && t < sevenDaysAgo) continue;
+      for (const theme of f.themes) {
+        const key = theme.toLowerCase();
+        const prev = counts.get(key) || { count: 0, rating: 0 };
+        counts.set(key, { count: prev.count + 1, rating: prev.rating + f.overallRating });
+      }
+    }
+    return [...counts.entries()]
+      .map(([theme, { count, rating }]) => ({
+        theme,
+        count,
+        avgRating: count > 0 ? rating / count : 0,
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 8);
+  }, [list, location]);
+
+  const unanalyzedCount = useMemo(
+    () => list.filter((f) => f.comment?.trim().length > 0 && !f.analyzedAt).length,
+    [list],
+  );
+
+  const handleAnalyze = async () => {
+    setAnalyzing(true);
+    try {
+      const res = await fetch("/api/admin/feedback/analyze", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(
+          `Analyzed ${data.analyzed} comments`,
+          data.remaining > 0 ? `${data.remaining} left — run again to continue.` : "All caught up.",
+        );
+        await fetchAll();
+      } else {
+        toast.error("Sentiment analysis failed", data.error || "Try again in a moment.");
+      }
+    } catch {
+      toast.error("Sentiment analysis failed", "Network error.");
+    } finally {
+      setAnalyzing(false);
+    }
+  };
 
   const updateStatus = async (id: string, status: FeedbackEntry["status"]) => {
     const res = await fetch("/api/admin/feedback", {
@@ -201,9 +268,25 @@ export function AdminFeedback() {
       key: "comment",
       header: "Comment",
       cell: (f) => (
-        <span className="v2-fb-comment">
-          {f.comment ? `"${f.comment}"` : <span className="v2-muted">No comment</span>}
-        </span>
+        <div className="v2-fb-comment" style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+          <span>
+            {f.comment ? `"${f.comment}"` : <span className="v2-muted">No comment</span>}
+          </span>
+          {(f.sentiment || (f.themes && f.themes.length > 0)) && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem" }}>
+              {f.sentiment && (
+                <Badge tone={SENTIMENT_TONE[f.sentiment]} variant="soft">
+                  <Sparkles className="h-3 w-3" /> {f.sentiment}
+                </Badge>
+              )}
+              {f.themes?.map((theme) => (
+                <Badge key={theme} tone="neutral" variant="outline">
+                  {theme}
+                </Badge>
+              ))}
+            </div>
+          )}
+        </div>
       ),
     },
     {
@@ -256,6 +339,26 @@ export function AdminFeedback() {
           <p className="v2-page-subtitle">
             Per-order ratings + comments. Stay on top of negative scores — every "new" row is a customer to call back.
           </p>
+        </div>
+        <div className="v2-page-actions">
+          <Button
+            variant="secondary"
+            size="sm"
+            leadingIcon={<Sparkles className="h-3.5 w-3.5" />}
+            onClick={handleAnalyze}
+            disabled={analyzing || unanalyzedCount === 0}
+            title={
+              unanalyzedCount === 0
+                ? "All comments are already analyzed."
+                : `Send ${unanalyzedCount} unanalyzed comments to Claude for sentiment + themes`
+            }
+          >
+            {analyzing
+              ? "Analyzing…"
+              : unanalyzedCount > 0
+                ? `Analyze ${unanalyzedCount}`
+                : "Analyze"}
+          </Button>
         </div>
       </header>
 
@@ -318,6 +421,46 @@ export function AdminFeedback() {
           </CardBody>
         </Card>
       </section>
+
+      <Card>
+        <CardHeader
+          title="Top themes this week"
+          description="AI-extracted topics from analyzed comments over the last 7 days."
+        />
+        <CardBody>
+          {topThemes.length === 0 ? (
+            <EmptyState
+              icon={Sparkles}
+              title="No themes yet"
+              description={
+                unanalyzedCount > 0
+                  ? `Click the Analyze button above to score ${unanalyzedCount} comments.`
+                  : "Comments without text can't be themed."
+              }
+              compact
+            />
+          ) : (
+            <ul style={{ display: "flex", flexDirection: "column", gap: "0.5rem", margin: 0, padding: 0, listStyle: "none" }}>
+              {topThemes.map((t) => (
+                <li
+                  key={t.theme}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.75rem" }}
+                >
+                  <span style={{ fontWeight: 500, textTransform: "capitalize" }}>{t.theme}</span>
+                  <span style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                    <span className="v2-muted" style={{ fontSize: "0.8125rem" }}>
+                      avg {t.avgRating.toFixed(1)}★
+                    </span>
+                    <Badge tone={t.avgRating >= 4 ? "success" : t.avgRating >= 3 ? "warning" : "danger"} variant="soft">
+                      {t.count} mention{t.count === 1 ? "" : "s"}
+                    </Badge>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardBody>
+      </Card>
 
       <div className="v2-filters">
         <div className="v2-filter-search">

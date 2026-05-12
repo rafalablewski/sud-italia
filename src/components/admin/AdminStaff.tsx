@@ -409,6 +409,7 @@ function StaffDialog({ state, onClose, onSaved }: { state: DialogState; onClose:
   const [loc, setLoc] = useState(activeLocations[0]?.slug ?? "krakow");
   const [rateStr, setRateStr] = useState("30.00");
   const [hireDate, setHireDate] = useState("");
+  const [dob, setDob] = useState("");
   const [status, setStatus] = useState<StaffStatus>("active");
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
@@ -423,6 +424,7 @@ function StaffDialog({ state, onClose, onSaved }: { state: DialogState; onClose:
     setLoc(m?.locationSlug ?? activeLocations[0]?.slug ?? "krakow");
     setRateStr(m ? (m.hourlyRateGrosze / 100).toFixed(2) : "30.00");
     setHireDate(m?.hireDate ?? "");
+    setDob(m?.dob ?? "");
     setStatus(m?.status ?? "active");
     setNotes(m?.notes ?? "");
     setBusy(false);
@@ -446,6 +448,7 @@ function StaffDialog({ state, onClose, onSaved }: { state: DialogState; onClose:
         locationSlug: loc,
         hourlyRateGrosze: Math.round(parseFloat(rateStr || "0") * 100),
         hireDate: hireDate || undefined,
+        dob: dob || undefined,
         status,
         notes: notes.trim() || undefined,
       };
@@ -511,6 +514,13 @@ function StaffDialog({ state, onClose, onSaved }: { state: DialogState; onClose:
           />
           <Input label="Hire date" type="date" value={hireDate} onChange={(e) => setHireDate(e.target.value)} />
         </div>
+        <Input
+          label="Date of birth"
+          type="date"
+          value={dob}
+          onChange={(e) => setDob(e.target.value)}
+          description="Optional. Required for under-18 scheduling rules in alcohol-serving locations (Polish Labor Code §190)."
+        />
         <Select
           label="Status"
           value={status}

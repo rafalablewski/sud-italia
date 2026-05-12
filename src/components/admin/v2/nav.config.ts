@@ -1,5 +1,6 @@
 import {
   LayoutDashboard,
+  Banknote,
   ClipboardList,
   ChefHat,
   UtensilsCrossed,
@@ -9,8 +10,10 @@ import {
   BarChart3,
   Boxes,
   Building2,
+  CalendarCheck2,
   HardHat,
   Heart,
+  History,
   PackageSearch,
   Rocket,
   MessageSquare,
@@ -91,7 +94,10 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     id: "finance",
     label: "Finance",
-    items: [{ href: "/admin/reports", label: "Reports", icon: BarChart3, shortcut: "r" }],
+    items: [
+      { href: "/admin/reports", label: "Reports", icon: BarChart3, shortcut: "r" },
+      { href: "/admin/cash", label: "Cash", icon: Banknote },
+    ],
   },
   {
     id: "growth",
@@ -116,6 +122,8 @@ export const NAV_SECTIONS: NavSection[] = [
     label: "System",
     items: [
       { href: "/admin/users", label: "Users & roles", icon: ShieldCheck },
+      { href: "/admin/compliance", label: "Compliance", icon: CalendarCheck2 },
+      { href: "/admin/audit-log", label: "Audit log", icon: History },
       { href: "/admin/settings", label: "Settings", icon: Settings, shortcut: "," },
     ],
   },

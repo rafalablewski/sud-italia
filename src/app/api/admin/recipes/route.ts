@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAuthenticated } from "@/lib/admin-auth";
-import { getRecipes, getRecipe, saveRecipe, deleteRecipe, calculateFoodCost, getIngredients } from "@/lib/store";
+import {
+  appendAuditLog,
+  calculateFoodCost,
+  deleteRecipe,
+  getIngredients,
+  getRecipe,
+  getRecipes,
+  saveRecipe,
+  setMenuOverride,
+} from "@/lib/store";
 import type { Recipe } from "@/data/types";
 
 async function requireAuth() {
@@ -77,6 +86,21 @@ export async function POST(req: NextRequest) {
 
     const saved = await saveRecipe(recipe);
     const foodCost = await calculateFoodCost(recipe.menuItemId);
+
+    // Keep the menu page honest: every recipe save writes the per-portion
+    // cost back to MenuOverride.cost so the Menu admin's cost + margin
+    // columns reflect the real ingredient maths instead of the static
+    // seed value. The override path means we never mutate the menu data
+    // files; old recipes / no-recipe items keep their static cost.
+    await setMenuOverride(recipe.menuItemId, { cost: foodCost });
+    await appendAuditLog({
+      actor: "admin",
+      action: "menu.cost_synced_from_recipe",
+      entityType: "menu_item",
+      entityId: recipe.menuItemId,
+      after: { cost: foodCost },
+    });
+
     return NextResponse.json({ ...saved, calculatedCost: foodCost }, { status: 201 });
   } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  # Allow re-running manually from the Actions tab when triaging flakes.
+  workflow_dispatch: {}
+
+# Cancel any in-progress run for the same ref when a new commit lands — saves
+# minutes on busy PRs.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Typecheck + lint + build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        # `npm ci` is strict — it fails if package.json and package-lock.json
+        # have drifted, which is exactly the contract we want for CI.
+        run: npm ci
+
+      - name: TypeScript
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npx eslint "src/**/*.{ts,tsx}"
+
+      - name: Build
+        # Build catches issues tsc + lint can miss (Next route validation,
+        # bundler errors, server-only imports in client components). Runs
+        # without a Sentry DSN — `next.config.ts` is designed to no-op
+        # cleanly in that mode.
+        run: npm run build
+        env:
+          # Anything secret stays out of CI for now; production env is set on
+          # Vercel. CI only validates that the code compiles + boots.
+          ADMIN_PASSWORD: ci-placeholder

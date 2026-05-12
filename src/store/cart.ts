@@ -12,12 +12,18 @@ interface CartStore {
   selectedSlotTime: string | null;
   selectedSlotDate: string | null;
   deliveryAddress: string;
+  /** Tip in grosze; defaults to 0 (no tip selected). Survives refresh via the
+   *  persisted store, gets cleared on clearCart so it doesn't leak between
+   *  orders. */
+  tipAmount: number;
   setFulfillmentType: (type: FulfillmentType) => void;
   setSelectedSlot: (id: string | null, time: string | null, date: string | null) => void;
   setDeliveryAddress: (address: string) => void;
+  setTipAmount: (grosze: number) => void;
   addItem: (item: MenuItem, locationSlug: string) => void;
   removeItem: (itemId: string) => void;
   updateQuantity: (itemId: string, quantity: number) => void;
+  setItemNotes: (itemId: string, notes: string) => void;
   clearCart: () => void;
   getTotal: () => number;
   getItemCount: () => number;
@@ -33,6 +39,7 @@ export const useCartStore = create<CartStore>()(
       selectedSlotTime: null,
       selectedSlotDate: null,
       deliveryAddress: "",
+      tipAmount: 0,
 
       setFulfillmentType: (type: FulfillmentType) =>
         set({ fulfillmentType: type, selectedSlotId: null, selectedSlotTime: null, selectedSlotDate: null }),
@@ -41,6 +48,9 @@ export const useCartStore = create<CartStore>()(
         set({ selectedSlotId: id, selectedSlotTime: time, selectedSlotDate: date }),
 
       setDeliveryAddress: (address: string) => set({ deliveryAddress: address }),
+
+      setTipAmount: (grosze: number) =>
+        set({ tipAmount: Math.max(0, Math.round(grosze)) }),
 
       addItem: (item: MenuItem, locationSlug: string) => {
         set((state) => {
@@ -97,6 +107,17 @@ export const useCartStore = create<CartStore>()(
         }));
       },
 
+      setItemNotes: (itemId: string, notes: string) => {
+        const trimmed = notes.trim();
+        set((state) => ({
+          items: state.items.map((i) =>
+            i.menuItem.id === itemId
+              ? { ...i, notes: trimmed.length > 0 ? trimmed : undefined }
+              : i
+          ),
+        }));
+      },
+
       clearCart: () =>
         set({
           items: [],
@@ -106,6 +127,7 @@ export const useCartStore = create<CartStore>()(
           selectedSlotTime: null,
           selectedSlotDate: null,
           deliveryAddress: "",
+          tipAmount: 0,
         }),
 
       getTotal: () =>

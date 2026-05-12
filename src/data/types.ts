@@ -10,6 +10,9 @@ export interface Location {
   hours: { day: string; open: string; close: string }[];
   isActive: boolean;
   currency: "PLN";
+  /** When true, Polish Labor Code §190 prohibits under-18 staff from working
+   *  during the location's open hours. Drives scheduling-rule warnings. */
+  servesAlcohol?: boolean;
 }
 
 export type MenuCategory =
@@ -154,6 +157,11 @@ export interface CartItem {
   menuItem: MenuItem;
   quantity: number;
   locationSlug: string;
+  /**
+   * Free-text per-line special request, e.g. "no onion", "extra crispy",
+   * "well-done". Surfaced on the KDS ticket and on the admin order detail.
+   */
+  notes?: string;
 }
 
 export type FulfillmentType = "takeout" | "delivery";
@@ -203,6 +211,74 @@ export const ORDER_STATUSES = [
 
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
+/** Reason codes for refunds, voids, and comps. Surfaced in the admin UI dropdown. */
+export const REFUND_REASON_CODES = [
+  "customer_request",
+  "wrong_item",
+  "quality_issue",
+  "late_or_no_show",
+  "missing_item",
+  "duplicate_charge",
+  "manager_comp",
+  "other",
+] as const;
+
+export type RefundReasonCode = (typeof REFUND_REASON_CODES)[number];
+
+export const REFUND_REASON_LABELS: Record<RefundReasonCode, string> = {
+  customer_request: "Customer request",
+  wrong_item: "Wrong item / wrong order",
+  quality_issue: "Quality issue",
+  late_or_no_show: "Late or no-show",
+  missing_item: "Missing item",
+  duplicate_charge: "Duplicate charge",
+  manager_comp: "Manager comp (on the house)",
+  other: "Other",
+};
+
+export interface OrderRefund {
+  /** "full" refunds the entire paid amount and cancels the order; "partial" leaves the order intact. */
+  type: "full" | "partial";
+  /** Refunded amount in grosze. */
+  amount: number;
+  reasonCode: RefundReasonCode;
+  notes?: string;
+  /** Stripe refund id when the original charge was reversed; absent for offline / demo-mode refunds. */
+  stripeRefundId?: string;
+  /** Actor identifier (today: "admin"). */
+  refundedBy: string;
+  refundedAt: string;
+}
+
+/** Stripe dispute lifecycle statuses. Mirrors Stripe's own values 1:1. */
+export const DISPUTE_STATUSES = [
+  "warning_needs_response",
+  "warning_under_review",
+  "warning_closed",
+  "needs_response",
+  "under_review",
+  "won",
+  "lost",
+] as const;
+
+export type DisputeStatus = (typeof DISPUTE_STATUSES)[number];
+
+export interface OrderDispute {
+  /** Stripe dispute id (`dp_…`). */
+  stripeDisputeId: string;
+  status: DisputeStatus;
+  /** Stripe-supplied reason, e.g. "fraudulent", "product_not_received". */
+  reason: string;
+  /** Disputed amount in grosze. May be less than the charge total. */
+  amount: number;
+  /** ISO timestamp when the dispute was first opened. */
+  createdAt: string;
+  /** ISO timestamp of the most recent webhook update. */
+  updatedAt: string;
+  /** ISO timestamp of dispute resolution (won/lost), if closed. */
+  closedAt?: string;
+}
+
 export interface Order {
   id: string;
   locationSlug: string;
@@ -224,6 +300,17 @@ export interface Order {
   estimatedReadyAt?: string;
   feedback?: OrderFeedback;
   qualityCheck?: QualityCheck;
+  // Stripe correlation — captured by the webhook on checkout.session.completed.
+  // Required to issue refunds against the original charge.
+  stripeSessionId?: string;
+  stripePaymentIntentId?: string;
+  /** Set when a refund (full or partial) has been processed. */
+  refund?: OrderRefund;
+  /** Set when Stripe sent a `charge.dispute.created`. Drives the AdminOrders dispute badge. */
+  dispute?: OrderDispute;
+  /** Optional tip captured at checkout (grosze). Goes to Stripe as a separate
+   *  line item so receipts show "Items 28 zł + Tip 3 zł = 31 zł" cleanly. */
+  tipAmount?: number;
 }
 
 // --- Inventory (per-location stock for an ingredient) ---
@@ -323,6 +410,9 @@ export interface StaffMember {
   /** Hourly rate in grosze. */
   hourlyRateGrosze: number;
   hireDate?: string;
+  /** ISO date of birth (YYYY-MM-DD). Used by scheduling rules to enforce
+   *  under-18 / alcohol-hours restrictions per Polish Labor Code. */
+  dob?: string;
   status: StaffStatus;
   notes?: string;
   createdAt: string;
@@ -407,6 +497,78 @@ export interface ExpansionChecklist {
   items: ExpansionChecklistItem[];
   notes?: string;
   /** ISO timestamp of last edit. */
+  updatedAt: string;
+}
+
+// --- Cash management (truck float, drops, EOD variance) ---
+
+export interface CashDrop {
+  id: string;
+  /** Grosze added (positive) or removed (negative) from the till at this drop. */
+  amountGrosze: number;
+  /** "sale" = cash sale recorded by cashier, "drop" = bank/safe drop, "payout" = cash paid out, "adjust" = correction. */
+  kind: "sale" | "drop" | "payout" | "adjust";
+  /** ISO timestamp. */
+  at: string;
+  notes?: string;
+  actor?: string;
+}
+
+export interface CashSession {
+  id: string;
+  locationSlug: string;
+  /** ISO timestamp the session opened. */
+  openedAt: string;
+  /** Opening float in grosze (manager-supplied count when starting). */
+  openingFloat: number;
+  openedBy: string;
+  drops: CashDrop[];
+  /** Counted total in grosze at EOD; absent until close. */
+  closingCountGrosze?: number;
+  closedAt?: string;
+  closedBy?: string;
+  /** closingCountGrosze − (openingFloat + sum(drops)). Negative ⇒ short; positive ⇒ over. */
+  varianceGrosze?: number;
+  notes?: string;
+}
+
+// --- Compliance calendar (licences, inspections, insurance) ---
+
+export const COMPLIANCE_KINDS = [
+  "alcohol_license",
+  "fire_inspection",
+  "sanepid",
+  "insurance",
+  "gas_inspection",
+  "lease",
+  "other",
+] as const;
+
+export type ComplianceKind = (typeof COMPLIANCE_KINDS)[number];
+
+export const COMPLIANCE_KIND_LABELS: Record<ComplianceKind, string> = {
+  alcohol_license: "Alcohol license",
+  fire_inspection: "Fire inspection",
+  sanepid: "SANEPID",
+  insurance: "Insurance",
+  gas_inspection: "Gas inspection",
+  lease: "Lease",
+  other: "Other",
+};
+
+export interface ComplianceItem {
+  id: string;
+  locationSlug: string;
+  kind: ComplianceKind;
+  /** Human-friendly title — e.g. "Concession alcohol license (Stary Rynek)". */
+  title: string;
+  /** ISO date when the document/license expires. */
+  expiresAt: string;
+  /** ISO date the document was last renewed, if known. */
+  lastRenewedAt?: string;
+  /** Optional internal/contact notes (renewal procedure, lawyer contact, etc.). */
+  notes?: string;
+  createdAt: string;
   updatedAt: string;
 }
 

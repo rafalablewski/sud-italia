@@ -6,6 +6,7 @@ import { FulfillmentType, CartItem } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
 import { getActiveComboDeals } from "@/lib/upsell";
 import { normalizePlPhoneE164 } from "@/lib/phone";
+import { logger } from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,6 +21,7 @@ export async function POST(req: NextRequest) {
       slotDate,
       slotTime,
       deliveryAddress,
+      tipAmount: rawTip,
     } = body;
 
     if (!items?.length || !locationSlug || !customerName || !customerPhone) {
@@ -86,8 +88,10 @@ export async function POST(req: NextRequest) {
     const menuItemsById = new Map(menuItems.map((item) => [item.id, item]));
 
     let calculatedTotal = 0;
-    const verifiedItems: { id: string; name: string; price: number; quantity: number }[] = [];
+    const verifiedItems: { id: string; name: string; price: number; quantity: number; notes?: string }[] = [];
     const orderItems: CartItem[] = [];
+
+    const NOTE_MAX_LEN = 140;
 
     for (const item of items) {
       const menuItem = menuItemsById.get(item.id);
@@ -103,17 +107,26 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         );
       }
+      // Per-line note is optional, trimmed, length-bounded, and never trusted
+      // for price calculation — it's purely a kitchen-facing string.
+      let notes: string | undefined;
+      if (typeof item.notes === "string") {
+        const trimmed = item.notes.trim();
+        if (trimmed.length > 0) notes = trimmed.slice(0, NOTE_MAX_LEN);
+      }
       calculatedTotal += menuItem.price * item.quantity;
       verifiedItems.push({
         id: menuItem.id,
         name: menuItem.name,
         price: menuItem.price,
         quantity: item.quantity,
+        notes,
       });
       orderItems.push({
         menuItem,
         quantity: item.quantity,
         locationSlug,
+        notes,
       });
     }
 
@@ -123,6 +136,14 @@ export async function POST(req: NextRequest) {
     const comboResult = getActiveComboDeals(orderItems, locationConfig);
     const comboDiscount = comboResult.missingCategories.length === 0 ? comboResult.savings : 0;
     calculatedTotal = calculatedTotal - comboDiscount;
+
+    // Tip: optional integer grosze. Bound at the cart subtotal so a malicious
+    // client can't sneak through a 99% tip and then claim chargeback fraud.
+    let tipAmount = 0;
+    if (typeof rawTip === "number" && Number.isInteger(rawTip) && rawTip > 0) {
+      tipAmount = Math.min(rawTip, calculatedTotal);
+      calculatedTotal += tipAmount;
+    }
 
     const orderId = generateOrderId();
 
@@ -148,6 +169,7 @@ export async function POST(req: NextRequest) {
       slotId,
       slotDate,
       slotTime,
+      tipAmount: tipAmount > 0 ? tipAmount : undefined,
       createdAt: new Date().toISOString(),
     });
 
@@ -181,16 +203,33 @@ export async function POST(req: NextRequest) {
         // Requires: Stripe account with BLIK capability enabled for PLN
         // See: https://docs.stripe.com/payments/blik
         payment_method_types: ["card", "p24", "blik"],
-        line_items: verifiedItems.map((item) => ({
-          price_data: {
-            currency: "pln",
-            product_data: {
-              name: item.name,
+        line_items: [
+          ...verifiedItems.map((item) => ({
+            price_data: {
+              currency: "pln",
+              product_data: {
+                name: item.name,
+                ...(item.notes ? { description: item.notes } : {}),
+              },
+              unit_amount: item.price,
             },
-            unit_amount: item.price,
-          },
-          quantity: item.quantity,
-        })),
+            quantity: item.quantity,
+          })),
+          // Tip as a separate line item so the customer's receipt reads
+          // "Items 28 zł · Tip 3 zł · Total 31 zł" cleanly.
+          ...(tipAmount > 0
+            ? [
+                {
+                  price_data: {
+                    currency: "pln",
+                    product_data: { name: "Tip / Napiwek" },
+                    unit_amount: tipAmount,
+                  },
+                  quantity: 1,
+                },
+              ]
+            : []),
+        ],
         mode: "payment",
         success_url: `${process.env.NEXT_PUBLIC_BASE_URL || req.nextUrl.origin}/order-confirmation?orderId=${orderId}&location=${locationSlug}&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || req.nextUrl.origin}/locations/${locationSlug}`,
@@ -235,7 +274,7 @@ export async function POST(req: NextRequest) {
 
     return response;
   } catch (error) {
-    console.error("Checkout error:", error);
+    logger.error("Checkout request failed", { route: "POST /api/checkout" }, error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

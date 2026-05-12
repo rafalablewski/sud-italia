@@ -4,8 +4,10 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Award,
+  Cake,
   Coffee,
   Frown,
+  PartyPopper,
   Search,
   Sparkles,
   Users,
@@ -17,6 +19,7 @@ import {
   Button,
   Card,
   CardBody,
+  CardHeader,
   EmptyState,
   Input,
   Tabs,
@@ -24,6 +27,14 @@ import {
   type Column,
 } from "./v2/ui";
 import { KpiCard } from "./v2/charts";
+
+interface TriggerRow {
+  phone: string;
+  name: string;
+  email?: string;
+  trigger: "birthday" | "anniversary";
+  years: number;
+}
 
 interface CustomerSummary {
   phone: string;
@@ -68,6 +79,7 @@ function fmtDate(iso?: string): string {
 export function AdminCustomers() {
   const { location } = useAdminLocation();
   const [list, setList] = useState<CustomerSummary[]>([]);
+  const [triggers, setTriggers] = useState<TriggerRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -75,11 +87,12 @@ export function AdminCustomers() {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/customers");
-      if (res.ok) {
-        const data = await res.json();
-        setList(Array.isArray(data) ? data : []);
-      }
+      const [members, trig] = await Promise.all([
+        fetch("/api/admin/customers").then((r) => (r.ok ? r.json() : null)),
+        fetch("/api/admin/campaigns/triggers").then((r) => (r.ok ? r.json() : null)),
+      ]);
+      if (Array.isArray(members)) setList(members);
+      if (trig && Array.isArray(trig.triggers)) setTriggers(trig.triggers);
     } finally {
       setLoading(false);
     }
@@ -233,6 +246,40 @@ export function AdminCustomers() {
           hint={`${totals.orders} orders · ${formatPrice(totals.aov)} AOV`}
         />
       </section>
+
+      {triggers.length > 0 && (
+        <Card>
+          <CardHeader
+            title="Send today"
+            description="Customers with a birthday or first-order anniversary today. Tap to call them on the spot."
+          />
+          <CardBody>
+            <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: "0.375rem" }}>
+              {triggers.map((t) => (
+                <li
+                  key={`${t.phone}-${t.trigger}`}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.75rem", fontSize: "0.875rem" }}
+                >
+                  <span style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    {t.trigger === "birthday" ? (
+                      <Cake className="h-3.5 w-3.5" style={{ color: "var(--brand)" }} />
+                    ) : (
+                      <PartyPopper className="h-3.5 w-3.5" style={{ color: "var(--warning)" }} />
+                    )}
+                    <Link href={`/admin/customers/${encodeURIComponent(t.phone)}`} className="v2-link-cell">
+                      {t.name || "Customer"}
+                    </Link>
+                    <span className="v2-muted mono">{t.phone}</span>
+                  </span>
+                  <span className="v2-muted">
+                    {t.trigger === "birthday" ? `birthday · turning ${t.years}` : `${t.years}-yr anniversary`}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </CardBody>
+        </Card>
+      )}
 
       <div className="v2-filters">
         <div className="v2-filter-search">

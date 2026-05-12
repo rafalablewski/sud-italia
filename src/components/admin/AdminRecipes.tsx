@@ -43,6 +43,8 @@ import {
   Textarea,
   type Column,
 } from "./v2/ui";
+import { KpiCard } from "./v2/charts";
+import { Banknote, Coins, Percent } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
 
 interface IngredientData {
@@ -63,6 +65,49 @@ interface EnrichedRecipeIngredient {
   unit?: string;
   unitCost?: number;
   lineCost?: number;
+}
+
+/**
+ * UI-friendly display unit. Storage stays in the canonical unit (`kg`, `L`)
+ * so existing recipes keep working; the recipe editor displays grams /
+ * millilitres because that's what a cook thinks in.
+ */
+function displayUnit(unit: string | undefined): string {
+  if (unit === "kg") return "g";
+  if (unit === "L") return "ml";
+  return unit ?? "";
+}
+
+function toDisplayQty(qty: number, unit: string | undefined): number {
+  if (unit === "kg" || unit === "L") {
+    // Round to 1 decimal at most for grams/ml so the input doesn't show
+    // 249.99999999 for a stored 0.25 kg value.
+    return Math.round(qty * 1000 * 10) / 10;
+  }
+  return qty;
+}
+
+function fromDisplayQty(displayQty: number, unit: string | undefined): number {
+  if (unit === "kg" || unit === "L") return displayQty / 1000;
+  return displayQty;
+}
+
+function displayStep(unit: string | undefined): string {
+  if (unit === "kg" || unit === "L") return "1";
+  if (unit === "bunch") return "0.1";
+  return "1";
+}
+
+/** Convert a wasteFactor (1.00–2.00) to the percent integer the input shows. */
+function factorToPercent(wf: number): number {
+  if (!Number.isFinite(wf) || wf <= 1) return 0;
+  return Math.round((wf - 1) * 100);
+}
+
+/** Convert a percent input value back to the wasteFactor stored on the row. */
+function percentToFactor(pct: number): number {
+  if (!Number.isFinite(pct) || pct <= 0) return 1;
+  return 1 + pct / 100;
 }
 
 interface RecipeData {
@@ -521,88 +566,145 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
         }
       >
         <div className="v2-stack-12">
-          <div className="v2-recipe-summary">
-            <Card padding="compact">
-              <div className="v2-summary-row">
-                <span className="v2-muted">Per portion cost</span>
-                <span className="tabular v2-summary-val">{formatPrice(perPortion)}</span>
-              </div>
-            </Card>
-            <Card padding="compact">
-              <div className="v2-summary-row">
-                <span className="v2-muted">Margin</span>
-                <Badge tone={margin < 50 ? "danger" : margin < 65 ? "warning" : "success"} variant="soft">
-                  {margin}%
-                </Badge>
-              </div>
-            </Card>
-            <Card padding="compact">
-              <div className="v2-summary-row">
-                <span className="v2-muted">Batch cost · {yieldPortions} portion{yieldPortions === 1 ? "" : "s"}</span>
-                <span className="tabular v2-summary-val">{formatPrice(totalCost)}</span>
-              </div>
-            </Card>
-          </div>
+          <section className="v2-recipe-summary">
+            <KpiCard
+              label="Per portion"
+              value={perPortion / 100}
+              display={formatPrice(perPortion)}
+              icon={Coins}
+              tone="brand"
+              staticValue
+              hint={`Listed at ${formatPrice(menuItem.price)}`}
+            />
+            <KpiCard
+              label="Margin"
+              value={margin}
+              display={`${margin}%`}
+              icon={Percent}
+              tone={margin < 50 ? "danger" : margin < 65 ? "warning" : "success"}
+              staticValue
+              higherIsBetter
+              hint={
+                margin < 50
+                  ? "Below 50% — review pricing or recipe"
+                  : margin < 65
+                    ? "Healthy for QSR pizza"
+                    : "Strong"
+              }
+            />
+            <KpiCard
+              label="Batch cost"
+              value={totalCost / 100}
+              display={formatPrice(totalCost)}
+              icon={Banknote}
+              tone="neutral"
+              staticValue
+              hint={`${yieldPortions} portion${yieldPortions === 1 ? "" : "s"} per batch`}
+            />
+          </section>
 
-          <Card padding="none">
-            <CardHeader title="Ingredients" />
-            <CardBody>
-              {rows.length === 0 ? (
-                <div className="v2-muted">No ingredients yet. Add one below.</div>
-              ) : (
-                <ul className="v2-rcp-rows">
+          {/* Ingredients table — uses the same `v2-mng-section` class system
+              as the Menu page so the section header (icon + name + count) +
+              row padding + hover + bold names all match exactly. */}
+          <section className="v2-mng-section" data-variant="recipe-edit">
+            {rows.length === 0 ? (
+              <div style={{ padding: "12px 14px" }}>
+                <EmptyState
+                  icon={Coins}
+                  title="No ingredients yet"
+                  description="Pick one from the dropdown below to start building the recipe."
+                  compact
+                />
+              </div>
+            ) : (
+              <>
+                <header className="v2-mng-section-header">
+                  <span className="v2-mng-section-eyebrow">
+                    <Coins className="h-3.5 w-3.5" aria-hidden />
+                    <span className="v2-mng-section-name">Ingredients</span>
+                    <span className="v2-mng-section-count">{rows.length}</span>
+                  </span>
+                  <span className="v2-mng-col">Qty</span>
+                  <span
+                    className="v2-mng-col"
+                    title="Waste / trim loss as a percentage of the raw weight. 5% = lose 5 g out of every 100 g."
+                  >
+                    Waste
+                  </span>
+                  <span className="v2-mng-col">Cost</span>
+                  <span aria-hidden />
+                </header>
+                <ul className="v2-mng-list">
                   {rows.map((r) => (
-                    <li key={r.ingredientId} className="v2-rcp-row">
-                      <span className="v2-rcp-name">{r.name ?? r.ingredientId}</span>
+                    <li key={r.ingredientId} className="v2-mng-row v2-mng-row-recipe">
+                      <div className="v2-mng-row-main">
+                        <div className="v2-mng-row-headline">
+                          <span className="v2-mng-row-name" title={r.name ?? r.ingredientId}>
+                            {r.name ?? r.ingredientId}
+                          </span>
+                        </div>
+                      </div>
                       <Input
                         type="number"
-                        step="0.001"
+                        step={displayStep(r.unit)}
                         min="0"
-                        value={r.quantity}
-                        onChange={(e) => updateRow(r.ingredientId, { quantity: Number(e.target.value) })}
+                        value={toDisplayQty(r.quantity, r.unit)}
+                        onChange={(e) =>
+                          updateRow(r.ingredientId, {
+                            quantity: fromDisplayQty(Number(e.target.value), r.unit),
+                          })
+                        }
                         aria-label="Quantity"
-                        trailingAdornment={<span className="v2-muted">{r.unit}</span>}
+                        className="v2-rcp-num"
+                        trailingAdornment={<span className="v2-muted">{displayUnit(r.unit)}</span>}
                       />
                       <Input
                         type="number"
-                        step="0.01"
-                        min="1"
-                        max="2"
-                        value={r.wasteFactor}
-                        onChange={(e) => updateRow(r.ingredientId, { wasteFactor: Number(e.target.value) })}
-                        aria-label="Waste factor"
+                        step="1"
+                        min="0"
+                        max="100"
+                        value={factorToPercent(r.wasteFactor)}
+                        onChange={(e) =>
+                          updateRow(r.ingredientId, {
+                            wasteFactor: percentToFactor(Number(e.target.value)),
+                          })
+                        }
+                        aria-label="Waste percentage"
+                        className="v2-rcp-num"
+                        trailingAdornment={<span className="v2-muted">%</span>}
                       />
                       <span className="tabular v2-rcp-cost">{formatPrice(lineCost(r))}</span>
-                      <Button
-                        size="sm"
-                        variant="ghost"
+                      <button
+                        type="button"
+                        className="v2-rcp-remove"
                         onClick={() => removeRow(r.ingredientId)}
-                        aria-label="Remove ingredient"
+                        aria-label={`Remove ${r.name ?? r.ingredientId}`}
+                        title={`Remove ${r.name ?? r.ingredientId}`}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      </button>
                     </li>
                   ))}
                 </ul>
-              )}
+              </>
+            )}
+          </section>
 
-              <div className="v2-rcp-add">
-                <Select
-                  value={pickerIngId}
-                  onChange={(e) => setPickerIngId(e.target.value)}
-                  aria-label="Add ingredient"
-                  placeholder="Pick an ingredient…"
-                  options={availableIngredients.map((i) => ({
-                    value: i.id,
-                    label: `${i.name} · ${formatPrice(i.costPerUnit)}/${i.unit}`,
-                  }))}
-                />
-                <Button leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={addIngredient} disabled={!pickerIngId}>
-                  Add to recipe
-                </Button>
-              </div>
-            </CardBody>
-          </Card>
+          <div className="v2-rcp-add">
+            <Select
+              value={pickerIngId}
+              onChange={(e) => setPickerIngId(e.target.value)}
+              aria-label="Add ingredient"
+              placeholder="Pick an ingredient…"
+              options={availableIngredients.map((i) => ({
+                value: i.id,
+                label: `${i.name} · ${formatPrice(i.costPerUnit)}/${i.unit}`,
+              }))}
+            />
+            <Button leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={addIngredient} disabled={!pickerIngId}>
+              Add to recipe
+            </Button>
+          </div>
 
           <div className="v2-form-row-2">
             <Input

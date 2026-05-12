@@ -23,6 +23,7 @@ import {
   Card,
   CardBody,
   CardHeader,
+  ConfirmDialog,
   Dialog,
   EmptyState,
   Input,
@@ -75,6 +76,8 @@ interface Member {
   nickname?: string;
   email?: string;
   signedUpAt?: string;
+  /** ISO date of birth — powers birthday triggers. */
+  dob?: string;
 }
 
 interface DetailData {
@@ -377,6 +380,14 @@ export function AdminCustomerDetail({ phoneEncoded }: { phoneEncoded: string }) 
         </Card>
       </section>
 
+      <ProfileEditor
+        phone={data.phone}
+        member={data.member}
+        onSaved={fetchAll}
+      />
+
+      <GdprPanel phone={data.phone} onErased={fetchAll} />
+
       <section className="v2-grid-2">
         <Card>
           <CardHeader title="Channels & locations" description="Where this customer prefers to order" />
@@ -455,5 +466,168 @@ export function AdminCustomerDetail({ phoneEncoded }: { phoneEncoded: string }) 
         </div>
       </Dialog>
     </div>
+  );
+}
+
+/**
+ * Inline editor for the optional profile fields we use for CRM triggers
+ * today (DOB + email). Saving creates a stub `LoyaltyMember` row if the
+ * customer has never explicitly signed up — that way a manager who learns
+ * a customer's birthday can record it immediately without forcing the
+ * customer through a separate signup flow.
+ */
+function ProfileEditor({
+  phone,
+  member,
+  onSaved,
+}: {
+  phone: string;
+  member: Member | null;
+  onSaved: () => void | Promise<void>;
+}) {
+  const toast = useToast();
+  const [dob, setDob] = useState(member?.dob ?? "");
+  const [email, setEmail] = useState(member?.email ?? "");
+  const [busy, setBusy] = useState(false);
+
+  const dirty = (dob || "") !== (member?.dob ?? "") || (email || "") !== (member?.email ?? "");
+
+  const save = async () => {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/admin/members/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone,
+          dob: dob || undefined,
+          email: email.trim() || undefined,
+          name: member?.name || member?.nickname,
+        }),
+      });
+      if (res.ok) {
+        toast.success("Profile saved");
+        await onSaved();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast.error("Could not save", data?.error);
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader
+        title="Profile"
+        description="Optional fields. DOB powers birthday triggers; email enables receipt + reactivation campaigns."
+      />
+      <CardBody>
+        <div className="v2-form-row-2">
+          <Input
+            label="Date of birth"
+            type="date"
+            value={dob}
+            onChange={(e) => setDob(e.target.value)}
+          />
+          <Input
+            label="Email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="optional"
+          />
+        </div>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "0.75rem" }}>
+          <Button variant="primary" size="sm" onClick={save} disabled={busy || !dirty}>
+            {busy ? "Saving…" : "Save profile"}
+          </Button>
+        </div>
+      </CardBody>
+    </Card>
+  );
+}
+
+/**
+ * GDPR Article 15 (access) + 17 (erasure) controls for this customer.
+ * Both actions are audit-logged server-side; the destructive one requires
+ * an explicit confirmation step on top of the `confirm: true` body flag
+ * the endpoint enforces.
+ */
+function GdprPanel({
+  phone,
+  onErased,
+}: {
+  phone: string;
+  onErased: () => void | Promise<void>;
+}) {
+  const toast = useToast();
+  const [pendingErase, setPendingErase] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const exportData = () => {
+    // Same-tab navigation — Content-Disposition makes the browser save it.
+    window.location.href = `/api/admin/gdpr/export?phone=${encodeURIComponent(phone)}`;
+  };
+
+  const erase = async () => {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/admin/gdpr/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone, confirm: true }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        toast.success(
+          "Customer data erased",
+          `${data.redactedOrders} order(s) redacted · ${data.removedNotes} note(s) removed · ${data.redactedFeedback} feedback redacted.`,
+        );
+        await onErased();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast.error("Could not erase", data?.error);
+      }
+    } finally {
+      setBusy(false);
+      setPendingErase(false);
+    }
+  };
+
+  return (
+    <>
+      <Card>
+        <CardHeader
+          title="GDPR controls"
+          description="Polish UODO + EU GDPR Articles 15 (access) and 17 (erasure). Both actions are audit-logged."
+        />
+        <CardBody>
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+            <Button variant="secondary" size="sm" onClick={exportData}>
+              Download DSAR JSON
+            </Button>
+            <Button variant="danger" size="sm" onClick={() => setPendingErase(true)} disabled={busy}>
+              Erase customer data
+            </Button>
+          </div>
+          <p className="v2-muted" style={{ fontSize: "0.75rem", marginTop: "0.5rem", lineHeight: 1.5 }}>
+            Erasure redacts the name, phone, and address on every order, removes customer notes and the
+            loyalty-member row, and anonymises feedback. Order totals stay intact so revenue/JPK reports remain
+            consistent. The action is idempotent — safe to re-run.
+          </p>
+        </CardBody>
+      </Card>
+      <ConfirmDialog
+        open={pendingErase}
+        onClose={() => setPendingErase(false)}
+        onConfirm={erase}
+        title="Erase all data for this customer?"
+        description="Required under GDPR Art. 17. Order revenue rows stay (for accounting / JPK), but every identifying field is redacted. Cannot be undone."
+        confirmLabel="Yes, erase"
+        destructive
+      />
+    </>
   );
 }
