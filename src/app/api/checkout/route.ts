@@ -14,6 +14,7 @@ import {
   getCachedCheckout,
 } from "@/lib/idempotency";
 import { enforceRateLimit, getClientIp } from "@/lib/rate-limit";
+import { checkoutBodySchema, parseBody } from "@/lib/api-schemas";
 
 export async function POST(req: NextRequest) {
   // Public endpoint — rate-limited by client IP. 10 attempts per minute is
@@ -28,7 +29,13 @@ export async function POST(req: NextRequest) {
   if (rl) return rl;
 
   try {
-    const body = await req.json();
+    // Shape validation handled by the schema — required fields, enum
+    // values, integer cart quantities, delivery-address-required-when-
+    // delivery refinement, etc. The handler keeps the PL E.164 normalization
+    // step because phone format is a PL-specific business rule, not a
+    // schema-level concern.
+    const parsed = await parseBody(req, checkoutBodySchema);
+    if ("error" in parsed) return parsed.error;
     const {
       items,
       locationSlug,
@@ -40,41 +47,13 @@ export async function POST(req: NextRequest) {
       slotTime,
       deliveryAddress,
       tipAmount: rawTip,
-    } = body;
+    } = parsed.data;
 
-    if (!items?.length || !locationSlug || !customerName || !customerPhone) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
-    }
-
-    const phoneE164 = normalizePlPhoneE164(String(customerPhone));
+    const phoneE164 = normalizePlPhoneE164(customerPhone);
     if (!phoneE164) {
       return NextResponse.json(
         { error: "Invalid Polish phone number" },
-        { status: 400 }
-      );
-    }
-
-    if (!slotId || !slotDate || !slotTime) {
-      return NextResponse.json(
-        { error: "Please select a time slot" },
-        { status: 400 }
-      );
-    }
-
-    if (!fulfillmentType || !["takeout", "delivery"].includes(fulfillmentType)) {
-      return NextResponse.json(
-        { error: "Invalid fulfillment type" },
-        { status: 400 }
-      );
-    }
-
-    if (fulfillmentType === "delivery" && !deliveryAddress?.trim()) {
-      return NextResponse.json(
-        { error: "Delivery address is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -214,7 +193,10 @@ export async function POST(req: NextRequest) {
       customerName: customerName.trim(),
       customerPhone: phoneE164,
       fulfillmentType: fulfillmentType as FulfillmentType,
-      deliveryAddress: fulfillmentType === "delivery" ? deliveryAddress.trim() : undefined,
+      // The schema's refine guarantees deliveryAddress is present when
+      // fulfillmentType === "delivery" — the `?? ""` is just to satisfy
+      // TS narrowing through the refine, never the actual fallback.
+      deliveryAddress: fulfillmentType === "delivery" ? (deliveryAddress ?? "").trim() : undefined,
       slotId,
       slotDate,
       slotTime,
