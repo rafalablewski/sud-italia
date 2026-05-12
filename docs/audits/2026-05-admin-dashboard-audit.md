@@ -50,20 +50,20 @@ Format note: tables are split per category for readability. **Priority** is P0 (
 
 ### 1.2 POS & Order Flow
 
-| Existing | Missing | Why It Matters | Priority | Benchmark |
-|---|---|---|---|---|
-| `/admin/orders` kanban + table, status workflow, 3 s polling | **Native POS terminal mode** (touch-optimized, offline-capable, receipt printer driver, cash drawer pulse) | Online ordering ≠ POS; trucks need a counter terminal that works without LTE | P0 | Toast, Square Register |
-| Stripe checkout for online orders | **Offline-first sync** with conflict resolution (queue locally, replay on reconnect) | Festival sites have no signal; lose 30–60 min of orders = lose the day | P0 | Toast, Lightspeed |
-| — | **AI order routing** (which station, which truck, which prep window) | Manual routing breaks at 30+ concurrent orders; AI routing is table-stakes for 2026 | P1 | Olo, ItsaCheckmate |
-| Slot capacity (`maxOrders` per slot) | **Dynamic prep-time engine** (computes per-order ETA from menu mix × station load × historic actuals) | Static slots cannot represent "this 14:00 slot already has 4 pizzas, only 1 pasta left of station capacity" | P0 | Toast Kitchen Display, KDS Lockstep |
-| `/admin/kds` 2 s polling, station filter, prep timer | **Bump bar hardware** + auto-advance + recall + transfer between stations | Polling is fine at low volume; at peak a bump bar saves 8–12 seconds per ticket | P1 | LogicControls, Toast KDS |
-| — | **Kiosk mode** (self-serve at truck or pop-up) | A kiosk does 1.4–1.8× the AOV of a counter order and reduces labor by one position | P1 | Toast Kiosk, GRUBBRR |
-| — | **Voice ordering** (drive-thru style, phone IVR, in-truck) | McDonald's IBM ROAR is live; voice in food trucks is feasible by 2027 | P2 | McDonald's ROAR, SoundHound |
-| — | **QR table / location ordering** with table state machine (seated → ordering → paid → cleared) | Festival benches behave like tables; SUD has no way to model them | P1 | Toast Order & Pay |
-| Search endpoint `/api/admin/search` | **Universal command palette** (Cmd+K finds order, customer, item, supplier, action) | Linear-grade navigation; current Cmd+K only switches pages | P1 | Linear, Notion, Stripe |
-| — | **Tip handling** (suggest, pool, split, end-of-day report) | Polish tipping is rising; without a tip module, all tips are cash and untracked | P1 | Toast |
-| — | **Refunds / partial refunds / comps / voids** with manager approval and reason codes | Currently a refund is a status flip in `/admin/orders` with zero accounting integrity | P0 | Square, Toast |
-| — | **Order modifiers / special requests** stored on line items with KDS surfacing | Current `Order.items` carries no modifier object; "no onion" cannot be expressed | P0 | Any POS |
+| Existing | Missing | Why It Matters | Priority | Benchmark | Status |
+|---|---|---|---|---|---|
+| `/admin/orders` kanban + table, status workflow, 3 s polling | **Native POS terminal mode** (touch-optimized, offline-capable, receipt printer driver, cash drawer pulse) | Online ordering ≠ POS; trucks need a counter terminal that works without LTE | P0 | Toast, Square Register | ✗ Not fixed — requires hardware drivers + offline sync engine |
+| Stripe checkout for online orders | **Offline-first sync** with conflict resolution (queue locally, replay on reconnect) | Festival sites have no signal; lose 30–60 min of orders = lose the day | P0 | Toast, Lightspeed | ✗ Not fixed — needs CRDT/sync layer (e.g. PowerSync, Replicache) |
+| — | **AI order routing** (which station, which truck, which prep window) | Manual routing breaks at 30+ concurrent orders; AI routing is table-stakes for 2026 | P1 | Olo, ItsaCheckmate | ✗ Not fixed — depends on real prep-time data + model |
+| Slot capacity (`maxOrders` per slot) | **Dynamic prep-time engine** (computes per-order ETA from menu mix × station load × historic actuals) | Static slots cannot represent "this 14:00 slot already has 4 pizzas, only 1 pasta left of station capacity" | P0 | Toast Kitchen Display, KDS Lockstep | ✗ Not fixed — requires per-station load schema + historic actuals |
+| `/admin/kds` 2 s polling, station filter, prep timer | **Bump bar hardware** + auto-advance + recall + transfer between stations | Polling is fine at low volume; at peak a bump bar saves 8–12 seconds per ticket | P1 | LogicControls, Toast KDS | ✗ Not fixed — hardware integration |
+| — | **Kiosk mode** (self-serve at truck or pop-up) | A kiosk does 1.4–1.8× the AOV of a counter order and reduces labor by one position | P1 | Toast Kiosk, GRUBBRR | ✗ Not fixed — separate kiosk app surface |
+| — | **Voice ordering** (drive-thru style, phone IVR, in-truck) | McDonald's IBM ROAR is live; voice in food trucks is feasible by 2027 | P2 | McDonald's ROAR, SoundHound | ✗ Not fixed — Polish-language voice stack |
+| — | **QR table / location ordering** with table state machine (seated → ordering → paid → cleared) | Festival benches behave like tables; SUD has no way to model them | P1 | Toast Order & Pay | ✗ Not fixed — new module |
+| Search endpoint `/api/admin/search` | **Universal command palette** (Cmd+K finds order, customer, item, supplier, action) | Linear-grade navigation; current Cmd+K only switches pages | P1 | Linear, Notion, Stripe | ✓ Already fixed — `src/components/admin/v2/CommandPalette.tsx` queries `/api/admin/search` which returns `order \| customer \| menu-item \| ingredient` results. Audit claim is outdated |
+| — | **Tip handling** (suggest, pool, split, end-of-day report) | Polish tipping is rising; without a tip module, all tips are cash and untracked | P1 | Toast | ✗ Not fixed — new module (line-item field + pool/split rules + EOD report) |
+| — | **Refunds / partial refunds / comps / voids** with manager approval and reason codes | Currently a refund is a status flip in `/admin/orders` with zero accounting integrity | P0 | Square, Toast | ✗ Not fixed — needs reason-code enum, Stripe refund API wiring, manager approval flow |
+| — | **Order modifiers / special requests** stored on line items with KDS surfacing | Current `Order.items` carries no modifier object; "no onion" cannot be expressed | P0 | Any POS | ✗ Not fixed — schema change on `Order.items` + KDS surface |
 
 ### 1.3 Kitchen Systems
 
