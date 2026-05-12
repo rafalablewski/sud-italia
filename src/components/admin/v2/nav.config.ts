@@ -5,9 +5,11 @@ import {
   UtensilsCrossed,
   FlaskConical,
   CalendarDays,
+  CalendarRange,
   BarChart3,
   Boxes,
   Building2,
+  HardHat,
   Heart,
   PackageSearch,
   Rocket,
@@ -65,6 +67,14 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/admin/inventory", label: "Stock", icon: Boxes, shortcut: "i" },
       { href: "/admin/suppliers", label: "Suppliers", icon: Building2 },
       { href: "/admin/purchase-orders", label: "Purchase orders", icon: PackageSearch, shortcut: "p" },
+    ],
+  },
+  {
+    id: "people",
+    label: "People",
+    items: [
+      { href: "/admin/staff", label: "Staff", icon: HardHat, shortcut: "s" },
+      { href: "/admin/schedule", label: "Schedule", icon: CalendarRange },
     ],
   },
   {

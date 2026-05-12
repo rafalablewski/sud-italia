@@ -1,7 +1,7 @@
 import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote } from "@/data/types";
+import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch } from "@/data/types";
 import { getActiveLocations, locations as allLocations } from "@/data/locations";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -2238,5 +2238,123 @@ export async function deleteCustomerNote(id: string): Promise<boolean> {
     if (filtered.length === list.length) return false;
     await writeJSON("customer-notes.json", filtered);
     return true;
+  });
+}
+
+// --- Staff / HR ---
+
+export async function getStaff(locationSlug?: string): Promise<StaffMember[]> {
+  const all = await readJSON<StaffMember[]>("staff.json", []);
+  return locationSlug ? all.filter((s) => s.locationSlug === locationSlug) : all;
+}
+
+export async function saveStaff(
+  input: Omit<StaffMember, "id" | "createdAt"> & { id?: string; createdAt?: string },
+): Promise<StaffMember> {
+  return withLock("staff.json", async () => {
+    const list = await readJSON<StaffMember[]>("staff.json", []);
+    const member: StaffMember = {
+      id: input.id || `staff-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      name: input.name,
+      phone: input.phone,
+      email: input.email,
+      role: input.role,
+      locationSlug: input.locationSlug,
+      hourlyRateGrosze: input.hourlyRateGrosze,
+      hireDate: input.hireDate,
+      status: input.status,
+      notes: input.notes,
+      createdAt: input.createdAt ?? new Date().toISOString(),
+    };
+    const i = list.findIndex((s) => s.id === member.id);
+    if (i >= 0) list[i] = member;
+    else list.push(member);
+    await writeJSON("staff.json", list);
+    return member;
+  });
+}
+
+export async function deleteStaff(id: string): Promise<boolean> {
+  return withLock("staff.json", async () => {
+    const list = await readJSON<StaffMember[]>("staff.json", []);
+    const filtered = list.filter((s) => s.id !== id);
+    if (filtered.length === list.length) return false;
+    await writeJSON("staff.json", filtered);
+    return true;
+  });
+}
+
+export async function getShifts(filters?: {
+  locationSlug?: string;
+  staffId?: string;
+  from?: string;
+  to?: string;
+}): Promise<Shift[]> {
+  const all = await readJSON<Shift[]>("shifts.json", []);
+  let list = all;
+  if (filters?.locationSlug) list = list.filter((s) => s.locationSlug === filters.locationSlug);
+  if (filters?.staffId) list = list.filter((s) => s.staffId === filters.staffId);
+  if (filters?.from) list = list.filter((s) => s.endAt >= filters.from!);
+  if (filters?.to) list = list.filter((s) => s.startAt <= filters.to!);
+  return list.slice().sort((a, b) => a.startAt.localeCompare(b.startAt));
+}
+
+export async function saveShift(input: Omit<Shift, "id"> & { id?: string }): Promise<Shift> {
+  return withLock("shifts.json", async () => {
+    const list = await readJSON<Shift[]>("shifts.json", []);
+    const shift: Shift = {
+      id: input.id || `shift-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      staffId: input.staffId,
+      locationSlug: input.locationSlug,
+      startAt: input.startAt,
+      endAt: input.endAt,
+      role: input.role,
+      status: input.status,
+      notes: input.notes,
+    };
+    const i = list.findIndex((s) => s.id === shift.id);
+    if (i >= 0) list[i] = shift;
+    else list.push(shift);
+    await writeJSON("shifts.json", list);
+    return shift;
+  });
+}
+
+export async function deleteShift(id: string): Promise<boolean> {
+  return withLock("shifts.json", async () => {
+    const list = await readJSON<Shift[]>("shifts.json", []);
+    const filtered = list.filter((s) => s.id !== id);
+    if (filtered.length === list.length) return false;
+    await writeJSON("shifts.json", filtered);
+    return true;
+  });
+}
+
+export async function getTimePunches(filters?: {
+  staffId?: string;
+  from?: string;
+  to?: string;
+}): Promise<TimePunch[]> {
+  const all = await readJSON<TimePunch[]>("time-punches.json", []);
+  let list = all;
+  if (filters?.staffId) list = list.filter((p) => p.staffId === filters.staffId);
+  if (filters?.from) list = list.filter((p) => p.occurredAt >= filters.from!);
+  if (filters?.to) list = list.filter((p) => p.occurredAt <= filters.to!);
+  return list.slice().sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
+}
+
+export async function recordTimePunch(input: Omit<TimePunch, "id" | "occurredAt"> & { occurredAt?: string }): Promise<TimePunch> {
+  return withLock("time-punches.json", async () => {
+    const list = await readJSON<TimePunch[]>("time-punches.json", []);
+    const punch: TimePunch = {
+      id: `pn-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      staffId: input.staffId,
+      type: input.type,
+      shiftId: input.shiftId,
+      occurredAt: input.occurredAt ?? new Date().toISOString(),
+    };
+    list.push(punch);
+    await writeJSON("time-punches.json", list);
+    return punch;
   });
 }

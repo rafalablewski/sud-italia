@@ -307,3 +307,48 @@ export interface CustomerNote {
   authoredBy?: string;
   createdAt: string;
 }
+
+// --- Staff / HR ---
+
+export type StaffRole = "manager" | "kitchen" | "front" | "driver";
+export type StaffStatus = "active" | "inactive";
+
+export interface StaffMember {
+  id: string;
+  name: string;
+  phone?: string;
+  email?: string;
+  role: StaffRole;
+  locationSlug: string;
+  /** Hourly rate in grosze. */
+  hourlyRateGrosze: number;
+  hireDate?: string;
+  status: StaffStatus;
+  notes?: string;
+  createdAt: string;
+}
+
+export type ShiftStatus = "scheduled" | "in-progress" | "done" | "missed";
+
+export interface Shift {
+  id: string;
+  staffId: string;
+  locationSlug: string;
+  /** ISO start timestamp. */
+  startAt: string;
+  /** ISO end timestamp. */
+  endAt: string;
+  role: StaffRole;
+  status: ShiftStatus;
+  notes?: string;
+}
+
+export interface TimePunch {
+  id: string;
+  staffId: string;
+  /** ISO timestamp of the punch. */
+  occurredAt: string;
+  type: "clock-in" | "clock-out";
+  /** Optional shift this punch is associated with. */
+  shiftId?: string;
+}

@@ -2483,6 +2483,59 @@ html { scroll-behavior: smooth; }
 }
 
 /* ============================
+   ADMIN v2 — SCHEDULE
+   ============================ */
+
+.v2-schedule-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(180px, 1fr));
+  gap: 8px;
+  overflow-x: auto;
+}
+@media (max-width: 1100px) {
+  .v2-schedule-grid { grid-template-columns: repeat(7, 220px); }
+}
+
+.v2-schedule-day-title { display: flex; align-items: baseline; gap: 6px; }
+.v2-schedule-empty { padding: 12px 0; text-align: center; font-size: var(--text-xs); }
+
+.v2-schedule-shifts { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.v2-schedule-shift {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  transition: border-color var(--duration-fast);
+}
+.v2-schedule-shift:hover { border-color: var(--border-strong); }
+.v2-schedule-shift-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: transparent;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  color: var(--fg);
+}
+.v2-schedule-shift-head { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+.v2-schedule-shift-name { font-size: var(--text-sm); font-weight: 600; }
+.v2-schedule-shift-role { font-size: var(--text-2xs); }
+.v2-schedule-shift-del {
+  background: transparent;
+  border: 0;
+  color: var(--fg-subtle);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: var(--radius-xs);
+}
+.v2-schedule-shift-del:hover { color: var(--danger); background: var(--danger-soft); }
+
+/* ============================
    ADMIN DESIGN SYSTEM (LEGACY — being migrated to v2)
    Tokens → Surfaces → Inputs → Buttons → Typography → Badges → Alerts
    8px baseline grid · 5-color semantic palette · 6-level type scale
