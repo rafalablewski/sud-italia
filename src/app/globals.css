@@ -2151,6 +2151,78 @@ html { scroll-behavior: smooth; }
 .v2-menu-num-value { font-size: var(--text-base); color: var(--fg); font-weight: 600; }
 
 /* ============================
+   ADMIN v2 — RECIPES
+   ============================ */
+
+.v2-recipe-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.v2-recipe-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 4px;
+  border-top: 1px solid var(--border);
+}
+.v2-recipe-row:first-child { border-top: 0; }
+@media (max-width: 720px) {
+  .v2-recipe-row { grid-template-columns: 1fr; row-gap: 8px; }
+}
+
+.v2-recipe-main { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.v2-recipe-headline { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.v2-recipe-name { font-weight: 600; color: var(--fg); }
+.v2-recipe-ings {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+.v2-recipe-numbers { display: inline-flex; align-items: center; gap: 16px; }
+
+.v2-recipe-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+@media (max-width: 640px) { .v2-recipe-summary { grid-template-columns: 1fr; } }
+.v2-summary-row { display: flex; align-items: center; justify-content: space-between; }
+.v2-summary-val { font-weight: 600; color: var(--fg); }
+
+.v2-rcp-rows { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.v2-rcp-row {
+  display: grid;
+  grid-template-columns: 1fr 120px 110px 90px 32px;
+  align-items: center;
+  gap: 8px;
+}
+@media (max-width: 720px) {
+  .v2-rcp-row { grid-template-columns: 1fr 1fr; row-gap: 6px; }
+  .v2-rcp-row > .v2-rcp-name { grid-column: 1 / -1; }
+}
+.v2-rcp-name { font-weight: 500; color: var(--fg); }
+.v2-rcp-cost { text-align: right; font-weight: 600; color: var(--fg); }
+
+.v2-rcp-add {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+@media (max-width: 640px) { .v2-rcp-add { grid-template-columns: 1fr; } }
+
+.v2-form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 640px) { .v2-form-row-2 { grid-template-columns: 1fr; } }
+
+.v2-row-actions { display: inline-flex; gap: 4px; }
+
+/* ============================
    ADMIN DESIGN SYSTEM (LEGACY — being migrated to v2)
    Tokens → Surfaces → Inputs → Buttons → Typography → Badges → Alerts
    8px baseline grid · 5-color semantic palette · 6-level type scale

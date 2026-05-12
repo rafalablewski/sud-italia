@@ -1,26 +1,42 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { AdminNav } from "./AdminNav";
-import { LocationTabs } from "./LocationTabs";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Plus, Trash2, Save, Search, X, FlaskConical, Package,
-  ChevronDown, ChevronUp,
+  FlaskConical,
+  Leaf,
+  Package,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+  Utensils,
 } from "lucide-react";
-import { locations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
-import { formatQty, marginColorClass } from "@/lib/admin-utils";
 import {
   MENU_CATEGORY_LABELS,
-  INGREDIENT_CATEGORY_LABELS,
-  type MenuCategory,
   type IngredientCategory,
   type IngredientUnit,
+  type MenuCategory,
 } from "@/data/types";
-
-const activeLocations = locations.filter((l) => l.isActive);
-const CATEGORY_ORDER: MenuCategory[] = ["pizza", "pasta", "antipasti", "panini", "drinks", "desserts"];
-const UNITS: IngredientUnit[] = ["kg", "g", "L", "ml", "piece", "bunch", "can", "bottle"];
+import { useAdminLocation } from "./v2/LocationContext";
+import { useToast } from "./v2/ui/Toast";
+import {
+  Badge,
+  Button,
+  Card,
+  CardBody,
+  CardHeader,
+  ConfirmDialog,
+  Dialog,
+  EmptyState,
+  Input,
+  Select,
+  Table,
+  Tabs,
+  Textarea,
+  type Column,
+} from "./v2/ui";
+import { getActiveLocations } from "@/data/locations";
 
 interface IngredientData {
   id: string;
@@ -43,8 +59,10 @@ interface EnrichedRecipeIngredient {
 }
 
 interface RecipeData {
+  id?: string;
   menuItemId: string;
-  ingredients: EnrichedRecipeIngredient[];
+  enrichedIngredients?: EnrichedRecipeIngredient[];
+  ingredients?: EnrichedRecipeIngredient[];
   prepTimeMinutes?: number;
   yieldPortions: number;
   notes?: string;
@@ -59,723 +77,840 @@ interface MenuItemData {
   cost: number;
 }
 
-type Tab = "recipes" | "ingredients";
+const INGREDIENT_CATEGORIES: IngredientCategory[] = [
+  "dairy",
+  "meat",
+  "seafood",
+  "produce",
+  "dry",
+  "sauce",
+  "oil",
+  "spice",
+  "bread",
+  "beverage",
+];
+
+const INGREDIENT_UNITS: IngredientUnit[] = ["kg", "g", "L", "ml", "piece", "bunch", "can", "bottle"];
+
+const activeLocations = getActiveLocations();
+const FALLBACK_LOC = activeLocations[0]?.slug ?? "krakow";
+
+type TabKey = "recipes" | "ingredients";
 
 export function AdminRecipes() {
-  const [tab, setTab] = useState<Tab>("recipes");
+  const [tab, setTab] = useState<TabKey>("recipes");
 
   return (
-    <>
-      <AdminNav />
-      <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
-        <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1 w-fit border border-white/10">
-          <button
-            onClick={() => setTab("recipes")}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              tab === "recipes" ? "bg-white/10 admin-text shadow-sm" : "admin-text-muted hover:admin-text"
-            }`}
-          >
-            <FlaskConical className="h-4 w-4" />
-            Recipe Builder
-          </button>
-          <button
-            onClick={() => setTab("ingredients")}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              tab === "ingredients" ? "bg-white/10 admin-text shadow-sm" : "admin-text-muted hover:admin-text"
-            }`}
-          >
-            <Package className="h-4 w-4" />
-            Ingredients Database
-          </button>
+    <div className="v2-page">
+      <header className="v2-page-header">
+        <div className="v2-page-title-row">
+          <h1 className="v2-page-title">Recipes & Ingredients</h1>
+          <p className="v2-page-subtitle">
+            Build recipes for every dish. Costs and margins recalculate from real ingredient prices.
+          </p>
         </div>
+        <Tabs
+          value={tab}
+          onChange={(v) => setTab(v as TabKey)}
+          tabs={[
+            { value: "recipes", label: "Recipes", icon: <Utensils className="h-3.5 w-3.5" /> },
+            { value: "ingredients", label: "Ingredients", icon: <Leaf className="h-3.5 w-3.5" /> },
+          ]}
+          variant="pill"
+          ariaLabel="View mode"
+        />
+      </header>
 
-        {tab === "recipes" ? <RecipesTab /> : <IngredientsTab />}
-      </div>
-    </>
+      {tab === "recipes" ? <RecipesPanel /> : <IngredientsPanel />}
+    </div>
   );
 }
 
-// =====================
-// RECIPES TAB
-// =====================
+// =============================================================
+// Recipes panel
+// =============================================================
 
-function RecipesTab() {
-  const [selectedLocation, setSelectedLocation] = useState(activeLocations[0]?.slug || "");
-  const [menuItems, setMenuItems] = useState<MenuItemData[]>([]);
+function RecipesPanel() {
+  const { location: globalLoc } = useAdminLocation();
+  const toast = useToast();
+  const [pageLoc, setPageLoc] = useState<string>(globalLoc || FALLBACK_LOC);
+  useEffect(() => {
+    if (globalLoc) setPageLoc(globalLoc);
+  }, [globalLoc]);
+
+  const [menu, setMenu] = useState<MenuItemData[]>([]);
   const [recipes, setRecipes] = useState<RecipeData[]>([]);
   const [ingredients, setIngredients] = useState<IngredientData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<MenuItemData | null>(null);
   const [search, setSearch] = useState("");
-  const [expandedItem, setExpandedItem] = useState<string | null>(null);
-  const [filterCategory, setFilterCategory] = useState("");
-  const [filterHasRecipe, setFilterHasRecipe] = useState<"" | "yes" | "no">("");
-
-  // Live cost overrides from recipe editors (not yet saved)
-  const [liveCosts, setLiveCosts] = useState<Record<string, number>>({});
+  const [filterCat, setFilterCat] = useState<MenuCategory | "all">("all");
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [menuRes, recipesRes, ingRes] = await Promise.all([
-        fetch(`/api/admin/menu?location=${selectedLocation}`),
-        fetch("/api/admin/recipes"),
-        fetch("/api/admin/ingredients"),
+      const [m, r, i] = await Promise.all([
+        fetch(`/api/admin/menu?location=${pageLoc}`).then((res) => (res.ok ? res.json() : [])),
+        fetch(`/api/admin/recipes`).then((res) => (res.ok ? res.json() : [])),
+        fetch(`/api/admin/ingredients`).then((res) => (res.ok ? res.json() : [])),
       ]);
-      if (menuRes.ok) setMenuItems(await menuRes.json());
-      if (recipesRes.ok) setRecipes(await recipesRes.json());
-      if (ingRes.ok) setIngredients(await ingRes.json());
+      setMenu(Array.isArray(m) ? m : []);
+      setRecipes(Array.isArray(r) ? r : []);
+      setIngredients(Array.isArray(i) ? i : []);
     } finally {
       setLoading(false);
     }
-  }, [selectedLocation]);
+  }, [pageLoc]);
 
   useEffect(() => {
     fetchAll();
-    setExpandedItem(null);
-  }, [selectedLocation, fetchAll]);
+  }, [fetchAll]);
 
-  const recipeMap = new Map(recipes.map((r) => [r.menuItemId, r]));
-  const ingredientMap = new Map(ingredients.map((i) => [i.id, i]));
+  const recipeByMenuId = useMemo(() => {
+    const m = new Map<string, RecipeData>();
+    for (const r of recipes) m.set(r.menuItemId, r);
+    return m;
+  }, [recipes]);
 
-  const filtered = menuItems.filter((item) => {
-    if (filterCategory && item.category !== filterCategory) return false;
-    if (filterHasRecipe === "yes" && !recipeMap.has(item.id)) return false;
-    if (filterHasRecipe === "no" && recipeMap.has(item.id)) return false;
-    if (search && !item.name.toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
-  });
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return menu.filter((m) => {
+      if (filterCat !== "all" && m.category !== filterCat) return false;
+      if (!q) return true;
+      return m.name.toLowerCase().includes(q);
+    });
+  }, [menu, search, filterCat]);
 
-  const categories = CATEGORY_ORDER.filter((cat) => menuItems.some((i) => i.category === cat));
-  const grouped = categories
-    .map((cat) => ({
-      category: cat,
-      label: MENU_CATEGORY_LABELS[cat],
-      items: filtered.filter((i) => i.category === cat),
-    }))
-    .filter((g) => g.items.length > 0);
+  const grouped = useMemo(() => {
+    const m = new Map<MenuCategory, MenuItemData[]>();
+    for (const i of filtered) {
+      const arr = m.get(i.category) || [];
+      arr.push(i);
+      m.set(i.category, arr);
+    }
+    return Array.from(m.entries());
+  }, [filtered]);
 
-  const withRecipeCount = menuItems.filter((i) => recipeMap.has(i.id)).length;
-  const withoutRecipeCount = menuItems.length - withRecipeCount;
+  const locOptions = activeLocations.map((l) => ({ value: l.slug, label: l.city }));
+  const categories = useMemo(
+    () => Array.from(new Set(menu.map((m) => m.category))) as MenuCategory[],
+    [menu],
+  );
+
+  const onSaved = async () => {
+    setEditing(null);
+    await fetchAll();
+    toast.success("Recipe saved");
+  };
 
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
-        <div>
-          <h1 className="text-2xl font-bold font-heading admin-text">Recipe Builder</h1>
-          <p className="text-sm admin-text-muted mt-0.5">
-            {withRecipeCount} of {menuItems.length} items have recipes
-            {withoutRecipeCount > 0 && (
-              <span className="admin-red ml-1">({withoutRecipeCount} missing)</span>
-            )}
-          </p>
+      <div className="v2-filters">
+        <div className="v2-field-inline">
+          <Package className="h-3.5 w-3.5 v2-muted" />
+          <Select
+            value={pageLoc}
+            onChange={(e) => setPageLoc(e.target.value)}
+            options={locOptions}
+            aria-label="Menu location"
+          />
         </div>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3 mb-6">
-        <LocationTabs value={selectedLocation} onChange={setSelectedLocation} />
-        <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="glass-input rounded-lg text-sm">
-          <option value="">All categories</option>
-          {categories.map((cat) => (
-            <option key={cat} value={cat}>{MENU_CATEGORY_LABELS[cat]}</option>
-          ))}
-        </select>
-        <select value={filterHasRecipe} onChange={(e) => setFilterHasRecipe(e.target.value as "" | "yes" | "no")} className="glass-input rounded-lg text-sm">
-          <option value="">All items</option>
-          <option value="yes">With recipe</option>
-          <option value="no">Missing recipe</option>
-        </select>
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 admin-text-muted" />
-          <input type="text" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-9 pr-3 py-2 glass-input rounded-lg text-sm" />
+        <div className="v2-filter-search">
+          <Input
+            placeholder="Search dishes…"
+            leadingAdornment={<Search className="h-3.5 w-3.5" />}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
+        <Tabs
+          value={filterCat}
+          onChange={(v) => setFilterCat(v as MenuCategory | "all")}
+          tabs={[
+            { value: "all", label: "All", count: menu.length },
+            ...categories.map((c) => ({
+              value: c,
+              label: MENU_CATEGORY_LABELS[c],
+              count: menu.filter((m) => m.category === c).length,
+            })),
+          ]}
+          variant="pill"
+          ariaLabel="Category filter"
+        />
       </div>
 
       {loading ? (
-        <div className="text-center py-12 admin-text-muted">Loading...</div>
+        <div className="v2-page-loading">Loading recipes…</div>
+      ) : grouped.length === 0 ? (
+        <Card>
+          <CardBody>
+            <EmptyState icon={Utensils} title="No menu items found" />
+          </CardBody>
+        </Card>
       ) : (
-        <div className="space-y-8">
-          {grouped.map((group) => (
-            <div key={group.category}>
-              <h2 className="text-lg font-bold font-heading admin-text mb-3">
-                {group.label}
-                <span className="text-xs font-normal admin-text-muted ml-2">({group.items.length})</span>
-              </h2>
-              <div className="space-y-2">
-                {group.items.map((item) => {
-                  const recipe = recipeMap.get(item.id);
-                  const hasRecipe = !!recipe && (recipe.ingredients?.length ?? 0) > 0;
-                  const isExpanded = expandedItem === item.id;
-                  const foodCost = liveCosts[item.id] ?? recipe?.calculatedCost ?? item.cost;
-                  const netProfit = item.price - foodCost;
-                  const foodCostPct = item.price > 0 ? Math.round((foodCost / item.price) * 100) : 0;
-                  const marginPct = item.price > 0 ? Math.round((netProfit / item.price) * 100) : 0;
-                  const markupPct = foodCost > 0 ? Math.round((netProfit / foodCost) * 100) : 0;
-
-                  return (
-                    <div key={item.id} className={`rounded-lg shadow-sm overflow-hidden ${hasRecipe || isExpanded ? "glass-card" : "bg-yellow-500/10 border-2 border-dashed border-yellow-500/30"}`}>
-                      <button
-                        onClick={() => setExpandedItem(isExpanded ? null : item.id)}
-                        className="w-full flex flex-wrap items-center gap-3 p-4 text-left hover:bg-white/5 transition-colors"
-                      >
-                        <div className={`p-1.5 rounded-lg ${hasRecipe ? "bg-italia-green/10 text-italia-green" : "bg-yellow-500/20 text-yellow-400"}`}>
-                          <FlaskConical className="h-4 w-4" />
-                        </div>
-                        <span className="font-semibold admin-text flex-1 min-w-[120px]">{item.name}</span>
-                        <div className="flex items-center gap-3 text-xs">
-                          <div className="text-center px-2">
-                            <div className="admin-text-dim uppercase tracking-wider text-[9px] mb-0.5">Price</div>
-                            <div className="font-semibold admin-text">{formatPrice(item.price)}</div>
+        <div className="v2-menu-groups">
+          {grouped.map(([cat, items]) => (
+            <Card key={cat} padding="none">
+              <CardHeader title={MENU_CATEGORY_LABELS[cat]} description={`${items.length} dishes`} />
+              <CardBody>
+                <ul className="v2-recipe-list">
+                  {items.map((item) => {
+                    const recipe = recipeByMenuId.get(item.id);
+                    const calculatedCost = recipe?.calculatedCost ?? 0;
+                    const margin = item.price > 0 ? Math.round(((item.price - calculatedCost) / item.price) * 100) : 0;
+                    const hasRecipe = !!recipe;
+                    return (
+                      <li key={item.id} className="v2-recipe-row">
+                        <div className="v2-recipe-main">
+                          <div className="v2-recipe-headline">
+                            <span className="v2-recipe-name">{item.name}</span>
+                            {!hasRecipe ? (
+                              <Badge tone="warning" variant="soft">No recipe</Badge>
+                            ) : (
+                              <Badge tone="info" variant="soft">
+                                {(recipe.enrichedIngredients ?? recipe.ingredients ?? []).length} ingredients
+                              </Badge>
+                            )}
                           </div>
-                          <div className="text-center px-2">
-                            <div className="admin-text-dim uppercase tracking-wider text-[9px] mb-0.5">Food Cost</div>
-                            <div className={`font-semibold ${hasRecipe || liveCosts[item.id] !== undefined ? "admin-red" : "text-gray-500"}`}>
-                              {formatPrice(foodCost)} <span className="admin-text-dim">({foodCostPct}%)</span>
+                          {hasRecipe && (
+                            <ul className="v2-recipe-ings">
+                              {(recipe.enrichedIngredients ?? []).slice(0, 4).map((ri) => (
+                                <li key={ri.ingredientId}>
+                                  <span className="mono v2-muted">{ri.quantity}{ri.unit}</span>{" "}
+                                  <span>{ri.name}</span>
+                                </li>
+                              ))}
+                              {(recipe.enrichedIngredients ?? []).length > 4 && (
+                                <li className="v2-muted">
+                                  + {(recipe.enrichedIngredients ?? []).length - 4} more
+                                </li>
+                              )}
+                            </ul>
+                          )}
+                        </div>
+                        <div className="v2-recipe-numbers">
+                          <div className="v2-menu-num">
+                            <div className="v2-menu-num-label">Price</div>
+                            <div className="v2-menu-num-value tabular">{formatPrice(item.price)}</div>
+                          </div>
+                          <div className="v2-menu-num">
+                            <div className="v2-menu-num-label">Recipe cost</div>
+                            <div className="v2-menu-num-value tabular">
+                              {hasRecipe ? formatPrice(calculatedCost) : "—"}
                             </div>
                           </div>
-                          <div className="text-center px-2">
-                            <div className="admin-text-dim uppercase tracking-wider text-[9px] mb-0.5">Margin</div>
-                            <div className={`font-bold ${marginColorClass(marginPct)}`}>{marginPct}%</div>
-                          </div>
-                          <div className="text-center px-2">
-                            <div className="admin-text-dim uppercase tracking-wider text-[9px] mb-0.5">Markup</div>
-                            <div className="font-semibold admin-text">{markupPct}%</div>
-                          </div>
-                          <div className="text-center px-2">
-                            <div className="admin-text-dim uppercase tracking-wider text-[9px] mb-0.5">Net Profit</div>
-                            <div className={`font-bold ${netProfit >= 0 ? "text-emerald-400" : "admin-red"}`}>{formatPrice(netProfit)}</div>
+                          <div className="v2-menu-num">
+                            <div className="v2-menu-num-label">Margin</div>
+                            {hasRecipe ? (
+                              <Badge tone={margin < 50 ? "danger" : margin < 65 ? "warning" : "success"} variant="soft">
+                                {margin}%
+                              </Badge>
+                            ) : (
+                              <Badge tone="neutral" variant="soft">—</Badge>
+                            )}
                           </div>
                         </div>
-                        {hasRecipe ? (
-                          <span className="text-xs text-italia-green font-medium">{recipe.ingredients.length} ing.</span>
-                        ) : (
-                          <span className="text-xs text-yellow-400 font-medium">No recipe</span>
-                        )}
-                        {isExpanded ? <ChevronUp className="h-4 w-4 admin-text-muted" /> : <ChevronDown className="h-4 w-4 admin-text-muted" />}
-                      </button>
-
-                      {isExpanded && (
-                        <RecipeEditor
-                          menuItemId={item.id}
-                          menuItemName={item.name}
-                          sellingPrice={item.price}
-                          existingRecipe={recipe}
-                          ingredients={ingredients}
-                          ingredientMap={ingredientMap}
-                          onSaved={fetchAll}
-                          onCostChange={(cost) => setLiveCosts((prev) => ({ ...prev, [item.id]: cost }))}
-                        />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+                        <Button
+                          variant={hasRecipe ? "ghost" : "primary"}
+                          size="sm"
+                          leadingIcon={hasRecipe ? <Pencil className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+                          onClick={() => setEditing(item)}
+                        >
+                          {hasRecipe ? "Edit" : "Create"}
+                        </Button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </CardBody>
+            </Card>
           ))}
         </div>
       )}
+
+      <RecipeEditor
+        menuItem={editing}
+        recipe={editing ? recipeByMenuId.get(editing.id) : undefined}
+        ingredients={ingredients}
+        onClose={() => setEditing(null)}
+        onSaved={onSaved}
+      />
     </>
   );
 }
 
-// =====================
-// RECIPE EDITOR
-// =====================
+// =============================================================
+// Recipe editor dialog
+// =============================================================
 
-function RecipeEditor({
-  menuItemId,
-  menuItemName,
-  sellingPrice,
-  existingRecipe,
-  ingredients,
-  ingredientMap,
-  onSaved,
-  onCostChange,
-}: {
-  menuItemId: string;
-  menuItemName: string;
-  sellingPrice: number;
-  existingRecipe?: RecipeData;
+interface EditorProps {
+  menuItem: MenuItemData | null;
+  recipe?: RecipeData;
   ingredients: IngredientData[];
-  ingredientMap: Map<string, IngredientData>;
+  onClose: () => void;
   onSaved: () => void;
-  onCostChange?: (costPerPortion: number) => void;
-}) {
-  const [recipeIngredients, setRecipeIngredients] = useState<EnrichedRecipeIngredient[]>(
-    existingRecipe?.ingredients ?? []
-  );
-  const [yieldPortions, setYieldPortions] = useState(existingRecipe?.yieldPortions ?? 1);
-  const [prepTime, setPrepTime] = useState(existingRecipe?.prepTimeMinutes ?? 0);
-  const [notes, setNotes] = useState(existingRecipe?.notes ?? "");
-  const [saving, setSaving] = useState(false);
+}
+
+function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: EditorProps) {
+  const toast = useToast();
+  const [rows, setRows] = useState<EnrichedRecipeIngredient[]>([]);
+  const [yieldPortions, setYieldPortions] = useState(1);
+  const [prepTime, setPrepTime] = useState<string>("");
+  const [notes, setNotes] = useState("");
+  const [pickerIngId, setPickerIngId] = useState<string>("");
+  const [busy, setBusy] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  useEffect(() => {
+    if (!menuItem) return;
+    const ings = recipe?.enrichedIngredients ?? recipe?.ingredients ?? [];
+    setRows(
+      ings.map((r) => ({
+        ingredientId: r.ingredientId,
+        quantity: r.quantity,
+        wasteFactor: r.wasteFactor ?? 1,
+        name: r.name,
+        unit: r.unit,
+        unitCost: r.unitCost,
+      })),
+    );
+    setYieldPortions(recipe?.yieldPortions ?? 1);
+    setPrepTime(recipe?.prepTimeMinutes ? String(recipe.prepTimeMinutes) : "");
+    setNotes(recipe?.notes ?? "");
+    setPickerIngId("");
+  }, [menuItem, recipe]);
+
+  const ingredientMap = useMemo(() => {
+    const m = new Map<string, IngredientData>();
+    for (const i of ingredients) m.set(i.id, i);
+    return m;
+  }, [ingredients]);
 
   const addIngredient = () => {
-    if (ingredients.length === 0) return;
-    setRecipeIngredients((prev) => [
-      ...prev,
-      { ingredientId: ingredients[0].id, quantity: 0, wasteFactor: 1 },
+    if (!pickerIngId) return;
+    if (rows.some((r) => r.ingredientId === pickerIngId)) {
+      toast.warning("Already added", "Adjust the quantity instead.");
+      return;
+    }
+    const ing = ingredientMap.get(pickerIngId);
+    if (!ing) return;
+    setRows((r) => [
+      ...r,
+      {
+        ingredientId: ing.id,
+        quantity: 0,
+        wasteFactor: 1,
+        name: ing.name,
+        unit: ing.unit,
+        unitCost: ing.costPerUnit,
+      },
     ]);
+    setPickerIngId("");
   };
 
-  const removeIngredient = (idx: number) => {
-    setRecipeIngredients((prev) => prev.filter((_, i) => i !== idx));
+  const updateRow = (id: string, patch: Partial<EnrichedRecipeIngredient>) => {
+    setRows((r) => r.map((row) => (row.ingredientId === id ? { ...row, ...patch } : row)));
   };
 
-  const updateIngredient = (idx: number, field: string, value: string | number) => {
-    setRecipeIngredients((prev) =>
-      prev.map((ri, i) => (i === idx ? { ...ri, [field]: value } : ri))
-    );
+  const removeRow = (id: string) => {
+    setRows((r) => r.filter((row) => row.ingredientId !== id));
   };
 
-  let totalCost = 0;
-  for (const ri of recipeIngredients) {
-    const ing = ingredientMap.get(ri.ingredientId);
-    if (ing) totalCost += ing.costPerUnit * ri.quantity * (ri.wasteFactor || 1);
-  }
-  const costPerPortion = yieldPortions > 0 ? Math.round(totalCost / yieldPortions) : 0;
+  const lineCost = (r: EnrichedRecipeIngredient) =>
+    Math.round((r.unitCost ?? 0) * r.quantity * (r.wasteFactor || 1));
+  const totalCost = rows.reduce((acc, r) => acc + lineCost(r), 0);
+  const perPortion = yieldPortions > 0 ? Math.round(totalCost / yieldPortions) : totalCost;
+  const margin =
+    menuItem && menuItem.price > 0
+      ? Math.round(((menuItem.price - perPortion) / menuItem.price) * 100)
+      : 0;
 
-  // Report live cost to parent so header row updates instantly
-  useEffect(() => {
-    onCostChange?.(costPerPortion);
-  }, [costPerPortion, onCostChange]);
-
-  const handleSave = async () => {
-    setSaving(true);
+  const save = async () => {
+    if (!menuItem) return;
+    setBusy(true);
     try {
-      await fetch("/api/admin/recipes", {
+      const res = await fetch("/api/admin/recipes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          menuItemId,
-          ingredients: recipeIngredients.map((ri) => ({
-            ingredientId: ri.ingredientId,
-            quantity: ri.quantity,
-            wasteFactor: ri.wasteFactor,
+          menuItemId: menuItem.id,
+          ingredients: rows.map((r) => ({
+            ingredientId: r.ingredientId,
+            quantity: r.quantity,
+            wasteFactor: r.wasteFactor,
           })),
+          prepTimeMinutes: prepTime ? Number(prepTime) : undefined,
           yieldPortions,
-          prepTimeMinutes: prepTime || undefined,
           notes,
         }),
       });
-      onSaved();
+      if (res.ok) {
+        onSaved();
+      } else {
+        toast.error("Save failed", "Try again.");
+      }
     } finally {
-      setSaving(false);
+      setBusy(false);
     }
   };
 
+  const remove = async () => {
+    if (!menuItem) return;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/admin/recipes?menuItemId=${encodeURIComponent(menuItem.id)}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setConfirmDelete(false);
+        onSaved();
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!menuItem) {
+    return <Dialog open={false} onClose={onClose} />;
+  }
+
+  const availableIngredients = ingredients.filter((i) => !rows.some((r) => r.ingredientId === i.id));
+  const hasExisting = !!recipe;
+
   return (
-    <div className="border-t border-white/10 bg-white/5 p-5">
-      {/* Header with yield + prep */}
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
-        <h3 className="font-semibold admin-text">Recipe: {menuItemName}</h3>
-        <div className="flex items-center gap-4">
-          <label className="flex items-center gap-2 text-sm">
-            <span className="admin-text-muted">Yield</span>
-            <input
-              type="number"
-              min={1}
-              value={yieldPortions}
-              onChange={(e) => setYieldPortions(Number(e.target.value) || 1)}
-              className="w-16 glass-input rounded-lg text-center"
-            />
-            <span className="admin-text-muted">portions</span>
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <span className="admin-text-muted">Prep</span>
-            <input
-              type="number"
-              min={0}
-              value={prepTime || ""}
-              placeholder="0"
-              onChange={(e) => setPrepTime(Number(e.target.value) || 0)}
-              className="w-16 glass-input rounded-lg text-center"
-            />
-            <span className="admin-text-muted">min</span>
-          </label>
-        </div>
-      </div>
-
-      {/* Ingredient rows */}
-      {recipeIngredients.length > 0 && (
-        <div className="mb-4 space-y-2">
-          {/* Header */}
-          <div className="flex items-center gap-2 px-1 text-[10px] font-semibold admin-text-dim uppercase tracking-wider">
-            <div className="flex-1">Ingredient</div>
-            <div className="w-28 text-right">Quantity</div>
-            <div className="w-8" />
-            <div className="w-20 text-right">Waste</div>
-            <div className="w-24 text-right">Line Cost</div>
-            <div className="w-9" />
-          </div>
-          {recipeIngredients.map((ri, idx) => (
-            <IngredientRow
-              key={idx}
-              ri={ri}
-              idx={idx}
-              ingredientMap={ingredientMap}
-              ingredients={ingredients}
-              onUpdate={updateIngredient}
-              onRemove={removeIngredient}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Add ingredient */}
-      <button
-        onClick={addIngredient}
-        disabled={ingredients.length === 0}
-        className="glass-btn-ghost text-xs mb-4 disabled:opacity-50"
-      >
-        <Plus className="h-3.5 w-3.5" />
-        {ingredients.length === 0 ? "Add ingredients in the Ingredients Database tab first" : "Add ingredient to recipe"}
-      </button>
-
-      {/* Notes */}
-      <input
-        type="text"
-        placeholder="Recipe notes (optional)"
-        value={notes}
-        onChange={(e) => setNotes(e.target.value)}
-        className="w-full glass-input rounded-lg mb-4"
-      />
-
-      {/* Financial summary */}
-      {(() => {
-        const netProfit = sellingPrice - costPerPortion;
-        const foodCostPct = sellingPrice > 0 ? Math.round((costPerPortion / sellingPrice) * 100) : 0;
-        const marginPct = sellingPrice > 0 ? Math.round((netProfit / sellingPrice) * 100) : 0;
-        const markupPct = costPerPortion > 0 ? Math.round((netProfit / costPerPortion) * 100) : 0;
-
-        return (
-          <div className="p-4 bg-white/5 rounded-lg border border-white/10 space-y-3">
-            <div className="flex flex-wrap items-end gap-x-6 gap-y-2">
-              <div>
-                <div className="text-[10px] admin-text-dim uppercase tracking-wider mb-0.5">Selling Price</div>
-                <div className="text-lg font-bold admin-text">{formatPrice(sellingPrice)}</div>
-              </div>
-              <div>
-                <div className="text-[10px] admin-text-dim uppercase tracking-wider mb-0.5">Food Cost ({foodCostPct}%)</div>
-                <div className="text-lg font-bold admin-red">{formatPrice(costPerPortion)}</div>
-              </div>
-              <div>
-                <div className="text-[10px] admin-text-dim uppercase tracking-wider mb-0.5">Net Profit</div>
-                <div className={`text-lg font-bold ${netProfit >= 0 ? "text-emerald-400" : "admin-red"}`}>{formatPrice(netProfit)}</div>
-              </div>
-              <div>
-                <div className="text-[10px] admin-text-dim uppercase tracking-wider mb-0.5">Margin</div>
-                <div className={`text-lg font-bold ${marginColorClass(marginPct)}`}>{marginPct}%</div>
-              </div>
-              <div>
-                <div className="text-[10px] admin-text-dim uppercase tracking-wider mb-0.5">Markup</div>
-                <div className="text-lg font-bold admin-text">{markupPct}%</div>
-              </div>
-              <div className="ml-auto">
-                <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="glass-btn-green rounded-lg disabled:opacity-50"
-                >
-                  <Save className="h-4 w-4" />
-                  {saving ? "Saving..." : "Save Recipe"}
-                </button>
-              </div>
-            </div>
-            {yieldPortions > 1 && (
-              <div className="text-xs admin-text-dim">
-                Recipe total: {formatPrice(Math.round(totalCost))} for {yieldPortions} portions
-              </div>
+    <>
+      <Dialog
+        open
+        onClose={onClose}
+        size="xl"
+        title={`Recipe · ${menuItem.name}`}
+        description={`Listed price ${formatPrice(menuItem.price)} · Recipe cost auto-recalculates from real ingredient prices.`}
+        footer={
+          <>
+            {hasExisting && (
+              <Button variant="ghost" leadingIcon={<Trash2 className="h-3.5 w-3.5" />} onClick={() => setConfirmDelete(true)} disabled={busy}>
+                Delete recipe
+              </Button>
             )}
+            <Button variant="ghost" onClick={onClose} disabled={busy}>
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={save} loading={busy}>
+              Save recipe
+            </Button>
+          </>
+        }
+      >
+        <div className="v2-stack-12">
+          <div className="v2-recipe-summary">
+            <Card padding="compact">
+              <div className="v2-summary-row">
+                <span className="v2-muted">Per portion cost</span>
+                <span className="tabular v2-summary-val">{formatPrice(perPortion)}</span>
+              </div>
+            </Card>
+            <Card padding="compact">
+              <div className="v2-summary-row">
+                <span className="v2-muted">Margin</span>
+                <Badge tone={margin < 50 ? "danger" : margin < 65 ? "warning" : "success"} variant="soft">
+                  {margin}%
+                </Badge>
+              </div>
+            </Card>
+            <Card padding="compact">
+              <div className="v2-summary-row">
+                <span className="v2-muted">Batch cost · {yieldPortions} portion{yieldPortions === 1 ? "" : "s"}</span>
+                <span className="tabular v2-summary-val">{formatPrice(totalCost)}</span>
+              </div>
+            </Card>
           </div>
-        );
-      })()}
-    </div>
-  );
-}
 
-// =====================
-// INGREDIENT ROW (isolated state so typing doesn't fight derived values)
-// =====================
+          <Card padding="none">
+            <CardHeader title="Ingredients" />
+            <CardBody>
+              {rows.length === 0 ? (
+                <div className="v2-muted">No ingredients yet. Add one below.</div>
+              ) : (
+                <ul className="v2-rcp-rows">
+                  {rows.map((r) => (
+                    <li key={r.ingredientId} className="v2-rcp-row">
+                      <span className="v2-rcp-name">{r.name ?? r.ingredientId}</span>
+                      <Input
+                        type="number"
+                        step="0.001"
+                        min="0"
+                        value={r.quantity}
+                        onChange={(e) => updateRow(r.ingredientId, { quantity: Number(e.target.value) })}
+                        aria-label="Quantity"
+                        trailingAdornment={<span className="v2-muted">{r.unit}</span>}
+                      />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="1"
+                        max="2"
+                        value={r.wasteFactor}
+                        onChange={(e) => updateRow(r.ingredientId, { wasteFactor: Number(e.target.value) })}
+                        aria-label="Waste factor"
+                      />
+                      <span className="tabular v2-rcp-cost">{formatPrice(lineCost(r))}</span>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => removeRow(r.ingredientId)}
+                        aria-label="Remove ingredient"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
 
-function IngredientRow({
-  ri,
-  idx,
-  ingredientMap,
-  ingredients,
-  onUpdate,
-  onRemove,
-}: {
-  ri: EnrichedRecipeIngredient;
-  idx: number;
-  ingredientMap: Map<string, IngredientData>;
-  ingredients: IngredientData[];
-  onUpdate: (idx: number, field: string, value: string | number) => void;
-  onRemove: (idx: number) => void;
-}) {
-  const ing = ingredientMap.get(ri.ingredientId);
-  const displayUnit = ing?.unit === "kg" ? "g" : ing?.unit === "L" ? "ml" : (ing?.unit || "");
-  const multiplier = ing?.unit === "kg" || ing?.unit === "L" ? 1000 : 1;
+              <div className="v2-rcp-add">
+                <Select
+                  value={pickerIngId}
+                  onChange={(e) => setPickerIngId(e.target.value)}
+                  aria-label="Add ingredient"
+                  placeholder="Pick an ingredient…"
+                  options={availableIngredients.map((i) => ({
+                    value: i.id,
+                    label: `${i.name} · ${formatPrice(i.costPerUnit)}/${i.unit}`,
+                  }))}
+                />
+                <Button leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={addIngredient} disabled={!pickerIngId}>
+                  Add to recipe
+                </Button>
+              </div>
+            </CardBody>
+          </Card>
 
-  // Local state for inputs so typing isn't clobbered by derived value rounding
-  const [qtyStr, setQtyStr] = useState(ri.quantity ? String(Math.round(ri.quantity * multiplier * 1000) / 1000) : "");
-  const [wasteStr, setWasteStr] = useState(String(Math.round((ri.wasteFactor - 1) * 100)));
+          <div className="v2-form-row-2">
+            <Input
+              label="Yield · portions per batch"
+              type="number"
+              min="1"
+              value={yieldPortions}
+              onChange={(e) => setYieldPortions(Math.max(1, Number(e.target.value) || 1))}
+            />
+            <Input
+              label="Prep time (minutes)"
+              type="number"
+              min="0"
+              value={prepTime}
+              onChange={(e) => setPrepTime(e.target.value)}
+              description="Used by KDS prep estimates"
+            />
+          </div>
+          <Textarea label="Notes" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
+        </div>
+      </Dialog>
 
-  // Sync from parent when ingredient changes
-  useEffect(() => {
-    const m = ing?.unit === "kg" || ing?.unit === "L" ? 1000 : 1;
-    setQtyStr(ri.quantity ? String(Math.round(ri.quantity * m * 1000) / 1000) : "");
-    setWasteStr(String(Math.round((ri.wasteFactor - 1) * 100)));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ri.ingredientId]);
-
-  const lineCost = ing ? Math.round(ing.costPerUnit * ri.quantity * (ri.wasteFactor || 1)) : 0;
-
-  return (
-    <div className="flex items-center gap-2">
-      {/* Ingredient select */}
-      <select
-        value={ri.ingredientId}
-        onChange={(e) => onUpdate(idx, "ingredientId", e.target.value)}
-        className="flex-1 glass-input rounded-lg"
-      >
-        {ingredients.map((i) => (
-          <option key={i.id} value={i.id}>
-            {i.name} — {formatPrice(i.costPerUnit)}/{i.unit}
-          </option>
-        ))}
-      </select>
-
-      {/* Quantity */}
-      <input
-        type="number"
-        step="1"
-        min={0}
-        value={qtyStr}
-        placeholder="0"
-        onChange={(e) => {
-          setQtyStr(e.target.value);
-          const val = parseFloat(e.target.value) || 0;
-          onUpdate(idx, "quantity", val / multiplier);
-        }}
-        className="w-28 glass-input rounded-lg text-right"
+      <ConfirmDialog
+        open={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={remove}
+        title={`Delete recipe for ${menuItem.name}?`}
+        description="The menu item keeps its static cost. You can re-create the recipe at any time."
+        confirmLabel="Delete recipe"
+        destructive
       />
-      <span className="text-xs admin-text-muted w-8">{displayUnit}</span>
-
-      {/* Waste % */}
-      <div className="w-20 flex items-center gap-1">
-        <input
-          type="number"
-          step="1"
-          min={0}
-          value={wasteStr}
-          placeholder="0"
-          onChange={(e) => {
-            setWasteStr(e.target.value);
-            onUpdate(idx, "wasteFactor", 1 + (parseFloat(e.target.value) || 0) / 100);
-          }}
-          className="w-14 glass-input rounded-lg text-right"
-        />
-        <span className="text-xs admin-text-muted">%</span>
-      </div>
-
-      {/* Line cost — updates live as qty/waste change */}
-      <div className="w-24 text-right text-sm font-semibold admin-text">
-        {formatPrice(lineCost)}
-      </div>
-
-      {/* Delete */}
-      <button
-        onClick={() => onRemove(idx)}
-        className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-      >
-        <X className="h-4 w-4" />
-      </button>
-    </div>
+    </>
   );
 }
 
-// =====================
-// INGREDIENTS TAB
-// =====================
+// =============================================================
+// Ingredients panel
+// =============================================================
 
-function IngredientsTab() {
-  const [ingredients, setIngredients] = useState<IngredientData[]>([]);
+interface IngredientDialogState {
+  open: boolean;
+  ingredient: IngredientData | null;
+}
+
+function IngredientsPanel() {
+  const toast = useToast();
+  const [list, setList] = useState<IngredientData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
-  const [filterCategory, setFilterCategory] = useState("");
+  const [query, setQuery] = useState("");
+  const [catFilter, setCatFilter] = useState<IngredientCategory | "all">("all");
+  const [dialog, setDialog] = useState<IngredientDialogState>({ open: false, ingredient: null });
+  const [pendingDelete, setPendingDelete] = useState<IngredientData | null>(null);
 
-  const [formName, setFormName] = useState("");
-  const [formCategory, setFormCategory] = useState<IngredientCategory>("other");
-  const [formUnit, setFormUnit] = useState<IngredientUnit>("kg");
-  const [formCost, setFormCost] = useState("");
-  const [formSupplier, setFormSupplier] = useState("");
-  const [formNotes, setFormNotes] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  const fetchIngredients = useCallback(async () => {
+  const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch("/api/admin/ingredients");
-      if (res.ok) setIngredients(await res.json());
+      if (res.ok) {
+        const data = await res.json();
+        setList(Array.isArray(data) ? data : []);
+      }
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => { fetchIngredients(); }, [fetchIngredients]);
+  useEffect(() => {
+    fetchAll();
+  }, [fetchAll]);
 
-  const resetForm = () => {
-    setFormName(""); setFormCategory("other"); setFormUnit("kg");
-    setFormCost(""); setFormSupplier(""); setFormNotes("");
-    setEditingId(null); setShowForm(false);
-  };
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return list.filter((i) => {
+      if (catFilter !== "all" && i.category !== catFilter) return false;
+      if (!q) return true;
+      return (
+        i.name.toLowerCase().includes(q) ||
+        (i.supplier?.toLowerCase().includes(q) ?? false)
+      );
+    });
+  }, [list, query, catFilter]);
 
-  const startEdit = (ing: IngredientData) => {
-    setFormName(ing.name); setFormCategory(ing.category); setFormUnit(ing.unit);
-    setFormCost((ing.costPerUnit / 100).toFixed(2)); setFormSupplier(ing.supplier || "");
-    setFormNotes(ing.notes || ""); setEditingId(ing.id); setShowForm(true);
-  };
+  const cols: Column<IngredientData>[] = [
+    {
+      key: "name",
+      header: "Ingredient",
+      cell: (i) => <span>{i.name}</span>,
+      sortValue: (i) => i.name,
+    },
+    {
+      key: "category",
+      header: "Category",
+      cell: (i) => <Badge tone="neutral" variant="soft">{i.category}</Badge>,
+      sortValue: (i) => i.category,
+    },
+    {
+      key: "unit",
+      header: "Unit",
+      cell: (i) => i.unit,
+      sortValue: (i) => i.unit,
+    },
+    {
+      key: "cost",
+      header: "Cost / unit",
+      align: "right",
+      cell: (i) => formatPrice(i.costPerUnit),
+      sortValue: (i) => i.costPerUnit,
+    },
+    {
+      key: "supplier",
+      header: "Supplier",
+      cell: (i) => i.supplier || <span className="v2-muted">—</span>,
+      sortValue: (i) => i.supplier ?? "",
+    },
+    {
+      key: "actions",
+      header: "",
+      cell: (i) => (
+        <div className="v2-row-actions">
+          <Button size="sm" variant="ghost" leadingIcon={<Pencil className="h-3.5 w-3.5" />} onClick={() => setDialog({ open: true, ingredient: i })}>
+            Edit
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setPendingDelete(i)} aria-label={`Delete ${i.name}`}>
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
 
-  const handleSave = async () => {
-    if (!formName.trim()) return;
-    setSaving(true);
-    try {
-      await fetch("/api/admin/ingredients", {
-        method: editingId ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...(editingId ? { id: editingId } : {}),
-          name: formName.trim(), category: formCategory, unit: formUnit,
-          costPerUnit: Math.round(parseFloat(formCost || "0") * 100),
-          supplier: formSupplier, notes: formNotes,
-        }),
-      });
-      resetForm();
-      fetchIngredients();
-    } finally {
-      setSaving(false);
+  const doDelete = async () => {
+    if (!pendingDelete) return;
+    const res = await fetch(`/api/admin/ingredients?id=${encodeURIComponent(pendingDelete.id)}`, { method: "DELETE" });
+    if (res.ok) {
+      setList((arr) => arr.filter((i) => i.id !== pendingDelete.id));
+      toast.success("Ingredient removed", pendingDelete.name);
+    } else {
+      toast.error("Delete failed");
     }
+    setPendingDelete(null);
   };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm("Delete this ingredient?")) return;
-    await fetch(`/api/admin/ingredients?id=${id}`, { method: "DELETE" });
-    fetchIngredients();
-  };
-
-  const filtered = ingredients.filter((ing) => {
-    if (filterCategory && ing.category !== filterCategory) return false;
-    if (search && !ing.name.toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
-  });
-
-  const usedCategories = [...new Set(ingredients.map((i) => i.category))].sort();
 
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
-        <div>
-          <h1 className="text-2xl font-bold font-heading admin-text">Ingredients Database</h1>
-          <p className="text-sm admin-text-muted mt-0.5">{ingredients.length} ingredients</p>
+      <div className="v2-filters">
+        <div className="v2-filter-search">
+          <Input
+            placeholder="Search ingredients or suppliers…"
+            leadingAdornment={<Search className="h-3.5 w-3.5" />}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
         </div>
-        <button onClick={() => { resetForm(); setShowForm(true); }} className="flex items-center gap-2 px-4 py-2 glass-btn-green text-white rounded-lg font-semibold text-sm">
-          <Plus className="h-4 w-4" />
-          Add Ingredient
-        </button>
-      </div>
-
-      {showForm && (
-        <div className="glass-card rounded-lg p-5 mb-6">
-          <h2 className="font-bold text-lg mb-4 admin-text">{editingId ? "Edit Ingredient" : "New Ingredient"}</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
-            <div className="col-span-2 md:col-span-1">
-              <label className="block text-xs admin-text-muted mb-1">Name *</label>
-              <input type="text" value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="e.g. Fior di Latte Mozzarella" className="w-full glass-input rounded-lg text-sm" autoFocus />
-            </div>
-            <div>
-              <label className="block text-xs admin-text-muted mb-1">Category</label>
-              <select value={formCategory} onChange={(e) => setFormCategory(e.target.value as IngredientCategory)} className="w-full glass-input rounded-lg text-sm">
-                {Object.entries(INGREDIENT_CATEGORY_LABELS).map(([val, label]) => (
-                  <option key={val} value={val}>{label}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs admin-text-muted mb-1">Unit</label>
-              <select value={formUnit} onChange={(e) => setFormUnit(e.target.value as IngredientUnit)} className="w-full glass-input rounded-lg text-sm">
-                {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs admin-text-muted mb-1">Cost per {formUnit} (PLN)</label>
-              <input type="number" step="0.01" value={formCost} onChange={(e) => setFormCost(e.target.value)} placeholder="0.00" className="w-full glass-input rounded-lg text-sm" />
-            </div>
-            <div>
-              <label className="block text-xs admin-text-muted mb-1">Supplier</label>
-              <input type="text" value={formSupplier} onChange={(e) => setFormSupplier(e.target.value)} placeholder="Optional" className="w-full glass-input rounded-lg text-sm" />
-            </div>
-          </div>
-          <div className="flex gap-3">
-            <button onClick={handleSave} disabled={saving || !formName.trim()} className="glass-btn-green disabled:opacity-50">{saving ? "Saving..." : editingId ? "Update" : "Add"}</button>
-            <button onClick={resetForm} className="glass-btn-ghost">Cancel</button>
-          </div>
-        </div>
-      )}
-
-      <div className="flex flex-wrap items-center gap-3 mb-4">
-        <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="glass-input rounded-lg text-sm">
-          <option value="">All categories</option>
-          {usedCategories.map((cat) => (
-            <option key={cat} value={cat}>{INGREDIENT_CATEGORY_LABELS[cat as IngredientCategory]}</option>
-          ))}
-        </select>
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 admin-text-muted" />
-          <input type="text" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-9 pr-3 py-2 glass-input rounded-lg text-sm" />
-        </div>
+        <Tabs
+          value={catFilter}
+          onChange={(v) => setCatFilter(v as IngredientCategory | "all")}
+          tabs={[
+            { value: "all", label: "All", count: list.length },
+            ...INGREDIENT_CATEGORIES.map((c) => ({
+              value: c,
+              label: c,
+              count: list.filter((i) => i.category === c).length,
+            })),
+          ]}
+          variant="pill"
+          ariaLabel="Category filter"
+        />
+        <Button
+          variant="primary"
+          leadingIcon={<Plus className="h-3.5 w-3.5" />}
+          onClick={() => setDialog({ open: true, ingredient: null })}
+        >
+          New ingredient
+        </Button>
       </div>
 
       {loading ? (
-        <div className="text-center py-12 admin-text-muted">Loading...</div>
+        <div className="v2-page-loading">Loading…</div>
       ) : filtered.length === 0 ? (
-        <div className="glass-card rounded-lg p-12 text-center">
-          <Package className="h-8 w-8 mx-auto mb-3 admin-text-dim" />
-          <p className="admin-text-muted font-medium">No ingredients yet</p>
-          <p className="text-sm admin-text-dim mt-1">Add your ingredients to start building recipes</p>
-        </div>
+        <Card>
+          <CardBody>
+            <EmptyState
+              icon={FlaskConical}
+              title={list.length === 0 ? "No ingredients yet" : "No matches"}
+              description={list.length === 0 ? "Add your first ingredient to start building recipes." : "Try clearing filters."}
+              action={
+                list.length === 0 ? (
+                  <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setDialog({ open: true, ingredient: null })}>
+                    New ingredient
+                  </Button>
+                ) : undefined
+              }
+            />
+          </CardBody>
+        </Card>
       ) : (
-        <div className="glass-card rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-white/5 text-left">
-                <th className="px-4 py-3 font-semibold admin-text-muted">Name</th>
-                <th className="px-4 py-3 font-semibold admin-text-muted">Category</th>
-                <th className="px-4 py-3 font-semibold admin-text-muted text-right">Cost / Unit</th>
-                <th className="px-4 py-3 font-semibold admin-text-muted">Supplier</th>
-                <th className="px-4 py-3 font-semibold admin-text-muted w-20" />
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((ing) => (
-                <tr key={ing.id} className="border-t border-white/5 hover:bg-white/5">
-                  <td className="px-4 py-3 font-medium admin-text">{ing.name}</td>
-                  <td className="px-4 py-3"><span className="px-2 py-0.5 bg-white/10 rounded text-xs admin-text-muted">{INGREDIENT_CATEGORY_LABELS[ing.category]}</span></td>
-                  <td className="px-4 py-3 text-right font-semibold admin-text">{formatPrice(ing.costPerUnit)}<span className="text-xs admin-text-muted font-normal">/{ing.unit}</span></td>
-                  <td className="px-4 py-3 admin-text-muted">{ing.supplier || "—"}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1">
-                      <button onClick={() => startEdit(ing)} className="px-2 py-1 text-xs text-blue-400 hover:bg-white/5 rounded">Edit</button>
-                      <button onClick={() => handleDelete(ing.id)} className="p-1 text-gray-400 hover:text-italia-red"><Trash2 className="h-3.5 w-3.5" /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Card padding="none">
+          <CardBody>
+            <Table rows={filtered} columns={cols} rowKey={(i) => i.id} defaultSort={{ key: "name", dir: "asc" }} />
+          </CardBody>
+        </Card>
       )}
+
+      <IngredientDialog
+        state={dialog}
+        onClose={() => setDialog({ open: false, ingredient: null })}
+        onSaved={async () => {
+          setDialog({ open: false, ingredient: null });
+          await fetchAll();
+          toast.success("Saved");
+        }}
+      />
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={doDelete}
+        title={`Delete ${pendingDelete?.name ?? "this ingredient"}?`}
+        description="Recipes that reference this ingredient will lose this line item. The action is irreversible."
+        confirmLabel="Delete"
+        destructive
+      />
     </>
+  );
+}
+
+interface IngDialogProps {
+  state: IngredientDialogState;
+  onClose: () => void;
+  onSaved: () => void;
+}
+
+function IngredientDialog({ state, onClose, onSaved }: IngDialogProps) {
+  const toast = useToast();
+  const [name, setName] = useState("");
+  const [category, setCategory] = useState<IngredientCategory>("produce");
+  const [unit, setUnit] = useState<IngredientUnit>("kg");
+  const [costStr, setCostStr] = useState("0.00");
+  const [supplier, setSupplier] = useState("");
+  const [notes, setNotes] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!state.open) return;
+    const ing = state.ingredient;
+    setName(ing?.name ?? "");
+    setCategory(ing?.category ?? "produce");
+    setUnit(ing?.unit ?? "kg");
+    setCostStr(ing ? (ing.costPerUnit / 100).toFixed(2) : "0.00");
+    setSupplier(ing?.supplier ?? "");
+    setNotes(ing?.notes ?? "");
+  }, [state]);
+
+  if (!state.open) return <Dialog open={false} onClose={onClose} />;
+
+  const save = async () => {
+    if (!name.trim()) {
+      toast.warning("Name required");
+      return;
+    }
+    setBusy(true);
+    try {
+      const payload = {
+        id: state.ingredient?.id,
+        name: name.trim(),
+        category,
+        unit,
+        costPerUnit: Math.round(parseFloat(costStr || "0") * 100),
+        supplier: supplier.trim() || undefined,
+        notes: notes.trim() || undefined,
+      };
+      const res = await fetch("/api/admin/ingredients", {
+        method: state.ingredient ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        onSaved();
+      } else {
+        toast.error("Could not save");
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      size="md"
+      title={state.ingredient ? `Edit ${state.ingredient.name}` : "New ingredient"}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={busy}>Cancel</Button>
+          <Button variant="primary" onClick={save} loading={busy}>{state.ingredient ? "Save changes" : "Create ingredient"}</Button>
+        </>
+      }
+    >
+      <div className="v2-stack-12">
+        <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. San Marzano tomatoes" />
+        <div className="v2-form-row-2">
+          <Select
+            label="Category"
+            value={category}
+            onChange={(e) => setCategory(e.target.value as IngredientCategory)}
+            options={INGREDIENT_CATEGORIES.map((c) => ({ value: c, label: c }))}
+          />
+          <Select
+            label="Unit"
+            value={unit}
+            onChange={(e) => setUnit(e.target.value as IngredientUnit)}
+            options={INGREDIENT_UNITS.map((u) => ({ value: u, label: u }))}
+          />
+        </div>
+        <Input
+          label={`Cost per ${unit}`}
+          type="number"
+          step="0.01"
+          min="0"
+          value={costStr}
+          onChange={(e) => setCostStr(e.target.value)}
+          trailingAdornment={<span className="v2-muted">zł</span>}
+        />
+        <Input label="Supplier" value={supplier} onChange={(e) => setSupplier(e.target.value)} placeholder="Optional" />
+        <Textarea label="Notes" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
+      </div>
+    </Dialog>
   );
 }
