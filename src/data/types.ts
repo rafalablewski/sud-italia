@@ -500,6 +500,38 @@ export interface ExpansionChecklist {
   updatedAt: string;
 }
 
+// --- Cash management (truck float, drops, EOD variance) ---
+
+export interface CashDrop {
+  id: string;
+  /** Grosze added (positive) or removed (negative) from the till at this drop. */
+  amountGrosze: number;
+  /** "sale" = cash sale recorded by cashier, "drop" = bank/safe drop, "payout" = cash paid out, "adjust" = correction. */
+  kind: "sale" | "drop" | "payout" | "adjust";
+  /** ISO timestamp. */
+  at: string;
+  notes?: string;
+  actor?: string;
+}
+
+export interface CashSession {
+  id: string;
+  locationSlug: string;
+  /** ISO timestamp the session opened. */
+  openedAt: string;
+  /** Opening float in grosze (manager-supplied count when starting). */
+  openingFloat: number;
+  openedBy: string;
+  drops: CashDrop[];
+  /** Counted total in grosze at EOD; absent until close. */
+  closingCountGrosze?: number;
+  closedAt?: string;
+  closedBy?: string;
+  /** closingCountGrosze − (openingFloat + sum(drops)). Negative ⇒ short; positive ⇒ over. */
+  varianceGrosze?: number;
+  notes?: string;
+}
+
 // --- Compliance calendar (licences, inspections, insurance) ---
 
 export const COMPLIANCE_KINDS = [

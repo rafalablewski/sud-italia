@@ -1,7 +1,7 @@
 import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem } from "@/data/types";
+import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop } from "@/data/types";
 import { getActiveLocations, locations as allLocations } from "@/data/locations";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -2721,6 +2721,99 @@ export async function saveComplianceItem(
     else list.push(item);
     await writeJSON("compliance.json", list);
     return item;
+  });
+}
+
+// --- Cash sessions ------------------------------------------------------
+
+export async function getCashSessions(locationSlug?: string): Promise<CashSession[]> {
+  const all = await readJSON<CashSession[]>("cash-sessions.json", []);
+  const list = locationSlug ? all.filter((s) => s.locationSlug === locationSlug) : all;
+  // Most recent first so the UI doesn't have to re-sort.
+  return list.slice().sort((a, b) => b.openedAt.localeCompare(a.openedAt));
+}
+
+export async function getCashSessionById(id: string): Promise<CashSession | undefined> {
+  const all = await readJSON<CashSession[]>("cash-sessions.json", []);
+  return all.find((s) => s.id === id);
+}
+
+/** Find the open session (no closedAt) for a location, if any. Only one open
+ *  session per location is supported — opening a second 409s. */
+export async function getOpenCashSession(locationSlug: string): Promise<CashSession | undefined> {
+  const all = await readJSON<CashSession[]>("cash-sessions.json", []);
+  return all.find((s) => s.locationSlug === locationSlug && !s.closedAt);
+}
+
+export async function openCashSession(input: {
+  locationSlug: string;
+  openingFloat: number;
+  openedBy: string;
+  notes?: string;
+}): Promise<CashSession | { error: "already_open"; existing: CashSession }> {
+  return withLock("cash-sessions.json", async () => {
+    const all = await readJSON<CashSession[]>("cash-sessions.json", []);
+    const open = all.find((s) => s.locationSlug === input.locationSlug && !s.closedAt);
+    if (open) return { error: "already_open" as const, existing: open };
+    const session: CashSession = {
+      id: `cash-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      locationSlug: input.locationSlug,
+      openedAt: new Date().toISOString(),
+      openingFloat: Math.max(0, Math.round(input.openingFloat)),
+      openedBy: input.openedBy,
+      drops: [],
+      notes: input.notes,
+    };
+    all.push(session);
+    await writeJSON("cash-sessions.json", all);
+    return session;
+  });
+}
+
+export async function appendCashDrop(
+  sessionId: string,
+  drop: Omit<CashDrop, "id" | "at"> & { at?: string },
+): Promise<CashSession | null> {
+  return withLock("cash-sessions.json", async () => {
+    const all = await readJSON<CashSession[]>("cash-sessions.json", []);
+    const idx = all.findIndex((s) => s.id === sessionId);
+    if (idx === -1) return null;
+    if (all[idx].closedAt) return null;
+    const entry: CashDrop = {
+      id: `drop-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      amountGrosze: Math.round(drop.amountGrosze),
+      kind: drop.kind,
+      at: drop.at ?? new Date().toISOString(),
+      notes: drop.notes,
+      actor: drop.actor,
+    };
+    all[idx].drops.push(entry);
+    await writeJSON("cash-sessions.json", all);
+    return all[idx];
+  });
+}
+
+export async function closeCashSession(
+  sessionId: string,
+  closingCountGrosze: number,
+  closedBy: string,
+  notes?: string,
+): Promise<CashSession | null> {
+  return withLock("cash-sessions.json", async () => {
+    const all = await readJSON<CashSession[]>("cash-sessions.json", []);
+    const idx = all.findIndex((s) => s.id === sessionId);
+    if (idx === -1) return null;
+    if (all[idx].closedAt) return null;
+    const session = all[idx];
+    const expected =
+      session.openingFloat + session.drops.reduce((acc, d) => acc + d.amountGrosze, 0);
+    session.closingCountGrosze = Math.max(0, Math.round(closingCountGrosze));
+    session.closedAt = new Date().toISOString();
+    session.closedBy = closedBy;
+    session.varianceGrosze = session.closingCountGrosze - expected;
+    if (notes) session.notes = notes;
+    await writeJSON("cash-sessions.json", all);
+    return session;
   });
 }
 

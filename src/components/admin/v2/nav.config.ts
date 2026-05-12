@@ -1,5 +1,6 @@
 import {
   LayoutDashboard,
+  Banknote,
   ClipboardList,
   ChefHat,
   UtensilsCrossed,
@@ -93,7 +94,10 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     id: "finance",
     label: "Finance",
-    items: [{ href: "/admin/reports", label: "Reports", icon: BarChart3, shortcut: "r" }],
+    items: [
+      { href: "/admin/reports", label: "Reports", icon: BarChart3, shortcut: "r" },
+      { href: "/admin/cash", label: "Cash", icon: Banknote },
+    ],
   },
   {
     id: "growth",
