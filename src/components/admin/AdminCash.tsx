@@ -6,6 +6,7 @@ import {
   CircleDollarSign,
   ListPlus,
   Lock,
+  MapPin,
   Plus,
   Unlock,
 } from "lucide-react";
@@ -24,6 +25,10 @@ import {
   Textarea,
 } from "./v2/ui";
 import { formatPrice } from "@/lib/utils";
+import { getActiveLocations } from "@/data/locations";
+
+const activeLocations = getActiveLocations();
+const FALLBACK_LOC = activeLocations[0]?.slug ?? "krakow";
 
 interface CashDrop {
   id: string;
@@ -71,21 +76,30 @@ function varianceTone(g: number): "success" | "warning" | "danger" {
 }
 
 export function AdminCash() {
-  const { location } = useAdminLocation();
+  const { location: globalLoc } = useAdminLocation();
   const toast = useToast();
+
+  // Cash sessions are per-location and the API rejects "all locations" reads
+  // (a single drawer can't span trucks). When the sidebar is on "All
+  // locations", default to the first active truck and let the user pick from
+  // an in-page Select — mirrors the AdminInventory pattern.
+  const [pageLoc, setPageLoc] = useState<string>(globalLoc || FALLBACK_LOC);
+  useEffect(() => {
+    if (globalLoc) setPageLoc(globalLoc);
+  }, [globalLoc]);
+
   const [sessions, setSessions] = useState<CashSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
   const [dropDialogFor, setDropDialogFor] = useState<CashSession | null>(null);
   const [closeDialogFor, setCloseDialogFor] = useState<CashSession | null>(null);
 
+  const locOptions = activeLocations.map((l) => ({ value: l.slug, label: l.city }));
+
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const url = location
-        ? `/api/admin/cash?location=${encodeURIComponent(location)}`
-        : "/api/admin/cash";
-      const res = await fetch(url);
+      const res = await fetch(`/api/admin/cash?location=${encodeURIComponent(pageLoc)}`);
       if (res.ok) {
         const data = await res.json();
         setSessions(Array.isArray(data) ? data : []);
@@ -93,15 +107,15 @@ export function AdminCash() {
     } finally {
       setLoading(false);
     }
-  }, [location]);
+  }, [pageLoc]);
 
   useEffect(() => {
     fetchAll();
   }, [fetchAll]);
 
   const openSession = useMemo(
-    () => sessions.find((s) => !s.closedAt && (!location || s.locationSlug === location)),
-    [sessions, location],
+    () => sessions.find((s) => !s.closedAt && (s.locationSlug === pageLoc)),
+    [sessions, pageLoc],
   );
 
   return (
@@ -115,18 +129,25 @@ export function AdminCash() {
           </p>
         </div>
         <div className="v2-page-actions">
+          <div className="v2-field-inline">
+            <MapPin className="h-3.5 w-3.5 v2-muted" />
+            <Select
+              value={pageLoc}
+              onChange={(e) => setPageLoc(e.target.value)}
+              options={locOptions}
+              aria-label="Cash session location"
+            />
+          </div>
           <Button
             variant="primary"
             size="sm"
             leadingIcon={<Unlock className="h-3.5 w-3.5" />}
             onClick={() => setOpenDialog(true)}
-            disabled={!location || !!openSession}
+            disabled={!!openSession}
             title={
-              !location
-                ? "Pick a single location to open a session"
-                : openSession
-                  ? "A session is already open for this location"
-                  : "Open a new cash session"
+              openSession
+                ? "A session is already open for this location"
+                : "Open a new cash session"
             }
           >
             Open session
@@ -134,23 +155,11 @@ export function AdminCash() {
         </div>
       </header>
 
-      {!location && (
-        <Card>
-          <CardBody>
-            <EmptyState
-              icon={Banknote}
-              title="Pick a location"
-              description="Cash sessions are per-location. Select a single truck in the sidebar to see and manage cash here."
-            />
-          </CardBody>
-        </Card>
-      )}
-
-      {location && loading ? (
+      {loading ? (
         <div className="v2-page-loading">Loading sessions…</div>
       ) : null}
 
-      {location && !loading && openSession && (
+      {!loading && openSession && (
         <Card>
           <CardHeader
             title={`Open session · ${openSession.locationSlug.toUpperCase()}`}
@@ -206,7 +215,7 @@ export function AdminCash() {
         </Card>
       )}
 
-      {location && !loading && sessions.length === 0 && (
+      {!loading && sessions.length === 0 && (
         <Card>
           <CardBody>
             <EmptyState
@@ -223,7 +232,7 @@ export function AdminCash() {
         </Card>
       )}
 
-      {location && !loading && sessions.length > 0 && (
+      {!loading && sessions.length > 0 && (
         <Card>
           <CardHeader title="History" description={`${sessions.length} session${sessions.length === 1 ? "" : "s"} at this location.`} />
           <CardBody>
@@ -276,9 +285,9 @@ export function AdminCash() {
         </Card>
       )}
 
-      {openDialog && location && (
+      {openDialog && (
         <OpenDialog
-          locationSlug={location}
+          locationSlug={pageLoc}
           onClose={() => setOpenDialog(false)}
           onOpened={async () => {
             setOpenDialog(false);
