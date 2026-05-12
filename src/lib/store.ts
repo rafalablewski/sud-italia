@@ -11,6 +11,7 @@ import {
 import { WALLET_MAX_PHONES } from "@/lib/constants";
 import { normalizePlPhoneE164, phonesEqualPl } from "@/lib/phone";
 import { logger } from "@/lib/logger";
+import { withDistributedLock } from "@/lib/locks";
 
 // --- Storage abstraction: Neon Postgres when DATABASE_URL is set, filesystem fallback for local dev ---
 
@@ -35,14 +36,17 @@ async function ensureDB() {
   dbInitialized = true;
 }
 
-// Simple per-file lock to prevent concurrent read-modify-write races (filesystem only)
-const locks = new Map<string, Promise<void>>();
-
+/**
+ * Routes legacy callsites through the distributed lock (m0_1). The new
+ * primitive serializes across Vercel instances via Upstash Redis SET NX PX
+ * when configured, and falls back to an in-process Promise chain otherwise.
+ *
+ * Phase 1 will scope lock keys narrower (e.g. `slots:${locationSlug}:${date}`
+ * instead of `slots.json`) as each entity is normalized off kv_store. For now
+ * the keys match the legacy file names so the callsites can stay put.
+ */
 function withLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
-  const prev = locks.get(key) ?? Promise.resolve();
-  const next = prev.then(fn, fn);
-  locks.set(key, next.then(() => {}, () => {}));
-  return next;
+  return withDistributedLock(key, fn);
 }
 
 async function ensureDataDir() {
