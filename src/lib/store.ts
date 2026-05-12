@@ -223,6 +223,19 @@ export async function getOrderById(id: string): Promise<Order | undefined> {
   return orders.find((o) => o.id === id);
 }
 
+/**
+ * Find an order by its Stripe payment-intent id. Used by the dispute webhook
+ * (the `Dispute` object references a `charge` + `payment_intent` but no
+ * order-level metadata, so we lean on `stripePaymentIntentId` captured at
+ * checkout-completed time).
+ */
+export async function getOrderByStripePaymentIntent(
+  paymentIntentId: string,
+): Promise<Order | undefined> {
+  const orders = await readJSON<Order[]>("orders.json", []);
+  return orders.find((o) => o.stripePaymentIntentId === paymentIntentId);
+}
+
 export async function createOrder(order: Order): Promise<Order> {
   return withLock("orders.json", async () => {
     const orders = await readJSON<Order[]>("orders.json", []);

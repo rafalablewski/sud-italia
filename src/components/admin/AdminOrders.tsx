@@ -559,7 +559,29 @@ function OrderDetail({ order, onClose, onStatusChange, onRequestDelete, onReques
   const subtotal = order.items.reduce((acc, ci) => acc + ci.menuItem.price * ci.quantity, 0);
   const delta = order.totalAmount - subtotal;
   const refunded = order.refund;
+  const dispute = order.dispute;
   const canRefund = !refunded && order.status !== "cancelled" && order.status !== "pending";
+
+  // Dispute states that require operator action (visible amber/red on the
+  // badge). `under_review` already means we've submitted evidence.
+  const disputeBadgeTone: "danger" | "warning" | "neutral" | "success" | undefined = dispute
+    ? dispute.status === "lost"
+      ? "danger"
+      : dispute.status === "won" || dispute.status === "warning_closed"
+        ? "success"
+        : dispute.status === "needs_response" || dispute.status === "warning_needs_response"
+          ? "danger"
+          : "warning"
+    : undefined;
+  const disputeBadgeLabel = dispute
+    ? dispute.status === "won"
+      ? "Dispute won"
+      : dispute.status === "lost"
+        ? "Dispute lost"
+        : dispute.status === "warning_closed"
+          ? "Inquiry closed"
+          : "Disputed"
+    : "";
 
   return (
     <Dialog
@@ -575,6 +597,11 @@ function OrderDetail({ order, onClose, onStatusChange, onRequestDelete, onReques
           {refunded && (
             <Badge tone="danger" variant="soft">
               {refunded.type === "full" ? "Refunded" : "Partially refunded"}
+            </Badge>
+          )}
+          {dispute && disputeBadgeTone && (
+            <Badge tone={disputeBadgeTone} variant="soft">
+              {disputeBadgeLabel}
             </Badge>
           )}
         </span>
@@ -767,6 +794,44 @@ function OrderDetail({ order, onClose, onStatusChange, onRequestDelete, onReques
                   </span>
                 </div>
               )}
+            </CardBody>
+          </Card>
+        )}
+
+        {dispute && (
+          <Card padding="none">
+            <CardHeader title="Dispute / chargeback" />
+            <CardBody>
+              <div className="v2-detail-row">
+                <span className="v2-detail-key">Status</span>
+                <span>{disputeBadgeLabel} ({dispute.status.replace(/_/g, " ")})</span>
+              </div>
+              <div className="v2-detail-row">
+                <span className="v2-detail-key">Reason</span>
+                <span>{dispute.reason.replace(/_/g, " ")}</span>
+              </div>
+              <div className="v2-detail-row">
+                <span className="v2-detail-key">Amount</span>
+                <span className="mono">{formatPrice(dispute.amount)}</span>
+              </div>
+              <div className="v2-detail-row">
+                <span className="v2-detail-key">Opened</span>
+                <span>{new Date(dispute.createdAt).toLocaleString()}</span>
+              </div>
+              <div className="v2-detail-row">
+                <span className="v2-detail-key">Updated</span>
+                <span>{new Date(dispute.updatedAt).toLocaleString()}</span>
+              </div>
+              {dispute.closedAt && (
+                <div className="v2-detail-row">
+                  <span className="v2-detail-key">Closed</span>
+                  <span>{new Date(dispute.closedAt).toLocaleString()}</span>
+                </div>
+              )}
+              <div className="v2-detail-row">
+                <span className="v2-detail-key">Stripe</span>
+                <span className="mono">{dispute.stripeDisputeId}</span>
+              </div>
             </CardBody>
           </Card>
         )}

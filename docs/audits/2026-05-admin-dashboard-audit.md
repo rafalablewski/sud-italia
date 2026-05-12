@@ -186,7 +186,7 @@ Format note: tables are split per category for readability. **Priority** is P0 (
 | — | **VAT / JPK_V7 export** (Polish JPK schema, OSS for EU sales) | Polish tax law requires JPK_V7; without it, your accountant rebuilds your books monthly | P0 | iFirma, Comarch | ✗ Not fixed — JPK_V7 XML schema mapping |
 | — | **Investor reporting / KPI deck** auto-generated (TTM, cohort retention, contribution margin) | If you raise capital, you'll rebuild this manually for every diligence | P2 | Mosaic, Pry | ✗ Not fixed — KPI deck generator |
 | — | **Tax automation** (CIT, ZUS, PIT-11) integration with accountant | Currently entirely external | P2 | iFirma | ✗ Not fixed — accountant-system integration |
-| — | **Chargeback / dispute workflow** | Stripe sends webhooks for `charge.dispute.created`; you ignore them | P1 | Stripe Disputes | ✗ Not fixed — webhook handler + dispute entity |
+| — | **Chargeback / dispute workflow** | Stripe sends webhooks for `charge.dispute.created`; you ignore them | P1 | Stripe Disputes | ✓ Fixed — new `OrderDispute` entity persisted on `Order.dispute`; webhook handles `charge.dispute.created` / `updated` / `closed` / `funds_withdrawn` / `funds_reinstated`, looks the order up by `stripePaymentIntentId`, and pages the operator via `logger.error` (mirrored to Sentry). AdminOrders detail shows a tone-mapped badge + full dispute card. `src/data/types.ts`, `src/lib/store.ts`, `src/app/api/webhook/route.ts`, `src/components/admin/AdminOrders.tsx`. |
 
 ### 1.10 Data & AI (the brutal section)
 

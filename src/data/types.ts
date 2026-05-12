@@ -247,6 +247,35 @@ export interface OrderRefund {
   refundedAt: string;
 }
 
+/** Stripe dispute lifecycle statuses. Mirrors Stripe's own values 1:1. */
+export const DISPUTE_STATUSES = [
+  "warning_needs_response",
+  "warning_under_review",
+  "warning_closed",
+  "needs_response",
+  "under_review",
+  "won",
+  "lost",
+] as const;
+
+export type DisputeStatus = (typeof DISPUTE_STATUSES)[number];
+
+export interface OrderDispute {
+  /** Stripe dispute id (`dp_…`). */
+  stripeDisputeId: string;
+  status: DisputeStatus;
+  /** Stripe-supplied reason, e.g. "fraudulent", "product_not_received". */
+  reason: string;
+  /** Disputed amount in grosze. May be less than the charge total. */
+  amount: number;
+  /** ISO timestamp when the dispute was first opened. */
+  createdAt: string;
+  /** ISO timestamp of the most recent webhook update. */
+  updatedAt: string;
+  /** ISO timestamp of dispute resolution (won/lost), if closed. */
+  closedAt?: string;
+}
+
 export interface Order {
   id: string;
   locationSlug: string;
@@ -274,6 +303,8 @@ export interface Order {
   stripePaymentIntentId?: string;
   /** Set when a refund (full or partial) has been processed. */
   refund?: OrderRefund;
+  /** Set when Stripe sent a `charge.dispute.created`. Drives the AdminOrders dispute badge. */
+  dispute?: OrderDispute;
 }
 
 // --- Inventory (per-location stock for an ingredient) ---
