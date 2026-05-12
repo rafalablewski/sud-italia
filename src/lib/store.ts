@@ -1,7 +1,7 @@
 import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, Recipe } from "@/data/types";
+import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement } from "@/data/types";
 import { getActiveLocations, locations as allLocations } from "@/data/locations";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -1945,4 +1945,123 @@ export async function updateLocationUpsell(
     await writeJSON("upsell-settings.json", settings);
     return settings;
   });
+}
+
+// --- Inventory: stock levels + movements (per location) ---
+
+export async function getIngredientStock(
+  locationSlug?: string,
+): Promise<IngredientStock[]> {
+  const all = await readJSON<IngredientStock[]>("ingredient-stock.json", []);
+  if (!locationSlug) return all;
+  return all.filter((s) => s.locationSlug === locationSlug);
+}
+
+export async function getStockForIngredient(
+  ingredientId: string,
+  locationSlug: string,
+): Promise<IngredientStock | null> {
+  const all = await readJSON<IngredientStock[]>("ingredient-stock.json", []);
+  return all.find((s) => s.ingredientId === ingredientId && s.locationSlug === locationSlug) ?? null;
+}
+
+export async function upsertIngredientStock(
+  input: Omit<IngredientStock, "updatedAt"> & { updatedAt?: string },
+): Promise<IngredientStock> {
+  return withLock("ingredient-stock.json", async () => {
+    const list = await readJSON<IngredientStock[]>("ingredient-stock.json", []);
+    const i = list.findIndex(
+      (s) => s.ingredientId === input.ingredientId && s.locationSlug === input.locationSlug,
+    );
+    const row: IngredientStock = {
+      ...input,
+      updatedAt: new Date().toISOString(),
+    };
+    if (i >= 0) list[i] = row;
+    else list.push(row);
+    await writeJSON("ingredient-stock.json", list);
+    return row;
+  });
+}
+
+export async function deleteIngredientStock(
+  ingredientId: string,
+  locationSlug: string,
+): Promise<boolean> {
+  return withLock("ingredient-stock.json", async () => {
+    const list = await readJSON<IngredientStock[]>("ingredient-stock.json", []);
+    const filtered = list.filter(
+      (s) => !(s.ingredientId === ingredientId && s.locationSlug === locationSlug),
+    );
+    if (filtered.length === list.length) return false;
+    await writeJSON("ingredient-stock.json", filtered);
+    return true;
+  });
+}
+
+export async function getStockMovements(filters?: {
+  locationSlug?: string;
+  ingredientId?: string;
+  limit?: number;
+}): Promise<StockMovement[]> {
+  const all = await readJSON<StockMovement[]>("stock-movements.json", []);
+  let list = all;
+  if (filters?.locationSlug) list = list.filter((m) => m.locationSlug === filters.locationSlug);
+  if (filters?.ingredientId) list = list.filter((m) => m.ingredientId === filters.ingredientId);
+  list = list.slice().sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
+  if (filters?.limit) list = list.slice(0, filters.limit);
+  return list;
+}
+
+/**
+ * Atomically appends a movement record and applies the delta to the matching
+ * stock row (creating it with defaults if it doesn't exist yet). Both stores
+ * are locked to keep onHand consistent with the movement log.
+ */
+export async function createStockMovement(input: Omit<StockMovement, "id" | "occurredAt"> & {
+  occurredAt?: string;
+}): Promise<StockMovement> {
+  const movement: StockMovement = {
+    id: `mv-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+    occurredAt: input.occurredAt ?? new Date().toISOString(),
+    ingredientId: input.ingredientId,
+    locationSlug: input.locationSlug,
+    type: input.type,
+    quantity: input.quantity,
+    costImpact: input.costImpact,
+    reason: input.reason,
+    byUser: input.byUser,
+  };
+
+  await withLock("stock-movements.json", async () => {
+    const list = await readJSON<StockMovement[]>("stock-movements.json", []);
+    list.push(movement);
+    await writeJSON("stock-movements.json", list);
+  });
+
+  await withLock("ingredient-stock.json", async () => {
+    const list = await readJSON<IngredientStock[]>("ingredient-stock.json", []);
+    const i = list.findIndex(
+      (s) => s.ingredientId === input.ingredientId && s.locationSlug === input.locationSlug,
+    );
+    if (i >= 0) {
+      list[i] = {
+        ...list[i],
+        onHand: list[i].onHand + input.quantity,
+        updatedAt: movement.occurredAt,
+      };
+    } else {
+      list.push({
+        ingredientId: input.ingredientId,
+        locationSlug: input.locationSlug,
+        onHand: Math.max(0, input.quantity),
+        parLevel: 0,
+        reorderPoint: 0,
+        updatedAt: movement.occurredAt,
+      });
+    }
+    await writeJSON("ingredient-stock.json", list);
+  });
+
+  return movement;
 }

@@ -6,6 +6,7 @@ import {
   FlaskConical,
   CalendarDays,
   BarChart3,
+  Boxes,
   Heart,
   Rocket,
   MessageSquare,
@@ -52,6 +53,13 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/admin/menu", label: "Menu", icon: UtensilsCrossed, shortcut: "m" },
       { href: "/admin/recipes", label: "Recipes", icon: FlaskConical },
       { href: "/admin/slots", label: "Slots", icon: CalendarDays },
+    ],
+  },
+  {
+    id: "inventory",
+    label: "Inventory",
+    items: [
+      { href: "/admin/inventory", label: "Stock", icon: Boxes, shortcut: "i" },
     ],
   },
   {

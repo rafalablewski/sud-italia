@@ -225,3 +225,36 @@ export interface Order {
   feedback?: OrderFeedback;
   qualityCheck?: QualityCheck;
 }
+
+// --- Inventory (per-location stock for an ingredient) ---
+
+export interface IngredientStock {
+  ingredientId: string;
+  locationSlug: string;
+  /** Current quantity on hand, in the ingredient's unit. */
+  onHand: number;
+  /** Target stock level — guides receive quantities. */
+  parLevel: number;
+  /** Below this number, generate a low-stock alert. */
+  reorderPoint: number;
+  /** ISO timestamp of the last manual stocktake. */
+  lastCountedAt?: string;
+  lastCountedBy?: string;
+  updatedAt: string;
+}
+
+export type StockMovementType = "receive" | "waste" | "consume" | "adjust";
+
+export interface StockMovement {
+  id: string;
+  ingredientId: string;
+  locationSlug: string;
+  type: StockMovementType;
+  /** Signed delta applied to onHand (negative for waste/consume/adjust-). */
+  quantity: number;
+  /** Optional cost impact in grosze (e.g. waste valuation). */
+  costImpact?: number;
+  reason?: string;
+  occurredAt: string;
+  byUser?: string;
+}
