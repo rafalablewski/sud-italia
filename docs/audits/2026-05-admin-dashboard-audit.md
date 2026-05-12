@@ -154,19 +154,19 @@ Format note: tables are split per category for readability. **Priority** is P0 (
 
 ### 1.9 Financials
 
-| Existing | Missing | Why It Matters | Priority | Benchmark |
-|---|---|---|---|---|
-| `/admin/reports` (revenue, cost, profit, CSV) | **Real-time P&L** updated on every order (gross, COGS, labor accrual, opex, contribution) | A daily summary at midnight is 2010 reporting | P0 | Restaurant365, MarginEdge |
-| — | **Per-channel, per-item, per-location margin matrix** | Reveals which truck, which item, which platform is dragging | P1 | MarginEdge |
-| — | **Cash flow forecast** (13-week rolling) | Cash, not profit, kills small restaurant groups | P1 | Float, Causal |
-| — | **Scenario modeling** ("if I open Wrocław in Q4, what's break-even?") | Without scenarios, the `/admin/expansion` page is decorative | P2 | Causal, Pry |
-| — | **Franchise / multi-entity accounting** (royalty %, marketing fund %, supplier rebates) | Required if SUD ever franchises | P3 | Restaurant365, NetSuite |
-| — | **Treasury dashboard** (Stripe balance, payouts, refunds, chargebacks, FX exposure) | Stripe Dashboard does this; you should mirror it | P1 | Stripe |
-| — | **Cash management** (truck cash float, deposits, variance, drops to bank) | Cash is still 30–50% of food-truck revenue in Poland | P0 | Square Cash Drawer, Toast |
-| — | **VAT / JPK_V7 export** (Polish JPK schema, OSS for EU sales) | Polish tax law requires JPK_V7; without it, your accountant rebuilds your books monthly | P0 | iFirma, Comarch |
-| — | **Investor reporting / KPI deck** auto-generated (TTM, cohort retention, contribution margin) | If you raise capital, you'll rebuild this manually for every diligence | P2 | Mosaic, Pry |
-| — | **Tax automation** (CIT, ZUS, PIT-11) integration with accountant | Currently entirely external | P2 | iFirma |
-| — | **Chargeback / dispute workflow** | Stripe sends webhooks for `charge.dispute.created`; you ignore them | P1 | Stripe Disputes |
+| Existing | Missing | Why It Matters | Priority | Benchmark | Status |
+|---|---|---|---|---|---|
+| `/admin/reports` (revenue, cost, profit, CSV) | **Real-time P&L** updated on every order (gross, COGS, labor accrual, opex, contribution) | A daily summary at midnight is 2010 reporting | P0 | Restaurant365, MarginEdge | ✗ Not fixed — needs per-order COGS calc + labor accrual feed |
+| — | **Per-channel, per-item, per-location margin matrix** | Reveals which truck, which item, which platform is dragging | P1 | MarginEdge | ✗ Not fixed — depends on per-channel data |
+| — | **Cash flow forecast** (13-week rolling) | Cash, not profit, kills small restaurant groups | P1 | Float, Causal | ✗ Not fixed — forecast engine |
+| — | **Scenario modeling** ("if I open Wrocław in Q4, what's break-even?") | Without scenarios, the `/admin/expansion` page is decorative | P2 | Causal, Pry | ✗ Not fixed — scenario engine |
+| — | **Franchise / multi-entity accounting** (royalty %, marketing fund %, supplier rebates) | Required if SUD ever franchises | P3 | Restaurant365, NetSuite | ✗ Not fixed — depends on multi-tenant arch |
+| — | **Treasury dashboard** (Stripe balance, payouts, refunds, chargebacks, FX exposure) | Stripe Dashboard does this; you should mirror it | P1 | Stripe | ✗ Not fixed — needs Stripe Balance/Payouts ingestion |
+| — | **Cash management** (truck cash float, deposits, variance, drops to bank) | Cash is still 30–50% of food-truck revenue in Poland | P0 | Square Cash Drawer, Toast | ✗ Not fixed — cash-session entity + drop workflow |
+| — | **VAT / JPK_V7 export** (Polish JPK schema, OSS for EU sales) | Polish tax law requires JPK_V7; without it, your accountant rebuilds your books monthly | P0 | iFirma, Comarch | ✗ Not fixed — JPK_V7 XML schema mapping |
+| — | **Investor reporting / KPI deck** auto-generated (TTM, cohort retention, contribution margin) | If you raise capital, you'll rebuild this manually for every diligence | P2 | Mosaic, Pry | ✗ Not fixed — KPI deck generator |
+| — | **Tax automation** (CIT, ZUS, PIT-11) integration with accountant | Currently entirely external | P2 | iFirma | ✗ Not fixed — accountant-system integration |
+| — | **Chargeback / dispute workflow** | Stripe sends webhooks for `charge.dispute.created`; you ignore them | P1 | Stripe Disputes | ✗ Not fixed — webhook handler + dispute entity |
 
 ### 1.10 Data & AI (the brutal section)
 
