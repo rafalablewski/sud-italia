@@ -7,6 +7,9 @@ import {
   AlertTriangle,
   ArrowRight,
   Banknote,
+  Boxes,
+  ChefHat,
+  Clock,
   ClipboardList,
   Coins,
   Flame,
@@ -90,6 +93,9 @@ interface OrderRow {
   customerName: string;
   createdAt: string;
   slotDate?: string;
+  /** Optional — the orders endpoint returns it for paid orders. Used by the
+   *  "next 60 min" widget to surface tickets coming due. */
+  slotTime?: string;
 }
 
 const PERIOD_LABEL: Record<Period, string> = {
@@ -166,6 +172,10 @@ export function AdminDashboard() {
     ratio: number | null;
     openShifts: number;
   } | null>(null);
+  const [upcomingSlots, setUpcomingSlots] = useState<
+    { id: string; time: string; spotsLeft: number; fulfillmentTypes: string[] }[]
+  >([]);
+  const [lowStock, setLowStock] = useState<{ name: string; onHand: number; reorderPoint: number; unit: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -175,13 +185,31 @@ export function AdminDashboard() {
     const locParam = location ? `&location=${location}` : "";
 
     try {
-      const [a, b, ins, ord, notif, labor] = await Promise.all([
+      // The "next 60 min" widget needs today's slots and current low-stock
+      // alerts. Both endpoints only respond when scoped to a single
+      // location (slots requires it, stock is per-location), so we skip
+      // them when "All locations" is selected.
+      const today = new Date().toISOString().slice(0, 10);
+      const slotsP = location
+        ? fetch(`/api/slots?location=${location}&date=${today}`).then((r) =>
+            r.ok ? r.json() : [],
+          )
+        : Promise.resolve([]);
+      const stockP = location
+        ? fetch(`/api/admin/stock?location=${location}`).then((r) =>
+            r.ok ? r.json() : [],
+          )
+        : Promise.resolve([]);
+
+      const [a, b, ins, ord, notif, labor, slots, stock] = await Promise.all([
         fetch(`/api/admin/analytics?from=${from}&to=${to}${locParam}`).then((r) => (r.ok ? r.json() : null)),
         fetch(`/api/admin/analytics?from=${prev.from}&to=${prev.to}${locParam}`).then((r) => (r.ok ? r.json() : null)),
         fetch(`/api/admin/insights?from=${from}&to=${to}`).then((r) => (r.ok ? r.json() : null)),
         fetch(`/api/admin/orders${location ? `?location=${location}` : ""}`).then((r) => (r.ok ? r.json() : [])),
         fetch(`/api/admin/notifications`).then((r) => (r.ok ? r.json() : [])),
         fetch(`/api/admin/labor-ratio${location ? `?location=${location}` : ""}`).then((r) => (r.ok ? r.json() : null)),
+        slotsP,
+        stockP,
       ]);
       setSummary(a);
       setPrevSummary(b);
@@ -189,6 +217,14 @@ export function AdminDashboard() {
       setOrders(Array.isArray(ord) ? ord : []);
       setNotifications(Array.isArray(notif) ? notif : []);
       setLaborRatio(labor);
+      setUpcomingSlots(Array.isArray(slots) ? slots : []);
+      setLowStock(
+        Array.isArray(stock)
+          ? (stock as { name: string; onHand: number; reorderPoint: number; unit: string }[]).filter(
+              (s) => s.reorderPoint > 0 && s.onHand <= s.reorderPoint,
+            )
+          : [],
+      );
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -312,6 +348,14 @@ export function AdminDashboard() {
           </Button>
         </div>
       </header>
+
+      <Next60Widget
+        location={location}
+        orders={orders}
+        slots={upcomingSlots}
+        lowStock={lowStock}
+        openShifts={laborRatio?.openShifts ?? 0}
+      />
 
       <section className="v2-kpi-grid">
         <KpiCard
@@ -606,5 +650,197 @@ function LocationTable({ rows }: { rows: LocationComparison[] }) {
       rowKey={(r) => r.locationSlug}
       defaultSort={{ key: "revenue", dir: "desc" }}
     />
+  );
+}
+
+interface Next60Props {
+  location: string | null | undefined;
+  orders: OrderRow[];
+  slots: { id: string; time: string; spotsLeft: number; fulfillmentTypes: string[] }[];
+  lowStock: { name: string; onHand: number; reorderPoint: number; unit: string }[];
+  openShifts: number;
+}
+
+/**
+ * The single most valuable view in a restaurant: what's about to happen in
+ * the next 60 minutes. Composes existing data sources (orders, slots, stock,
+ * shifts) into one strip so a manager doesn't have to alt-tab between pages.
+ *
+ * The widget is location-scoped: slot + stock data only loads when a single
+ * location is selected (matching the underlying API contracts), so "All
+ * locations" shows a clear "pick a truck" empty state instead of misleading
+ * partial counts.
+ */
+function Next60Widget({ location, orders, slots, lowStock, openShifts }: Next60Props) {
+  const now = new Date();
+  const horizon = new Date(now.getTime() + 60 * 60 * 1000);
+  const todayDate = now.toISOString().slice(0, 10);
+  const horizonClock = horizon.toTimeString().slice(0, 5);
+  const nowClock = now.toTimeString().slice(0, 5);
+
+  // Slots whose pickup time falls in the next 60 min. The /api/slots payload
+  // only includes future / available slots so we don't have to filter out
+  // past ones explicitly — the time-range check is still defensive.
+  const upcomingSlots = slots
+    .filter((s) => s.time >= nowClock && s.time <= horizonClock)
+    .slice(0, 5);
+  const upcomingCapacity = upcomingSlots.reduce((acc, s) => acc + s.spotsLeft, 0);
+
+  // Orders coming due: paid (confirmed → ready) with slot time inside the
+  // next hour. Completed / cancelled are excluded — the manager wants
+  // open work, not history.
+  const dueOrders = orders
+    .filter((o) => {
+      if (!["confirmed", "preparing", "ready"].includes(o.status)) return false;
+      if (!o.slotTime) return false;
+      const slotDay = o.slotDate || todayDate;
+      if (slotDay !== todayDate) return false;
+      return o.slotTime >= nowClock && o.slotTime <= horizonClock;
+    })
+    .sort((a, b) => (a.slotTime || "").localeCompare(b.slotTime || ""))
+    .slice(0, 5);
+
+  // Sort low-stock by urgency (smallest ratio of on-hand to reorder point).
+  const sortedLowStock = [...lowStock]
+    .sort(
+      (a, b) =>
+        a.onHand / (a.reorderPoint || 1) - b.onHand / (b.reorderPoint || 1),
+    )
+    .slice(0, 5);
+
+  const tile = (title: string, count: number, hint: string, tone: "neutral" | "warning" | "danger" | "success", icon: React.ReactNode) => (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "0.25rem",
+        padding: "0.75rem 1rem",
+        borderRight: "1px solid var(--v2-border, #e5e7eb)",
+        minWidth: 0,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--v2-text-muted, #6b7280)" }}>
+        {icon}
+        {title}
+      </div>
+      <div style={{ fontSize: "1.5rem", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
+        <Badge tone={tone} variant="soft">{count}</Badge>
+      </div>
+      <div style={{ fontSize: "0.75rem", color: "var(--v2-text-muted, #6b7280)" }}>{hint}</div>
+    </div>
+  );
+
+  return (
+    <Card>
+      <CardHeader
+        title={`Next 60 minutes — until ${horizonClock}`}
+        description={
+          location
+            ? "Slots, tickets, stock, and floor — at a glance."
+            : "Pick a single truck to see live ops here."
+        }
+      />
+      <CardBody>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            border: "1px solid var(--v2-border, #e5e7eb)",
+            borderRadius: "0.5rem",
+            overflow: "hidden",
+          }}
+        >
+          {tile(
+            "Slots",
+            upcomingSlots.length,
+            upcomingSlots.length > 0
+              ? `${upcomingCapacity} spots left · earliest ${upcomingSlots[0].time}`
+              : location
+                ? "No slots in the next hour."
+                : "—",
+            upcomingCapacity === 0 && upcomingSlots.length > 0 ? "danger" : upcomingSlots.length > 0 ? "success" : "neutral",
+            <Clock className="h-3.5 w-3.5" />,
+          )}
+          {tile(
+            "Tickets due",
+            dueOrders.length,
+            dueOrders.length > 0
+              ? `next ${dueOrders[0].slotTime} · ${dueOrders[0].customerName || "Guest"}`
+              : "Nothing coming due.",
+            dueOrders.length > 5 ? "warning" : dueOrders.length > 0 ? "success" : "neutral",
+            <ChefHat className="h-3.5 w-3.5" />,
+          )}
+          {tile(
+            "Low stock",
+            sortedLowStock.length,
+            sortedLowStock.length > 0
+              ? `${sortedLowStock[0].name} ${sortedLowStock[0].onHand}${sortedLowStock[0].unit} of ${sortedLowStock[0].reorderPoint}${sortedLowStock[0].unit}`
+              : location
+                ? "All ingredients above reorder."
+                : "—",
+            sortedLowStock.length > 0 ? "danger" : "success",
+            <Boxes className="h-3.5 w-3.5" />,
+          )}
+          {tile(
+            "On the floor",
+            openShifts,
+            openShifts > 0 ? "currently clocked in" : "No one clocked in.",
+            openShifts > 0 ? "success" : "warning",
+            <HardHat className="h-3.5 w-3.5" />,
+          )}
+        </div>
+
+        {(dueOrders.length > 0 || sortedLowStock.length > 0) && (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+              gap: "0.75rem",
+              marginTop: "0.75rem",
+            }}
+          >
+            {dueOrders.length > 0 && (
+              <div>
+                <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--v2-text-muted, #6b7280)", marginBottom: "0.25rem" }}>
+                  TICKETS DUE
+                </div>
+                <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                  {dueOrders.map((o) => (
+                    <li key={o.id} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8125rem" }}>
+                      <Link href={`/admin/orders#${o.id}`} className="v2-link-cell">
+                        <span className="mono">{o.id.slice(-6).toUpperCase()}</span>
+                        <span className="v2-muted"> · {o.customerName || "Guest"}</span>
+                      </Link>
+                      <span className="v2-muted">{o.slotTime}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {sortedLowStock.length > 0 && (
+              <div>
+                <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--v2-text-muted, #6b7280)", marginBottom: "0.25rem" }}>
+                  LOW STOCK
+                </div>
+                <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                  {sortedLowStock.map((s) => (
+                    <li key={s.name} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8125rem" }}>
+                      <Link href="/admin/inventory" className="v2-link-cell">
+                        {s.name}
+                      </Link>
+                      <span className="v2-muted">
+                        {s.onHand}
+                        {s.unit} / {s.reorderPoint}
+                        {s.unit}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+      </CardBody>
+    </Card>
   );
 }
