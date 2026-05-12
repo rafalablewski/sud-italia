@@ -6,6 +6,24 @@ Sud Italia — Neapolitan pizza truck chain ordering platform (Next.js 16, React
 
 Two active locations: Kraków, Warszawa. Serverless deployment.
 
+## Build Verification
+
+- Always run `npx tsc --noEmit` and `npm run build` before declaring a feature complete. `next build` runs its own type-check too — both passing is the bar.
+- Lint **only the files you actually modified** (e.g. `npx eslint <changed paths>`). Do **not** block on pre-existing lint errors in untouched files. This codebase predates several React 19 strict-mode rules; those are tracked as tech debt, not blockers for new work.
+- When fixing a feature, never silently fix unrelated lint errors in passing — surface them, scope a separate cleanup if the user wants it.
+
+## Commit Strategy
+
+- Ship each audit item or feature as a **separate commit** with a scope-prefixed message: `feat(refunds): …`, `fix(kds): …`, `chore(ci): …`, `perf(menu-api): …`, `docs(audit): …`.
+- Push commits incrementally to the active PR rather than batching a dozen at the end — reviewers (human or bot) can comment as each lands and CI gives per-commit signal.
+- Audit work goes through `docs/audits/`: update the corresponding `✗ Not fixed` row to `✓ Fixed` (or `✓ Partial` with explicit residual `✗` notes) in the same commit that closes it. The doc is the source of truth for what's shipped.
+
+## Output Length
+
+- Multi-feature recaps stay under ~300 tokens. Prefer a tight bullet list per commit (subject + one-line outcome) over wide tables that wrap and truncate.
+- When a full report genuinely needs more, save the long form to `docs/session-notes/<YYYY-MM-DD>.md` and link to it from the chat reply.
+- End-of-turn summaries: one or two sentences (what changed, what's next) — never a status table.
+
 ## Critical Rules
 
 1. **NEVER use hardcoded/mock/fake data.** Wire every feature to real data sources (database via `src/lib/store.ts`, API calls). Cosmetic-only implementations are unacceptable — every feature must actually function end-to-end. No `MOCK_MEMBERS`, no `EARNED_IDS = new Set(["first-order"])`, no `const FAKE_DATA = [...]`.
