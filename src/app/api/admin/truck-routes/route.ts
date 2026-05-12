@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(await getTruckRoutes(location));
 }
 
-export async function POST(req: NextRequest) {
+async function upsertRoute(req: NextRequest) {
   const auth = await requireAuth();
   if (auth) return auth;
   try {
@@ -35,8 +35,12 @@ export async function POST(req: NextRequest) {
   }
 }
 
+export async function POST(req: NextRequest) {
+  return upsertRoute(req);
+}
+
 export async function PUT(req: NextRequest) {
-  return POST(req);
+  return upsertRoute(req);
 }
 
 export async function DELETE(req: NextRequest) {

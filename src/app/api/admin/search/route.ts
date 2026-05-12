@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
       .map<SearchResult>((o) => ({
         id: `order:${o.id}`,
         type: "order",
-        label: `${o.customerName || "Guest"} · ${(o.totalAmount / 100).toFixed(2)} ${o.locationSlug === "warszawa" ? "PLN" : "PLN"}`,
+        label: `${o.customerName || "Guest"} · ${(o.totalAmount / 100).toFixed(2)} PLN`,
         sublabel: `${o.id} · ${o.status}`,
         href: `/admin/orders#${o.id}`,
         meta: o.locationSlug,

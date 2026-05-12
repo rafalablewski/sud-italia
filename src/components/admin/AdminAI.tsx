@@ -177,12 +177,12 @@ export function AdminAI() {
     if (daily.length < 14) return [];
     const sorted = [...daily].sort((a, b) => a.date.localeCompare(b.date));
     const last = sorted[sorted.length - 1];
-    const window = sorted.slice(-29, -1);
-    if (window.length === 0 || !last) return [];
+    const priorWindow = sorted.slice(-29, -1);
+    if (priorWindow.length === 0 || !last) return [];
 
     function flag(metric: keyof DailyStats, label: string, format: (n: number) => string): { label: string; current: string; expected: string; deltaPct: number; tone: "danger" | "warning" | "success" } | null {
       const current = Number(last[metric] ?? 0);
-      const avg = window.reduce((acc, d) => acc + Number(d[metric] ?? 0), 0) / window.length;
+      const avg = priorWindow.reduce((acc, d) => acc + Number(d[metric] ?? 0), 0) / priorWindow.length;
       if (avg === 0) return null;
       const deltaPct = ((current - avg) / avg) * 100;
       if (Math.abs(deltaPct) < 20) return null;

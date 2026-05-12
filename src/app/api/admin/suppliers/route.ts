@@ -15,7 +15,10 @@ export async function GET() {
   return NextResponse.json(await getSuppliers());
 }
 
-export async function POST(req: NextRequest) {
+/** Shared upsert: both POST (create) and PUT (replace) accept the same body
+ * with an optional id. Keeping a single source of truth avoids drift between
+ * the two handlers and matches the store's `saveSupplier` upsert semantics. */
+async function upsertSupplier(req: NextRequest) {
   const auth = await requireAuth();
   if (auth) return auth;
   try {
@@ -38,9 +41,12 @@ export async function POST(req: NextRequest) {
   }
 }
 
+export async function POST(req: NextRequest) {
+  return upsertSupplier(req);
+}
+
 export async function PUT(req: NextRequest) {
-  // Alias for POST so the UI can use PUT for updates
-  return POST(req);
+  return upsertSupplier(req);
 }
 
 export async function DELETE(req: NextRequest) {

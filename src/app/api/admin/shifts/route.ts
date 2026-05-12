@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(await getShifts({ locationSlug: location, staffId, from, to }));
 }
 
-export async function POST(req: NextRequest) {
+async function upsertShift(req: NextRequest) {
   const auth = await requireAuth();
   if (auth) return auth;
   try {
@@ -49,8 +49,12 @@ export async function POST(req: NextRequest) {
   }
 }
 
+export async function POST(req: NextRequest) {
+  return upsertShift(req);
+}
+
 export async function PUT(req: NextRequest) {
-  return POST(req);
+  return upsertShift(req);
 }
 
 export async function DELETE(req: NextRequest) {

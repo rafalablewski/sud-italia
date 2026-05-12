@@ -20,6 +20,7 @@ interface CustomerSummary {
 
 const ACTIVE_DAYS = 30;
 const LAPSED_DAYS = 90;
+const MS_IN_DAY = 1000 * 60 * 60 * 24;
 
 async function requireAuth() {
   if (!(await isAuthenticated())) {
@@ -112,7 +113,7 @@ export async function GET(req: NextRequest) {
       c.status = "new";
     } else {
       const last = c.lastOrderAt ? new Date(c.lastOrderAt).getTime() : 0;
-      const daysSince = (now - last) / 86_400_000;
+      const daysSince = (now - last) / MS_IN_DAY;
       if (daysSince > LAPSED_DAYS) c.status = "lapsed";
       else if (c.orderCount >= 2) c.status = "repeat";
       else if (daysSince <= ACTIVE_DAYS) c.status = "active";

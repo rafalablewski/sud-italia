@@ -24,7 +24,7 @@ export async function GET() {
   return NextResponse.json(await getAdminUsers());
 }
 
-export async function POST(req: NextRequest) {
+async function upsertUser(req: NextRequest) {
   const auth = await requireAuth();
   if (auth) return auth;
   const role = await requireOwnerOrManager();
@@ -56,8 +56,12 @@ export async function POST(req: NextRequest) {
   }
 }
 
+export async function POST(req: NextRequest) {
+  return upsertUser(req);
+}
+
 export async function PUT(req: NextRequest) {
-  return POST(req);
+  return upsertUser(req);
 }
 
 export async function DELETE(req: NextRequest) {

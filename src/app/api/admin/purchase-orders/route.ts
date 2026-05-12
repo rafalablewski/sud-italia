@@ -64,34 +64,48 @@ function parseLines(body: unknown): PurchaseOrderLine[] {
   return out;
 }
 
+/** Save a full PO from an already-parsed body. Shared by POST and the
+ * fall-through branch of PUT — keeps body parsing in a single place so we
+ * don't try to read req.json() twice on the same request stream. */
+async function saveFromBody(body: { id?: string; supplierId?: string; locationSlug?: string; status?: string; lines?: unknown; expectedAt?: string; notes?: string }) {
+  if (!body.supplierId || !body.locationSlug) {
+    return NextResponse.json({ error: "Missing supplierId or locationSlug" }, { status: 400 });
+  }
+  const status: PurchaseOrderStatus = VALID_STATUSES.includes(body.status as PurchaseOrderStatus)
+    ? (body.status as PurchaseOrderStatus)
+    : "draft";
+  const lines = parseLines(body);
+  if (lines.length === 0) {
+    return NextResponse.json({ error: "At least one line required" }, { status: 400 });
+  }
+  const saved = await savePurchaseOrder({
+    id: body.id,
+    supplierId: body.supplierId,
+    locationSlug: body.locationSlug,
+    status,
+    lines,
+    expectedAt: body.expectedAt,
+    notes: body.notes,
+  });
+  return NextResponse.json(saved, { status: 201 });
+}
+
 export async function POST(req: NextRequest) {
   const auth = await requireAuth();
   if (auth) return auth;
   try {
-    const body = await req.json();
-    if (!body.supplierId || !body.locationSlug) {
-      return NextResponse.json({ error: "Missing supplierId or locationSlug" }, { status: 400 });
-    }
-    const status: PurchaseOrderStatus = VALID_STATUSES.includes(body.status) ? body.status : "draft";
-    const lines = parseLines(body);
-    if (lines.length === 0) {
-      return NextResponse.json({ error: "At least one line required" }, { status: 400 });
-    }
-    const saved = await savePurchaseOrder({
-      id: body.id,
-      supplierId: body.supplierId,
-      locationSlug: body.locationSlug,
-      status,
-      lines,
-      expectedAt: body.expectedAt,
-      notes: body.notes,
-    });
-    return NextResponse.json(saved, { status: 201 });
+    return await saveFromBody(await req.json());
   } catch {
     return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }
 }
 
+/** PUT supports two flows:
+ *  - status-only update (small payload with `id` + `status`) → patches the
+ *    PO and triggers receivePurchaseOrder if the new status is "received".
+ *  - full upsert (no status, or status+full body) → delegates to
+ *    saveFromBody so we keep one source of validation truth.
+ */
 export async function PUT(req: NextRequest) {
   const auth = await requireAuth();
   if (auth) return auth;
@@ -101,13 +115,14 @@ export async function PUT(req: NextRequest) {
     if (body.status && !VALID_STATUSES.includes(body.status)) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
-    if (body.status) {
+    // Status-only payload: just patch and exit.
+    if (body.status && body.lines === undefined) {
       const updated = await updatePurchaseOrderStatus(body.id, body.status);
       if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
       return NextResponse.json(updated);
     }
-    // Otherwise treat as a full save
-    return POST(req);
+    // Full body: same upsert path as POST.
+    return await saveFromBody(body);
   } catch {
     return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }
