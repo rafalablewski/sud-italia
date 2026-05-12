@@ -43,6 +43,8 @@ import {
   Textarea,
   type Column,
 } from "./v2/ui";
+import { KpiCard } from "./v2/charts";
+import { Banknote, Coins, Percent } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
 
 interface IngredientData {
@@ -564,47 +566,65 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
         }
       >
         <div className="v2-stack-12">
-          <div className="v2-recipe-summary">
-            <Card padding="compact">
-              <div className="v2-summary-row">
-                <span className="v2-muted">Per portion cost</span>
-                <span className="tabular v2-summary-val">{formatPrice(perPortion)}</span>
-              </div>
-            </Card>
-            <Card padding="compact">
-              <div className="v2-summary-row">
-                <span className="v2-muted">Margin</span>
-                <Badge tone={margin < 50 ? "danger" : margin < 65 ? "warning" : "success"} variant="soft">
-                  {margin}%
-                </Badge>
-              </div>
-            </Card>
-            <Card padding="compact">
-              <div className="v2-summary-row">
-                <span className="v2-muted">Batch cost · {yieldPortions} portion{yieldPortions === 1 ? "" : "s"}</span>
-                <span className="tabular v2-summary-val">{formatPrice(totalCost)}</span>
-              </div>
-            </Card>
-          </div>
+          <section className="v2-recipe-summary">
+            <KpiCard
+              label="Per portion"
+              value={perPortion / 100}
+              display={formatPrice(perPortion)}
+              icon={Coins}
+              tone="brand"
+              staticValue
+              hint={`Listed at ${formatPrice(menuItem.price)}`}
+            />
+            <KpiCard
+              label="Margin"
+              value={margin}
+              display={`${margin}%`}
+              icon={Percent}
+              tone={margin < 50 ? "danger" : margin < 65 ? "warning" : "success"}
+              staticValue
+              higherIsBetter
+              hint={
+                margin < 50
+                  ? "Below 50% — review pricing or recipe"
+                  : margin < 65
+                    ? "Healthy for QSR pizza"
+                    : "Strong"
+              }
+            />
+            <KpiCard
+              label="Batch cost"
+              value={totalCost / 100}
+              display={formatPrice(totalCost)}
+              icon={Banknote}
+              tone="neutral"
+              staticValue
+              hint={`${yieldPortions} portion${yieldPortions === 1 ? "" : "s"} per batch`}
+            />
+          </section>
 
           <Card padding="none">
-            <CardHeader title="Ingredients" />
+            <CardHeader
+              title="Ingredients"
+              description={`${rows.length} ingredient${rows.length === 1 ? "" : "s"} · cost recomputes live as you edit.`}
+            />
             <CardBody>
               {rows.length === 0 ? (
-                <div className="v2-muted">No ingredients yet. Add one below.</div>
+                <EmptyState
+                  icon={Coins}
+                  title="No ingredients yet"
+                  description="Pick one from the dropdown below to start building the recipe."
+                  compact
+                />
               ) : (
-                <>
-                  <div
-                    className="v2-rcp-row-head"
-                    role="presentation"
-                    aria-hidden
-                  >
+                <div className="v2-rcp-table">
+                  <div className="v2-rcp-row-head" role="presentation" aria-hidden>
                     <span>Ingredient</span>
                     <span>Quantity</span>
                     <span title="Waste / trim loss as a percentage of the raw weight. 5% means you lose 5 g out of every 100 g.">
                       Waste
                     </span>
-                    <span style={{ justifyContent: "flex-end" }}>Cost</span>
+                    <span>Cost</span>
                     <span aria-hidden />
                   </div>
                   <ul className="v2-rcp-rows">
@@ -624,6 +644,7 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
                             })
                           }
                           aria-label="Quantity"
+                          className="v2-rcp-num"
                           trailingAdornment={<span className="v2-muted">{displayUnit(r.unit)}</span>}
                         />
                         <Input
@@ -638,6 +659,7 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
                             })
                           }
                           aria-label="Waste percentage"
+                          className="v2-rcp-num"
                           trailingAdornment={<span className="v2-muted">%</span>}
                         />
                         <span className="tabular v2-rcp-cost">{formatPrice(lineCost(r))}</span>
@@ -645,14 +667,15 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
                           size="sm"
                           variant="ghost"
                           onClick={() => removeRow(r.ingredientId)}
-                          aria-label="Remove ingredient"
+                          aria-label={`Remove ${r.name ?? r.ingredientId}`}
+                          title={`Remove ${r.name ?? r.ingredientId}`}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </li>
                     ))}
                   </ul>
-                </>
+                </div>
               )}
 
               <div className="v2-rcp-add">

@@ -2346,25 +2346,34 @@ html { scroll-behavior: smooth; }
    ============================ */
 
 
+/* Three summary tiles at the top of the recipe editor. Uses the standard
+   `KpiCard` primitive — keeps the look consistent with AdminDashboard /
+   AdminReports / AdminInventory and lets the same tone bands tell the
+   story (margin colour-codes itself). */
 .v2-recipe-summary {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
-@media (max-width: 640px) { .v2-recipe-summary { grid-template-columns: 1fr; } }
-.v2-summary-row { display: flex; align-items: center; justify-content: space-between; }
-.v2-summary-val { font-weight: 600; color: var(--fg); }
+@media (max-width: 720px) { .v2-recipe-summary { grid-template-columns: 1fr; } }
 
-.v2-rcp-rows { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+/* Ingredients table. Tighter columns so the Cost column never gets clipped
+   inside the dialog. Native number-input spinners are hidden — the
+   visual noise made the table feel cluttered and the columns hard to
+   scan. */
+.v2-rcp-table { display: flex; flex-direction: column; }
+.v2-rcp-rows { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; }
 .v2-rcp-row,
 .v2-rcp-row-head {
   display: grid;
-  grid-template-columns: 1fr 120px 110px 90px 32px;
+  grid-template-columns: minmax(0, 1fr) 96px 84px 84px 28px;
   align-items: center;
-  gap: 8px;
+  column-gap: 12px;
+  padding: 8px 0;
 }
+.v2-rcp-row + .v2-rcp-row { border-top: 1px solid var(--border); }
 .v2-rcp-row-head {
-  padding: 0 2px 4px;
+  padding: 0 0 8px;
   font-size: var(--text-2xs);
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -2374,9 +2383,12 @@ html { scroll-behavior: smooth; }
   margin-bottom: 4px;
 }
 .v2-rcp-row-head > span { display: inline-flex; align-items: center; gap: 4px; }
+.v2-rcp-row-head > span:nth-child(4) { justify-content: flex-end; }
 @media (max-width: 720px) {
-  .v2-rcp-row { grid-template-columns: 1fr 1fr; row-gap: 6px; }
+  .v2-rcp-row,
+  .v2-rcp-row-head { grid-template-columns: 1fr 1fr; row-gap: 6px; column-gap: 8px; }
   .v2-rcp-row > .v2-rcp-name { grid-column: 1 / -1; }
+  .v2-rcp-row-head { display: none; }
 }
 .v2-rcp-name {
   font-weight: 500;
@@ -2386,7 +2398,28 @@ html { scroll-behavior: smooth; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.v2-rcp-cost { text-align: right; font-weight: 600; color: var(--fg); }
+.v2-rcp-cost {
+  text-align: right;
+  font-weight: 600;
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Compact number-input variant used inside .v2-rcp-row. Hides the native
+   spinner so the row reads cleanly and the values left-align inside a
+   tight box. Keep accessibility: spinners still respond to arrow keys. */
+.v2-input.v2-rcp-num {
+  padding: 6px 8px;
+  font-size: var(--text-sm);
+  text-align: right;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.v2-input.v2-rcp-num::-webkit-outer-spin-button,
+.v2-input.v2-rcp-num::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
 
 .v2-rcp-add {
   display: grid;
