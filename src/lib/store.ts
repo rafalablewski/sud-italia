@@ -967,6 +967,25 @@ export async function setMenuOverridesBulk(updates: Record<string, MenuOverride>
   });
 }
 
+/** Drop the override rows for the given menu-item ids, reverting them to
+ *  the static seed values. Used by the AdminMenu "Reset overrides" bulk
+ *  action. Returns the count of rows actually removed. */
+export async function clearMenuOverrides(ids: string[]): Promise<number> {
+  if (ids.length === 0) return 0;
+  return withLock("menu-overrides.json", async () => {
+    const overrides = await readJSON<Record<string, MenuOverride>>("menu-overrides.json", {});
+    let removed = 0;
+    for (const id of ids) {
+      if (id in overrides) {
+        delete overrides[id];
+        removed++;
+      }
+    }
+    if (removed > 0) await writeJSON("menu-overrides.json", overrides);
+    return removed;
+  });
+}
+
 // --- Settings ---
 
 export interface AppSettings {
