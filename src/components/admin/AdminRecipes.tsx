@@ -65,6 +65,43 @@ interface EnrichedRecipeIngredient {
   lineCost?: number;
 }
 
+/**
+ * UI-friendly display unit. Storage stays in the canonical unit (`kg`, `L`)
+ * so existing recipes keep working; the recipe editor displays grams /
+ * millilitres because that's what a cook thinks in.
+ */
+function displayUnit(unit: string | undefined): string {
+  if (unit === "kg") return "g";
+  if (unit === "L") return "ml";
+  return unit ?? "";
+}
+
+function toDisplayQty(qty: number, unit: string | undefined): number {
+  if (unit === "kg" || unit === "L") {
+    // Round to 1 decimal at most for grams/ml so the input doesn't show
+    // 249.99999999 for a stored 0.25 kg value.
+    return Math.round(qty * 1000 * 10) / 10;
+  }
+  return qty;
+}
+
+function fromDisplayQty(displayQty: number, unit: string | undefined): number {
+  if (unit === "kg" || unit === "L") return displayQty / 1000;
+  return displayQty;
+}
+
+function displayStep(unit: string | undefined): string {
+  if (unit === "kg" || unit === "L") return "1";
+  if (unit === "bunch") return "0.1";
+  return "1";
+}
+
+/** "5% waste" preview from a wasteFactor like 1.05. */
+function wastePercent(wf: number): string {
+  if (!Number.isFinite(wf) || wf <= 1) return "0%";
+  return `${Math.round((wf - 1) * 100)}%`;
+}
+
 interface RecipeData {
   id?: string;
   menuItemId: string;
@@ -550,40 +587,66 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
               {rows.length === 0 ? (
                 <div className="v2-muted">No ingredients yet. Add one below.</div>
               ) : (
-                <ul className="v2-rcp-rows">
-                  {rows.map((r) => (
-                    <li key={r.ingredientId} className="v2-rcp-row">
-                      <span className="v2-rcp-name">{r.name ?? r.ingredientId}</span>
-                      <Input
-                        type="number"
-                        step="0.001"
-                        min="0"
-                        value={r.quantity}
-                        onChange={(e) => updateRow(r.ingredientId, { quantity: Number(e.target.value) })}
-                        aria-label="Quantity"
-                        trailingAdornment={<span className="v2-muted">{r.unit}</span>}
-                      />
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="1"
-                        max="2"
-                        value={r.wasteFactor}
-                        onChange={(e) => updateRow(r.ingredientId, { wasteFactor: Number(e.target.value) })}
-                        aria-label="Waste factor"
-                      />
-                      <span className="tabular v2-rcp-cost">{formatPrice(lineCost(r))}</span>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => removeRow(r.ingredientId)}
-                        aria-label="Remove ingredient"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
+                <>
+                  <div
+                    className="v2-rcp-row-head"
+                    role="presentation"
+                    aria-hidden
+                  >
+                    <span>Ingredient</span>
+                    <span>Quantity</span>
+                    <span title="Waste / trim multiplier. 1.00 = no waste, 1.05 = 5% trim loss, 1.10 = 10%.">
+                      Waste ×
+                    </span>
+                    <span style={{ justifyContent: "flex-end" }}>Cost</span>
+                    <span aria-hidden />
+                  </div>
+                  <ul className="v2-rcp-rows">
+                    {rows.map((r) => (
+                      <li key={r.ingredientId} className="v2-rcp-row">
+                        <span className="v2-rcp-name">{r.name ?? r.ingredientId}</span>
+                        <Input
+                          type="number"
+                          step={displayStep(r.unit)}
+                          min="0"
+                          value={toDisplayQty(r.quantity, r.unit)}
+                          onChange={(e) =>
+                            updateRow(r.ingredientId, {
+                              quantity: fromDisplayQty(Number(e.target.value), r.unit),
+                            })
+                          }
+                          aria-label="Quantity"
+                          trailingAdornment={<span className="v2-muted">{displayUnit(r.unit)}</span>}
+                        />
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="1"
+                          max="2"
+                          value={r.wasteFactor}
+                          onChange={(e) =>
+                            updateRow(r.ingredientId, { wasteFactor: Number(e.target.value) })
+                          }
+                          aria-label="Waste factor"
+                          trailingAdornment={
+                            <span className="v2-muted" title="Waste / trim loss percentage">
+                              {wastePercent(r.wasteFactor)}
+                            </span>
+                          }
+                        />
+                        <span className="tabular v2-rcp-cost">{formatPrice(lineCost(r))}</span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => removeRow(r.ingredientId)}
+                          aria-label="Remove ingredient"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                </>
               )}
 
               <div className="v2-rcp-add">

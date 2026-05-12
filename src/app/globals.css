@@ -2356,12 +2356,24 @@ html { scroll-behavior: smooth; }
 .v2-summary-val { font-weight: 600; color: var(--fg); }
 
 .v2-rcp-rows { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
-.v2-rcp-row {
+.v2-rcp-row,
+.v2-rcp-row-head {
   display: grid;
   grid-template-columns: 1fr 120px 110px 90px 32px;
   align-items: center;
   gap: 8px;
 }
+.v2-rcp-row-head {
+  padding: 0 2px 4px;
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-subtle);
+  font-weight: 600;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+.v2-rcp-row-head > span { display: inline-flex; align-items: center; gap: 4px; }
 @media (max-width: 720px) {
   .v2-rcp-row { grid-template-columns: 1fr 1fr; row-gap: 6px; }
   .v2-rcp-row > .v2-rcp-name { grid-column: 1 / -1; }
