@@ -10,6 +10,7 @@ import {
   ClipboardList,
   Coins,
   Flame,
+  HardHat,
   MapPin,
   PiggyBank,
   Receipt,
@@ -159,6 +160,12 @@ export function AdminDashboard() {
   const [insights, setInsights] = useState<InsightsData | null>(null);
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [laborRatio, setLaborRatio] = useState<{
+    revenueGrosze: number;
+    laborGrosze: number;
+    ratio: number | null;
+    openShifts: number;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -168,18 +175,20 @@ export function AdminDashboard() {
     const locParam = location ? `&location=${location}` : "";
 
     try {
-      const [a, b, ins, ord, notif] = await Promise.all([
+      const [a, b, ins, ord, notif, labor] = await Promise.all([
         fetch(`/api/admin/analytics?from=${from}&to=${to}${locParam}`).then((r) => (r.ok ? r.json() : null)),
         fetch(`/api/admin/analytics?from=${prev.from}&to=${prev.to}${locParam}`).then((r) => (r.ok ? r.json() : null)),
         fetch(`/api/admin/insights?from=${from}&to=${to}`).then((r) => (r.ok ? r.json() : null)),
         fetch(`/api/admin/orders${location ? `?location=${location}` : ""}`).then((r) => (r.ok ? r.json() : [])),
         fetch(`/api/admin/notifications`).then((r) => (r.ok ? r.json() : [])),
+        fetch(`/api/admin/labor-ratio${location ? `?location=${location}` : ""}`).then((r) => (r.ok ? r.json() : null)),
       ]);
       setSummary(a);
       setPrevSummary(b);
       setInsights(ins);
       setOrders(Array.isArray(ord) ? ord : []);
       setNotifications(Array.isArray(notif) ? notif : []);
+      setLaborRatio(labor);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -361,6 +370,41 @@ export function AdminDashboard() {
           higherIsBetter={false}
           hint={`${insights?.cancelledOrders ?? 0} cancelled`}
         />
+        {(() => {
+          const r = laborRatio?.ratio ?? null;
+          // Target labour band for QSR: ~22–28%. Above 35% warrants action;
+          // > 45% is a red alert. Tile is muted until at least one order
+          // and one open shift exist so we don't flash 0% all morning.
+          const tone: "success" | "warning" | "danger" | "neutral" =
+            r === null
+              ? "neutral"
+              : r > 0.45
+                ? "danger"
+                : r > 0.35
+                  ? "warning"
+                  : "success";
+          const display =
+            r === null
+              ? laborRatio && laborRatio.laborGrosze > 0
+                ? "No sales yet"
+                : "—"
+              : `${(r * 100).toFixed(1)}%`;
+          return (
+            <KpiCard
+              label="Labour / revenue (today)"
+              value={r ?? 0}
+              display={display}
+              icon={HardHat}
+              tone={tone}
+              higherIsBetter={false}
+              hint={
+                laborRatio
+                  ? `${(laborRatio.laborGrosze / 100).toLocaleString("pl-PL", { maximumFractionDigits: 0 })} zł labour · ${laborRatio.openShifts} on the floor`
+                  : "Live · target 22–28%"
+              }
+            />
+          );
+        })()}
       </section>
 
       <section className="v2-grid-2-1">

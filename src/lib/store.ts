@@ -2427,6 +2427,77 @@ export async function recordTimePunch(input: Omit<TimePunch, "id" | "occurredAt"
   });
 }
 
+/**
+ * Compute realised labour cost (grosze) over an arbitrary window by pairing
+ * clock-in / clock-out punches per staff member and multiplying worked hours
+ * by each member's hourly rate. Open shifts (clock-in without a matching
+ * clock-out) are extended to `now` so the "labour today so far" tile reflects
+ * staff currently on the floor.
+ *
+ * Punches outside the window still affect the pairing when they straddle a
+ * boundary — we slice the worked seconds down to the requested range so
+ * mid-shift snapshots don't double-count.
+ */
+export async function getLaborCostInRange(
+  locationSlug: string | undefined,
+  fromIso: string,
+  toIso: string,
+  now: Date = new Date(),
+): Promise<{ laborGrosze: number; openShifts: number }> {
+  const fromMs = new Date(fromIso).getTime();
+  const toMs = new Date(toIso).getTime();
+  const nowMs = now.getTime();
+
+  const staff = await getStaff(locationSlug);
+  const staffById = new Map(staff.map((s) => [s.id, s]));
+  const punches = await getTimePunches({
+    // Pull a generous window so we catch a clock-in that started before
+    // `from` and is still open. Cap at 7 days back to keep the read bounded.
+    from: new Date(fromMs - 7 * 24 * 60 * 60 * 1000).toISOString(),
+  });
+
+  // Group oldest-first so the pair walk reads naturally.
+  const byStaff = new Map<string, TimePunch[]>();
+  for (const p of punches) {
+    if (!staffById.has(p.staffId)) continue;
+    (byStaff.get(p.staffId) ?? byStaff.set(p.staffId, []).get(p.staffId)!).push(p);
+  }
+  for (const arr of byStaff.values()) {
+    arr.sort((a, b) => a.occurredAt.localeCompare(b.occurredAt));
+  }
+
+  let laborGrosze = 0;
+  let openShifts = 0;
+
+  for (const [staffId, arr] of byStaff) {
+    const member = staffById.get(staffId)!;
+    let inAt: number | null = null;
+    for (const p of arr) {
+      const t = new Date(p.occurredAt).getTime();
+      if (p.type === "clock-in") {
+        inAt = t;
+      } else if (p.type === "clock-out" && inAt !== null) {
+        const startedAt = Math.max(inAt, fromMs);
+        const endedAt = Math.min(t, toMs);
+        if (endedAt > startedAt) {
+          laborGrosze += ((endedAt - startedAt) / 1000 / 3600) * member.hourlyRateGrosze;
+        }
+        inAt = null;
+      }
+    }
+    if (inAt !== null) {
+      openShifts++;
+      const startedAt = Math.max(inAt, fromMs);
+      const endedAt = Math.min(nowMs, toMs);
+      if (endedAt > startedAt) {
+        laborGrosze += ((endedAt - startedAt) / 1000 / 3600) * member.hourlyRateGrosze;
+      }
+    }
+  }
+
+  return { laborGrosze: Math.round(laborGrosze), openShifts };
+}
+
 // --- Truck operations ---
 
 export async function getTruckRoutes(locationSlug?: string): Promise<TruckRoute[]> {
