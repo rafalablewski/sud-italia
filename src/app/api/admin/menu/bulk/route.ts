@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
-import { isAuthenticated } from "@/lib/admin-auth";
+import { NextResponse } from "next/server";
+import { withAdmin } from "@/lib/api-middleware";
+import { hasLocationAccess } from "@/lib/admin-auth";
 import {
   appendAuditLog,
   clearMenuOverrides,
@@ -22,12 +23,13 @@ import { getActiveLocations } from "@/data/locations";
  *     prefixed per location (`krk-…` vs `waw-…`) but the human-facing
  *     names line up across trucks.
  */
-export async function POST(req: NextRequest) {
-  if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  let body: { action?: string; ids?: string[]; target?: string };
+// Bulk reset / clone touches override pricing across the chain — manager+.
+// clone_to specifies a target location which is validated against the
+// session scope inside the handler.
+export const POST = withAdmin(
+  { roles: ["manager", "owner"] },
+  async (req, _ctx, { user }) => {
+    let body: { action?: string; ids?: string[]; target?: string };
   try {
     body = await req.json();
   } catch {
@@ -42,7 +44,7 @@ export async function POST(req: NextRequest) {
   if (body.action === "reset") {
     const removed = await clearMenuOverrides(ids);
     await appendAuditLog({
-      actor: "admin",
+      actor: user.email || user.id,
       action: "menu.bulk_reset_overrides",
       entityType: "menu_item",
       entityId: `batch-of-${removed}`,
@@ -59,6 +61,12 @@ export async function POST(req: NextRequest) {
     const validLocations = getActiveLocations().map((l) => l.slug);
     if (!validLocations.includes(targetSlug)) {
       return NextResponse.json({ error: "Unknown target location" }, { status: 400 });
+    }
+    if (!(await hasLocationAccess(targetSlug))) {
+      return NextResponse.json(
+        { error: `Session is not authorized for location "${targetSlug}"` },
+        { status: 403 },
+      );
     }
 
     // Resolve source items + overrides. We pull the source from the full
@@ -114,7 +122,7 @@ export async function POST(req: NextRequest) {
       await setMenuOverridesBulk(updates);
     }
     await appendAuditLog({
-      actor: "admin",
+      actor: user.email || user.id,
       action: "menu.bulk_clone_overrides",
       entityType: "menu_item",
       entityId: `to-${targetSlug}-batch-of-${matched.length}`,
@@ -130,5 +138,6 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  return NextResponse.json({ error: "Unknown action" }, { status: 400 });
-}
+    return NextResponse.json({ error: "Unknown action" }, { status: 400 });
+  },
+);
