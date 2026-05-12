@@ -242,6 +242,25 @@ export async function updateOrderStatus(id: string, status: Order["status"]): Pr
   });
 }
 
+/**
+ * Patch arbitrary fields on an order. Used by the Stripe webhook (to capture
+ * session / payment-intent ids) and by the refund flow (to attach the refund
+ * record). Identity fields are stripped to prevent accidental rewrites.
+ */
+export async function updateOrder(
+  id: string,
+  patch: Partial<Omit<Order, "id" | "createdAt">>,
+): Promise<Order | null> {
+  return withLock("orders.json", async () => {
+    const orders = await readJSON<Order[]>("orders.json", []);
+    const index = orders.findIndex((o) => o.id === id);
+    if (index === -1) return null;
+    orders[index] = { ...orders[index], ...patch };
+    await writeJSON("orders.json", orders);
+    return orders[index];
+  });
+}
+
 export async function deleteOrder(id: string): Promise<boolean> {
   let slotId: string | undefined;
   const removed = await withLock("orders.json", async () => {

@@ -86,8 +86,10 @@ export async function POST(req: NextRequest) {
     const menuItemsById = new Map(menuItems.map((item) => [item.id, item]));
 
     let calculatedTotal = 0;
-    const verifiedItems: { id: string; name: string; price: number; quantity: number }[] = [];
+    const verifiedItems: { id: string; name: string; price: number; quantity: number; notes?: string }[] = [];
     const orderItems: CartItem[] = [];
+
+    const NOTE_MAX_LEN = 140;
 
     for (const item of items) {
       const menuItem = menuItemsById.get(item.id);
@@ -103,17 +105,26 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         );
       }
+      // Per-line note is optional, trimmed, length-bounded, and never trusted
+      // for price calculation — it's purely a kitchen-facing string.
+      let notes: string | undefined;
+      if (typeof item.notes === "string") {
+        const trimmed = item.notes.trim();
+        if (trimmed.length > 0) notes = trimmed.slice(0, NOTE_MAX_LEN);
+      }
       calculatedTotal += menuItem.price * item.quantity;
       verifiedItems.push({
         id: menuItem.id,
         name: menuItem.name,
         price: menuItem.price,
         quantity: item.quantity,
+        notes,
       });
       orderItems.push({
         menuItem,
         quantity: item.quantity,
         locationSlug,
+        notes,
       });
     }
 
@@ -186,6 +197,7 @@ export async function POST(req: NextRequest) {
             currency: "pln",
             product_data: {
               name: item.name,
+              ...(item.notes ? { description: item.notes } : {}),
             },
             unit_amount: item.price,
           },

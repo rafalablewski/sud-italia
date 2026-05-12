@@ -378,9 +378,25 @@ function Ticket({ order, stationFilter, onAdvance, isUpdating, nowMs }: TicketPr
               <div className="v2-ticket-station-label">{MENU_CATEGORY_LABELS[cat]}</div>
               <ul>
                 {items.map((ci, i) => (
-                  <li key={`${ci.menuItem.id}-${i}`}>
+                  <li key={`${ci.menuItem.id}-${i}`} style={{ flexWrap: "wrap" }}>
                     <span className="v2-ticket-qty">{ci.quantity}×</span>
                     <span className="v2-ticket-name">{ci.menuItem.name}</span>
+                    {ci.notes && (
+                      <span
+                        className="v2-ticket-item-note"
+                        style={{
+                          width: "100%",
+                          marginLeft: "1.5rem",
+                          marginTop: "0.125rem",
+                          fontSize: "0.75rem",
+                          fontWeight: 600,
+                          color: "#b91c1c",
+                          letterSpacing: "0.01em",
+                        }}
+                      >
+                        ⚠ {ci.notes}
+                      </span>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -391,7 +407,7 @@ function Ticket({ order, stationFilter, onAdvance, isUpdating, nowMs }: TicketPr
 
       {order.specialInstructions && (
         <div className="v2-ticket-notes">
-          <span className="v2-ticket-notes-label">Notes</span>
+          <span className="v2-ticket-notes-label">Order notes</span>
           <span>{order.specialInstructions}</span>
         </div>
       )}

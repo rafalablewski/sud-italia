@@ -14,6 +14,7 @@ import { SpeedGuarantee } from "./SpeedGuarantee";
 import { ComboDealsPreview } from "./ComboDealsPreview";
 import { getItemBadges } from "@/lib/upsell";
 import { getItemRating } from "@/data/ratings";
+import { useLiveMenuAvailability } from "@/lib/useLiveMenuAvailability";
 import { Search, X, ArrowUpDown, Check } from "lucide-react";
 
 type MenuSortValue = "default" | "price-low" | "price-high" | "rating";
@@ -28,11 +29,41 @@ const MENU_SORT_OPTIONS: { value: MenuSortValue; label: string }[] = [
 interface MenuSectionProps {
   items: MenuItem[];
   locationSlug: string;
+  /**
+   * SSR snapshot of which items are available. The live hook polls
+   * /api/menu/availability and overrides this map when admin toggles an item.
+   * Defaults to each item's own `available` flag for backward compatibility
+   * with callers that don't yet pass it (e.g. tests or older fixtures).
+   */
+  initialAvailability?: Record<string, boolean>;
 }
 
-export function MenuSection({ items, locationSlug }: MenuSectionProps) {
+export function MenuSection({ items, locationSlug, initialAvailability }: MenuSectionProps) {
+  const fallbackAvailability = useMemo(() => {
+    if (initialAvailability) return initialAvailability;
+    const map: Record<string, boolean> = {};
+    for (const item of items) map[item.id] = item.available;
+    return map;
+  }, [initialAvailability, items]);
+
+  const liveAvailability = useLiveMenuAvailability(locationSlug, fallbackAvailability);
+
+  // Apply live availability on top of each item so downstream renders see the
+  // freshest state. This is the single source of truth for "is it 86'd?".
+  const itemsLive: MenuItem[] = useMemo(
+    () =>
+      items.map((i) => {
+        const live = liveAvailability[i.id];
+        return live === undefined || live === i.available ? i : { ...i, available: live };
+      }),
+    [items, liveAvailability],
+  );
+
   const categories = useMemo(() => {
-    const cats = [...new Set(items.map((i) => i.category))];
+    // Categories are derived from the entire menu, not just the available
+    // subset — that way "Pizza" doesn't disappear when every pizza is 86'd,
+    // it just shows the empty state. Keeps tab positions stable.
+    const cats = [...new Set(itemsLive.map((i) => i.category))];
     const order: MenuCategory[] = [
       "pizza",
       "pasta",
@@ -42,15 +73,15 @@ export function MenuSection({ items, locationSlug }: MenuSectionProps) {
       "desserts",
     ];
     return cats.sort((a, b) => order.indexOf(a) - order.indexOf(b));
-  }, [items]);
+  }, [itemsLive]);
 
   const itemCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    for (const item of items.filter((i) => i.available)) {
+    for (const item of itemsLive.filter((i) => i.available)) {
       counts[item.category] = (counts[item.category] || 0) + 1;
     }
     return counts;
-  }, [items]);
+  }, [itemsLive]);
 
   const [activeCategory, setActiveCategory] = useState<MenuCategory | undefined>(
     categories[0]
@@ -103,7 +134,7 @@ export function MenuSection({ items, locationSlug }: MenuSectionProps) {
   }, [locationSlug]);
 
   const filteredItems = useMemo(() => {
-    const available = items.filter((i) => i.available);
+    const available = itemsLive.filter((i) => i.available);
     let result: MenuItem[];
 
     if (isSearching) {
@@ -129,7 +160,7 @@ export function MenuSection({ items, locationSlug }: MenuSectionProps) {
       const bPop = getItemBadges(b.id, locationSlug).includes("popular") ? 0 : 1;
       return aPop - bPop || a.name.localeCompare(b.name);
     });
-  }, [items, activeCategory, searchQuery, isSearching, sortBy, locationSlug]);
+  }, [itemsLive, activeCategory, searchQuery, isSearching, sortBy, locationSlug]);
 
   if (categories.length === 0 || (!activeCategory && !isSearching)) {
     return (
@@ -254,7 +285,7 @@ export function MenuSection({ items, locationSlug }: MenuSectionProps) {
         {/* Surprise Me feature */}
         {!isSearching && (
           <div className="mb-6">
-            <SurpriseMe items={items.filter((i) => i.available)} locationSlug={locationSlug} />
+            <SurpriseMe items={itemsLive.filter((i) => i.available)} locationSlug={locationSlug} />
           </div>
         )}
 

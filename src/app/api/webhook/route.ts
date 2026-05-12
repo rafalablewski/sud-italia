@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { updateOrderStatus } from "@/lib/store";
+import { updateOrder, updateOrderStatus } from "@/lib/store";
 
 const processedEvents = new Set<string>();
 
@@ -42,7 +42,19 @@ export async function POST(req: NextRequest) {
       const { orderId } = session.metadata ?? {};
 
       if (orderId && session.payment_status === "paid") {
-        await updateOrderStatus(orderId, "confirmed");
+        // Capture the Stripe correlation ids so admin refunds can target the
+        // original charge later. `payment_intent` may be a string id or an
+        // expanded object depending on the API version.
+        const paymentIntentId =
+          typeof session.payment_intent === "string"
+            ? session.payment_intent
+            : session.payment_intent?.id;
+        await updateOrder(orderId, {
+          status: "confirmed",
+          paidAt: new Date().toISOString(),
+          stripeSessionId: session.id,
+          stripePaymentIntentId: paymentIntentId ?? undefined,
+        });
       }
     }
 

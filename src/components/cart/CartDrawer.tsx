@@ -25,6 +25,7 @@ import { krakowMenu } from "@/data/menus/krakow";
 import { warszawaMenu } from "@/data/menus/warszawa";
 import { useCustomer } from "@/store/customer";
 import { postCartPresenceToServer } from "@/lib/cart-presence-post-client";
+import { useLiveMenuAvailability } from "@/lib/useLiveMenuAvailability";
 
 interface CartDrawerProps {
   open: boolean;
@@ -97,6 +98,26 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
     };
   }, [open, locationSlug, items.length, selectedSlotDate, fulfillmentType]);
 
+  // Live availability map for the cart's location — flips item-86 toggles
+  // through to the cart drawer within one polling interval so customers can
+  // remove unavailable items before they hit "Pay".
+  const availabilitySeed = useMemo(() => {
+    const seed: Record<string, boolean> = {};
+    for (const i of items) seed[i.menuItem.id] = true;
+    return seed;
+  }, [items]);
+  const liveAvailability = useLiveMenuAvailability(
+    locationSlug || "",
+    availabilitySeed,
+  );
+  const unavailableItems = useMemo(
+    () =>
+      items.filter(
+        (i) => liveAvailability[i.menuItem.id] === false,
+      ),
+    [items, liveAvailability],
+  );
+
   const subtotal = getTotal();
 
   // Apply combo deal discount to actual total
@@ -111,6 +132,7 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
     customerLastName.trim().length > 0 &&
     isPhoneValid &&
     selectedSlotId !== null &&
+    unavailableItems.length === 0 &&
     (fulfillmentType !== "delivery" || deliveryAddress.trim().length > 0);
 
   // Pre-fill checkout fields from loyalty identity
@@ -184,6 +206,7 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
           items: items.map((i) => ({
             id: i.menuItem.id,
             quantity: i.quantity,
+            notes: i.notes,
           })),
           locationSlug,
           customerName,
@@ -245,11 +268,38 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
 
   return (
     <Sheet open={open} onClose={onClose} title="Your Order">
+      {unavailableItems.length > 0 && (
+        <div className="mx-5 mt-3 mb-1 rounded-xl border border-italia-red/30 bg-italia-red/5 px-3 py-2.5">
+          <p className="text-xs font-semibold text-italia-red leading-snug">
+            {unavailableItems.length === 1
+              ? `"${unavailableItems[0].menuItem.name}" just sold out`
+              : `${unavailableItems.length} items just sold out`}
+          </p>
+          <p className="text-[11px] text-italia-gray mt-0.5">
+            Remove {unavailableItems.length === 1 ? "it" : "them"} below to continue.
+          </p>
+        </div>
+      )}
+
       {/* Items list */}
       <div className="px-5">
-        {items.map((item) => (
-          <CartItemRow key={item.menuItem.id} item={item} />
-        ))}
+        {items.map((item) => {
+          const soldOut = liveAvailability[item.menuItem.id] === false;
+          return (
+            <div
+              key={item.menuItem.id}
+              className={soldOut ? "opacity-60" : ""}
+              data-soldout={soldOut ? "true" : undefined}
+            >
+              <CartItemRow item={item} />
+              {soldOut && (
+                <p className="-mt-2 mb-3 text-[11px] font-medium text-italia-red">
+                  Sold out — remove to continue
+                </p>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* Loyalty status banner */}
@@ -511,13 +561,15 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
         >
           {isSubmitting
             ? "Processing..."
-            : !selectedSlotId
-              ? "Select a time slot"
-              : canCheckout
-                ? `Pay ${formatPrice(total)}`
-                : fulfillmentType === "delivery" && !deliveryAddress.trim()
-                  ? "Enter delivery address"
-                  : "Enter name & phone to order"}
+            : unavailableItems.length > 0
+              ? "Remove sold-out items"
+              : !selectedSlotId
+                ? "Select a time slot"
+                : canCheckout
+                  ? `Pay ${formatPrice(total)}`
+                  : fulfillmentType === "delivery" && !deliveryAddress.trim()
+                    ? "Enter delivery address"
+                    : "Enter name & phone to order"}
         </Button>
 
         <button

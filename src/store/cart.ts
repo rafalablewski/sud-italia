@@ -18,6 +18,7 @@ interface CartStore {
   addItem: (item: MenuItem, locationSlug: string) => void;
   removeItem: (itemId: string) => void;
   updateQuantity: (itemId: string, quantity: number) => void;
+  setItemNotes: (itemId: string, notes: string) => void;
   clearCart: () => void;
   getTotal: () => number;
   getItemCount: () => number;
@@ -93,6 +94,17 @@ export const useCartStore = create<CartStore>()(
         set((state) => ({
           items: state.items.map((i) =>
             i.menuItem.id === itemId ? { ...i, quantity } : i
+          ),
+        }));
+      },
+
+      setItemNotes: (itemId: string, notes: string) => {
+        const trimmed = notes.trim();
+        set((state) => ({
+          items: state.items.map((i) =>
+            i.menuItem.id === itemId
+              ? { ...i, notes: trimmed.length > 0 ? trimmed : undefined }
+              : i
           ),
         }));
       },

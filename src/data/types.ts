@@ -154,6 +154,11 @@ export interface CartItem {
   menuItem: MenuItem;
   quantity: number;
   locationSlug: string;
+  /**
+   * Free-text per-line special request, e.g. "no onion", "extra crispy",
+   * "well-done". Surfaced on the KDS ticket and on the admin order detail.
+   */
+  notes?: string;
 }
 
 export type FulfillmentType = "takeout" | "delivery";
@@ -203,6 +208,45 @@ export const ORDER_STATUSES = [
 
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
+/** Reason codes for refunds, voids, and comps. Surfaced in the admin UI dropdown. */
+export const REFUND_REASON_CODES = [
+  "customer_request",
+  "wrong_item",
+  "quality_issue",
+  "late_or_no_show",
+  "missing_item",
+  "duplicate_charge",
+  "manager_comp",
+  "other",
+] as const;
+
+export type RefundReasonCode = (typeof REFUND_REASON_CODES)[number];
+
+export const REFUND_REASON_LABELS: Record<RefundReasonCode, string> = {
+  customer_request: "Customer request",
+  wrong_item: "Wrong item / wrong order",
+  quality_issue: "Quality issue",
+  late_or_no_show: "Late or no-show",
+  missing_item: "Missing item",
+  duplicate_charge: "Duplicate charge",
+  manager_comp: "Manager comp (on the house)",
+  other: "Other",
+};
+
+export interface OrderRefund {
+  /** "full" refunds the entire paid amount and cancels the order; "partial" leaves the order intact. */
+  type: "full" | "partial";
+  /** Refunded amount in grosze. */
+  amount: number;
+  reasonCode: RefundReasonCode;
+  notes?: string;
+  /** Stripe refund id when the original charge was reversed; absent for offline / demo-mode refunds. */
+  stripeRefundId?: string;
+  /** Actor identifier (today: "admin"). */
+  refundedBy: string;
+  refundedAt: string;
+}
+
 export interface Order {
   id: string;
   locationSlug: string;
@@ -224,6 +268,12 @@ export interface Order {
   estimatedReadyAt?: string;
   feedback?: OrderFeedback;
   qualityCheck?: QualityCheck;
+  // Stripe correlation — captured by the webhook on checkout.session.completed.
+  // Required to issue refunds against the original charge.
+  stripeSessionId?: string;
+  stripePaymentIntentId?: string;
+  /** Set when a refund (full or partial) has been processed. */
+  refund?: OrderRefund;
 }
 
 // --- Inventory (per-location stock for an ingredient) ---
