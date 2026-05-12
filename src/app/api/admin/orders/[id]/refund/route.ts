@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getCurrentActor, requireRole } from "@/lib/admin-auth";
+import { NextResponse } from "next/server";
+import { withAdmin } from "@/lib/api-middleware";
+import { getCurrentActor, hasLocationAccess } from "@/lib/admin-auth";
 import { appendAuditLog, getOrderById, updateOrder } from "@/lib/store";
 import { logger } from "@/lib/logger";
 import {
@@ -15,15 +16,13 @@ interface RefundBody {
   notes?: string;
 }
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  // Refunds reach back to Stripe and to revenue rows — gate to owner/manager.
-  const auth = await requireRole(["owner", "manager"]);
-  if ("error" in auth) return auth.error;
-
-  const { id: orderId } = await params;
+// Refunds reach back to Stripe and to revenue rows — owner/manager only.
+// Per-order tenancy check happens inside the handler because the order's
+// locationSlug isn't known until we read it.
+export const POST = withAdmin<{ params: Promise<{ id: string }> }>(
+  { roles: ["owner", "manager"] },
+  async (req, { params }) => {
+    const { id: orderId } = await params;
   if (!orderId) {
     return NextResponse.json({ error: "Missing order id" }, { status: 400 });
   }
@@ -54,6 +53,16 @@ export async function POST(
   const order = await getOrderById(orderId);
   if (!order) {
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
+  }
+
+  // A manager scoped to one location must not be able to refund orders at
+  // another location (which would also wipe revenue rows the other location's
+  // owner is reconciling). Wildcard scope passes through.
+  if (!(await hasLocationAccess(order.locationSlug))) {
+    return NextResponse.json(
+      { error: `Session is not authorized for location "${order.locationSlug}"` },
+      { status: 403 },
+    );
   }
 
   if (order.refund) {
@@ -175,5 +184,6 @@ export async function POST(
     },
   });
 
-  return NextResponse.json(updated);
-}
+    return NextResponse.json(updated);
+  },
+);

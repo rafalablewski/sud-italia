@@ -1,5 +1,4 @@
-import { NextRequest } from "next/server";
-import { isAuthenticated } from "@/lib/admin-auth";
+import { withAdmin } from "@/lib/api-middleware";
 import { getOrders } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -25,13 +24,11 @@ const PING_MS = 25_000;
  * fall back to /api/admin/orders polling if EventSource is unavailable or
  * the stream drops.
  */
-export async function GET(req: NextRequest) {
-  if (!(await isAuthenticated())) {
-    return new Response("Unauthorized", { status: 401 });
-  }
-
-  const locationSlug = req.nextUrl.searchParams.get("location") || undefined;
-  const encoder = new TextEncoder();
+export const GET = withAdmin(
+  { locationParam: "location" },
+  async (req, _ctx, { locationSlug: scopedLocation }) => {
+    const locationSlug = scopedLocation ?? undefined;
+    const encoder = new TextEncoder();
 
   let lastJson = "";
   let closed = false;
@@ -85,5 +82,6 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  return new Response(stream, { headers: SSE_HEADERS });
-}
+    return new Response(stream, { headers: SSE_HEADERS });
+  },
+);

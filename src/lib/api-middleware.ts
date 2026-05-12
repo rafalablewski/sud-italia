@@ -127,20 +127,25 @@ export function withAdmin<RouteCtx = Record<string, never>>(
     let locationSlug: string | null = null;
     if (opts.locationParam !== undefined) {
       locationSlug = await resolveLocationSlug(opts.locationParam, req, ctx);
-      if (!locationSlug) {
-        // Route declared it scopes by location but the caller didn't supply
-        // one. 400 is the right code — without a slug there's nothing to
-        // authorize against.
-        return NextResponse.json(
-          { error: "Missing required location parameter" },
-          { status: 400 },
-        );
-      }
-      const allowed = await hasLocationAccess(locationSlug);
-      if (!allowed) {
-        return forbidden(
-          `Session is not authorized for location "${locationSlug}"`,
-        );
+      if (locationSlug) {
+        // Caller supplied a slug — must be in their session scope.
+        const allowed = await hasLocationAccess(locationSlug);
+        if (!allowed) {
+          return forbidden(
+            `Session is not authorized for location "${locationSlug}"`,
+          );
+        }
+      } else {
+        // No slug = cross-location read (HQ rollup, "all locations" view).
+        // Only allow when the session holds unrestricted scope. Routes that
+        // want to FORBID this entirely should pair with roles: ["owner"]
+        // and/or hand-validate in the handler.
+        const allowed = await hasLocationAccess(LOCATION_SCOPE_ALL);
+        if (!allowed) {
+          return forbidden(
+            "Cross-location access requires unrestricted scope",
+          );
+        }
       }
     }
 
