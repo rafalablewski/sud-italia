@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAuthenticated } from "@/lib/admin-auth";
+import { getCurrentActor, requireRole } from "@/lib/admin-auth";
 import { appendAuditLog } from "@/lib/store";
 import { deleteCustomerData } from "@/lib/gdpr";
 
@@ -10,9 +10,9 @@ import { deleteCustomerData } from "@/lib/gdpr";
  * accidental erasure if the endpoint is hit by a misconfigured tool.
  */
 export async function POST(req: NextRequest) {
-  if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  // Erasure is destructive and irreversible — owner only.
+  const auth = await requireRole(["owner"]);
+  if ("error" in auth) return auth.error;
 
   let body: { phone?: string; confirm?: boolean };
   try {
@@ -33,8 +33,9 @@ export async function POST(req: NextRequest) {
 
   const result = await deleteCustomerData(body.phone);
 
+  const actor = await getCurrentActor();
   await appendAuditLog({
-    actor: "admin",
+    actor,
     action: "gdpr.delete",
     entityType: "customer",
     entityId: result.phone,

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAuthenticated } from "@/lib/admin-auth";
+import { getCurrentActor, requireRole } from "@/lib/admin-auth";
 import { appendAuditLog, getOrderById, updateOrder } from "@/lib/store";
 import { logger } from "@/lib/logger";
 import {
@@ -19,9 +19,9 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  // Refunds reach back to Stripe and to revenue rows — gate to owner/manager.
+  const auth = await requireRole(["owner", "manager"]);
+  if ("error" in auth) return auth.error;
 
   const { id: orderId } = await params;
   if (!orderId) {
@@ -138,13 +138,14 @@ export async function POST(
     }
   }
 
+  const actor = await getCurrentActor();
   const refundRecord: OrderRefund = {
     type,
     amount: refundAmount,
     reasonCode,
     notes: notes?.trim() || undefined,
     stripeRefundId,
-    refundedBy: "admin",
+    refundedBy: actor,
     refundedAt: new Date().toISOString(),
   };
 
@@ -161,7 +162,7 @@ export async function POST(
   }
 
   await appendAuditLog({
-    actor: "admin",
+    actor,
     action: type === "full" ? "orders.refund_full" : "orders.refund_partial",
     entityType: "order",
     entityId: orderId,

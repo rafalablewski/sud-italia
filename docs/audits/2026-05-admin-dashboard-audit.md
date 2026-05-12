@@ -211,8 +211,8 @@ The most important admission this audit can offer: **stop calling the current `/
 
 | Existing | Missing | Why It Matters | Priority | Benchmark | Status |
 |---|---|---|---|---|---|
-| `AdminRole` enum defined; `hasRole()` function | **Actual RBAC enforcement** on every page + every API route + every field | Owner/manager/staff/kitchen tier is in the type system and *not enforced anywhere* | P0 | Linear, Stripe, every enterprise SaaS | ✗ Not fixed — `getCurrentRole()` still returns `"owner"` for every authenticated session (`src/lib/admin-auth.ts:106`); needs per-user identity binding before `hasRole` is meaningful |
-| Single-password HMAC session | **Per-user authentication** (email + password, magic link, OAuth) | Cannot identify "who deleted that order" today | P0 | NextAuth, Clerk, WorkOS | ✗ Not fixed — major auth refactor |
+| `AdminRole` enum defined; `hasRole()` function | **Actual RBAC enforcement** on every page + every API route + every field | Owner/manager/staff/kitchen tier is in the type system and *not enforced anywhere* | P0 | Linear, Stripe, every enterprise SaaS | ✓ Partial — `getCurrentRole()` now reads the userId claim from the signed cookie, hydrates the `AdminUser` row from `admin-users.json`, and returns that user's role. New `requireRole(allowed[])` helper gates refund, GDPR delete, and shift mutations. Audit-log `actor` now resolves to the bound user's email. Still ✗: cascading the role gate to every `/api/admin/*` route — refund + GDPR + shifts done as the canonical examples; remaining routes inherit the legacy shared-password fallback (effective: owner-equivalent). |
+| Single-password HMAC session | **Per-user authentication** (email + password, magic link, OAuth) | Cannot identify "who deleted that order" today | P0 | NextAuth, Clerk, WorkOS | ✓ Partial — session token now carries `<userId>:<issuedAt>.<hmac>`. Login accepts an optional `email`: when present and matching an active `admin-users.json` row, the token binds to that user and `getCurrentAdminUser()` resolves them; when absent, falls back to the legacy `"admin"` shared-owner session. AdminLogin form gained an Email field. Still ✗: magic-link delivery (Resend / SMTP) and OAuth/SSO. |
 | — | **SSO / SAML / OIDC** | Required by every enterprise / franchise buyer | P2 | WorkOS, Auth0 | ✗ Not fixed — depends on per-user auth |
 | — | **2FA / TOTP / WebAuthn** | Polish data-protection authority (UODO) considers this baseline for personal-data systems | P1 | Authy, WebAuthn | ✗ Not fixed — depends on per-user auth |
 | Audit log at `/admin/settings` | **Tamper-evident audit log** (append-only, hash-chained, exportable, filterable) | Current log is a JSON file an admin can edit | P1 | AWS CloudTrail, Vanta | ✗ Not fixed — needs hash-chain + export |
@@ -562,7 +562,7 @@ A trillion-dollar operator does not buy software. It builds an operating system 
 ### 5.2 Top 10 Highest-Impact Missing Features
 
 1. Real-time event bus + WebSocket / SSE for KDS, orders, alerts. — ✗ Not fixed
-2. Per-user authentication + actual RBAC enforcement. — ✗ Not fixed
+2. Per-user authentication + actual RBAC enforcement. — ✓ Partial — session cookie now carries a userId claim; login optionally binds to an `admin-users.json` row by email; `getCurrentRole()` resolves from that row; `requireRole()` enforces on refund / GDPR delete / shifts. Magic-link + cascading the gate to every admin route still ✗.
 3. Real demand-forecasting model (replace `ai-engine.ts` heuristics). — ✗ Not fixed (label dropped only)
 4. Aggregator integration (Pyszne, Glovo, Bolt, Uber Eats) via Deliverect-class adapter. — ✗ Not fixed
 5. Live truck telemetry (GPS, fuel, oven, generator) with customer-facing ETA. — ✗ Not fixed

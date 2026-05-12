@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAuthenticated } from "@/lib/admin-auth";
+import { isAuthenticated, requireRole } from "@/lib/admin-auth";
 import { deleteShift, getShifts, getStaff, saveShift } from "@/lib/store";
 import { locations as ALL_LOCATIONS } from "@/data/locations";
 import { partitionViolations, validateShift } from "@/lib/scheduling-rules";
@@ -26,8 +26,9 @@ export async function GET(req: NextRequest) {
 }
 
 async function upsertShift(req: NextRequest) {
-  const auth = await requireAuth();
-  if (auth) return auth;
+  // Scheduling mutations can ripple into Polish Labor Code violations — owner/manager only.
+  const role = await requireRole(["owner", "manager"]);
+  if ("error" in role) return role.error;
   try {
     const body = await req.json();
     if (!body.staffId || !body.locationSlug || !body.startAt || !body.endAt) {
