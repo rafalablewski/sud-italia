@@ -3,18 +3,8 @@ import { withAdmin } from "@/lib/api-middleware";
 import { getCurrentActor, hasLocationAccess } from "@/lib/admin-auth";
 import { appendAuditLog, getOrderById, updateOrder } from "@/lib/store";
 import { logger } from "@/lib/logger";
-import {
-  REFUND_REASON_CODES,
-  type OrderRefund,
-  type RefundReasonCode,
-} from "@/data/types";
-
-interface RefundBody {
-  type?: "full" | "partial";
-  amount?: number;
-  reasonCode?: RefundReasonCode;
-  notes?: string;
-}
+import { type OrderRefund } from "@/data/types";
+import { parseBody, refundBodySchema } from "@/lib/api-schemas";
 
 // Refunds reach back to Stripe and to revenue rows — owner/manager only.
 // Per-order tenancy check happens inside the handler because the order's
@@ -27,28 +17,9 @@ export const POST = withAdmin<{ params: Promise<{ id: string }> }>(
     return NextResponse.json({ error: "Missing order id" }, { status: 400 });
   }
 
-  let body: RefundBody;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-  }
-
-  const { type, amount, reasonCode, notes } = body;
-
-  if (type !== "full" && type !== "partial") {
-    return NextResponse.json(
-      { error: "type must be 'full' or 'partial'" },
-      { status: 400 },
-    );
-  }
-
-  if (!reasonCode || !REFUND_REASON_CODES.includes(reasonCode)) {
-    return NextResponse.json(
-      { error: "Invalid or missing reasonCode" },
-      { status: 400 },
-    );
-  }
+  const parsed = await parseBody(req, refundBodySchema);
+  if ("error" in parsed) return parsed.error;
+  const { type, amount, reasonCode, notes } = parsed.data;
 
   const order = await getOrderById(orderId);
   if (!order) {
@@ -72,20 +43,8 @@ export const POST = withAdmin<{ params: Promise<{ id: string }> }>(
     );
   }
 
-  // Determine the refund amount.
-  const refundAmount =
-    type === "full"
-      ? order.totalAmount
-      : Number.isInteger(amount) && (amount as number) > 0
-        ? (amount as number)
-        : NaN;
-
-  if (!Number.isFinite(refundAmount) || refundAmount <= 0) {
-    return NextResponse.json(
-      { error: "Partial refunds require a positive integer amount (grosze)" },
-      { status: 400 },
-    );
-  }
+  // Schema guarantees `amount` is a positive integer when `type === "partial"`.
+  const refundAmount = type === "full" ? order.totalAmount : (amount as number);
 
   if (refundAmount > order.totalAmount) {
     return NextResponse.json(

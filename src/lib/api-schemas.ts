@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { NextResponse } from "next/server";
+import { REFUND_REASON_CODES } from "@/data/types";
 
 /**
  * Zod schemas for API request bodies. Every route that mutates state
@@ -84,6 +85,132 @@ export const checkoutBodySchema = z
   );
 
 export type CheckoutBody = z.infer<typeof checkoutBodySchema>;
+
+// --- Admin: orders -------------------------------------------------------
+
+export const orderStatusSchema = z.enum([
+  "pending",
+  "confirmed",
+  "preparing",
+  "ready",
+  "completed",
+  "cancelled",
+]);
+
+/** PUT /api/admin/orders — manual status change by an operator. */
+export const orderStatusChangeSchema = z.object({
+  orderId: stableId,
+  status: orderStatusSchema,
+});
+
+/** DELETE /api/admin/orders — hard-delete (admin override). */
+export const orderDeleteSchema = z.object({
+  orderId: stableId,
+});
+
+/**
+ * POST /api/admin/orders/[id]/refund. Partial refunds require a positive
+ * amount in grosze; full refunds use the order total. reasonCode comes
+ * from the closed list in data/types.ts so we can build reports keyed by
+ * cause.
+ */
+export const refundBodySchema = z
+  .object({
+    type: z.enum(["full", "partial"]),
+    amount: z.number().int().positive().optional(),
+    reasonCode: z.enum(REFUND_REASON_CODES),
+    notes: z.string().max(500).optional(),
+  })
+  .refine(
+    (data) => data.type !== "partial" || typeof data.amount === "number",
+    {
+      message: "Partial refunds require a positive integer `amount` in grosze",
+      path: ["amount"],
+    },
+  );
+
+// --- Admin: slots --------------------------------------------------------
+
+export const fulfillmentTypeSchema = z.enum(["takeout", "delivery"]);
+
+/**
+ * POST /api/admin/slots — accepts either a single slot (time + maxOrders) or
+ * a bulk range (bulk: {startTime, endTime, interval}). We model the union
+ * as separate optional fields with a refine so the error message points at
+ * the right place if neither shape is supplied.
+ */
+export const slotCreateSchema = z
+  .object({
+    locationSlug,
+    date: isoDate,
+    fulfillmentTypes: z.array(fulfillmentTypeSchema).min(1).max(2),
+    time: wallTime.optional(),
+    maxOrders: z.number().int().positive().max(500).optional(),
+    bulk: z
+      .object({
+        startTime: wallTime,
+        endTime: wallTime,
+        interval: z.number().int().positive().max(180),
+      })
+      .optional(),
+  })
+  .refine(
+    (data) => (data.bulk ? true : !!data.time && data.maxOrders !== undefined),
+    {
+      message:
+        "Provide either `bulk` for a range or both `time` + `maxOrders` for a single slot",
+      path: ["time"],
+    },
+  );
+
+/**
+ * PUT /api/admin/slots — single update by id or bulk update by ids[]. The
+ * updates payload is open-ended (status, maxOrders, fulfillmentTypes, etc.)
+ * so we accept the loose record here and let the store reject unknown
+ * fields downstream.
+ */
+export const slotUpdateSchema = z
+  .object({
+    id: stableId.optional(),
+    ids: z.array(stableId).min(1).max(500).optional(),
+    status: z.enum(["draft", "active"]).optional(),
+    maxOrders: z.number().int().positive().max(500).optional(),
+    fulfillmentTypes: z.array(fulfillmentTypeSchema).optional(),
+  })
+  .refine((data) => !!data.id || (Array.isArray(data.ids) && data.ids.length > 0), {
+    message: "Provide `id` for a single update or `ids[]` for a bulk update",
+    path: ["id"],
+  });
+
+// --- Admin: cash sessions ------------------------------------------------
+
+/** POST /api/admin/cash — open a new session. */
+export const cashOpenSchema = z.object({
+  locationSlug,
+  openingFloat: grosze.max(1_000_000),
+  openedBy: z.string().min(1).max(120).optional(),
+  notes: z.string().max(500).optional(),
+});
+
+const cashDropKindSchema = z.enum(["sale", "drop", "payout", "adjust"]);
+
+/** POST /api/admin/cash/[id]?action=drop — append a drop / payout / adjust. */
+export const cashDropSchema = z.object({
+  amountGrosze: z
+    .number()
+    .int()
+    .refine((n) => n !== 0, { message: "amountGrosze must be non-zero" }),
+  kind: cashDropKindSchema,
+  notes: z.string().max(500).optional(),
+  actor: z.string().min(1).max(120).optional(),
+});
+
+/** POST /api/admin/cash/[id]?action=close — close out + reconcile. */
+export const cashCloseSchema = z.object({
+  closingCountGrosze: grosze.max(10_000_000),
+  closedBy: z.string().min(1).max(120).optional(),
+  notes: z.string().max(500).optional(),
+});
 
 // --- Helpers -------------------------------------------------------------
 

@@ -7,9 +7,7 @@ import {
   closeCashSession,
   getCashSessionById,
 } from "@/lib/store";
-import type { CashDrop } from "@/data/types";
-
-const VALID_DROP_KINDS: CashDrop["kind"][] = ["sale", "drop", "payout", "adjust"];
+import { cashCloseSchema, cashDropSchema } from "@/lib/api-schemas";
 
 export const GET = withAdmin<{ params: Promise<{ id: string }> }>(
   {},
@@ -50,30 +48,20 @@ export const POST = withAdmin<{ params: Promise<{ id: string }> }>(
       );
     }
 
-    let body: Record<string, unknown>;
-    try {
-      body = await req.json();
-    } catch {
-      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-    }
-
-    const actor = typeof body.actor === "string" ? body.actor : (user.email || user.id);
-
     if (action === "drop") {
-      const amountGrosze = Number(body.amountGrosze);
-      const kind = body.kind as CashDrop["kind"];
-      if (!Number.isFinite(amountGrosze) || amountGrosze === 0) {
-        return NextResponse.json({ error: "amountGrosze required (non-zero)" }, { status: 400 });
+      const parsed = cashDropSchema.safeParse(await req.json().catch(() => null));
+      if (!parsed.success) {
+        return NextResponse.json(
+          {
+            error: "Validation failed",
+            details: parsed.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })),
+          },
+          { status: 400 },
+        );
       }
-      if (!VALID_DROP_KINDS.includes(kind)) {
-        return NextResponse.json({ error: "Invalid kind" }, { status: 400 });
-      }
-      const updated = await appendCashDrop(id, {
-        amountGrosze,
-        kind,
-        notes: typeof body.notes === "string" ? body.notes : undefined,
-        actor,
-      });
+      const { amountGrosze, kind, notes, actor: bodyActor } = parsed.data;
+      const actor = bodyActor || user.email || user.id;
+      const updated = await appendCashDrop(id, { amountGrosze, kind, notes, actor });
       if (!updated) {
         return NextResponse.json(
           { error: "Session not found or already closed" },
@@ -85,25 +73,25 @@ export const POST = withAdmin<{ params: Promise<{ id: string }> }>(
         action: `cash.${kind}`,
         entityType: "cash_session",
         entityId: id,
-        after: { amountGrosze, kind, notes: body.notes },
+        after: { amountGrosze, kind, notes },
       });
       return NextResponse.json(updated);
     }
 
     if (action === "close") {
-      const closingCountGrosze = Number(body.closingCountGrosze);
-      if (!Number.isFinite(closingCountGrosze) || closingCountGrosze < 0) {
+      const parsed = cashCloseSchema.safeParse(await req.json().catch(() => null));
+      if (!parsed.success) {
         return NextResponse.json(
-          { error: "closingCountGrosze must be a non-negative integer" },
+          {
+            error: "Validation failed",
+            details: parsed.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })),
+          },
           { status: 400 },
         );
       }
-      const updated = await closeCashSession(
-        id,
-        closingCountGrosze,
-        typeof body.closedBy === "string" ? body.closedBy : actor,
-        typeof body.notes === "string" ? body.notes : undefined,
-      );
+      const { closingCountGrosze, closedBy, notes } = parsed.data;
+      const actor = closedBy || user.email || user.id;
+      const updated = await closeCashSession(id, closingCountGrosze, actor, notes);
       if (!updated) {
         return NextResponse.json(
           { error: "Session not found or already closed" },
@@ -111,7 +99,7 @@ export const POST = withAdmin<{ params: Promise<{ id: string }> }>(
         );
       }
       await appendAuditLog({
-        actor: typeof body.closedBy === "string" ? body.closedBy : actor,
+        actor,
         action: "cash.close",
         entityType: "cash_session",
         entityId: id,
