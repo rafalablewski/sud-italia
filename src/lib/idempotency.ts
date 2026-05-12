@@ -1,5 +1,6 @@
 import { createHash } from "crypto";
 import { eq, gt, and } from "drizzle-orm";
+import { neon } from "@neondatabase/serverless";
 import { getDb } from "@/db/client";
 import { webhookEvents, checkoutAttempts } from "@/db/schema";
 import { logger } from "@/lib/logger";
@@ -12,10 +13,70 @@ import { logger } from "@/lib/logger";
  * memory at the top of src/app/api/webhook/route.ts:20 — is resolved by
  * INSERT ... ON CONFLICT DO NOTHING with a RETURNING check.
  *
+ * Schema self-bootstraps at runtime (see ensureIdempotencyTables below),
+ * matching the existing `ensureDB()` pattern in src/lib/store.ts. Running
+ * `npm run db:migrate` against migrations/0000_*.sql remains an option for
+ * operators who prefer an explicit step, but it's not required.
+ *
  * When DATABASE_URL is absent (local dev / preview without Neon) we fall back
  * to an in-process Set. This loses idempotency across instances, but only in
  * environments that don't have a real DB anyway.
  */
+
+let tablesEnsured = false;
+
+/**
+ * Creates webhook_events + checkout_attempts on first use. DDL is idempotent
+ * (CREATE TABLE / INDEX IF NOT EXISTS), so the cost is one no-op round-trip
+ * per cold start once the tables exist.
+ */
+export async function ensureIdempotencyTables(): Promise<void> {
+  if (tablesEnsured) return;
+  if (!process.env.DATABASE_URL) return;
+  const sql = neon(process.env.DATABASE_URL);
+  try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS webhook_events (
+        provider TEXT NOT NULL,
+        event_id TEXT NOT NULL,
+        event_type TEXT,
+        processed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        CONSTRAINT webhook_events_provider_event_id_pk PRIMARY KEY (provider, event_id)
+      )
+    `;
+    await sql`
+      CREATE INDEX IF NOT EXISTS webhook_events_processed_at_idx
+        ON webhook_events (processed_at)
+    `;
+    await sql`
+      CREATE TABLE IF NOT EXISTS checkout_attempts (
+        idempotency_hash TEXT PRIMARY KEY,
+        stripe_session_id TEXT NOT NULL,
+        stripe_session_url TEXT NOT NULL,
+        order_id TEXT NOT NULL,
+        location_slug TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        expires_at TIMESTAMPTZ NOT NULL
+      )
+    `;
+    await sql`
+      CREATE INDEX IF NOT EXISTS checkout_attempts_created_at_idx
+        ON checkout_attempts (created_at)
+    `;
+    await sql`
+      CREATE INDEX IF NOT EXISTS checkout_attempts_expires_at_idx
+        ON checkout_attempts (expires_at)
+    `;
+    tablesEnsured = true;
+  } catch (err) {
+    logger.error(
+      "ensureIdempotencyTables failed",
+      { layer: "idempotency.ensure" },
+      err,
+    );
+    throw err;
+  }
+}
 
 const inProcessWebhookSeen = new Set<string>();
 
@@ -41,6 +102,7 @@ export async function claimWebhookEvent(
     });
     return true;
   }
+  await ensureIdempotencyTables();
   const inserted = await db
     .insert(webhookEvents)
     .values({ provider, eventId, eventType })
@@ -100,6 +162,7 @@ export async function getCachedCheckout(
       locationSlug: "",
     };
   }
+  await ensureIdempotencyTables();
   const rows = await db
     .select()
     .from(checkoutAttempts)
@@ -147,6 +210,7 @@ export async function cacheCheckout(args: {
     });
     return;
   }
+  await ensureIdempotencyTables();
   await db
     .insert(checkoutAttempts)
     .values({
