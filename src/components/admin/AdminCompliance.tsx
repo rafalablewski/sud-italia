@@ -197,7 +197,7 @@ export function AdminCompliance() {
       <section className="v2-kpi-grid">
         <Card padding="compact">
           <div className="v2-kds-stat">
-            <FileWarning className="h-4 w-4" style={{ color: "var(--v2-danger, #b91c1c)" }} />
+            <FileWarning className="h-4 w-4" style={{ color: "var(--danger)" }} />
             <div>
               <div className="v2-kds-stat-value tabular">{counts.expired}</div>
               <div className="v2-kds-stat-label">Expired</div>
@@ -206,7 +206,7 @@ export function AdminCompliance() {
         </Card>
         <Card padding="compact">
           <div className="v2-kds-stat">
-            <CalendarClock className="h-4 w-4" style={{ color: "var(--v2-danger, #b91c1c)" }} />
+            <CalendarClock className="h-4 w-4" style={{ color: "var(--danger)" }} />
             <div>
               <div className="v2-kds-stat-value tabular">{counts.urgent}</div>
               <div className="v2-kds-stat-label">Due in 7 days</div>
@@ -215,7 +215,7 @@ export function AdminCompliance() {
         </Card>
         <Card padding="compact">
           <div className="v2-kds-stat">
-            <CalendarCheck2 className="h-4 w-4" style={{ color: "var(--v2-warning, #b45309)" }} />
+            <CalendarCheck2 className="h-4 w-4" style={{ color: "var(--warning)" }} />
             <div>
               <div className="v2-kds-stat-value tabular">{counts.soon}</div>
               <div className="v2-kds-stat-label">Due in 30 days</div>
@@ -224,7 +224,7 @@ export function AdminCompliance() {
         </Card>
         <Card padding="compact">
           <div className="v2-kds-stat">
-            <CheckCircle2 className="h-4 w-4" style={{ color: "var(--v2-success, #16a34a)" }} />
+            <CheckCircle2 className="h-4 w-4" style={{ color: "var(--success)" }} />
             <div>
               <div className="v2-kds-stat-value tabular">{counts.healthy}</div>
               <div className="v2-kds-stat-label">Healthy</div>

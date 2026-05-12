@@ -290,12 +290,12 @@ export function AdminKDS() {
             padding: "0.5rem 0.75rem",
             margin: "0.5rem 0 0.25rem",
             borderRadius: "0.5rem",
-            background: "var(--v2-surface-muted, #f9fafb)",
-            border: "1px solid var(--v2-border, #e5e7eb)",
+            background: "var(--surface-2)",
+            border: "1px solid var(--border)",
             fontSize: "0.8125rem",
           }}
         >
-          <span style={{ fontWeight: 600, color: "var(--v2-text-muted, #6b7280)" }}>
+          <span style={{ fontWeight: 600, color: "var(--fg-muted)" }}>
             <RotateCcw className="h-3.5 w-3.5" style={{ display: "inline", marginRight: "0.375rem", verticalAlign: "-2px" }} />
             Just bumped:
           </span>
@@ -466,7 +466,7 @@ function Ticket({ order, stationFilter, onAdvance, isUpdating, nowMs }: TicketPr
                           marginTop: "0.125rem",
                           fontSize: "0.75rem",
                           fontWeight: 600,
-                          color: "#b91c1c",
+                          color: "var(--danger)",
                           letterSpacing: "0.01em",
                         }}
                       >

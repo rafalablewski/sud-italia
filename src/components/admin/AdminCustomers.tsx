@@ -262,9 +262,9 @@ export function AdminCustomers() {
                 >
                   <span style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                     {t.trigger === "birthday" ? (
-                      <Cake className="h-3.5 w-3.5" style={{ color: "var(--v2-brand, #b91c1c)" }} />
+                      <Cake className="h-3.5 w-3.5" style={{ color: "var(--brand)" }} />
                     ) : (
-                      <PartyPopper className="h-3.5 w-3.5" style={{ color: "var(--v2-warning, #b45309)" }} />
+                      <PartyPopper className="h-3.5 w-3.5" style={{ color: "var(--warning)" }} />
                     )}
                     <Link href={`/admin/customers/${encodeURIComponent(t.phone)}`} className="v2-link-cell">
                       {t.name || "Customer"}

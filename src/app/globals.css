@@ -1722,7 +1722,7 @@ html { scroll-behavior: smooth; }
 .v2-kpi-delta-up { background: var(--success-soft); color: var(--success); }
 .v2-kpi-delta-down { background: var(--danger-soft); color: var(--danger); }
 .v2-kpi-delta-flat { background: var(--surface-3); color: var(--fg-subtle); }
-.v2-kpi-hint { font-size: var(--text-2xs); color: var(--fg-subtle); }
+.v2-kpi-hint { font-size: var(--text-2xs); color: var(--fg-subtle); line-height: 1.4; white-space: normal; word-break: break-word; }
 .v2-kpi-spark { width: 96px; flex-shrink: 0; opacity: 0.85; }
 
 /* ============================

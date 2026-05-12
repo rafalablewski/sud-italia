@@ -715,18 +715,18 @@ function Next60Widget({ location, orders, slots, lowStock, openShifts }: Next60P
         flexDirection: "column",
         gap: "0.25rem",
         padding: "0.75rem 1rem",
-        borderRight: "1px solid var(--v2-border, #e5e7eb)",
+        borderRight: "1px solid var(--border)",
         minWidth: 0,
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--v2-text-muted, #6b7280)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--fg-muted)" }}>
         {icon}
         {title}
       </div>
       <div style={{ fontSize: "1.5rem", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
         <Badge tone={tone} variant="soft">{count}</Badge>
       </div>
-      <div style={{ fontSize: "0.75rem", color: "var(--v2-text-muted, #6b7280)" }}>{hint}</div>
+      <div style={{ fontSize: "0.75rem", color: "var(--fg-muted)" }}>{hint}</div>
     </div>
   );
 
@@ -745,7 +745,7 @@ function Next60Widget({ location, orders, slots, lowStock, openShifts }: Next60P
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-            border: "1px solid var(--v2-border, #e5e7eb)",
+            border: "1px solid var(--border)",
             borderRadius: "0.5rem",
             overflow: "hidden",
           }}
@@ -801,7 +801,7 @@ function Next60Widget({ location, orders, slots, lowStock, openShifts }: Next60P
           >
             {dueOrders.length > 0 && (
               <div>
-                <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--v2-text-muted, #6b7280)", marginBottom: "0.25rem" }}>
+                <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--fg-muted)", marginBottom: "0.25rem" }}>
                   TICKETS DUE
                 </div>
                 <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
@@ -819,7 +819,7 @@ function Next60Widget({ location, orders, slots, lowStock, openShifts }: Next60P
             )}
             {sortedLowStock.length > 0 && (
               <div>
-                <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--v2-text-muted, #6b7280)", marginBottom: "0.25rem" }}>
+                <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--fg-muted)", marginBottom: "0.25rem" }}>
                   LOW STOCK
                 </div>
                 <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: "0.25rem" }}>

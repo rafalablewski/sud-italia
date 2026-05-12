@@ -285,8 +285,8 @@ export function AdminMenu() {
             padding: "0.5rem 0.75rem",
             margin: "0 0 0.5rem",
             borderRadius: "0.5rem",
-            background: "var(--v2-surface, #ffffff)",
-            border: "1px solid var(--v2-border, #e5e7eb)",
+            background: "var(--surface-1)",
+            border: "1px solid var(--border)",
             boxShadow: "0 4px 12px rgba(0, 0, 0, 0.06)",
           }}
         >
@@ -348,7 +348,7 @@ export function AdminMenu() {
                       <li
                         key={item.id}
                         className={`v2-mng-row v2-mng-row-menu ${item.available ? "" : "is-off"}`}
-                        style={isSelected ? { background: "rgba(185, 28, 28, 0.04)" } : undefined}
+                        style={isSelected ? { background: "var(--brand-soft)" } : undefined}
                       >
                         <input
                           type="checkbox"

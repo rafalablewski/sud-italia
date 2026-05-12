@@ -174,7 +174,7 @@ export function Table<R>({
                   key={id}
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
                   className={`${onRowClick ? "v2-tr-clickable" : ""} ${isSelected ? "v2-tr-selected" : ""}`.trim()}
-                  style={isSelected ? { background: "rgba(185, 28, 28, 0.04)" } : undefined}
+                  style={isSelected ? { background: "var(--brand-soft)" } : undefined}
                 >
                   {selectable && (
                     <td

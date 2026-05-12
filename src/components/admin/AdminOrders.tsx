@@ -790,7 +790,7 @@ function OrderDetail({ order, onClose, onStatusChange, onRequestDelete, onReques
                         marginLeft: "1.75rem",
                         marginTop: "0.25rem",
                         fontSize: "0.8125rem",
-                        color: "var(--v2-text-muted, #6b7280)",
+                        color: "var(--fg-muted)",
                         fontStyle: "italic",
                       }}
                     >
@@ -822,7 +822,7 @@ function OrderDetail({ order, onClose, onStatusChange, onRequestDelete, onReques
                 <span className="mono">{formatPrice(order.totalAmount)}</span>
               </div>
               {refunded && (
-                <div style={{ color: "var(--v2-danger, #b91c1c)" }}>
+                <div style={{ color: "var(--danger)" }}>
                   <span>Refunded</span>
                   <span className="mono">−{formatPrice(refunded.amount)}</span>
                 </div>
@@ -959,8 +959,8 @@ function BulkActionsBar({
         padding: "0.5rem 0.75rem",
         margin: "0 0 0.5rem",
         borderRadius: "0.5rem",
-        background: "var(--v2-surface, #ffffff)",
-        border: "1px solid var(--v2-border, #e5e7eb)",
+        background: "var(--surface-1)",
+        border: "1px solid var(--border)",
         boxShadow: "0 4px 12px rgba(0, 0, 0, 0.06)",
       }}
     >
@@ -1110,13 +1110,13 @@ function RefundDialogBody({ order, onClose, onSubmit }: RefundDialogBodyProps) {
 
         <div
           style={{
-            background: "var(--v2-surface-muted, #f9fafb)",
-            border: "1px solid var(--v2-border, #e5e7eb)",
+            background: "var(--surface-2)",
+            border: "1px solid var(--border)",
             borderRadius: "0.5rem",
             padding: "0.75rem 1rem",
             fontSize: "0.8125rem",
             lineHeight: 1.5,
-            color: "var(--v2-text-muted, #6b7280)",
+            color: "var(--fg-muted)",
           }}
         >
           {willReverseStripe ? (

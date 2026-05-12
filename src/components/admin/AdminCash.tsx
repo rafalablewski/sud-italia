@@ -188,7 +188,7 @@ export function AdminCash() {
                   .map((d) => (
                     <li
                       key={d.id}
-                      style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.8125rem", padding: "0.25rem 0", borderTop: "1px solid var(--v2-border, #e5e7eb)" }}
+                      style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.8125rem", padding: "0.25rem 0", borderTop: "1px solid var(--border)" }}
                     >
                       <span style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                         <Badge tone={d.amountGrosze < 0 ? "danger" : "success"} variant="soft">
@@ -240,7 +240,7 @@ export function AdminCash() {
                       gap: "0.5rem",
                       alignItems: "center",
                       padding: "0.5rem 0",
-                      borderTop: "1px solid var(--v2-border, #e5e7eb)",
+                      borderTop: "1px solid var(--border)",
                       fontSize: "0.875rem",
                     }}
                   >
@@ -317,8 +317,8 @@ export function AdminCash() {
 
 function StatTile({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) {
   return (
-    <div style={{ border: "1px solid var(--v2-border, #e5e7eb)", borderRadius: "0.5rem", padding: "0.75rem 1rem", background: "var(--v2-surface-muted, #f9fafb)" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.75rem", color: "var(--v2-text-muted, #6b7280)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+    <div style={{ border: "1px solid var(--border)", borderRadius: "0.5rem", padding: "0.75rem 1rem", background: "var(--surface-2)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.75rem", color: "var(--fg-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
         {icon}
         {label}
       </div>

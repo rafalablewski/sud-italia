@@ -885,7 +885,7 @@ function VarianceCard({ rows }: { rows: VarianceRow[] }) {
                   gap: "0.75rem",
                   alignItems: "center",
                   padding: "0.5rem 0",
-                  borderTop: "1px solid var(--v2-border, #e5e7eb)",
+                  borderTop: "1px solid var(--border)",
                   fontSize: "0.875rem",
                 }}
               >

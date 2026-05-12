@@ -193,7 +193,7 @@ export function AuditLog() {
                   <li
                     key={e.id}
                     style={{
-                      borderTop: "1px solid var(--v2-border, #e5e7eb)",
+                      borderTop: "1px solid var(--border)",
                       padding: "0.75rem 1rem",
                     }}
                   >
@@ -300,20 +300,20 @@ function DiffRenderer({ before, after }: { before: unknown; after: unknown }) {
     <div
       style={{
         marginTop: "0.5rem",
-        background: "var(--v2-surface-muted, #f9fafb)",
-        border: "1px solid var(--v2-border, #e5e7eb)",
+        background: "var(--surface-2)",
+        border: "1px solid var(--border)",
         borderRadius: "0.5rem",
         padding: "0.5rem 0.75rem",
-        fontFamily: "var(--v2-font-mono, ui-monospace, monospace)",
+        fontFamily: "var(--font-mono, ui-monospace, monospace)",
         fontSize: "0.8125rem",
       }}
     >
       {rows.map((r) => (
         <div key={r.key} style={{ display: "flex", flexDirection: "column", gap: "0.125rem", padding: "0.25rem 0" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            {r.kind === "added" && <Plus className="h-3 w-3" style={{ color: "var(--v2-success, #16a34a)" }} />}
-            {r.kind === "removed" && <Minus className="h-3 w-3" style={{ color: "var(--v2-danger, #b91c1c)" }} />}
-            {r.kind === "changed" && <span style={{ color: "var(--v2-warning, #b45309)", fontWeight: 600 }}>~</span>}
+            {r.kind === "added" && <Plus className="h-3 w-3" style={{ color: "var(--success)" }} />}
+            {r.kind === "removed" && <Minus className="h-3 w-3" style={{ color: "var(--danger)" }} />}
+            {r.kind === "changed" && <span style={{ color: "var(--warning)", fontWeight: 600 }}>~</span>}
             <span style={{ fontWeight: 600 }}>{r.key}</span>
           </div>
           {r.kind === "removed" && <DiffValue value={r.before} tone="removed" />}
@@ -334,14 +334,11 @@ function DiffBlock({ label, value, tone }: { label: string; value: unknown; tone
   return (
     <div
       style={{
-        background:
-          tone === "added"
-            ? "rgba(22, 163, 74, 0.08)"
-            : "rgba(185, 28, 28, 0.08)",
-        border: `1px solid ${tone === "added" ? "rgba(22, 163, 74, 0.25)" : "rgba(185, 28, 28, 0.25)"}`,
+        background: tone === "added" ? "var(--success-soft)" : "var(--danger-soft)",
+        border: "1px solid var(--border)",
         borderRadius: "0.375rem",
         padding: "0.5rem 0.75rem",
-        fontFamily: "var(--v2-font-mono, ui-monospace, monospace)",
+        fontFamily: "var(--font-mono, ui-monospace, monospace)",
         fontSize: "0.8125rem",
       }}
     >
@@ -363,8 +360,8 @@ function DiffValue({ value, tone }: { value: unknown; tone: "added" | "removed" 
         wordBreak: "break-word",
         color:
           tone === "added"
-            ? "var(--v2-success, #16a34a)"
-            : "var(--v2-danger, #b91c1c)",
+            ? "var(--success)"
+            : "var(--danger)",
       }}
     >
       {text}

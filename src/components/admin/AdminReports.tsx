@@ -383,8 +383,8 @@ export function AdminReports() {
           tone="success"
           hint={
             tipReport && tipReport.totals.totalTippedOrders > 0
-              ? `${tipReport.totals.totalTippedOrders} tipped orders · avg ${formatPrice(tipReport.totals.averageTipPerOrder)} (${(tipReport.totals.averageTipRate * 100).toFixed(1)}% of revenue)`
-              : "No tips in this window"
+              ? `${tipReport.totals.totalTippedOrders} tipped · ${formatPrice(tipReport.totals.averageTipPerOrder)} avg · ${(tipReport.totals.averageTipRate * 100).toFixed(1)}%`
+              : "No tips in window"
           }
         />
       </section>
