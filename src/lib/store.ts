@@ -1152,6 +1152,8 @@ export interface LoyaltyMember {
   nickname?: string;
   email?: string;
   signedUpAt: string;
+  /** Optional ISO date of birth (YYYY-MM-DD). Powers birthday trigger campaigns. */
+  dob?: string;
 }
 
 export async function getLoyaltyMembers(): Promise<LoyaltyMember[]> {
@@ -1182,7 +1184,7 @@ export async function getLoyaltyMember(phone: string): Promise<LoyaltyMember | u
 
 export async function updateLoyaltyMember(
   phone: string,
-  updates: Partial<Pick<LoyaltyMember, "name" | "lastName" | "nickname" | "email">>
+  updates: Partial<Pick<LoyaltyMember, "name" | "lastName" | "nickname" | "email" | "dob">>
 ): Promise<LoyaltyMember | null> {
   const canonical = normalizePlPhoneE164(phone) || phone.trim();
   return withLock("loyalty-members.json", async () => {

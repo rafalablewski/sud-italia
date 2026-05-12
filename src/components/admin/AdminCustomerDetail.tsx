@@ -75,6 +75,8 @@ interface Member {
   nickname?: string;
   email?: string;
   signedUpAt?: string;
+  /** ISO date of birth — powers birthday triggers. */
+  dob?: string;
 }
 
 interface DetailData {
@@ -377,6 +379,12 @@ export function AdminCustomerDetail({ phoneEncoded }: { phoneEncoded: string }) 
         </Card>
       </section>
 
+      <ProfileEditor
+        phone={data.phone}
+        member={data.member}
+        onSaved={fetchAll}
+      />
+
       <section className="v2-grid-2">
         <Card>
           <CardHeader title="Channels & locations" description="Where this customer prefers to order" />
@@ -455,5 +463,85 @@ export function AdminCustomerDetail({ phoneEncoded }: { phoneEncoded: string }) 
         </div>
       </Dialog>
     </div>
+  );
+}
+
+/**
+ * Inline editor for the optional profile fields we use for CRM triggers
+ * today (DOB + email). Saving creates a stub `LoyaltyMember` row if the
+ * customer has never explicitly signed up — that way a manager who learns
+ * a customer's birthday can record it immediately without forcing the
+ * customer through a separate signup flow.
+ */
+function ProfileEditor({
+  phone,
+  member,
+  onSaved,
+}: {
+  phone: string;
+  member: Member | null;
+  onSaved: () => void | Promise<void>;
+}) {
+  const toast = useToast();
+  const [dob, setDob] = useState(member?.dob ?? "");
+  const [email, setEmail] = useState(member?.email ?? "");
+  const [busy, setBusy] = useState(false);
+
+  const dirty = (dob || "") !== (member?.dob ?? "") || (email || "") !== (member?.email ?? "");
+
+  const save = async () => {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/admin/members/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone,
+          dob: dob || undefined,
+          email: email.trim() || undefined,
+          name: member?.name || member?.nickname,
+        }),
+      });
+      if (res.ok) {
+        toast.success("Profile saved");
+        await onSaved();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast.error("Could not save", data?.error);
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader
+        title="Profile"
+        description="Optional fields. DOB powers birthday triggers; email enables receipt + reactivation campaigns."
+      />
+      <CardBody>
+        <div className="v2-form-row-2">
+          <Input
+            label="Date of birth"
+            type="date"
+            value={dob}
+            onChange={(e) => setDob(e.target.value)}
+          />
+          <Input
+            label="Email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="optional"
+          />
+        </div>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "0.75rem" }}>
+          <Button variant="primary" size="sm" onClick={save} disabled={busy || !dirty}>
+            {busy ? "Saving…" : "Save profile"}
+          </Button>
+        </div>
+      </CardBody>
+    </Card>
   );
 }
