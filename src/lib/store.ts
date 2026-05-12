@@ -2724,6 +2724,68 @@ export async function saveComplianceItem(
   });
 }
 
+// --- GDPR erasure -------------------------------------------------------
+
+/**
+ * Redact every order belonging to a phone number. Used by the GDPR delete
+ * flow — order rows stay for accounting, but customerName / address /
+ * specialInstructions are wiped and customerPhone is rewritten to a
+ * deterministic tombstone so reconciliation tooling still groups them.
+ */
+export async function gdprRedactOrders(canonicalPhone: string, tombstone: string): Promise<number> {
+  return withLock("orders.json", async () => {
+    const list = await readJSON<Order[]>("orders.json", []);
+    let touched = 0;
+    for (const o of list) {
+      if (phonesEqualPl(o.customerPhone, canonicalPhone)) {
+        o.customerName = "[GDPR_REDACTED]";
+        o.customerPhone = tombstone;
+        o.deliveryAddress = undefined;
+        o.specialInstructions = undefined;
+        touched++;
+      }
+    }
+    if (touched > 0) await writeJSON("orders.json", list);
+    return touched;
+  });
+}
+
+export async function gdprRemoveCustomerNotes(canonicalPhone: string): Promise<number> {
+  return withLock("customer-notes.json", async () => {
+    const list = await readJSON<CustomerNote[]>("customer-notes.json", []);
+    const next = list.filter((n) => !phonesEqualPl(n.phone, canonicalPhone));
+    const removed = list.length - next.length;
+    if (removed > 0) await writeJSON("customer-notes.json", next);
+    return removed;
+  });
+}
+
+export async function gdprRemoveLoyaltyMember(canonicalPhone: string): Promise<boolean> {
+  return withLock("loyalty-members.json", async () => {
+    const list = await readJSON<{ phone: string }[]>("loyalty-members.json", []);
+    const next = list.filter((m) => !phonesEqualPl(m.phone, canonicalPhone));
+    if (next.length === list.length) return false;
+    await writeJSON("loyalty-members.json", next);
+    return true;
+  });
+}
+
+export async function gdprRedactFeedback(canonicalPhone: string, tombstone: string): Promise<number> {
+  return withLock("feedback.json", async () => {
+    const list = await readJSON<FeedbackEntry[]>("feedback.json", []);
+    let touched = 0;
+    for (const f of list) {
+      if (phonesEqualPl(f.customerPhone, canonicalPhone)) {
+        f.customerName = "[GDPR_REDACTED]";
+        f.customerPhone = tombstone;
+        touched++;
+      }
+    }
+    if (touched > 0) await writeJSON("feedback.json", list);
+    return touched;
+  });
+}
+
 // --- Cash sessions ------------------------------------------------------
 
 export async function getCashSessions(locationSlug?: string): Promise<CashSession[]> {
