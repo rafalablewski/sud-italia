@@ -1,6 +1,7 @@
 import {
   LayoutDashboard,
   ClipboardList,
+  ChefHat,
   UtensilsCrossed,
   FlaskConical,
   CalendarDays,
@@ -41,6 +42,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/admin", label: "Dashboard", icon: LayoutDashboard, shortcut: "d" },
       { href: "/admin/orders", label: "Orders", icon: ClipboardList, shortcut: "o" },
+      { href: "/admin/kds", label: "Kitchen Display", icon: ChefHat, shortcut: "k" },
     ],
   },
   {

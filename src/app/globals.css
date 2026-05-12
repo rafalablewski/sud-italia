@@ -1960,6 +1960,140 @@ html { scroll-behavior: smooth; }
 .v2-detail-status-actions { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 
 /* ============================
+   ADMIN v2 — KDS
+   ============================ */
+
+.v2-kds-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+}
+.v2-kds-stat { display: flex; align-items: center; gap: 10px; }
+.v2-kds-stat-value { font-size: var(--text-xl); font-weight: 600; color: var(--fg); line-height: 1.1; }
+.v2-kds-stat-label { font-size: var(--text-2xs); color: var(--fg-subtle); text-transform: uppercase; letter-spacing: 0.06em; }
+
+.v2-kds-board {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(280px, 1fr));
+  gap: 12px;
+}
+@media (max-width: 1100px) {
+  .v2-kds-board { grid-template-columns: 1fr; }
+}
+
+.v2-kds-col {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  min-height: 320px;
+}
+.v2-kds-col-warning { border-top: 3px solid var(--warning); }
+.v2-kds-col-info { border-top: 3px solid var(--info); }
+.v2-kds-col-success { border-top: 3px solid var(--success); }
+
+.v2-kds-col-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.v2-kds-col-count {
+  font-size: var(--text-2xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-subtle);
+}
+.v2-kds-col-body { padding: 10px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; max-height: calc(100vh - 320px); }
+.v2-kds-col-empty { padding: 16px 8px; text-align: center; color: var(--fg-subtle); font-size: var(--text-xs); }
+
+.v2-ticket {
+  background: var(--surface-1);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: var(--shadow-xs);
+}
+.v2-ticket-warning { border-left: 4px solid var(--warning); }
+.v2-ticket-danger { border-left: 4px solid var(--danger); background: color-mix(in oklab, var(--danger-soft) 50%, var(--surface-1)); animation: v2-pulse 2s ease-in-out infinite; }
+
+@keyframes v2-pulse {
+  0%, 100% { box-shadow: var(--shadow-xs); }
+  50% { box-shadow: 0 0 0 3px var(--danger-soft); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .v2-ticket-danger { animation: none; }
+}
+
+.v2-ticket-header { display: flex; justify-content: space-between; align-items: center; }
+.v2-ticket-id { font-size: var(--text-sm); font-weight: 700; color: var(--fg); letter-spacing: 0.04em; }
+.v2-ticket-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+}
+.v2-ticket-timer-neutral { background: var(--surface-3); color: var(--fg-muted); }
+.v2-ticket-timer-warning { background: var(--warning-soft); color: var(--warning); }
+.v2-ticket-timer-danger { background: var(--danger-soft); color: var(--danger); }
+
+.v2-ticket-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: var(--text-xs); color: var(--fg-muted); }
+.v2-ticket-customer { font-weight: 600; color: var(--fg); }
+.v2-ticket-channel { display: inline-flex; align-items: center; gap: 6px; }
+.v2-ticket-loc { display: inline-flex; align-items: center; gap: 3px; text-transform: capitalize; }
+
+.v2-ticket-stations { display: flex; flex-direction: column; gap: 6px; }
+.v2-ticket-station {
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+  transition: opacity var(--duration-fast);
+}
+.v2-ticket-station.is-dim { opacity: 0.45; }
+.v2-ticket-station-label {
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+  margin-bottom: 4px;
+}
+.v2-ticket-station ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.v2-ticket-station li { display: flex; align-items: baseline; gap: 6px; font-size: var(--text-sm); color: var(--fg); }
+.v2-ticket-qty { color: var(--fg-subtle); font-variant-numeric: tabular-nums; min-width: 22px; }
+.v2-ticket-name { flex: 1; }
+
+.v2-ticket-notes {
+  background: var(--warning-soft);
+  color: var(--warning);
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.v2-ticket-notes-label { font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; font-size: var(--text-2xs); }
+
+.v2-ticket-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 4px; border-top: 1px solid var(--border); }
+.v2-ticket-slot {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+
+/* ============================
    ADMIN DESIGN SYSTEM (LEGACY — being migrated to v2)
    Tokens → Surfaces → Inputs → Buttons → Typography → Badges → Alerts
    8px baseline grid · 5-color semantic palette · 6-level type scale
