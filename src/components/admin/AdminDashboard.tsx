@@ -1,21 +1,40 @@
 "use client";
 
-import { AdminNav } from "./AdminNav";
-import { useState, useEffect, useCallback } from "react";
-import { locations } from "@/data/locations";
-import { formatPrice } from "@/lib/utils";
-import { formatSlotDate } from "@/lib/format";
-import {
-  TrendingUp, TrendingDown, DollarSign, ShoppingBag, Package,
-  Truck, Clock, Bell, CheckCheck, ArrowRight, BarChart3,
-  RefreshCw, MapPin, Users, XCircle, AlertTriangle, Layers,
-  Activity, CalendarDays, Trash2, Eraser,
-} from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import type { Order } from "@/data/types";
-import { LocationTabs } from "./LocationTabs";
+import {
+  Activity,
+  AlertTriangle,
+  ArrowRight,
+  Banknote,
+  ClipboardList,
+  Coins,
+  Flame,
+  MapPin,
+  PiggyBank,
+  Receipt,
+  RefreshCw,
+  Star,
+  Users,
+} from "lucide-react";
+import { useAdminLocation } from "./v2/LocationContext";
+import { Badge, Button, Card, CardBody, CardHeader, EmptyState, Tabs, type Column, Table } from "./v2/ui";
+import { AreaChart, BarChart, Heatmap, KpiCard } from "./v2/charts";
 
-const activeLocations = locations.filter((l) => l.isActive);
+type Period = "today" | "7d" | "30d" | "90d";
+
+interface DailyStats {
+  date: string;
+  revenue: number;
+  cost: number;
+  profit: number;
+  orderCount: number;
+  itemCount: number;
+  avgOrderValue: number;
+  takeoutCount: number;
+  deliveryCount: number;
+  topItems: { name: string; quantity: number; revenue: number }[];
+}
 
 interface SummaryData {
   totalRevenue: number;
@@ -27,733 +46,521 @@ interface SummaryData {
   avgOrderValue: number;
   takeoutCount: number;
   deliveryCount: number;
-  dailyStats: { date: string; revenue: number; profit: number; orderCount: number }[];
+  dailyStats: DailyStats[];
   topItems: { name: string; quantity: number; revenue: number }[];
-  categoryBreakdown: Record<string, { revenue: number; cost: number; count: number }>;
+}
+
+interface LocationComparison {
+  locationSlug: string;
+  city: string;
+  revenue: number;
+  profit: number;
+  profitMargin: number;
+  orderCount: number;
+  avgOrderValue: number;
+  cancellationRate: number;
 }
 
 interface InsightsData {
-  slotUtilization: { time: string; totalCapacity: number; totalUsed: number; utilization: number; slotCount: number }[];
-  locationComparison: { locationSlug: string; city: string; revenue: number; profit: number; profitMargin: number; orderCount: number; avgOrderValue: number; totalItems: number; avgItemsPerOrder: number; takeoutCount: number; deliveryCount: number; cancelledCount: number; cancellationRate: number }[];
-  repeatCustomers: { name: string; phone: string; orderCount: number; totalSpent: number; lastOrderDate: string }[];
-  avgItemsPerOrder: number;
+  locationComparison: LocationComparison[];
   topSellers: { name: string; quantity: number; revenue: number }[];
-  worstSellers: { name: string; quantity: number; revenue: number }[];
   cancelledOrders: number;
   cancellationRate: number;
   peakHours: { hour: number; orderCount: number; revenue: number }[];
+  repeatCustomers: { name: string; phone: string; orderCount: number; totalSpent: number }[];
 }
 
 interface NotificationItem {
-  id: string; type: string; title: string; message: string;
-  locationSlug?: string; orderId?: string; createdAt: string; read: boolean;
+  id: string;
+  type: "new_order" | "slot_full" | "daily_summary" | "low_slots" | "order_status";
+  title: string;
+  message: string;
+  locationSlug?: string;
+  orderId?: string;
+  createdAt: string;
+  read: boolean;
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  pending: "badge-pending",
-  confirmed: "badge-confirmed",
-  preparing: "badge-preparing",
-  ready: "badge-ready",
-  completed: "badge-completed",
+interface OrderRow {
+  id: string;
+  locationSlug: string;
+  status: string;
+  totalAmount: number;
+  customerName: string;
+  createdAt: string;
+  slotDate?: string;
+}
+
+const PERIOD_LABEL: Record<Period, string> = {
+  today: "Today",
+  "7d": "7 days",
+  "30d": "30 days",
+  "90d": "90 days",
 };
 
-const NOTIF_ICONS: Record<string, string> = {
-  new_order: "badge-info",
-  slot_full: "badge-warning",
-  daily_summary: "badge-success",
-  low_slots: "badge-warning",
-  order_status: "badge-info",
+const PERIOD_DAYS: Record<Period, number> = {
+  today: 1,
+  "7d": 7,
+  "30d": 30,
+  "90d": 90,
 };
 
-function getDateRange(period: string): { from: string; to: string } {
-  const today = new Date();
-  const to = today.toISOString().split("T")[0];
-  const from = new Date(today);
-  switch (period) {
-    case "today": return { from: to, to };
-    case "week": from.setDate(from.getDate() - 7); break;
-    case "month": from.setDate(from.getDate() - 30); break;
-    case "year": from.setFullYear(from.getFullYear() - 1); break;
-  }
-  return { from: from.toISOString().split("T")[0], to };
+function isoDate(d: Date): string {
+  return d.toISOString().split("T")[0];
+}
+
+function dateRange(period: Period): { from: string; to: string } {
+  const to = new Date();
+  const from = new Date();
+  from.setDate(to.getDate() - (PERIOD_DAYS[period] - 1));
+  return { from: isoDate(from), to: isoDate(to) };
+}
+
+function previousRange(period: Period): { from: string; to: string } {
+  const days = PERIOD_DAYS[period];
+  const to = new Date();
+  to.setDate(to.getDate() - days);
+  const from = new Date();
+  from.setDate(from.getDate() - days * 2 + 1);
+  return { from: isoDate(from), to: isoDate(to) };
+}
+
+function fmtCurrency(grosze: number): string {
+  return `${(grosze / 100).toLocaleString("pl-PL", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  })} zł`;
+}
+
+function fmtPercent(n: number, digits = 0): string {
+  return `${n.toFixed(digits)}%`;
+}
+
+function pctDelta(curr: number, prev: number): number | undefined {
+  if (!prev) return undefined;
+  return ((curr - prev) / prev) * 100;
+}
+
+const HOUR_LABELS = Array.from({ length: 24 }, (_, h) => `${String(h).padStart(2, "0")}`);
+const DOW_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+function dayOfWeek(iso: string): number {
+  const d = new Date(iso);
+  const jd = d.getDay();
+  return jd === 0 ? 6 : jd - 1;
 }
 
 export function AdminDashboard() {
-  const [period, setPeriod] = useState("week");
-  const [location, setLocation] = useState("");
+  const [period, setPeriod] = useState<Period>("7d");
+  const { location } = useAdminLocation();
+
   const [summary, setSummary] = useState<SummaryData | null>(null);
+  const [prevSummary, setPrevSummary] = useState<SummaryData | null>(null);
   const [insights, setInsights] = useState<InsightsData | null>(null);
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<OrderRow[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const fetchAll = useCallback(async () => {
-    setLoading(true);
-    const { from, to } = getDateRange(period);
+    const { from, to } = dateRange(period);
+    const prev = previousRange(period);
     const locParam = location ? `&location=${location}` : "";
+
     try {
-      const [summaryRes, insightsRes, ordersRes, notifsRes] = await Promise.all([
-        fetch(`/api/admin/analytics?from=${from}&to=${to}${locParam}`),
-        fetch(`/api/admin/insights?from=${from}&to=${to}`),
-        fetch(`/api/admin/orders${location ? `?location=${location}` : ""}`),
-        fetch("/api/admin/notifications"),
+      const [a, b, ins, ord, notif] = await Promise.all([
+        fetch(`/api/admin/analytics?from=${from}&to=${to}${locParam}`).then((r) => (r.ok ? r.json() : null)),
+        fetch(`/api/admin/analytics?from=${prev.from}&to=${prev.to}${locParam}`).then((r) => (r.ok ? r.json() : null)),
+        fetch(`/api/admin/insights?from=${from}&to=${to}`).then((r) => (r.ok ? r.json() : null)),
+        fetch(`/api/admin/orders${location ? `?location=${location}` : ""}`).then((r) => (r.ok ? r.json() : [])),
+        fetch(`/api/admin/notifications`).then((r) => (r.ok ? r.json() : [])),
       ]);
-      if (summaryRes.ok) setSummary(await summaryRes.json());
-      if (insightsRes.ok) setInsights(await insightsRes.json());
-      if (ordersRes.ok) { const all = await ordersRes.json(); setOrders(all.slice(0, 10)); }
-      if (notifsRes.ok) setNotifications(await notifsRes.json());
-    } catch (err) { console.error("Dashboard fetch error:", err); }
-    finally { setLoading(false); }
+      setSummary(a);
+      setPrevSummary(b);
+      setInsights(ins);
+      setOrders(Array.isArray(ord) ? ord : []);
+      setNotifications(Array.isArray(notif) ? notif : []);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, [period, location]);
 
   useEffect(() => {
+    setLoading(true);
     fetchAll();
-    const interval = setInterval(fetchAll, 30000);
+    const interval = setInterval(fetchAll, 30_000);
     return () => clearInterval(interval);
   }, [fetchAll]);
 
-  const markAllRead = async () => {
-    await fetch("/api/admin/notifications", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ markAll: true }) });
-    setNotifications((n) => n.map((x) => ({ ...x, read: true })));
-  };
+  const kpis = useMemo(() => {
+    const rev = summary?.totalRevenue ?? 0;
+    const prevRev = prevSummary?.totalRevenue ?? 0;
+    const oTot = summary?.totalOrders ?? 0;
+    const prevOrders = prevSummary?.totalOrders ?? 0;
+    const aov = summary?.avgOrderValue ?? 0;
+    const prevAov = prevSummary?.avgOrderValue ?? 0;
+    const margin = summary?.profitMargin ?? 0;
+    const prevMargin = prevSummary?.profitMargin ?? 0;
+    const profit = summary?.totalProfit ?? 0;
+    return {
+      rev,
+      revDelta: pctDelta(rev, prevRev),
+      orders: oTot,
+      ordersDelta: pctDelta(oTot, prevOrders),
+      aov,
+      aovDelta: pctDelta(aov, prevAov),
+      margin,
+      marginDelta: pctDelta(margin, prevMargin),
+      profit,
+    };
+  }, [summary, prevSummary]);
 
-  const deleteNotif = async (id: string) => {
-    const res = await fetch("/api/admin/notifications", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
-    if (res.ok) {
-      setNotifications((n) => n.filter((x) => x.id !== id));
-    }
-  };
+  const trendData = useMemo(() => {
+    if (!summary?.dailyStats) return [];
+    return summary.dailyStats.map((d) => ({
+      date: d.date,
+      revenue: Math.round(d.revenue / 100),
+      profit: Math.round(d.profit / 100),
+    }));
+  }, [summary]);
 
-  const pruneOrphanOrderNotifs = async () => {
-    if (
-      !window.confirm(
-        "Remove new-order notifications that do not match any existing order? Other notification types are kept."
-      )
-    ) {
-      return;
-    }
-    setPruneNotifsHint(null);
-    try {
-      const res = await fetch("/api/admin/notifications", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pruneOrphanNewOrders: true }),
-      });
-      const data = (await res.json()) as { removed?: number; error?: string };
-      if (!res.ok) {
-        setPruneNotifsHint(data.error || "Could not clean up.");
-        return;
-      }
-      setPruneNotifsHint(`Removed ${data.removed ?? 0} orphan new-order alert(s).`);
-      setTimeout(() => setPruneNotifsHint(null), 8000);
-      await fetchAll();
-    } catch {
-      setPruneNotifsHint("Network error.");
-    }
-  };
+  const revenueSpark = useMemo(() => trendData.map((d) => d.revenue), [trendData]);
+  const ordersSpark = useMemo(
+    () => (summary?.dailyStats ?? []).map((d) => d.orderCount),
+    [summary],
+  );
 
-  const handleStatusChange = async (orderId: string, status: string) => {
-    await fetch("/api/admin/orders", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderId, status }) });
+  const heatCells = useMemo(() => {
+    const { from } = dateRange(period);
+    const grid = new Map<string, number>();
+    for (const o of orders) {
+      if (o.status === "pending" || o.status === "cancelled") continue;
+      const day = o.slotDate || o.createdAt.split("T")[0];
+      if (day < from) continue;
+      const ts = new Date(o.createdAt);
+      if (Number.isNaN(ts.getTime())) continue;
+      const dow = DOW_LABELS[dayOfWeek(day)];
+      const hour = String(ts.getHours()).padStart(2, "0");
+      const key = `${dow}|${hour}`;
+      grid.set(key, (grid.get(key) ?? 0) + 1);
+    }
+    const cells: { x: string; y: string; value: number }[] = [];
+    for (const [k, v] of grid) {
+      const [y, x] = k.split("|");
+      cells.push({ x, y, value: v });
+    }
+    return cells;
+  }, [orders, period]);
+
+  const topSellers = useMemo(
+    () =>
+      (insights?.topSellers ?? []).slice(0, 8).map((t) => ({
+        name: t.name,
+        quantity: t.quantity,
+      })),
+    [insights],
+  );
+
+  const recentAlerts = useMemo(() => notifications.slice(0, 6), [notifications]);
+
+  const onManualRefresh = () => {
+    setRefreshing(true);
     fetchAll();
   };
 
-  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
-  const [pruneNotifsHint, setPruneNotifsHint] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!loading) setLastRefresh(new Date());
-  }, [loading]);
-
-  const maxRevenue = summary ? Math.max(...summary.dailyStats.map((d) => d.revenue), 1) : 1;
-  const activeOrders = orders.filter((o) => o.status !== "completed");
-  const unreadNotifs = notifications.filter((n) => !n.read);
-
-  const periodLabel = period === "today" ? "Today" : period === "week" ? "Last 7 days" : period === "month" ? "Last 30 days" : "Last year";
-
   return (
-    <>
-      <AdminNav />
-      <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
-        {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-heading font-bold admin-text">Dashboard</h1>
-            <p className="text-sm admin-text-dim mt-1">
-              {periodLabel} · Updated {timeAgo(lastRefresh.toISOString())}
-              {activeOrders.length > 0 && ` · ${activeOrders.length} active order${activeOrders.length !== 1 ? "s" : ""}`}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex gap-1">
-              {["today", "week", "month", "year"].map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setPeriod(p)}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                    period === p
-                      ? "bg-white/10 text-white border border-white/12"
-                      : "text-slate-400 border border-transparent hover:text-slate-200 hover:bg-white/5"
-                  }`}
-                >
-                  {p === "today" ? "Today" : p === "week" ? "7D" : p === "month" ? "30D" : "1Y"}
-                </button>
-              ))}
-            </div>
-            <button
-              onClick={fetchAll}
-              disabled={loading}
-              className="glass-btn-ghost p-1.5"
-              title="Refresh"
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-            </button>
-          </div>
+    <div className="v2-page">
+      <header className="v2-page-header">
+        <div className="v2-page-title-row">
+          <h1 className="v2-page-title">Executive Overview</h1>
+          <p className="v2-page-subtitle">
+            {location ? `${location.toUpperCase()} • ` : "All locations • "}
+            Real-time operations, finance, and customer health.
+          </p>
         </div>
-
-        <LocationTabs value={location} onChange={setLocation} includeAll />
-
-        {/* KPI Row 1 */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <KPICard label="Revenue" value={summary ? formatPrice(summary.totalRevenue) : undefined} icon={<DollarSign className="h-4 w-4" />} iconColor="text-slate-400" loading={!summary} />
-          <KPICard label="Profit" value={summary ? formatPrice(summary.totalProfit) : undefined} sub={summary ? `${summary.profitMargin}% margin` : undefined} icon={summary && summary.totalProfit >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />} iconColor={summary && summary.totalProfit >= 0 ? "text-emerald-400" : "text-red-400"} loading={!summary} />
-          <KPICard label="Orders" value={summary ? summary.totalOrders.toString() : undefined} sub={summary ? `${summary.takeoutCount} takeout · ${summary.deliveryCount} delivery` : undefined} icon={<ShoppingBag className="h-4 w-4" />} iconColor="text-slate-400" loading={!summary} />
-          <KPICard label="Avg Order" value={summary ? formatPrice(summary.avgOrderValue) : undefined} sub={insights ? `${insights.avgItemsPerOrder} items/order` : undefined} icon={<BarChart3 className="h-4 w-4" />} iconColor="text-slate-400" loading={!summary} />
-        </div>
-
-        {/* KPI Row 2 */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <KPICard label="Repeat Customers" value={insights ? insights.repeatCustomers.length.toString() : undefined} icon={<Users className="h-4 w-4" />} iconColor="text-slate-400" loading={!insights} />
-          <KPICard label="Items / Order" value={insights ? insights.avgItemsPerOrder.toString() : undefined} sub="basket size" icon={<Layers className="h-4 w-4" />} iconColor="text-slate-400" loading={!insights} />
-          <KPICard label="Cancellation" value={insights ? `${insights.cancellationRate}%` : undefined} sub={insights ? `${insights.cancelledOrders} cancelled` : undefined} icon={<XCircle className="h-4 w-4" />} iconColor={insights && insights.cancellationRate > 10 ? "text-red-400" : "text-emerald-400"} loading={!insights} />
-          <KPICard
-            label={insights?.worstSellers[0] ? "Slowest mover" : "Top seller"}
-            value={
-              insights
-                ? (insights.worstSellers[0]?.name ?? insights.topSellers[0]?.name ?? "None")
-                : undefined
-            }
-            sub={
-              insights?.worstSellers[0]
-                ? `${insights.worstSellers[0].quantity} sold`
-                : insights?.topSellers[0]
-                  ? `${insights.topSellers[0].quantity} sold`
-                  : undefined
-            }
-            icon={
-              insights?.worstSellers[0] ? (
-                <AlertTriangle className="h-4 w-4" />
-              ) : (
-                <TrendingUp className="h-4 w-4" />
-              )
-            }
-            iconColor={insights?.worstSellers[0] ? "text-slate-400" : "text-emerald-400"}
-            loading={!insights}
+        <div className="v2-page-actions">
+          <Tabs
+            value={period}
+            onChange={(v) => setPeriod(v as Period)}
+            tabs={[
+              { value: "today", label: "Today" },
+              { value: "7d", label: "7d" },
+              { value: "30d", label: "30d" },
+              { value: "90d", label: "90d" },
+            ]}
+            variant="pill"
+            ariaLabel="Date range"
           />
+          <Button
+            variant="secondary"
+            size="sm"
+            leadingIcon={<RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "v2-spin" : ""}`} />}
+            onClick={onManualRefresh}
+            disabled={refreshing}
+          >
+            Refresh
+          </Button>
         </div>
+      </header>
 
-        {/* Live Orders + Notifications — operational priority, above fold */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2 glass-card p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold admin-text flex items-center gap-2">
-                <span className="inline-flex rounded-full h-2 w-2 bg-emerald-400" />
-                Live Orders
-                {activeOrders.length > 0 && (
-                  <span className="ml-1 px-2 py-0.5 bg-italia-red/20 admin-red text-xs font-bold rounded">{activeOrders.length}</span>
-                )}
-              </h2>
-              <Link href="/admin/orders" className="text-xs admin-link font-medium flex items-center gap-1 hover:text-red-200 transition-colors">
-                All orders <ArrowRight className="h-3 w-3" />
+      <section className="v2-kpi-grid">
+        <KpiCard
+          label="Revenue"
+          value={kpis.rev / 100}
+          format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
+          delta={kpis.revDelta}
+          higherIsBetter
+          trend={revenueSpark}
+          icon={Banknote}
+          tone="brand"
+          hint={`vs ${PERIOD_LABEL[period].toLowerCase()} prior`}
+        />
+        <KpiCard
+          label="Orders"
+          value={kpis.orders}
+          delta={kpis.ordersDelta}
+          higherIsBetter
+          trend={ordersSpark}
+          icon={ClipboardList}
+          tone="info"
+          hint={`${kpis.orders ? Math.round(((summary?.totalItems ?? 0) / kpis.orders) * 10) / 10 : 0} items/order`}
+        />
+        <KpiCard
+          label="Avg order value"
+          value={kpis.aov / 100}
+          format={(n) => `${n.toFixed(2)} zł`}
+          delta={kpis.aovDelta}
+          higherIsBetter
+          icon={Receipt}
+          tone="success"
+        />
+        <KpiCard
+          label="Profit margin"
+          value={kpis.margin}
+          display={fmtPercent(kpis.margin)}
+          delta={kpis.marginDelta}
+          higherIsBetter
+          icon={PiggyBank}
+          tone="success"
+          hint={`Net ${fmtCurrency(kpis.profit)}`}
+        />
+        <KpiCard
+          label="Repeat customers"
+          value={insights?.repeatCustomers.length ?? 0}
+          icon={Users}
+          tone="info"
+          hint="2+ orders in period"
+        />
+        <KpiCard
+          label="Cancellation rate"
+          value={insights?.cancellationRate ?? 0}
+          display={fmtPercent(insights?.cancellationRate ?? 0, 1)}
+          icon={AlertTriangle}
+          tone="warning"
+          higherIsBetter={false}
+          hint={`${insights?.cancelledOrders ?? 0} cancelled`}
+        />
+      </section>
+
+      <section className="v2-grid-2-1">
+        <Card>
+          <CardHeader
+            title="Revenue & profit trend"
+            description={`Daily totals in zł over the last ${PERIOD_LABEL[period].toLowerCase()}`}
+            actions={
+              <Badge tone="info" variant="soft" dot>
+                Live · 30s
+              </Badge>
+            }
+          />
+          <CardBody>
+            {trendData.length === 0 ? (
+              <EmptyState
+                icon={Activity}
+                title="No orders yet in this period"
+                description="When orders come in, daily revenue and profit appear here."
+                compact
+              />
+            ) : (
+              <AreaChart
+                data={trendData}
+                xKey="date"
+                series={[
+                  { key: "revenue", label: "Revenue" },
+                  { key: "profit", label: "Profit" },
+                ]}
+                height={260}
+                yFormat={(n) => `${Math.round(n / 1000)}k zł`}
+                xFormat={(v) => {
+                  const s = String(v);
+                  return s.length >= 10 ? s.slice(5) : s;
+                }}
+                tooltipValue={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
+              />
+            )}
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader
+            title="Operational alerts"
+            description="Most recent first"
+            actions={
+              <Link href="/admin#notifications" className="v2-link-sm">
+                All <ArrowRight className="h-3 w-3" />
               </Link>
-            </div>
-            {activeOrders.length === 0 ? (
-              <div className="py-8 text-center">
-                <Clock className="h-8 w-8 mx-auto mb-2 admin-text-dim opacity-40" />
-                <p className="text-sm admin-text-muted">No active orders right now</p>
-                <p className="text-xs admin-text-dim mt-1">New orders will appear here automatically</p>
-              </div>
+            }
+          />
+          <CardBody>
+            {recentAlerts.length === 0 ? (
+              <EmptyState icon={Activity} title="All clear" description="No operational warnings." compact />
             ) : (
-              <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                {activeOrders.map((order) => (
-                  <div key={order.id} className="flex flex-wrap items-center gap-3 p-3 rounded-lg bg-white/4 border border-white/6 hover:bg-white/6 transition-colors">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="font-mono text-xs font-bold admin-text">{order.id}</span>
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${STATUS_COLORS[order.status]}`}>{order.status}</span>
-                      </div>
-                      <p className="text-sm admin-text">{order.customerName}</p>
-                      <div className="flex items-center gap-3 text-xs admin-text-dim mt-0.5">
-                        <span className="flex items-center gap-1">{order.fulfillmentType === "delivery" ? <Truck className="h-3 w-3" /> : <Package className="h-3 w-3" />} {order.fulfillmentType}</span>
-                        <span>{order.slotTime}</span>
-                        <span className="font-semibold admin-text">{formatPrice(order.totalAmount)}</span>
-                      </div>
+              <ul className="v2-alert-list">
+                {recentAlerts.map((n) => (
+                  <li key={n.id} className={`v2-alert-row ${n.read ? "" : "is-unread"}`}>
+                    <div className="v2-alert-text">
+                      <div className="v2-alert-title">{n.title}</div>
+                      <div className="v2-alert-message">{n.message}</div>
                     </div>
-                    <select value={order.status} onChange={(e) => handleStatusChange(order.id, e.target.value)} className="glass-input px-2 py-1 rounded-lg text-xs">
-                      <option value="pending">pending</option>
-                      <option value="confirmed">confirmed</option>
-                      <option value="preparing">preparing</option>
-                      <option value="ready">ready</option>
-                      <option value="completed">completed</option>
-                    </select>
-                  </div>
+                    {n.locationSlug && (
+                      <Badge tone="neutral" variant="soft" icon={<MapPin className="h-3 w-3" />}>
+                        {n.locationSlug}
+                      </Badge>
+                    )}
+                  </li>
                 ))}
-              </div>
+              </ul>
             )}
-          </div>
+          </CardBody>
+        </Card>
+      </section>
 
-          <div id="notifications" className="glass-card p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold admin-text flex items-center gap-2">
-                <Bell className="h-4 w-4" />
-                Notifications
-                {unreadNotifs.length > 0 && (
-                  <span className="px-2 py-0.5 bg-italia-red text-white text-xs font-bold rounded-full">{unreadNotifs.length}</span>
-                )}
-              </h2>
-              <div className="flex flex-wrap items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={pruneOrphanOrderNotifs}
-                  className="text-xs admin-text-dim hover:text-amber-200 flex items-center gap-1 transition-colors"
-                  title="Delete new-order alerts for orders that no longer exist"
-                >
-                  <Eraser className="h-3 w-3" /> Remove orphan order alerts
-                </button>
-                {unreadNotifs.length > 0 && (
-                  <button type="button" onClick={markAllRead} className="text-xs admin-text-dim hover:text-white flex items-center gap-1 transition-colors">
-                    <CheckCheck className="h-3 w-3" /> Mark all read
-                  </button>
-                )}
-              </div>
-            </div>
-            {pruneNotifsHint && (
-              <p className={`text-xs mb-3 ${pruneNotifsHint.includes("Removed") ? "text-emerald-400/90" : "text-red-400/90"}`}>
-                {pruneNotifsHint}
-              </p>
-            )}
-            {notifications.length === 0 ? (
-              <div className="py-8 text-center">
-                <Bell className="h-8 w-8 mx-auto mb-2 admin-text-dim opacity-40" />
-                <p className="text-sm admin-text-muted">All caught up</p>
-                <p className="text-xs admin-text-dim mt-1">System alerts will show here</p>
-              </div>
+      <section className="v2-grid-2">
+        <Card>
+          <CardHeader
+            title="Top sellers"
+            description="By quantity in the selected period"
+            actions={<Star className="h-4 w-4 v2-muted" aria-hidden />}
+          />
+          <CardBody>
+            {topSellers.length === 0 ? (
+              <EmptyState icon={Flame} title="No best-sellers yet" description="Add menu items and start taking orders." compact />
             ) : (
-              <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                {notifications.slice(0, 20).map((notif) => (
-                  <div key={notif.id} className={`p-3 rounded-lg border transition-colors ${notif.read ? "bg-white/3 border-white/5" : "bg-blue-500/8 border-blue-500/15"}`}>
-                    <div className="flex items-start gap-2">
-                      <span className={`mt-0.5 w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 ${NOTIF_ICONS[notif.type] || "bg-white/8 admin-text-dim"}`}>
-                        <Bell className="h-3 w-3" />
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-xs font-semibold admin-text">{notif.title}</p>
-                          <span className="text-[10px] admin-text-dim whitespace-nowrap flex-shrink-0">{timeAgo(notif.createdAt)}</span>
-                        </div>
-                        <p className="text-xs admin-text-dim mt-0.5">{notif.message}</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => deleteNotif(notif.id)}
-                        className="p-1.5 rounded-md text-slate-500 hover:text-red-400 hover:bg-red-500/10 flex-shrink-0 transition-colors"
-                        title="Delete notification"
-                        aria-label="Delete notification"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <BarChart
+                data={topSellers}
+                xKey="name"
+                series={[{ key: "quantity", label: "Sold" }]}
+                layout="vertical"
+                height={Math.max(180, topSellers.length * 36)}
+              />
             )}
-          </div>
-        </div>
+          </CardBody>
+        </Card>
 
-        {/* Charts row */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Revenue chart */}
-          <div className="lg:col-span-2 glass-card p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="font-bold admin-text">Revenue & Profit</h2>
-                {summary && summary.dailyStats.length > 0 && (
-                  <p className="text-xs admin-text-dim mt-0.5">{summary.dailyStats.length} day{summary.dailyStats.length !== 1 ? "s" : ""} of data</p>
-                )}
-              </div>
-              <Link href="/admin/reports" className="text-xs admin-link font-medium flex items-center gap-1 hover:text-red-200 transition-colors">
-                Full reports <ArrowRight className="h-3 w-3" />
-              </Link>
-            </div>
-            {summary && summary.dailyStats.length > 0 ? (
-              <div className="flex items-end gap-1 h-40">
-                {summary.dailyStats.slice(-14).map((day) => {
-                  const pct = (day.revenue / maxRevenue) * 100;
-                  const profitPct = (day.profit / maxRevenue) * 100;
-                  return (
-                    <div key={day.date} className="flex-1 flex flex-col items-center gap-1 group relative">
-                      <div className="w-full flex flex-col items-stretch" style={{ height: "128px" }}>
-                        <div className="flex-1" />
-                        <div
-                          className="bg-italia-red/20 rounded-t-sm relative transition-all duration-300 group-hover:bg-italia-red/30"
-                          style={{ height: `${pct}%`, minHeight: pct > 0 ? "2px" : "0" }}
-                        >
-                          <div
-                            className="absolute bottom-0 left-0 right-0 bg-emerald-500/40 rounded-t-sm"
-                            style={{ height: `${(profitPct / pct) * 100}%` }}
-                          />
-                        </div>
-                      </div>
-                      <span className="text-[9px] admin-text-dim">{day.date.slice(8)}</span>
-                      <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 glass-light text-white text-[10px] rounded-lg px-2.5 py-1.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
-                        <div className="font-semibold">{formatSlotDate(day.date)}</div>
-                        <div>Rev: {formatPrice(day.revenue)}</div>
-                        <div>Profit: {formatPrice(day.profit)}</div>
-                        <div>{day.orderCount} orders</div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : !summary ? (
-              <div className="h-40 flex items-end gap-1">
-                {Array.from({ length: 14 }).map((_, i) => (
-                  <div key={i} className="flex-1 bg-white/5 rounded-t-sm animate-pulse" style={{ height: `${20 + Math.random() * 60}%` }} />
-                ))}
-              </div>
+        <Card>
+          <CardHeader
+            title="Order heatmap"
+            description="Day of week × hour of day"
+            actions={<Coins className="h-4 w-4 v2-muted" aria-hidden />}
+          />
+          <CardBody>
+            {heatCells.length === 0 ? (
+              <EmptyState icon={Flame} title="No orders mapped yet" description="Heatmap fills in as orders arrive." compact />
             ) : (
-              <div className="h-40 flex items-center justify-center">
-                <div className="text-center">
-                  <BarChart3 className="h-8 w-8 mx-auto mb-2 admin-text-dim opacity-40" />
-                  <p className="text-sm admin-text-muted">No revenue data for this period</p>
-                  <p className="text-xs admin-text-dim mt-1">Try selecting a wider date range</p>
-                </div>
-              </div>
+              <Heatmap cells={heatCells} xLabels={HOUR_LABELS} yLabels={DOW_LABELS} rowHeight={22} format={(v) => `${v} orders`} />
             )}
-            <div className="flex items-center gap-4 mt-3 text-xs admin-text-dim">
-              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-italia-red/20" /> Revenue</span>
-              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-emerald-500/40" /> Profit</span>
-            </div>
-          </div>
+          </CardBody>
+        </Card>
+      </section>
 
-          {/* Top Sellers */}
-          <div className="glass-card p-5">
-            <h2 className="font-bold admin-text mb-4">Top Sellers</h2>
-            {summary && summary.topItems.length > 0 ? (
-              <div className="space-y-3">
-                {summary.topItems.slice(0, 6).map((item, i) => (
-                  <div key={item.name} className="flex items-center gap-3">
-                    <span className={`w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold ${
-                      i === 0 ? "bg-amber-500/25 text-amber-300" : i < 3 ? "bg-amber-500/15 text-amber-400" : "bg-white/8 admin-text-dim"
-                    }`}>{i + 1}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-medium admin-text truncate ${i === 0 ? "font-semibold" : ""}`}>{item.name}</p>
-                      <p className="text-xs admin-text-dim">{item.quantity} sold</p>
-                    </div>
-                    <span className="text-sm font-semibold admin-text">{formatPrice(item.revenue)}</span>
-                  </div>
-                ))}
-              </div>
-            ) : !summary ? (
-              <div className="space-y-3">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <div className="w-6 h-6 rounded-md bg-white/8 animate-pulse" />
-                    <div className="flex-1 space-y-1.5">
-                      <div className="h-4 w-28 bg-white/8 rounded animate-pulse" />
-                      <div className="h-3 w-16 bg-white/5 rounded animate-pulse" />
-                    </div>
-                  </div>
-                ))}
-              </div>
+      <section>
+        <Card padding="none">
+          <CardHeader
+            title="Location performance"
+            description="Side-by-side benchmark for active locations"
+          />
+          <CardBody>
+            {insights?.locationComparison && insights.locationComparison.length > 0 ? (
+              <LocationTable rows={insights.locationComparison} />
             ) : (
-              <div className="py-4 text-center">
-                <p className="text-sm admin-text-muted">No sales data yet</p>
-              </div>
+              <EmptyState icon={MapPin} title="Need more data" description="Once orders exist across locations, comparison appears here." compact />
             )}
-          </div>
-        </div>
+          </CardBody>
+        </Card>
+      </section>
 
-        {/* Slot Utilization + Peak Hours */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="glass-card p-5">
-            <div className="flex items-center justify-between mb-1">
-              <h2 className="font-bold admin-text">Slot Utilization</h2>
-              <Link href="/admin/slots" className="text-xs admin-link font-medium flex items-center gap-1 hover:text-red-200 transition-colors">
-                Manage slots <ArrowRight className="h-3 w-3" />
-              </Link>
-            </div>
-            <p className="text-xs admin-text-dim mb-4">Fill rate per time slot</p>
-            {insights && insights.slotUtilization.length > 0 ? (
-              <div className="space-y-2">
-                {insights.slotUtilization.map((slot) => (
-                  <div key={slot.time} className="flex items-center gap-3">
-                    <span className="w-12 text-sm font-mono font-semibold admin-text">{slot.time}</span>
-                    <div className="flex-1 h-6 bg-white/5 rounded-full overflow-hidden relative">
-                      <div className={`h-full rounded-full transition-all duration-500 ${slot.utilization >= 80 ? "bg-red-500/60" : slot.utilization >= 50 ? "bg-amber-500/60" : "bg-emerald-500/60"}`} style={{ width: `${slot.utilization}%` }} />
-                      <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold admin-text">{slot.totalUsed}/{slot.totalCapacity}</span>
-                    </div>
-                    <span className={`w-10 text-right text-xs font-bold ${slot.utilization >= 80 ? "text-red-400" : slot.utilization >= 50 ? "text-amber-400" : "text-emerald-400"}`}>{slot.utilization}%</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="py-4 text-center">
-                <CalendarDays className="h-8 w-8 mx-auto mb-2 admin-text-dim opacity-40" />
-                <p className="text-sm admin-text-muted">No active slots</p>
-                <p className="text-xs admin-text-dim mt-1">Configure time slots in Slot management</p>
-              </div>
-            )}
-          </div>
-
-          <div className="glass-card p-5">
-            <h2 className="font-bold admin-text mb-1">Peak Hours</h2>
-            <p className="text-xs admin-text-dim mb-4">Orders by hour of day</p>
-            {insights && insights.peakHours.length > 0 ? (
-              <div className="space-y-2">
-                {(() => {
-                  const max = Math.max(...insights.peakHours.map((h) => h.orderCount), 1);
-                  return insights.peakHours.map((h) => (
-                    <div key={h.hour} className="flex items-center gap-3">
-                      <span className="w-12 text-sm font-mono font-semibold admin-text">{String(h.hour).padStart(2, "0")}:00</span>
-                      <div className="flex-1 h-6 bg-white/5 rounded-full overflow-hidden relative">
-                        <div className="h-full rounded-full bg-blue-500/50 transition-all duration-500" style={{ width: `${(h.orderCount / max) * 100}%` }} />
-                        <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold admin-text">{h.orderCount} orders</span>
-                      </div>
-                      <span className="w-20 text-right text-xs font-semibold admin-text">{formatPrice(h.revenue)}</span>
-                    </div>
-                  ));
-                })()}
-              </div>
-            ) : (
-              <div className="py-4 text-center">
-                <Clock className="h-8 w-8 mx-auto mb-2 admin-text-dim opacity-40" />
-                <p className="text-sm admin-text-muted">No order data yet</p>
-                <p className="text-xs admin-text-dim mt-1">Peak hours appear after orders come in</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Location Comparison */}
-        {insights && insights.locationComparison.length > 0 && (
-          <div className="glass-card p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold admin-text">Location Comparison</h2>
-              <span className="text-xs admin-text-dim">{insights.locationComparison.length} location{insights.locationComparison.length !== 1 ? "s" : ""}</span>
-            </div>
-            <div className="overflow-x-auto -mx-5 px-5">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-white/8">
-                    <th className="text-left py-2 pr-4 font-semibold admin-text-dim text-xs uppercase tracking-wider">Location</th>
-                    <th className="text-right py-2 px-3 font-semibold admin-text-dim text-xs uppercase tracking-wider">Revenue</th>
-                    <th className="text-right py-2 px-3 font-semibold admin-text-dim text-xs uppercase tracking-wider">Profit</th>
-                    <th className="text-right py-2 px-3 font-semibold admin-text-dim text-xs uppercase tracking-wider">Margin</th>
-                    <th className="text-right py-2 px-3 font-semibold admin-text-dim text-xs uppercase tracking-wider">Orders</th>
-                    <th className="text-right py-2 px-3 font-semibold admin-text-dim text-xs uppercase tracking-wider">Avg Order</th>
-                    <th className="text-center py-2 px-3 font-semibold admin-text-dim text-xs uppercase tracking-wider">T / D</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {insights.locationComparison.map((loc) => {
-                    const best = insights.locationComparison.reduce((a, b) => a.revenue > b.revenue ? a : b);
-                    return (
-                      <tr key={loc.locationSlug} className="border-b border-white/5 hover:bg-white/3 transition-colors">
-                        <td className="py-3 pr-4">
-                          <div className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4 admin-red" />
-                            <span className="font-semibold admin-text">{loc.city}</span>
-                            {loc.locationSlug === best.locationSlug && loc.revenue > 0 && (
-                              <span className="px-1.5 py-0.5 bg-amber-500/20 text-amber-400 text-[10px] font-bold rounded-full">TOP</span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="text-right py-3 px-3 font-semibold admin-text">{formatPrice(loc.revenue)}</td>
-                        <td className={`text-right py-3 px-3 font-semibold ${loc.profit >= 0 ? "text-emerald-400" : "text-red-400"}`}>{formatPrice(loc.profit)}</td>
-                        <td className="text-right py-3 px-3">
-                          <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${loc.profitMargin >= 65 ? "bg-emerald-500/20 text-emerald-400" : loc.profitMargin >= 50 ? "bg-amber-500/20 text-amber-400" : "bg-red-500/20 text-red-400"}`}>{loc.profitMargin}%</span>
-                        </td>
-                        <td className="text-right py-3 px-3 admin-text">{loc.orderCount}</td>
-                        <td className="text-right py-3 px-3 admin-text">{formatPrice(loc.avgOrderValue)}</td>
-                        <td className="text-center py-3 px-3 text-xs admin-text-dim">{loc.takeoutCount} / {loc.deliveryCount}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* Repeat Customers + Worst Sellers */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="glass-card p-5">
-            <div className="flex items-center justify-between mb-1">
-              <h2 className="font-bold admin-text">Repeat Customers</h2>
-              <Link href="/admin/loyalty" className="text-xs admin-link font-medium flex items-center gap-1 hover:text-red-200 transition-colors">
-                Loyalty <ArrowRight className="h-3 w-3" />
-              </Link>
-            </div>
-            <p className="text-xs admin-text-dim mb-4">Ordered more than once</p>
-            {insights && insights.repeatCustomers.length > 0 ? (
-              <div className="space-y-3">
-                {insights.repeatCustomers.slice(0, 8).map((c, i) => (
-                  <div key={c.phone} className="flex items-center gap-3">
-                    <span className={`w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold ${i < 3 ? "bg-amber-500/20 text-amber-400" : "bg-white/8 admin-text-dim"}`}>{i + 1}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium admin-text truncate">{c.name}</p>
-                      <p className="text-xs admin-text-dim">{c.orderCount} orders</p>
-                    </div>
-                    <span className="text-sm font-semibold admin-text">{formatPrice(c.totalSpent)}</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="py-4 text-center">
-                <Users className="h-8 w-8 mx-auto mb-2 admin-text-dim opacity-40" />
-                <p className="text-sm admin-text-muted">No repeat customers yet</p>
-                <p className="text-xs admin-text-dim mt-1">Customers who order again will appear here</p>
-              </div>
-            )}
-          </div>
-
-          <div className="glass-card p-5">
-            <div className="flex items-center justify-between mb-1">
-              <h2 className="font-bold admin-text">
-                {insights && insights.worstSellers.length > 0 ? "Slowest movers" : "Top sellers"}
-              </h2>
-              <Link href="/admin/menu" className="text-xs admin-link font-medium flex items-center gap-1 hover:text-red-200 transition-colors">
-                Edit menu <ArrowRight className="h-3 w-3" />
-              </Link>
-            </div>
-            <p className="text-xs admin-text-dim mb-4">
-              {insights && insights.worstSellers.length > 0
-                ? "Compared across menu items that sold in this period"
-                : "By quantity sold in this period"}
-            </p>
-            {insights && insights.worstSellers.length > 0 ? (
-              <div className="space-y-3">
-                {insights.worstSellers.map((item, i) => {
-                  const maxQty = insights.worstSellers[insights.worstSellers.length - 1]?.quantity || 1;
-                  return (
-                    <div key={item.name} className="flex items-center gap-3">
-                      <span className="w-6 h-6 rounded-md bg-red-500/15 flex items-center justify-center text-xs font-bold text-red-400">{i + 1}</span>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-medium admin-text truncate">{item.name}</span>
-                          <span className="text-sm font-semibold admin-text ml-2">{formatPrice(item.revenue)}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
-                            <div className="h-full bg-red-500/40 rounded-full" style={{ width: `${(item.quantity / maxQty) * 100}%` }} />
-                          </div>
-                          <span className="text-xs admin-text-dim">{item.quantity} sold</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : insights && insights.topSellers.length > 0 ? (
-              <div className="space-y-3">
-                {insights.topSellers.map((item, i) => {
-                  const maxQty = insights.topSellers[0]?.quantity || 1;
-                  return (
-                    <div key={item.name} className="flex items-center gap-3">
-                      <span className="w-6 h-6 rounded-md bg-emerald-500/15 flex items-center justify-center text-xs font-bold text-emerald-400">{i + 1}</span>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-medium admin-text truncate">{item.name}</span>
-                          <span className="text-sm font-semibold admin-text ml-2">{formatPrice(item.revenue)}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
-                            <div className="h-full bg-emerald-500/40 rounded-full" style={{ width: `${(item.quantity / maxQty) * 100}%` }} />
-                          </div>
-                          <span className="text-xs admin-text-dim">{item.quantity} sold</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="py-4 text-center">
-                <BarChart3 className="h-8 w-8 mx-auto mb-2 admin-text-dim opacity-40" />
-                <p className="text-sm admin-text-muted">No sales data yet</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Category Breakdown */}
-        {summary && Object.keys(summary.categoryBreakdown).length > 0 && (
-          <div className="glass-card p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold admin-text">Revenue by Category</h2>
-              <span className="text-xs admin-text-dim">{Object.keys(summary.categoryBreakdown).length} categories</span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-              {Object.entries(summary.categoryBreakdown)
-                .sort(([, a], [, b]) => b.revenue - a.revenue)
-                .map(([cat, data], i) => {
-                  const margin = data.revenue > 0 ? Math.round(((data.revenue - data.cost) / data.revenue) * 100) : 0;
-                  return (
-                    <div key={cat} className={`p-3 rounded-lg hover:bg-white/8 transition-colors ${i === 0 ? "bg-white/8 border border-white/10" : "bg-white/5"}`}>
-                      <p className="text-xs font-semibold admin-text-dim uppercase tracking-wide">{cat}</p>
-                      <p className="text-lg font-bold admin-text mt-1">{formatPrice(data.revenue)}</p>
-                      <div className="flex items-center justify-between mt-1">
-                        <span className="text-xs admin-text-dim">{data.count} items</span>
-                        <span className={`text-xs font-semibold ${margin >= 65 ? "text-emerald-400" : margin >= 50 ? "text-amber-400" : "text-red-400"}`}>{margin}%</span>
-                      </div>
-                    </div>
-                  );
-                })}
-            </div>
-          </div>
-        )}
-      </div>
-    </>
-  );
-}
-
-function KPICard({ label, value, sub, icon, iconColor, loading }: {
-  label: string; value?: string; sub?: string; icon: React.ReactNode;
-  gradient?: string; iconColor: string; loading?: boolean;
-}) {
-  return (
-    <div className="glass-card p-4">
-      <div className="flex items-center gap-2.5 mb-2">
-        <span className={`w-8 h-8 rounded-md flex items-center justify-center bg-white/6 ${iconColor}`}>
-          {icon}
-        </span>
-        <span className="text-[11px] font-semibold admin-text-dim uppercase tracking-wider">{label}</span>
-      </div>
-      {loading || !value ? (
-        <div className="space-y-1.5">
-          <div className="h-6 w-24 bg-white/8 rounded animate-pulse" />
-          <div className="h-3.5 w-16 bg-white/5 rounded animate-pulse" />
-        </div>
-      ) : (
-        <>
-          <p className="text-xl font-bold admin-text">{value}</p>
-          {sub && <p className="text-xs admin-text-dim mt-0.5">{sub}</p>}
-        </>
-      )}
+      {loading && <div className="v2-page-loading">Loading…</div>}
     </div>
   );
 }
 
-function timeAgo(dateStr: string): string {
-  const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-  if (seconds < 60) return "just now";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
+function LocationTable({ rows }: { rows: LocationComparison[] }) {
+  const cols: Column<LocationComparison>[] = [
+    {
+      key: "city",
+      header: "Location",
+      cell: (r) => (
+        <span className="v2-loc-cell">
+          <span className="v2-loc-cell-dot" aria-hidden />
+          <span>{r.city}</span>
+        </span>
+      ),
+      sortValue: (r) => r.city,
+    },
+    {
+      key: "revenue",
+      header: "Revenue",
+      align: "right",
+      cell: (r) => fmtCurrency(r.revenue),
+      sortValue: (r) => r.revenue,
+    },
+    {
+      key: "profit",
+      header: "Profit",
+      align: "right",
+      cell: (r) => fmtCurrency(r.profit),
+      sortValue: (r) => r.profit,
+    },
+    {
+      key: "margin",
+      header: "Margin",
+      align: "right",
+      cell: (r) => fmtPercent(r.profitMargin, 1),
+      sortValue: (r) => r.profitMargin,
+    },
+    {
+      key: "orders",
+      header: "Orders",
+      align: "right",
+      cell: (r) => r.orderCount.toLocaleString(),
+      sortValue: (r) => r.orderCount,
+    },
+    {
+      key: "aov",
+      header: "AOV",
+      align: "right",
+      cell: (r) => fmtCurrency(r.avgOrderValue),
+      sortValue: (r) => r.avgOrderValue,
+    },
+    {
+      key: "cancel",
+      header: "Cancel %",
+      align: "right",
+      cell: (r) => (
+        <Badge tone={r.cancellationRate > 10 ? "danger" : r.cancellationRate > 5 ? "warning" : "success"} variant="soft">
+          {fmtPercent(r.cancellationRate, 1)}
+        </Badge>
+      ),
+      sortValue: (r) => r.cancellationRate,
+    },
+  ];
+  return (
+    <Table
+      rows={rows}
+      columns={cols}
+      rowKey={(r) => r.locationSlug}
+      defaultSort={{ key: "revenue", dir: "desc" }}
+    />
+  );
 }

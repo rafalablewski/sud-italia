@@ -1710,6 +1710,121 @@ html { scroll-behavior: smooth; }
 .v2-kpi-spark { width: 96px; flex-shrink: 0; opacity: 0.85; }
 
 /* ============================
+   ADMIN v2 — PAGE LAYOUT
+   Shared by every rewritten page (.v2-page).
+   ============================ */
+
+.v2-page {
+  --page-pad: 24px;
+  padding: var(--page-pad);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  background: var(--bg);
+  color: var(--fg);
+  min-height: calc(100vh - 53px);
+}
+@media (max-width: 720px) { .v2-page { --page-pad: 14px; gap: 14px; } }
+
+.v2-page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.v2-page-title-row { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.v2-page-title {
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: var(--fg);
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+.v2-page-subtitle { font-size: var(--text-sm); color: var(--fg-muted); margin: 0; }
+.v2-page-actions { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.v2-page-loading {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 14px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--fg-muted);
+  font-size: var(--text-xs);
+  box-shadow: var(--shadow-sm);
+  z-index: 30;
+}
+
+/* KPI grid */
+.v2-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+/* 2:1 split (chart + sidebar list) */
+.v2-grid-2-1 {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 1100px) { .v2-grid-2-1 { grid-template-columns: 1fr; } }
+
+/* Equal 2-col */
+.v2-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 1100px) { .v2-grid-2 { grid-template-columns: 1fr; } }
+
+.v2-muted { color: var(--fg-subtle); }
+
+.v2-link-sm {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+  text-decoration: none;
+  font-weight: 500;
+}
+.v2-link-sm:hover { color: var(--fg); }
+
+.v2-spin { animation: v2-spin 1s linear infinite; }
+
+/* Alert list (dashboard) */
+.v2-alert-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.v2-alert-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.v2-alert-row.is-unread { border-left: 3px solid var(--brand); padding-left: 9px; background: var(--brand-soft); }
+.v2-alert-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.v2-alert-title { font-size: var(--text-sm); font-weight: 600; color: var(--fg); }
+.v2-alert-message { font-size: var(--text-xs); color: var(--fg-muted); line-height: 1.4; }
+
+/* Location-cell helper (dashboard table) */
+.v2-loc-cell { display: inline-flex; align-items: center; gap: 8px; font-weight: 500; }
+.v2-loc-cell-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--brand); }
+
+/* Page-content reset for the rewritten admin pages so the legacy .admin-bg
+   wrapper from layout.tsx doesn't force a dark background on light theme.
+   Legacy pages keep their dark look; pages built on .v2-page get the
+   token-driven background. */
+.admin-bg:has(.v2-page) { background: transparent; min-height: 0; }
+.admin-bg:has(.v2-page) > * { z-index: auto; }
+
+/* ============================
    ADMIN DESIGN SYSTEM (LEGACY — being migrated to v2)
    Tokens → Surfaces → Inputs → Buttons → Typography → Badges → Alerts
    8px baseline grid · 5-color semantic palette · 6-level type scale
