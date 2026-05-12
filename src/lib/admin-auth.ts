@@ -303,3 +303,57 @@ export async function requireRole(
   }
   return { user };
 }
+
+/**
+ * Companion to `requireRole`: ensures the current session is authorized to
+ * touch `locationSlug`. Returns `{ ok: true }` on success or a 401/403
+ * NextResponse on failure — drop at the top of any /api/admin/* handler that
+ * reads or writes a single-location entity.
+ *
+ * Wildcard scope ("*") passes unconditionally; otherwise the slug must be in
+ * the session's comma-separated list. Pass `null`/undefined for routes that
+ * intentionally span all locations (e.g. HQ rollups) — those still require
+ * the caller to hold "*" scope.
+ *
+ * The middleware in m0_8 calls this for every admin route automatically.
+ * Hand-call only when a single route legitimately needs cross-location
+ * access enforced by some other rule.
+ */
+export async function requireLocationAccess(
+  locationSlug: string | null | undefined,
+): Promise<{ ok: true } | { error: Response }> {
+  const claims = await getClaims();
+  if (!claims) {
+    return {
+      error: new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      }),
+    };
+  }
+  const scopes =
+    claims.locationScope === LOCATION_SCOPE_ALL
+      ? [LOCATION_SCOPE_ALL]
+      : claims.locationScope.split(",").filter(Boolean);
+  if (scopes.includes(LOCATION_SCOPE_ALL)) return { ok: true };
+  if (!locationSlug) {
+    // Caller asked for a cross-location operation but session is scoped down.
+    return {
+      error: new Response(
+        JSON.stringify({ error: "Requires unrestricted location scope" }),
+        { status: 403, headers: { "Content-Type": "application/json" } },
+      ),
+    };
+  }
+  if (!scopes.includes(locationSlug)) {
+    return {
+      error: new Response(
+        JSON.stringify({
+          error: `Session is not authorized for location "${locationSlug}"`,
+        }),
+        { status: 403, headers: { "Content-Type": "application/json" } },
+      ),
+    };
+  }
+  return { ok: true };
+}
