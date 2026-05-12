@@ -2281,6 +2281,78 @@ html { scroll-behavior: smooth; }
 }
 
 /* ============================
+   ADMIN v2 — SLOTS
+   ============================ */
+
+.v2-day-shortcut { display: inline-flex; gap: 4px; align-items: center; }
+
+.v2-slots-stack { display: flex; flex-direction: column; gap: 12px; }
+
+.v2-slot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.v2-slot-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color var(--duration-fast), background var(--duration-fast);
+}
+.v2-slot-card:hover { border-color: var(--border-strong); background: var(--surface-hover); }
+.v2-slot-card-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.v2-slot-time { font-size: var(--text-md); font-weight: 600; color: var(--fg); }
+.v2-slot-meter {
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--surface-3);
+  overflow: hidden;
+}
+.v2-slot-meter-bar { height: 100%; transition: width var(--duration-base) var(--ease); }
+.v2-slot-meter-success { background: var(--success); }
+.v2-slot-meter-info { background: var(--info); }
+.v2-slot-meter-warning { background: var(--warning); }
+.v2-slot-meter-danger { background: var(--danger); }
+.v2-slot-card-foot { display: flex; justify-content: space-between; align-items: center; font-size: var(--text-xs); color: var(--fg-muted); }
+.v2-slot-channels { display: inline-flex; align-items: center; gap: 4px; color: var(--fg-subtle); }
+
+.v2-toggle-row { display: inline-flex; gap: 10px; }
+.v2-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--fg);
+  cursor: pointer;
+}
+.v2-toggle input { accent-color: var(--brand); }
+.v2-toggle:has(input:checked) { background: var(--brand-soft); border-color: color-mix(in oklab, var(--brand) 35%, transparent); }
+
+.v2-slot-orders { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.v2-slot-orders li {
+  display: grid;
+  grid-template-columns: 70px 1fr auto auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 8px;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+}
+
+/* ============================
    ADMIN DESIGN SYSTEM (LEGACY — being migrated to v2)
    Tokens → Surfaces → Inputs → Buttons → Typography → Badges → Alerts
    8px baseline grid · 5-color semantic palette · 6-level type scale
