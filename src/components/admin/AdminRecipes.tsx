@@ -2,14 +2,21 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Coffee,
   FlaskConical,
+  IceCream,
   Leaf,
   Package,
   Pencil,
+  Pizza,
   Plus,
+  Salad,
+  Sandwich,
   Search,
   Trash2,
   Utensils,
+  UtensilsCrossed,
+  type LucideIcon,
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import {
@@ -94,6 +101,15 @@ const INGREDIENT_UNITS: IngredientUnit[] = ["kg", "g", "L", "ml", "piece", "bunc
 
 const activeLocations = getActiveLocations();
 const FALLBACK_LOC = activeLocations[0]?.slug ?? "krakow";
+
+const CATEGORY_ICON: Record<MenuCategory, LucideIcon> = {
+  pizza: Pizza,
+  pasta: UtensilsCrossed,
+  antipasti: Salad,
+  panini: Sandwich,
+  drinks: Coffee,
+  desserts: IceCream,
+};
 
 type TabKey = "recipes" | "ingredients";
 
@@ -248,68 +264,71 @@ function RecipesPanel() {
           </CardBody>
         </Card>
       ) : (
-        <div className="v2-menu-groups">
-          {grouped.map(([cat, items]) => (
-            <Card key={cat} padding="none">
-              <CardHeader title={MENU_CATEGORY_LABELS[cat]} description={`${items.length} dishes`} />
-              <CardBody>
-                <ul className="v2-recipe-list">
+        <div className="v2-mng-groups">
+          {grouped.map(([cat, items]) => {
+            const Icon = CATEGORY_ICON[cat];
+            return (
+              <section key={cat} className="v2-mng-section" data-variant="recipes">
+                <header className="v2-mng-section-header">
+                  <span className="v2-mng-section-eyebrow">
+                    <Icon className="h-3.5 w-3.5" aria-hidden />
+                    <span className="v2-mng-section-name">{MENU_CATEGORY_LABELS[cat]}</span>
+                    <span className="v2-mng-section-count">{items.length}</span>
+                  </span>
+                  <span className="v2-mng-col">Price</span>
+                  <span className="v2-mng-col">Recipe cost</span>
+                  <span className="v2-mng-col">Margin</span>
+                  <span aria-hidden />
+                </header>
+                <ul className="v2-mng-list">
                   {items.map((item) => {
                     const recipe = recipeByMenuId.get(item.id);
                     const calculatedCost = recipe?.calculatedCost ?? 0;
                     const margin = item.price > 0 ? Math.round(((item.price - calculatedCost) / item.price) * 100) : 0;
                     const hasRecipe = !!recipe;
+                    const marginTone: "success" | "warning" | "danger" = margin >= 65 ? "success" : margin >= 50 ? "warning" : "danger";
                     return (
-                      <li key={item.id} className="v2-recipe-row">
-                        <div className="v2-recipe-main">
-                          <div className="v2-recipe-headline">
-                            <span className="v2-recipe-name">{item.name}</span>
-                            {!hasRecipe ? (
-                              <Badge tone="warning" variant="soft">No recipe</Badge>
-                            ) : (
-                              <Badge tone="info" variant="soft">
+                      <li key={item.id} className="v2-mng-row v2-mng-row-recipes">
+                        <div className="v2-mng-row-main">
+                          <div className="v2-mng-row-headline">
+                            <span className="v2-mng-row-name">{item.name}</span>
+                            {hasRecipe ? (
+                              <span className="v2-mng-tag v2-mng-tag-info">
                                 {(recipe.enrichedIngredients ?? recipe.ingredients ?? []).length} ingredients
-                              </Badge>
+                              </span>
+                            ) : (
+                              <span className="v2-mng-tag v2-mng-tag-warning">No recipe</span>
                             )}
                           </div>
-                          {hasRecipe && (
-                            <ul className="v2-recipe-ings">
-                              {(recipe.enrichedIngredients ?? []).slice(0, 4).map((ri) => (
-                                <li key={ri.ingredientId}>
+                          {hasRecipe ? (
+                            <p className="v2-mng-row-desc">
+                              {(recipe.enrichedIngredients ?? []).slice(0, 4).map((ri, i) => (
+                                <span key={ri.ingredientId}>
+                                  {i > 0 && <span className="v2-mng-dot">·</span>}
                                   <span className="mono v2-muted">{ri.quantity}{ri.unit}</span>{" "}
                                   <span>{ri.name}</span>
-                                </li>
+                                </span>
                               ))}
                               {(recipe.enrichedIngredients ?? []).length > 4 && (
-                                <li className="v2-muted">
-                                  + {(recipe.enrichedIngredients ?? []).length - 4} more
-                                </li>
+                                <span>
+                                  <span className="v2-mng-dot">·</span>
+                                  <span className="v2-muted">+{(recipe.enrichedIngredients ?? []).length - 4} more</span>
+                                </span>
                               )}
-                            </ul>
+                            </p>
+                          ) : (
+                            <p className="v2-mng-row-desc v2-muted">No ingredients linked yet.</p>
                           )}
                         </div>
-                        <div className="v2-recipe-numbers">
-                          <div className="v2-menu-num">
-                            <div className="v2-menu-num-label">Price</div>
-                            <div className="v2-menu-num-value tabular">{formatPrice(item.price)}</div>
-                          </div>
-                          <div className="v2-menu-num">
-                            <div className="v2-menu-num-label">Recipe cost</div>
-                            <div className="v2-menu-num-value tabular">
-                              {hasRecipe ? formatPrice(calculatedCost) : "—"}
-                            </div>
-                          </div>
-                          <div className="v2-menu-num">
-                            <div className="v2-menu-num-label">Margin</div>
-                            {hasRecipe ? (
-                              <Badge tone={margin < 50 ? "danger" : margin < 65 ? "warning" : "success"} variant="soft">
-                                {margin}%
-                              </Badge>
-                            ) : (
-                              <Badge tone="neutral" variant="soft">—</Badge>
-                            )}
-                          </div>
-                        </div>
+
+                        <span className="v2-mng-val v2-mng-val-price tabular">{formatPrice(item.price)}</span>
+                        <span className="v2-mng-val v2-mng-val-cost tabular">
+                          {hasRecipe ? formatPrice(calculatedCost) : <span className="v2-muted">—</span>}
+                        </span>
+                        <span className={`v2-mng-val v2-mng-val-margin v2-mng-val-margin-${hasRecipe ? marginTone : "neutral"} tabular`}>
+                          {hasRecipe ? `${margin}%` : <span className="v2-muted">—</span>}
+                        </span>
+
                         <Button
                           variant={hasRecipe ? "ghost" : "primary"}
                           size="sm"
@@ -322,9 +341,9 @@ function RecipesPanel() {
                     );
                   })}
                 </ul>
-              </CardBody>
-            </Card>
-          ))}
+              </section>
+            );
+          })}
         </div>
       )}
 

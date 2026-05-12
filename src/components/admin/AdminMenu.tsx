@@ -2,12 +2,18 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Coffee,
   Eye,
   EyeOff,
+  IceCream,
   MapPin,
   Pencil,
+  Pizza,
+  Salad,
+  Sandwich,
   Search,
   UtensilsCrossed,
+  type LucideIcon,
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { MENU_CATEGORY_LABELS, type MenuCategory } from "@/data/types";
@@ -18,7 +24,6 @@ import {
   Button,
   Card,
   CardBody,
-  CardHeader,
   Dialog,
   EmptyState,
   Input,
@@ -28,6 +33,15 @@ import {
 } from "./v2/ui";
 
 const CATEGORY_ORDER: MenuCategory[] = ["pizza", "pasta", "antipasti", "panini", "drinks", "desserts"];
+
+const CATEGORY_ICON: Record<MenuCategory, LucideIcon> = {
+  pizza: Pizza,
+  pasta: UtensilsCrossed,
+  antipasti: Salad,
+  panini: Sandwich,
+  drinks: Coffee,
+  desserts: IceCream,
+};
 
 interface MenuItemData {
   id: string;
@@ -236,58 +250,60 @@ export function AdminMenu() {
           </CardBody>
         </Card>
       ) : (
-        <div className="v2-menu-groups">
-          {grouped.map(([cat, list]) => (
-            <Card key={cat} padding="none">
-              <CardHeader
-                title={MENU_CATEGORY_LABELS[cat]}
-                description={`${list.length} item${list.length === 1 ? "" : "s"}`}
-              />
-              <CardBody>
-                <ul className="v2-menu-list">
+        <div className="v2-mng-groups">
+          {grouped.map(([cat, list]) => {
+            const Icon = CATEGORY_ICON[cat];
+            return (
+              <section key={cat} className="v2-mng-section" data-variant="menu">
+                <header className="v2-mng-section-header">
+                  <span className="v2-mng-section-eyebrow">
+                    <Icon className="h-3.5 w-3.5" aria-hidden />
+                    <span className="v2-mng-section-name">{MENU_CATEGORY_LABELS[cat]}</span>
+                    <span className="v2-mng-section-count">{list.length}</span>
+                  </span>
+                  <span className="v2-mng-col">Price</span>
+                  <span className="v2-mng-col">Cost</span>
+                  <span className="v2-mng-col">Margin</span>
+                  <span aria-hidden />
+                </header>
+                <ul className="v2-mng-list">
                   {list.map((item) => {
                     const margin = marginPct(item.price, item.cost);
                     return (
                       <li
                         key={item.id}
-                        className={`v2-menu-row ${item.available ? "" : "is-off"}`}
+                        className={`v2-mng-row v2-mng-row-menu ${item.available ? "" : "is-off"}`}
                       >
                         <button
                           type="button"
                           onClick={() => toggleAvailability(item)}
-                          className={`v2-menu-toggle ${item.available ? "is-on" : "is-off"}`}
+                          className={`v2-mng-toggle ${item.available ? "is-on" : "is-off"}`}
                           aria-label={item.available ? "Mark sold out" : "Mark available"}
                           title={item.available ? "Mark sold out" : "Mark available"}
                         >
                           {item.available ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                         </button>
 
-                        <div className="v2-menu-row-main">
-                          <div className="v2-menu-row-headline">
-                            <span className="v2-menu-row-name">{item.name}</span>
+                        <div className="v2-mng-row-main">
+                          <div className="v2-mng-row-headline">
+                            <span className="v2-mng-row-name">{item.name}</span>
                             {item._hasOverride && (
-                              <span className="v2-menu-tag v2-menu-tag-override">Overridden</span>
+                              <span className="v2-mng-tag v2-mng-tag-override">Overridden</span>
                             )}
                             {item.tags.map((t) => (
-                              <span key={t} className="v2-menu-tag">{t}</span>
+                              <span key={t} className="v2-mng-tag">{t}</span>
                             ))}
                           </div>
-                          <p className="v2-menu-row-desc">{item.description}</p>
+                          {item.description && <p className="v2-mng-row-desc">{item.description}</p>}
                         </div>
 
-                        <div className="v2-menu-row-numbers">
-                          <span className="v2-menu-price tabular">{formatPrice(item.price)}</span>
-                          <span
-                            className={`v2-menu-margin v2-menu-margin-${marginTone(margin)} tabular`}
-                            title={`Cost ${formatPrice(item.cost)} · margin ${margin}%`}
-                          >
-                            {margin}%
-                          </span>
-                        </div>
+                        <span className="v2-mng-val v2-mng-val-price tabular">{formatPrice(item.price)}</span>
+                        <span className="v2-mng-val v2-mng-val-cost tabular">{formatPrice(item.cost)}</span>
+                        <span className={`v2-mng-val v2-mng-val-margin v2-mng-val-margin-${marginTone(margin)} tabular`}>{margin}%</span>
 
                         <button
                           type="button"
-                          className="v2-menu-edit"
+                          className="v2-mng-edit"
                           onClick={() => setEditing(item)}
                           aria-label={`Edit ${item.name}`}
                           title="Edit"
@@ -298,9 +314,9 @@ export function AdminMenu() {
                     );
                   })}
                 </ul>
-              </CardBody>
-            </Card>
-          ))}
+              </section>
+            );
+          })}
         </div>
       )}
 
