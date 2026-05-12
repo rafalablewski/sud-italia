@@ -7,6 +7,7 @@ import {
   getManualPointsTotal,
 } from "@/lib/store";
 import { normalizePlPhoneE164, phonesEqualPl } from "@/lib/phone";
+import { parseBody, pointsAdjustSchema } from "@/lib/api-schemas";
 
 // Manual point adjustments move loyalty currency — manager+. The adjustedBy
 // audit field now records the bound user instead of the hardcoded "admin"
@@ -14,20 +15,11 @@ import { normalizePlPhoneE164, phonesEqualPl } from "@/lib/phone";
 export const POST = withAdmin(
   { roles: ["manager", "owner"] },
   async (req, _ctx, { user }) => {
-    let body;
-    try {
-      body = await req.json();
-    } catch {
-      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-    }
+    const parsed = await parseBody(req, pointsAdjustSchema);
+    if ("error" in parsed) return parsed.error;
+    const { phone, amount, reason } = parsed.data;
 
-    const { phone, amount, reason } = body;
-
-    if (!phone || typeof amount !== "number" || amount === 0) {
-      return NextResponse.json({ error: "Phone and non-zero amount required" }, { status: 400 });
-    }
-
-    const phoneE164 = normalizePlPhoneE164(String(phone));
+    const phoneE164 = normalizePlPhoneE164(phone);
     if (!phoneE164) {
       return NextResponse.json({ error: "Invalid Polish phone number" }, { status: 400 });
     }

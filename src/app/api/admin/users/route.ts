@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAdmin } from "@/lib/api-middleware";
 import { appendAuditLog, deleteAdminUser, getAdminUsers, saveAdminUser } from "@/lib/store";
-import type { AdminRole, AdminUserStatus } from "@/data/types";
-
-const VALID_ROLES: AdminRole[] = ["owner", "manager", "staff", "kitchen"];
-const VALID_STATUS: AdminUserStatus[] = ["active", "disabled"];
+import { adminUserUpsertSchema, parseBody } from "@/lib/api-schemas";
 
 // Admin-user mgmt is itself a privileged surface — manager+ for writes,
 // any-auth for reads (so the admin/users page can show the roster).
@@ -13,31 +10,26 @@ export const GET = withAdmin({}, async () => {
 });
 
 async function upsertUser(req: NextRequest, actor: string) {
-  try {
-    const body = await req.json();
-    if (!body.name?.trim()) return NextResponse.json({ error: "Name required" }, { status: 400 });
-    if (!VALID_ROLES.includes(body.role)) return NextResponse.json({ error: "Invalid role" }, { status: 400 });
-    if (!VALID_STATUS.includes(body.status)) return NextResponse.json({ error: "Invalid status" }, { status: 400 });
-    const saved = await saveAdminUser({
-      id: body.id,
-      name: body.name.trim(),
-      email: body.email,
-      role: body.role,
-      status: body.status,
-      locationSlug: body.locationSlug,
-      notes: body.notes,
-    });
-    await appendAuditLog({
-      actor,
-      action: body.id ? "users.update" : "users.create",
-      entityType: "admin_user",
-      entityId: saved.id,
-      after: saved,
-    });
-    return NextResponse.json(saved, { status: 201 });
-  } catch {
-    return NextResponse.json({ error: "Invalid body" }, { status: 400 });
-  }
+  const parsed = await parseBody(req, adminUserUpsertSchema);
+  if ("error" in parsed) return parsed.error;
+  const body = parsed.data;
+  const saved = await saveAdminUser({
+    id: body.id,
+    name: body.name.trim(),
+    email: body.email,
+    role: body.role,
+    status: body.status,
+    locationSlug: body.locationSlug,
+    notes: body.notes,
+  });
+  await appendAuditLog({
+    actor,
+    action: body.id ? "users.update" : "users.create",
+    entityType: "admin_user",
+    entityId: saved.id,
+    after: saved,
+  });
+  return NextResponse.json(saved, { status: 201 });
 }
 
 export const POST = withAdmin(

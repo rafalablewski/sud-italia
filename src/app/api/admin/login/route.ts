@@ -8,6 +8,7 @@ import {
 } from "@/lib/admin-auth";
 import { appendAuditLog, getAdminUsers } from "@/lib/store";
 import { enforceRateLimit, getClientIp } from "@/lib/rate-limit";
+import { adminLoginSchema, parseBody } from "@/lib/api-schemas";
 
 /**
  * Shared-password login extended with an optional `email`.
@@ -32,13 +33,15 @@ export async function POST(req: NextRequest) {
   });
   if (rl) return rl;
 
-  try {
-    const body = await req.json().catch(() => ({}));
-    const { password, email } = body as { password?: string; email?: string };
+  const parsed = await parseBody(req, adminLoginSchema);
+  if ("error" in parsed) return parsed.error;
+  const { password, email } = parsed.data;
 
-    if (!password || !verifyPassword(password)) {
-      return NextResponse.json({ error: "Invalid password" }, { status: 401 });
-    }
+  if (!verifyPassword(password)) {
+    return NextResponse.json({ error: "Invalid password" }, { status: 401 });
+  }
+
+  try {
 
     let userId = "admin";
     let auditActor = "admin";

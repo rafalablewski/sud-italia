@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { withAdmin } from "@/lib/api-middleware";
 import { addCustomerNote, deleteCustomerNote, getCustomerNotes } from "@/lib/store";
 import { normalizePlPhoneE164 } from "@/lib/phone";
+import { customerNoteCreateSchema, parseBody } from "@/lib/api-schemas";
 
 // Customer notes are chain-wide (linked to phone, not location). Any
 // authenticated staff can read; writing notes is staff+; deleting is
@@ -18,22 +19,17 @@ export const GET = withAdmin({}, async (req) => {
 export const POST = withAdmin(
   { roles: ["staff", "manager", "owner"] },
   async (req, _ctx, { user }) => {
-    try {
-      const body = await req.json();
-      if (!body.phone || !body.body?.trim()) {
-        return NextResponse.json({ error: "Missing phone or body" }, { status: 400 });
-      }
-      const phone = normalizePlPhoneE164(body.phone) ?? body.phone;
-      const saved = await addCustomerNote({
-        phone,
-        body: String(body.body).trim(),
-        tags: Array.isArray(body.tags) ? body.tags : undefined,
-        authoredBy: body.authoredBy || user.email || user.id,
-      });
-      return NextResponse.json(saved, { status: 201 });
-    } catch {
-      return NextResponse.json({ error: "Invalid body" }, { status: 400 });
-    }
+    const parsed = await parseBody(req, customerNoteCreateSchema);
+    if ("error" in parsed) return parsed.error;
+    const { phone: rawPhone, body, tags, authoredBy } = parsed.data;
+    const phone = normalizePlPhoneE164(rawPhone) ?? rawPhone;
+    const saved = await addCustomerNote({
+      phone,
+      body: body.trim(),
+      tags,
+      authoredBy: authoredBy || user.email || user.id,
+    });
+    return NextResponse.json(saved, { status: 201 });
   },
 );
 

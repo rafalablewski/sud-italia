@@ -212,6 +212,139 @@ export const cashCloseSchema = z.object({
   notes: z.string().max(500).optional(),
 });
 
+// --- Admin: loyalty -------------------------------------------------------
+
+/**
+ * POST /api/admin/members/points — manual point adjustment by a manager.
+ * Amount can be positive (grant) or negative (deduct) but not zero. The
+ * handler still normalizes the phone to PL E.164.
+ */
+export const pointsAdjustSchema = z
+  .object({
+    phone: phoneInput,
+    amount: z
+      .number()
+      .int()
+      .refine((n) => n !== 0, { message: "amount must be non-zero" })
+      .refine((n) => Math.abs(n) <= 100_000, {
+        message: "amount magnitude must be ≤ 100,000",
+      }),
+    reason: z.string().max(500).optional(),
+  });
+
+/** PUT /api/admin/members/profile — set DOB / email / display name. */
+export const memberProfileSchema = z
+  .object({
+    phone: phoneInput,
+    dob: isoDate.optional(),
+    email: z.string().email().max(254).optional(),
+    name: z.string().min(1).max(120).optional(),
+  })
+  .refine(
+    (data) =>
+      data.dob !== undefined ||
+      data.email !== undefined ||
+      data.name !== undefined,
+    { message: "At least one of dob, email, name is required" },
+  );
+
+// --- Admin: customer notes ------------------------------------------------
+
+/** POST /api/admin/customer-notes — attach a free-text note to a phone. */
+export const customerNoteCreateSchema = z.object({
+  phone: phoneInput,
+  body: z.string().min(1).max(2000),
+  tags: z.array(z.string().min(1).max(40)).max(20).optional(),
+  authoredBy: z.string().min(1).max(120).optional(),
+});
+
+// --- Admin: menu overrides -----------------------------------------------
+
+const menuOverrideEditSchema = z.object({
+  price: grosze.max(100_000).optional(),
+  cost: grosze.max(100_000).optional(),
+  available: z.boolean().optional(),
+  name: z.string().min(1).max(200).optional(),
+  description: z.string().max(1000).optional(),
+});
+
+/**
+ * PUT /api/admin/menu — single override (id + fields) or bulk
+ * ({items: {id: fields}}). Refined so the caller picks exactly one shape.
+ */
+export const menuOverridePutSchema = z
+  .object({
+    id: stableId.optional(),
+    items: z.record(stableId, menuOverrideEditSchema).optional(),
+    price: grosze.max(100_000).optional(),
+    cost: grosze.max(100_000).optional(),
+    available: z.boolean().optional(),
+    name: z.string().min(1).max(200).optional(),
+    description: z.string().max(1000).optional(),
+  })
+  .refine((data) => !!data.id || !!data.items, {
+    message: "Provide either `id` for single override or `items` map for bulk",
+    path: ["id"],
+  });
+
+/** POST /api/admin/menu/bulk — reset overrides or clone across locations. */
+export const menuBulkActionSchema = z
+  .object({
+    action: z.enum(["reset", "clone_to"]),
+    ids: z.array(stableId).min(1).max(500),
+    target: locationSlug.optional(),
+  })
+  .refine((data) => data.action !== "clone_to" || !!data.target, {
+    message: "clone_to requires a `target` location slug",
+    path: ["target"],
+  });
+
+// --- Admin: users (RBAC) -------------------------------------------------
+
+export const adminRoleSchema = z.enum(["owner", "manager", "staff", "kitchen"]);
+export const adminUserStatusSchema = z.enum(["active", "disabled"]);
+
+/** POST + PUT /api/admin/users — upsert an operator account. */
+export const adminUserUpsertSchema = z.object({
+  id: stableId.optional(),
+  name: z.string().min(1).max(120),
+  email: z.string().email().max(254).optional(),
+  role: adminRoleSchema,
+  status: adminUserStatusSchema,
+  locationSlug: locationSlug.optional(),
+  notes: z.string().max(2000).optional(),
+});
+
+// --- Admin: settings (brand-level) ---------------------------------------
+
+/**
+ * PUT /api/admin/settings — the settings shape is open-ended (brand fields,
+ * feature flags, theme, etc.). We accept any JSON object and let the
+ * store apply its own merge semantics. The size cap (10 KB stringified)
+ * keeps a malicious client from blasting megabytes into kv_store.
+ */
+export const settingsUpdateSchema = z
+  .record(z.string(), z.unknown())
+  .refine((obj) => JSON.stringify(obj).length <= 10_000, {
+    message: "Settings payload must be ≤ 10 KB stringified",
+  });
+
+// --- Admin: GDPR ---------------------------------------------------------
+
+/** POST /api/admin/gdpr/delete — irreversible. `confirm: true` is mandatory. */
+export const gdprDeleteSchema = z.object({
+  phone: phoneInput,
+  confirm: z.literal(true),
+});
+
+// --- Public: admin login -------------------------------------------------
+
+/** POST /api/admin/login — shared password + optional bound email. */
+export const adminLoginSchema = z.object({
+  password: z.string().min(1).max(500),
+  email: z.string().email().max(254).optional().or(z.literal("")),
+});
+
 // --- Helpers -------------------------------------------------------------
 
 /**

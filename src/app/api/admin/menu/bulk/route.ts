@@ -10,6 +10,7 @@ import {
 } from "@/lib/store";
 import { getMenu } from "@/data/menus";
 import { getActiveLocations } from "@/data/locations";
+import { menuBulkActionSchema, parseBody } from "@/lib/api-schemas";
 
 /**
  * Bulk-action endpoint for AdminMenu. Two actions multiplexed via `action`:
@@ -29,35 +30,24 @@ import { getActiveLocations } from "@/data/locations";
 export const POST = withAdmin(
   { roles: ["manager", "owner"] },
   async (req, _ctx, { user }) => {
-    let body: { action?: string; ids?: string[]; target?: string };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-  }
+    const parsed = await parseBody(req, menuBulkActionSchema);
+    if ("error" in parsed) return parsed.error;
+    const { action, ids, target } = parsed.data;
 
-  const ids = Array.isArray(body.ids) ? body.ids.filter((x): x is string => typeof x === "string") : [];
-  if (ids.length === 0) {
-    return NextResponse.json({ error: "ids must be a non-empty string array" }, { status: 400 });
-  }
-
-  if (body.action === "reset") {
-    const removed = await clearMenuOverrides(ids);
-    await appendAuditLog({
-      actor: user.email || user.id,
-      action: "menu.bulk_reset_overrides",
-      entityType: "menu_item",
-      entityId: `batch-of-${removed}`,
-      after: { ids, removed },
-    });
-    return NextResponse.json({ ok: true, action: "reset", affected: removed });
-  }
-
-  if (body.action === "clone_to") {
-    if (!body.target) {
-      return NextResponse.json({ error: "target location required" }, { status: 400 });
+    if (action === "reset") {
+      const removed = await clearMenuOverrides(ids);
+      await appendAuditLog({
+        actor: user.email || user.id,
+        action: "menu.bulk_reset_overrides",
+        entityType: "menu_item",
+        entityId: `batch-of-${removed}`,
+        after: { ids, removed },
+      });
+      return NextResponse.json({ ok: true, action: "reset", affected: removed });
     }
-    const targetSlug = body.target;
+
+    // action === "clone_to" — schema's refine guarantees `target` is set.
+    const targetSlug = target as string;
     const validLocations = getActiveLocations().map((l) => l.slug);
     if (!validLocations.includes(targetSlug)) {
       return NextResponse.json({ error: "Unknown target location" }, { status: 400 });
@@ -136,8 +126,5 @@ export const POST = withAdmin(
       unmatched: unmatched.length,
       unmatchedIds: unmatched,
     });
-  }
-
-    return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   },
 );

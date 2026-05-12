@@ -3,6 +3,7 @@ import { withAdmin } from "@/lib/api-middleware";
 import { getCurrentActor } from "@/lib/admin-auth";
 import { appendAuditLog } from "@/lib/store";
 import { deleteCustomerData } from "@/lib/gdpr";
+import { gdprDeleteSchema, parseBody } from "@/lib/api-schemas";
 
 /**
  * GDPR Article 17 erasure endpoint. Redacts identity fields from every
@@ -15,24 +16,11 @@ import { deleteCustomerData } from "@/lib/gdpr";
 export const POST = withAdmin(
   { roles: ["owner"] },
   async (req) => {
-    let body: { phone?: string; confirm?: boolean };
-    try {
-      body = await req.json();
-    } catch {
-      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-    }
+    const parsed = await parseBody(req, gdprDeleteSchema);
+    if ("error" in parsed) return parsed.error;
+    const { phone } = parsed.data;
 
-    if (!body.phone) {
-      return NextResponse.json({ error: "phone required" }, { status: 400 });
-    }
-    if (body.confirm !== true) {
-      return NextResponse.json(
-        { error: "Must include `confirm: true` to execute erasure" },
-        { status: 400 },
-      );
-    }
-
-    const result = await deleteCustomerData(body.phone);
+    const result = await deleteCustomerData(phone);
 
     const actor = await getCurrentActor();
     await appendAuditLog({

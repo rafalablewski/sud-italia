@@ -9,6 +9,7 @@ import {
 } from "@/lib/store";
 import { getMenu } from "@/data/menus";
 import { locations } from "@/data/locations";
+import { menuOverridePutSchema, parseBody } from "@/lib/api-schemas";
 
 // Menu reads are scoped per-location when a slug is provided. When omitted
 // (returning all locations' menus), the session must hold unrestricted scope
@@ -66,12 +67,13 @@ function buildMenuItemNames(): Map<string, string> {
 export const PUT = withAdmin(
   { roles: ["manager", "owner"] },
   async (req, _ctx, { user }) => {
-    try {
-      const body = await req.json();
-      const previousOverrides = await getMenuOverrides();
-      const names = buildMenuItemNames();
+    const parsed = await parseBody(req, menuOverridePutSchema);
+    if ("error" in parsed) return parsed.error;
+    const body = parsed.data;
+    const previousOverrides = await getMenuOverrides();
+    const names = buildMenuItemNames();
 
-      const writeAudits = async (updates: Record<string, MenuOverride>) => {
+    const writeAudits = async (updates: Record<string, MenuOverride>) => {
         for (const [id, next] of Object.entries(updates)) {
           const prev = previousOverrides[id];
           if (typeof next.available === "boolean" && prev?.available !== next.available) {
@@ -102,23 +104,18 @@ export const PUT = withAdmin(
         }
       };
 
-      if (body.items && typeof body.items === "object") {
-        const updates = body.items as Record<string, MenuOverride>;
-        await setMenuOverridesBulk(updates);
-        await writeAudits(updates);
-        return NextResponse.json({ success: true });
-      }
-
-      const { id, ...override } = body;
-      if (!id) {
-        return NextResponse.json({ error: "Missing item id" }, { status: 400 });
-      }
-
-      await setMenuOverride(id, override as MenuOverride);
-      await writeAudits({ [id]: override as MenuOverride });
+    if (body.items) {
+      const updates = body.items as Record<string, MenuOverride>;
+      await setMenuOverridesBulk(updates);
+      await writeAudits(updates);
       return NextResponse.json({ success: true });
-    } catch {
-      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
+
+    // Schema's refine guarantees `id` is present when `items` is absent.
+    const { id, items: _items, ...override } = body;
+    const singleId = id as string;
+    await setMenuOverride(singleId, override as MenuOverride);
+    await writeAudits({ [singleId]: override as MenuOverride });
+    return NextResponse.json({ success: true });
   },
 );
