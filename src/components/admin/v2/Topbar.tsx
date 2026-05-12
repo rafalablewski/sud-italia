@@ -2,15 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, Menu, Search } from "lucide-react";
+import { Bell, HelpCircle, Menu, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ALL_NAV_ITEMS } from "./nav.config";
 import { ThemeToggle } from "./ThemeToggle";
+import { useAdminShell } from "./ShellContext";
 
 interface Props {
   onOpenMobileNav: () => void;
-  /** Opens the command palette (wired in Phase 2). */
-  onOpenSearch?: () => void;
 }
 
 interface Crumb {
@@ -20,7 +19,7 @@ interface Crumb {
 
 function buildCrumbs(pathname: string): Crumb[] {
   if (!pathname.startsWith("/admin")) return [];
-  const segments = pathname.split("/").filter(Boolean); // ["admin", ...]
+  const segments = pathname.split("/").filter(Boolean);
   if (segments.length === 1) return [{ label: "Dashboard" }];
 
   const crumbs: Crumb[] = [{ label: "Admin", href: "/admin" }];
@@ -37,9 +36,10 @@ function buildCrumbs(pathname: string): Crumb[] {
   return crumbs;
 }
 
-export function Topbar({ onOpenMobileNav, onOpenSearch }: Props) {
+export function Topbar({ onOpenMobileNav }: Props) {
   const pathname = usePathname();
   const crumbs = buildCrumbs(pathname);
+  const { openPalette, openNotifications, openHelp, notificationsVersion } = useAdminShell();
   const [unread, setUnread] = useState(0);
   const [isMac, setIsMac] = useState(false);
 
@@ -62,7 +62,8 @@ export function Topbar({ onOpenMobileNav, onOpenSearch }: Props) {
       alive = false;
       clearInterval(interval);
     };
-  }, []);
+    // Re-fetch when the panel reports a change so the badge updates immediately
+  }, [notificationsVersion]);
 
   return (
     <header className="v2-topbar">
@@ -94,20 +95,30 @@ export function Topbar({ onOpenMobileNav, onOpenSearch }: Props) {
       <div className="v2-topbar-right">
         <button
           type="button"
-          onClick={onOpenSearch}
+          onClick={openPalette}
           className="v2-search-trigger"
           aria-label="Open command palette"
-          disabled={!onOpenSearch}
         >
           <Search className="h-3.5 w-3.5" />
           <span className="v2-search-placeholder">Search anything…</span>
           <kbd className="v2-kbd">{isMac ? "⌘" : "Ctrl"}<span>K</span></kbd>
         </button>
 
+        <button
+          type="button"
+          onClick={openHelp}
+          className="v2-icon-btn"
+          aria-label="Keyboard shortcuts"
+          title="Keyboard shortcuts (?)"
+        >
+          <HelpCircle className="h-4 w-4" />
+        </button>
+
         <ThemeToggle />
 
-        <Link
-          href="/admin#notifications"
+        <button
+          type="button"
+          onClick={openNotifications}
           aria-label={unread > 0 ? `${unread} unread notifications` : "Notifications"}
           className="v2-icon-btn v2-bell"
         >
@@ -117,7 +128,7 @@ export function Topbar({ onOpenMobileNav, onOpenSearch }: Props) {
               {unread > 9 ? "9+" : unread}
             </span>
           )}
-        </Link>
+        </button>
       </div>
     </header>
   );
