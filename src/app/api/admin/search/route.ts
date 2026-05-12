@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { isAuthenticated } from "@/lib/admin-auth";
+import { NextResponse } from "next/server";
+import { withAdmin } from "@/lib/api-middleware";
 import { getOrders, getLoyaltyMembers, getIngredients } from "@/lib/store";
 import { krakowMenu } from "@/data/menus/krakow";
 import { warszawaMenu } from "@/data/menus/warszawa";
@@ -21,11 +21,7 @@ function ciIncludes(haystack: string | undefined, needle: string): boolean {
   return haystack.toLowerCase().includes(needle);
 }
 
-export async function GET(req: NextRequest) {
-  if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withAdmin({}, async (req) => {
   const q = (req.nextUrl.searchParams.get("q") || "").trim().toLowerCase();
   if (q.length === 0) {
     // Return recent orders for the empty-query state so the palette is useful
@@ -128,4 +124,4 @@ export async function GET(req: NextRequest) {
   return NextResponse.json<{ results: SearchResult[] }>({
     results: [...orderHits, ...customerHits, ...menuHits, ...ingredientHits],
   });
-}
+});
