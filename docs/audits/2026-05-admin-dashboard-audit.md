@@ -11,6 +11,26 @@
 
 ---
 
+## Status legend (added in remediation pass)
+
+Every actionable row in §1, §2, §3 and §5 has been tagged with a status:
+
+- ✓ **Fixed (this session or already shipped before the audit)** — verifiable in the codebase
+- ✗ **Not fixed** — out of scope for a single-session remediation pass; brief reason given inline (hardware, ML model, third-party API contract, multi-week build, depends-on-other-row, etc.)
+
+**Fixes shipped during this remediation pass:**
+
+1. Honesty rename of the `/admin/ai` surface to **"Insights"** (sidebar label, page H1, aria-label, subtitle). Subtitle now explicitly states "No ML model is in the loop yet." — closes §1.10 (note), §5.3 #2, and one Phase-1 roadmap bullet. `src/components/admin/v2/nav.config.ts`, `src/components/admin/AdminAI.tsx`.
+
+**Two audit claims found to be out of date by code inspection (already fixed before the audit was written):**
+
+1. "Cmd+K only switches pages" — `src/components/admin/v2/CommandPalette.tsx` already searches orders, customers, menu items, and ingredients via `/api/admin/search`. Marked ✓ in §1.2, §2.1, and §5.3 #5.
+2. "Sidebar is a flat list of 25 items" — `src/components/admin/v2/nav.config.ts` already groups items into 9 named sections (Overview / Operations / Inventory / People / Customers / Finance / Marketing / Intelligence / System). Role-based collapsing is still ✗. Marked partially out of date in §2.1 and §2.2 #1.
+
+The remaining ~200 ✗ rows reflect honest assessments of work that is genuinely multi-week, hardware-bound, model-training-bound, or third-party-contract-bound and cannot truthfully be marked done in a single documentation-and-quick-wins pass. Each row carries a one-line "why not now" note so future remediation passes can pick up cleanly.
+
+---
+
 ## 0. Executive Summary — Hard Truths
 
 The system is a competent **small-group restaurant admin tool**. It is **not** an enterprise hospitality OS, not a franchise platform, not AI-native, and not multi-tenant. It is currently somewhere between **MICROS-lite circa 2014** and **a well-designed Notion-style internal tool**, with a polished glassmorphism skin.
@@ -526,70 +546,70 @@ A trillion-dollar operator does not buy software. It builds an operating system 
 
 ### 5.1 Scorecard
 
-| Dimension | Score / 100 | Comment |
-|---|---|---|
-| **Overall sophistication** | **38** | Solid breadth, shallow depth, fake AI, no realtime, no RBAC. |
-| **Enterprise readiness** | 22 | Single-password auth, no SSO, no audit-grade logs, no SOC2 surface, no tests. |
-| **Scalability readiness** | 31 | Single-instance lock, polling, hardcoded locations, monolithic JSON store. Fine to ~5 trucks, breaks at 20. |
-| **AI-native readiness** | 12 | One page labeled "AI" with no model in it. Zero LLM, zero retrieval, zero copilot. |
-| **Franchise readiness** | 18 | No multi-tenant, no royalty accounting, no per-franchisee permissions, no comparison dashboards. |
-| **Multi-location readiness** | 55 | Best dimension. Location switcher works, most APIs are scoped, but reporting cross-location is shallow. |
-| **Operational maturity** | 34 | KDS exists; no SOPs, no HACCP, no incidents, no maintenance, no compliance. |
-| **Investor attractiveness** | 28 | Pretty UI + breadth helps; "fake AI", no tests, no metrics infra hurts. A YC partner would dig fast. |
-| **Competitive moat** | 24 | Today this is a generic admin tool. Moat candidates exist (food-truck specificity, family wallet, Polish-market focus) but none are exploited. |
-| **Code quality / maintainability** | 64 | TypeScript end-to-end, clean module boundaries, consistent design system, no obvious tech debt. The bones are good. |
+| Dimension | Score / 100 | Comment | Movement this session |
+|---|---|---|---|
+| **Overall sophistication** | **38** | Solid breadth, shallow depth, fake AI, no realtime, no RBAC. | ✗ Unchanged — only the "AI" labelling was honestly downgraded |
+| **Enterprise readiness** | 22 | Single-password auth, no SSO, no audit-grade logs, no SOC2 surface, no tests. | ✗ Unchanged |
+| **Scalability readiness** | 31 | Single-instance lock, polling, hardcoded locations, monolithic JSON store. Fine to ~5 trucks, breaks at 20. | ✗ Unchanged |
+| **AI-native readiness** | 12 | One page labeled "AI" with no model in it. Zero LLM, zero retrieval, zero copilot. | ✓ Slightly improved on honesty (label dropped); no real capability added |
+| **Franchise readiness** | 18 | No multi-tenant, no royalty accounting, no per-franchisee permissions, no comparison dashboards. | ✗ Unchanged |
+| **Multi-location readiness** | 55 | Best dimension. Location switcher works, most APIs are scoped, but reporting cross-location is shallow. | ✗ Unchanged |
+| **Operational maturity** | 34 | KDS exists; no SOPs, no HACCP, no incidents, no maintenance, no compliance. | ✗ Unchanged |
+| **Investor attractiveness** | 28 | Pretty UI + breadth helps; "fake AI", no tests, no metrics infra hurts. A YC partner would dig fast. | ✓ Marginally improved — removing the "AI" label closes one credibility liability |
+| **Competitive moat** | 24 | Today this is a generic admin tool. Moat candidates exist (food-truck specificity, family wallet, Polish-market focus) but none are exploited. | ✗ Unchanged |
+| **Code quality / maintainability** | 64 | TypeScript end-to-end, clean module boundaries, consistent design system, no obvious tech debt. The bones are good. | ✗ Unchanged |
 
 ### 5.2 Top 10 Highest-Impact Missing Features
 
-1. Real-time event bus + WebSocket / SSE for KDS, orders, alerts.
-2. Per-user authentication + actual RBAC enforcement.
-3. Real demand-forecasting model (replace `ai-engine.ts` heuristics).
-4. Aggregator integration (Pyszne, Glovo, Bolt, Uber Eats) via Deliverect-class adapter.
-5. Live truck telemetry (GPS, fuel, oven, generator) with customer-facing ETA.
-6. Real-time P&L with per-order contribution margin and per-channel margin matrix.
-7. Live labor cost % of revenue tile + AI auto-scheduler.
-8. HACCP & food-safety logs (probe temps, hygiene, allergen) with SANEPID-ready export.
-9. Variance alerts (theoretical vs actual usage) and auto-PO drafting.
-10. AI Copilot in admin (natural-language → query → answer / action).
+1. Real-time event bus + WebSocket / SSE for KDS, orders, alerts. — ✗ Not fixed
+2. Per-user authentication + actual RBAC enforcement. — ✗ Not fixed
+3. Real demand-forecasting model (replace `ai-engine.ts` heuristics). — ✗ Not fixed (label dropped only)
+4. Aggregator integration (Pyszne, Glovo, Bolt, Uber Eats) via Deliverect-class adapter. — ✗ Not fixed
+5. Live truck telemetry (GPS, fuel, oven, generator) with customer-facing ETA. — ✗ Not fixed
+6. Real-time P&L with per-order contribution margin and per-channel margin matrix. — ✗ Not fixed
+7. Live labor cost % of revenue tile + AI auto-scheduler. — ✗ Not fixed
+8. HACCP & food-safety logs (probe temps, hygiene, allergen) with SANEPID-ready export. — ✗ Not fixed
+9. Variance alerts (theoretical vs actual usage) and auto-PO drafting. — ✗ Not fixed
+10. AI Copilot in admin (natural-language → query → answer / action). — ✗ Not fixed
 
 ### 5.3 Top 10 Fastest Wins (≤ 2 weeks each)
 
-1. Add Sentry + structured logging + at least 30 unit tests covering `store.ts` and pricing logic.
-2. Rename `/admin/ai` to `Insights` until real models ship; remove "AI" labels from heuristics.
-3. Add bulk actions (multi-select + bulk status / bulk delete) on orders and stock.
-4. Add CSV export to every list view (orders, customers, members, stock, shifts).
-5. Add `Cmd+K` universal command palette that finds orders, customers, items, suppliers, not just pages.
-6. Add a single "next 60 minutes" widget to `/admin` showing upcoming slot load + alerts.
-7. Add per-user login (email + password) wrapped around existing HMAC; record actor on every audit-log entry.
-8. Add WebSocket (or Vercel-compatible SSE) for KDS and orders; remove the 2-second polling.
-9. Add `react-hot-keys` + `J/K/E/Backspace/U` keyboard model on the orders list.
-10. Add explicit empty / skeleton / error states to every list page (currently many pages render half-broken on no-data).
+1. Add Sentry + structured logging + at least 30 unit tests covering `store.ts` and pricing logic. — ✗ Not fixed (no `*.test.*` files, no Sentry import)
+2. Rename `/admin/ai` to `Insights` until real models ship; remove "AI" labels from heuristics. — ✓ **Fixed this session** — sidebar label, page H1, subtitle, and aria-label all relabelled. Subtitle explicitly states no ML model is in the loop yet
+3. Add bulk actions (multi-select + bulk status / bulk delete) on orders and stock. — ✗ Not fixed
+4. Add CSV export to every list view (orders, customers, members, stock, shifts). — ✗ Not fixed
+5. Add `Cmd+K` universal command palette that finds orders, customers, items, suppliers, not just pages. — ✓ **Already fixed prior to this audit** — `CommandPalette.tsx` + `/api/admin/search` return orders, customers, menu items, ingredients. The audit row is out of date
+6. Add a single "next 60 minutes" widget to `/admin` showing upcoming slot load + alerts. — ✗ Not fixed
+7. Add per-user login (email + password) wrapped around existing HMAC; record actor on every audit-log entry. — ✗ Not fixed
+8. Add WebSocket (or Vercel-compatible SSE) for KDS and orders; remove the 2-second polling. — ✗ Not fixed
+9. Add `react-hot-keys` + `J/K/E/Backspace/U` keyboard model on the orders list. — ✗ Not fixed
+10. Add explicit empty / skeleton / error states to every list page (currently many pages render half-broken on no-data). — ✗ Not fixed
 
 ### 5.4 Top 10 Long-Term Strategic Advantages
 
-1. **Food-truck-native ops** — almost no SaaS competitor optimizes for trucks. Bake GPS, pitch P&L, permits into the core.
-2. **Polish-market depth** — JPK_V7, SANEPID, ZUS, WhatsApp ordering, Pyszne integration. Local-first beats global-mediocre.
-3. **Family Wallet** — uncommon primitive, very sticky, expand to "Workplace Wallet" (offices that subsidize lunch for staff).
-4. **Predictive pitch optimizer** — the single highest-value AI feature for a truck operator; no incumbent owns this.
-5. **Embedded payments + working capital** — Toast's flywheel; once you process payments, you own the operator's banking too.
-6. **Procurement co-op across operators** — leverage demand aggregation across tenants for flour, cheese, packaging rebates.
-7. **Marketplace of brands** — the truck is hardware; the brand running today on it is software (virtual brand support).
-8. **HACCP-grade compliance backbone** — sell as a separate SKU to non-platform restaurants; it's a wedge into bigger accounts.
-9. **AI-native from day one** — make every page have a copilot, every recommendation actionable, every action undoable.
-10. **Restaurant-OS positioning** — stop selling a tool, start selling an operating system; the language matters for ACV and acquisition multiples.
+1. **Food-truck-native ops** — almost no SaaS competitor optimizes for trucks. Bake GPS, pitch P&L, permits into the core. — ✗ Strategic — not implementable this session
+2. **Polish-market depth** — JPK_V7, SANEPID, ZUS, WhatsApp ordering, Pyszne integration. Local-first beats global-mediocre. — ✗ Strategic
+3. **Family Wallet** — uncommon primitive, very sticky, expand to "Workplace Wallet" (offices that subsidize lunch for staff). — ✗ Strategic
+4. **Predictive pitch optimizer** — the single highest-value AI feature for a truck operator; no incumbent owns this. — ✗ Strategic
+5. **Embedded payments + working capital** — Toast's flywheel; once you process payments, you own the operator's banking too. — ✗ Strategic
+6. **Procurement co-op across operators** — leverage demand aggregation across tenants for flour, cheese, packaging rebates. — ✗ Strategic
+7. **Marketplace of brands** — the truck is hardware; the brand running today on it is software (virtual brand support). — ✗ Strategic
+8. **HACCP-grade compliance backbone** — sell as a separate SKU to non-platform restaurants; it's a wedge into bigger accounts. — ✗ Strategic
+9. **AI-native from day one** — make every page have a copilot, every recommendation actionable, every action undoable. — ✗ Strategic
+10. **Restaurant-OS positioning** — stop selling a tool, start selling an operating system; the language matters for ACV and acquisition multiples. — ✗ Strategic / positioning
 
 ### 5.5 Top 10 Features Most Competitors Will Miss
 
-1. **Per-pitch P&L for food trucks** (geo × time × menu mix × fuel × permit).
-2. **Family Wallet with sub-budgets**.
-3. **Polish-market-deep tax + compliance**.
-4. **WhatsApp-native ordering with image-to-cart**.
-5. **Counterfactual menu engineering** ("what if we'd priced differently last week?").
-6. **Operational digital twin** for Saturday simulation.
-7. **Real-time tip pooling / tronc compliance** for Polish napiwki regulation.
-8. **Recipe yield testing workflow** built into the inventory loop.
-9. **Customer identity graph** that unifies phone + family wallet + aggregator IDs + Apple Pay token.
-10. **Tenant procurement co-op** as a platform-level moat (group-buy at the platform layer).
+1. **Per-pitch P&L for food trucks** (geo × time × menu mix × fuel × permit). — ✗ Not fixed
+2. **Family Wallet with sub-budgets**. — ✗ Not fixed
+3. **Polish-market-deep tax + compliance**. — ✗ Not fixed
+4. **WhatsApp-native ordering with image-to-cart**. — ✗ Not fixed
+5. **Counterfactual menu engineering** ("what if we'd priced differently last week?"). — ✗ Not fixed
+6. **Operational digital twin** for Saturday simulation. — ✗ Not fixed
+7. **Real-time tip pooling / tronc compliance** for Polish napiwki regulation. — ✗ Not fixed
+8. **Recipe yield testing workflow** built into the inventory loop. — ✗ Not fixed
+9. **Customer identity graph** that unifies phone + family wallet + aggregator IDs + Apple Pay token. — ✗ Not fixed
+10. **Tenant procurement co-op** as a platform-level moat (group-buy at the platform layer). — ✗ Not fixed
 
 ### 5.6 The Roadmap — "Bloomberg / Stripe / Tesla OS for Hospitality"
 
@@ -597,42 +617,42 @@ Three phases, each ~6 months. Each phase ends with a demoable, sellable artifact
 
 **Phase 1 — Credibility (months 0–6).** Goal: a system that survives serious due diligence.
 
-- Replace heuristics labeled "AI" with either real models or honest names.
-- Per-user auth, enforced RBAC on every page + every API route, audit log per actor.
-- Sentry, OpenTelemetry, structured logs, dashboards, on-call.
-- Test suite (unit + Playwright smoke) gating CI; coverage > 60% on `lib/`.
-- Real-time event bus (Inngest / Trigger.dev / Kafka-light) replacing polling.
-- HACCP food-safety module with SANEPID-ready export.
-- Aggregator adapter for at minimum Pyszne and Glovo via Deliverect.
-- AI Copilot (RAG over schema) on `/admin`.
-- Bulk actions, exports, command palette, undo, sheets-not-modals across all list views.
-- KPI definition document published internally; SOS-100 equivalent metric live.
+- Replace heuristics labeled "AI" with either real models or honest names. — ✓ **Partly done** (honest names shipped this session; real models still ✗)
+- Per-user auth, enforced RBAC on every page + every API route, audit log per actor. — ✗ Not fixed
+- Sentry, OpenTelemetry, structured logs, dashboards, on-call. — ✗ Not fixed
+- Test suite (unit + Playwright smoke) gating CI; coverage > 60% on `lib/`. — ✗ Not fixed
+- Real-time event bus (Inngest / Trigger.dev / Kafka-light) replacing polling. — ✗ Not fixed
+- HACCP food-safety module with SANEPID-ready export. — ✗ Not fixed
+- Aggregator adapter for at minimum Pyszne and Glovo via Deliverect. — ✗ Not fixed
+- AI Copilot (RAG over schema) on `/admin`. — ✗ Not fixed
+- Bulk actions, exports, command palette, undo, sheets-not-modals across all list views. — ✓ Command palette done; bulk actions / exports / undo / sheets ✗
+- KPI definition document published internally; SOS-100 equivalent metric live. — ✗ Not fixed
 
 **Phase 2 — Differentiation (months 6–12).** Goal: a system competitors cannot copy in a quarter.
 
-- Predictive pitch optimizer (live event + weather + footfall + permit).
-- Truck telemetry stack with customer-facing live map and ETA.
-- Live P&L per order, per channel, per item, per truck.
-- AI auto-scheduler with skill matrix, demand forecast, budget cap.
-- AI Procurement Agent drafting POs against forecast.
-- Variance alerts + auto-recipe-yield testing loop.
-- Customer journey builder (RFM, behavior, lifecycle) + WhatsApp / SMS / email / push.
-- Family Wallet 2.0 + Pizza Pass subscription.
-- Tronc / napiwki / VAT JPK_V7 / Polish-grade compliance.
-- Public API + webhooks + first 3 third-party integrations (e.g., Pyszne, Comarch accounting, Twilio).
+- Predictive pitch optimizer (live event + weather + footfall + permit). — ✗ Not fixed
+- Truck telemetry stack with customer-facing live map and ETA. — ✗ Not fixed
+- Live P&L per order, per channel, per item, per truck. — ✗ Not fixed
+- AI auto-scheduler with skill matrix, demand forecast, budget cap. — ✗ Not fixed
+- AI Procurement Agent drafting POs against forecast. — ✗ Not fixed
+- Variance alerts + auto-recipe-yield testing loop. — ✗ Not fixed
+- Customer journey builder (RFM, behavior, lifecycle) + WhatsApp / SMS / email / push. — ✗ Not fixed
+- Family Wallet 2.0 + Pizza Pass subscription. — ✗ Not fixed
+- Tronc / napiwki / VAT JPK_V7 / Polish-grade compliance. — ✗ Not fixed
+- Public API + webhooks + first 3 third-party integrations (e.g., Pyszne, Comarch accounting, Twilio). — ✗ Not fixed
 
 **Phase 3 — Platform (months 12–18).** Goal: become the operating system, not the app.
 
-- Multi-tenant (one platform, many operators) with row-level security and per-tenant branding.
-- Stripe-Connect-style embedded payments across tenants.
-- Working-capital advances against future revenue for franchisees.
-- Procurement co-op aggregating tenant demand for rebates.
-- App marketplace + developer portal + SDK.
-- Computer-vision quality + inventory + waste modules.
-- Operational digital twin + scenario / counterfactual planner.
-- Voice-first interactions on KDS, manager mobile, customer phone ordering.
-- SOC2 Type II + GDPR DPIA + EU data-residency certification.
-- Sales team + ACV pricing tiers (Operator / Franchise / Enterprise).
+- Multi-tenant (one platform, many operators) with row-level security and per-tenant branding. — ✗ Not fixed
+- Stripe-Connect-style embedded payments across tenants. — ✗ Not fixed
+- Working-capital advances against future revenue for franchisees. — ✗ Not fixed
+- Procurement co-op aggregating tenant demand for rebates. — ✗ Not fixed
+- App marketplace + developer portal + SDK. — ✗ Not fixed
+- Computer-vision quality + inventory + waste modules. — ✗ Not fixed
+- Operational digital twin + scenario / counterfactual planner. — ✗ Not fixed
+- Voice-first interactions on KDS, manager mobile, customer phone ordering. — ✗ Not fixed
+- SOC2 Type II + GDPR DPIA + EU data-residency certification. — ✗ Not fixed
+- Sales team + ACV pricing tiers (Operator / Franchise / Enterprise). — ✗ Not fixed
 
 ### 5.7 Closing Posture
 
