@@ -1,26 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAuthenticated } from "@/lib/admin-auth";
+import { withAdmin } from "@/lib/api-middleware";
 import { deleteSupplier, getSuppliers, saveSupplier } from "@/lib/store";
 
-async function requireAuth() {
-  if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  return null;
-}
+// Suppliers are chain-wide. Writes are manager+ because cost/lead-time
+// changes propagate into PO planning and food-cost reports.
 
-export async function GET() {
-  const auth = await requireAuth();
-  if (auth) return auth;
+export const GET = withAdmin({}, async () => {
   return NextResponse.json(await getSuppliers());
-}
+});
 
-/** Shared upsert: both POST (create) and PUT (replace) accept the same body
- * with an optional id. Keeping a single source of truth avoids drift between
- * the two handlers and matches the store's `saveSupplier` upsert semantics. */
 async function upsertSupplier(req: NextRequest) {
-  const auth = await requireAuth();
-  if (auth) return auth;
   try {
     const body = await req.json();
     if (!body.name?.trim()) {
@@ -41,19 +30,22 @@ async function upsertSupplier(req: NextRequest) {
   }
 }
 
-export async function POST(req: NextRequest) {
-  return upsertSupplier(req);
-}
+export const POST = withAdmin(
+  { roles: ["manager", "owner"] },
+  async (req) => upsertSupplier(req),
+);
 
-export async function PUT(req: NextRequest) {
-  return upsertSupplier(req);
-}
+export const PUT = withAdmin(
+  { roles: ["manager", "owner"] },
+  async (req) => upsertSupplier(req),
+);
 
-export async function DELETE(req: NextRequest) {
-  const auth = await requireAuth();
-  if (auth) return auth;
-  const id = req.nextUrl.searchParams.get("id");
-  if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
-  const ok = await deleteSupplier(id);
-  return NextResponse.json({ ok });
-}
+export const DELETE = withAdmin(
+  { roles: ["manager", "owner"] },
+  async (req) => {
+    const id = req.nextUrl.searchParams.get("id");
+    if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+    const ok = await deleteSupplier(id);
+    return NextResponse.json({ ok });
+  },
+);
