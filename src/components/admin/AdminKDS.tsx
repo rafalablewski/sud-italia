@@ -12,6 +12,7 @@ import {
   PauseCircle,
   PlayCircle,
   RefreshCw,
+  RotateCcw,
   Timer,
   Truck,
   Package,
@@ -90,6 +91,13 @@ export function AdminKDS() {
   const [soundOn, setSoundOn] = useState(true);
   const [paused, setPaused] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+  // Cooks bump tickets by mistake constantly. We keep the last 5 bumps in
+  // memory so a "Recall" tray on the right side can put one back on the
+  // expo column in a single click — within the 60 s window where this is
+  // most useful. Older bumps quietly fall out of the list.
+  const [bumpHistory, setBumpHistory] = useState<
+    { orderId: string; label: string; bumpedAt: number }[]
+  >([]);
 
   const knownIdsRef = useRef<Set<string>>(new Set());
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -162,6 +170,16 @@ export function AdminKDS() {
       if (res.ok) {
         if (next === "completed") {
           toast.success("Order bumped", `${o.customerName || "Guest"} · ${o.id.slice(-6).toUpperCase()}`);
+          setBumpHistory((arr) =>
+            [
+              {
+                orderId: o.id,
+                label: `${o.customerName || "Guest"} · ${o.id.slice(-6).toUpperCase()}`,
+                bumpedAt: Date.now(),
+              },
+              ...arr.filter((e) => e.orderId !== o.id),
+            ].slice(0, 5),
+          );
           setOrders((arr) => arr.filter((x) => x.id !== o.id));
         } else {
           setOrders((arr) => arr.map((x) => (x.id === o.id ? { ...x, status: next } : x)));
@@ -169,6 +187,36 @@ export function AdminKDS() {
       } else {
         toast.error("Could not advance", "Try refreshing the queue.");
       }
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const recall = async (orderId: string) => {
+    setUpdatingId(orderId);
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/recall`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        const recalled: Order = await res.json();
+        // Reinsert into the active list so it shows up on the expo column
+        // again; the next polling tick would catch it anyway but this keeps
+        // the UI feeling instant.
+        setOrders((arr) => {
+          const without = arr.filter((x) => x.id !== recalled.id);
+          return ACTIVE_STATUSES.includes(recalled.status)
+            ? [...without, recalled]
+            : without;
+        });
+        setBumpHistory((arr) => arr.filter((e) => e.orderId !== orderId));
+        toast.success("Order recalled", "Back on the expo column.");
+      } else {
+        const data: { error?: string } = await res.json().catch(() => ({}));
+        toast.error("Could not recall", data.error || "Try again in a moment.");
+      }
+    } catch {
+      toast.error("Could not recall", "Network error. Try again.");
     } finally {
       setUpdatingId(null);
     }
@@ -237,6 +285,42 @@ export function AdminKDS() {
           </Button>
         </div>
       </header>
+
+      {bumpHistory.length > 0 && (
+        <div
+          role="region"
+          aria-label="Recently bumped"
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: "0.5rem",
+            padding: "0.5rem 0.75rem",
+            margin: "0.5rem 0 0.25rem",
+            borderRadius: "0.5rem",
+            background: "var(--v2-surface-muted, #f9fafb)",
+            border: "1px solid var(--v2-border, #e5e7eb)",
+            fontSize: "0.8125rem",
+          }}
+        >
+          <span style={{ fontWeight: 600, color: "var(--v2-text-muted, #6b7280)" }}>
+            <RotateCcw className="h-3.5 w-3.5" style={{ display: "inline", marginRight: "0.375rem", verticalAlign: "-2px" }} />
+            Just bumped:
+          </span>
+          {bumpHistory.map((entry) => (
+            <Button
+              key={entry.orderId}
+              size="sm"
+              variant="ghost"
+              disabled={updatingId === entry.orderId}
+              onClick={() => recall(entry.orderId)}
+              title={`Recall ${entry.label} to the expo column`}
+            >
+              {entry.label} · Recall
+            </Button>
+          ))}
+        </div>
+      )}
 
       {/* Decorative quick-stats above the board */}
       <section className="v2-kds-stats">
