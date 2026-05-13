@@ -579,12 +579,22 @@ const CUSTOMERS_DDL = [
     last_order_at timestamptz,
     loyalty_points_balance integer NOT NULL DEFAULT 0,
     manual_points_adjust integer NOT NULL DEFAULT 0,
-    sms_optout text NOT NULL DEFAULT 'false',
-    email_optout text NOT NULL DEFAULT 'false',
+    sms_optout boolean NOT NULL DEFAULT false,
+    email_optout boolean NOT NULL DEFAULT false,
     notes text,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
   )`,
+  // Gemini review feedback: storage migrated from text → boolean for the
+  // optout flags. These ALTERs are safe to re-run; once the column is
+  // already boolean PostgreSQL's "TYPE boolean USING (col::boolean)"
+  // is a no-op cast.
+  `ALTER TABLE customers ALTER COLUMN sms_optout DROP DEFAULT`,
+  `ALTER TABLE customers ALTER COLUMN sms_optout TYPE boolean USING (sms_optout::boolean)`,
+  `ALTER TABLE customers ALTER COLUMN sms_optout SET DEFAULT false`,
+  `ALTER TABLE customers ALTER COLUMN email_optout DROP DEFAULT`,
+  `ALTER TABLE customers ALTER COLUMN email_optout TYPE boolean USING (email_optout::boolean)`,
+  `ALTER TABLE customers ALTER COLUMN email_optout SET DEFAULT false`,
   `CREATE INDEX IF NOT EXISTS customers_last_order_at_idx
     ON customers (last_order_at)`,
   `CREATE INDEX IF NOT EXISTS customers_email_idx ON customers (email)`,
@@ -622,8 +632,8 @@ function rowToCustomer(row: typeof customersTable.$inferSelect): CustomerRollup 
     lastOrderAt: row.lastOrderAt ? row.lastOrderAt.toISOString() : null,
     loyaltyPointsBalance: row.loyaltyPointsBalance,
     manualPointsAdjust: row.manualPointsAdjust,
-    smsOptout: row.smsOptout === "true",
-    emailOptout: row.emailOptout === "true",
+    smsOptout: row.smsOptout,
+    emailOptout: row.emailOptout,
     notes: row.notes,
   };
 }
@@ -2283,9 +2293,11 @@ const LOYALTY_MEMBERS_DDL = [
     last_name text,
     nickname text,
     email text,
-    dob text,
+    dob date,
     signed_up_at timestamptz NOT NULL
   )`,
+  // Gemini review feedback: dob migrated from text → date.
+  `ALTER TABLE loyalty_members ALTER COLUMN dob TYPE date USING (NULLIF(dob, '')::date)`,
 ];
 
 async function ensureLoyaltyMembersTable(): Promise<void> {
@@ -4011,12 +4023,17 @@ const STAFF_DDL = [
     role text NOT NULL,
     location_slug text NOT NULL,
     hourly_rate_grosze integer NOT NULL,
-    hire_date text,
-    dob text,
+    hire_date date,
+    dob date,
     status text NOT NULL,
     notes text,
     created_at timestamptz NOT NULL
   )`,
+  // Gemini review feedback: hire_date + dob migrated from text → date.
+  // Existing rows hold ISO YYYY-MM-DD strings (and NULL), so the cast is
+  // lossless. Repeat calls are no-ops once the column is already date.
+  `ALTER TABLE staff ALTER COLUMN hire_date TYPE date USING (NULLIF(hire_date, '')::date)`,
+  `ALTER TABLE staff ALTER COLUMN dob TYPE date USING (NULLIF(dob, '')::date)`,
   `CREATE INDEX IF NOT EXISTS staff_location_idx ON staff (location_slug)`,
   `CREATE INDEX IF NOT EXISTS staff_status_idx ON staff (status)`,
 ];
@@ -4939,8 +4956,12 @@ const STATIONS_DDL = [
     location_slug text NOT NULL,
     name text NOT NULL,
     display_order integer NOT NULL DEFAULT 0,
-    active text NOT NULL DEFAULT 'true'
+    active boolean NOT NULL DEFAULT true
   )`,
+  // Gemini review feedback: active migrated from text → boolean.
+  `ALTER TABLE stations ALTER COLUMN active DROP DEFAULT`,
+  `ALTER TABLE stations ALTER COLUMN active TYPE boolean USING (active::boolean)`,
+  `ALTER TABLE stations ALTER COLUMN active SET DEFAULT true`,
   `CREATE INDEX IF NOT EXISTS stations_location_idx ON stations (location_slug)`,
 ];
 const MENU_ITEM_STATION_DDL = [
@@ -5028,7 +5049,7 @@ export async function getStations(locationSlug?: string): Promise<Station[]> {
       locationSlug: row.locationSlug,
       name: row.name,
       displayOrder: row.displayOrder,
-      active: row.active === "true",
+      active: row.active,
     }));
   } catch (err) {
     logger.warn("getStations DB read failed", { layer: "store.kds" }, err);
@@ -5053,7 +5074,7 @@ export async function saveStation(input: {
       locationSlug: input.locationSlug,
       name: input.name,
       displayOrder: input.displayOrder ?? 0,
-      active: input.active === false ? "false" : "true",
+      active: input.active !== false,
     };
     await db
       .insert(stationsTable)
@@ -5493,8 +5514,12 @@ const LOCATION_ASSIGNMENTS_DDL = [
     brand_id text NOT NULL,
     franchisee_id text,
     region_slug text,
-    setup_complete text NOT NULL DEFAULT 'true'
+    setup_complete boolean NOT NULL DEFAULT true
   )`,
+  // Gemini review feedback: setup_complete migrated from text → boolean.
+  `ALTER TABLE location_assignments ALTER COLUMN setup_complete DROP DEFAULT`,
+  `ALTER TABLE location_assignments ALTER COLUMN setup_complete TYPE boolean USING (setup_complete::boolean)`,
+  `ALTER TABLE location_assignments ALTER COLUMN setup_complete SET DEFAULT true`,
   `CREATE INDEX IF NOT EXISTS location_assignments_brand_idx
     ON location_assignments (brand_id)`,
   `CREATE INDEX IF NOT EXISTS location_assignments_franchisee_idx
@@ -5664,7 +5689,7 @@ export async function getLocationAssignment(locationSlug: string): Promise<Locat
       brandId: r.brandId,
       franchiseeId: r.franchiseeId ?? undefined,
       regionSlug: r.regionSlug ?? undefined,
-      setupComplete: r.setupComplete === "true",
+      setupComplete: r.setupComplete,
     };
   } catch (err) {
     logger.warn("getLocationAssignment failed", { locationSlug, layer: "store.location_assignments" }, err);
@@ -5682,7 +5707,7 @@ export async function saveLocationAssignment(input: LocationAssignment): Promise
       brandId: input.brandId,
       franchiseeId: input.franchiseeId ?? null,
       regionSlug: input.regionSlug ?? null,
-      setupComplete: input.setupComplete ? "true" : "false",
+      setupComplete: input.setupComplete ?? true,
     };
     await db
       .insert(locationAssignmentsTable)

@@ -4,6 +4,8 @@ import {
   integer,
   jsonb,
   timestamp,
+  date,
+  boolean,
   primaryKey,
   index,
   uniqueIndex,
@@ -250,8 +252,8 @@ export const customers = pgTable(
     lastOrderAt: timestamp("last_order_at", { withTimezone: true }),
     loyaltyPointsBalance: integer("loyalty_points_balance").notNull().default(0),
     manualPointsAdjust: integer("manual_points_adjust").notNull().default(0),
-    smsOptout: text("sms_optout").notNull().default("false"), // "true"|"false" so we can also use "unset"
-    emailOptout: text("email_optout").notNull().default("false"),
+    smsOptout: boolean("sms_optout").notNull().default(false),
+    emailOptout: boolean("email_optout").notNull().default(false),
     notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -445,8 +447,8 @@ export const staff = pgTable(
     role: text("role").notNull(),
     locationSlug: text("location_slug").notNull(),
     hourlyRateGrosze: integer("hourly_rate_grosze").notNull(),
-    hireDate: text("hire_date"),
-    dob: text("dob"),
+    hireDate: date("hire_date"),
+    dob: date("dob"),
     status: text("status").notNull(),
     notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
@@ -507,7 +509,7 @@ export const loyaltyMembers = pgTable("loyalty_members", {
   lastName: text("last_name"),
   nickname: text("nickname"),
   email: text("email"),
-  dob: text("dob"),
+  dob: date("dob"),
   signedUpAt: timestamp("signed_up_at", { withTimezone: true }).notNull(),
 });
 
@@ -608,7 +610,7 @@ export const stations = pgTable(
     /** Display ordinal for the expo screen. */
     displayOrder: integer("display_order").notNull().default(0),
     /** When false, items route around this station (e.g. seasonally closed). */
-    active: text("active").notNull().default("true"),
+    active: boolean("active").notNull().default(true),
   },
   (table) => [
     index("stations_location_idx").on(table.locationSlug),
@@ -729,7 +731,7 @@ export const locationAssignments = pgTable(
     franchiseeId: text("franchisee_id"),
     /** Optional regional grouping for HQ rollups (m3_11). */
     regionSlug: text("region_slug"),
-    setupComplete: text("setup_complete").notNull().default("true"),
+    setupComplete: boolean("setup_complete").notNull().default(true),
   },
   (table) => [
     index("location_assignments_brand_idx").on(table.brandId),
