@@ -2,6 +2,10 @@
   "framework": "nextjs",
   "crons": [
     {
+      "path": "/api/admin/cron/outbox-drain",
+      "schedule": "* * * * *"
+    },
+    {
       "path": "/api/admin/cron/slots-auto-close",
       "schedule": "*/5 * * * *"
     },

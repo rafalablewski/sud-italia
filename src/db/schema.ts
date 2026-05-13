@@ -542,3 +542,46 @@ export const customerNotes = pgTable(
     index("customer_notes_created_idx").on(table.createdAt),
   ],
 );
+
+// --- Phase 1: outbox events (m1_13) -------------------------------------
+
+/**
+ * Outbox pattern. Side effects that must fire exactly once (SMS, email,
+ * aggregator-confirm, KDS-notify) are written here in the same transaction
+ * as the parent change (order placement, status flip, etc.). The
+ * outbox-drain cron pulls unprocessed rows and dispatches them; success
+ * sets processed_at, failure increments attempt_count + last_error.
+ *
+ * id is deterministic — typically a content hash of (event_type, entity_id,
+ * a per-event key) — so INSERT ON CONFLICT DO NOTHING gives exactly-once
+ * even when the parent write is retried.
+ */
+export const outboxEvents = pgTable(
+  "outbox_events",
+  {
+    id: text("id").primaryKey(),
+    eventType: text("event_type").notNull(),
+    entityType: text("entity_type"),
+    entityId: text("entity_id"),
+    payload: jsonb("payload").notNull(),
+    scheduledFor: timestamp("scheduled_for", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    attemptCount: integer("attempt_count").notNull().default(0),
+    lastError: text("last_error"),
+    processedAt: timestamp("processed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    // Drain query: WHERE processed_at IS NULL AND scheduled_for <= now()
+    // ORDER BY scheduled_for LIMIT N. This index covers it.
+    index("outbox_processed_scheduled_idx").on(
+      table.processedAt,
+      table.scheduledFor,
+    ),
+    index("outbox_event_type_idx").on(table.eventType),
+    index("outbox_entity_idx").on(table.entityType, table.entityId),
+  ],
+);

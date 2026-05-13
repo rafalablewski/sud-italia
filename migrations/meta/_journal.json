@@ -71,6 +71,13 @@
       "when": 1778660116764,
       "tag": "0009_blue_moira_mactaggert",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1778660677295,
+      "tag": "0010_illegal_bromley",
+      "breakpoints": true
     }
   ]
 }

@@ -13,6 +13,7 @@ import { normalizePlPhoneE164, phonesEqualPl } from "@/lib/phone";
 import { logger } from "@/lib/logger";
 import { withDistributedLock } from "@/lib/locks";
 import { emitOrderEvent } from "@/lib/order-events";
+import { appendOutboxEvent } from "@/lib/outbox";
 import { and, desc, eq, inArray, lt, sql as drizzleSql } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { auditLog as auditLogTable, customerNotes as customerNotesTable, customers as customersTable, feedback as feedbackTable, ingredientStock as ingredientStockTable, ingredients as ingredientsTable, loyaltyMembers as loyaltyMembersTable, orderItems as orderItemsTable, orders as ordersTable, pointAdjustments as pointAdjustmentsTable, recipes as recipesTable, shifts as shiftsTable, slots as slotsTable, staff as staffTable, stockMovements as stockMovementsTable, timePunches as timePunchesTable } from "@/db/schema";
@@ -1009,6 +1010,22 @@ export async function createOrder(order: Order): Promise<Order> {
   // event refreshes it — non-blocking and idempotent.
   void recomputeCustomerRollup(order.customerPhone);
   emitOrderEvent({ kind: "created", orderId: order.id, locationSlug: order.locationSlug });
+  // Outbox: queue side effects (Phase 2 SMS/email/aggregator).
+  // dedupeKey is just "placed" so retried createOrder calls converge on
+  // one row rather than creating multiple identical events.
+  await appendOutboxEvent({
+    eventType: "order.placed",
+    entityType: "order",
+    entityId: order.id,
+    dedupeKey: "placed",
+    payload: {
+      orderId: order.id,
+      locationSlug: order.locationSlug,
+      customerPhone: order.customerPhone,
+      customerName: order.customerName,
+      totalAmount: order.totalAmount,
+    },
+  });
   return saved;
 }
 
@@ -1033,6 +1050,23 @@ export async function updateOrderStatus(id: string, status: Order["status"]): Pr
       locationSlug: updated.locationSlug,
       status,
     });
+    // Outbox: status transitions that customers care about. dedupeKey
+    // includes the status so a noop status flip can't create a duplicate
+    // notification.
+    if (status === "ready" || status === "completed" || status === "cancelled") {
+      await appendOutboxEvent({
+        eventType: `order.${status}`,
+        entityType: "order",
+        entityId: updated.id,
+        dedupeKey: status,
+        payload: {
+          orderId: updated.id,
+          locationSlug: updated.locationSlug,
+          customerPhone: updated.customerPhone,
+          status,
+        },
+      });
+    }
   }
   return updated;
 }
@@ -1070,6 +1104,40 @@ export async function updateOrder(
   }
   if (updated) {
     emitOrderEvent({ kind: "updated", orderId: updated.id, locationSlug: updated.locationSlug });
+    // Outbox: paidAt transition (checkout.session.completed webhook lands)
+    // and refund are the customer-facing events that need durable side
+    // effects. dispute is operator-facing only (no SMS/email to customer);
+    // it's surfaced via Sentry from the webhook handler already.
+    if (patch.paidAt !== undefined) {
+      await appendOutboxEvent({
+        eventType: "order.confirmed",
+        entityType: "order",
+        entityId: updated.id,
+        dedupeKey: "confirmed",
+        payload: {
+          orderId: updated.id,
+          locationSlug: updated.locationSlug,
+          customerPhone: updated.customerPhone,
+          paidAt: updated.paidAt,
+        },
+      });
+    }
+    if (patch.refund !== undefined) {
+      await appendOutboxEvent({
+        eventType: "order.refunded",
+        entityType: "order",
+        entityId: updated.id,
+        // include the stripeRefundId so partial-refund-then-full-refund
+        // emits two distinct events.
+        dedupeKey: updated.refund?.stripeRefundId ?? `manual-${Date.now()}`,
+        payload: {
+          orderId: updated.id,
+          locationSlug: updated.locationSlug,
+          customerPhone: updated.customerPhone,
+          refund: updated.refund,
+        },
+      });
+    }
   }
   return updated;
 }
