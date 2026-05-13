@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { SITE_NAME, SITE_DESCRIPTION } from "@/lib/constants";
+import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
 
 export const metadata: Metadata = {
   title: {
@@ -45,6 +46,7 @@ export default function RootLayout({
   return (
     <html lang="pl" className="h-full">
       <body className="min-h-full flex flex-col antialiased">
+        <ServiceWorkerRegistrar />
         {children}
       </body>
     </html>
