@@ -4968,7 +4968,18 @@ export interface KdsTicket {
   stationId: string;
   locationSlug: string;
   status: "fired" | "ready" | "bumped" | "recalled";
-  items: { menuItemId: string; name: string; quantity: number; notes?: string }[];
+  /**
+   * `allergens` is surfaced per-line so the cook can sanity-check before
+   * firing — protects against the customer-reported-allergen incidents
+   * that fall out of cross-contamination at a small open kitchen.
+   */
+  items: {
+    menuItemId: string;
+    name: string;
+    quantity: number;
+    notes?: string;
+    allergens?: string[];
+  }[];
   promisedReadyAt?: string;
   firedAt: string;
   readyAt?: string;
@@ -5148,6 +5159,10 @@ export async function fireKdsTickets(order: Order): Promise<KdsTicket[]> {
           name: i.menuItem.name,
           quantity: i.quantity,
           notes: i.notes,
+          // m2_8: surface allergens on the ticket so the cook can verify
+          // before firing. MenuItem.allergens comes from the seed data
+          // (krakow.ts/warszawa.ts) which is already populated.
+          allergens: i.menuItem.allergens,
         })),
       };
       await db
