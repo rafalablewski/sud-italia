@@ -2,36 +2,8 @@
   "framework": "nextjs",
   "crons": [
     {
-      "path": "/api/admin/cron/outbox-drain",
-      "schedule": "* * * * *"
-    },
-    {
-      "path": "/api/admin/cron/slots-auto-close",
-      "schedule": "*/5 * * * *"
-    },
-    {
-      "path": "/api/admin/cron/daily-summary",
-      "schedule": "30 4 * * *"
-    },
-    {
-      "path": "/api/admin/cron/customers-lapsed-detect",
+      "path": "/api/admin/cron/dispatch",
       "schedule": "0 4 * * *"
-    },
-    {
-      "path": "/api/admin/cron/inventory-variance",
-      "schedule": "0 3 * * 0"
-    },
-    {
-      "path": "/api/admin/cron/loyalty-expire-points",
-      "schedule": "0 3 1 * *"
-    },
-    {
-      "path": "/api/admin/cron/royalty-weekly",
-      "schedule": "0 2 * * 1"
-    },
-    {
-      "path": "/api/admin/cron/weather-staffing",
-      "schedule": "0 6 * * *"
     }
   ]
 }

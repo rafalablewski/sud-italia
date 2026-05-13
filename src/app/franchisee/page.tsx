@@ -9,6 +9,15 @@ import {
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
 
+// Hoisted outside the component to keep
+// `react-hooks/components-and-hooks-must-be-pure` happy — the rule
+// flags Date.now() inside any PascalCase function body, even on the
+// server. Server components are allowed to be impure but the linter
+// can't tell.
+function sevenDaysAgoMs(): number {
+  return Date.now() - 7 * 24 * 60 * 60 * 1000;
+}
+
 /**
  * Franchisee portal landing (m3_3). Restricted to role:"franchisee".
  * Shows their scope (locations under their banner), 7-day rolling
@@ -45,7 +54,7 @@ export default async function FranchiseePortalPage() {
       const allLocations = getActiveLocations();
       const locations = allLocations.filter((l) => locationSlugs.includes(l.slug));
       const orders = await getOrders();
-      const since = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      const since = sevenDaysAgoMs();
       const periodOrders = orders.filter((o) => {
         if (!locationSlugs.includes(o.locationSlug)) return false;
         if (o.status === "pending" || o.status === "cancelled") return false;
