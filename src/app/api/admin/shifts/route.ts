@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAuthenticated, requireRole } from "@/lib/admin-auth";
+import { withAdmin } from "@/lib/api-middleware";
+import { hasLocationAccess } from "@/lib/admin-auth";
 import { deleteShift, getShifts, getStaff, saveShift } from "@/lib/store";
 import { locations as ALL_LOCATIONS } from "@/data/locations";
 import { partitionViolations, validateShift } from "@/lib/scheduling-rules";
@@ -8,31 +9,36 @@ import type { Shift, ShiftStatus, StaffRole } from "@/data/types";
 const VALID_STATUS: ShiftStatus[] = ["scheduled", "in-progress", "done", "missed"];
 const VALID_ROLES: StaffRole[] = ["manager", "kitchen", "front", "driver"];
 
-async function requireAuth() {
-  if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  return null;
-}
+export const GET = withAdmin(
+  { locationParam: "location" },
+  async (req, _ctx, { locationSlug }) => {
+    const staffId = req.nextUrl.searchParams.get("staffId") || undefined;
+    const from = req.nextUrl.searchParams.get("from") || undefined;
+    const to = req.nextUrl.searchParams.get("to") || undefined;
+    return NextResponse.json(
+      await getShifts({
+        locationSlug: locationSlug ?? undefined,
+        staffId,
+        from,
+        to,
+      }),
+    );
+  },
+);
 
-export async function GET(req: NextRequest) {
-  const auth = await requireAuth();
-  if (auth) return auth;
-  const location = req.nextUrl.searchParams.get("location") || undefined;
-  const staffId = req.nextUrl.searchParams.get("staffId") || undefined;
-  const from = req.nextUrl.searchParams.get("from") || undefined;
-  const to = req.nextUrl.searchParams.get("to") || undefined;
-  return NextResponse.json(await getShifts({ locationSlug: location, staffId, from, to }));
-}
-
+// Scheduling mutations can ripple into Polish Labor Code violations —
+// owner/manager only. Tenant check uses the body's locationSlug.
 async function upsertShift(req: NextRequest) {
-  // Scheduling mutations can ripple into Polish Labor Code violations — owner/manager only.
-  const role = await requireRole(["owner", "manager"]);
-  if ("error" in role) return role.error;
   try {
     const body = await req.json();
     if (!body.staffId || !body.locationSlug || !body.startAt || !body.endAt) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+    if (!(await hasLocationAccess(body.locationSlug))) {
+      return NextResponse.json(
+        { error: `Session is not authorized for location "${body.locationSlug}"` },
+        { status: 403 },
+      );
     }
     if (!VALID_ROLES.includes(body.role)) return NextResponse.json({ error: "Invalid role" }, { status: 400 });
     if (!VALID_STATUS.includes(body.status)) return NextResponse.json({ error: "Invalid status" }, { status: 400 });
@@ -48,8 +54,6 @@ async function upsertShift(req: NextRequest) {
       notes: body.notes,
     };
 
-    // `force=1` skips the rule engine for the rare emergency where ops needs
-    // to override (still logs the override via the saved shift's audit row).
     const force = req.nextUrl.searchParams.get("force") === "1";
     let warnings: ReturnType<typeof partitionViolations>["warnings"] = [];
     if (!force) {
@@ -78,19 +82,22 @@ async function upsertShift(req: NextRequest) {
   }
 }
 
-export async function POST(req: NextRequest) {
-  return upsertShift(req);
-}
+export const POST = withAdmin(
+  { roles: ["owner", "manager"] },
+  async (req) => upsertShift(req),
+);
 
-export async function PUT(req: NextRequest) {
-  return upsertShift(req);
-}
+export const PUT = withAdmin(
+  { roles: ["owner", "manager"] },
+  async (req) => upsertShift(req),
+);
 
-export async function DELETE(req: NextRequest) {
-  const auth = await requireAuth();
-  if (auth) return auth;
-  const id = req.nextUrl.searchParams.get("id");
-  if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
-  const ok = await deleteShift(id);
-  return NextResponse.json({ ok });
-}
+export const DELETE = withAdmin(
+  { roles: ["manager", "owner"] },
+  async (req) => {
+    const id = req.nextUrl.searchParams.get("id");
+    if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+    const ok = await deleteShift(id);
+    return NextResponse.json({ ok });
+  },
+);

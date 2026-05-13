@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronLeft, LogOut, PanelLeft } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
-import { NAV_SECTIONS } from "./nav.config";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { filterNavForRole, NAV_SECTIONS } from "./nav.config";
+import type { AdminRole } from "@/lib/admin-roles";
 import { LocationSwitcher } from "./LocationSwitcher";
 
 const COLLAPSE_KEY = "sud-admin-sidebar-collapsed";
@@ -17,6 +18,7 @@ interface Props {
 export function Sidebar({ onCloseMobile, isMobile = false }: Props) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const [role, setRole] = useState<AdminRole | null>(null);
 
   useEffect(() => {
     try {
@@ -25,6 +27,32 @@ export function Sidebar({ onCloseMobile, isMobile = false }: Props) {
       /* non-fatal */
     }
   }, []);
+
+  // m2_31: fetch the current role once per mount so we can filter the nav.
+  // While the request is in flight we show the unfiltered nav — flicker is
+  // visible briefly but the alternative (empty sidebar) is worse UX. The
+  // server still enforces the actual permissions, so showing extra links
+  // is cosmetic only.
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/admin/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (!cancelled && j?.role) setRole(j.role as AdminRole);
+      })
+      .catch(() => {
+        /* non-fatal */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // If we have a role, filter; otherwise show everything (pre-fetch state).
+  const sections = useMemo(
+    () => (role ? filterNavForRole(role) : NAV_SECTIONS),
+    [role],
+  );
 
   const toggleCollapsed = useCallback(() => {
     setCollapsed((c) => {
@@ -76,7 +104,7 @@ export function Sidebar({ onCloseMobile, isMobile = false }: Props) {
       </div>
 
       <nav className="v2-sidebar-nav" aria-label="Sections">
-        {NAV_SECTIONS.map((section) => (
+        {sections.map((section) => (
           <div key={section.id} className="v2-sidebar-section">
             <div className="v2-sidebar-section-label">{section.label}</div>
             <ul>

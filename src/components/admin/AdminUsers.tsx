@@ -24,6 +24,7 @@ import {
 const ROLE_LABEL: Record<AdminRole, string> = {
   owner: "Owner",
   manager: "Manager",
+  franchisee: "Franchisee",
   staff: "Staff",
   kitchen: "Kitchen",
 };
@@ -31,6 +32,7 @@ const ROLE_LABEL: Record<AdminRole, string> = {
 const ROLE_TONE: Record<AdminRole, "info" | "brand" | "warning" | "success"> = {
   owner: "brand",
   manager: "info",
+  franchisee: "info",
   staff: "warning",
   kitchen: "success",
 };
@@ -96,7 +98,7 @@ export function AdminUsers() {
   };
 
   const counts = useMemo(() => {
-    const c: Record<AdminRole | "all", number> = { all: list.length, owner: 0, manager: 0, staff: 0, kitchen: 0 };
+    const c: Record<AdminRole | "all", number> = { all: list.length, owner: 0, manager: 0, franchisee: 0, staff: 0, kitchen: 0 };
     for (const u of list) c[u.role]++;
     return c;
   }, [list]);

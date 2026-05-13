@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { isAuthenticated } from "@/lib/admin-auth";
+import { NextResponse } from "next/server";
+import { withAdmin } from "@/lib/api-middleware";
 import {
   adminVoidWalletRedemption,
   getWalletRedemptions,
@@ -8,11 +8,7 @@ import { normalizePlPhoneE164, phonesEqualPl } from "@/lib/phone";
 
 /** Voiding a row restores spendable points for affected customers on next identify. */
 
-export async function GET(req: NextRequest) {
-  if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withAdmin({}, async (req) => {
   const { searchParams } = req.nextUrl;
   const walletIdFilter = searchParams.get("walletId")?.trim() || null;
   const phoneFilterRaw = searchParams.get("phone")?.trim() || null;
@@ -22,7 +18,7 @@ export async function GET(req: NextRequest) {
   const limitRaw = searchParams.get("limit");
   const limit = Math.min(
     500,
-    Math.max(1, parseInt(limitRaw || "200", 10) || 200)
+    Math.max(1, parseInt(limitRaw || "200", 10) || 200),
   );
 
   let list = await getWalletRedemptions();
@@ -35,34 +31,34 @@ export async function GET(req: NextRequest) {
   }
 
   list = [...list].sort((a, b) =>
-    b.createdAt.localeCompare(a.createdAt)
+    b.createdAt.localeCompare(a.createdAt),
   );
   list = list.slice(0, limit);
 
   return NextResponse.json({ redemptions: list });
-}
+});
 
-export async function DELETE(req: NextRequest) {
-  if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+// Voiding a redemption restores points to a customer — manager+ only.
+export const DELETE = withAdmin(
+  { roles: ["manager", "owner"] },
+  async (req) => {
+    let id = "";
+    try {
+      const body = await req.json();
+      if (typeof body?.id === "string") id = body.id.trim();
+    } catch {
+      return NextResponse.json({ error: "Invalid body" }, { status: 400 });
+    }
 
-  let id = "";
-  try {
-    const body = await req.json();
-    if (typeof body?.id === "string") id = body.id.trim();
-  } catch {
-    return NextResponse.json({ error: "Invalid body" }, { status: 400 });
-  }
+    if (!id) {
+      return NextResponse.json({ error: "id required" }, { status: 400 });
+    }
 
-  if (!id) {
-    return NextResponse.json({ error: "id required" }, { status: 400 });
-  }
+    const ok = await adminVoidWalletRedemption(id);
+    if (!ok) {
+      return NextResponse.json({ error: "Redemption not found" }, { status: 404 });
+    }
 
-  const ok = await adminVoidWalletRedemption(id);
-  if (!ok) {
-    return NextResponse.json({ error: "Redemption not found" }, { status: 404 });
-  }
-
-  return NextResponse.json({ ok: true });
-}
+    return NextResponse.json({ ok: true });
+  },
+);

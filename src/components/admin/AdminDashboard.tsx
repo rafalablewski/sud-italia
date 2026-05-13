@@ -337,6 +337,13 @@ export function AdminDashboard() {
             variant="pill"
             ariaLabel="Date range"
           />
+          <Link
+            href="/admin/capabilities"
+            className="v2-btn v2-btn-secondary inline-flex items-center gap-1.5"
+          >
+            <Activity className="h-3.5 w-3.5" />
+            Capabilities
+          </Link>
           <Button
             variant="secondary"
             size="sm"

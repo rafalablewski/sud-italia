@@ -5,6 +5,7 @@ import {
   updateOrderStatus,
 } from "@/lib/store";
 import { logger } from "@/lib/logger";
+import { claimWebhookEvent } from "@/lib/idempotency";
 import type { DisputeStatus, OrderDispute } from "@/data/types";
 
 /** Stripe's dispute event payload — picks just the fields we persist. */
@@ -16,8 +17,6 @@ interface StripeDispute {
   created: number;
   payment_intent: string | { id: string } | null;
 }
-
-const processedEvents = new Set<string>();
 
 export async function POST(req: NextRequest) {
   if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_WEBHOOK_SECRET) {
@@ -47,11 +46,13 @@ export async function POST(req: NextRequest) {
       process.env.STRIPE_WEBHOOK_SECRET
     );
 
-    // Idempotency: skip already-processed events
-    if (processedEvents.has(event.id)) {
+    // Idempotency: skip already-processed events. claimWebhookEvent INSERTs
+    // into webhook_events with ON CONFLICT DO NOTHING, so Stripe retries that
+    // land on a different Vercel instance can no longer double-process.
+    const claimed = await claimWebhookEvent("stripe", event.id, event.type);
+    if (!claimed) {
       return NextResponse.json({ received: true, duplicate: true });
     }
-    processedEvents.add(event.id);
 
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;

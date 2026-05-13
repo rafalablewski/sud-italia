@@ -11,6 +11,15 @@ import {
 import { WALLET_MAX_PHONES } from "@/lib/constants";
 import { normalizePlPhoneE164, phonesEqualPl } from "@/lib/phone";
 import { logger } from "@/lib/logger";
+import { withDistributedLock } from "@/lib/locks";
+import { emitOrderEvent } from "@/lib/order-events";
+import { appendOutboxEvent } from "@/lib/outbox";
+import { incrCounter } from "@/lib/metrics";
+import { and, asc, desc, eq, inArray, lt, sql as drizzleSql } from "drizzle-orm";
+import { getDb } from "@/db/client";
+import { allergenIncidents as allergenIncidentsTable, auditLog as auditLogTable, brands as brandsTable, customerNotes as customerNotesTable, customers as customersTable, feedback as feedbackTable, franchisees as franchiseesTable, ingredientStock as ingredientStockTable, ingredients as ingredientsTable, kdsTickets as kdsTicketsTable, locationAssignments as locationAssignmentsTable, loyaltyMembers as loyaltyMembersTable, menuItemStation as menuItemStationTable, orderItems as orderItemsTable, orders as ordersTable, pointAdjustments as pointAdjustmentsTable, recipes as recipesTable, royaltyStatements as royaltyStatementsTable, shifts as shiftsTable, slots as slotsTable, staff as staffTable, stations as stationsTable, stockMovements as stockMovementsTable, tempLogs as tempLogsTable, timePunches as timePunchesTable } from "@/db/schema";
+import { gte, lte } from "drizzle-orm";
+import { bumpLazyBackfillHit, ensureTable } from "@/db/migrate";
 
 // --- Storage abstraction: Neon Postgres when DATABASE_URL is set, filesystem fallback for local dev ---
 
@@ -35,14 +44,17 @@ async function ensureDB() {
   dbInitialized = true;
 }
 
-// Simple per-file lock to prevent concurrent read-modify-write races (filesystem only)
-const locks = new Map<string, Promise<void>>();
-
+/**
+ * Routes legacy callsites through the distributed lock (m0_1). The new
+ * primitive serializes across Vercel instances via Upstash Redis SET NX PX
+ * when configured, and falls back to an in-process Promise chain otherwise.
+ *
+ * Phase 1 will scope lock keys narrower (e.g. `slots:${locationSlug}:${date}`
+ * instead of `slots.json`) as each entity is normalized off kv_store. For now
+ * the keys match the legacy file names so the callsites can stay put.
+ */
 function withLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
-  const prev = locks.get(key) ?? Promise.resolve();
-  const next = prev.then(fn, fn);
-  locks.set(key, next.then(() => {}, () => {}));
-  return next;
+  return withDistributedLock(key, fn);
 }
 
 async function ensureDataDir() {
@@ -89,20 +101,169 @@ async function writeJSON<T>(key: string, data: T): Promise<void> {
   await writeFile(join(DATA_DIR, key), JSON.stringify(data, null, 2));
 }
 
-// --- Time Slots ---
+// --- Time Slots (m1_1: normalized table with dual-write) ----------------
+
+/**
+ * Self-bootstrap DDL for the `slots` table. Matches the Drizzle schema in
+ * src/db/schema.ts; both must move together if either changes. Idempotent
+ * — runs once per process via ensureTable's cache flag.
+ */
+const SLOTS_DDL = [
+  `CREATE TABLE IF NOT EXISTS slots (
+    id text PRIMARY KEY,
+    location_slug text NOT NULL,
+    date text NOT NULL,
+    time text NOT NULL,
+    max_orders integer NOT NULL,
+    current_orders integer NOT NULL DEFAULT 0,
+    fulfillment_types text[] NOT NULL,
+    status text NOT NULL DEFAULT 'draft',
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS slots_location_date_time_unique
+    ON slots (location_slug, date, time)`,
+  `CREATE INDEX IF NOT EXISTS slots_location_date_idx
+    ON slots (location_slug, date)`,
+  `CREATE INDEX IF NOT EXISTS slots_status_idx ON slots (status)`,
+];
+
+async function ensureSlotsTable(): Promise<void> {
+  await ensureTable("slots", SLOTS_DDL);
+}
+
+type SlotRow = typeof slotsTable.$inferSelect;
+
+function rowToSlot(row: SlotRow): TimeSlot {
+  return {
+    id: row.id,
+    locationSlug: row.locationSlug,
+    date: row.date,
+    time: row.time,
+    maxOrders: row.maxOrders,
+    currentOrders: row.currentOrders,
+    fulfillmentTypes: row.fulfillmentTypes as TimeSlot["fulfillmentTypes"],
+    status: row.status as TimeSlot["status"],
+  };
+}
+
+function slotToValues(slot: TimeSlot) {
+  return {
+    id: slot.id,
+    locationSlug: slot.locationSlug,
+    date: slot.date,
+    time: slot.time,
+    maxOrders: slot.maxOrders,
+    currentOrders: slot.currentOrders,
+    fulfillmentTypes: slot.fulfillmentTypes,
+    status: slot.status,
+  };
+}
+
+/** Best-effort dual-write into the normalized table. Logs but never throws —
+ * the kv_store path is the durable source until Phase 1 fully drains. */
+async function dualWriteSlot(slot: TimeSlot): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureSlotsTable();
+    await db
+      .insert(slotsTable)
+      .values({ ...slotToValues(slot), updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: slotsTable.id,
+        set: { ...slotToValues(slot), updatedAt: new Date() },
+      });
+  } catch (err) {
+    logger.warn(
+      "dualWriteSlot failed (kv_store remains source of truth)",
+      { slotId: slot.id, layer: "store.slots" },
+      err,
+    );
+  }
+}
+
+async function dualDeleteSlot(id: string): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureSlotsTable();
+    await db.delete(slotsTable).where(eq(slotsTable.id, id));
+  } catch (err) {
+    logger.warn(
+      "dualDeleteSlot failed",
+      { slotId: id, layer: "store.slots" },
+      err,
+    );
+  }
+}
 
 export async function getSlots(locationSlug?: string, date?: string): Promise<TimeSlot[]> {
-  const slots = await readJSON<TimeSlot[]>("slots.json", []);
-  return slots.filter((s) => {
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureSlotsTable();
+      const filters = [];
+      if (locationSlug) filters.push(eq(slotsTable.locationSlug, locationSlug));
+      if (date) filters.push(eq(slotsTable.date, date));
+      const rows =
+        filters.length > 0
+          ? await db.select().from(slotsTable).where(and(...filters))
+          : await db.select().from(slotsTable);
+      if (rows.length > 0) return rows.map(rowToSlot);
+      // Fall through to kv_store on empty result — this is the lazy-backfill
+      // path. Once the normalized table has any rows it wins. The empty case
+      // covers both "no slots exist" and "the normalized table hasn't been
+      // backfilled yet for this filter" — both are fine to fall back from.
+    } catch (err) {
+      logger.warn(
+        "getSlots DB read failed; falling back to kv_store",
+        { layer: "store.slots" },
+        err,
+      );
+    }
+  }
+  const fromKv = await readJSON<TimeSlot[]>("slots.json", []);
+  const filtered = fromKv.filter((s) => {
     if (locationSlug && s.locationSlug !== locationSlug) return false;
     if (date && s.date !== date) return false;
     return true;
   });
+  if (filtered.length > 0) {
+    bumpLazyBackfillHit("slots");
+    // Lazy backfill — push the kv rows into the normalized table so the next
+    // read won't fall back. Fire-and-forget; failures don't affect this call.
+    void Promise.all(filtered.map((s) => dualWriteSlot(s)));
+  }
+  return filtered;
 }
 
 export async function getSlotById(id: string): Promise<TimeSlot | undefined> {
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureSlotsTable();
+      const rows = await db
+        .select()
+        .from(slotsTable)
+        .where(eq(slotsTable.id, id))
+        .limit(1);
+      if (rows.length > 0) return rowToSlot(rows[0]);
+    } catch (err) {
+      logger.warn(
+        "getSlotById DB read failed; falling back to kv_store",
+        { slotId: id, layer: "store.slots" },
+        err,
+      );
+    }
+  }
   const slots = await readJSON<TimeSlot[]>("slots.json", []);
-  return slots.find((s) => s.id === id);
+  const hit = slots.find((s) => s.id === id);
+  if (hit) {
+    bumpLazyBackfillHit("slots");
+    void dualWriteSlot(hit);
+  }
+  return hit;
 }
 
 export async function createSlot(slot: TimeSlot): Promise<TimeSlot> {
@@ -110,6 +271,7 @@ export async function createSlot(slot: TimeSlot): Promise<TimeSlot> {
     const slots = await readJSON<TimeSlot[]>("slots.json", []);
     slots.push(slot);
     await writeJSON("slots.json", slots);
+    await dualWriteSlot(slot);
     return slot;
   });
 }
@@ -119,6 +281,7 @@ export async function createSlotsBulk(newSlots: TimeSlot[]): Promise<TimeSlot[]>
     const slots = await readJSON<TimeSlot[]>("slots.json", []);
     slots.push(...newSlots);
     await writeJSON("slots.json", slots);
+    await Promise.all(newSlots.map((s) => dualWriteSlot(s)));
     return newSlots;
   });
 }
@@ -130,6 +293,7 @@ export async function updateSlot(id: string, updates: Partial<TimeSlot>): Promis
     if (index === -1) return null;
     slots[index] = { ...slots[index], ...updates };
     await writeJSON("slots.json", slots);
+    await dualWriteSlot(slots[index]);
     return slots[index];
   });
 }
@@ -146,6 +310,7 @@ export async function updateSlotsBulk(ids: string[], updates: Partial<TimeSlot>)
       }
     }
     await writeJSON("slots.json", slots);
+    await Promise.all(updated.map((s) => dualWriteSlot(s)));
     return updated;
   });
 }
@@ -156,6 +321,7 @@ export async function deleteSlot(id: string): Promise<boolean> {
     const filtered = slots.filter((s) => s.id !== id);
     if (filtered.length === slots.length) return false;
     await writeJSON("slots.json", filtered);
+    await dualDeleteSlot(id);
     return true;
   });
 }
@@ -167,30 +333,131 @@ export async function deleteSlotsBulk(ids: string[]): Promise<number> {
     const filtered = slots.filter((s) => !idSet.has(s.id));
     const deletedCount = slots.length - filtered.length;
     await writeJSON("slots.json", filtered);
+    if (deletedCount > 0) {
+      const db = getDb();
+      if (db) {
+        try {
+          await ensureSlotsTable();
+          await db.delete(slotsTable).where(inArray(slotsTable.id, ids));
+        } catch (err) {
+          logger.warn(
+            "deleteSlotsBulk DB delete failed",
+            { ids, layer: "store.slots" },
+            err,
+          );
+        }
+      }
+    }
     return deletedCount;
   });
 }
 
 export async function incrementSlotOrders(id: string): Promise<boolean> {
+  // Primary path: atomic UPDATE ... WHERE current_orders < max_orders
+  // RETURNING *. Two simultaneous lambdas can issue this against the same
+  // slot and Postgres serializes them — no application lock required. The
+  // distributed lock from m0_1 stays in the kv_store dual-write path as
+  // belt-and-suspenders while the legacy data drains.
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureSlotsTable();
+      const updated = await db
+        .update(slotsTable)
+        .set({
+          currentOrders: drizzleSql`${slotsTable.currentOrders} + 1`,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(slotsTable.id, id),
+            lt(slotsTable.currentOrders, slotsTable.maxOrders),
+          ),
+        )
+        .returning({ currentOrders: slotsTable.currentOrders });
+      if (updated.length === 1) {
+        // Best-effort mirror to kv_store so the cold backup stays in sync.
+        // Failure here only means the kv copy is one increment behind; the
+        // normalized table is the source of truth.
+        await withLock("slots.json", async () => {
+          const slots = await readJSON<TimeSlot[]>("slots.json", []);
+          const slot = slots.find((s) => s.id === id);
+          if (slot) {
+            slot.currentOrders = updated[0].currentOrders;
+            await writeJSON("slots.json", slots);
+          }
+        });
+        incrCounter("slot.booked");
+        return true;
+      }
+      // updated.length === 0 means either the row isn't in the normalized
+      // table yet (lazy backfill not done) or the slot is full. Fall through
+      // to the kv_store path so the legacy check still works.
+    } catch (err) {
+      logger.warn(
+        "incrementSlotOrders DB update failed; falling back to kv path",
+        { slotId: id, layer: "store.slots" },
+        err,
+      );
+    }
+  }
+  // Legacy / fallback path — kv_store + in-process atomicity via withLock.
   return withLock("slots.json", async () => {
     const slots = await readJSON<TimeSlot[]>("slots.json", []);
     const slot = slots.find((s) => s.id === id);
     if (!slot) return false;
-    if (slot.currentOrders >= slot.maxOrders) return false;
+    if (slot.currentOrders >= slot.maxOrders) {
+      incrCounter("slot.full");
+      return false;
+    }
     slot.currentOrders += 1;
     await writeJSON("slots.json", slots);
+    await dualWriteSlot(slot);
+    incrCounter("slot.booked");
     return true;
   });
 }
 
 /** Release one slot booking (e.g. when an order is removed). */
 export async function decrementSlotOrders(id: string): Promise<boolean> {
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureSlotsTable();
+      const updated = await db
+        .update(slotsTable)
+        .set({
+          currentOrders: drizzleSql`GREATEST(0, ${slotsTable.currentOrders} - 1)`,
+          updatedAt: new Date(),
+        })
+        .where(eq(slotsTable.id, id))
+        .returning({ currentOrders: slotsTable.currentOrders });
+      if (updated.length === 1) {
+        await withLock("slots.json", async () => {
+          const slots = await readJSON<TimeSlot[]>("slots.json", []);
+          const slot = slots.find((s) => s.id === id);
+          if (slot) {
+            slot.currentOrders = updated[0].currentOrders;
+            await writeJSON("slots.json", slots);
+          }
+        });
+        return true;
+      }
+    } catch (err) {
+      logger.warn(
+        "decrementSlotOrders DB update failed; falling back to kv path",
+        { slotId: id, layer: "store.slots" },
+        err,
+      );
+    }
+  }
   return withLock("slots.json", async () => {
     const slots = await readJSON<TimeSlot[]>("slots.json", []);
     const slot = slots.find((s) => s.id === id);
     if (!slot) return false;
     slot.currentOrders = Math.max(0, slot.currentOrders - 1);
     await writeJSON("slots.json", slots);
+    await dualWriteSlot(slot);
     return true;
   });
 }
@@ -212,15 +479,515 @@ export async function getAvailableSlots(
 
 // --- Orders ---
 
+// --- Orders (m1_2: normalized table with dual-write) --------------------
+
+/** Self-bootstrap DDL for the `orders` table. Mirrors the Drizzle schema. */
+const ORDERS_DDL = [
+  `CREATE TABLE IF NOT EXISTS orders (
+    id text PRIMARY KEY,
+    location_slug text NOT NULL,
+    customer_phone text NOT NULL,
+    customer_name text NOT NULL,
+    status text NOT NULL,
+    fulfillment_type text NOT NULL,
+    slot_id text NOT NULL,
+    slot_date text NOT NULL,
+    slot_time text NOT NULL,
+    total_grosze integer NOT NULL,
+    tip_grosze integer,
+    delivery_fee_grosze integer,
+    assigned_driver_id text,
+    stripe_session_id text,
+    stripe_payment_intent_id text,
+    delivery_address text,
+    created_at timestamptz NOT NULL,
+    paid_at timestamptz,
+    payload jsonb NOT NULL DEFAULT '{}'::jsonb,
+    updated_at timestamptz NOT NULL DEFAULT now()
+  )`,
+  // m2_11/12 added two columns; existing deployments need ALTER. IF NOT
+  // EXISTS makes this safe to run alongside the CREATE TABLE IF NOT EXISTS
+  // above on first boot.
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_fee_grosze integer`,
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS assigned_driver_id text`,
+  `CREATE INDEX IF NOT EXISTS orders_location_created_at_idx
+    ON orders (location_slug, created_at DESC)`,
+  `CREATE INDEX IF NOT EXISTS orders_status_idx ON orders (status)`,
+  `CREATE INDEX IF NOT EXISTS orders_customer_phone_idx
+    ON orders (customer_phone)`,
+  `CREATE INDEX IF NOT EXISTS orders_stripe_payment_intent_idx
+    ON orders (stripe_payment_intent_id)`,
+  `CREATE INDEX IF NOT EXISTS orders_slot_id_idx ON orders (slot_id)`,
+  `CREATE INDEX IF NOT EXISTS orders_assigned_driver_idx
+    ON orders (assigned_driver_id)`,
+];
+
+async function ensureOrdersTable(): Promise<void> {
+  await ensureTable("orders", ORDERS_DDL);
+}
+
+/**
+ * Order line-items table (m1_3). FK to orders.id with ON DELETE CASCADE so
+ * deleting an order automatically clears its rows. Existence depends on the
+ * orders table; ensureOrderItemsTable() runs ensureOrdersTable() first.
+ */
+const ORDER_ITEMS_DDL = [
+  `CREATE TABLE IF NOT EXISTS order_items (
+    id text PRIMARY KEY,
+    order_id text NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    menu_item_id text NOT NULL,
+    quantity integer NOT NULL,
+    unit_price_grosze integer NOT NULL,
+    notes text,
+    modifiers jsonb NOT NULL DEFAULT '{}'::jsonb
+  )`,
+  `CREATE INDEX IF NOT EXISTS order_items_order_id_idx
+    ON order_items (order_id)`,
+  `CREATE INDEX IF NOT EXISTS order_items_menu_item_id_idx
+    ON order_items (menu_item_id)`,
+];
+
+async function ensureOrderItemsTable(): Promise<void> {
+  await ensureOrdersTable();
+  await ensureTable("order_items", ORDER_ITEMS_DDL);
+}
+
+/**
+ * Mirrors an order's `items` array into the order_items table. Replaces all
+ * existing rows for the order — simpler than computing a diff, and the
+ * cascade keeps things consistent if an order is deleted concurrently.
+ * Best-effort; the kv_store + orders.payload.items remain the durable copy.
+ */
+// --- Customers rollup (m1_4) --------------------------------------------
+
+/**
+ * Customers are a derived rollup over orders + point-adjustments + loyalty
+ * signups. Source-of-truth lives in those entities; the customers row is a
+ * fast index into "lifetime stats for this phone". Maintained by
+ * recomputeCustomerRollup which fires at the boundary of every event that
+ * changes those source tables.
+ */
+const CUSTOMERS_DDL = [
+  `CREATE TABLE IF NOT EXISTS customers (
+    phone text PRIMARY KEY,
+    name text,
+    email text,
+    birthday text,
+    total_spent_grosze integer NOT NULL DEFAULT 0,
+    order_count integer NOT NULL DEFAULT 0,
+    first_order_at timestamptz,
+    last_order_at timestamptz,
+    loyalty_points_balance integer NOT NULL DEFAULT 0,
+    manual_points_adjust integer NOT NULL DEFAULT 0,
+    sms_optout boolean NOT NULL DEFAULT false,
+    email_optout boolean NOT NULL DEFAULT false,
+    notes text,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
+  )`,
+  // Gemini review feedback: storage migrated from text → boolean for the
+  // optout flags. These ALTERs are safe to re-run; once the column is
+  // already boolean PostgreSQL's "TYPE boolean USING (col::boolean)"
+  // is a no-op cast.
+  `ALTER TABLE customers ALTER COLUMN sms_optout DROP DEFAULT`,
+  `ALTER TABLE customers ALTER COLUMN sms_optout TYPE boolean USING (sms_optout::boolean)`,
+  `ALTER TABLE customers ALTER COLUMN sms_optout SET DEFAULT false`,
+  `ALTER TABLE customers ALTER COLUMN email_optout DROP DEFAULT`,
+  `ALTER TABLE customers ALTER COLUMN email_optout TYPE boolean USING (email_optout::boolean)`,
+  `ALTER TABLE customers ALTER COLUMN email_optout SET DEFAULT false`,
+  `CREATE INDEX IF NOT EXISTS customers_last_order_at_idx
+    ON customers (last_order_at)`,
+  `CREATE INDEX IF NOT EXISTS customers_email_idx ON customers (email)`,
+];
+
+async function ensureCustomersTable(): Promise<void> {
+  await ensureTable("customers", CUSTOMERS_DDL);
+}
+
+export interface CustomerRollup {
+  phone: string;
+  name: string | null;
+  email: string | null;
+  birthday: string | null;
+  totalSpentGrosze: number;
+  orderCount: number;
+  firstOrderAt: string | null;
+  lastOrderAt: string | null;
+  loyaltyPointsBalance: number;
+  manualPointsAdjust: number;
+  smsOptout: boolean;
+  emailOptout: boolean;
+  notes: string | null;
+}
+
+function rowToCustomer(row: typeof customersTable.$inferSelect): CustomerRollup {
+  return {
+    phone: row.phone,
+    name: row.name,
+    email: row.email,
+    birthday: row.birthday,
+    totalSpentGrosze: row.totalSpentGrosze,
+    orderCount: row.orderCount,
+    firstOrderAt: row.firstOrderAt ? row.firstOrderAt.toISOString() : null,
+    lastOrderAt: row.lastOrderAt ? row.lastOrderAt.toISOString() : null,
+    loyaltyPointsBalance: row.loyaltyPointsBalance,
+    manualPointsAdjust: row.manualPointsAdjust,
+    smsOptout: row.smsOptout,
+    emailOptout: row.emailOptout,
+    notes: row.notes,
+  };
+}
+
+/**
+ * Aggregates the source data and upserts the customer row. Best-effort —
+ * never throws; legacy code paths that don't call this won't notice.
+ *
+ * Non-pending orders only count toward lifetime stats — a pending checkout
+ * that abandons mid-payment shouldn't pollute the customer's history.
+ */
+async function recomputeCustomerRollup(rawPhone: string): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  const phone = normalizePlPhoneE164(rawPhone) ?? rawPhone;
+  try {
+    await ensureCustomersTable();
+
+    // Source aggregations. getOrders already prefers the normalized table
+    // (m1_2); getPointAdjustments + getLoyaltyMember stay on kv_store until
+    // their own M1 entity migration ships.
+    const [allOrders, adjustments, member] = await Promise.all([
+      getOrders(),
+      getPointAdjustments(),
+      getLoyaltyMember(phone),
+    ]);
+
+    const myOrders = allOrders.filter(
+      (o) => o.customerPhone && phonesEqualPl(o.customerPhone, phone) && o.status !== "pending",
+    );
+    const totalSpentGrosze = myOrders.reduce((sum, o) => sum + o.totalAmount, 0);
+    const orderCount = myOrders.length;
+
+    let firstOrderAt: Date | null = null;
+    let lastOrderAt: Date | null = null;
+    let latestName: string | undefined;
+    for (const o of myOrders) {
+      const t = new Date(o.paidAt || o.createdAt);
+      if (!Number.isFinite(t.getTime())) continue;
+      if (!firstOrderAt || t < firstOrderAt) firstOrderAt = t;
+      if (!lastOrderAt || t > lastOrderAt) {
+        lastOrderAt = t;
+        latestName = o.customerName;
+      }
+    }
+
+    const manualPointsAdjust = adjustments
+      .filter((a) => phonesEqualPl(a.phone, phone))
+      .reduce((sum, a) => sum + a.amount, 0);
+    const earnedPoints = Math.floor(totalSpentGrosze / 100);
+    // Phase 1 doesn't yet subtract redemptions here — that lands when
+    // wallet-redemptions migrates to its table in m1_8. Earned + manual is
+    // the right floor; the customer detail page still does the redemption
+    // math live until then.
+    const loyaltyPointsBalance = earnedPoints + manualPointsAdjust;
+
+    const memberName = member
+      ? [member.name, member.lastName].filter(Boolean).join(" ").trim() ||
+        member.nickname ||
+        null
+      : null;
+
+    const name = memberName || latestName || null;
+    const email = member?.email ?? null;
+    const birthday = member?.dob ?? null;
+
+    const values = {
+      phone,
+      name,
+      email,
+      birthday,
+      totalSpentGrosze,
+      orderCount,
+      firstOrderAt,
+      lastOrderAt,
+      loyaltyPointsBalance,
+      manualPointsAdjust,
+      updatedAt: new Date(),
+    };
+
+    await db
+      .insert(customersTable)
+      .values(values)
+      .onConflictDoUpdate({
+        target: customersTable.phone,
+        set: values,
+      });
+  } catch (err) {
+    logger.warn(
+      "recomputeCustomerRollup failed",
+      { phone, layer: "store.customers" },
+      err,
+    );
+  }
+}
+
+/** Point lookup for the customer rollup. Returns null when no row exists yet. */
+export async function getCustomer(rawPhone: string): Promise<CustomerRollup | null> {
+  const db = getDb();
+  if (!db) return null;
+  const phone = normalizePlPhoneE164(rawPhone) ?? rawPhone;
+  try {
+    await ensureCustomersTable();
+    const rows = await db
+      .select()
+      .from(customersTable)
+      .where(eq(customersTable.phone, phone))
+      .limit(1);
+    if (rows.length === 0) return null;
+    return rowToCustomer(rows[0]);
+  } catch (err) {
+    logger.warn(
+      "getCustomer DB read failed",
+      { phone, layer: "store.customers" },
+      err,
+    );
+    return null;
+  }
+}
+
+/** Bulk read for the admin customers list. */
+export async function getCustomers(): Promise<CustomerRollup[]> {
+  const db = getDb();
+  if (!db) return [];
+  try {
+    await ensureCustomersTable();
+    const rows = await db.select().from(customersTable);
+    return rows.map(rowToCustomer);
+  } catch (err) {
+    logger.warn(
+      "getCustomers DB read failed",
+      { layer: "store.customers" },
+      err,
+    );
+    return [];
+  }
+}
+
+async function dualWriteOrderItems(order: Order): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureOrderItemsTable();
+    // Delete-then-insert keeps the upsert logic simple. Concurrency on the
+    // same order is rare (typical lifecycle: create once, status updates
+    // don't change items), and any rare race converges on the latest write.
+    await db.delete(orderItemsTable).where(eq(orderItemsTable.orderId, order.id));
+    if (order.items.length === 0) return;
+    await db.insert(orderItemsTable).values(
+      order.items.map((item, idx) => ({
+        id: `${order.id}-li-${idx}`,
+        orderId: order.id,
+        menuItemId: item.menuItem.id,
+        quantity: item.quantity,
+        unitPriceGrosze: item.menuItem.price,
+        notes: item.notes ?? null,
+        modifiers: {},
+      })),
+    );
+  } catch (err) {
+    logger.warn(
+      "dualWriteOrderItems failed (payload.items remains source of truth)",
+      { orderId: order.id, layer: "store.order_items" },
+      err,
+    );
+  }
+}
+
+type OrderRow = typeof ordersTable.$inferSelect;
+
+/**
+ * Anything we don't normalize into a column lives in `payload`. m1_3 will
+ * pull `items` out into its own line-items table; for now items round-trip
+ * through this jsonb blob.
+ */
+interface OrderPayload {
+  items: Order["items"];
+  specialInstructions?: Order["specialInstructions"];
+  queuePosition?: Order["queuePosition"];
+  estimatedReadyAt?: Order["estimatedReadyAt"];
+  feedback?: Order["feedback"];
+  qualityCheck?: Order["qualityCheck"];
+  refund?: Order["refund"];
+  dispute?: Order["dispute"];
+}
+
+function rowToOrder(row: OrderRow): Order {
+  const payload = (row.payload ?? {}) as OrderPayload;
+  return {
+    id: row.id,
+    locationSlug: row.locationSlug,
+    customerPhone: row.customerPhone,
+    customerName: row.customerName,
+    status: row.status as Order["status"],
+    fulfillmentType: row.fulfillmentType as Order["fulfillmentType"],
+    slotId: row.slotId,
+    slotDate: row.slotDate,
+    slotTime: row.slotTime,
+    totalAmount: row.totalGrosze,
+    tipAmount: row.tipGrosze ?? undefined,
+    deliveryFee: row.deliveryFeeGrosze ?? undefined,
+    assignedDriverId: row.assignedDriverId ?? undefined,
+    stripeSessionId: row.stripeSessionId ?? undefined,
+    stripePaymentIntentId: row.stripePaymentIntentId ?? undefined,
+    deliveryAddress: row.deliveryAddress ?? undefined,
+    createdAt: row.createdAt.toISOString(),
+    paidAt: row.paidAt ? row.paidAt.toISOString() : undefined,
+    items: payload.items ?? [],
+    specialInstructions: payload.specialInstructions,
+    queuePosition: payload.queuePosition,
+    estimatedReadyAt: payload.estimatedReadyAt,
+    feedback: payload.feedback,
+    qualityCheck: payload.qualityCheck,
+    refund: payload.refund,
+    dispute: payload.dispute,
+  };
+}
+
+function orderToValues(order: Order) {
+  const payload: OrderPayload = {
+    items: order.items,
+    specialInstructions: order.specialInstructions,
+    queuePosition: order.queuePosition,
+    estimatedReadyAt: order.estimatedReadyAt,
+    feedback: order.feedback,
+    qualityCheck: order.qualityCheck,
+    refund: order.refund,
+    dispute: order.dispute,
+  };
+  return {
+    id: order.id,
+    locationSlug: order.locationSlug,
+    customerPhone: order.customerPhone,
+    customerName: order.customerName,
+    status: order.status,
+    fulfillmentType: order.fulfillmentType,
+    slotId: order.slotId,
+    slotDate: order.slotDate,
+    slotTime: order.slotTime,
+    totalGrosze: order.totalAmount,
+    tipGrosze: order.tipAmount ?? null,
+    deliveryFeeGrosze: order.deliveryFee ?? null,
+    assignedDriverId: order.assignedDriverId ?? null,
+    stripeSessionId: order.stripeSessionId ?? null,
+    stripePaymentIntentId: order.stripePaymentIntentId ?? null,
+    deliveryAddress: order.deliveryAddress ?? null,
+    createdAt: new Date(order.createdAt),
+    paidAt: order.paidAt ? new Date(order.paidAt) : null,
+    payload,
+  };
+}
+
+async function dualWriteOrder(order: Order): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureOrdersTable();
+    const values = orderToValues(order);
+    await db
+      .insert(ordersTable)
+      .values({ ...values, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: ordersTable.id,
+        set: { ...values, updatedAt: new Date() },
+      });
+  } catch (err) {
+    logger.warn(
+      "dualWriteOrder failed (kv_store remains source of truth)",
+      { orderId: order.id, layer: "store.orders" },
+      err,
+    );
+    return;
+  }
+  // Line items track the parent order; only mirror them once the order row
+  // is in place, otherwise the FK constraint would block the children.
+  await dualWriteOrderItems(order);
+}
+
+async function dualDeleteOrder(id: string): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureOrdersTable();
+    await db.delete(ordersTable).where(eq(ordersTable.id, id));
+  } catch (err) {
+    logger.warn(
+      "dualDeleteOrder failed",
+      { orderId: id, layer: "store.orders" },
+      err,
+    );
+  }
+}
+
 export async function getOrders(locationSlug?: string): Promise<Order[]> {
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureOrdersTable();
+      const rows = locationSlug
+        ? await db
+            .select()
+            .from(ordersTable)
+            .where(eq(ordersTable.locationSlug, locationSlug))
+            .orderBy(desc(ordersTable.createdAt))
+        : await db
+            .select()
+            .from(ordersTable)
+            .orderBy(desc(ordersTable.createdAt));
+      if (rows.length > 0) return rows.map(rowToOrder);
+    } catch (err) {
+      logger.warn(
+        "getOrders DB read failed; falling back to kv_store",
+        { layer: "store.orders" },
+        err,
+      );
+    }
+  }
   const orders = await readJSON<Order[]>("orders.json", []);
-  if (!locationSlug) return orders;
-  return orders.filter((o) => o.locationSlug === locationSlug);
+  const filtered = locationSlug
+    ? orders.filter((o) => o.locationSlug === locationSlug)
+    : orders;
+  if (filtered.length > 0) {
+    bumpLazyBackfillHit("orders");
+    void Promise.all(filtered.map((o) => dualWriteOrder(o)));
+  }
+  return filtered;
 }
 
 export async function getOrderById(id: string): Promise<Order | undefined> {
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureOrdersTable();
+      const rows = await db
+        .select()
+        .from(ordersTable)
+        .where(eq(ordersTable.id, id))
+        .limit(1);
+      if (rows.length > 0) return rowToOrder(rows[0]);
+    } catch (err) {
+      logger.warn(
+        "getOrderById DB read failed; falling back to kv_store",
+        { orderId: id, layer: "store.orders" },
+        err,
+      );
+    }
+  }
   const orders = await readJSON<Order[]>("orders.json", []);
-  return orders.find((o) => o.id === id);
+  const hit = orders.find((o) => o.id === id);
+  if (hit) {
+    bumpLazyBackfillHit("orders");
+    void dualWriteOrder(hit);
+  }
+  return hit;
 }
 
 /**
@@ -232,28 +999,110 @@ export async function getOrderById(id: string): Promise<Order | undefined> {
 export async function getOrderByStripePaymentIntent(
   paymentIntentId: string,
 ): Promise<Order | undefined> {
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureOrdersTable();
+      const rows = await db
+        .select()
+        .from(ordersTable)
+        .where(eq(ordersTable.stripePaymentIntentId, paymentIntentId))
+        .limit(1);
+      if (rows.length > 0) return rowToOrder(rows[0]);
+    } catch (err) {
+      logger.warn(
+        "getOrderByStripePaymentIntent DB read failed; falling back",
+        { paymentIntentId, layer: "store.orders" },
+        err,
+      );
+    }
+  }
   const orders = await readJSON<Order[]>("orders.json", []);
-  return orders.find((o) => o.stripePaymentIntentId === paymentIntentId);
+  const hit = orders.find((o) => o.stripePaymentIntentId === paymentIntentId);
+  if (hit) {
+    bumpLazyBackfillHit("orders");
+    void dualWriteOrder(hit);
+  }
+  return hit;
 }
 
 export async function createOrder(order: Order): Promise<Order> {
-  return withLock("orders.json", async () => {
+  const saved = await withLock("orders.json", async () => {
     const orders = await readJSON<Order[]>("orders.json", []);
     orders.push(order);
     await writeJSON("orders.json", orders);
+    await dualWriteOrder(order);
     return order;
   });
+  // Fire-and-forget rollup so the checkout request doesn't wait. A failure
+  // here only means the customer's row is one order behind until the next
+  // event refreshes it — non-blocking and idempotent.
+  void recomputeCustomerRollup(order.customerPhone);
+  emitOrderEvent({ kind: "created", orderId: order.id, locationSlug: order.locationSlug });
+  incrCounter("orders.placed");
+  // Fire KDS tickets (m2_2). Idempotent on (order_id, station_id) so
+  // retried createOrder calls don't double-create.
+  void fireKdsTickets(order);
+  // Outbox: queue side effects (Phase 2 SMS/email/aggregator).
+  // dedupeKey is just "placed" so retried createOrder calls converge on
+  // one row rather than creating multiple identical events.
+  await appendOutboxEvent({
+    eventType: "order.placed",
+    entityType: "order",
+    entityId: order.id,
+    dedupeKey: "placed",
+    payload: {
+      orderId: order.id,
+      locationSlug: order.locationSlug,
+      customerPhone: order.customerPhone,
+      customerName: order.customerName,
+      totalAmount: order.totalAmount,
+    },
+  });
+  return saved;
 }
 
 export async function updateOrderStatus(id: string, status: Order["status"]): Promise<Order | null> {
-  return withLock("orders.json", async () => {
+  const updated = await withLock("orders.json", async () => {
     const orders = await readJSON<Order[]>("orders.json", []);
     const index = orders.findIndex((o) => o.id === id);
     if (index === -1) return null;
     orders[index].status = status;
     await writeJSON("orders.json", orders);
+    await dualWriteOrder(orders[index]);
     return orders[index];
   });
+  if (updated) {
+    // Pending → confirmed flips a checkout from "doesn't count" to
+    // "counts" in lifetime stats; cancelled does the opposite. Both warrant
+    // a rollup refresh.
+    void recomputeCustomerRollup(updated.customerPhone);
+    emitOrderEvent({
+      kind: "status_changed",
+      orderId: updated.id,
+      locationSlug: updated.locationSlug,
+      status,
+    });
+    // Outbox: status transitions that customers care about. dedupeKey
+    // includes the status so a noop status flip can't create a duplicate
+    // notification.
+    incrCounter(`orders.status.${status}`);
+    if (status === "ready" || status === "completed" || status === "cancelled") {
+      await appendOutboxEvent({
+        eventType: `order.${status}`,
+        entityType: "order",
+        entityId: updated.id,
+        dedupeKey: status,
+        payload: {
+          orderId: updated.id,
+          locationSlug: updated.locationSlug,
+          customerPhone: updated.customerPhone,
+          status,
+        },
+      });
+    }
+  }
+  return updated;
 }
 
 /**
@@ -265,25 +1114,82 @@ export async function updateOrder(
   id: string,
   patch: Partial<Omit<Order, "id" | "createdAt">>,
 ): Promise<Order | null> {
-  return withLock("orders.json", async () => {
+  const updated = await withLock("orders.json", async () => {
     const orders = await readJSON<Order[]>("orders.json", []);
     const index = orders.findIndex((o) => o.id === id);
     if (index === -1) return null;
     orders[index] = { ...orders[index], ...patch };
     await writeJSON("orders.json", orders);
+    await dualWriteOrder(orders[index]);
     return orders[index];
   });
+  // Refresh the rollup when a patch could change lifetime stats. paidAt
+  // pins the firstOrderAt/lastOrderAt timestamps; refund/dispute affect
+  // future Phase 4 customer-health scoring. Status flips already trigger
+  // a rollup through updateOrderStatus when called separately.
+  if (
+    updated &&
+    (patch.paidAt !== undefined ||
+      patch.refund !== undefined ||
+      patch.dispute !== undefined ||
+      patch.status !== undefined)
+  ) {
+    void recomputeCustomerRollup(updated.customerPhone);
+  }
+  if (updated) {
+    emitOrderEvent({ kind: "updated", orderId: updated.id, locationSlug: updated.locationSlug });
+    // Outbox: paidAt transition (checkout.session.completed webhook lands)
+    // and refund are the customer-facing events that need durable side
+    // effects. dispute is operator-facing only (no SMS/email to customer);
+    // it's surfaced via Sentry from the webhook handler already.
+    if (patch.paidAt !== undefined) {
+      await appendOutboxEvent({
+        eventType: "order.confirmed",
+        entityType: "order",
+        entityId: updated.id,
+        dedupeKey: "confirmed",
+        payload: {
+          orderId: updated.id,
+          locationSlug: updated.locationSlug,
+          customerPhone: updated.customerPhone,
+          paidAt: updated.paidAt,
+        },
+      });
+    }
+    if (patch.refund !== undefined) {
+      await appendOutboxEvent({
+        eventType: "order.refunded",
+        entityType: "order",
+        entityId: updated.id,
+        // include the stripeRefundId so partial-refund-then-full-refund
+        // emits two distinct events.
+        dedupeKey: updated.refund?.stripeRefundId ?? `manual-${Date.now()}`,
+        payload: {
+          orderId: updated.id,
+          locationSlug: updated.locationSlug,
+          customerPhone: updated.customerPhone,
+          refund: updated.refund,
+        },
+      });
+    }
+  }
+  return updated;
 }
 
 export async function deleteOrder(id: string): Promise<boolean> {
   let slotId: string | undefined;
+  let customerPhone: string | undefined;
+  let locationSlug: string | undefined;
   const removed = await withLock("orders.json", async () => {
     const orders = await readJSON<Order[]>("orders.json", []);
     const index = orders.findIndex((o) => o.id === id);
     if (index === -1) return false;
     slotId = orders[index].slotId;
+    customerPhone = orders[index].customerPhone;
+    locationSlug = orders[index].locationSlug;
     orders.splice(index, 1);
     await writeJSON("orders.json", orders);
+    await dualDeleteOrder(id);
     return true;
   });
   if (removed) {
@@ -291,6 +1197,13 @@ export async function deleteOrder(id: string): Promise<boolean> {
       await decrementSlotOrders(slotId);
     }
     await removeNotificationsForOrder(id);
+    if (customerPhone) {
+      // Lifetime stats drop one order on this delete — refresh the rollup.
+      void recomputeCustomerRollup(customerPhone);
+    }
+    if (locationSlug) {
+      emitOrderEvent({ kind: "deleted", orderId: id, locationSlug });
+    }
   }
   return removed;
 }
@@ -943,6 +1856,19 @@ export interface MenuOverride {
   available?: boolean;
   name?: string;
   description?: string;
+  /**
+   * Phase 3 m3_6 menu lockdown: when true, only the brand owner can edit
+   * this item. Franchisees can only override price within a configured
+   * window (default ±15%). When false / unset, franchisees can manage
+   * the item fully under their banner.
+   */
+  locked?: boolean;
+  /**
+   * Phase 3 m3_6: maximum franchisee price delta from the corporate
+   * price, in basis points. 1500 = ±15%. Only consulted when `locked`
+   * is true.
+   */
+  franchiseePriceMaxDeltaBps?: number;
 }
 
 export async function getMenuOverrides(): Promise<Record<string, MenuOverride>> {
@@ -1080,8 +2006,155 @@ export async function updateLoyaltySettings(updates: Partial<LoyaltySettings>): 
 
 // --- Ingredients ---
 
+// --- Inventory: ingredients + recipes (m1_5: dual-write) ----------------
+
+const INGREDIENTS_DDL = [
+  `CREATE TABLE IF NOT EXISTS ingredients (
+    id text PRIMARY KEY,
+    name text NOT NULL,
+    category text NOT NULL,
+    unit text NOT NULL,
+    cost_per_unit integer NOT NULL,
+    supplier text,
+    notes text
+  )`,
+];
+const RECIPES_DDL = [
+  `CREATE TABLE IF NOT EXISTS recipes (
+    id text PRIMARY KEY,
+    menu_item_id text NOT NULL,
+    prep_time_minutes integer,
+    yield_portions integer NOT NULL,
+    notes text,
+    ingredients_payload jsonb NOT NULL DEFAULT '[]'::jsonb
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS recipes_menu_item_id_unique
+    ON recipes (menu_item_id)`,
+];
+
+async function ensureIngredientsTable(): Promise<void> {
+  await ensureTable("ingredients", INGREDIENTS_DDL);
+}
+async function ensureRecipesTable(): Promise<void> {
+  await ensureTable("recipes", RECIPES_DDL);
+}
+
+async function dualWriteIngredient(ingredient: Ingredient): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureIngredientsTable();
+    await db
+      .insert(ingredientsTable)
+      .values({
+        id: ingredient.id,
+        name: ingredient.name,
+        category: ingredient.category,
+        unit: ingredient.unit,
+        costPerUnit: ingredient.costPerUnit,
+        supplier: ingredient.supplier ?? null,
+        notes: ingredient.notes ?? null,
+      })
+      .onConflictDoUpdate({
+        target: ingredientsTable.id,
+        set: {
+          name: ingredient.name,
+          category: ingredient.category,
+          unit: ingredient.unit,
+          costPerUnit: ingredient.costPerUnit,
+          supplier: ingredient.supplier ?? null,
+          notes: ingredient.notes ?? null,
+        },
+      });
+  } catch (err) {
+    logger.warn("dualWriteIngredient failed", { id: ingredient.id, layer: "store.ingredients" }, err);
+  }
+}
+
+async function dualDeleteIngredient(id: string): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureIngredientsTable();
+    await db.delete(ingredientsTable).where(eq(ingredientsTable.id, id));
+  } catch (err) {
+    logger.warn("dualDeleteIngredient failed", { id, layer: "store.ingredients" }, err);
+  }
+}
+
+async function dualWriteRecipe(recipe: Recipe): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureRecipesTable();
+    const values = {
+      id: recipe.id,
+      menuItemId: recipe.menuItemId,
+      prepTimeMinutes: recipe.prepTimeMinutes ?? null,
+      yieldPortions: recipe.yieldPortions,
+      notes: recipe.notes ?? null,
+      ingredientsPayload: recipe.ingredients,
+    };
+    await db
+      .insert(recipesTable)
+      .values(values)
+      .onConflictDoUpdate({ target: recipesTable.id, set: values });
+  } catch (err) {
+    logger.warn("dualWriteRecipe failed", { menuItemId: recipe.menuItemId, layer: "store.recipes" }, err);
+  }
+}
+
+async function dualDeleteRecipe(menuItemId: string): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureRecipesTable();
+    await db.delete(recipesTable).where(eq(recipesTable.menuItemId, menuItemId));
+  } catch (err) {
+    logger.warn("dualDeleteRecipe failed", { menuItemId, layer: "store.recipes" }, err);
+  }
+}
+
+function rowToIngredient(row: typeof ingredientsTable.$inferSelect): Ingredient {
+  return {
+    id: row.id,
+    name: row.name,
+    category: row.category as Ingredient["category"],
+    unit: row.unit as Ingredient["unit"],
+    costPerUnit: row.costPerUnit,
+    supplier: row.supplier ?? undefined,
+    notes: row.notes ?? undefined,
+  };
+}
+
+function rowToRecipe(row: typeof recipesTable.$inferSelect): Recipe {
+  return {
+    id: row.id,
+    menuItemId: row.menuItemId,
+    ingredients: (row.ingredientsPayload as Recipe["ingredients"]) ?? [],
+    prepTimeMinutes: row.prepTimeMinutes ?? undefined,
+    yieldPortions: row.yieldPortions,
+    notes: row.notes ?? undefined,
+  };
+}
+
 export async function getIngredients(): Promise<Ingredient[]> {
-  return readJSON<Ingredient[]>("ingredients.json", []);
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureIngredientsTable();
+      const rows = await db.select().from(ingredientsTable);
+      if (rows.length > 0) return rows.map(rowToIngredient);
+    } catch (err) {
+      logger.warn("getIngredients DB read failed; falling back", { layer: "store.ingredients" }, err);
+    }
+  }
+  const fromKv = await readJSON<Ingredient[]>("ingredients.json", []);
+  if (fromKv.length > 0) {
+    bumpLazyBackfillHit("ingredients");
+    void Promise.all(fromKv.map((i) => dualWriteIngredient(i)));
+  }
+  return fromKv;
 }
 
 export async function saveIngredient(ingredient: Ingredient): Promise<Ingredient> {
@@ -1094,6 +2167,7 @@ export async function saveIngredient(ingredient: Ingredient): Promise<Ingredient
       list.push(ingredient);
     }
     await writeJSON("ingredients.json", list);
+    await dualWriteIngredient(ingredient);
     return ingredient;
   });
 }
@@ -1104,6 +2178,7 @@ export async function deleteIngredient(id: string): Promise<boolean> {
     const filtered = list.filter((i) => i.id !== id);
     if (filtered.length === list.length) return false;
     await writeJSON("ingredients.json", filtered);
+    await dualDeleteIngredient(id);
     return true;
   });
 }
@@ -1111,12 +2186,46 @@ export async function deleteIngredient(id: string): Promise<boolean> {
 // --- Recipes ---
 
 export async function getRecipes(): Promise<Recipe[]> {
-  return readJSON<Recipe[]>("recipes.json", []);
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureRecipesTable();
+      const rows = await db.select().from(recipesTable);
+      if (rows.length > 0) return rows.map(rowToRecipe);
+    } catch (err) {
+      logger.warn("getRecipes DB read failed; falling back", { layer: "store.recipes" }, err);
+    }
+  }
+  const fromKv = await readJSON<Recipe[]>("recipes.json", []);
+  if (fromKv.length > 0) {
+    bumpLazyBackfillHit("recipes");
+    void Promise.all(fromKv.map((r) => dualWriteRecipe(r)));
+  }
+  return fromKv;
 }
 
 export async function getRecipe(menuItemId: string): Promise<Recipe | undefined> {
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureRecipesTable();
+      const rows = await db
+        .select()
+        .from(recipesTable)
+        .where(eq(recipesTable.menuItemId, menuItemId))
+        .limit(1);
+      if (rows.length > 0) return rowToRecipe(rows[0]);
+    } catch (err) {
+      logger.warn("getRecipe DB read failed; falling back", { menuItemId, layer: "store.recipes" }, err);
+    }
+  }
   const recipes = await readJSON<Recipe[]>("recipes.json", []);
-  return recipes.find((r) => r.menuItemId === menuItemId);
+  const hit = recipes.find((r) => r.menuItemId === menuItemId);
+  if (hit) {
+    bumpLazyBackfillHit("recipes");
+    void dualWriteRecipe(hit);
+  }
+  return hit;
 }
 
 export async function saveRecipe(recipe: Recipe): Promise<Recipe> {
@@ -1129,6 +2238,7 @@ export async function saveRecipe(recipe: Recipe): Promise<Recipe> {
       list.push(recipe);
     }
     await writeJSON("recipes.json", list);
+    await dualWriteRecipe(recipe);
     return recipe;
   });
 }
@@ -1139,6 +2249,7 @@ export async function deleteRecipe(menuItemId: string): Promise<boolean> {
     const filtered = list.filter((r) => r.menuItemId !== menuItemId);
     if (filtered.length === list.length) return false;
     await writeJSON("recipes.json", filtered);
+    await dualDeleteRecipe(menuItemId);
     return true;
   });
 }
@@ -1175,30 +2286,120 @@ export interface LoyaltyMember {
   dob?: string;
 }
 
+const LOYALTY_MEMBERS_DDL = [
+  `CREATE TABLE IF NOT EXISTS loyalty_members (
+    phone text PRIMARY KEY,
+    name text NOT NULL,
+    last_name text,
+    nickname text,
+    email text,
+    dob date,
+    signed_up_at timestamptz NOT NULL
+  )`,
+  // Gemini review feedback: dob migrated from text → date.
+  `ALTER TABLE loyalty_members ALTER COLUMN dob TYPE date USING (NULLIF(dob, '')::date)`,
+];
+
+async function ensureLoyaltyMembersTable(): Promise<void> {
+  await ensureTable("loyalty_members", LOYALTY_MEMBERS_DDL);
+}
+
+function rowToLoyaltyMember(row: typeof loyaltyMembersTable.$inferSelect): LoyaltyMember {
+  return {
+    phone: row.phone,
+    name: row.name,
+    lastName: row.lastName ?? undefined,
+    nickname: row.nickname ?? undefined,
+    email: row.email ?? undefined,
+    dob: row.dob ?? undefined,
+    signedUpAt: row.signedUpAt.toISOString(),
+  };
+}
+
+async function dualWriteLoyaltyMember(m: LoyaltyMember): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureLoyaltyMembersTable();
+    const values = {
+      phone: m.phone,
+      name: m.name,
+      lastName: m.lastName ?? null,
+      nickname: m.nickname ?? null,
+      email: m.email ?? null,
+      dob: m.dob ?? null,
+      signedUpAt: new Date(m.signedUpAt),
+    };
+    await db
+      .insert(loyaltyMembersTable)
+      .values(values)
+      .onConflictDoUpdate({ target: loyaltyMembersTable.phone, set: values });
+  } catch (err) {
+    logger.warn("dualWriteLoyaltyMember failed", { phone: m.phone, layer: "store.loyalty_members" }, err);
+  }
+}
+
 export async function getLoyaltyMembers(): Promise<LoyaltyMember[]> {
-  return readJSON<LoyaltyMember[]>("loyalty-members.json", []);
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureLoyaltyMembersTable();
+      const rows = await db.select().from(loyaltyMembersTable);
+      if (rows.length > 0) return rows.map(rowToLoyaltyMember);
+    } catch (err) {
+      logger.warn("getLoyaltyMembers DB read failed; falling back", { layer: "store.loyalty_members" }, err);
+    }
+  }
+  const list = await readJSON<LoyaltyMember[]>("loyalty-members.json", []);
+  if (list.length > 0) {
+    bumpLazyBackfillHit("loyalty_members");
+    void Promise.all(list.map((m) => dualWriteLoyaltyMember(m)));
+  }
+  return list;
 }
 
 export async function addLoyaltyMember(member: LoyaltyMember): Promise<LoyaltyMember> {
   const canonical = normalizePlPhoneE164(member.phone) || member.phone.trim();
   const toSave: LoyaltyMember = { ...member, phone: canonical };
-  return withLock("loyalty-members.json", async () => {
+  const saved = await withLock("loyalty-members.json", async () => {
     const list = await readJSON<LoyaltyMember[]>("loyalty-members.json", []);
     if (list.some((m) => phonesEqualPl(m.phone, canonical))) return toSave;
     list.push(toSave);
     await writeJSON("loyalty-members.json", list);
     return toSave;
   });
+  await dualWriteLoyaltyMember(saved);
+  // Loyalty signup carries the customer's name/email/dob — feeds the rollup.
+  void recomputeCustomerRollup(canonical);
+  return saved;
 }
 
 export async function getLoyaltyMember(phone: string): Promise<LoyaltyMember | undefined> {
-  const list = await readJSON<LoyaltyMember[]>("loyalty-members.json", []);
-  const canonical = normalizePlPhoneE164(phone);
-  if (canonical) {
-    const hit = list.find((m) => phonesEqualPl(m.phone, canonical));
-    if (hit) return hit;
+  const db = getDb();
+  const canonical = normalizePlPhoneE164(phone) ?? phone.trim();
+  if (db) {
+    try {
+      await ensureLoyaltyMembersTable();
+      const rows = await db
+        .select()
+        .from(loyaltyMembersTable)
+        .where(eq(loyaltyMembersTable.phone, canonical))
+        .limit(1);
+      if (rows.length > 0) return rowToLoyaltyMember(rows[0]);
+    } catch (err) {
+      logger.warn("getLoyaltyMember DB read failed; falling back", { phone, layer: "store.loyalty_members" }, err);
+    }
   }
-  return list.find((m) => m.phone === phone.trim());
+  const list = await readJSON<LoyaltyMember[]>("loyalty-members.json", []);
+  const normalized = normalizePlPhoneE164(phone);
+  let hit: LoyaltyMember | undefined;
+  if (normalized) hit = list.find((m) => phonesEqualPl(m.phone, normalized));
+  if (!hit) hit = list.find((m) => m.phone === phone.trim());
+  if (hit) {
+    bumpLazyBackfillHit("loyalty_members");
+    void dualWriteLoyaltyMember(hit);
+  }
+  return hit;
 }
 
 export async function updateLoyaltyMember(
@@ -1206,7 +2407,7 @@ export async function updateLoyaltyMember(
   updates: Partial<Pick<LoyaltyMember, "name" | "lastName" | "nickname" | "email" | "dob">>
 ): Promise<LoyaltyMember | null> {
   const canonical = normalizePlPhoneE164(phone) || phone.trim();
-  return withLock("loyalty-members.json", async () => {
+  const updated = await withLock("loyalty-members.json", async () => {
     const list = await readJSON<LoyaltyMember[]>("loyalty-members.json", []);
     const index = list.findIndex((m) => phonesEqualPl(m.phone, canonical));
     if (index === -1) return null;
@@ -1214,6 +2415,12 @@ export async function updateLoyaltyMember(
     await writeJSON("loyalty-members.json", list);
     return list[index];
   });
+  if (updated) {
+    await dualWriteLoyaltyMember(updated);
+    // Profile edits affect the customer rollup's name/email/birthday.
+    void recomputeCustomerRollup(canonical);
+  }
+  return updated;
 }
 
 // --- Family wallets (up to WALLET_MAX_PHONES phones, shared earn, invite + confirm) ---
@@ -1517,16 +2724,93 @@ export interface PointAdjustment {
   adjustedAt: string;
 }
 
+const POINT_ADJUSTMENTS_DDL = [
+  `CREATE TABLE IF NOT EXISTS point_adjustments (
+    id text PRIMARY KEY,
+    phone text NOT NULL,
+    amount integer NOT NULL,
+    reason text NOT NULL,
+    adjusted_by text NOT NULL,
+    adjusted_at timestamptz NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS point_adjustments_phone_idx
+    ON point_adjustments (phone)`,
+  `CREATE INDEX IF NOT EXISTS point_adjustments_adjusted_at_idx
+    ON point_adjustments (adjusted_at)`,
+];
+
+async function ensurePointAdjustmentsTable(): Promise<void> {
+  await ensureTable("point_adjustments", POINT_ADJUSTMENTS_DDL);
+}
+
+/**
+ * Adjustments don't carry an id field; synthesize one from natural keys so
+ * ON CONFLICT DO NOTHING gives idempotent backfill.
+ */
+function pointAdjustmentSyntheticId(a: PointAdjustment): string {
+  return `${a.phone}|${a.adjustedAt}|${a.amount}`;
+}
+
+function rowToPointAdjustment(row: typeof pointAdjustmentsTable.$inferSelect): PointAdjustment {
+  return {
+    phone: row.phone,
+    amount: row.amount,
+    reason: row.reason,
+    adjustedBy: row.adjustedBy,
+    adjustedAt: row.adjustedAt.toISOString(),
+  };
+}
+
+async function dualWritePointAdjustment(a: PointAdjustment): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensurePointAdjustmentsTable();
+    await db
+      .insert(pointAdjustmentsTable)
+      .values({
+        id: pointAdjustmentSyntheticId(a),
+        phone: a.phone,
+        amount: a.amount,
+        reason: a.reason,
+        adjustedBy: a.adjustedBy,
+        adjustedAt: new Date(a.adjustedAt),
+      })
+      .onConflictDoNothing();
+  } catch (err) {
+    logger.warn("dualWritePointAdjustment failed", { phone: a.phone, layer: "store.point_adjustments" }, err);
+  }
+}
+
 export async function getPointAdjustments(): Promise<PointAdjustment[]> {
-  return readJSON<PointAdjustment[]>("point-adjustments.json", []);
+  const db = getDb();
+  if (db) {
+    try {
+      await ensurePointAdjustmentsTable();
+      const rows = await db.select().from(pointAdjustmentsTable);
+      if (rows.length > 0) return rows.map(rowToPointAdjustment);
+    } catch (err) {
+      logger.warn("getPointAdjustments DB read failed; falling back", { layer: "store.point_adjustments" }, err);
+    }
+  }
+  const list = await readJSON<PointAdjustment[]>("point-adjustments.json", []);
+  if (list.length > 0) {
+    bumpLazyBackfillHit("point_adjustments");
+    void Promise.all(list.map((a) => dualWritePointAdjustment(a)));
+  }
+  return list;
 }
 
 export async function addPointAdjustment(adj: PointAdjustment): Promise<void> {
-  return withLock("point-adjustments.json", async () => {
+  await withLock("point-adjustments.json", async () => {
     const list = await readJSON<PointAdjustment[]>("point-adjustments.json", []);
     list.push(adj);
     await writeJSON("point-adjustments.json", list);
   });
+  await dualWritePointAdjustment(adj);
+  // Manual adjustments shift loyaltyPointsBalance + manualPointsAdjust on
+  // the customer rollup — keep that in sync.
+  void recomputeCustomerRollup(adj.phone);
 }
 
 export async function getManualPointsTotal(phone: string): Promise<number> {
@@ -1897,8 +3181,99 @@ export interface FeedbackEntry {
   analyzedAt?: string;
 }
 
+const FEEDBACK_DDL = [
+  `CREATE TABLE IF NOT EXISTS feedback (
+    id text PRIMARY KEY,
+    order_id text NOT NULL,
+    location_slug text NOT NULL,
+    customer_name text NOT NULL,
+    customer_phone text NOT NULL,
+    overall_rating integer NOT NULL,
+    category_ratings jsonb NOT NULL DEFAULT '{}'::jsonb,
+    comment text NOT NULL,
+    status text NOT NULL,
+    sentiment text,
+    themes text[],
+    analyzed_at timestamptz,
+    created_at timestamptz NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS feedback_location_created_idx
+    ON feedback (location_slug, created_at)`,
+  `CREATE INDEX IF NOT EXISTS feedback_status_idx ON feedback (status)`,
+  `CREATE INDEX IF NOT EXISTS feedback_order_id_idx ON feedback (order_id)`,
+];
+
+async function ensureFeedbackTable(): Promise<void> {
+  await ensureTable("feedback", FEEDBACK_DDL);
+}
+
+function rowToFeedback(row: typeof feedbackTable.$inferSelect): FeedbackEntry {
+  return {
+    id: row.id,
+    orderId: row.orderId,
+    locationSlug: row.locationSlug,
+    customerName: row.customerName,
+    customerPhone: row.customerPhone,
+    overallRating: row.overallRating,
+    categoryRatings: (row.categoryRatings as Record<string, number>) ?? {},
+    comment: row.comment,
+    status: row.status as FeedbackEntry["status"],
+    sentiment: (row.sentiment as FeedbackSentiment | null) ?? undefined,
+    themes: row.themes ?? undefined,
+    analyzedAt: row.analyzedAt ? row.analyzedAt.toISOString() : undefined,
+    date: row.createdAt.toISOString(),
+  };
+}
+
+async function dualWriteFeedback(entry: FeedbackEntry): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureFeedbackTable();
+    const values = {
+      id: entry.id,
+      orderId: entry.orderId,
+      locationSlug: entry.locationSlug,
+      customerName: entry.customerName,
+      customerPhone: entry.customerPhone,
+      overallRating: entry.overallRating,
+      categoryRatings: entry.categoryRatings,
+      comment: entry.comment,
+      status: entry.status,
+      sentiment: entry.sentiment ?? null,
+      themes: entry.themes ?? null,
+      analyzedAt: entry.analyzedAt ? new Date(entry.analyzedAt) : null,
+      createdAt: new Date(entry.date),
+    };
+    await db
+      .insert(feedbackTable)
+      .values(values)
+      .onConflictDoUpdate({ target: feedbackTable.id, set: values });
+  } catch (err) {
+    logger.warn("dualWriteFeedback failed", { id: entry.id, layer: "store.feedback" }, err);
+  }
+}
+
 export async function getFeedback(): Promise<FeedbackEntry[]> {
-  return readJSON<FeedbackEntry[]>("feedback.json", []);
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureFeedbackTable();
+      const rows = await db
+        .select()
+        .from(feedbackTable)
+        .orderBy(desc(feedbackTable.createdAt));
+      if (rows.length > 0) return rows.map(rowToFeedback);
+    } catch (err) {
+      logger.warn("getFeedback DB read failed; falling back", { layer: "store.feedback" }, err);
+    }
+  }
+  const list = await readJSON<FeedbackEntry[]>("feedback.json", []);
+  if (list.length > 0) {
+    bumpLazyBackfillHit("feedback");
+    void Promise.all(list.map((f) => dualWriteFeedback(f)));
+  }
+  return list;
 }
 
 export async function saveFeedback(entry: FeedbackEntry): Promise<FeedbackEntry> {
@@ -1911,6 +3286,7 @@ export async function saveFeedback(entry: FeedbackEntry): Promise<FeedbackEntry>
       list.push(entry);
     }
     await writeJSON("feedback.json", list);
+    await dualWriteFeedback(entry);
     return entry;
   });
 }
@@ -1922,6 +3298,7 @@ export async function updateFeedbackStatus(id: string, status: FeedbackEntry["st
     if (idx === -1) return null;
     list[idx].status = status;
     await writeJSON("feedback.json", list);
+    await dualWriteFeedback(list[idx]);
     return list[idx];
   });
 }
@@ -1934,22 +3311,27 @@ export async function updateFeedbackStatus(id: string, status: FeedbackEntry["st
 export async function setFeedbackAnalysis(
   updates: { id: string; sentiment: FeedbackSentiment; themes: string[] }[],
 ): Promise<number> {
-  return withLock("feedback.json", async () => {
+  const written: FeedbackEntry[] = [];
+  const n = await withLock("feedback.json", async () => {
     const list = await readJSON<FeedbackEntry[]>("feedback.json", []);
     const byId = new Map(updates.map((u) => [u.id, u]));
     const now = new Date().toISOString();
-    let n = 0;
+    let count = 0;
     for (const entry of list) {
       const u = byId.get(entry.id);
       if (!u) continue;
       entry.sentiment = u.sentiment;
       entry.themes = u.themes;
       entry.analyzedAt = now;
-      n++;
+      written.push(entry);
+      count++;
     }
     await writeJSON("feedback.json", list);
-    return n;
+    return count;
   });
+  // Mirror outside the lock — these are independent rows.
+  await Promise.all(written.map((e) => dualWriteFeedback(e)));
+  return n;
 }
 
 // ── Chatbot FAQ ──────────────────────────────────────────────
@@ -2036,22 +3418,203 @@ export async function updateLocationUpsell(
   });
 }
 
-// --- Inventory: stock levels + movements (per location) ---
+// --- Inventory: stock levels + movements (m1_5: dual-write) -------------
+
+const INGREDIENT_STOCK_DDL = [
+  `CREATE TABLE IF NOT EXISTS ingredient_stock (
+    ingredient_id text NOT NULL,
+    location_slug text NOT NULL,
+    on_hand integer NOT NULL,
+    par_level integer NOT NULL,
+    reorder_point integer NOT NULL,
+    last_counted_at timestamptz,
+    last_counted_by text,
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (ingredient_id, location_slug)
+  )`,
+  `CREATE INDEX IF NOT EXISTS ingredient_stock_location_idx
+    ON ingredient_stock (location_slug)`,
+];
+const STOCK_MOVEMENTS_DDL = [
+  `CREATE TABLE IF NOT EXISTS stock_movements (
+    id text PRIMARY KEY,
+    ingredient_id text NOT NULL,
+    location_slug text NOT NULL,
+    type text NOT NULL,
+    quantity integer NOT NULL,
+    cost_impact integer,
+    reason text,
+    by_user text,
+    occurred_at timestamptz NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS stock_movements_ingredient_occurred_idx
+    ON stock_movements (ingredient_id, occurred_at)`,
+  `CREATE INDEX IF NOT EXISTS stock_movements_location_occurred_idx
+    ON stock_movements (location_slug, occurred_at)`,
+];
+
+async function ensureIngredientStockTable(): Promise<void> {
+  await ensureTable("ingredient_stock", INGREDIENT_STOCK_DDL);
+}
+async function ensureStockMovementsTable(): Promise<void> {
+  await ensureTable("stock_movements", STOCK_MOVEMENTS_DDL);
+}
+
+function rowToStock(row: typeof ingredientStockTable.$inferSelect): IngredientStock {
+  return {
+    ingredientId: row.ingredientId,
+    locationSlug: row.locationSlug,
+    onHand: row.onHand,
+    parLevel: row.parLevel,
+    reorderPoint: row.reorderPoint,
+    lastCountedAt: row.lastCountedAt ? row.lastCountedAt.toISOString() : undefined,
+    lastCountedBy: row.lastCountedBy ?? undefined,
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+function rowToMovement(row: typeof stockMovementsTable.$inferSelect): StockMovement {
+  return {
+    id: row.id,
+    ingredientId: row.ingredientId,
+    locationSlug: row.locationSlug,
+    type: row.type as StockMovement["type"],
+    quantity: row.quantity,
+    costImpact: row.costImpact ?? undefined,
+    reason: row.reason ?? undefined,
+    byUser: row.byUser ?? undefined,
+    occurredAt: row.occurredAt.toISOString(),
+  };
+}
+
+async function dualWriteStock(stock: IngredientStock): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureIngredientStockTable();
+    const values = {
+      ingredientId: stock.ingredientId,
+      locationSlug: stock.locationSlug,
+      onHand: stock.onHand,
+      parLevel: stock.parLevel,
+      reorderPoint: stock.reorderPoint,
+      lastCountedAt: stock.lastCountedAt ? new Date(stock.lastCountedAt) : null,
+      lastCountedBy: stock.lastCountedBy ?? null,
+      updatedAt: new Date(stock.updatedAt),
+    };
+    await db
+      .insert(ingredientStockTable)
+      .values(values)
+      .onConflictDoUpdate({
+        target: [ingredientStockTable.ingredientId, ingredientStockTable.locationSlug],
+        set: values,
+      });
+  } catch (err) {
+    logger.warn("dualWriteStock failed", { ...stock, layer: "store.stock" }, err);
+  }
+}
+
+async function dualDeleteStock(ingredientId: string, locationSlug: string): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureIngredientStockTable();
+    await db
+      .delete(ingredientStockTable)
+      .where(
+        and(
+          eq(ingredientStockTable.ingredientId, ingredientId),
+          eq(ingredientStockTable.locationSlug, locationSlug),
+        ),
+      );
+  } catch (err) {
+    logger.warn("dualDeleteStock failed", { ingredientId, locationSlug, layer: "store.stock" }, err);
+  }
+}
+
+async function dualWriteMovement(movement: StockMovement): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureStockMovementsTable();
+    // Movements are append-only; ON CONFLICT DO NOTHING is enough.
+    await db
+      .insert(stockMovementsTable)
+      .values({
+        id: movement.id,
+        ingredientId: movement.ingredientId,
+        locationSlug: movement.locationSlug,
+        type: movement.type,
+        quantity: movement.quantity,
+        costImpact: movement.costImpact ?? null,
+        reason: movement.reason ?? null,
+        byUser: movement.byUser ?? null,
+        occurredAt: new Date(movement.occurredAt),
+      })
+      .onConflictDoNothing();
+  } catch (err) {
+    logger.warn("dualWriteMovement failed", { id: movement.id, layer: "store.stock_movements" }, err);
+  }
+}
 
 export async function getIngredientStock(
   locationSlug?: string,
 ): Promise<IngredientStock[]> {
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureIngredientStockTable();
+      const rows = locationSlug
+        ? await db
+            .select()
+            .from(ingredientStockTable)
+            .where(eq(ingredientStockTable.locationSlug, locationSlug))
+        : await db.select().from(ingredientStockTable);
+      if (rows.length > 0) return rows.map(rowToStock);
+    } catch (err) {
+      logger.warn("getIngredientStock DB read failed; falling back", { layer: "store.stock" }, err);
+    }
+  }
   const all = await readJSON<IngredientStock[]>("ingredient-stock.json", []);
-  if (!locationSlug) return all;
-  return all.filter((s) => s.locationSlug === locationSlug);
+  const filtered = locationSlug ? all.filter((s) => s.locationSlug === locationSlug) : all;
+  if (filtered.length > 0) {
+    bumpLazyBackfillHit("ingredient_stock");
+    void Promise.all(filtered.map((s) => dualWriteStock(s)));
+  }
+  return filtered;
 }
 
 export async function getStockForIngredient(
   ingredientId: string,
   locationSlug: string,
 ): Promise<IngredientStock | null> {
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureIngredientStockTable();
+      const rows = await db
+        .select()
+        .from(ingredientStockTable)
+        .where(
+          and(
+            eq(ingredientStockTable.ingredientId, ingredientId),
+            eq(ingredientStockTable.locationSlug, locationSlug),
+          ),
+        )
+        .limit(1);
+      if (rows.length > 0) return rowToStock(rows[0]);
+    } catch (err) {
+      logger.warn("getStockForIngredient DB read failed; falling back", { ingredientId, locationSlug, layer: "store.stock" }, err);
+    }
+  }
   const all = await readJSON<IngredientStock[]>("ingredient-stock.json", []);
-  return all.find((s) => s.ingredientId === ingredientId && s.locationSlug === locationSlug) ?? null;
+  const hit =
+    all.find((s) => s.ingredientId === ingredientId && s.locationSlug === locationSlug) ?? null;
+  if (hit) {
+    bumpLazyBackfillHit("ingredient_stock");
+    void dualWriteStock(hit);
+  }
+  return hit;
 }
 
 export async function upsertIngredientStock(
@@ -2069,6 +3632,7 @@ export async function upsertIngredientStock(
     if (i >= 0) list[i] = row;
     else list.push(row);
     await writeJSON("ingredient-stock.json", list);
+    await dualWriteStock(row);
     return row;
   });
 }
@@ -2084,6 +3648,7 @@ export async function deleteIngredientStock(
     );
     if (filtered.length === list.length) return false;
     await writeJSON("ingredient-stock.json", filtered);
+    await dualDeleteStock(ingredientId, locationSlug);
     return true;
   });
 }
@@ -2093,12 +3658,36 @@ export async function getStockMovements(filters?: {
   ingredientId?: string;
   limit?: number;
 }): Promise<StockMovement[]> {
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureStockMovementsTable();
+      const whereClauses = [];
+      if (filters?.locationSlug)
+        whereClauses.push(eq(stockMovementsTable.locationSlug, filters.locationSlug));
+      if (filters?.ingredientId)
+        whereClauses.push(eq(stockMovementsTable.ingredientId, filters.ingredientId));
+      const baseQuery = db
+        .select()
+        .from(stockMovementsTable)
+        .orderBy(desc(stockMovementsTable.occurredAt));
+      const filtered = whereClauses.length > 0 ? baseQuery.where(and(...whereClauses)) : baseQuery;
+      const rows = filters?.limit ? await filtered.limit(filters.limit) : await filtered;
+      if (rows.length > 0) return rows.map(rowToMovement);
+    } catch (err) {
+      logger.warn("getStockMovements DB read failed; falling back", { layer: "store.stock_movements" }, err);
+    }
+  }
   const all = await readJSON<StockMovement[]>("stock-movements.json", []);
   let list = all;
   if (filters?.locationSlug) list = list.filter((m) => m.locationSlug === filters.locationSlug);
   if (filters?.ingredientId) list = list.filter((m) => m.ingredientId === filters.ingredientId);
   list = list.slice().sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
   if (filters?.limit) list = list.slice(0, filters.limit);
+  if (list.length > 0) {
+    bumpLazyBackfillHit("stock_movements");
+    void Promise.all(list.map((m) => dualWriteMovement(m)));
+  }
   return list;
 }
 
@@ -2127,7 +3716,9 @@ export async function createStockMovement(input: Omit<StockMovement, "id" | "occ
     list.push(movement);
     await writeJSON("stock-movements.json", list);
   });
+  await dualWriteMovement(movement);
 
+  let updatedStock: IngredientStock | undefined;
   await withLock("ingredient-stock.json", async () => {
     const list = await readJSON<IngredientStock[]>("ingredient-stock.json", []);
     const i = list.findIndex(
@@ -2139,18 +3730,24 @@ export async function createStockMovement(input: Omit<StockMovement, "id" | "occ
         onHand: list[i].onHand + input.quantity,
         updatedAt: movement.occurredAt,
       };
+      updatedStock = list[i];
     } else {
-      list.push({
+      const row: IngredientStock = {
         ingredientId: input.ingredientId,
         locationSlug: input.locationSlug,
         onHand: Math.max(0, input.quantity),
         parLevel: 0,
         reorderPoint: 0,
         updatedAt: movement.occurredAt,
-      });
+      };
+      list.push(row);
+      updatedStock = row;
     }
     await writeJSON("ingredient-stock.json", list);
   });
+  if (updatedStock) {
+    await dualWriteStock(updatedStock);
+  }
 
   return movement;
 }
@@ -2293,12 +3890,95 @@ export async function deletePurchaseOrder(id: string): Promise<boolean> {
   });
 }
 
-// --- CRM (customer notes) ---
+// --- CRM (customer notes — m1_8b dual-write) ----------------------------
+
+const CUSTOMER_NOTES_DDL = [
+  `CREATE TABLE IF NOT EXISTS customer_notes (
+    id text PRIMARY KEY,
+    phone text NOT NULL,
+    body text NOT NULL,
+    tags text[],
+    authored_by text,
+    created_at timestamptz NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS customer_notes_phone_idx
+    ON customer_notes (phone)`,
+  `CREATE INDEX IF NOT EXISTS customer_notes_created_idx
+    ON customer_notes (created_at)`,
+];
+
+async function ensureCustomerNotesTable(): Promise<void> {
+  await ensureTable("customer_notes", CUSTOMER_NOTES_DDL);
+}
+
+function rowToCustomerNote(row: typeof customerNotesTable.$inferSelect): CustomerNote {
+  return {
+    id: row.id,
+    phone: row.phone,
+    body: row.body,
+    tags: row.tags ?? undefined,
+    authoredBy: row.authoredBy ?? undefined,
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+
+async function dualWriteCustomerNote(n: CustomerNote): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureCustomerNotesTable();
+    await db
+      .insert(customerNotesTable)
+      .values({
+        id: n.id,
+        phone: n.phone,
+        body: n.body,
+        tags: n.tags ?? null,
+        authoredBy: n.authoredBy ?? null,
+        createdAt: new Date(n.createdAt),
+      })
+      .onConflictDoNothing();
+  } catch (err) {
+    logger.warn("dualWriteCustomerNote failed", { id: n.id, layer: "store.customer_notes" }, err);
+  }
+}
+
+async function dualDeleteCustomerNote(id: string): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureCustomerNotesTable();
+    await db.delete(customerNotesTable).where(eq(customerNotesTable.id, id));
+  } catch (err) {
+    logger.warn("dualDeleteCustomerNote failed", { id, layer: "store.customer_notes" }, err);
+  }
+}
 
 export async function getCustomerNotes(phone?: string): Promise<CustomerNote[]> {
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureCustomerNotesTable();
+      const baseQuery = db
+        .select()
+        .from(customerNotesTable)
+        .orderBy(desc(customerNotesTable.createdAt));
+      const rows = phone
+        ? await baseQuery.where(eq(customerNotesTable.phone, phone))
+        : await baseQuery;
+      if (rows.length > 0) return rows.map(rowToCustomerNote);
+    } catch (err) {
+      logger.warn("getCustomerNotes DB read failed; falling back", { layer: "store.customer_notes" }, err);
+    }
+  }
   const all = await readJSON<CustomerNote[]>("customer-notes.json", []);
   const list = phone ? all.filter((n) => n.phone === phone) : all;
-  return list.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const sorted = list.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  if (sorted.length > 0) {
+    bumpLazyBackfillHit("customer_notes");
+    void Promise.all(sorted.map((n) => dualWriteCustomerNote(n)));
+  }
+  return sorted;
 }
 
 export async function addCustomerNote(
@@ -2316,6 +3996,7 @@ export async function addCustomerNote(
     };
     list.push(note);
     await writeJSON("customer-notes.json", list);
+    await dualWriteCustomerNote(note);
     return note;
   });
 }
@@ -2326,15 +4007,217 @@ export async function deleteCustomerNote(id: string): Promise<boolean> {
     const filtered = list.filter((n) => n.id !== id);
     if (filtered.length === list.length) return false;
     await writeJSON("customer-notes.json", filtered);
+    await dualDeleteCustomerNote(id);
     return true;
   });
 }
 
-// --- Staff / HR ---
+// --- Staff / HR (m1_8a: dual-write) -------------------------------------
+
+const STAFF_DDL = [
+  `CREATE TABLE IF NOT EXISTS staff (
+    id text PRIMARY KEY,
+    name text NOT NULL,
+    phone text,
+    email text,
+    role text NOT NULL,
+    location_slug text NOT NULL,
+    hourly_rate_grosze integer NOT NULL,
+    hire_date date,
+    dob date,
+    status text NOT NULL,
+    notes text,
+    created_at timestamptz NOT NULL
+  )`,
+  // Gemini review feedback: hire_date + dob migrated from text → date.
+  // Existing rows hold ISO YYYY-MM-DD strings (and NULL), so the cast is
+  // lossless. Repeat calls are no-ops once the column is already date.
+  `ALTER TABLE staff ALTER COLUMN hire_date TYPE date USING (NULLIF(hire_date, '')::date)`,
+  `ALTER TABLE staff ALTER COLUMN dob TYPE date USING (NULLIF(dob, '')::date)`,
+  `CREATE INDEX IF NOT EXISTS staff_location_idx ON staff (location_slug)`,
+  `CREATE INDEX IF NOT EXISTS staff_status_idx ON staff (status)`,
+];
+const SHIFTS_DDL = [
+  `CREATE TABLE IF NOT EXISTS shifts (
+    id text PRIMARY KEY,
+    staff_id text NOT NULL,
+    location_slug text NOT NULL,
+    start_at timestamptz NOT NULL,
+    end_at timestamptz NOT NULL,
+    role text NOT NULL,
+    status text NOT NULL,
+    notes text
+  )`,
+  `CREATE INDEX IF NOT EXISTS shifts_location_start_idx
+    ON shifts (location_slug, start_at)`,
+  `CREATE INDEX IF NOT EXISTS shifts_staff_start_idx
+    ON shifts (staff_id, start_at)`,
+  `CREATE INDEX IF NOT EXISTS shifts_status_idx ON shifts (status)`,
+];
+const TIME_PUNCHES_DDL = [
+  `CREATE TABLE IF NOT EXISTS time_punches (
+    id text PRIMARY KEY,
+    staff_id text NOT NULL,
+    occurred_at timestamptz NOT NULL,
+    type text NOT NULL,
+    shift_id text
+  )`,
+  `CREATE INDEX IF NOT EXISTS time_punches_staff_occurred_idx
+    ON time_punches (staff_id, occurred_at)`,
+];
+
+async function ensureStaffTable(): Promise<void> {
+  await ensureTable("staff", STAFF_DDL);
+}
+async function ensureShiftsTable(): Promise<void> {
+  await ensureTable("shifts", SHIFTS_DDL);
+}
+async function ensureTimePunchesTable(): Promise<void> {
+  await ensureTable("time_punches", TIME_PUNCHES_DDL);
+}
+
+function rowToStaff(row: typeof staffTable.$inferSelect): StaffMember {
+  return {
+    id: row.id,
+    name: row.name,
+    phone: row.phone ?? undefined,
+    email: row.email ?? undefined,
+    role: row.role as StaffMember["role"],
+    locationSlug: row.locationSlug,
+    hourlyRateGrosze: row.hourlyRateGrosze,
+    hireDate: row.hireDate ?? undefined,
+    dob: row.dob ?? undefined,
+    status: row.status as StaffMember["status"],
+    notes: row.notes ?? undefined,
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+function rowToShift(row: typeof shiftsTable.$inferSelect): Shift {
+  return {
+    id: row.id,
+    staffId: row.staffId,
+    locationSlug: row.locationSlug,
+    startAt: row.startAt.toISOString(),
+    endAt: row.endAt.toISOString(),
+    role: row.role as Shift["role"],
+    status: row.status as Shift["status"],
+    notes: row.notes ?? undefined,
+  };
+}
+function rowToTimePunch(row: typeof timePunchesTable.$inferSelect): TimePunch {
+  return {
+    id: row.id,
+    staffId: row.staffId,
+    occurredAt: row.occurredAt.toISOString(),
+    type: row.type as TimePunch["type"],
+    shiftId: row.shiftId ?? undefined,
+  };
+}
+
+async function dualWriteStaff(m: StaffMember): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureStaffTable();
+    const values = {
+      id: m.id,
+      name: m.name,
+      phone: m.phone ?? null,
+      email: m.email ?? null,
+      role: m.role,
+      locationSlug: m.locationSlug,
+      hourlyRateGrosze: m.hourlyRateGrosze,
+      hireDate: m.hireDate ?? null,
+      dob: m.dob ?? null,
+      status: m.status,
+      notes: m.notes ?? null,
+      createdAt: new Date(m.createdAt),
+    };
+    await db.insert(staffTable).values(values).onConflictDoUpdate({ target: staffTable.id, set: values });
+  } catch (err) {
+    logger.warn("dualWriteStaff failed", { id: m.id, layer: "store.staff" }, err);
+  }
+}
+async function dualDeleteStaff(id: string): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureStaffTable();
+    await db.delete(staffTable).where(eq(staffTable.id, id));
+  } catch (err) {
+    logger.warn("dualDeleteStaff failed", { id, layer: "store.staff" }, err);
+  }
+}
+async function dualWriteShift(s: Shift): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureShiftsTable();
+    const values = {
+      id: s.id,
+      staffId: s.staffId,
+      locationSlug: s.locationSlug,
+      startAt: new Date(s.startAt),
+      endAt: new Date(s.endAt),
+      role: s.role,
+      status: s.status,
+      notes: s.notes ?? null,
+    };
+    await db.insert(shiftsTable).values(values).onConflictDoUpdate({ target: shiftsTable.id, set: values });
+  } catch (err) {
+    logger.warn("dualWriteShift failed", { id: s.id, layer: "store.shifts" }, err);
+  }
+}
+async function dualDeleteShift(id: string): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureShiftsTable();
+    await db.delete(shiftsTable).where(eq(shiftsTable.id, id));
+  } catch (err) {
+    logger.warn("dualDeleteShift failed", { id, layer: "store.shifts" }, err);
+  }
+}
+async function dualWriteTimePunch(p: TimePunch): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureTimePunchesTable();
+    await db
+      .insert(timePunchesTable)
+      .values({
+        id: p.id,
+        staffId: p.staffId,
+        occurredAt: new Date(p.occurredAt),
+        type: p.type,
+        shiftId: p.shiftId ?? null,
+      })
+      .onConflictDoNothing();
+  } catch (err) {
+    logger.warn("dualWriteTimePunch failed", { id: p.id, layer: "store.time_punches" }, err);
+  }
+}
 
 export async function getStaff(locationSlug?: string): Promise<StaffMember[]> {
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureStaffTable();
+      const rows = locationSlug
+        ? await db.select().from(staffTable).where(eq(staffTable.locationSlug, locationSlug))
+        : await db.select().from(staffTable);
+      if (rows.length > 0) return rows.map(rowToStaff);
+    } catch (err) {
+      logger.warn("getStaff DB read failed; falling back", { layer: "store.staff" }, err);
+    }
+  }
   const all = await readJSON<StaffMember[]>("staff.json", []);
-  return locationSlug ? all.filter((s) => s.locationSlug === locationSlug) : all;
+  const filtered = locationSlug ? all.filter((s) => s.locationSlug === locationSlug) : all;
+  if (filtered.length > 0) {
+    bumpLazyBackfillHit("staff");
+    void Promise.all(filtered.map((s) => dualWriteStaff(s)));
+  }
+  return filtered;
 }
 
 export async function saveStaff(
@@ -2360,6 +4243,7 @@ export async function saveStaff(
     if (i >= 0) list[i] = member;
     else list.push(member);
     await writeJSON("staff.json", list);
+    await dualWriteStaff(member);
     return member;
   });
 }
@@ -2370,6 +4254,7 @@ export async function deleteStaff(id: string): Promise<boolean> {
     const filtered = list.filter((s) => s.id !== id);
     if (filtered.length === list.length) return false;
     await writeJSON("staff.json", filtered);
+    await dualDeleteStaff(id);
     return true;
   });
 }
@@ -2380,13 +4265,34 @@ export async function getShifts(filters?: {
   from?: string;
   to?: string;
 }): Promise<Shift[]> {
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureShiftsTable();
+      const where = [];
+      if (filters?.locationSlug) where.push(eq(shiftsTable.locationSlug, filters.locationSlug));
+      if (filters?.staffId) where.push(eq(shiftsTable.staffId, filters.staffId));
+      if (filters?.from) where.push(gte(shiftsTable.endAt, new Date(filters.from)));
+      if (filters?.to) where.push(lte(shiftsTable.startAt, new Date(filters.to)));
+      const baseQuery = db.select().from(shiftsTable).orderBy(shiftsTable.startAt);
+      const rows = where.length > 0 ? await baseQuery.where(and(...where)) : await baseQuery;
+      if (rows.length > 0) return rows.map(rowToShift);
+    } catch (err) {
+      logger.warn("getShifts DB read failed; falling back", { layer: "store.shifts" }, err);
+    }
+  }
   const all = await readJSON<Shift[]>("shifts.json", []);
   let list = all;
   if (filters?.locationSlug) list = list.filter((s) => s.locationSlug === filters.locationSlug);
   if (filters?.staffId) list = list.filter((s) => s.staffId === filters.staffId);
   if (filters?.from) list = list.filter((s) => s.endAt >= filters.from!);
   if (filters?.to) list = list.filter((s) => s.startAt <= filters.to!);
-  return list.slice().sort((a, b) => a.startAt.localeCompare(b.startAt));
+  const sorted = list.slice().sort((a, b) => a.startAt.localeCompare(b.startAt));
+  if (sorted.length > 0) {
+    bumpLazyBackfillHit("shifts");
+    void Promise.all(sorted.map((s) => dualWriteShift(s)));
+  }
+  return sorted;
 }
 
 export async function saveShift(input: Omit<Shift, "id"> & { id?: string }): Promise<Shift> {
@@ -2406,6 +4312,7 @@ export async function saveShift(input: Omit<Shift, "id"> & { id?: string }): Pro
     if (i >= 0) list[i] = shift;
     else list.push(shift);
     await writeJSON("shifts.json", list);
+    await dualWriteShift(shift);
     return shift;
   });
 }
@@ -2416,6 +4323,7 @@ export async function deleteShift(id: string): Promise<boolean> {
     const filtered = list.filter((s) => s.id !== id);
     if (filtered.length === list.length) return false;
     await writeJSON("shifts.json", filtered);
+    await dualDeleteShift(id);
     return true;
   });
 }
@@ -2425,12 +4333,35 @@ export async function getTimePunches(filters?: {
   from?: string;
   to?: string;
 }): Promise<TimePunch[]> {
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureTimePunchesTable();
+      const where = [];
+      if (filters?.staffId) where.push(eq(timePunchesTable.staffId, filters.staffId));
+      if (filters?.from) where.push(gte(timePunchesTable.occurredAt, new Date(filters.from)));
+      if (filters?.to) where.push(lte(timePunchesTable.occurredAt, new Date(filters.to)));
+      const baseQuery = db
+        .select()
+        .from(timePunchesTable)
+        .orderBy(desc(timePunchesTable.occurredAt));
+      const rows = where.length > 0 ? await baseQuery.where(and(...where)) : await baseQuery;
+      if (rows.length > 0) return rows.map(rowToTimePunch);
+    } catch (err) {
+      logger.warn("getTimePunches DB read failed; falling back", { layer: "store.time_punches" }, err);
+    }
+  }
   const all = await readJSON<TimePunch[]>("time-punches.json", []);
   let list = all;
   if (filters?.staffId) list = list.filter((p) => p.staffId === filters.staffId);
   if (filters?.from) list = list.filter((p) => p.occurredAt >= filters.from!);
   if (filters?.to) list = list.filter((p) => p.occurredAt <= filters.to!);
-  return list.slice().sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
+  const sorted = list.slice().sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
+  if (sorted.length > 0) {
+    bumpLazyBackfillHit("time_punches");
+    void Promise.all(sorted.map((p) => dualWriteTimePunch(p)));
+  }
+  return sorted;
 }
 
 export async function recordTimePunch(input: Omit<TimePunch, "id" | "occurredAt"> & { occurredAt?: string }): Promise<TimePunch> {
@@ -2445,6 +4376,7 @@ export async function recordTimePunch(input: Omit<TimePunch, "id" | "occurredAt"
     };
     list.push(punch);
     await writeJSON("time-punches.json", list);
+    await dualWriteTimePunch(punch);
     return punch;
   });
 }
@@ -2626,18 +4558,121 @@ export async function saveExpansionChecklist(input: Omit<ExpansionChecklist, "up
   });
 }
 
-// --- Audit log ---
+// --- Audit log (m1_6: dual-write, no trim) ------------------------------
+
+const AUDIT_LOG_DDL = [
+  `CREATE TABLE IF NOT EXISTS audit_log (
+    id text PRIMARY KEY,
+    actor text NOT NULL,
+    action text NOT NULL,
+    entity_type text,
+    entity_id text,
+    location_slug text,
+    "before" jsonb,
+    "after" jsonb,
+    ip text,
+    user_agent text,
+    occurred_at timestamptz NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS audit_log_occurred_at_idx
+    ON audit_log (occurred_at)`,
+  `CREATE INDEX IF NOT EXISTS audit_log_entity_idx
+    ON audit_log (entity_type, entity_id)`,
+  `CREATE INDEX IF NOT EXISTS audit_log_location_occurred_idx
+    ON audit_log (location_slug, occurred_at)`,
+  `CREATE INDEX IF NOT EXISTS audit_log_actor_idx ON audit_log (actor)`,
+  `CREATE INDEX IF NOT EXISTS audit_log_action_idx ON audit_log (action)`,
+];
+
+async function ensureAuditLogTable(): Promise<void> {
+  await ensureTable("audit_log", AUDIT_LOG_DDL);
+}
+
+function rowToAuditEntry(row: typeof auditLogTable.$inferSelect): AuditLogEntry {
+  return {
+    id: row.id,
+    actor: row.actor,
+    action: row.action,
+    entityType: row.entityType ?? undefined,
+    entityId: row.entityId ?? undefined,
+    before: row.before ?? undefined,
+    after: row.after ?? undefined,
+    occurredAt: row.occurredAt.toISOString(),
+  };
+}
+
+async function dualWriteAuditEntry(entry: AuditLogEntry): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureAuditLogTable();
+    await db
+      .insert(auditLogTable)
+      .values({
+        id: entry.id,
+        actor: entry.actor,
+        action: entry.action,
+        entityType: entry.entityType ?? null,
+        entityId: entry.entityId ?? null,
+        // The kv_store AuditLogEntry doesn't carry location/ip/UA; Phase 2's
+        // request-context (m1_15) plumbing will start filling these in.
+        locationSlug: null,
+        before: entry.before ?? null,
+        after: entry.after ?? null,
+        ip: null,
+        userAgent: null,
+        occurredAt: new Date(entry.occurredAt),
+      })
+      .onConflictDoNothing();
+  } catch (err) {
+    logger.warn(
+      "dualWriteAuditEntry failed (kv copy remains)",
+      { id: entry.id, layer: "store.audit_log" },
+      err,
+    );
+  }
+}
 
 export async function getAuditLog(filters?: {
   action?: string;
   entityType?: string;
   limit?: number;
 }): Promise<AuditLogEntry[]> {
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureAuditLogTable();
+      const whereClauses = [];
+      if (filters?.action) whereClauses.push(eq(auditLogTable.action, filters.action));
+      if (filters?.entityType)
+        whereClauses.push(eq(auditLogTable.entityType, filters.entityType));
+      const baseQuery = db
+        .select()
+        .from(auditLogTable)
+        .orderBy(desc(auditLogTable.occurredAt));
+      const filteredQuery =
+        whereClauses.length > 0 ? baseQuery.where(and(...whereClauses)) : baseQuery;
+      const rows = filters?.limit
+        ? await filteredQuery.limit(filters.limit)
+        : await filteredQuery.limit(500); // Hard ceiling for the read path
+      if (rows.length > 0) return rows.map(rowToAuditEntry);
+    } catch (err) {
+      logger.warn(
+        "getAuditLog DB read failed; falling back to kv_store",
+        { layer: "store.audit_log" },
+        err,
+      );
+    }
+  }
   const all = await readJSON<AuditLogEntry[]>("audit-log.json", []);
   let list = all.slice().sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
   if (filters?.action) list = list.filter((e) => e.action === filters.action);
   if (filters?.entityType) list = list.filter((e) => e.entityType === filters.entityType);
   if (filters?.limit) list = list.slice(0, filters.limit);
+  if (list.length > 0) {
+    bumpLazyBackfillHit("audit_log");
+    void Promise.all(list.map((e) => dualWriteAuditEntry(e)));
+  }
   return list;
 }
 
@@ -2680,29 +4715,34 @@ export async function deleteAdminUser(id: string): Promise<boolean> {
   });
 }
 
+/**
+ * Keep the kv_store mirror small — old reads still work against it, but
+ * the normalized audit_log table has unlimited retention via m1_6.
+ */
 const AUDIT_LOG_MAX_ENTRIES = 1000;
 
 export async function appendAuditLog(input: Omit<AuditLogEntry, "id" | "occurredAt"> & { occurredAt?: string }): Promise<AuditLogEntry> {
-  return withLock("audit-log.json", async () => {
+  const entry: AuditLogEntry = {
+    id: `al-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+    actor: input.actor,
+    action: input.action,
+    entityType: input.entityType,
+    entityId: input.entityId,
+    before: input.before,
+    after: input.after,
+    occurredAt: input.occurredAt ?? new Date().toISOString(),
+  };
+  await withLock("audit-log.json", async () => {
     const list = await readJSON<AuditLogEntry[]>("audit-log.json", []);
-    const entry: AuditLogEntry = {
-      id: `al-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
-      actor: input.actor,
-      action: input.action,
-      entityType: input.entityType,
-      entityId: input.entityId,
-      before: input.before,
-      after: input.after,
-      occurredAt: input.occurredAt ?? new Date().toISOString(),
-    };
     list.push(entry);
-    // Trim to last N to keep file small
     const trimmed = list.length > AUDIT_LOG_MAX_ENTRIES
       ? list.slice(list.length - AUDIT_LOG_MAX_ENTRIES)
       : list;
     await writeJSON("audit-log.json", trimmed);
-    return entry;
   });
+  // Normalized audit_log has no trim — keep forever.
+  await dualWriteAuditEntry(entry);
+  return entry;
 }
 
 // --- Compliance calendar -----------------------------------------------------
@@ -2904,6 +4944,1145 @@ export async function deleteComplianceItem(id: string): Promise<boolean> {
     const filtered = list.filter((c) => c.id !== id);
     if (filtered.length === list.length) return false;
     await writeJSON("compliance.json", filtered);
+    return true;
+  });
+}
+
+// --- KDS v2 stations + tickets (m2_1, m2_2, m2_3) -----------------------
+
+const STATIONS_DDL = [
+  `CREATE TABLE IF NOT EXISTS stations (
+    id text PRIMARY KEY,
+    location_slug text NOT NULL,
+    name text NOT NULL,
+    display_order integer NOT NULL DEFAULT 0,
+    active boolean NOT NULL DEFAULT true
+  )`,
+  // Gemini review feedback: active migrated from text → boolean.
+  `ALTER TABLE stations ALTER COLUMN active DROP DEFAULT`,
+  `ALTER TABLE stations ALTER COLUMN active TYPE boolean USING (active::boolean)`,
+  `ALTER TABLE stations ALTER COLUMN active SET DEFAULT true`,
+  `CREATE INDEX IF NOT EXISTS stations_location_idx ON stations (location_slug)`,
+];
+const MENU_ITEM_STATION_DDL = [
+  `CREATE TABLE IF NOT EXISTS menu_item_station (
+    menu_item_id text NOT NULL,
+    station_id text NOT NULL,
+    PRIMARY KEY (menu_item_id, station_id)
+  )`,
+  `CREATE INDEX IF NOT EXISTS menu_item_station_station_idx
+    ON menu_item_station (station_id)`,
+];
+const KDS_TICKETS_DDL = [
+  `CREATE TABLE IF NOT EXISTS kds_tickets (
+    id text PRIMARY KEY,
+    order_id text NOT NULL,
+    station_id text NOT NULL,
+    location_slug text NOT NULL,
+    status text NOT NULL DEFAULT 'fired',
+    payload jsonb NOT NULL DEFAULT '{}'::jsonb,
+    promised_ready_at timestamptz,
+    fired_at timestamptz NOT NULL DEFAULT now(),
+    ready_at timestamptz,
+    bumped_at timestamptz,
+    created_at timestamptz NOT NULL DEFAULT now()
+  )`,
+  `CREATE INDEX IF NOT EXISTS kds_tickets_order_idx
+    ON kds_tickets (order_id)`,
+  `CREATE INDEX IF NOT EXISTS kds_tickets_station_status_idx
+    ON kds_tickets (station_id, status)`,
+  `CREATE INDEX IF NOT EXISTS kds_tickets_location_status_fired_idx
+    ON kds_tickets (location_slug, status, fired_at)`,
+];
+
+async function ensureKdsTables(): Promise<void> {
+  await ensureTable("stations", STATIONS_DDL);
+  await ensureTable("menu_item_station", MENU_ITEM_STATION_DDL);
+  await ensureTable("kds_tickets", KDS_TICKETS_DDL);
+}
+
+export interface Station {
+  id: string;
+  locationSlug: string;
+  name: string;
+  displayOrder: number;
+  active: boolean;
+}
+
+export interface KdsTicket {
+  id: string;
+  orderId: string;
+  stationId: string;
+  locationSlug: string;
+  status: "fired" | "ready" | "bumped" | "recalled";
+  /**
+   * `allergens` is surfaced per-line so the cook can sanity-check before
+   * firing — protects against the customer-reported-allergen incidents
+   * that fall out of cross-contamination at a small open kitchen.
+   */
+  items: {
+    menuItemId: string;
+    name: string;
+    quantity: number;
+    notes?: string;
+    allergens?: string[];
+  }[];
+  promisedReadyAt?: string;
+  firedAt: string;
+  readyAt?: string;
+  bumpedAt?: string;
+}
+
+export async function getStations(locationSlug?: string): Promise<Station[]> {
+  const db = getDb();
+  if (!db) return [];
+  try {
+    await ensureKdsTables();
+    const rows = locationSlug
+      ? await db
+          .select()
+          .from(stationsTable)
+          .where(eq(stationsTable.locationSlug, locationSlug))
+      : await db.select().from(stationsTable);
+    return rows.map((row) => ({
+      id: row.id,
+      locationSlug: row.locationSlug,
+      name: row.name,
+      displayOrder: row.displayOrder,
+      active: row.active,
+    }));
+  } catch (err) {
+    logger.warn("getStations DB read failed", { layer: "store.kds" }, err);
+    return [];
+  }
+}
+
+export async function saveStation(input: {
+  id?: string;
+  locationSlug: string;
+  name: string;
+  displayOrder?: number;
+  active?: boolean;
+}): Promise<Station | null> {
+  const db = getDb();
+  if (!db) return null;
+  try {
+    await ensureKdsTables();
+    const id = input.id || `stn-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+    const values = {
+      id,
+      locationSlug: input.locationSlug,
+      name: input.name,
+      displayOrder: input.displayOrder ?? 0,
+      active: input.active !== false,
+    };
+    await db
+      .insert(stationsTable)
+      .values(values)
+      .onConflictDoUpdate({ target: stationsTable.id, set: values });
+    return {
+      id,
+      locationSlug: input.locationSlug,
+      name: input.name,
+      displayOrder: input.displayOrder ?? 0,
+      active: input.active !== false,
+    };
+  } catch (err) {
+    logger.error("saveStation failed", { layer: "store.kds" }, err);
+    return null;
+  }
+}
+
+export async function deleteStation(id: string): Promise<boolean> {
+  const db = getDb();
+  if (!db) return false;
+  try {
+    await ensureKdsTables();
+    await db.delete(stationsTable).where(eq(stationsTable.id, id));
+    await db.delete(menuItemStationTable).where(eq(menuItemStationTable.stationId, id));
+    return true;
+  } catch (err) {
+    logger.warn("deleteStation failed", { id, layer: "store.kds" }, err);
+    return false;
+  }
+}
+
+/**
+ * Set or replace the station mapping for a menu item. Pass an empty array
+ * to clear all mappings (the item then doesn't route to any station and
+ * the kitchen sees it on a generic "ungrouped" ticket — m2_2 behaviour).
+ */
+export async function setMenuItemStations(
+  menuItemId: string,
+  stationIds: string[],
+): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureKdsTables();
+    await db
+      .delete(menuItemStationTable)
+      .where(eq(menuItemStationTable.menuItemId, menuItemId));
+    if (stationIds.length > 0) {
+      await db.insert(menuItemStationTable).values(
+        stationIds.map((sid) => ({ menuItemId, stationId: sid })),
+      );
+    }
+  } catch (err) {
+    logger.warn("setMenuItemStations failed", { menuItemId, layer: "store.kds" }, err);
+  }
+}
+
+/**
+ * Look up the stations an order should fan out to. Returns a map of
+ * stationId → the order's items that station should make. Items with no
+ * mapping fall into an "ungrouped" bucket keyed by the empty string —
+ * kitchens see those on a default ticket so nothing falls through the
+ * cracks.
+ */
+export async function resolveOrderStationFanout(
+  order: Order,
+): Promise<Map<string, Order["items"]>> {
+  const db = getDb();
+  const fanout = new Map<string, Order["items"]>();
+  if (!db) {
+    fanout.set("", order.items);
+    return fanout;
+  }
+  try {
+    await ensureKdsTables();
+    const itemIds = order.items.map((i) => i.menuItem.id);
+    if (itemIds.length === 0) return fanout;
+    const mappings = await db
+      .select()
+      .from(menuItemStationTable)
+      .where(inArray(menuItemStationTable.menuItemId, itemIds));
+    const byItem = new Map<string, string[]>();
+    for (const m of mappings) {
+      const list = byItem.get(m.menuItemId) ?? [];
+      list.push(m.stationId);
+      byItem.set(m.menuItemId, list);
+    }
+    for (const item of order.items) {
+      const stations = byItem.get(item.menuItem.id) ?? [];
+      if (stations.length === 0) {
+        const ungrouped = fanout.get("") ?? [];
+        ungrouped.push(item);
+        fanout.set("", ungrouped);
+        continue;
+      }
+      for (const sid of stations) {
+        const list = fanout.get(sid) ?? [];
+        list.push(item);
+        fanout.set(sid, list);
+      }
+    }
+  } catch (err) {
+    logger.warn("resolveOrderStationFanout failed", { orderId: order.id, layer: "store.kds" }, err);
+    // Fall back to one ungrouped ticket so the kitchen at least sees the order.
+    fanout.set("", order.items);
+  }
+  return fanout;
+}
+
+/**
+ * Computes when this order is promised to be ready (m2_5). The KDS uses
+ * this for the countdown and red+audible "overdue" indicator.
+ *
+ * Priority:
+ *   1. Order has a customer-picked slot → use slot date+time. That's
+ *      what the customer is expecting and what we charged them against.
+ *   2. Else fire-time + max(prep_time_minutes across items) + 3 min buffer.
+ *      The 3 min covers expo handoff + any plating that's not in the
+ *      per-item prep_time.
+ *   3. Hard floor of 10 minutes from fire time so a fast-prep order
+ *      doesn't promise the customer something we can't deliver.
+ */
+function computePromisedReadyAt(order: Order, firedAt: Date): Date {
+  if (order.slotDate && order.slotTime) {
+    const slotInstant = new Date(`${order.slotDate}T${order.slotTime}:00.000+02:00`);
+    if (Number.isFinite(slotInstant.getTime())) return slotInstant;
+  }
+  const maxPrep = Math.max(
+    0,
+    ...order.items.map((i) => i.menuItem.prepTimeMinutes ?? 0),
+  );
+  const minutes = Math.max(10, maxPrep + 3);
+  return new Date(firedAt.getTime() + minutes * 60 * 1000);
+}
+/**
+ * Fire KDS tickets for an order (m2_2 + m2_4 + m2_5). Generates one ticket
+ * per station the order touches. Idempotent on (order_id, station_id) so
+ * retried createOrder calls don't double-create.
+ *
+ * m2_4 fire-together: each ticket's payload carries `fireAt` — when the
+ * cook should actually START prep. The longest-prep ticket fires
+ * immediately; faster items get a stagger so they all finish at
+ * promised_ready_at. The KDS UI grays out tickets until their `fireAt`
+ * arrives.
+ *
+ * m2_5 SLA: promised_ready_at is computed once per order
+ * (computePromisedReadyAt) and set on every ticket. The KDS countdown
+ * + red+audible overdue indicator read this column.
+ */
+export async function fireKdsTickets(order: Order): Promise<KdsTicket[]> {
+  const db = getDb();
+  if (!db) return [];
+  try {
+    await ensureKdsTables();
+    const fanout = await resolveOrderStationFanout(order);
+    const tickets: KdsTicket[] = [];
+    const now = new Date();
+    const promisedReadyAt = computePromisedReadyAt(order, now);
+    // m2_4: stagger each ticket's start so the longest-prep finishes
+    // alongside the others. Per-ticket "fireAt" is computed from the
+    // station's max item prep time vs the longest in the whole order.
+    const orderMaxPrep = Math.max(
+      0,
+      ...order.items.map((i) => i.menuItem.prepTimeMinutes ?? 0),
+    );
+    for (const [stationId, items] of fanout) {
+      const stationMaxPrep = Math.max(
+        0,
+        ...items.map((i) => i.menuItem.prepTimeMinutes ?? 0),
+      );
+      // Tickets with shorter prep get delayed by the difference so all
+      // finish ~together. 0 for the slowest station.
+      const stagger = Math.max(0, orderMaxPrep - stationMaxPrep);
+      const fireAt = new Date(now.getTime() + stagger * 60 * 1000);
+      const ticketId = `tkt-${order.id}-${stationId || "default"}`;
+      const payload = {
+        items: items.map((i) => ({
+          menuItemId: i.menuItem.id,
+          name: i.menuItem.name,
+          quantity: i.quantity,
+          notes: i.notes,
+          allergens: i.menuItem.allergens,
+        })),
+        fireAt: fireAt.toISOString(),
+      };
+      await db
+        .insert(kdsTicketsTable)
+        .values({
+          id: ticketId,
+          orderId: order.id,
+          stationId: stationId || "ungrouped",
+          locationSlug: order.locationSlug,
+          status: "fired",
+          payload,
+          promisedReadyAt,
+          firedAt: now,
+        })
+        .onConflictDoNothing();
+      tickets.push({
+        id: ticketId,
+        orderId: order.id,
+        stationId: stationId || "ungrouped",
+        locationSlug: order.locationSlug,
+        status: "fired",
+        items: payload.items,
+        firedAt: now.toISOString(),
+        promisedReadyAt: promisedReadyAt.toISOString(),
+      });
+    }
+    // Mirror promised_ready_at onto the order itself for receipts +
+    // post-checkout "your order at 13:15" UI.
+    await updateOrder(order.id, { estimatedReadyAt: promisedReadyAt.toISOString() });
+    return tickets;
+  } catch (err) {
+    logger.warn("fireKdsTickets failed", { orderId: order.id, layer: "store.kds" }, err);
+    return [];
+  }
+}
+
+/** Mark a ticket as ready (m2_3). Sets ready_at; returns the updated ticket. */
+export async function markTicketReady(ticketId: string): Promise<KdsTicket | null> {
+  const db = getDb();
+  if (!db) return null;
+  try {
+    await ensureKdsTables();
+    const updated = await db
+      .update(kdsTicketsTable)
+      .set({ status: "ready", readyAt: new Date() })
+      .where(eq(kdsTicketsTable.id, ticketId))
+      .returning();
+    if (updated.length === 0) return null;
+    const r = updated[0];
+    return {
+      id: r.id,
+      orderId: r.orderId,
+      stationId: r.stationId,
+      locationSlug: r.locationSlug,
+      status: r.status as KdsTicket["status"],
+      items: (r.payload as { items: KdsTicket["items"] }).items ?? [],
+      promisedReadyAt: r.promisedReadyAt ? r.promisedReadyAt.toISOString() : undefined,
+      firedAt: r.firedAt.toISOString(),
+      readyAt: r.readyAt ? r.readyAt.toISOString() : undefined,
+      bumpedAt: r.bumpedAt ? r.bumpedAt.toISOString() : undefined,
+    };
+  } catch (err) {
+    logger.warn("markTicketReady failed", { ticketId, layer: "store.kds" }, err);
+    return null;
+  }
+}
+
+/** Bump (complete) a ticket from the expo screen. Marks the order ready if
+ *  all its tickets are bumped. */
+export async function bumpTicket(ticketId: string): Promise<KdsTicket | null> {
+  const db = getDb();
+  if (!db) return null;
+  try {
+    await ensureKdsTables();
+    const updated = await db
+      .update(kdsTicketsTable)
+      .set({ status: "bumped", bumpedAt: new Date() })
+      .where(eq(kdsTicketsTable.id, ticketId))
+      .returning();
+    if (updated.length === 0) return null;
+    const r = updated[0];
+    // If every ticket for this order is bumped, mark the order ready so
+    // the customer gets the "order ready" SMS.
+    const remaining = await db
+      .select({ id: kdsTicketsTable.id })
+      .from(kdsTicketsTable)
+      .where(
+        and(
+          eq(kdsTicketsTable.orderId, r.orderId),
+          eq(kdsTicketsTable.status, "fired"),
+        ),
+      )
+      .limit(1);
+    if (remaining.length === 0) {
+      await updateOrderStatus(r.orderId, "ready");
+    }
+    return {
+      id: r.id,
+      orderId: r.orderId,
+      stationId: r.stationId,
+      locationSlug: r.locationSlug,
+      status: r.status as KdsTicket["status"],
+      items: (r.payload as { items: KdsTicket["items"] }).items ?? [],
+      firedAt: r.firedAt.toISOString(),
+      readyAt: r.readyAt ? r.readyAt.toISOString() : undefined,
+      bumpedAt: r.bumpedAt ? r.bumpedAt.toISOString() : undefined,
+    };
+  } catch (err) {
+    logger.warn("bumpTicket failed", { ticketId, layer: "store.kds" }, err);
+    return null;
+  }
+}
+
+/** Fetch tickets for a location. Filters to non-bumped by default. */
+export async function getKdsTickets(
+  locationSlug: string,
+  opts?: { includeBumped?: boolean; stationId?: string },
+): Promise<KdsTicket[]> {
+  const db = getDb();
+  if (!db) return [];
+  try {
+    await ensureKdsTables();
+    const where = [eq(kdsTicketsTable.locationSlug, locationSlug)];
+    if (opts?.stationId) where.push(eq(kdsTicketsTable.stationId, opts.stationId));
+    const rows = opts?.includeBumped
+      ? await db.select().from(kdsTicketsTable).where(and(...where)).orderBy(asc(kdsTicketsTable.firedAt))
+      : await db
+          .select()
+          .from(kdsTicketsTable)
+          .where(and(...where, inArray(kdsTicketsTable.status, ["fired", "ready", "recalled"])))
+          .orderBy(asc(kdsTicketsTable.firedAt));
+    return rows.map((r) => ({
+      id: r.id,
+      orderId: r.orderId,
+      stationId: r.stationId,
+      locationSlug: r.locationSlug,
+      status: r.status as KdsTicket["status"],
+      items: (r.payload as { items: KdsTicket["items"] }).items ?? [],
+      promisedReadyAt: r.promisedReadyAt ? r.promisedReadyAt.toISOString() : undefined,
+      firedAt: r.firedAt.toISOString(),
+      readyAt: r.readyAt ? r.readyAt.toISOString() : undefined,
+      bumpedAt: r.bumpedAt ? r.bumpedAt.toISOString() : undefined,
+    }));
+  } catch (err) {
+    logger.warn("getKdsTickets failed", { locationSlug, layer: "store.kds" }, err);
+    return [];
+  }
+}
+
+// --- KDS station analytics (m2_9) ---------------------------------------
+
+export interface StationAnalyticsRow {
+  stationId: string;
+  ticketCount: number;
+  /** Mean bump time = bumpedAt - firedAt, ms. */
+  meanBumpMs: number;
+  /** P50 bump time (median) — robust to outliers. */
+  p50BumpMs: number;
+  /** P95 bump time — catches the long-tail issues operators care about. */
+  p95BumpMs: number;
+  /** Tickets / hour over the window. */
+  throughputPerHour: number;
+}
+
+/**
+ * Per-station bump-time analytics over a date window (m2_9). Reads the
+ * kds_tickets table directly so the cost is one indexed range scan even
+ * over 30 days. Bumped tickets only — fired-but-not-bumped don't count
+ * toward "how fast was this station today".
+ */
+export async function getKdsStationAnalytics(
+  locationSlug: string,
+  fromIso: string,
+  toIso: string,
+): Promise<StationAnalyticsRow[]> {
+  const db = getDb();
+  if (!db) return [];
+  try {
+    await ensureKdsTables();
+    const from = new Date(fromIso);
+    const to = new Date(toIso);
+    if (!Number.isFinite(from.getTime()) || !Number.isFinite(to.getTime())) return [];
+    const rows = await db
+      .select()
+      .from(kdsTicketsTable)
+      .where(
+        and(
+          eq(kdsTicketsTable.locationSlug, locationSlug),
+          gte(kdsTicketsTable.firedAt, from),
+          lte(kdsTicketsTable.firedAt, to),
+        ),
+      );
+    const windowHours = Math.max(0.001, (to.getTime() - from.getTime()) / (1000 * 60 * 60));
+    const byStation = new Map<string, number[]>();
+    for (const r of rows) {
+      if (!r.bumpedAt) continue;
+      const ms = r.bumpedAt.getTime() - r.firedAt.getTime();
+      if (!Number.isFinite(ms) || ms < 0) continue;
+      const list = byStation.get(r.stationId) ?? [];
+      list.push(ms);
+      byStation.set(r.stationId, list);
+    }
+    const out: StationAnalyticsRow[] = [];
+    for (const [stationId, samples] of byStation) {
+      const sorted = [...samples].sort((a, b) => a - b);
+      const sum = sorted.reduce((acc, x) => acc + x, 0);
+      const p50 = sorted[Math.floor(sorted.length * 0.5)] ?? 0;
+      const p95 = sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95))] ?? 0;
+      out.push({
+        stationId,
+        ticketCount: sorted.length,
+        meanBumpMs: sorted.length > 0 ? sum / sorted.length : 0,
+        p50BumpMs: p50,
+        p95BumpMs: p95,
+        throughputPerHour: sorted.length / windowHours,
+      });
+    }
+    // Slowest p95 first — that's the bottleneck the operator wants to see.
+    return out.sort((a, b) => b.p95BumpMs - a.p95BumpMs);
+  } catch (err) {
+    logger.warn("getKdsStationAnalytics failed", { locationSlug, layer: "store.kds" }, err);
+    return [];
+  }
+}
+
+// --- Phase 3: brands + franchisees + location assignments (m3_1, m3_2) ---
+
+const BRANDS_DDL = [
+  `CREATE TABLE IF NOT EXISTS brands (
+    id text PRIMARY KEY,
+    name text NOT NULL,
+    slug text NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now()
+  )`,
+];
+const FRANCHISEES_DDL = [
+  `CREATE TABLE IF NOT EXISTS franchisees (
+    id text PRIMARY KEY,
+    brand_id text NOT NULL,
+    name text NOT NULL,
+    email text,
+    royalty_rate_bps integer NOT NULL DEFAULT 800,
+    marketing_fund_bps integer NOT NULL DEFAULT 200,
+    status text NOT NULL DEFAULT 'active',
+    created_at timestamptz NOT NULL DEFAULT now()
+  )`,
+  `CREATE INDEX IF NOT EXISTS franchisees_brand_idx ON franchisees (brand_id)`,
+  `CREATE INDEX IF NOT EXISTS franchisees_email_idx ON franchisees (email)`,
+];
+const LOCATION_ASSIGNMENTS_DDL = [
+  `CREATE TABLE IF NOT EXISTS location_assignments (
+    location_slug text PRIMARY KEY,
+    brand_id text NOT NULL,
+    franchisee_id text,
+    region_slug text,
+    setup_complete boolean NOT NULL DEFAULT true
+  )`,
+  // Gemini review feedback: setup_complete migrated from text → boolean.
+  `ALTER TABLE location_assignments ALTER COLUMN setup_complete DROP DEFAULT`,
+  `ALTER TABLE location_assignments ALTER COLUMN setup_complete TYPE boolean USING (setup_complete::boolean)`,
+  `ALTER TABLE location_assignments ALTER COLUMN setup_complete SET DEFAULT true`,
+  `CREATE INDEX IF NOT EXISTS location_assignments_brand_idx
+    ON location_assignments (brand_id)`,
+  `CREATE INDEX IF NOT EXISTS location_assignments_franchisee_idx
+    ON location_assignments (franchisee_id)`,
+  `CREATE INDEX IF NOT EXISTS location_assignments_region_idx
+    ON location_assignments (region_slug)`,
+];
+
+async function ensureFranchiseTables(): Promise<void> {
+  await ensureTable("brands", BRANDS_DDL);
+  await ensureTable("franchisees", FRANCHISEES_DDL);
+  await ensureTable("location_assignments", LOCATION_ASSIGNMENTS_DDL);
+}
+
+export interface Brand {
+  id: string;
+  name: string;
+  slug: string;
+  createdAt: string;
+}
+
+export interface Franchisee {
+  id: string;
+  brandId: string;
+  name: string;
+  email?: string;
+  royaltyRateBps: number;
+  marketingFundBps: number;
+  status: "active" | "disabled";
+  createdAt: string;
+}
+
+export interface LocationAssignment {
+  locationSlug: string;
+  brandId: string;
+  franchiseeId?: string;
+  regionSlug?: string;
+  setupComplete: boolean;
+}
+
+/** Seed the default brand if missing. Idempotent. */
+async function ensureDefaultBrand(): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  await ensureFranchiseTables();
+  try {
+    await db
+      .insert(brandsTable)
+      .values({ id: "sud-italia", name: "Sud Italia", slug: "sud-italia" })
+      .onConflictDoNothing();
+  } catch (err) {
+    logger.warn("ensureDefaultBrand failed", { layer: "store.brands" }, err);
+  }
+}
+
+export async function getBrands(): Promise<Brand[]> {
+  const db = getDb();
+  if (!db) return [];
+  try {
+    await ensureDefaultBrand();
+    const rows = await db.select().from(brandsTable);
+    return rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      slug: r.slug,
+      createdAt: r.createdAt.toISOString(),
+    }));
+  } catch (err) {
+    logger.warn("getBrands failed", { layer: "store.brands" }, err);
+    return [];
+  }
+}
+
+export async function saveBrand(input: Brand): Promise<Brand | null> {
+  const db = getDb();
+  if (!db) return null;
+  try {
+    await ensureFranchiseTables();
+    const values = { id: input.id, name: input.name, slug: input.slug };
+    await db.insert(brandsTable).values(values).onConflictDoUpdate({ target: brandsTable.id, set: values });
+    return { ...input };
+  } catch (err) {
+    logger.error("saveBrand failed", { id: input.id, layer: "store.brands" }, err);
+    return null;
+  }
+}
+
+export async function getFranchisees(brandId?: string): Promise<Franchisee[]> {
+  const db = getDb();
+  if (!db) return [];
+  try {
+    await ensureFranchiseTables();
+    const rows = brandId
+      ? await db.select().from(franchiseesTable).where(eq(franchiseesTable.brandId, brandId))
+      : await db.select().from(franchiseesTable);
+    return rows.map((r) => ({
+      id: r.id,
+      brandId: r.brandId,
+      name: r.name,
+      email: r.email ?? undefined,
+      royaltyRateBps: r.royaltyRateBps,
+      marketingFundBps: r.marketingFundBps,
+      status: r.status as Franchisee["status"],
+      createdAt: r.createdAt.toISOString(),
+    }));
+  } catch (err) {
+    logger.warn("getFranchisees failed", { layer: "store.franchisees" }, err);
+    return [];
+  }
+}
+
+export async function saveFranchisee(input: Omit<Franchisee, "createdAt"> & { createdAt?: string }): Promise<Franchisee | null> {
+  const db = getDb();
+  if (!db) return null;
+  try {
+    await ensureFranchiseTables();
+    const values = {
+      id: input.id,
+      brandId: input.brandId,
+      name: input.name,
+      email: input.email ?? null,
+      royaltyRateBps: input.royaltyRateBps,
+      marketingFundBps: input.marketingFundBps,
+      status: input.status,
+    };
+    await db
+      .insert(franchiseesTable)
+      .values(values)
+      .onConflictDoUpdate({ target: franchiseesTable.id, set: values });
+    const rows = await db
+      .select()
+      .from(franchiseesTable)
+      .where(eq(franchiseesTable.id, input.id))
+      .limit(1);
+    if (rows.length === 0) return null;
+    const r = rows[0];
+    return {
+      id: r.id,
+      brandId: r.brandId,
+      name: r.name,
+      email: r.email ?? undefined,
+      royaltyRateBps: r.royaltyRateBps,
+      marketingFundBps: r.marketingFundBps,
+      status: r.status as Franchisee["status"],
+      createdAt: r.createdAt.toISOString(),
+    };
+  } catch (err) {
+    logger.error("saveFranchisee failed", { id: input.id, layer: "store.franchisees" }, err);
+    return null;
+  }
+}
+
+export async function getLocationAssignment(locationSlug: string): Promise<LocationAssignment | null> {
+  const db = getDb();
+  if (!db) return null;
+  try {
+    await ensureFranchiseTables();
+    const rows = await db
+      .select()
+      .from(locationAssignmentsTable)
+      .where(eq(locationAssignmentsTable.locationSlug, locationSlug))
+      .limit(1);
+    if (rows.length === 0) return null;
+    const r = rows[0];
+    return {
+      locationSlug: r.locationSlug,
+      brandId: r.brandId,
+      franchiseeId: r.franchiseeId ?? undefined,
+      regionSlug: r.regionSlug ?? undefined,
+      setupComplete: r.setupComplete,
+    };
+  } catch (err) {
+    logger.warn("getLocationAssignment failed", { locationSlug, layer: "store.location_assignments" }, err);
+    return null;
+  }
+}
+
+export async function saveLocationAssignment(input: LocationAssignment): Promise<LocationAssignment | null> {
+  const db = getDb();
+  if (!db) return null;
+  try {
+    await ensureFranchiseTables();
+    const values = {
+      locationSlug: input.locationSlug,
+      brandId: input.brandId,
+      franchiseeId: input.franchiseeId ?? null,
+      regionSlug: input.regionSlug ?? null,
+      setupComplete: input.setupComplete ?? true,
+    };
+    await db
+      .insert(locationAssignmentsTable)
+      .values(values)
+      .onConflictDoUpdate({ target: locationAssignmentsTable.locationSlug, set: values });
+    return input;
+  } catch (err) {
+    logger.error("saveLocationAssignment failed", { locationSlug: input.locationSlug, layer: "store.location_assignments" }, err);
+    return null;
+  }
+}
+
+/** All locations for a given franchisee (m3_3 portal scope). */
+export async function getLocationsForFranchisee(franchiseeId: string): Promise<string[]> {
+  const db = getDb();
+  if (!db) return [];
+  try {
+    await ensureFranchiseTables();
+    const rows = await db
+      .select({ locationSlug: locationAssignmentsTable.locationSlug })
+      .from(locationAssignmentsTable)
+      .where(eq(locationAssignmentsTable.franchiseeId, franchiseeId));
+    return rows.map((r) => r.locationSlug);
+  } catch (err) {
+    logger.warn("getLocationsForFranchisee failed", { franchiseeId, layer: "store.location_assignments" }, err);
+    return [];
+  }
+}
+
+// --- Royalty statements (m3_5) ------------------------------------------
+
+const ROYALTY_STATEMENTS_DDL = [
+  `CREATE TABLE IF NOT EXISTS royalty_statements (
+    id text PRIMARY KEY,
+    franchisee_id text NOT NULL,
+    period_start timestamptz NOT NULL,
+    period_end timestamptz NOT NULL,
+    revenue_grosze integer NOT NULL,
+    royalty_grosze integer NOT NULL,
+    marketing_fund_grosze integer NOT NULL,
+    order_count integer NOT NULL,
+    generated_at timestamptz NOT NULL DEFAULT now()
+  )`,
+  `CREATE INDEX IF NOT EXISTS royalty_statements_franchisee_period_idx
+    ON royalty_statements (franchisee_id, period_end)`,
+];
+
+async function ensureRoyaltyStatementsTable(): Promise<void> {
+  await ensureTable("royalty_statements", ROYALTY_STATEMENTS_DDL);
+}
+
+export interface RoyaltyStatement {
+  id: string;
+  franchiseeId: string;
+  periodStart: string;
+  periodEnd: string;
+  revenueGrosze: number;
+  royaltyGrosze: number;
+  marketingFundGrosze: number;
+  orderCount: number;
+  generatedAt: string;
+}
+
+export async function getRoyaltyStatements(franchiseeId: string): Promise<RoyaltyStatement[]> {
+  const db = getDb();
+  if (!db) return [];
+  try {
+    await ensureRoyaltyStatementsTable();
+    const rows = await db
+      .select()
+      .from(royaltyStatementsTable)
+      .where(eq(royaltyStatementsTable.franchiseeId, franchiseeId))
+      .orderBy(desc(royaltyStatementsTable.periodEnd));
+    return rows.map((r) => ({
+      id: r.id,
+      franchiseeId: r.franchiseeId,
+      periodStart: r.periodStart.toISOString(),
+      periodEnd: r.periodEnd.toISOString(),
+      revenueGrosze: r.revenueGrosze,
+      royaltyGrosze: r.royaltyGrosze,
+      marketingFundGrosze: r.marketingFundGrosze,
+      orderCount: r.orderCount,
+      generatedAt: r.generatedAt.toISOString(),
+    }));
+  } catch (err) {
+    logger.warn("getRoyaltyStatements failed", { franchiseeId, layer: "store.royalty" }, err);
+    return [];
+  }
+}
+
+/**
+ * Idempotent-upsert royalty statement (m3_5). Re-running the weekly cron
+ * for the same period replaces the row in place via ON CONFLICT on a
+ * composite of (franchisee_id, period_end) — we synthesize a stable id.
+ */
+export async function saveRoyaltyStatement(input: Omit<RoyaltyStatement, "id" | "generatedAt">): Promise<RoyaltyStatement | null> {
+  const db = getDb();
+  if (!db) return null;
+  try {
+    await ensureRoyaltyStatementsTable();
+    const id = `rs-${input.franchiseeId}-${input.periodEnd.slice(0, 10)}`;
+    const values = {
+      id,
+      franchiseeId: input.franchiseeId,
+      periodStart: new Date(input.periodStart),
+      periodEnd: new Date(input.periodEnd),
+      revenueGrosze: input.revenueGrosze,
+      royaltyGrosze: input.royaltyGrosze,
+      marketingFundGrosze: input.marketingFundGrosze,
+      orderCount: input.orderCount,
+    };
+    await db
+      .insert(royaltyStatementsTable)
+      .values(values)
+      .onConflictDoUpdate({ target: royaltyStatementsTable.id, set: values });
+    return { id, generatedAt: new Date().toISOString(), ...input };
+  } catch (err) {
+    logger.error("saveRoyaltyStatement failed", { franchiseeId: input.franchiseeId, layer: "store.royalty" }, err);
+    return null;
+  }
+}
+
+// --- Phase 3 compliance: temp logs + allergen incidents (m3_13-15) -----
+
+const TEMP_LOGS_DDL = [
+  `CREATE TABLE IF NOT EXISTS temp_logs (
+    id text PRIMARY KEY,
+    location_slug text NOT NULL,
+    sensor text NOT NULL,
+    temp_celsius integer NOT NULL,
+    status text NOT NULL DEFAULT 'ok',
+    recorded_by text,
+    recorded_at timestamptz NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS temp_logs_location_recorded_idx
+    ON temp_logs (location_slug, recorded_at)`,
+  `CREATE INDEX IF NOT EXISTS temp_logs_sensor_idx ON temp_logs (sensor)`,
+  `CREATE INDEX IF NOT EXISTS temp_logs_status_idx ON temp_logs (status)`,
+];
+const ALLERGEN_INCIDENTS_DDL = [
+  `CREATE TABLE IF NOT EXISTS allergen_incidents (
+    id text PRIMARY KEY,
+    location_slug text NOT NULL,
+    customer_phone text,
+    order_id text,
+    menu_item_id text,
+    allergen text NOT NULL,
+    severity text NOT NULL,
+    description text NOT NULL,
+    resolution text,
+    reported_by text NOT NULL,
+    reported_at timestamptz NOT NULL,
+    resolved_at timestamptz
+  )`,
+  `CREATE INDEX IF NOT EXISTS allergen_incidents_location_reported_idx
+    ON allergen_incidents (location_slug, reported_at)`,
+  `CREATE INDEX IF NOT EXISTS allergen_incidents_severity_idx
+    ON allergen_incidents (severity)`,
+];
+
+async function ensureComplianceTables(): Promise<void> {
+  await ensureTable("temp_logs", TEMP_LOGS_DDL);
+  await ensureTable("allergen_incidents", ALLERGEN_INCIDENTS_DDL);
+}
+
+export interface TempLog {
+  id: string;
+  locationSlug: string;
+  sensor: string;
+  /** Temperature in tenths of a degree Celsius. -50 = -5.0 °C. */
+  tempCelsius: number;
+  status: "ok" | "flagged";
+  recordedBy?: string;
+  recordedAt: string;
+}
+
+export interface AllergenIncident {
+  id: string;
+  locationSlug: string;
+  customerPhone?: string;
+  orderId?: string;
+  menuItemId?: string;
+  allergen: string;
+  severity: "low" | "medium" | "high";
+  description: string;
+  resolution?: string;
+  reportedBy: string;
+  reportedAt: string;
+  resolvedAt?: string;
+}
+
+const TEMP_RANGES: Record<string, { minTenths: number; maxTenths: number }> = {
+  // Defaults from HACCP guidance. Operator can override per-sensor later;
+  // for now any sensor name maps to a fridge range unless it contains
+  // "freezer" or "hot".
+  default: { minTenths: 0, maxTenths: 50 },
+  freezer: { minTenths: -300, maxTenths: -180 },
+  hot: { minTenths: 630, maxTenths: 800 },
+};
+
+function rangeForSensor(sensor: string): { minTenths: number; maxTenths: number } {
+  const lower = sensor.toLowerCase();
+  if (lower.includes("freezer")) return TEMP_RANGES.freezer;
+  if (lower.includes("hot")) return TEMP_RANGES.hot;
+  return TEMP_RANGES.default;
+}
+
+export async function saveTempLog(input: Omit<TempLog, "id" | "status"> & { id?: string }): Promise<TempLog | null> {
+  const db = getDb();
+  if (!db) return null;
+  try {
+    await ensureComplianceTables();
+    const id = input.id || `tl-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+    const range = rangeForSensor(input.sensor);
+    const status: "ok" | "flagged" =
+      input.tempCelsius < range.minTenths || input.tempCelsius > range.maxTenths
+        ? "flagged"
+        : "ok";
+    await db.insert(tempLogsTable).values({
+      id,
+      locationSlug: input.locationSlug,
+      sensor: input.sensor,
+      tempCelsius: input.tempCelsius,
+      status,
+      recordedBy: input.recordedBy ?? null,
+      recordedAt: new Date(input.recordedAt),
+    });
+    return { id, status, ...input };
+  } catch (err) {
+    logger.error("saveTempLog failed", { layer: "store.compliance" }, err);
+    return null;
+  }
+}
+
+export async function getTempLogs(filters: {
+  locationSlug: string;
+  fromIso?: string;
+  toIso?: string;
+  limit?: number;
+}): Promise<TempLog[]> {
+  const db = getDb();
+  if (!db) return [];
+  try {
+    await ensureComplianceTables();
+    const where = [eq(tempLogsTable.locationSlug, filters.locationSlug)];
+    if (filters.fromIso) where.push(gte(tempLogsTable.recordedAt, new Date(filters.fromIso)));
+    if (filters.toIso) where.push(lte(tempLogsTable.recordedAt, new Date(filters.toIso)));
+    const baseQuery = db
+      .select()
+      .from(tempLogsTable)
+      .where(and(...where))
+      .orderBy(desc(tempLogsTable.recordedAt));
+    const rows = filters.limit ? await baseQuery.limit(filters.limit) : await baseQuery.limit(500);
+    return rows.map((r) => ({
+      id: r.id,
+      locationSlug: r.locationSlug,
+      sensor: r.sensor,
+      tempCelsius: r.tempCelsius,
+      status: r.status as TempLog["status"],
+      recordedBy: r.recordedBy ?? undefined,
+      recordedAt: r.recordedAt.toISOString(),
+    }));
+  } catch (err) {
+    logger.warn("getTempLogs failed", { layer: "store.compliance" }, err);
+    return [];
+  }
+}
+
+export async function saveAllergenIncident(input: Omit<AllergenIncident, "id"> & { id?: string }): Promise<AllergenIncident | null> {
+  const db = getDb();
+  if (!db) return null;
+  try {
+    await ensureComplianceTables();
+    const id = input.id || `ai-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+    await db.insert(allergenIncidentsTable).values({
+      id,
+      locationSlug: input.locationSlug,
+      customerPhone: input.customerPhone ?? null,
+      orderId: input.orderId ?? null,
+      menuItemId: input.menuItemId ?? null,
+      allergen: input.allergen,
+      severity: input.severity,
+      description: input.description,
+      resolution: input.resolution ?? null,
+      reportedBy: input.reportedBy,
+      reportedAt: new Date(input.reportedAt),
+      resolvedAt: input.resolvedAt ? new Date(input.resolvedAt) : null,
+    });
+    return { id, ...input };
+  } catch (err) {
+    logger.error("saveAllergenIncident failed", { layer: "store.compliance" }, err);
+    return null;
+  }
+}
+
+export async function getAllergenIncidents(locationSlug?: string): Promise<AllergenIncident[]> {
+  const db = getDb();
+  if (!db) return [];
+  try {
+    await ensureComplianceTables();
+    const rows = locationSlug
+      ? await db
+          .select()
+          .from(allergenIncidentsTable)
+          .where(eq(allergenIncidentsTable.locationSlug, locationSlug))
+          .orderBy(desc(allergenIncidentsTable.reportedAt))
+      : await db
+          .select()
+          .from(allergenIncidentsTable)
+          .orderBy(desc(allergenIncidentsTable.reportedAt));
+    return rows.map((r) => ({
+      id: r.id,
+      locationSlug: r.locationSlug,
+      customerPhone: r.customerPhone ?? undefined,
+      orderId: r.orderId ?? undefined,
+      menuItemId: r.menuItemId ?? undefined,
+      allergen: r.allergen,
+      severity: r.severity as AllergenIncident["severity"],
+      description: r.description,
+      resolution: r.resolution ?? undefined,
+      reportedBy: r.reportedBy,
+      reportedAt: r.reportedAt.toISOString(),
+      resolvedAt: r.resolvedAt ? r.resolvedAt.toISOString() : undefined,
+    }));
+  } catch (err) {
+    logger.warn("getAllergenIncidents failed", { layer: "store.compliance" }, err);
+    return [];
+  }
+}
+
+// --- Web Push subscriptions (m5_6) ----------------------------------
+//
+// One row per (phone, endpoint) pair. Phone is the customer identity
+// from the cookie-based session; endpoint is the unique push service
+// URL the browser issues per device. Customers can subscribe from
+// multiple devices and we'll fan out to all of them.
+//
+// Stored in kv_store for now — push subscriptions are write-rarely,
+// read-rarely, the volume stays tiny, and there's no analytics query
+// over them yet.
+
+export interface StoredPushSubscription {
+  phone: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  createdAt: string;
+}
+
+export async function listPushSubscriptions(phone?: string): Promise<StoredPushSubscription[]> {
+  const all = await readJSON<StoredPushSubscription[]>("push-subscriptions.json", []);
+  return phone ? all.filter((s) => s.phone === phone) : all;
+}
+
+export async function savePushSubscription(input: Omit<StoredPushSubscription, "createdAt">): Promise<StoredPushSubscription> {
+  return withLock("push-subscriptions.json", async () => {
+    const list = await readJSON<StoredPushSubscription[]>("push-subscriptions.json", []);
+    const existing = list.findIndex((s) => s.endpoint === input.endpoint);
+    const row: StoredPushSubscription = {
+      ...input,
+      createdAt: existing >= 0 ? list[existing].createdAt : new Date().toISOString(),
+    };
+    if (existing >= 0) list[existing] = row;
+    else list.push(row);
+    await writeJSON("push-subscriptions.json", list);
+    return row;
+  });
+}
+
+export async function deletePushSubscription(endpoint: string): Promise<boolean> {
+  return withLock("push-subscriptions.json", async () => {
+    const list = await readJSON<StoredPushSubscription[]>("push-subscriptions.json", []);
+    const filtered = list.filter((s) => s.endpoint !== endpoint);
+    if (filtered.length === list.length) return false;
+    await writeJSON("push-subscriptions.json", filtered);
     return true;
   });
 }

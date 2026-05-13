@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { isAuthenticated } from "@/lib/admin-auth";
+import { NextResponse } from "next/server";
+import { withAdmin } from "@/lib/api-middleware";
 import {
   getNotifications,
   markNotificationRead,
@@ -9,41 +9,31 @@ import {
   pruneOrphanNewOrderNotifications,
 } from "@/lib/store";
 
-export async function GET(req: NextRequest) {
-  if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withAdmin({}, async (req) => {
   const countOnly = req.nextUrl.searchParams.get("count");
   if (countOnly === "true") {
     return NextResponse.json({ unread: await getUnreadCount() });
   }
-
   return NextResponse.json(await getNotifications());
-}
+});
 
-export async function POST(req: NextRequest) {
-  if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  try {
-    const body = await req.json();
-    if (body?.pruneOrphanNewOrders === true) {
-      const removed = await pruneOrphanNewOrderNotifications();
-      return NextResponse.json({ success: true, removed });
+export const POST = withAdmin(
+  { roles: ["manager", "owner"] },
+  async (req) => {
+    try {
+      const body = await req.json();
+      if (body?.pruneOrphanNewOrders === true) {
+        const removed = await pruneOrphanNewOrderNotifications();
+        return NextResponse.json({ success: true, removed });
+      }
+      return NextResponse.json({ error: "Unknown action" }, { status: 400 });
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
     }
-    return NextResponse.json({ error: "Unknown action" }, { status: 400 });
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-  }
-}
+  },
+);
 
-export async function PUT(req: NextRequest) {
-  if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const PUT = withAdmin({}, async (req) => {
   const { id, markAll } = await req.json();
 
   if (markAll) {
@@ -57,24 +47,23 @@ export async function PUT(req: NextRequest) {
   }
 
   return NextResponse.json({ error: "Missing id or markAll" }, { status: 400 });
-}
+});
 
-export async function DELETE(req: NextRequest) {
-  if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  try {
-    const { id } = await req.json();
-    if (!id || typeof id !== "string") {
-      return NextResponse.json({ error: "Missing notification id" }, { status: 400 });
+export const DELETE = withAdmin(
+  { roles: ["manager", "owner"] },
+  async (req) => {
+    try {
+      const { id } = await req.json();
+      if (!id || typeof id !== "string") {
+        return NextResponse.json({ error: "Missing notification id" }, { status: 400 });
+      }
+      const ok = await deleteNotification(id);
+      if (!ok) {
+        return NextResponse.json({ error: "Notification not found" }, { status: 404 });
+      }
+      return NextResponse.json({ success: true });
+    } catch {
+      return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
-    const ok = await deleteNotification(id);
-    if (!ok) {
-      return NextResponse.json({ error: "Notification not found" }, { status: 404 });
-    }
-    return NextResponse.json({ success: true });
-  } catch {
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
-  }
-}
+  },
+);

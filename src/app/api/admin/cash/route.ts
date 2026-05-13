@@ -1,45 +1,42 @@
-import { NextRequest, NextResponse } from "next/server";
-import { isAuthenticated } from "@/lib/admin-auth";
+import { NextResponse } from "next/server";
+import { withAdmin } from "@/lib/api-middleware";
+import { hasLocationAccess } from "@/lib/admin-auth";
 import {
   appendAuditLog,
   getCashSessions,
   openCashSession,
 } from "@/lib/store";
+import { cashOpenSchema, parseBody } from "@/lib/api-schemas";
 
-async function requireAuth() {
-  if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  return null;
-}
+export const GET = withAdmin(
+  { locationParam: "location" },
+  async (_req, _ctx, { locationSlug }) => {
+    return NextResponse.json(await getCashSessions(locationSlug ?? undefined));
+  },
+);
 
-export async function GET(req: NextRequest) {
-  const auth = await requireAuth();
-  if (auth) return auth;
-  const location = req.nextUrl.searchParams.get("location") || undefined;
-  return NextResponse.json(await getCashSessions(location));
-}
+// Opening a cash session affects revenue reconciliation — manager+ only.
+// Per-location tenancy: the body must specify a slug the session is
+// authorized for.
+export const POST = withAdmin(
+  { roles: ["manager", "owner"] },
+  async (req, _ctx, { user }) => {
+    const parsed = await parseBody(req, cashOpenSchema);
+    if ("error" in parsed) return parsed.error;
+    const { locationSlug, openingFloat, openedBy, notes } = parsed.data;
 
-export async function POST(req: NextRequest) {
-  const auth = await requireAuth();
-  if (auth) return auth;
-
-  try {
-    const body = await req.json();
-    if (!body.locationSlug) {
-      return NextResponse.json({ error: "locationSlug required" }, { status: 400 });
-    }
-    if (!Number.isFinite(body.openingFloat) || body.openingFloat < 0) {
+    if (!(await hasLocationAccess(locationSlug))) {
       return NextResponse.json(
-        { error: "openingFloat must be a non-negative number (grosze)" },
-        { status: 400 },
+        { error: `Session is not authorized for location "${locationSlug}"` },
+        { status: 403 },
       );
     }
+
     const result = await openCashSession({
-      locationSlug: body.locationSlug,
-      openingFloat: body.openingFloat,
-      openedBy: body.openedBy?.trim() || "admin",
-      notes: body.notes?.trim() || undefined,
+      locationSlug,
+      openingFloat,
+      openedBy: openedBy?.trim() || user.email || user.id,
+      notes: notes?.trim() || undefined,
     });
 
     if ("error" in result) {
@@ -58,7 +55,5 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json(result, { status: 201 });
-  } catch {
-    return NextResponse.json({ error: "Invalid body" }, { status: 400 });
-  }
-}
+  },
+);

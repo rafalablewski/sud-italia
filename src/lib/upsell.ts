@@ -291,9 +291,11 @@ export function getActiveComboDeals(
   return { activeDeal: null, savings: 0, missingCategories: [], progress: 0 };
 }
 
-// --- Free delivery threshold ---
+// --- Free delivery threshold + fee (m2_12) ------------------------------
 
 export const FREE_DELIVERY_THRESHOLD = 6000; // 60 PLN
+/** Flat delivery fee in grosze applied when cart total is below threshold. */
+export const DELIVERY_FEE_GROSZE = 700; // 7.00 PLN
 
 export function getDeliveryProgress(cartTotal: number): {
   remaining: number;
@@ -306,4 +308,19 @@ export function getDeliveryProgress(cartTotal: number): {
   const remaining = FREE_DELIVERY_THRESHOLD - cartTotal;
   const progress = cartTotal / FREE_DELIVERY_THRESHOLD;
   return { remaining, progress, qualified: false };
+}
+
+/**
+ * Compute the delivery fee that applies to a cart (grosze). Returns 0 for
+ * takeout, 0 for delivery above the threshold, and DELIVERY_FEE_GROSZE
+ * otherwise. Mirrors getDeliveryProgress so the customer sees the same
+ * "Spend X more for free delivery" CTA as the checkout charges.
+ */
+export function computeDeliveryFee(
+  cartSubtotal: number,
+  fulfillmentType: "takeout" | "delivery",
+): number {
+  if (fulfillmentType !== "delivery") return 0;
+  if (cartSubtotal >= FREE_DELIVERY_THRESHOLD) return 0;
+  return DELIVERY_FEE_GROSZE;
 }

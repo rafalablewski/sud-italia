@@ -1,43 +1,27 @@
-import { NextRequest, NextResponse } from "next/server";
-import { isAuthenticated } from "@/lib/admin-auth";
+import { NextResponse } from "next/server";
+import { withAdmin } from "@/lib/api-middleware";
+import {
+  orderDeleteSchema,
+  orderStatusChangeSchema,
+  parseBody,
+} from "@/lib/api-schemas";
 import { appendAuditLog, getOrders, updateOrderStatus, deleteOrder } from "@/lib/store";
-import { Order } from "@/data/types";
 
-async function requireAuth() {
-  if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  return null;
-}
+export const GET = withAdmin(
+  { locationParam: "location" },
+  async (req, _ctx, { locationSlug }) => {
+    const orders = await getOrders(locationSlug ?? undefined);
+    orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return NextResponse.json(orders);
+  },
+);
 
-export async function GET(req: NextRequest) {
-  const authError = await requireAuth();
-  if (authError) return authError;
-
-  const locationSlug = req.nextUrl.searchParams.get("location") || undefined;
-  const orders = await getOrders(locationSlug);
-
-  // Sort newest first
-  orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
-  return NextResponse.json(orders);
-}
-
-export async function PUT(req: NextRequest) {
-  const authError = await requireAuth();
-  if (authError) return authError;
-
-  try {
-    const { orderId, status } = await req.json();
-
-    if (!orderId || !status) {
-      return NextResponse.json({ error: "Missing orderId or status" }, { status: 400 });
-    }
-
-    const validStatuses: Order["status"][] = ["pending", "confirmed", "preparing", "ready", "completed", "cancelled"];
-    if (!validStatuses.includes(status)) {
-      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
-    }
+export const PUT = withAdmin(
+  { roles: ["staff", "kitchen", "manager", "owner"] },
+  async (req, _ctx, { user }) => {
+    const parsed = await parseBody(req, orderStatusChangeSchema);
+    if ("error" in parsed) return parsed.error;
+    const { orderId, status } = parsed.data;
 
     const order = await updateOrderStatus(orderId, status);
     if (!order) {
@@ -45,7 +29,7 @@ export async function PUT(req: NextRequest) {
     }
 
     await appendAuditLog({
-      actor: "admin",
+      actor: user.email || user.id,
       action: "orders.status_change",
       entityType: "order",
       entityId: orderId,
@@ -53,21 +37,15 @@ export async function PUT(req: NextRequest) {
     });
 
     return NextResponse.json(order);
-  } catch {
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
-}
+  },
+);
 
-export async function DELETE(req: NextRequest) {
-  const authError = await requireAuth();
-  if (authError) return authError;
-
-  try {
-    const { orderId } = await req.json();
-
-    if (!orderId || typeof orderId !== "string") {
-      return NextResponse.json({ error: "Missing orderId" }, { status: 400 });
-    }
+export const DELETE = withAdmin(
+  { roles: ["manager", "owner"] },
+  async (req, _ctx, { user }) => {
+    const parsed = await parseBody(req, orderDeleteSchema);
+    if ("error" in parsed) return parsed.error;
+    const { orderId } = parsed.data;
 
     const ok = await deleteOrder(orderId);
     if (!ok) {
@@ -75,14 +53,12 @@ export async function DELETE(req: NextRequest) {
     }
 
     await appendAuditLog({
-      actor: "admin",
+      actor: user.email || user.id,
       action: "orders.delete",
       entityType: "order",
       entityId: orderId,
     });
 
     return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
-}
+  },
+);

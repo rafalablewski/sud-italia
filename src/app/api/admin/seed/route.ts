@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { isAuthenticated } from "@/lib/admin-auth";
-import { saveIngredient, saveRecipe, getIngredients } from "@/lib/store";
+import { withAdmin } from "@/lib/api-middleware";
+import { saveIngredient, saveRecipe } from "@/lib/store";
 import type { Ingredient, Recipe } from "@/data/types";
 
 // Seed data: ingredients with avg Polish market prices (2026)
@@ -100,11 +100,8 @@ const MARGHERITA_RECIPE: Omit<Recipe, "id"> = {
   ],
 };
 
-export async function POST() {
-  if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+// Seeding ingredients + recipes is a chain-level operation; owner only.
+export const POST = withAdmin({ roles: ["owner"] }, async () => {
   try {
     // Save ingredients (upsert)
     for (const ing of SEED_INGREDIENTS) {
@@ -149,4 +146,4 @@ export async function POST() {
   } catch (err) {
     return NextResponse.json({ error: "Seed failed", details: String(err) }, { status: 500 });
   }
-}
+});

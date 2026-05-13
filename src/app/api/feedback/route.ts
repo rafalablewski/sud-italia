@@ -1,10 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOrderById } from "@/lib/store";
+import { enforceRateLimit, getClientIp } from "@/lib/rate-limit";
 
 // In production, this would write to a reviews table.
 // For now, we log and return success — the structure is ready for DB.
 
 export async function POST(req: NextRequest) {
+  // Public endpoint — rate-limit by client IP first, then refine by phone
+  // once we've looked up the order. 5/min/IP is generous for an honest
+  // re-submit after a flaky network but blocks review-stuffing abuse.
+  const ipLimit = await enforceRateLimit({
+    key: "feedback-ip",
+    id: getClientIp(req),
+    limit: 5,
+    windowSec: 60,
+  });
+  if (ipLimit) return ipLimit;
+
   try {
     const body = await req.json();
     const { orderId, itemRatings, overallRatings, comment, email } = body;
@@ -13,10 +25,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing orderId" }, { status: 400 });
     }
 
-    // Validate the order exists
     const order = await getOrderById(orderId);
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    }
+
+    // Phone-scoped limit prevents one customer from spamming reviews even
+    // from different IPs (e.g. flipping VPN, switching off carrier WiFi).
+    if (order.customerPhone) {
+      const phoneLimit = await enforceRateLimit({
+        key: "feedback-phone",
+        id: order.customerPhone,
+        limit: 5,
+        windowSec: 60,
+      });
+      if (phoneLimit) return phoneLimit;
     }
 
     // Log the review (in production: INSERT INTO reviews)

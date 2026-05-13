@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { isAuthenticated } from "@/lib/admin-auth";
+import { withAdmin } from "@/lib/api-middleware";
+import { getCurrentLocationScope, LOCATION_SCOPE_ALL } from "@/lib/admin-auth";
 import { getOrders, getLoyaltyMembers, getAllManualPoints } from "@/lib/store";
 import { calculateTier, LoyaltyTier } from "@/lib/loyalty";
 import { normalizePlPhoneE164, sumManualPointsForPhone } from "@/lib/phone";
@@ -17,10 +18,12 @@ export interface MemberRecord {
 }
 
 
-export async function GET() {
-  if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+// Loyalty member roster. Cross-location data — a member may have ordered at
+// multiple trucks. Scoped sessions see only members whose orders include
+// at least one in-scope location.
+export const GET = withAdmin({}, async () => {
+  const scope = (await getCurrentLocationScope()) ?? [LOCATION_SCOPE_ALL];
+  const unrestricted = scope.includes(LOCATION_SCOPE_ALL);
 
   const allOrders = await getOrders();
   const signups = await getLoyaltyMembers();
@@ -30,6 +33,7 @@ export async function GET() {
   const byPhone = new Map<string, typeof allOrders>();
   for (const order of allOrders) {
     if (!order.customerPhone) continue;
+    if (!unrestricted && !scope.includes(order.locationSlug)) continue;
     const key = normalizePlPhoneE164(order.customerPhone) || order.customerPhone.trim();
     const list = byPhone.get(key) || [];
     list.push(order);
@@ -82,4 +86,4 @@ export async function GET() {
   members.sort((a, b) => b.points - a.points);
 
   return NextResponse.json({ members });
-}
+});

@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { isAuthenticated } from "@/lib/admin-auth";
+import { NextResponse } from "next/server";
+import { withAdmin } from "@/lib/api-middleware";
 import {
   addLoyaltyMember,
   appendAuditLog,
@@ -7,6 +7,7 @@ import {
   updateLoyaltyMember,
 } from "@/lib/store";
 import { normalizePlPhoneE164 } from "@/lib/phone";
+import { memberProfileSchema, parseBody } from "@/lib/api-schemas";
 
 /**
  * Update a customer's profile fields (today: `dob` and `email`). Phone is the
@@ -17,59 +18,39 @@ import { normalizePlPhoneE164 } from "@/lib/phone";
  * Lays the groundwork for birthday / anniversary triggers — see
  * `/api/admin/campaigns/triggers`.
  */
-export async function PUT(req: NextRequest) {
-  if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+export const PUT = withAdmin(
+  { roles: ["staff", "manager", "owner"] },
+  async (req, _ctx, { user }) => {
+    const parsed = await parseBody(req, memberProfileSchema);
+    if ("error" in parsed) return parsed.error;
+    const body = parsed.data;
+    const canonical = normalizePlPhoneE164(body.phone) || body.phone.trim();
 
-  let body: {
-    phone?: string;
-    dob?: string;
-    email?: string;
-    name?: string;
-  };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-  }
+    const existing = await getLoyaltyMember(canonical);
+    let result;
+    if (existing) {
+      result = await updateLoyaltyMember(canonical, {
+        dob: body.dob,
+        email: body.email,
+      });
+    } else {
+      result = await addLoyaltyMember({
+        phone: canonical,
+        name: body.name?.trim() || "Customer",
+        email: body.email,
+        dob: body.dob,
+        signedUpAt: new Date().toISOString(),
+      });
+    }
 
-  if (!body.phone) {
-    return NextResponse.json({ error: "phone required" }, { status: 400 });
-  }
-  const canonical = normalizePlPhoneE164(body.phone) || body.phone.trim();
-
-  if (body.dob && Number.isNaN(new Date(body.dob).getTime())) {
-    return NextResponse.json({ error: "Invalid dob" }, { status: 400 });
-  }
-
-  const existing = await getLoyaltyMember(canonical);
-  let result;
-  if (existing) {
-    result = await updateLoyaltyMember(canonical, {
-      dob: body.dob,
-      email: body.email,
+    await appendAuditLog({
+      actor: user.email || user.id,
+      action: "members.profile_update",
+      entityType: "loyalty_member",
+      entityId: canonical,
+      after: { dob: body.dob, email: body.email },
     });
-  } else {
-    // Create a stub member record so we have somewhere to attach the DOB.
-    // Name is best-effort — we only have what the caller passes; the
-    // member-list aggregator falls back to the order name anyway.
-    result = await addLoyaltyMember({
-      phone: canonical,
-      name: body.name?.trim() || "Customer",
-      email: body.email,
-      dob: body.dob,
-      signedUpAt: new Date().toISOString(),
-    });
-  }
 
-  await appendAuditLog({
-    actor: "admin",
-    action: "members.profile_update",
-    entityType: "loyalty_member",
-    entityId: canonical,
-    after: { dob: body.dob, email: body.email },
-  });
-
-  return NextResponse.json(result);
-}
+    return NextResponse.json(result);
+  },
+);

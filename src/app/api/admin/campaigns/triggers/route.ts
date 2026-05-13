@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { isAuthenticated } from "@/lib/admin-auth";
+import { NextResponse } from "next/server";
+import { withAdmin } from "@/lib/api-middleware";
 import { getLoyaltyMembers, getOrders } from "@/lib/store";
 
 interface TriggerRow {
@@ -17,15 +17,11 @@ interface TriggerRow {
  * customer's first paid order. Lifetime events are the cheapest, highest-
  * lift CRM trigger — 3–5% revenue lift is the industry baseline.
  *
- * Out of scope (separate audit row): actually firing the email/SMS. This
- * endpoint just enumerates who's eligible so the admin UI can present
- * them, plus a future cron can pick them up.
+ * Out of scope: actually firing the email/SMS. This endpoint just
+ * enumerates who's eligible so the admin UI can present them, plus a
+ * future cron can pick them up.
  */
-export async function GET(_req: NextRequest) {
-  if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withAdmin({}, async () => {
   const today = new Date();
   const todayMm = today.getUTCMonth();
   const todayDd = today.getUTCDate();
@@ -33,8 +29,6 @@ export async function GET(_req: NextRequest) {
 
   const [members, orders] = await Promise.all([getLoyaltyMembers(), getOrders()]);
 
-  // Build first-paid-order date per phone — anniversary lookup. We treat any
-  // non-pending status as "paid" to match the analytics convention.
   const firstOrderByPhone = new Map<string, Date>();
   for (const o of orders) {
     if (o.status === "pending" || o.status === "cancelled") continue;
@@ -82,4 +76,4 @@ export async function GET(_req: NextRequest) {
   }
 
   return NextResponse.json({ date: today.toISOString().slice(0, 10), triggers });
-}
+});

@@ -1,8 +1,90 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
+/**
+ * Baseline security headers (m0_12). Applied to every response.
+ *
+ * - `Strict-Transport-Security` forces HTTPS once the site has been visited
+ *   over TLS. We use a 2-year max-age + preload eligible window, which
+ *   matches what hstspreload.org accepts.
+ * - `X-Frame-Options: DENY` blocks clickjacking via iframe embedding. The
+ *   public site has no legitimate cross-origin embed need (and admin pages
+ *   absolutely shouldn't be embeddable).
+ * - `X-Content-Type-Options: nosniff` stops the browser from guessing
+ *   MIME types — important when serving the JPK XML / DSAR JSON exports.
+ * - `Referrer-Policy: strict-origin-when-cross-origin` keeps URL path data
+ *   (which includes order ids and phone numbers in some pages) from leaking
+ *   to third-party origins.
+ * - `Permissions-Policy` opts out of every powerful feature we don't use,
+ *   so a future XSS can't grab camera/microphone/geolocation without the
+ *   policy being explicitly relaxed.
+ * - `Content-Security-Policy` allows our own origin, Stripe (checkout +
+ *   webhook iframe), Sentry telemetry, and inline styles for Tailwind's
+ *   utility classes. `script-src` excludes `unsafe-inline`; React + Next
+ *   handle the no-inline-script constraint natively.
+ */
+const SECURITY_HEADERS = [
+  {
+    key: "Strict-Transport-Security",
+    value: "max-age=63072000; includeSubDomains; preload",
+  },
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  {
+    key: "Permissions-Policy",
+    value: [
+      "accelerometer=()",
+      "ambient-light-sensor=()",
+      "autoplay=()",
+      "battery=()",
+      "camera=()",
+      "display-capture=()",
+      "document-domain=()",
+      "encrypted-media=()",
+      "fullscreen=(self)",
+      "geolocation=()",
+      "gyroscope=()",
+      "magnetometer=()",
+      "microphone=()",
+      "midi=()",
+      "payment=(self \"https://js.stripe.com\")",
+      "picture-in-picture=()",
+      "publickey-credentials-get=()",
+      "screen-wake-lock=()",
+      "sync-xhr=()",
+      "usb=()",
+      "xr-spatial-tracking=()",
+    ].join(", "),
+  },
+  {
+    key: "Content-Security-Policy",
+    value: [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' https://js.stripe.com https://*.sentry.io",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob: https:",
+      "font-src 'self' data:",
+      "connect-src 'self' https://api.stripe.com https://*.ingest.sentry.io https://*.upstash.io https://*.neon.tech",
+      "frame-src https://js.stripe.com https://hooks.stripe.com",
+      "frame-ancestors 'none'",
+      "form-action 'self' https://checkout.stripe.com",
+      "base-uri 'self'",
+      "object-src 'none'",
+      "upgrade-insecure-requests",
+    ].join("; "),
+  },
+];
+
 const nextConfig: NextConfig = {
-  /* config options here */
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: SECURITY_HEADERS,
+      },
+    ];
+  },
 };
 
 // Only wrap with Sentry when a DSN is configured. Without a DSN the wrapper

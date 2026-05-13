@@ -199,12 +199,24 @@ export interface QualityCheck {
   notes?: string;
 }
 
-/** Single source of truth for order lifecycle statuses (kitchen + API validation). */
+/** Single source of truth for order lifecycle statuses (kitchen + API validation).
+ *
+ * m2_13 added the three delivery-specific transitions between `ready` and
+ * `completed`. Takeout orders skip them and flip ready → completed directly.
+ *   ready      kitchen finished prep
+ *   assigned   driver picked the bag up
+ *   picked_up  driver left the truck en route to the customer
+ *   delivered  customer received it (admin or driver marks this)
+ *   completed  closeout — analytics + closing reports look at this set
+ */
 export const ORDER_STATUSES = [
   "pending",
   "confirmed",
   "preparing",
   "ready",
+  "assigned",
+  "picked_up",
+  "delivered",
   "completed",
   "cancelled",
 ] as const;
@@ -311,6 +323,14 @@ export interface Order {
   /** Optional tip captured at checkout (grosze). Goes to Stripe as a separate
    *  line item so receipts show "Items 28 zł + Tip 3 zł = 31 zł" cleanly. */
   tipAmount?: number;
+  /** Delivery fee in grosze (m2_12). Charged on top of items + tip for
+   *  delivery orders below the free-delivery threshold. 0 / unset for
+   *  takeout. */
+  deliveryFee?: number;
+  /** Staff member id assigned as the courier (m2_11). Set when admin
+   *  taps "Assign driver" on the order detail. Used to scope driver-
+   *  facing views and to compute delivery margin in m2_14. */
+  assignedDriverId?: string;
 }
 
 // --- Inventory (per-location stock for an ingredient) ---
@@ -397,7 +417,7 @@ export interface CustomerNote {
 
 // --- Staff / HR ---
 
-export type StaffRole = "manager" | "kitchen" | "front" | "driver";
+export type StaffRole = "manager" | "kitchen" | "front" | "driver" | "courier";
 export type StaffStatus = "active" | "inactive";
 
 export interface StaffMember {
@@ -574,7 +594,7 @@ export interface ComplianceItem {
 
 // --- Admin users + roles ---
 
-export type AdminRole = "owner" | "manager" | "staff" | "kitchen";
+export type AdminRole = "owner" | "manager" | "franchisee" | "staff" | "kitchen";
 export type AdminUserStatus = "active" | "disabled";
 
 export interface AdminUser {

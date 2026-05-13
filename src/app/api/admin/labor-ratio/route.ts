@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { isAuthenticated } from "@/lib/admin-auth";
+import { NextResponse } from "next/server";
+import { withAdmin } from "@/lib/api-middleware";
 import { getLaborCostInRange, getOrders } from "@/lib/store";
 
 /**
@@ -12,49 +12,44 @@ import { getLaborCostInRange, getOrders } from "@/lib/store";
  * convention used elsewhere). Labour is computed by pairing time punches and
  * extending open shifts to "now", so a shift in progress already counts.
  */
-export async function GET(req: NextRequest) {
-  if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+export const GET = withAdmin(
+  { locationParam: "location" },
+  async (_req, _ctx, { locationSlug: scoped }) => {
+    const locationSlug = scoped ?? undefined;
 
-  const locationSlug = req.nextUrl.searchParams.get("location") || undefined;
+    const now = new Date();
+    const yyyyMmDd = now.toISOString().slice(0, 10);
+    const dayStart = new Date(`${yyyyMmDd}T00:00:00.000Z`);
+    const dayEnd = new Date(`${yyyyMmDd}T23:59:59.999Z`);
 
-  const now = new Date();
-  const yyyyMmDd = now.toISOString().slice(0, 10);
-  const dayStart = new Date(`${yyyyMmDd}T00:00:00.000Z`);
-  // End-of-day in UTC keeps the range bounded; the caller can refresh as the
-  // tile re-renders, so we don't need a rolling 24 h window.
-  const dayEnd = new Date(`${yyyyMmDd}T23:59:59.999Z`);
+    const orders = (await getOrders(locationSlug)).filter(
+      (o) => o.status !== "pending",
+    );
+    let revenueGrosze = 0;
+    let orderCount = 0;
+    for (const o of orders) {
+      const day = o.slotDate || o.createdAt.slice(0, 10);
+      if (day !== yyyyMmDd) continue;
+      revenueGrosze += o.totalAmount;
+      orderCount++;
+    }
 
-  const orders = (await getOrders(locationSlug)).filter(
-    (o) => o.status !== "pending",
-  );
-  let revenueGrosze = 0;
-  let orderCount = 0;
-  for (const o of orders) {
-    const day = o.slotDate || o.createdAt.slice(0, 10);
-    if (day !== yyyyMmDd) continue;
-    revenueGrosze += o.totalAmount;
-    orderCount++;
-  }
+    const { laborGrosze, openShifts } = await getLaborCostInRange(
+      locationSlug,
+      dayStart.toISOString(),
+      dayEnd.toISOString(),
+      now,
+    );
 
-  const { laborGrosze, openShifts } = await getLaborCostInRange(
-    locationSlug,
-    dayStart.toISOString(),
-    dayEnd.toISOString(),
-    now,
-  );
+    const ratio = revenueGrosze > 0 ? laborGrosze / revenueGrosze : null;
 
-  // Ratio is labour / revenue. When revenue is zero (no orders yet today) the
-  // tile shows "—" rather than infinity; the caller decides how to render.
-  const ratio = revenueGrosze > 0 ? laborGrosze / revenueGrosze : null;
-
-  return NextResponse.json({
-    date: yyyyMmDd,
-    revenueGrosze,
-    laborGrosze,
-    ratio,
-    openShifts,
-    orderCount,
-  });
-}
+    return NextResponse.json({
+      date: yyyyMmDd,
+      revenueGrosze,
+      laborGrosze,
+      ratio,
+      openShifts,
+      orderCount,
+    });
+  },
+);

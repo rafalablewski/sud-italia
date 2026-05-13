@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAuthenticated } from "@/lib/admin-auth";
+import { withAdmin } from "@/lib/api-middleware";
+import { hasLocationAccess } from "@/lib/admin-auth";
 import {
   appendAuditLog,
   deleteComplianceItem,
@@ -8,35 +9,24 @@ import {
 } from "@/lib/store";
 import { COMPLIANCE_KINDS, type ComplianceKind } from "@/data/types";
 
-async function requireAuth() {
-  if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  return null;
-}
+export const GET = withAdmin(
+  { locationParam: "location" },
+  async (_req, _ctx, { locationSlug }) => {
+    return NextResponse.json(await getComplianceItems(locationSlug ?? undefined));
+  },
+);
 
-export async function GET(req: NextRequest) {
-  const auth = await requireAuth();
-  if (auth) return auth;
-  const location = req.nextUrl.searchParams.get("location") || undefined;
-  return NextResponse.json(await getComplianceItems(location));
-}
-
-export async function POST(req: NextRequest) {
-  return upsert(req);
-}
-
-export async function PUT(req: NextRequest) {
-  return upsert(req);
-}
-
-async function upsert(req: NextRequest) {
-  const auth = await requireAuth();
-  if (auth) return auth;
+async function upsert(req: NextRequest, actor: string) {
   try {
     const body = await req.json();
     if (!body.locationSlug) {
       return NextResponse.json({ error: "locationSlug required" }, { status: 400 });
+    }
+    if (!(await hasLocationAccess(body.locationSlug))) {
+      return NextResponse.json(
+        { error: `Session is not authorized for location "${body.locationSlug}"` },
+        { status: 403 },
+      );
     }
     if (!body.title?.trim()) {
       return NextResponse.json({ error: "Title required" }, { status: 400 });
@@ -57,7 +47,7 @@ async function upsert(req: NextRequest) {
       notes: body.notes?.trim() || undefined,
     });
     await appendAuditLog({
-      actor: "admin",
+      actor,
       action: body.id ? "compliance.update" : "compliance.create",
       entityType: "compliance_item",
       entityId: saved.id,
@@ -69,19 +59,30 @@ async function upsert(req: NextRequest) {
   }
 }
 
-export async function DELETE(req: NextRequest) {
-  const auth = await requireAuth();
-  if (auth) return auth;
-  const id = req.nextUrl.searchParams.get("id");
-  if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
-  const ok = await deleteComplianceItem(id);
-  if (ok) {
-    await appendAuditLog({
-      actor: "admin",
-      action: "compliance.delete",
-      entityType: "compliance_item",
-      entityId: id,
-    });
-  }
-  return NextResponse.json({ ok });
-}
+export const POST = withAdmin(
+  { roles: ["manager", "owner"] },
+  async (req, _ctx, { user }) => upsert(req, user.email || user.id),
+);
+
+export const PUT = withAdmin(
+  { roles: ["manager", "owner"] },
+  async (req, _ctx, { user }) => upsert(req, user.email || user.id),
+);
+
+export const DELETE = withAdmin(
+  { roles: ["manager", "owner"] },
+  async (req, _ctx, { user }) => {
+    const id = req.nextUrl.searchParams.get("id");
+    if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+    const ok = await deleteComplianceItem(id);
+    if (ok) {
+      await appendAuditLog({
+        actor: user.email || user.id,
+        action: "compliance.delete",
+        entityType: "compliance_item",
+        entityId: id,
+      });
+    }
+    return NextResponse.json({ ok });
+  },
+);

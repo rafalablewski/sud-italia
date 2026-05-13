@@ -299,6 +299,13 @@ export function AdminAI() {
           <p className="v2-page-subtitle">
             Heuristic forecasts, anomaly checks, reorder suggestions and staffing tips computed from real orders + stock data. No ML model is in the loop yet.
           </p>
+          <a
+            href="/admin/ai/agent"
+            className="v2-btn v2-btn-primary inline-flex items-center gap-1.5 mt-2 w-fit"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            Open Ops Agent
+          </a>
         </div>
         <Tabs
           value={tab}

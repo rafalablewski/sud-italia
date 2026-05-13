@@ -1997,6 +1997,39 @@ html { scroll-behavior: smooth; }
   .v2-kds-board { grid-template-columns: 1fr; }
 }
 
+/**
+ * Mobile KDS (m2_33): phone / small tablet running the kitchen board.
+ * Single-column stack, glove-friendly minimum 44 px touch targets per
+ * Apple HIG, denser stat row, full-bleed columns. Targeted at < 640 px
+ * because that's where the v2-page chrome starts pinching the board.
+ */
+@media (max-width: 640px) {
+  .v2-kds-page { padding: 8px; }
+  .v2-kds-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .v2-kds-stat { gap: 6px; }
+  .v2-kds-stat-value { font-size: var(--text-lg); }
+  .v2-kds-col { min-height: 0; }
+  .v2-kds-col-body {
+    /* Bigger viewport on phones — drop the desktop's max-height. */
+    max-height: none;
+  }
+  .v2-ticket {
+    padding: 14px;
+    gap: 10px;
+  }
+  .v2-ticket button,
+  .v2-ticket [role="button"] {
+    /* Apple HIG minimum touch target for fingers + restaurant gloves. */
+    min-height: 44px;
+    min-width: 44px;
+  }
+  /* Hide the page subtitle on phones — saves a row of vertical space. */
+  .v2-kds-page .v2-page-subtitle { display: none; }
+}
+
 .v2-kds-col {
   background: var(--surface-2);
   border: 1px solid var(--border);
@@ -3412,3 +3445,41 @@ select.pub-input {
   background: #f3f4f6;
   color: var(--color-italia-dark);
 }
+
+/* ============================
+   Expo board (m2_6)
+   ============================ */
+.expo-board { padding: 16px; background: var(--bg, #0a0a0a); color: var(--fg, #f4f4f4); min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+.expo-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.expo-title { font-size: 24px; margin: 0; }
+.expo-sub { font-size: 12px; color: #999; margin: 4px 0 0; }
+.expo-nav { display: flex; gap: 12px; }
+.expo-link { color: #ddd; text-decoration: none; padding: 8px 12px; border: 1px solid #333; border-radius: 6px; }
+.expo-error { background: #7f1d1d; color: white; padding: 8px 12px; border-radius: 6px; margin-bottom: 12px; }
+.expo-empty { color: #999; padding: 40px; text-align: center; }
+.expo-orders { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+.expo-order { background: #111; border: 2px solid #2a2a2a; border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.expo-order-warn { border-color: #f59e0b; }
+.expo-order-overdue { border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.18); animation: expoPulse 1.5s ease-in-out infinite; }
+@keyframes expoPulse { 50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.28); } }
+.expo-order[data-ready="true"] { border-color: #10b981; }
+.expo-order-header { display: flex; justify-content: space-between; align-items: baseline; }
+.expo-order-id { font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.expo-order-countdown { font-size: 14px; color: #ddd; font-variant-numeric: tabular-nums; }
+.expo-order-stations { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.expo-ticket { background: #1a1a1a; border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.expo-ticket-ready { background: #064e3b; }
+.expo-ticket-bumped { background: #1e3a8a; opacity: 0.6; }
+.expo-ticket-station { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: #aaa; }
+.expo-ticket-items { display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.expo-ticket-item { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; }
+.expo-ticket-qty { color: #999; min-width: 24px; }
+.expo-allergens { display: inline-block; font-size: 11px; padding: 2px 6px; background: #7f1d1d; color: white; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+.expo-notes { color: #f59e0b; font-style: italic; font-size: 12px; }
+.expo-ticket-actions { display: flex; gap: 8px; }
+.expo-btn { padding: 10px 16px; border-radius: 6px; border: none; font-size: 14px; cursor: pointer; min-height: 44px; min-width: 44px; font-weight: 500; }
+.expo-btn-ready { background: #10b981; color: white; }
+.expo-btn-bump { background: #6366f1; color: white; }
+.expo-btn-bump-all { background: #c8102e; color: white; width: 100%; padding: 12px; font-weight: 600; }
+.expo-order-footer { margin-top: auto; }
+.expo-hotkey { display: inline-block; padding: 2px 6px; margin-right: 8px; background: #333; color: #fff; border: 1px solid #555; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 12px; }

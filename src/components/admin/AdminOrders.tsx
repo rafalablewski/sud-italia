@@ -56,6 +56,9 @@ const STATUS_LABEL: Record<OrderStatus, string> = {
   confirmed: "Confirmed",
   preparing: "Preparing",
   ready: "Ready",
+  assigned: "Assigned",
+  picked_up: "Picked up",
+  delivered: "Delivered",
   completed: "Completed",
   cancelled: "Cancelled",
 };
@@ -206,6 +209,9 @@ export function AdminOrders() {
       confirmed: 0,
       preparing: 0,
       ready: 0,
+      assigned: 0,
+      picked_up: 0,
+      delivered: 0,
       completed: 0,
       cancelled: 0,
     };

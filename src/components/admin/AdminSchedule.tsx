@@ -41,6 +41,7 @@ const ROLE_LABEL: Record<StaffRole, string> = {
   kitchen: "Kitchen",
   front: "Front of house",
   driver: "Driver",
+  courier: "Courier",
 };
 
 function isoDate(d: Date): string {

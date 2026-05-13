@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { isAuthenticated } from "@/lib/admin-auth";
+import { NextResponse } from "next/server";
+import { withAdmin } from "@/lib/api-middleware";
 import { getOrders, getLoyaltyMembers, getPointAdjustments } from "@/lib/store";
 import { normalizePlPhoneE164 } from "@/lib/phone";
 
@@ -22,18 +22,20 @@ const ACTIVE_DAYS = 30;
 const LAPSED_DAYS = 90;
 const MS_IN_DAY = 1000 * 60 * 60 * 24;
 
-async function requireAuth() {
-  if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  return null;
-}
-
-export async function GET(req: NextRequest) {
-  const auth = await requireAuth();
-  if (auth) return auth;
-
-  const orders = (await getOrders()).filter((o) => o.status !== "pending");
+// Customer profiles span every location a customer has ever ordered at.
+// Treated as chain-wide data: any authenticated staff can browse, but cross-
+// location reads require unrestricted scope. When the caller passes
+// ?location=, the customer aggregation is filtered to that location's
+// orders so a scoped session sees only its own customer roster.
+export const GET = withAdmin(
+  { locationParam: "location" },
+  async (_req, _ctx, { locationSlug }) => {
+    const allOrders = await getOrders();
+    const orders = allOrders.filter(
+      (o) =>
+        o.status !== "pending" &&
+        (!locationSlug || o.locationSlug === locationSlug),
+    );
   const members = await getLoyaltyMembers();
   const memberMap = new Map(members.map((m) => [m.phone, m]));
 
@@ -122,6 +124,7 @@ export async function GET(req: NextRequest) {
     customers.push(c);
   }
 
-  customers.sort((a, b) => b.totalSpent - a.totalSpent);
-  return NextResponse.json(customers);
-}
+    customers.sort((a, b) => b.totalSpent - a.totalSpent);
+    return NextResponse.json(customers);
+  },
+);

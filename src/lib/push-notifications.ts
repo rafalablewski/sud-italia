@@ -64,6 +64,28 @@ export async function sendPushNotification(
 }
 
 /**
+ * Fan-out helper (m5_6). Loads every subscription for the given
+ * phone from kv_store and pushes the message to each device. Stub
+ * mode (no VAPID keys) logs but doesn't throw — keeps the call
+ * path safe to wire into the order outbox without gating on
+ * production credentials.
+ */
+export async function pushToCustomer(phone: string, message: PushMessage): Promise<number> {
+  const { listPushSubscriptions } = await import("@/lib/store");
+  const subs = await listPushSubscriptions(phone);
+  if (subs.length === 0) return 0;
+  let sent = 0;
+  for (const sub of subs) {
+    const ok = await sendPushNotification(
+      { phone: sub.phone, endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+      message,
+    );
+    if (ok) sent += 1;
+  }
+  return sent;
+}
+
+/**
  * Pre-defined notification templates.
  */
 export const PUSH_TEMPLATES = {
