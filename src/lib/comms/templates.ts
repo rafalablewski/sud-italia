@@ -50,6 +50,17 @@ export interface OrderConfirmedReceipt {
   pointsEarned: number;
   slotDisplay?: string;
   locationName: string;
+  /** Optional referral link to include as a footer CTA. */
+  referralUrl?: string;
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 /** A single rendered message ready for the provider. */
@@ -134,53 +145,129 @@ export function orderRefundedSms(
 
 // --- Templates: paid-order receipt email -------------------------------
 
+/**
+ * Receipt email — plain text + HTML versions. HTML is a single-column
+ * table layout that renders consistently across Gmail / iOS Mail / Outlook
+ * without external CSS. Inline-style only, no external assets, no images
+ * (avoids the "load remote images" prompt that hides the receipt).
+ */
 export function orderConfirmedReceiptEmail(
   p: OrderConfirmedReceipt,
   locale: Locale = DEFAULT_LOCALE,
 ): RenderedEmail {
   const isEnglish = locale === "en";
-  const itemLines = p.itemLines
+  const itemLinesText = p.itemLines
     .map((line) => `  ${line.qty}x ${line.name}  —  ${line.lineTotal} PLN`)
     .join("\n");
 
-  if (isEnglish) {
-    return {
-      subject: `Sud Italia receipt — order ${p.orderId}`,
-      text: `Hi ${p.customerName},
+  const labels = isEnglish
+    ? {
+        subject: `Sud Italia receipt — order ${p.orderId}`,
+        hi: `Hi ${p.customerName},`,
+        thanks: `Thanks for your order at ${p.locationName}!`,
+        orderL: "Order",
+        readyAt: "Ready at",
+        items: "Items",
+        total: "Total",
+        pointsEarned: "Loyalty points earned",
+        footer:
+          "A copy of this receipt is on your account. Reply to this email if anything's off.",
+        sign: "— The Sud Italia team",
+        referralCta: "Share Sud Italia, earn points",
+      }
+    : {
+        subject: `Paragon Sud Italia — zamówienie ${p.orderId}`,
+        hi: `Cześć ${p.customerName},`,
+        thanks: `Dziękujemy za zamówienie w ${p.locationName}!`,
+        orderL: "Zamówienie",
+        readyAt: "Gotowe o",
+        items: "Pozycje",
+        total: "Razem",
+        pointsEarned: "Punkty zdobyte",
+        footer:
+          "Kopia paragonu jest na Twoim koncie. Odpowiedz na tę wiadomość, jeśli coś się nie zgadza.",
+        sign: "— Zespół Sud Italia",
+        referralCta: "Poleć Sud Italia, zdobądź punkty",
+      };
 
-Thanks for your order at ${p.locationName}!
+  const text = `${labels.hi}
 
-Order: ${p.orderId}
-${p.slotDisplay ? `Ready at: ${p.slotDisplay}\n` : ""}
-Items:
-${itemLines}
+${labels.thanks}
 
-Total: ${p.totalDisplay} PLN
-Loyalty points earned: ${p.pointsEarned}
+${labels.orderL}: ${p.orderId}
+${p.slotDisplay ? `${labels.readyAt}: ${p.slotDisplay}\n` : ""}
+${labels.items}:
+${itemLinesText}
 
-A copy of this receipt is on your account. Reply to this email if anything's off.
+${labels.total}: ${p.totalDisplay} PLN
+${labels.pointsEarned}: ${p.pointsEarned}
+${p.referralUrl ? `\n${labels.referralCta}: ${p.referralUrl}\n` : ""}
+${labels.footer}
 
-— The Sud Italia team`,
-    };
-  }
-  return {
-    subject: `Paragon Sud Italia — zamówienie ${p.orderId}`,
-    text: `Cześć ${p.customerName},
+${labels.sign}`;
 
-Dziękujemy za zamówienie w ${p.locationName}!
+  const itemRowsHtml = p.itemLines
+    .map(
+      (line) => `
+      <tr>
+        <td style="padding:8px 0;border-bottom:1px solid #eee;">
+          <span style="display:inline-block;width:28px;color:#666;">${escapeHtml(String(line.qty))}×</span>
+          ${escapeHtml(line.name)}
+        </td>
+        <td style="padding:8px 0;border-bottom:1px solid #eee;text-align:right;font-variant-numeric:tabular-nums;">
+          ${escapeHtml(line.lineTotal)} PLN
+        </td>
+      </tr>`,
+    )
+    .join("");
 
-Zamówienie: ${p.orderId}
-${p.slotDisplay ? `Gotowe o: ${p.slotDisplay}\n` : ""}
-Pozycje:
-${itemLines}
+  const html = `<!DOCTYPE html>
+<html lang="${isEnglish ? "en" : "pl"}">
+<head><meta charset="utf-8"><title>${escapeHtml(labels.subject)}</title></head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f4f4f4;margin:0;padding:24px;color:#222;">
+  <table role="presentation" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;border:1px solid #e5e5e5;">
+    <tr><td style="padding:24px 24px 0;">
+      <h1 style="font-size:18px;margin:0 0 4px;color:#c8102e;">Sud Italia</h1>
+      <p style="margin:0 0 20px;color:#666;font-size:13px;">${escapeHtml(p.locationName)}</p>
+      <p style="margin:0 0 12px;">${escapeHtml(labels.hi)}</p>
+      <p style="margin:0 0 16px;">${escapeHtml(labels.thanks)}</p>
+    </td></tr>
+    <tr><td style="padding:0 24px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;font-size:14px;">
+        <tr><td style="padding:4px 0;color:#666;">${escapeHtml(labels.orderL)}</td><td style="padding:4px 0;text-align:right;">${escapeHtml(p.orderId)}</td></tr>
+        ${p.slotDisplay ? `<tr><td style="padding:4px 0;color:#666;">${escapeHtml(labels.readyAt)}</td><td style="padding:4px 0;text-align:right;">${escapeHtml(p.slotDisplay)}</td></tr>` : ""}
+      </table>
+      <h2 style="font-size:14px;text-transform:uppercase;color:#666;letter-spacing:0.05em;margin:20px 0 4px;">${escapeHtml(labels.items)}</h2>
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;font-size:14px;">
+        ${itemRowsHtml}
+        <tr>
+          <td style="padding:12px 0;font-weight:600;">${escapeHtml(labels.total)}</td>
+          <td style="padding:12px 0;text-align:right;font-weight:600;font-variant-numeric:tabular-nums;">${escapeHtml(p.totalDisplay)} PLN</td>
+        </tr>
+        <tr>
+          <td style="padding:4px 0;color:#666;font-size:13px;">${escapeHtml(labels.pointsEarned)}</td>
+          <td style="padding:4px 0;text-align:right;color:#666;font-size:13px;">+${p.pointsEarned}</td>
+        </tr>
+      </table>
+    </td></tr>
+    ${
+      p.referralUrl
+        ? `<tr><td style="padding:20px 24px;">
+            <a href="${escapeHtml(p.referralUrl)}" style="display:inline-block;background:#c8102e;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none;font-weight:500;">
+              ${escapeHtml(labels.referralCta)}
+            </a>
+          </td></tr>`
+        : ""
+    }
+    <tr><td style="padding:20px 24px 24px;color:#666;font-size:13px;border-top:1px solid #eee;">
+      <p style="margin:0 0 12px;">${escapeHtml(labels.footer)}</p>
+      <p style="margin:0;">${escapeHtml(labels.sign)}</p>
+    </td></tr>
+  </table>
+</body>
+</html>`;
 
-Razem: ${p.totalDisplay} PLN
-Punkty zdobyte: ${p.pointsEarned}
-
-Kopia paragonu jest na Twoim koncie. Odpowiedz na tę wiadomość, jeśli coś się nie zgadza.
-
-— Zespół Sud Italia`,
-  };
+  return { subject: labels.subject, text, html };
 }
 
 // --- Templates: feedback request after delivery -------------------------

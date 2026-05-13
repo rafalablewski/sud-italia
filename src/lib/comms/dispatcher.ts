@@ -149,6 +149,13 @@ export async function commsDispatcher(event: OutboxRow): Promise<void> {
       const ctx = await loadContext(payload);
       if (!ctx) return;
       if (!ctx.customer.email || ctx.customer.emailOptout) return;
+      // Referral CTA in the receipt footer. Uses NEXT_PUBLIC_BASE_URL +
+      // the customer's phone as the unique handle — the existing referral
+      // landing page already accepts ?ref=<phone>.
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, "") || "";
+      const referralUrl = baseUrl
+        ? `${baseUrl}/?ref=${encodeURIComponent(ctx.customer.phone)}`
+        : undefined;
       const email = orderConfirmedReceiptEmail({
         orderId: ctx.order.id,
         customerName: ctx.customer.name || ctx.order.customerName || "Friend",
@@ -162,11 +169,13 @@ export async function commsDispatcher(event: OutboxRow): Promise<void> {
         pointsEarned: Math.floor(ctx.order.totalAmount / 100),
         slotDisplay: ctx.order.slotTime,
         locationName: locationNameFor(ctx.order.locationSlug),
+        referralUrl,
       });
       await getEmailProvider().send({
         to: ctx.customer.email,
         subject: email.subject,
         text: email.text,
+        html: email.html,
       });
       return;
     }
