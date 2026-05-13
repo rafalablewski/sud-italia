@@ -43,6 +43,13 @@
       "when": 1778659568850,
       "tag": "0005_mute_frog_thor",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1778659666608,
+      "tag": "0006_common_archangel",
+      "breakpoints": true
     }
   ]
 }

@@ -349,3 +349,43 @@ export const stockMovements = pgTable(
     ),
   ],
 );
+
+// --- Phase 1: audit log (m1_6) -----------------------------------------
+
+/**
+ * Persistent operator audit log. Replaces audit-log.json which trims to
+ * the last 1000 entries — inspectors, GDPR DSARs, fraud investigations,
+ * and Phase 4's AI agent (which writes a row per tool call) all want the
+ * full history. No trim here; rows are small (~200 bytes each) and a
+ * year of operator activity fits comfortably in any tier.
+ *
+ * Indices match the actual query shapes: chronological listings,
+ * per-entity lookups, per-actor activity for fraud, per-location for
+ * franchisee scoping.
+ */
+export const auditLog = pgTable(
+  "audit_log",
+  {
+    id: text("id").primaryKey(),
+    actor: text("actor").notNull(),
+    action: text("action").notNull(),
+    entityType: text("entity_type"),
+    entityId: text("entity_id"),
+    locationSlug: text("location_slug"),
+    before: jsonb("before"),
+    after: jsonb("after"),
+    ip: text("ip"),
+    userAgent: text("user_agent"),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    index("audit_log_occurred_at_idx").on(table.occurredAt),
+    index("audit_log_entity_idx").on(table.entityType, table.entityId),
+    index("audit_log_location_occurred_idx").on(
+      table.locationSlug,
+      table.occurredAt,
+    ),
+    index("audit_log_actor_idx").on(table.actor),
+    index("audit_log_action_idx").on(table.action),
+  ],
+);

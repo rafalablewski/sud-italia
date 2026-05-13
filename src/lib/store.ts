@@ -14,7 +14,7 @@ import { logger } from "@/lib/logger";
 import { withDistributedLock } from "@/lib/locks";
 import { and, desc, eq, inArray, lt, sql as drizzleSql } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { customers as customersTable, ingredientStock as ingredientStockTable, ingredients as ingredientsTable, orderItems as orderItemsTable, orders as ordersTable, recipes as recipesTable, slots as slotsTable, stockMovements as stockMovementsTable } from "@/db/schema";
+import { auditLog as auditLogTable, customers as customersTable, ingredientStock as ingredientStockTable, ingredients as ingredientsTable, orderItems as orderItemsTable, orders as ordersTable, recipes as recipesTable, slots as slotsTable, stockMovements as stockMovementsTable } from "@/db/schema";
 import { bumpLazyBackfillHit, ensureTable } from "@/db/migrate";
 
 // --- Storage abstraction: Neon Postgres when DATABASE_URL is set, filesystem fallback for local dev ---
@@ -3823,18 +3823,121 @@ export async function saveExpansionChecklist(input: Omit<ExpansionChecklist, "up
   });
 }
 
-// --- Audit log ---
+// --- Audit log (m1_6: dual-write, no trim) ------------------------------
+
+const AUDIT_LOG_DDL = [
+  `CREATE TABLE IF NOT EXISTS audit_log (
+    id text PRIMARY KEY,
+    actor text NOT NULL,
+    action text NOT NULL,
+    entity_type text,
+    entity_id text,
+    location_slug text,
+    "before" jsonb,
+    "after" jsonb,
+    ip text,
+    user_agent text,
+    occurred_at timestamptz NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS audit_log_occurred_at_idx
+    ON audit_log (occurred_at)`,
+  `CREATE INDEX IF NOT EXISTS audit_log_entity_idx
+    ON audit_log (entity_type, entity_id)`,
+  `CREATE INDEX IF NOT EXISTS audit_log_location_occurred_idx
+    ON audit_log (location_slug, occurred_at)`,
+  `CREATE INDEX IF NOT EXISTS audit_log_actor_idx ON audit_log (actor)`,
+  `CREATE INDEX IF NOT EXISTS audit_log_action_idx ON audit_log (action)`,
+];
+
+async function ensureAuditLogTable(): Promise<void> {
+  await ensureTable("audit_log", AUDIT_LOG_DDL);
+}
+
+function rowToAuditEntry(row: typeof auditLogTable.$inferSelect): AuditLogEntry {
+  return {
+    id: row.id,
+    actor: row.actor,
+    action: row.action,
+    entityType: row.entityType ?? undefined,
+    entityId: row.entityId ?? undefined,
+    before: row.before ?? undefined,
+    after: row.after ?? undefined,
+    occurredAt: row.occurredAt.toISOString(),
+  };
+}
+
+async function dualWriteAuditEntry(entry: AuditLogEntry): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureAuditLogTable();
+    await db
+      .insert(auditLogTable)
+      .values({
+        id: entry.id,
+        actor: entry.actor,
+        action: entry.action,
+        entityType: entry.entityType ?? null,
+        entityId: entry.entityId ?? null,
+        // The kv_store AuditLogEntry doesn't carry location/ip/UA; Phase 2's
+        // request-context (m1_15) plumbing will start filling these in.
+        locationSlug: null,
+        before: entry.before ?? null,
+        after: entry.after ?? null,
+        ip: null,
+        userAgent: null,
+        occurredAt: new Date(entry.occurredAt),
+      })
+      .onConflictDoNothing();
+  } catch (err) {
+    logger.warn(
+      "dualWriteAuditEntry failed (kv copy remains)",
+      { id: entry.id, layer: "store.audit_log" },
+      err,
+    );
+  }
+}
 
 export async function getAuditLog(filters?: {
   action?: string;
   entityType?: string;
   limit?: number;
 }): Promise<AuditLogEntry[]> {
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureAuditLogTable();
+      const whereClauses = [];
+      if (filters?.action) whereClauses.push(eq(auditLogTable.action, filters.action));
+      if (filters?.entityType)
+        whereClauses.push(eq(auditLogTable.entityType, filters.entityType));
+      const baseQuery = db
+        .select()
+        .from(auditLogTable)
+        .orderBy(desc(auditLogTable.occurredAt));
+      const filteredQuery =
+        whereClauses.length > 0 ? baseQuery.where(and(...whereClauses)) : baseQuery;
+      const rows = filters?.limit
+        ? await filteredQuery.limit(filters.limit)
+        : await filteredQuery.limit(500); // Hard ceiling for the read path
+      if (rows.length > 0) return rows.map(rowToAuditEntry);
+    } catch (err) {
+      logger.warn(
+        "getAuditLog DB read failed; falling back to kv_store",
+        { layer: "store.audit_log" },
+        err,
+      );
+    }
+  }
   const all = await readJSON<AuditLogEntry[]>("audit-log.json", []);
   let list = all.slice().sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
   if (filters?.action) list = list.filter((e) => e.action === filters.action);
   if (filters?.entityType) list = list.filter((e) => e.entityType === filters.entityType);
   if (filters?.limit) list = list.slice(0, filters.limit);
+  if (list.length > 0) {
+    bumpLazyBackfillHit("audit_log");
+    void Promise.all(list.map((e) => dualWriteAuditEntry(e)));
+  }
   return list;
 }
 
@@ -3877,29 +3980,34 @@ export async function deleteAdminUser(id: string): Promise<boolean> {
   });
 }
 
+/**
+ * Keep the kv_store mirror small — old reads still work against it, but
+ * the normalized audit_log table has unlimited retention via m1_6.
+ */
 const AUDIT_LOG_MAX_ENTRIES = 1000;
 
 export async function appendAuditLog(input: Omit<AuditLogEntry, "id" | "occurredAt"> & { occurredAt?: string }): Promise<AuditLogEntry> {
-  return withLock("audit-log.json", async () => {
+  const entry: AuditLogEntry = {
+    id: `al-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+    actor: input.actor,
+    action: input.action,
+    entityType: input.entityType,
+    entityId: input.entityId,
+    before: input.before,
+    after: input.after,
+    occurredAt: input.occurredAt ?? new Date().toISOString(),
+  };
+  await withLock("audit-log.json", async () => {
     const list = await readJSON<AuditLogEntry[]>("audit-log.json", []);
-    const entry: AuditLogEntry = {
-      id: `al-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
-      actor: input.actor,
-      action: input.action,
-      entityType: input.entityType,
-      entityId: input.entityId,
-      before: input.before,
-      after: input.after,
-      occurredAt: input.occurredAt ?? new Date().toISOString(),
-    };
     list.push(entry);
-    // Trim to last N to keep file small
     const trimmed = list.length > AUDIT_LOG_MAX_ENTRIES
       ? list.slice(list.length - AUDIT_LOG_MAX_ENTRIES)
       : list;
     await writeJSON("audit-log.json", trimmed);
-    return entry;
   });
+  // Normalized audit_log has no trim — keep forever.
+  await dualWriteAuditEntry(entry);
+  return entry;
 }
 
 // --- Compliance calendar -----------------------------------------------------
