@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/nextjs";
+import { getRequestContext } from "@/lib/request-context";
 
 type LogLevel = "debug" | "info" | "warn" | "error";
 
@@ -16,10 +17,22 @@ interface LogContext {
  * `extra`. In development the JSON is pretty-printed so it's readable.
  */
 function emit(level: LogLevel, message: string, context?: LogContext, error?: unknown): void {
+  // Pull the active request context (m1_15) into every line. Caller-supplied
+  // fields override request-context fields so an explicit `userId: "system"`
+  // in a cron's logger.info() doesn't get overwritten by an enclosing
+  // owner session.
+  const reqCtx = getRequestContext();
   const entry = {
     level,
     msg: message,
     time: new Date().toISOString(),
+    ...(reqCtx ? {
+      requestId: reqCtx.requestId,
+      ...(reqCtx.userId ? { userId: reqCtx.userId } : {}),
+      ...(reqCtx.locationSlug ? { locationSlug: reqCtx.locationSlug } : {}),
+      ...(reqCtx.path ? { path: reqCtx.path } : {}),
+      ...(reqCtx.method ? { method: reqCtx.method } : {}),
+    } : {}),
     ...(context || {}),
     ...(error instanceof Error
       ? { error: { name: error.name, message: error.message, stack: error.stack } }

@@ -7,6 +7,7 @@ import {
   ROLE_RANK,
 } from "@/lib/admin-auth";
 import { logger } from "@/lib/logger";
+import { deriveRequestId, runWithRequestContext } from "@/lib/request-context";
 
 /**
  * Drop-in wrapper for /api/admin/* route handlers. Replaces the
@@ -149,28 +150,33 @@ export function withAdmin<RouteCtx = Record<string, never>>(
       }
     }
 
-    try {
-      return await handler(req, ctx, { user, locationSlug });
-    } catch (err) {
-      // The handler itself is responsible for catching its own expected
-      // errors; this is the last-ditch net so a thrown error doesn't leak a
-      // stack trace to the client. Mirrors the existing try/catch idiom in
-      // most of the admin routes.
-      logger.error(
-        "withAdmin handler threw",
-        {
-          route: req.nextUrl.pathname,
-          method: req.method,
-          userId: user.id,
-          locationSlug,
-        },
-        err,
-      );
-      return NextResponse.json(
-        { error: "Internal server error" },
-        { status: 500 },
-      );
-    }
+    // Set the per-request context so every log line + audit entry inside
+    // the handler gets requestId / userId / locationSlug for free.
+    const requestId = deriveRequestId(req.headers.get("x-request-id"));
+    return runWithRequestContext(
+      {
+        requestId,
+        userId: user.id,
+        locationSlug,
+        path: req.nextUrl.pathname,
+        method: req.method,
+      },
+      async () => {
+        try {
+          return await handler(req, ctx, { user, locationSlug });
+        } catch (err) {
+          // The handler itself is responsible for catching its own
+          // expected errors; this is the last-ditch net so a thrown error
+          // doesn't leak a stack trace to the client. Mirrors the
+          // existing try/catch idiom in most of the admin routes.
+          logger.error("withAdmin handler threw", { layer: "withAdmin" }, err);
+          return NextResponse.json(
+            { error: "Internal server error" },
+            { status: 500 },
+          );
+        }
+      },
+    );
   };
 }
 
