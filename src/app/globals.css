@@ -1997,6 +1997,39 @@ html { scroll-behavior: smooth; }
   .v2-kds-board { grid-template-columns: 1fr; }
 }
 
+/**
+ * Mobile KDS (m2_33): phone / small tablet running the kitchen board.
+ * Single-column stack, glove-friendly minimum 44 px touch targets per
+ * Apple HIG, denser stat row, full-bleed columns. Targeted at < 640 px
+ * because that's where the v2-page chrome starts pinching the board.
+ */
+@media (max-width: 640px) {
+  .v2-kds-page { padding: 8px; }
+  .v2-kds-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .v2-kds-stat { gap: 6px; }
+  .v2-kds-stat-value { font-size: var(--text-lg); }
+  .v2-kds-col { min-height: 0; }
+  .v2-kds-col-body {
+    /* Bigger viewport on phones — drop the desktop's max-height. */
+    max-height: none;
+  }
+  .v2-ticket {
+    padding: 14px;
+    gap: 10px;
+  }
+  .v2-ticket button,
+  .v2-ticket [role="button"] {
+    /* Apple HIG minimum touch target for fingers + restaurant gloves. */
+    min-height: 44px;
+    min-width: 44px;
+  }
+  /* Hide the page subtitle on phones — saves a row of vertical space. */
+  .v2-kds-page .v2-page-subtitle { display: none; }
+}
+
 .v2-kds-col {
   background: var(--surface-2);
   border: 1px solid var(--border);
