@@ -5152,9 +5152,44 @@ export async function resolveOrderStationFanout(
 }
 
 /**
- * Fire KDS tickets for an order. Called by createOrder (m2_2). Generates
- * one ticket per station the order touches. Idempotent on (order_id,
- * station_id) — re-running on a retry doesn't double-create.
+ * Computes when this order is promised to be ready (m2_5). The KDS uses
+ * this for the countdown and red+audible "overdue" indicator.
+ *
+ * Priority:
+ *   1. Order has a customer-picked slot → use slot date+time. That's
+ *      what the customer is expecting and what we charged them against.
+ *   2. Else fire-time + max(prep_time_minutes across items) + 3 min buffer.
+ *      The 3 min covers expo handoff + any plating that's not in the
+ *      per-item prep_time.
+ *   3. Hard floor of 10 minutes from fire time so a fast-prep order
+ *      doesn't promise the customer something we can't deliver.
+ */
+function computePromisedReadyAt(order: Order, firedAt: Date): Date {
+  if (order.slotDate && order.slotTime) {
+    const slotInstant = new Date(`${order.slotDate}T${order.slotTime}:00.000+02:00`);
+    if (Number.isFinite(slotInstant.getTime())) return slotInstant;
+  }
+  const maxPrep = Math.max(
+    0,
+    ...order.items.map((i) => i.menuItem.prepTimeMinutes ?? 0),
+  );
+  const minutes = Math.max(10, maxPrep + 3);
+  return new Date(firedAt.getTime() + minutes * 60 * 1000);
+}
+/**
+ * Fire KDS tickets for an order (m2_2 + m2_4 + m2_5). Generates one ticket
+ * per station the order touches. Idempotent on (order_id, station_id) so
+ * retried createOrder calls don't double-create.
+ *
+ * m2_4 fire-together: each ticket's payload carries `fireAt` — when the
+ * cook should actually START prep. The longest-prep ticket fires
+ * immediately; faster items get a stagger so they all finish at
+ * promised_ready_at. The KDS UI grays out tickets until their `fireAt`
+ * arrives.
+ *
+ * m2_5 SLA: promised_ready_at is computed once per order
+ * (computePromisedReadyAt) and set on every ticket. The KDS countdown
+ * + red+audible overdue indicator read this column.
  */
 export async function fireKdsTickets(order: Order): Promise<KdsTicket[]> {
   const db = getDb();
@@ -5164,7 +5199,23 @@ export async function fireKdsTickets(order: Order): Promise<KdsTicket[]> {
     const fanout = await resolveOrderStationFanout(order);
     const tickets: KdsTicket[] = [];
     const now = new Date();
+    const promisedReadyAt = computePromisedReadyAt(order, now);
+    // m2_4: stagger each ticket's start so the longest-prep finishes
+    // alongside the others. Per-ticket "fireAt" is computed from the
+    // station's max item prep time vs the longest in the whole order.
+    const orderMaxPrep = Math.max(
+      0,
+      ...order.items.map((i) => i.menuItem.prepTimeMinutes ?? 0),
+    );
     for (const [stationId, items] of fanout) {
+      const stationMaxPrep = Math.max(
+        0,
+        ...items.map((i) => i.menuItem.prepTimeMinutes ?? 0),
+      );
+      // Tickets with shorter prep get delayed by the difference so all
+      // finish ~together. 0 for the slowest station.
+      const stagger = Math.max(0, orderMaxPrep - stationMaxPrep);
+      const fireAt = new Date(now.getTime() + stagger * 60 * 1000);
       const ticketId = `tkt-${order.id}-${stationId || "default"}`;
       const payload = {
         items: items.map((i) => ({
@@ -5172,11 +5223,9 @@ export async function fireKdsTickets(order: Order): Promise<KdsTicket[]> {
           name: i.menuItem.name,
           quantity: i.quantity,
           notes: i.notes,
-          // m2_8: surface allergens on the ticket so the cook can verify
-          // before firing. MenuItem.allergens comes from the seed data
-          // (krakow.ts/warszawa.ts) which is already populated.
           allergens: i.menuItem.allergens,
         })),
+        fireAt: fireAt.toISOString(),
       };
       await db
         .insert(kdsTicketsTable)
@@ -5187,6 +5236,7 @@ export async function fireKdsTickets(order: Order): Promise<KdsTicket[]> {
           locationSlug: order.locationSlug,
           status: "fired",
           payload,
+          promisedReadyAt,
           firedAt: now,
         })
         .onConflictDoNothing();
@@ -5198,8 +5248,12 @@ export async function fireKdsTickets(order: Order): Promise<KdsTicket[]> {
         status: "fired",
         items: payload.items,
         firedAt: now.toISOString(),
+        promisedReadyAt: promisedReadyAt.toISOString(),
       });
     }
+    // Mirror promised_ready_at onto the order itself for receipts +
+    // post-checkout "your order at 13:15" UI.
+    await updateOrder(order.id, { estimatedReadyAt: promisedReadyAt.toISOString() });
     return tickets;
   } catch (err) {
     logger.warn("fireKdsTickets failed", { orderId: order.id, layer: "store.kds" }, err);
