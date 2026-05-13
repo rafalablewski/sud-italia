@@ -585,3 +585,85 @@ export const outboxEvents = pgTable(
     index("outbox_entity_idx").on(table.entityType, table.entityId),
   ],
 );
+
+// --- Phase 2: KDS v2 stations + tickets (m2_1, m2_2, m2_3) --------------
+
+/**
+ * Kitchen stations per location. A station is a physical work area —
+ * pizza oven, fryer, cold prep, drinks, expo. Items route to stations
+ * via menu_item_station; tickets fan out from an order onto each
+ * station's queue.
+ */
+export const stations = pgTable(
+  "stations",
+  {
+    id: text("id").primaryKey(),
+    locationSlug: text("location_slug").notNull(),
+    name: text("name").notNull(),
+    /** Display ordinal for the expo screen. */
+    displayOrder: integer("display_order").notNull().default(0),
+    /** When false, items route around this station (e.g. seasonally closed). */
+    active: text("active").notNull().default("true"),
+  },
+  (table) => [
+    index("stations_location_idx").on(table.locationSlug),
+  ],
+);
+
+/**
+ * menu_item_station maps menu items to one or more stations.
+ * Composite PK so duplicates are impossible. menu_item_id is a free
+ * string (not FK) because menu items live in code (krakow.ts/warszawa.ts)
+ * — see CLAUDE.md.
+ */
+export const menuItemStation = pgTable(
+  "menu_item_station",
+  {
+    menuItemId: text("menu_item_id").notNull(),
+    stationId: text("station_id").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.menuItemId, table.stationId] }),
+    index("menu_item_station_station_idx").on(table.stationId),
+  ],
+);
+
+/**
+ * KDS tickets — one row per (order, station). The same order can have
+ * up to N tickets, one per station that needs to make something. Items
+ * for that station live in `payload.items` until Phase 2.5 carves out a
+ * separate ticket_items table.
+ *
+ * Lifecycle:
+ *   fired (started_at set on bump)
+ *   ready (ready_at set on bump from station to expo)
+ *   bumped (bumped_at set on expo bump = order ready overall)
+ *   recalled (resurfaced after accidental bump)
+ */
+export const kdsTickets = pgTable(
+  "kds_tickets",
+  {
+    id: text("id").primaryKey(),
+    orderId: text("order_id").notNull(),
+    stationId: text("station_id").notNull(),
+    locationSlug: text("location_slug").notNull(),
+    status: text("status").notNull().default("fired"),
+    payload: jsonb("payload").notNull().default({}),
+    promisedReadyAt: timestamp("promised_ready_at", { withTimezone: true }),
+    firedAt: timestamp("fired_at", { withTimezone: true }).notNull().defaultNow(),
+    readyAt: timestamp("ready_at", { withTimezone: true }),
+    bumpedAt: timestamp("bumped_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("kds_tickets_order_idx").on(table.orderId),
+    index("kds_tickets_station_status_idx").on(table.stationId, table.status),
+    index("kds_tickets_location_status_fired_idx").on(
+      table.locationSlug,
+      table.status,
+      table.firedAt,
+    ),
+  ],
+);

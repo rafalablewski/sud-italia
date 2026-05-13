@@ -15,9 +15,9 @@ import { withDistributedLock } from "@/lib/locks";
 import { emitOrderEvent } from "@/lib/order-events";
 import { appendOutboxEvent } from "@/lib/outbox";
 import { incrCounter } from "@/lib/metrics";
-import { and, desc, eq, inArray, lt, sql as drizzleSql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, lt, sql as drizzleSql } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { auditLog as auditLogTable, customerNotes as customerNotesTable, customers as customersTable, feedback as feedbackTable, ingredientStock as ingredientStockTable, ingredients as ingredientsTable, loyaltyMembers as loyaltyMembersTable, orderItems as orderItemsTable, orders as ordersTable, pointAdjustments as pointAdjustmentsTable, recipes as recipesTable, shifts as shiftsTable, slots as slotsTable, staff as staffTable, stockMovements as stockMovementsTable, timePunches as timePunchesTable } from "@/db/schema";
+import { auditLog as auditLogTable, customerNotes as customerNotesTable, customers as customersTable, feedback as feedbackTable, ingredientStock as ingredientStockTable, ingredients as ingredientsTable, kdsTickets as kdsTicketsTable, loyaltyMembers as loyaltyMembersTable, menuItemStation as menuItemStationTable, orderItems as orderItemsTable, orders as ordersTable, pointAdjustments as pointAdjustmentsTable, recipes as recipesTable, shifts as shiftsTable, slots as slotsTable, staff as staffTable, stations as stationsTable, stockMovements as stockMovementsTable, timePunches as timePunchesTable } from "@/db/schema";
 import { gte, lte } from "drizzle-orm";
 import { bumpLazyBackfillHit, ensureTable } from "@/db/migrate";
 
@@ -1017,6 +1017,9 @@ export async function createOrder(order: Order): Promise<Order> {
   void recomputeCustomerRollup(order.customerPhone);
   emitOrderEvent({ kind: "created", orderId: order.id, locationSlug: order.locationSlug });
   incrCounter("orders.placed");
+  // Fire KDS tickets (m2_2). Idempotent on (order_id, station_id) so
+  // retried createOrder calls don't double-create.
+  void fireKdsTickets(order);
   // Outbox: queue side effects (Phase 2 SMS/email/aggregator).
   // dedupeKey is just "placed" so retried createOrder calls converge on
   // one row rather than creating multiple identical events.
@@ -4900,4 +4903,391 @@ export async function deleteComplianceItem(id: string): Promise<boolean> {
     await writeJSON("compliance.json", filtered);
     return true;
   });
+}
+
+// --- KDS v2 stations + tickets (m2_1, m2_2, m2_3) -----------------------
+
+const STATIONS_DDL = [
+  `CREATE TABLE IF NOT EXISTS stations (
+    id text PRIMARY KEY,
+    location_slug text NOT NULL,
+    name text NOT NULL,
+    display_order integer NOT NULL DEFAULT 0,
+    active text NOT NULL DEFAULT 'true'
+  )`,
+  `CREATE INDEX IF NOT EXISTS stations_location_idx ON stations (location_slug)`,
+];
+const MENU_ITEM_STATION_DDL = [
+  `CREATE TABLE IF NOT EXISTS menu_item_station (
+    menu_item_id text NOT NULL,
+    station_id text NOT NULL,
+    PRIMARY KEY (menu_item_id, station_id)
+  )`,
+  `CREATE INDEX IF NOT EXISTS menu_item_station_station_idx
+    ON menu_item_station (station_id)`,
+];
+const KDS_TICKETS_DDL = [
+  `CREATE TABLE IF NOT EXISTS kds_tickets (
+    id text PRIMARY KEY,
+    order_id text NOT NULL,
+    station_id text NOT NULL,
+    location_slug text NOT NULL,
+    status text NOT NULL DEFAULT 'fired',
+    payload jsonb NOT NULL DEFAULT '{}'::jsonb,
+    promised_ready_at timestamptz,
+    fired_at timestamptz NOT NULL DEFAULT now(),
+    ready_at timestamptz,
+    bumped_at timestamptz,
+    created_at timestamptz NOT NULL DEFAULT now()
+  )`,
+  `CREATE INDEX IF NOT EXISTS kds_tickets_order_idx
+    ON kds_tickets (order_id)`,
+  `CREATE INDEX IF NOT EXISTS kds_tickets_station_status_idx
+    ON kds_tickets (station_id, status)`,
+  `CREATE INDEX IF NOT EXISTS kds_tickets_location_status_fired_idx
+    ON kds_tickets (location_slug, status, fired_at)`,
+];
+
+async function ensureKdsTables(): Promise<void> {
+  await ensureTable("stations", STATIONS_DDL);
+  await ensureTable("menu_item_station", MENU_ITEM_STATION_DDL);
+  await ensureTable("kds_tickets", KDS_TICKETS_DDL);
+}
+
+export interface Station {
+  id: string;
+  locationSlug: string;
+  name: string;
+  displayOrder: number;
+  active: boolean;
+}
+
+export interface KdsTicket {
+  id: string;
+  orderId: string;
+  stationId: string;
+  locationSlug: string;
+  status: "fired" | "ready" | "bumped" | "recalled";
+  items: { menuItemId: string; name: string; quantity: number; notes?: string }[];
+  promisedReadyAt?: string;
+  firedAt: string;
+  readyAt?: string;
+  bumpedAt?: string;
+}
+
+export async function getStations(locationSlug?: string): Promise<Station[]> {
+  const db = getDb();
+  if (!db) return [];
+  try {
+    await ensureKdsTables();
+    const rows = locationSlug
+      ? await db
+          .select()
+          .from(stationsTable)
+          .where(eq(stationsTable.locationSlug, locationSlug))
+      : await db.select().from(stationsTable);
+    return rows.map((row) => ({
+      id: row.id,
+      locationSlug: row.locationSlug,
+      name: row.name,
+      displayOrder: row.displayOrder,
+      active: row.active === "true",
+    }));
+  } catch (err) {
+    logger.warn("getStations DB read failed", { layer: "store.kds" }, err);
+    return [];
+  }
+}
+
+export async function saveStation(input: {
+  id?: string;
+  locationSlug: string;
+  name: string;
+  displayOrder?: number;
+  active?: boolean;
+}): Promise<Station | null> {
+  const db = getDb();
+  if (!db) return null;
+  try {
+    await ensureKdsTables();
+    const id = input.id || `stn-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+    const values = {
+      id,
+      locationSlug: input.locationSlug,
+      name: input.name,
+      displayOrder: input.displayOrder ?? 0,
+      active: input.active === false ? "false" : "true",
+    };
+    await db
+      .insert(stationsTable)
+      .values(values)
+      .onConflictDoUpdate({ target: stationsTable.id, set: values });
+    return {
+      id,
+      locationSlug: input.locationSlug,
+      name: input.name,
+      displayOrder: input.displayOrder ?? 0,
+      active: input.active !== false,
+    };
+  } catch (err) {
+    logger.error("saveStation failed", { layer: "store.kds" }, err);
+    return null;
+  }
+}
+
+export async function deleteStation(id: string): Promise<boolean> {
+  const db = getDb();
+  if (!db) return false;
+  try {
+    await ensureKdsTables();
+    await db.delete(stationsTable).where(eq(stationsTable.id, id));
+    await db.delete(menuItemStationTable).where(eq(menuItemStationTable.stationId, id));
+    return true;
+  } catch (err) {
+    logger.warn("deleteStation failed", { id, layer: "store.kds" }, err);
+    return false;
+  }
+}
+
+/**
+ * Set or replace the station mapping for a menu item. Pass an empty array
+ * to clear all mappings (the item then doesn't route to any station and
+ * the kitchen sees it on a generic "ungrouped" ticket — m2_2 behaviour).
+ */
+export async function setMenuItemStations(
+  menuItemId: string,
+  stationIds: string[],
+): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureKdsTables();
+    await db
+      .delete(menuItemStationTable)
+      .where(eq(menuItemStationTable.menuItemId, menuItemId));
+    if (stationIds.length > 0) {
+      await db.insert(menuItemStationTable).values(
+        stationIds.map((sid) => ({ menuItemId, stationId: sid })),
+      );
+    }
+  } catch (err) {
+    logger.warn("setMenuItemStations failed", { menuItemId, layer: "store.kds" }, err);
+  }
+}
+
+/**
+ * Look up the stations an order should fan out to. Returns a map of
+ * stationId → the order's items that station should make. Items with no
+ * mapping fall into an "ungrouped" bucket keyed by the empty string —
+ * kitchens see those on a default ticket so nothing falls through the
+ * cracks.
+ */
+export async function resolveOrderStationFanout(
+  order: Order,
+): Promise<Map<string, Order["items"]>> {
+  const db = getDb();
+  const fanout = new Map<string, Order["items"]>();
+  if (!db) {
+    fanout.set("", order.items);
+    return fanout;
+  }
+  try {
+    await ensureKdsTables();
+    const itemIds = order.items.map((i) => i.menuItem.id);
+    if (itemIds.length === 0) return fanout;
+    const mappings = await db
+      .select()
+      .from(menuItemStationTable)
+      .where(inArray(menuItemStationTable.menuItemId, itemIds));
+    const byItem = new Map<string, string[]>();
+    for (const m of mappings) {
+      const list = byItem.get(m.menuItemId) ?? [];
+      list.push(m.stationId);
+      byItem.set(m.menuItemId, list);
+    }
+    for (const item of order.items) {
+      const stations = byItem.get(item.menuItem.id) ?? [];
+      if (stations.length === 0) {
+        const ungrouped = fanout.get("") ?? [];
+        ungrouped.push(item);
+        fanout.set("", ungrouped);
+        continue;
+      }
+      for (const sid of stations) {
+        const list = fanout.get(sid) ?? [];
+        list.push(item);
+        fanout.set(sid, list);
+      }
+    }
+  } catch (err) {
+    logger.warn("resolveOrderStationFanout failed", { orderId: order.id, layer: "store.kds" }, err);
+    // Fall back to one ungrouped ticket so the kitchen at least sees the order.
+    fanout.set("", order.items);
+  }
+  return fanout;
+}
+
+/**
+ * Fire KDS tickets for an order. Called by createOrder (m2_2). Generates
+ * one ticket per station the order touches. Idempotent on (order_id,
+ * station_id) — re-running on a retry doesn't double-create.
+ */
+export async function fireKdsTickets(order: Order): Promise<KdsTicket[]> {
+  const db = getDb();
+  if (!db) return [];
+  try {
+    await ensureKdsTables();
+    const fanout = await resolveOrderStationFanout(order);
+    const tickets: KdsTicket[] = [];
+    const now = new Date();
+    for (const [stationId, items] of fanout) {
+      const ticketId = `tkt-${order.id}-${stationId || "default"}`;
+      const payload = {
+        items: items.map((i) => ({
+          menuItemId: i.menuItem.id,
+          name: i.menuItem.name,
+          quantity: i.quantity,
+          notes: i.notes,
+        })),
+      };
+      await db
+        .insert(kdsTicketsTable)
+        .values({
+          id: ticketId,
+          orderId: order.id,
+          stationId: stationId || "ungrouped",
+          locationSlug: order.locationSlug,
+          status: "fired",
+          payload,
+          firedAt: now,
+        })
+        .onConflictDoNothing();
+      tickets.push({
+        id: ticketId,
+        orderId: order.id,
+        stationId: stationId || "ungrouped",
+        locationSlug: order.locationSlug,
+        status: "fired",
+        items: payload.items,
+        firedAt: now.toISOString(),
+      });
+    }
+    return tickets;
+  } catch (err) {
+    logger.warn("fireKdsTickets failed", { orderId: order.id, layer: "store.kds" }, err);
+    return [];
+  }
+}
+
+/** Mark a ticket as ready (m2_3). Sets ready_at; returns the updated ticket. */
+export async function markTicketReady(ticketId: string): Promise<KdsTicket | null> {
+  const db = getDb();
+  if (!db) return null;
+  try {
+    await ensureKdsTables();
+    const updated = await db
+      .update(kdsTicketsTable)
+      .set({ status: "ready", readyAt: new Date() })
+      .where(eq(kdsTicketsTable.id, ticketId))
+      .returning();
+    if (updated.length === 0) return null;
+    const r = updated[0];
+    return {
+      id: r.id,
+      orderId: r.orderId,
+      stationId: r.stationId,
+      locationSlug: r.locationSlug,
+      status: r.status as KdsTicket["status"],
+      items: (r.payload as { items: KdsTicket["items"] }).items ?? [],
+      promisedReadyAt: r.promisedReadyAt ? r.promisedReadyAt.toISOString() : undefined,
+      firedAt: r.firedAt.toISOString(),
+      readyAt: r.readyAt ? r.readyAt.toISOString() : undefined,
+      bumpedAt: r.bumpedAt ? r.bumpedAt.toISOString() : undefined,
+    };
+  } catch (err) {
+    logger.warn("markTicketReady failed", { ticketId, layer: "store.kds" }, err);
+    return null;
+  }
+}
+
+/** Bump (complete) a ticket from the expo screen. Marks the order ready if
+ *  all its tickets are bumped. */
+export async function bumpTicket(ticketId: string): Promise<KdsTicket | null> {
+  const db = getDb();
+  if (!db) return null;
+  try {
+    await ensureKdsTables();
+    const updated = await db
+      .update(kdsTicketsTable)
+      .set({ status: "bumped", bumpedAt: new Date() })
+      .where(eq(kdsTicketsTable.id, ticketId))
+      .returning();
+    if (updated.length === 0) return null;
+    const r = updated[0];
+    // If every ticket for this order is bumped, mark the order ready so
+    // the customer gets the "order ready" SMS.
+    const remaining = await db
+      .select({ id: kdsTicketsTable.id })
+      .from(kdsTicketsTable)
+      .where(
+        and(
+          eq(kdsTicketsTable.orderId, r.orderId),
+          eq(kdsTicketsTable.status, "fired"),
+        ),
+      )
+      .limit(1);
+    if (remaining.length === 0) {
+      await updateOrderStatus(r.orderId, "ready");
+    }
+    return {
+      id: r.id,
+      orderId: r.orderId,
+      stationId: r.stationId,
+      locationSlug: r.locationSlug,
+      status: r.status as KdsTicket["status"],
+      items: (r.payload as { items: KdsTicket["items"] }).items ?? [],
+      firedAt: r.firedAt.toISOString(),
+      readyAt: r.readyAt ? r.readyAt.toISOString() : undefined,
+      bumpedAt: r.bumpedAt ? r.bumpedAt.toISOString() : undefined,
+    };
+  } catch (err) {
+    logger.warn("bumpTicket failed", { ticketId, layer: "store.kds" }, err);
+    return null;
+  }
+}
+
+/** Fetch tickets for a location. Filters to non-bumped by default. */
+export async function getKdsTickets(
+  locationSlug: string,
+  opts?: { includeBumped?: boolean; stationId?: string },
+): Promise<KdsTicket[]> {
+  const db = getDb();
+  if (!db) return [];
+  try {
+    await ensureKdsTables();
+    const where = [eq(kdsTicketsTable.locationSlug, locationSlug)];
+    if (opts?.stationId) where.push(eq(kdsTicketsTable.stationId, opts.stationId));
+    const rows = opts?.includeBumped
+      ? await db.select().from(kdsTicketsTable).where(and(...where)).orderBy(asc(kdsTicketsTable.firedAt))
+      : await db
+          .select()
+          .from(kdsTicketsTable)
+          .where(and(...where, inArray(kdsTicketsTable.status, ["fired", "ready", "recalled"])))
+          .orderBy(asc(kdsTicketsTable.firedAt));
+    return rows.map((r) => ({
+      id: r.id,
+      orderId: r.orderId,
+      stationId: r.stationId,
+      locationSlug: r.locationSlug,
+      status: r.status as KdsTicket["status"],
+      items: (r.payload as { items: KdsTicket["items"] }).items ?? [],
+      promisedReadyAt: r.promisedReadyAt ? r.promisedReadyAt.toISOString() : undefined,
+      firedAt: r.firedAt.toISOString(),
+      readyAt: r.readyAt ? r.readyAt.toISOString() : undefined,
+      bumpedAt: r.bumpedAt ? r.bumpedAt.toISOString() : undefined,
+    }));
+  } catch (err) {
+    logger.warn("getKdsTickets failed", { locationSlug, layer: "store.kds" }, err);
+    return [];
+  }
 }
