@@ -260,3 +260,92 @@ export const customers = pgTable(
     index("customers_email_idx").on(table.email),
   ],
 );
+
+// --- Phase 1: inventory (m1_5) ------------------------------------------
+
+/** Ingredients (chain-wide, not per-location). */
+export const ingredients = pgTable("ingredients", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  category: text("category").notNull(),
+  unit: text("unit").notNull(),
+  costPerUnit: integer("cost_per_unit").notNull(),
+  supplier: text("supplier"),
+  notes: text("notes"),
+});
+
+/**
+ * Recipes (chain-wide). RecipeIngredient[] stays in `ingredients_payload`
+ * jsonb because it's tightly coupled to the recipe — every access path
+ * loads the recipe whole, and there's no cross-recipe ingredient query
+ * that benefits from a normalized recipe_ingredients table.
+ */
+export const recipes = pgTable(
+  "recipes",
+  {
+    id: text("id").primaryKey(),
+    menuItemId: text("menu_item_id").notNull(),
+    prepTimeMinutes: integer("prep_time_minutes"),
+    yieldPortions: integer("yield_portions").notNull(),
+    notes: text("notes"),
+    ingredientsPayload: jsonb("ingredients_payload").notNull().default([]),
+  },
+  (table) => [
+    uniqueIndex("recipes_menu_item_id_unique").on(table.menuItemId),
+  ],
+);
+
+/**
+ * Per-location stock levels. Composite PK on (ingredient_id, location_slug)
+ * prevents two rows for the same ingredient/location pair — the old JSON
+ * code had no such guard.
+ */
+export const ingredientStock = pgTable(
+  "ingredient_stock",
+  {
+    ingredientId: text("ingredient_id").notNull(),
+    locationSlug: text("location_slug").notNull(),
+    onHand: integer("on_hand").notNull(),
+    parLevel: integer("par_level").notNull(),
+    reorderPoint: integer("reorder_point").notNull(),
+    lastCountedAt: timestamp("last_counted_at", { withTimezone: true }),
+    lastCountedBy: text("last_counted_by"),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.ingredientId, table.locationSlug] }),
+    index("ingredient_stock_location_idx").on(table.locationSlug),
+  ],
+);
+
+/**
+ * Append-only stock movement log. Index on
+ * (ingredient_id, occurred_at DESC) so the variance report stops doing
+ * an in-memory filter and sort.
+ */
+export const stockMovements = pgTable(
+  "stock_movements",
+  {
+    id: text("id").primaryKey(),
+    ingredientId: text("ingredient_id").notNull(),
+    locationSlug: text("location_slug").notNull(),
+    type: text("type").notNull(),
+    quantity: integer("quantity").notNull(),
+    costImpact: integer("cost_impact"),
+    reason: text("reason"),
+    byUser: text("by_user"),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    index("stock_movements_ingredient_occurred_idx").on(
+      table.ingredientId,
+      table.occurredAt,
+    ),
+    index("stock_movements_location_occurred_idx").on(
+      table.locationSlug,
+      table.occurredAt,
+    ),
+  ],
+);

@@ -14,7 +14,7 @@ import { logger } from "@/lib/logger";
 import { withDistributedLock } from "@/lib/locks";
 import { and, desc, eq, inArray, lt, sql as drizzleSql } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { customers as customersTable, orderItems as orderItemsTable, orders as ordersTable, slots as slotsTable } from "@/db/schema";
+import { customers as customersTable, ingredientStock as ingredientStockTable, ingredients as ingredientsTable, orderItems as orderItemsTable, orders as ordersTable, recipes as recipesTable, slots as slotsTable, stockMovements as stockMovementsTable } from "@/db/schema";
 import { bumpLazyBackfillHit, ensureTable } from "@/db/migrate";
 
 // --- Storage abstraction: Neon Postgres when DATABASE_URL is set, filesystem fallback for local dev ---
@@ -1874,8 +1874,155 @@ export async function updateLoyaltySettings(updates: Partial<LoyaltySettings>): 
 
 // --- Ingredients ---
 
+// --- Inventory: ingredients + recipes (m1_5: dual-write) ----------------
+
+const INGREDIENTS_DDL = [
+  `CREATE TABLE IF NOT EXISTS ingredients (
+    id text PRIMARY KEY,
+    name text NOT NULL,
+    category text NOT NULL,
+    unit text NOT NULL,
+    cost_per_unit integer NOT NULL,
+    supplier text,
+    notes text
+  )`,
+];
+const RECIPES_DDL = [
+  `CREATE TABLE IF NOT EXISTS recipes (
+    id text PRIMARY KEY,
+    menu_item_id text NOT NULL,
+    prep_time_minutes integer,
+    yield_portions integer NOT NULL,
+    notes text,
+    ingredients_payload jsonb NOT NULL DEFAULT '[]'::jsonb
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS recipes_menu_item_id_unique
+    ON recipes (menu_item_id)`,
+];
+
+async function ensureIngredientsTable(): Promise<void> {
+  await ensureTable("ingredients", INGREDIENTS_DDL);
+}
+async function ensureRecipesTable(): Promise<void> {
+  await ensureTable("recipes", RECIPES_DDL);
+}
+
+async function dualWriteIngredient(ingredient: Ingredient): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureIngredientsTable();
+    await db
+      .insert(ingredientsTable)
+      .values({
+        id: ingredient.id,
+        name: ingredient.name,
+        category: ingredient.category,
+        unit: ingredient.unit,
+        costPerUnit: ingredient.costPerUnit,
+        supplier: ingredient.supplier ?? null,
+        notes: ingredient.notes ?? null,
+      })
+      .onConflictDoUpdate({
+        target: ingredientsTable.id,
+        set: {
+          name: ingredient.name,
+          category: ingredient.category,
+          unit: ingredient.unit,
+          costPerUnit: ingredient.costPerUnit,
+          supplier: ingredient.supplier ?? null,
+          notes: ingredient.notes ?? null,
+        },
+      });
+  } catch (err) {
+    logger.warn("dualWriteIngredient failed", { id: ingredient.id, layer: "store.ingredients" }, err);
+  }
+}
+
+async function dualDeleteIngredient(id: string): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureIngredientsTable();
+    await db.delete(ingredientsTable).where(eq(ingredientsTable.id, id));
+  } catch (err) {
+    logger.warn("dualDeleteIngredient failed", { id, layer: "store.ingredients" }, err);
+  }
+}
+
+async function dualWriteRecipe(recipe: Recipe): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureRecipesTable();
+    const values = {
+      id: recipe.id,
+      menuItemId: recipe.menuItemId,
+      prepTimeMinutes: recipe.prepTimeMinutes ?? null,
+      yieldPortions: recipe.yieldPortions,
+      notes: recipe.notes ?? null,
+      ingredientsPayload: recipe.ingredients,
+    };
+    await db
+      .insert(recipesTable)
+      .values(values)
+      .onConflictDoUpdate({ target: recipesTable.id, set: values });
+  } catch (err) {
+    logger.warn("dualWriteRecipe failed", { menuItemId: recipe.menuItemId, layer: "store.recipes" }, err);
+  }
+}
+
+async function dualDeleteRecipe(menuItemId: string): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureRecipesTable();
+    await db.delete(recipesTable).where(eq(recipesTable.menuItemId, menuItemId));
+  } catch (err) {
+    logger.warn("dualDeleteRecipe failed", { menuItemId, layer: "store.recipes" }, err);
+  }
+}
+
+function rowToIngredient(row: typeof ingredientsTable.$inferSelect): Ingredient {
+  return {
+    id: row.id,
+    name: row.name,
+    category: row.category as Ingredient["category"],
+    unit: row.unit as Ingredient["unit"],
+    costPerUnit: row.costPerUnit,
+    supplier: row.supplier ?? undefined,
+    notes: row.notes ?? undefined,
+  };
+}
+
+function rowToRecipe(row: typeof recipesTable.$inferSelect): Recipe {
+  return {
+    id: row.id,
+    menuItemId: row.menuItemId,
+    ingredients: (row.ingredientsPayload as Recipe["ingredients"]) ?? [],
+    prepTimeMinutes: row.prepTimeMinutes ?? undefined,
+    yieldPortions: row.yieldPortions,
+    notes: row.notes ?? undefined,
+  };
+}
+
 export async function getIngredients(): Promise<Ingredient[]> {
-  return readJSON<Ingredient[]>("ingredients.json", []);
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureIngredientsTable();
+      const rows = await db.select().from(ingredientsTable);
+      if (rows.length > 0) return rows.map(rowToIngredient);
+    } catch (err) {
+      logger.warn("getIngredients DB read failed; falling back", { layer: "store.ingredients" }, err);
+    }
+  }
+  const fromKv = await readJSON<Ingredient[]>("ingredients.json", []);
+  if (fromKv.length > 0) {
+    bumpLazyBackfillHit("ingredients");
+    void Promise.all(fromKv.map((i) => dualWriteIngredient(i)));
+  }
+  return fromKv;
 }
 
 export async function saveIngredient(ingredient: Ingredient): Promise<Ingredient> {
@@ -1888,6 +2035,7 @@ export async function saveIngredient(ingredient: Ingredient): Promise<Ingredient
       list.push(ingredient);
     }
     await writeJSON("ingredients.json", list);
+    await dualWriteIngredient(ingredient);
     return ingredient;
   });
 }
@@ -1898,6 +2046,7 @@ export async function deleteIngredient(id: string): Promise<boolean> {
     const filtered = list.filter((i) => i.id !== id);
     if (filtered.length === list.length) return false;
     await writeJSON("ingredients.json", filtered);
+    await dualDeleteIngredient(id);
     return true;
   });
 }
@@ -1905,12 +2054,46 @@ export async function deleteIngredient(id: string): Promise<boolean> {
 // --- Recipes ---
 
 export async function getRecipes(): Promise<Recipe[]> {
-  return readJSON<Recipe[]>("recipes.json", []);
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureRecipesTable();
+      const rows = await db.select().from(recipesTable);
+      if (rows.length > 0) return rows.map(rowToRecipe);
+    } catch (err) {
+      logger.warn("getRecipes DB read failed; falling back", { layer: "store.recipes" }, err);
+    }
+  }
+  const fromKv = await readJSON<Recipe[]>("recipes.json", []);
+  if (fromKv.length > 0) {
+    bumpLazyBackfillHit("recipes");
+    void Promise.all(fromKv.map((r) => dualWriteRecipe(r)));
+  }
+  return fromKv;
 }
 
 export async function getRecipe(menuItemId: string): Promise<Recipe | undefined> {
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureRecipesTable();
+      const rows = await db
+        .select()
+        .from(recipesTable)
+        .where(eq(recipesTable.menuItemId, menuItemId))
+        .limit(1);
+      if (rows.length > 0) return rowToRecipe(rows[0]);
+    } catch (err) {
+      logger.warn("getRecipe DB read failed; falling back", { menuItemId, layer: "store.recipes" }, err);
+    }
+  }
   const recipes = await readJSON<Recipe[]>("recipes.json", []);
-  return recipes.find((r) => r.menuItemId === menuItemId);
+  const hit = recipes.find((r) => r.menuItemId === menuItemId);
+  if (hit) {
+    bumpLazyBackfillHit("recipes");
+    void dualWriteRecipe(hit);
+  }
+  return hit;
 }
 
 export async function saveRecipe(recipe: Recipe): Promise<Recipe> {
@@ -1923,6 +2106,7 @@ export async function saveRecipe(recipe: Recipe): Promise<Recipe> {
       list.push(recipe);
     }
     await writeJSON("recipes.json", list);
+    await dualWriteRecipe(recipe);
     return recipe;
   });
 }
@@ -1933,6 +2117,7 @@ export async function deleteRecipe(menuItemId: string): Promise<boolean> {
     const filtered = list.filter((r) => r.menuItemId !== menuItemId);
     if (filtered.length === list.length) return false;
     await writeJSON("recipes.json", filtered);
+    await dualDeleteRecipe(menuItemId);
     return true;
   });
 }
@@ -2833,22 +3018,203 @@ export async function updateLocationUpsell(
   });
 }
 
-// --- Inventory: stock levels + movements (per location) ---
+// --- Inventory: stock levels + movements (m1_5: dual-write) -------------
+
+const INGREDIENT_STOCK_DDL = [
+  `CREATE TABLE IF NOT EXISTS ingredient_stock (
+    ingredient_id text NOT NULL,
+    location_slug text NOT NULL,
+    on_hand integer NOT NULL,
+    par_level integer NOT NULL,
+    reorder_point integer NOT NULL,
+    last_counted_at timestamptz,
+    last_counted_by text,
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (ingredient_id, location_slug)
+  )`,
+  `CREATE INDEX IF NOT EXISTS ingredient_stock_location_idx
+    ON ingredient_stock (location_slug)`,
+];
+const STOCK_MOVEMENTS_DDL = [
+  `CREATE TABLE IF NOT EXISTS stock_movements (
+    id text PRIMARY KEY,
+    ingredient_id text NOT NULL,
+    location_slug text NOT NULL,
+    type text NOT NULL,
+    quantity integer NOT NULL,
+    cost_impact integer,
+    reason text,
+    by_user text,
+    occurred_at timestamptz NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS stock_movements_ingredient_occurred_idx
+    ON stock_movements (ingredient_id, occurred_at)`,
+  `CREATE INDEX IF NOT EXISTS stock_movements_location_occurred_idx
+    ON stock_movements (location_slug, occurred_at)`,
+];
+
+async function ensureIngredientStockTable(): Promise<void> {
+  await ensureTable("ingredient_stock", INGREDIENT_STOCK_DDL);
+}
+async function ensureStockMovementsTable(): Promise<void> {
+  await ensureTable("stock_movements", STOCK_MOVEMENTS_DDL);
+}
+
+function rowToStock(row: typeof ingredientStockTable.$inferSelect): IngredientStock {
+  return {
+    ingredientId: row.ingredientId,
+    locationSlug: row.locationSlug,
+    onHand: row.onHand,
+    parLevel: row.parLevel,
+    reorderPoint: row.reorderPoint,
+    lastCountedAt: row.lastCountedAt ? row.lastCountedAt.toISOString() : undefined,
+    lastCountedBy: row.lastCountedBy ?? undefined,
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+function rowToMovement(row: typeof stockMovementsTable.$inferSelect): StockMovement {
+  return {
+    id: row.id,
+    ingredientId: row.ingredientId,
+    locationSlug: row.locationSlug,
+    type: row.type as StockMovement["type"],
+    quantity: row.quantity,
+    costImpact: row.costImpact ?? undefined,
+    reason: row.reason ?? undefined,
+    byUser: row.byUser ?? undefined,
+    occurredAt: row.occurredAt.toISOString(),
+  };
+}
+
+async function dualWriteStock(stock: IngredientStock): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureIngredientStockTable();
+    const values = {
+      ingredientId: stock.ingredientId,
+      locationSlug: stock.locationSlug,
+      onHand: stock.onHand,
+      parLevel: stock.parLevel,
+      reorderPoint: stock.reorderPoint,
+      lastCountedAt: stock.lastCountedAt ? new Date(stock.lastCountedAt) : null,
+      lastCountedBy: stock.lastCountedBy ?? null,
+      updatedAt: new Date(stock.updatedAt),
+    };
+    await db
+      .insert(ingredientStockTable)
+      .values(values)
+      .onConflictDoUpdate({
+        target: [ingredientStockTable.ingredientId, ingredientStockTable.locationSlug],
+        set: values,
+      });
+  } catch (err) {
+    logger.warn("dualWriteStock failed", { ...stock, layer: "store.stock" }, err);
+  }
+}
+
+async function dualDeleteStock(ingredientId: string, locationSlug: string): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureIngredientStockTable();
+    await db
+      .delete(ingredientStockTable)
+      .where(
+        and(
+          eq(ingredientStockTable.ingredientId, ingredientId),
+          eq(ingredientStockTable.locationSlug, locationSlug),
+        ),
+      );
+  } catch (err) {
+    logger.warn("dualDeleteStock failed", { ingredientId, locationSlug, layer: "store.stock" }, err);
+  }
+}
+
+async function dualWriteMovement(movement: StockMovement): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureStockMovementsTable();
+    // Movements are append-only; ON CONFLICT DO NOTHING is enough.
+    await db
+      .insert(stockMovementsTable)
+      .values({
+        id: movement.id,
+        ingredientId: movement.ingredientId,
+        locationSlug: movement.locationSlug,
+        type: movement.type,
+        quantity: movement.quantity,
+        costImpact: movement.costImpact ?? null,
+        reason: movement.reason ?? null,
+        byUser: movement.byUser ?? null,
+        occurredAt: new Date(movement.occurredAt),
+      })
+      .onConflictDoNothing();
+  } catch (err) {
+    logger.warn("dualWriteMovement failed", { id: movement.id, layer: "store.stock_movements" }, err);
+  }
+}
 
 export async function getIngredientStock(
   locationSlug?: string,
 ): Promise<IngredientStock[]> {
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureIngredientStockTable();
+      const rows = locationSlug
+        ? await db
+            .select()
+            .from(ingredientStockTable)
+            .where(eq(ingredientStockTable.locationSlug, locationSlug))
+        : await db.select().from(ingredientStockTable);
+      if (rows.length > 0) return rows.map(rowToStock);
+    } catch (err) {
+      logger.warn("getIngredientStock DB read failed; falling back", { layer: "store.stock" }, err);
+    }
+  }
   const all = await readJSON<IngredientStock[]>("ingredient-stock.json", []);
-  if (!locationSlug) return all;
-  return all.filter((s) => s.locationSlug === locationSlug);
+  const filtered = locationSlug ? all.filter((s) => s.locationSlug === locationSlug) : all;
+  if (filtered.length > 0) {
+    bumpLazyBackfillHit("ingredient_stock");
+    void Promise.all(filtered.map((s) => dualWriteStock(s)));
+  }
+  return filtered;
 }
 
 export async function getStockForIngredient(
   ingredientId: string,
   locationSlug: string,
 ): Promise<IngredientStock | null> {
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureIngredientStockTable();
+      const rows = await db
+        .select()
+        .from(ingredientStockTable)
+        .where(
+          and(
+            eq(ingredientStockTable.ingredientId, ingredientId),
+            eq(ingredientStockTable.locationSlug, locationSlug),
+          ),
+        )
+        .limit(1);
+      if (rows.length > 0) return rowToStock(rows[0]);
+    } catch (err) {
+      logger.warn("getStockForIngredient DB read failed; falling back", { ingredientId, locationSlug, layer: "store.stock" }, err);
+    }
+  }
   const all = await readJSON<IngredientStock[]>("ingredient-stock.json", []);
-  return all.find((s) => s.ingredientId === ingredientId && s.locationSlug === locationSlug) ?? null;
+  const hit =
+    all.find((s) => s.ingredientId === ingredientId && s.locationSlug === locationSlug) ?? null;
+  if (hit) {
+    bumpLazyBackfillHit("ingredient_stock");
+    void dualWriteStock(hit);
+  }
+  return hit;
 }
 
 export async function upsertIngredientStock(
@@ -2866,6 +3232,7 @@ export async function upsertIngredientStock(
     if (i >= 0) list[i] = row;
     else list.push(row);
     await writeJSON("ingredient-stock.json", list);
+    await dualWriteStock(row);
     return row;
   });
 }
@@ -2881,6 +3248,7 @@ export async function deleteIngredientStock(
     );
     if (filtered.length === list.length) return false;
     await writeJSON("ingredient-stock.json", filtered);
+    await dualDeleteStock(ingredientId, locationSlug);
     return true;
   });
 }
@@ -2890,12 +3258,36 @@ export async function getStockMovements(filters?: {
   ingredientId?: string;
   limit?: number;
 }): Promise<StockMovement[]> {
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureStockMovementsTable();
+      const whereClauses = [];
+      if (filters?.locationSlug)
+        whereClauses.push(eq(stockMovementsTable.locationSlug, filters.locationSlug));
+      if (filters?.ingredientId)
+        whereClauses.push(eq(stockMovementsTable.ingredientId, filters.ingredientId));
+      const baseQuery = db
+        .select()
+        .from(stockMovementsTable)
+        .orderBy(desc(stockMovementsTable.occurredAt));
+      const filtered = whereClauses.length > 0 ? baseQuery.where(and(...whereClauses)) : baseQuery;
+      const rows = filters?.limit ? await filtered.limit(filters.limit) : await filtered;
+      if (rows.length > 0) return rows.map(rowToMovement);
+    } catch (err) {
+      logger.warn("getStockMovements DB read failed; falling back", { layer: "store.stock_movements" }, err);
+    }
+  }
   const all = await readJSON<StockMovement[]>("stock-movements.json", []);
   let list = all;
   if (filters?.locationSlug) list = list.filter((m) => m.locationSlug === filters.locationSlug);
   if (filters?.ingredientId) list = list.filter((m) => m.ingredientId === filters.ingredientId);
   list = list.slice().sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
   if (filters?.limit) list = list.slice(0, filters.limit);
+  if (list.length > 0) {
+    bumpLazyBackfillHit("stock_movements");
+    void Promise.all(list.map((m) => dualWriteMovement(m)));
+  }
   return list;
 }
 
@@ -2924,7 +3316,9 @@ export async function createStockMovement(input: Omit<StockMovement, "id" | "occ
     list.push(movement);
     await writeJSON("stock-movements.json", list);
   });
+  await dualWriteMovement(movement);
 
+  let updatedStock: IngredientStock | undefined;
   await withLock("ingredient-stock.json", async () => {
     const list = await readJSON<IngredientStock[]>("ingredient-stock.json", []);
     const i = list.findIndex(
@@ -2936,18 +3330,24 @@ export async function createStockMovement(input: Omit<StockMovement, "id" | "occ
         onHand: list[i].onHand + input.quantity,
         updatedAt: movement.occurredAt,
       };
+      updatedStock = list[i];
     } else {
-      list.push({
+      const row: IngredientStock = {
         ingredientId: input.ingredientId,
         locationSlug: input.locationSlug,
         onHand: Math.max(0, input.quantity),
         parLevel: 0,
         reorderPoint: 0,
         updatedAt: movement.occurredAt,
-      });
+      };
+      list.push(row);
+      updatedStock = row;
     }
     await writeJSON("ingredient-stock.json", list);
   });
+  if (updatedStock) {
+    await dualWriteStock(updatedStock);
+  }
 
   return movement;
 }
