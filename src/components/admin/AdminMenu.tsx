@@ -53,6 +53,8 @@ interface MenuItemData {
   tags: string[];
   available: boolean;
   _hasOverride: boolean;
+  _hasRecipe?: boolean;
+  _costSource?: "recipe" | "override" | "seed";
 }
 
 const activeLocations = getActiveLocations();
@@ -467,7 +469,13 @@ export function AdminMenu() {
                         </div>
 
                         <span className="v2-mng-val v2-mng-val-price tabular">{formatPrice(item.price)}</span>
-                        <span className="v2-mng-val v2-mng-val-cost tabular">{formatPrice(item.cost)}</span>
+                        <span
+                          className="v2-mng-val v2-mng-val-cost tabular"
+                          title={item._hasRecipe ? "Cost is computed from this item's recipe (canonical)." : item._costSource === "override" ? "Cost is a manual override." : "Cost is the seed value — no recipe yet."}
+                        >
+                          {formatPrice(item.cost)}
+                          {item._hasRecipe && <span className="v2-mng-cost-source"> recipe</span>}
+                        </span>
                         <span className={`v2-mng-val v2-mng-val-margin v2-mng-val-margin-${marginTone(margin)} tabular`}>{margin}%</span>
 
                         <button

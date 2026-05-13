@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { withAdmin } from "@/lib/api-middleware";
 import {
   appendAuditLog,
+  getIngredients,
   getMenuOverrides,
+  getRecipes,
   setMenuOverride,
   setMenuOverridesBulk,
   type MenuOverride,
@@ -11,33 +13,68 @@ import { getMenu } from "@/data/menus";
 import { locations } from "@/data/locations";
 import { menuOverridePutSchema, parseBody } from "@/lib/api-schemas";
 
+/** Per-portion food cost for every dish that has a recipe, computed in a single
+ * pass instead of N+1 calls to calculateFoodCost. The recipe is the source of
+ * truth: any item with a recipe gets its menu-shown cost derived from the
+ * current ingredient prices, so the Menu and Recipes admin pages can never
+ * disagree (or drift when an ingredient price changes). */
+async function getRecipeCostMap(): Promise<Map<string, number>> {
+  const [recipes, ingredients] = await Promise.all([getRecipes(), getIngredients()]);
+  const priceById = new Map(ingredients.map((i) => [i.id, i.costPerUnit]));
+  const map = new Map<string, number>();
+  for (const r of recipes) {
+    if (r.ingredients.length === 0) continue;
+    let total = 0;
+    for (const ri of r.ingredients) {
+      const unitCost = priceById.get(ri.ingredientId) ?? 0;
+      total += unitCost * ri.quantity * (ri.wasteFactor || 1);
+    }
+    map.set(r.menuItemId, Math.round(total / (r.yieldPortions || 1)));
+  }
+  return map;
+}
+
 // Menu reads are scoped per-location when a slug is provided. When omitted
 // (returning all locations' menus), the session must hold unrestricted scope
 // — withAdmin's "missing locationParam = require *" semantics enforces that.
 export const GET = withAdmin(
   { locationParam: "location" },
   async (_req, _ctx, { locationSlug }) => {
-    const overrides = await getMenuOverrides();
+    const [overrides, recipeCosts] = await Promise.all([
+      getMenuOverrides(),
+      getRecipeCostMap(),
+    ]);
+
+    const enrich = (item: ReturnType<typeof getMenu>[number]) => {
+      const override = overrides[item.id];
+      const recipeCost = recipeCosts.get(item.id);
+      const hasRecipe = recipeCost !== undefined;
+      // Recipe is canonical: when one exists, its computed per-portion cost
+      // wins over both the seed cost and the override.cost (override.cost is
+      // still stored, but reflects whatever was last synced — possibly stale).
+      const cost = hasRecipe ? recipeCost : (override?.cost ?? item.cost);
+      // An override that contains only `cost` is the recipe-save sync, not a
+      // human edit — don't surface "Overridden" for it.
+      const overrideKeys = override ? Object.keys(override).filter((k) => k !== "cost") : [];
+      return {
+        ...item,
+        ...override,
+        cost,
+        _hasOverride: overrideKeys.length > 0,
+        _hasRecipe: hasRecipe,
+        _costSource: hasRecipe ? "recipe" : override?.cost !== undefined ? "override" : "seed",
+      };
+    };
 
     if (locationSlug) {
-      const base = getMenu(locationSlug);
-      const merged = base.map((item) => ({
-        ...item,
-        ...overrides[item.id],
-        _hasOverride: !!overrides[item.id],
-      }));
+      const merged = getMenu(locationSlug).map(enrich);
       return NextResponse.json(merged);
     }
 
     const active = locations.filter((l) => l.isActive);
     const result: Record<string, unknown[]> = {};
     for (const loc of active) {
-      const base = getMenu(loc.slug);
-      result[loc.slug] = base.map((item) => ({
-        ...item,
-        ...overrides[item.id],
-        _hasOverride: !!overrides[item.id],
-      }));
+      result[loc.slug] = getMenu(loc.slug).map(enrich);
     }
     return NextResponse.json(result);
   },

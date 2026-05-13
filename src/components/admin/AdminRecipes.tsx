@@ -309,83 +309,39 @@ function RecipesPanel() {
           </CardBody>
         </Card>
       ) : (
-        <div className="v2-mng-groups">
+        <div className="v2-rcp-board">
           {grouped.map(([cat, items]) => {
             const Icon = CATEGORY_ICON[cat];
             return (
-              <section key={cat} className="v2-mng-section" data-variant="recipes">
-                <header className="v2-mng-section-header">
-                  <span className="v2-mng-section-eyebrow">
-                    <Icon className="h-3.5 w-3.5" aria-hidden />
-                    <span className="v2-mng-section-name">{MENU_CATEGORY_LABELS[cat]}</span>
-                    <span className="v2-mng-section-count">{items.length}</span>
-                  </span>
-                  <span className="v2-mng-col">Price</span>
-                  <span className="v2-mng-col">Recipe cost</span>
-                  <span className="v2-mng-col">Margin</span>
-                  <span aria-hidden />
+              <section key={cat} className="v2-rcp-group">
+                <header className="v2-rcp-group-header">
+                  <Icon className="h-3.5 w-3.5" aria-hidden />
+                  <span className="v2-rcp-group-name">{MENU_CATEGORY_LABELS[cat]}</span>
+                  <span className="v2-rcp-group-count">{items.length}</span>
                 </header>
-                <ul className="v2-mng-list">
+                <div className="v2-rcp-grid">
                   {items.map((item) => {
                     const recipe = recipeByMenuId.get(item.id);
+                    const hasRecipe = !!recipe;
+                    const enriched = (recipe?.enrichedIngredients ?? []) as EnrichedRecipeIngredient[];
                     const calculatedCost = recipe?.calculatedCost ?? 0;
                     const margin = item.price > 0 ? Math.round(((item.price - calculatedCost) / item.price) * 100) : 0;
-                    const hasRecipe = !!recipe;
                     const marginTone: "success" | "warning" | "danger" = margin >= 65 ? "success" : margin >= 50 ? "warning" : "danger";
                     return (
-                      <li key={item.id} className="v2-mng-row v2-mng-row-recipes">
-                        <div className="v2-mng-row-main">
-                          <div className="v2-mng-row-headline">
-                            <span className="v2-mng-row-name">{item.name}</span>
-                            {hasRecipe ? (
-                              <span className="v2-mng-tag v2-mng-tag-info">
-                                {(recipe.enrichedIngredients ?? recipe.ingredients ?? []).length} ingredients
-                              </span>
-                            ) : (
-                              <span className="v2-mng-tag v2-mng-tag-warning">No recipe</span>
-                            )}
-                          </div>
-                          {hasRecipe ? (
-                            <p className="v2-mng-row-desc">
-                              {(recipe.enrichedIngredients ?? []).slice(0, 4).map((ri, i) => (
-                                <span key={ri.ingredientId}>
-                                  {i > 0 && <span className="v2-mng-dot">·</span>}
-                                  <span className="mono v2-muted">{ri.quantity}{ri.unit}</span>{" "}
-                                  <span>{ri.name}</span>
-                                </span>
-                              ))}
-                              {(recipe.enrichedIngredients ?? []).length > 4 && (
-                                <span>
-                                  <span className="v2-mng-dot">·</span>
-                                  <span className="v2-muted">+{(recipe.enrichedIngredients ?? []).length - 4} more</span>
-                                </span>
-                              )}
-                            </p>
-                          ) : (
-                            <p className="v2-mng-row-desc v2-muted">No ingredients linked yet.</p>
-                          )}
-                        </div>
-
-                        <span className="v2-mng-val v2-mng-val-price tabular">{formatPrice(item.price)}</span>
-                        <span className="v2-mng-val v2-mng-val-cost tabular">
-                          {hasRecipe ? formatPrice(calculatedCost) : <span className="v2-muted">—</span>}
-                        </span>
-                        <span className={`v2-mng-val v2-mng-val-margin v2-mng-val-margin-${hasRecipe ? marginTone : "neutral"} tabular`}>
-                          {hasRecipe ? `${margin}%` : <span className="v2-muted">—</span>}
-                        </span>
-
-                        <Button
-                          variant={hasRecipe ? "ghost" : "primary"}
-                          size="sm"
-                          leadingIcon={hasRecipe ? <Pencil className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
-                          onClick={() => setEditing(item)}
-                        >
-                          {hasRecipe ? "Edit" : "Create"}
-                        </Button>
-                      </li>
+                      <RecipeCard
+                        key={item.id}
+                        item={item}
+                        recipe={recipe}
+                        hasRecipe={hasRecipe}
+                        ingredients={enriched}
+                        calculatedCost={calculatedCost}
+                        margin={margin}
+                        marginTone={marginTone}
+                        onEdit={() => setEditing(item)}
+                      />
                     );
                   })}
-                </ul>
+                </div>
               </section>
             );
           })}
@@ -400,6 +356,172 @@ function RecipesPanel() {
         onSaved={onSaved}
       />
     </>
+  );
+}
+
+// =============================================================
+// Recipe card (board view)
+// =============================================================
+
+/**
+ * Stable palette of segment colours for the cost-breakdown bar. We pick a
+ * colour per ingredient by hashing its id, so the same ingredient lights up
+ * the same colour on every dish — easier to scan than a per-card random
+ * palette. Six tones is enough to feel varied without a rainbow.
+ */
+const COST_BAR_COLORS = [
+  "var(--brand)",
+  "var(--info)",
+  "var(--success)",
+  "var(--warning)",
+  "#a855f7",
+  "#06b6d4",
+] as const;
+function colorForIngredient(id: string): string {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
+  return COST_BAR_COLORS[Math.abs(h) % COST_BAR_COLORS.length];
+}
+
+interface RecipeCardProps {
+  item: MenuItemData;
+  recipe: RecipeData | undefined;
+  hasRecipe: boolean;
+  ingredients: EnrichedRecipeIngredient[];
+  calculatedCost: number;
+  margin: number;
+  marginTone: "success" | "warning" | "danger";
+  onEdit: () => void;
+}
+
+function RecipeCard({
+  item,
+  recipe,
+  hasRecipe,
+  ingredients,
+  calculatedCost,
+  margin,
+  marginTone,
+  onEdit,
+}: RecipeCardProps) {
+  // Sort ingredients by cost share descending so the bar reads largest→smallest.
+  // Anything <2% of total cost is grouped into "Other" so the bar doesn't end
+  // in a row of one-pixel slivers that are impossible to hover.
+  const segments = useMemo(() => {
+    if (!hasRecipe || ingredients.length === 0 || calculatedCost <= 0) return [];
+    const total = ingredients.reduce((s, ri) => s + (ri.lineCost ?? 0), 0);
+    if (total <= 0) return [];
+    const sorted = [...ingredients].sort((a, b) => (b.lineCost ?? 0) - (a.lineCost ?? 0));
+    const visible: { id: string; name: string; cost: number; pct: number; color: string }[] = [];
+    let otherCost = 0;
+    for (const ri of sorted) {
+      const cost = ri.lineCost ?? 0;
+      const pct = (cost / total) * 100;
+      if (pct < 2) {
+        otherCost += cost;
+      } else {
+        visible.push({
+          id: ri.ingredientId,
+          name: ri.name ?? "Unknown",
+          cost,
+          pct,
+          color: colorForIngredient(ri.ingredientId),
+        });
+      }
+    }
+    if (otherCost > 0) {
+      visible.push({
+        id: "__other__",
+        name: "Other",
+        cost: otherCost,
+        pct: (otherCost / total) * 100,
+        color: "var(--fg-subtle)",
+      });
+    }
+    return visible;
+  }, [hasRecipe, ingredients, calculatedCost]);
+
+  return (
+    <article
+      className={`v2-rcp-card ${hasRecipe ? "" : "is-empty"}`}
+      data-margin-tone={hasRecipe ? marginTone : "neutral"}
+    >
+      <header className="v2-rcp-card-header">
+        <h3 className="v2-rcp-card-name">{item.name}</h3>
+        {hasRecipe ? (
+          <span className="v2-rcp-card-badge is-info">{ingredients.length} ingredients</span>
+        ) : (
+          <span className="v2-rcp-card-badge is-warning">No recipe</span>
+        )}
+      </header>
+
+      {hasRecipe ? (
+        <>
+          <div className="v2-rcp-cost-bar" role="img" aria-label={`Cost breakdown: ${segments.map((s) => `${s.name} ${Math.round(s.pct)}%`).join(", ")}`}>
+            {segments.map((s) => (
+              <span
+                key={s.id}
+                className="v2-rcp-cost-bar-seg"
+                style={{ width: `${s.pct}%`, background: s.color }}
+                title={`${s.name} · ${formatPrice(s.cost)} · ${Math.round(s.pct)}%`}
+              />
+            ))}
+          </div>
+          <ul className="v2-rcp-legend">
+            {segments.slice(0, 4).map((s) => (
+              <li key={s.id} className="v2-rcp-legend-item">
+                <span className="v2-rcp-legend-dot" style={{ background: s.color }} aria-hidden />
+                <span className="v2-rcp-legend-name">{s.name}</span>
+                <span className="v2-rcp-legend-pct tabular">{Math.round(s.pct)}%</span>
+              </li>
+            ))}
+            {segments.length > 4 && (
+              <li className="v2-rcp-legend-item v2-rcp-legend-item-more">
+                <span className="v2-rcp-legend-name">+{segments.length - 4} more</span>
+              </li>
+            )}
+          </ul>
+        </>
+      ) : (
+        <div className="v2-rcp-empty">
+          <FlaskConical className="h-6 w-6 v2-muted" aria-hidden />
+          <p>No ingredients linked yet. Cost is unknown until you build the recipe.</p>
+        </div>
+      )}
+
+      <dl className="v2-rcp-stats">
+        <div className="v2-rcp-stat">
+          <dt>Price</dt>
+          <dd className="tabular">{formatPrice(item.price)}</dd>
+        </div>
+        <div className="v2-rcp-stat">
+          <dt>Cost</dt>
+          <dd className="tabular">{hasRecipe ? formatPrice(calculatedCost) : "—"}</dd>
+        </div>
+        <div className="v2-rcp-stat">
+          <dt>Margin</dt>
+          <dd className={`tabular v2-rcp-margin v2-rcp-margin-${hasRecipe ? marginTone : "neutral"}`}>
+            {hasRecipe ? `${margin}%` : "—"}
+          </dd>
+        </div>
+      </dl>
+
+      <footer className="v2-rcp-card-footer">
+        {recipe?.prepTimeMinutes ? (
+          <span className="v2-rcp-prep tabular">{recipe.prepTimeMinutes} min prep</span>
+        ) : (
+          <span aria-hidden />
+        )}
+        <Button
+          variant={hasRecipe ? "ghost" : "primary"}
+          size="sm"
+          leadingIcon={hasRecipe ? <Pencil className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+          onClick={onEdit}
+        >
+          {hasRecipe ? "Edit recipe" : "Create recipe"}
+        </Button>
+      </footer>
+    </article>
   );
 }
 
