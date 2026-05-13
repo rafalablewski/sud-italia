@@ -569,9 +569,15 @@ html { scroll-behavior: smooth; }
 .v2-topbar-right { display: flex; align-items: center; gap: 6px; }
 .v2-content { padding: 0; min-height: calc(100vh - 53px); }
 
-.v2-mobile-only { display: none; }
+/* Compound selector matches the hamburger button (.v2-icon-btn.v2-mobile-only)
+   with specificity (0,2,0), beating the .v2-icon-btn (0,1,0) display rule
+   below — otherwise the later rule wins by source order and the hamburger
+   appears on every viewport, alongside the desktop sidebar's collapse arrow. */
+.v2-mobile-only,
+.v2-icon-btn.v2-mobile-only { display: none; }
 @media (max-width: 900px) {
-  .v2-mobile-only { display: inline-flex; }
+  .v2-mobile-only,
+  .v2-icon-btn.v2-mobile-only { display: inline-flex; }
   .v2-topbar { padding: 10px 14px; }
 }
 
@@ -2777,6 +2783,25 @@ html { scroll-behavior: smooth; }
   margin-top: 10px;
   border-top: 1px solid var(--border);
   font-size: var(--text-md);
+}
+
+/* Generic label-on-left / value-on-right row used by reward cards, schedule
+   summaries, and any other "Cost · 50 pts" style line. Without this rule the
+   two sibling spans render inline-adjacent and the label runs into the value
+   ("Cost50 pts", "Week of 11/05/20260.0h · 0 zł"). */
+.v2-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+.v2-summary-row > .v2-muted { flex: 0 0 auto; }
+.v2-summary-val {
+  font-weight: 600;
+  color: var(--fg);
+  text-align: right;
+  min-width: 0;
 }
 
 /* ============================

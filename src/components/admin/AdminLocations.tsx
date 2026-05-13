@@ -119,24 +119,44 @@ export function AdminLocations() {
 
   const comparison = insights?.locationComparison ?? [];
 
-  // Identify the "winner" per metric for highlight badges
+  // Identify the "winner" per metric for highlight badges. A winner only
+  // exists when (a) there are at least two locations to compare, (b) the
+  // top location's value is meaningful (non-zero for "more is better"
+  // metrics; from a location with actual order volume for cancellation
+  // rate), and (c) it strictly beats every other location — ties don't
+  // get a trophy, and a row of zeroes definitely doesn't.
   const winners = useMemo(() => {
     const w: Record<string, string | undefined> = {};
-    if (comparison.length === 0) return w;
-    const pick = (key: keyof LocationComparison, dir: "max" | "min") => {
-      const reducer = (best: LocationComparison, c: LocationComparison) => {
-        const a = c[key] as number;
-        const b = best[key] as number;
-        return dir === "max" ? (a > b ? c : best) : a < b ? c : best;
-      };
-      return comparison.reduce(reducer).locationSlug;
+    if (comparison.length < 2) return w;
+
+    const pickMax = (key: keyof LocationComparison) => {
+      const sorted = [...comparison].sort((a, b) => (b[key] as number) - (a[key] as number));
+      const top = sorted[0];
+      const runner = sorted[1];
+      if ((top[key] as number) <= 0) return undefined;
+      if ((top[key] as number) <= (runner[key] as number)) return undefined;
+      return top.locationSlug;
     };
-    w.revenue = pick("revenue", "max");
-    w.profit = pick("profit", "max");
-    w.margin = pick("profitMargin", "max");
-    w.orders = pick("orderCount", "max");
-    w.aov = pick("avgOrderValue", "max");
-    w.cancellation = pick("cancellationRate", "min");
+
+    const pickMinCancellation = () => {
+      // Only locations that actually took orders this period can have a
+      // meaningful cancellation rate — 0% from a location with zero orders
+      // isn't an achievement.
+      const withOrders = comparison.filter((c) => c.orderCount + c.cancelledCount > 0);
+      if (withOrders.length < 2) return undefined;
+      const sorted = [...withOrders].sort((a, b) => a.cancellationRate - b.cancellationRate);
+      const top = sorted[0];
+      const runner = sorted[1];
+      if (top.cancellationRate >= runner.cancellationRate) return undefined;
+      return top.locationSlug;
+    };
+
+    w.revenue = pickMax("revenue");
+    w.profit = pickMax("profit");
+    w.margin = pickMax("profitMargin");
+    w.orders = pickMax("orderCount");
+    w.aov = pickMax("avgOrderValue");
+    w.cancellation = pickMinCancellation();
     return w;
   }, [comparison]);
 
