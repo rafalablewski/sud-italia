@@ -339,7 +339,7 @@ export function AdminDashboard() {
           />
           <Link
             href="/admin/capabilities"
-            className="v2-btn v2-btn-secondary inline-flex items-center gap-1.5"
+            className="v2-btn v2-btn-secondary v2-btn-sm inline-flex items-center gap-1.5"
           >
             <Activity className="h-3.5 w-3.5" />
             Capabilities

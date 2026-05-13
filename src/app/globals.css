@@ -569,9 +569,15 @@ html { scroll-behavior: smooth; }
 .v2-topbar-right { display: flex; align-items: center; gap: 6px; }
 .v2-content { padding: 0; min-height: calc(100vh - 53px); }
 
-.v2-mobile-only { display: none; }
+/* Compound selector matches the hamburger button (.v2-icon-btn.v2-mobile-only)
+   with specificity (0,2,0), beating the .v2-icon-btn (0,1,0) display rule
+   below — otherwise the later rule wins by source order and the hamburger
+   appears on every viewport, alongside the desktop sidebar's collapse arrow. */
+.v2-mobile-only,
+.v2-icon-btn.v2-mobile-only { display: none; }
 @media (max-width: 900px) {
-  .v2-mobile-only { display: inline-flex; }
+  .v2-mobile-only,
+  .v2-icon-btn.v2-mobile-only { display: inline-flex; }
   .v2-topbar { padding: 10px 14px; }
 }
 
@@ -2332,6 +2338,18 @@ html { scroll-behavior: smooth; }
 .v2-mng-val-margin-info { color: var(--info); }
 .v2-mng-val-margin-neutral { color: var(--fg-muted); }
 
+/* Tiny "recipe" suffix on the menu's cost column — signals that the value is
+   derived from the recipe ingredients (canonical) rather than a manual cost
+   override. Whitespace prefix is hard-coded as a leading space in the JSX. */
+.v2-mng-cost-source {
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--info);
+  margin-left: 2px;
+}
+
 /* Edit icon (Menu) — fades in on hover */
 .v2-mng-edit {
   width: 24px;
@@ -2356,7 +2374,11 @@ html { scroll-behavior: smooth; }
 /* Action button (Recipes) — pinned right */
 .v2-mng-row-recipes > .v2-btn { justify-self: end; }
 
-/* Narrow viewports: drop the column legend; values inline-wrap below the name. */
+/* Narrow viewports: drop the column legend; values inline-wrap below the name.
+   Every menu-row child is pinned to an explicit grid cell — CSS Grid's auto-
+   placement processes definite-row items before auto items, so leaving
+   row-main on auto-flow lets the edit button steal column 1 and push the
+   name into the 28px edit column where it overflows. */
 @media (max-width: 720px) {
   .v2-mng-section-header,
   .v2-mng-row { column-gap: 8px; padding: 10px 12px; }
@@ -2364,6 +2386,10 @@ html { scroll-behavior: smooth; }
   .v2-mng-section[data-variant="menu"] {
     --mng-grid: 20px 20px minmax(0, 1fr) 28px;
     --mng-cols-start: 4;
+  }
+  .v2-mng-section[data-variant="menu"] .v2-mng-row {
+    align-items: start;
+    row-gap: 2px;
   }
   .v2-mng-section[data-variant="recipes"] {
     --mng-grid: minmax(0, 1fr) auto;
@@ -2374,17 +2400,20 @@ html { scroll-behavior: smooth; }
     font-size: var(--text-xs);
     padding-top: 4px;
   }
-  .v2-mng-section[data-variant="menu"] .v2-mng-row > .v2-mng-val {
-    grid-column: 3 / 4;
-    padding-top: 2px;
-  }
+  .v2-mng-section[data-variant="menu"] .v2-mng-row > .v2-mng-select { grid-column: 1; grid-row: 1; align-self: center; }
+  .v2-mng-section[data-variant="menu"] .v2-mng-row > .v2-mng-toggle { grid-column: 2; grid-row: 1; align-self: center; }
+  .v2-mng-section[data-variant="menu"] .v2-mng-row > .v2-mng-row-main { grid-column: 3; grid-row: 1; }
+  .v2-mng-section[data-variant="menu"] .v2-mng-row > .v2-mng-val-price { grid-column: 3; grid-row: 2; text-align: left; padding-top: 2px; }
+  .v2-mng-section[data-variant="menu"] .v2-mng-row > .v2-mng-val-cost { grid-column: 3; grid-row: 3; text-align: left; padding-top: 0; }
+  .v2-mng-section[data-variant="menu"] .v2-mng-row > .v2-mng-val-margin { grid-column: 3; grid-row: 4; text-align: left; padding-top: 0; }
+  .v2-mng-section[data-variant="menu"] .v2-mng-row > .v2-mng-edit { grid-column: 4; grid-row: 1; align-self: center; }
   .v2-mng-section[data-variant="recipes"] .v2-mng-row > .v2-mng-val {
     grid-column: 1;
   }
   .v2-mng-val-price::before { content: "Price "; color: var(--fg-subtle); font-weight: 500; margin-right: 4px; text-transform: uppercase; font-size: 9px; letter-spacing: 0.08em; }
   .v2-mng-val-cost::before { content: "Cost "; color: var(--fg-subtle); font-weight: 500; margin-right: 4px; text-transform: uppercase; font-size: 9px; letter-spacing: 0.08em; }
   .v2-mng-val-margin::before { content: "Margin "; color: var(--fg-subtle); font-weight: 500; margin-right: 4px; text-transform: uppercase; font-size: 9px; letter-spacing: 0.08em; }
-  .v2-mng-edit { opacity: 1; grid-row: 1; }
+  .v2-mng-edit { opacity: 1; }
   .v2-mng-section[data-variant="menu"] .v2-mng-row-name { font-size: var(--text-sm); }
 }
 
@@ -2392,6 +2421,210 @@ html { scroll-behavior: smooth; }
    ADMIN v2 — RECIPES
    ============================ */
 
+/* The Recipes board: card grid by category. Visually distinct from the
+   Menu list — each dish is its own tile with a stacked cost-breakdown bar
+   so you can read ingredient share at a glance. The Menu page stays a
+   compact list because operators scan it for prices and 86 toggles; the
+   Recipes page is a workshop and benefits from more room per dish. */
+.v2-rcp-board { display: flex; flex-direction: column; gap: 20px; }
+
+.v2-rcp-group { display: flex; flex-direction: column; gap: 12px; }
+
+.v2-rcp-group-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px;
+  color: var(--fg-muted);
+}
+.v2-rcp-group-header > svg { color: var(--fg-muted); }
+.v2-rcp-group-name {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--fg);
+  letter-spacing: -0.01em;
+}
+.v2-rcp-group-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 18px;
+  min-width: 22px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in oklab, var(--fg) 8%, transparent);
+  color: var(--fg-muted);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+}
+
+.v2-rcp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.v2-rcp-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  transition: border-color var(--duration-fast), background var(--duration-fast);
+}
+.v2-rcp-card:hover { border-color: var(--border-strong); }
+.v2-rcp-card.is-empty { background: var(--surface-2); border-style: dashed; }
+
+.v2-rcp-card-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+.v2-rcp-card-name {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--fg);
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.v2-rcp-card-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 8px;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+.v2-rcp-card-badge.is-info { background: var(--info-soft); color: var(--info); }
+.v2-rcp-card-badge.is-warning { background: var(--warning-soft); color: var(--warning); }
+
+/* Stacked horizontal bar — one segment per ingredient, width proportional
+   to its share of food cost. Inline-block segments + background colours
+   per ingredient (hashed-stable so the same ingredient gets the same hue
+   on every dish). Hover the segment to see the exact share. */
+.v2-rcp-cost-bar {
+  display: flex;
+  width: 100%;
+  height: 10px;
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  background: var(--surface-3);
+}
+.v2-rcp-cost-bar-seg {
+  height: 100%;
+  display: block;
+  transition: filter var(--duration-fast);
+}
+.v2-rcp-cost-bar-seg:hover { filter: brightness(1.15); }
+.v2-rcp-cost-bar-seg + .v2-rcp-cost-bar-seg { border-left: 1px solid var(--surface-1); }
+
+.v2-rcp-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+}
+.v2-rcp-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+  min-width: 0;
+}
+.v2-rcp-legend-item-more { color: var(--fg-subtle); font-style: italic; }
+.v2-rcp-legend-dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.v2-rcp-legend-name {
+  flex: 1 1 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.v2-rcp-legend-pct { flex: 0 0 auto; color: var(--fg-subtle); font-weight: 500; }
+
+.v2-rcp-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 16px 4px;
+  text-align: center;
+  color: var(--fg-subtle);
+  font-size: var(--text-xs);
+}
+.v2-rcp-empty > p { margin: 0; max-width: 28ch; }
+
+.v2-rcp-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  margin: 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 8px 0;
+}
+.v2-rcp-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+  padding: 0 8px;
+}
+.v2-rcp-stat + .v2-rcp-stat { border-left: 1px solid var(--border); }
+.v2-rcp-stat > dt {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-subtle);
+  font-weight: 500;
+}
+.v2-rcp-stat > dd {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+.v2-rcp-margin-success { color: var(--success); }
+.v2-rcp-margin-warning { color: var(--warning); }
+.v2-rcp-margin-danger { color: var(--danger); }
+.v2-rcp-margin-neutral { color: var(--fg-subtle); }
+
+.v2-rcp-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.v2-rcp-prep {
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 720px) {
+  .v2-rcp-grid { grid-template-columns: 1fr; }
+}
 
 /* Three summary tiles at the top of the recipe editor. Uses the standard
    `KpiCard` primitive — keeps the look consistent with AdminDashboard /
@@ -2550,6 +2783,25 @@ html { scroll-behavior: smooth; }
   margin-top: 10px;
   border-top: 1px solid var(--border);
   font-size: var(--text-md);
+}
+
+/* Generic label-on-left / value-on-right row used by reward cards, schedule
+   summaries, and any other "Cost · 50 pts" style line. Without this rule the
+   two sibling spans render inline-adjacent and the label runs into the value
+   ("Cost50 pts", "Week of 11/05/20260.0h · 0 zł"). */
+.v2-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+.v2-summary-row > .v2-muted { flex: 0 0 auto; }
+.v2-summary-val {
+  font-weight: 600;
+  color: var(--fg);
+  text-align: right;
+  min-width: 0;
 }
 
 /* ============================

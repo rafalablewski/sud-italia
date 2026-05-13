@@ -316,7 +316,7 @@ export function AdminSlots() {
           <Button size="sm" variant="ghost" onClick={() => setDate(isoDate(new Date()))}>Today</Button>
           <Button size="sm" variant="ghost" onClick={() => setDate(addDays(date, -1))}>−1 day</Button>
           <Button size="sm" variant="ghost" onClick={() => setDate(addDays(date, 1))}>+1 day</Button>
-          <Button size="sm" variant="ghost" leadingIcon={<RefreshCw className={`h-3.5 w-3.5 ${loading ? "v2-spin" : ""}`} />} onClick={fetchSlots}>Refresh</Button>
+          <Button size="sm" variant="secondary" leadingIcon={<RefreshCw className={`h-3.5 w-3.5 ${loading ? "v2-spin" : ""}`} />} onClick={fetchSlots}>Refresh</Button>
         </div>
       </div>
 
