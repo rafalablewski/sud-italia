@@ -2,6 +2,7 @@ import {
   pgTable,
   text,
   integer,
+  jsonb,
   timestamp,
   primaryKey,
   index,
@@ -112,5 +113,62 @@ export const slots = pgTable(
     ),
     index("slots_location_date_idx").on(table.locationSlug, table.date),
     index("slots_status_idx").on(table.status),
+  ],
+);
+
+// --- Phase 1: orders (m1_2) ---------------------------------------------
+
+/**
+ * Normalized orders table. Replaces the full-blob in-memory filters that
+ * every admin analytics / report / labour-ratio query was doing against
+ * kv_store["orders.json"]. Indices on (location_slug, created_at DESC),
+ * (status), (customer_phone), (stripe_payment_intent_id) cover the four
+ * access patterns those queries actually use.
+ *
+ * `payload` (jsonb) holds the remaining un-normalized fields: `items`
+ * (line items move to their own table in m1_3), `feedback`, `refund`,
+ * `dispute`, `qualityCheck`, `queuePosition`, `estimatedReadyAt`,
+ * `specialInstructions`. This keeps the type-mapping simple — anything
+ * Phase 1 doesn't normalize into a column stays in jsonb until a later
+ * phase pulls it out.
+ *
+ * `total_grosze` and `tip_grosze` are explicit columns because revenue
+ * reports SUM() over them; doing that against jsonb is OK but indexes +
+ * a planned PARTITION BY date make integer columns the right call long
+ * term.
+ */
+export const orders = pgTable(
+  "orders",
+  {
+    id: text("id").primaryKey(),
+    locationSlug: text("location_slug").notNull(),
+    customerPhone: text("customer_phone").notNull(),
+    customerName: text("customer_name").notNull(),
+    status: text("status").notNull(),
+    fulfillmentType: text("fulfillment_type").notNull(),
+    slotId: text("slot_id").notNull(),
+    slotDate: text("slot_date").notNull(),
+    slotTime: text("slot_time").notNull(),
+    totalGrosze: integer("total_grosze").notNull(),
+    tipGrosze: integer("tip_grosze"),
+    stripeSessionId: text("stripe_session_id"),
+    stripePaymentIntentId: text("stripe_payment_intent_id"),
+    deliveryAddress: text("delivery_address"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+    paidAt: timestamp("paid_at", { withTimezone: true }),
+    payload: jsonb("payload").notNull().default({}),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("orders_location_created_at_idx").on(
+      table.locationSlug,
+      table.createdAt,
+    ),
+    index("orders_status_idx").on(table.status),
+    index("orders_customer_phone_idx").on(table.customerPhone),
+    index("orders_stripe_payment_intent_idx").on(table.stripePaymentIntentId),
+    index("orders_slot_id_idx").on(table.slotId),
   ],
 );

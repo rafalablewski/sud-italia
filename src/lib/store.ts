@@ -12,9 +12,9 @@ import { WALLET_MAX_PHONES } from "@/lib/constants";
 import { normalizePlPhoneE164, phonesEqualPl } from "@/lib/phone";
 import { logger } from "@/lib/logger";
 import { withDistributedLock } from "@/lib/locks";
-import { and, eq, inArray, lt, sql as drizzleSql } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, sql as drizzleSql } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { slots as slotsTable } from "@/db/schema";
+import { orders as ordersTable, slots as slotsTable } from "@/db/schema";
 import { bumpLazyBackfillHit, ensureTable } from "@/db/migrate";
 
 // --- Storage abstraction: Neon Postgres when DATABASE_URL is set, filesystem fallback for local dev ---
@@ -470,15 +470,222 @@ export async function getAvailableSlots(
 
 // --- Orders ---
 
+// --- Orders (m1_2: normalized table with dual-write) --------------------
+
+/** Self-bootstrap DDL for the `orders` table. Mirrors the Drizzle schema. */
+const ORDERS_DDL = [
+  `CREATE TABLE IF NOT EXISTS orders (
+    id text PRIMARY KEY,
+    location_slug text NOT NULL,
+    customer_phone text NOT NULL,
+    customer_name text NOT NULL,
+    status text NOT NULL,
+    fulfillment_type text NOT NULL,
+    slot_id text NOT NULL,
+    slot_date text NOT NULL,
+    slot_time text NOT NULL,
+    total_grosze integer NOT NULL,
+    tip_grosze integer,
+    stripe_session_id text,
+    stripe_payment_intent_id text,
+    delivery_address text,
+    created_at timestamptz NOT NULL,
+    paid_at timestamptz,
+    payload jsonb NOT NULL DEFAULT '{}'::jsonb,
+    updated_at timestamptz NOT NULL DEFAULT now()
+  )`,
+  `CREATE INDEX IF NOT EXISTS orders_location_created_at_idx
+    ON orders (location_slug, created_at DESC)`,
+  `CREATE INDEX IF NOT EXISTS orders_status_idx ON orders (status)`,
+  `CREATE INDEX IF NOT EXISTS orders_customer_phone_idx
+    ON orders (customer_phone)`,
+  `CREATE INDEX IF NOT EXISTS orders_stripe_payment_intent_idx
+    ON orders (stripe_payment_intent_id)`,
+  `CREATE INDEX IF NOT EXISTS orders_slot_id_idx ON orders (slot_id)`,
+];
+
+async function ensureOrdersTable(): Promise<void> {
+  await ensureTable("orders", ORDERS_DDL);
+}
+
+type OrderRow = typeof ordersTable.$inferSelect;
+
+/**
+ * Anything we don't normalize into a column lives in `payload`. m1_3 will
+ * pull `items` out into its own line-items table; for now items round-trip
+ * through this jsonb blob.
+ */
+interface OrderPayload {
+  items: Order["items"];
+  specialInstructions?: Order["specialInstructions"];
+  queuePosition?: Order["queuePosition"];
+  estimatedReadyAt?: Order["estimatedReadyAt"];
+  feedback?: Order["feedback"];
+  qualityCheck?: Order["qualityCheck"];
+  refund?: Order["refund"];
+  dispute?: Order["dispute"];
+}
+
+function rowToOrder(row: OrderRow): Order {
+  const payload = (row.payload ?? {}) as OrderPayload;
+  return {
+    id: row.id,
+    locationSlug: row.locationSlug,
+    customerPhone: row.customerPhone,
+    customerName: row.customerName,
+    status: row.status as Order["status"],
+    fulfillmentType: row.fulfillmentType as Order["fulfillmentType"],
+    slotId: row.slotId,
+    slotDate: row.slotDate,
+    slotTime: row.slotTime,
+    totalAmount: row.totalGrosze,
+    tipAmount: row.tipGrosze ?? undefined,
+    stripeSessionId: row.stripeSessionId ?? undefined,
+    stripePaymentIntentId: row.stripePaymentIntentId ?? undefined,
+    deliveryAddress: row.deliveryAddress ?? undefined,
+    createdAt: row.createdAt.toISOString(),
+    paidAt: row.paidAt ? row.paidAt.toISOString() : undefined,
+    items: payload.items ?? [],
+    specialInstructions: payload.specialInstructions,
+    queuePosition: payload.queuePosition,
+    estimatedReadyAt: payload.estimatedReadyAt,
+    feedback: payload.feedback,
+    qualityCheck: payload.qualityCheck,
+    refund: payload.refund,
+    dispute: payload.dispute,
+  };
+}
+
+function orderToValues(order: Order) {
+  const payload: OrderPayload = {
+    items: order.items,
+    specialInstructions: order.specialInstructions,
+    queuePosition: order.queuePosition,
+    estimatedReadyAt: order.estimatedReadyAt,
+    feedback: order.feedback,
+    qualityCheck: order.qualityCheck,
+    refund: order.refund,
+    dispute: order.dispute,
+  };
+  return {
+    id: order.id,
+    locationSlug: order.locationSlug,
+    customerPhone: order.customerPhone,
+    customerName: order.customerName,
+    status: order.status,
+    fulfillmentType: order.fulfillmentType,
+    slotId: order.slotId,
+    slotDate: order.slotDate,
+    slotTime: order.slotTime,
+    totalGrosze: order.totalAmount,
+    tipGrosze: order.tipAmount ?? null,
+    stripeSessionId: order.stripeSessionId ?? null,
+    stripePaymentIntentId: order.stripePaymentIntentId ?? null,
+    deliveryAddress: order.deliveryAddress ?? null,
+    createdAt: new Date(order.createdAt),
+    paidAt: order.paidAt ? new Date(order.paidAt) : null,
+    payload,
+  };
+}
+
+async function dualWriteOrder(order: Order): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureOrdersTable();
+    const values = orderToValues(order);
+    await db
+      .insert(ordersTable)
+      .values({ ...values, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: ordersTable.id,
+        set: { ...values, updatedAt: new Date() },
+      });
+  } catch (err) {
+    logger.warn(
+      "dualWriteOrder failed (kv_store remains source of truth)",
+      { orderId: order.id, layer: "store.orders" },
+      err,
+    );
+  }
+}
+
+async function dualDeleteOrder(id: string): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureOrdersTable();
+    await db.delete(ordersTable).where(eq(ordersTable.id, id));
+  } catch (err) {
+    logger.warn(
+      "dualDeleteOrder failed",
+      { orderId: id, layer: "store.orders" },
+      err,
+    );
+  }
+}
+
 export async function getOrders(locationSlug?: string): Promise<Order[]> {
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureOrdersTable();
+      const rows = locationSlug
+        ? await db
+            .select()
+            .from(ordersTable)
+            .where(eq(ordersTable.locationSlug, locationSlug))
+            .orderBy(desc(ordersTable.createdAt))
+        : await db
+            .select()
+            .from(ordersTable)
+            .orderBy(desc(ordersTable.createdAt));
+      if (rows.length > 0) return rows.map(rowToOrder);
+    } catch (err) {
+      logger.warn(
+        "getOrders DB read failed; falling back to kv_store",
+        { layer: "store.orders" },
+        err,
+      );
+    }
+  }
   const orders = await readJSON<Order[]>("orders.json", []);
-  if (!locationSlug) return orders;
-  return orders.filter((o) => o.locationSlug === locationSlug);
+  const filtered = locationSlug
+    ? orders.filter((o) => o.locationSlug === locationSlug)
+    : orders;
+  if (filtered.length > 0) {
+    bumpLazyBackfillHit("orders");
+    void Promise.all(filtered.map((o) => dualWriteOrder(o)));
+  }
+  return filtered;
 }
 
 export async function getOrderById(id: string): Promise<Order | undefined> {
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureOrdersTable();
+      const rows = await db
+        .select()
+        .from(ordersTable)
+        .where(eq(ordersTable.id, id))
+        .limit(1);
+      if (rows.length > 0) return rowToOrder(rows[0]);
+    } catch (err) {
+      logger.warn(
+        "getOrderById DB read failed; falling back to kv_store",
+        { orderId: id, layer: "store.orders" },
+        err,
+      );
+    }
+  }
   const orders = await readJSON<Order[]>("orders.json", []);
-  return orders.find((o) => o.id === id);
+  const hit = orders.find((o) => o.id === id);
+  if (hit) {
+    bumpLazyBackfillHit("orders");
+    void dualWriteOrder(hit);
+  }
+  return hit;
 }
 
 /**
@@ -490,8 +697,31 @@ export async function getOrderById(id: string): Promise<Order | undefined> {
 export async function getOrderByStripePaymentIntent(
   paymentIntentId: string,
 ): Promise<Order | undefined> {
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureOrdersTable();
+      const rows = await db
+        .select()
+        .from(ordersTable)
+        .where(eq(ordersTable.stripePaymentIntentId, paymentIntentId))
+        .limit(1);
+      if (rows.length > 0) return rowToOrder(rows[0]);
+    } catch (err) {
+      logger.warn(
+        "getOrderByStripePaymentIntent DB read failed; falling back",
+        { paymentIntentId, layer: "store.orders" },
+        err,
+      );
+    }
+  }
   const orders = await readJSON<Order[]>("orders.json", []);
-  return orders.find((o) => o.stripePaymentIntentId === paymentIntentId);
+  const hit = orders.find((o) => o.stripePaymentIntentId === paymentIntentId);
+  if (hit) {
+    bumpLazyBackfillHit("orders");
+    void dualWriteOrder(hit);
+  }
+  return hit;
 }
 
 export async function createOrder(order: Order): Promise<Order> {
@@ -499,6 +729,7 @@ export async function createOrder(order: Order): Promise<Order> {
     const orders = await readJSON<Order[]>("orders.json", []);
     orders.push(order);
     await writeJSON("orders.json", orders);
+    await dualWriteOrder(order);
     return order;
   });
 }
@@ -510,6 +741,7 @@ export async function updateOrderStatus(id: string, status: Order["status"]): Pr
     if (index === -1) return null;
     orders[index].status = status;
     await writeJSON("orders.json", orders);
+    await dualWriteOrder(orders[index]);
     return orders[index];
   });
 }
@@ -529,6 +761,7 @@ export async function updateOrder(
     if (index === -1) return null;
     orders[index] = { ...orders[index], ...patch };
     await writeJSON("orders.json", orders);
+    await dualWriteOrder(orders[index]);
     return orders[index];
   });
 }
@@ -542,6 +775,7 @@ export async function deleteOrder(id: string): Promise<boolean> {
     slotId = orders[index].slotId;
     orders.splice(index, 1);
     await writeJSON("orders.json", orders);
+    await dualDeleteOrder(id);
     return true;
   });
   if (removed) {

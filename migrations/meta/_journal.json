@@ -15,6 +15,13 @@
       "when": 1778658957494,
       "tag": "0001_many_captain_britain",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778659102297,
+      "tag": "0002_ancient_butterfly",
+      "breakpoints": true
     }
   ]
 }
