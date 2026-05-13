@@ -2400,13 +2400,13 @@ html { scroll-behavior: smooth; }
     font-size: var(--text-xs);
     padding-top: 4px;
   }
-  .v2-mng-section[data-variant="menu"] .v2-mng-row > .v2-mng-select { grid-column: 1; grid-row: 1; align-self: center; }
-  .v2-mng-section[data-variant="menu"] .v2-mng-row > .v2-mng-toggle { grid-column: 2; grid-row: 1; align-self: center; }
+  .v2-mng-section[data-variant="menu"] .v2-mng-row > .v2-mng-select { grid-column: 1; grid-row: 1; align-self: start; padding-top: 2px; }
+  .v2-mng-section[data-variant="menu"] .v2-mng-row > .v2-mng-toggle { grid-column: 2; grid-row: 1; align-self: start; padding-top: 1px; }
   .v2-mng-section[data-variant="menu"] .v2-mng-row > .v2-mng-row-main { grid-column: 3; grid-row: 1; }
   .v2-mng-section[data-variant="menu"] .v2-mng-row > .v2-mng-val-price { grid-column: 3; grid-row: 2; text-align: left; padding-top: 2px; }
   .v2-mng-section[data-variant="menu"] .v2-mng-row > .v2-mng-val-cost { grid-column: 3; grid-row: 3; text-align: left; padding-top: 0; }
   .v2-mng-section[data-variant="menu"] .v2-mng-row > .v2-mng-val-margin { grid-column: 3; grid-row: 4; text-align: left; padding-top: 0; }
-  .v2-mng-section[data-variant="menu"] .v2-mng-row > .v2-mng-edit { grid-column: 4; grid-row: 1; align-self: center; }
+  .v2-mng-section[data-variant="menu"] .v2-mng-row > .v2-mng-edit { grid-column: 4; grid-row: 1; align-self: start; padding-top: 0; }
   .v2-mng-section[data-variant="recipes"] .v2-mng-row > .v2-mng-val {
     grid-column: 1;
   }
