@@ -1041,9 +1041,9 @@ html { scroll-behavior: smooth; }
 .v2-card-p-compact > .v2-card-footer { padding-top: 8px; padding-bottom: 12px; }
 .v2-card-p-compact:not(:has(.v2-card-header)):not(:has(.v2-card-body)):not(:has(.v2-card-footer)) { padding: 12px 14px; }
 
-.v2-card-p-none > .v2-card-header,
-.v2-card-p-none > .v2-card-body,
-.v2-card-p-none > .v2-card-footer { padding: 0; }
+.v2-card-p-none > .v2-card-header { padding: 16px 20px 12px; }
+.v2-card-p-none > .v2-card-body { padding: 0; }
+.v2-card-p-none > .v2-card-footer { padding: 12px 20px 14px; }
 
 .v2-card-header {
   display: flex;
