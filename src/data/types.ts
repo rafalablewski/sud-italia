@@ -594,7 +594,7 @@ export interface ComplianceItem {
 
 // --- Admin users + roles ---
 
-export type AdminRole = "owner" | "manager" | "staff" | "kitchen";
+export type AdminRole = "owner" | "manager" | "franchisee" | "staff" | "kitchen";
 export type AdminUserStatus = "active" | "disabled";
 
 export interface AdminUser {

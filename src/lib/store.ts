@@ -17,7 +17,7 @@ import { appendOutboxEvent } from "@/lib/outbox";
 import { incrCounter } from "@/lib/metrics";
 import { and, asc, desc, eq, inArray, lt, sql as drizzleSql } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { auditLog as auditLogTable, customerNotes as customerNotesTable, customers as customersTable, feedback as feedbackTable, ingredientStock as ingredientStockTable, ingredients as ingredientsTable, kdsTickets as kdsTicketsTable, loyaltyMembers as loyaltyMembersTable, menuItemStation as menuItemStationTable, orderItems as orderItemsTable, orders as ordersTable, pointAdjustments as pointAdjustmentsTable, recipes as recipesTable, shifts as shiftsTable, slots as slotsTable, staff as staffTable, stations as stationsTable, stockMovements as stockMovementsTable, timePunches as timePunchesTable } from "@/db/schema";
+import { auditLog as auditLogTable, brands as brandsTable, customerNotes as customerNotesTable, customers as customersTable, feedback as feedbackTable, franchisees as franchiseesTable, ingredientStock as ingredientStockTable, ingredients as ingredientsTable, kdsTickets as kdsTicketsTable, locationAssignments as locationAssignmentsTable, loyaltyMembers as loyaltyMembersTable, menuItemStation as menuItemStationTable, orderItems as orderItemsTable, orders as ordersTable, pointAdjustments as pointAdjustmentsTable, recipes as recipesTable, shifts as shiftsTable, slots as slotsTable, staff as staffTable, stations as stationsTable, stockMovements as stockMovementsTable, timePunches as timePunchesTable } from "@/db/schema";
 import { gte, lte } from "drizzle-orm";
 import { bumpLazyBackfillHit, ensureTable } from "@/db/migrate";
 
@@ -5446,6 +5446,255 @@ export async function getKdsStationAnalytics(
     return out.sort((a, b) => b.p95BumpMs - a.p95BumpMs);
   } catch (err) {
     logger.warn("getKdsStationAnalytics failed", { locationSlug, layer: "store.kds" }, err);
+    return [];
+  }
+}
+
+// --- Phase 3: brands + franchisees + location assignments (m3_1, m3_2) ---
+
+const BRANDS_DDL = [
+  `CREATE TABLE IF NOT EXISTS brands (
+    id text PRIMARY KEY,
+    name text NOT NULL,
+    slug text NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now()
+  )`,
+];
+const FRANCHISEES_DDL = [
+  `CREATE TABLE IF NOT EXISTS franchisees (
+    id text PRIMARY KEY,
+    brand_id text NOT NULL,
+    name text NOT NULL,
+    email text,
+    royalty_rate_bps integer NOT NULL DEFAULT 800,
+    marketing_fund_bps integer NOT NULL DEFAULT 200,
+    status text NOT NULL DEFAULT 'active',
+    created_at timestamptz NOT NULL DEFAULT now()
+  )`,
+  `CREATE INDEX IF NOT EXISTS franchisees_brand_idx ON franchisees (brand_id)`,
+  `CREATE INDEX IF NOT EXISTS franchisees_email_idx ON franchisees (email)`,
+];
+const LOCATION_ASSIGNMENTS_DDL = [
+  `CREATE TABLE IF NOT EXISTS location_assignments (
+    location_slug text PRIMARY KEY,
+    brand_id text NOT NULL,
+    franchisee_id text,
+    region_slug text,
+    setup_complete text NOT NULL DEFAULT 'true'
+  )`,
+  `CREATE INDEX IF NOT EXISTS location_assignments_brand_idx
+    ON location_assignments (brand_id)`,
+  `CREATE INDEX IF NOT EXISTS location_assignments_franchisee_idx
+    ON location_assignments (franchisee_id)`,
+  `CREATE INDEX IF NOT EXISTS location_assignments_region_idx
+    ON location_assignments (region_slug)`,
+];
+
+async function ensureFranchiseTables(): Promise<void> {
+  await ensureTable("brands", BRANDS_DDL);
+  await ensureTable("franchisees", FRANCHISEES_DDL);
+  await ensureTable("location_assignments", LOCATION_ASSIGNMENTS_DDL);
+}
+
+export interface Brand {
+  id: string;
+  name: string;
+  slug: string;
+  createdAt: string;
+}
+
+export interface Franchisee {
+  id: string;
+  brandId: string;
+  name: string;
+  email?: string;
+  royaltyRateBps: number;
+  marketingFundBps: number;
+  status: "active" | "disabled";
+  createdAt: string;
+}
+
+export interface LocationAssignment {
+  locationSlug: string;
+  brandId: string;
+  franchiseeId?: string;
+  regionSlug?: string;
+  setupComplete: boolean;
+}
+
+/** Seed the default brand if missing. Idempotent. */
+async function ensureDefaultBrand(): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  await ensureFranchiseTables();
+  try {
+    await db
+      .insert(brandsTable)
+      .values({ id: "sud-italia", name: "Sud Italia", slug: "sud-italia" })
+      .onConflictDoNothing();
+  } catch (err) {
+    logger.warn("ensureDefaultBrand failed", { layer: "store.brands" }, err);
+  }
+}
+
+export async function getBrands(): Promise<Brand[]> {
+  const db = getDb();
+  if (!db) return [];
+  try {
+    await ensureDefaultBrand();
+    const rows = await db.select().from(brandsTable);
+    return rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      slug: r.slug,
+      createdAt: r.createdAt.toISOString(),
+    }));
+  } catch (err) {
+    logger.warn("getBrands failed", { layer: "store.brands" }, err);
+    return [];
+  }
+}
+
+export async function saveBrand(input: Brand): Promise<Brand | null> {
+  const db = getDb();
+  if (!db) return null;
+  try {
+    await ensureFranchiseTables();
+    const values = { id: input.id, name: input.name, slug: input.slug };
+    await db.insert(brandsTable).values(values).onConflictDoUpdate({ target: brandsTable.id, set: values });
+    return { ...input };
+  } catch (err) {
+    logger.error("saveBrand failed", { id: input.id, layer: "store.brands" }, err);
+    return null;
+  }
+}
+
+export async function getFranchisees(brandId?: string): Promise<Franchisee[]> {
+  const db = getDb();
+  if (!db) return [];
+  try {
+    await ensureFranchiseTables();
+    const rows = brandId
+      ? await db.select().from(franchiseesTable).where(eq(franchiseesTable.brandId, brandId))
+      : await db.select().from(franchiseesTable);
+    return rows.map((r) => ({
+      id: r.id,
+      brandId: r.brandId,
+      name: r.name,
+      email: r.email ?? undefined,
+      royaltyRateBps: r.royaltyRateBps,
+      marketingFundBps: r.marketingFundBps,
+      status: r.status as Franchisee["status"],
+      createdAt: r.createdAt.toISOString(),
+    }));
+  } catch (err) {
+    logger.warn("getFranchisees failed", { layer: "store.franchisees" }, err);
+    return [];
+  }
+}
+
+export async function saveFranchisee(input: Omit<Franchisee, "createdAt"> & { createdAt?: string }): Promise<Franchisee | null> {
+  const db = getDb();
+  if (!db) return null;
+  try {
+    await ensureFranchiseTables();
+    const values = {
+      id: input.id,
+      brandId: input.brandId,
+      name: input.name,
+      email: input.email ?? null,
+      royaltyRateBps: input.royaltyRateBps,
+      marketingFundBps: input.marketingFundBps,
+      status: input.status,
+    };
+    await db
+      .insert(franchiseesTable)
+      .values(values)
+      .onConflictDoUpdate({ target: franchiseesTable.id, set: values });
+    const rows = await db
+      .select()
+      .from(franchiseesTable)
+      .where(eq(franchiseesTable.id, input.id))
+      .limit(1);
+    if (rows.length === 0) return null;
+    const r = rows[0];
+    return {
+      id: r.id,
+      brandId: r.brandId,
+      name: r.name,
+      email: r.email ?? undefined,
+      royaltyRateBps: r.royaltyRateBps,
+      marketingFundBps: r.marketingFundBps,
+      status: r.status as Franchisee["status"],
+      createdAt: r.createdAt.toISOString(),
+    };
+  } catch (err) {
+    logger.error("saveFranchisee failed", { id: input.id, layer: "store.franchisees" }, err);
+    return null;
+  }
+}
+
+export async function getLocationAssignment(locationSlug: string): Promise<LocationAssignment | null> {
+  const db = getDb();
+  if (!db) return null;
+  try {
+    await ensureFranchiseTables();
+    const rows = await db
+      .select()
+      .from(locationAssignmentsTable)
+      .where(eq(locationAssignmentsTable.locationSlug, locationSlug))
+      .limit(1);
+    if (rows.length === 0) return null;
+    const r = rows[0];
+    return {
+      locationSlug: r.locationSlug,
+      brandId: r.brandId,
+      franchiseeId: r.franchiseeId ?? undefined,
+      regionSlug: r.regionSlug ?? undefined,
+      setupComplete: r.setupComplete === "true",
+    };
+  } catch (err) {
+    logger.warn("getLocationAssignment failed", { locationSlug, layer: "store.location_assignments" }, err);
+    return null;
+  }
+}
+
+export async function saveLocationAssignment(input: LocationAssignment): Promise<LocationAssignment | null> {
+  const db = getDb();
+  if (!db) return null;
+  try {
+    await ensureFranchiseTables();
+    const values = {
+      locationSlug: input.locationSlug,
+      brandId: input.brandId,
+      franchiseeId: input.franchiseeId ?? null,
+      regionSlug: input.regionSlug ?? null,
+      setupComplete: input.setupComplete ? "true" : "false",
+    };
+    await db
+      .insert(locationAssignmentsTable)
+      .values(values)
+      .onConflictDoUpdate({ target: locationAssignmentsTable.locationSlug, set: values });
+    return input;
+  } catch (err) {
+    logger.error("saveLocationAssignment failed", { locationSlug: input.locationSlug, layer: "store.location_assignments" }, err);
+    return null;
+  }
+}
+
+/** All locations for a given franchisee (m3_3 portal scope). */
+export async function getLocationsForFranchisee(franchiseeId: string): Promise<string[]> {
+  const db = getDb();
+  if (!db) return [];
+  try {
+    await ensureFranchiseTables();
+    const rows = await db
+      .select({ locationSlug: locationAssignmentsTable.locationSlug })
+      .from(locationAssignmentsTable)
+      .where(eq(locationAssignmentsTable.franchiseeId, franchiseeId));
+    return rows.map((r) => r.locationSlug);
+  } catch (err) {
+    logger.warn("getLocationsForFranchisee failed", { franchiseeId, layer: "store.location_assignments" }, err);
     return [];
   }
 }

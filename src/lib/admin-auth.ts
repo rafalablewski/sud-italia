@@ -174,10 +174,16 @@ export async function clearSession(): Promise<void> {
   cookieStore.delete(SESSION_COOKIE);
 }
 
-export type AdminRole = "owner" | "manager" | "staff" | "kitchen";
+export type AdminRole = "owner" | "manager" | "franchisee" | "staff" | "kitchen";
 
 export const ROLE_RANK: Record<AdminRole, number> = {
   owner: 100,
+  // Franchisee sits between owner and manager (m3_2). They have
+  // read-everything power inside their own scope but never see other
+  // franchisees' data. m0_5 locationScope claim is what enforces the
+  // tenancy; the rank only governs role-gated UI like settings, users,
+  // and admin-only HQ rollups.
+  franchisee: 70,
   manager: 50,
   staff: 20,
   kitchen: 10,

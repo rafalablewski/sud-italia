@@ -672,3 +672,68 @@ export const kdsTickets = pgTable(
     ),
   ],
 );
+
+// --- Phase 3: brands + franchisees + location_assignments (m3_1, m3_2) ---
+
+/**
+ * Brand entity. One row per brand the platform serves. "Sud Italia" is
+ * the only one today; the table opens the door to multi-brand SaaS
+ * later (white-label deployments).
+ */
+export const brands = pgTable("brands", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+/**
+ * Franchisees own N locations under one brand. Royalty + marketing-fund
+ * basis points are bps (1/100 of 1%) so 800 = 8%, 200 = 2%.
+ */
+export const franchisees = pgTable(
+  "franchisees",
+  {
+    id: text("id").primaryKey(),
+    brandId: text("brand_id").notNull(),
+    name: text("name").notNull(),
+    email: text("email"),
+    royaltyRateBps: integer("royalty_rate_bps").notNull().default(800),
+    marketingFundBps: integer("marketing_fund_bps").notNull().default(200),
+    status: text("status").notNull().default("active"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("franchisees_brand_idx").on(table.brandId),
+    index("franchisees_email_idx").on(table.email),
+  ],
+);
+
+/**
+ * Maps a location slug to its brand + (optional) franchisee. Locations
+ * live in code (src/data/locations.ts) per CLAUDE.md; this table is the
+ * runtime overlay that says "krakow belongs to brand X, franchisee Y".
+ *
+ * (location_slug) PK so a slug can only map to one brand at a time;
+ * franchisee is optional because corporate locations don't have one.
+ */
+export const locationAssignments = pgTable(
+  "location_assignments",
+  {
+    locationSlug: text("location_slug").primaryKey(),
+    brandId: text("brand_id").notNull(),
+    franchiseeId: text("franchisee_id"),
+    /** Optional regional grouping for HQ rollups (m3_11). */
+    regionSlug: text("region_slug"),
+    setupComplete: text("setup_complete").notNull().default("true"),
+  },
+  (table) => [
+    index("location_assignments_brand_idx").on(table.brandId),
+    index("location_assignments_franchisee_idx").on(table.franchiseeId),
+    index("location_assignments_region_idx").on(table.regionSlug),
+  ],
+);

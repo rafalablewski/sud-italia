@@ -92,6 +92,13 @@
       "when": 1778661920249,
       "tag": "0012_panoramic_zzzax",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1778664233689,
+      "tag": "0013_curly_hiroim",
+      "breakpoints": true
     }
   ]
 }
