@@ -427,3 +427,68 @@ export const feedback = pgTable(
     index("feedback_order_id_idx").on(table.orderId),
   ],
 );
+
+// --- Phase 1: staff / shifts / time-punches (m1_8a) ---------------------
+
+export const staff = pgTable(
+  "staff",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    phone: text("phone"),
+    email: text("email"),
+    role: text("role").notNull(),
+    locationSlug: text("location_slug").notNull(),
+    hourlyRateGrosze: integer("hourly_rate_grosze").notNull(),
+    hireDate: text("hire_date"),
+    dob: text("dob"),
+    status: text("status").notNull(),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    index("staff_location_idx").on(table.locationSlug),
+    index("staff_status_idx").on(table.status),
+  ],
+);
+
+export const shifts = pgTable(
+  "shifts",
+  {
+    id: text("id").primaryKey(),
+    staffId: text("staff_id").notNull(),
+    locationSlug: text("location_slug").notNull(),
+    startAt: timestamp("start_at", { withTimezone: true }).notNull(),
+    endAt: timestamp("end_at", { withTimezone: true }).notNull(),
+    role: text("role").notNull(),
+    status: text("status").notNull(),
+    notes: text("notes"),
+  },
+  (table) => [
+    index("shifts_location_start_idx").on(table.locationSlug, table.startAt),
+    index("shifts_staff_start_idx").on(table.staffId, table.startAt),
+    index("shifts_status_idx").on(table.status),
+  ],
+);
+
+/**
+ * Time punches — append-only. The labour-cost calculation pairs IN/OUT per
+ * staff member across a window, so (staff_id, occurred_at DESC) is the
+ * only access pattern that matters.
+ */
+export const timePunches = pgTable(
+  "time_punches",
+  {
+    id: text("id").primaryKey(),
+    staffId: text("staff_id").notNull(),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
+    type: text("type").notNull(), // "clock-in" | "clock-out"
+    shiftId: text("shift_id"),
+  },
+  (table) => [
+    index("time_punches_staff_occurred_idx").on(
+      table.staffId,
+      table.occurredAt,
+    ),
+  ],
+);

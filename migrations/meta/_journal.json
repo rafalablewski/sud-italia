@@ -57,6 +57,13 @@
       "when": 1778659779491,
       "tag": "0007_bored_hannibal_king",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1778659916084,
+      "tag": "0008_useful_psynapse",
+      "breakpoints": true
     }
   ]
 }

@@ -14,7 +14,8 @@ import { logger } from "@/lib/logger";
 import { withDistributedLock } from "@/lib/locks";
 import { and, desc, eq, inArray, lt, sql as drizzleSql } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { auditLog as auditLogTable, customers as customersTable, feedback as feedbackTable, ingredientStock as ingredientStockTable, ingredients as ingredientsTable, orderItems as orderItemsTable, orders as ordersTable, recipes as recipesTable, slots as slotsTable, stockMovements as stockMovementsTable } from "@/db/schema";
+import { auditLog as auditLogTable, customers as customersTable, feedback as feedbackTable, ingredientStock as ingredientStockTable, ingredients as ingredientsTable, orderItems as orderItemsTable, orders as ordersTable, recipes as recipesTable, shifts as shiftsTable, slots as slotsTable, staff as staffTable, stockMovements as stockMovementsTable, timePunches as timePunchesTable } from "@/db/schema";
+import { gte, lte } from "drizzle-orm";
 import { bumpLazyBackfillHit, ensureTable } from "@/db/migrate";
 
 // --- Storage abstraction: Neon Postgres when DATABASE_URL is set, filesystem fallback for local dev ---
@@ -3625,11 +3626,207 @@ export async function deleteCustomerNote(id: string): Promise<boolean> {
   });
 }
 
-// --- Staff / HR ---
+// --- Staff / HR (m1_8a: dual-write) -------------------------------------
+
+const STAFF_DDL = [
+  `CREATE TABLE IF NOT EXISTS staff (
+    id text PRIMARY KEY,
+    name text NOT NULL,
+    phone text,
+    email text,
+    role text NOT NULL,
+    location_slug text NOT NULL,
+    hourly_rate_grosze integer NOT NULL,
+    hire_date text,
+    dob text,
+    status text NOT NULL,
+    notes text,
+    created_at timestamptz NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS staff_location_idx ON staff (location_slug)`,
+  `CREATE INDEX IF NOT EXISTS staff_status_idx ON staff (status)`,
+];
+const SHIFTS_DDL = [
+  `CREATE TABLE IF NOT EXISTS shifts (
+    id text PRIMARY KEY,
+    staff_id text NOT NULL,
+    location_slug text NOT NULL,
+    start_at timestamptz NOT NULL,
+    end_at timestamptz NOT NULL,
+    role text NOT NULL,
+    status text NOT NULL,
+    notes text
+  )`,
+  `CREATE INDEX IF NOT EXISTS shifts_location_start_idx
+    ON shifts (location_slug, start_at)`,
+  `CREATE INDEX IF NOT EXISTS shifts_staff_start_idx
+    ON shifts (staff_id, start_at)`,
+  `CREATE INDEX IF NOT EXISTS shifts_status_idx ON shifts (status)`,
+];
+const TIME_PUNCHES_DDL = [
+  `CREATE TABLE IF NOT EXISTS time_punches (
+    id text PRIMARY KEY,
+    staff_id text NOT NULL,
+    occurred_at timestamptz NOT NULL,
+    type text NOT NULL,
+    shift_id text
+  )`,
+  `CREATE INDEX IF NOT EXISTS time_punches_staff_occurred_idx
+    ON time_punches (staff_id, occurred_at)`,
+];
+
+async function ensureStaffTable(): Promise<void> {
+  await ensureTable("staff", STAFF_DDL);
+}
+async function ensureShiftsTable(): Promise<void> {
+  await ensureTable("shifts", SHIFTS_DDL);
+}
+async function ensureTimePunchesTable(): Promise<void> {
+  await ensureTable("time_punches", TIME_PUNCHES_DDL);
+}
+
+function rowToStaff(row: typeof staffTable.$inferSelect): StaffMember {
+  return {
+    id: row.id,
+    name: row.name,
+    phone: row.phone ?? undefined,
+    email: row.email ?? undefined,
+    role: row.role as StaffMember["role"],
+    locationSlug: row.locationSlug,
+    hourlyRateGrosze: row.hourlyRateGrosze,
+    hireDate: row.hireDate ?? undefined,
+    dob: row.dob ?? undefined,
+    status: row.status as StaffMember["status"],
+    notes: row.notes ?? undefined,
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+function rowToShift(row: typeof shiftsTable.$inferSelect): Shift {
+  return {
+    id: row.id,
+    staffId: row.staffId,
+    locationSlug: row.locationSlug,
+    startAt: row.startAt.toISOString(),
+    endAt: row.endAt.toISOString(),
+    role: row.role as Shift["role"],
+    status: row.status as Shift["status"],
+    notes: row.notes ?? undefined,
+  };
+}
+function rowToTimePunch(row: typeof timePunchesTable.$inferSelect): TimePunch {
+  return {
+    id: row.id,
+    staffId: row.staffId,
+    occurredAt: row.occurredAt.toISOString(),
+    type: row.type as TimePunch["type"],
+    shiftId: row.shiftId ?? undefined,
+  };
+}
+
+async function dualWriteStaff(m: StaffMember): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureStaffTable();
+    const values = {
+      id: m.id,
+      name: m.name,
+      phone: m.phone ?? null,
+      email: m.email ?? null,
+      role: m.role,
+      locationSlug: m.locationSlug,
+      hourlyRateGrosze: m.hourlyRateGrosze,
+      hireDate: m.hireDate ?? null,
+      dob: m.dob ?? null,
+      status: m.status,
+      notes: m.notes ?? null,
+      createdAt: new Date(m.createdAt),
+    };
+    await db.insert(staffTable).values(values).onConflictDoUpdate({ target: staffTable.id, set: values });
+  } catch (err) {
+    logger.warn("dualWriteStaff failed", { id: m.id, layer: "store.staff" }, err);
+  }
+}
+async function dualDeleteStaff(id: string): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureStaffTable();
+    await db.delete(staffTable).where(eq(staffTable.id, id));
+  } catch (err) {
+    logger.warn("dualDeleteStaff failed", { id, layer: "store.staff" }, err);
+  }
+}
+async function dualWriteShift(s: Shift): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureShiftsTable();
+    const values = {
+      id: s.id,
+      staffId: s.staffId,
+      locationSlug: s.locationSlug,
+      startAt: new Date(s.startAt),
+      endAt: new Date(s.endAt),
+      role: s.role,
+      status: s.status,
+      notes: s.notes ?? null,
+    };
+    await db.insert(shiftsTable).values(values).onConflictDoUpdate({ target: shiftsTable.id, set: values });
+  } catch (err) {
+    logger.warn("dualWriteShift failed", { id: s.id, layer: "store.shifts" }, err);
+  }
+}
+async function dualDeleteShift(id: string): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureShiftsTable();
+    await db.delete(shiftsTable).where(eq(shiftsTable.id, id));
+  } catch (err) {
+    logger.warn("dualDeleteShift failed", { id, layer: "store.shifts" }, err);
+  }
+}
+async function dualWriteTimePunch(p: TimePunch): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureTimePunchesTable();
+    await db
+      .insert(timePunchesTable)
+      .values({
+        id: p.id,
+        staffId: p.staffId,
+        occurredAt: new Date(p.occurredAt),
+        type: p.type,
+        shiftId: p.shiftId ?? null,
+      })
+      .onConflictDoNothing();
+  } catch (err) {
+    logger.warn("dualWriteTimePunch failed", { id: p.id, layer: "store.time_punches" }, err);
+  }
+}
 
 export async function getStaff(locationSlug?: string): Promise<StaffMember[]> {
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureStaffTable();
+      const rows = locationSlug
+        ? await db.select().from(staffTable).where(eq(staffTable.locationSlug, locationSlug))
+        : await db.select().from(staffTable);
+      if (rows.length > 0) return rows.map(rowToStaff);
+    } catch (err) {
+      logger.warn("getStaff DB read failed; falling back", { layer: "store.staff" }, err);
+    }
+  }
   const all = await readJSON<StaffMember[]>("staff.json", []);
-  return locationSlug ? all.filter((s) => s.locationSlug === locationSlug) : all;
+  const filtered = locationSlug ? all.filter((s) => s.locationSlug === locationSlug) : all;
+  if (filtered.length > 0) {
+    bumpLazyBackfillHit("staff");
+    void Promise.all(filtered.map((s) => dualWriteStaff(s)));
+  }
+  return filtered;
 }
 
 export async function saveStaff(
@@ -3655,6 +3852,7 @@ export async function saveStaff(
     if (i >= 0) list[i] = member;
     else list.push(member);
     await writeJSON("staff.json", list);
+    await dualWriteStaff(member);
     return member;
   });
 }
@@ -3665,6 +3863,7 @@ export async function deleteStaff(id: string): Promise<boolean> {
     const filtered = list.filter((s) => s.id !== id);
     if (filtered.length === list.length) return false;
     await writeJSON("staff.json", filtered);
+    await dualDeleteStaff(id);
     return true;
   });
 }
@@ -3675,13 +3874,34 @@ export async function getShifts(filters?: {
   from?: string;
   to?: string;
 }): Promise<Shift[]> {
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureShiftsTable();
+      const where = [];
+      if (filters?.locationSlug) where.push(eq(shiftsTable.locationSlug, filters.locationSlug));
+      if (filters?.staffId) where.push(eq(shiftsTable.staffId, filters.staffId));
+      if (filters?.from) where.push(gte(shiftsTable.endAt, new Date(filters.from)));
+      if (filters?.to) where.push(lte(shiftsTable.startAt, new Date(filters.to)));
+      const baseQuery = db.select().from(shiftsTable).orderBy(shiftsTable.startAt);
+      const rows = where.length > 0 ? await baseQuery.where(and(...where)) : await baseQuery;
+      if (rows.length > 0) return rows.map(rowToShift);
+    } catch (err) {
+      logger.warn("getShifts DB read failed; falling back", { layer: "store.shifts" }, err);
+    }
+  }
   const all = await readJSON<Shift[]>("shifts.json", []);
   let list = all;
   if (filters?.locationSlug) list = list.filter((s) => s.locationSlug === filters.locationSlug);
   if (filters?.staffId) list = list.filter((s) => s.staffId === filters.staffId);
   if (filters?.from) list = list.filter((s) => s.endAt >= filters.from!);
   if (filters?.to) list = list.filter((s) => s.startAt <= filters.to!);
-  return list.slice().sort((a, b) => a.startAt.localeCompare(b.startAt));
+  const sorted = list.slice().sort((a, b) => a.startAt.localeCompare(b.startAt));
+  if (sorted.length > 0) {
+    bumpLazyBackfillHit("shifts");
+    void Promise.all(sorted.map((s) => dualWriteShift(s)));
+  }
+  return sorted;
 }
 
 export async function saveShift(input: Omit<Shift, "id"> & { id?: string }): Promise<Shift> {
@@ -3701,6 +3921,7 @@ export async function saveShift(input: Omit<Shift, "id"> & { id?: string }): Pro
     if (i >= 0) list[i] = shift;
     else list.push(shift);
     await writeJSON("shifts.json", list);
+    await dualWriteShift(shift);
     return shift;
   });
 }
@@ -3711,6 +3932,7 @@ export async function deleteShift(id: string): Promise<boolean> {
     const filtered = list.filter((s) => s.id !== id);
     if (filtered.length === list.length) return false;
     await writeJSON("shifts.json", filtered);
+    await dualDeleteShift(id);
     return true;
   });
 }
@@ -3720,12 +3942,35 @@ export async function getTimePunches(filters?: {
   from?: string;
   to?: string;
 }): Promise<TimePunch[]> {
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureTimePunchesTable();
+      const where = [];
+      if (filters?.staffId) where.push(eq(timePunchesTable.staffId, filters.staffId));
+      if (filters?.from) where.push(gte(timePunchesTable.occurredAt, new Date(filters.from)));
+      if (filters?.to) where.push(lte(timePunchesTable.occurredAt, new Date(filters.to)));
+      const baseQuery = db
+        .select()
+        .from(timePunchesTable)
+        .orderBy(desc(timePunchesTable.occurredAt));
+      const rows = where.length > 0 ? await baseQuery.where(and(...where)) : await baseQuery;
+      if (rows.length > 0) return rows.map(rowToTimePunch);
+    } catch (err) {
+      logger.warn("getTimePunches DB read failed; falling back", { layer: "store.time_punches" }, err);
+    }
+  }
   const all = await readJSON<TimePunch[]>("time-punches.json", []);
   let list = all;
   if (filters?.staffId) list = list.filter((p) => p.staffId === filters.staffId);
   if (filters?.from) list = list.filter((p) => p.occurredAt >= filters.from!);
   if (filters?.to) list = list.filter((p) => p.occurredAt <= filters.to!);
-  return list.slice().sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
+  const sorted = list.slice().sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
+  if (sorted.length > 0) {
+    bumpLazyBackfillHit("time_punches");
+    void Promise.all(sorted.map((p) => dualWriteTimePunch(p)));
+  }
+  return sorted;
 }
 
 export async function recordTimePunch(input: Omit<TimePunch, "id" | "occurredAt"> & { occurredAt?: string }): Promise<TimePunch> {
@@ -3740,6 +3985,7 @@ export async function recordTimePunch(input: Omit<TimePunch, "id" | "occurredAt"
     };
     list.push(punch);
     await writeJSON("time-punches.json", list);
+    await dualWriteTimePunch(punch);
     return punch;
   });
 }
