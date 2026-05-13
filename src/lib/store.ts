@@ -17,7 +17,7 @@ import { appendOutboxEvent } from "@/lib/outbox";
 import { incrCounter } from "@/lib/metrics";
 import { and, asc, desc, eq, inArray, lt, sql as drizzleSql } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { auditLog as auditLogTable, brands as brandsTable, customerNotes as customerNotesTable, customers as customersTable, feedback as feedbackTable, franchisees as franchiseesTable, ingredientStock as ingredientStockTable, ingredients as ingredientsTable, kdsTickets as kdsTicketsTable, locationAssignments as locationAssignmentsTable, loyaltyMembers as loyaltyMembersTable, menuItemStation as menuItemStationTable, orderItems as orderItemsTable, orders as ordersTable, pointAdjustments as pointAdjustmentsTable, recipes as recipesTable, royaltyStatements as royaltyStatementsTable, shifts as shiftsTable, slots as slotsTable, staff as staffTable, stations as stationsTable, stockMovements as stockMovementsTable, timePunches as timePunchesTable } from "@/db/schema";
+import { allergenIncidents as allergenIncidentsTable, auditLog as auditLogTable, brands as brandsTable, customerNotes as customerNotesTable, customers as customersTable, feedback as feedbackTable, franchisees as franchiseesTable, ingredientStock as ingredientStockTable, ingredients as ingredientsTable, kdsTickets as kdsTicketsTable, locationAssignments as locationAssignmentsTable, loyaltyMembers as loyaltyMembersTable, menuItemStation as menuItemStationTable, orderItems as orderItemsTable, orders as ordersTable, pointAdjustments as pointAdjustmentsTable, recipes as recipesTable, royaltyStatements as royaltyStatementsTable, shifts as shiftsTable, slots as slotsTable, staff as staffTable, stations as stationsTable, stockMovements as stockMovementsTable, tempLogs as tempLogsTable, timePunches as timePunchesTable } from "@/db/schema";
 import { gte, lte } from "drizzle-orm";
 import { bumpLazyBackfillHit, ensureTable } from "@/db/migrate";
 
@@ -5802,5 +5802,213 @@ export async function saveRoyaltyStatement(input: Omit<RoyaltyStatement, "id" | 
   } catch (err) {
     logger.error("saveRoyaltyStatement failed", { franchiseeId: input.franchiseeId, layer: "store.royalty" }, err);
     return null;
+  }
+}
+
+// --- Phase 3 compliance: temp logs + allergen incidents (m3_13-15) -----
+
+const TEMP_LOGS_DDL = [
+  `CREATE TABLE IF NOT EXISTS temp_logs (
+    id text PRIMARY KEY,
+    location_slug text NOT NULL,
+    sensor text NOT NULL,
+    temp_celsius integer NOT NULL,
+    status text NOT NULL DEFAULT 'ok',
+    recorded_by text,
+    recorded_at timestamptz NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS temp_logs_location_recorded_idx
+    ON temp_logs (location_slug, recorded_at)`,
+  `CREATE INDEX IF NOT EXISTS temp_logs_sensor_idx ON temp_logs (sensor)`,
+  `CREATE INDEX IF NOT EXISTS temp_logs_status_idx ON temp_logs (status)`,
+];
+const ALLERGEN_INCIDENTS_DDL = [
+  `CREATE TABLE IF NOT EXISTS allergen_incidents (
+    id text PRIMARY KEY,
+    location_slug text NOT NULL,
+    customer_phone text,
+    order_id text,
+    menu_item_id text,
+    allergen text NOT NULL,
+    severity text NOT NULL,
+    description text NOT NULL,
+    resolution text,
+    reported_by text NOT NULL,
+    reported_at timestamptz NOT NULL,
+    resolved_at timestamptz
+  )`,
+  `CREATE INDEX IF NOT EXISTS allergen_incidents_location_reported_idx
+    ON allergen_incidents (location_slug, reported_at)`,
+  `CREATE INDEX IF NOT EXISTS allergen_incidents_severity_idx
+    ON allergen_incidents (severity)`,
+];
+
+async function ensureComplianceTables(): Promise<void> {
+  await ensureTable("temp_logs", TEMP_LOGS_DDL);
+  await ensureTable("allergen_incidents", ALLERGEN_INCIDENTS_DDL);
+}
+
+export interface TempLog {
+  id: string;
+  locationSlug: string;
+  sensor: string;
+  /** Temperature in tenths of a degree Celsius. -50 = -5.0 °C. */
+  tempCelsius: number;
+  status: "ok" | "flagged";
+  recordedBy?: string;
+  recordedAt: string;
+}
+
+export interface AllergenIncident {
+  id: string;
+  locationSlug: string;
+  customerPhone?: string;
+  orderId?: string;
+  menuItemId?: string;
+  allergen: string;
+  severity: "low" | "medium" | "high";
+  description: string;
+  resolution?: string;
+  reportedBy: string;
+  reportedAt: string;
+  resolvedAt?: string;
+}
+
+const TEMP_RANGES: Record<string, { minTenths: number; maxTenths: number }> = {
+  // Defaults from HACCP guidance. Operator can override per-sensor later;
+  // for now any sensor name maps to a fridge range unless it contains
+  // "freezer" or "hot".
+  default: { minTenths: 0, maxTenths: 50 },
+  freezer: { minTenths: -300, maxTenths: -180 },
+  hot: { minTenths: 630, maxTenths: 800 },
+};
+
+function rangeForSensor(sensor: string): { minTenths: number; maxTenths: number } {
+  const lower = sensor.toLowerCase();
+  if (lower.includes("freezer")) return TEMP_RANGES.freezer;
+  if (lower.includes("hot")) return TEMP_RANGES.hot;
+  return TEMP_RANGES.default;
+}
+
+export async function saveTempLog(input: Omit<TempLog, "id" | "status"> & { id?: string }): Promise<TempLog | null> {
+  const db = getDb();
+  if (!db) return null;
+  try {
+    await ensureComplianceTables();
+    const id = input.id || `tl-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+    const range = rangeForSensor(input.sensor);
+    const status: "ok" | "flagged" =
+      input.tempCelsius < range.minTenths || input.tempCelsius > range.maxTenths
+        ? "flagged"
+        : "ok";
+    await db.insert(tempLogsTable).values({
+      id,
+      locationSlug: input.locationSlug,
+      sensor: input.sensor,
+      tempCelsius: input.tempCelsius,
+      status,
+      recordedBy: input.recordedBy ?? null,
+      recordedAt: new Date(input.recordedAt),
+    });
+    return { id, status, ...input };
+  } catch (err) {
+    logger.error("saveTempLog failed", { layer: "store.compliance" }, err);
+    return null;
+  }
+}
+
+export async function getTempLogs(filters: {
+  locationSlug: string;
+  fromIso?: string;
+  toIso?: string;
+  limit?: number;
+}): Promise<TempLog[]> {
+  const db = getDb();
+  if (!db) return [];
+  try {
+    await ensureComplianceTables();
+    const where = [eq(tempLogsTable.locationSlug, filters.locationSlug)];
+    if (filters.fromIso) where.push(gte(tempLogsTable.recordedAt, new Date(filters.fromIso)));
+    if (filters.toIso) where.push(lte(tempLogsTable.recordedAt, new Date(filters.toIso)));
+    const baseQuery = db
+      .select()
+      .from(tempLogsTable)
+      .where(and(...where))
+      .orderBy(desc(tempLogsTable.recordedAt));
+    const rows = filters.limit ? await baseQuery.limit(filters.limit) : await baseQuery.limit(500);
+    return rows.map((r) => ({
+      id: r.id,
+      locationSlug: r.locationSlug,
+      sensor: r.sensor,
+      tempCelsius: r.tempCelsius,
+      status: r.status as TempLog["status"],
+      recordedBy: r.recordedBy ?? undefined,
+      recordedAt: r.recordedAt.toISOString(),
+    }));
+  } catch (err) {
+    logger.warn("getTempLogs failed", { layer: "store.compliance" }, err);
+    return [];
+  }
+}
+
+export async function saveAllergenIncident(input: Omit<AllergenIncident, "id"> & { id?: string }): Promise<AllergenIncident | null> {
+  const db = getDb();
+  if (!db) return null;
+  try {
+    await ensureComplianceTables();
+    const id = input.id || `ai-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+    await db.insert(allergenIncidentsTable).values({
+      id,
+      locationSlug: input.locationSlug,
+      customerPhone: input.customerPhone ?? null,
+      orderId: input.orderId ?? null,
+      menuItemId: input.menuItemId ?? null,
+      allergen: input.allergen,
+      severity: input.severity,
+      description: input.description,
+      resolution: input.resolution ?? null,
+      reportedBy: input.reportedBy,
+      reportedAt: new Date(input.reportedAt),
+      resolvedAt: input.resolvedAt ? new Date(input.resolvedAt) : null,
+    });
+    return { id, ...input };
+  } catch (err) {
+    logger.error("saveAllergenIncident failed", { layer: "store.compliance" }, err);
+    return null;
+  }
+}
+
+export async function getAllergenIncidents(locationSlug?: string): Promise<AllergenIncident[]> {
+  const db = getDb();
+  if (!db) return [];
+  try {
+    await ensureComplianceTables();
+    const rows = locationSlug
+      ? await db
+          .select()
+          .from(allergenIncidentsTable)
+          .where(eq(allergenIncidentsTable.locationSlug, locationSlug))
+          .orderBy(desc(allergenIncidentsTable.reportedAt))
+      : await db
+          .select()
+          .from(allergenIncidentsTable)
+          .orderBy(desc(allergenIncidentsTable.reportedAt));
+    return rows.map((r) => ({
+      id: r.id,
+      locationSlug: r.locationSlug,
+      customerPhone: r.customerPhone ?? undefined,
+      orderId: r.orderId ?? undefined,
+      menuItemId: r.menuItemId ?? undefined,
+      allergen: r.allergen,
+      severity: r.severity as AllergenIncident["severity"],
+      description: r.description,
+      resolution: r.resolution ?? undefined,
+      reportedBy: r.reportedBy,
+      reportedAt: r.reportedAt.toISOString(),
+      resolvedAt: r.resolvedAt ? r.resolvedAt.toISOString() : undefined,
+    }));
+  } catch (err) {
+    logger.warn("getAllergenIncidents failed", { layer: "store.compliance" }, err);
+    return [];
   }
 }

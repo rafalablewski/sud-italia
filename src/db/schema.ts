@@ -767,3 +767,63 @@ export const royaltyStatements = pgTable(
     ),
   ],
 );
+
+// --- Phase 3: compliance-as-code (m3_13-15) ------------------------------
+
+/**
+ * HACCP temperature log entries (m3_14). Each row is one reading from
+ * one sensor (fridge, freezer, hot-hold, etc) at one moment. Auto-flag
+ * status when the reading falls outside the HACCP-defined range; staff
+ * enters readings on mobile via /admin/compliance/temp.
+ */
+export const tempLogs = pgTable(
+  "temp_logs",
+  {
+    id: text("id").primaryKey(),
+    locationSlug: text("location_slug").notNull(),
+    sensor: text("sensor").notNull(),
+    tempCelsius: integer("temp_celsius").notNull(), // tenths of a degree
+    status: text("status").notNull().default("ok"),
+    recordedBy: text("recorded_by"),
+    recordedAt: timestamp("recorded_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    index("temp_logs_location_recorded_idx").on(
+      table.locationSlug,
+      table.recordedAt,
+    ),
+    index("temp_logs_sensor_idx").on(table.sensor),
+    index("temp_logs_status_idx").on(table.status),
+  ],
+);
+
+/**
+ * Customer-reported allergen incidents (m3_15). Staff log them as soon
+ * as a customer reports; manager gets paged via outbox event. The
+ * resolution column captures what we did (comp, refund, no action) so
+ * inspectors see the full chain on the audit page.
+ */
+export const allergenIncidents = pgTable(
+  "allergen_incidents",
+  {
+    id: text("id").primaryKey(),
+    locationSlug: text("location_slug").notNull(),
+    customerPhone: text("customer_phone"),
+    orderId: text("order_id"),
+    menuItemId: text("menu_item_id"),
+    allergen: text("allergen").notNull(),
+    severity: text("severity").notNull(), // "low" | "medium" | "high"
+    description: text("description").notNull(),
+    resolution: text("resolution"),
+    reportedBy: text("reported_by").notNull(),
+    reportedAt: timestamp("reported_at", { withTimezone: true }).notNull(),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("allergen_incidents_location_reported_idx").on(
+      table.locationSlug,
+      table.reportedAt,
+    ),
+    index("allergen_incidents_severity_idx").on(table.severity),
+  ],
+);
