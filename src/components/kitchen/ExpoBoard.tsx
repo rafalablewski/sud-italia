@@ -95,15 +95,43 @@ export function ExpoBoard({ locationName, slug }: Props) {
     });
   }, [tickets]);
 
-  const bump = async (ticketId: string) => {
-    const res = await fetch(`/api/kitchen/tickets/${ticketId}/bump`, { method: "POST" });
-    if (res.ok) refresh();
-  };
+  const bump = useCallback(
+    async (ticketId: string) => {
+      const res = await fetch(`/api/kitchen/tickets/${ticketId}/bump`, { method: "POST" });
+      if (res.ok) refresh();
+    },
+    [refresh],
+  );
 
   const markReady = async (ticketId: string) => {
     const res = await fetch(`/api/kitchen/tickets/${ticketId}/ready`, { method: "POST" });
     if (res.ok) refresh();
   };
+
+  // m2_7 bump-bar hotkeys. Numeric 1-9 + 0 bump the Nth visible order
+  // group ("bump all → notify customer"). Glove-friendly without a
+  // physical bump-bar plugged in; landscape tablet at the pass-through
+  // wins big. F1-F12 conflict with the browser/OS so we use digits.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+      const map: Record<string, number> = {
+        "1": 0, "2": 1, "3": 2, "4": 3, "5": 4,
+        "6": 5, "7": 6, "8": 7, "9": 8, "0": 9,
+      };
+      const idx = map[e.key];
+      if (idx === undefined) return;
+      e.preventDefault();
+      queueMicrotask(() => {
+        if (idx >= orderGroups.length) return;
+        const [, group] = orderGroups[idx];
+        group.forEach((t) => void bump(t.id));
+      });
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [orderGroups, bump]);
 
   function statusFor(t: Ticket): "ok" | "warn" | "overdue" {
     if (!t.promisedReadyAt) return "ok";
@@ -155,8 +183,10 @@ export function ExpoBoard({ locationName, slug }: Props) {
       {!loading && orderGroups.length === 0 && <p className="expo-empty">No active orders.</p>}
 
       <div className="expo-orders">
-        {orderGroups.map(([orderId, group]) => {
+        {orderGroups.map(([orderId, group], idx) => {
           const allReady = group.every((t) => t.status === "ready");
+          // m2_7: digits 1-9 + 0 map to first 10 visible orders.
+          const hotkey = idx < 9 ? String(idx + 1) : idx === 9 ? "0" : undefined;
           const worstStatus = group
             .map(statusFor)
             .reduce<"ok" | "warn" | "overdue">((acc, s) => {
@@ -171,7 +201,10 @@ export function ExpoBoard({ locationName, slug }: Props) {
               data-ready={allReady ? "true" : "false"}
             >
               <header className="expo-order-header">
-                <div className="expo-order-id">#{orderId}</div>
+                <div className="expo-order-id">
+                  {hotkey && <kbd className="expo-hotkey" aria-label={`Press ${hotkey} to bump all`}>{hotkey}</kbd>}
+                  #{orderId}
+                </div>
                 <div className="expo-order-countdown">{countdownLabel(group[0])}</div>
               </header>
               <ul className="expo-order-stations">

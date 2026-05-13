@@ -3482,3 +3482,4 @@ select.pub-input {
 .expo-btn-bump { background: #6366f1; color: white; }
 .expo-btn-bump-all { background: #c8102e; color: white; width: 100%; padding: 12px; font-weight: 600; }
 .expo-order-footer { margin-top: auto; }
+.expo-hotkey { display: inline-block; padding: 2px 6px; margin-right: 8px; background: #333; color: #fff; border: 1px solid #555; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 12px; }
