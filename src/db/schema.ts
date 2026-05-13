@@ -172,3 +172,40 @@ export const orders = pgTable(
     index("orders_slot_id_idx").on(table.slotId),
   ],
 );
+
+// --- Phase 1: order items (m1_3) ----------------------------------------
+
+/**
+ * Order line-items, normalized out of `orders.payload.items`. Phase 1 keeps
+ * the jsonb mirror in payload so dual-write stays simple; the order_items
+ * table exists for the queries that need a real SQL group-by:
+ *
+ *   - Per-item revenue / margin reports.
+ *   - "What was the top-selling pizza last week per location?"
+ *   - Phase 2 KDS station routing — fan out by menu_item_station mapping.
+ *
+ * `unit_price_grosze` is captured at order time, not looked up from the
+ * menu — menus shift price; the order's actual paid price is the truth.
+ *
+ * `modifiers` (jsonb) is forward-compatible: Phase 2 will start storing
+ * `{ size: "L", extra_cheese: true, no_onions: true }` once the menu
+ * supports modifier groups. For now it's just an empty object.
+ */
+export const orderItems = pgTable(
+  "order_items",
+  {
+    id: text("id").primaryKey(),
+    orderId: text("order_id")
+      .notNull()
+      .references(() => orders.id, { onDelete: "cascade" }),
+    menuItemId: text("menu_item_id").notNull(),
+    quantity: integer("quantity").notNull(),
+    unitPriceGrosze: integer("unit_price_grosze").notNull(),
+    notes: text("notes"),
+    modifiers: jsonb("modifiers").notNull().default({}),
+  },
+  (table) => [
+    index("order_items_order_id_idx").on(table.orderId),
+    index("order_items_menu_item_id_idx").on(table.menuItemId),
+  ],
+);

@@ -14,7 +14,7 @@ import { logger } from "@/lib/logger";
 import { withDistributedLock } from "@/lib/locks";
 import { and, desc, eq, inArray, lt, sql as drizzleSql } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { orders as ordersTable, slots as slotsTable } from "@/db/schema";
+import { orderItems as orderItemsTable, orders as ordersTable, slots as slotsTable } from "@/db/schema";
 import { bumpLazyBackfillHit, ensureTable } from "@/db/migrate";
 
 // --- Storage abstraction: Neon Postgres when DATABASE_URL is set, filesystem fallback for local dev ---
@@ -508,6 +508,68 @@ async function ensureOrdersTable(): Promise<void> {
   await ensureTable("orders", ORDERS_DDL);
 }
 
+/**
+ * Order line-items table (m1_3). FK to orders.id with ON DELETE CASCADE so
+ * deleting an order automatically clears its rows. Existence depends on the
+ * orders table; ensureOrderItemsTable() runs ensureOrdersTable() first.
+ */
+const ORDER_ITEMS_DDL = [
+  `CREATE TABLE IF NOT EXISTS order_items (
+    id text PRIMARY KEY,
+    order_id text NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    menu_item_id text NOT NULL,
+    quantity integer NOT NULL,
+    unit_price_grosze integer NOT NULL,
+    notes text,
+    modifiers jsonb NOT NULL DEFAULT '{}'::jsonb
+  )`,
+  `CREATE INDEX IF NOT EXISTS order_items_order_id_idx
+    ON order_items (order_id)`,
+  `CREATE INDEX IF NOT EXISTS order_items_menu_item_id_idx
+    ON order_items (menu_item_id)`,
+];
+
+async function ensureOrderItemsTable(): Promise<void> {
+  await ensureOrdersTable();
+  await ensureTable("order_items", ORDER_ITEMS_DDL);
+}
+
+/**
+ * Mirrors an order's `items` array into the order_items table. Replaces all
+ * existing rows for the order — simpler than computing a diff, and the
+ * cascade keeps things consistent if an order is deleted concurrently.
+ * Best-effort; the kv_store + orders.payload.items remain the durable copy.
+ */
+async function dualWriteOrderItems(order: Order): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureOrderItemsTable();
+    // Delete-then-insert keeps the upsert logic simple. Concurrency on the
+    // same order is rare (typical lifecycle: create once, status updates
+    // don't change items), and any rare race converges on the latest write.
+    await db.delete(orderItemsTable).where(eq(orderItemsTable.orderId, order.id));
+    if (order.items.length === 0) return;
+    await db.insert(orderItemsTable).values(
+      order.items.map((item, idx) => ({
+        id: `${order.id}-li-${idx}`,
+        orderId: order.id,
+        menuItemId: item.menuItem.id,
+        quantity: item.quantity,
+        unitPriceGrosze: item.menuItem.price,
+        notes: item.notes ?? null,
+        modifiers: {},
+      })),
+    );
+  } catch (err) {
+    logger.warn(
+      "dualWriteOrderItems failed (payload.items remains source of truth)",
+      { orderId: order.id, layer: "store.order_items" },
+      err,
+    );
+  }
+}
+
 type OrderRow = typeof ordersTable.$inferSelect;
 
 /**
@@ -607,7 +669,11 @@ async function dualWriteOrder(order: Order): Promise<void> {
       { orderId: order.id, layer: "store.orders" },
       err,
     );
+    return;
   }
+  // Line items track the parent order; only mirror them once the order row
+  // is in place, otherwise the FK constraint would block the children.
+  await dualWriteOrderItems(order);
 }
 
 async function dualDeleteOrder(id: string): Promise<void> {
