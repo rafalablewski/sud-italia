@@ -24,6 +24,7 @@ import {
   Settings,
   ShieldCheck,
   Users,
+  Layers,
   type LucideIcon,
 } from "lucide-react";
 import { ROLE_RANK, type AdminRole } from "@/lib/admin-roles";
@@ -139,6 +140,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/admin/users", label: "Users & roles", icon: ShieldCheck, requiredRole: "owner" },
       { href: "/admin/compliance", label: "Compliance", icon: CalendarCheck2, requiredRole: "manager" },
       { href: "/admin/audit-log", label: "Audit log", icon: History, requiredRole: "manager" },
+      { href: "/admin/capabilities", label: "Capabilities", icon: Layers, requiredRole: "manager" },
       { href: "/admin/settings", label: "Settings", icon: Settings, shortcut: ",", requiredRole: "owner" },
     ],
   },
