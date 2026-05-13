@@ -5373,3 +5373,79 @@ export async function getKdsTickets(
     return [];
   }
 }
+
+// --- KDS station analytics (m2_9) ---------------------------------------
+
+export interface StationAnalyticsRow {
+  stationId: string;
+  ticketCount: number;
+  /** Mean bump time = bumpedAt - firedAt, ms. */
+  meanBumpMs: number;
+  /** P50 bump time (median) — robust to outliers. */
+  p50BumpMs: number;
+  /** P95 bump time — catches the long-tail issues operators care about. */
+  p95BumpMs: number;
+  /** Tickets / hour over the window. */
+  throughputPerHour: number;
+}
+
+/**
+ * Per-station bump-time analytics over a date window (m2_9). Reads the
+ * kds_tickets table directly so the cost is one indexed range scan even
+ * over 30 days. Bumped tickets only — fired-but-not-bumped don't count
+ * toward "how fast was this station today".
+ */
+export async function getKdsStationAnalytics(
+  locationSlug: string,
+  fromIso: string,
+  toIso: string,
+): Promise<StationAnalyticsRow[]> {
+  const db = getDb();
+  if (!db) return [];
+  try {
+    await ensureKdsTables();
+    const from = new Date(fromIso);
+    const to = new Date(toIso);
+    if (!Number.isFinite(from.getTime()) || !Number.isFinite(to.getTime())) return [];
+    const rows = await db
+      .select()
+      .from(kdsTicketsTable)
+      .where(
+        and(
+          eq(kdsTicketsTable.locationSlug, locationSlug),
+          gte(kdsTicketsTable.firedAt, from),
+          lte(kdsTicketsTable.firedAt, to),
+        ),
+      );
+    const windowHours = Math.max(0.001, (to.getTime() - from.getTime()) / (1000 * 60 * 60));
+    const byStation = new Map<string, number[]>();
+    for (const r of rows) {
+      if (!r.bumpedAt) continue;
+      const ms = r.bumpedAt.getTime() - r.firedAt.getTime();
+      if (!Number.isFinite(ms) || ms < 0) continue;
+      const list = byStation.get(r.stationId) ?? [];
+      list.push(ms);
+      byStation.set(r.stationId, list);
+    }
+    const out: StationAnalyticsRow[] = [];
+    for (const [stationId, samples] of byStation) {
+      const sorted = [...samples].sort((a, b) => a - b);
+      const sum = sorted.reduce((acc, x) => acc + x, 0);
+      const p50 = sorted[Math.floor(sorted.length * 0.5)] ?? 0;
+      const p95 = sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95))] ?? 0;
+      out.push({
+        stationId,
+        ticketCount: sorted.length,
+        meanBumpMs: sorted.length > 0 ? sum / sorted.length : 0,
+        p50BumpMs: p50,
+        p95BumpMs: p95,
+        throughputPerHour: sorted.length / windowHours,
+      });
+    }
+    // Slowest p95 first — that's the bottleneck the operator wants to see.
+    return out.sort((a, b) => b.p95BumpMs - a.p95BumpMs);
+  } catch (err) {
+    logger.warn("getKdsStationAnalytics failed", { locationSlug, layer: "store.kds" }, err);
+    return [];
+  }
+}
