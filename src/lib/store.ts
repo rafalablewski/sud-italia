@@ -12,6 +12,10 @@ import { WALLET_MAX_PHONES } from "@/lib/constants";
 import { normalizePlPhoneE164, phonesEqualPl } from "@/lib/phone";
 import { logger } from "@/lib/logger";
 import { withDistributedLock } from "@/lib/locks";
+import { and, eq, inArray, lt, sql as drizzleSql } from "drizzle-orm";
+import { getDb } from "@/db/client";
+import { slots as slotsTable } from "@/db/schema";
+import { bumpLazyBackfillHit, ensureTable } from "@/db/migrate";
 
 // --- Storage abstraction: Neon Postgres when DATABASE_URL is set, filesystem fallback for local dev ---
 
@@ -93,20 +97,169 @@ async function writeJSON<T>(key: string, data: T): Promise<void> {
   await writeFile(join(DATA_DIR, key), JSON.stringify(data, null, 2));
 }
 
-// --- Time Slots ---
+// --- Time Slots (m1_1: normalized table with dual-write) ----------------
+
+/**
+ * Self-bootstrap DDL for the `slots` table. Matches the Drizzle schema in
+ * src/db/schema.ts; both must move together if either changes. Idempotent
+ * — runs once per process via ensureTable's cache flag.
+ */
+const SLOTS_DDL = [
+  `CREATE TABLE IF NOT EXISTS slots (
+    id text PRIMARY KEY,
+    location_slug text NOT NULL,
+    date text NOT NULL,
+    time text NOT NULL,
+    max_orders integer NOT NULL,
+    current_orders integer NOT NULL DEFAULT 0,
+    fulfillment_types text[] NOT NULL,
+    status text NOT NULL DEFAULT 'draft',
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS slots_location_date_time_unique
+    ON slots (location_slug, date, time)`,
+  `CREATE INDEX IF NOT EXISTS slots_location_date_idx
+    ON slots (location_slug, date)`,
+  `CREATE INDEX IF NOT EXISTS slots_status_idx ON slots (status)`,
+];
+
+async function ensureSlotsTable(): Promise<void> {
+  await ensureTable("slots", SLOTS_DDL);
+}
+
+type SlotRow = typeof slotsTable.$inferSelect;
+
+function rowToSlot(row: SlotRow): TimeSlot {
+  return {
+    id: row.id,
+    locationSlug: row.locationSlug,
+    date: row.date,
+    time: row.time,
+    maxOrders: row.maxOrders,
+    currentOrders: row.currentOrders,
+    fulfillmentTypes: row.fulfillmentTypes as TimeSlot["fulfillmentTypes"],
+    status: row.status as TimeSlot["status"],
+  };
+}
+
+function slotToValues(slot: TimeSlot) {
+  return {
+    id: slot.id,
+    locationSlug: slot.locationSlug,
+    date: slot.date,
+    time: slot.time,
+    maxOrders: slot.maxOrders,
+    currentOrders: slot.currentOrders,
+    fulfillmentTypes: slot.fulfillmentTypes,
+    status: slot.status,
+  };
+}
+
+/** Best-effort dual-write into the normalized table. Logs but never throws —
+ * the kv_store path is the durable source until Phase 1 fully drains. */
+async function dualWriteSlot(slot: TimeSlot): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureSlotsTable();
+    await db
+      .insert(slotsTable)
+      .values({ ...slotToValues(slot), updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: slotsTable.id,
+        set: { ...slotToValues(slot), updatedAt: new Date() },
+      });
+  } catch (err) {
+    logger.warn(
+      "dualWriteSlot failed (kv_store remains source of truth)",
+      { slotId: slot.id, layer: "store.slots" },
+      err,
+    );
+  }
+}
+
+async function dualDeleteSlot(id: string): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureSlotsTable();
+    await db.delete(slotsTable).where(eq(slotsTable.id, id));
+  } catch (err) {
+    logger.warn(
+      "dualDeleteSlot failed",
+      { slotId: id, layer: "store.slots" },
+      err,
+    );
+  }
+}
 
 export async function getSlots(locationSlug?: string, date?: string): Promise<TimeSlot[]> {
-  const slots = await readJSON<TimeSlot[]>("slots.json", []);
-  return slots.filter((s) => {
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureSlotsTable();
+      const filters = [];
+      if (locationSlug) filters.push(eq(slotsTable.locationSlug, locationSlug));
+      if (date) filters.push(eq(slotsTable.date, date));
+      const rows =
+        filters.length > 0
+          ? await db.select().from(slotsTable).where(and(...filters))
+          : await db.select().from(slotsTable);
+      if (rows.length > 0) return rows.map(rowToSlot);
+      // Fall through to kv_store on empty result — this is the lazy-backfill
+      // path. Once the normalized table has any rows it wins. The empty case
+      // covers both "no slots exist" and "the normalized table hasn't been
+      // backfilled yet for this filter" — both are fine to fall back from.
+    } catch (err) {
+      logger.warn(
+        "getSlots DB read failed; falling back to kv_store",
+        { layer: "store.slots" },
+        err,
+      );
+    }
+  }
+  const fromKv = await readJSON<TimeSlot[]>("slots.json", []);
+  const filtered = fromKv.filter((s) => {
     if (locationSlug && s.locationSlug !== locationSlug) return false;
     if (date && s.date !== date) return false;
     return true;
   });
+  if (filtered.length > 0) {
+    bumpLazyBackfillHit("slots");
+    // Lazy backfill — push the kv rows into the normalized table so the next
+    // read won't fall back. Fire-and-forget; failures don't affect this call.
+    void Promise.all(filtered.map((s) => dualWriteSlot(s)));
+  }
+  return filtered;
 }
 
 export async function getSlotById(id: string): Promise<TimeSlot | undefined> {
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureSlotsTable();
+      const rows = await db
+        .select()
+        .from(slotsTable)
+        .where(eq(slotsTable.id, id))
+        .limit(1);
+      if (rows.length > 0) return rowToSlot(rows[0]);
+    } catch (err) {
+      logger.warn(
+        "getSlotById DB read failed; falling back to kv_store",
+        { slotId: id, layer: "store.slots" },
+        err,
+      );
+    }
+  }
   const slots = await readJSON<TimeSlot[]>("slots.json", []);
-  return slots.find((s) => s.id === id);
+  const hit = slots.find((s) => s.id === id);
+  if (hit) {
+    bumpLazyBackfillHit("slots");
+    void dualWriteSlot(hit);
+  }
+  return hit;
 }
 
 export async function createSlot(slot: TimeSlot): Promise<TimeSlot> {
@@ -114,6 +267,7 @@ export async function createSlot(slot: TimeSlot): Promise<TimeSlot> {
     const slots = await readJSON<TimeSlot[]>("slots.json", []);
     slots.push(slot);
     await writeJSON("slots.json", slots);
+    await dualWriteSlot(slot);
     return slot;
   });
 }
@@ -123,6 +277,7 @@ export async function createSlotsBulk(newSlots: TimeSlot[]): Promise<TimeSlot[]>
     const slots = await readJSON<TimeSlot[]>("slots.json", []);
     slots.push(...newSlots);
     await writeJSON("slots.json", slots);
+    await Promise.all(newSlots.map((s) => dualWriteSlot(s)));
     return newSlots;
   });
 }
@@ -134,6 +289,7 @@ export async function updateSlot(id: string, updates: Partial<TimeSlot>): Promis
     if (index === -1) return null;
     slots[index] = { ...slots[index], ...updates };
     await writeJSON("slots.json", slots);
+    await dualWriteSlot(slots[index]);
     return slots[index];
   });
 }
@@ -150,6 +306,7 @@ export async function updateSlotsBulk(ids: string[], updates: Partial<TimeSlot>)
       }
     }
     await writeJSON("slots.json", slots);
+    await Promise.all(updated.map((s) => dualWriteSlot(s)));
     return updated;
   });
 }
@@ -160,6 +317,7 @@ export async function deleteSlot(id: string): Promise<boolean> {
     const filtered = slots.filter((s) => s.id !== id);
     if (filtered.length === slots.length) return false;
     await writeJSON("slots.json", filtered);
+    await dualDeleteSlot(id);
     return true;
   });
 }
@@ -171,11 +329,74 @@ export async function deleteSlotsBulk(ids: string[]): Promise<number> {
     const filtered = slots.filter((s) => !idSet.has(s.id));
     const deletedCount = slots.length - filtered.length;
     await writeJSON("slots.json", filtered);
+    if (deletedCount > 0) {
+      const db = getDb();
+      if (db) {
+        try {
+          await ensureSlotsTable();
+          await db.delete(slotsTable).where(inArray(slotsTable.id, ids));
+        } catch (err) {
+          logger.warn(
+            "deleteSlotsBulk DB delete failed",
+            { ids, layer: "store.slots" },
+            err,
+          );
+        }
+      }
+    }
     return deletedCount;
   });
 }
 
 export async function incrementSlotOrders(id: string): Promise<boolean> {
+  // Primary path: atomic UPDATE ... WHERE current_orders < max_orders
+  // RETURNING *. Two simultaneous lambdas can issue this against the same
+  // slot and Postgres serializes them — no application lock required. The
+  // distributed lock from m0_1 stays in the kv_store dual-write path as
+  // belt-and-suspenders while the legacy data drains.
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureSlotsTable();
+      const updated = await db
+        .update(slotsTable)
+        .set({
+          currentOrders: drizzleSql`${slotsTable.currentOrders} + 1`,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(slotsTable.id, id),
+            lt(slotsTable.currentOrders, slotsTable.maxOrders),
+          ),
+        )
+        .returning({ currentOrders: slotsTable.currentOrders });
+      if (updated.length === 1) {
+        // Best-effort mirror to kv_store so the cold backup stays in sync.
+        // Failure here only means the kv copy is one increment behind; the
+        // normalized table is the source of truth.
+        await withLock("slots.json", async () => {
+          const slots = await readJSON<TimeSlot[]>("slots.json", []);
+          const slot = slots.find((s) => s.id === id);
+          if (slot) {
+            slot.currentOrders = updated[0].currentOrders;
+            await writeJSON("slots.json", slots);
+          }
+        });
+        return true;
+      }
+      // updated.length === 0 means either the row isn't in the normalized
+      // table yet (lazy backfill not done) or the slot is full. Fall through
+      // to the kv_store path so the legacy check still works.
+    } catch (err) {
+      logger.warn(
+        "incrementSlotOrders DB update failed; falling back to kv path",
+        { slotId: id, layer: "store.slots" },
+        err,
+      );
+    }
+  }
+  // Legacy / fallback path — kv_store + in-process atomicity via withLock.
   return withLock("slots.json", async () => {
     const slots = await readJSON<TimeSlot[]>("slots.json", []);
     const slot = slots.find((s) => s.id === id);
@@ -183,18 +404,51 @@ export async function incrementSlotOrders(id: string): Promise<boolean> {
     if (slot.currentOrders >= slot.maxOrders) return false;
     slot.currentOrders += 1;
     await writeJSON("slots.json", slots);
+    await dualWriteSlot(slot);
     return true;
   });
 }
 
 /** Release one slot booking (e.g. when an order is removed). */
 export async function decrementSlotOrders(id: string): Promise<boolean> {
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureSlotsTable();
+      const updated = await db
+        .update(slotsTable)
+        .set({
+          currentOrders: drizzleSql`GREATEST(0, ${slotsTable.currentOrders} - 1)`,
+          updatedAt: new Date(),
+        })
+        .where(eq(slotsTable.id, id))
+        .returning({ currentOrders: slotsTable.currentOrders });
+      if (updated.length === 1) {
+        await withLock("slots.json", async () => {
+          const slots = await readJSON<TimeSlot[]>("slots.json", []);
+          const slot = slots.find((s) => s.id === id);
+          if (slot) {
+            slot.currentOrders = updated[0].currentOrders;
+            await writeJSON("slots.json", slots);
+          }
+        });
+        return true;
+      }
+    } catch (err) {
+      logger.warn(
+        "decrementSlotOrders DB update failed; falling back to kv path",
+        { slotId: id, layer: "store.slots" },
+        err,
+      );
+    }
+  }
   return withLock("slots.json", async () => {
     const slots = await readJSON<TimeSlot[]>("slots.json", []);
     const slot = slots.find((s) => s.id === id);
     if (!slot) return false;
     slot.currentOrders = Math.max(0, slot.currentOrders - 1);
     await writeJSON("slots.json", slots);
+    await dualWriteSlot(slot);
     return true;
   });
 }

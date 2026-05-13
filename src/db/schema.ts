@@ -1,18 +1,20 @@
 import {
   pgTable,
   text,
+  integer,
   timestamp,
   primaryKey,
   index,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 /**
  * Phase 0 — idempotency tables.
+ * Phase 1 — entity normalization with self-bootstrap + dual-write.
  *
- * These are the only normalized tables for now. Entity migration (orders,
- * customers, slots, …) happens in Phase 1 under the expand → backfill → flip
- * → contract pattern; until then `kv_store` continues to back the rest of the
- * data layer.
+ * Tables under Phase 1 ship alongside the existing kv_store; the
+ * `ensureTable` helper in src/db/migrate.ts runs idempotent DDL on first
+ * touch, so production deploys don't need a manual db:migrate step.
  */
 
 /**
@@ -62,5 +64,53 @@ export const checkoutAttempts = pgTable(
   (table) => [
     index("checkout_attempts_created_at_idx").on(table.createdAt),
     index("checkout_attempts_expires_at_idx").on(table.expiresAt),
+  ],
+);
+
+// --- Phase 1: slots (m1_1) ----------------------------------------------
+
+/**
+ * Normalized time-slot table. Replaces the read-modify-write loop on
+ * kv_store["slots.json"]; `incrementSlotOrders` becomes a single atomic
+ * UPDATE ... WHERE current_orders < max_orders RETURNING * with no need
+ * for the distributed lock from m0_1.
+ *
+ * UNIQUE constraint on (location_slug, date, time) prevents a manager from
+ * creating two slots at the same instant — the existing JSON path had no
+ * such guard.
+ *
+ * `fulfillment_types` is text[] so the GIN-style queries in the admin
+ * slots filter ("which slots support delivery?") don't require unnesting
+ * JSONB. Status is "draft" | "active"; archived past-time slots set status
+ * "draft" so they fall off the public list (matches existing behavior).
+ */
+export const slots = pgTable(
+  "slots",
+  {
+    id: text("id").primaryKey(),
+    locationSlug: text("location_slug").notNull(),
+    date: text("date").notNull(), // YYYY-MM-DD; stored as text to match TimeSlot.date
+    time: text("time").notNull(), // HH:MM
+    maxOrders: integer("max_orders").notNull(),
+    currentOrders: integer("current_orders").notNull().default(0),
+    // text[] — Drizzle types it through the .array() helper. The DB stores it
+    // as text[] not jsonb so the admin filter can use GIN if we add one later.
+    fulfillmentTypes: text("fulfillment_types").array().notNull(),
+    status: text("status").notNull().default("draft"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("slots_location_date_time_unique").on(
+      table.locationSlug,
+      table.date,
+      table.time,
+    ),
+    index("slots_location_date_idx").on(table.locationSlug, table.date),
+    index("slots_status_idx").on(table.status),
   ],
 );
