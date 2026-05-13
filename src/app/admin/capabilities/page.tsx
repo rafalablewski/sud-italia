@@ -239,7 +239,7 @@ export default async function CapabilitiesPage() {
       items: [
         {
           name: "Stripe checkout",
-          status: has("STRIPE_SECRET_KEY", "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY") ? "live" : "needs-config",
+          status: has("STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY") ? "live" : "needs-config",
           envVars: ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY"],
           summary: "Hosted-checkout session creation with idempotency key. Webhook reconciles to order on success.",
         },
@@ -262,8 +262,17 @@ export default async function CapabilitiesPage() {
         },
         {
           name: "Cart presence (live → kitchen)",
-          status: env.NEXT_PUBLIC_ENABLE_CART_PRESENCE === "false" ? "disabled" : "live",
-          envVars: ["NEXT_PUBLIC_ENABLE_CART_PRESENCE"],
+          status:
+            env.NEXT_PUBLIC_ENABLE_CART_PRESENCE === "false"
+              ? "disabled"
+              : has("UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN")
+                ? "live"
+                : "needs-config",
+          envVars: [
+            "NEXT_PUBLIC_ENABLE_CART_PRESENCE",
+            "UPSTASH_REDIS_REST_URL",
+            "UPSTASH_REDIS_REST_TOKEN",
+          ],
           summary: "Anonymous cart snapshots stream to KDS so the line sees demand forming. TTL'd in KV.",
         },
         {
@@ -280,8 +289,7 @@ export default async function CapabilitiesPage() {
         {
           name: "Embedded chatbot widget",
           status: "live",
-          href: "/admin/ai",
-          summary: "Customer-side FAQ widget. Admins manage Q/A pairs from the chatbot FAQ admin.",
+          summary: "Customer-side FAQ widget on the location pages. Content is sourced from the Chatbot FAQ admin below.",
         },
         {
           name: "“Surprise Me” recommendation",
@@ -372,10 +380,10 @@ export default async function CapabilitiesPage() {
           summary: "Event-driven SMS/email automations (welcome, lapsed, birthday). Outbox-backed.",
         },
         {
-          name: "Chatbot FAQ",
+          name: "Chatbot FAQ admin",
           status: "live",
           href: "/admin/ai",
-          summary: "Keyword-triggered customer support answers. Edit Q/A pairs from the AI admin.",
+          summary: "CRUD Q/A pairs that power the customer-side chatbot widget. Keyword-triggered.",
         },
       ],
     },
@@ -440,6 +448,7 @@ export default async function CapabilitiesPage() {
         {
           name: "Courier / driver dispatch",
           status: "live",
+          href: "/admin/orders",
           summary: "Driver assignment, dynamic delivery fee, statuses assigned → picked up → delivered.",
         },
         {
@@ -566,12 +575,14 @@ export default async function CapabilitiesPage() {
         {
           name: "GDPR data export",
           status: has("DATABASE_URL") ? "live" : "needs-config",
+          envVars: ["DATABASE_URL"],
           href: "/admin/customers",
           summary: "Per-customer dump of orders, points, feedback, notes. Triggered from the customer detail page.",
         },
         {
           name: "GDPR data deletion",
           status: has("DATABASE_URL") ? "live" : "needs-config",
+          envVars: ["DATABASE_URL"],
           href: "/admin/customers",
           summary: "Anonymises the customer + records the request in the audit log for reidentification trails.",
         },

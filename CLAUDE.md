@@ -36,7 +36,7 @@ Two active locations: Kraków, Warszawa. Serverless deployment.
 
 ## Admin Pages
 
-Dashboard, Menu, Recipes, Slots, Orders, Reports, Loyalty, Growth, Feedback, AI, Expansion, Settings — all at `/admin/*`. Use `AdminNav` component. Use glassmorphism design system (glass-card, glass-input, glass-btn, admin-text classes).
+Dashboard, Orders, KDS, Menu, Recipes, Slots, Inventory, Suppliers, Purchase orders, Staff, Schedule, Customers, Loyalty, Feedback, Reports, Cash, Growth, Upsell, Truck, Locations, AI, Expansion, Users, Compliance, Audit log, Capabilities, Settings — all at `/admin/*`. Use the v2 `AdminShell` (nav config in `src/components/admin/v2/nav.config.ts`). Use glassmorphism design system (glass-card, glass-input, glass-btn, admin-text classes). The Capabilities page at `/admin/capabilities` is the source of truth for what's deployed — see Rule #9.
 
 ## Key Patterns
 
