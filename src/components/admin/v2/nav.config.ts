@@ -26,7 +26,7 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
-import { ROLE_RANK, type AdminRole } from "@/lib/admin-auth";
+import { ROLE_RANK, type AdminRole } from "@/lib/admin-roles";
 
 export interface NavItem {
   href: string;

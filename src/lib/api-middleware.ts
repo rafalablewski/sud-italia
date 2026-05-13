@@ -110,7 +110,7 @@ async function resolveLocationSlug<RouteCtx>(
   return trimmed;
 }
 
-export function withAdmin<RouteCtx = Record<string, never>>(
+export function withAdmin<RouteCtx = { params: Promise<Record<string, never>> }>(
   opts: WithAdminOptions<RouteCtx>,
   handler: AdminRouteHandler<RouteCtx>,
 ): (req: NextRequest, ctx: RouteCtx) => Promise<Response> {

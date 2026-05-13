@@ -174,20 +174,11 @@ export async function clearSession(): Promise<void> {
   cookieStore.delete(SESSION_COOKIE);
 }
 
-export type AdminRole = "owner" | "manager" | "franchisee" | "staff" | "kitchen";
-
-export const ROLE_RANK: Record<AdminRole, number> = {
-  owner: 100,
-  // Franchisee sits between owner and manager (m3_2). They have
-  // read-everything power inside their own scope but never see other
-  // franchisees' data. m0_5 locationScope claim is what enforces the
-  // tenancy; the rank only governs role-gated UI like settings, users,
-  // and admin-only HQ rollups.
-  franchisee: 70,
-  manager: 50,
-  staff: 20,
-  kitchen: 10,
-};
+// Re-exported from the leaf module so client components can import the
+// rank table without pulling in next/headers + crypto + store.ts.
+import { ROLE_RANK as ROLE_RANK_VALUE, type AdminRole as AdminRoleType } from "@/lib/admin-roles";
+export type AdminRole = AdminRoleType;
+export const ROLE_RANK = ROLE_RANK_VALUE;
 
 /**
  * Reads the userId from the signed cookie and resolves to the current

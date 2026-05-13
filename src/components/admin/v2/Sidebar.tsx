@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { ChevronLeft, LogOut, PanelLeft } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { filterNavForRole, NAV_SECTIONS } from "./nav.config";
-import type { AdminRole } from "@/lib/admin-auth";
+import type { AdminRole } from "@/lib/admin-roles";
 import { LocationSwitcher } from "./LocationSwitcher";
 
 const COLLAPSE_KEY = "sud-admin-sidebar-collapsed";
