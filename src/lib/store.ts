@@ -14,7 +14,7 @@ import { logger } from "@/lib/logger";
 import { withDistributedLock } from "@/lib/locks";
 import { and, desc, eq, inArray, lt, sql as drizzleSql } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { orderItems as orderItemsTable, orders as ordersTable, slots as slotsTable } from "@/db/schema";
+import { customers as customersTable, orderItems as orderItemsTable, orders as ordersTable, slots as slotsTable } from "@/db/schema";
 import { bumpLazyBackfillHit, ensureTable } from "@/db/migrate";
 
 // --- Storage abstraction: Neon Postgres when DATABASE_URL is set, filesystem fallback for local dev ---
@@ -540,6 +540,210 @@ async function ensureOrderItemsTable(): Promise<void> {
  * cascade keeps things consistent if an order is deleted concurrently.
  * Best-effort; the kv_store + orders.payload.items remain the durable copy.
  */
+// --- Customers rollup (m1_4) --------------------------------------------
+
+/**
+ * Customers are a derived rollup over orders + point-adjustments + loyalty
+ * signups. Source-of-truth lives in those entities; the customers row is a
+ * fast index into "lifetime stats for this phone". Maintained by
+ * recomputeCustomerRollup which fires at the boundary of every event that
+ * changes those source tables.
+ */
+const CUSTOMERS_DDL = [
+  `CREATE TABLE IF NOT EXISTS customers (
+    phone text PRIMARY KEY,
+    name text,
+    email text,
+    birthday text,
+    total_spent_grosze integer NOT NULL DEFAULT 0,
+    order_count integer NOT NULL DEFAULT 0,
+    first_order_at timestamptz,
+    last_order_at timestamptz,
+    loyalty_points_balance integer NOT NULL DEFAULT 0,
+    manual_points_adjust integer NOT NULL DEFAULT 0,
+    sms_optout text NOT NULL DEFAULT 'false',
+    email_optout text NOT NULL DEFAULT 'false',
+    notes text,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
+  )`,
+  `CREATE INDEX IF NOT EXISTS customers_last_order_at_idx
+    ON customers (last_order_at)`,
+  `CREATE INDEX IF NOT EXISTS customers_email_idx ON customers (email)`,
+];
+
+async function ensureCustomersTable(): Promise<void> {
+  await ensureTable("customers", CUSTOMERS_DDL);
+}
+
+export interface CustomerRollup {
+  phone: string;
+  name: string | null;
+  email: string | null;
+  birthday: string | null;
+  totalSpentGrosze: number;
+  orderCount: number;
+  firstOrderAt: string | null;
+  lastOrderAt: string | null;
+  loyaltyPointsBalance: number;
+  manualPointsAdjust: number;
+  smsOptout: boolean;
+  emailOptout: boolean;
+  notes: string | null;
+}
+
+function rowToCustomer(row: typeof customersTable.$inferSelect): CustomerRollup {
+  return {
+    phone: row.phone,
+    name: row.name,
+    email: row.email,
+    birthday: row.birthday,
+    totalSpentGrosze: row.totalSpentGrosze,
+    orderCount: row.orderCount,
+    firstOrderAt: row.firstOrderAt ? row.firstOrderAt.toISOString() : null,
+    lastOrderAt: row.lastOrderAt ? row.lastOrderAt.toISOString() : null,
+    loyaltyPointsBalance: row.loyaltyPointsBalance,
+    manualPointsAdjust: row.manualPointsAdjust,
+    smsOptout: row.smsOptout === "true",
+    emailOptout: row.emailOptout === "true",
+    notes: row.notes,
+  };
+}
+
+/**
+ * Aggregates the source data and upserts the customer row. Best-effort —
+ * never throws; legacy code paths that don't call this won't notice.
+ *
+ * Non-pending orders only count toward lifetime stats — a pending checkout
+ * that abandons mid-payment shouldn't pollute the customer's history.
+ */
+async function recomputeCustomerRollup(rawPhone: string): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  const phone = normalizePlPhoneE164(rawPhone) ?? rawPhone;
+  try {
+    await ensureCustomersTable();
+
+    // Source aggregations. getOrders already prefers the normalized table
+    // (m1_2); getPointAdjustments + getLoyaltyMember stay on kv_store until
+    // their own M1 entity migration ships.
+    const [allOrders, adjustments, member] = await Promise.all([
+      getOrders(),
+      getPointAdjustments(),
+      getLoyaltyMember(phone),
+    ]);
+
+    const myOrders = allOrders.filter(
+      (o) => o.customerPhone && phonesEqualPl(o.customerPhone, phone) && o.status !== "pending",
+    );
+    const totalSpentGrosze = myOrders.reduce((sum, o) => sum + o.totalAmount, 0);
+    const orderCount = myOrders.length;
+
+    let firstOrderAt: Date | null = null;
+    let lastOrderAt: Date | null = null;
+    let latestName: string | undefined;
+    for (const o of myOrders) {
+      const t = new Date(o.paidAt || o.createdAt);
+      if (!Number.isFinite(t.getTime())) continue;
+      if (!firstOrderAt || t < firstOrderAt) firstOrderAt = t;
+      if (!lastOrderAt || t > lastOrderAt) {
+        lastOrderAt = t;
+        latestName = o.customerName;
+      }
+    }
+
+    const manualPointsAdjust = adjustments
+      .filter((a) => phonesEqualPl(a.phone, phone))
+      .reduce((sum, a) => sum + a.amount, 0);
+    const earnedPoints = Math.floor(totalSpentGrosze / 100);
+    // Phase 1 doesn't yet subtract redemptions here — that lands when
+    // wallet-redemptions migrates to its table in m1_8. Earned + manual is
+    // the right floor; the customer detail page still does the redemption
+    // math live until then.
+    const loyaltyPointsBalance = earnedPoints + manualPointsAdjust;
+
+    const memberName = member
+      ? [member.name, member.lastName].filter(Boolean).join(" ").trim() ||
+        member.nickname ||
+        null
+      : null;
+
+    const name = memberName || latestName || null;
+    const email = member?.email ?? null;
+    const birthday = member?.dob ?? null;
+
+    const values = {
+      phone,
+      name,
+      email,
+      birthday,
+      totalSpentGrosze,
+      orderCount,
+      firstOrderAt,
+      lastOrderAt,
+      loyaltyPointsBalance,
+      manualPointsAdjust,
+      updatedAt: new Date(),
+    };
+
+    await db
+      .insert(customersTable)
+      .values(values)
+      .onConflictDoUpdate({
+        target: customersTable.phone,
+        set: values,
+      });
+  } catch (err) {
+    logger.warn(
+      "recomputeCustomerRollup failed",
+      { phone, layer: "store.customers" },
+      err,
+    );
+  }
+}
+
+/** Point lookup for the customer rollup. Returns null when no row exists yet. */
+export async function getCustomer(rawPhone: string): Promise<CustomerRollup | null> {
+  const db = getDb();
+  if (!db) return null;
+  const phone = normalizePlPhoneE164(rawPhone) ?? rawPhone;
+  try {
+    await ensureCustomersTable();
+    const rows = await db
+      .select()
+      .from(customersTable)
+      .where(eq(customersTable.phone, phone))
+      .limit(1);
+    if (rows.length === 0) return null;
+    return rowToCustomer(rows[0]);
+  } catch (err) {
+    logger.warn(
+      "getCustomer DB read failed",
+      { phone, layer: "store.customers" },
+      err,
+    );
+    return null;
+  }
+}
+
+/** Bulk read for the admin customers list. */
+export async function getCustomers(): Promise<CustomerRollup[]> {
+  const db = getDb();
+  if (!db) return [];
+  try {
+    await ensureCustomersTable();
+    const rows = await db.select().from(customersTable);
+    return rows.map(rowToCustomer);
+  } catch (err) {
+    logger.warn(
+      "getCustomers DB read failed",
+      { layer: "store.customers" },
+      err,
+    );
+    return [];
+  }
+}
+
 async function dualWriteOrderItems(order: Order): Promise<void> {
   const db = getDb();
   if (!db) return;
@@ -791,17 +995,22 @@ export async function getOrderByStripePaymentIntent(
 }
 
 export async function createOrder(order: Order): Promise<Order> {
-  return withLock("orders.json", async () => {
+  const saved = await withLock("orders.json", async () => {
     const orders = await readJSON<Order[]>("orders.json", []);
     orders.push(order);
     await writeJSON("orders.json", orders);
     await dualWriteOrder(order);
     return order;
   });
+  // Fire-and-forget rollup so the checkout request doesn't wait. A failure
+  // here only means the customer's row is one order behind until the next
+  // event refreshes it — non-blocking and idempotent.
+  void recomputeCustomerRollup(order.customerPhone);
+  return saved;
 }
 
 export async function updateOrderStatus(id: string, status: Order["status"]): Promise<Order | null> {
-  return withLock("orders.json", async () => {
+  const updated = await withLock("orders.json", async () => {
     const orders = await readJSON<Order[]>("orders.json", []);
     const index = orders.findIndex((o) => o.id === id);
     if (index === -1) return null;
@@ -810,6 +1019,13 @@ export async function updateOrderStatus(id: string, status: Order["status"]): Pr
     await dualWriteOrder(orders[index]);
     return orders[index];
   });
+  if (updated) {
+    // Pending → confirmed flips a checkout from "doesn't count" to
+    // "counts" in lifetime stats; cancelled does the opposite. Both warrant
+    // a rollup refresh.
+    void recomputeCustomerRollup(updated.customerPhone);
+  }
+  return updated;
 }
 
 /**
@@ -821,7 +1037,7 @@ export async function updateOrder(
   id: string,
   patch: Partial<Omit<Order, "id" | "createdAt">>,
 ): Promise<Order | null> {
-  return withLock("orders.json", async () => {
+  const updated = await withLock("orders.json", async () => {
     const orders = await readJSON<Order[]>("orders.json", []);
     const index = orders.findIndex((o) => o.id === id);
     if (index === -1) return null;
@@ -830,15 +1046,31 @@ export async function updateOrder(
     await dualWriteOrder(orders[index]);
     return orders[index];
   });
+  // Refresh the rollup when a patch could change lifetime stats. paidAt
+  // pins the firstOrderAt/lastOrderAt timestamps; refund/dispute affect
+  // future Phase 4 customer-health scoring. Status flips already trigger
+  // a rollup through updateOrderStatus when called separately.
+  if (
+    updated &&
+    (patch.paidAt !== undefined ||
+      patch.refund !== undefined ||
+      patch.dispute !== undefined ||
+      patch.status !== undefined)
+  ) {
+    void recomputeCustomerRollup(updated.customerPhone);
+  }
+  return updated;
 }
 
 export async function deleteOrder(id: string): Promise<boolean> {
   let slotId: string | undefined;
+  let customerPhone: string | undefined;
   const removed = await withLock("orders.json", async () => {
     const orders = await readJSON<Order[]>("orders.json", []);
     const index = orders.findIndex((o) => o.id === id);
     if (index === -1) return false;
     slotId = orders[index].slotId;
+    customerPhone = orders[index].customerPhone;
     orders.splice(index, 1);
     await writeJSON("orders.json", orders);
     await dualDeleteOrder(id);
@@ -849,6 +1081,10 @@ export async function deleteOrder(id: string): Promise<boolean> {
       await decrementSlotOrders(slotId);
     }
     await removeNotificationsForOrder(id);
+    if (customerPhone) {
+      // Lifetime stats drop one order on this delete — refresh the rollup.
+      void recomputeCustomerRollup(customerPhone);
+    }
   }
   return removed;
 }
@@ -2080,11 +2316,14 @@ export async function getPointAdjustments(): Promise<PointAdjustment[]> {
 }
 
 export async function addPointAdjustment(adj: PointAdjustment): Promise<void> {
-  return withLock("point-adjustments.json", async () => {
+  await withLock("point-adjustments.json", async () => {
     const list = await readJSON<PointAdjustment[]>("point-adjustments.json", []);
     list.push(adj);
     await writeJSON("point-adjustments.json", list);
   });
+  // Manual adjustments shift loyaltyPointsBalance + manualPointsAdjust on
+  // the customer rollup — keep that in sync.
+  void recomputeCustomerRollup(adj.phone);
 }
 
 export async function getManualPointsTotal(phone: string): Promise<number> {

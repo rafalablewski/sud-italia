@@ -209,3 +209,54 @@ export const orderItems = pgTable(
     index("order_items_menu_item_id_idx").on(table.menuItemId),
   ],
 );
+
+// --- Phase 1: customers (m1_4) ------------------------------------------
+
+/**
+ * Customer rollup table. Not a source of truth — derived from orders +
+ * point-adjustments + loyalty signup data. Maintained by
+ * recomputeCustomerRollup() in store.ts which fires on the order lifecycle
+ * (create, status change, delete) and on point adjustments. Source data
+ * remains in orders / point-adjustments / loyalty-members, so a rollup
+ * inconsistency can always be repaired by reprocessing those.
+ *
+ * Phone is the natural key — that's how every other entity references a
+ * customer. E.164 format enforced upstream in normalizePlPhoneE164.
+ *
+ * The opt-out flags set the stage for Phase 2 comms: every SMS/email
+ * provider in lib/providers/* checks these before sending.
+ *
+ * `loyalty_points_balance` is the spendable balance — earned (revenue/100)
+ * + manual_adjustments - redemptions. We materialize it so the customer
+ * detail page renders fast; the Phase 4 AI ops agent's "give 100 points to
+ * Maria" tool will write a row to point_adjustments AND increment this
+ * column atomically.
+ */
+export const customers = pgTable(
+  "customers",
+  {
+    phone: text("phone").primaryKey(),
+    name: text("name"),
+    email: text("email"),
+    birthday: text("birthday"), // YYYY-MM-DD; loose match by month+day
+    totalSpentGrosze: integer("total_spent_grosze").notNull().default(0),
+    orderCount: integer("order_count").notNull().default(0),
+    firstOrderAt: timestamp("first_order_at", { withTimezone: true }),
+    lastOrderAt: timestamp("last_order_at", { withTimezone: true }),
+    loyaltyPointsBalance: integer("loyalty_points_balance").notNull().default(0),
+    manualPointsAdjust: integer("manual_points_adjust").notNull().default(0),
+    smsOptout: text("sms_optout").notNull().default("false"), // "true"|"false" so we can also use "unset"
+    emailOptout: text("email_optout").notNull().default("false"),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("customers_last_order_at_idx").on(table.lastOrderAt),
+    index("customers_email_idx").on(table.email),
+  ],
+);
