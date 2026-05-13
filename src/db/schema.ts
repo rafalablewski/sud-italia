@@ -151,6 +151,10 @@ export const orders = pgTable(
     slotTime: text("slot_time").notNull(),
     totalGrosze: integer("total_grosze").notNull(),
     tipGrosze: integer("tip_grosze"),
+    /** Delivery fee charged on top of items + tip (grosze). Null for takeout. */
+    deliveryFeeGrosze: integer("delivery_fee_grosze"),
+    /** Staff id assigned as courier for this delivery. */
+    assignedDriverId: text("assigned_driver_id"),
     stripeSessionId: text("stripe_session_id"),
     stripePaymentIntentId: text("stripe_payment_intent_id"),
     deliveryAddress: text("delivery_address"),
@@ -170,6 +174,7 @@ export const orders = pgTable(
     index("orders_customer_phone_idx").on(table.customerPhone),
     index("orders_stripe_payment_intent_idx").on(table.stripePaymentIntentId),
     index("orders_slot_id_idx").on(table.slotId),
+    index("orders_assigned_driver_idx").on(table.assignedDriverId),
   ],
 );
 

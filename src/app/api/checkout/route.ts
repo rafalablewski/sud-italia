@@ -5,7 +5,7 @@ import { getMenuWithOverrides } from "@/data/menus";
 import { getSlotById, incrementSlotOrders, createOrder, addNotification, getUpsellSettings } from "@/lib/store";
 import { FulfillmentType, CartItem } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
-import { getActiveComboDeals } from "@/lib/upsell";
+import { computeDeliveryFee, getActiveComboDeals } from "@/lib/upsell";
 import { normalizePlPhoneE164 } from "@/lib/phone";
 import { logger } from "@/lib/logger";
 import {
@@ -172,8 +172,15 @@ export async function POST(req: NextRequest) {
     const comboDiscount = comboResult.missingCategories.length === 0 ? comboResult.savings : 0;
     calculatedTotal = calculatedTotal - comboDiscount;
 
-    // Tip: optional integer grosze. Bound at the cart subtotal so a malicious
-    // client can't sneak through a 99% tip and then claim chargeback fraud.
+    // Delivery fee (m2_12). Computed server-side from the post-discount
+    // subtotal so a malicious client can't strip it. Adds a separate
+    // Stripe line item so the customer's receipt itemizes it cleanly.
+    const deliveryFee = computeDeliveryFee(calculatedTotal, fulfillmentType);
+    calculatedTotal += deliveryFee;
+
+    // Tip: optional integer grosze. Bound at the cart subtotal (pre-fee)
+    // so a malicious client can't sneak through a 99% tip and then claim
+    // chargeback fraud.
     let tipAmount = 0;
     if (typeof rawTip === "number" && Number.isInteger(rawTip) && rawTip > 0) {
       tipAmount = Math.min(rawTip, calculatedTotal);
@@ -208,6 +215,7 @@ export async function POST(req: NextRequest) {
       slotDate,
       slotTime,
       tipAmount: tipAmount > 0 ? tipAmount : undefined,
+      deliveryFee: deliveryFee > 0 ? deliveryFee : undefined,
       createdAt: new Date().toISOString(),
     });
 
@@ -254,8 +262,22 @@ export async function POST(req: NextRequest) {
               },
               quantity: item.quantity,
             })),
+            // Delivery fee (m2_12) as its own line so the receipt itemizes
+            // it instead of folding it into "Items".
+            ...(deliveryFee > 0
+              ? [
+                  {
+                    price_data: {
+                      currency: "pln",
+                      product_data: { name: "Delivery / Dostawa" },
+                      unit_amount: deliveryFee,
+                    },
+                    quantity: 1,
+                  },
+                ]
+              : []),
             // Tip as a separate line item so the customer's receipt reads
-            // "Items 28 zł · Tip 3 zł · Total 31 zł" cleanly.
+            // "Items 28 zł · Delivery 7 zł · Tip 3 zł · Total 38 zł" cleanly.
             ...(tipAmount > 0
               ? [
                   {

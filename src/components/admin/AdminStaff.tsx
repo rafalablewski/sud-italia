@@ -43,6 +43,7 @@ const ROLE_LABEL: Record<StaffRole, string> = {
   kitchen: "Kitchen",
   front: "Front of house",
   driver: "Driver",
+  courier: "Courier",
 };
 
 const ROLE_TONE: Record<StaffRole, "info" | "warning" | "success" | "brand"> = {
@@ -50,6 +51,7 @@ const ROLE_TONE: Record<StaffRole, "info" | "warning" | "success" | "brand"> = {
   kitchen: "warning",
   front: "info",
   driver: "success",
+  courier: "info",
 };
 
 const activeLocations = getActiveLocations();

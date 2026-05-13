@@ -495,6 +495,8 @@ const ORDERS_DDL = [
     slot_time text NOT NULL,
     total_grosze integer NOT NULL,
     tip_grosze integer,
+    delivery_fee_grosze integer,
+    assigned_driver_id text,
     stripe_session_id text,
     stripe_payment_intent_id text,
     delivery_address text,
@@ -503,6 +505,11 @@ const ORDERS_DDL = [
     payload jsonb NOT NULL DEFAULT '{}'::jsonb,
     updated_at timestamptz NOT NULL DEFAULT now()
   )`,
+  // m2_11/12 added two columns; existing deployments need ALTER. IF NOT
+  // EXISTS makes this safe to run alongside the CREATE TABLE IF NOT EXISTS
+  // above on first boot.
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_fee_grosze integer`,
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS assigned_driver_id text`,
   `CREATE INDEX IF NOT EXISTS orders_location_created_at_idx
     ON orders (location_slug, created_at DESC)`,
   `CREATE INDEX IF NOT EXISTS orders_status_idx ON orders (status)`,
@@ -511,6 +518,8 @@ const ORDERS_DDL = [
   `CREATE INDEX IF NOT EXISTS orders_stripe_payment_intent_idx
     ON orders (stripe_payment_intent_id)`,
   `CREATE INDEX IF NOT EXISTS orders_slot_id_idx ON orders (slot_id)`,
+  `CREATE INDEX IF NOT EXISTS orders_assigned_driver_idx
+    ON orders (assigned_driver_id)`,
 ];
 
 async function ensureOrdersTable(): Promise<void> {
@@ -815,6 +824,8 @@ function rowToOrder(row: OrderRow): Order {
     slotTime: row.slotTime,
     totalAmount: row.totalGrosze,
     tipAmount: row.tipGrosze ?? undefined,
+    deliveryFee: row.deliveryFeeGrosze ?? undefined,
+    assignedDriverId: row.assignedDriverId ?? undefined,
     stripeSessionId: row.stripeSessionId ?? undefined,
     stripePaymentIntentId: row.stripePaymentIntentId ?? undefined,
     deliveryAddress: row.deliveryAddress ?? undefined,
@@ -854,6 +865,8 @@ function orderToValues(order: Order) {
     slotTime: order.slotTime,
     totalGrosze: order.totalAmount,
     tipGrosze: order.tipAmount ?? null,
+    deliveryFeeGrosze: order.deliveryFee ?? null,
+    assignedDriverId: order.assignedDriverId ?? null,
     stripeSessionId: order.stripeSessionId ?? null,
     stripePaymentIntentId: order.stripePaymentIntentId ?? null,
     deliveryAddress: order.deliveryAddress ?? null,
