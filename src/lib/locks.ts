@@ -58,15 +58,31 @@ function newToken(): string {
   return `${Date.now().toString(36)}.${Math.random().toString(36).slice(2, 10)}`;
 }
 
+/**
+ * Returns:
+ *   - true  → we now hold the lock
+ *   - false → someone else holds it (retry)
+ *   - "broken" → Upstash itself errored; caller should fall back to the
+ *     in-process path rather than busy-looping into a 500.
+ */
 async function tryAcquireRedis(
   key: string,
   token: string,
   ttlMs: number,
-): Promise<boolean> {
+): Promise<true | false | "broken"> {
   const redis = getUpstashRedis();
-  if (!redis) return false;
-  const result = await redis.set(key, token, { nx: true, px: ttlMs });
-  return result === "OK";
+  if (!redis) return "broken";
+  try {
+    const result = await redis.set(key, token, { nx: true, px: ttlMs });
+    return result === "OK";
+  } catch (err) {
+    logger.error(
+      "tryAcquireRedis: Upstash failure — caller will fall back to in-process",
+      { key, layer: "locks" },
+      err,
+    );
+    return "broken";
+  }
 }
 
 const RELEASE_SCRIPT = `
@@ -134,8 +150,19 @@ export async function withDistributedLock<T>(
   let acquired = false;
   let attempts = 0;
   while (!acquired) {
-    acquired = await tryAcquireRedis(lockKey, token, ttlMs);
-    if (acquired) break;
+    const result = await tryAcquireRedis(lockKey, token, ttlMs);
+    if (result === true) {
+      acquired = true;
+      break;
+    }
+    if (result === "broken") {
+      // Upstash is misconfigured, expired, or having a moment. The
+      // alternative is throwing a 500 on every lock callsite — far
+      // worse than dropping to in-process and accepting the cross-
+      // instance race we were already living with pre-m0_1.
+      metrics.inProcessFallbacks += 1;
+      return withInProcessLock(key, fn);
+    }
     attempts += 1;
     metrics.contentions += 1;
     if (Date.now() - acquireStart > acquireTimeoutMs) {

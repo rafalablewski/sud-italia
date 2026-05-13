@@ -9,6 +9,7 @@ import {
 import { appendAuditLog, getAdminUsers } from "@/lib/store";
 import { enforceRateLimit, getClientIp } from "@/lib/rate-limit";
 import { adminLoginSchema, parseBody } from "@/lib/api-schemas";
+import { logger } from "@/lib/logger";
 
 /**
  * Shared-password login extended with an optional `email`.
@@ -99,7 +100,31 @@ export async function POST(req: NextRequest) {
     });
 
     return response;
-  } catch {
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  } catch (err) {
+    // Without this binding the catch silently swallows the error and the
+    // operator just sees "Internal server error" with nothing to grep for.
+    // Log structurally so Sentry + the Vercel function log both pick it up.
+    logger.error(
+      "admin.login.failed",
+      {
+        layer: "api.admin.login",
+        hasEmail: typeof email === "string" && email.trim().length > 0,
+      },
+      err,
+    );
+    return NextResponse.json(
+      {
+        error: "Internal server error",
+        // Surfaced only in non-production to speed up debugging on PR
+        // preview deploys. Stripped on production.
+        detail:
+          process.env.VERCEL_ENV !== "production"
+            ? err instanceof Error
+              ? err.message
+              : String(err)
+            : undefined,
+      },
+      { status: 500 },
+    );
   }
 }
