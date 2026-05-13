@@ -14,7 +14,7 @@ import { logger } from "@/lib/logger";
 import { withDistributedLock } from "@/lib/locks";
 import { and, desc, eq, inArray, lt, sql as drizzleSql } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { auditLog as auditLogTable, customers as customersTable, ingredientStock as ingredientStockTable, ingredients as ingredientsTable, orderItems as orderItemsTable, orders as ordersTable, recipes as recipesTable, slots as slotsTable, stockMovements as stockMovementsTable } from "@/db/schema";
+import { auditLog as auditLogTable, customers as customersTable, feedback as feedbackTable, ingredientStock as ingredientStockTable, ingredients as ingredientsTable, orderItems as orderItemsTable, orders as ordersTable, recipes as recipesTable, slots as slotsTable, stockMovements as stockMovementsTable } from "@/db/schema";
 import { bumpLazyBackfillHit, ensureTable } from "@/db/migrate";
 
 // --- Storage abstraction: Neon Postgres when DATABASE_URL is set, filesystem fallback for local dev ---
@@ -2879,8 +2879,99 @@ export interface FeedbackEntry {
   analyzedAt?: string;
 }
 
+const FEEDBACK_DDL = [
+  `CREATE TABLE IF NOT EXISTS feedback (
+    id text PRIMARY KEY,
+    order_id text NOT NULL,
+    location_slug text NOT NULL,
+    customer_name text NOT NULL,
+    customer_phone text NOT NULL,
+    overall_rating integer NOT NULL,
+    category_ratings jsonb NOT NULL DEFAULT '{}'::jsonb,
+    comment text NOT NULL,
+    status text NOT NULL,
+    sentiment text,
+    themes text[],
+    analyzed_at timestamptz,
+    created_at timestamptz NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS feedback_location_created_idx
+    ON feedback (location_slug, created_at)`,
+  `CREATE INDEX IF NOT EXISTS feedback_status_idx ON feedback (status)`,
+  `CREATE INDEX IF NOT EXISTS feedback_order_id_idx ON feedback (order_id)`,
+];
+
+async function ensureFeedbackTable(): Promise<void> {
+  await ensureTable("feedback", FEEDBACK_DDL);
+}
+
+function rowToFeedback(row: typeof feedbackTable.$inferSelect): FeedbackEntry {
+  return {
+    id: row.id,
+    orderId: row.orderId,
+    locationSlug: row.locationSlug,
+    customerName: row.customerName,
+    customerPhone: row.customerPhone,
+    overallRating: row.overallRating,
+    categoryRatings: (row.categoryRatings as Record<string, number>) ?? {},
+    comment: row.comment,
+    status: row.status as FeedbackEntry["status"],
+    sentiment: (row.sentiment as FeedbackSentiment | null) ?? undefined,
+    themes: row.themes ?? undefined,
+    analyzedAt: row.analyzedAt ? row.analyzedAt.toISOString() : undefined,
+    date: row.createdAt.toISOString(),
+  };
+}
+
+async function dualWriteFeedback(entry: FeedbackEntry): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureFeedbackTable();
+    const values = {
+      id: entry.id,
+      orderId: entry.orderId,
+      locationSlug: entry.locationSlug,
+      customerName: entry.customerName,
+      customerPhone: entry.customerPhone,
+      overallRating: entry.overallRating,
+      categoryRatings: entry.categoryRatings,
+      comment: entry.comment,
+      status: entry.status,
+      sentiment: entry.sentiment ?? null,
+      themes: entry.themes ?? null,
+      analyzedAt: entry.analyzedAt ? new Date(entry.analyzedAt) : null,
+      createdAt: new Date(entry.date),
+    };
+    await db
+      .insert(feedbackTable)
+      .values(values)
+      .onConflictDoUpdate({ target: feedbackTable.id, set: values });
+  } catch (err) {
+    logger.warn("dualWriteFeedback failed", { id: entry.id, layer: "store.feedback" }, err);
+  }
+}
+
 export async function getFeedback(): Promise<FeedbackEntry[]> {
-  return readJSON<FeedbackEntry[]>("feedback.json", []);
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureFeedbackTable();
+      const rows = await db
+        .select()
+        .from(feedbackTable)
+        .orderBy(desc(feedbackTable.createdAt));
+      if (rows.length > 0) return rows.map(rowToFeedback);
+    } catch (err) {
+      logger.warn("getFeedback DB read failed; falling back", { layer: "store.feedback" }, err);
+    }
+  }
+  const list = await readJSON<FeedbackEntry[]>("feedback.json", []);
+  if (list.length > 0) {
+    bumpLazyBackfillHit("feedback");
+    void Promise.all(list.map((f) => dualWriteFeedback(f)));
+  }
+  return list;
 }
 
 export async function saveFeedback(entry: FeedbackEntry): Promise<FeedbackEntry> {
@@ -2893,6 +2984,7 @@ export async function saveFeedback(entry: FeedbackEntry): Promise<FeedbackEntry>
       list.push(entry);
     }
     await writeJSON("feedback.json", list);
+    await dualWriteFeedback(entry);
     return entry;
   });
 }
@@ -2904,6 +2996,7 @@ export async function updateFeedbackStatus(id: string, status: FeedbackEntry["st
     if (idx === -1) return null;
     list[idx].status = status;
     await writeJSON("feedback.json", list);
+    await dualWriteFeedback(list[idx]);
     return list[idx];
   });
 }
@@ -2916,22 +3009,27 @@ export async function updateFeedbackStatus(id: string, status: FeedbackEntry["st
 export async function setFeedbackAnalysis(
   updates: { id: string; sentiment: FeedbackSentiment; themes: string[] }[],
 ): Promise<number> {
-  return withLock("feedback.json", async () => {
+  const written: FeedbackEntry[] = [];
+  const n = await withLock("feedback.json", async () => {
     const list = await readJSON<FeedbackEntry[]>("feedback.json", []);
     const byId = new Map(updates.map((u) => [u.id, u]));
     const now = new Date().toISOString();
-    let n = 0;
+    let count = 0;
     for (const entry of list) {
       const u = byId.get(entry.id);
       if (!u) continue;
       entry.sentiment = u.sentiment;
       entry.themes = u.themes;
       entry.analyzedAt = now;
-      n++;
+      written.push(entry);
+      count++;
     }
     await writeJSON("feedback.json", list);
-    return n;
+    return count;
   });
+  // Mirror outside the lock — these are independent rows.
+  await Promise.all(written.map((e) => dualWriteFeedback(e)));
+  return n;
 }
 
 // ── Chatbot FAQ ──────────────────────────────────────────────

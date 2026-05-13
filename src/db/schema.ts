@@ -389,3 +389,41 @@ export const auditLog = pgTable(
     index("audit_log_action_idx").on(table.action),
   ],
 );
+
+// --- Phase 1: feedback (m1_7) ------------------------------------------
+
+/**
+ * Customer feedback table. Replaces the in-memory filter on
+ * kv_store["feedback.json"] used by /admin/feedback + the sentiment
+ * analyzer. `themes` is a text[] (not jsonb) so GIN-style theme queries
+ * are an option later without a schema migration.
+ *
+ * (location_slug, created_at DESC) is the dominant access pattern;
+ * (status) covers the queue UI.
+ */
+export const feedback = pgTable(
+  "feedback",
+  {
+    id: text("id").primaryKey(),
+    orderId: text("order_id").notNull(),
+    locationSlug: text("location_slug").notNull(),
+    customerName: text("customer_name").notNull(),
+    customerPhone: text("customer_phone").notNull(),
+    overallRating: integer("overall_rating").notNull(),
+    categoryRatings: jsonb("category_ratings").notNull().default({}),
+    comment: text("comment").notNull(),
+    status: text("status").notNull(),
+    sentiment: text("sentiment"),
+    themes: text("themes").array(),
+    analyzedAt: timestamp("analyzed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    index("feedback_location_created_idx").on(
+      table.locationSlug,
+      table.createdAt,
+    ),
+    index("feedback_status_idx").on(table.status),
+    index("feedback_order_id_idx").on(table.orderId),
+  ],
+);

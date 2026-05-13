@@ -50,6 +50,13 @@
       "when": 1778659666608,
       "tag": "0006_common_archangel",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1778659779491,
+      "tag": "0007_bored_hannibal_king",
+      "breakpoints": true
     }
   ]
 }
