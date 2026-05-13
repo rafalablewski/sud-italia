@@ -492,3 +492,53 @@ export const timePunches = pgTable(
     ),
   ],
 );
+
+// --- Phase 1: CRM (m1_8b) -----------------------------------------------
+
+/** Phone-only loyalty signups (separate from `customers`, which is derived). */
+export const loyaltyMembers = pgTable("loyalty_members", {
+  phone: text("phone").primaryKey(),
+  name: text("name").notNull(),
+  lastName: text("last_name"),
+  nickname: text("nickname"),
+  email: text("email"),
+  dob: text("dob"),
+  signedUpAt: timestamp("signed_up_at", { withTimezone: true }).notNull(),
+});
+
+/** Append-only ledger of manual ±points. Composite read pattern is per-phone. */
+export const pointAdjustments = pgTable(
+  "point_adjustments",
+  {
+    // No PK on (phone, adjustedAt) — adjustments are append-only and the
+    // store doesn't expose an id. Synthesize one from the natural keys so
+    // ON CONFLICT DO NOTHING gives idempotent backfill.
+    id: text("id").primaryKey(),
+    phone: text("phone").notNull(),
+    amount: integer("amount").notNull(),
+    reason: text("reason").notNull(),
+    adjustedBy: text("adjusted_by").notNull(),
+    adjustedAt: timestamp("adjusted_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    index("point_adjustments_phone_idx").on(table.phone),
+    index("point_adjustments_adjusted_at_idx").on(table.adjustedAt),
+  ],
+);
+
+/** Free-text customer notes — phone-scoped reads are the dominant pattern. */
+export const customerNotes = pgTable(
+  "customer_notes",
+  {
+    id: text("id").primaryKey(),
+    phone: text("phone").notNull(),
+    body: text("body").notNull(),
+    tags: text("tags").array(),
+    authoredBy: text("authored_by"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    index("customer_notes_phone_idx").on(table.phone),
+    index("customer_notes_created_idx").on(table.createdAt),
+  ],
+);

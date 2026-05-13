@@ -14,7 +14,7 @@ import { logger } from "@/lib/logger";
 import { withDistributedLock } from "@/lib/locks";
 import { and, desc, eq, inArray, lt, sql as drizzleSql } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { auditLog as auditLogTable, customers as customersTable, feedback as feedbackTable, ingredientStock as ingredientStockTable, ingredients as ingredientsTable, orderItems as orderItemsTable, orders as ordersTable, recipes as recipesTable, shifts as shiftsTable, slots as slotsTable, staff as staffTable, stockMovements as stockMovementsTable, timePunches as timePunchesTable } from "@/db/schema";
+import { auditLog as auditLogTable, customerNotes as customerNotesTable, customers as customersTable, feedback as feedbackTable, ingredientStock as ingredientStockTable, ingredients as ingredientsTable, loyaltyMembers as loyaltyMembersTable, orderItems as orderItemsTable, orders as ordersTable, pointAdjustments as pointAdjustmentsTable, recipes as recipesTable, shifts as shiftsTable, slots as slotsTable, staff as staffTable, stockMovements as stockMovementsTable, timePunches as timePunchesTable } from "@/db/schema";
 import { gte, lte } from "drizzle-orm";
 import { bumpLazyBackfillHit, ensureTable } from "@/db/migrate";
 
@@ -2155,30 +2155,118 @@ export interface LoyaltyMember {
   dob?: string;
 }
 
+const LOYALTY_MEMBERS_DDL = [
+  `CREATE TABLE IF NOT EXISTS loyalty_members (
+    phone text PRIMARY KEY,
+    name text NOT NULL,
+    last_name text,
+    nickname text,
+    email text,
+    dob text,
+    signed_up_at timestamptz NOT NULL
+  )`,
+];
+
+async function ensureLoyaltyMembersTable(): Promise<void> {
+  await ensureTable("loyalty_members", LOYALTY_MEMBERS_DDL);
+}
+
+function rowToLoyaltyMember(row: typeof loyaltyMembersTable.$inferSelect): LoyaltyMember {
+  return {
+    phone: row.phone,
+    name: row.name,
+    lastName: row.lastName ?? undefined,
+    nickname: row.nickname ?? undefined,
+    email: row.email ?? undefined,
+    dob: row.dob ?? undefined,
+    signedUpAt: row.signedUpAt.toISOString(),
+  };
+}
+
+async function dualWriteLoyaltyMember(m: LoyaltyMember): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureLoyaltyMembersTable();
+    const values = {
+      phone: m.phone,
+      name: m.name,
+      lastName: m.lastName ?? null,
+      nickname: m.nickname ?? null,
+      email: m.email ?? null,
+      dob: m.dob ?? null,
+      signedUpAt: new Date(m.signedUpAt),
+    };
+    await db
+      .insert(loyaltyMembersTable)
+      .values(values)
+      .onConflictDoUpdate({ target: loyaltyMembersTable.phone, set: values });
+  } catch (err) {
+    logger.warn("dualWriteLoyaltyMember failed", { phone: m.phone, layer: "store.loyalty_members" }, err);
+  }
+}
+
 export async function getLoyaltyMembers(): Promise<LoyaltyMember[]> {
-  return readJSON<LoyaltyMember[]>("loyalty-members.json", []);
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureLoyaltyMembersTable();
+      const rows = await db.select().from(loyaltyMembersTable);
+      if (rows.length > 0) return rows.map(rowToLoyaltyMember);
+    } catch (err) {
+      logger.warn("getLoyaltyMembers DB read failed; falling back", { layer: "store.loyalty_members" }, err);
+    }
+  }
+  const list = await readJSON<LoyaltyMember[]>("loyalty-members.json", []);
+  if (list.length > 0) {
+    bumpLazyBackfillHit("loyalty_members");
+    void Promise.all(list.map((m) => dualWriteLoyaltyMember(m)));
+  }
+  return list;
 }
 
 export async function addLoyaltyMember(member: LoyaltyMember): Promise<LoyaltyMember> {
   const canonical = normalizePlPhoneE164(member.phone) || member.phone.trim();
   const toSave: LoyaltyMember = { ...member, phone: canonical };
-  return withLock("loyalty-members.json", async () => {
+  const saved = await withLock("loyalty-members.json", async () => {
     const list = await readJSON<LoyaltyMember[]>("loyalty-members.json", []);
     if (list.some((m) => phonesEqualPl(m.phone, canonical))) return toSave;
     list.push(toSave);
     await writeJSON("loyalty-members.json", list);
     return toSave;
   });
+  await dualWriteLoyaltyMember(saved);
+  // Loyalty signup carries the customer's name/email/dob — feeds the rollup.
+  void recomputeCustomerRollup(canonical);
+  return saved;
 }
 
 export async function getLoyaltyMember(phone: string): Promise<LoyaltyMember | undefined> {
-  const list = await readJSON<LoyaltyMember[]>("loyalty-members.json", []);
-  const canonical = normalizePlPhoneE164(phone);
-  if (canonical) {
-    const hit = list.find((m) => phonesEqualPl(m.phone, canonical));
-    if (hit) return hit;
+  const db = getDb();
+  const canonical = normalizePlPhoneE164(phone) ?? phone.trim();
+  if (db) {
+    try {
+      await ensureLoyaltyMembersTable();
+      const rows = await db
+        .select()
+        .from(loyaltyMembersTable)
+        .where(eq(loyaltyMembersTable.phone, canonical))
+        .limit(1);
+      if (rows.length > 0) return rowToLoyaltyMember(rows[0]);
+    } catch (err) {
+      logger.warn("getLoyaltyMember DB read failed; falling back", { phone, layer: "store.loyalty_members" }, err);
+    }
   }
-  return list.find((m) => m.phone === phone.trim());
+  const list = await readJSON<LoyaltyMember[]>("loyalty-members.json", []);
+  const normalized = normalizePlPhoneE164(phone);
+  let hit: LoyaltyMember | undefined;
+  if (normalized) hit = list.find((m) => phonesEqualPl(m.phone, normalized));
+  if (!hit) hit = list.find((m) => m.phone === phone.trim());
+  if (hit) {
+    bumpLazyBackfillHit("loyalty_members");
+    void dualWriteLoyaltyMember(hit);
+  }
+  return hit;
 }
 
 export async function updateLoyaltyMember(
@@ -2186,7 +2274,7 @@ export async function updateLoyaltyMember(
   updates: Partial<Pick<LoyaltyMember, "name" | "lastName" | "nickname" | "email" | "dob">>
 ): Promise<LoyaltyMember | null> {
   const canonical = normalizePlPhoneE164(phone) || phone.trim();
-  return withLock("loyalty-members.json", async () => {
+  const updated = await withLock("loyalty-members.json", async () => {
     const list = await readJSON<LoyaltyMember[]>("loyalty-members.json", []);
     const index = list.findIndex((m) => phonesEqualPl(m.phone, canonical));
     if (index === -1) return null;
@@ -2194,6 +2282,12 @@ export async function updateLoyaltyMember(
     await writeJSON("loyalty-members.json", list);
     return list[index];
   });
+  if (updated) {
+    await dualWriteLoyaltyMember(updated);
+    // Profile edits affect the customer rollup's name/email/birthday.
+    void recomputeCustomerRollup(canonical);
+  }
+  return updated;
 }
 
 // --- Family wallets (up to WALLET_MAX_PHONES phones, shared earn, invite + confirm) ---
@@ -2497,8 +2591,81 @@ export interface PointAdjustment {
   adjustedAt: string;
 }
 
+const POINT_ADJUSTMENTS_DDL = [
+  `CREATE TABLE IF NOT EXISTS point_adjustments (
+    id text PRIMARY KEY,
+    phone text NOT NULL,
+    amount integer NOT NULL,
+    reason text NOT NULL,
+    adjusted_by text NOT NULL,
+    adjusted_at timestamptz NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS point_adjustments_phone_idx
+    ON point_adjustments (phone)`,
+  `CREATE INDEX IF NOT EXISTS point_adjustments_adjusted_at_idx
+    ON point_adjustments (adjusted_at)`,
+];
+
+async function ensurePointAdjustmentsTable(): Promise<void> {
+  await ensureTable("point_adjustments", POINT_ADJUSTMENTS_DDL);
+}
+
+/**
+ * Adjustments don't carry an id field; synthesize one from natural keys so
+ * ON CONFLICT DO NOTHING gives idempotent backfill.
+ */
+function pointAdjustmentSyntheticId(a: PointAdjustment): string {
+  return `${a.phone}|${a.adjustedAt}|${a.amount}`;
+}
+
+function rowToPointAdjustment(row: typeof pointAdjustmentsTable.$inferSelect): PointAdjustment {
+  return {
+    phone: row.phone,
+    amount: row.amount,
+    reason: row.reason,
+    adjustedBy: row.adjustedBy,
+    adjustedAt: row.adjustedAt.toISOString(),
+  };
+}
+
+async function dualWritePointAdjustment(a: PointAdjustment): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensurePointAdjustmentsTable();
+    await db
+      .insert(pointAdjustmentsTable)
+      .values({
+        id: pointAdjustmentSyntheticId(a),
+        phone: a.phone,
+        amount: a.amount,
+        reason: a.reason,
+        adjustedBy: a.adjustedBy,
+        adjustedAt: new Date(a.adjustedAt),
+      })
+      .onConflictDoNothing();
+  } catch (err) {
+    logger.warn("dualWritePointAdjustment failed", { phone: a.phone, layer: "store.point_adjustments" }, err);
+  }
+}
+
 export async function getPointAdjustments(): Promise<PointAdjustment[]> {
-  return readJSON<PointAdjustment[]>("point-adjustments.json", []);
+  const db = getDb();
+  if (db) {
+    try {
+      await ensurePointAdjustmentsTable();
+      const rows = await db.select().from(pointAdjustmentsTable);
+      if (rows.length > 0) return rows.map(rowToPointAdjustment);
+    } catch (err) {
+      logger.warn("getPointAdjustments DB read failed; falling back", { layer: "store.point_adjustments" }, err);
+    }
+  }
+  const list = await readJSON<PointAdjustment[]>("point-adjustments.json", []);
+  if (list.length > 0) {
+    bumpLazyBackfillHit("point_adjustments");
+    void Promise.all(list.map((a) => dualWritePointAdjustment(a)));
+  }
+  return list;
 }
 
 export async function addPointAdjustment(adj: PointAdjustment): Promise<void> {
@@ -2507,6 +2674,7 @@ export async function addPointAdjustment(adj: PointAdjustment): Promise<void> {
     list.push(adj);
     await writeJSON("point-adjustments.json", list);
   });
+  await dualWritePointAdjustment(adj);
   // Manual adjustments shift loyaltyPointsBalance + manualPointsAdjust on
   // the customer rollup — keep that in sync.
   void recomputeCustomerRollup(adj.phone);
@@ -3589,12 +3757,95 @@ export async function deletePurchaseOrder(id: string): Promise<boolean> {
   });
 }
 
-// --- CRM (customer notes) ---
+// --- CRM (customer notes — m1_8b dual-write) ----------------------------
+
+const CUSTOMER_NOTES_DDL = [
+  `CREATE TABLE IF NOT EXISTS customer_notes (
+    id text PRIMARY KEY,
+    phone text NOT NULL,
+    body text NOT NULL,
+    tags text[],
+    authored_by text,
+    created_at timestamptz NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS customer_notes_phone_idx
+    ON customer_notes (phone)`,
+  `CREATE INDEX IF NOT EXISTS customer_notes_created_idx
+    ON customer_notes (created_at)`,
+];
+
+async function ensureCustomerNotesTable(): Promise<void> {
+  await ensureTable("customer_notes", CUSTOMER_NOTES_DDL);
+}
+
+function rowToCustomerNote(row: typeof customerNotesTable.$inferSelect): CustomerNote {
+  return {
+    id: row.id,
+    phone: row.phone,
+    body: row.body,
+    tags: row.tags ?? undefined,
+    authoredBy: row.authoredBy ?? undefined,
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+
+async function dualWriteCustomerNote(n: CustomerNote): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureCustomerNotesTable();
+    await db
+      .insert(customerNotesTable)
+      .values({
+        id: n.id,
+        phone: n.phone,
+        body: n.body,
+        tags: n.tags ?? null,
+        authoredBy: n.authoredBy ?? null,
+        createdAt: new Date(n.createdAt),
+      })
+      .onConflictDoNothing();
+  } catch (err) {
+    logger.warn("dualWriteCustomerNote failed", { id: n.id, layer: "store.customer_notes" }, err);
+  }
+}
+
+async function dualDeleteCustomerNote(id: string): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureCustomerNotesTable();
+    await db.delete(customerNotesTable).where(eq(customerNotesTable.id, id));
+  } catch (err) {
+    logger.warn("dualDeleteCustomerNote failed", { id, layer: "store.customer_notes" }, err);
+  }
+}
 
 export async function getCustomerNotes(phone?: string): Promise<CustomerNote[]> {
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureCustomerNotesTable();
+      const baseQuery = db
+        .select()
+        .from(customerNotesTable)
+        .orderBy(desc(customerNotesTable.createdAt));
+      const rows = phone
+        ? await baseQuery.where(eq(customerNotesTable.phone, phone))
+        : await baseQuery;
+      if (rows.length > 0) return rows.map(rowToCustomerNote);
+    } catch (err) {
+      logger.warn("getCustomerNotes DB read failed; falling back", { layer: "store.customer_notes" }, err);
+    }
+  }
   const all = await readJSON<CustomerNote[]>("customer-notes.json", []);
   const list = phone ? all.filter((n) => n.phone === phone) : all;
-  return list.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const sorted = list.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  if (sorted.length > 0) {
+    bumpLazyBackfillHit("customer_notes");
+    void Promise.all(sorted.map((n) => dualWriteCustomerNote(n)));
+  }
+  return sorted;
 }
 
 export async function addCustomerNote(
@@ -3612,6 +3863,7 @@ export async function addCustomerNote(
     };
     list.push(note);
     await writeJSON("customer-notes.json", list);
+    await dualWriteCustomerNote(note);
     return note;
   });
 }
@@ -3622,6 +3874,7 @@ export async function deleteCustomerNote(id: string): Promise<boolean> {
     const filtered = list.filter((n) => n.id !== id);
     if (filtered.length === list.length) return false;
     await writeJSON("customer-notes.json", filtered);
+    await dualDeleteCustomerNote(id);
     return true;
   });
 }
