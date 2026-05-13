@@ -24,6 +24,8 @@ Two active locations: Kraków, Warszawa. Serverless deployment.
 
 8. **Verify full data flow end-to-end before committing.** When building a feature that connects components (cross-sell → cart, discount → total, points → display), trace the entire chain: props passed → handlers wired → state updated → DB persisted → result visible to user. If any link is broken, the feature is broken.
 
+9. **Register every new capability in `/admin/capabilities`.** Whenever you ship a new feature, integration, scheduled job, or admin page, add a corresponding entry to `src/app/admin/capabilities/page.tsx` in the same commit. Include: `name`, one-sentence `summary` (what it does + how to use), `href` to the primary admin/customer surface, `envVars` if it needs configuration, and a `status` that introspects from `process.env` (`live` / `needs-config` / `disabled`) using the existing `has(...keys)` helper. The page is the source of truth for "what's deployed" — a feature that isn't listed there is invisible to operators.
+
 ## Architecture
 
 - **Store:** `src/lib/store.ts` — all data persistence goes through `readJSON`/`writeJSON` (handles Postgres + filesystem). Add new data types here with `withLock` for concurrency safety.
