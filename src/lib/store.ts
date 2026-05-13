@@ -12,6 +12,7 @@ import { WALLET_MAX_PHONES } from "@/lib/constants";
 import { normalizePlPhoneE164, phonesEqualPl } from "@/lib/phone";
 import { logger } from "@/lib/logger";
 import { withDistributedLock } from "@/lib/locks";
+import { emitOrderEvent } from "@/lib/order-events";
 import { and, desc, eq, inArray, lt, sql as drizzleSql } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { auditLog as auditLogTable, customerNotes as customerNotesTable, customers as customersTable, feedback as feedbackTable, ingredientStock as ingredientStockTable, ingredients as ingredientsTable, loyaltyMembers as loyaltyMembersTable, orderItems as orderItemsTable, orders as ordersTable, pointAdjustments as pointAdjustmentsTable, recipes as recipesTable, shifts as shiftsTable, slots as slotsTable, staff as staffTable, stockMovements as stockMovementsTable, timePunches as timePunchesTable } from "@/db/schema";
@@ -1007,6 +1008,7 @@ export async function createOrder(order: Order): Promise<Order> {
   // here only means the customer's row is one order behind until the next
   // event refreshes it — non-blocking and idempotent.
   void recomputeCustomerRollup(order.customerPhone);
+  emitOrderEvent({ kind: "created", orderId: order.id, locationSlug: order.locationSlug });
   return saved;
 }
 
@@ -1025,6 +1027,12 @@ export async function updateOrderStatus(id: string, status: Order["status"]): Pr
     // "counts" in lifetime stats; cancelled does the opposite. Both warrant
     // a rollup refresh.
     void recomputeCustomerRollup(updated.customerPhone);
+    emitOrderEvent({
+      kind: "status_changed",
+      orderId: updated.id,
+      locationSlug: updated.locationSlug,
+      status,
+    });
   }
   return updated;
 }
@@ -1060,18 +1068,23 @@ export async function updateOrder(
   ) {
     void recomputeCustomerRollup(updated.customerPhone);
   }
+  if (updated) {
+    emitOrderEvent({ kind: "updated", orderId: updated.id, locationSlug: updated.locationSlug });
+  }
   return updated;
 }
 
 export async function deleteOrder(id: string): Promise<boolean> {
   let slotId: string | undefined;
   let customerPhone: string | undefined;
+  let locationSlug: string | undefined;
   const removed = await withLock("orders.json", async () => {
     const orders = await readJSON<Order[]>("orders.json", []);
     const index = orders.findIndex((o) => o.id === id);
     if (index === -1) return false;
     slotId = orders[index].slotId;
     customerPhone = orders[index].customerPhone;
+    locationSlug = orders[index].locationSlug;
     orders.splice(index, 1);
     await writeJSON("orders.json", orders);
     await dualDeleteOrder(id);
@@ -1085,6 +1098,9 @@ export async function deleteOrder(id: string): Promise<boolean> {
     if (customerPhone) {
       // Lifetime stats drop one order on this delete — refresh the rollup.
       void recomputeCustomerRollup(customerPhone);
+    }
+    if (locationSlug) {
+      emitOrderEvent({ kind: "deleted", orderId: id, locationSlug });
     }
   }
   return removed;
