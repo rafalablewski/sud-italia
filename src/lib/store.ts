@@ -17,7 +17,7 @@ import { appendOutboxEvent } from "@/lib/outbox";
 import { incrCounter } from "@/lib/metrics";
 import { and, asc, desc, eq, inArray, lt, sql as drizzleSql } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { auditLog as auditLogTable, brands as brandsTable, customerNotes as customerNotesTable, customers as customersTable, feedback as feedbackTable, franchisees as franchiseesTable, ingredientStock as ingredientStockTable, ingredients as ingredientsTable, kdsTickets as kdsTicketsTable, locationAssignments as locationAssignmentsTable, loyaltyMembers as loyaltyMembersTable, menuItemStation as menuItemStationTable, orderItems as orderItemsTable, orders as ordersTable, pointAdjustments as pointAdjustmentsTable, recipes as recipesTable, shifts as shiftsTable, slots as slotsTable, staff as staffTable, stations as stationsTable, stockMovements as stockMovementsTable, timePunches as timePunchesTable } from "@/db/schema";
+import { auditLog as auditLogTable, brands as brandsTable, customerNotes as customerNotesTable, customers as customersTable, feedback as feedbackTable, franchisees as franchiseesTable, ingredientStock as ingredientStockTable, ingredients as ingredientsTable, kdsTickets as kdsTicketsTable, locationAssignments as locationAssignmentsTable, loyaltyMembers as loyaltyMembersTable, menuItemStation as menuItemStationTable, orderItems as orderItemsTable, orders as ordersTable, pointAdjustments as pointAdjustmentsTable, recipes as recipesTable, royaltyStatements as royaltyStatementsTable, shifts as shiftsTable, slots as slotsTable, staff as staffTable, stations as stationsTable, stockMovements as stockMovementsTable, timePunches as timePunchesTable } from "@/db/schema";
 import { gte, lte } from "drizzle-orm";
 import { bumpLazyBackfillHit, ensureTable } from "@/db/migrate";
 
@@ -1846,6 +1846,19 @@ export interface MenuOverride {
   available?: boolean;
   name?: string;
   description?: string;
+  /**
+   * Phase 3 m3_6 menu lockdown: when true, only the brand owner can edit
+   * this item. Franchisees can only override price within a configured
+   * window (default ±15%). When false / unset, franchisees can manage
+   * the item fully under their banner.
+   */
+  locked?: boolean;
+  /**
+   * Phase 3 m3_6: maximum franchisee price delta from the corporate
+   * price, in basis points. 1500 = ±15%. Only consulted when `locked`
+   * is true.
+   */
+  franchiseePriceMaxDeltaBps?: number;
 }
 
 export async function getMenuOverrides(): Promise<Record<string, MenuOverride>> {
@@ -5696,5 +5709,98 @@ export async function getLocationsForFranchisee(franchiseeId: string): Promise<s
   } catch (err) {
     logger.warn("getLocationsForFranchisee failed", { franchiseeId, layer: "store.location_assignments" }, err);
     return [];
+  }
+}
+
+// --- Royalty statements (m3_5) ------------------------------------------
+
+const ROYALTY_STATEMENTS_DDL = [
+  `CREATE TABLE IF NOT EXISTS royalty_statements (
+    id text PRIMARY KEY,
+    franchisee_id text NOT NULL,
+    period_start timestamptz NOT NULL,
+    period_end timestamptz NOT NULL,
+    revenue_grosze integer NOT NULL,
+    royalty_grosze integer NOT NULL,
+    marketing_fund_grosze integer NOT NULL,
+    order_count integer NOT NULL,
+    generated_at timestamptz NOT NULL DEFAULT now()
+  )`,
+  `CREATE INDEX IF NOT EXISTS royalty_statements_franchisee_period_idx
+    ON royalty_statements (franchisee_id, period_end)`,
+];
+
+async function ensureRoyaltyStatementsTable(): Promise<void> {
+  await ensureTable("royalty_statements", ROYALTY_STATEMENTS_DDL);
+}
+
+export interface RoyaltyStatement {
+  id: string;
+  franchiseeId: string;
+  periodStart: string;
+  periodEnd: string;
+  revenueGrosze: number;
+  royaltyGrosze: number;
+  marketingFundGrosze: number;
+  orderCount: number;
+  generatedAt: string;
+}
+
+export async function getRoyaltyStatements(franchiseeId: string): Promise<RoyaltyStatement[]> {
+  const db = getDb();
+  if (!db) return [];
+  try {
+    await ensureRoyaltyStatementsTable();
+    const rows = await db
+      .select()
+      .from(royaltyStatementsTable)
+      .where(eq(royaltyStatementsTable.franchiseeId, franchiseeId))
+      .orderBy(desc(royaltyStatementsTable.periodEnd));
+    return rows.map((r) => ({
+      id: r.id,
+      franchiseeId: r.franchiseeId,
+      periodStart: r.periodStart.toISOString(),
+      periodEnd: r.periodEnd.toISOString(),
+      revenueGrosze: r.revenueGrosze,
+      royaltyGrosze: r.royaltyGrosze,
+      marketingFundGrosze: r.marketingFundGrosze,
+      orderCount: r.orderCount,
+      generatedAt: r.generatedAt.toISOString(),
+    }));
+  } catch (err) {
+    logger.warn("getRoyaltyStatements failed", { franchiseeId, layer: "store.royalty" }, err);
+    return [];
+  }
+}
+
+/**
+ * Idempotent-upsert royalty statement (m3_5). Re-running the weekly cron
+ * for the same period replaces the row in place via ON CONFLICT on a
+ * composite of (franchisee_id, period_end) — we synthesize a stable id.
+ */
+export async function saveRoyaltyStatement(input: Omit<RoyaltyStatement, "id" | "generatedAt">): Promise<RoyaltyStatement | null> {
+  const db = getDb();
+  if (!db) return null;
+  try {
+    await ensureRoyaltyStatementsTable();
+    const id = `rs-${input.franchiseeId}-${input.periodEnd.slice(0, 10)}`;
+    const values = {
+      id,
+      franchiseeId: input.franchiseeId,
+      periodStart: new Date(input.periodStart),
+      periodEnd: new Date(input.periodEnd),
+      revenueGrosze: input.revenueGrosze,
+      royaltyGrosze: input.royaltyGrosze,
+      marketingFundGrosze: input.marketingFundGrosze,
+      orderCount: input.orderCount,
+    };
+    await db
+      .insert(royaltyStatementsTable)
+      .values(values)
+      .onConflictDoUpdate({ target: royaltyStatementsTable.id, set: values });
+    return { id, generatedAt: new Date().toISOString(), ...input };
+  } catch (err) {
+    logger.error("saveRoyaltyStatement failed", { franchiseeId: input.franchiseeId, layer: "store.royalty" }, err);
+    return null;
   }
 }

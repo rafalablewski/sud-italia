@@ -737,3 +737,33 @@ export const locationAssignments = pgTable(
     index("location_assignments_region_idx").on(table.regionSlug),
   ],
 );
+
+// --- Phase 3: royalty statements (m3_5) ----------------------------------
+
+/**
+ * Weekly royalty statements per franchisee. Computed by the
+ * /api/admin/cron/royalty-weekly job each Monday for the prior 7 days.
+ * Surface in the franchisee portal + corporate HQ rollup.
+ */
+export const royaltyStatements = pgTable(
+  "royalty_statements",
+  {
+    id: text("id").primaryKey(),
+    franchiseeId: text("franchisee_id").notNull(),
+    periodStart: timestamp("period_start", { withTimezone: true }).notNull(),
+    periodEnd: timestamp("period_end", { withTimezone: true }).notNull(),
+    revenueGrosze: integer("revenue_grosze").notNull(),
+    royaltyGrosze: integer("royalty_grosze").notNull(),
+    marketingFundGrosze: integer("marketing_fund_grosze").notNull(),
+    orderCount: integer("order_count").notNull(),
+    generatedAt: timestamp("generated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("royalty_statements_franchisee_period_idx").on(
+      table.franchiseeId,
+      table.periodEnd,
+    ),
+  ],
+);
