@@ -3,6 +3,7 @@ import { neon } from "@neondatabase/serverless";
 import { withAdmin } from "@/lib/api-middleware";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import { snapshotLockMetrics } from "@/lib/locks";
+import { snapshotLazyBackfillCounters } from "@/db/migrate";
 
 /**
  * Operational health endpoint. Returns connectivity + latency for every
@@ -96,12 +97,19 @@ export const GET = withAdmin({}, async () => {
   const checks: Check[] = [neonCheck, redisCheck];
   const status = aggregate(checks);
   const locks = snapshotLockMetrics();
+  // Per-entity lazy-backfill counters from src/db/migrate.ts. Each entry is
+  // "how many times the read path fell back to kv_store because the row
+  // wasn't in the normalized table yet." Trending to zero means Phase 1's
+  // dual-write has caught the legacy data up; an operator can then plan a
+  // future kv_store drop with confidence.
+  const lazyBackfill = snapshotLazyBackfillCounters();
 
   return NextResponse.json(
     {
       status,
       checks,
       locks,
+      lazyBackfill,
       // Operators often care about which build is live during an incident.
       // VERCEL_GIT_COMMIT_SHA is populated automatically on Vercel deployments
       // and works as a deploy correlation id.
