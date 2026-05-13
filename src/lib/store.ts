@@ -14,6 +14,7 @@ import { logger } from "@/lib/logger";
 import { withDistributedLock } from "@/lib/locks";
 import { emitOrderEvent } from "@/lib/order-events";
 import { appendOutboxEvent } from "@/lib/outbox";
+import { incrCounter } from "@/lib/metrics";
 import { and, desc, eq, inArray, lt, sql as drizzleSql } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { auditLog as auditLogTable, customerNotes as customerNotesTable, customers as customersTable, feedback as feedbackTable, ingredientStock as ingredientStockTable, ingredients as ingredientsTable, loyaltyMembers as loyaltyMembersTable, orderItems as orderItemsTable, orders as ordersTable, pointAdjustments as pointAdjustmentsTable, recipes as recipesTable, shifts as shiftsTable, slots as slotsTable, staff as staffTable, stockMovements as stockMovementsTable, timePunches as timePunchesTable } from "@/db/schema";
@@ -386,6 +387,7 @@ export async function incrementSlotOrders(id: string): Promise<boolean> {
             await writeJSON("slots.json", slots);
           }
         });
+        incrCounter("slot.booked");
         return true;
       }
       // updated.length === 0 means either the row isn't in the normalized
@@ -404,10 +406,14 @@ export async function incrementSlotOrders(id: string): Promise<boolean> {
     const slots = await readJSON<TimeSlot[]>("slots.json", []);
     const slot = slots.find((s) => s.id === id);
     if (!slot) return false;
-    if (slot.currentOrders >= slot.maxOrders) return false;
+    if (slot.currentOrders >= slot.maxOrders) {
+      incrCounter("slot.full");
+      return false;
+    }
     slot.currentOrders += 1;
     await writeJSON("slots.json", slots);
     await dualWriteSlot(slot);
+    incrCounter("slot.booked");
     return true;
   });
 }
@@ -1010,6 +1016,7 @@ export async function createOrder(order: Order): Promise<Order> {
   // event refreshes it — non-blocking and idempotent.
   void recomputeCustomerRollup(order.customerPhone);
   emitOrderEvent({ kind: "created", orderId: order.id, locationSlug: order.locationSlug });
+  incrCounter("orders.placed");
   // Outbox: queue side effects (Phase 2 SMS/email/aggregator).
   // dedupeKey is just "placed" so retried createOrder calls converge on
   // one row rather than creating multiple identical events.
@@ -1053,6 +1060,7 @@ export async function updateOrderStatus(id: string, status: Order["status"]): Pr
     // Outbox: status transitions that customers care about. dedupeKey
     // includes the status so a noop status flip can't create a duplicate
     // notification.
+    incrCounter(`orders.status.${status}`);
     if (status === "ready" || status === "completed" || status === "cancelled") {
       await appendOutboxEvent({
         eventType: `order.${status}`,

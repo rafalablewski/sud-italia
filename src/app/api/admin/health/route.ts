@@ -4,6 +4,7 @@ import { withAdmin } from "@/lib/api-middleware";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import { snapshotLockMetrics } from "@/lib/locks";
 import { snapshotLazyBackfillCounters } from "@/db/migrate";
+import { snapshotMetrics } from "@/lib/metrics";
 
 /**
  * Operational health endpoint. Returns connectivity + latency for every
@@ -103,6 +104,7 @@ export const GET = withAdmin({}, async () => {
   // dual-write has caught the legacy data up; an operator can then plan a
   // future kv_store drop with confidence.
   const lazyBackfill = snapshotLazyBackfillCounters();
+  const metrics = snapshotMetrics();
 
   return NextResponse.json(
     {
@@ -110,6 +112,7 @@ export const GET = withAdmin({}, async () => {
       checks,
       locks,
       lazyBackfill,
+      metrics,
       // Operators often care about which build is live during an incident.
       // VERCEL_GIT_COMMIT_SHA is populated automatically on Vercel deployments
       // and works as a deploy correlation id.

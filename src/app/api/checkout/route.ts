@@ -15,8 +15,10 @@ import {
 } from "@/lib/idempotency";
 import { enforceRateLimit, getClientIp } from "@/lib/rate-limit";
 import { checkoutBodySchema, parseBody } from "@/lib/api-schemas";
+import { incrCounter, recordHistogram } from "@/lib/metrics";
 
 export async function POST(req: NextRequest) {
+  const checkoutStart = Date.now();
   // Public endpoint — rate-limited by client IP. 10 attempts per minute is
   // generous enough for a slow checkout retry but blocks card-stuffing /
   // session-flooding abuse.
@@ -26,7 +28,10 @@ export async function POST(req: NextRequest) {
     limit: 10,
     windowSec: 60,
   });
-  if (rl) return rl;
+  if (rl) {
+    incrCounter("checkout.rate_limited");
+    return rl;
+  }
 
   try {
     // Shape validation handled by the schema — required fields, enum
@@ -80,6 +85,8 @@ export async function POST(req: NextRequest) {
       );
       const cached = await getCachedCheckout(idempotencyHash);
       if (cached) {
+        incrCounter("checkout.idempotent_hit");
+        recordHistogram("checkout.latency_ms", Date.now() - checkoutStart);
         return NextResponse.json({
           url: cached.stripeSessionUrl || undefined,
           orderId: cached.orderId,
@@ -301,6 +308,7 @@ export async function POST(req: NextRequest) {
         maxAge: 60 * 60 * 24 * 365,
         path: "/",
       });
+      recordHistogram("checkout.latency_ms", Date.now() - checkoutStart);
       return stripeResponse;
     }
 
@@ -320,9 +328,12 @@ export async function POST(req: NextRequest) {
       path: "/",
     });
 
+    recordHistogram("checkout.latency_ms", Date.now() - checkoutStart);
     return response;
   } catch (error) {
     logger.error("Checkout request failed", { route: "POST /api/checkout" }, error);
+    recordHistogram("checkout.latency_ms", Date.now() - checkoutStart);
+    incrCounter("checkout.errors");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

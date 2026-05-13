@@ -1,5 +1,6 @@
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import { logger } from "@/lib/logger";
+import { incrCounter, recordHistogram } from "@/lib/metrics";
 
 /**
  * Distributed mutex for read-modify-write sections that must serialize across
@@ -139,6 +140,7 @@ export async function withDistributedLock<T>(
     metrics.contentions += 1;
     if (Date.now() - acquireStart > acquireTimeoutMs) {
       metrics.timeouts += 1;
+      incrCounter("lock.timeouts");
       const waitMs = Date.now() - acquireStart;
       logger.warn("withDistributedLock acquire timeout", {
         key,
@@ -158,6 +160,9 @@ export async function withDistributedLock<T>(
   const waitMs = Date.now() - acquireStart;
   metrics.acquisitions += 1;
   metrics.totalWaitMs += waitMs;
+  // Surface to the shared metrics surface so /api/admin/health rolls it up.
+  recordHistogram("lock.wait_ms", waitMs);
+  incrCounter("lock.acquisitions");
 
   const holdStart = Date.now();
   try {
