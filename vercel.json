@@ -28,6 +28,10 @@
     {
       "path": "/api/admin/cron/royalty-weekly",
       "schedule": "0 2 * * 1"
+    },
+    {
+      "path": "/api/admin/cron/weather-staffing",
+      "schedule": "0 6 * * *"
     }
   ]
 }

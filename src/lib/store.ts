@@ -6012,3 +6012,52 @@ export async function getAllergenIncidents(locationSlug?: string): Promise<Aller
     return [];
   }
 }
+
+// --- Web Push subscriptions (m5_6) ----------------------------------
+//
+// One row per (phone, endpoint) pair. Phone is the customer identity
+// from the cookie-based session; endpoint is the unique push service
+// URL the browser issues per device. Customers can subscribe from
+// multiple devices and we'll fan out to all of them.
+//
+// Stored in kv_store for now — push subscriptions are write-rarely,
+// read-rarely, the volume stays tiny, and there's no analytics query
+// over them yet.
+
+export interface StoredPushSubscription {
+  phone: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  createdAt: string;
+}
+
+export async function listPushSubscriptions(phone?: string): Promise<StoredPushSubscription[]> {
+  const all = await readJSON<StoredPushSubscription[]>("push-subscriptions.json", []);
+  return phone ? all.filter((s) => s.phone === phone) : all;
+}
+
+export async function savePushSubscription(input: Omit<StoredPushSubscription, "createdAt">): Promise<StoredPushSubscription> {
+  return withLock("push-subscriptions.json", async () => {
+    const list = await readJSON<StoredPushSubscription[]>("push-subscriptions.json", []);
+    const existing = list.findIndex((s) => s.endpoint === input.endpoint);
+    const row: StoredPushSubscription = {
+      ...input,
+      createdAt: existing >= 0 ? list[existing].createdAt : new Date().toISOString(),
+    };
+    if (existing >= 0) list[existing] = row;
+    else list.push(row);
+    await writeJSON("push-subscriptions.json", list);
+    return row;
+  });
+}
+
+export async function deletePushSubscription(endpoint: string): Promise<boolean> {
+  return withLock("push-subscriptions.json", async () => {
+    const list = await readJSON<StoredPushSubscription[]>("push-subscriptions.json", []);
+    const filtered = list.filter((s) => s.endpoint !== endpoint);
+    if (filtered.length === list.length) return false;
+    await writeJSON("push-subscriptions.json", filtered);
+    return true;
+  });
+}

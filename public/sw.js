@@ -145,3 +145,43 @@ self.addEventListener("message", (event) => {
     // page-side helper has loaded — no-op, just acks for diagnostics.
   }
 });
+
+// Push notifications (m5_6). Payload shape comes from
+// src/lib/push-notifications.ts → sendPushNotification.
+self.addEventListener("push", (event) => {
+  if (!event.data) return;
+  let payload;
+  try {
+    payload = event.data.json();
+  } catch {
+    payload = { title: "Sud Italia", body: event.data.text() };
+  }
+  const { title, body, icon, url, tag } = payload;
+  event.waitUntil(
+    self.registration.showNotification(title || "Sud Italia", {
+      body: body || "",
+      icon: icon || "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      tag: tag || undefined,
+      data: { url: url || "/" },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || "/";
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        if ("focus" in client) {
+          client.navigate(url);
+          return client.focus();
+        }
+      }
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(url);
+      }
+    }),
+  );
+});
