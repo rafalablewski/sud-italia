@@ -5,54 +5,77 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Sud Italia — Cart Upsell v2 (mockup)</title>
   <style>
+    /* ------------------------------------------------------------------
+       Production tokens (mirror of src/app/globals.css @theme block)
+       ------------------------------------------------------------------ */
     :root {
-      --italia-red: #C8102E;
-      --italia-red-dark: #A00D24;
-      --italia-green: #008C45;
-      --italia-green-dark: #006B35;
-      --italia-cream: #FFF8F0;
-      --italia-cream-dark: #F5EDDF;
-      --ink: #1A1A1A;
-      --ink-soft: #5C5856;
-      --ink-faint: #8A8480;
-      --line: rgba(26,26,26,0.08);
-      --line-strong: rgba(26,26,26,0.16);
+      --color-background: #FFF8F0;
+      --color-foreground: #1A1A1A;
+      --color-italia-red: #C8102E;
+      --color-italia-red-dark: #A00D24;
+      --color-italia-green: #008C45;
+      --color-italia-green-dark: #006B35;
+      --color-italia-cream: #FFF8F0;
+      --color-italia-cream-dark: #F5EDDF;
+      --color-italia-gold: #B8922E;
+      --color-italia-gold-dark: #9A7A24;
+      --color-italia-dark: #1A1A1A;
+      --color-italia-gray: #6B7280;
+      --color-italia-light-gray: #F3F4F6;
+      --gray-50:  #F9FAFB;
+      --gray-100: #F3F4F6;
+      --gray-200: #E5E7EB;
+      --gray-300: #D1D5DB;
+      --gray-400: #9CA3AF;
       --font-heading: Georgia, "Times New Roman", serif;
       --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     }
-    * { box-sizing: border-box; }
+
+    *, *::before, *::after { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; }
     body {
-      background: var(--italia-cream);
+      background: var(--color-italia-cream);
       font-family: var(--font-body);
-      color: var(--ink);
+      color: var(--color-italia-dark);
       min-height: 100vh;
-      padding: 28px;
+      padding: 28px 20px;
+      -webkit-font-smoothing: antialiased;
     }
+
+    h1, h2, h3, h4 { font-family: var(--font-heading); font-weight: 600; }
+    h1 { font-size: 30px; line-height: 1.15; margin: 0 0 8px; }
+    h2 { font-size: 20px; line-height: 1.2; margin: 0 0 8px; }
+
+    /* Page shell ----------------------------------------------------- */
     .page {
       max-width: 1180px;
       margin: 0 auto;
       display: grid;
-      grid-template-columns: 1fr 420px;
+      grid-template-columns: minmax(0, 1fr) 28rem;
       gap: 32px;
+      align-items: start;
     }
     @media (max-width: 980px) {
       .page { grid-template-columns: 1fr; }
     }
-    h1 { font-family: var(--font-heading); font-weight: 600; font-size: 30px; margin: 0 0 6px; }
-    h2 { font-family: var(--font-heading); font-weight: 600; font-size: 20px; margin: 0 0 8px; }
-    .lede { color: var(--ink-soft); font-size: 14px; line-height: 1.55; max-width: 720px; }
 
-    /* ---------- LEFT: explainer + controls ---------- */
+    .lede {
+      color: var(--color-italia-gray);
+      font-size: 14px;
+      line-height: 1.55;
+      max-width: 720px;
+    }
+
     .panel {
       background: white;
-      border: 1px solid var(--line);
+      border: 1px solid var(--gray-100);
       border-radius: 14px;
-      padding: 22px 22px 20px;
+      padding: 22px;
       margin-bottom: 18px;
       box-shadow: 0 1px 0 rgba(26,26,26,0.02);
     }
     .panel.muted { background: #FFFDF9; }
+
     .pill {
       display: inline-block;
       font-size: 11px;
@@ -60,240 +83,609 @@
       text-transform: uppercase;
       padding: 4px 10px;
       border-radius: 999px;
-      background: var(--italia-cream-dark);
-      color: var(--ink-soft);
+      background: var(--color-italia-cream-dark);
+      color: var(--color-italia-gray);
       margin-bottom: 10px;
       font-weight: 600;
     }
-    .pill.live { background: rgba(0,140,69,0.10); color: var(--italia-green-dark); }
+    .pill.live { background: rgba(0,140,69,0.10); color: var(--color-italia-green-dark); }
+    .pill.gold { background: rgba(184,146,46,0.12); color: var(--color-italia-gold-dark); }
 
     .controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
-    .seg { display: inline-flex; flex-wrap: wrap; background: var(--italia-cream-dark); border-radius: 12px; padding: 4px; gap: 2px; }
+    .seg {
+      display: inline-flex; flex-wrap: wrap; gap: 2px;
+      background: var(--color-italia-cream-dark);
+      border-radius: 12px; padding: 4px;
+    }
     .seg button {
-      background: transparent; border: 0; padding: 8px 12px; border-radius: 9px;
-      font: inherit; font-size: 13px; color: var(--ink-soft); cursor: pointer;
+      background: transparent; border: 0;
+      padding: 8px 12px; border-radius: 9px;
+      font: inherit; font-size: 13px;
+      color: var(--color-italia-gray); cursor: pointer;
     }
-    .seg button.active { background: white; color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,0.06); font-weight: 600; }
-    .btn {
-      cursor: pointer; border: 0; font: inherit; font-weight: 600; font-size: 14px;
-      padding: 10px 14px; border-radius: 10px; background: var(--ink); color: white;
+    .seg button.active {
+      background: white; color: var(--color-italia-dark);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+      font-weight: 600;
     }
-    .btn.ghost { background: white; color: var(--ink); border: 1px solid var(--line-strong); }
     .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
-
-    .legend { display: grid; gap: 10px; margin-top: 12px; }
-    .legend li { list-style: none; display: grid; grid-template-columns: 28px 1fr; gap: 10px; font-size: 13px; line-height: 1.5; color: var(--ink-soft); }
-    .legend li strong { color: var(--ink); font-weight: 600; }
-    .marker { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 7px; background: var(--italia-cream-dark); font-size: 12px; font-weight: 700; color: var(--italia-red); }
-
-    /* ---------- RIGHT: phone frame holding the cart drawer ---------- */
-    .phone {
-      position: sticky; top: 28px;
-      width: 420px; height: 820px;
-      background: #111; border-radius: 36px; padding: 12px;
-      box-shadow: 0 24px 60px rgba(26,26,26,0.18);
-      margin-left: auto;
+    .btn {
+      cursor: pointer; border: 0; font: inherit; font-weight: 500; font-size: 14px;
+      padding: 10px 16px; border-radius: 8px;
+      background: var(--color-italia-dark); color: white;
+      transition: background 0.15s;
     }
-    @media (max-width: 980px) { .phone { position: static; margin: 0 auto; } }
-    .screen {
-      width: 100%; height: 100%; background: var(--italia-cream); border-radius: 26px;
-      overflow: hidden; position: relative; display: flex; flex-direction: column;
+    .btn:hover { background: #000; }
+    .btn.ghost {
+      background: white; color: var(--color-italia-dark);
+      border: 1px solid var(--gray-200);
     }
-    .status-bar {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 14px 22px 6px; font-size: 12px; color: var(--ink); font-weight: 600;
+    .btn.ghost:hover { border-color: var(--gray-300); background: var(--gray-50); }
+    .btn.danger { background: var(--color-italia-red); }
+    .btn.danger:hover { background: var(--color-italia-red-dark); }
+
+    .legend { display: grid; gap: 10px; margin: 12px 0 0; padding: 0; }
+    .legend li {
+      list-style: none;
+      display: grid; grid-template-columns: 28px 1fr;
+      gap: 10px;
+      font-size: 13px; line-height: 1.5;
+      color: var(--color-italia-gray);
+    }
+    .legend li strong { color: var(--color-italia-dark); font-weight: 600; }
+    .marker {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 24px; height: 24px; border-radius: 7px;
+      background: var(--color-italia-cream-dark);
+      font-size: 12px; font-weight: 700;
+      color: var(--color-italia-red);
+    }
+    .checklist { padding-left: 18px; margin: 6px 0 0; }
+    .checklist li { margin: 4px 0; color: var(--color-italia-gray); font-size: 13px; }
+    .checklist li b { color: var(--color-italia-dark); font-weight: 600; }
+    code.kbd {
+      font: 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+      background: var(--color-italia-cream-dark);
+      padding: 2px 6px; border-radius: 5px;
     }
 
-    /* ---------- Cart drawer body ---------- */
+    /* ==================================================================
+       Drawer — mirrors src/components/ui/Sheet.tsx + CartDrawer.tsx
+       ================================================================== */
+    .drawer-wrap { position: sticky; top: 28px; }
+    @media (max-width: 980px) { .drawer-wrap { position: static; } }
+
+    .drawer {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.10), 0 10px 10px -5px rgba(0,0,0,0.04);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: min(820px, calc(100vh - 56px));
+      position: relative;
+    }
+
+    /* Header */
     .drawer-head {
-      padding: 8px 20px 14px; display: flex; align-items: baseline; justify-content: space-between;
-      border-bottom: 1px solid var(--line);
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid var(--gray-100);
+      padding: 16px 20px;
+      background: white;
     }
-    .drawer-head h3 { margin: 0; font-family: var(--font-heading); font-size: 22px; }
-    .drawer-head .count { font-size: 12px; color: var(--ink-soft); }
-    .drawer-body { flex: 1; overflow-y: auto; padding: 14px 20px 12px; }
+    .drawer-head h2 {
+      font-size: 18px; line-height: 1.2; margin: 0;
+      font-family: var(--font-heading);
+      color: var(--color-italia-dark); font-weight: 600;
+    }
+    .drawer-head .count {
+      font-size: 12px; color: var(--color-italia-gray);
+      margin-top: 2px;
+    }
+    .drawer-head .close {
+      border: 0; background: transparent; padding: 6px;
+      border-radius: 999px; cursor: pointer;
+      color: var(--color-italia-dark);
+      transition: background 0.15s;
+    }
+    .drawer-head .close:hover { background: var(--gray-100); }
 
-    /* time-of-day banner */
-    .tod {
-      border-radius: 12px; padding: 12px 14px; margin-bottom: 14px;
-      display: flex; align-items: center; gap: 12px; font-size: 13px; line-height: 1.4;
-      border: 1px solid transparent;
+    /* Body */
+    .drawer-body {
+      flex: 1; overflow-y: auto;
+      padding: 12px 0 16px;
+      position: relative;
     }
-    .tod .icon {
-      width: 36px; height: 36px; flex: none; border-radius: 10px;
-      display: inline-flex; align-items: center; justify-content: center; font-size: 18px;
-    }
-    .tod strong { display: block; font-size: 14px; }
-    .tod .save { font-weight: 700; }
-    .tod-add { margin-left: auto; flex: none; background: var(--ink); color: white; border: 0; font: inherit; font-weight: 600; font-size: 12px; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
-    /* variants */
-    .tod-lunch { background: #FFF1E5; border-color: #F5C690; }
-    .tod-lunch .icon { background: #FFB672; }
-    .tod-lunch .save { color: var(--italia-red); }
-    .tod-afternoon { background: #F7F0FF; border-color: #C9B7E8; }
-    .tod-afternoon .icon { background: #B89BE3; color: white; }
-    .tod-dinner { background: #FFF0F1; border-color: #F2B4B8; }
-    .tod-dinner .icon { background: var(--italia-red); color: white; }
-    .tod-dinner .save { color: var(--italia-red); }
-    .tod-late { background: #1F1B16; color: #FFF1E0; border-color: #2C2620; }
-    .tod-late .icon { background: #3A2D24; color: #FFD79B; }
-    .tod-late strong { color: white; }
-    .tod-late .tod-add { background: var(--italia-red); }
-    .tod-morning { background: #EBF6EF; border-color: #B6DCC4; }
-    .tod-morning .icon { background: var(--italia-green); color: white; }
-    .tod-returning { background: #FFF8E1; border-color: #F1D88B; }
-    .tod-returning .icon { background: #E0A93B; color: white; }
 
-    /* cart line items */
-    .lines { display: grid; gap: 8px; margin-bottom: 14px; }
+    .sec { padding-left: 20px; padding-right: 20px; margin-top: 12px; }
+    .sec:first-child { margin-top: 8px; }
+
+    /* ==================================================================
+       Cart line items (mirrors CartItem.tsx)
+       ================================================================== */
+    .lines { padding: 0 20px; }
     .line {
-      display: grid; grid-template-columns: 36px 1fr auto; align-items: center; gap: 12px;
-      background: white; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--gray-100);
     }
-    .line .qty { width: 28px; height: 28px; border-radius: 8px; background: var(--italia-cream-dark); display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; }
-    .line .name { font-weight: 600; font-size: 14px; }
-    .line .sub { font-size: 12px; color: var(--ink-soft); }
-    .line .price { font-weight: 600; font-size: 14px; }
+    .line:last-child { border-bottom: 0; }
+    .line .top {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px;
+    }
+    .line .name {
+      font-size: 16px; font-weight: 500; line-height: 1.2;
+      color: var(--color-italia-dark);
+      margin: 0;
+    }
+    .line .each {
+      font-size: 14px; color: var(--color-italia-gray);
+      margin: 2px 0 0;
+    }
+    .line .price {
+      font-size: 16px; font-weight: 600;
+      color: var(--color-italia-dark);
+      flex-shrink: 0;
+    }
+    .line .bot {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-top: 12px;
+    }
+    .qty-stepper {
+      display: inline-flex; align-items: center;
+      border: 1px solid var(--gray-200);
+      border-radius: 12px;
+    }
+    .qty-stepper button {
+      border: 0; background: transparent; padding: 10px;
+      cursor: pointer; color: var(--color-italia-dark);
+      transition: background 0.15s;
+    }
+    .qty-stepper button:first-child { border-radius: 12px 0 0 12px; }
+    .qty-stepper button:last-child  { border-radius: 0 12px 12px 0; }
+    .qty-stepper button:hover { background: var(--gray-50); }
+    .qty-stepper .n {
+      min-width: 40px; text-align: center;
+      font-size: 16px; font-weight: 500;
+      color: var(--color-italia-dark);
+    }
+    .line-actions { display: inline-flex; align-items: center; gap: 4px; }
+    .note-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 10px; font-size: 12px; font-weight: 500;
+      border: 0; border-radius: 8px; background: transparent;
+      color: var(--color-italia-gray); cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .note-btn:hover { background: var(--gray-50); }
+    .trash-btn {
+      border: 0; background: transparent; padding: 10px;
+      color: var(--gray-400); cursor: pointer;
+      transition: color 0.15s;
+    }
+    .trash-btn:hover { color: var(--color-italia-red); }
 
-    /* "Complete the meal" upsell strip */
-    .complete {
-      background: linear-gradient(180deg, #FFFFFF 0%, #FFF8F0 100%);
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 14px 14px 14px;
-      margin-bottom: 14px;
+    /* ==================================================================
+       Loyalty status banner — bg-italia-gold/8 border-italia-gold/15
+       ================================================================== */
+    .loyalty {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 12px;
+      border-radius: 12px;
+      background: rgba(184, 146, 46, 0.08);
+      border: 1px solid rgba(184, 146, 46, 0.15);
+      font-size: 12px;
+      color: var(--color-italia-dark);
     }
-    .complete-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
-    .complete-head h4 { margin: 0; font-family: var(--font-heading); font-size: 16px; font-weight: 600; }
-    .complete-head .why { font-size: 11px; color: var(--ink-soft); letter-spacing: 0.04em; text-transform: uppercase; }
+    .loyalty .gold { color: var(--color-italia-gold); flex-shrink: 0; }
+    .loyalty .first { font-weight: 600; }
+    .loyalty .pts { color: var(--color-italia-gold-dark); font-weight: 700; margin-left: 4px; }
+
+    /* ==================================================================
+       Time-of-day banner (NEW §2.3)
+       — chrome inspired by ComboDealBanner.tsx
+       ================================================================== */
+    .tod {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      transition: background 0.3s, border-color 0.3s;
+    }
+    .tod .icon-tile {
+      flex-shrink: 0;
+      width: 36px; height: 36px;
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 8px;
+    }
+    .tod .body { flex: 1; min-width: 0; }
+    .tod .row1 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .tod .ttl {
+      font-size: 14px; font-weight: 600; line-height: 1.3;
+      color: var(--color-italia-dark);
+      margin: 0;
+    }
+    .tod .sub {
+      font-size: 12px; line-height: 1.4;
+      color: var(--color-italia-gray);
+      margin-top: 4px;
+    }
+    .tod .badge {
+      font-size: 11px; font-weight: 700;
+      padding: 2px 6px; border-radius: 4px;
+      letter-spacing: 0.02em;
+    }
+    .tod-cta {
+      flex-shrink: 0;
+      border: 0; background: var(--color-italia-dark); color: white;
+      font: inherit; font-weight: 600; font-size: 12px;
+      padding: 8px 12px; border-radius: 8px;
+      cursor: pointer; align-self: center;
+      transition: background 0.15s;
+    }
+    .tod-cta:hover { background: #000; }
+
+    /* Variants per audit §2.3 — palettes use existing italia tokens only */
+    .tod-lunch,
+    .tod-afternoon,
+    .tod-returning {
+      background: rgba(184, 146, 46, 0.05);
+      border-color: rgba(184, 146, 46, 0.25);
+    }
+    .tod-lunch .icon-tile,
+    .tod-afternoon .icon-tile,
+    .tod-returning .icon-tile { background: rgba(184, 146, 46, 0.15); color: var(--color-italia-gold-dark); }
+    .tod-lunch .badge,
+    .tod-afternoon .badge,
+    .tod-returning .badge { background: rgba(184, 146, 46, 0.15); color: var(--color-italia-gold-dark); }
+
+    .tod-dinner {
+      background: rgba(200, 16, 46, 0.04);
+      border-color: rgba(200, 16, 46, 0.20);
+    }
+    .tod-dinner .icon-tile { background: rgba(200, 16, 46, 0.10); color: var(--color-italia-red); }
+    .tod-dinner .badge { background: rgba(200, 16, 46, 0.10); color: var(--color-italia-red); }
+
+    .tod-late {
+      background: var(--color-italia-dark);
+      border-color: #2C2620;
+    }
+    .tod-late .ttl { color: white; }
+    .tod-late .sub { color: rgba(255,255,255,0.65); }
+    .tod-late .icon-tile { background: rgba(255,255,255,0.10); color: #E0A93B; }
+    .tod-late .badge { background: rgba(200,16,46,0.30); color: white; }
+    .tod-late .tod-cta { background: var(--color-italia-red); }
+    .tod-late .tod-cta:hover { background: var(--color-italia-red-dark); }
+
+    .tod-morning {
+      background: rgba(0, 140, 69, 0.05);
+      border-color: rgba(0, 140, 69, 0.25);
+    }
+    .tod-morning .icon-tile { background: rgba(0, 140, 69, 0.15); color: var(--color-italia-green); }
+    .tod-morning .badge { background: rgba(0, 140, 69, 0.15); color: var(--color-italia-green-dark); }
+
+    /* ==================================================================
+       "Complete the meal" chips (REDESIGN §2.1)
+       header mirrors CartUpsell.tsx; chips reuse the same cream+gold skin
+       ================================================================== */
+    .complete-head {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+    }
+    .complete-head .label {
+      font-size: 12px; font-weight: 600; letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--color-italia-gray);
+      margin: 0;
+    }
+    .complete-head .gold { color: var(--color-italia-gold); }
+
     .chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
     .chip {
-      background: white; border: 1px solid var(--line-strong); border-radius: 12px;
-      padding: 10px 8px 9px; text-align: center; cursor: pointer;
-      transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
-      position: relative; overflow: hidden;
+      position: relative;
+      background: var(--color-italia-cream);
+      border: 1px solid rgba(184, 146, 46, 0.15);
+      border-radius: 12px;
+      padding: 12px 8px 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: transform 0.12s, border-color 0.15s, box-shadow 0.15s;
+      animation: fade-in 0.3s ease-out;
     }
-    .chip:hover { transform: translateY(-1px); border-color: var(--italia-red); box-shadow: 0 6px 14px rgba(200,16,46,0.10); }
+    .chip:hover {
+      border-color: rgba(184, 146, 46, 0.40);
+      box-shadow: 0 4px 10px rgba(184, 146, 46, 0.10);
+      transform: translateY(-1px);
+    }
     .chip:active { transform: translateY(0); }
     .chip .emoji { font-size: 22px; line-height: 1; display: block; margin-bottom: 4px; }
-    .chip .label { font-weight: 600; font-size: 13px; }
-    .chip .add { font-size: 12px; color: var(--italia-red); font-weight: 700; margin-top: 2px; }
-    .chip .tagline { font-size: 10px; color: var(--ink-faint); margin-top: 3px; line-height: 1.2; }
+    .chip .name {
+      font-size: 13px; font-weight: 500;
+      color: var(--color-italia-dark);
+      line-height: 1.2;
+    }
+    .chip .reason {
+      font-size: 11px; color: var(--color-italia-gray);
+      margin-top: 2px; line-height: 1.3;
+    }
+    .chip .price {
+      font-size: 13px; font-weight: 600;
+      color: var(--color-italia-red);
+      margin-top: 6px;
+    }
+    .chip .add-icon {
+      position: absolute; top: 8px; right: 8px;
+      width: 22px; height: 22px;
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 6px;
+      background: var(--color-italia-red);
+      color: white;
+    }
     .chip.added {
-      background: rgba(0,140,69,0.08); border-color: var(--italia-green);
-      animation: chip-in .35s ease;
+      background: rgba(0, 140, 69, 0.06);
+      border-color: rgba(0, 140, 69, 0.30);
+      animation: bounce-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
-    .chip.added .add { color: var(--italia-green); }
-    .chip.added::after {
-      content: "✓"; position: absolute; top: 6px; right: 8px;
-      color: var(--italia-green); font-weight: 700; font-size: 13px;
+    .chip.added .price { color: var(--color-italia-green-dark); }
+    .chip.added .add-icon { background: var(--color-italia-green); }
+
+    @keyframes fade-in {
+      from { opacity: 0; transform: translateY(-4px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
-    @keyframes chip-in {
-      0% { transform: scale(0.96); }
-      60% { transform: scale(1.03); }
+    @keyframes bounce-in {
+      0%   { transform: scale(0.94); }
+      60%  { transform: scale(1.03); }
       100% { transform: scale(1); }
     }
 
-    /* free-delivery progress bar */
+    /* ==================================================================
+       Delivery progress (REDESIGN — animated)
+       chrome from DeliveryProgress.tsx + shimmer
+       ================================================================== */
     .delivery {
-      background: white; border: 1px solid var(--line); border-radius: 12px;
-      padding: 12px 14px; margin-bottom: 14px;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px dashed var(--gray-200);
+      background: var(--gray-50);
+      transition: background 0.3s, border-color 0.3s, border-style 0.3s;
     }
-    .delivery-top { display: flex; align-items: center; gap: 8px; font-size: 13px; }
-    .delivery-top .truck { font-size: 16px; }
-    .delivery-top strong { font-weight: 700; }
-    .delivery-top .qualified { color: var(--italia-green); font-weight: 700; margin-left: auto; display: none; }
-    .delivery-top .remaining { margin-left: auto; font-weight: 700; color: var(--italia-red); }
+    .delivery-top {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 8px;
+    }
+    .delivery-top .label {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 14px; color: var(--color-italia-gray);
+    }
+    .delivery-top .label .rem { font-weight: 600; color: var(--color-italia-dark); }
+    .delivery-top .target {
+      font-size: 12px; color: var(--color-italia-gray);
+      flex-shrink: 0;
+    }
     .progress {
-      margin-top: 8px; height: 8px; border-radius: 999px;
-      background: var(--italia-cream-dark); overflow: hidden; position: relative;
+      margin-top: 8px;
+      width: 100%; height: 8px;
+      background: var(--gray-200);
+      border-radius: 999px;
+      overflow: hidden;
+      position: relative;
     }
     .progress .bar {
-      height: 100%; border-radius: 999px;
-      background: linear-gradient(90deg, #E6A042 0%, var(--italia-red) 100%);
-      transition: width .5s cubic-bezier(.22,.61,.36,1);
+      height: 100%;
+      background: linear-gradient(90deg, var(--color-italia-red) 0%, var(--color-italia-green) 100%);
+      border-radius: 999px;
+      transition: width 0.5s cubic-bezier(0.22, 0.61, 0.36, 1);
       position: relative;
     }
     .progress .bar::after {
-      content: ""; position: absolute; inset: 0; opacity: 0.4;
-      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.6) 50%, transparent 100%);
-      animation: shimmer 2.2s linear infinite;
+      content: ""; position: absolute; inset: 0;
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.45) 50%, transparent 100%);
+      animation: shimmer 1.8s linear infinite;
     }
-    .delivery.qualified .bar { background: var(--italia-green); }
-    .delivery.qualified .remaining { display: none; }
-    .delivery.qualified .qualified { display: inline; }
     @keyframes shimmer {
-      0% { transform: translateX(-100%); }
+      0%   { transform: translateX(-100%); }
       100% { transform: translateX(100%); }
     }
-
-    /* totals & pay */
-    .totals { padding: 14px 20px 6px; border-top: 1px solid var(--line); background: white; }
-    .totals .line2 { display: flex; justify-content: space-between; font-size: 13px; color: var(--ink-soft); padding: 3px 0; }
-    .totals .line2.total { color: var(--ink); font-size: 18px; font-weight: 700; padding: 8px 0 4px; border-top: 1px dashed var(--line); margin-top: 6px; }
-    .totals .save-tag { color: var(--italia-green); }
-    .totals .earn { font-size: 11px; color: var(--ink-soft); margin: 2px 0 8px; }
-    .totals .earn b { color: var(--italia-red); }
-
-    .pay {
-      display: grid; grid-template-columns: 1fr; gap: 8px;
-      padding: 0 20px 18px; background: white;
+    .delivery.qualified {
+      background: rgba(0, 140, 69, 0.04);
+      border-style: solid;
+      border-color: rgba(0, 140, 69, 0.25);
     }
-    .pay .applepay {
-      background: black; color: white; border: 0; border-radius: 12px;
-      padding: 14px 18px; font: inherit; font-weight: 600; font-size: 16px;
-      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    .delivery.qualified .qualified-row {
+      display: flex; align-items: center; gap: 8px;
+      color: var(--color-italia-green);
+      font-size: 14px; font-weight: 600;
+    }
+    .delivery.qualified .delivery-top,
+    .delivery.qualified .progress { display: none; }
+    .delivery .qualified-row { display: none; }
+
+    /* ==================================================================
+       Totals + sticky pay (mirrors CartDrawer.tsx)
+       ================================================================== */
+    .totals {
+      border-top: 1px solid var(--gray-100);
+      padding: 12px 20px;
+      background: white;
+      box-shadow: 0 -4px 16px rgba(0,0,0,0.06);
+    }
+    .totals-rows > div {
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 14px; color: var(--color-italia-gray);
+      padding: 2px 0;
+    }
+    .totals-rows .discount { color: var(--color-italia-green); font-weight: 500; }
+    .totals-rows .freed { color: var(--color-italia-green); font-weight: 500; }
+    .totals-rows .total {
+      color: var(--color-italia-dark);
+      font-size: 18px; font-weight: 700;
+      border-top: 1px solid var(--gray-100);
+      padding-top: 8px; margin-top: 6px;
+    }
+    .totals-rows .total .amt { color: var(--color-italia-red); }
+    .loyalty-earn {
+      display: flex; align-items: center; gap: 8px;
+      padding: 4px 0;
+      font-size: 12px; color: var(--color-italia-gray);
+    }
+    .loyalty-earn b { font-weight: 700; color: var(--color-italia-gold-dark); }
+    .loyalty-earn .gold { color: var(--color-italia-gold); }
+
+    .pay-btn {
+      width: 100%; min-height: 48px;
+      margin-top: 12px;
+      background: var(--color-italia-red); color: white;
+      border: 0; border-radius: 8px;
+      font: inherit; font-weight: 500; font-size: 16px;
       cursor: pointer;
+      transition: background 0.15s;
     }
-    .pay .applepay .logo { font-size: 18px; }
-    .pay .card {
-      background: var(--italia-red); color: white; border: 0; border-radius: 12px;
-      padding: 12px 16px; font: inherit; font-weight: 600; font-size: 14px;
+    .pay-btn:hover { background: var(--color-italia-red-dark); }
+    .clear-btn {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      width: 100%; margin-top: 6px; padding: 6px 0;
+      border: 0; background: transparent;
+      font: inherit; font-size: 12px;
+      color: var(--color-italia-gray);
       cursor: pointer;
+      transition: color 0.15s;
     }
-    .pay .pay-meta { text-align: center; font-size: 11px; color: var(--ink-faint); margin-top: 4px; }
+    .clear-btn:hover { color: var(--color-italia-red); }
 
-    /* toast */
+    /* ==================================================================
+       Inline add-to-cart toast (NEW §2.1)
+       ================================================================== */
     .toast-host {
-      position: absolute; left: 14px; right: 14px; top: 76px;
-      z-index: 50; pointer-events: none;
+      position: absolute; left: 20px; right: 20px; top: 12px;
+      z-index: 20; pointer-events: none;
     }
     .toast {
-      background: var(--ink); color: white; border-radius: 12px;
-      padding: 10px 14px 11px; font-size: 13px; line-height: 1.35;
-      box-shadow: 0 10px 24px rgba(26,26,26,0.30);
       display: flex; align-items: flex-start; gap: 10px;
-      transform: translateY(-12px); opacity: 0; transition: transform .25s ease, opacity .25s ease;
+      padding: 10px 12px;
+      background: white;
+      border: 1px solid rgba(184, 146, 46, 0.30);
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(26,26,26,0.10);
       pointer-events: auto;
+      transform: translateY(-12px); opacity: 0;
+      transition: transform 0.25s ease, opacity 0.25s ease;
     }
     .toast.in { transform: translateY(0); opacity: 1; }
-    .toast .emoji { font-size: 18px; line-height: 1; margin-top: 1px; }
-    .toast b { font-weight: 600; }
-    .toast .seed { color: #FFD79B; font-size: 12px; display: block; margin-top: 2px; }
-
-    /* helper notes inside drawer */
-    .hint { font-size: 11px; color: var(--ink-faint); margin-top: -6px; margin-bottom: 10px; padding-left: 2px; }
-
-    /* sticky footer bg */
-    .footer-stick { position: sticky; bottom: 0; }
-
-    code.kbd {
-      font: 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-      background: var(--italia-cream-dark); padding: 2px 6px; border-radius: 5px;
+    .toast .ic-host {
+      flex-shrink: 0;
+      width: 28px; height: 28px;
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 8px;
+      background: rgba(184, 146, 46, 0.15);
+      color: var(--color-italia-gold-dark);
     }
-    .small { font-size: 12px; color: var(--ink-soft); }
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    @media (max-width: 540px) { .grid-2 { grid-template-columns: 1fr; } }
-    .checklist { padding-left: 18px; margin: 6px 0 0; }
-    .checklist li { margin: 4px 0; color: var(--ink-soft); font-size: 13px; }
-    .checklist li b { color: var(--ink); font-weight: 600; }
+    .toast .body { flex: 1; min-width: 0; }
+    .toast .title {
+      font-size: 13px; font-weight: 600;
+      color: var(--color-italia-dark);
+      line-height: 1.3;
+    }
+    .toast .seed {
+      font-size: 12px; color: var(--color-italia-gray);
+      margin-top: 2px; line-height: 1.4;
+    }
+
+    .hint {
+      font-size: 11px; color: var(--gray-400);
+      padding: 0 20px; margin-top: 12px;
+      line-height: 1.5;
+    }
+
+    /* ---------- Lucide icon sizing ---------- */
+    .ic    { width: 16px; height: 16px; stroke-width: 2; flex-shrink: 0; }
+    .ic-sm { width: 14px; height: 14px; stroke-width: 2; flex-shrink: 0; }
+    .ic-lg { width: 20px; height: 20px; stroke-width: 2; flex-shrink: 0; }
   </style>
 </head>
 <body>
 
+<!-- Lucide-style icon symbol sheet -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18 6L6 18M6 6l12 12"/>
+    </symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5 12h14M12 5v14"/>
+    </symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5 12h14"/>
+    </symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 6h18"/>
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+      <line x1="10" y1="11" x2="10" y2="17"/>
+      <line x1="14" y1="11" x2="14" y2="17"/>
+    </symbol>
+    <symbol id="i-note" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M15.5 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h11l5-5V5a2 2 0 0 0-2-2z"/>
+      <path d="M15 3v6h6"/>
+    </symbol>
+    <symbol id="i-sparkles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
+      <path d="M20 3v4"/><path d="M22 5h-4"/>
+      <path d="M4 17v2"/><path d="M5 18H3"/>
+    </symbol>
+    <symbol id="i-star" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+    </symbol>
+    <symbol id="i-truck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/>
+      <path d="M15 18H9"/>
+      <path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/>
+      <circle cx="17" cy="18" r="2"/>
+      <circle cx="7" cy="18" r="2"/>
+    </symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 6L9 17l-5-5"/>
+    </symbol>
+    <symbol id="i-bag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+      <path d="M3 6h18"/>
+      <path d="M16 10a4 4 0 0 1-8 0"/>
+    </symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+    </symbol>
+    <symbol id="i-coffee" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M17 8h1a4 4 0 0 1 0 8h-1"/>
+      <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z"/>
+      <line x1="6" y1="2" x2="6" y2="4"/>
+      <line x1="10" y1="2" x2="10" y2="4"/>
+      <line x1="14" y1="2" x2="14" y2="4"/>
+    </symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    </symbol>
+    <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="8.5" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </symbol>
+    <symbol id="i-wave" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M7 11.5V14a5 5 0 0 0 5 5h0a5 5 0 0 0 5-5v-3.5"/>
+      <path d="M7 11.5l-1-3a1.5 1.5 0 0 1 2.83-1l1 3"/>
+      <path d="M10 11l-1.5-4.5a1.5 1.5 0 0 1 2.83-1L13 10"/>
+      <path d="M13 10L11.5 5a1.5 1.5 0 0 1 3-.5L16 9"/>
+      <path d="M16 9l-.5-1.5a1.5 1.5 0 0 1 3-.5L19 9"/>
+    </symbol>
+  </defs>
+</svg>
+
+
 <div class="page">
 
-  <!-- LEFT COLUMN -->
+  <!-- =====================================================
+       LEFT: explainer + controls
+       ===================================================== -->
   <div>
     <div class="panel">
       <span class="pill">Audit §2.1 – 2.5</span>
@@ -301,261 +693,280 @@
       <p class="lede">
         Four new surfaces, all inside the existing cart drawer + add-to-cart flow.
         Nothing here blocks the happy path — every prompt is one-tap-add, dismissable, and contextual.
-        Pick a time-of-day variant and click <b>+ Add Margherita</b> to see the full sequence end-to-end.
+        Same tokens, fonts, icons, and copy patterns as the live drawer
+        (<code class="kbd">CartDrawer.tsx</code>, <code class="kbd">CartUpsell.tsx</code>,
+        <code class="kbd">DeliveryProgress.tsx</code>) — just augmented.
+      </p>
+      <p class="lede">
+        Pick a time-of-day variant, then hit <b>+ Add Margherita</b> to see the toast,
+        tap any chip to add it, and use <b>Push to free-delivery</b> to watch the progress
+        bar flip green.
       </p>
 
       <div class="controls">
         <div class="seg" id="tod-switch" role="tablist" aria-label="Time of day">
-          <button data-tod="lunch" class="active">11:30–13:00 Lunch</button>
-          <button data-tod="afternoon">14:30–16:30 Afternoon</button>
-          <button data-tod="dinner">17:00–19:30 Dinner</button>
-          <button data-tod="late">20:30+ Last call</button>
-          <button data-tod="morning">07:00–10:30 Pre-order</button>
+          <button data-tod="lunch" class="active">Lunch 11:30–13:00</button>
+          <button data-tod="afternoon">Afternoon 14:30–16:30</button>
+          <button data-tod="dinner">Dinner 17:00–19:30</button>
+          <button data-tod="late">Last call 20:30+</button>
+          <button data-tod="morning">Pre-order 07:00–10:30</button>
           <button data-tod="returning">14-day lapsed</button>
-          <button data-tod="off">None (just §2.1)</button>
+          <button data-tod="off">None</button>
         </div>
       </div>
 
       <div class="row">
-        <button class="btn" id="addBtn">+ Add Margherita to cart</button>
-        <button class="btn ghost" id="resetBtn">Reset</button>
+        <button class="btn danger" id="addBtn">+ Add Margherita</button>
         <button class="btn ghost" id="qualifyBtn">Push to free-delivery</button>
+        <button class="btn ghost" id="resetBtn">Reset</button>
       </div>
     </div>
 
     <div class="panel muted">
       <span class="pill live">What's new</span>
-      <h2>The four surfaces in the redesign</h2>
+      <h2>The four surfaces in this redesign</h2>
       <ul class="legend">
-        <li><span class="marker">1</span><span><strong>Inline toast on add-to-cart.</strong> Seed-only copy ("Customers usually add an espresso"). No CTA, no block. Auto-dismisses in 4s. — see top of phone after pressing Add.</span></li>
-        <li><span class="marker">2</span><span><strong>"Complete the meal" chips above subtotal.</strong> Three tap-to-add chips ranked by margin × attach-rate. Espresso comes first because GM 83% × 60% attach = highest profit/order. One tap, no second screen.</span></li>
-        <li><span class="marker">3</span><span><strong>Animated free-delivery progress bar.</strong> Visible only when fulfillment = delivery and below threshold. Shimmer animation + remaining-PLN counter. Flips to green/checkmark when qualified.</span></li>
-        <li><span class="marker">4</span><span><strong>Time-of-day banner at cart top.</strong> Lunch combo, afternoon espresso break, family feast, last-call clearance, pre-order-for-lunch, returning-after-14d. One banner at a time, picked server-side by local hour × customer state.</span></li>
+        <li>
+          <span class="marker">1</span>
+          <span>
+            <strong>Inline toast on add-to-cart.</strong>
+            Seed-only copy: "Customers usually add an espresso." No CTA, no block.
+            Auto-dismisses in 4s. Today the public side is silent on add — only the floating
+            cart badge animates. This is net-new.
+          </span>
+        </li>
+        <li>
+          <span class="marker">2</span>
+          <span>
+            <strong>"Complete the meal" chips, 3-up grid.</strong>
+            Replaces the existing vertical list in <code class="kbd">CartUpsell.tsx</code>.
+            Same Sparkles header + cream-on-gold card skin — just 3 columns of one-tap chips,
+            margin-ranked (espresso first per §2.4). Tap once, the chip flips green, item is
+            in cart.
+          </span>
+        </li>
+        <li>
+          <span class="marker">3</span>
+          <span>
+            <strong>Animated free-delivery progress bar.</strong>
+            Today's <code class="kbd">DeliveryProgress.tsx</code> already has the gradient
+            bar — this adds a continuous shimmer so motion catches the eye, plus a smoother
+            red→green transition when the threshold clears.
+          </span>
+        </li>
+        <li>
+          <span class="marker">4</span>
+          <span>
+            <strong>Time-of-day banner at cart top.</strong>
+            Sits above the cart items, same chrome family as
+            <code class="kbd">ComboDealBanner.tsx</code>. Six hour-window variants;
+            one banner at a time, picked server-side by local hour × customer state.
+            Lunch + Last-call apply a real discount; the rest deep-link.
+          </span>
+        </li>
       </ul>
     </div>
 
     <div class="panel muted">
-      <span class="pill">Out of scope for this sketch</span>
-      <h2>Deferred to follow-up sprints</h2>
+      <span class="pill gold">Out of scope for this sketch</span>
+      <h2>Deferred to follow-up tickets</h2>
       <ul class="checklist">
-        <li><b>Apple Pay / Google Pay primary CTA</b> at the Stripe sheet — shown here as a static black button so you can see the visual hierarchy, but the Stripe Payment Request API wiring is a separate ticket (Top-50 #4).</li>
-        <li><b>Item modifiers</b> ("Make it a large +PLN 6") — needs a <code class="kbd">CartItem.modifiers</code> migration; covered by §2.2 row 2 and Top-50 #15.</li>
-        <li><b>Bundle / decoy engine</b> (Lunch+, Family Feast) — covered separately under §3.2. The lunch banner shows the eventual link.</li>
-        <li><b>Per-customer ML ranking</b> — §9.1; this sketch uses the static margin × attach-rate heuristic from §2.4.</li>
+        <li><b>Apple Pay / Google Pay primary CTA</b> at the Stripe sheet — Top-50 #4. Needs Stripe Payment Request API wiring.</li>
+        <li><b>Item modifiers</b> ("Make it a large +PLN 6") — needs a <code class="kbd">CartItem.modifiers</code> migration. Top-50 #15.</li>
+        <li><b>Bundle / decoy engine</b> (Lunch+, Family Feast) — covered under §3.2. The lunch banner here shows the eventual link.</li>
+        <li><b>Per-customer ML ranking</b> — §9.1. This sketch uses the static margin × attach-rate heuristic from §2.4.</li>
       </ul>
     </div>
 
     <div class="panel muted">
-      <span class="pill">Won't ship</span>
-      <h2>Patterns we will <em>not</em> use (§2.2)</h2>
+      <span class="pill">Won't ship (§2.2)</span>
+      <h2>Patterns we will <em>not</em> use</h2>
       <ul class="checklist">
         <li>No "Are you sure?" confirmation pop-ups.</li>
         <li>No blocking modal after Add to cart.</li>
         <li>No guilt copy ("You forgot dessert!").</li>
-        <li>No fake urgency. The time-of-day banner uses <em>real</em> windows; scarcity claims come from real inventory only.</li>
+        <li>No fake urgency — windows are real, scarcity comes from real inventory.</li>
       </ul>
     </div>
   </div>
 
-  <!-- RIGHT COLUMN: phone -->
-  <div>
-    <div class="phone">
-      <div class="screen">
+  <!-- =====================================================
+       RIGHT: drawer (mirrors live CartDrawer)
+       ===================================================== -->
+  <div class="drawer-wrap">
+    <div class="drawer" role="dialog" aria-label="Your Order">
 
-        <div class="status-bar">
-          <span>12:14</span>
-          <span>● ▮▮▮ 100%</span>
+      <div class="drawer-head">
+        <div>
+          <h2>Your Order</h2>
+          <div class="count" id="countLabel">2 items · Kraków</div>
+        </div>
+        <button class="close" aria-label="Close cart">
+          <svg class="ic-lg"><use href="#i-x"/></svg>
+        </button>
+      </div>
+
+      <div class="drawer-body" id="drawerBody">
+
+        <div class="toast-host" id="toastHost" aria-live="polite"></div>
+
+        <div class="lines" id="lines"></div>
+
+        <div class="sec">
+          <div class="loyalty">
+            <svg class="ic gold"><use href="#i-star"/></svg>
+            <span>Earning points as <span class="first">Anna</span><span class="pts">150 pts</span></span>
+          </div>
         </div>
 
-        <div class="drawer-head">
-          <h3>Your order</h3>
-          <span class="count" id="countLabel">3 items · Kraków</span>
+        <div class="sec" id="todHost"></div>
+
+        <div class="sec">
+          <div class="complete-head">
+            <svg class="ic gold"><use href="#i-sparkles"/></svg>
+            <p class="label">Complete your meal</p>
+          </div>
+          <div class="chips" id="chips">
+            <div class="chip" data-id="espresso" data-price="600" data-name="Espresso">
+              <span class="add-icon"><svg class="ic-sm"><use href="#i-plus"/></svg></span>
+              <span class="emoji">☕️</span>
+              <div class="name">Espresso</div>
+              <div class="reason">Pizzaiolo's pick</div>
+              <div class="price">6,00 zł</div>
+            </div>
+            <div class="chip" data-id="tiramisu" data-price="1800" data-name="Tiramisù">
+              <span class="add-icon"><svg class="ic-sm"><use href="#i-plus"/></svg></span>
+              <span class="emoji">🍰</span>
+              <div class="name">Tiramisù</div>
+              <div class="reason">Made fresh today</div>
+              <div class="price">18,00 zł</div>
+            </div>
+            <div class="chip" data-id="limonata" data-price="1200" data-name="Limonata">
+              <span class="add-icon"><svg class="ic-sm"><use href="#i-plus"/></svg></span>
+              <span class="emoji">🍋</span>
+              <div class="name">Limonata</div>
+              <div class="reason">Sicilian lemon</div>
+              <div class="price">12,00 zł</div>
+            </div>
+          </div>
         </div>
 
-        <!-- toast host -->
-        <div class="toast-host" id="toastHost"></div>
-
-        <div class="drawer-body" id="drawerBody">
-
-          <!-- Time-of-day banner host -->
-          <div id="todHost"></div>
-
-          <!-- Cart line items -->
-          <div class="lines" id="lines">
-            <div class="line">
-              <span class="qty">1×</span>
-              <div>
-                <div class="name">Margherita</div>
-                <div class="sub">San Marzano · fior di latte</div>
-              </div>
-              <span class="price">28,00 zł</span>
-            </div>
-            <div class="line">
-              <span class="qty">1×</span>
-              <div>
-                <div class="name">Carbonara</div>
-                <div class="sub">Guanciale · pecorino · egg</div>
-              </div>
-              <span class="price">29,00 zł</span>
-            </div>
-          </div>
-
-          <!-- Complete the meal -->
-          <div class="complete">
-            <div class="complete-head">
-              <h4>Complete the meal</h4>
-              <span class="why">Customers usually add</span>
-            </div>
-            <div class="chips" id="chips">
-              <div class="chip" data-id="espresso" data-price="600" data-name="Espresso">
-                <span class="emoji">☕️</span>
-                <div class="label">Espresso</div>
-                <div class="add">+ 6,00 zł</div>
-                <div class="tagline">Pizzaiolo's pick</div>
-              </div>
-              <div class="chip" data-id="tiramisu" data-price="1800" data-name="Tiramisù">
-                <span class="emoji">🍰</span>
-                <div class="label">Tiramisù</div>
-                <div class="add">+ 18,00 zł</div>
-                <div class="tagline">Made fresh today</div>
-              </div>
-              <div class="chip" data-id="limonata" data-price="1200" data-name="Limonata">
-                <span class="emoji">🍋</span>
-                <div class="label">Limonata</div>
-                <div class="add">+ 12,00 zł</div>
-                <div class="tagline">Sicilian lemon</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Free delivery progress bar -->
+        <div class="sec">
           <div class="delivery" id="delivery">
             <div class="delivery-top">
-              <span class="truck">🚚</span>
-              <span><strong id="deliveryMsg">12,00 zł</strong> to free delivery</span>
-              <span class="remaining" id="deliveryRem">12,00 zł left</span>
-              <span class="qualified">✓ Free delivery</span>
+              <div class="label">
+                <svg class="ic"><use href="#i-truck"/></svg>
+                <span>Add <span class="rem" id="deliveryRem">3,00 zł</span> for free delivery</span>
+              </div>
+              <span class="target" id="deliveryTarget">60,00 zł</span>
             </div>
-            <div class="progress"><div class="bar" id="bar" style="width: 80%"></div></div>
+            <div class="progress">
+              <div class="bar" id="bar" style="width: 95%"></div>
+            </div>
+            <div class="qualified-row">
+              <svg class="ic"><use href="#i-check"/></svg>
+              <span>Free delivery unlocked!</span>
+            </div>
           </div>
-
-          <p class="hint">Toggle delivery vs takeout, slot pickers, customer details — unchanged from current drawer. Not redrawn here to keep the mock focused on the upsell deltas.</p>
         </div>
 
-        <!-- Totals -->
-        <div class="totals footer-stick">
-          <div class="line2"><span>Subtotal</span><span id="sub">57,00 zł</span></div>
-          <div class="line2" id="discountRow" style="display:none"><span class="save-tag" id="discountLabel">Lunch combo −10%</span><span class="save-tag" id="discountAmt">−5,70 zł</span></div>
-          <div class="line2"><span>Delivery</span><span id="del">8,00 zł</span></div>
-          <div class="line2 total"><span>Total</span><span id="total">65,00 zł</span></div>
-          <div class="earn">You'll earn <b id="pts">57 pts</b> · Silver tier +14 pts to next</div>
-        </div>
-
-        <div class="pay">
-          <button class="applepay"><span class="logo">⏏</span> Pay with Apple Pay</button>
-          <button class="card">Pay 65,00 zł by card</button>
-          <div class="pay-meta">PLN 0 hidden fees · Stripe · BLIK / card / Apple Pay / Google Pay</div>
-        </div>
+        <p class="hint">
+          Fulfillment selector (Takeout / Delivery), slot picker, address autocomplete,
+          customer-detail inputs, and tip picker — unchanged from the current drawer,
+          hidden here so the focus stays on the upsell deltas.
+        </p>
 
       </div>
+
+      <div class="totals">
+        <div class="totals-rows">
+          <div><span>Subtotal</span><span id="sub">57,00 zł</span></div>
+          <div class="discount" id="discountRow" style="display:none">
+            <span id="discountLabel">Lunch combo −10%</span>
+            <span id="discountAmt">−5,70 zł</span>
+          </div>
+          <div id="delRow"><span>Delivery</span><span id="del">10,00 zł</span></div>
+          <div class="total"><span>Total</span><span class="amt" id="total">67,00 zł</span></div>
+        </div>
+        <div class="loyalty-earn">
+          <svg class="ic-sm gold"><use href="#i-star"/></svg>
+          <span>You'll earn <b id="pts">57 points</b> with this order</span>
+        </div>
+        <button class="pay-btn" id="payBtn">Pay 67,00 zł</button>
+        <button class="clear-btn">
+          <svg class="ic-sm"><use href="#i-trash"/></svg>
+          Clear cart
+        </button>
+      </div>
+
     </div>
   </div>
-
 </div>
 
 <script>
-  // ---------- state ----------
+  // ===================================================================
+  // State
+  // ===================================================================
+  const baseItems = [
+    { id: "pizza", name: "Margherita", each: 2800, qty: 1 },
+    { id: "pasta", name: "Carbonara",  each: 2900, qty: 1 },
+  ];
   const state = {
-    items: [
-      { id: "pizza", name: "Margherita", price: 2800, qty: 1 },
-      { id: "pasta", name: "Carbonara",  price: 2900, qty: 1 },
-    ],
+    items: structuredClone(baseItems),
     tod: "lunch",
-    discount: 0, // grosze
+    discount: 0,
     discountLabel: null,
     deliveryThreshold: 6000, // 60 PLN
-    deliveryFee: 800, // 8 PLN flat for the mock
+    deliveryFee: 1000,       // 10 PLN flat (production fallback)
   };
 
-  // ---------- time-of-day banners ----------
+  // Time-of-day variant table (audit §2.3)
   const TOD = {
     off: null,
     lunch: {
-      variant: "tod-lunch", icon: "🍝", strong: "Lunch combo — pasta + drink",
-      tail: 'Save <span class="save">8,00 zł</span> (PLN 39 instead of 47)',
-      addLabel: "Make it a combo",
-      apply: () => ({ label: "Lunch combo −10%", amount: 0.10 })
+      variant: "tod-lunch", icon: "i-clock",
+      title: "Lunch combo — pasta + drink",
+      sub: "PLN 39 instead of 47 · ready in 8 min",
+      badge: "−10%", cta: "Make it a combo",
+      apply: () => ({ label: "Lunch combo −10%", percent: 10 })
     },
     afternoon: {
-      variant: "tod-afternoon", icon: "☕️", strong: "Espresso break",
-      tail: 'Add an espresso for <span class="save">6,00 zł</span> · ready in 4 min',
-      addLabel: "+ Espresso",
-      apply: null
+      variant: "tod-afternoon", icon: "i-coffee",
+      title: "Espresso break",
+      sub: "Add an espresso for 6,00 zł · pickup in 4 min",
+      badge: "PLN 6", cta: "Add espresso",
+      addItem: { id: "espresso", name: "Espresso", each: 600 }
     },
     dinner: {
-      variant: "tod-dinner", icon: "🍕", strong: "Family Feast for 4 — 119,00 zł",
-      tail: '2 pizzas + bruschetta + 4 drinks + tiramisù · save 43,00 zł',
-      addLabel: "See the feast",
-      apply: null
+      variant: "tod-dinner", icon: "i-users",
+      title: "Family Feast for 4 — 119,00 zł",
+      sub: "2 pizzas + bruschetta + 4 drinks + tiramisù · save 43,00 zł",
+      badge: "−27%", cta: "See the feast",
     },
     late: {
-      variant: "tod-late", icon: "🌙", strong: "Last call — −15% on any pizza tonight",
-      tail: "Clearance window closes at 23:00 · pickup only",
-      addLabel: "Apply −15%",
-      apply: () => ({ label: "Last call −15%", amount: 0.15 })
+      variant: "tod-late", icon: "i-moon",
+      title: "Last call — 15% off any pizza tonight",
+      sub: "Clearance window closes 23:00 · pickup only",
+      badge: "−15%", cta: "Apply −15%",
+      apply: () => ({ label: "Last call −15%", percent: 15 })
     },
     morning: {
-      variant: "tod-morning", icon: "⏰", strong: "Pre-order lunch — 12:00 slot fills by 11:15",
-      tail: "Lock your usual now, skip the queue at noon",
-      addLabel: "Pick a slot",
-      apply: null
+      variant: "tod-morning", icon: "i-clock",
+      title: "Pre-order lunch — 12:00 slot fills by 11:15",
+      sub: "Lock your usual now, skip the queue at noon",
+      badge: "9 left", cta: "Pick a slot",
     },
     returning: {
-      variant: "tod-returning", icon: "👋", strong: "Welcome back, Anna",
-      tail: 'Your usual <b>Margherita + espresso</b> is 34,00 zł · ready at 18:14',
-      addLabel: "Reorder usual",
-      apply: null
+      variant: "tod-returning", icon: "i-wave",
+      title: "Welcome back, Anna",
+      sub: "Your usual Margherita + espresso is 34,00 zł · ready 18:14",
+      badge: "1 tap", cta: "Reorder usual",
     },
   };
 
-  function fmt(grosze) {
-    return (grosze / 100).toFixed(2).replace(".", ",") + " zł";
-  }
-
-  function recompute() {
-    const sub = state.items.reduce((s, i) => s + i.price * i.qty, 0);
-    const discountAmt = state.discount;
-    const remaining = Math.max(0, state.deliveryThreshold - sub);
-    const fee = remaining === 0 ? 0 : state.deliveryFee;
-    const total = sub - discountAmt + fee;
-
-    document.getElementById("sub").textContent = fmt(sub);
-    document.getElementById("del").textContent = fee === 0 ? "Free" : fmt(fee);
-    document.getElementById("del").style.color = fee === 0 ? "var(--italia-green)" : "";
-    document.getElementById("total").textContent = fmt(total);
-    document.getElementById("countLabel").textContent =
-      state.items.reduce((s, i) => s + i.qty, 0) + " items · Kraków";
-    document.querySelector(".card").textContent = "Pay " + fmt(total) + " by card";
-    document.getElementById("pts").textContent = Math.round(sub / 100) + " pts";
-
-    // discount row
-    const dr = document.getElementById("discountRow");
-    if (discountAmt > 0) {
-      dr.style.display = "flex";
-      document.getElementById("discountLabel").textContent = state.discountLabel || "Discount";
-      document.getElementById("discountAmt").textContent = "−" + fmt(discountAmt);
-    } else {
-      dr.style.display = "none";
-    }
-
-    // delivery bar
-    const pct = Math.min(100, Math.round((sub / state.deliveryThreshold) * 100));
-    const deliveryEl = document.getElementById("delivery");
-    document.getElementById("bar").style.width = pct + "%";
-    document.getElementById("deliveryRem").textContent = fmt(remaining) + " left";
-    document.getElementById("deliveryMsg").textContent = remaining === 0 ? "You're at free delivery." : fmt(remaining);
-    deliveryEl.classList.toggle("qualified", remaining === 0);
-  }
+  // pl-PL currency format (matches src/lib/utils.ts formatPrice)
+  const fmt = new Intl.NumberFormat("pl-PL", { style: "currency", currency: "PLN" });
+  const money = grosze => fmt.format(grosze / 100);
 
   function renderLines() {
     const wrap = document.getElementById("lines");
@@ -564,56 +975,112 @@
       const row = document.createElement("div");
       row.className = "line";
       row.innerHTML = `
-        <span class="qty">${it.qty}×</span>
-        <div>
-          <div class="name">${it.name}</div>
-          <div class="sub">${it.sub || ""}</div>
+        <div class="top">
+          <div>
+            <p class="name">${it.name}</p>
+            <p class="each">${money(it.each)} each</p>
+          </div>
+          <span class="price">${money(it.each * it.qty)}</span>
         </div>
-        <span class="price">${fmt(it.price * it.qty)}</span>
+        <div class="bot">
+          <div class="qty-stepper">
+            <button aria-label="Decrease"><svg class="ic-sm"><use href="#i-minus"/></svg></button>
+            <span class="n">${it.qty}</span>
+            <button aria-label="Increase"><svg class="ic-sm"><use href="#i-plus"/></svg></button>
+          </div>
+          <div class="line-actions">
+            <button class="note-btn"><svg class="ic-sm"><use href="#i-note"/></svg>Add note</button>
+            <button class="trash-btn" aria-label="Remove"><svg class="ic-lg"><use href="#i-trash"/></svg></button>
+          </div>
+        </div>
       `;
       wrap.appendChild(row);
     });
   }
 
+  function recompute() {
+    const sub = state.items.reduce((s, i) => s + i.each * i.qty, 0);
+    const remaining = Math.max(0, state.deliveryThreshold - sub);
+    const qualified = remaining === 0;
+    const fee = qualified ? 0 : state.deliveryFee;
+    const total = sub - state.discount + fee;
+
+    document.getElementById("sub").textContent = money(sub);
+    document.getElementById("total").textContent = money(total);
+    document.getElementById("payBtn").textContent = "Pay " + money(total);
+    document.getElementById("countLabel").textContent =
+      state.items.reduce((s, i) => s + i.qty, 0) + " items · Kraków";
+
+    const dr = document.getElementById("discountRow");
+    if (state.discount > 0) {
+      dr.style.display = "flex";
+      dr.querySelector("#discountLabel").textContent = state.discountLabel;
+      dr.querySelector("#discountAmt").textContent = "−" + money(state.discount);
+    } else {
+      dr.style.display = "none";
+    }
+
+    const delEl = document.getElementById("del");
+    if (qualified) delEl.innerHTML = '<span class="freed">Free</span>';
+    else           delEl.textContent = money(state.deliveryFee);
+
+    document.getElementById("pts").textContent = Math.round(sub / 100) + " points";
+
+    const pct = Math.min(100, (sub / state.deliveryThreshold) * 100);
+    const deliveryEl = document.getElementById("delivery");
+    document.getElementById("bar").style.width = pct + "%";
+    document.getElementById("deliveryRem").textContent = money(remaining);
+    document.getElementById("deliveryTarget").textContent = money(state.deliveryThreshold);
+    deliveryEl.classList.toggle("qualified", qualified);
+  }
+
   function renderTod() {
     const host = document.getElementById("todHost");
     const cfg = TOD[state.tod];
-    if (!cfg) { host.innerHTML = ""; return; }
+    if (!cfg) { host.innerHTML = ""; host.style.display = "none"; return; }
+    host.style.display = "block";
     host.innerHTML = `
       <div class="tod ${cfg.variant}">
-        <span class="icon">${cfg.icon}</span>
-        <div>
-          <strong>${cfg.strong}</strong>
-          <div>${cfg.tail}</div>
+        <div class="icon-tile"><svg class="ic-lg"><use href="#${cfg.icon}"/></svg></div>
+        <div class="body">
+          <div class="row1">
+            <p class="ttl">${cfg.title}</p>
+            <span class="badge">${cfg.badge}</span>
+          </div>
+          <p class="sub">${cfg.sub}</p>
         </div>
-        <button class="tod-add" id="todAdd">${cfg.addLabel}</button>
+        <button class="tod-cta" id="todCta">${cfg.cta}</button>
       </div>
     `;
-    const btn = document.getElementById("todAdd");
-    if (btn) btn.addEventListener("click", () => {
+    document.getElementById("todCta").addEventListener("click", () => {
       if (cfg.apply) {
         const d = cfg.apply();
-        const sub = state.items.reduce((s, i) => s + i.price * i.qty, 0);
-        state.discount = Math.round(sub * d.amount);
+        const sub = state.items.reduce((s, i) => s + i.each * i.qty, 0);
+        state.discount = Math.round(sub * d.percent / 100);
         state.discountLabel = d.label;
         recompute();
-        toast("✅", "Combo applied", d.label + " — keep building.");
+        toast("sparkles", "Combo applied", d.label + " — keep building or check out.");
+      } else if (cfg.addItem) {
+        state.items.push({ ...cfg.addItem, qty: 1 });
+        renderLines();
+        recompute();
+        toast("sparkles", cfg.addItem.name + " added", "Customers usually add this with pizza.");
       } else {
-        toast("👍", "Noted", "Wire this CTA to the corresponding flow.");
+        toast("sparkles", "Noted", "Wire this CTA to the corresponding bundle/flow.");
       }
     });
   }
 
-  // ---------- toast ----------
   let toastTimer = null;
-  function toast(emoji, title, seed) {
+  function toast(iconKey, title, seed) {
+    const iconId = ({ pizza: "i-bag", sparkles: "i-sparkles", coffee: "i-coffee", truck: "i-truck" })[iconKey] || "i-sparkles";
     const host = document.getElementById("toastHost");
     host.innerHTML = `
       <div class="toast" id="t">
-        <span class="emoji">${emoji}</span>
-        <div>
-          <b>${title}</b>
-          <span class="seed">${seed}</span>
+        <span class="ic-host"><svg class="ic"><use href="#${iconId}"/></svg></span>
+        <div class="body">
+          <div class="title">${title}</div>
+          <div class="seed">${seed}</div>
         </div>
       </div>`;
     requestAnimationFrame(() => document.getElementById("t").classList.add("in"));
@@ -625,63 +1092,56 @@
     }, 4000);
   }
 
-  // ---------- chips ----------
   document.getElementById("chips").addEventListener("click", e => {
     const chip = e.target.closest(".chip");
     if (!chip || chip.classList.contains("added")) return;
     chip.classList.add("added");
     const id = chip.dataset.id;
-    const price = parseInt(chip.dataset.price, 10);
+    const each = parseInt(chip.dataset.price, 10);
     const name = chip.dataset.name;
-    state.items.push({ id, name, price, qty: 1, sub: "Added from upsell" });
+    state.items.push({ id, name, each, qty: 1 });
     renderLines();
     recompute();
-    toast("✨", name + " added", "Nice. Tap another chip or check out.");
+    toast("sparkles", name + " added", "Nice — tap another chip or check out.");
   });
 
-  // ---------- buttons ----------
   document.getElementById("addBtn").addEventListener("click", () => {
     state.items[0].qty += 1;
     renderLines();
     recompute();
-    toast("🍕", "Margherita added", "Customers usually add an espresso.");
+    toast("pizza", "Margherita added", "Customers usually add an espresso.");
+  });
+
+  document.getElementById("qualifyBtn").addEventListener("click", () => {
+    state.items.push({ id: "burrata", name: "Burrata bruschetta", each: 2200, qty: 1 });
+    renderLines();
+    recompute();
+    toast("truck", "Free delivery unlocked", "Nice — your order qualifies.");
   });
 
   document.getElementById("resetBtn").addEventListener("click", () => {
-    state.items = [
-      { id: "pizza", name: "Margherita", price: 2800, qty: 1, sub: "San Marzano · fior di latte" },
-      { id: "pasta", name: "Carbonara",  price: 2900, qty: 1, sub: "Guanciale · pecorino · egg" },
-    ];
+    state.items = structuredClone(baseItems);
     state.discount = 0; state.discountLabel = null;
     document.querySelectorAll(".chip.added").forEach(c => c.classList.remove("added"));
     renderLines();
     recompute();
   });
 
-  document.getElementById("qualifyBtn").addEventListener("click", () => {
-    state.items.push({ id: "feast", name: "Bruschetta + Tiramisù", price: 3400, qty: 1, sub: "Pushed cart over threshold" });
-    renderLines();
-    recompute();
-    toast("🚚", "Free delivery unlocked", "Nice — kitchen is starting your order at noon.");
-  });
-
-  // ---------- time-of-day switcher ----------
   document.getElementById("tod-switch").addEventListener("click", e => {
     const btn = e.target.closest("button");
     if (!btn) return;
     document.querySelectorAll("#tod-switch button").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
     state.tod = btn.dataset.tod;
-    // reset discount when switching (last-call/lunch toggles a discount on apply)
     state.discount = 0; state.discountLabel = null;
     renderTod();
     recompute();
   });
 
-  // ---------- init ----------
   renderLines();
   renderTod();
   recompute();
 </script>
+
 </body>
 </html>
