@@ -266,29 +266,6 @@
     }
     .trash-btn:hover { color: var(--color-italia-red); }
 
-    /* "Make it a large" / "Add chicken" modifier pills (§2.2 row 2)
-       — visual preview; backend migration to CartItem.modifiers tracked separately */
-    .mods { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
-    .mod-pill {
-      display: inline-flex; align-items: center; gap: 4px;
-      padding: 5px 10px;
-      font-size: 12px; font-weight: 500;
-      color: var(--color-italia-gray);
-      background: white;
-      border: 1px solid var(--gray-200);
-      border-radius: 999px;
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-    .mod-pill:hover { border-color: var(--color-italia-red); color: var(--color-italia-red); }
-    .mod-pill.active {
-      background: rgba(200, 16, 46, 0.06);
-      border-color: var(--color-italia-red);
-      color: var(--color-italia-red);
-      font-weight: 600;
-    }
-    .mod-pill .ic-sm { width: 12px; height: 12px; }
-
     /* ==================================================================
        Loyalty status banner — bg-italia-gold/8 border-italia-gold/15
        ================================================================== */
@@ -469,6 +446,21 @@
       border-color: rgba(0, 140, 69, 0.30);
       animation: bounce-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
+    .chip.added:hover {
+      background: rgba(200, 16, 46, 0.04);
+      border-color: rgba(200, 16, 46, 0.40);
+    }
+    .chip.added:hover .add-icon { background: var(--color-italia-red); }
+    .chip.added:hover .price { color: var(--color-italia-red); }
+    .chip.added::after {
+      content: "Added · tap to remove";
+      position: absolute; left: 0; right: 0; bottom: -16px;
+      font-size: 10px; color: var(--color-italia-gray);
+      letter-spacing: 0.02em;
+      opacity: 0; transition: opacity 0.15s;
+      pointer-events: none;
+    }
+    .chip.added:hover::after { opacity: 1; }
     .chip.added .price { color: var(--color-italia-green-dark); }
     .chip.added .add-icon { background: var(--color-italia-green); }
 
@@ -630,19 +622,75 @@
       0%   { transform: translateX(-100%); }
       100% { transform: translateX(100%); }
     }
+    /* Premium unlocked state — celebratory moment, not a status flip */
     .delivery.qualified {
-      background: rgba(0, 140, 69, 0.04);
+      position: relative;
+      overflow: hidden;
+      padding: 16px 16px 16px 16px;
       border-style: solid;
-      border-color: rgba(0, 140, 69, 0.25);
+      border-color: rgba(184, 146, 46, 0.40);
+      background:
+        radial-gradient(circle at 0% 0%, rgba(255,255,255,0.7) 0%, transparent 55%),
+        linear-gradient(135deg, rgba(184,146,46,0.14) 0%, rgba(0,140,69,0.10) 100%);
+      animation: unlock-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
-    .delivery.qualified .qualified-row {
-      display: flex; align-items: center; gap: 8px;
-      color: var(--color-italia-green);
-      font-size: 14px; font-weight: 600;
+    .delivery.qualified::after {
+      content: ""; position: absolute; inset: 0;
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.55) 45%, transparent 100%);
+      transform: translateX(-100%);
+      animation: unlock-shimmer 1.4s ease-out 0.1s;
+      pointer-events: none;
     }
     .delivery.qualified .delivery-top,
     .delivery.qualified .progress { display: none; }
     .delivery .qualified-row { display: none; }
+    .delivery.qualified .qualified-row {
+      display: flex; align-items: center; gap: 12px;
+      position: relative;
+    }
+    .delivery.qualified .medallion {
+      flex-shrink: 0;
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--color-italia-gold) 0%, var(--color-italia-green) 100%);
+      box-shadow: 0 4px 14px rgba(184, 146, 46, 0.40),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.30);
+      display: inline-flex; align-items: center; justify-content: center;
+      color: white;
+      animation: medallion-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .delivery.qualified .text { line-height: 1.25; }
+    .delivery.qualified .ttl {
+      font-family: var(--font-heading);
+      font-weight: 600; font-size: 16px;
+      color: var(--color-italia-dark);
+      letter-spacing: 0.01em;
+    }
+    .delivery.qualified .sub {
+      font-size: 12px; color: var(--color-italia-gray);
+      margin-top: 2px;
+    }
+    .delivery.qualified .ribbon {
+      position: absolute; top: -1px; right: -1px;
+      width: 64px; height: 64px;
+      background:
+        linear-gradient(135deg, transparent 50%, rgba(200,16,46,0.18) 50%, rgba(200,16,46,0.18) 100%);
+      pointer-events: none;
+    }
+    @keyframes unlock-in {
+      0%   { transform: scale(0.96); opacity: 0; }
+      60%  { transform: scale(1.01); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    @keyframes unlock-shimmer {
+      0%   { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    @keyframes medallion-pop {
+      0%   { transform: scale(0.4) rotate(-12deg); opacity: 0; }
+      55%  { transform: scale(1.12) rotate(4deg); opacity: 1; }
+      100% { transform: scale(1) rotate(0); }
+    }
 
     /* ==================================================================
        Totals + sticky pay (mirrors CartDrawer.tsx)
@@ -675,9 +723,9 @@
     .loyalty-earn b { font-weight: 700; color: var(--color-italia-gold-dark); }
     .loyalty-earn .gold { color: var(--color-italia-gold); }
 
-    /* Pay stack — Apple Pay primary, card secondary (audit §2.1 T+pay) */
+    /* Pay stack — Apple/Google Pay primary, card secondary (audit §2.1 T+pay) */
     .pay-stack { margin-top: 12px; display: grid; gap: 8px; }
-    .applepay-btn {
+    .wallet-btn {
       width: 100%; min-height: 48px;
       background: #000; color: white;
       border: 0; border-radius: 8px;
@@ -686,12 +734,16 @@
       cursor: pointer;
       transition: background 0.15s, transform 0.1s;
     }
-    .applepay-btn:hover { background: #1a1a1a; }
-    .applepay-btn:active { transform: scale(0.99); }
-    .applepay-btn .logo {
-      font-family: -apple-system, "SF Pro", system-ui, sans-serif;
-      font-weight: 600; font-size: 18px;
+    .wallet-btn:hover { background: #1a1a1a; }
+    .wallet-btn:active { transform: scale(0.99); }
+    .wallet-btn .wallet-logo { width: 18px; height: 18px; flex-shrink: 0; }
+    .wallet-btn .wallet-logo.apple { color: white; }
+    .wallet-btn[data-method="google"] {
+      background: #fff; color: #3c4043;
+      border: 1px solid var(--gray-200);
     }
+    .wallet-btn[data-method="google"]:hover { background: var(--gray-50); }
+    .wallet-btn[data-method="google"] .wallet-label { font-weight: 500; letter-spacing: 0.01em; }
     .pay-btn {
       width: 100%; min-height: 44px;
       background: var(--color-italia-red); color: white;
@@ -864,6 +916,15 @@
       <path d="M8 5l-2-2"/>
       <path d="M16 5l2-2"/>
     </symbol>
+    <symbol id="i-apple" viewBox="0 0 14 18" fill="currentColor">
+      <path d="M11.86 9.27c-.02-2.3 1.88-3.4 1.96-3.46-1.07-1.57-2.74-1.79-3.34-1.81-1.42-.14-2.77.84-3.5.84-.71 0-1.83-.82-3.01-.79C2.5 4.07 1.04 4.92.27 6.31c-1.6 2.78-.41 6.9 1.16 9.15.77 1.1 1.69 2.34 2.89 2.3 1.16-.05 1.6-.74 3-.74 1.4 0 1.8.74 3.04.72 1.26-.02 2.05-1.12 2.82-2.23.88-1.28 1.25-2.51 1.27-2.57-.03-.01-2.43-.93-2.45-3.69m-2.3-6.78c.65-.78 1.08-1.86.96-2.94-.93.04-2.05.62-2.72 1.4-.6.69-1.12 1.79-.98 2.85 1.04.08 2.1-.53 2.74-1.31"/>
+    </symbol>
+    <symbol id="i-gpay" viewBox="0 0 18 18">
+      <path d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.49h4.84c-.21 1.13-.84 2.09-1.79 2.73v2.27h2.9c1.7-1.57 2.69-3.88 2.69-6.65z" fill="#4285F4"/>
+      <path d="M9 18c2.43 0 4.46-.81 5.95-2.18l-2.9-2.27c-.8.54-1.83.86-3.05.86-2.34 0-4.32-1.58-5.03-3.7H.97v2.32A9 9 0 0 0 9 18z" fill="#34A853"/>
+      <path d="M3.97 10.71c-.18-.54-.28-1.12-.28-1.71s.1-1.17.28-1.71V4.96H.97A8.99 8.99 0 0 0 0 9c0 1.45.35 2.82.97 4.04l3-2.33z" fill="#FBBC05"/>
+      <path d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58A8.99 8.99 0 0 0 9 0 8.99 8.99 0 0 0 .97 4.96l3 2.33C4.68 5.16 6.66 3.58 9 3.58z" fill="#EA4335"/>
+    </symbol>
   </defs>
 </svg>
 
@@ -969,31 +1030,46 @@
         <li>
           <span class="marker">7</span>
           <span>
-            <strong>Modifier pills on cart lines.</strong>
-            <em>§2.2 row 2 + Starbucks size-laddering.</em> "Make it a large +6 zł" and
-            "Double cheese +4 zł" on pizza; "Add chicken +8 zł" on pasta. Tap-toggle,
-            price recomputes in place. (Backend migration to
-            <code class="kbd">CartItem.modifiers</code> tracked separately.)
+            <strong>Scarcity strip — real seasonal stock.</strong>
+            <em>§2.2 row 7.</em> "Try the seasonal burrata — 7 of 12 left today" uses
+            real inventory from the existing seasonal-items pipeline. Burns down with each
+            add. Tap once to add, tap again to remove.
           </span>
         </li>
         <li>
           <span class="marker">8</span>
           <span>
-            <strong>Scarcity strip — real seasonal stock.</strong>
-            <em>§2.2 row 7.</em> "Try the seasonal burrata — 7 of 12 left today" uses
-            real inventory from the existing seasonal-items pipeline. Burns down with each
-            add.
-          </span>
-        </li>
-        <li>
-          <span class="marker">9</span>
-          <span>
             <strong>Tier-conditional perk banner.</strong>
             <em>§2.2 row 6.</em> "Make it a Gold-tier order: +pesto bruschetta on the
-            house." Only renders for Gold/Platinum members. Tap to comp it in.
+            house." Only renders for Gold/Platinum members. Tap once to comp it in,
+            tap again to remove.
           </span>
         </li>
       </ul>
+    </div>
+
+    <div class="panel muted">
+      <span class="pill">Q: admin manageability</span>
+      <h2>Yes — the ToD banners are admin-config, not hardcoded</h2>
+      <p class="lede">
+        When this ships, each location's banners live in
+        <code class="kbd">LocationUpsellConfig.timeWindows[]</code> next to the existing
+        <code class="kbd">combos</code> array in <code class="kbd">upsell-settings.json</code>.
+        An admin entry under <code class="kbd">/admin/upsell</code> exposes:
+      </p>
+      <ul class="checklist">
+        <li><b>Window</b> — start/end local hour (e.g. 11:30–13:00), days-of-week, location slug.</li>
+        <li><b>Trigger</b> — hour / weather (rain) / customer state (lapsed, order-#3 unlock).</li>
+        <li><b>Copy</b> — title, sub-line, badge text, CTA label, icon glyph.</li>
+        <li><b>Action</b> — apply % discount, add an item to cart, deep-link to a bundle page, or just nudge.</li>
+        <li><b>Default-apply</b> toggle — whether the banner is opt-out (McDonald's effect) or opt-in.</li>
+        <li><b>Tier-gating</b> — which loyalty tiers see this banner (Bronze / Silver / Gold / Platinum).</li>
+      </ul>
+      <p class="lede">
+        A new capability entry under <code class="kbd">/admin/capabilities</code>
+        ("Time-of-day upsell windows") will register the surface in the same commit that
+        ships the React component, per Rule #9.
+      </p>
     </div>
 
     <div class="panel muted">
@@ -1003,17 +1079,18 @@
         <li><b>Bundle / decoy engine</b> (Lunch+ tier, Family Feast) — §3.2 territory, separate sprint. The lunch + dinner banners here show the entry points.</li>
         <li><b>Per-customer ML upsell scoring</b> — §9.1. Static margin × attach heuristic stands in until the logistic-regression scorer ships.</li>
         <li><b>Hour-of-day modulation of "popular this hour"</b> — §1.2 trigger #2. Needs the per-hour item-popularity rollup.</li>
-        <li><b>Stripe Payment Request API + persistent <code class="kbd">CartItem.modifiers</code></b> — the Apple Pay and modifier surfaces above are visually correct but write through a temporary client-only model until the API migrations land.</li>
+        <li><b>Stripe Payment Request API</b> — Apple Pay / Google Pay buttons above show the visual hierarchy; the actual wallet sheet wiring lands separately.</li>
       </ul>
     </div>
 
     <div class="panel muted">
-      <span class="pill">Won't ship (§2.2)</span>
-      <h2>Patterns we will <em>not</em> use</h2>
+      <span class="pill">Won't ship — by brand decision</span>
+      <h2>Audit recommendations we <em>reject</em></h2>
       <ul class="checklist">
-        <li>No "Are you sure?" confirmation pop-ups.</li>
-        <li>No blocking modal after Add to cart.</li>
-        <li>No guilt copy ("You forgot dessert!").</li>
+        <li><b>Item-size modifiers</b> ("Make it a large +PLN 6", "Double cheese", "Add chicken") — §2.2 row 2 + §2.5 Starbucks size-laddering. Sud Italia serves fixed Neapolitan portions. Sizing up or modifying set recipes runs against the brand's core authenticity value, so this entire upsell pattern is overruled.</li>
+        <li>No "Are you sure?" confirmation pop-ups (§2.2).</li>
+        <li>No blocking modal after Add to cart (§2.2).</li>
+        <li>No guilt copy ("You forgot dessert!") (§2.2).</li>
         <li>No fake urgency — windows are real, scarcity comes from real inventory.</li>
       </ul>
     </div>
@@ -1121,9 +1198,13 @@
               <div class="bar" id="bar" style="width: 95%"></div>
             </div>
             <div class="qualified-row">
-              <svg class="ic"><use href="#i-check"/></svg>
-              <span>Free delivery unlocked!</span>
+              <span class="medallion"><svg class="ic-lg"><use href="#i-sparkles"/></svg></span>
+              <div class="text">
+                <div class="ttl">Free delivery unlocked</div>
+                <div class="sub">Your order ships on us today · we'll bring it warm</div>
+              </div>
             </div>
+            <span class="ribbon" aria-hidden="true"></span>
           </div>
         </div>
 
@@ -1150,12 +1231,13 @@
           <span>You'll earn <b id="pts">57 points</b> with this order</span>
         </div>
         <div class="pay-stack">
-          <button class="applepay-btn" id="applePayBtn">
-            <span class="logo"></span> Pay
+          <button class="wallet-btn" id="walletBtn" aria-label="Pay with Apple Pay">
+            <svg class="wallet-logo apple" viewBox="0 0 14 18" fill="currentColor"><use href="#i-apple"/></svg>
+            <span class="wallet-label">Pay</span>
           </button>
           <button class="pay-btn" id="payBtn">Pay 67,00 zł by card</button>
         </div>
-        <div class="pay-meta">PLN 0 hidden fees · Stripe · BLIK / card / Apple Pay / Google Pay</div>
+        <div class="pay-meta" id="payMeta">PLN 0 hidden fees · Stripe · BLIK / card / Apple Pay</div>
         <button class="clear-btn">
           <svg class="ic-sm"><use href="#i-trash"/></svg>
           Clear cart
@@ -1170,20 +1252,13 @@
   // ===================================================================
   // State
   // ===================================================================
-  // Modifier catalogue per item (§2.2 row 2). In production this lives on
-  // MenuItem; here it's a static map for the two demo items.
-  const MODIFIERS = {
-    pizza: [
-      { id: "large",  name: "Make it a large",  delta: 600 },
-      { id: "cheese", name: "Double cheese",    delta: 400 },
-    ],
-    pasta: [
-      { id: "chicken", name: "Add chicken", delta: 800 },
-    ],
-  };
+  // Note: portion modifiers ("Make it a large", "Double cheese", etc.) are
+  // deliberately NOT implemented. Sud Italia serves fixed Neapolitan portions
+  // — sizing up or adding ingredients to set recipes runs counter to that
+  // core brand value. The audit's §2.2 row 2 is intentionally overruled here.
   const baseItems = [
-    { id: "pizza", name: "Margherita", each: 2800, qty: 1, mods: {} },
-    { id: "pasta", name: "Carbonara",  each: 2900, qty: 1, mods: {} },
+    { id: "pizza", name: "Margherita", each: 2800, qty: 1 },
+    { id: "pasta", name: "Carbonara",  each: 2900, qty: 1 },
   ];
   const state = {
     items: structuredClone(baseItems),
@@ -1260,38 +1335,20 @@
   const fmt = new Intl.NumberFormat("pl-PL", { style: "currency", currency: "PLN" });
   const money = grosze => fmt.format(grosze / 100);
 
-  function effectivePrice(item) {
-    const mods = MODIFIERS[item.id] || [];
-    const delta = mods.reduce((s, m) => s + (item.mods[m.id] ? m.delta : 0), 0);
-    return item.each + delta;
-  }
-
   function renderLines() {
     const wrap = document.getElementById("lines");
     wrap.innerHTML = "";
-    state.items.forEach((it, idx) => {
-      const mods = MODIFIERS[it.id] || [];
-      const price = effectivePrice(it);
-      const modPills = mods.map(m => {
-        const on = !!it.mods[m.id];
-        const icon = on ? "i-check" : "i-plus";
-        const sign = on ? "" : "+";
-        return `<button class="mod-pill ${on ? 'active' : ''}" data-line="${idx}" data-mod="${m.id}">
-          <svg class="ic-sm"><use href="#${icon}"/></svg>
-          ${m.name} ${sign}${money(m.delta).replace(/ ?zł/, '')}zł
-        </button>`;
-      }).join("");
+    state.items.forEach(it => {
       const row = document.createElement("div");
       row.className = "line";
       row.innerHTML = `
         <div class="top">
           <div>
             <p class="name">${it.name}</p>
-            <p class="each">${money(price)} each</p>
+            <p class="each">${money(it.each)} each</p>
           </div>
-          <span class="price">${money(price * it.qty)}</span>
+          <span class="price">${money(it.each * it.qty)}</span>
         </div>
-        ${mods.length ? `<div class="mods">${modPills}</div>` : ""}
         <div class="bot">
           <div class="qty-stepper">
             <button aria-label="Decrease"><svg class="ic-sm"><use href="#i-minus"/></svg></button>
@@ -1306,22 +1363,10 @@
       `;
       wrap.appendChild(row);
     });
-    // Wire modifier-pill toggles
-    wrap.querySelectorAll(".mod-pill").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const idx = parseInt(btn.dataset.line, 10);
-        const modId = btn.dataset.mod;
-        const it = state.items[idx];
-        if (!it) return;
-        it.mods[modId] = !it.mods[modId];
-        renderLines();
-        recompute();
-      });
-    });
   }
 
   function recompute() {
-    const sub = state.items.reduce((s, i) => s + effectivePrice(i) * i.qty, 0);
+    const sub = state.items.reduce((s, i) => s + i.each * i.qty, 0);
     const remaining = Math.max(0, state.deliveryThreshold - sub);
     const qualified = remaining === 0;
     const fee = qualified ? 0 : state.deliveryFee;
@@ -1391,7 +1436,7 @@
           return;
         }
         const d = cfg.apply();
-        const sub = state.items.reduce((s, i) => s + effectivePrice(i) * i.qty, 0);
+        const sub = state.items.reduce((s, i) => s + i.each * i.qty, 0);
         state.discount = Math.round(sub * d.percent / 100);
         state.discountLabel = d.label;
         if (d.dropThreshold !== undefined) state.deliveryThreshold = d.dropThreshold;
@@ -1399,7 +1444,7 @@
         recompute();
         toast("sparkles", "Combo applied", d.label + " — keep building or check out.");
       } else if (cfg.addItem) {
-        state.items.push({ ...cfg.addItem, qty: 1, mods: {} });
+        state.items.push({ ...cfg.addItem, qty: 1 });
         renderLines();
         recompute();
         toast("sparkles", cfg.addItem.name + " added", "Customers usually add this with pizza.");
@@ -1416,7 +1461,7 @@
     state.deliveryThreshold = 4900; // personalised baseline for "regular" segment
     if (cfg && cfg.defaultApplied && cfg.apply) {
       const d = cfg.apply();
-      const sub = state.items.reduce((s, i) => s + effectivePrice(i) * i.qty, 0);
+      const sub = state.items.reduce((s, i) => s + i.each * i.qty, 0);
       state.discount = Math.round(sub * d.percent / 100);
       state.discountLabel = d.label;
       if (d.dropThreshold !== undefined) state.deliveryThreshold = d.dropThreshold;
@@ -1444,29 +1489,57 @@
     }, 4000);
   }
 
-  // Scarcity strip (§2.2)
+  // Scarcity strip (§2.2) — tap to toggle
+  function resetScarcity() {
+    const el = document.getElementById("scarcityChip");
+    el.classList.remove("added");
+    el.querySelector(".ttl").innerHTML = 'Try the seasonal burrata <span class="stock">7 of 12 left today</span>';
+    el.querySelector(".price-pill").textContent = "+ 22,00 zł";
+  }
   document.getElementById("scarcityChip").addEventListener("click", () => {
     const el = document.getElementById("scarcityChip");
-    if (el.classList.contains("added")) return;
+    if (el.classList.contains("added")) {
+      const idx = state.items.findIndex(x => x.id === el.dataset.id);
+      if (idx >= 0) state.items.splice(idx, 1);
+      resetScarcity();
+      renderLines();
+      recompute();
+      toast("sparkles", "Seasonal burrata removed", "Tap again to add it back.");
+      return;
+    }
     el.classList.add("added");
-    el.querySelector(".ttl").innerHTML = "Burrata bruschetta added <span class=\"stock\">6 left today</span>";
-    el.querySelector(".price-pill").textContent = "✓ Added";
+    el.querySelector(".ttl").innerHTML = 'Burrata bruschetta added <span class="stock">6 left today</span>';
+    el.querySelector(".price-pill").textContent = "✓ Tap to remove";
     state.items.push({ id: el.dataset.id, name: el.dataset.name,
-                       each: parseInt(el.dataset.price, 10), qty: 1, mods: {} });
+                       each: parseInt(el.dataset.price, 10), qty: 1 });
     renderLines();
     recompute();
     toast("sparkles", "Seasonal burrata added", "Limited stock — locked in for your order.");
   });
 
-  // Tier-conditional perk (§2.2)
+  // Tier-conditional perk (§2.2) — tap to toggle
+  function resetPerk() {
+    const el = document.getElementById("tierPerk");
+    el.classList.remove("applied");
+    el.querySelector(".ttl").textContent = "Make it a Gold-tier order";
+    el.querySelector(".add-pill").textContent = "Add free";
+  }
   document.getElementById("tierPerk").addEventListener("click", () => {
     const el = document.getElementById("tierPerk");
-    if (el.classList.contains("applied")) return;
+    if (el.classList.contains("applied")) {
+      const idx = state.items.findIndex(x => x.id === "perk-pesto");
+      if (idx >= 0) state.items.splice(idx, 1);
+      resetPerk();
+      renderLines();
+      recompute();
+      toast("sparkles", "Gold perk removed", "Tap again to comp it back.");
+      return;
+    }
     el.classList.add("applied");
     el.querySelector(".ttl").textContent = "Gold-tier perk added — pesto bruschetta on the house";
-    el.querySelector(".add-pill").textContent = "✓ Added";
+    el.querySelector(".add-pill").textContent = "✓ Tap to remove";
     state.items.push({ id: "perk-pesto", name: "Pesto bruschetta (Gold perk)",
-                       each: 0, qty: 1, mods: {} });
+                       each: 0, qty: 1 });
     renderLines();
     recompute();
     toast("sparkles", "Gold perk applied", "Comp'd pesto bruschetta added — enjoy.");
@@ -1474,15 +1547,25 @@
 
   document.getElementById("chips").addEventListener("click", e => {
     const chip = e.target.closest(".chip");
-    if (!chip || chip.classList.contains("added")) return;
-    chip.classList.add("added");
-    const id = chip.dataset.id;
-    const each = parseInt(chip.dataset.price, 10);
+    if (!chip) return;
+    const id   = chip.dataset.id;
     const name = chip.dataset.name;
-    state.items.push({ id, name, each, qty: 1, mods: {} });
+    if (chip.classList.contains("added")) {
+      // tap again → remove (one chip = one item)
+      const idx = state.items.findIndex(x => x.id === id);
+      if (idx >= 0) state.items.splice(idx, 1);
+      chip.classList.remove("added");
+      renderLines();
+      recompute();
+      toast("sparkles", name + " removed", "Tap the chip again to add it back.");
+      return;
+    }
+    const each = parseInt(chip.dataset.price, 10);
+    chip.classList.add("added");
+    state.items.push({ id, name, each, qty: 1 });
     renderLines();
     recompute();
-    toast("sparkles", name + " added", "Nice — tap another chip or check out.");
+    toast("sparkles", name + " added", "Tap the chip again to remove.");
   });
 
   document.getElementById("addBtn").addEventListener("click", () => {
@@ -1493,7 +1576,7 @@
   });
 
   document.getElementById("qualifyBtn").addEventListener("click", () => {
-    state.items.push({ id: "burrata", name: "Burrata bruschetta", each: 2200, qty: 1, mods: {} });
+    state.items.push({ id: "burrata", name: "Burrata bruschetta", each: 2200, qty: 1 });
     renderLines();
     recompute();
     toast("truck", "Free delivery unlocked", "Nice — your order qualifies.");
@@ -1503,14 +1586,8 @@
     state.items = structuredClone(baseItems);
     applyDefaultsForTod();
     document.querySelectorAll(".chip.added").forEach(c => c.classList.remove("added"));
-    const sc = document.getElementById("scarcityChip");
-    sc.classList.remove("added");
-    sc.querySelector(".ttl").innerHTML = 'Try the seasonal burrata <span class="stock">7 of 12 left today</span>';
-    sc.querySelector(".price-pill").textContent = "+ 22,00 zł";
-    const tp = document.getElementById("tierPerk");
-    tp.classList.remove("applied");
-    tp.querySelector(".ttl").textContent = "Make it a Gold-tier order";
-    tp.querySelector(".add-pill").textContent = "Add free";
+    resetScarcity();
+    resetPerk();
     renderLines();
     renderTod();
     recompute();
@@ -1527,8 +1604,36 @@
     recompute();
   });
 
+  // ----- wallet detection (audit §2.1 T+pay) -----
+  // Apple Pay on Apple devices; Google Pay on Android/Chrome elsewhere;
+  // Apple Pay as the default fallback per spec.
+  function detectWallet() {
+    const ua = navigator.userAgent || "";
+    if (/Android/i.test(ua)) return "google";
+    if (/iPhone|iPad|iPod/i.test(ua)) return "apple";
+    if (/Macintosh|Mac OS X/.test(ua) && /Safari/.test(ua) && !/Chrome|Chromium/.test(ua)) return "apple";
+    if (/Windows|Linux/i.test(ua) && /Chrome|Chromium/.test(ua) && !/Edg/.test(ua)) return "google";
+    return "apple"; // default per spec
+  }
+  function applyWallet() {
+    const method = detectWallet();
+    const btn = document.getElementById("walletBtn");
+    const meta = document.getElementById("payMeta");
+    btn.setAttribute("data-method", method);
+    btn.setAttribute("aria-label", method === "google" ? "Pay with Google Pay" : "Pay with Apple Pay");
+    btn.innerHTML = method === "google"
+      ? `<svg class="wallet-logo" viewBox="0 0 18 18" aria-hidden="true"><use href="#i-gpay"/></svg>
+         <span class="wallet-label">Pay</span>`
+      : `<svg class="wallet-logo apple" viewBox="0 0 14 18" fill="currentColor" aria-hidden="true"><use href="#i-apple"/></svg>
+         <span class="wallet-label">Pay</span>`;
+    meta.textContent = method === "google"
+      ? "PLN 0 hidden fees · Stripe · BLIK / card / Google Pay"
+      : "PLN 0 hidden fees · Stripe · BLIK / card / Apple Pay";
+  }
+
   // ----- init -----
   applyDefaultsForTod();
+  applyWallet();
   renderLines();
   renderTod();
   recompute();
