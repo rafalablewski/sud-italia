@@ -376,18 +376,17 @@ function TimeWindowsEditor({
   const usingDefaults = !windows || windows.length === 0;
   const list: TimeWindowConfig[] = usingDefaults ? defaultsAsConfig() : windows;
 
-  // Track which rows are expanded. Collapsed-by-default keeps the page
-  // skim-friendly when you have 5+ windows; click a row header to edit.
-  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  // Rows are expanded by default; admin clicks the chevron on any row to
+  // fold it away when scanning. We track *collapsed* ids so a freshly
+  // added window is open without needing to seed its id into the set.
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
   const toggleExpanded = (id: string) =>
-    setExpanded((prev) => {
+    setCollapsed((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
-  const expandAll = () => setExpanded(new Set(list.map((w) => w.id)));
-  const collapseAll = () => setExpanded(new Set());
 
   // If admin makes any edit while we're showing defaults, materialise the
   // defaults upstream first so the edit lands on a real array.
@@ -409,13 +408,13 @@ function TimeWindowsEditor({
       active: true,
     });
     onChange(next);
-    setExpanded((prev) => new Set(prev).add(id)); // expand the new row so admin can fill it
+    // No need to seed the new row — defaults-open means it's open already.
   };
   const resetToDefaults = () => {
     // Empty array → editor falls back to showing the hardcoded defaults
     // (and the runtime resolver does the same).
     onChange([]);
-    setExpanded(new Set());
+    setCollapsed(new Set());
   };
   const updateWindow = (index: number, updates: Partial<TimeWindowConfig>) => {
     const next = materialise();
@@ -444,12 +443,6 @@ function TimeWindowsEditor({
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <button onClick={expandAll} className="glass-btn" title="Expand all rows">
-            <ChevronDown className="h-3 w-3" /> Expand all
-          </button>
-          <button onClick={collapseAll} className="glass-btn" title="Collapse all rows">
-            <ChevronRight className="h-3 w-3" /> Collapse all
-          </button>
           {!usingDefaults && (
             <button onClick={resetToDefaults} className="glass-btn" title="Discard overrides and use the five defaults">
               <RotateCcw className="h-3 w-3" /> Reset to defaults
@@ -463,7 +456,8 @@ function TimeWindowsEditor({
 
       <div className="space-y-3">
         {list.map((w, i) => {
-          const isOpen = expanded.has(w.id);
+          // Default-open: the row is open unless explicitly collapsed.
+          const isOpen = !collapsed.has(w.id);
           return (
             <div
               key={w.id}
