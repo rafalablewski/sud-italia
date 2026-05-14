@@ -110,7 +110,9 @@ export function Dialog({
 interface ConfirmProps {
   open: boolean;
   onClose: () => void;
-  onConfirm: () => void | Promise<void>;
+  /** Returning `false` (or a rejected promise) keeps the dialog open so the
+   *  user can retry. Returning `void` / `true` closes it as usual. */
+  onConfirm: () => void | boolean | Promise<void | boolean>;
   title: ReactNode;
   description?: ReactNode;
   confirmLabel?: string;
@@ -132,8 +134,11 @@ export function ConfirmDialog({
   const handleConfirm = async () => {
     setBusy(true);
     try {
-      await onConfirm();
-      onClose();
+      const result = await onConfirm();
+      if (result !== false) onClose();
+    } catch {
+      // Caller surfaced the error (e.g. via toast). Keep the dialog open so
+      // the user retains context to retry or cancel.
     } finally {
       setBusy(false);
     }

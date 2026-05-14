@@ -30,33 +30,10 @@ import {
 } from "./v2/ui";
 import { formatPrice } from "@/lib/utils";
 import { getActiveLocations } from "@/data/locations";
+import type { CashDrop, CashSession } from "@/data/types";
 
 const activeLocations = getActiveLocations();
 const FALLBACK_LOC = activeLocations[0]?.slug ?? "krakow";
-
-interface CashDrop {
-  id: string;
-  amountGrosze: number;
-  kind: "sale" | "drop" | "payout" | "adjust";
-  at: string;
-  notes?: string;
-  actor?: string;
-}
-
-interface CashSession {
-  id: string;
-  locationSlug: string;
-  openedAt: string;
-  openingFloat: number;
-  openedBy: string;
-  drops: CashDrop[];
-  closingCountGrosze?: number;
-  closedAt?: string;
-  closedBy?: string;
-  varianceGrosze?: number;
-  notes?: string;
-  hidden?: boolean;
-}
 
 const KIND_LABEL: Record<CashDrop["kind"], string> = {
   sale: "Cash sale",
@@ -100,6 +77,11 @@ export function AdminCash() {
   const [closeDialogFor, setCloseDialogFor] = useState<CashSession | null>(null);
   const [pendingDelete, setPendingDelete] = useState<CashSession | null>(null);
   const [showHidden, setShowHidden] = useState(false);
+  // Per-session id currently undergoing a hide/restore PATCH. Used to disable
+  // the row's hide/delete buttons so rapid double-clicks don't fire two
+  // concurrent mutations.
+  const [busyRowId, setBusyRowId] = useState<string | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
 
   const locOptions = activeLocations.map((l) => ({ value: l.slug, label: l.city }));
 
@@ -119,32 +101,42 @@ export function AdminCash() {
   }, [pageLoc, showHidden]);
 
   const toggleHidden = async (s: CashSession) => {
+    if (busyRowId) return;
     const next = !s.hidden;
-    const res = await fetch(`/api/admin/cash/${s.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ hidden: next }),
-    });
-    if (res.ok) {
-      toast.success(next ? "Session hidden" : "Session restored");
-      await fetchAll();
-    } else {
-      const data = await res.json().catch(() => ({}));
-      toast.error("Could not update session", data?.error);
+    setBusyRowId(s.id);
+    try {
+      const res = await fetch(`/api/admin/cash/${s.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hidden: next }),
+      });
+      if (res.ok) {
+        toast.success(next ? "Session hidden" : "Session restored");
+        await fetchAll();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast.error("Could not update session", data?.error);
+      }
+    } finally {
+      setBusyRowId(null);
     }
   };
 
-  const doDelete = async () => {
-    if (!pendingDelete) return;
-    const res = await fetch(`/api/admin/cash/${pendingDelete.id}`, { method: "DELETE" });
-    if (res.ok) {
-      toast.success("Session deleted");
-      setPendingDelete(null);
-      await fetchAll();
-    } else {
+  const doDelete = async (): Promise<boolean> => {
+    if (!pendingDelete || deleteBusy) return false;
+    setDeleteBusy(true);
+    try {
+      const res = await fetch(`/api/admin/cash/${pendingDelete.id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success("Session deleted");
+        await fetchAll();
+        return true;
+      }
       const data = await res.json().catch(() => ({}));
       toast.error("Could not delete session", data?.error);
-      setPendingDelete(null);
+      return false;
+    } finally {
+      setDeleteBusy(false);
     }
   };
 
@@ -327,6 +319,8 @@ export function AdminCash() {
                         variant="ghost"
                         leadingIcon={s.hidden ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                         onClick={() => toggleHidden(s)}
+                        loading={busyRowId === s.id}
+                        disabled={busyRowId !== null && busyRowId !== s.id}
                         title={s.hidden ? "Restore to default view" : "Hide from default view"}
                         aria-label={s.hidden ? "Restore session" : "Hide session"}
                       />
@@ -335,6 +329,7 @@ export function AdminCash() {
                         variant="ghost"
                         leadingIcon={<Trash2 className="h-3.5 w-3.5" />}
                         onClick={() => setPendingDelete(s)}
+                        disabled={busyRowId !== null}
                         title="Delete session permanently"
                         aria-label="Delete session"
                       />

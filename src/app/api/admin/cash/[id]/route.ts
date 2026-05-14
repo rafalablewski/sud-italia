@@ -9,7 +9,7 @@ import {
   getCashSessionById,
   setCashSessionHidden,
 } from "@/lib/store";
-import { cashCloseSchema, cashDropSchema } from "@/lib/api-schemas";
+import { cashCloseSchema, cashDropSchema, cashPatchSchema } from "@/lib/api-schemas";
 
 export const GET = withAdmin<{ params: Promise<{ id: string }> }>(
   {},
@@ -132,18 +132,25 @@ export const PATCH = withAdmin<{ params: Promise<{ id: string }> }>(
         { status: 403 },
       );
     }
-    const body = await req.json().catch(() => null);
-    if (!body || typeof body.hidden !== "boolean") {
-      return NextResponse.json({ error: "Body must include { hidden: boolean }" }, { status: 400 });
+    const parsed = cashPatchSchema.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          error: "Validation failed",
+          details: parsed.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })),
+        },
+        { status: 400 },
+      );
     }
-    const updated = await setCashSessionHidden(id, body.hidden);
+    const { hidden } = parsed.data;
+    const updated = await setCashSessionHidden(id, hidden);
     if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
     await appendAuditLog({
       actor: user.email || user.id,
-      action: body.hidden ? "cash.hide" : "cash.unhide",
+      action: hidden ? "cash.hide" : "cash.unhide",
       entityType: "cash_session",
       entityId: id,
-      after: { hidden: body.hidden },
+      after: { hidden },
     });
     return NextResponse.json(updated);
   },
