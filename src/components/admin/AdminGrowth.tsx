@@ -1,20 +1,26 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  ArrowDown,
+  ArrowUp,
   Award,
   Coins,
   Crown,
   Gem,
   Gift,
   Heart,
+  Pencil,
+  Plus,
   Rocket,
   Shield,
   Star,
+  Trash2,
   Trophy,
   Users,
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
+import { getActiveLocations } from "@/data/locations";
 import { useToast } from "./v2/ui/Toast";
 import {
   Badge,
@@ -22,9 +28,11 @@ import {
   Card,
   CardBody,
   CardHeader,
+  ConfirmDialog,
   Dialog,
   EmptyState,
   Input,
+  Select,
   Table,
   Tabs,
   Textarea,
@@ -52,6 +60,30 @@ interface ReferralConfig {
   active: boolean;
 }
 
+type LiveWidgetType =
+  | "ordersInLastHour"
+  | "currentlyPreparing"
+  | "trendingItem"
+  | "avgPrepTime"
+  | "happyHour"
+  | "truckLocation"
+  | "freeText";
+
+interface LiveWidget {
+  id: string;
+  type: LiveWidgetType;
+  label?: string;
+  active: boolean;
+  locationSlugs?: string[];
+  order: number;
+  config?: {
+    text?: string;
+    endHour?: number;
+    discountPct?: number;
+    category?: string;
+  };
+}
+
 interface LoyaltySettings {
   tiers: {
     bronze: Tier;
@@ -61,12 +93,30 @@ interface LoyaltySettings {
   };
   rewards: Reward[];
   referral: ReferralConfig;
-  liveActivity: {
-    ordersInLastHour: boolean;
-    currentlyPreparing: boolean;
-    trendingItem: boolean;
-    avgPrepTime: boolean;
-  };
+  liveWidgets: LiveWidget[];
+}
+
+/** Mirror of `LIVE_WIDGET_LIMIT` in src/lib/store.ts. The public API caps
+ *  the rendered list at this many; we surface the limit in the UI too. */
+const LIVE_WIDGET_LIMIT = 7;
+
+const WIDGET_TYPE_OPTIONS: { value: LiveWidgetType; label: string; description: string; defaultLabel: string }[] = [
+  { value: "ordersInLastHour", label: "Orders in last hour", description: "Live order count pulse.", defaultLabel: "orders in the last hour" },
+  { value: "currentlyPreparing", label: "Currently preparing", description: "How many orders are on the line right now.", defaultLabel: "orders being prepared" },
+  { value: "trendingItem", label: "Trending item", description: "Highlights the most-ordered dish.", defaultLabel: "Trending" },
+  { value: "avgPrepTime", label: "Average prep time", description: "Rolling average prep time across recent orders.", defaultLabel: "Avg prep" },
+  { value: "happyHour", label: "Happy hour", description: "Time-bound discount banner. Auto-hides once end hour passes.", defaultLabel: "" },
+  { value: "truckLocation", label: "Truck location", description: "Today's address for the food truck.", defaultLabel: "Truck is at" },
+  { value: "freeText", label: "Free text / announcement", description: "Admin-supplied one-liner. Use for tonight's special, weather note, etc.", defaultLabel: "" },
+];
+
+function widgetTypeMeta(t: LiveWidgetType) {
+  return WIDGET_TYPE_OPTIONS.find((o) => o.value === t) ?? WIDGET_TYPE_OPTIONS[0];
+}
+
+function makeWidgetId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return `lw-${crypto.randomUUID().slice(0, 8)}`;
+  return `lw-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 }
 
 interface ReferralRow {
@@ -172,11 +222,44 @@ export function AdminGrowth() {
     await persist({ referral });
   };
 
-  const toggleLive = async (key: keyof LoyaltySettings["liveActivity"]) => {
+  const [editingWidget, setEditingWidget] = useState<LiveWidget | null>(null);
+  const [pendingDeleteWidget, setPendingDeleteWidget] = useState<LiveWidget | null>(null);
+
+  const persistWidgets = async (next: LiveWidget[]) => {
     if (!settings) return;
-    const liveActivity = { ...settings.liveActivity, [key]: !settings.liveActivity[key] };
-    setSettings({ ...settings, liveActivity });
-    await persist({ liveActivity });
+    const normalised = next.map((w, idx) => ({ ...w, order: idx }));
+    setSettings({ ...settings, liveWidgets: normalised });
+    await persist({ liveWidgets: normalised });
+  };
+
+  const upsertWidget = async (widget: LiveWidget) => {
+    if (!settings) return;
+    const list = settings.liveWidgets;
+    const exists = list.some((w) => w.id === widget.id);
+    const next = exists ? list.map((w) => (w.id === widget.id ? widget : w)) : [...list, { ...widget, order: list.length }];
+    await persistWidgets(next);
+    setEditingWidget(null);
+  };
+
+  const deleteWidget = async (id: string) => {
+    if (!settings) return;
+    await persistWidgets(settings.liveWidgets.filter((w) => w.id !== id));
+  };
+
+  const toggleWidget = async (id: string) => {
+    if (!settings) return;
+    await persistWidgets(settings.liveWidgets.map((w) => (w.id === id ? { ...w, active: !w.active } : w)));
+  };
+
+  const reorderWidget = async (id: string, dir: -1 | 1) => {
+    if (!settings) return;
+    const list = settings.liveWidgets.slice().sort((a, b) => a.order - b.order);
+    const idx = list.findIndex((w) => w.id === id);
+    if (idx === -1) return;
+    const swap = idx + dir;
+    if (swap < 0 || swap >= list.length) return;
+    [list[idx], list[swap]] = [list[swap], list[idx]];
+    await persistWidgets(list);
   };
 
   const deleteReferralCode = async (code: string) => {
@@ -404,32 +487,14 @@ export function AdminGrowth() {
       )}
 
       {tab === "live" && (
-        <Card>
-          <CardHeader title="Live activity widgets" description="Customer-site signals that build social proof." />
-          <CardBody>
-            <ul className="v2-checkbox-list">
-              {(
-                [
-                  ["ordersInLastHour", "Orders in last hour pill"],
-                  ["currentlyPreparing", "Currently preparing badge"],
-                  ["trendingItem", "Trending item indicator"],
-                  ["avgPrepTime", "Average prep time pill"],
-                ] as const
-              ).map(([k, label]) => (
-                <li key={k}>
-                  <label className="v2-toggle">
-                    <input
-                      type="checkbox"
-                      checked={settings.liveActivity[k]}
-                      onChange={() => toggleLive(k)}
-                    />
-                    <span>{label}</span>
-                  </label>
-                </li>
-              ))}
-            </ul>
-          </CardBody>
-        </Card>
+        <LiveWidgetsPanel
+          widgets={settings.liveWidgets}
+          onEdit={setEditingWidget}
+          onDelete={setPendingDeleteWidget}
+          onToggle={toggleWidget}
+          onReorder={reorderWidget}
+          onAdd={() => setEditingWidget({ id: "", type: "freeText", active: true, order: settings.liveWidgets.length })}
+        />
       )}
 
       <RewardDialog
@@ -437,7 +502,301 @@ export function AdminGrowth() {
         onClose={() => setEditingReward(null)}
         onSubmit={upsertReward}
       />
+
+      <WidgetDialog
+        widget={editingWidget}
+        onClose={() => setEditingWidget(null)}
+        onSubmit={upsertWidget}
+      />
+
+      <ConfirmDialog
+        open={pendingDeleteWidget !== null}
+        onClose={() => setPendingDeleteWidget(null)}
+        onConfirm={async () => {
+          if (!pendingDeleteWidget) return;
+          await deleteWidget(pendingDeleteWidget.id);
+        }}
+        title="Delete this widget?"
+        description={pendingDeleteWidget ? `"${pendingDeleteWidget.label ?? widgetTypeMeta(pendingDeleteWidget.type).label}" will be removed from the live bar.` : ""}
+        confirmLabel="Delete"
+        destructive
+      />
     </div>
+  );
+}
+
+interface LiveWidgetsPanelProps {
+  widgets: LiveWidget[];
+  onEdit: (widget: LiveWidget) => void;
+  onDelete: (widget: LiveWidget) => void;
+  onToggle: (id: string) => void;
+  onReorder: (id: string, dir: -1 | 1) => void;
+  onAdd: () => void;
+}
+
+function LiveWidgetsPanel({ widgets, onEdit, onDelete, onToggle, onReorder, onAdd }: LiveWidgetsPanelProps) {
+  const activeLocations = useMemo(() => getActiveLocations(), []);
+  const sorted = useMemo(() => widgets.slice().sort((a, b) => a.order - b.order), [widgets]);
+  const activeCount = sorted.filter((w) => w.active).length;
+  const atLimit = activeCount >= LIVE_WIDGET_LIMIT;
+
+  const locationLabel = (slugs?: string[]) => {
+    if (!slugs || slugs.length === 0) return "All locations";
+    return slugs
+      .map((s) => activeLocations.find((l) => l.slug === s)?.city ?? s)
+      .join(" · ");
+  };
+
+  return (
+    <Card>
+      <CardHeader
+        title="Live activity widgets"
+        description={`Customer-site signals that build social proof. ${activeCount}/${LIVE_WIDGET_LIMIT} active · ${sorted.length} total.`}
+        actions={
+          <Button
+            size="sm"
+            variant="primary"
+            leadingIcon={<Plus className="h-3.5 w-3.5" />}
+            onClick={onAdd}
+          >
+            Add widget
+          </Button>
+        }
+      />
+      <CardBody>
+        {sorted.length === 0 ? (
+          <EmptyState
+            icon={Rocket}
+            title="No widgets configured"
+            description="Add a widget — it will appear on the customer site as soon as you save."
+            compact
+          />
+        ) : (
+          <>
+            {atLimit && (
+              <p className="v2-muted" style={{ fontSize: "0.8125rem", marginBottom: "0.75rem" }}>
+                {LIVE_WIDGET_LIMIT} active widgets is the bar limit. New ones above the cap are dropped from the rendered list — disable one to enable another.
+              </p>
+            )}
+            <ul className="v2-widget-list">
+              {sorted.map((w, idx) => {
+                const meta = widgetTypeMeta(w.type);
+                return (
+                  <li key={w.id} className={`v2-widget-row${w.active ? "" : " is-off"}`}>
+                    <span className="v2-widget-order">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        leadingIcon={<ArrowUp className="h-3 w-3" />}
+                        onClick={() => onReorder(w.id, -1)}
+                        disabled={idx === 0}
+                        aria-label="Move up"
+                      />
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        leadingIcon={<ArrowDown className="h-3 w-3" />}
+                        onClick={() => onReorder(w.id, 1)}
+                        disabled={idx === sorted.length - 1}
+                        aria-label="Move down"
+                      />
+                    </span>
+                    <span className="v2-widget-main">
+                      <span className="v2-widget-title">
+                        {w.label || meta.label}
+                      </span>
+                      <span className="v2-widget-sub v2-muted">{meta.description}</span>
+                    </span>
+                    <Badge tone="neutral" variant="soft">{meta.label}</Badge>
+                    <Badge tone={w.locationSlugs && w.locationSlugs.length > 0 ? "info" : "neutral"} variant="soft">
+                      {locationLabel(w.locationSlugs)}
+                    </Badge>
+                    <label className="v2-toggle">
+                      <input type="checkbox" checked={w.active} onChange={() => onToggle(w.id)} />
+                      <span>{w.active ? "On" : "Off"}</span>
+                    </label>
+                    <span className="v2-widget-actions">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        leadingIcon={<Pencil className="h-3.5 w-3.5" />}
+                        onClick={() => onEdit(w)}
+                        aria-label="Edit widget"
+                      />
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        leadingIcon={<Trash2 className="h-3.5 w-3.5" />}
+                        onClick={() => onDelete(w)}
+                        aria-label="Delete widget"
+                      />
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
+        )}
+      </CardBody>
+    </Card>
+  );
+}
+
+interface WidgetDialogProps {
+  widget: LiveWidget | null;
+  onClose: () => void;
+  onSubmit: (widget: LiveWidget) => Promise<void> | void;
+}
+
+function WidgetDialog({ widget, onClose, onSubmit }: WidgetDialogProps) {
+  const activeLocations = useMemo(() => getActiveLocations(), []);
+  const [type, setType] = useState<LiveWidgetType>("freeText");
+  const [label, setLabel] = useState("");
+  const [text, setText] = useState("");
+  const [endHour, setEndHour] = useState<number | "">("");
+  const [discountPct, setDiscountPct] = useState<number | "">("");
+  const [category, setCategory] = useState("");
+  const [slugs, setSlugs] = useState<string[]>([]);
+  const [active, setActive] = useState(true);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!widget) return;
+    setType(widget.type);
+    setLabel(widget.label ?? "");
+    setText(widget.config?.text ?? "");
+    setEndHour(widget.config?.endHour ?? "");
+    setDiscountPct(widget.config?.discountPct ?? "");
+    setCategory(widget.config?.category ?? "");
+    setSlugs(widget.locationSlugs ?? []);
+    setActive(widget.active);
+    setBusy(false);
+  }, [widget]);
+
+  if (!widget) return <Dialog open={false} onClose={onClose} />;
+
+  const toggleSlug = (slug: string) => {
+    setSlugs((prev) => (prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug]));
+  };
+
+  const submit = async () => {
+    setBusy(true);
+    const config: LiveWidget["config"] = {};
+    if (type === "freeText") config.text = text.trim() || undefined;
+    if (type === "happyHour") {
+      if (endHour !== "") config.endHour = Number(endHour);
+      if (discountPct !== "") config.discountPct = Number(discountPct);
+      if (category.trim()) config.category = category.trim();
+    }
+    const payload: LiveWidget = {
+      id: widget.id || makeWidgetId(),
+      type,
+      label: label.trim() || undefined,
+      active,
+      locationSlugs: slugs.length > 0 ? slugs : undefined,
+      order: widget.order,
+      config: Object.keys(config).length > 0 ? config : undefined,
+    };
+    await onSubmit(payload);
+    setBusy(false);
+  };
+
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      size="md"
+      title={widget.id ? "Edit widget" : "New widget"}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={busy}>Cancel</Button>
+          <Button variant="primary" onClick={submit} loading={busy}>{widget.id ? "Save" : "Create"}</Button>
+        </>
+      }
+    >
+      <div className="v2-stack-12">
+        <Select
+          label="Widget type"
+          value={type}
+          onChange={(e) => setType(e.target.value as LiveWidgetType)}
+          options={WIDGET_TYPE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+          description={widgetTypeMeta(type).description}
+        />
+        <Input
+          label="Label override"
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          placeholder={widgetTypeMeta(type).defaultLabel || "Custom message"}
+          description={type === "freeText" ? "Required for free-text widgets — this is what appears on the bar." : "Optional. Leave blank to use the preset wording."}
+        />
+        {type === "freeText" && !label && (
+          <Input
+            label="Body text"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Tonight: live DJ from 19:00 🎶"
+          />
+        )}
+        {type === "happyHour" && (
+          <div className="v2-form-row-2">
+            <Input
+              label="Discount %"
+              type="number"
+              min="0"
+              max="100"
+              value={discountPct === "" ? "" : String(discountPct)}
+              onChange={(e) => setDiscountPct(e.target.value === "" ? "" : Number(e.target.value))}
+              placeholder="20"
+            />
+            <Input
+              label="Ends at hour (0–23)"
+              type="number"
+              min="0"
+              max="23"
+              value={endHour === "" ? "" : String(endHour)}
+              onChange={(e) => setEndHour(e.target.value === "" ? "" : Number(e.target.value))}
+              placeholder="19"
+            />
+          </div>
+        )}
+        {type === "happyHour" && (
+          <Input
+            label="Category (optional)"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            placeholder="pasta"
+            description="Renders as e.g. '20% off pasta'. Leave blank for a generic banner."
+          />
+        )}
+        <div className="v2-field">
+          <span className="v2-field-label">Locations</span>
+          <div className="v2-chip-row">
+            <button
+              type="button"
+              className={`v2-chip${slugs.length === 0 ? " is-selected" : ""}`}
+              onClick={() => setSlugs([])}
+            >
+              All
+            </button>
+            {activeLocations.map((loc) => (
+              <button
+                key={loc.slug}
+                type="button"
+                className={`v2-chip${slugs.includes(loc.slug) ? " is-selected" : ""}`}
+                onClick={() => toggleSlug(loc.slug)}
+              >
+                {loc.city}
+              </button>
+            ))}
+          </div>
+          <span className="v2-field-desc">Select one or more cities; clear all to broadcast everywhere.</span>
+        </div>
+        <label className="v2-toggle">
+          <input type="checkbox" checked={active} onChange={() => setActive((v) => !v)} />
+          <span>Active</span>
+        </label>
+      </div>
+    </Dialog>
   );
 }
 

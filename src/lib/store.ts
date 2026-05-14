@@ -1944,6 +1944,35 @@ export async function updateSettings(updates: Partial<AppSettings>): Promise<App
 
 // --- Growth & Loyalty Settings ---
 
+/** Built-in widget renderers the customer-site LiveActivityBar knows about. */
+export type LiveWidgetType =
+  | "ordersInLastHour"
+  | "currentlyPreparing"
+  | "trendingItem"
+  | "avgPrepTime"
+  | "happyHour"
+  | "truckLocation"
+  | "freeText";
+
+export interface LiveWidget {
+  id: string;
+  type: LiveWidgetType;
+  /** Optional override of the preset wording — keep null/undefined to use the renderer's default. */
+  label?: string;
+  active: boolean;
+  /** Empty or undefined ⇒ all locations. Otherwise the widget renders only on listed slugs. */
+  locationSlugs?: string[];
+  /** Display order (ascending) inside the live bar. */
+  order: number;
+  /** Type-specific configuration (e.g. happy-hour discount, free-text body). */
+  config?: {
+    text?: string;
+    endHour?: number;
+    discountPct?: number;
+    category?: string;
+  };
+}
+
 export interface LoyaltySettings {
   tiers: {
     bronze: { threshold: number; multiplier: number; perks: string[] };
@@ -1957,7 +1986,23 @@ export interface LoyaltySettings {
   abandonedCart: { delaySeconds: number; message: string; active: boolean };
   challenges: { id: string; title: string; description: string; target: number; rewardPoints: number; type: string; active: boolean }[];
   seasonalItems: { id: string; name: string; description: string; category: string; price: number; availableUntil: string; badge: string; active: boolean; locationSlug?: string }[];
-  liveActivity: { ordersInLastHour: boolean; currentlyPreparing: boolean; trendingItem: boolean; avgPrepTime: boolean };
+  liveWidgets: LiveWidget[];
+}
+
+/** Up to this many widgets may render on the customer live bar at once. */
+export const LIVE_WIDGET_LIMIT = 7;
+
+const LEGACY_LIVE_WIDGET_KEYS = ["ordersInLastHour", "currentlyPreparing", "trendingItem", "avgPrepTime"] as const;
+
+/** Seed the dynamic widget list from the legacy 4-boolean shape so existing
+ *  installs keep their preferences after the schema upgrade. */
+function seedLiveWidgetsFromLegacy(legacy?: Record<string, boolean>): LiveWidget[] {
+  return LEGACY_LIVE_WIDGET_KEYS.map((key, idx) => ({
+    id: `lw-${key}`,
+    type: key,
+    active: legacy ? legacy[key] !== false : true,
+    order: idx,
+  }));
 }
 
 const DEFAULT_LOYALTY_SETTINGS: LoyaltySettings = {
@@ -1987,18 +2032,32 @@ const DEFAULT_LOYALTY_SETTINGS: LoyaltySettings = {
     { id: "s2", name: "Panna Cotta al Limoncello", description: "Limoncello-infused panna cotta with candied lemon zest and Amalfi lemon coulis", category: "desserts", price: 2200, availableUntil: "2026-04-30", badge: "Limited Edition", active: true, locationSlug: "krakow" },
     { id: "s3", name: "Risotto Primavera", description: "Carnaroli rice with asparagus, peas, mint, and shaved Parmigiano Reggiano", category: "pasta", price: 3200, availableUntil: "2026-05-31", badge: "Chef's Creation", active: true, locationSlug: "warszawa" },
   ],
-  liveActivity: { ordersInLastHour: true, currentlyPreparing: true, trendingItem: true, avgPrepTime: true },
+  liveWidgets: seedLiveWidgetsFromLegacy(),
 };
 
+type LegacyLoyaltyShape = Partial<LoyaltySettings> & {
+  /** Pre-migration boolean map. */
+  liveActivity?: Record<string, boolean>;
+};
+
+function hydrateLoyalty(saved: LegacyLoyaltyShape): LoyaltySettings {
+  const liveWidgets =
+    Array.isArray(saved.liveWidgets) && saved.liveWidgets.length > 0
+      ? saved.liveWidgets
+      : seedLiveWidgetsFromLegacy(saved.liveActivity);
+  return { ...DEFAULT_LOYALTY_SETTINGS, ...saved, liveWidgets };
+}
+
 export async function getLoyaltySettings(): Promise<LoyaltySettings> {
-  const saved = await readJSON<Partial<LoyaltySettings>>("loyalty-settings.json", {});
-  return { ...DEFAULT_LOYALTY_SETTINGS, ...saved };
+  const saved = await readJSON<LegacyLoyaltyShape>("loyalty-settings.json", {});
+  return hydrateLoyalty(saved);
 }
 
 export async function updateLoyaltySettings(updates: Partial<LoyaltySettings>): Promise<LoyaltySettings> {
   return withLock("loyalty-settings.json", async () => {
-    const current = await readJSON<Partial<LoyaltySettings>>("loyalty-settings.json", {});
-    const merged = { ...DEFAULT_LOYALTY_SETTINGS, ...current, ...updates };
+    const current = await readJSON<LegacyLoyaltyShape>("loyalty-settings.json", {});
+    const hydrated = hydrateLoyalty(current);
+    const merged: LoyaltySettings = { ...hydrated, ...updates };
     await writeJSON("loyalty-settings.json", merged);
     return merged;
   });
@@ -4847,9 +4906,13 @@ export async function gdprRedactFeedback(canonicalPhone: string, tombstone: stri
 
 // --- Cash sessions ------------------------------------------------------
 
-export async function getCashSessions(locationSlug?: string): Promise<CashSession[]> {
+export async function getCashSessions(
+  locationSlug?: string,
+  opts: { includeHidden?: boolean } = {},
+): Promise<CashSession[]> {
   const all = await readJSON<CashSession[]>("cash-sessions.json", []);
-  const list = locationSlug ? all.filter((s) => s.locationSlug === locationSlug) : all;
+  let list = locationSlug ? all.filter((s) => s.locationSlug === locationSlug) : all;
+  if (!opts.includeHidden) list = list.filter((s) => !s.hidden);
   // Most recent first so the UI doesn't have to re-sort.
   return list.slice().sort((a, b) => b.openedAt.localeCompare(a.openedAt));
 }
@@ -4935,6 +4998,31 @@ export async function closeCashSession(
     if (notes) session.notes = notes;
     await writeJSON("cash-sessions.json", all);
     return session;
+  });
+}
+
+export async function setCashSessionHidden(
+  sessionId: string,
+  hidden: boolean,
+): Promise<CashSession | null> {
+  return withLock("cash-sessions.json", async () => {
+    const all = await readJSON<CashSession[]>("cash-sessions.json", []);
+    const idx = all.findIndex((s) => s.id === sessionId);
+    if (idx === -1) return null;
+    all[idx].hidden = hidden;
+    await writeJSON("cash-sessions.json", all);
+    return all[idx];
+  });
+}
+
+export async function deleteCashSession(sessionId: string): Promise<CashSession | null> {
+  return withLock("cash-sessions.json", async () => {
+    const all = await readJSON<CashSession[]>("cash-sessions.json", []);
+    const idx = all.findIndex((s) => s.id === sessionId);
+    if (idx === -1) return null;
+    const [removed] = all.splice(idx, 1);
+    await writeJSON("cash-sessions.json", all);
+    return removed;
   });
 }
 

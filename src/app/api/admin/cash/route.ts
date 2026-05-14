@@ -10,8 +10,11 @@ import { cashOpenSchema, parseBody } from "@/lib/api-schemas";
 
 export const GET = withAdmin(
   { locationParam: "location" },
-  async (_req, _ctx, { locationSlug }) => {
-    return NextResponse.json(await getCashSessions(locationSlug ?? undefined));
+  async (req, _ctx, { locationSlug }) => {
+    const includeHidden = req.nextUrl.searchParams.get("includeHidden") === "1";
+    return NextResponse.json(
+      await getCashSessions(locationSlug ?? undefined, { includeHidden }),
+    );
   },
 );
 

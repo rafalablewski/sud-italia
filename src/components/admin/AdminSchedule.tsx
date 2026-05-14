@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight, MapPin, Plus, Trash2 } from "lucide-react";
+import { CalendarDays, MapPin, Plus, Trash2 } from "lucide-react";
 import type { Shift, ShiftStatus, StaffMember, StaffRole } from "@/data/types";
 import { getActiveLocations } from "@/data/locations";
 import { useAdminLocation } from "./v2/LocationContext";
@@ -13,6 +13,7 @@ import {
   CardBody,
   CardHeader,
   ConfirmDialog,
+  DatePager,
   Dialog,
   EmptyState,
   Input,
@@ -222,23 +223,13 @@ export function AdminSchedule() {
               aria-label="Location"
             />
           </div>
-          <Button variant="secondary" leadingIcon={<ChevronLeft className="h-3.5 w-3.5" />} onClick={() => setWeekStart((w) => addDays(w, -7))}>
-            Prev week
-          </Button>
-          <Button variant="ghost" onClick={() => setWeekStart(weekStartIso(isoDate(new Date())))}>
-            This week
-          </Button>
-          <Button variant="secondary" trailingIcon={<ChevronRight className="h-3.5 w-3.5" />} onClick={() => setWeekStart((w) => addDays(w, 7))}>
-            Next week
-          </Button>
+          <DatePager unit="week" value={weekStart} onChange={setWeekStart} />
         </div>
       </header>
 
       <Card padding="compact">
         <div className="v2-summary-row">
-          <span className="v2-muted">
-            <CalendarDays className="h-3.5 w-3.5" /> Week of {new Date(weekStart).toLocaleDateString()}
-          </span>
+          <span className="v2-muted">Hours · cost</span>
           <span className="tabular v2-summary-val">
             {totals.totalHours.toFixed(1)}h · {(totals.totalCost / 100).toLocaleString("pl-PL", { maximumFractionDigits: 0 })} zł
           </span>

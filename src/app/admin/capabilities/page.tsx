@@ -365,7 +365,8 @@ export default async function CapabilitiesPage() {
         {
           name: "Live activity bar (social proof)",
           status: "live",
-          summary: "On-menu strip: orders/hour, currently preparing, trending item, avg prep time.",
+          href: "/admin/growth",
+          summary: "Customer-site strip of dynamic widgets (orders/hour, currently preparing, trending, prep time, happy hour, truck location, free text). CRUD in Growth → Live widgets, per-location targeting, cap of 7 active.",
         },
         {
           name: "Speed Guarantee",
@@ -413,7 +414,7 @@ export default async function CapabilitiesPage() {
           name: "Cash sessions + drops",
           status: "live",
           href: "/admin/cash",
-          summary: "Open/close drawer, drops, variance vs orders.",
+          summary: "Open/close drawer, drops, variance vs orders. History rows can be hidden (soft) or deleted (audit-logged).",
         },
         {
           name: "Slots",

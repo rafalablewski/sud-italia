@@ -212,6 +212,11 @@ export const cashCloseSchema = z.object({
   notes: z.string().max(500).optional(),
 });
 
+/** PATCH /api/admin/cash/[id] — toggle the soft-hidden flag. */
+export const cashPatchSchema = z.object({
+  hidden: z.boolean(),
+});
+
 // --- Admin: loyalty -------------------------------------------------------
 
 /**

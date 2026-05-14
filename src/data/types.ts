@@ -550,6 +550,9 @@ export interface CashSession {
   /** closingCountGrosze − (openingFloat + sum(drops)). Negative ⇒ short; positive ⇒ over. */
   varianceGrosze?: number;
   notes?: string;
+  /** Soft-hidden from the default History view. The row is preserved for
+   *  audit and can be revealed via the "Show hidden" toggle. */
+  hidden?: boolean;
 }
 
 // --- Compliance calendar (licences, inspections, insurance) ---

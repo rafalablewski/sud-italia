@@ -4,10 +4,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Banknote,
   CircleDollarSign,
+  Eye,
+  EyeOff,
   ListPlus,
   Lock,
   MapPin,
   Plus,
+  Trash2,
   Unlock,
 } from "lucide-react";
 import { useAdminLocation } from "./v2/LocationContext";
@@ -18,6 +21,7 @@ import {
   Card,
   CardBody,
   CardHeader,
+  ConfirmDialog,
   Dialog,
   EmptyState,
   Input,
@@ -26,32 +30,10 @@ import {
 } from "./v2/ui";
 import { formatPrice } from "@/lib/utils";
 import { getActiveLocations } from "@/data/locations";
+import type { CashDrop, CashSession } from "@/data/types";
 
 const activeLocations = getActiveLocations();
 const FALLBACK_LOC = activeLocations[0]?.slug ?? "krakow";
-
-interface CashDrop {
-  id: string;
-  amountGrosze: number;
-  kind: "sale" | "drop" | "payout" | "adjust";
-  at: string;
-  notes?: string;
-  actor?: string;
-}
-
-interface CashSession {
-  id: string;
-  locationSlug: string;
-  openedAt: string;
-  openingFloat: number;
-  openedBy: string;
-  drops: CashDrop[];
-  closingCountGrosze?: number;
-  closedAt?: string;
-  closedBy?: string;
-  varianceGrosze?: number;
-  notes?: string;
-}
 
 const KIND_LABEL: Record<CashDrop["kind"], string> = {
   sale: "Cash sale",
@@ -93,13 +75,22 @@ export function AdminCash() {
   const [openDialog, setOpenDialog] = useState(false);
   const [dropDialogFor, setDropDialogFor] = useState<CashSession | null>(null);
   const [closeDialogFor, setCloseDialogFor] = useState<CashSession | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<CashSession | null>(null);
+  const [showHidden, setShowHidden] = useState(false);
+  // Per-session id currently undergoing a hide/restore PATCH. Used to disable
+  // the row's hide/delete buttons so rapid double-clicks don't fire two
+  // concurrent mutations.
+  const [busyRowId, setBusyRowId] = useState<string | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
 
   const locOptions = activeLocations.map((l) => ({ value: l.slug, label: l.city }));
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/cash?location=${encodeURIComponent(pageLoc)}`);
+      const qs = new URLSearchParams({ location: pageLoc });
+      if (showHidden) qs.set("includeHidden", "1");
+      const res = await fetch(`/api/admin/cash?${qs.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setSessions(Array.isArray(data) ? data : []);
@@ -107,7 +98,47 @@ export function AdminCash() {
     } finally {
       setLoading(false);
     }
-  }, [pageLoc]);
+  }, [pageLoc, showHidden]);
+
+  const toggleHidden = async (s: CashSession) => {
+    if (busyRowId) return;
+    const next = !s.hidden;
+    setBusyRowId(s.id);
+    try {
+      const res = await fetch(`/api/admin/cash/${s.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hidden: next }),
+      });
+      if (res.ok) {
+        toast.success(next ? "Session hidden" : "Session restored");
+        await fetchAll();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast.error("Could not update session", data?.error);
+      }
+    } finally {
+      setBusyRowId(null);
+    }
+  };
+
+  const doDelete = async (): Promise<boolean> => {
+    if (!pendingDelete || deleteBusy) return false;
+    setDeleteBusy(true);
+    try {
+      const res = await fetch(`/api/admin/cash/${pendingDelete.id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success("Session deleted");
+        await fetchAll();
+        return true;
+      }
+      const data = await res.json().catch(() => ({}));
+      toast.error("Could not delete session", data?.error);
+      return false;
+    } finally {
+      setDeleteBusy(false);
+    }
+  };
 
   useEffect(() => {
     fetchAll();
@@ -234,49 +265,75 @@ export function AdminCash() {
 
       {!loading && sessions.length > 0 && (
         <Card>
-          <CardHeader title="History" description={`${sessions.length} session${sessions.length === 1 ? "" : "s"} at this location.`} />
+          <CardHeader
+            title="History"
+            description={`${sessions.length} session${sessions.length === 1 ? "" : "s"} at this location${showHidden ? " (including hidden)" : ""}.`}
+            actions={
+              <Button
+                size="sm"
+                variant="ghost"
+                leadingIcon={showHidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                onClick={() => setShowHidden((v) => !v)}
+              >
+                {showHidden ? "Hide hidden" : "Show hidden"}
+              </Button>
+            }
+          />
           <CardBody>
-            <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            <ul className="v2-cash-history">
               {sessions.map((s) => {
                 const expected = expectedFromSession(s);
                 const isClosed = !!s.closedAt;
                 return (
-                  <li
-                    key={s.id}
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 1fr 1fr 1fr",
-                      gap: "0.5rem",
-                      alignItems: "center",
-                      padding: "0.5rem 0",
-                      borderTop: "1px solid var(--border)",
-                      fontSize: "0.875rem",
-                    }}
-                  >
-                    <span>
+                  <li key={s.id} className={`v2-cash-row${s.hidden ? " is-hidden" : ""}`}>
+                    <span className="v2-cash-row-when">
                       <Badge tone={isClosed ? "neutral" : "warning"} variant="soft">
                         {isClosed ? "Closed" : "Open"}
                       </Badge>
-                      <span className="v2-muted" style={{ marginLeft: "0.5rem" }}>
-                        {new Date(s.openedAt).toLocaleString()}
-                      </span>
+                      {s.hidden && (
+                        <Badge tone="neutral" variant="soft">
+                          Hidden
+                        </Badge>
+                      )}
+                      <span className="v2-muted">{new Date(s.openedAt).toLocaleString()}</span>
                     </span>
                     <span className="v2-muted">Opening {fmtZl(s.openingFloat)}</span>
                     <span className="v2-muted">Expected {fmtZl(expected)}</span>
-                    {isClosed ? (
-                      <span style={{ display: "flex", alignItems: "center", gap: "0.5rem", justifyContent: "flex-end" }}>
-                        <span className="v2-muted">Counted {fmtZl(s.closingCountGrosze ?? 0)}</span>
-                        <Badge tone={varianceTone(s.varianceGrosze ?? 0)} variant="soft">
-                          {((s.varianceGrosze ?? 0) >= 0 ? "+" : "") + formatPrice(s.varianceGrosze ?? 0)}
-                        </Badge>
-                      </span>
-                    ) : (
-                      <span style={{ display: "flex", justifyContent: "flex-end" }}>
+                    <span className="v2-cash-row-result">
+                      {isClosed ? (
+                        <>
+                          <span className="v2-muted">Counted {fmtZl(s.closingCountGrosze ?? 0)}</span>
+                          <Badge tone={varianceTone(s.varianceGrosze ?? 0)} variant="soft">
+                            {((s.varianceGrosze ?? 0) >= 0 ? "+" : "") + formatPrice(s.varianceGrosze ?? 0)}
+                          </Badge>
+                        </>
+                      ) : (
                         <Button size="sm" variant="ghost" onClick={() => setCloseDialogFor(s)}>
                           Close
                         </Button>
-                      </span>
-                    )}
+                      )}
+                    </span>
+                    <span className="v2-cash-row-actions">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        leadingIcon={s.hidden ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                        onClick={() => toggleHidden(s)}
+                        loading={busyRowId === s.id}
+                        disabled={busyRowId !== null && busyRowId !== s.id}
+                        title={s.hidden ? "Restore to default view" : "Hide from default view"}
+                        aria-label={s.hidden ? "Restore session" : "Hide session"}
+                      />
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        leadingIcon={<Trash2 className="h-3.5 w-3.5" />}
+                        onClick={() => setPendingDelete(s)}
+                        disabled={busyRowId !== null}
+                        title="Delete session permanently"
+                        aria-label="Delete session"
+                      />
+                    </span>
                   </li>
                 );
               })}
@@ -320,6 +377,20 @@ export function AdminCash() {
           }}
         />
       )}
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={doDelete}
+        title="Delete this cash session?"
+        description={
+          pendingDelete
+            ? `Permanently removes the ${pendingDelete.closedAt ? "closed" : "open"} session from ${new Date(pendingDelete.openedAt).toLocaleString()}. Audit log keeps a record. Prefer "Hide" to remove from view without losing data.`
+            : ""
+        }
+        confirmLabel="Delete"
+        destructive
+      />
     </div>
   );
 }

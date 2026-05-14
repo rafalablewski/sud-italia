@@ -5,9 +5,11 @@ import {
   appendAuditLog,
   appendCashDrop,
   closeCashSession,
+  deleteCashSession,
   getCashSessionById,
+  setCashSessionHidden,
 } from "@/lib/store";
-import { cashCloseSchema, cashDropSchema } from "@/lib/api-schemas";
+import { cashCloseSchema, cashDropSchema, cashPatchSchema } from "@/lib/api-schemas";
 
 export const GET = withAdmin<{ params: Promise<{ id: string }> }>(
   {},
@@ -112,5 +114,77 @@ export const POST = withAdmin<{ params: Promise<{ id: string }> }>(
     }
 
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
+  },
+);
+
+/** Toggle `hidden` on a cash session. Body: `{ hidden: boolean }`.
+ *  Hiding is a soft-delete: the row is removed from the default History view
+ *  but retained for audit and revealable via "Show hidden". */
+export const PATCH = withAdmin<{ params: Promise<{ id: string }> }>(
+  { roles: ["manager", "owner"] },
+  async (req, { params }, { user }) => {
+    const { id } = await params;
+    const session = await getCashSessionById(id);
+    if (!session) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if (!(await hasLocationAccess(session.locationSlug))) {
+      return NextResponse.json(
+        { error: `Session is not authorized for location "${session.locationSlug}"` },
+        { status: 403 },
+      );
+    }
+    const parsed = cashPatchSchema.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          error: "Validation failed",
+          details: parsed.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })),
+        },
+        { status: 400 },
+      );
+    }
+    const { hidden } = parsed.data;
+    const updated = await setCashSessionHidden(id, hidden);
+    if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    await appendAuditLog({
+      actor: user.email || user.id,
+      action: hidden ? "cash.hide" : "cash.unhide",
+      entityType: "cash_session",
+      entityId: id,
+      after: { hidden },
+    });
+    return NextResponse.json(updated);
+  },
+);
+
+/** Hard-delete a cash session. Used for fixing fat-finger opens and test data.
+ *  Real reconciled history should be hidden, not deleted — but managers need
+ *  an escape hatch when the row is wrong. Audit-logged. */
+export const DELETE = withAdmin<{ params: Promise<{ id: string }> }>(
+  { roles: ["manager", "owner"] },
+  async (_req, { params }, { user }) => {
+    const { id } = await params;
+    const session = await getCashSessionById(id);
+    if (!session) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if (!(await hasLocationAccess(session.locationSlug))) {
+      return NextResponse.json(
+        { error: `Session is not authorized for location "${session.locationSlug}"` },
+        { status: 403 },
+      );
+    }
+    const removed = await deleteCashSession(id);
+    if (!removed) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    await appendAuditLog({
+      actor: user.email || user.id,
+      action: "cash.delete",
+      entityType: "cash_session",
+      entityId: id,
+      before: {
+        openedAt: removed.openedAt,
+        closedAt: removed.closedAt,
+        openingFloat: removed.openingFloat,
+        varianceGrosze: removed.varianceGrosze,
+      },
+    });
+    return NextResponse.json({ ok: true });
   },
 );
