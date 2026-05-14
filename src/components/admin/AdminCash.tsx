@@ -55,6 +55,7 @@ interface CashSession {
   closedBy?: string;
   varianceGrosze?: number;
   notes?: string;
+  hidden?: boolean;
 }
 
 const KIND_LABEL: Record<CashDrop["kind"], string> = {
