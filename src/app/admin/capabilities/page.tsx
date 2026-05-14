@@ -413,7 +413,7 @@ export default async function CapabilitiesPage() {
           name: "Cash sessions + drops",
           status: "live",
           href: "/admin/cash",
-          summary: "Open/close drawer, drops, variance vs orders.",
+          summary: "Open/close drawer, drops, variance vs orders. History rows can be hidden (soft) or deleted (audit-logged).",
         },
         {
           name: "Slots",

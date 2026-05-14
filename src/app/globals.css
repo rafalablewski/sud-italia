@@ -1864,6 +1864,20 @@ html { scroll-behavior: smooth; }
 .v2-cell-sub { font-size: var(--text-2xs); color: var(--fg-subtle); }
 .v2-inline { display: inline-flex; align-items: center; gap: 4px; }
 
+/* Icon-prefixed informational note used inside compact cards (e.g. the
+   role-gate footnote on /admin/users). Top-aligns the icon with the first
+   line of wrapped text so it doesn't drift to the vertical centre when the
+   message breaks across two lines. */
+.v2-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: var(--text-sm);
+  line-height: 1.55;
+  color: var(--fg-muted);
+}
+.v2-note > svg { flex-shrink: 0; margin-top: 3px; color: var(--fg-subtle); }
+
 /* Kanban */
 .v2-kanban {
   display: grid;
@@ -3005,8 +3019,77 @@ html { scroll-behavior: smooth; }
 }
 
 /* ============================
+   ADMIN v2 — CASH
+   ============================ */
+
+/* Session history list. Inter-row dividers only — no border on the first
+   row, which previously rendered as a stray line above the data when only
+   one session existed. */
+.v2-cash-history {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+.v2-cash-row {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr 1.4fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 0;
+  font-size: var(--text-sm);
+}
+.v2-cash-row + .v2-cash-row { border-top: 1px solid var(--border); }
+.v2-cash-row.is-hidden { opacity: 0.55; }
+.v2-cash-row-when { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.v2-cash-row-result { display: inline-flex; align-items: center; gap: 8px; justify-content: flex-end; }
+.v2-cash-row-actions { display: inline-flex; align-items: center; gap: 4px; justify-content: flex-end; }
+@media (max-width: 720px) {
+  .v2-cash-row {
+    grid-template-columns: 1fr auto;
+    gap: 6px;
+  }
+  .v2-cash-row-result { grid-column: 1 / -1; justify-content: flex-start; }
+}
+
+/* ============================
    ADMIN v2 — SCHEDULE
    ============================ */
+
+/* Segmented pager used for Prev / This week / Next. Wraps three ghost buttons
+   into a single bordered group with internal dividers so the trio reads as one
+   control instead of two filled siblings flanking a transparent middle. */
+.v2-week-pager {
+  display: inline-flex;
+  align-items: stretch;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.v2-week-pager > .v2-btn {
+  border-radius: 0;
+  border: none;
+  border-right: 1px solid var(--border);
+  background: transparent;
+  color: var(--fg-muted);
+}
+.v2-week-pager > .v2-btn:last-child { border-right: none; }
+.v2-week-pager > .v2-btn:hover:not(:disabled):not(.is-loading) {
+  background: var(--surface-3);
+  color: var(--fg);
+}
+.v2-week-pager > .v2-btn.is-current {
+  background: var(--brand-soft);
+  color: var(--fg);
+  font-weight: 600;
+}
+.v2-week-pager > .v2-btn:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: -2px;
+  z-index: 1;
+}
 
 .v2-schedule-grid {
   display: grid;

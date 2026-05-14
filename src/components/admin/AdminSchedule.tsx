@@ -106,6 +106,7 @@ export function AdminSchedule() {
   const days = useMemo(() => rangeDays(weekStart, 7), [weekStart]);
   const rangeFrom = days[0];
   const rangeTo = `${days[6]}T23:59:59`;
+  const isCurrentWeek = weekStart === weekStartIso(isoDate(new Date()));
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -222,15 +223,32 @@ export function AdminSchedule() {
               aria-label="Location"
             />
           </div>
-          <Button variant="secondary" leadingIcon={<ChevronLeft className="h-3.5 w-3.5" />} onClick={() => setWeekStart((w) => addDays(w, -7))}>
-            Prev week
-          </Button>
-          <Button variant="ghost" onClick={() => setWeekStart(weekStartIso(isoDate(new Date())))}>
-            This week
-          </Button>
-          <Button variant="secondary" trailingIcon={<ChevronRight className="h-3.5 w-3.5" />} onClick={() => setWeekStart((w) => addDays(w, 7))}>
-            Next week
-          </Button>
+          <div className="v2-week-pager" role="group" aria-label="Week navigation">
+            <Button
+              variant="ghost"
+              leadingIcon={<ChevronLeft className="h-3.5 w-3.5" />}
+              onClick={() => setWeekStart((w) => addDays(w, -7))}
+              aria-label="Previous week"
+            >
+              Prev
+            </Button>
+            <Button
+              variant="ghost"
+              className={isCurrentWeek ? "is-current" : ""}
+              onClick={() => setWeekStart(weekStartIso(isoDate(new Date())))}
+              aria-current={isCurrentWeek || undefined}
+            >
+              This week
+            </Button>
+            <Button
+              variant="ghost"
+              trailingIcon={<ChevronRight className="h-3.5 w-3.5" />}
+              onClick={() => setWeekStart((w) => addDays(w, 7))}
+              aria-label="Next week"
+            >
+              Next
+            </Button>
+          </div>
         </div>
       </header>
 

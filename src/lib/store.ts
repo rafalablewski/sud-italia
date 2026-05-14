@@ -4847,9 +4847,13 @@ export async function gdprRedactFeedback(canonicalPhone: string, tombstone: stri
 
 // --- Cash sessions ------------------------------------------------------
 
-export async function getCashSessions(locationSlug?: string): Promise<CashSession[]> {
+export async function getCashSessions(
+  locationSlug?: string,
+  opts: { includeHidden?: boolean } = {},
+): Promise<CashSession[]> {
   const all = await readJSON<CashSession[]>("cash-sessions.json", []);
-  const list = locationSlug ? all.filter((s) => s.locationSlug === locationSlug) : all;
+  let list = locationSlug ? all.filter((s) => s.locationSlug === locationSlug) : all;
+  if (!opts.includeHidden) list = list.filter((s) => !s.hidden);
   // Most recent first so the UI doesn't have to re-sort.
   return list.slice().sort((a, b) => b.openedAt.localeCompare(a.openedAt));
 }
@@ -4935,6 +4939,31 @@ export async function closeCashSession(
     if (notes) session.notes = notes;
     await writeJSON("cash-sessions.json", all);
     return session;
+  });
+}
+
+export async function setCashSessionHidden(
+  sessionId: string,
+  hidden: boolean,
+): Promise<CashSession | null> {
+  return withLock("cash-sessions.json", async () => {
+    const all = await readJSON<CashSession[]>("cash-sessions.json", []);
+    const idx = all.findIndex((s) => s.id === sessionId);
+    if (idx === -1) return null;
+    all[idx].hidden = hidden;
+    await writeJSON("cash-sessions.json", all);
+    return all[idx];
+  });
+}
+
+export async function deleteCashSession(sessionId: string): Promise<CashSession | null> {
+  return withLock("cash-sessions.json", async () => {
+    const all = await readJSON<CashSession[]>("cash-sessions.json", []);
+    const idx = all.findIndex((s) => s.id === sessionId);
+    if (idx === -1) return null;
+    const [removed] = all.splice(idx, 1);
+    await writeJSON("cash-sessions.json", all);
+    return removed;
   });
 }
 

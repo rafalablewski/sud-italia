@@ -231,9 +231,9 @@ export function AdminUsers() {
       )}
 
       <Card padding="compact">
-        <div className="v2-inline">
-          <ShieldCheck className="h-4 w-4 v2-muted" />
-          <span className="v2-muted">
+        <div className="v2-note">
+          <ShieldCheck className="h-4 w-4" />
+          <span>
             Role gate active on <span className="mono">/api/admin/users</span> writes (owner / manager). Other endpoints will adopt the same gate as per-user sessions land.
           </span>
         </div>
