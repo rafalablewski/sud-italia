@@ -8,8 +8,17 @@ import { CartUpsell } from "./CartUpsell";
 import { DeliveryProgress } from "./DeliveryProgress";
 import { ComboDealBanner } from "./ComboDealBanner";
 import { LoyaltyEarnPreview } from "./LoyaltyEarnPreview";
+import { TodBanner } from "./TodBanner";
+import { TierPerkBanner } from "./TierPerkBanner";
 import { formatPrice } from "@/lib/utils";
-import { getCartSuggestions, getActiveComboDeals, UpsellConfig } from "@/lib/upsell";
+import {
+  getCartSuggestions,
+  getActiveComboDeals,
+  getDeliveryThresholdForCustomer,
+  getCustomerSegment,
+  UpsellConfig,
+} from "@/lib/upsell";
+import { calculateTier } from "@/lib/loyalty";
 import {
   ShoppingCart,
   Trash2,
@@ -126,6 +135,21 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
   const tipAmount = useCartStore((s) => s.tipAmount);
   const setTipAmount = useCartStore((s) => s.setTipAmount);
   const total = subtotal - comboDiscount + tipAmount;
+
+  // Per-segment free-delivery threshold (audit §2.5 Uber Eats).
+  // Resolves the customer's tier from their points balance and feeds the
+  // segmented threshold to DeliveryProgress so the bar shows the right
+  // target. The same threshold is passed to computeDeliveryFee in
+  // /api/checkout so the receipt matches what the bar promised.
+  const deliverySegment = loyaltyCustomer
+    ? {
+        ordersCount: loyaltyCustomer.ordersCount,
+        tier: calculateTier(loyaltyCustomer.points),
+      }
+    : null;
+  const deliveryThreshold = getDeliveryThresholdForCustomer(deliverySegment);
+  const isDeliveryPersonalised =
+    !!deliverySegment && getCustomerSegment(deliverySegment) !== "regular";
 
   const isPhoneValid = PHONE_PATTERN.test(customerPhone.trim());
 
@@ -284,6 +308,11 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
         </div>
       )}
 
+      {/* Time-of-day banner (audit §2.3) — picks one variant by local hour.
+          Sits above the items list so it primes the customer before they
+          scroll into their cart contents. */}
+      <TodBanner allMenuItems={allMenuItems} />
+
       {/* Items list */}
       <div className="px-5">
         {items.map((item) => {
@@ -326,6 +355,10 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
         )}
       </div>
 
+      {/* Gold/Platinum perk banner (audit §2.2 row 6) — visible only to
+          eligible tiers; offers a comp'd antipasto via a price-0 cart line. */}
+      <TierPerkBanner allMenuItems={allMenuItems} />
+
       {/* Combo deal banner */}
       <ComboDealBanner cartItems={items} />
 
@@ -333,7 +366,14 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
       <CartUpsell suggestions={suggestions} />
 
       {/* Delivery progress bar */}
-      <DeliveryProgress cartTotal={total} fulfillmentType={fulfillmentType} />
+      {/* Per-segment threshold (audit §2.5 Uber Eats): first-timers see 39 PLN,
+          regulars 60 PLN, Gold/Platinum 0 (already free). */}
+      <DeliveryProgress
+        cartTotal={total}
+        fulfillmentType={fulfillmentType}
+        thresholdGrosze={deliveryThreshold}
+        isPersonalised={isDeliveryPersonalised}
+      />
 
       {/* Fulfillment type selector */}
       <div className="px-5 mt-4 mb-3">

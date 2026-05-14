@@ -24,6 +24,12 @@
   --animate-pulse-soft: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   --animate-bounce-in: bounce-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
   --animate-count-up: count-up 0.3s ease-out;
+  /* Free-delivery progress bar (audit §2.1) — shimmer crawl while below the
+   *  threshold; one-shot sweep + pop-in on the celebratory unlock card. */
+  --animate-delivery-shimmer: delivery-shimmer 1.8s linear infinite;
+  --animate-delivery-sweep: delivery-sweep 1.4s ease-out 0.1s 1 both;
+  --animate-delivery-unlock: delivery-unlock 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  --animate-delivery-medallion: delivery-medallion 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* ============================
@@ -91,6 +97,26 @@
 @keyframes progress-fill {
   from { width: 0; }
   to { width: 100%; }
+}
+
+/* Free-delivery surfaces (audit §2.1 + §2.5) */
+@keyframes delivery-shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+@keyframes delivery-sweep {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+@keyframes delivery-unlock {
+  0%   { transform: scale(0.96); opacity: 0; }
+  60%  { transform: scale(1.01); }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes delivery-medallion {
+  0%   { transform: scale(0.4) rotate(-12deg); opacity: 0; }
+  55%  { transform: scale(1.12) rotate(4deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); }
 }
 
 body {

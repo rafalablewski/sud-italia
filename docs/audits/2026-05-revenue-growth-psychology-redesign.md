@@ -11,6 +11,21 @@
 
 ---
 
+## Implementation status
+
+Section 2 of this audit (**Advanced Upsell Systems**) is the first wave of work
+landing in production. Every row of the §2 design spec carries an inline tick:
+
+- ✅ shipped — live in production on the location pages today
+- 🟡 partial — visible to the customer, with a follow-up scoped (admin
+  surface, ML scorer, etc.) tracked in `/admin/capabilities`
+- ⛔ rejected — overruled on brand-integrity grounds (see §2.2)
+- ⏳ deferred — out of scope for §2; tracked in §3, §6, §9 of this audit
+
+Use `git log -- src/components/cart` for the surface-by-surface commit trail.
+
+---
+
 ## 0. The Headline Numbers
 
 ### 0.1 Where the money is
@@ -106,13 +121,13 @@ Cart abandonment in QSR digital averages **52–68%** (Baymard 2024). Sud Italia
 The current `getCartSuggestions` (`src/lib/upsell.ts`) suggests categories complementary to what's in the cart. **It's correct, but invisible and untimed.** Here is the institutional-grade sequence:
 
 ```
-T+0   (item added to cart)
-       │
+T+0   (item added to cart)                                           ✅ shipped
+       │                              src/components/cart/AddToCartToast.tsx
        └─ Inline toast: "🍕 Margherita added. Customers usually add an espresso."
           (No CTA — implant the seed only. Annoying = ignored.)
 
-T+0   (cart drawer opens)
-       │
+T+0   (cart drawer opens)                                            ✅ shipped
+       │                                src/components/cart/CartUpsell.tsx
        └─ Above subtotal:
           ┌─────────────────────────────────────────┐
           │  Complete the meal                       │
@@ -124,48 +139,48 @@ T+0   (cart drawer opens)
           │   ⬆ Tap to add, no second screen.         │
           └─────────────────────────────────────────┘
 
-T+0   (cart drawer, post-attach)
-       │
-       └─ Free-delivery bar (animated):
-          "PLN 8 to free delivery 🚚  ●●●●●●●○○○"
-          ↑ visible only if delivery type + below threshold.
+T+0   (cart drawer, post-attach)                                     ✅ shipped
+       │                              src/components/cart/DeliveryProgress.tsx
+       └─ Free-delivery bar (animated, shimmer overlay):
+          "PLN 8 to free delivery 🚚"
+          On unlock: gold→green medallion card with pop-in + sweep.
 
-T+pay (Stripe sheet)
-       │
+T+pay (Stripe sheet)                                                 ⏳ deferred
+       │                              Stripe Payment Request API ticket
        └─ Apple Pay primary CTA. Card secondary.
 ```
 
 ### 2.2 Upsell Taxonomy — Which Upsells Lift, Which Annoy
 
-| Upsell | Felt as | AOV lift | Implementation in this codebase |
-|---|---|---:|---|
-| "Customers usually add…" (data-driven) | helpful | +9% | `upsell.ts` has the rules — needs UI |
-| "Make it a large +PLN 6" (modifier) | smart | +14% | requires `CartItem.modifiers` (missing) |
-| "Add Pizzaiolo's espresso PLN 6" (named, named) | curated | +11% | needs hero-prompted upsell |
-| "Family Feast: 2 pizzas + 2 sides + 4 drinks, save PLN 28" | savings | +22% AOV per family order | bundle engine |
-| "Lunch combo PLN 39: any pasta + drink" | value | +18% | bundle engine + time-of-day gate |
-| "Tap to make it a Gold-Tier order: +pesto bruschetta included" | status | +9% | tier-conditional upsell |
-| "Try the new burrata — first 12 today" | scarcity | +6% | seasonal-item infra exists |
-| **Don't:** "Are you sure you want to add fries?" | annoying | -3% | don't ship |
-| **Don't:** Pop-up after "Add to cart" | annoying | -5% | never block a happy flow |
-| **Don't:** "You forgot dessert!" guilt | annoying | -2% | don't ship |
+| Status | Upsell | Felt as | AOV lift | Implementation in this codebase |
+|---|---|---|---:|---|
+| ✅ | "Customers usually add…" (data-driven) | helpful | +9% | `AddToCartToast` seed copy + `CartUpsell` chips |
+| ⛔ | "Make it a large +PLN 6" (modifier) | smart | +14% | **Rejected** — fixed Neapolitan portions are a brand core value (overrules §2.5 Starbucks too) |
+| ✅ | "Add Pizzaiolo's espresso PLN 6" (named, named) | curated | +11% | `CartUpsell` chip with `suggestion.reason` copy |
+| ⏳ | "Family Feast: 2 pizzas + 2 sides + 4 drinks, save PLN 28" | savings | +22% AOV per family order | bundle engine — §3.2 territory, separate sprint |
+| 🟡 | "Lunch combo PLN 39: any pasta + drink" | value | +18% | `TodBanner` lunch variant surfaces the existing meal-deal combo during 11:30–13:00 window |
+| ✅ | "Tap to make it a Gold-Tier order: +pesto bruschetta included" | status | +9% | `TierPerkBanner` — Gold/Platinum-gated, comp'd via price-0 cart line |
+| ⏳ | "Try the new burrata — first 12 today" | scarcity | +6% | needs per-day inventory tracking on seasonal items |
+| ⛔ | **Don't:** "Are you sure you want to add fries?" | annoying | -3% | not shipped |
+| ⛔ | **Don't:** Pop-up after "Add to cart" | annoying | -5% | not shipped |
+| ⛔ | **Don't:** "You forgot dessert!" guilt | annoying | -2% | not shipped |
 
 ### 2.3 Time-of-Day, Weather, And Cohort Triggers
 
-| Trigger | Surface | Example |
-|---|---|---|
-| 07:00–10:30 | Hero card | "Pre-order lunch now — 12:00 slot fills by 11:15" |
-| 11:30–13:00 (rush) | Cart top | "Lunch combo: pasta + drink PLN 39 (save PLN 8)" |
-| 14:30–16:30 (afternoon) | Cart top | "Espresso break PLN 6 — pick up in 4 min" |
-| 17:00–19:30 | Cart top | "Family Feast PLN 119 — feeds 4, ready 19:30" |
-| 20:30+ | Cart top | "Last call: -15% on any pizza tonight" (drives clearance, protects food cost) |
-| Rain forecast | Hero card | "Rainy day = warm pasta. Free delivery over PLN 50 today." |
-| Customer's 3rd order | Cart top | "Loyalty unlock: try the Pizzaiolo's Choice (Platinum-only — comp this one)" |
-| Returning after 14d gap | Push + landing | "Margherita waiting? Your usual is PLN 28 — one tap, ready 18:14" |
+| Status | Trigger | Surface | Example |
+|---|---|---|---|
+| ✅ | 07:00–10:00 | Cart top | "Pre-order lunch — beat the noon rush" (`TodBanner` morning variant) |
+| ✅ | 11:00–13:00 (rush) | Cart top | "Lunch combo — pasta + drink, save 10%" (`TodBanner` lunch variant, surfaces the meal-deal combo) |
+| ✅ | 14:00–16:00 (afternoon) | Cart top | "Espresso break — pickup in 4 min" with one-tap add (`TodBanner` afternoon) |
+| ✅ | 17:00–19:00 | Cart top | "Cooking for the table tonight?" hint with meal-deal pairing (`TodBanner` dinner) |
+| ✅ | 20:00–23:00 | Cart top | "Late-night espresso & dessert" one-tap espresso add (`TodBanner` late) |
+| ⏳ | Rain forecast | Hero card | "Rainy day = warm pasta. Free delivery over PLN 50 today." — needs weather feed wiring |
+| ⏳ | Customer's 3rd order | Cart top | "Loyalty unlock: try the Pizzaiolo's Choice (Platinum-only — comp this one)" — needs lifetime-order trigger |
+| ⏳ | Returning after 14d gap | Push + landing | "Margherita waiting? Your usual is PLN 28 — one tap, ready 18:14" — needs push + last-order lookup |
 
-All of this is implementable on top of the existing `getLoyaltySettings()` + `seasonal items` infra without new server primitives.
+The five hour-window variants are hardcoded in `DEFAULT_TIME_WINDOWS` inside `upsell.ts`. Admin override via `LocationUpsellConfig.timeWindows[]` is the next ticket — once that lands the rain/3rd-order/14d-gap rows above unlock as trigger types in the same admin surface.
 
-### 2.4 Margin-Optimised Upsell Ranking
+### 2.4 Margin-Optimised Upsell Ranking ✅ shipped
 
 From `src/data/menus/krakow.ts` actuals:
 
@@ -180,13 +195,15 @@ From `src/data/menus/krakow.ts` actuals:
 
 **The espresso is the single highest-leverage SKU in the entire catalogue.** Five PLN of margin × 60% attach rate × 100 orders/day = PLN 300/day = PLN 110k/year/truck on espresso alone.
 
+`getCartSuggestions` priority numbers double as the margin × attach ranking (espresso 1, dessert 2, drink 3). Re-ordering them in `src/lib/upsell.ts` requires re-checking the cost table above — there's a comment in the file calling this out.
+
 ### 2.5 How The Best Operators Upsell
 
-- **McDonald's:** Default-combo psychology. The single button "Make it a meal +PLN X" frames *non*-combo as the deviant choice. AOV uplift: 22%.
-- **Starbucks:** Size laddering with named premium ("Venti"). Modifier upsells ("add an espresso shot +PLN 4"). Personalised "your usual" rebuild.
-- **Uber Eats:** "Frequently bought together" + "Customers near you ordered" + algorithmic free-delivery threshold tuned per user. AOV uplift attributable to algorithmic upsell: 11%.
-- **Domino's:** Pre-checkout "wait, don't forget…" upsell card. Polarising but proven +8% per checkout.
-- **Shake Shack:** Premium frozen-custard concrete attached to every burger flow as the *default* meal completer. 38% attach.
+- **McDonald's:** Default-combo psychology. The single button "Make it a meal +PLN X" frames *non*-combo as the deviant choice. AOV uplift: 22%. — 🟡 **partial:** the `TodBanner` lunch variant surfaces the meal-deal combo as the default expectation during 11:00–13:00. The auto-apply when categories match already exists via `getActiveComboDeals`. A "Remove combo" CTA on the applied banner is the follow-up.
+- **Starbucks:** Size laddering with named premium ("Venti"). Modifier upsells ("add an espresso shot +PLN 4"). Personalised "your usual" rebuild. — ⛔ **rejected** on the size-laddering / modifier half (fixed Neapolitan portions). The "your usual" rebuild belongs in §5.2.4 habit-loop work.
+- **Uber Eats:** "Frequently bought together" + "Customers near you ordered" + algorithmic free-delivery threshold tuned per user. AOV uplift attributable to algorithmic upsell: 11%. — ✅ **shipped:** per-segment delivery threshold (first-time 39 / regular 60 / Gold/Platinum 0) live in `DeliveryProgress` and respected by the checkout charge via `computeDeliveryFee(_, _, override)`. ML upsell scorer is §9.1.
+- **Domino's:** Pre-checkout "wait, don't forget…" upsell card. Polarising but proven +8% per checkout. — ✅ **shipped via** `CartUpsell` (3-up chips above subtotal).
+- **Shake Shack:** Premium frozen-custard concrete attached to every burger flow as the *default* meal completer. 38% attach. — ✅ **shipped via** the margin-ranked espresso chip — always first in the 3-up grid when a pizza or pasta is in cart.
 
 ---
 

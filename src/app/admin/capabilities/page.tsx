@@ -338,6 +338,31 @@ export default async function CapabilitiesPage() {
           summary: "Inline 4s toast fires whenever an item is added on the location page: '<item> added. Customers usually add a/an <suggestion>.' Seed copy comes from the same getCartSuggestions() rules the cart drawer uses, so the recommendation matches what the customer sees on open. Portal-mounted, non-blocking. Audit §2.1 T+0.",
         },
         {
+          name: "Complete-the-meal chips",
+          status: "live",
+          summary: "3-up tap-to-add grid above the cart subtotal. Margin-ranked: espresso first (83% GM × 60% attach), then tiramisu, then a non-coffee drink. Explicit × badge for removal — body of an added chip is non-interactive. Audit §2.1 + §2.4.",
+        },
+        {
+          name: "Time-of-day banner",
+          status: "live",
+          summary: "Cart top banner that picks one of five hour-window variants (morning pre-order, lunch combo, afternoon espresso, dinner pairing, late espresso & dessert) based on local clock. Defaults hardcoded in upsell.ts DEFAULT_TIME_WINDOWS; admin override via LocationUpsellConfig.timeWindows[] is the follow-up ticket. Audit §2.3.",
+        },
+        {
+          name: "Per-segment delivery threshold",
+          status: "live",
+          summary: "Free-delivery bar shows a personalised threshold: first-time customers see 39 PLN, regulars 60 PLN, Gold/Platinum 0 PLN. The checkout fee charge uses the same threshold via computeDeliveryFee(_,_, override), so the bar and the receipt agree. Audit §2.5 Uber Eats.",
+        },
+        {
+          name: "Premium delivery-unlocked card",
+          status: "live",
+          summary: "Once the threshold clears, the bar transforms into a celebratory card: gold→green medallion, Georgia-serif headline, pop-in + one-shot shimmer animation. Not a status flip, a moment. Audit §2.1 post-attach.",
+        },
+        {
+          name: "Gold-tier perk banner",
+          status: "live",
+          summary: "Comp'd pesto bruschetta (price-0 cart line) offered to Gold/Platinum members in the cart drawer. Self-hides when no antipasto is available today. Tier-conditional upsell from audit §2.2 row 6.",
+        },
+        {
           name: "Combo deals",
           status: "live",
           href: "/admin/menu",
