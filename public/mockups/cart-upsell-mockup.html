@@ -1447,6 +1447,19 @@
     deliveryEl.classList.toggle("qualified", qualified);
   }
 
+  // Keep the clicked element visually anchored when the cart-lines list grows
+  // or shrinks above it. Without this, adding/removing via a chip pushes
+  // everything below the lines section up or down by ~70px and the user's
+  // cursor ends up on a different chip.
+  function withStableScroll(fn) {
+    const body = document.getElementById("drawerBody");
+    const beforeH = body.scrollHeight;
+    const beforeScroll = body.scrollTop;
+    fn();
+    const afterH = body.scrollHeight;
+    body.scrollTop = beforeScroll + (afterH - beforeH);
+  }
+
   function renderTod() {
     const host = document.getElementById("todHost");
     const cfg = TOD[state.tod];
@@ -1546,21 +1559,25 @@
     const el = document.getElementById("scarcityChip");
     const isRemove = !!e.target.closest(".remove-x");
     if (el.classList.contains("added")) {
-      if (!isRemove) return; // body of added strip is non-interactive
-      const idx = state.items.findIndex(x => x.id === el.dataset.id);
-      if (idx >= 0) state.items.splice(idx, 1);
-      resetScarcity();
-      renderLines();
-      recompute();
+      if (!isRemove) return;
+      withStableScroll(() => {
+        const idx = state.items.findIndex(x => x.id === el.dataset.id);
+        if (idx >= 0) state.items.splice(idx, 1);
+        resetScarcity();
+        renderLines();
+        recompute();
+      });
       return;
     }
-    el.classList.add("added");
-    el.querySelector(".ttl").innerHTML = 'Burrata bruschetta added <span class="stock">6 left today</span>';
-    el.querySelector(".price-pill").textContent = "✓ Added";
-    state.items.push({ id: el.dataset.id, name: el.dataset.name,
-                       each: parseInt(el.dataset.price, 10), qty: 1 });
-    renderLines();
-    recompute();
+    withStableScroll(() => {
+      el.classList.add("added");
+      el.querySelector(".ttl").innerHTML = 'Burrata bruschetta added <span class="stock">6 left today</span>';
+      el.querySelector(".price-pill").textContent = "✓ Added";
+      state.items.push({ id: el.dataset.id, name: el.dataset.name,
+                         each: parseInt(el.dataset.price, 10), qty: 1 });
+      renderLines();
+      recompute();
+    });
   });
 
   // Tier-conditional perk (§2.2) — body click adds; only the × button removes
@@ -1575,20 +1592,24 @@
     const isRemove = !!e.target.closest(".remove-x");
     if (el.classList.contains("applied")) {
       if (!isRemove) return;
-      const idx = state.items.findIndex(x => x.id === "perk-pesto");
-      if (idx >= 0) state.items.splice(idx, 1);
-      resetPerk();
-      renderLines();
-      recompute();
+      withStableScroll(() => {
+        const idx = state.items.findIndex(x => x.id === "perk-pesto");
+        if (idx >= 0) state.items.splice(idx, 1);
+        resetPerk();
+        renderLines();
+        recompute();
+      });
       return;
     }
-    el.classList.add("applied");
-    el.querySelector(".ttl").textContent = "Gold-tier perk added — pesto bruschetta on the house";
-    el.querySelector(".add-pill").textContent = "✓ Added";
-    state.items.push({ id: "perk-pesto", name: "Pesto bruschetta (Gold perk)",
-                       each: 0, qty: 1 });
-    renderLines();
-    recompute();
+    withStableScroll(() => {
+      el.classList.add("applied");
+      el.querySelector(".ttl").textContent = "Gold-tier perk added — pesto bruschetta on the house";
+      el.querySelector(".add-pill").textContent = "✓ Added";
+      state.items.push({ id: "perk-pesto", name: "Pesto bruschetta (Gold perk)",
+                         each: 0, qty: 1 });
+      renderLines();
+      recompute();
+    });
   });
 
   document.getElementById("chips").addEventListener("click", e => {
@@ -1596,24 +1617,26 @@
     if (!chip) return;
     const id   = chip.dataset.id;
     const name = chip.dataset.name;
-    const isAdded  = chip.classList.contains("added");
-    const isBadge  = !!e.target.closest(".add-icon");
+    const isAdded = chip.classList.contains("added");
+    const isBadge = !!e.target.closest(".add-icon");
     if (isAdded) {
-      // Only the × badge removes — body of an added chip is non-interactive.
-      if (!isBadge) return;
-      const idx = state.items.findIndex(x => x.id === id);
-      if (idx >= 0) state.items.splice(idx, 1);
-      chip.classList.remove("added");
-      renderLines();
-      recompute();
+      if (!isBadge) return; // body of an added chip is non-interactive
+      withStableScroll(() => {
+        const idx = state.items.findIndex(x => x.id === id);
+        if (idx >= 0) state.items.splice(idx, 1);
+        chip.classList.remove("added");
+        renderLines();
+        recompute();
+      });
       return;
     }
-    // Not added → any click on the chip adds. No toast — the green flip is the feedback.
-    const each = parseInt(chip.dataset.price, 10);
-    chip.classList.add("added");
-    state.items.push({ id, name, each, qty: 1 });
-    renderLines();
-    recompute();
+    withStableScroll(() => {
+      const each = parseInt(chip.dataset.price, 10);
+      chip.classList.add("added");
+      state.items.push({ id, name, each, qty: 1 });
+      renderLines();
+      recompute();
+    });
   });
 
   document.getElementById("addBtn").addEventListener("click", () => {

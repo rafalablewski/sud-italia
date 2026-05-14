@@ -333,6 +333,11 @@ export default async function CapabilitiesPage() {
           summary: "Cart-context suggestions (espresso + dessert with pizza). Settings here.",
         },
         {
+          name: "Add-to-cart toast",
+          status: "live",
+          summary: "Inline 4s toast fires whenever an item is added on the location page: '<item> added. Customers usually add a/an <suggestion>.' Seed copy comes from the same getCartSuggestions() rules the cart drawer uses, so the recommendation matches what the customer sees on open. Portal-mounted, non-blocking. Audit §2.1 T+0.",
+        },
+        {
           name: "Combo deals",
           status: "live",
           href: "/admin/menu",
