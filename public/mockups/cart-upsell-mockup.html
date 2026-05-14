@@ -445,24 +445,31 @@
       background: rgba(0, 140, 69, 0.06);
       border-color: rgba(0, 140, 69, 0.30);
       animation: bounce-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+      cursor: default;
     }
     .chip.added:hover {
-      background: rgba(200, 16, 46, 0.04);
-      border-color: rgba(200, 16, 46, 0.40);
+      transform: none;
+      box-shadow: none;
+      border-color: rgba(0, 140, 69, 0.30);
     }
-    .chip.added:hover .add-icon { background: var(--color-italia-red); }
-    .chip.added:hover .price { color: var(--color-italia-red); }
-    .chip.added::after {
-      content: "Added · tap to remove";
-      position: absolute; left: 0; right: 0; bottom: -16px;
-      font-size: 10px; color: var(--color-italia-gray);
-      letter-spacing: 0.02em;
-      opacity: 0; transition: opacity 0.15s;
-      pointer-events: none;
-    }
-    .chip.added:hover::after { opacity: 1; }
     .chip.added .price { color: var(--color-italia-green-dark); }
-    .chip.added .add-icon { background: var(--color-italia-green); }
+    /* When added: the corner badge becomes the only interactive target — an × to remove */
+    .chip.added .add-icon {
+      background: white;
+      color: var(--color-italia-dark);
+      border: 1px solid var(--gray-200);
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .chip.added .add-icon:hover {
+      background: var(--color-italia-red);
+      color: white;
+      border-color: var(--color-italia-red);
+    }
+    /* SVG swap — + when idle, × when added */
+    .chip .icon-remove { display: none; }
+    .chip.added .icon-add    { display: none; }
+    .chip.added .icon-remove { display: inline; }
 
     /* Scarcity strip (§2.2 row 7 — "Try the new burrata, first 12 today") */
     .scarcity-chip {
@@ -505,9 +512,31 @@
       border-color: rgba(0, 140, 69, 0.30);
       cursor: default;
     }
+    .scarcity-chip.added:hover { box-shadow: none; border-color: rgba(0, 140, 69, 0.30); }
     .scarcity-chip.added .flame { background: rgba(0,140,69,0.10); color: var(--color-italia-green); }
     .scarcity-chip.added .stock { color: var(--color-italia-green-dark); }
     .scarcity-chip.added .price-pill { background: var(--color-italia-green); }
+
+    /* Universal × remove button used on scarcity + tier-perk rows when added */
+    .remove-x {
+      flex-shrink: 0;
+      width: 28px; height: 28px;
+      display: none;
+      align-items: center; justify-content: center;
+      border: 1px solid var(--gray-200);
+      border-radius: 8px;
+      background: white;
+      color: var(--color-italia-dark);
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .scarcity-chip.added .remove-x,
+    .tier-perk.applied .remove-x { display: inline-flex; }
+    .remove-x:hover {
+      background: var(--color-italia-red);
+      color: white;
+      border-color: var(--color-italia-red);
+    }
 
     /* Tier-conditional perk banner (§2.2 row 6) */
     .tier-perk {
@@ -542,9 +571,11 @@
     .tier-perk.applied {
       background: rgba(0, 140, 69, 0.06);
       border-color: rgba(0, 140, 69, 0.30);
+      cursor: default;
     }
+    .tier-perk.applied:hover { box-shadow: none; border-color: rgba(0, 140, 69, 0.30); }
     .tier-perk.applied .medal { background: rgba(0,140,69,0.10); color: var(--color-italia-green); }
-    .tier-perk.applied .add-pill { background: var(--color-italia-green); }
+    .tier-perk.applied .add-pill { background: var(--color-italia-green); pointer-events: none; }
 
     /* Gold-tier loyalty badge */
     .tier-badge {
@@ -1134,21 +1165,30 @@
           </div>
           <div class="chips" id="chips">
             <div class="chip" data-id="espresso" data-price="600" data-name="Espresso">
-              <span class="add-icon"><svg class="ic-sm"><use href="#i-plus"/></svg></span>
+              <span class="add-icon" aria-label="Add or remove">
+                <svg class="ic-sm icon-add"><use href="#i-plus"/></svg>
+                <svg class="ic-sm icon-remove"><use href="#i-x"/></svg>
+              </span>
               <span class="emoji">☕️</span>
               <div class="name">Espresso</div>
               <div class="reason">Pizzaiolo's pick</div>
               <div class="price">6,00 zł</div>
             </div>
             <div class="chip" data-id="tiramisu" data-price="1800" data-name="Tiramisù">
-              <span class="add-icon"><svg class="ic-sm"><use href="#i-plus"/></svg></span>
+              <span class="add-icon" aria-label="Add or remove">
+                <svg class="ic-sm icon-add"><use href="#i-plus"/></svg>
+                <svg class="ic-sm icon-remove"><use href="#i-x"/></svg>
+              </span>
               <span class="emoji">🍰</span>
               <div class="name">Tiramisù</div>
               <div class="reason">Made fresh today</div>
               <div class="price">18,00 zł</div>
             </div>
             <div class="chip" data-id="limonata" data-price="1200" data-name="Limonata">
-              <span class="add-icon"><svg class="ic-sm"><use href="#i-plus"/></svg></span>
+              <span class="add-icon" aria-label="Add or remove">
+                <svg class="ic-sm icon-add"><use href="#i-plus"/></svg>
+                <svg class="ic-sm icon-remove"><use href="#i-x"/></svg>
+              </span>
               <span class="emoji">🍋</span>
               <div class="name">Limonata</div>
               <div class="reason">Sicilian lemon</div>
@@ -1167,6 +1207,9 @@
               <div class="sub">Hand-pulled this morning · ends when the tray's empty</div>
             </div>
             <span class="price-pill">+ 22,00 zł</span>
+            <button class="remove-x" type="button" aria-label="Remove seasonal burrata">
+              <svg class="ic-sm"><use href="#i-x"/></svg>
+            </button>
           </div>
         </div>
 
@@ -1179,6 +1222,9 @@
               <div class="sub">+ pesto bruschetta on the house · today only</div>
             </div>
             <button class="add-pill" type="button">Add free</button>
+            <button class="remove-x" type="button" aria-label="Remove Gold-tier perk">
+              <svg class="ic-sm"><use href="#i-x"/></svg>
+            </button>
           </div>
         </div>
 
@@ -1489,60 +1535,60 @@
     }, 4000);
   }
 
-  // Scarcity strip (§2.2) — tap to toggle
+  // Scarcity strip (§2.2) — body click adds; only the × button removes
   function resetScarcity() {
     const el = document.getElementById("scarcityChip");
     el.classList.remove("added");
     el.querySelector(".ttl").innerHTML = 'Try the seasonal burrata <span class="stock">7 of 12 left today</span>';
     el.querySelector(".price-pill").textContent = "+ 22,00 zł";
   }
-  document.getElementById("scarcityChip").addEventListener("click", () => {
+  document.getElementById("scarcityChip").addEventListener("click", e => {
     const el = document.getElementById("scarcityChip");
+    const isRemove = !!e.target.closest(".remove-x");
     if (el.classList.contains("added")) {
+      if (!isRemove) return; // body of added strip is non-interactive
       const idx = state.items.findIndex(x => x.id === el.dataset.id);
       if (idx >= 0) state.items.splice(idx, 1);
       resetScarcity();
       renderLines();
       recompute();
-      toast("sparkles", "Seasonal burrata removed", "Tap again to add it back.");
       return;
     }
     el.classList.add("added");
     el.querySelector(".ttl").innerHTML = 'Burrata bruschetta added <span class="stock">6 left today</span>';
-    el.querySelector(".price-pill").textContent = "✓ Tap to remove";
+    el.querySelector(".price-pill").textContent = "✓ Added";
     state.items.push({ id: el.dataset.id, name: el.dataset.name,
                        each: parseInt(el.dataset.price, 10), qty: 1 });
     renderLines();
     recompute();
-    toast("sparkles", "Seasonal burrata added", "Limited stock — locked in for your order.");
   });
 
-  // Tier-conditional perk (§2.2) — tap to toggle
+  // Tier-conditional perk (§2.2) — body click adds; only the × button removes
   function resetPerk() {
     const el = document.getElementById("tierPerk");
     el.classList.remove("applied");
     el.querySelector(".ttl").textContent = "Make it a Gold-tier order";
     el.querySelector(".add-pill").textContent = "Add free";
   }
-  document.getElementById("tierPerk").addEventListener("click", () => {
+  document.getElementById("tierPerk").addEventListener("click", e => {
     const el = document.getElementById("tierPerk");
+    const isRemove = !!e.target.closest(".remove-x");
     if (el.classList.contains("applied")) {
+      if (!isRemove) return;
       const idx = state.items.findIndex(x => x.id === "perk-pesto");
       if (idx >= 0) state.items.splice(idx, 1);
       resetPerk();
       renderLines();
       recompute();
-      toast("sparkles", "Gold perk removed", "Tap again to comp it back.");
       return;
     }
     el.classList.add("applied");
     el.querySelector(".ttl").textContent = "Gold-tier perk added — pesto bruschetta on the house";
-    el.querySelector(".add-pill").textContent = "✓ Tap to remove";
+    el.querySelector(".add-pill").textContent = "✓ Added";
     state.items.push({ id: "perk-pesto", name: "Pesto bruschetta (Gold perk)",
                        each: 0, qty: 1 });
     renderLines();
     recompute();
-    toast("sparkles", "Gold perk applied", "Comp'd pesto bruschetta added — enjoy.");
   });
 
   document.getElementById("chips").addEventListener("click", e => {
@@ -1550,22 +1596,24 @@
     if (!chip) return;
     const id   = chip.dataset.id;
     const name = chip.dataset.name;
-    if (chip.classList.contains("added")) {
-      // tap again → remove (one chip = one item)
+    const isAdded  = chip.classList.contains("added");
+    const isBadge  = !!e.target.closest(".add-icon");
+    if (isAdded) {
+      // Only the × badge removes — body of an added chip is non-interactive.
+      if (!isBadge) return;
       const idx = state.items.findIndex(x => x.id === id);
       if (idx >= 0) state.items.splice(idx, 1);
       chip.classList.remove("added");
       renderLines();
       recompute();
-      toast("sparkles", name + " removed", "Tap the chip again to add it back.");
       return;
     }
+    // Not added → any click on the chip adds. No toast — the green flip is the feedback.
     const each = parseInt(chip.dataset.price, 10);
     chip.classList.add("added");
     state.items.push({ id, name, each, qty: 1 });
     renderLines();
     recompute();
-    toast("sparkles", name + " added", "Tap the chip again to remove.");
   });
 
   document.getElementById("addBtn").addEventListener("click", () => {
