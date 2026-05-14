@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Users } from "lucide-react";
+import { Building2 } from "lucide-react";
 
 import { useCustomer } from "@/store/customer";
 
-interface PublicTeamRollup {
+interface PublicCorporateRollup {
   slug: string;
   name: string;
   memberCount: number;
+  minEmployees: number;
   poolEarnedThisMonth: number;
   headBonusPoints: number;
   headBonusBps: number;
@@ -27,38 +28,38 @@ const DAY_NAMES = [
 ];
 
 /**
- * "Ordering with [team]" banner (audit §3.4) — shown in the cart drawer
- * when the active wallet is productised as a team. The banner self-hides
- * for solo customers and for family wallets without a team config, so it
- * doesn't add chrome to the existing flow.
+ * "Ordering with [company]" banner (audit §3.4) — shown in the cart drawer
+ * when the active wallet is productised as a Sud Italia Corporate account.
+ * The banner self-hides for solo customers and for family wallets without a
+ * corporate config, so it doesn't add chrome to the existing flow.
  *
- * The banner reads the team slug off the customer's wallet (only `id` is
- * stored client-side), then resolves the public rollup so we can show
- * member count + auto-pre-order copy without leaking PII.
+ * The banner reads the corporate slug off the customer's wallet (only `id`
+ * is stored client-side), then resolves the public rollup so we can show
+ * employee count + auto-pre-order copy without leaking PII.
  */
-export function TeamOrderBanner() {
+export function CorporateOrderBanner() {
   const { customer } = useCustomer();
-  const [rollup, setRollup] = useState<PublicTeamRollup | null>(null);
+  const [rollup, setRollup] = useState<PublicCorporateRollup | null>(null);
 
-  const teamSlug = customer?.wallet?.team?.slug;
+  const corpSlug = customer?.wallet?.corporate?.slug;
   const walletStatus = customer?.wallet?.myStatus;
-  const eligible = !!teamSlug && walletStatus === "active";
+  const eligible = !!corpSlug && walletStatus === "active";
   useEffect(() => {
-    if (!eligible || !teamSlug) return;
+    if (!eligible || !corpSlug) return;
     let cancelled = false;
-    fetch(`/api/team/${encodeURIComponent(teamSlug)}`)
+    fetch(`/api/corporate/${encodeURIComponent(corpSlug)}`)
       .then((r) => r.json())
       .then((data) => {
         if (cancelled) return;
         if (data && typeof data === "object" && "slug" in data) {
-          setRollup(data as PublicTeamRollup);
+          setRollup(data as PublicCorporateRollup);
         }
       })
       .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [eligible, teamSlug]);
+  }, [eligible, corpSlug]);
 
   if (!eligible || !rollup) return null;
 
@@ -82,15 +83,18 @@ export function TeamOrderBanner() {
             boxShadow: "0 2px 6px rgba(184,146,46,0.30)",
           }}
         >
-          <Users className="h-5 w-5" />
+          <Building2 className="h-5 w-5" />
         </span>
         <div className="flex-1 min-w-0 leading-snug">
-          <p className="text-sm font-semibold text-italia-dark">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-italia-gold-dark">
+            Sud Italia Corporate
+          </p>
+          <p className="text-sm font-semibold text-italia-dark mt-0.5">
             Ordering with <span className="font-bold">{rollup.name}</span>
-            {!isHead && <span className="text-italia-gray font-normal"> · billed to the team head</span>}
+            {!isHead && <span className="text-italia-gray font-normal"> · billed to the company card</span>}
           </p>
           <p className="text-xs text-italia-gray mt-0.5">
-            {rollup.memberCount} member{rollup.memberCount === 1 ? "" : "s"}
+            {rollup.memberCount} employee{rollup.memberCount === 1 ? "" : "s"}
             {preorderCopy && <span> · {preorderCopy}</span>}
             {isHead && (
               <span> · {rollup.headBonusPoints} pts head bonus this month</span>
@@ -104,5 +108,5 @@ export function TeamOrderBanner() {
 
 function formatPreorder(day?: number, time?: string): string | null {
   if (typeof day !== "number" || day < 0 || day > 6 || !time) return null;
-  return `${DAY_NAMES[day]} ${time} team lunch`;
+  return `${DAY_NAMES[day]} ${time} corporate lunch`;
 }

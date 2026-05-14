@@ -11,7 +11,7 @@ import { LoyaltyEarnPreview } from "./LoyaltyEarnPreview";
 import { TodBanner } from "./TodBanner";
 import { TierPerkBanner } from "./TierPerkBanner";
 import { BundleLadder } from "./BundleLadder";
-import { TeamOrderBanner } from "./TeamOrderBanner";
+import { CorporateOrderBanner } from "./CorporateOrderBanner";
 import type { BundleTier } from "@/lib/bundles";
 import { formatPrice } from "@/lib/utils";
 import {
@@ -354,9 +354,9 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
         </div>
       )}
 
-      {/* Audit §3.4 — Sud Italia for Teams. Surfaces above everything so
+      {/* Audit §3.4 — Sud Italia Corporate. Surfaces above everything so
           the customer sees who's paying before they scan their cart. */}
-      <TeamOrderBanner />
+      <CorporateOrderBanner />
 
       {/* Time-of-day banner (audit §2.3) — picks one variant by local hour.
           Sits above the items list so it primes the customer before they
@@ -413,11 +413,16 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
 
       {/* Bundle ladder (audit §3.2) — fixed-price tiers above the per-item
           chips. Sits before the combo banner because once the customer locks
-          a bundle, the percentage-discount combo is moot. */}
+          a bundle, the percentage-discount combo is moot. Lunch ladder is
+          hour-gated; Family Feast is quantity-gated; both rules are
+          admin-configurable via LocationUpsellConfig.bundleRules. */}
       <BundleLadder
         allMenuItems={resolvedMenuItems}
         configBundles={
           (upsellConfig as { bundles?: BundleTier[] } | null)?.bundles ?? null
+        }
+        configRules={
+          (upsellConfig as { bundleRules?: import("@/lib/bundles").BundleAvailabilityRules } | null)?.bundleRules ?? null
         }
       />
 

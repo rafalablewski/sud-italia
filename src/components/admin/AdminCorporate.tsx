@@ -1,13 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Users, Plus, Save, Trash2, Link2 } from "lucide-react";
+import { Building2, Plus, Save, Trash2, Link2 } from "lucide-react";
 
-interface TeamPayload {
+interface CorporatePayload {
   slug: string;
   name: string;
   billingEmail?: string;
   headBonusBps: number;
+  minEmployees: number;
   autoPreorderDay?: number;
   autoPreorderTime?: string;
   locationSlug?: string;
@@ -18,15 +19,16 @@ interface PublicRollup {
   slug: string;
   name: string;
   memberCount: number;
+  minEmployees: number;
   poolEarnedThisMonth: number;
   headBonusPoints: number;
   headBonusBps: number;
 }
 
-interface TeamSummary {
+interface CorporateSummary {
   walletId: string;
   headPhone: string;
-  team: TeamPayload | null;
+  corporate: CorporatePayload | null;
   memberCount: number;
   rollup: PublicRollup | null;
 }
@@ -48,16 +50,20 @@ const DAYS = [
 ];
 
 /**
- * /admin/teams (audit §3.4) — promote a wallet to a Sud Italia for Teams
- * account, edit billing + head-bonus config, view live rollup.
+ * /admin/corporate (audit §3.4) — promote a wallet to a Sud Italia
+ * Corporate account, edit billing + head-bonus + min-employees config,
+ * view live rollup.
  *
- * Lists every team-configured wallet at the top, with an "Add a team"
- * row that lets the admin pick from the existing family wallets and
- * convert one into a team. Conversion is reversible — clearing the team
- * config keeps the underlying family wallet intact.
+ * Lists every corporate-configured wallet at the top, with a "Promote a
+ * wallet" row that lets the admin pick from the existing family wallets and
+ * convert one into a corporate account. Conversion is reversible — clearing
+ * the corporate config keeps the underlying family wallet intact.
+ *
+ * Corporate is intended for companies with more than 5 employees ordering
+ * in bulk; the floor is enforced server-side at minEmployees ≥ 6.
  */
-export function AdminTeams() {
-  const [teams, setTeams] = useState<TeamSummary[]>([]);
+export function AdminCorporate() {
+  const [corporates, setCorporates] = useState<CorporateSummary[]>([]);
   const [walletPool, setWalletPool] = useState<FamilyWalletSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,14 +72,14 @@ export function AdminTeams() {
     setLoading(true);
     setError(null);
     try {
-      const [teamsRes, walletsRes] = await Promise.all([
-        fetch("/api/admin/teams"),
+      const [corpRes, walletsRes] = await Promise.all([
+        fetch("/api/admin/corporate"),
         fetch("/api/admin/wallets"),
       ]);
-      if (!teamsRes.ok) throw new Error("Failed to load teams");
-      const teamsData = await teamsRes.json();
+      if (!corpRes.ok) throw new Error("Failed to load corporate accounts");
+      const corpData = await corpRes.json();
       const walletsData = walletsRes.ok ? await walletsRes.json() : { wallets: [] };
-      setTeams(teamsData.teams || []);
+      setCorporates(corpData.corporates || []);
       setWalletPool(
         (walletsData.wallets || []).map(
           (w: { id: string; headPhone: string; memberCount: number }) => ({
@@ -94,18 +100,19 @@ export function AdminTeams() {
     refresh();
   }, [refresh]);
 
-  const teamWalletIds = new Set(teams.map((t) => t.walletId));
-  const eligibleWallets = walletPool.filter((w) => !teamWalletIds.has(w.id));
+  const corpWalletIds = new Set(corporates.map((t) => t.walletId));
+  const eligibleWallets = walletPool.filter((w) => !corpWalletIds.has(w.id));
 
   return (
     <div className="v2-page">
       <header className="v2-page-header">
         <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Teams</h1>
+          <h1 className="v2-page-title">Corporate</h1>
           <p className="v2-page-subtitle">
-            Sud Italia for Teams — productised office-lunch wallets. Head pays one
-            card, members earn personal points, head earns 20% of the team pool.
-            Public landing at /team/[slug].
+            Sud Italia Corporate — productised bulk-ordering for companies
+            with 6+ employees. Company head pays one card, employees earn
+            personal points, head earns 20% of the corporate pool. Public
+            landing at /corporate/[slug].
           </p>
         </div>
         <button
@@ -126,16 +133,17 @@ export function AdminTeams() {
 
       <section className="glass-card p-4 md:p-5 mb-5">
         <h2 className="admin-text text-base font-semibold mb-3 flex items-center gap-2">
-          <Users className="h-4 w-4" /> Active teams ({teams.length})
+          <Building2 className="h-4 w-4" /> Active corporate accounts ({corporates.length})
         </h2>
-        {teams.length === 0 ? (
+        {corporates.length === 0 ? (
           <p className="admin-text-secondary text-sm">
-            No teams configured yet. Promote a family wallet below to get started.
+            No corporate accounts configured yet. Promote a family wallet
+            with at least 6 active members below to get started.
           </p>
         ) : (
           <div className="grid gap-3">
-            {teams.map((t) => (
-              <TeamRow key={t.walletId} summary={t} onChanged={refresh} />
+            {corporates.map((c) => (
+              <CorporateRow key={c.walletId} summary={c} onChanged={refresh} />
             ))}
           </div>
         )}
@@ -143,12 +151,12 @@ export function AdminTeams() {
 
       <section className="glass-card p-4 md:p-5">
         <h2 className="admin-text text-base font-semibold mb-3 flex items-center gap-2">
-          <Plus className="h-4 w-4" /> Promote a wallet to a team
+          <Plus className="h-4 w-4" /> Promote a wallet to a corporate account
         </h2>
         {eligibleWallets.length === 0 ? (
           <p className="admin-text-secondary text-sm">
             No family wallets available. Customers create wallets from /rewards;
-            once one exists you can promote it here.
+            once one exists with 6+ members you can promote it here.
           </p>
         ) : (
           <div className="grid gap-2">
@@ -166,36 +174,37 @@ export function AdminTeams() {
 // Subcomponents
 // ---------------------------------------------------------------------------
 
-function TeamRow({
+function CorporateRow({
   summary,
   onChanged,
 }: {
-  summary: TeamSummary;
+  summary: CorporateSummary;
   onChanged: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const team = summary.team;
-  if (!team) return null;
+  const corporate = summary.corporate;
+  if (!corporate) return null;
 
   return (
     <div className="rounded-lg border border-white/10 bg-white/5 p-3">
       <div className="flex items-start gap-3 flex-wrap">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="admin-text font-semibold text-sm">{team.name}</span>
+            <span className="admin-text font-semibold text-sm">{corporate.name}</span>
             <a
-              href={`/team/${team.slug}`}
+              href={`/corporate/${corporate.slug}`}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-1 text-xs text-blue-300 hover:underline"
             >
-              <Link2 className="h-3 w-3" /> /team/{team.slug}
+              <Link2 className="h-3 w-3" /> /corporate/{corporate.slug}
             </a>
           </div>
           <p className="admin-text-secondary text-xs mt-1">
-            {summary.memberCount} member{summary.memberCount === 1 ? "" : "s"} ·
-            {" "}{(team.headBonusBps / 100).toFixed(0)}% head bonus
-            {team.billingEmail && <> · invoice → {team.billingEmail}</>}
+            {summary.memberCount} employee{summary.memberCount === 1 ? "" : "s"} ·
+            {" "}min {corporate.minEmployees} ·
+            {" "}{(corporate.headBonusBps / 100).toFixed(0)}% head bonus
+            {corporate.billingEmail && <> · invoice → {corporate.billingEmail}</>}
           </p>
           {summary.rollup && (
             <p className="admin-text-secondary text-xs mt-1">
@@ -212,7 +221,7 @@ function TeamRow({
           {open ? "Close" : "Edit"}
         </button>
       </div>
-      {open && <TeamEditor summary={summary} onSaved={onChanged} />}
+      {open && <CorporateEditor summary={summary} onSaved={onChanged} />}
     </div>
   );
 }
@@ -225,6 +234,7 @@ function PromoteRow({
   onPromoted: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const eligible = wallet.memberCount >= 6;
   return (
     <div className="rounded-lg border border-white/10 bg-white/5 p-3">
       <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -234,22 +244,29 @@ function PromoteRow({
           </p>
           <p className="admin-text-secondary text-xs mt-0.5">
             {wallet.memberCount} member{wallet.memberCount === 1 ? "" : "s"}
+            {!eligible && (
+              <span className="text-italia-gold-dark ml-1">
+                · needs 6+ to promote
+              </span>
+            )}
           </p>
         </div>
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
           className="glass-btn text-xs"
+          disabled={!eligible}
+          title={eligible ? undefined : "Corporate accounts require at least 6 members"}
         >
           {open ? "Cancel" : "Promote"}
         </button>
       </div>
       {open && (
-        <TeamEditor
+        <CorporateEditor
           summary={{
             walletId: wallet.id,
             headPhone: wallet.headPhone,
-            team: null,
+            corporate: null,
             memberCount: wallet.memberCount,
             rollup: null,
           }}
@@ -263,18 +280,19 @@ function PromoteRow({
   );
 }
 
-function TeamEditor({
+function CorporateEditor({
   summary,
   onSaved,
 }: {
-  summary: TeamSummary;
+  summary: CorporateSummary;
   onSaved: () => void;
 }) {
-  const seed = summary.team;
+  const seed = summary.corporate;
   const [slug, setSlug] = useState(seed?.slug ?? "");
   const [name, setName] = useState(seed?.name ?? "");
   const [billingEmail, setBillingEmail] = useState(seed?.billingEmail ?? "");
   const [headBonusBps, setHeadBonusBps] = useState(seed?.headBonusBps ?? 2000);
+  const [minEmployees, setMinEmployees] = useState(seed?.minEmployees ?? 6);
   const [autoPreorderDay, setAutoPreorderDay] = useState<number | "">(
     typeof seed?.autoPreorderDay === "number" ? seed.autoPreorderDay : "",
   );
@@ -289,7 +307,7 @@ function TeamEditor({
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch("/api/admin/teams", {
+      const res = await fetch("/api/admin/corporate", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -298,6 +316,7 @@ function TeamEditor({
           name,
           billingEmail: billingEmail || undefined,
           headBonusBps,
+          minEmployees,
           autoPreorderDay: autoPreorderDay === "" ? undefined : autoPreorderDay,
           autoPreorderTime: autoPreorderTime || undefined,
           locationSlug: locationSlug || undefined,
@@ -316,13 +335,13 @@ function TeamEditor({
 
   const remove = async () => {
     if (!seed) return;
-    if (!confirm(`Remove ${seed.name} as a team? The underlying family wallet stays intact.`)) {
+    if (!confirm(`Remove ${seed.name} as a corporate account? The underlying family wallet stays intact.`)) {
       return;
     }
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch("/api/admin/teams", {
+      const res = await fetch("/api/admin/corporate", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ walletId: summary.walletId }),
@@ -340,7 +359,7 @@ function TeamEditor({
 
   return (
     <div className="mt-3 grid gap-3 md:grid-cols-2">
-      <Field label="Team name">
+      <Field label="Company name">
         <input
           className="glass-input w-full"
           value={name}
@@ -348,7 +367,7 @@ function TeamEditor({
           placeholder="Acme"
         />
       </Field>
-      <Field label="Public slug · /team/…">
+      <Field label="Public slug · /corporate/…">
         <input
           className="glass-input w-full"
           value={slug}
@@ -376,6 +395,27 @@ function TeamEditor({
           onChange={(e) => setHeadBonusBps(Number(e.target.value))}
         />
       </Field>
+      <Field label={`Minimum employees · ${minEmployees} (≥6 enforced)`}>
+        <input
+          className="glass-input w-full"
+          type="number"
+          min={6}
+          max={500}
+          value={minEmployees}
+          onChange={(e) => setMinEmployees(Math.max(6, Number(e.target.value) || 6))}
+        />
+      </Field>
+      <Field label="Pinned location (optional)">
+        <select
+          className="glass-input w-full"
+          value={locationSlug}
+          onChange={(e) => setLocationSlug(e.target.value)}
+        >
+          <option value="">— any —</option>
+          <option value="krakow">Kraków</option>
+          <option value="warszawa">Warszawa</option>
+        </select>
+      </Field>
       <Field label="Auto pre-order day (optional)">
         <select
           className="glass-input w-full"
@@ -400,17 +440,6 @@ function TeamEditor({
           onChange={(e) => setAutoPreorderTime(e.target.value)}
         />
       </Field>
-      <Field label="Pinned location (optional)">
-        <select
-          className="glass-input w-full"
-          value={locationSlug}
-          onChange={(e) => setLocationSlug(e.target.value)}
-        >
-          <option value="">— any —</option>
-          <option value="krakow">Kraków</option>
-          <option value="warszawa">Warszawa</option>
-        </select>
-      </Field>
 
       {error && (
         <p className="text-sm text-italia-red md:col-span-2">{error}</p>
@@ -424,7 +453,7 @@ function TeamEditor({
           disabled={saving || !name.trim() || !slug.trim()}
         >
           <Save className="h-4 w-4" />
-          {saving ? "Saving…" : seed ? "Save changes" : "Create team"}
+          {saving ? "Saving…" : seed ? "Save changes" : "Create corporate account"}
         </button>
         {seed && (
           <button
@@ -434,7 +463,7 @@ function TeamEditor({
             disabled={saving}
           >
             <Trash2 className="h-4 w-4" />
-            Remove team
+            Remove corporate account
           </button>
         )}
       </div>

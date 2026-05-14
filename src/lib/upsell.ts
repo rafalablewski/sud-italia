@@ -257,6 +257,26 @@ export interface UpsellSuggestion {
   priority: number; // lower = shown first
 }
 
+/**
+ * Per-item reason copy overrides — keyed by item id suffix so a single
+ * entry covers both Kraków (`krk-...`) and Warszawa (`waw-...`). Production
+ * brand voice for the chip subtitle. Anything not in this map falls back
+ * to the priority-rule copy below ("Perfect after your meal …").
+ */
+const ITEM_REASON_OVERRIDES: Record<string, string> = {
+  "drink-espresso": "Never too late",
+  "dessert-tiramisu": "Pizzaiolo's fav",
+  "anti-burrata": "Freshly-baked today",
+  "anti-bruschetta": "Freshly-baked today",
+};
+
+function reasonForItem(item: MenuItem, fallback: string): string {
+  for (const [suffix, copy] of Object.entries(ITEM_REASON_OVERRIDES)) {
+    if (item.id.endsWith(suffix)) return copy;
+  }
+  return fallback;
+}
+
 // Default preferred cross-sell items per location
 const DEFAULT_PREFERRED_COFFEE: Record<string, string> = {
   krakow: "krk-drink-espresso",
@@ -318,7 +338,7 @@ export function getCartSuggestions(
     if (anyCoffee) {
       suggestions.push({
         item: anyCoffee,
-        reason: "Perfect after your meal — Italian espresso",
+        reason: reasonForItem(anyCoffee, "Perfect after your meal — Italian espresso"),
         priority: 1,
       });
     }
@@ -331,7 +351,7 @@ export function getCartSuggestions(
     if (anyDessert) {
       suggestions.push({
         item: anyDessert,
-        reason: "Finish with our signature Tiramisù",
+        reason: reasonForItem(anyDessert, "Finish with our signature Tiramisù"),
         priority: 2,
       });
     }
@@ -344,7 +364,7 @@ export function getCartSuggestions(
     if (anyDrink) {
       suggestions.push({
         item: anyDrink,
-        reason: "Add a refreshing drink to your order",
+        reason: reasonForItem(anyDrink, "Add a refreshing drink to your order"),
         priority: 3,
       });
     }
@@ -356,7 +376,7 @@ export function getCartSuggestions(
     if (pizza) {
       suggestions.push({
         item: pizza,
-        reason: "Add a pizza to make it a meal",
+        reason: reasonForItem(pizza, "Add a pizza to make it a meal"),
         priority: 4,
       });
     }
@@ -397,13 +417,15 @@ function contextualReason(
 ): string {
   const orderCount = ctx.customerOrderCount ?? 0;
   const attach = ctx.customerAttachByItemId?.[s.item.id] ?? 0;
+  // Strong attach signal → recognition copy. Even when the item has a
+  // brand-voice override, "you added it 3 of last 4 visits" is more
+  // useful in the chip subtitle.
   if (orderCount >= 2 && attach >= 2 && attach / orderCount >= 0.5) {
     return `You added it ${attach} of last ${orderCount} visits`;
   }
-  if (orderCount >= 3 && attach === 0 && s.item.category === "desserts") {
-    return "You haven't tried this one yet";
-  }
-  return s.reason;
+  // Otherwise the per-item brand voice (Pizzaiolo's fav etc) wins, with
+  // the priority-rule copy as the final fallback.
+  return reasonForItem(s.item, s.reason);
 }
 
 // --- Combo / Bundle Deals ---

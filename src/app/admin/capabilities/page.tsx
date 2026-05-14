@@ -362,13 +362,13 @@ export default async function CapabilitiesPage() {
           name: "Bundle architecture (Lunch / Family Feast)",
           status: "live",
           href: "/admin/upsell",
-          summary: "Decoy + anchor + default-pushed combos surfaced in the cart drawer above the per-item chips. Two ladders: Lunch (Solo / Lunch / Lunch+ / Hungry) and Family Feast (Family / Family Feast / Feast Deluxe). Tapping a tier locks the cart subtotal to the bundle's priceGrosze; checkout sends one Stripe line at the bundle price with the composition itemized in the description. DEFAULT_BUNDLES in src/lib/bundles.ts; admin override via LocationUpsellConfig.bundles. Audit §3.2.",
+          summary: "Decoy + anchor + default-pushed combos surfaced in the cart drawer above the per-item chips. Lunch ladder is hour-gated (default 11:00–14:00); Family Feast ladder is quantity-gated (default ≥5 pizza+pasta items, with a one-line nudge when within 2 of the threshold). Both rules are admin-configurable in /admin/upsell → Bundle availability. Tapping a tier locks the cart subtotal to the bundle's priceGrosze; checkout sends one Stripe line at the bundle price with the composition itemized in the description. DEFAULT_BUNDLES + DEFAULT_BUNDLE_RULES in src/lib/bundles.ts. Audit §3.2.",
         },
         {
-          name: "Sud Italia for Teams",
+          name: "Sud Italia Corporate",
           status: "live",
-          href: "/admin/teams",
-          summary: "Productised office-lunch wallets. Promote a FamilyWallet to a team in /admin/teams: public landing at /team/[slug], billing email for the head's monthly invoice, head bonus rate (default 20% of pool), optional auto-pre-order day/time. Cart drawer surfaces an `Ordering with [team]` banner when the active wallet is a team; member ordering bills to the head's saved card while personal points stay individual. POST /api/team/[slug]/join sends an SMS OTP; existing /rewards confirm flow promotes the member to active. Audit §3.4.",
+          href: "/admin/corporate",
+          summary: "Bulk-ordering primitive for companies with 6+ employees (the brief's >5 employees rule, enforced at promotion time). Promote a FamilyWallet to a corporate account in /admin/corporate: public landing at /corporate/[slug], billing email for the head's monthly invoice, head bonus rate (default 20% of pool), minimum-employee gate (default 6), optional auto-pre-order day/time. Cart drawer surfaces an `Ordering with [company]` banner with the Sud Italia Corporate kicker when the active wallet is a corporate account; employee ordering bills to the company card while personal loyalty points stay individual. POST /api/corporate/[slug]/join sends an SMS OTP; existing /rewards confirm flow promotes the employee to active. Audit §3.4.",
         },
         {
           name: "Premium delivery-unlocked card",

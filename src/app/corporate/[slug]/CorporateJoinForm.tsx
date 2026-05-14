@@ -2,20 +2,20 @@
 
 import { useState } from "react";
 
-interface TeamJoinFormProps {
+interface CorporateJoinFormProps {
   slug: string;
-  teamName: string;
+  companyName: string;
 }
 
 const PHONE_PATTERN = /^[\d\s\-()]{7,}$/;
 
 /**
- * Member-side join intake (audit §3.4). Collects a PL phone, hits
- * /api/team/[slug]/join which sends a 6-digit OTP via Twilio (no-op when
- * unset). The invitee then enters the OTP through the existing wallet
+ * Employee-side join intake (audit §3.4). Collects a PL phone, hits
+ * /api/corporate/[slug]/join which sends a 6-digit OTP via Twilio (no-op
+ * when unset). The invitee then enters the OTP through the existing wallet
  * confirm flow at /rewards.
  */
-export function TeamJoinForm({ slug, teamName }: TeamJoinFormProps) {
+export function CorporateJoinForm({ slug, companyName }: CorporateJoinFormProps) {
   const [phone, setPhone] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,7 +29,7 @@ export function TeamJoinForm({ slug, teamName }: TeamJoinFormProps) {
     if (!valid) return;
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/team/${slug}/join`, {
+      const res = await fetch(`/api/corporate/${slug}/join`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: `+48${phone.trim()}` }),
@@ -52,7 +52,7 @@ export function TeamJoinForm({ slug, teamName }: TeamJoinFormProps) {
       <div className="mt-5 p-4 rounded-xl border border-italia-green/30 bg-italia-green/5">
         <p className="font-semibold text-sm text-italia-dark">Check your messages</p>
         <p className="text-xs text-italia-gray mt-1 leading-relaxed">
-          We texted a 6-digit code. Open the loyalty page and enter it to finish joining {teamName}.
+          We texted a 6-digit code. Open the loyalty page and enter it to finish joining {companyName}.
         </p>
         <a
           href="/rewards"
@@ -76,7 +76,7 @@ export function TeamJoinForm({ slug, teamName }: TeamJoinFormProps) {
         <input
           type="tel"
           autoComplete="tel"
-          placeholder="Your phone (we'll text a join code)"
+          placeholder="Your work phone (we'll text a join code)"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           className="pub-input min-h-[44px] rounded-l-none text-sm"
@@ -87,7 +87,7 @@ export function TeamJoinForm({ slug, teamName }: TeamJoinFormProps) {
         disabled={!valid || submitting}
         className="px-4 py-2 rounded-[0.625rem] bg-italia-red text-white font-semibold text-sm hover:bg-italia-red-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {submitting ? "Sending…" : `Join ${teamName}`}
+        {submitting ? "Sending…" : `Join ${companyName}`}
       </button>
       {error && (
         <p className="absolute mt-12 text-xs text-italia-red">{error}</p>

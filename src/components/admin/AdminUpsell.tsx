@@ -63,7 +63,20 @@ interface LocationConfig {
   preferredDrink: string;
   combos: ComboDealConfig[];
   timeWindows?: TimeWindowConfig[];
+  /** Bundle availability rules (audit §3.2 follow-up). Lunch ladder is
+   *  hour-gated; Family Feast ladder is quantity-gated. */
+  bundleRules?: BundleRulesConfig;
 }
+
+interface BundleRulesConfig {
+  lunch: { startHour: number; endHour: number };
+  family: { minMainItems: number; hintWithin: number };
+}
+
+const DEFAULT_BUNDLE_RULES: BundleRulesConfig = {
+  lunch: { startHour: 11, endHour: 14 },
+  family: { minMainItems: 5, hintWithin: 2 },
+};
 
 type AllSettings = Record<string, LocationConfig>;
 
@@ -778,6 +791,125 @@ export function AdminUpsell() {
           onChange={(timeWindows) => updateConfig({ timeWindows })}
         />
       </div>
+
+      {/* Bundle availability rules (audit §3.2 follow-up) */}
+      <div className="glass-card p-6">
+        <BundleRulesEditor
+          rules={config.bundleRules ?? DEFAULT_BUNDLE_RULES}
+          onChange={(bundleRules) => updateConfig({ bundleRules })}
+        />
+      </div>
     </div>
   );
 }
+
+function BundleRulesEditor({
+  rules,
+  onChange,
+}: {
+  rules: BundleRulesConfig;
+  onChange: (next: BundleRulesConfig) => void;
+}) {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <label className="text-xs font-semibold admin-text uppercase tracking-wide">
+            Bundle availability
+          </label>
+          <p className="text-xs admin-text-secondary mt-0.5">
+            Lunch ladder is hour-gated; Family Feast ladder is quantity-gated.
+            Within hint range, the cart drawer shows a one-line nudge instead
+            of the full ladder.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="rounded-lg border border-white/10 bg-white/5 p-3">
+          <p className="admin-text font-semibold text-sm mb-2">Lunch ladder window</p>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="block">
+              <span className="block text-[11px] admin-text-secondary uppercase tracking-wide mb-1">Start hour</span>
+              <input
+                type="number"
+                min={0}
+                max={23}
+                value={rules.lunch.startHour}
+                onChange={(e) =>
+                  onChange({
+                    ...rules,
+                    lunch: { ...rules.lunch, startHour: clampHour(Number(e.target.value)) },
+                  })
+                }
+                className="glass-input w-full"
+              />
+            </label>
+            <label className="block">
+              <span className="block text-[11px] admin-text-secondary uppercase tracking-wide mb-1">End hour</span>
+              <input
+                type="number"
+                min={0}
+                max={24}
+                value={rules.lunch.endHour}
+                onChange={(e) =>
+                  onChange({
+                    ...rules,
+                    lunch: { ...rules.lunch, endHour: clampHour(Number(e.target.value)) },
+                  })
+                }
+                className="glass-input w-full"
+              />
+            </label>
+          </div>
+          <p className="text-[11px] admin-text-secondary mt-2">
+            Default 11–14 (shown for [start, end), so 11–14 = 11:00 through 13:59).
+          </p>
+        </div>
+
+        <div className="rounded-lg border border-white/10 bg-white/5 p-3">
+          <p className="admin-text font-semibold text-sm mb-2">Family Feast quantity gate</p>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="block">
+              <span className="block text-[11px] admin-text-secondary uppercase tracking-wide mb-1">Min mains (pizza + pasta)</span>
+              <input
+                type="number"
+                min={2}
+                max={20}
+                value={rules.family.minMainItems}
+                onChange={(e) =>
+                  onChange({
+                    ...rules,
+                    family: { ...rules.family, minMainItems: Math.max(2, Number(e.target.value) || 2) },
+                  })
+                }
+                className="glass-input w-full"
+              />
+            </label>
+            <label className="block">
+              <span className="block text-[11px] admin-text-secondary uppercase tracking-wide mb-1">Hint within</span>
+              <input
+                type="number"
+                min={0}
+                max={10}
+                value={rules.family.hintWithin}
+                onChange={(e) =>
+                  onChange({
+                    ...rules,
+                    family: { ...rules.family, hintWithin: Math.max(0, Number(e.target.value) || 0) },
+                  })
+                }
+                className="glass-input w-full"
+              />
+            </label>
+          </div>
+          <p className="text-[11px] admin-text-secondary mt-2">
+            Default min 5, hint within 2 — i.e. show the &ldquo;add 1 more pizza
+            or pasta&rdquo; nudge once the cart has 3 or 4 mains.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+

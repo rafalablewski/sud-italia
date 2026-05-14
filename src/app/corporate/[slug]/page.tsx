@@ -1,23 +1,27 @@
 import { notFound } from "next/navigation";
-import { getPublicTeamRollup } from "@/lib/store";
-import { TeamJoinForm } from "./TeamJoinForm";
-import { Users } from "lucide-react";
+import { getPublicCorporateRollup } from "@/lib/store";
+import { CorporateJoinForm } from "./CorporateJoinForm";
+import { Building2 } from "lucide-react";
 
 /**
- * Sud Italia for Teams — public landing page (audit §3.4).
+ * Sud Italia Corporate — public landing page (audit §3.4).
  *
- * Slack-friendly URL the office head shares (e.g. /team/acme). Renders the
- * team's hero stats and the join intake form. Members earn personal points
- * exactly like a solo customer; the head additionally accrues 20% of the
- * pool (configurable per team via `headBonusBps`).
+ * URL companies share with their employees (e.g. /corporate/acme). Renders
+ * the company hero stats and the join intake form. Members earn personal
+ * loyalty points exactly like a solo customer; the company head additionally
+ * accrues a configurable share of the corporate pool (default 20%).
+ *
+ * Corporate is intended for companies with more than 5 employees ordering
+ * in bulk; the `minEmployees` threshold (default 6) is surfaced on the
+ * landing page so prospects know up-front.
  */
-export default async function TeamLandingPage({
+export default async function CorporateLandingPage({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const rollup = await getPublicTeamRollup(slug);
+  const rollup = await getPublicCorporateRollup(slug);
   if (!rollup) notFound();
 
   const headBonusPct = (rollup.headBonusBps / 100).toFixed(0);
@@ -38,31 +42,36 @@ export default async function TeamLandingPage({
             }}
             aria-hidden
           >
-            <Users className="h-7 w-7" />
+            <Building2 className="h-7 w-7" />
           </span>
 
-          <h1 className="font-heading text-3xl font-semibold mt-4 leading-tight text-italia-dark">
-            Lunch for {rollup.name},<br />
-            on us (well, on the company card).
+          <p className="text-[11px] font-bold uppercase tracking-widest text-italia-gold-dark mt-4">
+            Sud Italia Corporate
+          </p>
+          <h1 className="font-heading text-3xl font-semibold mt-1 leading-tight text-italia-dark">
+            Bulk lunch for {rollup.name},<br />
+            on the company card.
           </h1>
           <p className="text-sm text-italia-gray mt-2 leading-relaxed">
-            Members order what they want. The team card pays. Each teammate keeps personal
-            loyalty points; the team head earns {headBonusPct}% of the team pool.
+            Employees order what they want. The company card pays. Each teammate keeps personal
+            loyalty points; the company head earns {headBonusPct}% of the corporate pool.
+            Built for companies with {rollup.minEmployees}+ employees.
           </p>
 
           <div className="grid grid-cols-3 gap-2 mt-5">
-            <Stat n={String(rollup.memberCount)} label="Members" />
+            <Stat n={String(rollup.memberCount)} label="Employees joined" />
             <Stat n={`${rollup.poolEarnedThisMonth} pts`} label="This month" />
             <Stat n={`${rollup.headBonusPoints} pts`} label="Head bonus" />
           </div>
 
-          <TeamJoinForm slug={rollup.slug} teamName={rollup.name} />
+          <CorporateJoinForm slug={rollup.slug} companyName={rollup.name} />
 
           <div className="mt-5 p-3 bg-gray-50 rounded-xl space-y-2">
-            <Perk text={`One card, one invoice — VAT-compliant breakdown emailed monthly.`} />
+            <Perk text={`One company card, one VAT-compliant invoice emailed each month.`} />
             <Perk text={`Personal points stay yours. Spend them on rewards exactly like a solo account.`} />
+            <Perk text={`Designed for ${rollup.minEmployees}+ employee teams ordering in bulk.`} />
             {preorderCopy && <Perk text={`Auto-pre-order: ${preorderCopy}.`} />}
-            <Perk text={`Slack-friendly. Drop /team/${rollup.slug} in #lunch and watch it fill in.`} />
+            <Perk text={`Share /corporate/${rollup.slug} in your company Slack and watch it fill in.`} />
           </div>
         </div>
       </div>

@@ -1,17 +1,19 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Sparkles, ChevronDown } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Sparkles, ChevronDown, Users } from "lucide-react";
 
 import { useCartStore } from "@/store/cart";
 import {
   BundleTier,
   BundleMealPeriod,
+  BundleAvailabilityRules,
   bundleSavings,
   buildBundleCartLines,
   resolveBundles,
+  resolveBundleRules,
+  resolveBundleAvailability,
   resolveBundleSlots,
-  suggestedBundleMealPeriod,
 } from "@/lib/bundles";
 import type { MenuItem } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
@@ -21,19 +23,35 @@ interface BundleLadderProps {
   /** Admin-configured bundle list (LocationUpsellConfig.bundles). When
    *  unset / empty, DEFAULT_BUNDLES from src/lib/bundles.ts wins. */
   configBundles?: BundleTier[] | null;
+  /** Admin-configured availability rules (LocationUpsellConfig.bundleRules).
+   *  When unset, DEFAULT_BUNDLE_RULES wins (lunch 11–14, family minMainItems 5). */
+  configRules?: Partial<BundleAvailabilityRules> | null;
 }
 
 /**
  * Bundle ladder (audit §3.2) — surfaces the Lunch tier or Family Feast tier
- * above the per-item suggestions in the cart drawer. One picker, two meal
- * periods, switchable header chip when both are relevant.
+ * above the per-item suggestions in the cart drawer. Two ladders, two
+ * different gates:
+ *
+ *   Lunch  — hour-gated. Only renders during the configured lunch window
+ *            (default 11–14). Outside the window, returns null (no chrome).
+ *
+ *   Family — quantity-gated. Only renders once the cart has ≥ minMainItems
+ *            (default 5) pizzas + pastas. When the cart is within
+ *            `hintWithin` of the threshold, renders a one-line hint
+ *            ("Add 1 more pizza or pasta to unlock the Family Feast")
+ *            instead of the full ladder so we nudge without clutter.
  *
  * Tap a tier → cart's items are replaced with the bundle's resolved
  * composition (preferring whatever the customer already added) and the
  * subtotal locks to the bundle price. Adding/removing any line breaks the
  * lock — handled inside the cart store.
  */
-export function BundleLadder({ allMenuItems, configBundles }: BundleLadderProps) {
+export function BundleLadder({
+  allMenuItems,
+  configBundles,
+  configRules,
+}: BundleLadderProps) {
   const items = useCartStore((s) => s.items);
   const locationSlug = useCartStore((s) => s.locationSlug);
   const appliedBundleId = useCartStore((s) => s.appliedBundleId);
@@ -45,17 +63,59 @@ export function BundleLadder({ allMenuItems, configBundles }: BundleLadderProps)
     [configBundles],
   );
 
-  const suggestedPeriod = useMemo(
-    () => suggestedBundleMealPeriod(items),
-    [items],
+  const rules = useMemo(
+    () => resolveBundleRules(configRules ?? null),
+    [configRules],
   );
+
   const hasLunch = allBundles.some((b) => b.mealPeriod === "lunch");
   const hasFamily = allBundles.some((b) => b.mealPeriod === "family");
-  const initialPeriod: BundleMealPeriod | null =
-    suggestedPeriod ??
-    (hasLunch ? "lunch" : hasFamily ? "family" : null);
 
-  const [period, setPeriod] = useState<BundleMealPeriod | null>(initialPeriod);
+  // Recompute the local hour every minute so a customer who lingers in the
+  // drawer sees the lunch ladder appear at 11:00 and disappear at 14:00.
+  // One-minute resolution is plenty — the hour gate switches on the hour.
+  const [hour, setHour] = useState(() => new Date().getHours());
+  useEffect(() => {
+    const i = setInterval(() => setHour(new Date().getHours()), 60_000);
+    return () => clearInterval(i);
+  }, []);
+
+  // Decide what each ladder should do given current cart shape + hour.
+  const lunchAvailability = useMemo(
+    () =>
+      hasLunch
+        ? resolveBundleAvailability("lunch", items, rules, hour)
+        : { kind: "hidden" as const },
+    [hasLunch, items, rules, hour],
+  );
+  const familyAvailability = useMemo(
+    () =>
+      hasFamily
+        ? resolveBundleAvailability("family", items, rules, hour)
+        : { kind: "hidden" as const },
+    [hasFamily, items, rules, hour],
+  );
+
+  // User's preferred ladder when both are available — drives the header
+  // switcher. We derive the *effective* period below from this preference
+  // intersected with what's actually showable, so the user's choice
+  // survives availability flips without an effect-driven sync.
+  const [preferredPeriod, setPreferredPeriod] = useState<BundleMealPeriod>("family");
+
+  // Effective period: respect the user's preference when that ladder is
+  // showable; otherwise fall back to whichever ladder is currently allowed.
+  const period: BundleMealPeriod | null = (() => {
+    const lunchOk = lunchAvailability.kind === "show";
+    const familyOk = familyAvailability.kind === "show";
+    if (preferredPeriod === "family" && familyOk) return "family";
+    if (preferredPeriod === "lunch" && lunchOk) return "lunch";
+    if (familyOk) return "family";
+    if (lunchOk) return "lunch";
+    return null;
+  })();
+
+  const showLadder = period !== null;
+  const showFamilyHint = familyAvailability.kind === "hint";
 
   // Filter to the currently shown period AND only bundles whose composition
   // can be fulfilled at this location's menu — hides the tier rather than
@@ -67,7 +127,9 @@ export function BundleLadder({ allMenuItems, configBundles }: BundleLadderProps)
       .filter((b) => resolveBundleSlots(b, allMenuItems) !== null);
   }, [allBundles, allMenuItems, period]);
 
-  if (!locationSlug || visibleBundles.length === 0) return null;
+  // No ladder + no hint → render nothing.
+  if (!locationSlug) return null;
+  if (!showLadder && !showFamilyHint) return null;
 
   const handleApply = (bundle: BundleTier) => {
     if (appliedBundleId === bundle.id) {
@@ -79,49 +141,75 @@ export function BundleLadder({ allMenuItems, configBundles }: BundleLadderProps)
     applyBundle(bundle.id, bundle.priceGrosze, lines, locationSlug);
   };
 
-  // Decide the column layout once so chips tile cleanly. 4 tiers (full lunch
-  // ladder) → 2 rows of 2 on the drawer's narrow width; 3 tiers → 3 columns.
-  const cols = visibleBundles.length === 4 ? 2 : Math.min(visibleBundles.length, 3);
+  // When the hint fires, surface the cheapest family tier's savings so the
+  // copy can read "Save 19 zł — add 1 more pizza or pasta". Drops to a
+  // generic nudge when the savings can't be computed.
+  const familyMinSavings =
+    showFamilyHint && allBundles.length > 0
+      ? Math.min(
+          ...allBundles
+            .filter((b) => b.mealPeriod === "family")
+            .map(bundleSavings),
+        )
+      : 0;
+
+  const ladderHasBoth =
+    lunchAvailability.kind === "show" && familyAvailability.kind === "show";
+  const cols =
+    visibleBundles.length === 4 ? 2 : Math.min(visibleBundles.length, 3);
 
   return (
-    <div className="px-5 mt-3">
-      <div className="flex items-baseline justify-between mb-2">
-        <p className="flex items-center gap-2 text-xs font-semibold text-italia-gray uppercase tracking-wide">
-          <Sparkles className="h-4 w-4 text-italia-gold" />
-          Make it a bundle{visibleBundles.length > 0 && (
-            <span className="text-italia-gold-dark normal-case font-medium tracking-normal">
-              {" "}
-              · save up to {formatPrice(Math.max(...visibleBundles.map(bundleSavings)))}
-            </span>
-          )}
-        </p>
-        {hasLunch && hasFamily && (
-          <button
-            type="button"
-            onClick={() =>
-              setPeriod((p) => (p === "lunch" ? "family" : "lunch"))
-            }
-            className="inline-flex items-center gap-0.5 text-[11px] font-medium text-italia-red"
-          >
-            {period === "lunch" ? "Lunch" : "Family"}
-            <ChevronDown className="h-3 w-3" />
-          </button>
-        )}
-      </div>
+    <div className="px-5 mt-3 space-y-2">
+      {/* Family-feast nudge — only when within hintWithin items of the
+          minimum, and only when the full family ladder isn't already showing. */}
+      {showFamilyHint && familyAvailability.kind === "hint" && (
+        <FamilyHint
+          needed={familyAvailability.needed}
+          mainItems={familyAvailability.mainItems}
+          minSavings={familyMinSavings}
+        />
+      )}
 
-      <div
-        className="grid gap-2"
-        style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
-      >
-        {visibleBundles.map((bundle) => (
-          <BundleChip
-            key={bundle.id}
-            bundle={bundle}
-            applied={appliedBundleId === bundle.id}
-            onApply={() => handleApply(bundle)}
-          />
-        ))}
-      </div>
+      {showLadder && visibleBundles.length > 0 && (
+        <>
+          <div className="flex items-baseline justify-between">
+            <p className="flex items-center gap-2 text-xs font-semibold text-italia-gray uppercase tracking-wide">
+              <Sparkles className="h-4 w-4 text-italia-gold" />
+              Make it a bundle
+              <span className="text-italia-gold-dark normal-case font-medium tracking-normal">
+                {" "}
+                · save up to {formatPrice(Math.max(...visibleBundles.map(bundleSavings)))}
+              </span>
+            </p>
+            {ladderHasBoth && (
+              <button
+                type="button"
+                onClick={() =>
+                  setPreferredPeriod((p) => (p === "lunch" ? "family" : "lunch"))
+                }
+                className="inline-flex items-center gap-0.5 text-[11px] font-medium text-italia-red"
+              >
+                {period === "lunch" ? "Lunch" : "Family"}
+                <ChevronDown className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+
+          <div
+            className="grid gap-2"
+            style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
+          >
+            {visibleBundles.map((bundle) => (
+              <BundleChip
+                key={bundle.id}
+                bundle={bundle}
+                applied={appliedBundleId === bundle.id}
+                onApply={() => handleApply(bundle)}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -163,7 +251,6 @@ function BundleChip({ bundle, applied, onApply }: ChipProps) {
         applied ? "cursor-default" : "cursor-pointer hover:shadow-sm hover:-translate-y-0.5 active:translate-y-0"
       }`}
     >
-      {/* Tier ribbon — Most picked / Best value badge above the card. */}
       {!applied && bundle.isDefault && (
         <span className="absolute -top-2 left-2.5 px-2 py-0.5 rounded-full bg-italia-red text-white text-[9px] font-bold uppercase tracking-wider">
           Most picked
@@ -209,5 +296,38 @@ function BundleChip({ bundle, applied, onApply }: ChipProps) {
         </div>
       )}
     </button>
+  );
+}
+
+interface FamilyHintProps {
+  needed: number;
+  mainItems: number;
+  minSavings: number;
+}
+
+/**
+ * One-line nudge that appears when the cart is `hintWithin` items short of
+ * the Family Feast threshold — the full ladder stays hidden, but we tell
+ * the customer how close they are.
+ */
+function FamilyHint({ needed, mainItems, minSavings }: FamilyHintProps) {
+  const noun = needed === 1 ? "pizza or pasta" : "pizzas or pastas";
+  return (
+    <div className="flex items-center gap-2.5 p-2.5 rounded-xl border border-italia-gold/30 bg-italia-gold/5">
+      <span className="flex-shrink-0 w-7 h-7 rounded-lg bg-italia-gold/15 text-italia-gold-dark inline-flex items-center justify-center">
+        <Users className="h-4 w-4" />
+      </span>
+      <p className="flex-1 text-xs text-italia-dark leading-snug">
+        Add{" "}
+        <span className="font-semibold">{needed} more {noun}</span>
+        {" "}to unlock the Family Feast bundle
+        {minSavings > 0 && (
+          <span className="text-italia-gold-dark font-semibold">
+            {" "}— save up to {formatPrice(minSavings)}
+          </span>
+        )}
+        <span className="text-italia-gray"> · {mainItems} of needed total</span>
+      </p>
+    </div>
   );
 }

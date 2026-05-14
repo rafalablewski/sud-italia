@@ -668,6 +668,14 @@
     <symbol id="i-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
       <polyline points="6 9 12 15 18 9"/>
     </symbol>
+    <symbol id="i-building" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="4" y="2" width="16" height="20" rx="2"/>
+      <path d="M9 22v-4h6v4"/>
+      <path d="M8 6h.01"/><path d="M16 6h.01"/>
+      <path d="M8 10h.01"/><path d="M16 10h.01"/>
+      <path d="M8 14h.01"/><path d="M16 14h.01"/>
+      <path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/>
+    </symbol>
   </defs>
 </svg>
 
@@ -685,21 +693,34 @@
         Four new behaviours layered into the same drawer that ships
         cart-upsell-v2. Same tokens, fonts, icons and copy patterns as
         <code class="kbd">CartDrawer.tsx</code> — just augmented with a
-        bundle ladder, smarter chip ranking, segmented delivery copy, and
-        a team-order banner when the active wallet is a team.
+        gated bundle ladder, smarter chip ranking, segmented delivery copy,
+        and a corporate-order banner when the active wallet is a Sud Italia
+        Corporate account.
       </p>
       <p class="lede">
-        Toggle the controls below to see each behaviour. Bundle clicks lock
-        the cart subtotal; team toggle adds the gold/green banner above the
-        ToD section; segment switcher repaints the delivery target; hour
-        switcher rotates the chip recommendations.
+        Toggle the controls below. Hour switcher gates the lunch ladder
+        (only renders 11–14); cart-quantity switcher gates the Family Feast
+        ladder (renders at ≥5 mains, hint at 3–4); segment switcher
+        repaints the delivery target; corporate toggle adds the gold/green
+        banner with the Sud Italia Corporate kicker.
       </p>
 
       <div class="controls">
-        <div class="seg" id="bundle-switch" role="tablist" aria-label="Bundle ladder">
-          <button data-bundle="lunch" class="active">Lunch ladder</button>
-          <button data-bundle="family">Family Feast ladder</button>
-          <button data-bundle="off">Hide bundles</button>
+        <div class="seg" id="hour-switch" role="tablist" aria-label="Hour of day">
+          <button data-hour="9">09:00 morning</button>
+          <button data-hour="11" class="active">11:00 lunch</button>
+          <button data-hour="14">14:00 afternoon</button>
+          <button data-hour="19">19:00 dinner</button>
+          <button data-hour="21">21:00 late</button>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="seg" id="cart-switch" role="tablist" aria-label="Cart shape">
+          <button data-cart="solo">Solo · 1 pasta</button>
+          <button data-cart="duo" class="active">Duo · 2 mains</button>
+          <button data-cart="growing">Growing · 3 mains (hint)</button>
+          <button data-cart="family">Family · 5 mains</button>
         </div>
       </div>
 
@@ -713,19 +734,10 @@
       </div>
 
       <div class="controls">
-        <div class="seg" id="hour-switch" role="tablist" aria-label="Hour of day">
-          <button data-hour="11" class="active">11:00 lunch</button>
-          <button data-hour="14">14:00 afternoon</button>
-          <button data-hour="19">19:00 dinner</button>
-          <button data-hour="21">21:00 late</button>
-        </div>
-      </div>
-
-      <div class="controls">
-        <div class="seg" id="team-switch" role="tablist" aria-label="Team mode">
-          <button data-team="off" class="active">Solo customer</button>
-          <button data-team="member">Acme team · member</button>
-          <button data-team="head">Acme team · head</button>
+        <div class="seg" id="corp-switch" role="tablist" aria-label="Corporate mode">
+          <button data-corp="off" class="active">Solo customer</button>
+          <button data-corp="member">Acme Corporate · employee</button>
+          <button data-corp="head">Acme Corporate · head</button>
         </div>
       </div>
 
@@ -753,11 +765,14 @@
         <li>
           <span class="marker">2</span>
           <span>
-            <strong>Bundle ladder above the chips.</strong>
-            <em>§3.2.</em> Decoy + anchor + default-pushed combos at fixed
-            prices. <b>Most picked</b> on the default tier (red ribbon), <b>Best value</b>
-            on the anchor (gold ribbon), decoy slightly muted. Tap to lock
-            the cart subtotal to the bundle's price.
+            <strong>Gated bundle ladder above the chips.</strong>
+            <em>§3.2.</em> Lunch ladder shows only during the lunch window
+            (default 11–14, admin-configurable). Family Feast shows only
+            when the cart has ≥5 mains; at 3 or 4 mains the customer sees a
+            one-line nudge instead of the full ladder
+            (&ldquo;Add 1 more pizza or pasta to unlock Family Feast&rdquo;).
+            <b>Most picked</b> on the default tier (red ribbon), <b>Best value</b>
+            on the anchor (gold ribbon), decoy slightly muted.
           </span>
         </li>
         <li>
@@ -766,18 +781,20 @@
             <strong>Segmented free-delivery threshold.</strong>
             <em>§3.3.</em> Four bands instead of three: first-time 39 zł,
             growing 2–4 → <b>49 zł</b>, regular 5+ → 59 zł, Gold/Platinum
-            free. The "tuned for you" annotation surfaces the personalisation
-            so customers don't think the bar moved by accident.
+            free. The &ldquo;tuned for you&rdquo; annotation surfaces the personalisation
+            so customers don&rsquo;t think the bar moved by accident.
           </span>
         </li>
         <li>
           <span class="marker">4</span>
           <span>
-            <strong>Sud Italia for Teams banner.</strong>
+            <strong>Sud Italia Corporate banner.</strong>
             <em>§3.4.</em> Renders above the ToD banner when the active
-            wallet has a <code class="kbd">team</code> config. "Ordering with Acme · billed
-            to the team head". Members see member copy, head sees head-bonus
-            accrual. Public landing at <code class="kbd">/team/[slug]</code>.
+            wallet has a <code class="kbd">corporate</code> config. Floor is 6 employees
+            (&ldquo;>5&rdquo; from the brief, enforced at promotion). Employees see
+            "Ordering with Acme · billed to the company card", head sees
+            head-bonus accrual. Public landing at <code class="kbd">/corporate/[slug]</code>;
+            admin at <code class="kbd">/admin/corporate</code>.
           </span>
         </li>
       </ul>
@@ -787,12 +804,13 @@
       <span class="pill">Q: where it plugs in</span>
       <h2>Same files, additive surfaces</h2>
       <ul class="checklist">
-        <li><b>upsell.ts</b> — adds <code class="kbd">scorePairing()</code> + <code class="kbd">PairingContext</code>; <code class="kbd">getCartSuggestions</code> takes an optional context.</li>
-        <li><b>bundles.ts</b> (new) — <code class="kbd">DEFAULT_BUNDLES</code> for both ladders; admins override via <code class="kbd">LocationUpsellConfig.bundles</code>.</li>
-        <li><b>cart store</b> — <code class="kbd">appliedBundleId</code> + <code class="kbd">bundlePriceGrosze</code>; getTotal returns the locked price when set.</li>
-        <li><b>checkout API</b> — re-validates the bundle composition and sends one Stripe line at the locked price with the items itemized in the description.</li>
-        <li><b>FamilyWallet</b> — optional <code class="kbd">team</code> config (slug, name, billingEmail, headBonusBps, autoPreorderDay/Time, locationSlug).</li>
-        <li><b>/admin/teams</b> (new) — promote a wallet to a team; edit config; remove.</li>
+        <li><b>upsell.ts</b> — <code class="kbd">scorePairing()</code> + <code class="kbd">PairingContext</code>; <code class="kbd">ITEM_REASON_OVERRIDES</code> map (espresso → "Never too late", tiramisù → "Pizzaiolo's fav", burrata/bruschetta → "Freshly-baked today").</li>
+        <li><b>bundles.ts</b> (new) — <code class="kbd">DEFAULT_BUNDLES</code> + <code class="kbd">DEFAULT_BUNDLE_RULES</code> + <code class="kbd">resolveBundleAvailability()</code> (returns show / hint / hidden).</li>
+        <li><b>BundleLadder</b> — re-resolves availability on a one-minute tick so the lunch ladder appears and disappears with the local clock; surfaces the family hint when within 2 mains of the threshold.</li>
+        <li><b>checkout API</b> — re-validates the bundle composition and sends one Stripe line at the locked price with the items itemized.</li>
+        <li><b>FamilyWallet</b> — optional <code class="kbd">corporate</code> config (slug, name, billingEmail, headBonusBps, <b>minEmployees</b>, autoPreorderDay/Time, locationSlug). Server enforces minEmployees ≥ 6.</li>
+        <li><b>/admin/upsell → Bundle availability</b> — edit lunch hours + family quantity gate per location.</li>
+        <li><b>/admin/corporate</b> (renamed from /admin/teams) — promote a wallet (≥6 members), edit config, remove.</li>
       </ul>
     </div>
 
@@ -800,9 +818,9 @@
       <span class="pill gold">Out of scope here</span>
       <h2>Deliberately not in this commit</h2>
       <ul class="checklist">
-        <li><b>Bundles editor in /admin/upsell</b> — admins can still override via <code class="kbd">LocationUpsellConfig.bundles</code> JSON; the UI ships next.</li>
-        <li><b>Monthly invoice cron for team heads</b> — config persisted; cron lands in a follow-up.</li>
-        <li><b>Auto-pre-order reminder</b> — schedule persisted; the cron that fires "Wednesday team lunch — 4 of 8 have ordered, 2h to go" lands next.</li>
+        <li><b>Per-bundle composition editor in /admin/upsell</b> — bundle slot definitions still ship via <code class="kbd">DEFAULT_BUNDLES</code> + <code class="kbd">LocationUpsellConfig.bundles</code> JSON; the schema editor ships next.</li>
+        <li><b>Monthly invoice cron for corporate heads</b> — config persisted; cron lands in a follow-up.</li>
+        <li><b>Auto-pre-order reminder</b> — schedule persisted; the cron that fires &ldquo;Wednesday corporate lunch — 4 of 8 have ordered, 2h to go&rdquo; lands next.</li>
       </ul>
     </div>
   </div>
@@ -838,14 +856,15 @@
           </div>
         </div>
 
-        <!-- 3.4 Team banner — only when wallet.team is active -->
-        <div class="sec" id="teamHost" style="display: none;">
+        <!-- 3.4 Corporate banner — only when wallet.corporate is active -->
+        <div class="sec" id="corpHost" style="display: none;">
           <div class="team-banner">
-            <span class="crest"><svg class="ic-lg"><use href="#i-users"/></svg></span>
+            <span class="crest"><svg class="ic-lg"><use href="#i-building"/></svg></span>
             <div class="body">
-              <div class="ttl" id="teamTtl">Ordering with <span class="name">Acme</span> · billed to the team head</div>
-              <div class="sub" id="teamSub">8 members · Wednesday 12:30 team lunch · 4 of 8 have ordered</div>
-              <div class="meter"><div class="fill" id="teamMeter" style="width: 50%"></div></div>
+              <p style="font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-italia-gold-dark); margin: 0;">Sud Italia Corporate</p>
+              <div class="ttl" id="corpTtl" style="margin-top: 2px;">Ordering with <span class="name">Acme</span> · billed to the company card</div>
+              <div class="sub" id="corpSub">8 employees · Wednesday 12:30 corporate lunch · 4 of 8 have ordered</div>
+              <div class="meter"><div class="fill" id="corpMeter" style="width: 50%"></div></div>
             </div>
           </div>
         </div>
@@ -946,23 +965,76 @@
   // State — same shape as cart-upsell-mockup.html so the recompute path
   // is comparable line-for-line. Adds bundle + team + segment + hour.
   // ===================================================================
-  const baseItems = [
-    { id: "pizza", name: "Margherita", each: 2800, qty: 1 },
-    { id: "pasta", name: "Carbonara",  each: 2900, qty: 1 },
-  ];
+  // Cart shape presets — drive the §3.2 family quantity gate. Each preset
+  // mirrors a realistic cart so the "show / hint / hidden" decision is
+  // observable.
+  const CART_PRESETS = {
+    solo:    [{ id: "pasta", name: "Carbonara",  each: 2900, qty: 1 }],
+    duo:     [{ id: "pizza", name: "Margherita", each: 2800, qty: 1 }, { id: "pasta", name: "Carbonara", each: 2900, qty: 1 }],
+    growing: [{ id: "pizza", name: "Margherita", each: 2800, qty: 1 }, { id: "pizza2", name: "Diavola", each: 3200, qty: 1 }, { id: "pasta", name: "Carbonara", each: 2900, qty: 1 }],
+    family:  [{ id: "pizza", name: "Margherita", each: 2800, qty: 1 }, { id: "pizza2", name: "Diavola", each: 3200, qty: 1 }, { id: "pizza3", name: "Quattro Formaggi", each: 3400, qty: 1 }, { id: "pasta", name: "Carbonara", each: 2900, qty: 1 }, { id: "pasta2", name: "Pesto", each: 2700, qty: 1 }],
+  };
+
+  // §3.2 admin-tunable rules — mirror of DEFAULT_BUNDLE_RULES.
+  const BUNDLE_RULES = {
+    lunch: { startHour: 11, endHour: 14 },
+    family: { minMainItems: 5, hintWithin: 2 },
+  };
+
   const state = {
-    items: structuredClone(baseItems),
+    cartShape: "duo",
+    items: structuredClone(CART_PRESETS.duo),
     bundle: null,                     // active BundleTier or null
-    bundleLadder: "lunch",            // "lunch" | "family" | "off"
+    preferredLadder: "family",        // user-preferred ladder when both showable
     discountPercent: 0.10,
     discountLabel: "Lunch combo −10%",
     deliveryFee: 1000,                // 10 PLN flat fallback
     segment: "growing",               // first-time | growing | regular | vip
-    hour: 11,                         // local hour, drives chip ranking
-    team: "off",                      // off | member | head
+    hour: 11,                         // local hour, drives gating + chip ranking
+    corp: "off",                      // off | member | head
     customerAttachByItemId: { espresso: 3 },
     customerOrderCount: 4,
   };
+
+  // Items that count toward the §3.2 family quantity gate (pizza + pasta).
+  function countMains() {
+    return state.items.reduce((sum, it) => {
+      if (/^pizza/.test(it.id) || /^pasta/.test(it.id)) return sum + it.qty;
+      return sum;
+    }, 0);
+  }
+
+  // §3.2 — return "show" / "hint" / "hidden" for each ladder, identical
+  // to resolveBundleAvailability() in src/lib/bundles.ts.
+  function resolveAvailability() {
+    const lunchOk = state.hour >= BUNDLE_RULES.lunch.startHour && state.hour < BUNDLE_RULES.lunch.endHour;
+    const mains = countMains();
+    let family;
+    if (mains >= BUNDLE_RULES.family.minMainItems) {
+      family = { kind: "show", mains };
+    } else {
+      const needed = BUNDLE_RULES.family.minMainItems - mains;
+      family = needed > 0 && needed <= BUNDLE_RULES.family.hintWithin
+        ? { kind: "hint", mains, needed }
+        : { kind: "hidden", mains };
+    }
+    return {
+      lunch:  lunchOk ? { kind: "show" } : { kind: "hidden" },
+      family,
+    };
+  }
+
+  // Effective ladder period: respect user preference when allowed, else
+  // fall back to whichever is showable.
+  function effectivePeriod(av) {
+    const lunchOk = av.lunch.kind === "show";
+    const familyOk = av.family.kind === "show";
+    if (state.preferredLadder === "family" && familyOk) return "family";
+    if (state.preferredLadder === "lunch" && lunchOk) return "lunch";
+    if (familyOk) return "family";
+    if (lunchOk) return "lunch";
+    return null;
+  }
 
   // §3.3 segment → threshold (grosze). Mirror of SEGMENT_FREE_DELIVERY_THRESHOLD.
   const SEGMENT_THRESHOLD = {
@@ -1042,89 +1114,124 @@
     });
   }
 
-  function renderTeam() {
-    const host = document.getElementById("teamHost");
-    if (state.team === "off") {
+  function renderCorporate() {
+    const host = document.getElementById("corpHost");
+    if (state.corp === "off") {
       host.style.display = "none";
       return;
     }
     host.style.display = "block";
-    if (state.team === "head") {
-      document.getElementById("teamTtl").innerHTML = `Ordering as <span class="name">Acme</span> head · paid on file`;
-      document.getElementById("teamSub").textContent = "8 members · 428 pts head bonus this month · Wed 12:30 lunch reminder";
-      document.getElementById("teamMeter").style.width = "70%";
+    if (state.corp === "head") {
+      document.getElementById("corpTtl").innerHTML = `Ordering as <span class="name">Acme</span> head · paid on file`;
+      document.getElementById("corpSub").textContent = "8 employees · 428 pts head bonus this month · Wed 12:30 lunch reminder";
+      document.getElementById("corpMeter").style.width = "70%";
     } else {
-      document.getElementById("teamTtl").innerHTML = `Ordering with <span class="name">Acme</span> · billed to the team head`;
-      document.getElementById("teamSub").textContent = "8 members · Wednesday 12:30 team lunch · 4 of 8 have ordered";
-      document.getElementById("teamMeter").style.width = "50%";
+      document.getElementById("corpTtl").innerHTML = `Ordering with <span class="name">Acme</span> · billed to the company card`;
+      document.getElementById("corpSub").textContent = "8 employees · Wednesday 12:30 corporate lunch · 4 of 8 have ordered";
+      document.getElementById("corpMeter").style.width = "50%";
     }
   }
 
   function renderBundles() {
     const host = document.getElementById("bundleHost");
-    if (state.bundleLadder === "off") {
+    const av = resolveAvailability();
+    const period = effectivePeriod(av);
+    const showFamilyHint = av.family.kind === "hint";
+
+    if (!period && !showFamilyHint) {
       host.innerHTML = "";
       host.style.display = "none";
       return;
     }
     host.style.display = "block";
 
-    const ladder = BUNDLES[state.bundleLadder];
-    const maxSavings = Math.max(...ladder.map(b => Math.max(0, b.ref - b.price)));
-    const ladderName = state.bundleLadder === "lunch" ? "Lunch" : "Family";
-    const switcherLabel = state.bundleLadder === "lunch" ? "Family ▾" : "Lunch ▾";
+    let html = "";
 
-    const tiles = ladder.map(b => {
-      const role = b.role ? `is-${b.role}` : "";
-      const applied = state.bundle && state.bundle.id === b.id ? "applied" : "";
-      const saving = Math.max(0, b.ref - b.price);
-      const showRef = b.ref > b.price;
-      return `
-        <div class="bundle ${role} ${applied}" data-id="${esc(b.id)}">
-          <span class="tier-label">${esc(b.tier)}</span>
-          <span class="name">${esc(b.name)}</span>
-          <span class="composition">${esc(b.composition)}</span>
-          <span class="price-row">
-            <span class="price">${esc(money(b.price))}</span>
-            ${showRef ? `<span class="youdpay">${esc(money(b.ref))}</span>` : ""}
+    // §3.2 family hint — one-line nudge when within hintWithin items of
+    // the threshold. Always rendered above the ladder when fired.
+    if (showFamilyHint) {
+      const noun = av.family.needed === 1 ? "pizza or pasta" : "pizzas or pastas";
+      const minSaving = Math.min(...BUNDLES.family.map(b => Math.max(0, b.ref - b.price)));
+      html += `
+        <div class="family-hint" style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(184,146,46,0.30); background: rgba(184,146,46,0.05); margin-bottom: 8px;">
+          <span style="flex-shrink: 0; width: 28px; height: 28px; border-radius: 8px; background: rgba(184,146,46,0.15); color: var(--color-italia-gold-dark); display: inline-flex; align-items: center; justify-content: center;">
+            <svg class="ic"><use href="#i-users"/></svg>
           </span>
-          ${saving > 0 ? `<span class="saving">Save ${esc(money(saving))}</span>` : ""}
+          <p style="flex: 1; font-size: 12px; color: var(--color-italia-dark); line-height: 1.35; margin: 0;">
+            Add <b>${av.family.needed} more ${esc(noun)}</b> to unlock the Family Feast bundle
+            <span style="color: var(--color-italia-gold-dark); font-weight: 600;"> — save up to ${esc(money(minSaving))}</span>
+            <span style="color: var(--color-italia-gray);"> · ${av.family.mains} of ${BUNDLE_RULES.family.minMainItems} mains</span>
+          </p>
         </div>`;
-    }).join("");
+    }
 
-    host.innerHTML = `
-      <div class="bundle-head">
-        <p class="label"><span class="gold">✦</span> Make it a bundle <span class="save-up-to">· save up to ${esc(money(maxSavings))}</span></p>
-        <button class="switcher" id="bundleSwitch" aria-label="Switch ladder">${esc(switcherLabel)}</button>
-      </div>
-      <div class="bundles" style="grid-template-columns: repeat(${ladder.length === 4 ? 2 : Math.min(ladder.length, 3)}, 1fr);">
-        ${tiles}
-      </div>`;
+    if (period) {
+      const ladder = BUNDLES[period];
+      const maxSavings = Math.max(...ladder.map(b => Math.max(0, b.ref - b.price)));
+      const ladderHasBoth = av.lunch.kind === "show" && av.family.kind === "show";
+      const switcherLabel = period === "lunch" ? "Lunch ▾" : "Family ▾";
 
-    document.getElementById("bundleSwitch").addEventListener("click", () => {
-      state.bundleLadder = state.bundleLadder === "lunch" ? "family" : "lunch";
-      // Switching the ladder doesn't auto-clear an applied bundle from the
-      // other ladder — production behaviour parity.
-      renderBundles();
-      document.querySelectorAll('#bundle-switch button').forEach(b => {
-        b.classList.toggle("active", b.dataset.bundle === state.bundleLadder);
+      const tiles = ladder.map(b => {
+        const role = b.role ? `is-${b.role}` : "";
+        const applied = state.bundle && state.bundle.id === b.id ? "applied" : "";
+        const saving = Math.max(0, b.ref - b.price);
+        const showRef = b.ref > b.price;
+        return `
+          <div class="bundle ${role} ${applied}" data-id="${esc(b.id)}">
+            <span class="tier-label">${esc(b.tier)}</span>
+            <span class="name">${esc(b.name)}</span>
+            <span class="composition">${esc(b.composition)}</span>
+            <span class="price-row">
+              <span class="price">${esc(money(b.price))}</span>
+              ${showRef ? `<span class="youdpay">${esc(money(b.ref))}</span>` : ""}
+            </span>
+            ${saving > 0 ? `<span class="saving">Save ${esc(money(saving))}</span>` : ""}
+          </div>`;
+      }).join("");
+
+      html += `
+        <div class="bundle-head">
+          <p class="label"><span class="gold">✦</span> Make it a bundle <span class="save-up-to">· save up to ${esc(money(maxSavings))}</span></p>
+          ${ladderHasBoth ? `<button class="switcher" id="bundleSwitch" aria-label="Switch ladder">${esc(switcherLabel)}</button>` : ""}
+        </div>
+        <div class="bundles" style="grid-template-columns: repeat(${ladder.length === 4 ? 2 : Math.min(ladder.length, 3)}, 1fr);">
+          ${tiles}
+        </div>`;
+    }
+
+    host.innerHTML = html;
+
+    const switchBtn = document.getElementById("bundleSwitch");
+    if (switchBtn) {
+      switchBtn.addEventListener("click", () => {
+        state.preferredLadder = state.preferredLadder === "lunch" ? "family" : "lunch";
+        renderBundles();
       });
-    });
+    }
 
     host.querySelectorAll(".bundle").forEach(el => {
-      el.addEventListener("click", () => applyBundle(el.dataset.id));
+      el.addEventListener("click", () => applyBundle(el.dataset.id, period));
     });
   }
 
   // §3.1 — re-rank the three chip slots by composite (margin × hour ×
   // customer × novelty). Pure mockup version: returns an ordered array
   // of { id, glyph, name, reason, price } for the chips section.
+  // Brand-voice reason copy per item — mirrors ITEM_REASON_OVERRIDES in
+  // src/lib/upsell.ts. Strong customer-attach signal still wins over the
+  // override (see below).
+  const ITEM_REASON_OVERRIDES = {
+    espresso: "Never too late",
+    tiramisu: "Pizzaiolo's fav",
+    burrata:  "Freshly-baked today",
+  };
+
   function rankChips() {
     const candidates = [
-      { id: "espresso", category: "drinks",   glyph: "☕️", name: "Espresso", base: 600, defaultReason: "Pizzaiolo's pick" },
-      { id: "tiramisu", category: "desserts", glyph: "🍰", name: "Tiramisù", base: 1800, defaultReason: "Made fresh today" },
-      { id: "limonata", category: "drinks",   glyph: "🍋", name: "Limonata", base: 1200, defaultReason: "Sicilian lemon" },
-      { id: "burrata",  category: "antipasti",glyph: "🥖", name: "Burrata bruschetta", base: 2200, defaultReason: "Hand-pulled today" },
+      { id: "espresso", category: "drinks",   glyph: "☕️", name: "Espresso", base: 600 },
+      { id: "tiramisu", category: "desserts", glyph: "🍰", name: "Tiramisù", base: 1800 },
+      { id: "limonata", category: "drinks",   glyph: "🍋", name: "Limonata", base: 1200 },
+      { id: "burrata",  category: "antipasti",glyph: "🥖", name: "Burrata bruschetta", base: 2200 },
     ];
     const scored = candidates.map(c => {
       const hourBias = (HOUR_BIAS[c.category] || [])[state.hour] ?? 0.5;
@@ -1137,13 +1244,16 @@
                     : 0;
       const composite = Math.max(0, Math.min(1, hourBias * 0.4 + customer * 0.3 + 0.4 * 0.3 + novelty));
 
-      let reason = c.defaultReason;
+      // Strong-attach recognition wins over the brand-voice override
+      // ("you added it 3 of last 4 visits"); otherwise use the override
+      // when one exists, falling back to a generic line.
+      let reason;
       if (orders >= 2 && attach >= 2 && rate >= 0.5) {
         reason = `You added it ${attach} of last ${orders} visits`;
-      } else if (orders >= 3 && attach === 0 && c.category === "desserts") {
-        reason = "You haven't tried this one yet";
-      } else if (state.hour >= 17 && c.category === "drinks" && c.id === "espresso") {
-        reason = "Espresso, evening edition";
+      } else if (ITEM_REASON_OVERRIDES[c.id]) {
+        reason = ITEM_REASON_OVERRIDES[c.id];
+      } else {
+        reason = "Made fresh today";
       }
       return { ...c, composite, reason };
     });
@@ -1243,14 +1353,15 @@
   // ===================================================================
   // Bundle apply / clear
   // ===================================================================
-  function applyBundle(id) {
-    const ladder = BUNDLES[state.bundleLadder];
+  function applyBundle(id, period) {
+    const ladder = BUNDLES[period];
+    if (!ladder) return;
     const tier = ladder.find(b => b.id === id);
     if (!tier) return;
     if (state.bundle && state.bundle.id === tier.id) {
       // Tap-applied → clear
       state.bundle = null;
-      state.items = structuredClone(baseItems);
+      state.items = structuredClone(CART_PRESETS[state.cartShape]);
       renderBundles();
       renderLines();
       renderChips();
@@ -1337,17 +1448,27 @@
   // ===================================================================
   // Left-rail control wiring
   // ===================================================================
-  document.getElementById("bundle-switch").addEventListener("click", e => {
+  document.getElementById("hour-switch").addEventListener("click", e => {
     const btn = e.target.closest("button"); if (!btn) return;
-    document.querySelectorAll("#bundle-switch button").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll("#hour-switch button").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
-    state.bundleLadder = btn.dataset.bundle;
-    if (state.bundle && BUNDLES[state.bundleLadder]?.find(b => b.id === state.bundle.id) === undefined) {
-      state.bundle = null;
-      state.items = structuredClone(baseItems);
-      renderLines();
-    }
+    state.hour = parseInt(btn.dataset.hour, 10);
+    // Hour change retriggers bundle gating + chip ranking.
     renderBundles();
+    renderChips();
+    recompute();
+  });
+
+  document.getElementById("cart-switch").addEventListener("click", e => {
+    const btn = e.target.closest("button"); if (!btn) return;
+    document.querySelectorAll("#cart-switch button").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    state.cartShape = btn.dataset.cart;
+    state.bundle = null;
+    state.items = structuredClone(CART_PRESETS[state.cartShape]);
+    renderLines();
+    renderBundles();
+    renderChips();
     recompute();
   });
 
@@ -1359,20 +1480,12 @@
     recompute();
   });
 
-  document.getElementById("hour-switch").addEventListener("click", e => {
+  document.getElementById("corp-switch").addEventListener("click", e => {
     const btn = e.target.closest("button"); if (!btn) return;
-    document.querySelectorAll("#hour-switch button").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll("#corp-switch button").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
-    state.hour = parseInt(btn.dataset.hour, 10);
-    renderChips();
-  });
-
-  document.getElementById("team-switch").addEventListener("click", e => {
-    const btn = e.target.closest("button"); if (!btn) return;
-    document.querySelectorAll("#team-switch button").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    state.team = btn.dataset.team;
-    renderTeam();
+    state.corp = btn.dataset.corp;
+    renderCorporate();
   });
 
   document.getElementById("addBtn").addEventListener("click", () => {
@@ -1396,7 +1509,7 @@
   });
 
   document.getElementById("resetBtn").addEventListener("click", () => {
-    state.items = structuredClone(baseItems);
+    state.items = structuredClone(CART_PRESETS[state.cartShape]);
     state.bundle = null;
     renderLines();
     renderBundles();
@@ -1408,7 +1521,7 @@
   // Init
   // ===================================================================
   renderLines();
-  renderTeam();
+  renderCorporate();
   renderBundles();
   renderChips();
   recompute();

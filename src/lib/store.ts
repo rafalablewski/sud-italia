@@ -2499,33 +2499,43 @@ export interface FamilyWallet {
   createdAt: string;
   members: WalletMemberEntry[];
   /**
-   * When set, productises this wallet as a "Sud Italia for Teams" wallet
-   * (audit §3.4) — adds a public team URL, billing email for the head's
-   * monthly invoice, and a head-bonus accrual rate so the team head earns
-   * a slice of the team pool. Members continue to earn personal points
-   * exactly as a solo customer would.
+   * When set, productises this wallet as a "Sud Italia Corporate" account
+   * (audit §3.4) — adds a public corporate URL, billing email for the
+   * admin's monthly invoice, and a head-bonus accrual rate so the
+   * company contact earns a slice of the corporate pool. Members continue
+   * to earn personal points exactly as a solo customer would.
+   *
+   * Corporate is intended for companies with more than 5 employees ordering
+   * in bulk; the `minEmployees` threshold (default 6) enforces eligibility
+   * at promotion time and is surfaced on the public landing page.
    */
-  team?: TeamConfig;
+  corporate?: CorporateConfig;
 }
 
-export interface TeamConfig {
-  /** URL slug used at /team/[slug]. Lowercase, alphanumeric + dash. */
+export interface CorporateConfig {
+  /** URL slug used at /corporate/[slug]. Lowercase, alphanumeric + dash. */
   slug: string;
-  /** Display name (e.g. "Acme", "Allegro Lunch Team"). */
+  /** Company name (e.g. "Acme", "Allegro"). */
   name: string;
   /** Email the monthly VAT-compliant invoice goes to. */
   billingEmail?: string;
   /**
    * Head bonus, expressed in basis points of the pool. 2000 = 20%.
-   * Surfaces inside the loyalty engine; the head's spendable points are
-   * boosted by this multiplier of the team's monthly earned pool.
+   * Surfaces inside the loyalty engine; the company head's spendable
+   * points are boosted by this multiplier of the corporate monthly pool.
    */
   headBonusBps: number;
+  /**
+   * Minimum employee count required for the corporate program. Default 6
+   * so the brief's ">5 employees" is enforced. Surfaced on the public
+   * landing page so prospects know the threshold up-front.
+   */
+  minEmployees: number;
   /** Optional weekly auto-pre-order schedule. Used by the cart-drawer
-   *  banner copy (&ldquo;Wednesday team lunch — 4 of 8 have ordered, 2h to go&rdquo;). */
+   *  banner copy (&ldquo;Wednesday corporate lunch — 4 of 8 have ordered, 2h to go&rdquo;). */
   autoPreorderDay?: number; // 0 = Sun, 1 = Mon, ..., 6 = Sat
   autoPreorderTime?: string; // "HH:MM" local
-  /** Pinned location for the team's standing order. */
+  /** Pinned location for the company's standing order. */
   locationSlug?: string;
   createdAt: string;
 }
@@ -2736,99 +2746,118 @@ export async function leaveFamilyWallet(
   });
 }
 
-// --- Sud Italia for Teams (audit §3.4) ---------------------------------
+// --- Sud Italia Corporate (audit §3.4) ---------------------------------
 //
-// Productises the existing FamilyWallet as an office-team primitive. A team
-// is just a wallet with a `team` config attached: public slug at
-// /team/[slug], billing email for the head, and an explicit head bonus rate.
+// Productises the existing FamilyWallet as a corporate-bulk-ordering
+// primitive. A corporate account is just a wallet with a `corporate` config
+// attached: public slug at /corporate/[slug], billing email for the
+// company contact, an explicit head bonus rate, and a minimum employee
+// threshold (default 6 — the brief's ">5 employees" rule).
 //
 // Members continue to earn personal points exactly as a solo customer would
 // (handled by resolveCustomerLoyalty); the head additionally accrues a slice
-// of the team pool via headBonusBps.
+// of the corporate pool via headBonusBps.
 
-const TEAM_SLUG_PATTERN = /^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])?$/;
+const CORPORATE_SLUG_PATTERN = /^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])?$/;
+const CORPORATE_DEFAULT_MIN_EMPLOYEES = 6;
 
-export function normaliseTeamSlug(raw: string): string | null {
+export function normaliseCorporateSlug(raw: string): string | null {
   const slug = raw.trim().toLowerCase().replace(/\s+/g, "-");
-  if (!TEAM_SLUG_PATTERN.test(slug)) return null;
+  if (!CORPORATE_SLUG_PATTERN.test(slug)) return null;
   return slug;
 }
 
-export async function findTeamBySlug(slugRaw: string): Promise<FamilyWallet | null> {
-  const slug = normaliseTeamSlug(slugRaw);
+export async function findCorporateBySlug(slugRaw: string): Promise<FamilyWallet | null> {
+  const slug = normaliseCorporateSlug(slugRaw);
   if (!slug) return null;
   const wallets = await getFamilyWallets();
-  return wallets.find((w) => w.team?.slug === slug) ?? null;
+  return wallets.find((w) => w.corporate?.slug === slug) ?? null;
 }
 
-export async function listTeamWallets(): Promise<FamilyWallet[]> {
+export async function listCorporateWallets(): Promise<FamilyWallet[]> {
   const wallets = await getFamilyWallets();
-  return wallets.filter((w) => w.team);
+  return wallets.filter((w) => w.corporate);
 }
 
-export type SetTeamConfigResult =
+export type SetCorporateConfigResult =
   | { ok: true; wallet: FamilyWallet }
   | { error: string };
 
 /**
- * Promote an existing wallet to a team (or update an existing team's
- * config). Slug must be unique across teams. Caller must have already
- * verified that `headPhone` matches the wallet's owner — this helper
- * trusts the input.
+ * Promote an existing wallet to a corporate account (or update an existing
+ * one's config). Slug must be unique across corporates. Caller must have
+ * already verified that `headPhone` matches the wallet's owner — this
+ * helper trusts the input.
+ *
+ * `minEmployees` defaults to 6 (the brief's ">5 employees" rule). The
+ * landing page surfaces the threshold so prospects know up-front.
  */
-export async function setTeamConfig(
+export async function setCorporateConfig(
   walletId: string,
-  team: Omit<TeamConfig, "createdAt"> & { createdAt?: string },
-): Promise<SetTeamConfigResult> {
-  const slug = normaliseTeamSlug(team.slug);
+  corporate: Omit<CorporateConfig, "createdAt" | "minEmployees"> & {
+    createdAt?: string;
+    minEmployees?: number;
+  },
+): Promise<SetCorporateConfigResult> {
+  const slug = normaliseCorporateSlug(corporate.slug);
   if (!slug) {
-    return { error: "Invalid team slug. Use lowercase letters, digits, and dashes (3–40 chars)." };
+    return { error: "Invalid corporate slug. Use lowercase letters, digits, and dashes (3–40 chars)." };
   }
-  if (!team.name.trim()) {
-    return { error: "Team name is required" };
+  if (!corporate.name.trim()) {
+    return { error: "Company name is required" };
   }
-  if (!Number.isFinite(team.headBonusBps) || team.headBonusBps < 0 || team.headBonusBps > 5000) {
+  if (!Number.isFinite(corporate.headBonusBps) || corporate.headBonusBps < 0 || corporate.headBonusBps > 5000) {
     return { error: "Head bonus must be 0–5000 bps (0–50%)" };
+  }
+  const minEmployeesRaw =
+    typeof corporate.minEmployees === "number" && Number.isFinite(corporate.minEmployees)
+      ? corporate.minEmployees
+      : CORPORATE_DEFAULT_MIN_EMPLOYEES;
+  // Brief: corporate is for companies with >5 employees, so the floor is 6.
+  if (minEmployeesRaw < 6) {
+    return { error: "Corporate accounts require at least 6 employees (>5)." };
   }
   return withLock("wallets.json", async () => {
     const list = await readJSON<FamilyWallet[]>("wallets.json", []);
     const w = list.find((x) => x.id === walletId);
     if (!w) return { error: "Wallet not found" };
-    const collision = list.find((x) => x.id !== walletId && x.team?.slug === slug);
-    if (collision) return { error: "That team URL is taken" };
+    const collision = list.find((x) => x.id !== walletId && x.corporate?.slug === slug);
+    if (collision) return { error: "That corporate URL is taken" };
     const now = new Date().toISOString();
-    w.team = {
+    w.corporate = {
       slug,
-      name: team.name.trim(),
-      billingEmail: team.billingEmail?.trim() || undefined,
-      headBonusBps: Math.round(team.headBonusBps),
-      autoPreorderDay: team.autoPreorderDay,
-      autoPreorderTime: team.autoPreorderTime?.trim() || undefined,
-      locationSlug: team.locationSlug?.trim() || undefined,
-      createdAt: w.team?.createdAt ?? team.createdAt ?? now,
+      name: corporate.name.trim(),
+      billingEmail: corporate.billingEmail?.trim() || undefined,
+      headBonusBps: Math.round(corporate.headBonusBps),
+      minEmployees: Math.round(minEmployeesRaw),
+      autoPreorderDay: corporate.autoPreorderDay,
+      autoPreorderTime: corporate.autoPreorderTime?.trim() || undefined,
+      locationSlug: corporate.locationSlug?.trim() || undefined,
+      createdAt: w.corporate?.createdAt ?? corporate.createdAt ?? now,
     };
     await writeJSON("wallets.json", list);
     return { ok: true, wallet: w };
   });
 }
 
-export async function clearTeamConfig(walletId: string): Promise<{ ok: true } | { error: string }> {
+export async function clearCorporateConfig(walletId: string): Promise<{ ok: true } | { error: string }> {
   return withLock("wallets.json", async () => {
     const list = await readJSON<FamilyWallet[]>("wallets.json", []);
     const w = list.find((x) => x.id === walletId);
     if (!w) return { error: "Wallet not found" };
-    if (!w.team) return { ok: true };
-    delete w.team;
+    if (!w.corporate) return { ok: true };
+    delete w.corporate;
     await writeJSON("wallets.json", list);
     return { ok: true };
   });
 }
 
-/** Public-facing team rollup (no PII beyond what the head already shares). */
-export interface PublicTeamRollup {
+/** Public-facing corporate rollup (no PII beyond what the head shares). */
+export interface PublicCorporateRollup {
   slug: string;
   name: string;
   memberCount: number;
+  minEmployees: number;
   poolEarnedThisMonth: number;
   headBonusPoints: number;
   headBonusBps: number;
@@ -2837,9 +2866,9 @@ export interface PublicTeamRollup {
   locationSlug?: string;
 }
 
-export async function getPublicTeamRollup(slugRaw: string): Promise<PublicTeamRollup | null> {
-  const wallet = await findTeamBySlug(slugRaw);
-  if (!wallet || !wallet.team) return null;
+export async function getPublicCorporateRollup(slugRaw: string): Promise<PublicCorporateRollup | null> {
+  const wallet = await findCorporateBySlug(slugRaw);
+  if (!wallet || !wallet.corporate) return null;
 
   const orders = await getOrders();
   const monthStart = new Date();
@@ -2863,18 +2892,19 @@ export async function getPublicTeamRollup(slugRaw: string): Promise<PublicTeamRo
     poolEarnedThisMonth += Math.floor(totalSpent / 100);
   }
 
-  const headBonusPoints = Math.floor((poolEarnedThisMonth * wallet.team.headBonusBps) / 10_000);
+  const headBonusPoints = Math.floor((poolEarnedThisMonth * wallet.corporate.headBonusBps) / 10_000);
 
   return {
-    slug: wallet.team.slug,
-    name: wallet.team.name,
+    slug: wallet.corporate.slug,
+    name: wallet.corporate.name,
     memberCount: wallet.members.length,
+    minEmployees: wallet.corporate.minEmployees,
     poolEarnedThisMonth,
     headBonusPoints,
-    headBonusBps: wallet.team.headBonusBps,
-    autoPreorderDay: wallet.team.autoPreorderDay,
-    autoPreorderTime: wallet.team.autoPreorderTime,
-    locationSlug: wallet.team.locationSlug,
+    headBonusBps: wallet.corporate.headBonusBps,
+    autoPreorderDay: wallet.corporate.autoPreorderDay,
+    autoPreorderTime: wallet.corporate.autoPreorderTime,
+    locationSlug: wallet.corporate.locationSlug,
   };
 }
 
@@ -3071,11 +3101,11 @@ export interface CustomerWalletPayload {
   memberRedeemCap: number;
   members: { phone: string; status: WalletMemberStatus; isHead: boolean; contributedPoints: number }[];
   /**
-   * Team config (audit §3.4). Populated when this wallet has been
-   * productised as a Sud Italia for Teams account. Lets the cart drawer
-   * surface the "Ordering with [team]" banner without an extra fetch.
+   * Corporate config (audit §3.4). Populated when this wallet has been
+   * productised as a Sud Italia Corporate account. Lets the cart drawer
+   * surface the "Ordering with [company]" banner without an extra fetch.
    */
-  team?: {
+  corporate?: {
     slug: string;
     name: string;
   };
@@ -3150,8 +3180,8 @@ export async function resolveCustomerLoyalty(
         headRedeemCap: 0,
         memberRedeemCap: Math.max(0, soloEarned - soloRed),
         members: membersPayload,
-        team: wallet.team
-          ? { slug: wallet.team.slug, name: wallet.team.name }
+        corporate: wallet.corporate
+          ? { slug: wallet.corporate.slug, name: wallet.corporate.name }
           : undefined,
       },
     };
@@ -3204,8 +3234,8 @@ export async function resolveCustomerLoyalty(
       headRedeemCap,
       memberRedeemCap,
       members: membersPayload,
-      team: wallet.team
-        ? { slug: wallet.team.slug, name: wallet.team.name }
+      corporate: wallet.corporate
+        ? { slug: wallet.corporate.slug, name: wallet.corporate.name }
         : undefined,
     },
   };
@@ -3698,6 +3728,15 @@ export interface LocationUpsellConfig {
   /** Optional. Falls back to DEFAULT_BUNDLES in src/lib/bundles.ts when
    *  unset or empty so the cart ladder still has tiers to render. */
   bundles?: LocationBundle[];
+  /**
+   * Per-ladder availability rules (audit §3.2 follow-up). Lunch ladder
+   * is hour-gated, Family Feast ladder is quantity-gated. Falls back to
+   * DEFAULT_BUNDLE_RULES from src/lib/bundles.ts when unset.
+   */
+  bundleRules?: {
+    lunch?: { startHour: number; endHour: number };
+    family?: { minMainItems: number; hintWithin: number };
+  };
 }
 
 export type UpsellSettings = Record<string, LocationUpsellConfig>;

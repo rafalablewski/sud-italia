@@ -104,7 +104,7 @@ export const NAV_SECTIONS: NavSection[] = [
       // Staff need to look up customers during phone orders.
       { href: "/admin/customers", label: "Customers", icon: Users, shortcut: "c", requiredRole: "staff" },
       { href: "/admin/loyalty", label: "Loyalty", icon: Heart, shortcut: "l", requiredRole: "staff" },
-      { href: "/admin/teams", label: "Teams", icon: Users, requiredRole: "manager" },
+      { href: "/admin/corporate", label: "Corporate", icon: Building2, requiredRole: "manager" },
       { href: "/admin/feedback", label: "Feedback", icon: MessageSquare, requiredRole: "manager" },
     ],
   },

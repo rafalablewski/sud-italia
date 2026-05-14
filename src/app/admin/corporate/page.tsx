@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
 import { isAuthenticated } from "@/lib/admin-auth";
-import { AdminTeams } from "@/components/admin/AdminTeams";
+import { AdminCorporate } from "@/components/admin/AdminCorporate";
 
-export default async function AdminTeamsPage() {
+export default async function AdminCorporatePage() {
   if (!(await isAuthenticated())) {
     redirect("/admin/login");
   }
-  return <AdminTeams />;
+  return <AdminCorporate />;
 }

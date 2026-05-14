@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  findTeamBySlug,
+  findCorporateBySlug,
   inviteFamilyWalletMember,
   storeWalletInviteOtp,
 } from "@/lib/store";
@@ -9,8 +9,9 @@ import { getSmsProvider } from "@/lib/providers/sms";
 import { enforceRateLimit, getClientIp } from "@/lib/rate-limit";
 
 /**
- * Team join intake (audit §3.4). Public endpoint; rate-limited per IP so
- * a join URL shared in #lunch can't be abused as an SMS pumping attack.
+ * Corporate join intake (audit §3.4). Public endpoint; rate-limited per IP
+ * so a join URL shared in a company Slack can't be abused as an SMS
+ * pumping attack.
  *
  * Flow:
  *   1. POST { phone } → server normalises to PL E.164, queues an invite on
@@ -18,14 +19,14 @@ import { enforceRateLimit, getClientIp } from "@/lib/rate-limit";
  *      via SMS (no-op when Twilio isn't configured).
  *   2. The invitee enters the OTP through the existing wallet-confirm UI;
  *      that promotes them to `active` and they start ordering on the
- *      team's billing card.
+ *      corporate billing card.
  */
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const rl = await enforceRateLimit({
-    key: "team-join",
+    key: "corporate-join",
     id: getClientIp(req),
     limit: 5,
     windowSec: 60,
@@ -33,9 +34,9 @@ export async function POST(
   if (rl) return rl;
 
   const { slug } = await params;
-  const wallet = await findTeamBySlug(slug);
-  if (!wallet || !wallet.team) {
-    return NextResponse.json({ error: "Team not found" }, { status: 404 });
+  const wallet = await findCorporateBySlug(slug);
+  if (!wallet || !wallet.corporate) {
+    return NextResponse.json({ error: "Corporate account not found" }, { status: 404 });
   }
 
   let body: { phone?: string };
@@ -61,7 +62,7 @@ export async function POST(
   await storeWalletInviteOtp(phone, wallet.id, code);
   await getSmsProvider().send(
     phone,
-    `Sud Italia — your code to join ${wallet.team.name}: ${code}. Expires in 10 minutes.`,
+    `Sud Italia Corporate — your code to join ${wallet.corporate.name}: ${code}. Expires in 10 minutes.`,
   );
 
   return NextResponse.json({ ok: true, resent: result.resent });

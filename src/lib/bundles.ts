@@ -174,7 +174,88 @@ export const DEFAULT_BUNDLES: BundleTier[] = [
 ];
 
 /**
- * Pick the bundle tier most relevant to the cart's current contents.
+ * Per-ladder availability rules (audit §3.2 — clarification follow-up).
+ * The Lunch ladder is hour-gated so it only surfaces during the lunch
+ * window; the Family Feast ladder is quantity-gated so it only surfaces
+ * once the cart has enough mains to make the bundle worth offering.
+ *
+ * Defaults match the operator brief:
+ *   lunch  — 11:00–13:59 local
+ *   family — show at ≥5 main items (pizza + pasta); hint when within 2.
+ *
+ * Admins override via LocationUpsellConfig.bundleRules so each truck can
+ * tune the windows independently.
+ */
+export interface BundleAvailabilityRules {
+  lunch: { startHour: number; endHour: number };
+  family: { minMainItems: number; hintWithin: number };
+}
+
+export const DEFAULT_BUNDLE_RULES: BundleAvailabilityRules = {
+  lunch: { startHour: 11, endHour: 14 },
+  family: { minMainItems: 5, hintWithin: 2 },
+};
+
+export function resolveBundleRules(
+  override?: Partial<BundleAvailabilityRules> | null,
+): BundleAvailabilityRules {
+  return {
+    lunch: { ...DEFAULT_BUNDLE_RULES.lunch, ...(override?.lunch ?? {}) },
+    family: { ...DEFAULT_BUNDLE_RULES.family, ...(override?.family ?? {}) },
+  };
+}
+
+/**
+ * Count the cart's "main" items — pizzas + pastas. Family Feast eligibility
+ * keys off this; sides, drinks and desserts don't count toward the minimum.
+ */
+export function countMainItems(cartItems: CartItem[]): number {
+  return cartItems.reduce((sum, ci) => {
+    if (ci.menuItem.category === "pizza" || ci.menuItem.category === "pasta") {
+      return sum + ci.quantity;
+    }
+    return sum;
+  }, 0);
+}
+
+export type BundleAvailability =
+  | { kind: "show" }
+  | { kind: "hidden" }
+  | { kind: "hint"; mealPeriod: BundleMealPeriod; mainItems: number; needed: number };
+
+/**
+ * Decide what the cart drawer should do for a given ladder + cart shape +
+ * local hour:
+ *   show   — render the ladder normally
+ *   hidden — don't render anything
+ *   hint   — render a one-line "add N more …" notification only
+ *
+ * Hour gates apply to lunch; quantity gates apply to family. A ladder that
+ * fails its gate but is *close* (within `hintWithin`) returns a `hint` so
+ * the drawer can nudge without showing the full ladder.
+ */
+export function resolveBundleAvailability(
+  mealPeriod: BundleMealPeriod,
+  cartItems: CartItem[],
+  rules: BundleAvailabilityRules,
+  hour: number,
+): BundleAvailability {
+  if (mealPeriod === "lunch") {
+    const inWindow =
+      hour >= rules.lunch.startHour && hour < rules.lunch.endHour;
+    return inWindow ? { kind: "show" } : { kind: "hidden" };
+  }
+  // family
+  const mains = countMainItems(cartItems);
+  if (mains >= rules.family.minMainItems) return { kind: "show" };
+  const needed = rules.family.minMainItems - mains;
+  if (needed > 0 && needed <= rules.family.hintWithin) {
+    return { kind: "hint", mealPeriod: "family", mainItems: mains, needed };
+  }
+  return { kind: "hidden" };
+}
+
+/** Pick the bundle tier most relevant to the cart's current contents.
  * Returns the matching meal period (lunch when the cart leans pasta /
  * panini, family when it has pizzas or grows past 4 line items).
  */
