@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getOrders } from "@/lib/store";
-import { normalizePlPhoneE164, phonesEqualPl } from "@/lib/phone";
+import { getOrdersByPhone } from "@/lib/store";
+import { normalizePlPhoneE164 } from "@/lib/phone";
 
 /**
  * Per-item attach counts for a single phone (audit §3.1 — pairing graph).
@@ -28,10 +28,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ orderCount: 0, attachByItemId: {} });
   }
 
-  const orders = await getOrders();
-  const mine = orders.filter(
-    (o) => o.customerPhone && phonesEqualPl(o.customerPhone, phone) && o.status !== "pending",
-  );
+  // Uses the orders_customer_phone_idx index so this is O(N) in the
+  // customer's own order count, not the total order table.
+  const mine = await getOrdersByPhone(phone);
 
   const attachByItemId: Record<string, number> = {};
   for (const o of mine) {

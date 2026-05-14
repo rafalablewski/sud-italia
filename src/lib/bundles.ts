@@ -318,6 +318,10 @@ export function resolveBundleSlots(
  * in the cart so applying a bundle to a cart-with-pasta keeps that pasta
  * rather than swapping it for the cheapest option. Returns one CartItem per
  * slot occurrence (a "drinks: 4" slot returns 4 lines).
+ *
+ * Existing-cart items are consumed one-at-a-time, not duplicated en bloc,
+ * so a cart with two different pizzas going into the Family ladder keeps
+ * both pizzas instead of being collapsed to two of the first match.
  */
 export function buildBundleCartLines(
   bundle: BundleTier,
@@ -328,21 +332,69 @@ export function buildBundleCartLines(
   const resolved = resolveBundleSlots(bundle, menuItems);
   if (!resolved) return null;
 
+  // Flatten the existing cart into a per-unit pool so each existing line
+  // can satisfy at most one slot occurrence. Preserves variety.
+  const pool: MenuItem[] = existingCart.flatMap((ci) =>
+    Array.from({ length: ci.quantity }, () => ci.menuItem),
+  );
+
   const out: CartItem[] = [];
   for (const { slot, candidates } of resolved) {
-    const existingMatch = existingCart.find((ci) =>
-      candidates.some((c) => c.id === ci.menuItem.id),
-    );
-    const pick = existingMatch?.menuItem ?? candidates[0];
     for (let i = 0; i < slot.quantity; i++) {
-      out.push({
-        menuItem: pick,
-        quantity: 1,
-        locationSlug,
-      });
+      const matchIdx = pool.findIndex((m) =>
+        candidates.some((c) => c.id === m.id),
+      );
+      const pick =
+        matchIdx >= 0 ? pool[matchIdx] : candidates[0];
+      if (matchIdx >= 0) pool.splice(matchIdx, 1);
+      out.push({ menuItem: pick, quantity: 1, locationSlug });
     }
   }
   return out;
+}
+
+/**
+ * Server-side composition check (audit §3.2 — security). Returns true iff
+ * the supplied cart contents satisfy every slot of the bundle, line-for-
+ * line. Used by /api/checkout to defend against a client that posts an
+ * `appliedBundleId` plus arbitrary expensive items hoping to pay the
+ * bundle price — without this, a single-quantity check would let a
+ * malicious cart get a 46 PLN tier for 200 PLN of pizza.
+ *
+ * Algorithm: greedy slot-by-slot consumption against a per-unit pool of
+ * the supplied items. Each unit can satisfy at most one slot, so the
+ * cart total qty must equal the bundle total qty.
+ */
+export function cartSatisfiesBundle(
+  bundle: BundleTier,
+  cartItems: CartItem[],
+  menuItems: MenuItem[],
+): boolean {
+  const totalSlotQty = bundle.composition.reduce(
+    (s, slot) => s + slot.quantity,
+    0,
+  );
+  const totalCartQty = cartItems.reduce((s, ci) => s + ci.quantity, 0);
+  if (totalSlotQty !== totalCartQty) return false;
+
+  const resolved = resolveBundleSlots(bundle, menuItems);
+  if (!resolved) return false;
+
+  // Flatten cart into per-unit pool of MenuItems.
+  const pool: MenuItem[] = cartItems.flatMap((ci) =>
+    Array.from({ length: ci.quantity }, () => ci.menuItem),
+  );
+
+  for (const { slot, candidates } of resolved) {
+    const candidateIds = new Set(candidates.map((c) => c.id));
+    for (let i = 0; i < slot.quantity; i++) {
+      const idx = pool.findIndex((m) => candidateIds.has(m.id));
+      if (idx === -1) return false;
+      pool.splice(idx, 1);
+    }
+  }
+  // pool should be empty given the qty-equality check above; verify anyway.
+  return pool.length === 0;
 }
 
 /** Per-bundle savings in grosze (used in the "Save 18 zł" badge). */

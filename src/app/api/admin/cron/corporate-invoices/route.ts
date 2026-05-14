@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logCronRun, withCron } from "@/lib/cron";
-import { getOrders, listCorporateWallets } from "@/lib/store";
+import { getOrdersByPhone, listCorporateWallets } from "@/lib/store";
 import { appendOutboxEvent } from "@/lib/outbox";
-import { phonesEqualPl } from "@/lib/phone";
 
 /**
  * Monthly corporate invoice cron (audit §3.4).
@@ -29,7 +28,6 @@ export async function POST(req: NextRequest) {
   const periodStart = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0);
 
   const corporates = await listCorporateWallets();
-  const orders = await getOrders();
 
   const results: { slug: string; lineCount: number; totalGrosze: number; queued: boolean }[] = [];
 
@@ -44,14 +42,11 @@ export async function POST(req: NextRequest) {
     let totalGrosze = 0;
 
     for (const phone of activePhones) {
-      const mine = orders.filter(
-        (o) =>
-          o.customerPhone &&
-          phonesEqualPl(o.customerPhone, phone) &&
-          o.status !== "pending" &&
-          new Date(o.createdAt) >= periodStart &&
-          new Date(o.createdAt) < periodEnd,
-      );
+      // Indexed per-phone query bounded by period; faster than scanning
+      // the full orders table for every corporate × every member.
+      const sinceIso = periodStart.toISOString();
+      const allSince = await getOrdersByPhone(phone, { sinceIso });
+      const mine = allSince.filter((o) => new Date(o.createdAt) < periodEnd);
       if (mine.length === 0) continue;
       const sub = mine.reduce((s, o) => s + o.totalAmount, 0);
       lines.push({ phone, ordersCount: mine.length, totalGrosze: sub });

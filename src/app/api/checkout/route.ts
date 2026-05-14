@@ -17,7 +17,7 @@ import {
   getActiveComboDeals,
   getDeliveryThresholdForCustomer,
 } from "@/lib/upsell";
-import { findBundle, resolveBundleSlots, type BundleTier } from "@/lib/bundles";
+import { findBundle, cartSatisfiesBundle, type BundleTier } from "@/lib/bundles";
 import { calculateTier } from "@/lib/loyalty";
 import { normalizePlPhoneE164 } from "@/lib/phone";
 import { logger } from "@/lib/logger";
@@ -188,19 +188,19 @@ export async function POST(req: NextRequest) {
     const upsellSettings = await getUpsellSettings();
     const locationConfig = upsellSettings[locationSlug] || null;
 
+    // §3.2 security check: client-supplied appliedBundleId is honoured only
+    // when the cart's actual composition satisfies the bundle slot-for-slot.
+    // Without this the client could post a 46 PLN tier + 200 PLN of pizzas
+    // and steal the discount. cartSatisfiesBundle enforces both total qty
+    // AND per-slot category/item match.
     let bundleSubtotal: number | null = null;
     if (appliedBundleId) {
       const bundle = findBundle(
         appliedBundleId,
         (locationConfig as { bundles?: BundleTier[] } | null)?.bundles ?? null,
       );
-      if (bundle) {
-        const slots = resolveBundleSlots(bundle, menuItems);
-        const totalSlotQty = bundle.composition.reduce((s, c) => s + c.quantity, 0);
-        const cartQty = orderItems.reduce((s, i) => s + i.quantity, 0);
-        if (slots && totalSlotQty === cartQty) {
-          bundleSubtotal = bundle.priceGrosze;
-        }
+      if (bundle && cartSatisfiesBundle(bundle, orderItems, menuItems)) {
+        bundleSubtotal = bundle.priceGrosze;
       }
     }
 

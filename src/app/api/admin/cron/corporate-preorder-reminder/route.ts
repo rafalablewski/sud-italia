@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logCronRun, withCron } from "@/lib/cron";
-import { getOrders, listCorporateWallets } from "@/lib/store";
+import { getOrdersByPhone, listCorporateWallets } from "@/lib/store";
 import { appendOutboxEvent } from "@/lib/outbox";
-import { phonesEqualPl } from "@/lib/phone";
 
 const DAY_NAMES = [
   "Sunday",
@@ -40,7 +39,6 @@ export async function POST(req: NextRequest) {
   const isoDate = now.toISOString().slice(0, 10);
 
   const corporates = await listCorporateWallets();
-  const orders = await getOrders();
 
   const queued: { slug: string; phone: string }[] = [];
   const skipped: { slug: string; reason: string }[] = [];
@@ -68,23 +66,18 @@ export async function POST(req: NextRequest) {
 
     const startOfDay = new Date(now);
     startOfDay.setHours(0, 0, 0, 0);
-    const orderedPhones = new Set(
-      orders
-        .filter(
-          (o) =>
-            o.customerPhone &&
-            o.status !== "pending" &&
-            new Date(o.createdAt) >= startOfDay,
-        )
-        .map((o) => o.customerPhone!.trim()),
-    );
 
-    const alreadyOrdered = activePhones.filter((p) =>
-      [...orderedPhones].some((op) => phonesEqualPl(op, p)),
-    );
-    const needNudge = activePhones.filter(
-      (p) => !alreadyOrdered.some((op) => phonesEqualPl(op, p)),
-    );
+    // Per-phone indexed check (uses orders_customer_phone_idx) so we
+    // don't scan the entire orders table once per corporate × member.
+    const alreadyOrdered: string[] = [];
+    const needNudge: string[] = [];
+    for (const phone of activePhones) {
+      const todays = await getOrdersByPhone(phone, {
+        sinceIso: startOfDay.toISOString(),
+      });
+      if (todays.length > 0) alreadyOrdered.push(phone);
+      else needNudge.push(phone);
+    }
 
     for (const phone of needNudge) {
       await appendOutboxEvent({

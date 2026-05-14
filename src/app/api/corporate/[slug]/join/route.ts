@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomInt } from "crypto";
 import {
   findCorporateBySlug,
   inviteFamilyWalletMember,
@@ -58,7 +59,9 @@ export async function POST(
   // Generate + send a 6-digit confirmation code. The OTP is stored under
   // the invitee's phone; the existing /api/customer/wallet/confirm flow
   // consumes it and flips the membership to `active`.
-  const code = String(Math.floor(100_000 + Math.random() * 900_000));
+  // crypto.randomInt is used (not Math.random) so the code can't be
+  // predicted by an attacker who knows the rough enrolment timestamp.
+  const code = randomInt(100_000, 1_000_000).toString();
   await storeWalletInviteOtp(phone, wallet.id, code);
   await getSmsProvider().send(
     phone,

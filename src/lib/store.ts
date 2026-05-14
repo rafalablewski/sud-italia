@@ -15,10 +15,10 @@ import { withDistributedLock } from "@/lib/locks";
 import { emitOrderEvent } from "@/lib/order-events";
 import { appendOutboxEvent } from "@/lib/outbox";
 import { incrCounter } from "@/lib/metrics";
-import { and, asc, desc, eq, inArray, lt, sql as drizzleSql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lt, ne, sql as drizzleSql } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { allergenIncidents as allergenIncidentsTable, auditLog as auditLogTable, brands as brandsTable, customerNotes as customerNotesTable, customers as customersTable, feedback as feedbackTable, franchisees as franchiseesTable, ingredientStock as ingredientStockTable, ingredients as ingredientsTable, kdsTickets as kdsTicketsTable, locationAssignments as locationAssignmentsTable, loyaltyMembers as loyaltyMembersTable, menuItemStation as menuItemStationTable, orderItems as orderItemsTable, orders as ordersTable, pointAdjustments as pointAdjustmentsTable, recipes as recipesTable, royaltyStatements as royaltyStatementsTable, shifts as shiftsTable, slots as slotsTable, staff as staffTable, stations as stationsTable, stockMovements as stockMovementsTable, tempLogs as tempLogsTable, timePunches as timePunchesTable } from "@/db/schema";
-import { gte, lte } from "drizzle-orm";
+import { lte } from "drizzle-orm";
 import { bumpLazyBackfillHit, ensureTable } from "@/db/migrate";
 
 // --- Storage abstraction: Neon Postgres when DATABASE_URL is set, filesystem fallback for local dev ---
@@ -960,6 +960,61 @@ export async function getOrders(locationSlug?: string): Promise<Order[]> {
     void Promise.all(filtered.map((o) => dualWriteOrder(o)));
   }
   return filtered;
+}
+
+/**
+ * Phone-filtered order read. Uses the `orders_customer_phone_idx` index in
+ * Postgres so a customer with N total orders out of an order table of size
+ * M is O(N log M) instead of the O(M) scan that the in-memory filter does
+ * on top of `getOrders()`. Falls back to the filesystem store + manual
+ * filter when no DB is configured. Excludes `pending` orders by default
+ * since callers (loyalty, attach-history, corporate pool) always do that.
+ */
+export async function getOrdersByPhone(
+  phoneRaw: string,
+  opts?: { sinceIso?: string; includePending?: boolean },
+): Promise<Order[]> {
+  const canonical = normalizePlPhoneE164(phoneRaw) || phoneRaw.trim();
+  if (!canonical) return [];
+
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureOrdersTable();
+      const where = [eq(ordersTable.customerPhone, canonical)];
+      if (!opts?.includePending) {
+        where.push(ne(ordersTable.status, "pending"));
+      }
+      if (opts?.sinceIso) {
+        where.push(gte(ordersTable.createdAt, new Date(opts.sinceIso)));
+      }
+      const rows = await db
+        .select()
+        .from(ordersTable)
+        .where(and(...where))
+        .orderBy(desc(ordersTable.createdAt));
+      // Even when rows.length === 0 we trust the DB result — empty is a
+      // valid answer for a phone with no past orders.
+      return rows.map(rowToOrder);
+    } catch (err) {
+      logger.warn(
+        "getOrdersByPhone DB read failed; falling back to kv_store",
+        { layer: "store.orders" },
+        err,
+      );
+    }
+  }
+
+  // Filesystem fallback — same in-memory filter the old call sites used.
+  const orders = await readJSON<Order[]>("orders.json", []);
+  const sinceMs = opts?.sinceIso ? new Date(opts.sinceIso).getTime() : -Infinity;
+  return orders.filter(
+    (o) =>
+      o.customerPhone &&
+      phonesEqualPl(o.customerPhone, canonical) &&
+      (opts?.includePending || o.status !== "pending") &&
+      new Date(o.createdAt).getTime() >= sinceMs,
+  );
 }
 
 export async function getOrderById(id: string): Promise<Order | undefined> {
@@ -2870,7 +2925,6 @@ export async function getPublicCorporateRollup(slugRaw: string): Promise<PublicC
   const wallet = await findCorporateBySlug(slugRaw);
   if (!wallet || !wallet.corporate) return null;
 
-  const orders = await getOrders();
   const monthStart = new Date();
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
@@ -2879,15 +2933,14 @@ export async function getPublicCorporateRollup(slugRaw: string): Promise<PublicC
     .filter((m) => m.status === "active")
     .map((m) => m.phone);
 
+  // Phone-by-phone indexed query rather than a full table scan filtered in
+  // memory. Each call is O(N_phone) on the orders_customer_phone_idx +
+  // a createdAt range filter, and we run one per active member so the
+  // overall cost is O(members × per-member orders) — bounded by the team
+  // size (max ~12), not the total order volume.
   let poolEarnedThisMonth = 0;
   for (const p of activePhones) {
-    const monthOrders = orders.filter(
-      (o) =>
-        o.customerPhone &&
-        phonesEqualPl(o.customerPhone, p) &&
-        o.status !== "pending" &&
-        new Date(o.createdAt) >= monthStart,
-    );
+    const monthOrders = await getOrdersByPhone(p, { sinceIso: monthStart.toISOString() });
     const totalSpent = monthOrders.reduce((s, o) => s + o.totalAmount, 0);
     poolEarnedThisMonth += Math.floor(totalSpent / 100);
   }
@@ -3208,14 +3261,12 @@ export async function resolveCustomerLoyalty(
       const activePhones = wallet.members
         .filter((m) => m.status === "active")
         .map((m) => m.phone);
+      // Indexed phone-by-phone query so we don't rescan the entire
+      // orders table per member. Each call uses orders_customer_phone_idx.
       for (const p of activePhones) {
-        const monthOrders = orders.filter(
-          (o) =>
-            o.customerPhone &&
-            phonesEqualPl(o.customerPhone, p) &&
-            o.status !== "pending" &&
-            new Date(o.createdAt) >= monthStart,
-        );
+        const monthOrders = await getOrdersByPhone(p, {
+          sinceIso: monthStart.toISOString(),
+        });
         monthlyPool += monthOrders.reduce(
           (sum, o) => sum + Math.floor(o.totalAmount / 100),
           0,
