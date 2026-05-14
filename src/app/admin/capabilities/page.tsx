@@ -345,7 +345,8 @@ export default async function CapabilitiesPage() {
         {
           name: "Time-of-day banner",
           status: "live",
-          summary: "Cart top banner that picks one of five hour-window variants (morning pre-order, lunch combo, afternoon espresso, dinner pairing, late espresso & dessert) based on local clock. Defaults hardcoded in upsell.ts DEFAULT_TIME_WINDOWS; admin override via LocationUpsellConfig.timeWindows[] is the follow-up ticket. Audit §2.3.",
+          href: "/admin/upsell",
+          summary: "Cart top banner that picks one of five hour-window variants (morning pre-order, lunch combo, afternoon espresso, dinner pairing, late espresso & dessert) based on local clock. Editable per location at /admin/upsell → Time-of-day Banners: variant, hour window, title, sub, badge, CTA, optional add-item id suffix, active toggle. Empty admin list = the five hardcoded DEFAULT_TIME_WINDOWS in upsell.ts. Audit §2.3.",
         },
         {
           name: "Per-segment delivery threshold",

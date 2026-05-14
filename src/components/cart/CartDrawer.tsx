@@ -310,8 +310,10 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
 
       {/* Time-of-day banner (audit §2.3) — picks one variant by local hour.
           Sits above the items list so it primes the customer before they
-          scroll into their cart contents. */}
-      <TodBanner allMenuItems={allMenuItems} />
+          scroll into their cart contents. Admin override via
+          LocationUpsellConfig.timeWindows[] when set; otherwise the
+          hardcoded DEFAULT_TIME_WINDOWS. */}
+      <TodBanner allMenuItems={allMenuItems} upsellConfig={upsellConfig} />
 
       {/* Items list */}
       <div className="px-5">

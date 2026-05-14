@@ -55,6 +55,21 @@ export interface UpsellConfig {
     minItems: number;
     active: boolean;
   }[];
+  /** Admin override for the §2.3 time-of-day banner. When present + non-empty,
+   *  these windows replace DEFAULT_TIME_WINDOWS for the location. Same shape
+   *  as TimeWindow below; `active: false` rows are skipped. */
+  timeWindows?: {
+    id: string;
+    variant: string; // narrowed to TimeWindowVariant at runtime
+    startHour: number;
+    endHour: number;
+    title: string;
+    sub: string;
+    badge: string;
+    cta: string;
+    addItemIdSuffix?: string;
+    active: boolean;
+  }[];
 }
 
 export function getItemBadges(
@@ -485,15 +500,52 @@ export const DEFAULT_TIME_WINDOWS: TimeWindow[] = [
   },
 ];
 
+/** Narrow a free-form variant string off of `UpsellConfig.timeWindows[].variant`
+ *  to the closed `TimeWindowVariant` set. Anything unrecognised falls back to
+ *  "lunch" — keeps the editor permissive without crashing the UI. */
+function asTimeWindowVariant(variant: string): TimeWindowVariant {
+  return (["morning", "lunch", "afternoon", "dinner", "late"] as const).includes(
+    variant as TimeWindowVariant,
+  )
+    ? (variant as TimeWindowVariant)
+    : "lunch";
+}
+
 /**
  * Returns the time window active at `now` (local hour), or null if no window
  * matches. Used by TodBanner to pick the right copy + CTA.
  *
  * `now` is a parameter so callers can fix the clock for tests; in production
  * it defaults to a fresh Date so each render reflects the actual hour.
+ *
+ * When an admin has saved custom `timeWindows[]` on the location's
+ * UpsellConfig those win over the hardcoded DEFAULT_TIME_WINDOWS — inactive
+ * entries are skipped, so admins can disable a single window without
+ * wiping the row.
  */
-export function getActiveTimeWindow(now: Date = new Date()): TimeWindow | null {
+export function getActiveTimeWindow(
+  now: Date = new Date(),
+  config?: UpsellConfig | null,
+): TimeWindow | null {
   const hour = now.getHours();
+  const adminWindows = config?.timeWindows?.filter((w) => w.active);
+  if (adminWindows && adminWindows.length > 0) {
+    const hit = adminWindows.find(
+      (w) => hour >= w.startHour && hour < w.endHour,
+    );
+    if (!hit) return null;
+    return {
+      id: hit.id,
+      variant: asTimeWindowVariant(hit.variant),
+      startHour: hit.startHour,
+      endHour: hit.endHour,
+      title: hit.title,
+      sub: hit.sub,
+      badge: hit.badge,
+      cta: hit.cta,
+      addItemId: hit.addItemIdSuffix || undefined,
+    };
+  }
   return (
     DEFAULT_TIME_WINDOWS.find((w) => hour >= w.startHour && hour < w.endHour) ||
     null

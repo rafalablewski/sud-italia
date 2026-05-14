@@ -14,6 +14,7 @@ import {
   getActiveTimeWindow,
   type TimeWindow,
   type TimeWindowVariant,
+  type UpsellConfig,
 } from "@/lib/upsell";
 import type { MenuItem } from "@/data/types";
 
@@ -21,6 +22,10 @@ interface TodBannerProps {
   /** Full menu for the active location — needed to resolve `addItemId` to a
    *  real MenuItem when the CTA pushes an item into the cart. */
   allMenuItems: MenuItem[];
+  /** Admin-edited upsell config for the location (from
+   *  /api/settings/upsell). When `timeWindows[]` is present + non-empty
+   *  those windows override DEFAULT_TIME_WINDOWS. */
+  upsellConfig?: UpsellConfig | null;
 }
 
 /**
@@ -39,19 +44,19 @@ interface TodBannerProps {
  * The banner re-evaluates the active window every minute so the customer
  * doesn't sit at "Lunch combo" past 13:00 if they leave the drawer open.
  */
-export function TodBanner({ allMenuItems }: TodBannerProps) {
+export function TodBanner({ allMenuItems, upsellConfig }: TodBannerProps) {
   const [window, setWindow] = useState<TimeWindow | null>(() =>
-    getActiveTimeWindow(),
+    getActiveTimeWindow(new Date(), upsellConfig ?? null),
   );
   const addItem = useCartStore((s) => s.addItem);
   const locationSlug = useCartStore((s) => s.locationSlug);
 
   useEffect(() => {
-    const tick = () => setWindow(getActiveTimeWindow());
+    const tick = () => setWindow(getActiveTimeWindow(new Date(), upsellConfig ?? null));
     tick();
     const id = setInterval(tick, 60_000);
     return () => clearInterval(id);
-  }, []);
+  }, [upsellConfig]);
 
   if (!window) return null;
 

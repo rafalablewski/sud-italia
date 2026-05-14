@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { LocationTabs } from "./LocationTabs";
-import { Star, Coffee, IceCream, GlassWater, Plus, Trash2, Check, Save } from "lucide-react";
+import { Star, Coffee, IceCream, GlassWater, Plus, Trash2, Check, Save, Clock } from "lucide-react";
 import { krakowMenu } from "@/data/menus/krakow";
 import { warszawaMenu } from "@/data/menus/warszawa";
+import { DEFAULT_TIME_WINDOWS } from "@/lib/upsell";
 import type { MenuItem, MenuCategory } from "@/data/types";
 
 interface ComboDealConfig {
@@ -17,6 +18,30 @@ interface ComboDealConfig {
   active: boolean;
 }
 
+/** Mirrors LocationTimeWindow from src/lib/store.ts. Repeated here as a local
+ *  type rather than imported to keep this client component out of the
+ *  server-only store module. */
+interface TimeWindowConfig {
+  id: string;
+  variant: string;
+  startHour: number;
+  endHour: number;
+  title: string;
+  sub: string;
+  badge: string;
+  cta: string;
+  addItemIdSuffix?: string;
+  active: boolean;
+}
+
+const TIME_WINDOW_VARIANTS = [
+  "morning",
+  "lunch",
+  "afternoon",
+  "dinner",
+  "late",
+] as const;
+
 interface LocationConfig {
   popularItems: string[];
   staffPicks: string[];
@@ -24,6 +49,7 @@ interface LocationConfig {
   preferredDessert: string;
   preferredDrink: string;
   combos: ComboDealConfig[];
+  timeWindows?: TimeWindowConfig[];
 }
 
 type AllSettings = Record<string, LocationConfig>;
@@ -306,6 +332,210 @@ function ComboEditor({
   );
 }
 
+function TimeWindowsEditor({
+  windows,
+  onChange,
+}: {
+  windows?: TimeWindowConfig[];
+  onChange: (windows: TimeWindowConfig[]) => void;
+}) {
+  const list = windows ?? [];
+  const empty = list.length === 0;
+
+  const addWindow = () => {
+    onChange([
+      ...list,
+      {
+        id: `tod-${crypto.randomUUID()}`,
+        variant: "lunch",
+        startHour: 11,
+        endHour: 13,
+        title: "Lunch combo",
+        sub: "Add a pasta and a drink to save 10%",
+        badge: "−10%",
+        cta: "How it works",
+        addItemIdSuffix: "",
+        active: true,
+      },
+    ]);
+  };
+  const loadDefaults = () => {
+    onChange(
+      DEFAULT_TIME_WINDOWS.map((w) => ({
+        id: w.id,
+        variant: w.variant,
+        startHour: w.startHour,
+        endHour: w.endHour,
+        title: w.title,
+        sub: w.sub,
+        badge: w.badge,
+        cta: w.cta,
+        addItemIdSuffix: w.addItemId ?? "",
+        active: true,
+      })),
+    );
+  };
+  const updateWindow = (index: number, updates: Partial<TimeWindowConfig>) => {
+    const updated = [...list];
+    updated[index] = { ...updated[index], ...updates };
+    onChange(updated);
+  };
+  const removeWindow = (index: number) => {
+    onChange(list.filter((_, i) => i !== index));
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <label className="text-xs font-semibold admin-text uppercase tracking-wide flex items-center gap-1.5">
+            <Clock className="h-3.5 w-3.5 text-italia-gold" />
+            Time-of-day Banners
+          </label>
+          <p className="text-[11px] text-slate-400 mt-1">
+            One banner at a time, picked by local hour. Empty list = the five
+            hardcoded defaults are in effect (morning, lunch, afternoon,
+            dinner, late). Audit §2.3.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {empty && (
+            <button onClick={loadDefaults} className="glass-btn">
+              Load defaults
+            </button>
+          )}
+          <button onClick={addWindow} className="glass-btn">
+            <Plus className="h-3 w-3" /> Add window
+          </button>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        {list.map((w, i) => (
+          <div
+            key={w.id}
+            className={`glass-card p-4 space-y-3 ${!w.active ? "opacity-50" : ""}`}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => updateWindow(i, { active: !w.active })}
+                  className={`w-10 h-5 rounded-full transition-colors relative ${w.active ? "bg-emerald-500" : "bg-white/15"}`}
+                  aria-label={w.active ? "Disable window" : "Enable window"}
+                >
+                  <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${w.active ? "left-[22px]" : "left-0.5"}`} />
+                </button>
+                <select
+                  value={w.variant}
+                  onChange={(e) => updateWindow(i, { variant: e.target.value })}
+                  className="glass-input text-sm w-32"
+                >
+                  {TIME_WINDOW_VARIANTS.map((v) => (
+                    <option key={v} value={v}>{v}</option>
+                  ))}
+                </select>
+                <div className="flex items-center gap-1 text-xs text-slate-400">
+                  <input
+                    type="number"
+                    min={0}
+                    max={23}
+                    value={w.startHour}
+                    onChange={(e) =>
+                      updateWindow(i, { startHour: clampHour(Number(e.target.value)) })
+                    }
+                    className="glass-input text-sm w-16"
+                  />
+                  <span>→</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={24}
+                    value={w.endHour}
+                    onChange={(e) =>
+                      updateWindow(i, { endHour: clampHour(Number(e.target.value), 24) })
+                    }
+                    className="glass-input text-sm w-16"
+                  />
+                </div>
+              </div>
+              <button
+                onClick={() => removeWindow(i)}
+                className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
+                aria-label="Remove window"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+
+            <input
+              type="text"
+              value={w.title}
+              onChange={(e) => updateWindow(i, { title: e.target.value })}
+              placeholder="Banner title"
+              className="glass-input text-sm w-full"
+            />
+            <input
+              type="text"
+              value={w.sub}
+              onChange={(e) => updateWindow(i, { sub: e.target.value })}
+              placeholder="Sub-line (the one-sentence why)"
+              className="glass-input text-sm w-full"
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label className="text-[10px] text-slate-400 block mb-1">Badge</label>
+                <input
+                  type="text"
+                  value={w.badge}
+                  onChange={(e) => updateWindow(i, { badge: e.target.value })}
+                  placeholder="−10% / Quick add / Pre-order"
+                  className="glass-input text-sm w-full"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-slate-400 block mb-1">CTA</label>
+                <input
+                  type="text"
+                  value={w.cta}
+                  onChange={(e) => updateWindow(i, { cta: e.target.value })}
+                  placeholder="Add espresso / How it works"
+                  className="glass-input text-sm w-full"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-slate-400 block mb-1">
+                  Add-item id suffix
+                </label>
+                <input
+                  type="text"
+                  value={w.addItemIdSuffix ?? ""}
+                  onChange={(e) =>
+                    updateWindow(i, { addItemIdSuffix: e.target.value.trim() })
+                  }
+                  placeholder="e.g. espresso (blank = no add)"
+                  className="glass-input text-sm w-full"
+                />
+              </div>
+            </div>
+          </div>
+        ))}
+        {empty && (
+          <p className="text-sm text-slate-500 text-center py-4">
+            No custom windows — the five default banners are running.
+            "Load defaults" to start editing.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function clampHour(value: number, max = 23): number {
+  if (Number.isNaN(value)) return 0;
+  return Math.max(0, Math.min(max, Math.round(value)));
+}
+
 export function AdminUpsell() {
   const [settings, setSettings] = useState<AllSettings>({});
   const [activeLocation, setActiveLocation] = useState(LOCATIONS[0].slug);
@@ -456,6 +686,14 @@ export function AdminUpsell() {
         <ComboEditor
           combos={config.combos}
           onChange={(combos) => updateConfig({ combos })}
+        />
+      </div>
+
+      {/* Time-of-day banners (audit §2.3) */}
+      <div className="glass-card p-6">
+        <TimeWindowsEditor
+          windows={config.timeWindows}
+          onChange={(timeWindows) => updateConfig({ timeWindows })}
         />
       </div>
     </div>

@@ -36,6 +36,42 @@ export const PUT = withAdmin(
       return NextResponse.json({ error: "Invalid config: combos must be an array" }, { status: 400 });
     }
 
+    // Optional timeWindows[] (audit §2.3). Validate shape so a typo
+    // doesn't poison the customer-facing TodBanner.
+    if (config.timeWindows !== undefined) {
+      if (!Array.isArray(config.timeWindows)) {
+        return NextResponse.json(
+          { error: "Invalid config: timeWindows must be an array" },
+          { status: 400 },
+        );
+      }
+      const validVariants = new Set(["morning", "lunch", "afternoon", "dinner", "late"]);
+      for (const w of config.timeWindows) {
+        if (
+          typeof w?.id !== "string" ||
+          typeof w?.variant !== "string" ||
+          !validVariants.has(w.variant) ||
+          typeof w?.startHour !== "number" ||
+          typeof w?.endHour !== "number" ||
+          w.startHour < 0 ||
+          w.startHour > 23 ||
+          w.endHour < 0 ||
+          w.endHour > 24 ||
+          w.endHour <= w.startHour ||
+          typeof w?.title !== "string" ||
+          typeof w?.sub !== "string" ||
+          typeof w?.badge !== "string" ||
+          typeof w?.cta !== "string" ||
+          typeof w?.active !== "boolean"
+        ) {
+          return NextResponse.json(
+            { error: "Invalid time window — check variant, hour bounds, and required text fields" },
+            { status: 400 },
+          );
+        }
+      }
+    }
+
     const settings = await updateLocationUpsell(locationSlug, config);
     return NextResponse.json(settings);
   },

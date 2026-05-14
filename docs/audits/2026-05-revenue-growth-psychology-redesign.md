@@ -178,7 +178,7 @@ T+pay (Stripe sheet)                                                 ⏳ deferre
 | ⏳ | Customer's 3rd order | Cart top | "Loyalty unlock: try the Pizzaiolo's Choice (Platinum-only — comp this one)" — needs lifetime-order trigger |
 | ⏳ | Returning after 14d gap | Push + landing | "Margherita waiting? Your usual is PLN 28 — one tap, ready 18:14" — needs push + last-order lookup |
 
-The five hour-window variants are hardcoded in `DEFAULT_TIME_WINDOWS` inside `upsell.ts`. Admin override via `LocationUpsellConfig.timeWindows[]` is the next ticket — once that lands the rain/3rd-order/14d-gap rows above unlock as trigger types in the same admin surface.
+The five hour-window variants ship with hardcoded `DEFAULT_TIME_WINDOWS` defaults in `upsell.ts`, and **`/admin/upsell` → "Time-of-day Banners"** is the live editor: per-location override of variant, hour window, title, sub, badge, CTA, optional add-item id suffix, active toggle. Empty admin list = defaults remain in effect, so no migration is needed. The rain / 3rd-order-unlock / 14-day-lapsed rows above remain ⏳ because they're new *trigger types* (weather feed, lifetime-order counter, last-order lookup) rather than hour windows — those plug into the same admin surface in a follow-up.
 
 ### 2.4 Margin-Optimised Upsell Ranking ✅ shipped
 
