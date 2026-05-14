@@ -180,6 +180,93 @@ export async function commsDispatcher(event: OutboxRow): Promise<void> {
       return;
     }
 
+    // --- Sud Italia Corporate (audit §3.4) ----------------------------
+    // Monthly VAT-compliant invoice to the corporate billing email.
+    // Payload: { slug, name, billingEmail, periodStart, periodEnd,
+    //            totalGrosze, lines: [{ phone, ordersCount, totalGrosze }] }
+    case "corporate.monthly_invoice": {
+      const p = event.payload as {
+        name?: string;
+        slug?: string;
+        billingEmail?: string;
+        periodStart?: string;
+        periodEnd?: string;
+        totalGrosze?: number;
+        lines?: { phone: string; ordersCount: number; totalGrosze: number }[];
+      };
+      if (!p.billingEmail || !p.slug || !p.name) {
+        logger.warn("comms.corporate_invoice.missing_fields", { eventId: event.id });
+        return;
+      }
+      const periodLabel =
+        p.periodStart && p.periodEnd
+          ? `${p.periodStart.slice(0, 10)} → ${p.periodEnd.slice(0, 10)}`
+          : "";
+      const lines = (p.lines ?? [])
+        .map(
+          (l) =>
+            `<tr><td>${l.phone}</td><td>${l.ordersCount}</td><td style="text-align:right">${formatPrice(l.totalGrosze)}</td></tr>`,
+        )
+        .join("");
+      const subject = `Sud Italia Corporate — invoice for ${p.name} (${periodLabel})`;
+      const html = `
+        <h2 style="font-family: Georgia, serif;">Sud Italia Corporate</h2>
+        <p>Monthly billing summary for <strong>${p.name}</strong> (${periodLabel}).</p>
+        <table style="border-collapse: collapse; width: 100%; font-family: system-ui, sans-serif;">
+          <thead><tr><th>Employee</th><th>Orders</th><th style="text-align:right">Total</th></tr></thead>
+          <tbody>${lines}</tbody>
+        </table>
+        <p style="margin-top: 16px; font-weight: 600;">Total: ${formatPrice(p.totalGrosze ?? 0)}</p>
+        <p style="margin-top: 12px; font-size: 12px; color: #6b7280;">
+          VAT-compliant invoice attached separately by your accountant. This message confirms the captured period.
+        </p>`;
+      const text = [
+        `Sud Italia Corporate — monthly invoice for ${p.name}`,
+        periodLabel,
+        ...(p.lines ?? []).map(
+          (l) => `${l.phone}: ${l.ordersCount} orders · ${formatPrice(l.totalGrosze)}`,
+        ),
+        `Total: ${formatPrice(p.totalGrosze ?? 0)}`,
+      ].join("\n");
+      await getEmailProvider().send({
+        to: p.billingEmail,
+        subject,
+        text,
+        html,
+      });
+      return;
+    }
+
+    // Auto-pre-order reminder — fires ~2h before the corporate's standing
+    // weekly slot for each member who hasn't yet placed an order today.
+    // Payload: { slug, name, phone, dayName, time, alreadyOrdered, totalMembers }
+    case "corporate.preorder_reminder": {
+      const p = event.payload as {
+        name?: string;
+        phone?: string;
+        dayName?: string;
+        time?: string;
+        alreadyOrdered?: number;
+        totalMembers?: number;
+      };
+      if (!p.phone || !p.name) {
+        logger.warn("comms.corporate_reminder.missing_fields", { eventId: event.id });
+        return;
+      }
+      const customer = await getCustomer(p.phone);
+      if (customer?.smsOptout) {
+        logger.info("comms.skip.sms_optout", {
+          eventId: event.id,
+          type: event.eventType,
+        });
+        return;
+      }
+      const dayLabel = p.dayName ? `${p.dayName} ${p.time ?? ""}` : "today's";
+      const body = `Sud Italia — ${p.name} ${dayLabel} lunch. ${p.alreadyOrdered ?? 0}/${p.totalMembers ?? 0} teammates ordered. Pick your meal: sudita.lia/corporate/${(event.payload as { slug?: string }).slug ?? ""}`.slice(0, 300);
+      await getSmsProvider().send(p.phone, body);
+      return;
+    }
+
     default:
       // Unknown event type — let it pass through, but log so an operator
       // notices if we ship a new event without wiring its handler.

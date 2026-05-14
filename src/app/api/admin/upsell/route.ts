@@ -72,6 +72,86 @@ export const PUT = withAdmin(
       }
     }
 
+    // Optional bundles[] (audit §3.2). Validate shape so a typo doesn't
+    // poison the cart-drawer ladder. Composition slots are checked too
+    // since they drive cart line resolution at checkout.
+    if (config.bundles !== undefined) {
+      if (!Array.isArray(config.bundles)) {
+        return NextResponse.json(
+          { error: "Invalid config: bundles must be an array" },
+          { status: 400 },
+        );
+      }
+      const validMealPeriods = new Set(["lunch", "family"]);
+      for (const b of config.bundles) {
+        if (
+          typeof b?.id !== "string" ||
+          typeof b?.tier !== "string" ||
+          typeof b?.name !== "string" ||
+          typeof b?.description !== "string" ||
+          typeof b?.priceGrosze !== "number" ||
+          b.priceGrosze < 0 ||
+          typeof b?.refPriceGrosze !== "number" ||
+          b.refPriceGrosze < 0 ||
+          typeof b?.mealPeriod !== "string" ||
+          !validMealPeriods.has(b.mealPeriod) ||
+          typeof b?.active !== "boolean" ||
+          !Array.isArray(b?.composition) ||
+          b.composition.length === 0
+        ) {
+          return NextResponse.json(
+            { error: "Invalid bundle — check id, name, prices, mealPeriod, composition" },
+            { status: 400 },
+          );
+        }
+        for (const slot of b.composition) {
+          if (
+            (slot?.kind !== "category" && slot?.kind !== "item") ||
+            typeof slot?.quantity !== "number" ||
+            slot.quantity < 1 ||
+            slot.quantity > 20
+          ) {
+            return NextResponse.json(
+              { error: "Invalid bundle slot — kind must be 'category' or 'item'; quantity 1–20" },
+              { status: 400 },
+            );
+          }
+        }
+      }
+    }
+
+    // Optional bundleRules (audit §3.2 follow-up).
+    if (config.bundleRules !== undefined) {
+      const r = config.bundleRules;
+      if (r?.lunch) {
+        if (
+          typeof r.lunch.startHour !== "number" ||
+          typeof r.lunch.endHour !== "number" ||
+          r.lunch.startHour < 0 ||
+          r.lunch.endHour > 24 ||
+          r.lunch.endHour <= r.lunch.startHour
+        ) {
+          return NextResponse.json(
+            { error: "Invalid bundleRules.lunch — startHour/endHour out of range" },
+            { status: 400 },
+          );
+        }
+      }
+      if (r?.family) {
+        if (
+          typeof r.family.minMainItems !== "number" ||
+          r.family.minMainItems < 2 ||
+          typeof r.family.hintWithin !== "number" ||
+          r.family.hintWithin < 0
+        ) {
+          return NextResponse.json(
+            { error: "Invalid bundleRules.family — minMainItems ≥ 2; hintWithin ≥ 0" },
+            { status: 400 },
+          );
+        }
+      }
+    }
+
     const settings = await updateLocationUpsell(locationSlug, config);
     return NextResponse.json(settings);
   },

@@ -3187,6 +3187,74 @@ export async function resolveCustomerLoyalty(
     };
   }
 
+  // --- Corporate wallets (audit §3.4) ----------------------------------
+  // Each employee behaves as a solo customer for earnings + redemptions —
+  // their personal points stay with them. The HEAD additionally accrues a
+  // month-to-date bonus equal to `headBonusBps` × (sum of all active
+  // members' this-month order points). The bonus is recomputed on read
+  // and folded into the head's spendablePoints so it's immediately usable
+  // for rewards.
+  if (wallet.corporate) {
+    const soloRed = sumSoloRedemptionsForPhone(redemptions, canonical);
+    const walletRedByMe = sumMemberWalletRedemptions(redemptions, wallet.id, canonical);
+    const mySpendable = Math.max(0, soloEarned - soloRed - walletRedByMe);
+
+    let headBonus = 0;
+    let monthlyPool = 0;
+    if (isHead) {
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+      const activePhones = wallet.members
+        .filter((m) => m.status === "active")
+        .map((m) => m.phone);
+      for (const p of activePhones) {
+        const monthOrders = orders.filter(
+          (o) =>
+            o.customerPhone &&
+            phonesEqualPl(o.customerPhone, p) &&
+            o.status !== "pending" &&
+            new Date(o.createdAt) >= monthStart,
+        );
+        monthlyPool += monthOrders.reduce(
+          (sum, o) => sum + Math.floor(o.totalAmount / 100),
+          0,
+        );
+      }
+      headBonus = Math.floor((monthlyPool * wallet.corporate.headBonusBps) / 10_000);
+    }
+
+    const membersPayload: CustomerWalletPayload["members"] = await Promise.all(
+      wallet.members.map(async (m) => ({
+        phone: m.phone,
+        status: m.status,
+        isHead: phonesEqualPl(m.phone, wallet.headPhone),
+        contributedPoints: await earnedPointsForPhone(m.phone, orders),
+      })),
+    );
+
+    return {
+      ordersCount,
+      points: soloEarned + headBonus,
+      spendablePoints: mySpendable + headBonus,
+      wallet: {
+        id: wallet.id,
+        role: isHead ? "head" : "member",
+        myStatus: "active",
+        // Surface the rolling head-bonus pool so the head's UI can show
+        // "428 pts head bonus this month". Members see 0 — they have no
+        // pool exposure.
+        poolEarned: isHead ? monthlyPool : 0,
+        spendablePool: isHead ? headBonus : 0,
+        myContributedPoints: soloEarned,
+        headRedeemCap: mySpendable + headBonus,
+        memberRedeemCap: mySpendable,
+        members: membersPayload,
+        corporate: { slug: wallet.corporate.slug, name: wallet.corporate.name },
+      },
+    };
+  }
+
   const activePhones = wallet.members
     .filter((m) => m.status === "active")
     .map((m) => m.phone);
@@ -3234,9 +3302,8 @@ export async function resolveCustomerLoyalty(
       headRedeemCap,
       memberRedeemCap,
       members: membersPayload,
-      corporate: wallet.corporate
-        ? { slug: wallet.corporate.slug, name: wallet.corporate.name }
-        : undefined,
+      // Corporate wallets returned earlier; this branch is non-corporate
+      // family wallets only, so `corporate` is always undefined here.
     },
   };
 }

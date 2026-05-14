@@ -33,8 +33,14 @@ const ALL_JOBS = [
   { path: "/api/admin/cron/daily-summary", everyDay: true },
   { path: "/api/admin/cron/customers-lapsed-detect", everyDay: true },
   { path: "/api/admin/cron/weather-staffing", everyDay: true },
+  // Audit §3.4 — corporate auto-pre-order reminders fire daily and self-
+  // skip when no corporate has a schedule matching today within the
+  // lead window.
+  { path: "/api/admin/cron/corporate-preorder-reminder", everyDay: true },
   { path: "/api/admin/cron/inventory-variance", everyDay: false, dow: 0 },
   { path: "/api/admin/cron/loyalty-expire-points", everyDay: false, dom: 1 },
+  // Audit §3.4 — monthly corporate invoice on the 1st of each month.
+  { path: "/api/admin/cron/corporate-invoices", everyDay: false, dom: 1 },
   { path: "/api/admin/cron/royalty-weekly", everyDay: false, dow: 1 },
 ] as const;
 
