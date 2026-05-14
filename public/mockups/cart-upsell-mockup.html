@@ -1309,7 +1309,10 @@
   const state = {
     items: structuredClone(baseItems),
     tod: "lunch",
-    discount: 0,
+    // Store the discount as a rate (0–1) so recompute() always derives the
+    // amount from the current subtotal. Caching a grosze figure goes stale
+    // the moment another chip/item lands in the cart.
+    discountPercent: 0,
     discountLabel: null,
     deliveryThreshold: 6000, // 60 PLN
     deliveryFee: 1000,       // 10 PLN flat (production fallback)
@@ -1381,6 +1384,21 @@
   const fmt = new Intl.NumberFormat("pl-PL", { style: "currency", currency: "PLN" });
   const money = grosze => fmt.format(grosze / 100);
 
+  // HTML-escape helper for every variable that lands inside an innerHTML
+  // template below. The mockup's interpolated values come from the TOD
+  // config + the (controlled) state.items array, so the practical XSS
+  // surface is zero — but the audit caught the pattern and this avoids
+  // teaching readers an unsafe template style.
+  function esc(s) {
+    return String(s ?? "").replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    })[c]);
+  }
+
   function renderLines() {
     const wrap = document.getElementById("lines");
     wrap.innerHTML = "";
@@ -1390,15 +1408,15 @@
       row.innerHTML = `
         <div class="top">
           <div>
-            <p class="name">${it.name}</p>
-            <p class="each">${money(it.each)} each</p>
+            <p class="name">${esc(it.name)}</p>
+            <p class="each">${esc(money(it.each))} each</p>
           </div>
-          <span class="price">${money(it.each * it.qty)}</span>
+          <span class="price">${esc(money(it.each * it.qty))}</span>
         </div>
         <div class="bot">
           <div class="qty-stepper">
             <button aria-label="Decrease"><svg class="ic-sm"><use href="#i-minus"/></svg></button>
-            <span class="n">${it.qty}</span>
+            <span class="n">${esc(it.qty)}</span>
             <button aria-label="Increase"><svg class="ic-sm"><use href="#i-plus"/></svg></button>
           </div>
           <div class="line-actions">
@@ -1413,10 +1431,13 @@
 
   function recompute() {
     const sub = state.items.reduce((s, i) => s + i.each * i.qty, 0);
+    // Derive the discount fresh from the subtotal each render so adding
+    // more items after applying a combo keeps the discount in sync.
+    const discountAmt = Math.round(sub * (state.discountPercent || 0));
     const remaining = Math.max(0, state.deliveryThreshold - sub);
     const qualified = remaining === 0;
     const fee = qualified ? 0 : state.deliveryFee;
-    const total = sub - state.discount + fee;
+    const total = sub - discountAmt + fee;
 
     document.getElementById("sub").textContent = money(sub);
     document.getElementById("total").textContent = money(total);
@@ -1425,10 +1446,10 @@
       state.items.reduce((s, i) => s + i.qty, 0) + " items · Kraków";
 
     const dr = document.getElementById("discountRow");
-    if (state.discount > 0) {
+    if (discountAmt > 0) {
       dr.style.display = "flex";
       dr.querySelector("#discountLabel").textContent = state.discountLabel;
-      dr.querySelector("#discountAmt").textContent = "−" + money(state.discount);
+      dr.querySelector("#discountAmt").textContent = "−" + money(discountAmt);
     } else {
       dr.style.display = "none";
     }
@@ -1466,27 +1487,27 @@
     if (!cfg) { host.innerHTML = ""; host.style.display = "none"; return; }
     host.style.display = "block";
 
-    const isApplied = cfg.defaultApplied && state.discount > 0 && state.discountLabel === cfg.apply().label;
+    const isApplied = cfg.defaultApplied && state.discountPercent > 0 && state.discountLabel === cfg.apply().label;
     const ctaLabel = isApplied ? (cfg.ctaApplied || "Remove") : cfg.cta;
 
     host.innerHTML = `
-      <div class="tod ${cfg.variant}${isApplied ? ' tod-applied' : ''}">
-        <div class="icon-tile"><svg class="ic-lg"><use href="#${cfg.icon}"/></svg></div>
+      <div class="tod ${esc(cfg.variant)}${isApplied ? ' tod-applied' : ''}">
+        <div class="icon-tile"><svg class="ic-lg"><use href="#${esc(cfg.icon)}"/></svg></div>
         <div class="body">
           <div class="row1">
-            <p class="ttl">${cfg.title}</p>
-            <span class="badge">${isApplied ? '✓ Applied' : cfg.badge}</span>
+            <p class="ttl">${esc(cfg.title)}</p>
+            <span class="badge">${isApplied ? '✓ Applied' : esc(cfg.badge)}</span>
           </div>
-          <p class="sub">${cfg.sub}</p>
+          <p class="sub">${esc(cfg.sub)}</p>
         </div>
-        <button class="tod-cta${isApplied ? ' is-applied' : ''}" id="todCta">${ctaLabel}</button>
+        <button class="tod-cta${isApplied ? ' is-applied' : ''}" id="todCta">${esc(ctaLabel)}</button>
       </div>
     `;
     document.getElementById("todCta").addEventListener("click", () => {
       if (cfg.apply) {
         if (isApplied) {
           // McDonald's default-effect: opt OUT instead of opt IN
-          state.discount = 0;
+          state.discountPercent = 0;
           state.discountLabel = null;
           if (cfg.apply().dropThreshold !== undefined) state.deliveryThreshold = 6000;
           renderTod();
@@ -1495,8 +1516,7 @@
           return;
         }
         const d = cfg.apply();
-        const sub = state.items.reduce((s, i) => s + i.each * i.qty, 0);
-        state.discount = Math.round(sub * d.percent / 100);
+        state.discountPercent = d.percent / 100;
         state.discountLabel = d.label;
         if (d.dropThreshold !== undefined) state.deliveryThreshold = d.dropThreshold;
         renderTod();
@@ -1516,12 +1536,12 @@
   // Apply any defaultApplied combo when ToD changes (McDonald's effect, §2.5)
   function applyDefaultsForTod() {
     const cfg = TOD[state.tod];
-    state.discount = 0; state.discountLabel = null;
+    state.discountPercent = 0;
+    state.discountLabel = null;
     state.deliveryThreshold = 4900; // personalised baseline for "regular" segment
     if (cfg && cfg.defaultApplied && cfg.apply) {
       const d = cfg.apply();
-      const sub = state.items.reduce((s, i) => s + i.each * i.qty, 0);
-      state.discount = Math.round(sub * d.percent / 100);
+      state.discountPercent = d.percent / 100;
       state.discountLabel = d.label;
       if (d.dropThreshold !== undefined) state.deliveryThreshold = d.dropThreshold;
     }
@@ -1533,10 +1553,10 @@
     const host = document.getElementById("toastHost");
     host.innerHTML = `
       <div class="toast" id="t">
-        <span class="ic-host"><svg class="ic"><use href="#${iconId}"/></svg></span>
+        <span class="ic-host"><svg class="ic"><use href="#${esc(iconId)}"/></svg></span>
         <div class="body">
-          <div class="title">${title}</div>
-          <div class="seed">${seed}</div>
+          <div class="title">${esc(title)}</div>
+          <div class="seed">${esc(seed)}</div>
         </div>
       </div>`;
     requestAnimationFrame(() => document.getElementById("t").classList.add("in"));
@@ -1640,7 +1660,11 @@
   });
 
   document.getElementById("addBtn").addEventListener("click", () => {
-    state.items[0].qty += 1;
+    // Look the pizza up by id rather than position — the cart's order
+    // shifts whenever a chip or banner pushes a new line into items[].
+    const pizza = state.items.find((it) => it.id === "pizza");
+    if (pizza) pizza.qty += 1;
+    else state.items.push({ id: "pizza", name: "Margherita", each: 2800, qty: 1 });
     renderLines();
     recompute();
     toast("pizza", "Margherita added", "Customers usually add an espresso.");
