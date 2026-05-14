@@ -365,7 +365,8 @@ export default async function CapabilitiesPage() {
         {
           name: "Live activity bar (social proof)",
           status: "live",
-          summary: "On-menu strip: orders/hour, currently preparing, trending item, avg prep time.",
+          href: "/admin/growth",
+          summary: "Customer-site strip of dynamic widgets (orders/hour, currently preparing, trending, prep time, happy hour, truck location, free text). CRUD in Growth → Live widgets, per-location targeting, cap of 7 active.",
         },
         {
           name: "Speed Guarantee",

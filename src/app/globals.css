@@ -3019,6 +3019,67 @@ html { scroll-behavior: smooth; }
 }
 
 /* ============================
+   ADMIN v2 — GROWTH / LIVE WIDGETS
+   ============================ */
+
+.v2-widget-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+.v2-widget-row {
+  display: grid;
+  grid-template-columns: auto 1.4fr auto auto auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  font-size: var(--text-sm);
+}
+.v2-widget-row + .v2-widget-row { border-top: 1px solid var(--border-strong); }
+.v2-widget-row.is-off { opacity: 0.6; }
+.v2-widget-order { display: inline-flex; flex-direction: column; gap: 2px; }
+.v2-widget-order .v2-btn { padding: 0 6px; min-height: 18px; }
+.v2-widget-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.v2-widget-title { font-weight: 500; color: var(--fg); }
+.v2-widget-sub { font-size: var(--text-2xs); }
+.v2-widget-actions { display: inline-flex; gap: 4px; }
+@media (max-width: 900px) {
+  .v2-widget-row {
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas:
+      "order main actions"
+      "type type type"
+      "loc loc loc"
+      "toggle toggle toggle";
+    row-gap: 6px;
+  }
+}
+
+/* Tiny chip toggle used inside dialogs (e.g. location targeting on widgets). */
+.v2-chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.v2-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  color: var(--fg-muted);
+  cursor: pointer;
+  transition: background var(--duration-fast), color var(--duration-fast), border-color var(--duration-fast);
+}
+.v2-chip:hover { background: var(--surface-3); color: var(--fg); }
+.v2-chip.is-selected {
+  background: var(--brand-soft);
+  border-color: var(--brand);
+  color: var(--fg);
+}
+
+/* ============================
    ADMIN v2 — CASH
    ============================ */
 
