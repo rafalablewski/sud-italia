@@ -3057,10 +3057,12 @@ html { scroll-behavior: smooth; }
    ADMIN v2 — SCHEDULE
    ============================ */
 
-/* Segmented pager used for Prev / This week / Next. Wraps three ghost buttons
-   into a single bordered group with internal dividers so the trio reads as one
-   control instead of two filled siblings flanking a transparent middle. */
-.v2-week-pager {
+/* Unified date pager used everywhere admin pages need ◀ date ▶ navigation.
+   Four segments — Prev, Date label, Today/This week, Next — share one border
+   with internal dividers so the group reads as a single control. The middle
+   label segment hides a native date input behind it so clicking the label
+   opens the OS date picker. */
+.v2-date-pager {
   display: inline-flex;
   align-items: stretch;
   background: var(--surface-2);
@@ -3068,27 +3070,60 @@ html { scroll-behavior: smooth; }
   border-radius: var(--radius-md);
   overflow: hidden;
 }
-.v2-week-pager > .v2-btn {
+.v2-date-pager > .v2-btn,
+.v2-date-pager > .v2-date-pager-label {
   border-radius: 0;
   border: none;
   border-right: 1px solid var(--border);
   background: transparent;
   color: var(--fg-muted);
 }
-.v2-week-pager > .v2-btn:last-child { border-right: none; }
-.v2-week-pager > .v2-btn:hover:not(:disabled):not(.is-loading) {
+.v2-date-pager > :last-child { border-right: none; }
+.v2-date-pager > .v2-btn:hover:not(:disabled):not(.is-loading),
+.v2-date-pager > .v2-date-pager-label:hover {
   background: var(--surface-3);
   color: var(--fg);
 }
-.v2-week-pager > .v2-btn.is-current {
+.v2-date-pager > .v2-btn.is-current {
   background: var(--brand-soft);
   color: var(--fg);
   font-weight: 600;
 }
-.v2-week-pager > .v2-btn:focus-visible {
+.v2-date-pager > .v2-btn:focus-visible,
+.v2-date-pager > .v2-date-pager-label:focus-within {
   outline: 2px solid var(--border-focus);
   outline-offset: -2px;
   z-index: 1;
+}
+
+.v2-date-pager-label {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  font-size: var(--text-base);
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+  min-height: 34px;
+  white-space: nowrap;
+  transition: background var(--duration-fast), color var(--duration-fast);
+}
+.v2-date-pager-label > svg { color: var(--fg-subtle); flex-shrink: 0; }
+/* The native date input drives the picker but stays visually invisible —
+   it overlays the label so the entire pill is the click target. */
+.v2-date-pager-label > input[type="date"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: transparent;
 }
 
 .v2-schedule-grid {

@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  CalendarDays,
   CalendarPlus,
   Clock,
   MapPin,
@@ -23,6 +22,7 @@ import {
   CardBody,
   CardHeader,
   ConfirmDialog,
+  DatePager,
   Dialog,
   EmptyState,
   Input,
@@ -308,16 +308,8 @@ export function AdminSlots() {
             aria-label="Location"
           />
         </div>
-        <div className="v2-field-inline">
-          <CalendarDays className="h-3.5 w-3.5 v2-muted" />
-          <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label="Date" />
-        </div>
-        <div className="v2-day-shortcut">
-          <Button size="sm" variant="ghost" onClick={() => setDate(isoDate(new Date()))}>Today</Button>
-          <Button size="sm" variant="ghost" onClick={() => setDate(addDays(date, -1))}>−1 day</Button>
-          <Button size="sm" variant="ghost" onClick={() => setDate(addDays(date, 1))}>+1 day</Button>
-          <Button size="sm" variant="secondary" leadingIcon={<RefreshCw className={`h-3.5 w-3.5 ${loading ? "v2-spin" : ""}`} />} onClick={fetchSlots}>Refresh</Button>
-        </div>
+        <DatePager unit={view} value={date} onChange={setDate} />
+        <Button size="sm" variant="secondary" leadingIcon={<RefreshCw className={`h-3.5 w-3.5 ${loading ? "v2-spin" : ""}`} />} onClick={fetchSlots}>Refresh</Button>
       </div>
 
       <section className="v2-kpi-grid">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight, MapPin, Plus, Trash2 } from "lucide-react";
+import { CalendarDays, MapPin, Plus, Trash2 } from "lucide-react";
 import type { Shift, ShiftStatus, StaffMember, StaffRole } from "@/data/types";
 import { getActiveLocations } from "@/data/locations";
 import { useAdminLocation } from "./v2/LocationContext";
@@ -13,6 +13,7 @@ import {
   CardBody,
   CardHeader,
   ConfirmDialog,
+  DatePager,
   Dialog,
   EmptyState,
   Input,
@@ -106,7 +107,6 @@ export function AdminSchedule() {
   const days = useMemo(() => rangeDays(weekStart, 7), [weekStart]);
   const rangeFrom = days[0];
   const rangeTo = `${days[6]}T23:59:59`;
-  const isCurrentWeek = weekStart === weekStartIso(isoDate(new Date()));
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -223,40 +223,13 @@ export function AdminSchedule() {
               aria-label="Location"
             />
           </div>
-          <div className="v2-week-pager" role="group" aria-label="Week navigation">
-            <Button
-              variant="ghost"
-              leadingIcon={<ChevronLeft className="h-3.5 w-3.5" />}
-              onClick={() => setWeekStart((w) => addDays(w, -7))}
-              aria-label="Previous week"
-            >
-              Prev
-            </Button>
-            <Button
-              variant="ghost"
-              className={isCurrentWeek ? "is-current" : ""}
-              onClick={() => setWeekStart(weekStartIso(isoDate(new Date())))}
-              aria-current={isCurrentWeek || undefined}
-            >
-              This week
-            </Button>
-            <Button
-              variant="ghost"
-              trailingIcon={<ChevronRight className="h-3.5 w-3.5" />}
-              onClick={() => setWeekStart((w) => addDays(w, 7))}
-              aria-label="Next week"
-            >
-              Next
-            </Button>
-          </div>
+          <DatePager unit="week" value={weekStart} onChange={setWeekStart} />
         </div>
       </header>
 
       <Card padding="compact">
         <div className="v2-summary-row">
-          <span className="v2-muted">
-            <CalendarDays className="h-3.5 w-3.5" /> Week of {new Date(weekStart).toLocaleDateString()}
-          </span>
+          <span className="v2-muted">Hours · cost</span>
           <span className="tabular v2-summary-val">
             {totals.totalHours.toFixed(1)}h · {(totals.totalCost / 100).toLocaleString("pl-PL", { maximumFractionDigits: 0 })} zł
           </span>
