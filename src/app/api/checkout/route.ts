@@ -17,6 +17,7 @@ import {
   getActiveComboDeals,
   getDeliveryThresholdForCustomer,
 } from "@/lib/upsell";
+import { findBundle, resolveBundleSlots, type BundleTier } from "@/lib/bundles";
 import { calculateTier } from "@/lib/loyalty";
 import { normalizePlPhoneE164 } from "@/lib/phone";
 import { logger } from "@/lib/logger";
@@ -64,6 +65,7 @@ export async function POST(req: NextRequest) {
       slotTime,
       deliveryAddress,
       tipAmount: rawTip,
+      appliedBundleId,
     } = parsed.data;
 
     const phoneE164 = normalizePlPhoneE164(customerPhone);
@@ -177,12 +179,40 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Server-side combo discount validation
+    // Server-side combo discount validation. Bundles (audit §3.2) win over
+    // combos: when an `appliedBundleId` is supplied, we re-resolve it from
+    // the upsell config (or DEFAULT_BUNDLES), validate the cart shape
+    // against its composition, and replace the per-line subtotal with the
+    // bundle's locked price. Combo discount is suppressed in that case so
+    // we don't stack two unrelated savings.
     const upsellSettings = await getUpsellSettings();
     const locationConfig = upsellSettings[locationSlug] || null;
-    const comboResult = getActiveComboDeals(orderItems, locationConfig);
-    const comboDiscount = comboResult.missingCategories.length === 0 ? comboResult.savings : 0;
-    calculatedTotal = calculatedTotal - comboDiscount;
+
+    let bundleSubtotal: number | null = null;
+    if (appliedBundleId) {
+      const bundle = findBundle(
+        appliedBundleId,
+        (locationConfig as { bundles?: BundleTier[] } | null)?.bundles ?? null,
+      );
+      if (bundle) {
+        const slots = resolveBundleSlots(bundle, menuItems);
+        const totalSlotQty = bundle.composition.reduce((s, c) => s + c.quantity, 0);
+        const cartQty = orderItems.reduce((s, i) => s + i.quantity, 0);
+        if (slots && totalSlotQty === cartQty) {
+          bundleSubtotal = bundle.priceGrosze;
+        }
+      }
+    }
+
+    let comboDiscount = 0;
+    if (bundleSubtotal !== null) {
+      calculatedTotal = bundleSubtotal;
+    } else {
+      const comboResult = getActiveComboDeals(orderItems, locationConfig);
+      comboDiscount = comboResult.missingCategories.length === 0 ? comboResult.savings : 0;
+      calculatedTotal = calculatedTotal - comboDiscount;
+    }
+    void comboDiscount; // referenced for clarity; pricing already applied above
 
     // Delivery fee (m2_12). Computed server-side from the post-discount
     // subtotal so a malicious client can't strip it. Adds a separate
@@ -274,6 +304,35 @@ export async function POST(req: NextRequest) {
       const stripe = (await import("stripe")).default;
       const stripeClient = new stripe(process.env.STRIPE_SECRET_KEY);
 
+      // When a bundle is locked (§3.2) Stripe sees one line at the bundle's
+      // locked price, with the composition itemized in the description. The
+      // KDS still gets the per-line CartItem array via the `orderItems`
+      // create above so the kitchen knows what to make.
+      const bundleStripeLines: { price_data: { currency: string; product_data: { name: string; description?: string }; unit_amount: number }; quantity: number }[] | null =
+        bundleSubtotal !== null && appliedBundleId
+          ? (() => {
+              const bundle = findBundle(
+                appliedBundleId,
+                (locationConfig as { bundles?: BundleTier[] } | null)?.bundles ?? null,
+              );
+              if (!bundle) return null;
+              const composition = verifiedItems.map((i) => `${i.quantity}× ${i.name}`).join(", ");
+              return [
+                {
+                  price_data: {
+                    currency: "pln",
+                    product_data: {
+                      name: `Bundle: ${bundle.name}`,
+                      description: composition,
+                    },
+                    unit_amount: bundle.priceGrosze,
+                  },
+                  quantity: 1,
+                },
+              ];
+            })()
+          : null;
+
       const session = await stripeClient.checkout.sessions.create(
         {
           // BLIK: Add "blik" to payment_method_types when Stripe BLIK is enabled
@@ -281,17 +340,18 @@ export async function POST(req: NextRequest) {
           // See: https://docs.stripe.com/payments/blik
           payment_method_types: ["card", "p24", "blik"],
           line_items: [
-            ...verifiedItems.map((item) => ({
-              price_data: {
-                currency: "pln",
-                product_data: {
-                  name: item.name,
-                  ...(item.notes ? { description: item.notes } : {}),
+            ...(bundleStripeLines ??
+              verifiedItems.map((item) => ({
+                price_data: {
+                  currency: "pln",
+                  product_data: {
+                    name: item.name,
+                    ...(item.notes ? { description: item.notes } : {}),
+                  },
+                  unit_amount: item.price,
                 },
-                unit_amount: item.price,
-              },
-              quantity: item.quantity,
-            })),
+                quantity: item.quantity,
+              }))),
             // Delivery fee (m2_12) as its own line so the receipt itemizes
             // it instead of folding it into "Items".
             ...(deliveryFee > 0

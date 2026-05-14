@@ -16,6 +16,12 @@ interface CartStore {
    *  persisted store, gets cleared on clearCart so it doesn't leak between
    *  orders. */
   tipAmount: number;
+  /** Active bundle id (audit §3.2). When set, the cart subtotal switches
+   *  from sum-of-lines to the locked `bundlePriceGrosze`; the items array
+   *  still drives the KDS ticket so the kitchen sees what to make. Cleared
+   *  whenever the line-up no longer satisfies the bundle composition. */
+  appliedBundleId: string | null;
+  bundlePriceGrosze: number;
   setFulfillmentType: (type: FulfillmentType) => void;
   setSelectedSlot: (id: string | null, time: string | null, date: string | null) => void;
   setDeliveryAddress: (address: string) => void;
@@ -24,6 +30,18 @@ interface CartStore {
   removeItem: (itemId: string) => void;
   updateQuantity: (itemId: string, quantity: number) => void;
   setItemNotes: (itemId: string, notes: string) => void;
+  /**
+   * Replace the cart with the bundle's resolved composition and lock the
+   * subtotal to `priceGrosze`. Pass `null` to clear an applied bundle and
+   * fall back to per-line pricing.
+   */
+  applyBundle: (
+    bundleId: string,
+    priceGrosze: number,
+    items: CartItem[],
+    locationSlug: string,
+  ) => void;
+  clearBundle: () => void;
   clearCart: () => void;
   getTotal: () => number;
   getItemCount: () => number;
@@ -40,6 +58,8 @@ export const useCartStore = create<CartStore>()(
       selectedSlotDate: null,
       deliveryAddress: "",
       tipAmount: 0,
+      appliedBundleId: null,
+      bundlePriceGrosze: 0,
 
       setFulfillmentType: (type: FulfillmentType) =>
         set({ fulfillmentType: type, selectedSlotId: null, selectedSlotTime: null, selectedSlotDate: null }),
@@ -70,6 +90,9 @@ export const useCartStore = create<CartStore>()(
                   : i
               ),
               locationSlug,
+              // Adding extras outside the bundle composition breaks the lock.
+              appliedBundleId: null,
+              bundlePriceGrosze: 0,
             };
           }
 
@@ -79,6 +102,8 @@ export const useCartStore = create<CartStore>()(
               { menuItem: item, quantity: 1, locationSlug },
             ],
             locationSlug,
+            appliedBundleId: null,
+            bundlePriceGrosze: 0,
           };
         });
       },
@@ -91,6 +116,11 @@ export const useCartStore = create<CartStore>()(
           return {
             items: newItems,
             locationSlug: newItems.length === 0 ? null : state.locationSlug,
+            // Removing a line breaks the bundle lock — fall back to
+            // per-item pricing rather than charge the full bundle price
+            // for a smaller order.
+            appliedBundleId: null,
+            bundlePriceGrosze: 0,
           };
         });
       },
@@ -104,8 +134,27 @@ export const useCartStore = create<CartStore>()(
           items: state.items.map((i) =>
             i.menuItem.id === itemId ? { ...i, quantity } : i
           ),
+          appliedBundleId: null,
+          bundlePriceGrosze: 0,
         }));
       },
+
+      applyBundle: (
+        bundleId: string,
+        priceGrosze: number,
+        items: CartItem[],
+        locationSlug: string,
+      ) => {
+        set({
+          items,
+          locationSlug,
+          appliedBundleId: bundleId,
+          bundlePriceGrosze: Math.max(0, Math.round(priceGrosze)),
+        });
+      },
+
+      clearBundle: () =>
+        set({ appliedBundleId: null, bundlePriceGrosze: 0 }),
 
       setItemNotes: (itemId: string, notes: string) => {
         const trimmed = notes.trim();
@@ -128,13 +177,22 @@ export const useCartStore = create<CartStore>()(
           selectedSlotDate: null,
           deliveryAddress: "",
           tipAmount: 0,
+          appliedBundleId: null,
+          bundlePriceGrosze: 0,
         }),
 
-      getTotal: () =>
-        get().items.reduce(
+      getTotal: () => {
+        const state = get();
+        // When a bundle is applied, the locked price replaces line summing.
+        // Tip + delivery still apply on top inside CartDrawer.
+        if (state.appliedBundleId && state.bundlePriceGrosze > 0) {
+          return state.bundlePriceGrosze;
+        }
+        return state.items.reduce(
           (sum, item) => sum + item.menuItem.price * item.quantity,
           0
-        ),
+        );
+      },
 
       getItemCount: () =>
         get().items.reduce((sum, item) => sum + item.quantity, 0),

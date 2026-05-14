@@ -1,0 +1,747 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Sud Italia — Cross-Sell Psychology v1 (mockup)</title>
+  <style>
+    /* ------------------------------------------------------------------
+       Production tokens (mirror of src/app/globals.css @theme block)
+       ------------------------------------------------------------------ */
+    :root {
+      --color-background: #FFF8F0;
+      --color-foreground: #1A1A1A;
+      --color-italia-red: #C8102E;
+      --color-italia-red-dark: #A00D24;
+      --color-italia-green: #008C45;
+      --color-italia-green-dark: #006B35;
+      --color-italia-cream: #FFF8F0;
+      --color-italia-cream-dark: #F5EDDF;
+      --color-italia-gold: #B8922E;
+      --color-italia-gold-dark: #9A7A24;
+      --color-italia-dark: #1A1A1A;
+      --color-italia-gray: #6B7280;
+      --color-italia-light-gray: #F3F4F6;
+      --gray-50:  #F9FAFB;
+      --gray-100: #F3F4F6;
+      --gray-200: #E5E7EB;
+      --gray-300: #D1D5DB;
+      --gray-400: #9CA3AF;
+      --font-heading: Georgia, "Times New Roman", serif;
+      --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--color-italia-cream);
+      font-family: var(--font-body);
+      color: var(--color-italia-dark);
+      min-height: 100vh;
+      padding: 28px 20px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    h1, h2, h3, h4 { font-family: var(--font-heading); font-weight: 600; }
+    h1 { font-size: 30px; line-height: 1.15; margin: 0 0 8px; }
+    h2 { font-size: 20px; line-height: 1.2; margin: 0 0 8px; }
+    h3 { font-size: 16px; line-height: 1.25; margin: 0 0 6px; }
+
+    .page {
+      max-width: 1180px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 28rem;
+      gap: 32px;
+      align-items: start;
+    }
+    @media (max-width: 980px) { .page { grid-template-columns: 1fr; } }
+
+    .lede { color: var(--color-italia-gray); font-size: 14px; line-height: 1.55; max-width: 720px; }
+
+    .panel {
+      background: white;
+      border: 1px solid var(--gray-100);
+      border-radius: 14px;
+      padding: 22px;
+      margin-bottom: 18px;
+      box-shadow: 0 1px 0 rgba(26,26,26,0.02);
+    }
+
+    .pill {
+      display: inline-block;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--color-italia-cream-dark);
+      color: var(--color-italia-gray);
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+    .pill.live { background: rgba(0,140,69,0.10); color: var(--color-italia-green-dark); }
+    .pill.gold { background: rgba(184,146,46,0.12); color: var(--color-italia-gold-dark); }
+
+    .legend { display: grid; gap: 10px; margin: 12px 0 0; padding: 0; }
+    .legend li {
+      list-style: none;
+      display: grid; grid-template-columns: 28px 1fr; gap: 10px;
+      font-size: 13px; line-height: 1.5;
+      color: var(--color-italia-gray);
+    }
+    .legend li strong { color: var(--color-italia-dark); font-weight: 600; }
+    .marker {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 24px; height: 24px; border-radius: 7px;
+      background: var(--color-italia-cream-dark);
+      font-size: 12px; font-weight: 700; color: var(--color-italia-red);
+    }
+    .checklist { padding-left: 18px; margin: 6px 0 0; }
+    .checklist li { margin: 4px 0; color: var(--color-italia-gray); font-size: 13px; }
+    .checklist li b { color: var(--color-italia-dark); font-weight: 600; }
+
+    code.kbd {
+      font: 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+      background: var(--color-italia-cream-dark);
+      padding: 2px 6px; border-radius: 5px;
+    }
+
+    /* ==================================================================
+       Drawer mock — mirrors Sheet.tsx + CartDrawer.tsx
+       ================================================================== */
+    .drawer-wrap { position: sticky; top: 28px; }
+    @media (max-width: 980px) { .drawer-wrap { position: static; } }
+
+    .drawer {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.10), 0 10px 10px -5px rgba(0,0,0,0.04);
+      overflow: hidden;
+      display: flex; flex-direction: column;
+      max-height: calc(100vh - 56px);
+      position: relative;
+    }
+    .drawer-head {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      border-bottom: 1px solid var(--gray-100);
+      padding: 16px 20px; background: white;
+    }
+    .drawer-head h2 { font-size: 18px; line-height: 1.2; margin: 0; font-family: var(--font-heading); color: var(--color-italia-dark); font-weight: 600; }
+    .drawer-head .count { font-size: 12px; color: var(--color-italia-gray); margin-top: 2px; }
+    .drawer-body { flex: 1; overflow-y: auto; padding: 12px 0 16px; }
+    .sec { padding: 12px 20px 0; }
+
+    /* ==================================================================
+       3.2 Bundle architecture — Lunch + Family Feast tiers
+       ================================================================== */
+    .bundle-head {
+      display: flex; align-items: baseline; justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .bundle-head .label {
+      font-size: 12px; font-weight: 600; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--color-italia-gray); margin: 0;
+    }
+    .bundle-head .label .gold { color: var(--color-italia-gold); }
+    .bundle-head .switcher {
+      font-size: 11px; color: var(--color-italia-red); cursor: pointer;
+      background: none; border: 0; padding: 0;
+    }
+
+    .bundles {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+    }
+    @media (max-width: 540px) { .bundles { grid-template-columns: repeat(2, 1fr); } }
+
+    .bundle {
+      position: relative;
+      background: white;
+      border: 1px solid var(--gray-200);
+      border-radius: 12px;
+      padding: 12px 10px 10px;
+      text-align: left;
+      cursor: pointer;
+      transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .bundle:hover {
+      border-color: var(--color-italia-gold);
+      box-shadow: 0 4px 12px rgba(184,146,46,0.10);
+      transform: translateY(-1px);
+    }
+    .bundle .tier {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--color-italia-gray);
+    }
+    .bundle .name {
+      font-family: var(--font-heading); font-size: 16px; font-weight: 600;
+      color: var(--color-italia-dark); line-height: 1.15;
+    }
+    .bundle .composition {
+      font-size: 11px; color: var(--color-italia-gray); line-height: 1.35;
+      min-height: 30px;
+    }
+    .bundle .price-row {
+      display: flex; align-items: baseline; gap: 6px; margin-top: 2px;
+    }
+    .bundle .price {
+      font-size: 18px; font-weight: 700; color: var(--color-italia-red);
+    }
+    .bundle .youdpay {
+      font-size: 11px; color: var(--color-italia-gray); text-decoration: line-through;
+    }
+    .bundle .saving {
+      font-size: 10px; font-weight: 700;
+      color: var(--color-italia-green-dark);
+      letter-spacing: 0.04em; text-transform: uppercase;
+    }
+    .bundle.is-default {
+      border-color: var(--color-italia-red);
+      background: rgba(200, 16, 46, 0.04);
+      box-shadow: 0 2px 6px rgba(200,16,46,0.06);
+    }
+    .bundle.is-default::before {
+      content: "Most picked";
+      position: absolute; top: -10px; left: 12px;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+      padding: 3px 8px;
+      background: var(--color-italia-red); color: white;
+      border-radius: 999px;
+    }
+    .bundle.is-anchor {
+      border-color: var(--color-italia-gold);
+      background: linear-gradient(135deg, rgba(184,146,46,0.06), rgba(184,146,46,0.02));
+    }
+    .bundle.is-anchor::before {
+      content: "Best value";
+      position: absolute; top: -10px; left: 12px;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+      padding: 3px 8px;
+      background: var(--color-italia-gold-dark); color: white;
+      border-radius: 999px;
+    }
+    .bundle.is-decoy { opacity: 0.85; }
+    .bundle.applied {
+      background: rgba(0,140,69,0.06);
+      border-color: rgba(0,140,69,0.40);
+      cursor: default;
+    }
+    .bundle.applied .price { color: var(--color-italia-green-dark); }
+    .bundle.applied::after {
+      content: "Applied";
+      position: absolute; top: 8px; right: 10px;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+      color: var(--color-italia-green-dark);
+    }
+
+    /* ==================================================================
+       3.3 Free-delivery progress — segmented copy
+       ================================================================== */
+    .delivery {
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px dashed var(--gray-200);
+      background: var(--gray-50);
+    }
+    .delivery-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .delivery-top .label { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--color-italia-gray); }
+    .delivery-top .label .rem { font-weight: 600; color: var(--color-italia-dark); }
+    .delivery-top .target { font-size: 12px; color: var(--color-italia-gray); flex-shrink: 0; }
+    .threshold-note { font-size: 10px; color: var(--gray-400); margin-left: 4px; font-style: italic; }
+    .progress { margin-top: 8px; width: 100%; height: 8px; background: var(--gray-200); border-radius: 999px; overflow: hidden; position: relative; }
+    .progress .bar {
+      height: 100%; background: linear-gradient(90deg, var(--color-italia-red) 0%, var(--color-italia-green) 100%);
+      border-radius: 999px; transition: width 0.5s; position: relative;
+    }
+    .progress .bar::after {
+      content: ""; position: absolute; inset: 0;
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.45) 50%, transparent 100%);
+      animation: shimmer 1.8s linear infinite;
+    }
+    @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+    .delivery .segments {
+      display: flex; gap: 6px; margin-top: 10px;
+      font-size: 10px; color: var(--color-italia-gray); letter-spacing: 0.04em; text-transform: uppercase;
+    }
+    .delivery .segments b { color: var(--color-italia-dark); font-weight: 700; }
+    .delivery .seg-tag {
+      padding: 2px 6px; border-radius: 4px;
+      background: var(--color-italia-cream-dark);
+    }
+    .delivery .seg-tag.active {
+      background: rgba(184,146,46,0.18); color: var(--color-italia-gold-dark);
+    }
+
+    /* ==================================================================
+       3.1 Pairing reasoning chip (debug/why-this view)
+       ================================================================== */
+    .pairing-card {
+      background: white;
+      border: 1px solid var(--gray-200);
+      border-radius: 14px;
+      padding: 14px;
+      margin-top: 12px;
+    }
+    .pairing-card .head {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+      color: var(--color-italia-gray);
+    }
+    .pairing-card .head svg { color: var(--color-italia-gold); }
+    .pairing-card .item-row {
+      display: flex; align-items: center; gap: 10px; margin-top: 10px;
+    }
+    .pairing-card .item-row .glyph {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: var(--color-italia-cream-dark);
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+    .pairing-card .item-row .name { font-size: 14px; font-weight: 600; color: var(--color-italia-dark); }
+    .pairing-card .item-row .why { font-size: 11px; color: var(--color-italia-gray); margin-top: 1px; }
+    .pairing-card .meter {
+      margin-left: auto;
+      width: 48px; height: 6px;
+      background: var(--gray-200);
+      border-radius: 999px; overflow: hidden;
+      flex-shrink: 0;
+    }
+    .pairing-card .meter .fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--color-italia-gold) 0%, var(--color-italia-green) 100%);
+    }
+    .pairing-card .signals {
+      margin-top: 10px;
+      display: grid; gap: 4px;
+      font-size: 11px; color: var(--color-italia-gray);
+    }
+    .pairing-card .signals .row { display: flex; justify-content: space-between; }
+    .pairing-card .signals .row b { color: var(--color-italia-dark); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+    /* ==================================================================
+       3.4 Sud Italia for Teams — landing page mock + cart inline
+       ================================================================== */
+    .team-banner {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(184,146,46,0.10), rgba(0,140,69,0.06));
+      border: 1px solid rgba(184,146,46,0.30);
+    }
+    .team-banner .crest {
+      flex-shrink: 0; width: 36px; height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--color-italia-gold) 0%, var(--color-italia-green) 100%);
+      display: inline-flex; align-items: center; justify-content: center;
+      color: white;
+      box-shadow: 0 2px 6px rgba(184,146,46,0.30);
+    }
+    .team-banner .body { flex: 1; min-width: 0; }
+    .team-banner .ttl { font-size: 13px; font-weight: 600; color: var(--color-italia-dark); }
+    .team-banner .sub { font-size: 11px; color: var(--color-italia-gray); margin-top: 2px; }
+    .team-banner .meter {
+      margin-top: 6px;
+      height: 4px; border-radius: 999px;
+      background: rgba(255,255,255,0.50);
+      overflow: hidden;
+    }
+    .team-banner .meter .fill { height: 100%; background: var(--color-italia-green); width: 50%; }
+
+    .team-landing {
+      background: white;
+      border-radius: 16px;
+      border: 1px solid var(--gray-100);
+      padding: 28px;
+      box-shadow: 0 12px 24px -10px rgba(26,26,26,0.10);
+    }
+    .team-landing .crest-lg {
+      width: 56px; height: 56px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--color-italia-gold) 0%, var(--color-italia-green) 100%);
+      display: inline-flex; align-items: center; justify-content: center;
+      color: white;
+      box-shadow: 0 4px 14px rgba(184,146,46,0.40), inset 0 1px 0 rgba(255,255,255,0.30);
+    }
+    .team-landing h1 { font-size: 26px; margin: 14px 0 4px; }
+    .team-landing .lede-team { font-size: 13px; color: var(--color-italia-gray); margin: 0; }
+    .team-landing .stats {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+      margin-top: 16px;
+    }
+    .team-landing .stat {
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: var(--color-italia-cream);
+      border: 1px solid rgba(184,146,46,0.15);
+    }
+    .team-landing .stat .n {
+      font-family: var(--font-heading); font-size: 20px; font-weight: 600;
+      color: var(--color-italia-dark);
+    }
+    .team-landing .stat .l {
+      font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--color-italia-gray); margin-top: 2px;
+    }
+    .team-landing form {
+      margin-top: 16px;
+      display: flex; gap: 8px;
+    }
+    .team-landing input {
+      flex: 1; padding: 10px 12px;
+      border: 1.5px solid var(--gray-200); border-radius: 10px;
+      font: inherit; font-size: 14px; background: white; min-width: 0;
+    }
+    .team-landing input:focus { border-color: var(--color-italia-gold); outline: 0; }
+    .team-landing button.cta {
+      padding: 10px 16px;
+      border: 0; border-radius: 10px;
+      background: var(--color-italia-red); color: white;
+      font: inherit; font-weight: 600; font-size: 14px; cursor: pointer;
+    }
+    .team-landing .perks {
+      margin-top: 16px; padding: 12px;
+      border-radius: 10px;
+      background: var(--gray-50);
+      display: grid; gap: 8px;
+    }
+    .team-landing .perk {
+      display: flex; gap: 8px; align-items: flex-start;
+      font-size: 12px; color: var(--color-italia-dark); line-height: 1.4;
+    }
+    .team-landing .perk .dot {
+      flex-shrink: 0; width: 18px; height: 18px;
+      border-radius: 999px;
+      background: rgba(0,140,69,0.15); color: var(--color-italia-green-dark);
+      display: inline-flex; align-items: center; justify-content: center; margin-top: 1px;
+    }
+
+    /* Section ribbons in left rail */
+    .ribbon { font-family: var(--font-heading); font-size: 14px; color: var(--color-italia-dark); margin: 24px 0 8px; }
+
+    /* Animations */
+    @keyframes fade-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-in { animation: fade-in 0.3s ease-out; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <!-- ========================= LEFT RAIL ========================= -->
+    <main>
+      <header style="margin-bottom: 18px;">
+        <span class="pill">Audit §3 · Cross-sell psychology</span>
+        <h1>Bundles, pairing graph, segmented delivery, Teams</h1>
+        <p class="lede">
+          Four moves on the same drawer + one new public page. Each one expands an existing
+          primitive — the family wallet becomes Teams, the chips graph becomes contextual,
+          the combo banner becomes a tier ladder, the threshold copy becomes segmented.
+        </p>
+      </header>
+
+      <section class="panel">
+        <h2>3.1 Pairing graph — the why</h2>
+        <p class="lede" style="margin-bottom: 6px;">
+          <code class="kbd">CROSS_SELL_MAP</code> stays as the safety net, but each candidate
+          gets a per-cart score from four signals. Same chips you ship today, ranked smarter:
+        </p>
+        <ul class="legend">
+          <li><span class="marker">M</span><span><strong>Margin × attach.</strong> Espresso (83% GM × 60% attach) keeps its first-place anchor.</span></li>
+          <li><span class="marker">H</span><span><strong>Hour bias.</strong> Espresso 0.82 at 11:00, 0.31 at 19:00. Banner copy already pivots; chips now do too.</span></li>
+          <li><span class="marker">C</span><span><strong>This customer.</strong> Espresso last 4 orders → boost. Never tried → small novelty bonus.</span></li>
+          <li><span class="marker">N</span><span><strong>Novelty decay.</strong> The thing they always add gets quiet; chip rotates to the next-best earner.</span></li>
+        </ul>
+
+        <!-- Why-this card: behind-the-scenes view rendered in /admin/upsell, not customer-side -->
+        <div class="pairing-card">
+          <div class="head">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+            Edge weights · admin debug view
+          </div>
+          <div class="item-row">
+            <span class="glyph">☕</span>
+            <div>
+              <div class="name">Espresso</div>
+              <div class="why">Pizza in cart · 11:14 local · last ordered 3 of 4 visits</div>
+            </div>
+            <div class="meter"><div class="fill" style="width: 92%"></div></div>
+          </div>
+          <div class="signals">
+            <div class="row"><span>Margin × attach</span><b>0.78</b></div>
+            <div class="row"><span>Hour-of-day (11:00)</span><b>0.82</b></div>
+            <div class="row"><span>This customer (3 / 4 orders)</span><b>0.95</b></div>
+            <div class="row"><span>Novelty decay</span><b>−0.12</b></div>
+            <div class="row" style="border-top: 1px solid var(--gray-100); padding-top: 4px; margin-top: 2px;"><span>Composite</span><b style="color: var(--color-italia-gold-dark);">0.92</b></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>3.2 Bundle ladder — Lunch tier</h2>
+        <p class="lede" style="margin-bottom: 12px;">
+          Four price points. The decoy makes Lunch+ look reasonable. Lunch+ makes Lunch look cheap.
+          The default-push on Lunch creates the McDonald's combo effect.
+          Predicted AOV: <strong style="color: var(--color-italia-dark);">36–42 PLN</strong> vs current 28–32.
+        </p>
+
+        <div class="bundles">
+          <div class="bundle">
+            <span class="tier">Solo</span>
+            <span class="name">Just the pasta</span>
+            <span class="composition">1 pasta of your choice</span>
+            <span class="price-row"><span class="price">26 zł</span></span>
+          </div>
+
+          <div class="bundle is-default">
+            <span class="tier">Lunch</span>
+            <span class="name">Pasta + drink</span>
+            <span class="composition">1 pasta + 1 drink. The classic.</span>
+            <span class="price-row">
+              <span class="price">32 zł</span>
+              <span class="youdpay">38 zł</span>
+            </span>
+            <span class="saving">Save 6 zł</span>
+          </div>
+
+          <div class="bundle is-anchor">
+            <span class="tier">Lunch+</span>
+            <span class="name">Pasta + drink + tiramisù</span>
+            <span class="composition">A meal you remember. Eat well, sleep better.</span>
+            <span class="price-row">
+              <span class="price">46 zł</span>
+              <span class="youdpay">56 zł</span>
+            </span>
+            <span class="saving">Save 10 zł</span>
+          </div>
+
+          <div class="bundle is-decoy">
+            <span class="tier">Hungry</span>
+            <span class="name">+ bruschetta</span>
+            <span class="composition">Pasta, drink, dessert &amp; bruschetta. For a real one.</span>
+            <span class="price-row">
+              <span class="price">58 zł</span>
+              <span class="youdpay">76 zł</span>
+            </span>
+            <span class="saving">Save 18 zł</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>3.2 Bundle ladder — Family Feast (dinner / weekend)</h2>
+        <p class="lede" style="margin-bottom: 12px;">
+          Same architecture, larger format. Family Feast becomes the visually correct choice between
+          Family and Feast Deluxe.
+        </p>
+
+        <div class="bundles" style="grid-template-columns: repeat(3, 1fr);">
+          <div class="bundle">
+            <span class="tier">Family</span>
+            <span class="name">Two pizzas + sides</span>
+            <span class="composition">2 pizzas + side + 2 drinks</span>
+            <span class="price-row">
+              <span class="price">89 zł</span>
+              <span class="youdpay">108 zł</span>
+            </span>
+            <span class="saving">Save 19 zł</span>
+          </div>
+
+          <div class="bundle is-anchor">
+            <span class="tier">Family Feast</span>
+            <span class="name">Whole-table dinner</span>
+            <span class="composition">2 pizzas + bruschetta + 4 drinks + tiramisù</span>
+            <span class="price-row">
+              <span class="price">119 zł</span>
+              <span class="youdpay">162 zł</span>
+            </span>
+            <span class="saving">Save 43 zł</span>
+          </div>
+
+          <div class="bundle is-decoy">
+            <span class="tier">Feast Deluxe</span>
+            <span class="name">Big group, no leftovers</span>
+            <span class="composition">3 pizzas + 2 sides + 6 drinks + 2 desserts</span>
+            <span class="price-row">
+              <span class="price">169 zł</span>
+              <span class="youdpay">232 zł</span>
+            </span>
+            <span class="saving">Save 63 zł</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>3.3 Segmented free-delivery threshold</h2>
+        <p class="lede" style="margin-bottom: 12px;">
+          The bar already knows the customer. We split &ldquo;regular&rdquo; into <strong>growing</strong> (2–4 orders, 49 zł) and <strong>regular</strong> (5+ orders, 59 zł), and label the active one inline so customers see the personalisation rather than guess at it.
+        </p>
+
+        <div class="delivery">
+          <div class="delivery-top">
+            <div class="label">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 3h15v13H1zM16 8h4l3 3v5h-7M5.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM18.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/></svg>
+              Add <span class="rem">12 zł</span> for free delivery
+            </div>
+            <span class="target">49 zł <span class="threshold-note">· tuned for you</span></span>
+          </div>
+          <div class="progress"><div class="bar" style="width: 76%"></div></div>
+          <div class="segments">
+            <span class="seg-tag">First-time · 39 zł</span>
+            <span class="seg-tag active">Growing 2–4 · 49 zł</span>
+            <span class="seg-tag">Regular 5+ · 59 zł</span>
+            <span class="seg-tag">VIP · free</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>3.4 Sud Italia for Teams — public landing</h2>
+        <p class="lede" style="margin-bottom: 12px;">
+          Existing <code class="kbd">FamilyWallet</code> + <code class="kbd">role: head | member</code>
+          gets a public team URL. Office head pays one card, members earn personal points,
+          head earns 20% of the pool. Auto-pre-order reminder on the recurring slot.
+        </p>
+
+        <div class="team-landing">
+          <span class="crest-lg" aria-hidden="true">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </span>
+          <h1>Lunch for Acme, on us<br/>(well, on the company card)</h1>
+          <p class="lede-team">Members order what they want. Acme's card pays. Each teammate keeps personal points; Wojtek (head) earns 20% of the team pool.</p>
+
+          <div class="stats">
+            <div class="stat"><div class="n">8</div><div class="l">Members</div></div>
+            <div class="stat"><div class="n">PLN 2,140</div><div class="l">This month</div></div>
+            <div class="stat"><div class="n">428 pts</div><div class="l">Head bonus</div></div>
+          </div>
+
+          <form onsubmit="event.preventDefault();">
+            <input type="tel" placeholder="Your phone (we'll text a join code)" />
+            <button type="submit" class="cta">Join Acme's team</button>
+          </form>
+
+          <div class="perks">
+            <div class="perk"><span class="dot">✓</span><span><b>One card, one invoice.</b> Monthly VAT-compliant breakdown emailed to Wojtek on the 1st.</span></div>
+            <div class="perk"><span class="dot">✓</span><span><b>Personal points stay yours.</b> Spend them on rewards exactly like a solo account.</span></div>
+            <div class="perk"><span class="dot">✓</span><span><b>Auto-pre-order.</b> Wednesday 12:30 lunch — &ldquo;4 of 8 have ordered, 2h to go&rdquo;.</span></div>
+            <div class="perk"><span class="dot">✓</span><span><b>Slack-friendly.</b> Drop the team URL in #lunch and watch it fill in.</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>What changes vs today</h2>
+        <ul class="checklist">
+          <li><b>upsell.ts</b> grows a <code class="kbd">scorePairing()</code> helper. Same exports, smarter ranking.</li>
+          <li><b>bundles.ts</b> (new) holds <code class="kbd">DEFAULT_BUNDLES</code> + <code class="kbd">applyBundle()</code>. Stored alongside combos in <code class="kbd">LocationUpsellConfig</code>.</li>
+          <li><b>BundleLadder</b> component renders the 3–4 tier grid in the cart drawer above the combo banner.</li>
+          <li><b>getCustomerSegment</b> adds <code class="kbd">growing</code> (2–4 orders, 49 zł) between <code class="kbd">first-time</code> and <code class="kbd">regular</code>.</li>
+          <li><b>FamilyWallet</b> grows <code class="kbd">teamSlug</code>, <code class="kbd">teamName</code>, <code class="kbd">billingEmail</code>, <code class="kbd">headBonusBps</code>. New page <code class="kbd">/team/[slug]</code>. New admin <code class="kbd">/admin/teams</code>.</li>
+          <li><b>/admin/capabilities</b> registers all four entries with status / hrefs / env vars.</li>
+        </ul>
+      </section>
+    </main>
+
+    <!-- ========================= RIGHT RAIL · DRAWER MOCK ========================= -->
+    <aside class="drawer-wrap">
+      <div class="drawer">
+        <header class="drawer-head">
+          <div>
+            <h2>Your order</h2>
+            <div class="count">2 items · Kraków</div>
+          </div>
+          <button class="close" aria-label="Close">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </header>
+
+        <div class="drawer-body">
+
+          <!-- Team banner — appears when active wallet is a team -->
+          <div class="sec">
+            <div class="team-banner fade-in">
+              <span class="crest" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              </span>
+              <div class="body">
+                <div class="ttl">Ordering with <strong>Acme team</strong> · billed to Wojtek</div>
+                <div class="sub">4 of 8 teammates have ordered for the 12:30 lunch · 2h to go</div>
+                <div class="meter"><div class="fill" style="width: 50%"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3.2 Bundle picker — Lunch tier (compressed for the drawer width) -->
+          <div class="sec">
+            <div class="bundle-head">
+              <p class="label"><span class="gold">✦</span> Make it a bundle · save up to 18 zł</p>
+              <button class="switcher">Lunch ▾</button>
+            </div>
+            <div class="bundles" style="grid-template-columns: repeat(2, 1fr);">
+              <div class="bundle is-default">
+                <span class="tier">Lunch</span>
+                <span class="name">+ drink</span>
+                <span class="composition">Pasta + drink. The classic.</span>
+                <span class="price-row"><span class="price">32 zł</span><span class="youdpay">38 zł</span></span>
+                <span class="saving">Save 6 zł</span>
+              </div>
+              <div class="bundle is-anchor">
+                <span class="tier">Lunch+</span>
+                <span class="name">+ drink + tiramisù</span>
+                <span class="composition">A meal you'll remember.</span>
+                <span class="price-row"><span class="price">46 zł</span><span class="youdpay">56 zł</span></span>
+                <span class="saving">Save 10 zł</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3.1 Pairing chips — same chrome as today, smarter sorting (server-side) -->
+          <div class="sec">
+            <div class="bundle-head" style="margin-bottom: 6px;">
+              <p class="label"><span class="gold">✦</span> Complete your meal</p>
+            </div>
+            <div class="bundles" style="grid-template-columns: repeat(3, 1fr);">
+              <div class="bundle" style="padding: 10px 8px 8px;">
+                <span style="font-size: 22px; line-height: 1;">☕</span>
+                <span class="name" style="font-size: 13px;">Espresso</span>
+                <span class="composition" style="min-height: 0; font-size: 10px;">You added it 3 of last 4 visits</span>
+                <span class="price" style="font-size: 13px;">5 zł</span>
+              </div>
+              <div class="bundle" style="padding: 10px 8px 8px;">
+                <span style="font-size: 22px; line-height: 1;">🍰</span>
+                <span class="name" style="font-size: 13px;">Tiramisù</span>
+                <span class="composition" style="min-height: 0; font-size: 10px;">Lunch crowd loves this</span>
+                <span class="price" style="font-size: 13px;">14 zł</span>
+              </div>
+              <div class="bundle" style="padding: 10px 8px 8px;">
+                <span style="font-size: 22px; line-height: 1;">🍋</span>
+                <span class="name" style="font-size: 13px;">Limonata</span>
+                <span class="composition" style="min-height: 0; font-size: 10px;">Try something new today</span>
+                <span class="price" style="font-size: 13px;">10 zł</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3.3 Segmented delivery progress -->
+          <div class="sec">
+            <div class="delivery">
+              <div class="delivery-top">
+                <div class="label">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 3h15v13H1zM16 8h4l3 3v5h-7"/></svg>
+                  Add <span class="rem">12 zł</span> for free delivery
+                </div>
+                <span class="target">49 zł <span class="threshold-note">· tuned for you</span></span>
+              </div>
+              <div class="progress"><div class="bar" style="width: 76%"></div></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <p class="lede" style="text-align: center; margin: 14px auto 0; font-size: 12px;">
+        Drawer overlay only — surrounding cart line items, loyalty banner, and pay bar are unchanged.
+      </p>
+    </aside>
+  </div>
+</body>
+</html>

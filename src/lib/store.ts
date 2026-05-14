@@ -2498,6 +2498,36 @@ export interface FamilyWallet {
   headPhone: string;
   createdAt: string;
   members: WalletMemberEntry[];
+  /**
+   * When set, productises this wallet as a "Sud Italia for Teams" wallet
+   * (audit §3.4) — adds a public team URL, billing email for the head's
+   * monthly invoice, and a head-bonus accrual rate so the team head earns
+   * a slice of the team pool. Members continue to earn personal points
+   * exactly as a solo customer would.
+   */
+  team?: TeamConfig;
+}
+
+export interface TeamConfig {
+  /** URL slug used at /team/[slug]. Lowercase, alphanumeric + dash. */
+  slug: string;
+  /** Display name (e.g. "Acme", "Allegro Lunch Team"). */
+  name: string;
+  /** Email the monthly VAT-compliant invoice goes to. */
+  billingEmail?: string;
+  /**
+   * Head bonus, expressed in basis points of the pool. 2000 = 20%.
+   * Surfaces inside the loyalty engine; the head's spendable points are
+   * boosted by this multiplier of the team's monthly earned pool.
+   */
+  headBonusBps: number;
+  /** Optional weekly auto-pre-order schedule. Used by the cart-drawer
+   *  banner copy (&ldquo;Wednesday team lunch — 4 of 8 have ordered, 2h to go&rdquo;). */
+  autoPreorderDay?: number; // 0 = Sun, 1 = Mon, ..., 6 = Sat
+  autoPreorderTime?: string; // "HH:MM" local
+  /** Pinned location for the team's standing order. */
+  locationSlug?: string;
+  createdAt: string;
 }
 
 type WalletInviteOtpMap = Record<
@@ -2706,6 +2736,148 @@ export async function leaveFamilyWallet(
   });
 }
 
+// --- Sud Italia for Teams (audit §3.4) ---------------------------------
+//
+// Productises the existing FamilyWallet as an office-team primitive. A team
+// is just a wallet with a `team` config attached: public slug at
+// /team/[slug], billing email for the head, and an explicit head bonus rate.
+//
+// Members continue to earn personal points exactly as a solo customer would
+// (handled by resolveCustomerLoyalty); the head additionally accrues a slice
+// of the team pool via headBonusBps.
+
+const TEAM_SLUG_PATTERN = /^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])?$/;
+
+export function normaliseTeamSlug(raw: string): string | null {
+  const slug = raw.trim().toLowerCase().replace(/\s+/g, "-");
+  if (!TEAM_SLUG_PATTERN.test(slug)) return null;
+  return slug;
+}
+
+export async function findTeamBySlug(slugRaw: string): Promise<FamilyWallet | null> {
+  const slug = normaliseTeamSlug(slugRaw);
+  if (!slug) return null;
+  const wallets = await getFamilyWallets();
+  return wallets.find((w) => w.team?.slug === slug) ?? null;
+}
+
+export async function listTeamWallets(): Promise<FamilyWallet[]> {
+  const wallets = await getFamilyWallets();
+  return wallets.filter((w) => w.team);
+}
+
+export type SetTeamConfigResult =
+  | { ok: true; wallet: FamilyWallet }
+  | { error: string };
+
+/**
+ * Promote an existing wallet to a team (or update an existing team's
+ * config). Slug must be unique across teams. Caller must have already
+ * verified that `headPhone` matches the wallet's owner — this helper
+ * trusts the input.
+ */
+export async function setTeamConfig(
+  walletId: string,
+  team: Omit<TeamConfig, "createdAt"> & { createdAt?: string },
+): Promise<SetTeamConfigResult> {
+  const slug = normaliseTeamSlug(team.slug);
+  if (!slug) {
+    return { error: "Invalid team slug. Use lowercase letters, digits, and dashes (3–40 chars)." };
+  }
+  if (!team.name.trim()) {
+    return { error: "Team name is required" };
+  }
+  if (!Number.isFinite(team.headBonusBps) || team.headBonusBps < 0 || team.headBonusBps > 5000) {
+    return { error: "Head bonus must be 0–5000 bps (0–50%)" };
+  }
+  return withLock("wallets.json", async () => {
+    const list = await readJSON<FamilyWallet[]>("wallets.json", []);
+    const w = list.find((x) => x.id === walletId);
+    if (!w) return { error: "Wallet not found" };
+    const collision = list.find((x) => x.id !== walletId && x.team?.slug === slug);
+    if (collision) return { error: "That team URL is taken" };
+    const now = new Date().toISOString();
+    w.team = {
+      slug,
+      name: team.name.trim(),
+      billingEmail: team.billingEmail?.trim() || undefined,
+      headBonusBps: Math.round(team.headBonusBps),
+      autoPreorderDay: team.autoPreorderDay,
+      autoPreorderTime: team.autoPreorderTime?.trim() || undefined,
+      locationSlug: team.locationSlug?.trim() || undefined,
+      createdAt: w.team?.createdAt ?? team.createdAt ?? now,
+    };
+    await writeJSON("wallets.json", list);
+    return { ok: true, wallet: w };
+  });
+}
+
+export async function clearTeamConfig(walletId: string): Promise<{ ok: true } | { error: string }> {
+  return withLock("wallets.json", async () => {
+    const list = await readJSON<FamilyWallet[]>("wallets.json", []);
+    const w = list.find((x) => x.id === walletId);
+    if (!w) return { error: "Wallet not found" };
+    if (!w.team) return { ok: true };
+    delete w.team;
+    await writeJSON("wallets.json", list);
+    return { ok: true };
+  });
+}
+
+/** Public-facing team rollup (no PII beyond what the head already shares). */
+export interface PublicTeamRollup {
+  slug: string;
+  name: string;
+  memberCount: number;
+  poolEarnedThisMonth: number;
+  headBonusPoints: number;
+  headBonusBps: number;
+  autoPreorderDay?: number;
+  autoPreorderTime?: string;
+  locationSlug?: string;
+}
+
+export async function getPublicTeamRollup(slugRaw: string): Promise<PublicTeamRollup | null> {
+  const wallet = await findTeamBySlug(slugRaw);
+  if (!wallet || !wallet.team) return null;
+
+  const orders = await getOrders();
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+
+  const activePhones = wallet.members
+    .filter((m) => m.status === "active")
+    .map((m) => m.phone);
+
+  let poolEarnedThisMonth = 0;
+  for (const p of activePhones) {
+    const monthOrders = orders.filter(
+      (o) =>
+        o.customerPhone &&
+        phonesEqualPl(o.customerPhone, p) &&
+        o.status !== "pending" &&
+        new Date(o.createdAt) >= monthStart,
+    );
+    const totalSpent = monthOrders.reduce((s, o) => s + o.totalAmount, 0);
+    poolEarnedThisMonth += Math.floor(totalSpent / 100);
+  }
+
+  const headBonusPoints = Math.floor((poolEarnedThisMonth * wallet.team.headBonusBps) / 10_000);
+
+  return {
+    slug: wallet.team.slug,
+    name: wallet.team.name,
+    memberCount: wallet.members.length,
+    poolEarnedThisMonth,
+    headBonusPoints,
+    headBonusBps: wallet.team.headBonusBps,
+    autoPreorderDay: wallet.team.autoPreorderDay,
+    autoPreorderTime: wallet.team.autoPreorderTime,
+    locationSlug: wallet.team.locationSlug,
+  };
+}
+
 // --- Wallet + solo redemptions (ledger) ---
 
 export interface WalletRedemption {
@@ -2898,6 +3070,15 @@ export interface CustomerWalletPayload {
   headRedeemCap: number;
   memberRedeemCap: number;
   members: { phone: string; status: WalletMemberStatus; isHead: boolean; contributedPoints: number }[];
+  /**
+   * Team config (audit §3.4). Populated when this wallet has been
+   * productised as a Sud Italia for Teams account. Lets the cart drawer
+   * surface the "Ordering with [team]" banner without an extra fetch.
+   */
+  team?: {
+    slug: string;
+    name: string;
+  };
 }
 
 export interface ResolveCustomerLoyaltyResult {
@@ -2969,6 +3150,9 @@ export async function resolveCustomerLoyalty(
         headRedeemCap: 0,
         memberRedeemCap: Math.max(0, soloEarned - soloRed),
         members: membersPayload,
+        team: wallet.team
+          ? { slug: wallet.team.slug, name: wallet.team.name }
+          : undefined,
       },
     };
   }
@@ -3020,6 +3204,9 @@ export async function resolveCustomerLoyalty(
       headRedeemCap,
       memberRedeemCap,
       members: membersPayload,
+      team: wallet.team
+        ? { slug: wallet.team.slug, name: wallet.team.name }
+        : undefined,
     },
   };
 }
@@ -3465,6 +3652,38 @@ export interface LocationTimeWindow {
   active: boolean;
 }
 
+/**
+ * Bundle ladder definition (audit §3.2). Stored next to combos so the same
+ * /admin/upsell page edits both. When empty or unset, the customer cart
+ * falls back to `DEFAULT_BUNDLES` from src/lib/bundles.ts.
+ */
+export interface LocationBundleSlot {
+  /** "category" → any item of `category`; "item" → menu items whose id
+   *  ends with `itemIdSuffix` (e.g. "anti-bruschetta"). */
+  kind: "category" | "item";
+  category?: string;
+  itemIdSuffix?: string;
+  quantity: number;
+}
+
+export interface LocationBundle {
+  id: string;
+  /** Short tier label rendered in the chip header — Solo / Lunch / Lunch+ / Hungry. */
+  tier: string;
+  name: string;
+  description: string;
+  priceGrosze: number;
+  /** Strikethrough reference price — drives the "Save X" badge. */
+  refPriceGrosze: number;
+  composition: LocationBundleSlot[];
+  /** "lunch" | "family" — drives which ladder shows in the cart. */
+  mealPeriod: string;
+  isAnchor?: boolean;
+  isDecoy?: boolean;
+  isDefault?: boolean;
+  active: boolean;
+}
+
 export interface LocationUpsellConfig {
   popularItems: string[];
   staffPicks: string[];
@@ -3476,6 +3695,9 @@ export interface LocationUpsellConfig {
    *  unset or empty so existing locations keep working before the admin
    *  has saved a custom schedule. */
   timeWindows?: LocationTimeWindow[];
+  /** Optional. Falls back to DEFAULT_BUNDLES in src/lib/bundles.ts when
+   *  unset or empty so the cart ladder still has tiers to render. */
+  bundles?: LocationBundle[];
 }
 
 export type UpsellSettings = Record<string, LocationUpsellConfig>;

@@ -351,7 +351,24 @@ export default async function CapabilitiesPage() {
         {
           name: "Per-segment delivery threshold",
           status: "live",
-          summary: "Free-delivery bar shows a personalised threshold: first-time customers see 39 PLN, regulars 60 PLN, Gold/Platinum 0 PLN. The checkout fee charge uses the same threshold via computeDeliveryFee(_,_, override), so the bar and the receipt agree. Audit §2.5 Uber Eats.",
+          summary: "Free-delivery bar shows a personalised threshold tuned to the customer's lifecycle: first-time 39 PLN, growing (2–4 orders) 49 PLN, regular (5+) 59 PLN, Gold/Platinum 0 PLN. The checkout fee charge uses the same threshold via computeDeliveryFee(_,_, override) and getCustomerSegment(), so the bar and the receipt agree. Audit §2.5 + §3.3.",
+        },
+        {
+          name: "Contextual pairing graph",
+          status: "live",
+          summary: "Cart upsell chips re-rank by composite score combining margin × attach, hour-of-day bias (espresso 0.82 at 11:00, 0.31 at 19:00), per-customer attach history (`you added it 3 of last 4 visits`), and a small novelty decay so chips rotate. Pure scorePairing() in upsell.ts; cart drawer feeds context via /api/customer/attach-history. Audit §3.1.",
+        },
+        {
+          name: "Bundle architecture (Lunch / Family Feast)",
+          status: "live",
+          href: "/admin/upsell",
+          summary: "Decoy + anchor + default-pushed combos surfaced in the cart drawer above the per-item chips. Two ladders: Lunch (Solo / Lunch / Lunch+ / Hungry) and Family Feast (Family / Family Feast / Feast Deluxe). Tapping a tier locks the cart subtotal to the bundle's priceGrosze; checkout sends one Stripe line at the bundle price with the composition itemized in the description. DEFAULT_BUNDLES in src/lib/bundles.ts; admin override via LocationUpsellConfig.bundles. Audit §3.2.",
+        },
+        {
+          name: "Sud Italia for Teams",
+          status: "live",
+          href: "/admin/teams",
+          summary: "Productised office-lunch wallets. Promote a FamilyWallet to a team in /admin/teams: public landing at /team/[slug], billing email for the head's monthly invoice, head bonus rate (default 20% of pool), optional auto-pre-order day/time. Cart drawer surfaces an `Ordering with [team]` banner when the active wallet is a team; member ordering bills to the head's saved card while personal points stay individual. POST /api/team/[slug]/join sends an SMS OTP; existing /rewards confirm flow promotes the member to active. Audit §3.4.",
         },
         {
           name: "Premium delivery-unlocked card",

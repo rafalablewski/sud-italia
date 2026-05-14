@@ -11,6 +11,12 @@ export interface CustomerWalletMember {
   contributedPoints: number;
 }
 
+export interface CustomerWalletTeam {
+  /** Public team slug — drives /team/[slug] and the cart banner. */
+  slug: string;
+  name: string;
+}
+
 export interface CustomerWallet {
   id: string;
   role: "head" | "member";
@@ -21,6 +27,8 @@ export interface CustomerWallet {
   headRedeemCap: number;
   memberRedeemCap: number;
   members: CustomerWalletMember[];
+  /** Audit §3.4 — present when this wallet has been productised as a team. */
+  team?: CustomerWalletTeam;
 }
 
 export interface CustomerIdentity {

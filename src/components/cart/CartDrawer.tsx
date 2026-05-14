@@ -10,6 +10,9 @@ import { ComboDealBanner } from "./ComboDealBanner";
 import { LoyaltyEarnPreview } from "./LoyaltyEarnPreview";
 import { TodBanner } from "./TodBanner";
 import { TierPerkBanner } from "./TierPerkBanner";
+import { BundleLadder } from "./BundleLadder";
+import { TeamOrderBanner } from "./TeamOrderBanner";
+import type { BundleTier } from "@/lib/bundles";
 import { formatPrice } from "@/lib/utils";
 import {
   getCartSuggestions,
@@ -17,6 +20,7 @@ import {
   getDeliveryThresholdForCustomer,
   getCustomerSegment,
   UpsellConfig,
+  PairingContext,
 } from "@/lib/upsell";
 import { calculateTier } from "@/lib/loyalty";
 import {
@@ -78,6 +82,26 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
       .catch(() => {});
   }, [locationSlug]);
 
+  // Per-customer attach history (audit §3.1) — fetched once when the drawer
+  // first sees a known phone. Feeds scorePairing() inside getCartSuggestions
+  // so the chips re-rank by "you added it 3 of last 4 visits".
+  const [attachHistory, setAttachHistory] = useState<{
+    orderCount: number;
+    attachByItemId: Record<string, number>;
+  } | null>(null);
+  useEffect(() => {
+    if (!loyaltyCustomer?.phone) {
+      setAttachHistory(null);
+      return;
+    }
+    fetch(`/api/customer/attach-history?phone=${encodeURIComponent(loyaltyCustomer.phone)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data && typeof data === "object") setAttachHistory(data);
+      })
+      .catch(() => setAttachHistory(null));
+  }, [loyaltyCustomer?.phone]);
+
   // Slot scarcity for honest FOMO (same data as SlotPicker)
   useEffect(() => {
     if (!open || !locationSlug || items.length === 0) {
@@ -128,10 +152,19 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
   );
 
   const subtotal = getTotal();
+  const appliedBundleId = useCartStore((s) => s.appliedBundleId);
+  const bundlePriceGrosze = useCartStore((s) => s.bundlePriceGrosze);
+  const isBundleActive = appliedBundleId !== null && bundlePriceGrosze > 0;
 
-  // Apply combo deal discount to actual total
+  // Apply combo deal discount to actual total — disabled while a bundle
+  // is locked (the bundle's own savings replace the percentage discount).
   const comboResult = useMemo(() => getActiveComboDeals(items, upsellConfig), [items, upsellConfig]);
-  const comboDiscount = comboResult.missingCategories.length === 0 ? comboResult.savings : 0;
+  const comboDiscount =
+    isBundleActive
+      ? 0
+      : comboResult.missingCategories.length === 0
+        ? comboResult.savings
+        : 0;
   const tipAmount = useCartStore((s) => s.tipAmount);
   const setTipAmount = useCartStore((s) => s.setTipAmount);
   const total = subtotal - comboDiscount + tipAmount;
@@ -198,10 +231,22 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
     return locationSlug ? menus[locationSlug] || [] : [];
   }, [allMenuItems, locationSlug]);
 
-  // Cross-sell suggestions — always have menu items to work with now
+  // Cross-sell suggestions — always have menu items to work with now.
+  // Pass §3.1 pairing context so the chips re-rank by hour + customer
+  // attach history. When the drawer is open we read the local hour fresh
+  // each render so a customer who lingers past 13:00 sees the post-lunch
+  // ranking shift in place.
+  const pairingContext = useMemo<PairingContext>(
+    () => ({
+      hour: new Date().getHours(),
+      customerOrderCount: attachHistory?.orderCount ?? 0,
+      customerAttachByItemId: attachHistory?.attachByItemId ?? {},
+    }),
+    [attachHistory],
+  );
   const suggestions = useMemo(
-    () => getCartSuggestions(items, resolvedMenuItems, 4, upsellConfig),
-    [items, resolvedMenuItems, upsellConfig]
+    () => getCartSuggestions(items, resolvedMenuItems, 4, upsellConfig, pairingContext),
+    [items, resolvedMenuItems, upsellConfig, pairingContext]
   );
 
   const handlePhoneChange = (value: string) => {
@@ -245,6 +290,7 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
           customerEmail: customerEmail.trim() || undefined,
           specialInstructions: specialInstructions.trim() || undefined,
           tipAmount: tipAmount > 0 ? tipAmount : undefined,
+          appliedBundleId: appliedBundleId || undefined,
         }),
       });
 
@@ -308,6 +354,10 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
         </div>
       )}
 
+      {/* Audit §3.4 — Sud Italia for Teams. Surfaces above everything so
+          the customer sees who's paying before they scan their cart. */}
+      <TeamOrderBanner />
+
       {/* Time-of-day banner (audit §2.3) — picks one variant by local hour.
           Sits above the items list so it primes the customer before they
           scroll into their cart contents. Admin override via
@@ -360,6 +410,16 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
       {/* Gold/Platinum perk banner (audit §2.2 row 6) — visible only to
           eligible tiers; offers a comp'd antipasto via a price-0 cart line. */}
       <TierPerkBanner allMenuItems={allMenuItems} />
+
+      {/* Bundle ladder (audit §3.2) — fixed-price tiers above the per-item
+          chips. Sits before the combo banner because once the customer locks
+          a bundle, the percentage-discount combo is moot. */}
+      <BundleLadder
+        allMenuItems={resolvedMenuItems}
+        configBundles={
+          (upsellConfig as { bundles?: BundleTier[] } | null)?.bundles ?? null
+        }
+      />
 
       {/* Combo deal banner */}
       <ComboDealBanner cartItems={items} />
@@ -572,7 +632,7 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
       <div className="sticky bottom-0 border-t border-gray-100 px-4 py-3 sm:px-5 sm:py-4 bg-white shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
         <div className="space-y-1">
           <div className="flex justify-between items-center text-sm text-italia-gray">
-            <span>Subtotal</span>
+            <span>Subtotal{isBundleActive && <span className="ml-1 text-italia-green-dark text-xs font-medium">· bundle locked</span>}</span>
             <span>{formatPrice(subtotal)}</span>
           </div>
           {comboDiscount > 0 && (
