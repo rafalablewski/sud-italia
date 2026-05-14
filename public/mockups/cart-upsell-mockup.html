@@ -1,0 +1,1738 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Sud Italia — Cart Upsell v2 (mockup)</title>
+  <style>
+    /* ------------------------------------------------------------------
+       Production tokens (mirror of src/app/globals.css @theme block)
+       ------------------------------------------------------------------ */
+    :root {
+      --color-background: #FFF8F0;
+      --color-foreground: #1A1A1A;
+      --color-italia-red: #C8102E;
+      --color-italia-red-dark: #A00D24;
+      --color-italia-green: #008C45;
+      --color-italia-green-dark: #006B35;
+      --color-italia-cream: #FFF8F0;
+      --color-italia-cream-dark: #F5EDDF;
+      --color-italia-gold: #B8922E;
+      --color-italia-gold-dark: #9A7A24;
+      --color-italia-dark: #1A1A1A;
+      --color-italia-gray: #6B7280;
+      --color-italia-light-gray: #F3F4F6;
+      --gray-50:  #F9FAFB;
+      --gray-100: #F3F4F6;
+      --gray-200: #E5E7EB;
+      --gray-300: #D1D5DB;
+      --gray-400: #9CA3AF;
+      --font-heading: Georgia, "Times New Roman", serif;
+      --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--color-italia-cream);
+      font-family: var(--font-body);
+      color: var(--color-italia-dark);
+      min-height: 100vh;
+      padding: 28px 20px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    h1, h2, h3, h4 { font-family: var(--font-heading); font-weight: 600; }
+    h1 { font-size: 30px; line-height: 1.15; margin: 0 0 8px; }
+    h2 { font-size: 20px; line-height: 1.2; margin: 0 0 8px; }
+
+    /* Page shell ----------------------------------------------------- */
+    .page {
+      max-width: 1180px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 28rem;
+      gap: 32px;
+      align-items: start;
+    }
+    @media (max-width: 980px) {
+      .page { grid-template-columns: 1fr; }
+    }
+
+    .lede {
+      color: var(--color-italia-gray);
+      font-size: 14px;
+      line-height: 1.55;
+      max-width: 720px;
+    }
+
+    .panel {
+      background: white;
+      border: 1px solid var(--gray-100);
+      border-radius: 14px;
+      padding: 22px;
+      margin-bottom: 18px;
+      box-shadow: 0 1px 0 rgba(26,26,26,0.02);
+    }
+    .panel.muted { background: #FFFDF9; }
+
+    .pill {
+      display: inline-block;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--color-italia-cream-dark);
+      color: var(--color-italia-gray);
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+    .pill.live { background: rgba(0,140,69,0.10); color: var(--color-italia-green-dark); }
+    .pill.gold { background: rgba(184,146,46,0.12); color: var(--color-italia-gold-dark); }
+
+    .controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    .seg {
+      display: inline-flex; flex-wrap: wrap; gap: 2px;
+      background: var(--color-italia-cream-dark);
+      border-radius: 12px; padding: 4px;
+    }
+    .seg button {
+      background: transparent; border: 0;
+      padding: 8px 12px; border-radius: 9px;
+      font: inherit; font-size: 13px;
+      color: var(--color-italia-gray); cursor: pointer;
+    }
+    .seg button.active {
+      background: white; color: var(--color-italia-dark);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+      font-weight: 600;
+    }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+    .btn {
+      cursor: pointer; border: 0; font: inherit; font-weight: 500; font-size: 14px;
+      padding: 10px 16px; border-radius: 8px;
+      background: var(--color-italia-dark); color: white;
+      transition: background 0.15s;
+    }
+    .btn:hover { background: #000; }
+    .btn.ghost {
+      background: white; color: var(--color-italia-dark);
+      border: 1px solid var(--gray-200);
+    }
+    .btn.ghost:hover { border-color: var(--gray-300); background: var(--gray-50); }
+    .btn.danger { background: var(--color-italia-red); }
+    .btn.danger:hover { background: var(--color-italia-red-dark); }
+
+    .legend { display: grid; gap: 10px; margin: 12px 0 0; padding: 0; }
+    .legend li {
+      list-style: none;
+      display: grid; grid-template-columns: 28px 1fr;
+      gap: 10px;
+      font-size: 13px; line-height: 1.5;
+      color: var(--color-italia-gray);
+    }
+    .legend li strong { color: var(--color-italia-dark); font-weight: 600; }
+    .marker {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 24px; height: 24px; border-radius: 7px;
+      background: var(--color-italia-cream-dark);
+      font-size: 12px; font-weight: 700;
+      color: var(--color-italia-red);
+    }
+    .checklist { padding-left: 18px; margin: 6px 0 0; }
+    .checklist li { margin: 4px 0; color: var(--color-italia-gray); font-size: 13px; }
+    .checklist li b { color: var(--color-italia-dark); font-weight: 600; }
+    code.kbd {
+      font: 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+      background: var(--color-italia-cream-dark);
+      padding: 2px 6px; border-radius: 5px;
+    }
+
+    /* ==================================================================
+       Drawer — mirrors src/components/ui/Sheet.tsx + CartDrawer.tsx
+       ================================================================== */
+    .drawer-wrap { position: sticky; top: 28px; }
+    @media (max-width: 980px) { .drawer-wrap { position: static; } }
+
+    .drawer {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.10), 0 10px 10px -5px rgba(0,0,0,0.04);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: min(820px, calc(100vh - 56px));
+      position: relative;
+    }
+
+    /* Header */
+    .drawer-head {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid var(--gray-100);
+      padding: 16px 20px;
+      background: white;
+    }
+    .drawer-head h2 {
+      font-size: 18px; line-height: 1.2; margin: 0;
+      font-family: var(--font-heading);
+      color: var(--color-italia-dark); font-weight: 600;
+    }
+    .drawer-head .count {
+      font-size: 12px; color: var(--color-italia-gray);
+      margin-top: 2px;
+    }
+    .drawer-head .close {
+      border: 0; background: transparent; padding: 6px;
+      border-radius: 999px; cursor: pointer;
+      color: var(--color-italia-dark);
+      transition: background 0.15s;
+    }
+    .drawer-head .close:hover { background: var(--gray-100); }
+
+    /* Body */
+    .drawer-body {
+      flex: 1; overflow-y: auto;
+      padding: 12px 0 16px;
+      position: relative;
+    }
+
+    .sec { padding-left: 20px; padding-right: 20px; margin-top: 12px; }
+    .sec:first-child { margin-top: 8px; }
+
+    /* ==================================================================
+       Cart line items (mirrors CartItem.tsx)
+       ================================================================== */
+    .lines { padding: 0 20px; }
+    .line {
+      padding: 16px 0;
+      border-bottom: 1px solid var(--gray-100);
+    }
+    .line:last-child { border-bottom: 0; }
+    .line .top {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px;
+    }
+    .line .name {
+      font-size: 16px; font-weight: 500; line-height: 1.2;
+      color: var(--color-italia-dark);
+      margin: 0;
+    }
+    .line .each {
+      font-size: 14px; color: var(--color-italia-gray);
+      margin: 2px 0 0;
+    }
+    .line .price {
+      font-size: 16px; font-weight: 600;
+      color: var(--color-italia-dark);
+      flex-shrink: 0;
+    }
+    .line .bot {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-top: 12px;
+    }
+    .qty-stepper {
+      display: inline-flex; align-items: center;
+      border: 1px solid var(--gray-200);
+      border-radius: 12px;
+    }
+    .qty-stepper button {
+      border: 0; background: transparent; padding: 10px;
+      cursor: pointer; color: var(--color-italia-dark);
+      transition: background 0.15s;
+    }
+    .qty-stepper button:first-child { border-radius: 12px 0 0 12px; }
+    .qty-stepper button:last-child  { border-radius: 0 12px 12px 0; }
+    .qty-stepper button:hover { background: var(--gray-50); }
+    .qty-stepper .n {
+      min-width: 40px; text-align: center;
+      font-size: 16px; font-weight: 500;
+      color: var(--color-italia-dark);
+    }
+    .line-actions { display: inline-flex; align-items: center; gap: 4px; }
+    .note-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 10px; font-size: 12px; font-weight: 500;
+      border: 0; border-radius: 8px; background: transparent;
+      color: var(--color-italia-gray); cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .note-btn:hover { background: var(--gray-50); }
+    .trash-btn {
+      border: 0; background: transparent; padding: 10px;
+      color: var(--gray-400); cursor: pointer;
+      transition: color 0.15s;
+    }
+    .trash-btn:hover { color: var(--color-italia-red); }
+
+    /* ==================================================================
+       Loyalty status banner — bg-italia-gold/8 border-italia-gold/15
+       ================================================================== */
+    .loyalty {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 12px;
+      border-radius: 12px;
+      background: rgba(184, 146, 46, 0.08);
+      border: 1px solid rgba(184, 146, 46, 0.15);
+      font-size: 12px;
+      color: var(--color-italia-dark);
+    }
+    .loyalty .gold { color: var(--color-italia-gold); flex-shrink: 0; }
+    .loyalty .first { font-weight: 600; }
+    .loyalty .pts { color: var(--color-italia-gold-dark); font-weight: 700; margin-left: 4px; }
+
+    /* ==================================================================
+       Time-of-day banner (NEW §2.3)
+       — chrome inspired by ComboDealBanner.tsx
+       ================================================================== */
+    .tod {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      transition: background 0.3s, border-color 0.3s;
+    }
+    .tod .icon-tile {
+      flex-shrink: 0;
+      width: 36px; height: 36px;
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 8px;
+    }
+    .tod .body { flex: 1; min-width: 0; }
+    .tod .row1 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .tod .ttl {
+      font-size: 14px; font-weight: 600; line-height: 1.3;
+      color: var(--color-italia-dark);
+      margin: 0;
+    }
+    .tod .sub {
+      font-size: 12px; line-height: 1.4;
+      color: var(--color-italia-gray);
+      margin-top: 4px;
+    }
+    .tod .badge {
+      font-size: 11px; font-weight: 700;
+      padding: 2px 6px; border-radius: 4px;
+      letter-spacing: 0.02em;
+    }
+    .tod-cta {
+      flex-shrink: 0;
+      border: 0; background: var(--color-italia-dark); color: white;
+      font: inherit; font-weight: 600; font-size: 12px;
+      padding: 8px 12px; border-radius: 8px;
+      cursor: pointer; align-self: center;
+      transition: background 0.15s;
+    }
+    .tod-cta:hover { background: #000; }
+    /* "Remove combo" state for McDonald's default-effect (§2.5) */
+    .tod-cta.is-applied {
+      background: transparent;
+      color: var(--color-italia-gray);
+      border: 1px solid var(--gray-200);
+      font-weight: 500;
+    }
+    .tod-cta.is-applied:hover {
+      color: var(--color-italia-red);
+      border-color: var(--color-italia-red);
+      background: rgba(200,16,46,0.04);
+    }
+    .tod-applied .badge { background: rgba(0,140,69,0.15) !important; color: var(--color-italia-green-dark) !important; }
+
+    /* Variants per audit §2.3 — palettes use existing italia tokens only */
+    .tod-lunch,
+    .tod-afternoon,
+    .tod-returning {
+      background: rgba(184, 146, 46, 0.05);
+      border-color: rgba(184, 146, 46, 0.25);
+    }
+    .tod-lunch .icon-tile,
+    .tod-afternoon .icon-tile,
+    .tod-returning .icon-tile { background: rgba(184, 146, 46, 0.15); color: var(--color-italia-gold-dark); }
+    .tod-lunch .badge,
+    .tod-afternoon .badge,
+    .tod-returning .badge { background: rgba(184, 146, 46, 0.15); color: var(--color-italia-gold-dark); }
+
+    .tod-dinner {
+      background: rgba(200, 16, 46, 0.04);
+      border-color: rgba(200, 16, 46, 0.20);
+    }
+    .tod-dinner .icon-tile { background: rgba(200, 16, 46, 0.10); color: var(--color-italia-red); }
+    .tod-dinner .badge { background: rgba(200, 16, 46, 0.10); color: var(--color-italia-red); }
+
+    .tod-late {
+      background: var(--color-italia-dark);
+      border-color: #2C2620;
+    }
+    .tod-late .ttl { color: white; }
+    .tod-late .sub { color: rgba(255,255,255,0.65); }
+    .tod-late .icon-tile { background: rgba(255,255,255,0.10); color: #E0A93B; }
+    .tod-late .badge { background: rgba(200,16,46,0.30); color: white; }
+    .tod-late .tod-cta { background: var(--color-italia-red); }
+    .tod-late .tod-cta:hover { background: var(--color-italia-red-dark); }
+
+    .tod-morning {
+      background: rgba(0, 140, 69, 0.05);
+      border-color: rgba(0, 140, 69, 0.25);
+    }
+    .tod-morning .icon-tile { background: rgba(0, 140, 69, 0.15); color: var(--color-italia-green); }
+    .tod-morning .badge { background: rgba(0, 140, 69, 0.15); color: var(--color-italia-green-dark); }
+
+    .tod-unlock {
+      background: linear-gradient(135deg, rgba(184,146,46,0.10), rgba(200,16,46,0.06));
+      border-color: rgba(184,146,46,0.40);
+    }
+    .tod-unlock .icon-tile { background: rgba(184,146,46,0.20); color: var(--color-italia-gold-dark); }
+    .tod-unlock .badge { background: var(--color-italia-gold-dark); color: white; }
+
+    /* ==================================================================
+       "Complete the meal" chips (REDESIGN §2.1)
+       header mirrors CartUpsell.tsx; chips reuse the same cream+gold skin
+       ================================================================== */
+    .complete-head {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+    }
+    .complete-head .label {
+      font-size: 12px; font-weight: 600; letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--color-italia-gray);
+      margin: 0;
+    }
+    .complete-head .gold { color: var(--color-italia-gold); }
+
+    .chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .chip {
+      position: relative;
+      background: var(--color-italia-cream);
+      border: 1px solid rgba(184, 146, 46, 0.15);
+      border-radius: 12px;
+      padding: 12px 8px 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: transform 0.12s, border-color 0.15s, box-shadow 0.15s;
+      animation: fade-in 0.3s ease-out;
+    }
+    .chip:hover {
+      border-color: rgba(184, 146, 46, 0.40);
+      box-shadow: 0 4px 10px rgba(184, 146, 46, 0.10);
+      transform: translateY(-1px);
+    }
+    .chip:active { transform: translateY(0); }
+    .chip .emoji { font-size: 22px; line-height: 1; display: block; margin-bottom: 4px; }
+    .chip .name {
+      font-size: 13px; font-weight: 500;
+      color: var(--color-italia-dark);
+      line-height: 1.2;
+    }
+    .chip .reason {
+      font-size: 11px; color: var(--color-italia-gray);
+      margin-top: 2px; line-height: 1.3;
+    }
+    .chip .price {
+      font-size: 13px; font-weight: 600;
+      color: var(--color-italia-red);
+      margin-top: 6px;
+    }
+    .chip .add-icon {
+      position: absolute; top: 8px; right: 8px;
+      width: 22px; height: 22px;
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 6px;
+      background: var(--color-italia-red);
+      color: white;
+    }
+    .chip.added {
+      background: rgba(0, 140, 69, 0.06);
+      border-color: rgba(0, 140, 69, 0.30);
+      animation: bounce-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+      cursor: default;
+    }
+    .chip.added:hover {
+      transform: none;
+      box-shadow: none;
+      border-color: rgba(0, 140, 69, 0.30);
+    }
+    .chip.added .price { color: var(--color-italia-green-dark); }
+    /* When added: the corner badge becomes the only interactive target — an × to remove */
+    .chip.added .add-icon {
+      background: white;
+      color: var(--color-italia-dark);
+      border: 1px solid var(--gray-200);
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .chip.added .add-icon:hover {
+      background: var(--color-italia-red);
+      color: white;
+      border-color: var(--color-italia-red);
+    }
+    /* SVG swap — + when idle, × when added */
+    .chip .icon-remove { display: none; }
+    .chip.added .icon-add    { display: none; }
+    .chip.added .icon-remove { display: inline; }
+
+    /* Scarcity strip (§2.2 row 7 — "Try the new burrata, first 12 today") */
+    .scarcity-chip {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px;
+      background: rgba(200, 16, 46, 0.04);
+      border: 1px solid rgba(200, 16, 46, 0.25);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: transform 0.12s, border-color 0.15s, box-shadow 0.15s;
+    }
+    .scarcity-chip:hover {
+      border-color: var(--color-italia-red);
+      box-shadow: 0 4px 10px rgba(200, 16, 46, 0.08);
+    }
+    .scarcity-chip .flame {
+      flex-shrink: 0; width: 32px; height: 32px;
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 8px;
+      background: rgba(200, 16, 46, 0.10);
+      color: var(--color-italia-red);
+    }
+    .scarcity-chip .body { flex: 1; min-width: 0; }
+    .scarcity-chip .ttl { font-size: 13px; font-weight: 600; color: var(--color-italia-dark); }
+    .scarcity-chip .sub { font-size: 11px; color: var(--color-italia-gray); margin-top: 2px; }
+    .scarcity-chip .stock {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--color-italia-red);
+      margin-left: 4px;
+    }
+    .scarcity-chip .price-pill {
+      flex-shrink: 0;
+      padding: 6px 10px; font-size: 13px; font-weight: 600;
+      background: var(--color-italia-red); color: white;
+      border-radius: 8px;
+    }
+    .scarcity-chip.added {
+      background: rgba(0, 140, 69, 0.06);
+      border-color: rgba(0, 140, 69, 0.30);
+      cursor: default;
+    }
+    .scarcity-chip.added:hover { box-shadow: none; border-color: rgba(0, 140, 69, 0.30); }
+    .scarcity-chip.added .flame { background: rgba(0,140,69,0.10); color: var(--color-italia-green); }
+    .scarcity-chip.added .stock { color: var(--color-italia-green-dark); }
+    .scarcity-chip.added .price-pill { background: var(--color-italia-green); }
+
+    /* Universal × remove button used on scarcity + tier-perk rows when added */
+    .remove-x {
+      flex-shrink: 0;
+      width: 28px; height: 28px;
+      display: none;
+      align-items: center; justify-content: center;
+      border: 1px solid var(--gray-200);
+      border-radius: 8px;
+      background: white;
+      color: var(--color-italia-dark);
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .scarcity-chip.added .remove-x,
+    .tier-perk.applied .remove-x { display: inline-flex; }
+    .remove-x:hover {
+      background: var(--color-italia-red);
+      color: white;
+      border-color: var(--color-italia-red);
+    }
+
+    /* Tier-conditional perk banner (§2.2 row 6) */
+    .tier-perk {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px;
+      background: linear-gradient(135deg, rgba(184,146,46,0.10), rgba(184,146,46,0.04));
+      border: 1px solid rgba(184, 146, 46, 0.35);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .tier-perk:hover {
+      border-color: var(--color-italia-gold);
+      box-shadow: 0 4px 10px rgba(184, 146, 46, 0.10);
+    }
+    .tier-perk .medal {
+      flex-shrink: 0; width: 32px; height: 32px;
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 8px;
+      background: rgba(184, 146, 46, 0.18);
+      color: var(--color-italia-gold-dark);
+    }
+    .tier-perk .body { flex: 1; min-width: 0; }
+    .tier-perk .ttl { font-size: 13px; font-weight: 600; color: var(--color-italia-dark); }
+    .tier-perk .sub { font-size: 11px; color: var(--color-italia-gray); margin-top: 2px; }
+    .tier-perk .add-pill {
+      flex-shrink: 0;
+      padding: 6px 10px; font-size: 12px; font-weight: 600;
+      background: var(--color-italia-gold-dark); color: white;
+      border-radius: 8px; border: 0; cursor: pointer;
+    }
+    .tier-perk.applied {
+      background: rgba(0, 140, 69, 0.06);
+      border-color: rgba(0, 140, 69, 0.30);
+      cursor: default;
+    }
+    .tier-perk.applied:hover { box-shadow: none; border-color: rgba(0, 140, 69, 0.30); }
+    .tier-perk.applied .medal { background: rgba(0,140,69,0.10); color: var(--color-italia-green); }
+    .tier-perk.applied .add-pill { background: var(--color-italia-green); pointer-events: none; }
+
+    /* Gold-tier loyalty badge */
+    .tier-badge {
+      display: inline-flex; align-items: center; gap: 3px;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 2px 6px; border-radius: 4px;
+      background: rgba(184, 146, 46, 0.18);
+      color: var(--color-italia-gold-dark);
+      margin: 0 4px;
+    }
+
+    /* Personalised threshold annotation (§2.5 Uber Eats) */
+    .threshold-note {
+      font-size: 10px; color: var(--gray-400);
+      margin-left: 4px;
+      font-style: italic;
+    }
+
+    @keyframes fade-in {
+      from { opacity: 0; transform: translateY(-4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes bounce-in {
+      0%   { transform: scale(0.94); }
+      60%  { transform: scale(1.03); }
+      100% { transform: scale(1); }
+    }
+
+    /* ==================================================================
+       Delivery progress (REDESIGN — animated)
+       chrome from DeliveryProgress.tsx + shimmer
+       ================================================================== */
+    .delivery {
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px dashed var(--gray-200);
+      background: var(--gray-50);
+      transition: background 0.3s, border-color 0.3s, border-style 0.3s;
+    }
+    .delivery-top {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 8px;
+    }
+    .delivery-top .label {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 14px; color: var(--color-italia-gray);
+    }
+    .delivery-top .label .rem { font-weight: 600; color: var(--color-italia-dark); }
+    .delivery-top .target {
+      font-size: 12px; color: var(--color-italia-gray);
+      flex-shrink: 0;
+    }
+    .progress {
+      margin-top: 8px;
+      width: 100%; height: 8px;
+      background: var(--gray-200);
+      border-radius: 999px;
+      overflow: hidden;
+      position: relative;
+    }
+    .progress .bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--color-italia-red) 0%, var(--color-italia-green) 100%);
+      border-radius: 999px;
+      transition: width 0.5s cubic-bezier(0.22, 0.61, 0.36, 1);
+      position: relative;
+    }
+    .progress .bar::after {
+      content: ""; position: absolute; inset: 0;
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.45) 50%, transparent 100%);
+      animation: shimmer 1.8s linear infinite;
+    }
+    @keyframes shimmer {
+      0%   { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    /* Premium unlocked state — celebratory moment, not a status flip */
+    .delivery.qualified {
+      position: relative;
+      overflow: hidden;
+      padding: 16px 16px 16px 16px;
+      border-style: solid;
+      border-color: rgba(184, 146, 46, 0.40);
+      background:
+        radial-gradient(circle at 0% 0%, rgba(255,255,255,0.7) 0%, transparent 55%),
+        linear-gradient(135deg, rgba(184,146,46,0.14) 0%, rgba(0,140,69,0.10) 100%);
+      animation: unlock-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .delivery.qualified::after {
+      content: ""; position: absolute; inset: 0;
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.55) 45%, transparent 100%);
+      transform: translateX(-100%);
+      animation: unlock-shimmer 1.4s ease-out 0.1s;
+      pointer-events: none;
+    }
+    .delivery.qualified .delivery-top,
+    .delivery.qualified .progress { display: none; }
+    .delivery .qualified-row { display: none; }
+    .delivery.qualified .qualified-row {
+      display: flex; align-items: center; gap: 12px;
+      position: relative;
+    }
+    .delivery.qualified .medallion {
+      flex-shrink: 0;
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--color-italia-gold) 0%, var(--color-italia-green) 100%);
+      box-shadow: 0 4px 14px rgba(184, 146, 46, 0.40),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.30);
+      display: inline-flex; align-items: center; justify-content: center;
+      color: white;
+      animation: medallion-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .delivery.qualified .text { line-height: 1.25; }
+    .delivery.qualified .ttl {
+      font-family: var(--font-heading);
+      font-weight: 600; font-size: 16px;
+      color: var(--color-italia-dark);
+      letter-spacing: 0.01em;
+    }
+    .delivery.qualified .sub {
+      font-size: 12px; color: var(--color-italia-gray);
+      margin-top: 2px;
+    }
+    .delivery.qualified .ribbon {
+      position: absolute; top: -1px; right: -1px;
+      width: 64px; height: 64px;
+      background:
+        linear-gradient(135deg, transparent 50%, rgba(200,16,46,0.18) 50%, rgba(200,16,46,0.18) 100%);
+      pointer-events: none;
+    }
+    @keyframes unlock-in {
+      0%   { transform: scale(0.96); opacity: 0; }
+      60%  { transform: scale(1.01); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    @keyframes unlock-shimmer {
+      0%   { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    @keyframes medallion-pop {
+      0%   { transform: scale(0.4) rotate(-12deg); opacity: 0; }
+      55%  { transform: scale(1.12) rotate(4deg); opacity: 1; }
+      100% { transform: scale(1) rotate(0); }
+    }
+
+    /* ==================================================================
+       Totals + sticky pay (mirrors CartDrawer.tsx)
+       ================================================================== */
+    .totals {
+      border-top: 1px solid var(--gray-100);
+      padding: 12px 20px;
+      background: white;
+      box-shadow: 0 -4px 16px rgba(0,0,0,0.06);
+    }
+    .totals-rows > div {
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 14px; color: var(--color-italia-gray);
+      padding: 2px 0;
+    }
+    .totals-rows .discount { color: var(--color-italia-green); font-weight: 500; }
+    .totals-rows .freed { color: var(--color-italia-green); font-weight: 500; }
+    .totals-rows .total {
+      color: var(--color-italia-dark);
+      font-size: 18px; font-weight: 700;
+      border-top: 1px solid var(--gray-100);
+      padding-top: 8px; margin-top: 6px;
+    }
+    .totals-rows .total .amt { color: var(--color-italia-red); }
+    .loyalty-earn {
+      display: flex; align-items: center; gap: 8px;
+      padding: 4px 0;
+      font-size: 12px; color: var(--color-italia-gray);
+    }
+    .loyalty-earn b { font-weight: 700; color: var(--color-italia-gold-dark); }
+    .loyalty-earn .gold { color: var(--color-italia-gold); }
+
+    /* Pay stack — Apple/Google Pay primary, card secondary (audit §2.1 T+pay) */
+    .pay-stack { margin-top: 12px; display: grid; gap: 8px; }
+    .wallet-btn {
+      width: 100%; min-height: 48px;
+      background: #000; color: white;
+      border: 0; border-radius: 8px;
+      font: inherit; font-weight: 500; font-size: 16px;
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .wallet-btn:hover { background: #1a1a1a; }
+    .wallet-btn:active { transform: scale(0.99); }
+    .wallet-btn .wallet-logo { width: 18px; height: 18px; flex-shrink: 0; }
+    .wallet-btn .wallet-logo.apple { color: white; }
+    .wallet-btn[data-method="google"] {
+      background: #fff; color: #3c4043;
+      border: 1px solid var(--gray-200);
+    }
+    .wallet-btn[data-method="google"]:hover { background: var(--gray-50); }
+    .wallet-btn[data-method="google"] .wallet-label { font-weight: 500; letter-spacing: 0.01em; }
+    .pay-btn {
+      width: 100%; min-height: 44px;
+      background: var(--color-italia-red); color: white;
+      border: 0; border-radius: 8px;
+      font: inherit; font-weight: 500; font-size: 15px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .pay-btn:hover { background: var(--color-italia-red-dark); }
+    .pay-meta {
+      text-align: center; margin-top: 6px;
+      font-size: 11px; color: var(--gray-400);
+    }
+    .clear-btn {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      width: 100%; margin-top: 6px; padding: 6px 0;
+      border: 0; background: transparent;
+      font: inherit; font-size: 12px;
+      color: var(--color-italia-gray);
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+    .clear-btn:hover { color: var(--color-italia-red); }
+
+    /* ==================================================================
+       Inline add-to-cart toast (NEW §2.1)
+       ================================================================== */
+    .toast-host {
+      position: absolute; left: 20px; right: 20px; top: 12px;
+      z-index: 20; pointer-events: none;
+    }
+    .toast {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 12px;
+      background: white;
+      border: 1px solid rgba(184, 146, 46, 0.30);
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(26,26,26,0.10);
+      pointer-events: auto;
+      transform: translateY(-12px); opacity: 0;
+      transition: transform 0.25s ease, opacity 0.25s ease;
+    }
+    .toast.in { transform: translateY(0); opacity: 1; }
+    .toast .ic-host {
+      flex-shrink: 0;
+      width: 28px; height: 28px;
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 8px;
+      background: rgba(184, 146, 46, 0.15);
+      color: var(--color-italia-gold-dark);
+    }
+    .toast .body { flex: 1; min-width: 0; }
+    .toast .title {
+      font-size: 13px; font-weight: 600;
+      color: var(--color-italia-dark);
+      line-height: 1.3;
+    }
+    .toast .seed {
+      font-size: 12px; color: var(--color-italia-gray);
+      margin-top: 2px; line-height: 1.4;
+    }
+
+    .hint {
+      font-size: 11px; color: var(--gray-400);
+      padding: 0 20px; margin-top: 12px;
+      line-height: 1.5;
+    }
+
+    /* ---------- Lucide icon sizing ---------- */
+    .ic    { width: 16px; height: 16px; stroke-width: 2; flex-shrink: 0; }
+    .ic-sm { width: 14px; height: 14px; stroke-width: 2; flex-shrink: 0; }
+    .ic-lg { width: 20px; height: 20px; stroke-width: 2; flex-shrink: 0; }
+  </style>
+</head>
+<body>
+
+<!-- Lucide-style icon symbol sheet -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18 6L6 18M6 6l12 12"/>
+    </symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5 12h14M12 5v14"/>
+    </symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5 12h14"/>
+    </symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 6h18"/>
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+      <line x1="10" y1="11" x2="10" y2="17"/>
+      <line x1="14" y1="11" x2="14" y2="17"/>
+    </symbol>
+    <symbol id="i-note" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M15.5 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h11l5-5V5a2 2 0 0 0-2-2z"/>
+      <path d="M15 3v6h6"/>
+    </symbol>
+    <symbol id="i-sparkles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
+      <path d="M20 3v4"/><path d="M22 5h-4"/>
+      <path d="M4 17v2"/><path d="M5 18H3"/>
+    </symbol>
+    <symbol id="i-star" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+    </symbol>
+    <symbol id="i-truck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/>
+      <path d="M15 18H9"/>
+      <path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/>
+      <circle cx="17" cy="18" r="2"/>
+      <circle cx="7" cy="18" r="2"/>
+    </symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 6L9 17l-5-5"/>
+    </symbol>
+    <symbol id="i-bag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+      <path d="M3 6h18"/>
+      <path d="M16 10a4 4 0 0 1-8 0"/>
+    </symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+    </symbol>
+    <symbol id="i-coffee" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M17 8h1a4 4 0 0 1 0 8h-1"/>
+      <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z"/>
+      <line x1="6" y1="2" x2="6" y2="4"/>
+      <line x1="10" y1="2" x2="10" y2="4"/>
+      <line x1="14" y1="2" x2="14" y2="4"/>
+    </symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    </symbol>
+    <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="8.5" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </symbol>
+    <symbol id="i-wave" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M7 11.5V14a5 5 0 0 0 5 5h0a5 5 0 0 0 5-5v-3.5"/>
+      <path d="M7 11.5l-1-3a1.5 1.5 0 0 1 2.83-1l1 3"/>
+      <path d="M10 11l-1.5-4.5a1.5 1.5 0 0 1 2.83-1L13 10"/>
+      <path d="M13 10L11.5 5a1.5 1.5 0 0 1 3-.5L16 9"/>
+      <path d="M16 9l-.5-1.5a1.5 1.5 0 0 1 3-.5L19 9"/>
+    </symbol>
+    <symbol id="i-rain" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M16 13a4 4 0 0 0 0-8 6 6 0 0 0-11.31 2A4 4 0 0 0 6 15"/>
+      <line x1="8" y1="19" x2="8" y2="21"/>
+      <line x1="12" y1="19" x2="12" y2="22"/>
+      <line x1="16" y1="19" x2="16" y2="21"/>
+    </symbol>
+    <symbol id="i-trophy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
+      <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
+      <path d="M4 22h16"/>
+      <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
+      <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
+      <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
+    </symbol>
+    <symbol id="i-flame" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
+    </symbol>
+    <symbol id="i-medal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="15" r="6"/>
+      <path d="M12 9V3"/>
+      <path d="M7.5 3L12 9l4.5-6"/>
+      <path d="M8 5l-2-2"/>
+      <path d="M16 5l2-2"/>
+    </symbol>
+    <symbol id="i-apple" viewBox="0 0 14 18" fill="currentColor">
+      <path d="M11.86 9.27c-.02-2.3 1.88-3.4 1.96-3.46-1.07-1.57-2.74-1.79-3.34-1.81-1.42-.14-2.77.84-3.5.84-.71 0-1.83-.82-3.01-.79C2.5 4.07 1.04 4.92.27 6.31c-1.6 2.78-.41 6.9 1.16 9.15.77 1.1 1.69 2.34 2.89 2.3 1.16-.05 1.6-.74 3-.74 1.4 0 1.8.74 3.04.72 1.26-.02 2.05-1.12 2.82-2.23.88-1.28 1.25-2.51 1.27-2.57-.03-.01-2.43-.93-2.45-3.69m-2.3-6.78c.65-.78 1.08-1.86.96-2.94-.93.04-2.05.62-2.72 1.4-.6.69-1.12 1.79-.98 2.85 1.04.08 2.1-.53 2.74-1.31"/>
+    </symbol>
+    <symbol id="i-gpay" viewBox="0 0 18 18">
+      <path d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.49h4.84c-.21 1.13-.84 2.09-1.79 2.73v2.27h2.9c1.7-1.57 2.69-3.88 2.69-6.65z" fill="#4285F4"/>
+      <path d="M9 18c2.43 0 4.46-.81 5.95-2.18l-2.9-2.27c-.8.54-1.83.86-3.05.86-2.34 0-4.32-1.58-5.03-3.7H.97v2.32A9 9 0 0 0 9 18z" fill="#34A853"/>
+      <path d="M3.97 10.71c-.18-.54-.28-1.12-.28-1.71s.1-1.17.28-1.71V4.96H.97A8.99 8.99 0 0 0 0 9c0 1.45.35 2.82.97 4.04l3-2.33z" fill="#FBBC05"/>
+      <path d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58A8.99 8.99 0 0 0 9 0 8.99 8.99 0 0 0 .97 4.96l3 2.33C4.68 5.16 6.66 3.58 9 3.58z" fill="#EA4335"/>
+    </symbol>
+  </defs>
+</svg>
+
+
+<div class="page">
+
+  <!-- =====================================================
+       LEFT: explainer + controls
+       ===================================================== -->
+  <div>
+    <div class="panel">
+      <span class="pill">Audit §2.1 – 2.5</span>
+      <h1>Cart Upsell v2 — visual draft</h1>
+      <p class="lede">
+        Four new surfaces, all inside the existing cart drawer + add-to-cart flow.
+        Nothing here blocks the happy path — every prompt is one-tap-add, dismissable, and contextual.
+        Same tokens, fonts, icons, and copy patterns as the live drawer
+        (<code class="kbd">CartDrawer.tsx</code>, <code class="kbd">CartUpsell.tsx</code>,
+        <code class="kbd">DeliveryProgress.tsx</code>) — just augmented.
+      </p>
+      <p class="lede">
+        Pick a time-of-day variant, then hit <b>+ Add Margherita</b> to see the toast,
+        tap any chip to add it, and use <b>Push to free-delivery</b> to watch the progress
+        bar flip green.
+      </p>
+
+      <div class="controls">
+        <div class="seg" id="tod-switch" role="tablist" aria-label="Time of day">
+          <button data-tod="lunch" class="active">Lunch 11:30–13:00</button>
+          <button data-tod="afternoon">Afternoon 14:30–16:30</button>
+          <button data-tod="dinner">Dinner 17:00–19:30</button>
+          <button data-tod="late">Last call 20:30+</button>
+          <button data-tod="morning">Pre-order 07:00–10:30</button>
+          <button data-tod="rain">Rain forecast</button>
+          <button data-tod="returning">14-day lapsed</button>
+          <button data-tod="unlock3">Order #3 unlock</button>
+          <button data-tod="off">None</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <button class="btn danger" id="addBtn">+ Add Margherita</button>
+        <button class="btn ghost" id="qualifyBtn">Push to free-delivery</button>
+        <button class="btn ghost" id="resetBtn">Reset</button>
+      </div>
+    </div>
+
+    <div class="panel muted">
+      <span class="pill live">What's new — full §2 coverage</span>
+      <h2>The redesign deltas vs production</h2>
+      <ul class="legend">
+        <li>
+          <span class="marker">1</span>
+          <span>
+            <strong>Inline toast on add-to-cart.</strong>
+            <em>§2.1 T+0.</em> Seed-only copy ("Customers usually add an espresso"),
+            auto-dismiss 4s, no CTA, no block.
+          </span>
+        </li>
+        <li>
+          <span class="marker">2</span>
+          <span>
+            <strong>"Complete the meal" 3-up chips above subtotal.</strong>
+            <em>§2.1 + §2.4.</em> Margin-ranked (espresso first: 83% GM × 60% attach).
+            One-tap-add, no second screen.
+          </span>
+        </li>
+        <li>
+          <span class="marker">3</span>
+          <span>
+            <strong>Animated free-delivery progress bar.</strong>
+            <em>§2.1 + §2.5 Uber Eats.</em> Shimmer overlay + smoother red→green flip.
+            Threshold is <b>per-segment</b> (regulars 49 zł, first-timers 39 zł, Gold free)
+            — note the "tuned for you" annotation next to the target.
+          </span>
+        </li>
+        <li>
+          <span class="marker">4</span>
+          <span>
+            <strong>Apple Pay primary, card secondary.</strong>
+            <em>§2.1 T+pay.</em> Stripe Payment Request API wiring lands separately;
+            this mockup shows the intended visual hierarchy.
+          </span>
+        </li>
+        <li>
+          <span class="marker">5</span>
+          <span>
+            <strong>Time-of-day banner — 8 variants.</strong>
+            <em>§2.3.</em> Lunch, afternoon, dinner, last-call, pre-order, <b>rain</b>,
+            <b>14-day lapsed</b>, <b>3rd-order loyalty unlock</b>. One at a time, picked
+            server-side by hour × weather × customer state.
+          </span>
+        </li>
+        <li>
+          <span class="marker">6</span>
+          <span>
+            <strong>McDonald's default-effect on the lunch combo.</strong>
+            <em>§2.5.</em> Combo is <b>pre-applied</b> during the lunch window — the CTA
+            flips to "Remove combo" so non-combo is now the deviant path. Toggle the ToD
+            to see the discount auto-apply.
+          </span>
+        </li>
+        <li>
+          <span class="marker">7</span>
+          <span>
+            <strong>Scarcity strip — real seasonal stock.</strong>
+            <em>§2.2 row 7.</em> "Try the seasonal burrata — 7 of 12 left today" uses
+            real inventory from the existing seasonal-items pipeline. Burns down with each
+            add. Tap once to add, tap again to remove.
+          </span>
+        </li>
+        <li>
+          <span class="marker">8</span>
+          <span>
+            <strong>Tier-conditional perk banner.</strong>
+            <em>§2.2 row 6.</em> "Make it a Gold-tier order: +pesto bruschetta on the
+            house." Only renders for Gold/Platinum members. Tap once to comp it in,
+            tap again to remove.
+          </span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="panel muted">
+      <span class="pill">Q: admin manageability</span>
+      <h2>Yes — the ToD banners are admin-config, not hardcoded</h2>
+      <p class="lede">
+        When this ships, each location's banners live in
+        <code class="kbd">LocationUpsellConfig.timeWindows[]</code> next to the existing
+        <code class="kbd">combos</code> array in <code class="kbd">upsell-settings.json</code>.
+        An admin entry under <code class="kbd">/admin/upsell</code> exposes:
+      </p>
+      <ul class="checklist">
+        <li><b>Window</b> — start/end local hour (e.g. 11:30–13:00), days-of-week, location slug.</li>
+        <li><b>Trigger</b> — hour / weather (rain) / customer state (lapsed, order-#3 unlock).</li>
+        <li><b>Copy</b> — title, sub-line, badge text, CTA label, icon glyph.</li>
+        <li><b>Action</b> — apply % discount, add an item to cart, deep-link to a bundle page, or just nudge.</li>
+        <li><b>Default-apply</b> toggle — whether the banner is opt-out (McDonald's effect) or opt-in.</li>
+        <li><b>Tier-gating</b> — which loyalty tiers see this banner (Bronze / Silver / Gold / Platinum).</li>
+      </ul>
+      <p class="lede">
+        A new capability entry under <code class="kbd">/admin/capabilities</code>
+        ("Time-of-day upsell windows") will register the surface in the same commit that
+        ships the React component, per Rule #9.
+      </p>
+    </div>
+
+    <div class="panel muted">
+      <span class="pill gold">Genuinely out of scope</span>
+      <h2>What requires backend lift, deferred</h2>
+      <ul class="checklist">
+        <li><b>Bundle / decoy engine</b> (Lunch+ tier, Family Feast) — §3.2 territory, separate sprint. The lunch + dinner banners here show the entry points.</li>
+        <li><b>Per-customer ML upsell scoring</b> — §9.1. Static margin × attach heuristic stands in until the logistic-regression scorer ships.</li>
+        <li><b>Hour-of-day modulation of "popular this hour"</b> — §1.2 trigger #2. Needs the per-hour item-popularity rollup.</li>
+        <li><b>Stripe Payment Request API</b> — Apple Pay / Google Pay buttons above show the visual hierarchy; the actual wallet sheet wiring lands separately.</li>
+      </ul>
+    </div>
+
+    <div class="panel muted">
+      <span class="pill">Won't ship — by brand decision</span>
+      <h2>Audit recommendations we <em>reject</em></h2>
+      <ul class="checklist">
+        <li><b>Item-size modifiers</b> ("Make it a large +PLN 6", "Double cheese", "Add chicken") — §2.2 row 2 + §2.5 Starbucks size-laddering. Sud Italia serves fixed Neapolitan portions. Sizing up or modifying set recipes runs against the brand's core authenticity value, so this entire upsell pattern is overruled.</li>
+        <li>No "Are you sure?" confirmation pop-ups (§2.2).</li>
+        <li>No blocking modal after Add to cart (§2.2).</li>
+        <li>No guilt copy ("You forgot dessert!") (§2.2).</li>
+        <li>No fake urgency — windows are real, scarcity comes from real inventory.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- =====================================================
+       RIGHT: drawer (mirrors live CartDrawer)
+       ===================================================== -->
+  <div class="drawer-wrap">
+    <div class="drawer" role="dialog" aria-label="Your Order">
+
+      <div class="drawer-head">
+        <div>
+          <h2>Your Order</h2>
+          <div class="count" id="countLabel">2 items · Kraków</div>
+        </div>
+        <button class="close" aria-label="Close cart">
+          <svg class="ic-lg"><use href="#i-x"/></svg>
+        </button>
+      </div>
+
+      <div class="drawer-body" id="drawerBody">
+
+        <div class="toast-host" id="toastHost" aria-live="polite"></div>
+
+        <div class="lines" id="lines"></div>
+
+        <div class="sec">
+          <div class="loyalty">
+            <svg class="ic gold"><use href="#i-star"/></svg>
+            <span>Earning points as <span class="first">Anna</span><span class="tier-badge">Gold</span><span class="pts">850 pts</span></span>
+          </div>
+        </div>
+
+        <div class="sec" id="todHost"></div>
+
+        <div class="sec">
+          <div class="complete-head">
+            <svg class="ic gold"><use href="#i-sparkles"/></svg>
+            <p class="label">Complete your meal</p>
+          </div>
+          <div class="chips" id="chips">
+            <div class="chip" data-id="espresso" data-price="600" data-name="Espresso">
+              <span class="add-icon" aria-label="Add or remove">
+                <svg class="ic-sm icon-add"><use href="#i-plus"/></svg>
+                <svg class="ic-sm icon-remove"><use href="#i-x"/></svg>
+              </span>
+              <span class="emoji">☕️</span>
+              <div class="name">Espresso</div>
+              <div class="reason">Pizzaiolo's pick</div>
+              <div class="price">6,00 zł</div>
+            </div>
+            <div class="chip" data-id="tiramisu" data-price="1800" data-name="Tiramisù">
+              <span class="add-icon" aria-label="Add or remove">
+                <svg class="ic-sm icon-add"><use href="#i-plus"/></svg>
+                <svg class="ic-sm icon-remove"><use href="#i-x"/></svg>
+              </span>
+              <span class="emoji">🍰</span>
+              <div class="name">Tiramisù</div>
+              <div class="reason">Made fresh today</div>
+              <div class="price">18,00 zł</div>
+            </div>
+            <div class="chip" data-id="limonata" data-price="1200" data-name="Limonata">
+              <span class="add-icon" aria-label="Add or remove">
+                <svg class="ic-sm icon-add"><use href="#i-plus"/></svg>
+                <svg class="ic-sm icon-remove"><use href="#i-x"/></svg>
+              </span>
+              <span class="emoji">🍋</span>
+              <div class="name">Limonata</div>
+              <div class="reason">Sicilian lemon</div>
+              <div class="price">12,00 zł</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Scarcity strip (§2.2 row 7) — seasonal item with real inventory count -->
+        <div class="sec">
+          <div class="scarcity-chip" id="scarcityChip"
+               data-id="burrata-seasonal" data-name="Seasonal burrata bruschetta" data-price="2200">
+            <span class="flame"><svg class="ic-lg"><use href="#i-flame"/></svg></span>
+            <div class="body">
+              <div class="ttl">Try the seasonal burrata <span class="stock">7 of 12 left today</span></div>
+              <div class="sub">Hand-pulled this morning · ends when the tray's empty</div>
+            </div>
+            <span class="price-pill">+ 22,00 zł</span>
+            <button class="remove-x" type="button" aria-label="Remove seasonal burrata">
+              <svg class="ic-sm"><use href="#i-x"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Tier-conditional perk (§2.2 row 6) — visible to Gold/Platinum members only -->
+        <div class="sec">
+          <div class="tier-perk" id="tierPerk">
+            <span class="medal"><svg class="ic-lg"><use href="#i-medal"/></svg></span>
+            <div class="body">
+              <div class="ttl">Make it a Gold-tier order</div>
+              <div class="sub">+ pesto bruschetta on the house · today only</div>
+            </div>
+            <button class="add-pill" type="button">Add free</button>
+            <button class="remove-x" type="button" aria-label="Remove Gold-tier perk">
+              <svg class="ic-sm"><use href="#i-x"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="delivery" id="delivery">
+            <div class="delivery-top">
+              <div class="label">
+                <svg class="ic"><use href="#i-truck"/></svg>
+                <span>Add <span class="rem" id="deliveryRem">3,00 zł</span> for free delivery</span>
+              </div>
+              <span class="target">
+                <span id="deliveryTarget">49,00 zł</span>
+                <span class="threshold-note" title="Per-segment threshold (Uber-Eats-style §2.5). Regulars: 49 zł, first-timers: 39 zł, Gold/Platinum: free.">· tuned for you</span>
+              </span>
+            </div>
+            <div class="progress">
+              <div class="bar" id="bar" style="width: 95%"></div>
+            </div>
+            <div class="qualified-row">
+              <span class="medallion"><svg class="ic-lg"><use href="#i-sparkles"/></svg></span>
+              <div class="text">
+                <div class="ttl">Free delivery unlocked</div>
+                <div class="sub">Your order ships on us today · we'll bring it warm</div>
+              </div>
+            </div>
+            <span class="ribbon" aria-hidden="true"></span>
+          </div>
+        </div>
+
+        <p class="hint">
+          Fulfillment selector (Takeout / Delivery), slot picker, address autocomplete,
+          customer-detail inputs, and tip picker — unchanged from the current drawer,
+          hidden here so the focus stays on the upsell deltas.
+        </p>
+
+      </div>
+
+      <div class="totals">
+        <div class="totals-rows">
+          <div><span>Subtotal</span><span id="sub">57,00 zł</span></div>
+          <div class="discount" id="discountRow" style="display:none">
+            <span id="discountLabel">Lunch combo −10%</span>
+            <span id="discountAmt">−5,70 zł</span>
+          </div>
+          <div id="delRow"><span>Delivery</span><span id="del">10,00 zł</span></div>
+          <div class="total"><span>Total</span><span class="amt" id="total">67,00 zł</span></div>
+        </div>
+        <div class="loyalty-earn">
+          <svg class="ic-sm gold"><use href="#i-star"/></svg>
+          <span>You'll earn <b id="pts">57 points</b> with this order</span>
+        </div>
+        <div class="pay-stack">
+          <button class="wallet-btn" id="walletBtn" aria-label="Pay with Apple Pay">
+            <svg class="wallet-logo apple" viewBox="0 0 14 18" fill="currentColor"><use href="#i-apple"/></svg>
+            <span class="wallet-label">Pay</span>
+          </button>
+          <button class="pay-btn" id="payBtn">Pay 67,00 zł by card</button>
+        </div>
+        <div class="pay-meta" id="payMeta">PLN 0 hidden fees · Stripe · BLIK / card / Apple Pay</div>
+        <button class="clear-btn">
+          <svg class="ic-sm"><use href="#i-trash"/></svg>
+          Clear cart
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  // ===================================================================
+  // State
+  // ===================================================================
+  // Note: portion modifiers ("Make it a large", "Double cheese", etc.) are
+  // deliberately NOT implemented. Sud Italia serves fixed Neapolitan portions
+  // — sizing up or adding ingredients to set recipes runs counter to that
+  // core brand value. The audit's §2.2 row 2 is intentionally overruled here.
+  const baseItems = [
+    { id: "pizza", name: "Margherita", each: 2800, qty: 1 },
+    { id: "pasta", name: "Carbonara",  each: 2900, qty: 1 },
+  ];
+  const state = {
+    items: structuredClone(baseItems),
+    tod: "lunch",
+    // Store the discount as a rate (0–1) so recompute() always derives the
+    // amount from the current subtotal. Caching a grosze figure goes stale
+    // the moment another chip/item lands in the cart.
+    discountPercent: 0,
+    discountLabel: null,
+    deliveryThreshold: 6000, // 60 PLN
+    deliveryFee: 1000,       // 10 PLN flat (production fallback)
+  };
+
+  // Time-of-day variant table (audit §2.3)
+  // `defaultApplied: true` enables McDonald's default-effect (§2.5):
+  // combo is pre-applied; CTA flips to "Remove combo".
+  const TOD = {
+    off: null,
+    lunch: {
+      variant: "tod-lunch", icon: "i-clock",
+      title: "Lunch combo — pasta + drink",
+      sub: "PLN 39 instead of 47 · ready in 8 min",
+      badge: "−10%",
+      defaultApplied: true,
+      cta: "Make it a combo", ctaApplied: "Remove combo",
+      apply: () => ({ label: "Lunch combo −10%", percent: 10 })
+    },
+    afternoon: {
+      variant: "tod-afternoon", icon: "i-coffee",
+      title: "Espresso break",
+      sub: "Add an espresso for 6,00 zł · pickup in 4 min",
+      badge: "PLN 6", cta: "Add espresso",
+      addItem: { id: "espresso", name: "Espresso", each: 600 }
+    },
+    dinner: {
+      variant: "tod-dinner", icon: "i-users",
+      title: "Family Feast for 4 — 119,00 zł",
+      sub: "2 pizzas + bruschetta + 4 drinks + tiramisù · save 43,00 zł",
+      badge: "−27%", cta: "See the feast",
+    },
+    late: {
+      variant: "tod-late", icon: "i-moon",
+      title: "Last call — 15% off any pizza tonight",
+      sub: "Clearance window closes 23:00 · pickup only",
+      badge: "−15%", cta: "Apply −15%",
+      apply: () => ({ label: "Last call −15%", percent: 15 })
+    },
+    morning: {
+      variant: "tod-morning", icon: "i-clock",
+      title: "Pre-order lunch — 12:00 slot fills by 11:15",
+      sub: "Lock your usual now, skip the queue at noon",
+      badge: "9 left", cta: "Pick a slot",
+    },
+    rain: {
+      variant: "tod-morning", icon: "i-rain",
+      title: "Rainy day — warm pasta + free delivery",
+      sub: "Free delivery on orders over 50,00 zł today",
+      badge: "Today only", cta: "Lower the bar",
+      apply: () => ({ label: "Rainy-day threshold 50 zł", percent: 0, dropThreshold: 5000 })
+    },
+    returning: {
+      variant: "tod-returning", icon: "i-wave",
+      title: "Welcome back, Anna",
+      sub: "Your usual Margherita + espresso is 34,00 zł · ready 18:14",
+      badge: "1 tap", cta: "Reorder usual",
+    },
+    unlock3: {
+      variant: "tod-unlock", icon: "i-trophy",
+      title: "Loyalty unlock — Pizzaiolo's Choice",
+      sub: "Order #3 perk · we'll comp this one to celebrate",
+      badge: "Comp'd", cta: "Add the comp",
+      addItem: { id: "pizz-choice", name: "Pizzaiolo's Choice", each: 0 }
+    },
+  };
+
+  // pl-PL currency format (matches src/lib/utils.ts formatPrice)
+  const fmt = new Intl.NumberFormat("pl-PL", { style: "currency", currency: "PLN" });
+  const money = grosze => fmt.format(grosze / 100);
+
+  // HTML-escape helper for every variable that lands inside an innerHTML
+  // template below. The mockup's interpolated values come from the TOD
+  // config + the (controlled) state.items array, so the practical XSS
+  // surface is zero — but the audit caught the pattern and this avoids
+  // teaching readers an unsafe template style.
+  function esc(s) {
+    return String(s ?? "").replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    })[c]);
+  }
+
+  function renderLines() {
+    const wrap = document.getElementById("lines");
+    wrap.innerHTML = "";
+    state.items.forEach(it => {
+      const row = document.createElement("div");
+      row.className = "line";
+      row.innerHTML = `
+        <div class="top">
+          <div>
+            <p class="name">${esc(it.name)}</p>
+            <p class="each">${esc(money(it.each))} each</p>
+          </div>
+          <span class="price">${esc(money(it.each * it.qty))}</span>
+        </div>
+        <div class="bot">
+          <div class="qty-stepper">
+            <button aria-label="Decrease"><svg class="ic-sm"><use href="#i-minus"/></svg></button>
+            <span class="n">${esc(it.qty)}</span>
+            <button aria-label="Increase"><svg class="ic-sm"><use href="#i-plus"/></svg></button>
+          </div>
+          <div class="line-actions">
+            <button class="note-btn"><svg class="ic-sm"><use href="#i-note"/></svg>Add note</button>
+            <button class="trash-btn" aria-label="Remove"><svg class="ic-lg"><use href="#i-trash"/></svg></button>
+          </div>
+        </div>
+      `;
+      wrap.appendChild(row);
+    });
+  }
+
+  function recompute() {
+    const sub = state.items.reduce((s, i) => s + i.each * i.qty, 0);
+    // Derive the discount fresh from the subtotal each render so adding
+    // more items after applying a combo keeps the discount in sync.
+    const discountAmt = Math.round(sub * (state.discountPercent || 0));
+    const remaining = Math.max(0, state.deliveryThreshold - sub);
+    const qualified = remaining === 0;
+    const fee = qualified ? 0 : state.deliveryFee;
+    const total = sub - discountAmt + fee;
+
+    document.getElementById("sub").textContent = money(sub);
+    document.getElementById("total").textContent = money(total);
+    document.getElementById("payBtn").textContent = "Pay " + money(total) + " by card";
+    document.getElementById("countLabel").textContent =
+      state.items.reduce((s, i) => s + i.qty, 0) + " items · Kraków";
+
+    const dr = document.getElementById("discountRow");
+    if (discountAmt > 0) {
+      dr.style.display = "flex";
+      dr.querySelector("#discountLabel").textContent = state.discountLabel;
+      dr.querySelector("#discountAmt").textContent = "−" + money(discountAmt);
+    } else {
+      dr.style.display = "none";
+    }
+
+    const delEl = document.getElementById("del");
+    if (qualified) delEl.innerHTML = '<span class="freed">Free</span>';
+    else           delEl.textContent = money(state.deliveryFee);
+
+    document.getElementById("pts").textContent = Math.round(sub / 100) + " points";
+
+    const pct = Math.min(100, (sub / state.deliveryThreshold) * 100);
+    const deliveryEl = document.getElementById("delivery");
+    document.getElementById("bar").style.width = pct + "%";
+    document.getElementById("deliveryRem").textContent = money(remaining);
+    document.getElementById("deliveryTarget").textContent = money(state.deliveryThreshold);
+    deliveryEl.classList.toggle("qualified", qualified);
+  }
+
+  // Keep the clicked element visually anchored when the cart-lines list grows
+  // or shrinks above it. Without this, adding/removing via a chip pushes
+  // everything below the lines section up or down by ~70px and the user's
+  // cursor ends up on a different chip.
+  function withStableScroll(fn) {
+    const body = document.getElementById("drawerBody");
+    const beforeH = body.scrollHeight;
+    const beforeScroll = body.scrollTop;
+    fn();
+    const afterH = body.scrollHeight;
+    body.scrollTop = beforeScroll + (afterH - beforeH);
+  }
+
+  function renderTod() {
+    const host = document.getElementById("todHost");
+    const cfg = TOD[state.tod];
+    if (!cfg) { host.innerHTML = ""; host.style.display = "none"; return; }
+    host.style.display = "block";
+
+    const isApplied = cfg.defaultApplied && state.discountPercent > 0 && state.discountLabel === cfg.apply().label;
+    const ctaLabel = isApplied ? (cfg.ctaApplied || "Remove") : cfg.cta;
+
+    host.innerHTML = `
+      <div class="tod ${esc(cfg.variant)}${isApplied ? ' tod-applied' : ''}">
+        <div class="icon-tile"><svg class="ic-lg"><use href="#${esc(cfg.icon)}"/></svg></div>
+        <div class="body">
+          <div class="row1">
+            <p class="ttl">${esc(cfg.title)}</p>
+            <span class="badge">${isApplied ? '✓ Applied' : esc(cfg.badge)}</span>
+          </div>
+          <p class="sub">${esc(cfg.sub)}</p>
+        </div>
+        <button class="tod-cta${isApplied ? ' is-applied' : ''}" id="todCta">${esc(ctaLabel)}</button>
+      </div>
+    `;
+    document.getElementById("todCta").addEventListener("click", () => {
+      if (cfg.apply) {
+        if (isApplied) {
+          // McDonald's default-effect: opt OUT instead of opt IN
+          state.discountPercent = 0;
+          state.discountLabel = null;
+          if (cfg.apply().dropThreshold !== undefined) state.deliveryThreshold = 6000;
+          renderTod();
+          recompute();
+          toast("sparkles", "Combo removed", "You can re-add it any time.");
+          return;
+        }
+        const d = cfg.apply();
+        state.discountPercent = d.percent / 100;
+        state.discountLabel = d.label;
+        if (d.dropThreshold !== undefined) state.deliveryThreshold = d.dropThreshold;
+        renderTod();
+        recompute();
+        toast("sparkles", "Combo applied", d.label + " — keep building or check out.");
+      } else if (cfg.addItem) {
+        state.items.push({ ...cfg.addItem, qty: 1 });
+        renderLines();
+        recompute();
+        toast("sparkles", cfg.addItem.name + " added", "Customers usually add this with pizza.");
+      } else {
+        toast("sparkles", "Noted", "Wire this CTA to the corresponding bundle/flow.");
+      }
+    });
+  }
+
+  // Apply any defaultApplied combo when ToD changes (McDonald's effect, §2.5)
+  function applyDefaultsForTod() {
+    const cfg = TOD[state.tod];
+    state.discountPercent = 0;
+    state.discountLabel = null;
+    state.deliveryThreshold = 4900; // personalised baseline for "regular" segment
+    if (cfg && cfg.defaultApplied && cfg.apply) {
+      const d = cfg.apply();
+      state.discountPercent = d.percent / 100;
+      state.discountLabel = d.label;
+      if (d.dropThreshold !== undefined) state.deliveryThreshold = d.dropThreshold;
+    }
+  }
+
+  let toastTimer = null;
+  function toast(iconKey, title, seed) {
+    const iconId = ({ pizza: "i-bag", sparkles: "i-sparkles", coffee: "i-coffee", truck: "i-truck" })[iconKey] || "i-sparkles";
+    const host = document.getElementById("toastHost");
+    host.innerHTML = `
+      <div class="toast" id="t">
+        <span class="ic-host"><svg class="ic"><use href="#${esc(iconId)}"/></svg></span>
+        <div class="body">
+          <div class="title">${esc(title)}</div>
+          <div class="seed">${esc(seed)}</div>
+        </div>
+      </div>`;
+    requestAnimationFrame(() => document.getElementById("t").classList.add("in"));
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      const el = document.getElementById("t");
+      if (el) el.classList.remove("in");
+      setTimeout(() => host.innerHTML = "", 250);
+    }, 4000);
+  }
+
+  // Scarcity strip (§2.2) — body click adds; only the × button removes
+  function resetScarcity() {
+    const el = document.getElementById("scarcityChip");
+    el.classList.remove("added");
+    el.querySelector(".ttl").innerHTML = 'Try the seasonal burrata <span class="stock">7 of 12 left today</span>';
+    el.querySelector(".price-pill").textContent = "+ 22,00 zł";
+  }
+  document.getElementById("scarcityChip").addEventListener("click", e => {
+    const el = document.getElementById("scarcityChip");
+    const isRemove = !!e.target.closest(".remove-x");
+    if (el.classList.contains("added")) {
+      if (!isRemove) return;
+      withStableScroll(() => {
+        const idx = state.items.findIndex(x => x.id === el.dataset.id);
+        if (idx >= 0) state.items.splice(idx, 1);
+        resetScarcity();
+        renderLines();
+        recompute();
+      });
+      return;
+    }
+    withStableScroll(() => {
+      el.classList.add("added");
+      el.querySelector(".ttl").innerHTML = 'Burrata bruschetta added <span class="stock">6 left today</span>';
+      el.querySelector(".price-pill").textContent = "✓ Added";
+      state.items.push({ id: el.dataset.id, name: el.dataset.name,
+                         each: parseInt(el.dataset.price, 10), qty: 1 });
+      renderLines();
+      recompute();
+    });
+  });
+
+  // Tier-conditional perk (§2.2) — body click adds; only the × button removes
+  function resetPerk() {
+    const el = document.getElementById("tierPerk");
+    el.classList.remove("applied");
+    el.querySelector(".ttl").textContent = "Make it a Gold-tier order";
+    el.querySelector(".add-pill").textContent = "Add free";
+  }
+  document.getElementById("tierPerk").addEventListener("click", e => {
+    const el = document.getElementById("tierPerk");
+    const isRemove = !!e.target.closest(".remove-x");
+    if (el.classList.contains("applied")) {
+      if (!isRemove) return;
+      withStableScroll(() => {
+        const idx = state.items.findIndex(x => x.id === "perk-pesto");
+        if (idx >= 0) state.items.splice(idx, 1);
+        resetPerk();
+        renderLines();
+        recompute();
+      });
+      return;
+    }
+    withStableScroll(() => {
+      el.classList.add("applied");
+      el.querySelector(".ttl").textContent = "Gold-tier perk added — pesto bruschetta on the house";
+      el.querySelector(".add-pill").textContent = "✓ Added";
+      state.items.push({ id: "perk-pesto", name: "Pesto bruschetta (Gold perk)",
+                         each: 0, qty: 1 });
+      renderLines();
+      recompute();
+    });
+  });
+
+  document.getElementById("chips").addEventListener("click", e => {
+    const chip = e.target.closest(".chip");
+    if (!chip) return;
+    const id   = chip.dataset.id;
+    const name = chip.dataset.name;
+    const isAdded = chip.classList.contains("added");
+    const isBadge = !!e.target.closest(".add-icon");
+    if (isAdded) {
+      if (!isBadge) return; // body of an added chip is non-interactive
+      withStableScroll(() => {
+        const idx = state.items.findIndex(x => x.id === id);
+        if (idx >= 0) state.items.splice(idx, 1);
+        chip.classList.remove("added");
+        renderLines();
+        recompute();
+      });
+      return;
+    }
+    withStableScroll(() => {
+      const each = parseInt(chip.dataset.price, 10);
+      chip.classList.add("added");
+      state.items.push({ id, name, each, qty: 1 });
+      renderLines();
+      recompute();
+    });
+  });
+
+  document.getElementById("addBtn").addEventListener("click", () => {
+    // Look the pizza up by id rather than position — the cart's order
+    // shifts whenever a chip or banner pushes a new line into items[].
+    const pizza = state.items.find((it) => it.id === "pizza");
+    if (pizza) pizza.qty += 1;
+    else state.items.push({ id: "pizza", name: "Margherita", each: 2800, qty: 1 });
+    renderLines();
+    recompute();
+    toast("pizza", "Margherita added", "Customers usually add an espresso.");
+  });
+
+  document.getElementById("qualifyBtn").addEventListener("click", () => {
+    state.items.push({ id: "burrata", name: "Burrata bruschetta", each: 2200, qty: 1 });
+    renderLines();
+    recompute();
+    toast("truck", "Free delivery unlocked", "Nice — your order qualifies.");
+  });
+
+  document.getElementById("resetBtn").addEventListener("click", () => {
+    state.items = structuredClone(baseItems);
+    applyDefaultsForTod();
+    document.querySelectorAll(".chip.added").forEach(c => c.classList.remove("added"));
+    resetScarcity();
+    resetPerk();
+    renderLines();
+    renderTod();
+    recompute();
+  });
+
+  document.getElementById("tod-switch").addEventListener("click", e => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+    document.querySelectorAll("#tod-switch button").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    state.tod = btn.dataset.tod;
+    applyDefaultsForTod();
+    renderTod();
+    recompute();
+  });
+
+  // ----- wallet detection (audit §2.1 T+pay) -----
+  // Apple Pay on Apple devices; Google Pay on Android/Chrome elsewhere;
+  // Apple Pay as the default fallback per spec.
+  function detectWallet() {
+    const ua = navigator.userAgent || "";
+    if (/Android/i.test(ua)) return "google";
+    if (/iPhone|iPad|iPod/i.test(ua)) return "apple";
+    if (/Macintosh|Mac OS X/.test(ua) && /Safari/.test(ua) && !/Chrome|Chromium/.test(ua)) return "apple";
+    if (/Windows|Linux/i.test(ua) && /Chrome|Chromium/.test(ua) && !/Edg/.test(ua)) return "google";
+    return "apple"; // default per spec
+  }
+  function applyWallet() {
+    const method = detectWallet();
+    const btn = document.getElementById("walletBtn");
+    const meta = document.getElementById("payMeta");
+    btn.setAttribute("data-method", method);
+    btn.setAttribute("aria-label", method === "google" ? "Pay with Google Pay" : "Pay with Apple Pay");
+    btn.innerHTML = method === "google"
+      ? `<svg class="wallet-logo" viewBox="0 0 18 18" aria-hidden="true"><use href="#i-gpay"/></svg>
+         <span class="wallet-label">Pay</span>`
+      : `<svg class="wallet-logo apple" viewBox="0 0 14 18" fill="currentColor" aria-hidden="true"><use href="#i-apple"/></svg>
+         <span class="wallet-label">Pay</span>`;
+    meta.textContent = method === "google"
+      ? "PLN 0 hidden fees · Stripe · BLIK / card / Google Pay"
+      : "PLN 0 hidden fees · Stripe · BLIK / card / Apple Pay";
+  }
+
+  // ----- init -----
+  applyDefaultsForTod();
+  applyWallet();
+  renderLines();
+  renderTod();
+  recompute();
+</script>
+
+</body>
+</html>

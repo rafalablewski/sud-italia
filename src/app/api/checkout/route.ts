@@ -2,10 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "crypto";
 import { generateOrderId } from "@/lib/utils";
 import { getMenuWithOverrides } from "@/data/menus";
-import { getSlotById, incrementSlotOrders, createOrder, addNotification, getUpsellSettings } from "@/lib/store";
+import {
+  getSlotById,
+  incrementSlotOrders,
+  createOrder,
+  addNotification,
+  getUpsellSettings,
+  getCustomer,
+} from "@/lib/store";
 import { FulfillmentType, CartItem } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
-import { computeDeliveryFee, getActiveComboDeals } from "@/lib/upsell";
+import {
+  computeDeliveryFee,
+  getActiveComboDeals,
+  getDeliveryThresholdForCustomer,
+} from "@/lib/upsell";
+import { calculateTier } from "@/lib/loyalty";
 import { normalizePlPhoneE164 } from "@/lib/phone";
 import { logger } from "@/lib/logger";
 import {
@@ -175,7 +187,25 @@ export async function POST(req: NextRequest) {
     // Delivery fee (m2_12). Computed server-side from the post-discount
     // subtotal so a malicious client can't strip it. Adds a separate
     // Stripe line item so the customer's receipt itemizes it cleanly.
-    const deliveryFee = computeDeliveryFee(calculatedTotal, fulfillmentType);
+    //
+    // Per-segment threshold (audit §2.5): look up the customer by phone
+    // and pass their personalised threshold so the charge matches the
+    // bar the cart drawer displayed. Missing customer falls back to the
+    // 60 PLN default — same behaviour as before.
+    const segmentCustomer = await getCustomer(phoneE164);
+    const segmentThreshold = getDeliveryThresholdForCustomer(
+      segmentCustomer
+        ? {
+            ordersCount: segmentCustomer.orderCount,
+            tier: calculateTier(segmentCustomer.loyaltyPointsBalance),
+          }
+        : null,
+    );
+    const deliveryFee = computeDeliveryFee(
+      calculatedTotal,
+      fulfillmentType,
+      segmentThreshold,
+    );
     calculatedTotal += deliveryFee;
 
     // Tip: optional integer grosze. Bound at the cart subtotal (pre-fee)

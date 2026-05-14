@@ -2,9 +2,23 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { LocationTabs } from "./LocationTabs";
-import { Star, Coffee, IceCream, GlassWater, Plus, Trash2, Check, Save } from "lucide-react";
+import {
+  Star,
+  Coffee,
+  IceCream,
+  GlassWater,
+  Plus,
+  Trash2,
+  Check,
+  Save,
+  Clock,
+  ChevronDown,
+  ChevronRight,
+  RotateCcw,
+} from "lucide-react";
 import { krakowMenu } from "@/data/menus/krakow";
 import { warszawaMenu } from "@/data/menus/warszawa";
+import { DEFAULT_TIME_WINDOWS } from "@/lib/upsell";
 import type { MenuItem, MenuCategory } from "@/data/types";
 
 interface ComboDealConfig {
@@ -17,6 +31,30 @@ interface ComboDealConfig {
   active: boolean;
 }
 
+/** Mirrors LocationTimeWindow from src/lib/store.ts. Repeated here as a local
+ *  type rather than imported to keep this client component out of the
+ *  server-only store module. */
+interface TimeWindowConfig {
+  id: string;
+  variant: string;
+  startHour: number;
+  endHour: number;
+  title: string;
+  sub: string;
+  badge: string;
+  cta: string;
+  addItemIdSuffix?: string;
+  active: boolean;
+}
+
+const TIME_WINDOW_VARIANTS = [
+  "morning",
+  "lunch",
+  "afternoon",
+  "dinner",
+  "late",
+] as const;
+
 interface LocationConfig {
   popularItems: string[];
   staffPicks: string[];
@@ -24,6 +62,7 @@ interface LocationConfig {
   preferredDessert: string;
   preferredDrink: string;
   combos: ComboDealConfig[];
+  timeWindows?: TimeWindowConfig[];
 }
 
 type AllSettings = Record<string, LocationConfig>;
@@ -306,6 +345,279 @@ function ComboEditor({
   );
 }
 
+/** Materialise DEFAULT_TIME_WINDOWS into the editor's TimeWindowConfig
+ *  shape so the editor and the runtime resolver agree on field names. */
+function defaultsAsConfig(): TimeWindowConfig[] {
+  return DEFAULT_TIME_WINDOWS.map((w) => ({
+    id: w.id,
+    variant: w.variant,
+    startHour: w.startHour,
+    endHour: w.endHour,
+    title: w.title,
+    sub: w.sub,
+    badge: w.badge,
+    cta: w.cta,
+    addItemIdSuffix: w.addItemId ?? "",
+    active: true,
+  }));
+}
+
+function TimeWindowsEditor({
+  windows,
+  onChange,
+}: {
+  windows?: TimeWindowConfig[];
+  onChange: (windows: TimeWindowConfig[]) => void;
+}) {
+  // When the location has no saved windows we still want to *show* the five
+  // defaults so the admin sees what's running today and can edit in place.
+  // The defaults aren't pushed upstream until the admin actually changes
+  // something — otherwise opening the page would mark the form dirty.
+  const usingDefaults = !windows || windows.length === 0;
+  const list: TimeWindowConfig[] = usingDefaults ? defaultsAsConfig() : windows;
+
+  // Rows are expanded by default; admin clicks the chevron on any row to
+  // fold it away when scanning. We track *collapsed* ids so a freshly
+  // added window is open without needing to seed its id into the set.
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
+  const toggleExpanded = (id: string) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  // If admin makes any edit while we're showing defaults, materialise the
+  // defaults upstream first so the edit lands on a real array.
+  const materialise = (): TimeWindowConfig[] => (usingDefaults ? defaultsAsConfig() : [...list]);
+
+  const addWindow = () => {
+    const next = materialise();
+    const id = `tod-${crypto.randomUUID()}`;
+    next.push({
+      id,
+      variant: "lunch",
+      startHour: 11,
+      endHour: 13,
+      title: "Lunch combo",
+      sub: "Add a pasta and a drink to save 10%",
+      badge: "−10%",
+      cta: "How it works",
+      addItemIdSuffix: "",
+      active: true,
+    });
+    onChange(next);
+    // No need to seed the new row — defaults-open means it's open already.
+  };
+  const resetToDefaults = () => {
+    // Empty array → editor falls back to showing the hardcoded defaults
+    // (and the runtime resolver does the same).
+    onChange([]);
+    setCollapsed(new Set());
+  };
+  const updateWindow = (index: number, updates: Partial<TimeWindowConfig>) => {
+    const next = materialise();
+    next[index] = { ...next[index], ...updates };
+    onChange(next);
+  };
+  const removeWindow = (index: number) => {
+    const next = materialise();
+    next.splice(index, 1);
+    onChange(next);
+  };
+
+  return (
+    <div>
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div>
+          <label className="text-xs font-semibold admin-text uppercase tracking-wide flex items-center gap-1.5">
+            <Clock className="h-3.5 w-3.5 text-italia-gold" />
+            Time-of-day Banners
+          </label>
+          <p className="text-[11px] text-slate-400 mt-1">
+            One banner at a time, picked by local hour. {usingDefaults
+              ? "Showing the five hardcoded defaults — edit any row to override."
+              : "Override active for this location. Reset to revert."}{" "}
+            Audit §2.3.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {!usingDefaults && (
+            <button onClick={resetToDefaults} className="glass-btn" title="Discard overrides and use the five defaults">
+              <RotateCcw className="h-3 w-3" /> Reset to defaults
+            </button>
+          )}
+          <button onClick={addWindow} className="glass-btn">
+            <Plus className="h-3 w-3" /> Add window
+          </button>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        {list.map((w, i) => {
+          // Default-open: the row is open unless explicitly collapsed.
+          const isOpen = !collapsed.has(w.id);
+          return (
+            <div
+              key={w.id}
+              className={`glass-card p-4 space-y-3 ${!w.active ? "opacity-50" : ""}`}
+            >
+              {/* Header row — always visible */}
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <button
+                    onClick={() => toggleExpanded(w.id)}
+                    className="p-1 text-slate-400 hover:text-white transition-colors flex-shrink-0"
+                    aria-label={isOpen ? "Collapse window" : "Expand window"}
+                    aria-expanded={isOpen}
+                  >
+                    {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  </button>
+                  <button
+                    onClick={() => updateWindow(i, { active: !w.active })}
+                    className={`w-10 h-5 rounded-full transition-colors relative flex-shrink-0 ${w.active ? "bg-emerald-500" : "bg-white/15"}`}
+                    aria-label={w.active ? "Disable window" : "Enable window"}
+                  >
+                    <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${w.active ? "left-[22px]" : "left-0.5"}`} />
+                  </button>
+
+                  {isOpen ? (
+                    <>
+                      <select
+                        value={w.variant}
+                        onChange={(e) => updateWindow(i, { variant: e.target.value })}
+                        className="glass-input text-sm w-32 flex-shrink-0"
+                      >
+                        {TIME_WINDOW_VARIANTS.map((v) => (
+                          <option key={v} value={v}>{v}</option>
+                        ))}
+                      </select>
+                      <div className="flex items-center gap-1 text-xs text-slate-400 flex-shrink-0">
+                        <input
+                          type="number"
+                          min={0}
+                          max={23}
+                          value={w.startHour}
+                          onChange={(e) =>
+                            updateWindow(i, { startHour: clampHour(Number(e.target.value)) })
+                          }
+                          className="glass-input text-sm w-16"
+                        />
+                        <span>→</span>
+                        <input
+                          type="number"
+                          min={0}
+                          max={24}
+                          value={w.endHour}
+                          onChange={(e) =>
+                            updateWindow(i, { endHour: clampHour(Number(e.target.value), 24) })
+                          }
+                          className="glass-input text-sm w-16"
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => toggleExpanded(w.id)}
+                      className="flex items-center gap-2 min-w-0 text-left hover:text-white transition-colors"
+                      title="Expand to edit"
+                    >
+                      <span className="text-xs font-semibold uppercase tracking-wide text-italia-gold flex-shrink-0">
+                        {w.variant}
+                      </span>
+                      <span className="text-xs text-slate-400 flex-shrink-0">
+                        {w.startHour}–{w.endHour}
+                      </span>
+                      <span className="text-sm admin-text truncate">
+                        {w.title}
+                      </span>
+                    </button>
+                  )}
+                </div>
+                <button
+                  onClick={() => removeWindow(i)}
+                  className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors flex-shrink-0"
+                  aria-label="Remove window"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Body — only when expanded */}
+              {isOpen && (
+                <>
+                  <input
+                    type="text"
+                    value={w.title}
+                    onChange={(e) => updateWindow(i, { title: e.target.value })}
+                    placeholder="Banner title"
+                    className="glass-input text-sm w-full"
+                  />
+                  <input
+                    type="text"
+                    value={w.sub}
+                    onChange={(e) => updateWindow(i, { sub: e.target.value })}
+                    placeholder="Sub-line (the one-sentence why)"
+                    className="glass-input text-sm w-full"
+                  />
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-[10px] text-slate-400 block mb-1">Badge</label>
+                      <input
+                        type="text"
+                        value={w.badge}
+                        onChange={(e) => updateWindow(i, { badge: e.target.value })}
+                        placeholder="−10% / Quick add / Pre-order"
+                        className="glass-input text-sm w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-400 block mb-1">CTA</label>
+                      <input
+                        type="text"
+                        value={w.cta}
+                        onChange={(e) => updateWindow(i, { cta: e.target.value })}
+                        placeholder="Add espresso / How it works"
+                        className="glass-input text-sm w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-400 block mb-1">
+                        Add-item id suffix
+                      </label>
+                      <input
+                        type="text"
+                        value={w.addItemIdSuffix ?? ""}
+                        onChange={(e) =>
+                          updateWindow(i, { addItemIdSuffix: e.target.value.trim() })
+                        }
+                        placeholder="e.g. espresso (blank = no add)"
+                        className="glass-input text-sm w-full"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          );
+        })}
+        {list.length === 0 && (
+          <p className="text-sm text-slate-500 text-center py-4">
+            No windows configured. "Add window" to create one.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function clampHour(value: number, max = 23): number {
+  if (Number.isNaN(value)) return 0;
+  return Math.max(0, Math.min(max, Math.round(value)));
+}
+
 export function AdminUpsell() {
   const [settings, setSettings] = useState<AllSettings>({});
   const [activeLocation, setActiveLocation] = useState(LOCATIONS[0].slug);
@@ -456,6 +768,14 @@ export function AdminUpsell() {
         <ComboEditor
           combos={config.combos}
           onChange={(combos) => updateConfig({ combos })}
+        />
+      </div>
+
+      {/* Time-of-day banners (audit §2.3) */}
+      <div className="glass-card p-6">
+        <TimeWindowsEditor
+          windows={config.timeWindows}
+          onChange={(timeWindows) => updateConfig({ timeWindows })}
         />
       </div>
     </div>

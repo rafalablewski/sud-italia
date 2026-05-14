@@ -3443,6 +3443,28 @@ export interface LocationComboDeal {
   active: boolean;
 }
 
+/**
+ * Cart-drawer time-of-day banner — audit §2.3.
+ * Stored next to combos in upsell-settings.json so admins can re-tune the
+ * hour windows, copy, and CTAs without a code push.
+ */
+export interface LocationTimeWindow {
+  id: string;
+  /** "morning" | "lunch" | "afternoon" | "dinner" | "late" — drives the skin. */
+  variant: string;
+  /** Local-hour interval, [start, end). 24h clock, 0–23. */
+  startHour: number;
+  endHour: number;
+  title: string;
+  sub: string;
+  badge: string;
+  cta: string;
+  /** Optional menu-item id suffix (e.g. "espresso") to one-tap-add when the
+   *  CTA is tapped. Empty string means the CTA is informational/deep-link. */
+  addItemIdSuffix?: string;
+  active: boolean;
+}
+
 export interface LocationUpsellConfig {
   popularItems: string[];
   staffPicks: string[];
@@ -3450,6 +3472,10 @@ export interface LocationUpsellConfig {
   preferredDessert: string;
   preferredDrink: string;
   combos: LocationComboDeal[];
+  /** Optional. Falls back to DEFAULT_TIME_WINDOWS in src/lib/upsell.ts when
+   *  unset or empty so existing locations keep working before the admin
+   *  has saved a custom schedule. */
+  timeWindows?: LocationTimeWindow[];
 }
 
 export type UpsellSettings = Record<string, LocationUpsellConfig>;

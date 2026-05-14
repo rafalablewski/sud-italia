@@ -55,6 +55,21 @@ export interface UpsellConfig {
     minItems: number;
     active: boolean;
   }[];
+  /** Admin override for the §2.3 time-of-day banner. When present + non-empty,
+   *  these windows replace DEFAULT_TIME_WINDOWS for the location. Same shape
+   *  as TimeWindow below; `active: false` rows are skipped. */
+  timeWindows?: {
+    id: string;
+    variant: string; // narrowed to TimeWindowVariant at runtime
+    startHour: number;
+    endHour: number;
+    title: string;
+    sub: string;
+    badge: string;
+    cta: string;
+    addItemIdSuffix?: string;
+    active: boolean;
+  }[];
 }
 
 export function getItemBadges(
@@ -81,6 +96,13 @@ export const BADGE_CONFIG: Record<BadgeType, { label: string; color: string }> =
 // --- Cross-sell suggestions for the cart ---
 // RULE: Every pizza/pasta MUST get a coffee and dessert suggestion.
 // This is the #1 AOV driver.
+//
+// Margin-ranked ordering (audit §2.4): the priority numbers below double as a
+// margin × attach-rate ranking. Espresso comes first because PLN 5 of margin
+// (83% GM) × 60% attach rate ≈ PLN 110k/year/truck — the single
+// highest-leverage SKU. Dessert is second (70% GM, ~28% attach). A non-coffee
+// drink is third. Do not reorder these without re-checking the cost table in
+// src/data/menus/krakow.ts.
 
 export interface UpsellSuggestion {
   item: MenuItem;
@@ -319,8 +341,213 @@ export function getDeliveryProgress(cartTotal: number): {
 export function computeDeliveryFee(
   cartSubtotal: number,
   fulfillmentType: "takeout" | "delivery",
+  /** Per-customer threshold override (audit §2.5). Defaults to the standard
+   *  60 PLN bar; callers that know the customer should pass the segmented
+   *  threshold so the displayed bar and the actual charge stay in sync. */
+  thresholdOverride: number = FREE_DELIVERY_THRESHOLD,
 ): number {
   if (fulfillmentType !== "delivery") return 0;
-  if (cartSubtotal >= FREE_DELIVERY_THRESHOLD) return 0;
+  const threshold = thresholdOverride <= 0 ? 0 : thresholdOverride;
+  if (cartSubtotal >= threshold) return 0;
   return DELIVERY_FEE_GROSZE;
+}
+
+// --- Per-segment free-delivery threshold (audit §2.5 Uber Eats) ----------
+//
+// First-time customers see a lower bar (less friction to first conversion);
+// regulars see the standard 60 PLN; Gold/Platinum members get free delivery
+// always as a retention perk. The numbers below match the audit's table.
+
+export type CustomerSegment = "first-time" | "regular" | "vip";
+
+/** Resolved tier should be calculated upstream via `calculateTier(points)`
+ *  from `@/lib/loyalty` — kept as a plain string here to avoid an import
+ *  cycle and to leave room for future segment classifiers. */
+export interface CustomerSegmentInput {
+  ordersCount?: number | null;
+  tier?: string | null;
+}
+
+export const SEGMENT_FREE_DELIVERY_THRESHOLD: Record<CustomerSegment, number> = {
+  "first-time": 3900, // 39 PLN — low bar to remove friction on visit 1
+  regular: FREE_DELIVERY_THRESHOLD, // 60 PLN (default)
+  vip: 0, // Gold / Platinum — always free
+};
+
+export function getCustomerSegment(
+  customer: CustomerSegmentInput | null | undefined,
+): CustomerSegment {
+  if (!customer) return "first-time";
+  const tier = (customer.tier || "").toLowerCase();
+  if (tier === "gold" || tier === "platinum") return "vip";
+  const orders = customer.ordersCount ?? 0;
+  if (orders < 2) return "first-time";
+  return "regular";
+}
+
+export function getDeliveryThresholdForCustomer(
+  customer: CustomerSegmentInput | null | undefined,
+): number {
+  return SEGMENT_FREE_DELIVERY_THRESHOLD[getCustomerSegment(customer)];
+}
+
+/**
+ * Variant of getDeliveryProgress that takes a per-customer threshold so we
+ * can surface the same "tuned for you" bar the audit prescribes. Falls back
+ * to the default 60 PLN threshold if no override is given.
+ */
+export function getDeliveryProgressFor(
+  cartTotal: number,
+  threshold: number = FREE_DELIVERY_THRESHOLD,
+): { remaining: number; progress: number; qualified: boolean; threshold: number } {
+  if (threshold <= 0 || cartTotal >= threshold) {
+    return { remaining: 0, progress: 1, qualified: true, threshold };
+  }
+  return {
+    remaining: threshold - cartTotal,
+    progress: cartTotal / threshold,
+    qualified: false,
+    threshold,
+  };
+}
+
+// --- Time-of-day banner windows (audit §2.3) -----------------------------
+//
+// One banner at a time, picked server-side by local hour × customer state.
+// This is the hardcoded default schedule; once /admin/upsell exposes a
+// `timeWindows` editor in LocationUpsellConfig, that overrides this list.
+
+export type TimeWindowVariant =
+  | "morning"
+  | "lunch"
+  | "afternoon"
+  | "dinner"
+  | "late";
+
+export interface TimeWindow {
+  id: string;
+  variant: TimeWindowVariant;
+  /** Local-hour interval, [start, end). Use 24h clock. */
+  startHour: number;
+  endHour: number;
+  title: string;
+  sub: string;
+  /** Short label that goes in the right-side pill, e.g. "−10%", "PLN 6". */
+  badge: string;
+  /** Primary CTA copy. Defer to copy-toggle when banner is default-applied. */
+  cta: string;
+  /** Optional menu-item id to add when the CTA is tapped (afternoon espresso). */
+  addItemId?: string;
+  /** If set, the banner implies an existing combo deal id is in play; the
+   *  banner becomes informational once that combo auto-applies. */
+  comboId?: string;
+}
+
+export const DEFAULT_TIME_WINDOWS: TimeWindow[] = [
+  {
+    id: "morning",
+    variant: "morning",
+    startHour: 7,
+    endHour: 10,
+    title: "Pre-order lunch — beat the noon rush",
+    sub: "Lock the 12:00 slot now, walk past the queue",
+    badge: "Pre-order",
+    cta: "Pick a slot",
+  },
+  {
+    id: "lunch",
+    variant: "lunch",
+    startHour: 11,
+    endHour: 13,
+    title: "Lunch combo — pasta + drink",
+    sub: "Add a pasta and a drink to save 10%",
+    badge: "−10%",
+    cta: "How it works",
+    comboId: "meal-deal",
+  },
+  {
+    id: "afternoon",
+    variant: "afternoon",
+    startHour: 14,
+    endHour: 16,
+    title: "Espresso break",
+    sub: "Add an espresso — pickup in 4 min",
+    badge: "Quick add",
+    cta: "Add espresso",
+    addItemId: "espresso",
+  },
+  {
+    id: "dinner",
+    variant: "dinner",
+    startHour: 17,
+    endHour: 19,
+    title: "Cooking for the table tonight?",
+    sub: "Multiple pizzas + sides + drinks save 10% via Meal Deal",
+    badge: "Tip",
+    cta: "What pairs well",
+    comboId: "meal-deal",
+  },
+  {
+    id: "late",
+    variant: "late",
+    startHour: 20,
+    endHour: 23,
+    title: "Late-night espresso & dessert",
+    sub: "Tiramisù pairs with an espresso · ready in 6 min",
+    badge: "Quick add",
+    cta: "Add espresso",
+    addItemId: "espresso",
+  },
+];
+
+/** Narrow a free-form variant string off of `UpsellConfig.timeWindows[].variant`
+ *  to the closed `TimeWindowVariant` set. Anything unrecognised falls back to
+ *  "lunch" — keeps the editor permissive without crashing the UI. */
+function asTimeWindowVariant(variant: string): TimeWindowVariant {
+  return (["morning", "lunch", "afternoon", "dinner", "late"] as const).includes(
+    variant as TimeWindowVariant,
+  )
+    ? (variant as TimeWindowVariant)
+    : "lunch";
+}
+
+/**
+ * Returns the time window active at `now` (local hour), or null if no window
+ * matches. Used by TodBanner to pick the right copy + CTA.
+ *
+ * `now` is a parameter so callers can fix the clock for tests; in production
+ * it defaults to a fresh Date so each render reflects the actual hour.
+ *
+ * When an admin has saved custom `timeWindows[]` on the location's
+ * UpsellConfig those win over the hardcoded DEFAULT_TIME_WINDOWS — inactive
+ * entries are skipped, so admins can disable a single window without
+ * wiping the row.
+ */
+export function getActiveTimeWindow(
+  now: Date = new Date(),
+  config?: UpsellConfig | null,
+): TimeWindow | null {
+  const hour = now.getHours();
+  const adminWindows = config?.timeWindows?.filter((w) => w.active);
+  if (adminWindows && adminWindows.length > 0) {
+    const hit = adminWindows.find(
+      (w) => hour >= w.startHour && hour < w.endHour,
+    );
+    if (!hit) return null;
+    return {
+      id: hit.id,
+      variant: asTimeWindowVariant(hit.variant),
+      startHour: hit.startHour,
+      endHour: hit.endHour,
+      title: hit.title,
+      sub: hit.sub,
+      badge: hit.badge,
+      cta: hit.cta,
+      addItemId: hit.addItemIdSuffix || undefined,
+    };
+  }
+  return (
+    DEFAULT_TIME_WINDOWS.find((w) => hour >= w.startHour && hour < w.endHour) ||
+    null
+  );
 }

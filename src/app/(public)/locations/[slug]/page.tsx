@@ -6,6 +6,7 @@ import { LocationHero } from "@/components/location/LocationHero";
 import { MenuSection } from "@/components/location/MenuSection";
 import { LocationInfo } from "@/components/location/LocationInfo";
 import { FloatingCartButton } from "@/components/cart/FloatingCartButton";
+import { AddToCartToast } from "@/components/cart/AddToCartToast";
 import { LoyaltySection } from "@/components/location/LoyaltySection";
 import { LiveActivityBar } from "@/components/location/LiveActivityBar";
 import { SITE_NAME } from "@/lib/constants";
@@ -115,6 +116,7 @@ export default async function LocationPage({ params }: PageProps) {
       />
       <LocationInfo location={location} />
       <FloatingCartButton allMenuItems={menuItems} />
+      <AddToCartToast allMenuItems={menuItems} />
     </>
   );
 }
