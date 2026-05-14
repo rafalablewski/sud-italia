@@ -532,16 +532,36 @@
     .loyalty-earn b { font-weight: 700; color: var(--color-italia-gold-dark); }
     .loyalty-earn .gold { color: var(--color-italia-gold); }
 
-    .pay-btn {
+    /* Pay stack — Apple Pay primary, card secondary (audit §2.1 T+pay) */
+    .pay-stack { margin-top: 12px; display: grid; gap: 8px; }
+    .applepay-btn {
       width: 100%; min-height: 48px;
-      margin-top: 12px;
-      background: var(--color-italia-red); color: white;
+      background: #000; color: white;
       border: 0; border-radius: 8px;
       font: inherit; font-weight: 500; font-size: 16px;
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .applepay-btn:hover { background: #1a1a1a; }
+    .applepay-btn:active { transform: scale(0.99); }
+    .applepay-btn .logo {
+      font-family: -apple-system, "SF Pro", system-ui, sans-serif;
+      font-weight: 600; font-size: 18px;
+    }
+    .pay-btn {
+      width: 100%; min-height: 44px;
+      background: var(--color-italia-red); color: white;
+      border: 0; border-radius: 8px;
+      font: inherit; font-weight: 500; font-size: 15px;
       cursor: pointer;
       transition: background 0.15s;
     }
     .pay-btn:hover { background: var(--color-italia-red-dark); }
+    .pay-meta {
+      text-align: center; margin-top: 6px;
+      font-size: 11px; color: var(--gray-400);
+    }
     .clear-btn {
       display: flex; align-items: center; justify-content: center; gap: 6px;
       width: 100%; margin-top: 6px; padding: 6px 0;
@@ -723,42 +743,52 @@
     </div>
 
     <div class="panel muted">
-      <span class="pill live">What's new</span>
-      <h2>The four surfaces in this redesign</h2>
+      <span class="pill live">What's new — all five audit changes</span>
+      <h2>The redesign deltas vs production</h2>
       <ul class="legend">
         <li>
           <span class="marker">1</span>
           <span>
             <strong>Inline toast on add-to-cart.</strong>
-            Seed-only copy: "Customers usually add an espresso." No CTA, no block.
-            Auto-dismisses in 4s. Today the public side is silent on add — only the floating
-            cart badge animates. This is net-new.
+            <em>§2.1 T+0 — item added.</em> Seed-only copy: "Customers usually add an espresso."
+            No CTA, no block. Auto-dismisses in 4s. Today the public side is silent on add
+            — only the floating cart badge animates. This is net-new.
           </span>
         </li>
         <li>
           <span class="marker">2</span>
           <span>
             <strong>"Complete the meal" chips, 3-up grid.</strong>
-            Replaces the existing vertical list in <code class="kbd">CartUpsell.tsx</code>.
-            Same Sparkles header + cream-on-gold card skin — just 3 columns of one-tap chips,
-            margin-ranked (espresso first per §2.4). Tap once, the chip flips green, item is
-            in cart.
+            <em>§2.1 T+0 — cart drawer opens.</em> Replaces the existing vertical list in
+            <code class="kbd">CartUpsell.tsx</code>. Same Sparkles header + cream-on-gold
+            card skin — just 3 columns of one-tap chips, margin-ranked
+            (espresso first per §2.4: 83% GM × 60% attach). Tap once, chip flips green,
+            item lands in the cart. No second screen.
           </span>
         </li>
         <li>
           <span class="marker">3</span>
           <span>
             <strong>Animated free-delivery progress bar.</strong>
-            Today's <code class="kbd">DeliveryProgress.tsx</code> already has the gradient
-            bar — this adds a continuous shimmer so motion catches the eye, plus a smoother
-            red→green transition when the threshold clears.
+            <em>§2.1 T+0 — post-attach.</em> Today's <code class="kbd">DeliveryProgress.tsx</code>
+            has the static gradient bar — this adds a continuous shimmer so motion catches
+            the eye, plus a smoother red→green flip with a Check icon when the threshold clears.
           </span>
         </li>
         <li>
           <span class="marker">4</span>
           <span>
+            <strong>Apple Pay primary, card secondary.</strong>
+            <em>§2.1 T+pay.</em> Stacks the Apple/Google Pay button on top, card as
+            secondary. Mockup shows the visual hierarchy; the Stripe Payment Request API
+            wiring lands in a follow-up commit (the change is data-flow, not visual).
+          </span>
+        </li>
+        <li>
+          <span class="marker">5</span>
+          <span>
             <strong>Time-of-day banner at cart top.</strong>
-            Sits above the cart items, same chrome family as
+            <em>§2.3.</em> Sits above the cart items, same chrome family as
             <code class="kbd">ComboDealBanner.tsx</code>. Six hour-window variants;
             one banner at a time, picked server-side by local hour × customer state.
             Lunch + Last-call apply a real discount; the rest deep-link.
@@ -768,13 +798,13 @@
     </div>
 
     <div class="panel muted">
-      <span class="pill gold">Out of scope for this sketch</span>
-      <h2>Deferred to follow-up tickets</h2>
+      <span class="pill gold">Deeper §2 work, separate tickets</span>
+      <h2>Out of scope for this sketch</h2>
       <ul class="checklist">
-        <li><b>Apple Pay / Google Pay primary CTA</b> at the Stripe sheet — Top-50 #4. Needs Stripe Payment Request API wiring.</li>
-        <li><b>Item modifiers</b> ("Make it a large +PLN 6") — needs a <code class="kbd">CartItem.modifiers</code> migration. Top-50 #15.</li>
-        <li><b>Bundle / decoy engine</b> (Lunch+, Family Feast) — covered under §3.2. The lunch banner here shows the eventual link.</li>
-        <li><b>Per-customer ML ranking</b> — §9.1. This sketch uses the static margin × attach-rate heuristic from §2.4.</li>
+        <li><b>Item modifiers</b> ("Make it a large +PLN 6") — §2.2 row 2. Needs a <code class="kbd">CartItem.modifiers</code> migration. Top-50 #15.</li>
+        <li><b>Bundle / decoy engine</b> (Lunch+ tier, Family Feast) — §3.2. The lunch banner above shows where the entry point will go.</li>
+        <li><b>Per-customer ML ranking</b> — §9.1. This sketch uses the static margin × attach-rate heuristic from §2.4; replacing it with the logistic-regression scorer is a follow-up.</li>
+        <li><b>Hour-of-day modulation of "popular this hour"</b> — §1.2 trigger #2. Needs the per-hour item-popularity rollup.</li>
       </ul>
     </div>
 
@@ -892,7 +922,13 @@
           <svg class="ic-sm gold"><use href="#i-star"/></svg>
           <span>You'll earn <b id="pts">57 points</b> with this order</span>
         </div>
-        <button class="pay-btn" id="payBtn">Pay 67,00 zł</button>
+        <div class="pay-stack">
+          <button class="applepay-btn" id="applePayBtn">
+            <span class="logo"></span> Pay
+          </button>
+          <button class="pay-btn" id="payBtn">Pay 67,00 zł by card</button>
+        </div>
+        <div class="pay-meta">PLN 0 hidden fees · Stripe · BLIK / card / Apple Pay / Google Pay</div>
         <button class="clear-btn">
           <svg class="ic-sm"><use href="#i-trash"/></svg>
           Clear cart
@@ -1007,7 +1043,7 @@
 
     document.getElementById("sub").textContent = money(sub);
     document.getElementById("total").textContent = money(total);
-    document.getElementById("payBtn").textContent = "Pay " + money(total);
+    document.getElementById("payBtn").textContent = "Pay " + money(total) + " by card";
     document.getElementById("countLabel").textContent =
       state.items.reduce((s, i) => s + i.qty, 0) + " items · Kraków";
 
