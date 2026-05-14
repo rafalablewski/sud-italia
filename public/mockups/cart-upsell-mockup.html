@@ -266,6 +266,29 @@
     }
     .trash-btn:hover { color: var(--color-italia-red); }
 
+    /* "Make it a large" / "Add chicken" modifier pills (§2.2 row 2)
+       — visual preview; backend migration to CartItem.modifiers tracked separately */
+    .mods { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
+    .mod-pill {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 5px 10px;
+      font-size: 12px; font-weight: 500;
+      color: var(--color-italia-gray);
+      background: white;
+      border: 1px solid var(--gray-200);
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .mod-pill:hover { border-color: var(--color-italia-red); color: var(--color-italia-red); }
+    .mod-pill.active {
+      background: rgba(200, 16, 46, 0.06);
+      border-color: var(--color-italia-red);
+      color: var(--color-italia-red);
+      font-weight: 600;
+    }
+    .mod-pill .ic-sm { width: 12px; height: 12px; }
+
     /* ==================================================================
        Loyalty status banner — bg-italia-gold/8 border-italia-gold/15
        ================================================================== */
@@ -325,6 +348,19 @@
       transition: background 0.15s;
     }
     .tod-cta:hover { background: #000; }
+    /* "Remove combo" state for McDonald's default-effect (§2.5) */
+    .tod-cta.is-applied {
+      background: transparent;
+      color: var(--color-italia-gray);
+      border: 1px solid var(--gray-200);
+      font-weight: 500;
+    }
+    .tod-cta.is-applied:hover {
+      color: var(--color-italia-red);
+      border-color: var(--color-italia-red);
+      background: rgba(200,16,46,0.04);
+    }
+    .tod-applied .badge { background: rgba(0,140,69,0.15) !important; color: var(--color-italia-green-dark) !important; }
 
     /* Variants per audit §2.3 — palettes use existing italia tokens only */
     .tod-lunch,
@@ -364,6 +400,13 @@
     }
     .tod-morning .icon-tile { background: rgba(0, 140, 69, 0.15); color: var(--color-italia-green); }
     .tod-morning .badge { background: rgba(0, 140, 69, 0.15); color: var(--color-italia-green-dark); }
+
+    .tod-unlock {
+      background: linear-gradient(135deg, rgba(184,146,46,0.10), rgba(200,16,46,0.06));
+      border-color: rgba(184,146,46,0.40);
+    }
+    .tod-unlock .icon-tile { background: rgba(184,146,46,0.20); color: var(--color-italia-gold-dark); }
+    .tod-unlock .badge { background: var(--color-italia-gold-dark); color: white; }
 
     /* ==================================================================
        "Complete the meal" chips (REDESIGN §2.1)
@@ -428,6 +471,106 @@
     }
     .chip.added .price { color: var(--color-italia-green-dark); }
     .chip.added .add-icon { background: var(--color-italia-green); }
+
+    /* Scarcity strip (§2.2 row 7 — "Try the new burrata, first 12 today") */
+    .scarcity-chip {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px;
+      background: rgba(200, 16, 46, 0.04);
+      border: 1px solid rgba(200, 16, 46, 0.25);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: transform 0.12s, border-color 0.15s, box-shadow 0.15s;
+    }
+    .scarcity-chip:hover {
+      border-color: var(--color-italia-red);
+      box-shadow: 0 4px 10px rgba(200, 16, 46, 0.08);
+    }
+    .scarcity-chip .flame {
+      flex-shrink: 0; width: 32px; height: 32px;
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 8px;
+      background: rgba(200, 16, 46, 0.10);
+      color: var(--color-italia-red);
+    }
+    .scarcity-chip .body { flex: 1; min-width: 0; }
+    .scarcity-chip .ttl { font-size: 13px; font-weight: 600; color: var(--color-italia-dark); }
+    .scarcity-chip .sub { font-size: 11px; color: var(--color-italia-gray); margin-top: 2px; }
+    .scarcity-chip .stock {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--color-italia-red);
+      margin-left: 4px;
+    }
+    .scarcity-chip .price-pill {
+      flex-shrink: 0;
+      padding: 6px 10px; font-size: 13px; font-weight: 600;
+      background: var(--color-italia-red); color: white;
+      border-radius: 8px;
+    }
+    .scarcity-chip.added {
+      background: rgba(0, 140, 69, 0.06);
+      border-color: rgba(0, 140, 69, 0.30);
+      cursor: default;
+    }
+    .scarcity-chip.added .flame { background: rgba(0,140,69,0.10); color: var(--color-italia-green); }
+    .scarcity-chip.added .stock { color: var(--color-italia-green-dark); }
+    .scarcity-chip.added .price-pill { background: var(--color-italia-green); }
+
+    /* Tier-conditional perk banner (§2.2 row 6) */
+    .tier-perk {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px;
+      background: linear-gradient(135deg, rgba(184,146,46,0.10), rgba(184,146,46,0.04));
+      border: 1px solid rgba(184, 146, 46, 0.35);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .tier-perk:hover {
+      border-color: var(--color-italia-gold);
+      box-shadow: 0 4px 10px rgba(184, 146, 46, 0.10);
+    }
+    .tier-perk .medal {
+      flex-shrink: 0; width: 32px; height: 32px;
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 8px;
+      background: rgba(184, 146, 46, 0.18);
+      color: var(--color-italia-gold-dark);
+    }
+    .tier-perk .body { flex: 1; min-width: 0; }
+    .tier-perk .ttl { font-size: 13px; font-weight: 600; color: var(--color-italia-dark); }
+    .tier-perk .sub { font-size: 11px; color: var(--color-italia-gray); margin-top: 2px; }
+    .tier-perk .add-pill {
+      flex-shrink: 0;
+      padding: 6px 10px; font-size: 12px; font-weight: 600;
+      background: var(--color-italia-gold-dark); color: white;
+      border-radius: 8px; border: 0; cursor: pointer;
+    }
+    .tier-perk.applied {
+      background: rgba(0, 140, 69, 0.06);
+      border-color: rgba(0, 140, 69, 0.30);
+    }
+    .tier-perk.applied .medal { background: rgba(0,140,69,0.10); color: var(--color-italia-green); }
+    .tier-perk.applied .add-pill { background: var(--color-italia-green); }
+
+    /* Gold-tier loyalty badge */
+    .tier-badge {
+      display: inline-flex; align-items: center; gap: 3px;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 2px 6px; border-radius: 4px;
+      background: rgba(184, 146, 46, 0.18);
+      color: var(--color-italia-gold-dark);
+      margin: 0 4px;
+    }
+
+    /* Personalised threshold annotation (§2.5 Uber Eats) */
+    .threshold-note {
+      font-size: 10px; color: var(--gray-400);
+      margin-left: 4px;
+      font-style: italic;
+    }
 
     @keyframes fade-in {
       from { opacity: 0; transform: translateY(-4px); }
@@ -697,6 +840,30 @@
       <path d="M13 10L11.5 5a1.5 1.5 0 0 1 3-.5L16 9"/>
       <path d="M16 9l-.5-1.5a1.5 1.5 0 0 1 3-.5L19 9"/>
     </symbol>
+    <symbol id="i-rain" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M16 13a4 4 0 0 0 0-8 6 6 0 0 0-11.31 2A4 4 0 0 0 6 15"/>
+      <line x1="8" y1="19" x2="8" y2="21"/>
+      <line x1="12" y1="19" x2="12" y2="22"/>
+      <line x1="16" y1="19" x2="16" y2="21"/>
+    </symbol>
+    <symbol id="i-trophy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
+      <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
+      <path d="M4 22h16"/>
+      <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
+      <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
+      <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
+    </symbol>
+    <symbol id="i-flame" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
+    </symbol>
+    <symbol id="i-medal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="15" r="6"/>
+      <path d="M12 9V3"/>
+      <path d="M7.5 3L12 9l4.5-6"/>
+      <path d="M8 5l-2-2"/>
+      <path d="M16 5l2-2"/>
+    </symbol>
   </defs>
 </svg>
 
@@ -730,7 +897,9 @@
           <button data-tod="dinner">Dinner 17:00–19:30</button>
           <button data-tod="late">Last call 20:30+</button>
           <button data-tod="morning">Pre-order 07:00–10:30</button>
+          <button data-tod="rain">Rain forecast</button>
           <button data-tod="returning">14-day lapsed</button>
+          <button data-tod="unlock3">Order #3 unlock</button>
           <button data-tod="off">None</button>
         </div>
       </div>
@@ -743,68 +912,98 @@
     </div>
 
     <div class="panel muted">
-      <span class="pill live">What's new — all five audit changes</span>
+      <span class="pill live">What's new — full §2 coverage</span>
       <h2>The redesign deltas vs production</h2>
       <ul class="legend">
         <li>
           <span class="marker">1</span>
           <span>
             <strong>Inline toast on add-to-cart.</strong>
-            <em>§2.1 T+0 — item added.</em> Seed-only copy: "Customers usually add an espresso."
-            No CTA, no block. Auto-dismisses in 4s. Today the public side is silent on add
-            — only the floating cart badge animates. This is net-new.
+            <em>§2.1 T+0.</em> Seed-only copy ("Customers usually add an espresso"),
+            auto-dismiss 4s, no CTA, no block.
           </span>
         </li>
         <li>
           <span class="marker">2</span>
           <span>
-            <strong>"Complete the meal" chips, 3-up grid.</strong>
-            <em>§2.1 T+0 — cart drawer opens.</em> Replaces the existing vertical list in
-            <code class="kbd">CartUpsell.tsx</code>. Same Sparkles header + cream-on-gold
-            card skin — just 3 columns of one-tap chips, margin-ranked
-            (espresso first per §2.4: 83% GM × 60% attach). Tap once, chip flips green,
-            item lands in the cart. No second screen.
+            <strong>"Complete the meal" 3-up chips above subtotal.</strong>
+            <em>§2.1 + §2.4.</em> Margin-ranked (espresso first: 83% GM × 60% attach).
+            One-tap-add, no second screen.
           </span>
         </li>
         <li>
           <span class="marker">3</span>
           <span>
             <strong>Animated free-delivery progress bar.</strong>
-            <em>§2.1 T+0 — post-attach.</em> Today's <code class="kbd">DeliveryProgress.tsx</code>
-            has the static gradient bar — this adds a continuous shimmer so motion catches
-            the eye, plus a smoother red→green flip with a Check icon when the threshold clears.
+            <em>§2.1 + §2.5 Uber Eats.</em> Shimmer overlay + smoother red→green flip.
+            Threshold is <b>per-segment</b> (regulars 49 zł, first-timers 39 zł, Gold free)
+            — note the "tuned for you" annotation next to the target.
           </span>
         </li>
         <li>
           <span class="marker">4</span>
           <span>
             <strong>Apple Pay primary, card secondary.</strong>
-            <em>§2.1 T+pay.</em> Stacks the Apple/Google Pay button on top, card as
-            secondary. Mockup shows the visual hierarchy; the Stripe Payment Request API
-            wiring lands in a follow-up commit (the change is data-flow, not visual).
+            <em>§2.1 T+pay.</em> Stripe Payment Request API wiring lands separately;
+            this mockup shows the intended visual hierarchy.
           </span>
         </li>
         <li>
           <span class="marker">5</span>
           <span>
-            <strong>Time-of-day banner at cart top.</strong>
-            <em>§2.3.</em> Sits above the cart items, same chrome family as
-            <code class="kbd">ComboDealBanner.tsx</code>. Six hour-window variants;
-            one banner at a time, picked server-side by local hour × customer state.
-            Lunch + Last-call apply a real discount; the rest deep-link.
+            <strong>Time-of-day banner — 8 variants.</strong>
+            <em>§2.3.</em> Lunch, afternoon, dinner, last-call, pre-order, <b>rain</b>,
+            <b>14-day lapsed</b>, <b>3rd-order loyalty unlock</b>. One at a time, picked
+            server-side by hour × weather × customer state.
+          </span>
+        </li>
+        <li>
+          <span class="marker">6</span>
+          <span>
+            <strong>McDonald's default-effect on the lunch combo.</strong>
+            <em>§2.5.</em> Combo is <b>pre-applied</b> during the lunch window — the CTA
+            flips to "Remove combo" so non-combo is now the deviant path. Toggle the ToD
+            to see the discount auto-apply.
+          </span>
+        </li>
+        <li>
+          <span class="marker">7</span>
+          <span>
+            <strong>Modifier pills on cart lines.</strong>
+            <em>§2.2 row 2 + Starbucks size-laddering.</em> "Make it a large +6 zł" and
+            "Double cheese +4 zł" on pizza; "Add chicken +8 zł" on pasta. Tap-toggle,
+            price recomputes in place. (Backend migration to
+            <code class="kbd">CartItem.modifiers</code> tracked separately.)
+          </span>
+        </li>
+        <li>
+          <span class="marker">8</span>
+          <span>
+            <strong>Scarcity strip — real seasonal stock.</strong>
+            <em>§2.2 row 7.</em> "Try the seasonal burrata — 7 of 12 left today" uses
+            real inventory from the existing seasonal-items pipeline. Burns down with each
+            add.
+          </span>
+        </li>
+        <li>
+          <span class="marker">9</span>
+          <span>
+            <strong>Tier-conditional perk banner.</strong>
+            <em>§2.2 row 6.</em> "Make it a Gold-tier order: +pesto bruschetta on the
+            house." Only renders for Gold/Platinum members. Tap to comp it in.
           </span>
         </li>
       </ul>
     </div>
 
     <div class="panel muted">
-      <span class="pill gold">Deeper §2 work, separate tickets</span>
-      <h2>Out of scope for this sketch</h2>
+      <span class="pill gold">Genuinely out of scope</span>
+      <h2>What requires backend lift, deferred</h2>
       <ul class="checklist">
-        <li><b>Item modifiers</b> ("Make it a large +PLN 6") — §2.2 row 2. Needs a <code class="kbd">CartItem.modifiers</code> migration. Top-50 #15.</li>
-        <li><b>Bundle / decoy engine</b> (Lunch+ tier, Family Feast) — §3.2. The lunch banner above shows where the entry point will go.</li>
-        <li><b>Per-customer ML ranking</b> — §9.1. This sketch uses the static margin × attach-rate heuristic from §2.4; replacing it with the logistic-regression scorer is a follow-up.</li>
+        <li><b>Bundle / decoy engine</b> (Lunch+ tier, Family Feast) — §3.2 territory, separate sprint. The lunch + dinner banners here show the entry points.</li>
+        <li><b>Per-customer ML upsell scoring</b> — §9.1. Static margin × attach heuristic stands in until the logistic-regression scorer ships.</li>
         <li><b>Hour-of-day modulation of "popular this hour"</b> — §1.2 trigger #2. Needs the per-hour item-popularity rollup.</li>
+        <li><b>Stripe Payment Request API + persistent <code class="kbd">CartItem.modifiers</code></b> — the Apple Pay and modifier surfaces above are visually correct but write through a temporary client-only model until the API migrations land.</li>
       </ul>
     </div>
 
@@ -845,7 +1044,7 @@
         <div class="sec">
           <div class="loyalty">
             <svg class="ic gold"><use href="#i-star"/></svg>
-            <span>Earning points as <span class="first">Anna</span><span class="pts">150 pts</span></span>
+            <span>Earning points as <span class="first">Anna</span><span class="tier-badge">Gold</span><span class="pts">850 pts</span></span>
           </div>
         </div>
 
@@ -881,6 +1080,31 @@
           </div>
         </div>
 
+        <!-- Scarcity strip (§2.2 row 7) — seasonal item with real inventory count -->
+        <div class="sec">
+          <div class="scarcity-chip" id="scarcityChip"
+               data-id="burrata-seasonal" data-name="Seasonal burrata bruschetta" data-price="2200">
+            <span class="flame"><svg class="ic-lg"><use href="#i-flame"/></svg></span>
+            <div class="body">
+              <div class="ttl">Try the seasonal burrata <span class="stock">7 of 12 left today</span></div>
+              <div class="sub">Hand-pulled this morning · ends when the tray's empty</div>
+            </div>
+            <span class="price-pill">+ 22,00 zł</span>
+          </div>
+        </div>
+
+        <!-- Tier-conditional perk (§2.2 row 6) — visible to Gold/Platinum members only -->
+        <div class="sec">
+          <div class="tier-perk" id="tierPerk">
+            <span class="medal"><svg class="ic-lg"><use href="#i-medal"/></svg></span>
+            <div class="body">
+              <div class="ttl">Make it a Gold-tier order</div>
+              <div class="sub">+ pesto bruschetta on the house · today only</div>
+            </div>
+            <button class="add-pill" type="button">Add free</button>
+          </div>
+        </div>
+
         <div class="sec">
           <div class="delivery" id="delivery">
             <div class="delivery-top">
@@ -888,7 +1112,10 @@
                 <svg class="ic"><use href="#i-truck"/></svg>
                 <span>Add <span class="rem" id="deliveryRem">3,00 zł</span> for free delivery</span>
               </div>
-              <span class="target" id="deliveryTarget">60,00 zł</span>
+              <span class="target">
+                <span id="deliveryTarget">49,00 zł</span>
+                <span class="threshold-note" title="Per-segment threshold (Uber-Eats-style §2.5). Regulars: 49 zł, first-timers: 39 zł, Gold/Platinum: free.">· tuned for you</span>
+              </span>
             </div>
             <div class="progress">
               <div class="bar" id="bar" style="width: 95%"></div>
@@ -943,9 +1170,20 @@
   // ===================================================================
   // State
   // ===================================================================
+  // Modifier catalogue per item (§2.2 row 2). In production this lives on
+  // MenuItem; here it's a static map for the two demo items.
+  const MODIFIERS = {
+    pizza: [
+      { id: "large",  name: "Make it a large",  delta: 600 },
+      { id: "cheese", name: "Double cheese",    delta: 400 },
+    ],
+    pasta: [
+      { id: "chicken", name: "Add chicken", delta: 800 },
+    ],
+  };
   const baseItems = [
-    { id: "pizza", name: "Margherita", each: 2800, qty: 1 },
-    { id: "pasta", name: "Carbonara",  each: 2900, qty: 1 },
+    { id: "pizza", name: "Margherita", each: 2800, qty: 1, mods: {} },
+    { id: "pasta", name: "Carbonara",  each: 2900, qty: 1, mods: {} },
   ];
   const state = {
     items: structuredClone(baseItems),
@@ -957,13 +1195,17 @@
   };
 
   // Time-of-day variant table (audit §2.3)
+  // `defaultApplied: true` enables McDonald's default-effect (§2.5):
+  // combo is pre-applied; CTA flips to "Remove combo".
   const TOD = {
     off: null,
     lunch: {
       variant: "tod-lunch", icon: "i-clock",
       title: "Lunch combo — pasta + drink",
       sub: "PLN 39 instead of 47 · ready in 8 min",
-      badge: "−10%", cta: "Make it a combo",
+      badge: "−10%",
+      defaultApplied: true,
+      cta: "Make it a combo", ctaApplied: "Remove combo",
       apply: () => ({ label: "Lunch combo −10%", percent: 10 })
     },
     afternoon: {
@@ -992,11 +1234,25 @@
       sub: "Lock your usual now, skip the queue at noon",
       badge: "9 left", cta: "Pick a slot",
     },
+    rain: {
+      variant: "tod-morning", icon: "i-rain",
+      title: "Rainy day — warm pasta + free delivery",
+      sub: "Free delivery on orders over 50,00 zł today",
+      badge: "Today only", cta: "Lower the bar",
+      apply: () => ({ label: "Rainy-day threshold 50 zł", percent: 0, dropThreshold: 5000 })
+    },
     returning: {
       variant: "tod-returning", icon: "i-wave",
       title: "Welcome back, Anna",
       sub: "Your usual Margherita + espresso is 34,00 zł · ready 18:14",
       badge: "1 tap", cta: "Reorder usual",
+    },
+    unlock3: {
+      variant: "tod-unlock", icon: "i-trophy",
+      title: "Loyalty unlock — Pizzaiolo's Choice",
+      sub: "Order #3 perk · we'll comp this one to celebrate",
+      badge: "Comp'd", cta: "Add the comp",
+      addItem: { id: "pizz-choice", name: "Pizzaiolo's Choice", each: 0 }
     },
   };
 
@@ -1004,20 +1260,38 @@
   const fmt = new Intl.NumberFormat("pl-PL", { style: "currency", currency: "PLN" });
   const money = grosze => fmt.format(grosze / 100);
 
+  function effectivePrice(item) {
+    const mods = MODIFIERS[item.id] || [];
+    const delta = mods.reduce((s, m) => s + (item.mods[m.id] ? m.delta : 0), 0);
+    return item.each + delta;
+  }
+
   function renderLines() {
     const wrap = document.getElementById("lines");
     wrap.innerHTML = "";
-    state.items.forEach(it => {
+    state.items.forEach((it, idx) => {
+      const mods = MODIFIERS[it.id] || [];
+      const price = effectivePrice(it);
+      const modPills = mods.map(m => {
+        const on = !!it.mods[m.id];
+        const icon = on ? "i-check" : "i-plus";
+        const sign = on ? "" : "+";
+        return `<button class="mod-pill ${on ? 'active' : ''}" data-line="${idx}" data-mod="${m.id}">
+          <svg class="ic-sm"><use href="#${icon}"/></svg>
+          ${m.name} ${sign}${money(m.delta).replace(/ ?zł/, '')}zł
+        </button>`;
+      }).join("");
       const row = document.createElement("div");
       row.className = "line";
       row.innerHTML = `
         <div class="top">
           <div>
             <p class="name">${it.name}</p>
-            <p class="each">${money(it.each)} each</p>
+            <p class="each">${money(price)} each</p>
           </div>
-          <span class="price">${money(it.each * it.qty)}</span>
+          <span class="price">${money(price * it.qty)}</span>
         </div>
+        ${mods.length ? `<div class="mods">${modPills}</div>` : ""}
         <div class="bot">
           <div class="qty-stepper">
             <button aria-label="Decrease"><svg class="ic-sm"><use href="#i-minus"/></svg></button>
@@ -1032,10 +1306,22 @@
       `;
       wrap.appendChild(row);
     });
+    // Wire modifier-pill toggles
+    wrap.querySelectorAll(".mod-pill").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const idx = parseInt(btn.dataset.line, 10);
+        const modId = btn.dataset.mod;
+        const it = state.items[idx];
+        if (!it) return;
+        it.mods[modId] = !it.mods[modId];
+        renderLines();
+        recompute();
+      });
+    });
   }
 
   function recompute() {
-    const sub = state.items.reduce((s, i) => s + i.each * i.qty, 0);
+    const sub = state.items.reduce((s, i) => s + effectivePrice(i) * i.qty, 0);
     const remaining = Math.max(0, state.deliveryThreshold - sub);
     const qualified = remaining === 0;
     const fee = qualified ? 0 : state.deliveryFee;
@@ -1075,29 +1361,45 @@
     const cfg = TOD[state.tod];
     if (!cfg) { host.innerHTML = ""; host.style.display = "none"; return; }
     host.style.display = "block";
+
+    const isApplied = cfg.defaultApplied && state.discount > 0 && state.discountLabel === cfg.apply().label;
+    const ctaLabel = isApplied ? (cfg.ctaApplied || "Remove") : cfg.cta;
+
     host.innerHTML = `
-      <div class="tod ${cfg.variant}">
+      <div class="tod ${cfg.variant}${isApplied ? ' tod-applied' : ''}">
         <div class="icon-tile"><svg class="ic-lg"><use href="#${cfg.icon}"/></svg></div>
         <div class="body">
           <div class="row1">
             <p class="ttl">${cfg.title}</p>
-            <span class="badge">${cfg.badge}</span>
+            <span class="badge">${isApplied ? '✓ Applied' : cfg.badge}</span>
           </div>
           <p class="sub">${cfg.sub}</p>
         </div>
-        <button class="tod-cta" id="todCta">${cfg.cta}</button>
+        <button class="tod-cta${isApplied ? ' is-applied' : ''}" id="todCta">${ctaLabel}</button>
       </div>
     `;
     document.getElementById("todCta").addEventListener("click", () => {
       if (cfg.apply) {
+        if (isApplied) {
+          // McDonald's default-effect: opt OUT instead of opt IN
+          state.discount = 0;
+          state.discountLabel = null;
+          if (cfg.apply().dropThreshold !== undefined) state.deliveryThreshold = 6000;
+          renderTod();
+          recompute();
+          toast("sparkles", "Combo removed", "You can re-add it any time.");
+          return;
+        }
         const d = cfg.apply();
-        const sub = state.items.reduce((s, i) => s + i.each * i.qty, 0);
+        const sub = state.items.reduce((s, i) => s + effectivePrice(i) * i.qty, 0);
         state.discount = Math.round(sub * d.percent / 100);
         state.discountLabel = d.label;
+        if (d.dropThreshold !== undefined) state.deliveryThreshold = d.dropThreshold;
+        renderTod();
         recompute();
         toast("sparkles", "Combo applied", d.label + " — keep building or check out.");
       } else if (cfg.addItem) {
-        state.items.push({ ...cfg.addItem, qty: 1 });
+        state.items.push({ ...cfg.addItem, qty: 1, mods: {} });
         renderLines();
         recompute();
         toast("sparkles", cfg.addItem.name + " added", "Customers usually add this with pizza.");
@@ -1105,6 +1407,20 @@
         toast("sparkles", "Noted", "Wire this CTA to the corresponding bundle/flow.");
       }
     });
+  }
+
+  // Apply any defaultApplied combo when ToD changes (McDonald's effect, §2.5)
+  function applyDefaultsForTod() {
+    const cfg = TOD[state.tod];
+    state.discount = 0; state.discountLabel = null;
+    state.deliveryThreshold = 4900; // personalised baseline for "regular" segment
+    if (cfg && cfg.defaultApplied && cfg.apply) {
+      const d = cfg.apply();
+      const sub = state.items.reduce((s, i) => s + effectivePrice(i) * i.qty, 0);
+      state.discount = Math.round(sub * d.percent / 100);
+      state.discountLabel = d.label;
+      if (d.dropThreshold !== undefined) state.deliveryThreshold = d.dropThreshold;
+    }
   }
 
   let toastTimer = null;
@@ -1128,6 +1444,34 @@
     }, 4000);
   }
 
+  // Scarcity strip (§2.2)
+  document.getElementById("scarcityChip").addEventListener("click", () => {
+    const el = document.getElementById("scarcityChip");
+    if (el.classList.contains("added")) return;
+    el.classList.add("added");
+    el.querySelector(".ttl").innerHTML = "Burrata bruschetta added <span class=\"stock\">6 left today</span>";
+    el.querySelector(".price-pill").textContent = "✓ Added";
+    state.items.push({ id: el.dataset.id, name: el.dataset.name,
+                       each: parseInt(el.dataset.price, 10), qty: 1, mods: {} });
+    renderLines();
+    recompute();
+    toast("sparkles", "Seasonal burrata added", "Limited stock — locked in for your order.");
+  });
+
+  // Tier-conditional perk (§2.2)
+  document.getElementById("tierPerk").addEventListener("click", () => {
+    const el = document.getElementById("tierPerk");
+    if (el.classList.contains("applied")) return;
+    el.classList.add("applied");
+    el.querySelector(".ttl").textContent = "Gold-tier perk added — pesto bruschetta on the house";
+    el.querySelector(".add-pill").textContent = "✓ Added";
+    state.items.push({ id: "perk-pesto", name: "Pesto bruschetta (Gold perk)",
+                       each: 0, qty: 1, mods: {} });
+    renderLines();
+    recompute();
+    toast("sparkles", "Gold perk applied", "Comp'd pesto bruschetta added — enjoy.");
+  });
+
   document.getElementById("chips").addEventListener("click", e => {
     const chip = e.target.closest(".chip");
     if (!chip || chip.classList.contains("added")) return;
@@ -1135,7 +1479,7 @@
     const id = chip.dataset.id;
     const each = parseInt(chip.dataset.price, 10);
     const name = chip.dataset.name;
-    state.items.push({ id, name, each, qty: 1 });
+    state.items.push({ id, name, each, qty: 1, mods: {} });
     renderLines();
     recompute();
     toast("sparkles", name + " added", "Nice — tap another chip or check out.");
@@ -1149,7 +1493,7 @@
   });
 
   document.getElementById("qualifyBtn").addEventListener("click", () => {
-    state.items.push({ id: "burrata", name: "Burrata bruschetta", each: 2200, qty: 1 });
+    state.items.push({ id: "burrata", name: "Burrata bruschetta", each: 2200, qty: 1, mods: {} });
     renderLines();
     recompute();
     toast("truck", "Free delivery unlocked", "Nice — your order qualifies.");
@@ -1157,9 +1501,18 @@
 
   document.getElementById("resetBtn").addEventListener("click", () => {
     state.items = structuredClone(baseItems);
-    state.discount = 0; state.discountLabel = null;
+    applyDefaultsForTod();
     document.querySelectorAll(".chip.added").forEach(c => c.classList.remove("added"));
+    const sc = document.getElementById("scarcityChip");
+    sc.classList.remove("added");
+    sc.querySelector(".ttl").innerHTML = 'Try the seasonal burrata <span class="stock">7 of 12 left today</span>';
+    sc.querySelector(".price-pill").textContent = "+ 22,00 zł";
+    const tp = document.getElementById("tierPerk");
+    tp.classList.remove("applied");
+    tp.querySelector(".ttl").textContent = "Make it a Gold-tier order";
+    tp.querySelector(".add-pill").textContent = "Add free";
     renderLines();
+    renderTod();
     recompute();
   });
 
@@ -1169,11 +1522,13 @@
     document.querySelectorAll("#tod-switch button").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
     state.tod = btn.dataset.tod;
-    state.discount = 0; state.discountLabel = null;
+    applyDefaultsForTod();
     renderTod();
     recompute();
   });
 
+  // ----- init -----
+  applyDefaultsForTod();
   renderLines();
   renderTod();
   recompute();
