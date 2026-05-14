@@ -594,6 +594,41 @@
 
     .hint { font-size: 11px; color: var(--gray-400); padding: 0 20px; margin-top: 12px; line-height: 1.5; }
 
+    /* Brand-voice override map (mockup-only explainer panel) — same tokens
+       as .chip but laid out as a horizontal list so all three new copy
+       lines are visible at a glance. */
+    .reason-grid { display: grid; gap: 8px; }
+    .reason-row {
+      display: grid; grid-template-columns: 36px 1fr auto; gap: 12px;
+      align-items: center;
+      padding: 10px 12px;
+      background: var(--color-italia-cream);
+      border: 1px solid rgba(184, 146, 46, 0.15);
+      border-radius: 12px;
+    }
+    .reason-glyph {
+      width: 36px; height: 36px;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: rgba(184, 146, 46, 0.10);
+      border-radius: 10px;
+      font-size: 20px;
+    }
+    .reason-name {
+      font-size: 13px; font-weight: 600;
+      color: var(--color-italia-dark);
+    }
+    .reason-id {
+      font-size: 11px;
+      color: var(--color-italia-gray);
+      margin-top: 2px;
+    }
+    .reason-copy {
+      font-family: var(--font-heading);
+      font-size: 14px; font-weight: 600;
+      color: var(--color-italia-red);
+      white-space: nowrap;
+    }
+
     /* ---------- Lucide icon sizing (mirror) ---------- */
     .ic    { width: 16px; height: 16px; stroke-width: 2; flex-shrink: 0; }
     .ic-sm { width: 14px; height: 14px; stroke-width: 2; flex-shrink: 0; }
@@ -741,6 +776,13 @@
         </div>
       </div>
 
+      <div class="controls">
+        <div class="seg" id="history-switch" role="tablist" aria-label="Customer history">
+          <button data-history="new" class="active">Brand-new · brand voice</button>
+          <button data-history="returning">Returning · 3 of last 4 espresso</button>
+        </div>
+      </div>
+
       <div class="row">
         <button class="btn danger" id="addBtn">+ Add Margherita</button>
         <button class="btn ghost" id="qualifyBtn">Push to free-delivery</button>
@@ -755,11 +797,13 @@
         <li>
           <span class="marker">1</span>
           <span>
-            <strong>Contextual chip ranking.</strong>
-            <em>§3.1.</em> Every chip carries a composite score:
-            margin × attach × hour-bias × per-customer attach × small novelty
-            decay. Same three-up grid; smarter sort. Reason copy pivots to
-            "you added it 3 of last 4 visits" when the signal is strong.
+            <strong>Contextual chip ranking + brand-voice reasons.</strong>
+            <em>§3.1.</em> Same three-up grid + priority-driven order
+            (espresso → tiramisù → drink). Composite score
+            (margin × hour-bias × per-customer attach × novelty decay)
+            resolves ties within a priority bucket. Reason copy pivots to
+            &ldquo;you added it 3 of last 4 visits&rdquo; when the signal is strong;
+            otherwise the brand-voice override table below wins.
           </span>
         </li>
         <li>
@@ -798,6 +842,50 @@
           </span>
         </li>
       </ul>
+    </div>
+
+    <div class="panel muted">
+      <span class="pill">Brand-voice override map</span>
+      <h2>Per-item chip copy</h2>
+      <p class="lede" style="margin-bottom: 12px;">
+        Mirrors <code class="kbd">ITEM_REASON_OVERRIDES</code> in
+        <code class="kbd">src/lib/upsell.ts</code>, keyed by id suffix so the
+        same map covers both Kraków (<code class="kbd">krk-</code>) and
+        Warszawa (<code class="kbd">waw-</code>). Item never in the override
+        map falls back to the priority-rule copy.
+      </p>
+      <div class="reason-grid">
+        <div class="reason-row">
+          <span class="reason-glyph">☕️</span>
+          <div>
+            <div class="reason-name">Espresso</div>
+            <div class="reason-id"><code class="kbd">drink-espresso</code></div>
+          </div>
+          <div class="reason-copy">Never too late</div>
+        </div>
+        <div class="reason-row">
+          <span class="reason-glyph">🍰</span>
+          <div>
+            <div class="reason-name">Tiramisù</div>
+            <div class="reason-id"><code class="kbd">dessert-tiramisu</code></div>
+          </div>
+          <div class="reason-copy">Pizzaiolo&rsquo;s fav</div>
+        </div>
+        <div class="reason-row">
+          <span class="reason-glyph">🥖</span>
+          <div>
+            <div class="reason-name">Burrata bruschetta</div>
+            <div class="reason-id"><code class="kbd">anti-burrata</code> · <code class="kbd">anti-bruschetta</code></div>
+          </div>
+          <div class="reason-copy">Freshly-baked today</div>
+        </div>
+      </div>
+      <p class="lede" style="font-size: 12px; margin-top: 10px;">
+        Strong recurrence wins: when a customer added the same item ≥ half
+        of their recent visits, the chip switches to recognition copy
+        (&ldquo;you added it 3 of last 4 visits&rdquo;) so the override is paused
+        for that order.
+      </p>
     </div>
 
     <div class="panel muted">
@@ -992,8 +1080,18 @@
     segment: "growing",               // first-time | growing | regular | vip
     hour: 11,                         // local hour, drives gating + chip ranking
     corp: "off",                      // off | member | head
-    customerAttachByItemId: { espresso: 3 },
-    customerOrderCount: 4,
+    history: "new",                   // "new" | "returning" — drives chip reason copy
+    customerAttachByItemId: {},
+    customerOrderCount: 0,
+  };
+
+  // Customer-history presets (audit §3.1). "new" → brand-voice copy on
+  // every chip (Never too late / Pizzaiolo's fav / …). "returning" → strong
+  // attach on espresso so the chip flips to recognition copy
+  // ("you added it 3 of last 4 visits").
+  const HISTORY_PRESETS = {
+    new:       { attach: {},               orders: 0 },
+    returning: { attach: { espresso: 3 },  orders: 4 },
   };
 
   // Items that count toward the §3.2 family quantity gate (pizza + pasta).
@@ -1226,14 +1324,47 @@
     burrata:  "Freshly-baked today",
   };
 
+  // §3.1 chip ranking — mirrors getCartSuggestions() in src/lib/upsell.ts.
+  // Priority-driven rules:
+  //   RULE 1 (priority 1): pizza/pasta + no coffee → suggest espresso
+  //   RULE 2 (priority 2): pizza/pasta + no dessert → suggest tiramisù
+  //   RULE 3 (priority 3): pizza/pasta + no drink → suggest a non-coffee drink
+  //   RULE 4 (priority 4): only drinks/desserts → suggest a pizza
+  // Composite pairing score only resolves ties within the same priority
+  // bucket; it never lets a priority-3 chip leapfrog a priority-1 one.
+  // Reason copy: strong customer-attach signal wins, then the brand-voice
+  // override map (ITEM_REASON_OVERRIDES), then the priority-rule fallback.
   function rankChips() {
-    const candidates = [
-      { id: "espresso", category: "drinks",   glyph: "☕️", name: "Espresso", base: 600 },
-      { id: "tiramisu", category: "desserts", glyph: "🍰", name: "Tiramisù", base: 1800 },
-      { id: "limonata", category: "drinks",   glyph: "🍋", name: "Limonata", base: 1200 },
-      { id: "burrata",  category: "antipasti",glyph: "🥖", name: "Burrata bruschetta", base: 2200 },
-    ];
-    const scored = candidates.map(c => {
+    const ROSTER = {
+      espresso: { id: "espresso", category: "drinks",   glyph: "☕️", name: "Espresso", base: 600, isCoffee: true },
+      tiramisu: { id: "tiramisu", category: "desserts", glyph: "🍰", name: "Tiramisù", base: 1800 },
+      limonata: { id: "limonata", category: "drinks",   glyph: "🍋", name: "Limonata", base: 1200 },
+      burrata:  { id: "burrata",  category: "antipasti",glyph: "🥖", name: "Burrata bruschetta", base: 2200 },
+      pizza:    { id: "pizzaSug", category: "pizza",    glyph: "🍕", name: "Margherita", base: 2800 },
+    };
+
+    const cartCats = new Set(state.items.map(it => {
+      if (/^pizza/.test(it.id)) return "pizza";
+      if (/^pasta/.test(it.id)) return "pasta";
+      if (it.id === "espresso") return "drinks-coffee";
+      if (it.id === "limonata" || it.id.startsWith("drink")) return "drinks";
+      if (it.id === "tiramisu" || it.id === "cannoli") return "desserts";
+      if (it.id === "burrata") return "antipasti";
+      return null;
+    }).filter(Boolean));
+    const hasMain  = cartCats.has("pizza") || cartCats.has("pasta");
+    const hasCoffee = cartCats.has("drinks-coffee");
+    const hasDrink  = cartCats.has("drinks");
+    const hasDessert = cartCats.has("desserts");
+
+    const out = [];
+    if (hasMain && !hasCoffee)              out.push({ ...ROSTER.espresso, priority: 1, fallback: "Perfect after your meal — Italian espresso" });
+    if (hasMain && !hasDessert)             out.push({ ...ROSTER.tiramisu, priority: 2, fallback: "Finish with our signature Tiramisù" });
+    if (hasMain && !hasDrink && !hasCoffee) out.push({ ...ROSTER.limonata, priority: 3, fallback: "Add a refreshing drink to your order" });
+    if (!hasMain && (hasDrink || hasDessert)) out.push({ ...ROSTER.pizza, priority: 4, fallback: "Add a pizza to make it a meal" });
+
+    // Composite score + brand-voice override resolution per chip.
+    const scored = out.map(c => {
       const hourBias = (HOUR_BIAS[c.category] || [])[state.hour] ?? 0.5;
       const attach = state.customerAttachByItemId[c.id] ?? 0;
       const orders = state.customerOrderCount;
@@ -1244,20 +1375,20 @@
                     : 0;
       const composite = Math.max(0, Math.min(1, hourBias * 0.4 + customer * 0.3 + 0.4 * 0.3 + novelty));
 
-      // Strong-attach recognition wins over the brand-voice override
-      // ("you added it 3 of last 4 visits"); otherwise use the override
-      // when one exists, falling back to a generic line.
       let reason;
       if (orders >= 2 && attach >= 2 && rate >= 0.5) {
         reason = `You added it ${attach} of last ${orders} visits`;
       } else if (ITEM_REASON_OVERRIDES[c.id]) {
         reason = ITEM_REASON_OVERRIDES[c.id];
       } else {
-        reason = "Made fresh today";
+        reason = c.fallback;
       }
       return { ...c, composite, reason };
     });
-    scored.sort((a, b) => b.composite - a.composite);
+    // Priority first, composite as tie-break — same shape as production.
+    scored.sort((a, b) => a.priority !== b.priority
+      ? a.priority - b.priority
+      : b.composite - a.composite);
     return scored.slice(0, 3);
   }
 
@@ -1486,6 +1617,17 @@
     btn.classList.add("active");
     state.corp = btn.dataset.corp;
     renderCorporate();
+  });
+
+  document.getElementById("history-switch").addEventListener("click", e => {
+    const btn = e.target.closest("button"); if (!btn) return;
+    document.querySelectorAll("#history-switch button").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    state.history = btn.dataset.history;
+    const preset = HISTORY_PRESETS[state.history];
+    state.customerAttachByItemId = { ...preset.attach };
+    state.customerOrderCount = preset.orders;
+    renderChips();
   });
 
   document.getElementById("addBtn").addEventListener("click", () => {
