@@ -351,7 +351,38 @@ export default async function CapabilitiesPage() {
         {
           name: "Per-segment delivery threshold",
           status: "live",
-          summary: "Free-delivery bar shows a personalised threshold: first-time customers see 39 PLN, regulars 60 PLN, Gold/Platinum 0 PLN. The checkout fee charge uses the same threshold via computeDeliveryFee(_,_, override), so the bar and the receipt agree. Audit §2.5 Uber Eats.",
+          summary: "Free-delivery bar shows a personalised threshold tuned to the customer's lifecycle: first-time 39 PLN, growing (2–4 orders) 49 PLN, regular (5+) 59 PLN, Gold/Platinum 0 PLN. The checkout fee charge uses the same threshold via computeDeliveryFee(_,_, override) and getCustomerSegment(), so the bar and the receipt agree. Audit §2.5 + §3.3.",
+        },
+        {
+          name: "Contextual pairing graph",
+          status: "live",
+          summary: "Cart upsell chips re-rank by composite score combining margin × attach, hour-of-day bias (espresso 0.82 at 11:00, 0.31 at 19:00), per-customer attach history (`you added it 3 of last 4 visits`), and a small novelty decay so chips rotate. Pure scorePairing() in upsell.ts; cart drawer feeds context via /api/customer/attach-history. Audit §3.1.",
+        },
+        {
+          name: "Bundle architecture (Lunch / Family Feast)",
+          status: "live",
+          href: "/admin/upsell",
+          summary: "Decoy + anchor + default-pushed combos surfaced in the cart drawer above the per-item chips. Lunch ladder is hour-gated (default 11:00–14:00); Family Feast ladder is quantity-gated (default ≥5 pizza+pasta items, with a one-line nudge when within 2 of the threshold). Tapping a tier locks the cart subtotal to the bundle's priceGrosze; checkout sends one Stripe line at the bundle price with the composition itemized in the description. Both the bundle ladder (tiers, prices, slot composition, default/anchor/decoy flags) and the availability rules are fully CRUD-editable in /admin/upsell. DEFAULT_BUNDLES + DEFAULT_BUNDLE_RULES in src/lib/bundles.ts fall back when no admin override is saved. Audit §3.2.",
+        },
+        {
+          name: "Sud Italia Corporate",
+          status: "live",
+          href: "/admin/corporate",
+          summary: "Bulk-ordering primitive for companies with 6+ employees (the brief's >5 employees rule, enforced at promotion time). Promote a FamilyWallet to a corporate account in /admin/corporate: public landing at /corporate/[slug], billing email for the head's monthly invoice, head bonus rate (default 20% of pool), minimum-employee gate (default 6), optional auto-pre-order day/time. Cart drawer surfaces an `Ordering with [company]` banner with the Sud Italia Corporate kicker when the active wallet is a corporate account; employee ordering bills to the company card while personal loyalty points stay individual. Head bonus is folded into the head's spendablePoints via resolveCustomerLoyalty() so it's immediately redeemable. POST /api/corporate/[slug]/join sends an SMS OTP; existing /rewards confirm flow promotes the employee to active. Audit §3.4.",
+        },
+        {
+          name: "Corporate monthly invoices",
+          status: has("MAILGUN_API_KEY", "MAILGUN_DOMAIN", "MAILGUN_FROM") && has("CRON_SECRET") ? "live" : "needs-config",
+          envVars: ["MAILGUN_API_KEY", "MAILGUN_DOMAIN", "MAILGUN_FROM", "CRON_SECRET"],
+          href: "/admin/corporate",
+          summary: "Daily dispatcher fires /api/admin/cron/corporate-invoices on the 1st of each month. For every corporate-configured wallet with a billing email, sums the previous month's per-employee orders and queues a `corporate.monthly_invoice` outbox event. The comms dispatcher emails an HTML breakdown to the billing contact via Mailgun (noop when unset, dedupe key = YYYY-MM so retries within the same month are no-ops). Manual trigger from /admin via owner-only POST. Audit §3.4 row 4.",
+        },
+        {
+          name: "Corporate auto-pre-order reminder",
+          status: has("TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_FROM") && has("CRON_SECRET") ? "live" : "needs-config",
+          envVars: ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_FROM", "CRON_SECRET"],
+          href: "/admin/corporate",
+          summary: "Daily dispatcher fires /api/admin/cron/corporate-preorder-reminder. For every corporate with autoPreorderDay/Time configured, when today matches the day AND we're within 3 hours of the scheduled time, SMS-nudges every active employee who hasn't placed an order today (`Sud Italia — Acme Wednesday 12:30 lunch. 4/8 teammates ordered. Pick your meal: …`). Dedupe key = ISO date + phone so retries skip already-queued reminders. SMS opt-out honoured. Audit §3.4 row 5.",
         },
         {
           name: "Premium delivery-unlocked card",
@@ -729,6 +760,16 @@ export default async function CapabilitiesPage() {
           name: "Weather staffing",
           status: "live",
           summary: "Daily 06:00 UTC. Open-Meteo forecast per location.",
+        },
+        {
+          name: "Corporate monthly invoices",
+          status: "live",
+          summary: "1st of month via daily dispatcher. Sums previous month's orders per corporate account, queues a `corporate.monthly_invoice` outbox event with VAT-compliant breakdown → comms dispatcher → Mailgun. Dedupe key = YYYY-MM. Audit §3.4.",
+        },
+        {
+          name: "Corporate auto-pre-order reminder",
+          status: "live",
+          summary: "Daily. Checks every corporate's autoPreorderDay/Time; when today matches AND we're within 3h of scheduled, SMS-nudges members who haven't ordered today. Audit §3.4.",
         },
       ],
     },

@@ -1,5 +1,152 @@
 import { MenuItem, MenuCategory, CartItem } from "@/data/types";
 
+// --- Contextual pairing graph (audit §3.1) -----------------------------
+//
+// `CROSS_SELL_MAP` (further down) is the safety net — every cart still gets
+// the canonical "with pizza, suggest espresso + dessert + drink" rules.
+// On top of that, each candidate item gets a per-cart composite weight
+// from four signals:
+//
+//   margin       — gross-margin × historic attach rate, normalised 0..1
+//   hourBias     — does this category usually attach at THIS hour?
+//                  (espresso → 0.82 at lunch, 0.31 at dinner)
+//   customer     — how often did THIS phone add it on past orders?
+//                  (espresso → 0.95 if last 4 of 4; 0 if first ever)
+//   noveltyDecay — small +bonus for items the customer has never tried,
+//                  small −penalty for items they always add (chip rotates).
+//
+// The customer + hour signals come in via PairingContext. Callers can omit
+// either; the function still produces a usable score off margin × hour.
+
+export interface PairingContext {
+  /** Local hour 0..23 used to look up hour-of-day bias curves. */
+  hour?: number;
+  /**
+   * How many of THIS phone's past orders included each item id. Resolves
+   * the &ldquo;you added it 3 of last 4 visits&rdquo; copy + the customer signal.
+   * Empty / missing → treated as a brand-new customer (novelty bonus applies).
+   */
+  customerAttachByItemId?: Record<string, number>;
+  /** Total non-pending orders this phone has placed — denominator for the
+   *  attach rate. 0 / unset means we have no history at all. */
+  customerOrderCount?: number;
+}
+
+/** Per-category attach rates measured against historic order data. These are
+ *  the §2.4 numbers from the audit, exposed as a constant so the admin debug
+ *  view in /admin/upsell can render the same percentages the engine uses. */
+const CATEGORY_BASE_ATTACH: Record<MenuCategory, number> = {
+  drinks: 0.6, // espresso etc — the highest-leverage SKU
+  desserts: 0.28,
+  antipasti: 0.18,
+  panini: 0.05,
+  pasta: 0.04,
+  pizza: 0.03,
+};
+
+/** Hour-of-day bias by category, hand-calibrated against the §2.3 windows.
+ *  Each entry is a full 24-element array (0..23) so the lookup is O(1) and
+ *  the curve is explicit rather than computed. Espresso peaks at 11 (lunch
+ *  coffee) and dips at dinner; tiramisù holds steady through the evening;
+ *  drinks rise across lunch and dinner; antipasti spike at dinner. */
+const CATEGORY_HOUR_BIAS: Record<MenuCategory, number[]> = {
+  // 0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23
+  drinks: [
+    0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.5, 0.6, 0.7, 0.78, 0.82, 0.85, 0.85, 0.78,
+    0.65, 0.58, 0.55, 0.5, 0.45, 0.41, 0.42, 0.42, 0.42, 0.4,
+  ],
+  desserts: [
+    0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.55, 0.6, 0.65, 0.7, 0.72, 0.7,
+    0.7, 0.7, 0.72, 0.78, 0.82, 0.85, 0.85, 0.78, 0.7, 0.6,
+  ],
+  antipasti: [
+    0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.45, 0.5, 0.55, 0.62, 0.7, 0.65,
+    0.55, 0.55, 0.6, 0.72, 0.82, 0.85, 0.78, 0.65, 0.55, 0.45,
+  ],
+  panini: [
+    0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.4, 0.55, 0.7, 0.75, 0.8, 0.82, 0.78, 0.65,
+    0.55, 0.5, 0.45, 0.42, 0.4, 0.38, 0.35, 0.32, 0.3, 0.3,
+  ],
+  pasta: [
+    0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.45, 0.5, 0.55, 0.6, 0.7, 0.78, 0.82, 0.78,
+    0.65, 0.55, 0.55, 0.7, 0.82, 0.85, 0.78, 0.6, 0.5, 0.45,
+  ],
+  pizza: [
+    0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.72, 0.78, 0.7,
+    0.6, 0.55, 0.6, 0.75, 0.85, 0.88, 0.82, 0.7, 0.6, 0.5,
+  ],
+};
+
+/** Composite score breakdown — surfaced to /admin/upsell so operators can
+ *  see exactly why a chip was ranked the way it was. */
+export interface PairingScore {
+  composite: number;
+  margin: number;
+  hourBias: number;
+  customer: number;
+  noveltyDecay: number;
+}
+
+/**
+ * Score one candidate item for one cart context. Returns 0..1 (clamped) plus
+ * the raw signals so the admin debug view can render the breakdown.
+ *
+ * Pure function — no fetching, no clock reads. Callers pass `hour` and
+ * `customerAttachByItemId` so tests can pin the signals.
+ */
+export function scorePairing(
+  item: MenuItem,
+  context: PairingContext,
+): PairingScore {
+  const baseAttach = CATEGORY_BASE_ATTACH[item.category] ?? 0.1;
+  const margin = item.cost > 0 ? Math.max(0, (item.price - item.cost) / item.price) : 0.5;
+  const marginSignal = clamp01(margin * baseAttach * 1.4);
+
+  let hourBias = 0.5;
+  if (typeof context.hour === "number") {
+    const h = ((Math.floor(context.hour) % 24) + 24) % 24;
+    hourBias = CATEGORY_HOUR_BIAS[item.category]?.[h] ?? 0.5;
+  }
+
+  const orderCount = context.customerOrderCount ?? 0;
+  const attachCount = context.customerAttachByItemId?.[item.id] ?? 0;
+  let customerSignal = 0.5;
+  let noveltyDecay = 0;
+  if (orderCount > 0) {
+    const rate = attachCount / orderCount;
+    customerSignal = clamp01(rate * 0.95 + 0.5 * (1 - Math.min(1, rate)));
+    if (rate >= 0.75) {
+      // They always add it — quietly rotate to the next-best earner.
+      noveltyDecay = -0.12;
+    } else if (rate === 0 && orderCount >= 2) {
+      // Established customer who hasn't tried — small novelty bonus.
+      noveltyDecay = 0.08;
+    }
+  } else {
+    // Brand new — small bonus across the board to surface variety.
+    noveltyDecay = 0.05;
+  }
+
+  const composite = clamp01(
+    marginSignal * 0.4 + hourBias * 0.3 + customerSignal * 0.3 + noveltyDecay,
+  );
+
+  return {
+    composite,
+    margin: marginSignal,
+    hourBias,
+    customer: customerSignal,
+    noveltyDecay,
+  };
+}
+
+function clamp01(n: number): number {
+  if (!Number.isFinite(n)) return 0;
+  if (n < 0) return 0;
+  if (n > 1) return 1;
+  return n;
+}
+
 // --- Cross-sell rules: suggest complementary categories ---
 
 const CROSS_SELL_MAP: Record<MenuCategory, MenuCategory[]> = {
@@ -110,6 +257,26 @@ export interface UpsellSuggestion {
   priority: number; // lower = shown first
 }
 
+/**
+ * Per-item reason copy overrides — keyed by item id suffix so a single
+ * entry covers both Kraków (`krk-...`) and Warszawa (`waw-...`). Production
+ * brand voice for the chip subtitle. Anything not in this map falls back
+ * to the priority-rule copy below ("Perfect after your meal …").
+ */
+const ITEM_REASON_OVERRIDES: Record<string, string> = {
+  "drink-espresso": "Never too late",
+  "dessert-tiramisu": "Pizzaiolo's fav",
+  "anti-burrata": "Freshly-baked today",
+  "anti-bruschetta": "Freshly-baked today",
+};
+
+function reasonForItem(item: MenuItem, fallback: string): string {
+  for (const [suffix, copy] of Object.entries(ITEM_REASON_OVERRIDES)) {
+    if (item.id.endsWith(suffix)) return copy;
+  }
+  return fallback;
+}
+
 // Default preferred cross-sell items per location
 const DEFAULT_PREFERRED_COFFEE: Record<string, string> = {
   krakow: "krk-drink-espresso",
@@ -130,7 +297,14 @@ export function getCartSuggestions(
   cartItems: CartItem[],
   allMenuItems: MenuItem[],
   maxSuggestions: number = 4,
-  config?: UpsellConfig | null
+  config?: UpsellConfig | null,
+  /**
+   * Optional pairing context (audit §3.1). When present, candidates are
+   * re-ranked by `scorePairing()` × the canonical priority so the chips
+   * shift with hour-of-day and the customer's history. Pure / opt-in:
+   * absent context keeps today's deterministic order.
+   */
+  pairingContext?: PairingContext | null,
 ): UpsellSuggestion[] {
   if (cartItems.length === 0 || allMenuItems.length === 0) return [];
 
@@ -164,7 +338,7 @@ export function getCartSuggestions(
     if (anyCoffee) {
       suggestions.push({
         item: anyCoffee,
-        reason: "Perfect after your meal — Italian espresso",
+        reason: reasonForItem(anyCoffee, "Perfect after your meal — Italian espresso"),
         priority: 1,
       });
     }
@@ -177,7 +351,7 @@ export function getCartSuggestions(
     if (anyDessert) {
       suggestions.push({
         item: anyDessert,
-        reason: "Finish with our signature Tiramisù",
+        reason: reasonForItem(anyDessert, "Finish with our signature Tiramisù"),
         priority: 2,
       });
     }
@@ -190,7 +364,7 @@ export function getCartSuggestions(
     if (anyDrink) {
       suggestions.push({
         item: anyDrink,
-        reason: "Add a refreshing drink to your order",
+        reason: reasonForItem(anyDrink, "Add a refreshing drink to your order"),
         priority: 3,
       });
     }
@@ -202,16 +376,56 @@ export function getCartSuggestions(
     if (pizza) {
       suggestions.push({
         item: pizza,
-        reason: "Add a pizza to make it a meal",
+        reason: reasonForItem(pizza, "Add a pizza to make it a meal"),
         priority: 4,
       });
     }
   }
 
-  // Sort by priority and limit
+  // Sort: priority first (canonical espresso → dessert → drink ladder), then
+  // composite pairing score within the same priority bucket so two equally
+  // hot candidates resolve by margin × hour × customer (§3.1). The reason
+  // copy also pivots when the customer has a strong attach signal.
+  if (pairingContext) {
+    const scored = suggestions.map((s) => ({
+      s,
+      score: scorePairing(s.item, pairingContext).composite,
+    }));
+    scored.sort((a, b) => {
+      if (a.s.priority !== b.s.priority) return a.s.priority - b.s.priority;
+      return b.score - a.score;
+    });
+    return scored.slice(0, maxSuggestions).map(({ s }) => ({
+      ...s,
+      reason: contextualReason(s, pairingContext),
+    }));
+  }
+
   return suggestions
     .sort((a, b) => a.priority - b.priority)
     .slice(0, maxSuggestions);
+}
+
+/**
+ * Pivot the chip's reason copy when the customer has a strong attach
+ * signal — "you added it 3 of last 4 visits" reads as recognition, not as
+ * a generic recommendation. Falls back to the canonical reason otherwise.
+ */
+function contextualReason(
+  s: UpsellSuggestion,
+  ctx: PairingContext,
+): string {
+  const orderCount = ctx.customerOrderCount ?? 0;
+  const attach = ctx.customerAttachByItemId?.[s.item.id] ?? 0;
+  // Strong attach signal → recognition copy. Even when the item has a
+  // brand-voice override, "you added it 3 of last 4 visits" is more
+  // useful in the chip subtitle.
+  if (orderCount >= 2 && attach >= 2 && attach / orderCount >= 0.5) {
+    return `You added it ${attach} of last ${orderCount} visits`;
+  }
+  // Otherwise the per-item brand voice (Pizzaiolo's fav etc) wins, with
+  // the priority-rule copy as the final fallback.
+  return reasonForItem(s.item, s.reason);
 }
 
 // --- Combo / Bundle Deals ---
@@ -352,13 +566,17 @@ export function computeDeliveryFee(
   return DELIVERY_FEE_GROSZE;
 }
 
-// --- Per-segment free-delivery threshold (audit §2.5 Uber Eats) ----------
+// --- Per-segment free-delivery threshold (audit §2.5 + §3.3) -------------
 //
-// First-time customers see a lower bar (less friction to first conversion);
-// regulars see the standard 60 PLN; Gold/Platinum members get free delivery
-// always as a retention perk. The numbers below match the audit's table.
+// Four bands, each tuned to where the customer is in their lifecycle:
+//   first-time (orders < 2)      → 39 PLN — remove friction on visit 1
+//   growing    (orders 2–4)      → 49 PLN — slight raise as confidence builds
+//   regular    (orders ≥ 5)      → 59 PLN — they'll hit it anyway
+//   vip        (Gold / Platinum) → free   — surface as a tier perk
+// Numbers match the §3.3 table; Uber Eats reported ~+4% GMV / customer
+// from the same shape.
 
-export type CustomerSegment = "first-time" | "regular" | "vip";
+export type CustomerSegment = "first-time" | "growing" | "regular" | "vip";
 
 /** Resolved tier should be calculated upstream via `calculateTier(points)`
  *  from `@/lib/loyalty` — kept as a plain string here to avoid an import
@@ -369,9 +587,10 @@ export interface CustomerSegmentInput {
 }
 
 export const SEGMENT_FREE_DELIVERY_THRESHOLD: Record<CustomerSegment, number> = {
-  "first-time": 3900, // 39 PLN — low bar to remove friction on visit 1
-  regular: FREE_DELIVERY_THRESHOLD, // 60 PLN (default)
-  vip: 0, // Gold / Platinum — always free
+  "first-time": 3900, // 39 PLN
+  growing: 4900, // 49 PLN
+  regular: 5900, // 59 PLN — slightly under the legacy 60 PLN bar
+  vip: 0,
 };
 
 export function getCustomerSegment(
@@ -382,6 +601,7 @@ export function getCustomerSegment(
   if (tier === "gold" || tier === "platinum") return "vip";
   const orders = customer.ordersCount ?? 0;
   if (orders < 2) return "first-time";
+  if (orders < 5) return "growing";
   return "regular";
 }
 

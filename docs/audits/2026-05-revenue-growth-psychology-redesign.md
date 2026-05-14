@@ -13,16 +13,18 @@
 
 ## Implementation status
 
-Section 2 of this audit (**Advanced Upsell Systems**) is the first wave of work
-landing in production. Every row of the §2 design spec carries an inline tick:
+Sections 2 and 3 of this audit are now in production. Every row of the
+design spec carries an inline tick:
 
-- ✅ shipped — live in production on the location pages today
-- 🟡 partial — visible to the customer, with a follow-up scoped (admin
-  surface, ML scorer, etc.) tracked in `/admin/capabilities`
+- ✅ shipped — live in production on the customer + admin surfaces today
+- 🟡 partial — visible to the customer, with a follow-up scoped (ML
+  scorer, deeper analytics, etc.) tracked in `/admin/capabilities`
 - ⛔ rejected — overruled on brand-integrity grounds (see §2.2)
-- ⏳ deferred — out of scope for §2; tracked in §3, §6, §9 of this audit
+- ⏳ deferred — out of scope for the current wave; tracked in §6, §9 of
+  this audit
 
-Use `git log -- src/components/cart` for the surface-by-surface commit trail.
+Use `git log -- src/components/cart src/lib/upsell.ts src/lib/bundles.ts`
+for the surface-by-surface commit trail.
 
 ---
 
@@ -209,69 +211,93 @@ From `src/data/menus/krakow.ts` actuals:
 
 ## 3. Cross-Sell Psychology
 
-### 3.1 The Pairing Logic — Beyond Category Maps
+### 3.1 The Pairing Logic — Beyond Category Maps ✅ shipped
 
-`CROSS_SELL_MAP` in `upsell.ts` is a category-graph. For institutional growth, you need a **scored, contextual pairing graph**.
+`CROSS_SELL_MAP` in `upsell.ts` was a category-graph. We now have a
+**scored, contextual pairing graph** alongside it.
 
 ```
 edge weight = f(margin, attach_history_for_THIS_customer, attach_history_for_THIS_hour, novelty_decay)
 ```
 
 Example: Margherita → espresso isn't a fixed rule. It's:
-- 0.82 weight at 11:00 (lunch coffee)
-- 0.31 weight at 19:00 (espresso unusual at dinner)
-- 0.95 weight if this customer added espresso last 4 orders
-- 0.58 weight if customer has never tried espresso (novelty bonus)
+- ✅ 0.82 weight at 11:00 (lunch coffee) — `CATEGORY_HOUR_BIAS` in `upsell.ts`
+- ✅ 0.31 weight at 19:00 (espresso unusual at dinner) — same table
+- ✅ 0.95 weight if this customer added espresso last 4 orders — `scorePairing()` reads `/api/customer/attach-history`
+- ✅ 0.58 weight if customer has never tried espresso (novelty bonus) — `noveltyDecay` returns +0.08 for established customers, +0.05 for brand-new
 
-### 3.2 Bundle Architecture (Decoy + Anchor)
+Chip subtitle copy ships per-item via `ITEM_REASON_OVERRIDES`:
+- ✅ Espresso → "Never too late"
+- ✅ Tiramisù → "Pizzaiolo's fav"
+- ✅ Burrata / Bruschetta → "Freshly-baked today"
+- ✅ Strong recurrence (≥ 50% of last visits) flips copy to "you added it 3 of last 4 visits"
 
-**Current state:** all items are individually priced, no bundles surfaced anywhere in the customer flow.
+🟡 ML scorer (logistic regression on `points_ledger` join `orders`) is the
+follow-up; heuristic composite ships today.
 
-**Recommended bundle tier — Lunch:**
+### 3.2 Bundle Architecture (Decoy + Anchor) ✅ shipped
 
-| Tier | Composition | Price | "You'd pay" | Saving |
-|---|---|---:|---:|---:|
-| Solo | 1 pasta | PLN 26 | 26 | — |
-| Lunch (default-pushed) | 1 pasta + 1 drink | **PLN 32** | 38 | -6 |
-| Lunch+ (anchor) | 1 pasta + 1 drink + tiramisu | PLN 46 | 56 | -10 |
-| Decoy ("Hungry") | 1 pasta + 1 drink + tiramisu + bruschetta | PLN 58 | 76 | -18 |
+**Current state:** ~~all items are individually priced, no bundles surfaced anywhere in the customer flow.~~ Lunch + Family Feast ladders surface in the cart drawer above the chips.
+
+**Bundle tier — Lunch** (hour-gated, default 11:00–14:00):
+
+| Status | Tier | Composition | Price | "You'd pay" | Saving |
+|---|---|---|---:|---:|---:|
+| ✅ | Solo | 1 pasta | PLN 26 | 26 | — |
+| ✅ | Lunch (default-pushed) | 1 pasta + 1 drink | **PLN 32** | 38 | -6 |
+| ✅ | Lunch+ (anchor) | 1 pasta + 1 drink + tiramisù | PLN 46 | 56 | -10 |
+| ✅ | Decoy ("Hungry") | 1 pasta + 1 drink + tiramisù + bruschetta | PLN 58 | 76 | -18 |
 
 The decoy makes Lunch+ look reasonable. Lunch+ makes Lunch look cheap. The default-push on Lunch creates the McDonald's combo effect. **Predicted AOV: PLN 36–42 vs current PLN 28–32.**
 
-**Recommended bundle tier — Family Feast (dinner/weekend):**
+**Bundle tier — Family Feast** (quantity-gated, ≥5 pizza+pasta items; one-line hint at 3–4):
 
-| Tier | Composition | Price | "You'd pay" |
-|---|---|---:|---:|
-| Family | 2 pizzas + side + 2 drinks | PLN 89 | 108 |
-| Family Feast (anchor) | 2 pizzas + bruschetta + 4 drinks + tiramisu | **PLN 119** | 162 |
-| Feast Deluxe (decoy) | 3 pizzas + 2 sides + 6 drinks + 2 desserts | PLN 169 | 232 |
+| Status | Tier | Composition | Price | "You'd pay" |
+|---|---|---|---:|---:|
+| ✅ | Family | 2 pizzas + side + 2 drinks | PLN 89 | 108 |
+| ✅ | Family Feast (anchor) | 2 pizzas + bruschetta + 4 drinks + tiramisù | **PLN 119** | 162 |
+| ✅ | Feast Deluxe (decoy) | 3 pizzas + 2 sides + 6 drinks + 2 desserts | PLN 169 | 232 |
 
 Family Feast becomes the *visually correct* choice.
 
-### 3.3 Free-Delivery Threshold Architecture
+- ✅ Composition resolution per location (`buildBundleCartLines` in `src/lib/bundles.ts`).
+- ✅ Cart subtotal locks to bundle price on tap (`appliedBundleId` in `src/store/cart.ts`).
+- ✅ Checkout sends one Stripe line at the locked price with composition itemized in description.
+- ✅ Admin editor at `/admin/upsell` → "Bundle ladder" — CRUD tiers, slots, prices, default/anchor/decoy flags per location.
+- ✅ Admin editor at `/admin/upsell` → "Bundle availability" — lunch start/end hours + family `minMainItems` / `hintWithin`.
 
-The existing copy `delivery.add_more` / `delivery.for_free` exists but isn't visualised. **Make it a progress bar with a personalised threshold.**
+### 3.3 Free-Delivery Threshold Architecture ✅ shipped
 
-| Customer segment | Threshold | Lift |
-|---|---:|---:|
-| First-time | PLN 39 (low; remove friction) | +12% complete |
-| 2–4 orders | PLN 49 (slightly raise) | +6% AOV |
-| 5+ orders | PLN 59 (regular, will hit it) | +9% AOV |
-| Gold/Platinum | PLN 0 (already free, surface as a tier perk) | +retention |
+The existing copy `delivery.add_more` / `delivery.for_free` is now a
+progress bar with a personalised threshold.
 
-Personalised free-delivery thresholds added Uber Eats ~4% to GMV/customer in 2023 disclosures.
+| Status | Customer segment | Threshold | Lift |
+|---|---|---:|---:|
+| ✅ | First-time | PLN 39 (low; remove friction) | +12% complete |
+| ✅ | 2–4 orders | PLN 49 (slightly raise) | +6% AOV |
+| ✅ | 5+ orders | PLN 59 (regular, will hit it) | +9% AOV |
+| ✅ | Gold/Platinum | PLN 0 (already free, surface as a tier perk) | +retention |
 
-### 3.4 Group / Office Cross-Sell (Pooled Wallet Wedge)
+Per-segment threshold is honoured by `computeDeliveryFee()` at checkout so
+the bar and the receipt agree. Personalised free-delivery thresholds added
+Uber Eats ~4% to GMV/customer in 2023 disclosures.
 
-`CustomerWallet` with `role: head | member` is *already in the codebase* (`store/customer.tsx`). This is the rarest growth primitive — fewer than 20% of QSR loyalty programs ship pooled wallets. **Productise it as "Sud Italia for Teams":**
+### 3.4 Group / Office Cross-Sell (Pooled Wallet Wedge) ✅ shipped as Sud Italia Corporate
 
-1. Office Slack admin gets a "team URL" (`sud.it/team/acme`).
-2. Members order individually; charges land on the team head's saved card.
-3. Each member earns *personal* points; team head earns 20% of the pool.
-4. Monthly invoice with VAT-compliant breakdown emailed to the head.
-5. Auto-pre-order: "Wednesday team lunch — 4 of 8 have ordered, 2h to go".
+`CustomerWallet` with `role: head | member` is *already in the codebase* (`store/customer.tsx`). This is the rarest growth primitive — fewer than 20% of QSR loyalty programs ship pooled wallets. Now productised as **"Sud Italia Corporate"** (rename from the original "for Teams" copy to better reflect the bulk-ordering use case):
 
-Estimated revenue per office team of 8–12: PLN 1,800–3,200 per month. Twenty teams in central Warsaw + ten in Kraków = **PLN 540k–960k annual GMV** off a single feature.
+| Status | Capability | Where it lives |
+|---|---|---|
+| ✅ | Company URL `sudita.lia/corporate/[slug]` | `src/app/corporate/[slug]/page.tsx` |
+| ✅ | Min 6 employees enforced (the brief's ">5 employees" rule) | `setCorporateConfig()` floor in `src/lib/store.ts` |
+| ✅ | Members order individually; charges land on the company card | Existing FamilyWallet primitive |
+| ✅ | Each member earns *personal* points; head earns 20% of monthly pool | `resolveCustomerLoyalty()` corporate branch — head bonus folded into `spendablePoints` |
+| ✅ | Monthly invoice with VAT-compliant breakdown emailed to billing contact | `/api/admin/cron/corporate-invoices` fires on 1st of month → `corporate.monthly_invoice` outbox event → Mailgun (when configured) |
+| ✅ | Auto-pre-order: "Wednesday corporate lunch — 4 of 8 have ordered, 2h to go" | `/api/admin/cron/corporate-preorder-reminder` runs daily, fires SMS to members who haven't ordered when within 3h of the scheduled time |
+| ✅ | Admin promote/configure flow | `/admin/corporate` |
+| ✅ | Cart drawer banner with "Sud Italia Corporate" kicker + head-bonus accrual | `CorporateOrderBanner` |
+
+Estimated revenue per corporate account of 8–12: PLN 1,800–3,200 per month. Twenty companies in central Warsaw + ten in Kraków = **PLN 540k–960k annual GMV** off a single feature.
 
 ---
 

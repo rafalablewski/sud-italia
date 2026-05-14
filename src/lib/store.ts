@@ -15,10 +15,10 @@ import { withDistributedLock } from "@/lib/locks";
 import { emitOrderEvent } from "@/lib/order-events";
 import { appendOutboxEvent } from "@/lib/outbox";
 import { incrCounter } from "@/lib/metrics";
-import { and, asc, desc, eq, inArray, lt, sql as drizzleSql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lt, ne, sql as drizzleSql } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { allergenIncidents as allergenIncidentsTable, auditLog as auditLogTable, brands as brandsTable, customerNotes as customerNotesTable, customers as customersTable, feedback as feedbackTable, franchisees as franchiseesTable, ingredientStock as ingredientStockTable, ingredients as ingredientsTable, kdsTickets as kdsTicketsTable, locationAssignments as locationAssignmentsTable, loyaltyMembers as loyaltyMembersTable, menuItemStation as menuItemStationTable, orderItems as orderItemsTable, orders as ordersTable, pointAdjustments as pointAdjustmentsTable, recipes as recipesTable, royaltyStatements as royaltyStatementsTable, shifts as shiftsTable, slots as slotsTable, staff as staffTable, stations as stationsTable, stockMovements as stockMovementsTable, tempLogs as tempLogsTable, timePunches as timePunchesTable } from "@/db/schema";
-import { gte, lte } from "drizzle-orm";
+import { lte } from "drizzle-orm";
 import { bumpLazyBackfillHit, ensureTable } from "@/db/migrate";
 
 // --- Storage abstraction: Neon Postgres when DATABASE_URL is set, filesystem fallback for local dev ---
@@ -960,6 +960,61 @@ export async function getOrders(locationSlug?: string): Promise<Order[]> {
     void Promise.all(filtered.map((o) => dualWriteOrder(o)));
   }
   return filtered;
+}
+
+/**
+ * Phone-filtered order read. Uses the `orders_customer_phone_idx` index in
+ * Postgres so a customer with N total orders out of an order table of size
+ * M is O(N log M) instead of the O(M) scan that the in-memory filter does
+ * on top of `getOrders()`. Falls back to the filesystem store + manual
+ * filter when no DB is configured. Excludes `pending` orders by default
+ * since callers (loyalty, attach-history, corporate pool) always do that.
+ */
+export async function getOrdersByPhone(
+  phoneRaw: string,
+  opts?: { sinceIso?: string; includePending?: boolean },
+): Promise<Order[]> {
+  const canonical = normalizePlPhoneE164(phoneRaw) || phoneRaw.trim();
+  if (!canonical) return [];
+
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureOrdersTable();
+      const where = [eq(ordersTable.customerPhone, canonical)];
+      if (!opts?.includePending) {
+        where.push(ne(ordersTable.status, "pending"));
+      }
+      if (opts?.sinceIso) {
+        where.push(gte(ordersTable.createdAt, new Date(opts.sinceIso)));
+      }
+      const rows = await db
+        .select()
+        .from(ordersTable)
+        .where(and(...where))
+        .orderBy(desc(ordersTable.createdAt));
+      // Even when rows.length === 0 we trust the DB result — empty is a
+      // valid answer for a phone with no past orders.
+      return rows.map(rowToOrder);
+    } catch (err) {
+      logger.warn(
+        "getOrdersByPhone DB read failed; falling back to kv_store",
+        { layer: "store.orders" },
+        err,
+      );
+    }
+  }
+
+  // Filesystem fallback — same in-memory filter the old call sites used.
+  const orders = await readJSON<Order[]>("orders.json", []);
+  const sinceMs = opts?.sinceIso ? new Date(opts.sinceIso).getTime() : -Infinity;
+  return orders.filter(
+    (o) =>
+      o.customerPhone &&
+      phonesEqualPl(o.customerPhone, canonical) &&
+      (opts?.includePending || o.status !== "pending") &&
+      new Date(o.createdAt).getTime() >= sinceMs,
+  );
 }
 
 export async function getOrderById(id: string): Promise<Order | undefined> {
@@ -2498,6 +2553,46 @@ export interface FamilyWallet {
   headPhone: string;
   createdAt: string;
   members: WalletMemberEntry[];
+  /**
+   * When set, productises this wallet as a "Sud Italia Corporate" account
+   * (audit §3.4) — adds a public corporate URL, billing email for the
+   * admin's monthly invoice, and a head-bonus accrual rate so the
+   * company contact earns a slice of the corporate pool. Members continue
+   * to earn personal points exactly as a solo customer would.
+   *
+   * Corporate is intended for companies with more than 5 employees ordering
+   * in bulk; the `minEmployees` threshold (default 6) enforces eligibility
+   * at promotion time and is surfaced on the public landing page.
+   */
+  corporate?: CorporateConfig;
+}
+
+export interface CorporateConfig {
+  /** URL slug used at /corporate/[slug]. Lowercase, alphanumeric + dash. */
+  slug: string;
+  /** Company name (e.g. "Acme", "Allegro"). */
+  name: string;
+  /** Email the monthly VAT-compliant invoice goes to. */
+  billingEmail?: string;
+  /**
+   * Head bonus, expressed in basis points of the pool. 2000 = 20%.
+   * Surfaces inside the loyalty engine; the company head's spendable
+   * points are boosted by this multiplier of the corporate monthly pool.
+   */
+  headBonusBps: number;
+  /**
+   * Minimum employee count required for the corporate program. Default 6
+   * so the brief's ">5 employees" is enforced. Surfaced on the public
+   * landing page so prospects know the threshold up-front.
+   */
+  minEmployees: number;
+  /** Optional weekly auto-pre-order schedule. Used by the cart-drawer
+   *  banner copy (&ldquo;Wednesday corporate lunch — 4 of 8 have ordered, 2h to go&rdquo;). */
+  autoPreorderDay?: number; // 0 = Sun, 1 = Mon, ..., 6 = Sat
+  autoPreorderTime?: string; // "HH:MM" local
+  /** Pinned location for the company's standing order. */
+  locationSlug?: string;
+  createdAt: string;
 }
 
 type WalletInviteOtpMap = Record<
@@ -2706,6 +2801,166 @@ export async function leaveFamilyWallet(
   });
 }
 
+// --- Sud Italia Corporate (audit §3.4) ---------------------------------
+//
+// Productises the existing FamilyWallet as a corporate-bulk-ordering
+// primitive. A corporate account is just a wallet with a `corporate` config
+// attached: public slug at /corporate/[slug], billing email for the
+// company contact, an explicit head bonus rate, and a minimum employee
+// threshold (default 6 — the brief's ">5 employees" rule).
+//
+// Members continue to earn personal points exactly as a solo customer would
+// (handled by resolveCustomerLoyalty); the head additionally accrues a slice
+// of the corporate pool via headBonusBps.
+
+const CORPORATE_SLUG_PATTERN = /^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])?$/;
+const CORPORATE_DEFAULT_MIN_EMPLOYEES = 6;
+
+export function normaliseCorporateSlug(raw: string): string | null {
+  const slug = raw.trim().toLowerCase().replace(/\s+/g, "-");
+  if (!CORPORATE_SLUG_PATTERN.test(slug)) return null;
+  return slug;
+}
+
+export async function findCorporateBySlug(slugRaw: string): Promise<FamilyWallet | null> {
+  const slug = normaliseCorporateSlug(slugRaw);
+  if (!slug) return null;
+  const wallets = await getFamilyWallets();
+  return wallets.find((w) => w.corporate?.slug === slug) ?? null;
+}
+
+export async function listCorporateWallets(): Promise<FamilyWallet[]> {
+  const wallets = await getFamilyWallets();
+  return wallets.filter((w) => w.corporate);
+}
+
+export type SetCorporateConfigResult =
+  | { ok: true; wallet: FamilyWallet }
+  | { error: string };
+
+/**
+ * Promote an existing wallet to a corporate account (or update an existing
+ * one's config). Slug must be unique across corporates. Caller must have
+ * already verified that `headPhone` matches the wallet's owner — this
+ * helper trusts the input.
+ *
+ * `minEmployees` defaults to 6 (the brief's ">5 employees" rule). The
+ * landing page surfaces the threshold so prospects know up-front.
+ */
+export async function setCorporateConfig(
+  walletId: string,
+  corporate: Omit<CorporateConfig, "createdAt" | "minEmployees"> & {
+    createdAt?: string;
+    minEmployees?: number;
+  },
+): Promise<SetCorporateConfigResult> {
+  const slug = normaliseCorporateSlug(corporate.slug);
+  if (!slug) {
+    return { error: "Invalid corporate slug. Use lowercase letters, digits, and dashes (3–40 chars)." };
+  }
+  if (!corporate.name.trim()) {
+    return { error: "Company name is required" };
+  }
+  if (!Number.isFinite(corporate.headBonusBps) || corporate.headBonusBps < 0 || corporate.headBonusBps > 5000) {
+    return { error: "Head bonus must be 0–5000 bps (0–50%)" };
+  }
+  const minEmployeesRaw =
+    typeof corporate.minEmployees === "number" && Number.isFinite(corporate.minEmployees)
+      ? corporate.minEmployees
+      : CORPORATE_DEFAULT_MIN_EMPLOYEES;
+  // Brief: corporate is for companies with >5 employees, so the floor is 6.
+  if (minEmployeesRaw < 6) {
+    return { error: "Corporate accounts require at least 6 employees (>5)." };
+  }
+  return withLock("wallets.json", async () => {
+    const list = await readJSON<FamilyWallet[]>("wallets.json", []);
+    const w = list.find((x) => x.id === walletId);
+    if (!w) return { error: "Wallet not found" };
+    const collision = list.find((x) => x.id !== walletId && x.corporate?.slug === slug);
+    if (collision) return { error: "That corporate URL is taken" };
+    const now = new Date().toISOString();
+    w.corporate = {
+      slug,
+      name: corporate.name.trim(),
+      billingEmail: corporate.billingEmail?.trim() || undefined,
+      headBonusBps: Math.round(corporate.headBonusBps),
+      minEmployees: Math.round(minEmployeesRaw),
+      autoPreorderDay: corporate.autoPreorderDay,
+      autoPreorderTime: corporate.autoPreorderTime?.trim() || undefined,
+      locationSlug: corporate.locationSlug?.trim() || undefined,
+      createdAt: w.corporate?.createdAt ?? corporate.createdAt ?? now,
+    };
+    await writeJSON("wallets.json", list);
+    return { ok: true, wallet: w };
+  });
+}
+
+export async function clearCorporateConfig(walletId: string): Promise<{ ok: true } | { error: string }> {
+  return withLock("wallets.json", async () => {
+    const list = await readJSON<FamilyWallet[]>("wallets.json", []);
+    const w = list.find((x) => x.id === walletId);
+    if (!w) return { error: "Wallet not found" };
+    if (!w.corporate) return { ok: true };
+    delete w.corporate;
+    await writeJSON("wallets.json", list);
+    return { ok: true };
+  });
+}
+
+/** Public-facing corporate rollup (no PII beyond what the head shares). */
+export interface PublicCorporateRollup {
+  slug: string;
+  name: string;
+  memberCount: number;
+  minEmployees: number;
+  poolEarnedThisMonth: number;
+  headBonusPoints: number;
+  headBonusBps: number;
+  autoPreorderDay?: number;
+  autoPreorderTime?: string;
+  locationSlug?: string;
+}
+
+export async function getPublicCorporateRollup(slugRaw: string): Promise<PublicCorporateRollup | null> {
+  const wallet = await findCorporateBySlug(slugRaw);
+  if (!wallet || !wallet.corporate) return null;
+
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+
+  const activePhones = wallet.members
+    .filter((m) => m.status === "active")
+    .map((m) => m.phone);
+
+  // Phone-by-phone indexed query rather than a full table scan filtered in
+  // memory. Each call is O(N_phone) on the orders_customer_phone_idx +
+  // a createdAt range filter, and we run one per active member so the
+  // overall cost is O(members × per-member orders) — bounded by the team
+  // size (max ~12), not the total order volume.
+  let poolEarnedThisMonth = 0;
+  for (const p of activePhones) {
+    const monthOrders = await getOrdersByPhone(p, { sinceIso: monthStart.toISOString() });
+    const totalSpent = monthOrders.reduce((s, o) => s + o.totalAmount, 0);
+    poolEarnedThisMonth += Math.floor(totalSpent / 100);
+  }
+
+  const headBonusPoints = Math.floor((poolEarnedThisMonth * wallet.corporate.headBonusBps) / 10_000);
+
+  return {
+    slug: wallet.corporate.slug,
+    name: wallet.corporate.name,
+    memberCount: wallet.members.length,
+    minEmployees: wallet.corporate.minEmployees,
+    poolEarnedThisMonth,
+    headBonusPoints,
+    headBonusBps: wallet.corporate.headBonusBps,
+    autoPreorderDay: wallet.corporate.autoPreorderDay,
+    autoPreorderTime: wallet.corporate.autoPreorderTime,
+    locationSlug: wallet.corporate.locationSlug,
+  };
+}
+
 // --- Wallet + solo redemptions (ledger) ---
 
 export interface WalletRedemption {
@@ -2898,6 +3153,15 @@ export interface CustomerWalletPayload {
   headRedeemCap: number;
   memberRedeemCap: number;
   members: { phone: string; status: WalletMemberStatus; isHead: boolean; contributedPoints: number }[];
+  /**
+   * Corporate config (audit §3.4). Populated when this wallet has been
+   * productised as a Sud Italia Corporate account. Lets the cart drawer
+   * surface the "Ordering with [company]" banner without an extra fetch.
+   */
+  corporate?: {
+    slug: string;
+    name: string;
+  };
 }
 
 export interface ResolveCustomerLoyaltyResult {
@@ -2969,6 +3233,75 @@ export async function resolveCustomerLoyalty(
         headRedeemCap: 0,
         memberRedeemCap: Math.max(0, soloEarned - soloRed),
         members: membersPayload,
+        corporate: wallet.corporate
+          ? { slug: wallet.corporate.slug, name: wallet.corporate.name }
+          : undefined,
+      },
+    };
+  }
+
+  // --- Corporate wallets (audit §3.4) ----------------------------------
+  // Each employee behaves as a solo customer for earnings + redemptions —
+  // their personal points stay with them. The HEAD additionally accrues a
+  // month-to-date bonus equal to `headBonusBps` × (sum of all active
+  // members' this-month order points). The bonus is recomputed on read
+  // and folded into the head's spendablePoints so it's immediately usable
+  // for rewards.
+  if (wallet.corporate) {
+    const soloRed = sumSoloRedemptionsForPhone(redemptions, canonical);
+    const walletRedByMe = sumMemberWalletRedemptions(redemptions, wallet.id, canonical);
+    const mySpendable = Math.max(0, soloEarned - soloRed - walletRedByMe);
+
+    let headBonus = 0;
+    let monthlyPool = 0;
+    if (isHead) {
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+      const activePhones = wallet.members
+        .filter((m) => m.status === "active")
+        .map((m) => m.phone);
+      // Indexed phone-by-phone query so we don't rescan the entire
+      // orders table per member. Each call uses orders_customer_phone_idx.
+      for (const p of activePhones) {
+        const monthOrders = await getOrdersByPhone(p, {
+          sinceIso: monthStart.toISOString(),
+        });
+        monthlyPool += monthOrders.reduce(
+          (sum, o) => sum + Math.floor(o.totalAmount / 100),
+          0,
+        );
+      }
+      headBonus = Math.floor((monthlyPool * wallet.corporate.headBonusBps) / 10_000);
+    }
+
+    const membersPayload: CustomerWalletPayload["members"] = await Promise.all(
+      wallet.members.map(async (m) => ({
+        phone: m.phone,
+        status: m.status,
+        isHead: phonesEqualPl(m.phone, wallet.headPhone),
+        contributedPoints: await earnedPointsForPhone(m.phone, orders),
+      })),
+    );
+
+    return {
+      ordersCount,
+      points: soloEarned + headBonus,
+      spendablePoints: mySpendable + headBonus,
+      wallet: {
+        id: wallet.id,
+        role: isHead ? "head" : "member",
+        myStatus: "active",
+        // Surface the rolling head-bonus pool so the head's UI can show
+        // "428 pts head bonus this month". Members see 0 — they have no
+        // pool exposure.
+        poolEarned: isHead ? monthlyPool : 0,
+        spendablePool: isHead ? headBonus : 0,
+        myContributedPoints: soloEarned,
+        headRedeemCap: mySpendable + headBonus,
+        memberRedeemCap: mySpendable,
+        members: membersPayload,
+        corporate: { slug: wallet.corporate.slug, name: wallet.corporate.name },
       },
     };
   }
@@ -3020,6 +3353,8 @@ export async function resolveCustomerLoyalty(
       headRedeemCap,
       memberRedeemCap,
       members: membersPayload,
+      // Corporate wallets returned earlier; this branch is non-corporate
+      // family wallets only, so `corporate` is always undefined here.
     },
   };
 }
@@ -3465,6 +3800,38 @@ export interface LocationTimeWindow {
   active: boolean;
 }
 
+/**
+ * Bundle ladder definition (audit §3.2). Stored next to combos so the same
+ * /admin/upsell page edits both. When empty or unset, the customer cart
+ * falls back to `DEFAULT_BUNDLES` from src/lib/bundles.ts.
+ */
+export interface LocationBundleSlot {
+  /** "category" → any item of `category`; "item" → menu items whose id
+   *  ends with `itemIdSuffix` (e.g. "anti-bruschetta"). */
+  kind: "category" | "item";
+  category?: string;
+  itemIdSuffix?: string;
+  quantity: number;
+}
+
+export interface LocationBundle {
+  id: string;
+  /** Short tier label rendered in the chip header — Solo / Lunch / Lunch+ / Hungry. */
+  tier: string;
+  name: string;
+  description: string;
+  priceGrosze: number;
+  /** Strikethrough reference price — drives the "Save X" badge. */
+  refPriceGrosze: number;
+  composition: LocationBundleSlot[];
+  /** "lunch" | "family" — drives which ladder shows in the cart. */
+  mealPeriod: string;
+  isAnchor?: boolean;
+  isDecoy?: boolean;
+  isDefault?: boolean;
+  active: boolean;
+}
+
 export interface LocationUpsellConfig {
   popularItems: string[];
   staffPicks: string[];
@@ -3476,6 +3843,18 @@ export interface LocationUpsellConfig {
    *  unset or empty so existing locations keep working before the admin
    *  has saved a custom schedule. */
   timeWindows?: LocationTimeWindow[];
+  /** Optional. Falls back to DEFAULT_BUNDLES in src/lib/bundles.ts when
+   *  unset or empty so the cart ladder still has tiers to render. */
+  bundles?: LocationBundle[];
+  /**
+   * Per-ladder availability rules (audit §3.2 follow-up). Lunch ladder
+   * is hour-gated, Family Feast ladder is quantity-gated. Falls back to
+   * DEFAULT_BUNDLE_RULES from src/lib/bundles.ts when unset.
+   */
+  bundleRules?: {
+    lunch?: { startHour: number; endHour: number };
+    family?: { minMainItems: number; hintWithin: number };
+  };
 }
 
 export type UpsellSettings = Record<string, LocationUpsellConfig>;

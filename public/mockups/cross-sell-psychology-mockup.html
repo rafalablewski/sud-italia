@@ -1,0 +1,1673 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Sud Italia — Cross-sell Psychology v1 (mockup)</title>
+  <style>
+    /* ------------------------------------------------------------------
+       Production tokens (mirror of src/app/globals.css @theme block)
+       — kept identical to cart-upsell-mockup.html so the two files render
+       in the exact same visual vocabulary.
+       ------------------------------------------------------------------ */
+    :root {
+      --color-background: #FFF8F0;
+      --color-foreground: #1A1A1A;
+      --color-italia-red: #C8102E;
+      --color-italia-red-dark: #A00D24;
+      --color-italia-green: #008C45;
+      --color-italia-green-dark: #006B35;
+      --color-italia-cream: #FFF8F0;
+      --color-italia-cream-dark: #F5EDDF;
+      --color-italia-gold: #B8922E;
+      --color-italia-gold-dark: #9A7A24;
+      --color-italia-dark: #1A1A1A;
+      --color-italia-gray: #6B7280;
+      --color-italia-light-gray: #F3F4F6;
+      --gray-50:  #F9FAFB;
+      --gray-100: #F3F4F6;
+      --gray-200: #E5E7EB;
+      --gray-300: #D1D5DB;
+      --gray-400: #9CA3AF;
+      --font-heading: Georgia, "Times New Roman", serif;
+      --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--color-italia-cream);
+      font-family: var(--font-body);
+      color: var(--color-italia-dark);
+      min-height: 100vh;
+      padding: 28px 20px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    h1, h2, h3, h4 { font-family: var(--font-heading); font-weight: 600; }
+    h1 { font-size: 30px; line-height: 1.15; margin: 0 0 8px; }
+    h2 { font-size: 20px; line-height: 1.2; margin: 0 0 8px; }
+
+    .page {
+      max-width: 1180px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 28rem;
+      gap: 32px;
+      align-items: start;
+    }
+    @media (max-width: 980px) { .page { grid-template-columns: 1fr; } }
+
+    .lede { color: var(--color-italia-gray); font-size: 14px; line-height: 1.55; max-width: 720px; }
+
+    .panel {
+      background: white;
+      border: 1px solid var(--gray-100);
+      border-radius: 14px;
+      padding: 22px;
+      margin-bottom: 18px;
+      box-shadow: 0 1px 0 rgba(26,26,26,0.02);
+    }
+    .panel.muted { background: #FFFDF9; }
+
+    .pill {
+      display: inline-block;
+      font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+      padding: 4px 10px; border-radius: 999px;
+      background: var(--color-italia-cream-dark);
+      color: var(--color-italia-gray);
+      margin-bottom: 10px; font-weight: 600;
+    }
+    .pill.live { background: rgba(0,140,69,0.10); color: var(--color-italia-green-dark); }
+    .pill.gold { background: rgba(184,146,46,0.12); color: var(--color-italia-gold-dark); }
+
+    .controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    .seg {
+      display: inline-flex; flex-wrap: wrap; gap: 2px;
+      background: var(--color-italia-cream-dark);
+      border-radius: 12px; padding: 4px;
+    }
+    .seg button {
+      background: transparent; border: 0;
+      padding: 8px 12px; border-radius: 9px;
+      font: inherit; font-size: 13px;
+      color: var(--color-italia-gray); cursor: pointer;
+    }
+    .seg button.active {
+      background: white; color: var(--color-italia-dark);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+      font-weight: 600;
+    }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+    .btn {
+      cursor: pointer; border: 0; font: inherit; font-weight: 500; font-size: 14px;
+      padding: 10px 16px; border-radius: 8px;
+      background: var(--color-italia-dark); color: white;
+      transition: background 0.15s;
+    }
+    .btn:hover { background: #000; }
+    .btn.ghost {
+      background: white; color: var(--color-italia-dark);
+      border: 1px solid var(--gray-200);
+    }
+    .btn.ghost:hover { border-color: var(--gray-300); background: var(--gray-50); }
+    .btn.danger { background: var(--color-italia-red); }
+    .btn.danger:hover { background: var(--color-italia-red-dark); }
+
+    .legend { display: grid; gap: 10px; margin: 12px 0 0; padding: 0; }
+    .legend li {
+      list-style: none;
+      display: grid; grid-template-columns: 28px 1fr; gap: 10px;
+      font-size: 13px; line-height: 1.5;
+      color: var(--color-italia-gray);
+    }
+    .legend li strong { color: var(--color-italia-dark); font-weight: 600; }
+    .marker {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 24px; height: 24px; border-radius: 7px;
+      background: var(--color-italia-cream-dark);
+      font-size: 12px; font-weight: 700; color: var(--color-italia-red);
+    }
+    .checklist { padding-left: 18px; margin: 6px 0 0; }
+    .checklist li { margin: 4px 0; color: var(--color-italia-gray); font-size: 13px; }
+    .checklist li b { color: var(--color-italia-dark); font-weight: 600; }
+    code.kbd {
+      font: 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+      background: var(--color-italia-cream-dark);
+      padding: 2px 6px; border-radius: 5px;
+    }
+
+    /* ==================================================================
+       Drawer — mirrors src/components/ui/Sheet.tsx + CartDrawer.tsx
+       ================================================================== */
+    .drawer-wrap { position: sticky; top: 28px; }
+    @media (max-width: 980px) { .drawer-wrap { position: static; } }
+
+    .drawer {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.10), 0 10px 10px -5px rgba(0,0,0,0.04);
+      overflow: hidden;
+      display: flex; flex-direction: column;
+      height: min(900px, calc(100vh - 56px));
+      position: relative;
+    }
+    .drawer-head {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      border-bottom: 1px solid var(--gray-100);
+      padding: 16px 20px; background: white;
+    }
+    .drawer-head h2 {
+      font-size: 18px; line-height: 1.2; margin: 0;
+      font-family: var(--font-heading);
+      color: var(--color-italia-dark); font-weight: 600;
+    }
+    .drawer-head .count { font-size: 12px; color: var(--color-italia-gray); margin-top: 2px; }
+    .drawer-head .close {
+      border: 0; background: transparent; padding: 6px;
+      border-radius: 999px; cursor: pointer;
+      color: var(--color-italia-dark);
+      transition: background 0.15s;
+    }
+    .drawer-head .close:hover { background: var(--gray-100); }
+
+    .drawer-body { flex: 1; overflow-y: auto; padding: 12px 0 16px; position: relative; }
+    .sec { padding-left: 20px; padding-right: 20px; margin-top: 12px; }
+    .sec:first-child { margin-top: 8px; }
+
+    /* ==================================================================
+       Cart line items (mirrors CartItem.tsx)
+       ================================================================== */
+    .lines { padding: 0 20px; }
+    .line { padding: 16px 0; border-bottom: 1px solid var(--gray-100); }
+    .line:last-child { border-bottom: 0; }
+    .line .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .line .name { font-size: 16px; font-weight: 500; line-height: 1.2; color: var(--color-italia-dark); margin: 0; }
+    .line .each { font-size: 14px; color: var(--color-italia-gray); margin: 2px 0 0; }
+    .line .price { font-size: 16px; font-weight: 600; color: var(--color-italia-dark); flex-shrink: 0; }
+    .line .bot { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
+    .qty-stepper { display: inline-flex; align-items: center; border: 1px solid var(--gray-200); border-radius: 12px; }
+    .qty-stepper button { border: 0; background: transparent; padding: 10px; cursor: pointer; color: var(--color-italia-dark); transition: background 0.15s; }
+    .qty-stepper button:first-child { border-radius: 12px 0 0 12px; }
+    .qty-stepper button:last-child  { border-radius: 0 12px 12px 0; }
+    .qty-stepper button:hover { background: var(--gray-50); }
+    .qty-stepper .n { min-width: 40px; text-align: center; font-size: 16px; font-weight: 500; color: var(--color-italia-dark); }
+    .line-actions { display: inline-flex; align-items: center; gap: 4px; }
+    .note-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 10px; font-size: 12px; font-weight: 500; border: 0; border-radius: 8px; background: transparent; color: var(--color-italia-gray); cursor: pointer; transition: background 0.15s, color 0.15s; }
+    .note-btn:hover { background: var(--gray-50); }
+    .trash-btn { border: 0; background: transparent; padding: 10px; color: var(--gray-400); cursor: pointer; transition: color 0.15s; }
+    .trash-btn:hover { color: var(--color-italia-red); }
+
+    .line.bundle-locked .price::after {
+      content: "in bundle";
+      display: block; font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.04em;
+      color: var(--color-italia-green-dark); margin-top: 2px;
+    }
+
+    /* ==================================================================
+       Loyalty status banner — bg-italia-gold/8 border-italia-gold/15
+       (kept identical to cart-upsell-mockup.html)
+       ================================================================== */
+    .loyalty {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 12px; border-radius: 12px;
+      background: rgba(184, 146, 46, 0.08);
+      border: 1px solid rgba(184, 146, 46, 0.15);
+      font-size: 12px; color: var(--color-italia-dark);
+    }
+    .loyalty .gold { color: var(--color-italia-gold); flex-shrink: 0; }
+    .loyalty .first { font-weight: 600; }
+    .loyalty .pts { color: var(--color-italia-gold-dark); font-weight: 700; margin-left: 4px; }
+    .tier-badge {
+      display: inline-flex; align-items: center; gap: 3px;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+      padding: 2px 6px; border-radius: 4px;
+      background: rgba(184, 146, 46, 0.18);
+      color: var(--color-italia-gold-dark);
+      margin: 0 4px;
+    }
+
+    /* ==================================================================
+       Time-of-day banner (mirrors cart-upsell-mockup.html .tod chrome)
+       ================================================================== */
+    .tod {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 12px; border-radius: 12px;
+      border: 1px solid transparent;
+      transition: background 0.3s, border-color 0.3s;
+    }
+    .tod .icon-tile {
+      flex-shrink: 0; width: 36px; height: 36px;
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 8px;
+    }
+    .tod .body { flex: 1; min-width: 0; }
+    .tod .row1 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .tod .ttl { font-size: 14px; font-weight: 600; line-height: 1.3; color: var(--color-italia-dark); margin: 0; }
+    .tod .sub { font-size: 12px; line-height: 1.4; color: var(--color-italia-gray); margin-top: 4px; }
+    .tod .badge { font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; letter-spacing: 0.02em; }
+    .tod-lunch {
+      background: rgba(184, 146, 46, 0.05);
+      border-color: rgba(184, 146, 46, 0.25);
+    }
+    .tod-lunch .icon-tile { background: rgba(184, 146, 46, 0.15); color: var(--color-italia-gold-dark); }
+    .tod-lunch .badge { background: rgba(184, 146, 46, 0.15); color: var(--color-italia-gold-dark); }
+
+    /* ==================================================================
+       3.4 Team banner — sits above ToD when wallet.team is set
+       Same chrome vocabulary as .tod / .tier-perk; gold→green gradient
+       so it reads as "premium status" without competing with the red CTA.
+       ================================================================== */
+    .team-banner {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 12px; border-radius: 12px;
+      background: linear-gradient(135deg, rgba(184,146,46,0.10) 0%, rgba(0,140,69,0.06) 100%);
+      border: 1px solid rgba(184, 146, 46, 0.30);
+    }
+    .team-banner .crest {
+      flex-shrink: 0; width: 36px; height: 36px;
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 8px; color: white;
+      background: linear-gradient(135deg, var(--color-italia-gold) 0%, var(--color-italia-green) 100%);
+      box-shadow: 0 2px 6px rgba(184,146,46,0.30), inset 0 1px 0 rgba(255,255,255,0.30);
+    }
+    .team-banner .body { flex: 1; min-width: 0; }
+    .team-banner .ttl { font-size: 14px; font-weight: 600; color: var(--color-italia-dark); }
+    .team-banner .ttl .name { font-weight: 700; }
+    .team-banner .sub { font-size: 12px; color: var(--color-italia-gray); margin-top: 2px; line-height: 1.4; }
+    .team-banner .meter {
+      margin-top: 6px; height: 4px; border-radius: 999px;
+      background: rgba(255,255,255,0.55); overflow: hidden;
+    }
+    .team-banner .meter .fill { height: 100%; background: var(--color-italia-green); width: 50%; }
+
+    /* ==================================================================
+       3.2 Bundle ladder — same .complete-head + grid vocabulary as the
+       chip section, but each tile carries a tier ribbon + locked price.
+       ================================================================== */
+    .bundle-head {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 8px; flex-wrap: wrap;
+    }
+    .bundle-head .label {
+      flex: 1; font-size: 12px; font-weight: 600; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--color-italia-gray); margin: 0;
+    }
+    .bundle-head .gold { color: var(--color-italia-gold); }
+    .bundle-head .save-up-to {
+      font-size: 11px; color: var(--color-italia-gold-dark);
+      font-weight: 600; letter-spacing: 0; text-transform: none;
+    }
+    .bundle-head .switcher {
+      font: inherit; font-size: 11px; font-weight: 600;
+      color: var(--color-italia-red);
+      background: transparent; border: 0; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 2px;
+    }
+
+    .bundles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+
+    .bundle {
+      position: relative; text-align: left;
+      background: white;
+      border: 1px solid var(--gray-200);
+      border-radius: 12px;
+      padding: 10px 10px 8px;
+      cursor: pointer;
+      transition: transform 0.12s, border-color 0.15s, box-shadow 0.15s;
+      display: flex; flex-direction: column; gap: 4px;
+      animation: fade-in 0.3s ease-out;
+    }
+    .bundle:hover {
+      border-color: var(--color-italia-gold);
+      box-shadow: 0 4px 12px rgba(184,146,46,0.10);
+      transform: translateY(-1px);
+    }
+    .bundle:active { transform: translateY(0); }
+    .bundle .tier-label {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--color-italia-gray);
+    }
+    .bundle .name {
+      font-family: var(--font-heading); font-size: 14px; font-weight: 600;
+      line-height: 1.15; color: var(--color-italia-dark);
+    }
+    .bundle .composition {
+      font-size: 11px; color: var(--color-italia-gray);
+      line-height: 1.3; min-height: 28px;
+    }
+    .bundle .price-row { display: flex; align-items: baseline; gap: 6px; margin-top: 2px; }
+    .bundle .price { font-size: 16px; font-weight: 700; color: var(--color-italia-red); }
+    .bundle .youdpay { font-size: 11px; color: var(--color-italia-gray); text-decoration: line-through; }
+    .bundle .saving {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+      color: var(--color-italia-green-dark);
+    }
+    /* Default-pushed tier (Most picked) — McDonald's combo effect */
+    .bundle.is-default {
+      border-color: var(--color-italia-red);
+      background: rgba(200, 16, 46, 0.04);
+      box-shadow: 0 2px 6px rgba(200,16,46,0.06);
+    }
+    .bundle.is-default::before {
+      content: "Most picked";
+      position: absolute; top: -10px; left: 12px;
+      font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+      padding: 3px 8px;
+      background: var(--color-italia-red); color: white;
+      border-radius: 999px;
+    }
+    /* Anchor tier — gold "Best value" */
+    .bundle.is-anchor {
+      border-color: var(--color-italia-gold);
+      background: linear-gradient(135deg, rgba(184,146,46,0.06) 0%, rgba(184,146,46,0.02) 100%);
+    }
+    .bundle.is-anchor::before {
+      content: "Best value";
+      position: absolute; top: -10px; left: 12px;
+      font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+      padding: 3px 8px;
+      background: var(--color-italia-gold-dark); color: white;
+      border-radius: 999px;
+    }
+    /* Decoy tier — slightly muted, present to anchor the others */
+    .bundle.is-decoy { opacity: 0.86; }
+    /* Applied state — same green vocabulary as .chip.added */
+    .bundle.applied {
+      background: rgba(0,140,69,0.06);
+      border-color: rgba(0,140,69,0.30);
+      cursor: default;
+      box-shadow: none;
+    }
+    .bundle.applied:hover { transform: none; box-shadow: none; border-color: rgba(0,140,69,0.30); }
+    .bundle.applied .price { color: var(--color-italia-green-dark); }
+    .bundle.applied::before { display: none; }
+    .bundle.applied::after {
+      content: "✓ Applied";
+      position: absolute; top: 8px; right: 10px;
+      font-size: 9px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+      color: var(--color-italia-green-dark);
+    }
+
+    /* ==================================================================
+       "Complete the meal" chips (mirror of cart-upsell-mockup.html)
+       ================================================================== */
+    .complete-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .complete-head .label {
+      font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--color-italia-gray); margin: 0;
+    }
+    .complete-head .gold { color: var(--color-italia-gold); }
+
+    .chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .chip {
+      position: relative;
+      background: var(--color-italia-cream);
+      border: 1px solid rgba(184, 146, 46, 0.15);
+      border-radius: 12px;
+      padding: 12px 8px 10px;
+      text-align: center; cursor: pointer;
+      transition: transform 0.12s, border-color 0.15s, box-shadow 0.15s;
+      animation: fade-in 0.3s ease-out;
+    }
+    .chip:hover {
+      border-color: rgba(184, 146, 46, 0.40);
+      box-shadow: 0 4px 10px rgba(184, 146, 46, 0.10);
+      transform: translateY(-1px);
+    }
+    .chip:active { transform: translateY(0); }
+    .chip .emoji { font-size: 22px; line-height: 1; display: block; margin-bottom: 4px; }
+    .chip .name { font-size: 13px; font-weight: 500; color: var(--color-italia-dark); line-height: 1.2; }
+    .chip .reason { font-size: 11px; color: var(--color-italia-gray); margin-top: 2px; line-height: 1.3; }
+    .chip .price { font-size: 13px; font-weight: 600; color: var(--color-italia-red); margin-top: 6px; }
+    .chip .add-icon {
+      position: absolute; top: 8px; right: 8px;
+      width: 22px; height: 22px;
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 6px;
+      background: var(--color-italia-red); color: white;
+    }
+    .chip.added {
+      background: rgba(0, 140, 69, 0.06);
+      border-color: rgba(0, 140, 69, 0.30);
+      animation: bounce-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+      cursor: default;
+    }
+    .chip.added:hover { transform: none; box-shadow: none; border-color: rgba(0, 140, 69, 0.30); }
+    .chip.added .price { color: var(--color-italia-green-dark); }
+    .chip.added .add-icon {
+      background: white; color: var(--color-italia-dark);
+      border: 1px solid var(--gray-200); cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .chip.added .add-icon:hover { background: var(--color-italia-red); color: white; border-color: var(--color-italia-red); }
+    .chip .icon-remove { display: none; }
+    .chip.added .icon-add    { display: none; }
+    .chip.added .icon-remove { display: inline; }
+
+    @keyframes fade-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes bounce-in { 0% { transform: scale(0.94); } 60% { transform: scale(1.03); } 100% { transform: scale(1); } }
+
+    /* ==================================================================
+       Delivery progress (mirrors cart-upsell-mockup.html)
+       ================================================================== */
+    .delivery {
+      padding: 12px; border-radius: 12px;
+      border: 1px dashed var(--gray-200);
+      background: var(--gray-50);
+      transition: background 0.3s, border-color 0.3s, border-style 0.3s;
+    }
+    .delivery-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .delivery-top .label { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--color-italia-gray); }
+    .delivery-top .label .rem { font-weight: 600; color: var(--color-italia-dark); }
+    .delivery-top .target { font-size: 12px; color: var(--color-italia-gray); flex-shrink: 0; }
+    .threshold-note { font-size: 10px; color: var(--gray-400); margin-left: 4px; font-style: italic; }
+    .progress { margin-top: 8px; width: 100%; height: 8px; background: var(--gray-200); border-radius: 999px; overflow: hidden; position: relative; }
+    .progress .bar {
+      height: 100%; background: linear-gradient(90deg, var(--color-italia-red) 0%, var(--color-italia-green) 100%);
+      border-radius: 999px;
+      transition: width 0.5s cubic-bezier(0.22, 0.61, 0.36, 1);
+      position: relative;
+    }
+    .progress .bar::after {
+      content: ""; position: absolute; inset: 0;
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.45) 50%, transparent 100%);
+      animation: shimmer 1.8s linear infinite;
+    }
+    @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+    /* Premium unlocked state — celebratory moment, not a status flip */
+    .delivery.qualified {
+      position: relative; overflow: hidden; padding: 16px;
+      border-style: solid; border-color: rgba(184, 146, 46, 0.40);
+      background:
+        radial-gradient(circle at 0% 0%, rgba(255,255,255,0.7) 0%, transparent 55%),
+        linear-gradient(135deg, rgba(184,146,46,0.14) 0%, rgba(0,140,69,0.10) 100%);
+      animation: unlock-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .delivery.qualified::after {
+      content: ""; position: absolute; inset: 0;
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.55) 45%, transparent 100%);
+      transform: translateX(-100%);
+      animation: unlock-shimmer 1.4s ease-out 0.1s;
+      pointer-events: none;
+    }
+    .delivery.qualified .delivery-top, .delivery.qualified .progress { display: none; }
+    .delivery .qualified-row { display: none; }
+    .delivery.qualified .qualified-row { display: flex; align-items: center; gap: 12px; position: relative; }
+    .delivery.qualified .medallion {
+      flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--color-italia-gold) 0%, var(--color-italia-green) 100%);
+      box-shadow: 0 4px 14px rgba(184, 146, 46, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.30);
+      display: inline-flex; align-items: center; justify-content: center; color: white;
+      animation: medallion-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .delivery.qualified .text { line-height: 1.25; }
+    .delivery.qualified .ttl { font-family: var(--font-heading); font-weight: 600; font-size: 16px; color: var(--color-italia-dark); }
+    .delivery.qualified .sub { font-size: 12px; color: var(--color-italia-gray); margin-top: 2px; }
+    @keyframes unlock-in { 0% { transform: scale(0.96); opacity: 0; } 60% { transform: scale(1.01); } 100% { transform: scale(1); opacity: 1; } }
+    @keyframes unlock-shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+    @keyframes medallion-pop {
+      0%   { transform: scale(0.4) rotate(-12deg); opacity: 0; }
+      55%  { transform: scale(1.12) rotate(4deg); opacity: 1; }
+      100% { transform: scale(1) rotate(0); }
+    }
+
+    /* ==================================================================
+       Totals + sticky pay (mirrors CartDrawer.tsx)
+       ================================================================== */
+    .totals {
+      border-top: 1px solid var(--gray-100);
+      padding: 12px 20px;
+      background: white;
+      box-shadow: 0 -4px 16px rgba(0,0,0,0.06);
+    }
+    .totals-rows > div {
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 14px; color: var(--color-italia-gray);
+      padding: 2px 0;
+    }
+    .totals-rows .discount { color: var(--color-italia-green); font-weight: 500; }
+    .totals-rows .freed { color: var(--color-italia-green); font-weight: 500; }
+    .totals-rows .bundle-locked-note {
+      color: var(--color-italia-green-dark); font-weight: 600;
+      font-size: 12px; margin-left: 4px;
+    }
+    .totals-rows .total {
+      color: var(--color-italia-dark);
+      font-size: 18px; font-weight: 700;
+      border-top: 1px solid var(--gray-100);
+      padding-top: 8px; margin-top: 6px;
+    }
+    .totals-rows .total .amt { color: var(--color-italia-red); }
+    .loyalty-earn { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 12px; color: var(--color-italia-gray); }
+    .loyalty-earn b { font-weight: 700; color: var(--color-italia-gold-dark); }
+    .loyalty-earn .gold { color: var(--color-italia-gold); }
+
+    .pay-stack { margin-top: 12px; display: grid; gap: 8px; }
+    .pay-btn {
+      width: 100%; min-height: 44px;
+      background: var(--color-italia-red); color: white;
+      border: 0; border-radius: 8px;
+      font: inherit; font-weight: 500; font-size: 15px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .pay-btn:hover { background: var(--color-italia-red-dark); }
+    .pay-meta { text-align: center; margin-top: 6px; font-size: 11px; color: var(--gray-400); }
+    .clear-btn {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      width: 100%; margin-top: 6px; padding: 6px 0;
+      border: 0; background: transparent;
+      font: inherit; font-size: 12px;
+      color: var(--color-italia-gray); cursor: pointer;
+      transition: color 0.15s;
+    }
+    .clear-btn:hover { color: var(--color-italia-red); }
+
+    /* ==================================================================
+       Inline add-to-cart toast (mirrors cart-upsell-mockup.html)
+       ================================================================== */
+    .toast-host { position: absolute; left: 20px; right: 20px; top: 12px; z-index: 20; pointer-events: none; }
+    .toast {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 12px;
+      background: white;
+      border: 1px solid rgba(184, 146, 46, 0.30);
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(26,26,26,0.10);
+      pointer-events: auto;
+      transform: translateY(-12px); opacity: 0;
+      transition: transform 0.25s ease, opacity 0.25s ease;
+    }
+    .toast.in { transform: translateY(0); opacity: 1; }
+    .toast .ic-host {
+      flex-shrink: 0; width: 28px; height: 28px;
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 8px;
+      background: rgba(184, 146, 46, 0.15);
+      color: var(--color-italia-gold-dark);
+    }
+    .toast .body { flex: 1; min-width: 0; }
+    .toast .title { font-size: 13px; font-weight: 600; color: var(--color-italia-dark); line-height: 1.3; }
+    .toast .seed { font-size: 12px; color: var(--color-italia-gray); margin-top: 2px; line-height: 1.4; }
+
+    .hint { font-size: 11px; color: var(--gray-400); padding: 0 20px; margin-top: 12px; line-height: 1.5; }
+
+    /* Brand-voice override map (mockup-only explainer panel) — same tokens
+       as .chip but laid out as a horizontal list so all three new copy
+       lines are visible at a glance. */
+    .reason-grid { display: grid; gap: 8px; }
+    .reason-row {
+      display: grid; grid-template-columns: 36px 1fr auto; gap: 12px;
+      align-items: center;
+      padding: 10px 12px;
+      background: var(--color-italia-cream);
+      border: 1px solid rgba(184, 146, 46, 0.15);
+      border-radius: 12px;
+    }
+    .reason-glyph {
+      width: 36px; height: 36px;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: rgba(184, 146, 46, 0.10);
+      border-radius: 10px;
+      font-size: 20px;
+    }
+    .reason-name {
+      font-size: 13px; font-weight: 600;
+      color: var(--color-italia-dark);
+    }
+    .reason-id {
+      font-size: 11px;
+      color: var(--color-italia-gray);
+      margin-top: 2px;
+    }
+    .reason-copy {
+      font-family: var(--font-heading);
+      font-size: 14px; font-weight: 600;
+      color: var(--color-italia-red);
+      white-space: nowrap;
+    }
+
+    /* ---------- Lucide icon sizing (mirror) ---------- */
+    .ic    { width: 16px; height: 16px; stroke-width: 2; flex-shrink: 0; }
+    .ic-sm { width: 14px; height: 14px; stroke-width: 2; flex-shrink: 0; }
+    .ic-lg { width: 20px; height: 20px; stroke-width: 2; flex-shrink: 0; }
+  </style>
+</head>
+<body>
+
+<!-- Lucide-style icon symbol sheet — same set as cart-upsell-mockup.html
+     so identical chrome renders without re-defining icons. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18 6L6 18M6 6l12 12"/>
+    </symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5 12h14M12 5v14"/>
+    </symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5 12h14"/>
+    </symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 6h18"/>
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+      <line x1="10" y1="11" x2="10" y2="17"/>
+      <line x1="14" y1="11" x2="14" y2="17"/>
+    </symbol>
+    <symbol id="i-note" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M15.5 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h11l5-5V5a2 2 0 0 0-2-2z"/>
+      <path d="M15 3v6h6"/>
+    </symbol>
+    <symbol id="i-sparkles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
+      <path d="M20 3v4"/><path d="M22 5h-4"/>
+      <path d="M4 17v2"/><path d="M5 18H3"/>
+    </symbol>
+    <symbol id="i-star" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+    </symbol>
+    <symbol id="i-truck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/>
+      <path d="M15 18H9"/>
+      <path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/>
+      <circle cx="17" cy="18" r="2"/>
+      <circle cx="7" cy="18" r="2"/>
+    </symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 6L9 17l-5-5"/>
+    </symbol>
+    <symbol id="i-bag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+      <path d="M3 6h18"/>
+      <path d="M16 10a4 4 0 0 1-8 0"/>
+    </symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+    </symbol>
+    <symbol id="i-coffee" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M17 8h1a4 4 0 0 1 0 8h-1"/>
+      <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z"/>
+      <line x1="6" y1="2" x2="6" y2="4"/>
+      <line x1="10" y1="2" x2="10" y2="4"/>
+      <line x1="14" y1="2" x2="14" y2="4"/>
+    </symbol>
+    <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="8.5" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </symbol>
+    <symbol id="i-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="6 9 12 15 18 9"/>
+    </symbol>
+    <symbol id="i-building" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="4" y="2" width="16" height="20" rx="2"/>
+      <path d="M9 22v-4h6v4"/>
+      <path d="M8 6h.01"/><path d="M16 6h.01"/>
+      <path d="M8 10h.01"/><path d="M16 10h.01"/>
+      <path d="M8 14h.01"/><path d="M16 14h.01"/>
+      <path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/>
+    </symbol>
+  </defs>
+</svg>
+
+
+<div class="page">
+
+  <!-- =====================================================
+       LEFT: explainer + controls
+       ===================================================== -->
+  <div>
+    <div class="panel">
+      <span class="pill">Audit §3.1 – 3.4</span>
+      <h1>Cross-sell psychology — visual draft</h1>
+      <p class="lede">
+        Four new behaviours layered into the same drawer that ships
+        cart-upsell-v2. Same tokens, fonts, icons and copy patterns as
+        <code class="kbd">CartDrawer.tsx</code> — just augmented with a
+        gated bundle ladder, smarter chip ranking, segmented delivery copy,
+        and a corporate-order banner when the active wallet is a Sud Italia
+        Corporate account.
+      </p>
+      <p class="lede">
+        Toggle the controls below. Hour switcher gates the lunch ladder
+        (only renders 11–14); cart-quantity switcher gates the Family Feast
+        ladder (renders at ≥5 mains, hint at 3–4); segment switcher
+        repaints the delivery target; corporate toggle adds the gold/green
+        banner with the Sud Italia Corporate kicker.
+      </p>
+
+      <div class="controls">
+        <div class="seg" id="hour-switch" role="tablist" aria-label="Hour of day">
+          <button data-hour="9">09:00 morning</button>
+          <button data-hour="11" class="active">11:00 lunch</button>
+          <button data-hour="14">14:00 afternoon</button>
+          <button data-hour="19">19:00 dinner</button>
+          <button data-hour="21">21:00 late</button>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="seg" id="cart-switch" role="tablist" aria-label="Cart shape">
+          <button data-cart="solo">Solo · 1 pasta</button>
+          <button data-cart="duo" class="active">Duo · 2 mains</button>
+          <button data-cart="growing">Growing · 3 mains (hint)</button>
+          <button data-cart="family">Family · 5 mains</button>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="seg" id="seg-switch" role="tablist" aria-label="Customer segment">
+          <button data-seg="first-time">First-time · 39 zł</button>
+          <button data-seg="growing" class="active">Growing 2–4 · 49 zł</button>
+          <button data-seg="regular">Regular 5+ · 59 zł</button>
+          <button data-seg="vip">Gold/Platinum · free</button>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="seg" id="corp-switch" role="tablist" aria-label="Corporate mode">
+          <button data-corp="off" class="active">Solo customer</button>
+          <button data-corp="member">Acme Corporate · employee</button>
+          <button data-corp="head">Acme Corporate · head</button>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="seg" id="history-switch" role="tablist" aria-label="Customer history">
+          <button data-history="new" class="active">Brand-new · brand voice</button>
+          <button data-history="returning">Returning · 3 of last 4 espresso</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <button class="btn danger" id="addBtn">+ Add Margherita</button>
+        <button class="btn ghost" id="qualifyBtn">Push to free-delivery</button>
+        <button class="btn ghost" id="resetBtn">Reset</button>
+      </div>
+    </div>
+
+    <div class="panel muted">
+      <span class="pill live">What's new — full §3 coverage</span>
+      <h2>Cross-sell deltas vs the v2 cart</h2>
+      <ul class="legend">
+        <li>
+          <span class="marker">1</span>
+          <span>
+            <strong>Contextual chip ranking + brand-voice reasons.</strong>
+            <em>§3.1.</em> Same three-up grid + priority-driven order
+            (espresso → tiramisù → drink). Composite score
+            (margin × hour-bias × per-customer attach × novelty decay)
+            resolves ties within a priority bucket. Reason copy pivots to
+            &ldquo;you added it 3 of last 4 visits&rdquo; when the signal is strong;
+            otherwise the brand-voice override table below wins.
+          </span>
+        </li>
+        <li>
+          <span class="marker">2</span>
+          <span>
+            <strong>Gated bundle ladder above the chips.</strong>
+            <em>§3.2.</em> Lunch ladder shows only during the lunch window
+            (default 11–14, admin-configurable). Family Feast shows only
+            when the cart has ≥5 mains; at 3 or 4 mains the customer sees a
+            one-line nudge instead of the full ladder
+            (&ldquo;Add 1 more pizza or pasta to unlock Family Feast&rdquo;).
+            <b>Most picked</b> on the default tier (red ribbon), <b>Best value</b>
+            on the anchor (gold ribbon), decoy slightly muted.
+          </span>
+        </li>
+        <li>
+          <span class="marker">3</span>
+          <span>
+            <strong>Segmented free-delivery threshold.</strong>
+            <em>§3.3.</em> Four bands instead of three: first-time 39 zł,
+            growing 2–4 → <b>49 zł</b>, regular 5+ → 59 zł, Gold/Platinum
+            free. The &ldquo;tuned for you&rdquo; annotation surfaces the personalisation
+            so customers don&rsquo;t think the bar moved by accident.
+          </span>
+        </li>
+        <li>
+          <span class="marker">4</span>
+          <span>
+            <strong>Sud Italia Corporate banner.</strong>
+            <em>§3.4.</em> Renders above the ToD banner when the active
+            wallet has a <code class="kbd">corporate</code> config. Floor is 6 employees
+            (&ldquo;>5&rdquo; from the brief, enforced at promotion). Employees see
+            "Ordering with Acme · billed to the company card", head sees
+            head-bonus accrual. Public landing at <code class="kbd">/corporate/[slug]</code>;
+            admin at <code class="kbd">/admin/corporate</code>.
+          </span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="panel muted">
+      <span class="pill">Brand-voice override map</span>
+      <h2>Per-item chip copy</h2>
+      <p class="lede" style="margin-bottom: 12px;">
+        Mirrors <code class="kbd">ITEM_REASON_OVERRIDES</code> in
+        <code class="kbd">src/lib/upsell.ts</code>, keyed by id suffix so the
+        same map covers both Kraków (<code class="kbd">krk-</code>) and
+        Warszawa (<code class="kbd">waw-</code>). Item never in the override
+        map falls back to the priority-rule copy.
+      </p>
+      <div class="reason-grid">
+        <div class="reason-row">
+          <span class="reason-glyph">☕️</span>
+          <div>
+            <div class="reason-name">Espresso</div>
+            <div class="reason-id"><code class="kbd">drink-espresso</code></div>
+          </div>
+          <div class="reason-copy">Never too late</div>
+        </div>
+        <div class="reason-row">
+          <span class="reason-glyph">🍰</span>
+          <div>
+            <div class="reason-name">Tiramisù</div>
+            <div class="reason-id"><code class="kbd">dessert-tiramisu</code></div>
+          </div>
+          <div class="reason-copy">Pizzaiolo&rsquo;s fav</div>
+        </div>
+        <div class="reason-row">
+          <span class="reason-glyph">🥖</span>
+          <div>
+            <div class="reason-name">Burrata bruschetta</div>
+            <div class="reason-id"><code class="kbd">anti-burrata</code> · <code class="kbd">anti-bruschetta</code></div>
+          </div>
+          <div class="reason-copy">Freshly-baked today</div>
+        </div>
+      </div>
+      <p class="lede" style="font-size: 12px; margin-top: 10px;">
+        Strong recurrence wins: when a customer added the same item ≥ half
+        of their recent visits, the chip switches to recognition copy
+        (&ldquo;you added it 3 of last 4 visits&rdquo;) so the override is paused
+        for that order.
+      </p>
+    </div>
+
+    <div class="panel muted">
+      <span class="pill">Q: where it plugs in</span>
+      <h2>Same files, additive surfaces</h2>
+      <ul class="checklist">
+        <li><b>upsell.ts</b> — <code class="kbd">scorePairing()</code> + <code class="kbd">PairingContext</code>; <code class="kbd">ITEM_REASON_OVERRIDES</code> map (espresso → "Never too late", tiramisù → "Pizzaiolo's fav", burrata/bruschetta → "Freshly-baked today").</li>
+        <li><b>bundles.ts</b> (new) — <code class="kbd">DEFAULT_BUNDLES</code> + <code class="kbd">DEFAULT_BUNDLE_RULES</code> + <code class="kbd">resolveBundleAvailability()</code> (returns show / hint / hidden).</li>
+        <li><b>BundleLadder</b> — re-resolves availability on a one-minute tick so the lunch ladder appears and disappears with the local clock; surfaces the family hint when within 2 mains of the threshold.</li>
+        <li><b>checkout API</b> — re-validates the bundle composition and sends one Stripe line at the locked price with the items itemized.</li>
+        <li><b>FamilyWallet</b> — optional <code class="kbd">corporate</code> config (slug, name, billingEmail, headBonusBps, <b>minEmployees</b>, autoPreorderDay/Time, locationSlug). Server enforces minEmployees ≥ 6.</li>
+        <li><b>/admin/upsell → Bundle availability</b> — edit lunch hours + family quantity gate per location.</li>
+        <li><b>/admin/corporate</b> (renamed from /admin/teams) — promote a wallet (≥6 members), edit config, remove.</li>
+      </ul>
+    </div>
+
+    <div class="panel muted">
+      <span class="pill gold">Out of scope here</span>
+      <h2>Deliberately not in this commit</h2>
+      <ul class="checklist">
+        <li><b>Per-bundle composition editor in /admin/upsell</b> — bundle slot definitions still ship via <code class="kbd">DEFAULT_BUNDLES</code> + <code class="kbd">LocationUpsellConfig.bundles</code> JSON; the schema editor ships next.</li>
+        <li><b>Monthly invoice cron for corporate heads</b> — config persisted; cron lands in a follow-up.</li>
+        <li><b>Auto-pre-order reminder</b> — schedule persisted; the cron that fires &ldquo;Wednesday corporate lunch — 4 of 8 have ordered, 2h to go&rdquo; lands next.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- =====================================================
+       RIGHT: drawer (mirrors live CartDrawer)
+       ===================================================== -->
+  <div class="drawer-wrap">
+    <div class="drawer" role="dialog" aria-label="Your Order">
+
+      <div class="drawer-head">
+        <div>
+          <h2>Your Order</h2>
+          <div class="count" id="countLabel">2 items · Kraków</div>
+        </div>
+        <button class="close" aria-label="Close cart">
+          <svg class="ic-lg"><use href="#i-x"/></svg>
+        </button>
+      </div>
+
+      <div class="drawer-body" id="drawerBody">
+
+        <div class="toast-host" id="toastHost" aria-live="polite"></div>
+
+        <!-- Cart line items -->
+        <div class="lines" id="lines"></div>
+
+        <!-- Loyalty banner -->
+        <div class="sec">
+          <div class="loyalty">
+            <svg class="ic gold"><use href="#i-star"/></svg>
+            <span>Earning points as <span class="first">Anna</span><span class="tier-badge" id="tierBadge">Growing</span><span class="pts" id="ptsBalance">240 pts</span></span>
+          </div>
+        </div>
+
+        <!-- 3.4 Corporate banner — only when wallet.corporate is active -->
+        <div class="sec" id="corpHost" style="display: none;">
+          <div class="team-banner">
+            <span class="crest"><svg class="ic-lg"><use href="#i-building"/></svg></span>
+            <div class="body">
+              <p style="font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-italia-gold-dark); margin: 0;">Sud Italia Corporate</p>
+              <div class="ttl" id="corpTtl" style="margin-top: 2px;">Ordering with <span class="name">Acme</span> · billed to the company card</div>
+              <div class="sub" id="corpSub">8 employees · Wednesday 12:30 corporate lunch · 4 of 8 have ordered</div>
+              <div class="meter"><div class="fill" id="corpMeter" style="width: 50%"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ToD banner (kept lightweight; full set lives in cart-upsell-v2) -->
+        <div class="sec">
+          <div class="tod tod-lunch">
+            <div class="icon-tile"><svg class="ic-lg"><use href="#i-clock"/></svg></div>
+            <div class="body">
+              <div class="row1">
+                <p class="ttl">Lunch combo — pasta + drink</p>
+                <span class="badge">−10%</span>
+              </div>
+              <p class="sub">PLN 32 instead of 38 · ready in 8 min</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3.2 Bundle ladder — sits ABOVE the per-item chips -->
+        <div class="sec" id="bundleHost"></div>
+
+        <!-- 3.1 Contextual pairing chips -->
+        <div class="sec">
+          <div class="complete-head">
+            <svg class="ic gold"><use href="#i-sparkles"/></svg>
+            <p class="label">Complete your meal</p>
+          </div>
+          <div class="chips" id="chips"></div>
+        </div>
+
+        <!-- 3.3 Delivery progress with segmented threshold annotation -->
+        <div class="sec">
+          <div class="delivery" id="delivery">
+            <div class="delivery-top">
+              <div class="label">
+                <svg class="ic"><use href="#i-truck"/></svg>
+                <span>Add <span class="rem" id="deliveryRem">12,00 zł</span> for free delivery</span>
+              </div>
+              <span class="target">
+                <span id="deliveryTarget">49,00 zł</span>
+                <span class="threshold-note" id="thresholdNote" title="§3.3 — first-time 39, growing 49, regular 59, VIP free">· tuned for you</span>
+              </span>
+            </div>
+            <div class="progress">
+              <div class="bar" id="bar" style="width: 76%"></div>
+            </div>
+            <div class="qualified-row">
+              <span class="medallion"><svg class="ic-lg"><use href="#i-sparkles"/></svg></span>
+              <div class="text">
+                <div class="ttl">Free delivery unlocked</div>
+                <div class="sub">Your order ships on us today · we'll bring it warm</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <p class="hint">
+          Fulfillment selector, slot picker, address autocomplete,
+          customer-detail inputs, and tip picker — unchanged from the v2
+          drawer, hidden here so the focus stays on the §3 deltas.
+        </p>
+
+      </div>
+
+      <div class="totals">
+        <div class="totals-rows">
+          <div>
+            <span>Subtotal<span class="bundle-locked-note" id="bundleLockedNote" style="display: none;"> · bundle locked</span></span>
+            <span id="sub">57,00 zł</span>
+          </div>
+          <div class="discount" id="discountRow" style="display:none">
+            <span id="discountLabel">Lunch combo −10%</span>
+            <span id="discountAmt">−5,70 zł</span>
+          </div>
+          <div id="delRow"><span>Delivery</span><span id="del">10,00 zł</span></div>
+          <div class="total"><span>Total</span><span class="amt" id="total">61,30 zł</span></div>
+        </div>
+        <div class="loyalty-earn">
+          <svg class="ic-sm gold"><use href="#i-star"/></svg>
+          <span>You'll earn <b id="pts">57 points</b> with this order</span>
+        </div>
+        <div class="pay-stack">
+          <button class="pay-btn" id="payBtn">Pay 61,30 zł by card</button>
+        </div>
+        <div class="pay-meta">PLN 0 hidden fees · Stripe · BLIK / card / Apple Pay</div>
+        <button class="clear-btn">
+          <svg class="ic-sm"><use href="#i-trash"/></svg>
+          Clear cart
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  // ===================================================================
+  // State — same shape as cart-upsell-mockup.html so the recompute path
+  // is comparable line-for-line. Adds bundle + team + segment + hour.
+  // ===================================================================
+  // Cart shape presets — drive the §3.2 family quantity gate. Each preset
+  // mirrors a realistic cart so the "show / hint / hidden" decision is
+  // observable.
+  const CART_PRESETS = {
+    solo:    [{ id: "pasta", name: "Carbonara",  each: 2900, qty: 1 }],
+    duo:     [{ id: "pizza", name: "Margherita", each: 2800, qty: 1 }, { id: "pasta", name: "Carbonara", each: 2900, qty: 1 }],
+    growing: [{ id: "pizza", name: "Margherita", each: 2800, qty: 1 }, { id: "pizza2", name: "Diavola", each: 3200, qty: 1 }, { id: "pasta", name: "Carbonara", each: 2900, qty: 1 }],
+    family:  [{ id: "pizza", name: "Margherita", each: 2800, qty: 1 }, { id: "pizza2", name: "Diavola", each: 3200, qty: 1 }, { id: "pizza3", name: "Quattro Formaggi", each: 3400, qty: 1 }, { id: "pasta", name: "Carbonara", each: 2900, qty: 1 }, { id: "pasta2", name: "Pesto", each: 2700, qty: 1 }],
+  };
+
+  // §3.2 admin-tunable rules — mirror of DEFAULT_BUNDLE_RULES.
+  const BUNDLE_RULES = {
+    lunch: { startHour: 11, endHour: 14 },
+    family: { minMainItems: 5, hintWithin: 2 },
+  };
+
+  const state = {
+    cartShape: "duo",
+    items: structuredClone(CART_PRESETS.duo),
+    bundle: null,                     // active BundleTier or null
+    preferredLadder: "family",        // user-preferred ladder when both showable
+    discountPercent: 0.10,
+    discountLabel: "Lunch combo −10%",
+    deliveryFee: 1000,                // 10 PLN flat fallback
+    segment: "growing",               // first-time | growing | regular | vip
+    hour: 11,                         // local hour, drives gating + chip ranking
+    corp: "off",                      // off | member | head
+    history: "new",                   // "new" | "returning" — drives chip reason copy
+    customerAttachByItemId: {},
+    customerOrderCount: 0,
+  };
+
+  // Customer-history presets (audit §3.1). "new" → brand-voice copy on
+  // every chip (Never too late / Pizzaiolo's fav / …). "returning" → strong
+  // attach on espresso so the chip flips to recognition copy
+  // ("you added it 3 of last 4 visits").
+  const HISTORY_PRESETS = {
+    new:       { attach: {},               orders: 0 },
+    returning: { attach: { espresso: 3 },  orders: 4 },
+  };
+
+  // Items that count toward the §3.2 family quantity gate (pizza + pasta).
+  function countMains() {
+    return state.items.reduce((sum, it) => {
+      if (/^pizza/.test(it.id) || /^pasta/.test(it.id)) return sum + it.qty;
+      return sum;
+    }, 0);
+  }
+
+  // §3.2 — return "show" / "hint" / "hidden" for each ladder, identical
+  // to resolveBundleAvailability() in src/lib/bundles.ts.
+  function resolveAvailability() {
+    const lunchOk = state.hour >= BUNDLE_RULES.lunch.startHour && state.hour < BUNDLE_RULES.lunch.endHour;
+    const mains = countMains();
+    let family;
+    if (mains >= BUNDLE_RULES.family.minMainItems) {
+      family = { kind: "show", mains };
+    } else {
+      const needed = BUNDLE_RULES.family.minMainItems - mains;
+      family = needed > 0 && needed <= BUNDLE_RULES.family.hintWithin
+        ? { kind: "hint", mains, needed }
+        : { kind: "hidden", mains };
+    }
+    return {
+      lunch:  lunchOk ? { kind: "show" } : { kind: "hidden" },
+      family,
+    };
+  }
+
+  // Effective ladder period: respect user preference when allowed, else
+  // fall back to whichever is showable.
+  function effectivePeriod(av) {
+    const lunchOk = av.lunch.kind === "show";
+    const familyOk = av.family.kind === "show";
+    if (state.preferredLadder === "family" && familyOk) return "family";
+    if (state.preferredLadder === "lunch" && lunchOk) return "lunch";
+    if (familyOk) return "family";
+    if (lunchOk) return "lunch";
+    return null;
+  }
+
+  // §3.3 segment → threshold (grosze). Mirror of SEGMENT_FREE_DELIVERY_THRESHOLD.
+  const SEGMENT_THRESHOLD = {
+    "first-time": 3900,
+    growing:      4900,
+    regular:      5900,
+    vip:          0,
+  };
+  const SEGMENT_LABEL = {
+    "first-time": { tier: "First-time", note: "· tuned for you" },
+    growing:      { tier: "Growing",    note: "· tuned for you" },
+    regular:      { tier: "Regular",    note: "· tuned for you" },
+    vip:          { tier: "Gold",       note: "· tier perk" },
+  };
+
+  // §3.2 bundle ladders — mirror of DEFAULT_BUNDLES.
+  const BUNDLES = {
+    lunch: [
+      { id: "lunch-solo",    tier: "Solo",    name: "Just the pasta",      composition: "1 pasta of your choice",                       price: 2600, ref: 2600, role: null },
+      { id: "lunch-classic", tier: "Lunch",   name: "Pasta + drink",       composition: "1 pasta + 1 drink. The classic.",              price: 3200, ref: 3800, role: "default" },
+      { id: "lunch-plus",    tier: "Lunch+",  name: "Pasta + drink + tiramisù", composition: "A meal you'll remember.",                  price: 4600, ref: 5600, role: "anchor" },
+      { id: "lunch-hungry",  tier: "Hungry",  name: "+ bruschetta",        composition: "Pasta, drink, dessert & bruschetta.",          price: 5800, ref: 7600, role: "decoy" },
+    ],
+    family: [
+      { id: "family-classic", tier: "Family",       name: "Two pizzas + sides",   composition: "2 pizzas + 1 side + 2 drinks",               price:  8900, ref: 10800, role: null },
+      { id: "family-feast",   tier: "Family Feast", name: "Whole-table dinner",   composition: "2 pizzas + bruschetta + 4 drinks + tiramisù",price: 11900, ref: 16200, role: "anchor" },
+      { id: "family-deluxe",  tier: "Feast Deluxe", name: "Big group, no leftovers", composition: "3 pizzas + 2 sides + 6 drinks + 2 desserts", price: 16900, ref: 23200, role: "decoy" },
+    ],
+  };
+
+  // §3.1 hour-of-day bias by category — mirror of CATEGORY_HOUR_BIAS.
+  const HOUR_BIAS = {
+    drinks:   [0.4,0.4,0.4,0.4,0.4,0.4,0.5,0.6,0.7,0.78,0.82,0.85,0.85,0.78,0.65,0.58,0.55,0.5,0.45,0.41,0.42,0.42,0.42,0.4],
+    desserts: [0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.55,0.6,0.65,0.7,0.72,0.7,0.7,0.7,0.72,0.78,0.82,0.85,0.85,0.78,0.7,0.6],
+    antipasti:[0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.45,0.5,0.55,0.62,0.7,0.65,0.55,0.55,0.6,0.72,0.82,0.85,0.78,0.65,0.55,0.45],
+  };
+
+  // pl-PL currency format (matches src/lib/utils.ts formatPrice)
+  const fmt = new Intl.NumberFormat("pl-PL", { style: "currency", currency: "PLN" });
+  const money = grosze => fmt.format(grosze / 100);
+
+  function esc(s) {
+    return String(s ?? "").replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+    })[c]);
+  }
+
+  // ===================================================================
+  // Renderers
+  // ===================================================================
+  function renderLines() {
+    const wrap = document.getElementById("lines");
+    wrap.innerHTML = "";
+    state.items.forEach(it => {
+      const row = document.createElement("div");
+      row.className = "line" + (state.bundle ? " bundle-locked" : "");
+      row.innerHTML = `
+        <div class="top">
+          <div>
+            <p class="name">${esc(it.name)}</p>
+            <p class="each">${esc(money(it.each))} each</p>
+          </div>
+          <span class="price">${esc(money(it.each * it.qty))}</span>
+        </div>
+        <div class="bot">
+          <div class="qty-stepper">
+            <button aria-label="Decrease"><svg class="ic-sm"><use href="#i-minus"/></svg></button>
+            <span class="n">${esc(it.qty)}</span>
+            <button aria-label="Increase"><svg class="ic-sm"><use href="#i-plus"/></svg></button>
+          </div>
+          <div class="line-actions">
+            <button class="note-btn"><svg class="ic-sm"><use href="#i-note"/></svg>Add note</button>
+            <button class="trash-btn" aria-label="Remove"><svg class="ic-lg"><use href="#i-trash"/></svg></button>
+          </div>
+        </div>`;
+      wrap.appendChild(row);
+    });
+  }
+
+  function renderCorporate() {
+    const host = document.getElementById("corpHost");
+    if (state.corp === "off") {
+      host.style.display = "none";
+      return;
+    }
+    host.style.display = "block";
+    if (state.corp === "head") {
+      document.getElementById("corpTtl").innerHTML = `Ordering as <span class="name">Acme</span> head · paid on file`;
+      document.getElementById("corpSub").textContent = "8 employees · 428 pts head bonus this month · Wed 12:30 lunch reminder";
+      document.getElementById("corpMeter").style.width = "70%";
+    } else {
+      document.getElementById("corpTtl").innerHTML = `Ordering with <span class="name">Acme</span> · billed to the company card`;
+      document.getElementById("corpSub").textContent = "8 employees · Wednesday 12:30 corporate lunch · 4 of 8 have ordered";
+      document.getElementById("corpMeter").style.width = "50%";
+    }
+  }
+
+  function renderBundles() {
+    const host = document.getElementById("bundleHost");
+    const av = resolveAvailability();
+    const period = effectivePeriod(av);
+    const showFamilyHint = av.family.kind === "hint";
+
+    if (!period && !showFamilyHint) {
+      host.innerHTML = "";
+      host.style.display = "none";
+      return;
+    }
+    host.style.display = "block";
+
+    let html = "";
+
+    // §3.2 family hint — one-line nudge when within hintWithin items of
+    // the threshold. Always rendered above the ladder when fired.
+    if (showFamilyHint) {
+      const noun = av.family.needed === 1 ? "pizza or pasta" : "pizzas or pastas";
+      const minSaving = Math.min(...BUNDLES.family.map(b => Math.max(0, b.ref - b.price)));
+      html += `
+        <div class="family-hint" style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(184,146,46,0.30); background: rgba(184,146,46,0.05); margin-bottom: 8px;">
+          <span style="flex-shrink: 0; width: 28px; height: 28px; border-radius: 8px; background: rgba(184,146,46,0.15); color: var(--color-italia-gold-dark); display: inline-flex; align-items: center; justify-content: center;">
+            <svg class="ic"><use href="#i-users"/></svg>
+          </span>
+          <p style="flex: 1; font-size: 12px; color: var(--color-italia-dark); line-height: 1.35; margin: 0;">
+            Add <b>${av.family.needed} more ${esc(noun)}</b> to unlock the Family Feast bundle
+            <span style="color: var(--color-italia-gold-dark); font-weight: 600;"> — save up to ${esc(money(minSaving))}</span>
+            <span style="color: var(--color-italia-gray);"> · ${av.family.mains} of ${BUNDLE_RULES.family.minMainItems} mains</span>
+          </p>
+        </div>`;
+    }
+
+    if (period) {
+      const ladder = BUNDLES[period];
+      const maxSavings = Math.max(...ladder.map(b => Math.max(0, b.ref - b.price)));
+      const ladderHasBoth = av.lunch.kind === "show" && av.family.kind === "show";
+      const switcherLabel = period === "lunch" ? "Lunch ▾" : "Family ▾";
+
+      const tiles = ladder.map(b => {
+        const role = b.role ? `is-${b.role}` : "";
+        const applied = state.bundle && state.bundle.id === b.id ? "applied" : "";
+        const saving = Math.max(0, b.ref - b.price);
+        const showRef = b.ref > b.price;
+        return `
+          <div class="bundle ${role} ${applied}" data-id="${esc(b.id)}">
+            <span class="tier-label">${esc(b.tier)}</span>
+            <span class="name">${esc(b.name)}</span>
+            <span class="composition">${esc(b.composition)}</span>
+            <span class="price-row">
+              <span class="price">${esc(money(b.price))}</span>
+              ${showRef ? `<span class="youdpay">${esc(money(b.ref))}</span>` : ""}
+            </span>
+            ${saving > 0 ? `<span class="saving">Save ${esc(money(saving))}</span>` : ""}
+          </div>`;
+      }).join("");
+
+      html += `
+        <div class="bundle-head">
+          <p class="label"><span class="gold">✦</span> Make it a bundle <span class="save-up-to">· save up to ${esc(money(maxSavings))}</span></p>
+          ${ladderHasBoth ? `<button class="switcher" id="bundleSwitch" aria-label="Switch ladder">${esc(switcherLabel)}</button>` : ""}
+        </div>
+        <div class="bundles" style="grid-template-columns: repeat(${ladder.length === 4 ? 2 : Math.min(ladder.length, 3)}, 1fr);">
+          ${tiles}
+        </div>`;
+    }
+
+    host.innerHTML = html;
+
+    const switchBtn = document.getElementById("bundleSwitch");
+    if (switchBtn) {
+      switchBtn.addEventListener("click", () => {
+        state.preferredLadder = state.preferredLadder === "lunch" ? "family" : "lunch";
+        renderBundles();
+      });
+    }
+
+    host.querySelectorAll(".bundle").forEach(el => {
+      el.addEventListener("click", () => applyBundle(el.dataset.id, period));
+    });
+  }
+
+  // §3.1 — re-rank the three chip slots by composite (margin × hour ×
+  // customer × novelty). Pure mockup version: returns an ordered array
+  // of { id, glyph, name, reason, price } for the chips section.
+  // Brand-voice reason copy per item — mirrors ITEM_REASON_OVERRIDES in
+  // src/lib/upsell.ts. Strong customer-attach signal still wins over the
+  // override (see below).
+  const ITEM_REASON_OVERRIDES = {
+    espresso: "Never too late",
+    tiramisu: "Pizzaiolo's fav",
+    burrata:  "Freshly-baked today",
+  };
+
+  // §3.1 chip ranking — mirrors getCartSuggestions() in src/lib/upsell.ts.
+  // Priority-driven rules:
+  //   RULE 1 (priority 1): pizza/pasta + no coffee → suggest espresso
+  //   RULE 2 (priority 2): pizza/pasta + no dessert → suggest tiramisù
+  //   RULE 3 (priority 3): pizza/pasta + no drink → suggest a non-coffee drink
+  //   RULE 4 (priority 4): only drinks/desserts → suggest a pizza
+  // Composite pairing score only resolves ties within the same priority
+  // bucket; it never lets a priority-3 chip leapfrog a priority-1 one.
+  // Reason copy: strong customer-attach signal wins, then the brand-voice
+  // override map (ITEM_REASON_OVERRIDES), then the priority-rule fallback.
+  function rankChips() {
+    const ROSTER = {
+      espresso: { id: "espresso", category: "drinks",   glyph: "☕️", name: "Espresso", base: 600, isCoffee: true },
+      tiramisu: { id: "tiramisu", category: "desserts", glyph: "🍰", name: "Tiramisù", base: 1800 },
+      limonata: { id: "limonata", category: "drinks",   glyph: "🍋", name: "Limonata", base: 1200 },
+      burrata:  { id: "burrata",  category: "antipasti",glyph: "🥖", name: "Burrata bruschetta", base: 2200 },
+      pizza:    { id: "pizzaSug", category: "pizza",    glyph: "🍕", name: "Margherita", base: 2800 },
+    };
+
+    const cartCats = new Set(state.items.map(it => {
+      if (/^pizza/.test(it.id)) return "pizza";
+      if (/^pasta/.test(it.id)) return "pasta";
+      if (it.id === "espresso") return "drinks-coffee";
+      if (it.id === "limonata" || it.id.startsWith("drink")) return "drinks";
+      if (it.id === "tiramisu" || it.id === "cannoli") return "desserts";
+      if (it.id === "burrata") return "antipasti";
+      return null;
+    }).filter(Boolean));
+    const hasMain  = cartCats.has("pizza") || cartCats.has("pasta");
+    const hasCoffee = cartCats.has("drinks-coffee");
+    const hasDrink  = cartCats.has("drinks");
+    const hasDessert = cartCats.has("desserts");
+
+    const out = [];
+    if (hasMain && !hasCoffee)              out.push({ ...ROSTER.espresso, priority: 1, fallback: "Perfect after your meal — Italian espresso" });
+    if (hasMain && !hasDessert)             out.push({ ...ROSTER.tiramisu, priority: 2, fallback: "Finish with our signature Tiramisù" });
+    if (hasMain && !hasDrink && !hasCoffee) out.push({ ...ROSTER.limonata, priority: 3, fallback: "Add a refreshing drink to your order" });
+    if (!hasMain && (hasDrink || hasDessert)) out.push({ ...ROSTER.pizza, priority: 4, fallback: "Add a pizza to make it a meal" });
+
+    // Composite score + brand-voice override resolution per chip.
+    const scored = out.map(c => {
+      const hourBias = (HOUR_BIAS[c.category] || [])[state.hour] ?? 0.5;
+      const attach = state.customerAttachByItemId[c.id] ?? 0;
+      const orders = state.customerOrderCount;
+      const rate = orders > 0 ? attach / orders : 0;
+      const customer = orders > 0 ? rate * 0.95 + 0.5 * (1 - Math.min(1, rate)) : 0.5;
+      const novelty = orders > 0 && rate >= 0.75 ? -0.12
+                    : orders >= 2 && rate === 0 ? 0.08
+                    : 0;
+      const composite = Math.max(0, Math.min(1, hourBias * 0.4 + customer * 0.3 + 0.4 * 0.3 + novelty));
+
+      let reason;
+      if (orders >= 2 && attach >= 2 && rate >= 0.5) {
+        reason = `You added it ${attach} of last ${orders} visits`;
+      } else if (ITEM_REASON_OVERRIDES[c.id]) {
+        reason = ITEM_REASON_OVERRIDES[c.id];
+      } else {
+        reason = c.fallback;
+      }
+      return { ...c, composite, reason };
+    });
+    // Priority first, composite as tie-break — same shape as production.
+    scored.sort((a, b) => a.priority !== b.priority
+      ? a.priority - b.priority
+      : b.composite - a.composite);
+    return scored.slice(0, 3);
+  }
+
+  function renderChips() {
+    const wrap = document.getElementById("chips");
+    const order = rankChips();
+    wrap.innerHTML = order.map(c => `
+      <div class="chip" data-id="${esc(c.id)}" data-price="${esc(c.base)}" data-name="${esc(c.name)}">
+        <span class="add-icon" aria-label="Add or remove">
+          <svg class="ic-sm icon-add"><use href="#i-plus"/></svg>
+          <svg class="ic-sm icon-remove"><use href="#i-x"/></svg>
+        </span>
+        <span class="emoji">${c.glyph}</span>
+        <div class="name">${esc(c.name)}</div>
+        <div class="reason">${esc(c.reason)}</div>
+        <div class="price">${esc(money(c.base))}</div>
+      </div>`).join("");
+
+    // Re-mark already-added chips green
+    state.items.forEach(it => {
+      const chip = wrap.querySelector(`.chip[data-id="${it.id}"]`);
+      if (chip) chip.classList.add("added");
+    });
+  }
+
+  function recompute() {
+    let sub;
+    if (state.bundle) {
+      sub = state.bundle.price; // bundle locks the subtotal
+    } else {
+      sub = state.items.reduce((s, i) => s + i.each * i.qty, 0);
+    }
+
+    const discountAmt = state.bundle ? 0 : Math.round(sub * (state.discountPercent || 0));
+    const threshold = SEGMENT_THRESHOLD[state.segment];
+    const remaining = threshold > 0 ? Math.max(0, threshold - sub) : 0;
+    const qualified = threshold === 0 || sub >= threshold;
+    const fee = qualified ? 0 : state.deliveryFee;
+    const total = sub - discountAmt + fee;
+
+    document.getElementById("sub").textContent = money(sub);
+    document.getElementById("total").textContent = money(total);
+    document.getElementById("payBtn").textContent = "Pay " + money(total) + " by card";
+    document.getElementById("countLabel").textContent =
+      state.items.reduce((s, i) => s + i.qty, 0) + " items · Kraków";
+
+    document.getElementById("bundleLockedNote").style.display = state.bundle ? "inline" : "none";
+
+    const dr = document.getElementById("discountRow");
+    if (discountAmt > 0) {
+      dr.style.display = "flex";
+      dr.querySelector("#discountLabel").textContent = state.discountLabel;
+      dr.querySelector("#discountAmt").textContent = "−" + money(discountAmt);
+    } else {
+      dr.style.display = "none";
+    }
+
+    const delEl = document.getElementById("del");
+    if (qualified) delEl.innerHTML = '<span class="freed">Free</span>';
+    else           delEl.textContent = money(state.deliveryFee);
+
+    document.getElementById("pts").textContent = Math.round(sub / 100) + " points";
+
+    const delivery = document.getElementById("delivery");
+    if (threshold === 0) {
+      delivery.classList.add("qualified");
+    } else {
+      const pct = Math.min(100, (sub / threshold) * 100);
+      document.getElementById("bar").style.width = pct + "%";
+      document.getElementById("deliveryRem").textContent = money(remaining);
+      document.getElementById("deliveryTarget").textContent = money(threshold);
+      delivery.classList.toggle("qualified", qualified);
+    }
+
+    document.getElementById("thresholdNote").textContent = SEGMENT_LABEL[state.segment].note;
+
+    // Loyalty banner copy reflects segment
+    const tier = SEGMENT_LABEL[state.segment].tier;
+    const tierBadge = document.getElementById("tierBadge");
+    tierBadge.textContent = tier;
+    if (state.segment === "vip") {
+      tierBadge.style.background = "rgba(184,146,46,0.18)";
+      tierBadge.style.color = "var(--color-italia-gold-dark)";
+    } else if (state.segment === "first-time") {
+      tierBadge.style.background = "rgba(200,16,46,0.10)";
+      tierBadge.style.color = "var(--color-italia-red)";
+    } else {
+      tierBadge.style.background = "rgba(184,146,46,0.18)";
+      tierBadge.style.color = "var(--color-italia-gold-dark)";
+    }
+  }
+
+  // ===================================================================
+  // Bundle apply / clear
+  // ===================================================================
+  function applyBundle(id, period) {
+    const ladder = BUNDLES[period];
+    if (!ladder) return;
+    const tier = ladder.find(b => b.id === id);
+    if (!tier) return;
+    if (state.bundle && state.bundle.id === tier.id) {
+      // Tap-applied → clear
+      state.bundle = null;
+      state.items = structuredClone(CART_PRESETS[state.cartShape]);
+      renderBundles();
+      renderLines();
+      renderChips();
+      recompute();
+      toast("sparkles", "Bundle removed", "You're back on per-item pricing.");
+      return;
+    }
+    state.bundle = tier;
+    // Demo composition replacement: synthesize line-items from the tier
+    // string. In production this comes from buildBundleCartLines().
+    state.items = composeFromTier(tier);
+    renderBundles();
+    renderLines();
+    renderChips();
+    recompute();
+    toast("sparkles", `${tier.tier} applied`, `Locked at ${money(tier.price)} — change a line to switch back.`);
+  }
+
+  function composeFromTier(tier) {
+    if (tier.id === "lunch-solo")    return [{ id: "pasta", name: "Carbonara", each: 2600, qty: 1 }];
+    if (tier.id === "lunch-classic") return [{ id: "pasta", name: "Carbonara", each: 0, qty: 1 }, { id: "drink", name: "Limonata", each: 0, qty: 1 }];
+    if (tier.id === "lunch-plus")    return [{ id: "pasta", name: "Carbonara", each: 0, qty: 1 }, { id: "drink", name: "Limonata", each: 0, qty: 1 }, { id: "tiramisu", name: "Tiramisù", each: 0, qty: 1 }];
+    if (tier.id === "lunch-hungry")  return [{ id: "pasta", name: "Carbonara", each: 0, qty: 1 }, { id: "drink", name: "Limonata", each: 0, qty: 1 }, { id: "tiramisu", name: "Tiramisù", each: 0, qty: 1 }, { id: "burrata", name: "Bruschetta", each: 0, qty: 1 }];
+    if (tier.id === "family-classic")return [{ id: "pizza1", name: "Margherita", each: 0, qty: 1 }, { id: "pizza2", name: "Diavola", each: 0, qty: 1 }, { id: "side", name: "Burrata", each: 0, qty: 1 }, { id: "drink1", name: "Limonata", each: 0, qty: 2 }];
+    if (tier.id === "family-feast")  return [{ id: "pizza1", name: "Margherita", each: 0, qty: 1 }, { id: "pizza2", name: "Diavola", each: 0, qty: 1 }, { id: "side", name: "Bruschetta", each: 0, qty: 1 }, { id: "drink1", name: "Limonata", each: 0, qty: 4 }, { id: "tiramisu", name: "Tiramisù", each: 0, qty: 1 }];
+    if (tier.id === "family-deluxe") return [{ id: "pizza1", name: "Margherita", each: 0, qty: 1 }, { id: "pizza2", name: "Diavola", each: 0, qty: 1 }, { id: "pizza3", name: "Quattro Formaggi", each: 0, qty: 1 }, { id: "side1", name: "Burrata", each: 0, qty: 1 }, { id: "side2", name: "Bruschetta", each: 0, qty: 1 }, { id: "drink1", name: "Limonata", each: 0, qty: 6 }, { id: "tiramisu", name: "Tiramisù", each: 0, qty: 1 }, { id: "cannoli", name: "Cannoli", each: 0, qty: 1 }];
+    return state.items;
+  }
+
+  // ===================================================================
+  // Toast (mirror)
+  // ===================================================================
+  let toastTimer = null;
+  function toast(iconKey, title, seed) {
+    const iconId = ({ pizza: "i-bag", sparkles: "i-sparkles", coffee: "i-coffee", truck: "i-truck", users: "i-users" })[iconKey] || "i-sparkles";
+    const host = document.getElementById("toastHost");
+    host.innerHTML = `
+      <div class="toast" id="t">
+        <span class="ic-host"><svg class="ic"><use href="#${esc(iconId)}"/></svg></span>
+        <div class="body">
+          <div class="title">${esc(title)}</div>
+          <div class="seed">${esc(seed)}</div>
+        </div>
+      </div>`;
+    requestAnimationFrame(() => document.getElementById("t").classList.add("in"));
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      const el = document.getElementById("t");
+      if (el) el.classList.remove("in");
+      setTimeout(() => host.innerHTML = "", 250);
+    }, 4000);
+  }
+
+  // ===================================================================
+  // Chip add/remove (mirror) — bundle clears the lock when chip lands.
+  // ===================================================================
+  document.getElementById("chips").addEventListener("click", e => {
+    const chip = e.target.closest(".chip");
+    if (!chip) return;
+    const id   = chip.dataset.id;
+    const name = chip.dataset.name;
+    const isAdded = chip.classList.contains("added");
+    const isBadge = !!e.target.closest(".add-icon");
+    if (isAdded) {
+      if (!isBadge) return; // body of an added chip is non-interactive
+      const idx = state.items.findIndex(x => x.id === id);
+      if (idx >= 0) state.items.splice(idx, 1);
+      chip.classList.remove("added");
+      state.bundle = null;
+      renderLines();
+      renderBundles();
+      recompute();
+      return;
+    }
+    const each = parseInt(chip.dataset.price, 10);
+    chip.classList.add("added");
+    state.items.push({ id, name, each, qty: 1 });
+    state.bundle = null;
+    renderLines();
+    renderBundles();
+    recompute();
+  });
+
+  // ===================================================================
+  // Left-rail control wiring
+  // ===================================================================
+  document.getElementById("hour-switch").addEventListener("click", e => {
+    const btn = e.target.closest("button"); if (!btn) return;
+    document.querySelectorAll("#hour-switch button").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    state.hour = parseInt(btn.dataset.hour, 10);
+    // Hour change retriggers bundle gating + chip ranking.
+    renderBundles();
+    renderChips();
+    recompute();
+  });
+
+  document.getElementById("cart-switch").addEventListener("click", e => {
+    const btn = e.target.closest("button"); if (!btn) return;
+    document.querySelectorAll("#cart-switch button").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    state.cartShape = btn.dataset.cart;
+    state.bundle = null;
+    state.items = structuredClone(CART_PRESETS[state.cartShape]);
+    renderLines();
+    renderBundles();
+    renderChips();
+    recompute();
+  });
+
+  document.getElementById("seg-switch").addEventListener("click", e => {
+    const btn = e.target.closest("button"); if (!btn) return;
+    document.querySelectorAll("#seg-switch button").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    state.segment = btn.dataset.seg;
+    recompute();
+  });
+
+  document.getElementById("corp-switch").addEventListener("click", e => {
+    const btn = e.target.closest("button"); if (!btn) return;
+    document.querySelectorAll("#corp-switch button").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    state.corp = btn.dataset.corp;
+    renderCorporate();
+  });
+
+  document.getElementById("history-switch").addEventListener("click", e => {
+    const btn = e.target.closest("button"); if (!btn) return;
+    document.querySelectorAll("#history-switch button").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    state.history = btn.dataset.history;
+    const preset = HISTORY_PRESETS[state.history];
+    state.customerAttachByItemId = { ...preset.attach };
+    state.customerOrderCount = preset.orders;
+    renderChips();
+  });
+
+  document.getElementById("addBtn").addEventListener("click", () => {
+    const pizza = state.items.find((it) => it.id === "pizza");
+    if (pizza) pizza.qty += 1;
+    else state.items.push({ id: "pizza", name: "Margherita", each: 2800, qty: 1 });
+    state.bundle = null;
+    renderLines();
+    renderBundles();
+    recompute();
+    toast("pizza", "Margherita added", "Customers usually add an espresso.");
+  });
+
+  document.getElementById("qualifyBtn").addEventListener("click", () => {
+    state.items.push({ id: "burrata", name: "Burrata bruschetta", each: 2200, qty: 1 });
+    state.bundle = null;
+    renderLines();
+    renderBundles();
+    recompute();
+    toast("truck", "Free delivery unlocked", "Nice — your order qualifies.");
+  });
+
+  document.getElementById("resetBtn").addEventListener("click", () => {
+    state.items = structuredClone(CART_PRESETS[state.cartShape]);
+    state.bundle = null;
+    renderLines();
+    renderBundles();
+    renderChips();
+    recompute();
+  });
+
+  // ===================================================================
+  // Init
+  // ===================================================================
+  renderLines();
+  renderCorporate();
+  renderBundles();
+  renderChips();
+  recompute();
+</script>
+
+</body>
+</html>

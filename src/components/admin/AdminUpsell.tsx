@@ -63,7 +63,45 @@ interface LocationConfig {
   preferredDrink: string;
   combos: ComboDealConfig[];
   timeWindows?: TimeWindowConfig[];
+  /** Bundle availability rules (audit §3.2 follow-up). Lunch ladder is
+   *  hour-gated; Family Feast ladder is quantity-gated. */
+  bundleRules?: BundleRulesConfig;
+  /** Bundle tier ladder (audit §3.2). When unset / empty, the cart drawer
+   *  falls back to DEFAULT_BUNDLES in src/lib/bundles.ts. */
+  bundles?: BundleConfig[];
 }
+
+interface BundleSlotConfig {
+  kind: "category" | "item";
+  category?: string;
+  itemIdSuffix?: string;
+  quantity: number;
+}
+
+interface BundleConfig {
+  id: string;
+  tier: string;
+  name: string;
+  description: string;
+  priceGrosze: number;
+  refPriceGrosze: number;
+  composition: BundleSlotConfig[];
+  mealPeriod: string;
+  isAnchor?: boolean;
+  isDecoy?: boolean;
+  isDefault?: boolean;
+  active: boolean;
+}
+
+interface BundleRulesConfig {
+  lunch: { startHour: number; endHour: number };
+  family: { minMainItems: number; hintWithin: number };
+}
+
+const DEFAULT_BUNDLE_RULES: BundleRulesConfig = {
+  lunch: { startHour: 11, endHour: 14 },
+  family: { minMainItems: 5, hintWithin: 2 },
+};
 
 type AllSettings = Record<string, LocationConfig>;
 
@@ -778,6 +816,461 @@ export function AdminUpsell() {
           onChange={(timeWindows) => updateConfig({ timeWindows })}
         />
       </div>
+
+      {/* Bundle availability rules (audit §3.2 follow-up) */}
+      <div className="glass-card p-6">
+        <BundleRulesEditor
+          rules={config.bundleRules ?? DEFAULT_BUNDLE_RULES}
+          onChange={(bundleRules) => updateConfig({ bundleRules })}
+        />
+      </div>
+
+      {/* Bundle ladder (audit §3.2) */}
+      <div className="glass-card p-6">
+        <BundlesEditor
+          bundles={config.bundles ?? DEFAULT_BUNDLES_FALLBACK}
+          onChange={(bundles) => updateConfig({ bundles })}
+        />
+      </div>
     </div>
   );
 }
+
+// Mirror of DEFAULT_BUNDLES from src/lib/bundles.ts. Kept local so this
+// client component doesn't import the server module. Saving the editor
+// with these values is a no-op vs the unsaved state.
+const DEFAULT_BUNDLES_FALLBACK: BundleConfig[] = [
+  { id: "lunch-solo", tier: "Solo", name: "Just the pasta", description: "1 pasta of your choice", priceGrosze: 2600, refPriceGrosze: 2600, composition: [{ kind: "category", category: "pasta", quantity: 1 }], mealPeriod: "lunch", active: true },
+  { id: "lunch-classic", tier: "Lunch", name: "Pasta + drink", description: "1 pasta + 1 drink. The classic.", priceGrosze: 3200, refPriceGrosze: 3800, composition: [{ kind: "category", category: "pasta", quantity: 1 }, { kind: "category", category: "drinks", quantity: 1 }], mealPeriod: "lunch", isDefault: true, active: true },
+  { id: "lunch-plus", tier: "Lunch+", name: "Pasta + drink + tiramisù", description: "A meal you'll remember.", priceGrosze: 4600, refPriceGrosze: 5600, composition: [{ kind: "category", category: "pasta", quantity: 1 }, { kind: "category", category: "drinks", quantity: 1 }, { kind: "item", itemIdSuffix: "dessert-tiramisu", quantity: 1 }], mealPeriod: "lunch", isAnchor: true, active: true },
+  { id: "lunch-hungry", tier: "Hungry", name: "+ bruschetta", description: "Pasta, drink, dessert & bruschetta. For a real one.", priceGrosze: 5800, refPriceGrosze: 7600, composition: [{ kind: "category", category: "pasta", quantity: 1 }, { kind: "category", category: "drinks", quantity: 1 }, { kind: "item", itemIdSuffix: "dessert-tiramisu", quantity: 1 }, { kind: "item", itemIdSuffix: "anti-bruschetta", quantity: 1 }], mealPeriod: "lunch", isDecoy: true, active: true },
+  { id: "family-classic", tier: "Family", name: "Two pizzas + sides", description: "2 pizzas + 1 side + 2 drinks", priceGrosze: 8900, refPriceGrosze: 10800, composition: [{ kind: "category", category: "pizza", quantity: 2 }, { kind: "category", category: "antipasti", quantity: 1 }, { kind: "category", category: "drinks", quantity: 2 }], mealPeriod: "family", active: true },
+  { id: "family-feast", tier: "Family Feast", name: "Whole-table dinner", description: "2 pizzas + bruschetta + 4 drinks + tiramisù", priceGrosze: 11900, refPriceGrosze: 16200, composition: [{ kind: "category", category: "pizza", quantity: 2 }, { kind: "item", itemIdSuffix: "anti-bruschetta", quantity: 1 }, { kind: "category", category: "drinks", quantity: 4 }, { kind: "item", itemIdSuffix: "dessert-tiramisu", quantity: 1 }], mealPeriod: "family", isAnchor: true, active: true },
+  { id: "family-deluxe", tier: "Feast Deluxe", name: "Big group, no leftovers", description: "3 pizzas + 2 sides + 6 drinks + 2 desserts", priceGrosze: 16900, refPriceGrosze: 23200, composition: [{ kind: "category", category: "pizza", quantity: 3 }, { kind: "category", category: "antipasti", quantity: 2 }, { kind: "category", category: "drinks", quantity: 6 }, { kind: "category", category: "desserts", quantity: 2 }], mealPeriod: "family", isDecoy: true, active: true },
+];
+
+function BundlesEditor({
+  bundles,
+  onChange,
+}: {
+  bundles: BundleConfig[];
+  onChange: (next: BundleConfig[]) => void;
+}) {
+  const lunchBundles = bundles.filter((b) => b.mealPeriod === "lunch");
+  const familyBundles = bundles.filter((b) => b.mealPeriod === "family");
+
+  const update = (id: string, patch: Partial<BundleConfig>) => {
+    onChange(bundles.map((b) => (b.id === id ? { ...b, ...patch } : b)));
+  };
+  const remove = (id: string) => onChange(bundles.filter((b) => b.id !== id));
+  const addBundle = (mealPeriod: "lunch" | "family") => {
+    const fresh: BundleConfig = {
+      id: `${mealPeriod}-${Math.random().toString(36).slice(2, 8)}`,
+      tier: mealPeriod === "lunch" ? "New Lunch tier" : "New Family tier",
+      name: "Bundle name",
+      description: "What's in it",
+      priceGrosze: mealPeriod === "lunch" ? 3500 : 9900,
+      refPriceGrosze: mealPeriod === "lunch" ? 4000 : 11000,
+      composition: [{ kind: "category", category: mealPeriod === "lunch" ? "pasta" : "pizza", quantity: 1 }],
+      mealPeriod,
+      active: true,
+    };
+    onChange([...bundles, fresh]);
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <label className="text-xs font-semibold admin-text uppercase tracking-wide">
+            Bundle ladder
+          </label>
+          <p className="text-xs admin-text-secondary mt-0.5">
+            Decoy + anchor + default-pushed combos surfaced in the cart drawer.
+            Mark one Lunch tier as <em>default</em> (red &ldquo;Most picked&rdquo;) and one
+            Lunch + one Family tier as <em>anchor</em> (gold &ldquo;Best value&rdquo;).
+          </p>
+        </div>
+      </div>
+
+      <div className="grid gap-4">
+        <BundleLadderSection
+          title="Lunch ladder"
+          bundles={lunchBundles}
+          onUpdate={update}
+          onRemove={remove}
+          onAdd={() => addBundle("lunch")}
+        />
+        <BundleLadderSection
+          title="Family Feast ladder"
+          bundles={familyBundles}
+          onUpdate={update}
+          onRemove={remove}
+          onAdd={() => addBundle("family")}
+        />
+      </div>
+    </div>
+  );
+}
+
+function BundleLadderSection({
+  title,
+  bundles,
+  onUpdate,
+  onRemove,
+  onAdd,
+}: {
+  title: string;
+  bundles: BundleConfig[];
+  onUpdate: (id: string, patch: Partial<BundleConfig>) => void;
+  onRemove: (id: string) => void;
+  onAdd: () => void;
+}) {
+  return (
+    <div className="rounded-lg border border-white/10 bg-white/5 p-3">
+      <div className="flex items-center justify-between mb-3">
+        <p className="admin-text font-semibold text-sm">{title}</p>
+        <button
+          type="button"
+          onClick={onAdd}
+          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-white/20 text-xs admin-text hover:bg-white/10"
+        >
+          <Plus className="h-3 w-3" /> Add tier
+        </button>
+      </div>
+      {bundles.length === 0 ? (
+        <p className="admin-text-secondary text-xs">No tiers yet — add one above.</p>
+      ) : (
+        <div className="grid gap-2">
+          {bundles.map((b) => (
+            <BundleTierRow
+              key={b.id}
+              bundle={b}
+              onChange={(patch) => onUpdate(b.id, patch)}
+              onRemove={() => onRemove(b.id)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BundleTierRow({
+  bundle,
+  onChange,
+  onRemove,
+}: {
+  bundle: BundleConfig;
+  onChange: (patch: Partial<BundleConfig>) => void;
+  onRemove: () => void;
+}) {
+  const savings = Math.max(0, bundle.refPriceGrosze - bundle.priceGrosze);
+  return (
+    <div className="rounded-md border border-white/10 bg-black/20 p-3">
+      <div className="grid gap-2 md:grid-cols-[1fr_1fr_140px_140px_auto] items-center">
+        <input
+          className="glass-input"
+          value={bundle.tier}
+          placeholder="Tier label"
+          onChange={(e) => onChange({ tier: e.target.value })}
+        />
+        <input
+          className="glass-input"
+          value={bundle.name}
+          placeholder="Bundle name"
+          onChange={(e) => onChange({ name: e.target.value })}
+        />
+        <label className="flex items-center gap-1 text-xs admin-text-secondary">
+          Price (zł)
+          <input
+            className="glass-input w-20 text-right"
+            type="number"
+            min={0}
+            value={(bundle.priceGrosze / 100).toFixed(2)}
+            onChange={(e) =>
+              onChange({ priceGrosze: Math.round(parseFloat(e.target.value || "0") * 100) })
+            }
+          />
+        </label>
+        <label className="flex items-center gap-1 text-xs admin-text-secondary">
+          You&rsquo;d pay
+          <input
+            className="glass-input w-20 text-right"
+            type="number"
+            min={0}
+            value={(bundle.refPriceGrosze / 100).toFixed(2)}
+            onChange={(e) =>
+              onChange({
+                refPriceGrosze: Math.round(parseFloat(e.target.value || "0") * 100),
+              })
+            }
+          />
+        </label>
+        <button
+          type="button"
+          onClick={onRemove}
+          className="text-red-400 hover:text-red-300"
+          aria-label="Remove tier"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
+      <input
+        className="glass-input mt-2 w-full"
+        value={bundle.description}
+        placeholder="Short description rendered under the bundle name"
+        onChange={(e) => onChange({ description: e.target.value })}
+      />
+      <div className="flex flex-wrap gap-3 items-center mt-2 text-xs admin-text-secondary">
+        <label className="inline-flex items-center gap-1">
+          <input
+            type="checkbox"
+            checked={!!bundle.isDefault}
+            onChange={(e) =>
+              onChange({ isDefault: e.target.checked, isAnchor: e.target.checked ? false : bundle.isAnchor, isDecoy: e.target.checked ? false : bundle.isDecoy })
+            }
+          />
+          <span>Default-pushed (red)</span>
+        </label>
+        <label className="inline-flex items-center gap-1">
+          <input
+            type="checkbox"
+            checked={!!bundle.isAnchor}
+            onChange={(e) =>
+              onChange({ isAnchor: e.target.checked, isDefault: e.target.checked ? false : bundle.isDefault, isDecoy: e.target.checked ? false : bundle.isDecoy })
+            }
+          />
+          <span>Anchor (gold)</span>
+        </label>
+        <label className="inline-flex items-center gap-1">
+          <input
+            type="checkbox"
+            checked={!!bundle.isDecoy}
+            onChange={(e) =>
+              onChange({ isDecoy: e.target.checked, isDefault: e.target.checked ? false : bundle.isDefault, isAnchor: e.target.checked ? false : bundle.isAnchor })
+            }
+          />
+          <span>Decoy</span>
+        </label>
+        <label className="inline-flex items-center gap-1">
+          <input
+            type="checkbox"
+            checked={bundle.active}
+            onChange={(e) => onChange({ active: e.target.checked })}
+          />
+          <span>Active</span>
+        </label>
+        {savings > 0 && (
+          <span className="text-italia-gold">Save zł {(savings / 100).toFixed(2)}</span>
+        )}
+      </div>
+      <CompositionEditor
+        composition={bundle.composition}
+        onChange={(composition) => onChange({ composition })}
+      />
+    </div>
+  );
+}
+
+function CompositionEditor({
+  composition,
+  onChange,
+}: {
+  composition: BundleSlotConfig[];
+  onChange: (next: BundleSlotConfig[]) => void;
+}) {
+  const update = (i: number, patch: Partial<BundleSlotConfig>) => {
+    onChange(composition.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
+  };
+  const remove = (i: number) => onChange(composition.filter((_, idx) => idx !== i));
+  const add = () =>
+    onChange([...composition, { kind: "category", category: "drinks", quantity: 1 }]);
+  return (
+    <div className="mt-3">
+      <p className="text-[11px] uppercase tracking-wide admin-text-secondary font-semibold mb-1">
+        Composition
+      </p>
+      <div className="grid gap-1.5">
+        {composition.map((slot, i) => (
+          <div
+            key={i}
+            className="grid gap-1.5 grid-cols-[80px_1fr_60px_auto] items-center text-xs"
+          >
+            <select
+              className="glass-input"
+              value={slot.kind}
+              onChange={(e) =>
+                update(i, {
+                  kind: e.target.value as BundleSlotConfig["kind"],
+                  category: e.target.value === "category" ? slot.category ?? "drinks" : undefined,
+                  itemIdSuffix:
+                    e.target.value === "item" ? slot.itemIdSuffix ?? "dessert-tiramisu" : undefined,
+                })
+              }
+            >
+              <option value="category">Any of</option>
+              <option value="item">Specific</option>
+            </select>
+            {slot.kind === "category" ? (
+              <select
+                className="glass-input"
+                value={slot.category ?? "drinks"}
+                onChange={(e) => update(i, { category: e.target.value })}
+              >
+                {CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                className="glass-input"
+                value={slot.itemIdSuffix ?? ""}
+                placeholder="dessert-tiramisu"
+                onChange={(e) => update(i, { itemIdSuffix: e.target.value })}
+              />
+            )}
+            <input
+              className="glass-input"
+              type="number"
+              min={1}
+              max={10}
+              value={slot.quantity}
+              onChange={(e) =>
+                update(i, { quantity: Math.max(1, Number(e.target.value) || 1) })
+              }
+            />
+            <button
+              type="button"
+              onClick={() => remove(i)}
+              className="text-red-400 hover:text-red-300"
+              aria-label="Remove slot"
+            >
+              <Trash2 className="h-3 w-3" />
+            </button>
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={add}
+          className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-dashed border-white/20 text-[11px] admin-text-secondary hover:bg-white/5 w-fit"
+        >
+          <Plus className="h-3 w-3" /> Add slot
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function BundleRulesEditor({
+  rules,
+  onChange,
+}: {
+  rules: BundleRulesConfig;
+  onChange: (next: BundleRulesConfig) => void;
+}) {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <label className="text-xs font-semibold admin-text uppercase tracking-wide">
+            Bundle availability
+          </label>
+          <p className="text-xs admin-text-secondary mt-0.5">
+            Lunch ladder is hour-gated; Family Feast ladder is quantity-gated.
+            Within hint range, the cart drawer shows a one-line nudge instead
+            of the full ladder.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="rounded-lg border border-white/10 bg-white/5 p-3">
+          <p className="admin-text font-semibold text-sm mb-2">Lunch ladder window</p>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="block">
+              <span className="block text-[11px] admin-text-secondary uppercase tracking-wide mb-1">Start hour</span>
+              <input
+                type="number"
+                min={0}
+                max={23}
+                value={rules.lunch.startHour}
+                onChange={(e) =>
+                  onChange({
+                    ...rules,
+                    lunch: { ...rules.lunch, startHour: clampHour(Number(e.target.value)) },
+                  })
+                }
+                className="glass-input w-full"
+              />
+            </label>
+            <label className="block">
+              <span className="block text-[11px] admin-text-secondary uppercase tracking-wide mb-1">End hour</span>
+              <input
+                type="number"
+                min={0}
+                max={24}
+                value={rules.lunch.endHour}
+                onChange={(e) =>
+                  onChange({
+                    ...rules,
+                    lunch: { ...rules.lunch, endHour: clampHour(Number(e.target.value)) },
+                  })
+                }
+                className="glass-input w-full"
+              />
+            </label>
+          </div>
+          <p className="text-[11px] admin-text-secondary mt-2">
+            Default 11–14 (shown for [start, end), so 11–14 = 11:00 through 13:59).
+          </p>
+        </div>
+
+        <div className="rounded-lg border border-white/10 bg-white/5 p-3">
+          <p className="admin-text font-semibold text-sm mb-2">Family Feast quantity gate</p>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="block">
+              <span className="block text-[11px] admin-text-secondary uppercase tracking-wide mb-1">Min mains (pizza + pasta)</span>
+              <input
+                type="number"
+                min={2}
+                max={20}
+                value={rules.family.minMainItems}
+                onChange={(e) =>
+                  onChange({
+                    ...rules,
+                    family: { ...rules.family, minMainItems: Math.max(2, Number(e.target.value) || 2) },
+                  })
+                }
+                className="glass-input w-full"
+              />
+            </label>
+            <label className="block">
+              <span className="block text-[11px] admin-text-secondary uppercase tracking-wide mb-1">Hint within</span>
+              <input
+                type="number"
+                min={0}
+                max={10}
+                value={rules.family.hintWithin}
+                onChange={(e) =>
+                  onChange({
+                    ...rules,
+                    family: { ...rules.family, hintWithin: Math.max(0, Number(e.target.value) || 0) },
+                  })
+                }
+                className="glass-input w-full"
+              />
+            </label>
+          </div>
+          <p className="text-[11px] admin-text-secondary mt-2">
+            Default min 5, hint within 2 — i.e. show the &ldquo;add 1 more pizza
+            or pasta&rdquo; nudge once the cart has 3 or 4 mains.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+

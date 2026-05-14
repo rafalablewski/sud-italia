@@ -11,6 +11,12 @@ export interface CustomerWalletMember {
   contributedPoints: number;
 }
 
+export interface CustomerWalletCorporate {
+  /** Public corporate slug — drives /corporate/[slug] and the cart banner. */
+  slug: string;
+  name: string;
+}
+
 export interface CustomerWallet {
   id: string;
   role: "head" | "member";
@@ -21,6 +27,9 @@ export interface CustomerWallet {
   headRedeemCap: number;
   memberRedeemCap: number;
   members: CustomerWalletMember[];
+  /** Audit §3.4 — present when this wallet has been productised as a
+   *  Sud Italia Corporate account. */
+  corporate?: CustomerWalletCorporate;
 }
 
 export interface CustomerIdentity {
