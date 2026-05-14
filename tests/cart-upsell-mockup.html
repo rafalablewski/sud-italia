@@ -1,0 +1,687 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Sud Italia — Cart Upsell v2 (mockup)</title>
+  <style>
+    :root {
+      --italia-red: #C8102E;
+      --italia-red-dark: #A00D24;
+      --italia-green: #008C45;
+      --italia-green-dark: #006B35;
+      --italia-cream: #FFF8F0;
+      --italia-cream-dark: #F5EDDF;
+      --ink: #1A1A1A;
+      --ink-soft: #5C5856;
+      --ink-faint: #8A8480;
+      --line: rgba(26,26,26,0.08);
+      --line-strong: rgba(26,26,26,0.16);
+      --font-heading: Georgia, "Times New Roman", serif;
+      --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--italia-cream);
+      font-family: var(--font-body);
+      color: var(--ink);
+      min-height: 100vh;
+      padding: 28px;
+    }
+    .page {
+      max-width: 1180px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      gap: 32px;
+    }
+    @media (max-width: 980px) {
+      .page { grid-template-columns: 1fr; }
+    }
+    h1 { font-family: var(--font-heading); font-weight: 600; font-size: 30px; margin: 0 0 6px; }
+    h2 { font-family: var(--font-heading); font-weight: 600; font-size: 20px; margin: 0 0 8px; }
+    .lede { color: var(--ink-soft); font-size: 14px; line-height: 1.55; max-width: 720px; }
+
+    /* ---------- LEFT: explainer + controls ---------- */
+    .panel {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 22px 22px 20px;
+      margin-bottom: 18px;
+      box-shadow: 0 1px 0 rgba(26,26,26,0.02);
+    }
+    .panel.muted { background: #FFFDF9; }
+    .pill {
+      display: inline-block;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--italia-cream-dark);
+      color: var(--ink-soft);
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+    .pill.live { background: rgba(0,140,69,0.10); color: var(--italia-green-dark); }
+
+    .controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    .seg { display: inline-flex; flex-wrap: wrap; background: var(--italia-cream-dark); border-radius: 12px; padding: 4px; gap: 2px; }
+    .seg button {
+      background: transparent; border: 0; padding: 8px 12px; border-radius: 9px;
+      font: inherit; font-size: 13px; color: var(--ink-soft); cursor: pointer;
+    }
+    .seg button.active { background: white; color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,0.06); font-weight: 600; }
+    .btn {
+      cursor: pointer; border: 0; font: inherit; font-weight: 600; font-size: 14px;
+      padding: 10px 14px; border-radius: 10px; background: var(--ink); color: white;
+    }
+    .btn.ghost { background: white; color: var(--ink); border: 1px solid var(--line-strong); }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+
+    .legend { display: grid; gap: 10px; margin-top: 12px; }
+    .legend li { list-style: none; display: grid; grid-template-columns: 28px 1fr; gap: 10px; font-size: 13px; line-height: 1.5; color: var(--ink-soft); }
+    .legend li strong { color: var(--ink); font-weight: 600; }
+    .marker { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 7px; background: var(--italia-cream-dark); font-size: 12px; font-weight: 700; color: var(--italia-red); }
+
+    /* ---------- RIGHT: phone frame holding the cart drawer ---------- */
+    .phone {
+      position: sticky; top: 28px;
+      width: 420px; height: 820px;
+      background: #111; border-radius: 36px; padding: 12px;
+      box-shadow: 0 24px 60px rgba(26,26,26,0.18);
+      margin-left: auto;
+    }
+    @media (max-width: 980px) { .phone { position: static; margin: 0 auto; } }
+    .screen {
+      width: 100%; height: 100%; background: var(--italia-cream); border-radius: 26px;
+      overflow: hidden; position: relative; display: flex; flex-direction: column;
+    }
+    .status-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 14px 22px 6px; font-size: 12px; color: var(--ink); font-weight: 600;
+    }
+
+    /* ---------- Cart drawer body ---------- */
+    .drawer-head {
+      padding: 8px 20px 14px; display: flex; align-items: baseline; justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+    }
+    .drawer-head h3 { margin: 0; font-family: var(--font-heading); font-size: 22px; }
+    .drawer-head .count { font-size: 12px; color: var(--ink-soft); }
+    .drawer-body { flex: 1; overflow-y: auto; padding: 14px 20px 12px; }
+
+    /* time-of-day banner */
+    .tod {
+      border-radius: 12px; padding: 12px 14px; margin-bottom: 14px;
+      display: flex; align-items: center; gap: 12px; font-size: 13px; line-height: 1.4;
+      border: 1px solid transparent;
+    }
+    .tod .icon {
+      width: 36px; height: 36px; flex: none; border-radius: 10px;
+      display: inline-flex; align-items: center; justify-content: center; font-size: 18px;
+    }
+    .tod strong { display: block; font-size: 14px; }
+    .tod .save { font-weight: 700; }
+    .tod-add { margin-left: auto; flex: none; background: var(--ink); color: white; border: 0; font: inherit; font-weight: 600; font-size: 12px; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
+    /* variants */
+    .tod-lunch { background: #FFF1E5; border-color: #F5C690; }
+    .tod-lunch .icon { background: #FFB672; }
+    .tod-lunch .save { color: var(--italia-red); }
+    .tod-afternoon { background: #F7F0FF; border-color: #C9B7E8; }
+    .tod-afternoon .icon { background: #B89BE3; color: white; }
+    .tod-dinner { background: #FFF0F1; border-color: #F2B4B8; }
+    .tod-dinner .icon { background: var(--italia-red); color: white; }
+    .tod-dinner .save { color: var(--italia-red); }
+    .tod-late { background: #1F1B16; color: #FFF1E0; border-color: #2C2620; }
+    .tod-late .icon { background: #3A2D24; color: #FFD79B; }
+    .tod-late strong { color: white; }
+    .tod-late .tod-add { background: var(--italia-red); }
+    .tod-morning { background: #EBF6EF; border-color: #B6DCC4; }
+    .tod-morning .icon { background: var(--italia-green); color: white; }
+    .tod-returning { background: #FFF8E1; border-color: #F1D88B; }
+    .tod-returning .icon { background: #E0A93B; color: white; }
+
+    /* cart line items */
+    .lines { display: grid; gap: 8px; margin-bottom: 14px; }
+    .line {
+      display: grid; grid-template-columns: 36px 1fr auto; align-items: center; gap: 12px;
+      background: white; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px;
+    }
+    .line .qty { width: 28px; height: 28px; border-radius: 8px; background: var(--italia-cream-dark); display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; }
+    .line .name { font-weight: 600; font-size: 14px; }
+    .line .sub { font-size: 12px; color: var(--ink-soft); }
+    .line .price { font-weight: 600; font-size: 14px; }
+
+    /* "Complete the meal" upsell strip */
+    .complete {
+      background: linear-gradient(180deg, #FFFFFF 0%, #FFF8F0 100%);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px 14px 14px;
+      margin-bottom: 14px;
+    }
+    .complete-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .complete-head h4 { margin: 0; font-family: var(--font-heading); font-size: 16px; font-weight: 600; }
+    .complete-head .why { font-size: 11px; color: var(--ink-soft); letter-spacing: 0.04em; text-transform: uppercase; }
+    .chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .chip {
+      background: white; border: 1px solid var(--line-strong); border-radius: 12px;
+      padding: 10px 8px 9px; text-align: center; cursor: pointer;
+      transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+      position: relative; overflow: hidden;
+    }
+    .chip:hover { transform: translateY(-1px); border-color: var(--italia-red); box-shadow: 0 6px 14px rgba(200,16,46,0.10); }
+    .chip:active { transform: translateY(0); }
+    .chip .emoji { font-size: 22px; line-height: 1; display: block; margin-bottom: 4px; }
+    .chip .label { font-weight: 600; font-size: 13px; }
+    .chip .add { font-size: 12px; color: var(--italia-red); font-weight: 700; margin-top: 2px; }
+    .chip .tagline { font-size: 10px; color: var(--ink-faint); margin-top: 3px; line-height: 1.2; }
+    .chip.added {
+      background: rgba(0,140,69,0.08); border-color: var(--italia-green);
+      animation: chip-in .35s ease;
+    }
+    .chip.added .add { color: var(--italia-green); }
+    .chip.added::after {
+      content: "✓"; position: absolute; top: 6px; right: 8px;
+      color: var(--italia-green); font-weight: 700; font-size: 13px;
+    }
+    @keyframes chip-in {
+      0% { transform: scale(0.96); }
+      60% { transform: scale(1.03); }
+      100% { transform: scale(1); }
+    }
+
+    /* free-delivery progress bar */
+    .delivery {
+      background: white; border: 1px solid var(--line); border-radius: 12px;
+      padding: 12px 14px; margin-bottom: 14px;
+    }
+    .delivery-top { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+    .delivery-top .truck { font-size: 16px; }
+    .delivery-top strong { font-weight: 700; }
+    .delivery-top .qualified { color: var(--italia-green); font-weight: 700; margin-left: auto; display: none; }
+    .delivery-top .remaining { margin-left: auto; font-weight: 700; color: var(--italia-red); }
+    .progress {
+      margin-top: 8px; height: 8px; border-radius: 999px;
+      background: var(--italia-cream-dark); overflow: hidden; position: relative;
+    }
+    .progress .bar {
+      height: 100%; border-radius: 999px;
+      background: linear-gradient(90deg, #E6A042 0%, var(--italia-red) 100%);
+      transition: width .5s cubic-bezier(.22,.61,.36,1);
+      position: relative;
+    }
+    .progress .bar::after {
+      content: ""; position: absolute; inset: 0; opacity: 0.4;
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.6) 50%, transparent 100%);
+      animation: shimmer 2.2s linear infinite;
+    }
+    .delivery.qualified .bar { background: var(--italia-green); }
+    .delivery.qualified .remaining { display: none; }
+    .delivery.qualified .qualified { display: inline; }
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    /* totals & pay */
+    .totals { padding: 14px 20px 6px; border-top: 1px solid var(--line); background: white; }
+    .totals .line2 { display: flex; justify-content: space-between; font-size: 13px; color: var(--ink-soft); padding: 3px 0; }
+    .totals .line2.total { color: var(--ink); font-size: 18px; font-weight: 700; padding: 8px 0 4px; border-top: 1px dashed var(--line); margin-top: 6px; }
+    .totals .save-tag { color: var(--italia-green); }
+    .totals .earn { font-size: 11px; color: var(--ink-soft); margin: 2px 0 8px; }
+    .totals .earn b { color: var(--italia-red); }
+
+    .pay {
+      display: grid; grid-template-columns: 1fr; gap: 8px;
+      padding: 0 20px 18px; background: white;
+    }
+    .pay .applepay {
+      background: black; color: white; border: 0; border-radius: 12px;
+      padding: 14px 18px; font: inherit; font-weight: 600; font-size: 16px;
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      cursor: pointer;
+    }
+    .pay .applepay .logo { font-size: 18px; }
+    .pay .card {
+      background: var(--italia-red); color: white; border: 0; border-radius: 12px;
+      padding: 12px 16px; font: inherit; font-weight: 600; font-size: 14px;
+      cursor: pointer;
+    }
+    .pay .pay-meta { text-align: center; font-size: 11px; color: var(--ink-faint); margin-top: 4px; }
+
+    /* toast */
+    .toast-host {
+      position: absolute; left: 14px; right: 14px; top: 76px;
+      z-index: 50; pointer-events: none;
+    }
+    .toast {
+      background: var(--ink); color: white; border-radius: 12px;
+      padding: 10px 14px 11px; font-size: 13px; line-height: 1.35;
+      box-shadow: 0 10px 24px rgba(26,26,26,0.30);
+      display: flex; align-items: flex-start; gap: 10px;
+      transform: translateY(-12px); opacity: 0; transition: transform .25s ease, opacity .25s ease;
+      pointer-events: auto;
+    }
+    .toast.in { transform: translateY(0); opacity: 1; }
+    .toast .emoji { font-size: 18px; line-height: 1; margin-top: 1px; }
+    .toast b { font-weight: 600; }
+    .toast .seed { color: #FFD79B; font-size: 12px; display: block; margin-top: 2px; }
+
+    /* helper notes inside drawer */
+    .hint { font-size: 11px; color: var(--ink-faint); margin-top: -6px; margin-bottom: 10px; padding-left: 2px; }
+
+    /* sticky footer bg */
+    .footer-stick { position: sticky; bottom: 0; }
+
+    code.kbd {
+      font: 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+      background: var(--italia-cream-dark); padding: 2px 6px; border-radius: 5px;
+    }
+    .small { font-size: 12px; color: var(--ink-soft); }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 540px) { .grid-2 { grid-template-columns: 1fr; } }
+    .checklist { padding-left: 18px; margin: 6px 0 0; }
+    .checklist li { margin: 4px 0; color: var(--ink-soft); font-size: 13px; }
+    .checklist li b { color: var(--ink); font-weight: 600; }
+  </style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- LEFT COLUMN -->
+  <div>
+    <div class="panel">
+      <span class="pill">Audit §2.1 – 2.5</span>
+      <h1>Cart Upsell v2 — visual draft</h1>
+      <p class="lede">
+        Four new surfaces, all inside the existing cart drawer + add-to-cart flow.
+        Nothing here blocks the happy path — every prompt is one-tap-add, dismissable, and contextual.
+        Pick a time-of-day variant and click <b>+ Add Margherita</b> to see the full sequence end-to-end.
+      </p>
+
+      <div class="controls">
+        <div class="seg" id="tod-switch" role="tablist" aria-label="Time of day">
+          <button data-tod="lunch" class="active">11:30–13:00 Lunch</button>
+          <button data-tod="afternoon">14:30–16:30 Afternoon</button>
+          <button data-tod="dinner">17:00–19:30 Dinner</button>
+          <button data-tod="late">20:30+ Last call</button>
+          <button data-tod="morning">07:00–10:30 Pre-order</button>
+          <button data-tod="returning">14-day lapsed</button>
+          <button data-tod="off">None (just §2.1)</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <button class="btn" id="addBtn">+ Add Margherita to cart</button>
+        <button class="btn ghost" id="resetBtn">Reset</button>
+        <button class="btn ghost" id="qualifyBtn">Push to free-delivery</button>
+      </div>
+    </div>
+
+    <div class="panel muted">
+      <span class="pill live">What's new</span>
+      <h2>The four surfaces in the redesign</h2>
+      <ul class="legend">
+        <li><span class="marker">1</span><span><strong>Inline toast on add-to-cart.</strong> Seed-only copy ("Customers usually add an espresso"). No CTA, no block. Auto-dismisses in 4s. — see top of phone after pressing Add.</span></li>
+        <li><span class="marker">2</span><span><strong>"Complete the meal" chips above subtotal.</strong> Three tap-to-add chips ranked by margin × attach-rate. Espresso comes first because GM 83% × 60% attach = highest profit/order. One tap, no second screen.</span></li>
+        <li><span class="marker">3</span><span><strong>Animated free-delivery progress bar.</strong> Visible only when fulfillment = delivery and below threshold. Shimmer animation + remaining-PLN counter. Flips to green/checkmark when qualified.</span></li>
+        <li><span class="marker">4</span><span><strong>Time-of-day banner at cart top.</strong> Lunch combo, afternoon espresso break, family feast, last-call clearance, pre-order-for-lunch, returning-after-14d. One banner at a time, picked server-side by local hour × customer state.</span></li>
+      </ul>
+    </div>
+
+    <div class="panel muted">
+      <span class="pill">Out of scope for this sketch</span>
+      <h2>Deferred to follow-up sprints</h2>
+      <ul class="checklist">
+        <li><b>Apple Pay / Google Pay primary CTA</b> at the Stripe sheet — shown here as a static black button so you can see the visual hierarchy, but the Stripe Payment Request API wiring is a separate ticket (Top-50 #4).</li>
+        <li><b>Item modifiers</b> ("Make it a large +PLN 6") — needs a <code class="kbd">CartItem.modifiers</code> migration; covered by §2.2 row 2 and Top-50 #15.</li>
+        <li><b>Bundle / decoy engine</b> (Lunch+, Family Feast) — covered separately under §3.2. The lunch banner shows the eventual link.</li>
+        <li><b>Per-customer ML ranking</b> — §9.1; this sketch uses the static margin × attach-rate heuristic from §2.4.</li>
+      </ul>
+    </div>
+
+    <div class="panel muted">
+      <span class="pill">Won't ship</span>
+      <h2>Patterns we will <em>not</em> use (§2.2)</h2>
+      <ul class="checklist">
+        <li>No "Are you sure?" confirmation pop-ups.</li>
+        <li>No blocking modal after Add to cart.</li>
+        <li>No guilt copy ("You forgot dessert!").</li>
+        <li>No fake urgency. The time-of-day banner uses <em>real</em> windows; scarcity claims come from real inventory only.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- RIGHT COLUMN: phone -->
+  <div>
+    <div class="phone">
+      <div class="screen">
+
+        <div class="status-bar">
+          <span>12:14</span>
+          <span>● ▮▮▮ 100%</span>
+        </div>
+
+        <div class="drawer-head">
+          <h3>Your order</h3>
+          <span class="count" id="countLabel">3 items · Kraków</span>
+        </div>
+
+        <!-- toast host -->
+        <div class="toast-host" id="toastHost"></div>
+
+        <div class="drawer-body" id="drawerBody">
+
+          <!-- Time-of-day banner host -->
+          <div id="todHost"></div>
+
+          <!-- Cart line items -->
+          <div class="lines" id="lines">
+            <div class="line">
+              <span class="qty">1×</span>
+              <div>
+                <div class="name">Margherita</div>
+                <div class="sub">San Marzano · fior di latte</div>
+              </div>
+              <span class="price">28,00 zł</span>
+            </div>
+            <div class="line">
+              <span class="qty">1×</span>
+              <div>
+                <div class="name">Carbonara</div>
+                <div class="sub">Guanciale · pecorino · egg</div>
+              </div>
+              <span class="price">29,00 zł</span>
+            </div>
+          </div>
+
+          <!-- Complete the meal -->
+          <div class="complete">
+            <div class="complete-head">
+              <h4>Complete the meal</h4>
+              <span class="why">Customers usually add</span>
+            </div>
+            <div class="chips" id="chips">
+              <div class="chip" data-id="espresso" data-price="600" data-name="Espresso">
+                <span class="emoji">☕️</span>
+                <div class="label">Espresso</div>
+                <div class="add">+ 6,00 zł</div>
+                <div class="tagline">Pizzaiolo's pick</div>
+              </div>
+              <div class="chip" data-id="tiramisu" data-price="1800" data-name="Tiramisù">
+                <span class="emoji">🍰</span>
+                <div class="label">Tiramisù</div>
+                <div class="add">+ 18,00 zł</div>
+                <div class="tagline">Made fresh today</div>
+              </div>
+              <div class="chip" data-id="limonata" data-price="1200" data-name="Limonata">
+                <span class="emoji">🍋</span>
+                <div class="label">Limonata</div>
+                <div class="add">+ 12,00 zł</div>
+                <div class="tagline">Sicilian lemon</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Free delivery progress bar -->
+          <div class="delivery" id="delivery">
+            <div class="delivery-top">
+              <span class="truck">🚚</span>
+              <span><strong id="deliveryMsg">12,00 zł</strong> to free delivery</span>
+              <span class="remaining" id="deliveryRem">12,00 zł left</span>
+              <span class="qualified">✓ Free delivery</span>
+            </div>
+            <div class="progress"><div class="bar" id="bar" style="width: 80%"></div></div>
+          </div>
+
+          <p class="hint">Toggle delivery vs takeout, slot pickers, customer details — unchanged from current drawer. Not redrawn here to keep the mock focused on the upsell deltas.</p>
+        </div>
+
+        <!-- Totals -->
+        <div class="totals footer-stick">
+          <div class="line2"><span>Subtotal</span><span id="sub">57,00 zł</span></div>
+          <div class="line2" id="discountRow" style="display:none"><span class="save-tag" id="discountLabel">Lunch combo −10%</span><span class="save-tag" id="discountAmt">−5,70 zł</span></div>
+          <div class="line2"><span>Delivery</span><span id="del">8,00 zł</span></div>
+          <div class="line2 total"><span>Total</span><span id="total">65,00 zł</span></div>
+          <div class="earn">You'll earn <b id="pts">57 pts</b> · Silver tier +14 pts to next</div>
+        </div>
+
+        <div class="pay">
+          <button class="applepay"><span class="logo">⏏</span> Pay with Apple Pay</button>
+          <button class="card">Pay 65,00 zł by card</button>
+          <div class="pay-meta">PLN 0 hidden fees · Stripe · BLIK / card / Apple Pay / Google Pay</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ---------- state ----------
+  const state = {
+    items: [
+      { id: "pizza", name: "Margherita", price: 2800, qty: 1 },
+      { id: "pasta", name: "Carbonara",  price: 2900, qty: 1 },
+    ],
+    tod: "lunch",
+    discount: 0, // grosze
+    discountLabel: null,
+    deliveryThreshold: 6000, // 60 PLN
+    deliveryFee: 800, // 8 PLN flat for the mock
+  };
+
+  // ---------- time-of-day banners ----------
+  const TOD = {
+    off: null,
+    lunch: {
+      variant: "tod-lunch", icon: "🍝", strong: "Lunch combo — pasta + drink",
+      tail: 'Save <span class="save">8,00 zł</span> (PLN 39 instead of 47)',
+      addLabel: "Make it a combo",
+      apply: () => ({ label: "Lunch combo −10%", amount: 0.10 })
+    },
+    afternoon: {
+      variant: "tod-afternoon", icon: "☕️", strong: "Espresso break",
+      tail: 'Add an espresso for <span class="save">6,00 zł</span> · ready in 4 min',
+      addLabel: "+ Espresso",
+      apply: null
+    },
+    dinner: {
+      variant: "tod-dinner", icon: "🍕", strong: "Family Feast for 4 — 119,00 zł",
+      tail: '2 pizzas + bruschetta + 4 drinks + tiramisù · save 43,00 zł',
+      addLabel: "See the feast",
+      apply: null
+    },
+    late: {
+      variant: "tod-late", icon: "🌙", strong: "Last call — −15% on any pizza tonight",
+      tail: "Clearance window closes at 23:00 · pickup only",
+      addLabel: "Apply −15%",
+      apply: () => ({ label: "Last call −15%", amount: 0.15 })
+    },
+    morning: {
+      variant: "tod-morning", icon: "⏰", strong: "Pre-order lunch — 12:00 slot fills by 11:15",
+      tail: "Lock your usual now, skip the queue at noon",
+      addLabel: "Pick a slot",
+      apply: null
+    },
+    returning: {
+      variant: "tod-returning", icon: "👋", strong: "Welcome back, Anna",
+      tail: 'Your usual <b>Margherita + espresso</b> is 34,00 zł · ready at 18:14',
+      addLabel: "Reorder usual",
+      apply: null
+    },
+  };
+
+  function fmt(grosze) {
+    return (grosze / 100).toFixed(2).replace(".", ",") + " zł";
+  }
+
+  function recompute() {
+    const sub = state.items.reduce((s, i) => s + i.price * i.qty, 0);
+    const discountAmt = state.discount;
+    const remaining = Math.max(0, state.deliveryThreshold - sub);
+    const fee = remaining === 0 ? 0 : state.deliveryFee;
+    const total = sub - discountAmt + fee;
+
+    document.getElementById("sub").textContent = fmt(sub);
+    document.getElementById("del").textContent = fee === 0 ? "Free" : fmt(fee);
+    document.getElementById("del").style.color = fee === 0 ? "var(--italia-green)" : "";
+    document.getElementById("total").textContent = fmt(total);
+    document.getElementById("countLabel").textContent =
+      state.items.reduce((s, i) => s + i.qty, 0) + " items · Kraków";
+    document.querySelector(".card").textContent = "Pay " + fmt(total) + " by card";
+    document.getElementById("pts").textContent = Math.round(sub / 100) + " pts";
+
+    // discount row
+    const dr = document.getElementById("discountRow");
+    if (discountAmt > 0) {
+      dr.style.display = "flex";
+      document.getElementById("discountLabel").textContent = state.discountLabel || "Discount";
+      document.getElementById("discountAmt").textContent = "−" + fmt(discountAmt);
+    } else {
+      dr.style.display = "none";
+    }
+
+    // delivery bar
+    const pct = Math.min(100, Math.round((sub / state.deliveryThreshold) * 100));
+    const deliveryEl = document.getElementById("delivery");
+    document.getElementById("bar").style.width = pct + "%";
+    document.getElementById("deliveryRem").textContent = fmt(remaining) + " left";
+    document.getElementById("deliveryMsg").textContent = remaining === 0 ? "You're at free delivery." : fmt(remaining);
+    deliveryEl.classList.toggle("qualified", remaining === 0);
+  }
+
+  function renderLines() {
+    const wrap = document.getElementById("lines");
+    wrap.innerHTML = "";
+    state.items.forEach(it => {
+      const row = document.createElement("div");
+      row.className = "line";
+      row.innerHTML = `
+        <span class="qty">${it.qty}×</span>
+        <div>
+          <div class="name">${it.name}</div>
+          <div class="sub">${it.sub || ""}</div>
+        </div>
+        <span class="price">${fmt(it.price * it.qty)}</span>
+      `;
+      wrap.appendChild(row);
+    });
+  }
+
+  function renderTod() {
+    const host = document.getElementById("todHost");
+    const cfg = TOD[state.tod];
+    if (!cfg) { host.innerHTML = ""; return; }
+    host.innerHTML = `
+      <div class="tod ${cfg.variant}">
+        <span class="icon">${cfg.icon}</span>
+        <div>
+          <strong>${cfg.strong}</strong>
+          <div>${cfg.tail}</div>
+        </div>
+        <button class="tod-add" id="todAdd">${cfg.addLabel}</button>
+      </div>
+    `;
+    const btn = document.getElementById("todAdd");
+    if (btn) btn.addEventListener("click", () => {
+      if (cfg.apply) {
+        const d = cfg.apply();
+        const sub = state.items.reduce((s, i) => s + i.price * i.qty, 0);
+        state.discount = Math.round(sub * d.amount);
+        state.discountLabel = d.label;
+        recompute();
+        toast("✅", "Combo applied", d.label + " — keep building.");
+      } else {
+        toast("👍", "Noted", "Wire this CTA to the corresponding flow.");
+      }
+    });
+  }
+
+  // ---------- toast ----------
+  let toastTimer = null;
+  function toast(emoji, title, seed) {
+    const host = document.getElementById("toastHost");
+    host.innerHTML = `
+      <div class="toast" id="t">
+        <span class="emoji">${emoji}</span>
+        <div>
+          <b>${title}</b>
+          <span class="seed">${seed}</span>
+        </div>
+      </div>`;
+    requestAnimationFrame(() => document.getElementById("t").classList.add("in"));
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      const el = document.getElementById("t");
+      if (el) el.classList.remove("in");
+      setTimeout(() => host.innerHTML = "", 250);
+    }, 4000);
+  }
+
+  // ---------- chips ----------
+  document.getElementById("chips").addEventListener("click", e => {
+    const chip = e.target.closest(".chip");
+    if (!chip || chip.classList.contains("added")) return;
+    chip.classList.add("added");
+    const id = chip.dataset.id;
+    const price = parseInt(chip.dataset.price, 10);
+    const name = chip.dataset.name;
+    state.items.push({ id, name, price, qty: 1, sub: "Added from upsell" });
+    renderLines();
+    recompute();
+    toast("✨", name + " added", "Nice. Tap another chip or check out.");
+  });
+
+  // ---------- buttons ----------
+  document.getElementById("addBtn").addEventListener("click", () => {
+    state.items[0].qty += 1;
+    renderLines();
+    recompute();
+    toast("🍕", "Margherita added", "Customers usually add an espresso.");
+  });
+
+  document.getElementById("resetBtn").addEventListener("click", () => {
+    state.items = [
+      { id: "pizza", name: "Margherita", price: 2800, qty: 1, sub: "San Marzano · fior di latte" },
+      { id: "pasta", name: "Carbonara",  price: 2900, qty: 1, sub: "Guanciale · pecorino · egg" },
+    ];
+    state.discount = 0; state.discountLabel = null;
+    document.querySelectorAll(".chip.added").forEach(c => c.classList.remove("added"));
+    renderLines();
+    recompute();
+  });
+
+  document.getElementById("qualifyBtn").addEventListener("click", () => {
+    state.items.push({ id: "feast", name: "Bruschetta + Tiramisù", price: 3400, qty: 1, sub: "Pushed cart over threshold" });
+    renderLines();
+    recompute();
+    toast("🚚", "Free delivery unlocked", "Nice — kitchen is starting your order at noon.");
+  });
+
+  // ---------- time-of-day switcher ----------
+  document.getElementById("tod-switch").addEventListener("click", e => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+    document.querySelectorAll("#tod-switch button").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    state.tod = btn.dataset.tod;
+    // reset discount when switching (last-call/lunch toggles a discount on apply)
+    state.discount = 0; state.discountLabel = null;
+    renderTod();
+    recompute();
+  });
+
+  // ---------- init ----------
+  renderLines();
+  renderTod();
+  recompute();
+</script>
+</body>
+</html>
