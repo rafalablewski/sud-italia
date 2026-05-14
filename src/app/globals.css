@@ -3066,7 +3066,7 @@ html { scroll-behavior: smooth; }
   display: inline-flex;
   align-items: stretch;
   background: var(--surface-2);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
   overflow: hidden;
 }
@@ -3074,9 +3074,10 @@ html { scroll-behavior: smooth; }
 .v2-date-pager > .v2-date-pager-label {
   border-radius: 0;
   border: none;
-  border-right: 1px solid var(--border);
+  border-right: 1px solid var(--border-strong);
   background: transparent;
   color: var(--fg-muted);
+  min-width: 40px;
 }
 .v2-date-pager > :last-child { border-right: none; }
 .v2-date-pager > .v2-btn:hover:not(:disabled):not(.is-loading),
