@@ -14,6 +14,8 @@ import type { CartItem, FulfillmentType, Order } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
 import {
   computeDeliveryFee,
+  effectiveUnitPrice,
+  findModifierOption,
   getActiveComboDeals,
   getDeliveryThresholdForCustomer,
 } from "@/lib/upsell";
@@ -34,7 +36,17 @@ import { normalizePlPhoneE164 } from "@/lib/phone";
  */
 
 export interface CreateOrderInput {
-  items: { id: string; quantity: number; notes?: string }[];
+  items: {
+    id: string;
+    quantity: number;
+    notes?: string;
+    /** Modifier selections per line (audit §3). Each entry pairs a
+     *  modifier group id with the chosen option id from the item's
+     *  modifierGroups. Server re-validates every selection against the
+     *  current menu (admin may have removed an option between cart
+     *  hydration and checkout). */
+    selectedModifiers?: { groupId: string; optionId: string }[];
+  }[];
   locationSlug: string;
   customerName: string;
   customerPhone: string;
@@ -134,13 +146,32 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
       const trimmed = item.notes.trim();
       if (trimmed.length > 0) notes = trimmed.slice(0, NOTE_MAX_LEN);
     }
-    calculatedTotal += menuItem.price * item.quantity;
-    orderItems.push({
+    // Validate modifier selections against the current menu so a client
+    // can't post a forged modifier id to lower the price or escape KDS
+    // flags. Unknown / stale selections are dropped silently — the cart
+    // would have re-validated against the current menu on render.
+    let selectedModifiers: { groupId: string; optionId: string }[] | undefined;
+    if (Array.isArray(item.selectedModifiers) && item.selectedModifiers.length > 0) {
+      const valid = item.selectedModifiers.filter(
+        (m) =>
+          typeof m?.groupId === "string" &&
+          typeof m?.optionId === "string" &&
+          findModifierOption(menuItem, m.groupId, m.optionId) !== null,
+      );
+      if (valid.length > 0) selectedModifiers = valid;
+    }
+    const lineItem: CartItem = {
       menuItem,
       quantity: item.quantity,
       locationSlug: input.locationSlug,
       notes,
-    });
+      ...(selectedModifiers ? { selectedModifiers } : {}),
+    };
+    // effectiveUnitPrice includes any modifier surcharges (audit §3 —
+    // extra cheese +6, sourdough +5). Bundle-applied carts still
+    // override this further down via bundleSubtotal.
+    calculatedTotal += effectiveUnitPrice(lineItem) * item.quantity;
+    orderItems.push(lineItem);
   }
 
   // Bundles win over combos. Re-resolve the bundle from the upsell config
@@ -201,7 +232,13 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
   if (bundleSubtotal !== null) {
     calculatedTotal = bundleSubtotal;
   } else {
-    const comboResult = getActiveComboDeals(orderItems, locationConfig);
+    // Channel-aware (audit §3) — delivery-only combos only fire on
+    // delivery orders, dine-in combos only on takeout.
+    const comboResult = getActiveComboDeals(
+      orderItems,
+      locationConfig,
+      input.fulfillmentType,
+    );
     if (comboResult.isComplete) {
       comboDiscount = comboResult.savings;
       comboName = comboResult.activeDeal?.name ?? null;

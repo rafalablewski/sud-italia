@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, Check, Save, Layers, SlidersHorizontal, Construction, FlaskConical } from "lucide-react";
+import { AlertTriangle, Check, Save, Layers, SlidersHorizontal, Sliders, FlaskConical } from "lucide-react";
 import { LocationTabs } from "./LocationTabs";
 import { Tabs } from "./v2/ui";
 import {
@@ -12,6 +12,7 @@ import {
   useSellingSettings,
 } from "./AdminSellingShared";
 import { BundleManager } from "./bundle-manager/BundleManager";
+import { ModifierInventory } from "./ModifierInventory";
 
 type TabKey = "bundles" | "rules" | "experiments" | "modifiers";
 
@@ -102,7 +103,7 @@ export function AdminUpsell() {
           { value: "bundles", label: "Bundle ladders", icon: <Layers className="h-3.5 w-3.5" /> },
           { value: "rules", label: "Bundle rules", icon: <SlidersHorizontal className="h-3.5 w-3.5" /> },
           { value: "experiments", label: "Experiments (A/B)", icon: <FlaskConical className="h-3.5 w-3.5" /> },
-          { value: "modifiers", label: "Item modifiers", icon: <Construction className="h-3.5 w-3.5" /> },
+          { value: "modifiers", label: "Item modifiers", icon: <Sliders className="h-3.5 w-3.5" /> },
         ]}
         variant="underline"
         ariaLabel="Upsell view"
@@ -148,16 +149,8 @@ export function AdminUpsell() {
       )}
 
       {tab === "modifiers" && (
-        <div className="glass-card p-8 text-center">
-          <Construction className="h-8 w-8 text-italia-gold mx-auto mb-3" />
-          <h2 className="font-heading font-bold text-lg admin-text mb-2">
-            Per-item modifiers — coming soon
-          </h2>
-          <p className="text-sm admin-text-secondary max-w-md mx-auto">
-            Size upgrades (medium → large), premium toppings (+truffle oil, +buffalo mozzarella),
-            and add-a-side modifiers will live here. Today the menu has fixed-price items
-            only; this tab is reserved for the next iteration.
-          </p>
+        <div className="glass-card p-6">
+          <ModifierInventory />
         </div>
       )}
     </div>

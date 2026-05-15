@@ -55,10 +55,14 @@ export function CartUpsell({ suggestions }: CartUpsellProps) {
       </div>
       <div className="grid grid-cols-3 gap-2">
         {visible.map((suggestion) => {
-          const isAdded = itemIdsInCart.has(suggestion.item.id);
+          // Quantity-bump suggestions ("Make it 2") never show the added
+          // state — tapping the chip bumps the qty of the existing line
+          // rather than adding a duplicate. The cart store's addItem
+          // handles same-id increment automatically.
+          const isAdded = !suggestion.isQuantityBump && itemIdsInCart.has(suggestion.item.id);
           return (
             <CompleteTheMealChip
-              key={suggestion.item.id}
+              key={`${suggestion.item.id}-${suggestion.isQuantityBump ? "qty" : "add"}`}
               suggestion={suggestion}
               isAdded={isAdded}
               onAdd={() => {
@@ -129,10 +133,10 @@ function CompleteTheMealChip({ suggestion, isAdded, onAdd, onRemove }: ChipProps
       </span>
 
       <div className="text-[22px] leading-none mb-1" aria-hidden="true">
-        {categoryGlyph(suggestion.item.category)}
+        {suggestion.isQuantityBump ? "✕2" : categoryGlyph(suggestion.item.category)}
       </div>
       <div className="text-sm font-medium text-italia-dark leading-tight truncate">
-        {suggestion.item.name}
+        {suggestion.isQuantityBump ? `Add another ${suggestion.item.name}` : suggestion.item.name}
       </div>
       <div className="text-[11px] text-italia-gray leading-tight truncate mt-0.5">
         {suggestion.reason}
@@ -142,7 +146,7 @@ function CompleteTheMealChip({ suggestion, isAdded, onAdd, onRemove }: ChipProps
           isAdded ? "text-italia-green-dark" : "text-italia-red"
         }`}
       >
-        {formatPrice(suggestion.item.price)}
+        {suggestion.isQuantityBump ? "+" : ""}{formatPrice(suggestion.item.price)}
       </div>
     </div>
   );

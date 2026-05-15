@@ -90,6 +90,56 @@ export interface NutritionInfo {
  */
 export type MenuRole = "hero" | "profit-driver" | "anchor" | "lto";
 
+// --- Item Modifiers (audit §3 — the biggest missing capability) ---------
+//
+// A modifier group attaches to a menu item. Each group has a set of
+// options the customer can pick from (size, extra toppings, crust type).
+// Options carry a `priceDelta` in grosze added to the line price, and
+// optionally a `costDelta` for food-cost accuracy.
+//
+// Example: Pizza Margherita gets a "Crust" modifier group with options
+// [Standard 0, Sourdough +500, Gluten-free +500] and a "Premium toppings"
+// modifier group with multiselect [Extra cheese +600, Truffle oil +800,
+// Buffalo mozzarella +900].
+//
+// The cart line for a pizza with selections carries `selectedModifiers`,
+// each holding the group id + option id. Price math sums priceDelta × qty.
+
+export interface ModifierOption {
+  id: string;
+  label: string;
+  /** Price added to the line in grosze. Can be 0 (Standard crust) or
+   *  positive (extra cheese +600). Negative values are clamped to 0
+   *  at runtime — we don't credit refunds via modifier picks. */
+  priceDelta: number;
+  /** Food cost in grosze added when this option is selected. Used by
+   *  the bundle margin alert + Reports for honest margin calc. */
+  costDelta?: number;
+  /** Optional flag — when true, modifier choice fires a KDS callout
+   *  ("BUFFALO MOZZ" highlighted on the ticket). */
+  flagOnKds?: boolean;
+}
+
+export interface ModifierGroup {
+  id: string;
+  /** Customer-facing label rendered above the option list. */
+  label: string;
+  /** Minimum number of options that must be selected (default 0 =
+   *  optional group; 1 = required). */
+  minSelections?: number;
+  /** Maximum number of options the customer can select. 1 = radio
+   *  (default for required groups); ≥2 = checkbox multiselect. */
+  maxSelections?: number;
+  options: ModifierOption[];
+}
+
+export interface SelectedModifier {
+  /** ModifierGroup.id */
+  groupId: string;
+  /** ModifierOption.id */
+  optionId: string;
+}
+
 export interface MenuItem {
   id: string;
   name: string;
@@ -110,6 +160,20 @@ export interface MenuItem {
   prepTimeMinutes?: number;
   isLimited?: boolean;   // seasonal/limited-time item
   limitedUntil?: string; // ISO date string
+  /** Delivery-exclusive SKU (audit §3 channel economics). When true the
+   *  menu page hides this item for dine-in/takeout and only surfaces it
+   *  when fulfillmentType=delivery. Pantry items, beer 4-packs, frozen
+   *  desserts live here. */
+  deliveryOnly?: boolean;
+  /** Per-unit packaging cost in grosze (audit §3 — boxes, napkins, carrier
+   *  bag share). Subtracted from gross margin on delivery orders so the
+   *  Bundle KPI dashboard / margin alert reflects real delivery economics
+   *  rather than naked plate cost. Unset = 0 packaging cost. */
+  packagingCost?: number;
+  /** Item modifier groups (audit §3 — size upgrades, extra toppings,
+   *  crust types). Each group can be optional (minSelections=0) or
+   *  required, single-select (radio) or multi-select (checkbox). */
+  modifierGroups?: ModifierGroup[];
 }
 
 // --- Ingredients & Recipes ---
@@ -177,6 +241,10 @@ export interface CartItem {
    * "well-done". Surfaced on the KDS ticket and on the admin order detail.
    */
   notes?: string;
+  /** Modifier selections for this line (audit §3). Each entry pairs a
+   *  modifier group id with the chosen option id. Cart math sums
+   *  `option.priceDelta × quantity` into the line subtotal. */
+  selectedModifiers?: SelectedModifier[];
 }
 
 export type FulfillmentType = "takeout" | "delivery";

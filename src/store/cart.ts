@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { CartItem, MenuItem, FulfillmentType } from "@/data/types";
+import { effectiveUnitPrice } from "@/lib/upsell";
 
 interface CartStore {
   items: CartItem[];
@@ -188,8 +189,10 @@ export const useCartStore = create<CartStore>()(
         if (state.appliedBundleId && state.bundlePriceGrosze > 0) {
           return state.bundlePriceGrosze;
         }
+        // Effective unit price includes any per-line modifier surcharges
+        // (audit §3 — Extra cheese +6, Sourdough crust +5, etc.).
         return state.items.reduce(
-          (sum, item) => sum + item.menuItem.price * item.quantity,
+          (sum, item) => sum + effectiveUnitPrice(item) * item.quantity,
           0
         );
       },

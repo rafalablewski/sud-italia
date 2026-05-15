@@ -1,4 +1,4 @@
-import { MenuItem, MenuCategory, CartItem, MenuRole } from "@/data/types";
+import { MenuItem, MenuCategory, CartItem, MenuRole, ModifierOption } from "@/data/types";
 
 // --- Contextual pairing graph (audit §3.1) -----------------------------
 //
@@ -208,6 +208,9 @@ export interface UpsellConfig {
     discountPercent: number;
     minItems: number;
     active: boolean;
+    requiredItems?: { suffix: string; label: string }[];
+    /** Channel restriction — see ComboDeal.channel. */
+    channel?: "dine-in" | "delivery";
   }[];
   /** Admin override for the §2.3 time-of-day banner. When present + non-empty,
    *  these windows replace DEFAULT_TIME_WINDOWS for the location. Same shape
@@ -324,6 +327,12 @@ export interface UpsellSuggestion {
   item: MenuItem;
   reason: string;
   priority: number; // lower = shown first
+  /** When true, tapping this chip increments the quantity of an item
+   *  ALREADY in the cart rather than adding it as a new line. Powers the
+   *  "Make it 2" quantity upsell (audit §3). The chip should render
+   *  differently — green "+1" instead of red "+", and the cart-side
+   *  handler should call addItem() to trigger the same-id qty bump. */
+  isQuantityBump?: boolean;
 }
 
 /**
@@ -352,15 +361,46 @@ const DEFAULT_PREFERRED_COFFEE: Record<string, string> = {
   warszawa: "waw-drink-espresso",
 };
 
+// Premium default dessert (used when cart ≥ DESSERT_PREMIUM_CART_THRESHOLD)
 const DEFAULT_PREFERRED_DESSERT: Record<string, string> = {
   krakow: "krk-dessert-tiramisu",
   warszawa: "waw-dessert-tiramisu",
+};
+
+// Value default dessert — used on sub-threshold carts (audit §3 — Panna Cotta
+// 75% margin vs Tiramisù 70% margin; budget-tier carts signal price
+// sensitivity, surface the higher-margin / lower-friction sweet).
+const DEFAULT_VALUE_DESSERT: Record<string, string> = {
+  krakow: "krk-dessert-panna-cotta",
+  warszawa: "waw-dessert-panna-cotta",
 };
 
 const DEFAULT_PREFERRED_DRINK: Record<string, string> = {
   krakow: "krk-drink-limonata",
   warszawa: "waw-drink-limonata",
 };
+
+// Default budget drink (water) — surfaced when cart subtotal is below
+// DRINK_PREMIUM_CART_THRESHOLD, customer hasn't picked a paid drink, and
+// budget signal is high. Highest margin (83% / water) on cheapest SKU.
+const DEFAULT_BUDGET_DRINK: Record<string, string> = {
+  krakow: "krk-drink-water",
+  warszawa: "waw-drink-water",
+};
+
+// Garlic Bread is the new "side attach" for pizza orders — replaces panini
+// in the upsell hierarchy. 22% margin lift vs no-side, near-universal attach
+// affinity to pizza in QSR data.
+const DEFAULT_PIZZA_SIDE: Record<string, string> = {
+  krakow: "krk-anti-garlic-bread",
+  warszawa: "waw-anti-garlic-bread",
+};
+
+/** Cart total threshold below which we surface budget-tier defaults
+ *  (Panna Cotta, water) instead of premium ones (Tiramisù, Limonata).
+ *  Tunable at admin-config time in a future iteration. */
+const DESSERT_PREMIUM_CART_THRESHOLD = 4000; // 40 PLN
+const DRINK_PREMIUM_CART_THRESHOLD = 3500; // 35 PLN
 
 export function getCartSuggestions(
   cartItems: CartItem[],
@@ -386,19 +426,59 @@ export function getCartSuggestions(
   );
   const byId = new Map(available.map((m) => [m.id, m]));
 
-  const hasPizzaOrPasta = cartCategories.has("pizza") || cartCategories.has("pasta");
+  const hasPizza = cartCategories.has("pizza");
+  const hasPasta = cartCategories.has("pasta");
+  const hasPizzaOrPasta = hasPizza || hasPasta;
   const hasPanini = cartCategories.has("panini");
   const hasMain = hasPizzaOrPasta || hasPanini;
   const hasCoffee = cartItems.some((ci) => ci.menuItem.id.includes("espresso"));
   const hasDrink = cartCategories.has("drinks");
   const hasDessert = cartCategories.has("desserts");
+  const hasAntipasti = cartCategories.has("antipasti");
+  const hasGarlicBread = cartItems.some((ci) =>
+    ci.menuItem.id.endsWith("anti-garlic-bread"),
+  );
 
-  // Use admin config if available, otherwise defaults
+  // Cart subtotal drives the budget-vs-premium default split (audit §3).
+  const cartSubtotal = cartItems.reduce(
+    (s, ci) => s + ci.menuItem.price * ci.quantity,
+    0,
+  );
+  const isBudgetCart = cartSubtotal < DESSERT_PREMIUM_CART_THRESHOLD;
+  const isBudgetDrinkCart = cartSubtotal < DRINK_PREMIUM_CART_THRESHOLD;
+
+  // Use admin config if available, otherwise defaults. Budget defaults take
+  // priority on sub-threshold carts (Panna Cotta over Tiramisù).
   const prefCoffee = config?.preferredCoffee || DEFAULT_PREFERRED_COFFEE[locationSlug];
-  const prefDessert = config?.preferredDessert || DEFAULT_PREFERRED_DESSERT[locationSlug];
-  const prefDrink = config?.preferredDrink || DEFAULT_PREFERRED_DRINK[locationSlug];
+  const prefDessert =
+    config?.preferredDessert ||
+    (isBudgetCart
+      ? DEFAULT_VALUE_DESSERT[locationSlug]
+      : DEFAULT_PREFERRED_DESSERT[locationSlug]);
+  const prefDrink =
+    config?.preferredDrink ||
+    (isBudgetDrinkCart
+      ? DEFAULT_BUDGET_DRINK[locationSlug]
+      : DEFAULT_PREFERRED_DRINK[locationSlug]);
+  const prefPizzaSide = DEFAULT_PIZZA_SIDE[locationSlug];
 
   const suggestions: UpsellSuggestion[] = [];
+
+  // RULE 0 — Quantity upsell. The single highest-conversion pattern in QSR
+  // ("Make it 2 for +X"). When the cart has exactly one pizza or pasta and
+  // no other mains, surface the same SKU again with a small framing bump.
+  // Same-line-add increments the qty rather than creating a duplicate line.
+  if (cartItems.length === 1 && cartItems[0].quantity === 1) {
+    const single = cartItems[0].menuItem;
+    if (single.category === "pizza" || single.category === "pasta") {
+      suggestions.push({
+        item: single,
+        reason: `Make it 2 — share with a friend`,
+        priority: 0,
+        isQuantityBump: true,
+      });
+    }
+  }
 
   // RULE 1: Always suggest espresso with pizza/pasta (highest priority)
   if (hasMain && !hasCoffee) {
@@ -413,15 +493,51 @@ export function getCartSuggestions(
     }
   }
 
+  // RULE 1.5: Pizza-only carts get garlic bread before they get a dessert.
+  // Garlic bread is the highest-attach side in QSR pizza data. Sits between
+  // espresso (priority 1) and dessert (priority 2) so it's the second chip
+  // when present.
+  if (hasPizza && !hasGarlicBread && !hasAntipasti) {
+    const side = prefPizzaSide ? byId.get(prefPizzaSide) : null;
+    if (side) {
+      suggestions.push({
+        item: side,
+        reason: "Pulls apart — pairs with every pizza",
+        priority: 1.5,
+      });
+    }
+  }
+
   // RULE 2: Always suggest dessert with pizza/pasta
   if (hasMain && !hasDessert) {
     const dessert = prefDessert ? byId.get(prefDessert) : null;
     const anyDessert = dessert || available.find((m) => m.category === "desserts");
     if (anyDessert) {
+      // Budget carts get a different reason — value framing on Panna Cotta.
+      const fallbackReason = isBudgetCart
+        ? "Light, refreshing — pairs with anything"
+        : "Finish with our signature Tiramisù";
       suggestions.push({
         item: anyDessert,
-        reason: reasonForItem(anyDessert, "Finish with our signature Tiramisù"),
+        reason: reasonForItem(anyDessert, fallbackReason),
         priority: 2,
+      });
+    }
+  }
+
+  // RULE 2.5: Pasta carts that have no antipasti — escalate antipasti above
+  // the drink suggestion. Italian cuisine logic: pasta starts with bruschetta.
+  if (hasPasta && !hasAntipasti && !hasGarlicBread) {
+    const antipasti = available.find(
+      (m) =>
+        m.category === "antipasti" &&
+        m.id.endsWith("anti-bruschetta"),
+    );
+    if (antipasti) {
+      suggestions.push({
+        item: antipasti,
+        reason: "Start with bruschetta — Italian tradition",
+        priority: 2.5,
       });
     }
   }
@@ -520,18 +636,28 @@ export interface ComboDeal {
    *  matching every required suffix. Generic category-only combos leave
    *  this undefined and match any item from the listed categories. */
   requiredItems?: ComboDealRequiredItem[];
+  /** Channel restriction (audit §3 — dine-in vs delivery economics).
+   *  Unset = both channels; "dine-in" = truck only; "delivery" = delivery
+   *  only. Lets operators run dine-in-exclusive premium experiences or
+   *  delivery-exclusive pantry bundles without code changes. */
+  channel?: "dine-in" | "delivery";
 }
 
-// Default combos (used when no admin config exists for the location)
+// Default combos (used when no admin config exists for the location).
+// Audit §3 — DO NOT discount the success path. Espresso and Tiramisù have
+// 60% / 28% organic attach to pizza orders. Discounting them subsidises a
+// behaviour customers already do for free. The new Italian Classic Deal
+// gates on Limonata (a non-organic-attach drink) so the combo captures
+// a different cohort than the existing espresso upsell.
 export const DEFAULT_COMBO_DEALS: ComboDeal[] = [
   {
     id: "italian-classic",
     name: "Italian Classic Deal",
-    description: "Margherita + Espresso + Tiramisù",
+    description: "Margherita + Limonata + Tiramisù",
     categories: ["pizza", "drinks", "desserts"],
     requiredItems: [
       { suffix: "pizza-margherita", label: "Margherita" },
-      { suffix: "drink-espresso", label: "Espresso" },
+      { suffix: "drink-limonata", label: "Limonata" },
       { suffix: "dessert-tiramisu", label: "Tiramisù" },
     ],
     discountPercent: 10,
@@ -545,12 +671,18 @@ export const DEFAULT_COMBO_DEALS: ComboDeal[] = [
     discountPercent: 10,
     minItems: 3,
   },
+  // Pizza + Garlic Bread combo — replaces the dead Lunch Special (panini +
+  // drink, 2 PLN savings, ignored at 0% activation). Garlic bread has a
+  // higher attach intent than panini and is a real lunch driver.
   {
-    id: "lunch-special",
-    name: "Lunch Special",
-    description: "Any panino + drink",
-    categories: ["panini", "drinks"],
-    discountPercent: 8,
+    id: "pizza-side",
+    name: "Pizza & Side",
+    description: "Any pizza + garlic bread",
+    categories: ["pizza", "antipasti"],
+    requiredItems: [
+      { suffix: "anti-garlic-bread", label: "Garlic Bread" },
+    ],
+    discountPercent: 12,
     minItems: 2,
   },
 ];
@@ -585,16 +717,31 @@ export interface ComboDealResult {
 
 export function getActiveComboDeals(
   cartItems: CartItem[],
-  config?: UpsellConfig | null
+  config?: UpsellConfig | null,
+  /** Filter combos by fulfillment channel (audit §3). When omitted, every
+   *  combo applies regardless of channel — used by the cart's pre-checkout
+   *  preview where the channel isn't pinned yet. When passed, dine-in
+   *  combos only fire on "takeout" / dine-in carts and delivery combos
+   *  only fire on "delivery" carts. */
+  fulfillmentType?: "takeout" | "delivery" | null,
 ): ComboDealResult {
-  const combos: ComboDeal[] = config?.combos
+  const allCombos: ComboDeal[] = config?.combos
     ? config.combos
         .filter((c) => c.active)
         .map((c) => ({
           ...c,
           categories: c.categories as MenuCategory[],
+          channel: c.channel as ComboDeal["channel"],
         }))
     : DEFAULT_COMBO_DEALS;
+  // Channel filter: undefined channel = always available; "dine-in" only
+  // when fulfillmentType≠"delivery"; "delivery" only when fulfillmentType="delivery".
+  const combos: ComboDeal[] = allCombos.filter((c) => {
+    if (!c.channel) return true;
+    if (!fulfillmentType) return true; // No channel context yet — show.
+    if (c.channel === "delivery") return fulfillmentType === "delivery";
+    return fulfillmentType !== "delivery";
+  });
 
   const empty: ComboDealResult = {
     activeDeal: null,
@@ -810,11 +957,15 @@ export function computeDeliveryFee(
 
 // --- Per-segment free-delivery threshold (audit §2.5 + §3.3) -------------
 //
-// Four bands, each tuned to where the customer is in their lifecycle:
+// Five bands (audit §3 update — VIPs now have a non-zero floor so a Gold
+// customer can't get free delivery on a 6.90 PLN bottle of water):
 //   first-time (orders < 2)      → 39 PLN — remove friction on visit 1
 //   growing    (orders 2–4)      → 49 PLN — slight raise as confidence builds
 //   regular    (orders ≥ 5)      → 59 PLN — they'll hit it anyway
-//   vip        (Gold / Platinum) → free   — surface as a tier perk
+//   vip        (Gold / Platinum) → 35 PLN — non-zero floor protects delivery
+//                                  unit economics; below 35 the VIP pays the
+//                                  standard fee. The "free delivery" perk is
+//                                  surfaced as "free above 35 PLN" copy.
 // Numbers match the §3.3 table; Uber Eats reported ~+4% GMV / customer
 // from the same shape.
 
@@ -832,7 +983,7 @@ export const SEGMENT_FREE_DELIVERY_THRESHOLD: Record<CustomerSegment, number> = 
   "first-time": 3900, // 39 PLN
   growing: 4900, // 49 PLN
   regular: 5900, // 59 PLN — slightly under the legacy 60 PLN bar
-  vip: 0,
+  vip: 3500, // 35 PLN — non-zero floor protects courier economics
 };
 
 export function getCustomerSegment(
@@ -944,7 +1095,7 @@ export const DEFAULT_TIME_WINDOWS: TimeWindow[] = [
     startHour: 17,
     endHour: 19,
     title: "Cooking for the table tonight?",
-    sub: "Margherita + Espresso + Tiramisù save 10% with our Italian Classic Deal",
+    sub: "Margherita + Limonata + Tiramisù save 10% with our Italian Classic Deal",
     badge: "Tip",
     cta: "What pairs well",
     comboId: "italian-classic",
@@ -1013,3 +1164,182 @@ export function getActiveTimeWindow(
     null
   );
 }
+
+// --- Item modifiers (audit §3) ------------------------------------------
+//
+// Modifier groups attach to MenuItem. Each cart line carries
+// `selectedModifiers[]` referencing groupId + optionId. The helpers below
+// sum priceDelta and costDelta across selections so the cart drawer,
+// checkout, and bundle margin alert agree on a single source of truth.
+
+/** Resolve a SelectedModifier reference to its option in the item's
+ *  current modifierGroups. Returns null for unknown / stale references
+ *  (e.g. admin removed the option after the customer's cart was hydrated). */
+export function findModifierOption(
+  item: MenuItem,
+  groupId: string,
+  optionId: string,
+): ModifierOption | null {
+  const group = item.modifierGroups?.find((g) => g.id === groupId);
+  if (!group) return null;
+  return group.options.find((o) => o.id === optionId) ?? null;
+}
+
+/** Per-unit modifier price delta in grosze. Sum of every selected option's
+ *  priceDelta, clamped at 0 (negative deltas are ignored — modifiers can
+ *  never refund). */
+export function modifierPriceDelta(
+  cartItem: Pick<CartItem, "menuItem" | "selectedModifiers">,
+): number {
+  if (!cartItem.selectedModifiers || cartItem.selectedModifiers.length === 0) return 0;
+  let total = 0;
+  for (const sel of cartItem.selectedModifiers) {
+    const opt = findModifierOption(cartItem.menuItem, sel.groupId, sel.optionId);
+    if (!opt) continue;
+    if (opt.priceDelta > 0) total += opt.priceDelta;
+  }
+  return total;
+}
+
+/** Per-unit modifier cost delta in grosze. Used for honest margin calc. */
+export function modifierCostDelta(
+  cartItem: Pick<CartItem, "menuItem" | "selectedModifiers">,
+): number {
+  if (!cartItem.selectedModifiers || cartItem.selectedModifiers.length === 0) return 0;
+  let total = 0;
+  for (const sel of cartItem.selectedModifiers) {
+    const opt = findModifierOption(cartItem.menuItem, sel.groupId, sel.optionId);
+    if (!opt || typeof opt.costDelta !== "number") continue;
+    if (opt.costDelta > 0) total += opt.costDelta;
+  }
+  return total;
+}
+
+/** Effective per-unit price including modifiers — the unit price the
+ *  cart UI and checkout should both display. */
+export function effectiveUnitPrice(
+  cartItem: Pick<CartItem, "menuItem" | "selectedModifiers">,
+): number {
+  return cartItem.menuItem.price + modifierPriceDelta(cartItem);
+}
+
+/** Effective per-unit food cost including modifiers — used for the
+ *  bundle low-margin alert + Reports gross-margin column. */
+export function effectiveUnitCost(
+  cartItem: Pick<CartItem, "menuItem" | "selectedModifiers">,
+): number {
+  return cartItem.menuItem.cost + modifierCostDelta(cartItem);
+}
+
+// --- Packaging cost (audit §3 — delivery economics) ---------------------
+//
+// Per-item packaging cost (grosze) used to compute delivery margin
+// honestly. Falls back to a category baseline when MenuItem.packagingCost
+// is unset. Subtracted from contribution when fulfillment="delivery".
+//
+//   pizza        — box + napkin set         180 grosze
+//   pasta        — tray + lid + napkin       250 grosze
+//   antipasti    — tray + cutlery            150 grosze
+//   panini       — wrap + napkin              80 grosze
+//   drinks       — bottle / cup carrier       60 grosze (per unit)
+//   desserts     — sealed cup                100 grosze
+//
+// Bundles add a brand-carrier-bag surcharge of ~180 grosze split across
+// lines so the per-line attribution adds up. The cart drawer renders the
+// total as a delivery surcharge line item for transparency.
+
+const CATEGORY_PACKAGING_COST_FALLBACK: Record<MenuCategory, number> = {
+  pizza: 180,
+  pasta: 250,
+  antipasti: 150,
+  panini: 80,
+  drinks: 60,
+  desserts: 100,
+};
+
+/** Per-unit packaging cost in grosze for a menu item under a given channel.
+ *  Returns 0 for non-delivery channels — packaging is internalised at the
+ *  truck for dine-in. */
+export function packagingCostFor(
+  item: MenuItem,
+  fulfillmentType: "takeout" | "delivery",
+): number {
+  if (fulfillmentType !== "delivery") return 0;
+  if (typeof item.packagingCost === "number") return item.packagingCost;
+  return CATEGORY_PACKAGING_COST_FALLBACK[item.category] ?? 100;
+}
+
+/** Sum the packaging cost across a cart for a given fulfillment channel.
+ *  Used by the bundle margin alert + the Reports delivery profitability
+ *  endpoint to make sure delivery margin is computed against real
+ *  packaging cost, not naked plate cost. */
+export function totalPackagingCost(
+  cartItems: CartItem[],
+  fulfillmentType: "takeout" | "delivery",
+): number {
+  if (fulfillmentType !== "delivery") return 0;
+  return cartItems.reduce(
+    (s, ci) => s + packagingCostFor(ci.menuItem, fulfillmentType) * ci.quantity,
+    0,
+  );
+}
+
+// --- KDS complexity scoring (audit §5 — operations) ---------------------
+//
+// Single number 0..N that captures how much load a ticket places on the
+// kitchen. The expo / pass screen sorts by descending complexity so a
+// Family Feast (12 lines, 4 stations) lands at the top with a "PRIORITY:
+// COMPLEX BUNDLE" badge and the line can fire the longest-prep items first.
+//
+// Weights are tuned to roughly minutes of station occupancy:
+//   pizza      1.0   (oven slot)
+//   pasta      0.8   (pan + plating)
+//   antipasti  0.6   (cold prep or fryer)
+//   panini     0.5   (press + plating)
+//   desserts   0.4   (cold plate / dusting)
+//   drinks     0.15  (grab-and-go)
+//
+// A Family Feast with 4 pizzas + 2 antipasti + 4 drinks + 1 tiramisù
+// scores 4·1 + 2·0.6 + 4·0.15 + 1·0.4 = 6.2. Anything ≥ 6 is "complex"
+// and the KDS card surfaces the priority badge.
+
+const CATEGORY_COMPLEXITY_WEIGHT: Record<MenuCategory, number> = {
+  pizza: 1.0,
+  pasta: 0.8,
+  antipasti: 0.6,
+  panini: 0.5,
+  desserts: 0.4,
+  drinks: 0.15,
+};
+
+export interface TicketComplexity {
+  score: number;
+  lineCount: number;
+  /** Distinct stations a ticket hits (pizza oven, cold prep, drinks, dessert).
+   *  Used by KDS to highlight tickets that touch 4+ stations. */
+  stationCount: number;
+  isComplex: boolean;
+}
+
+export const KDS_COMPLEX_THRESHOLD = 6;
+
+export function computeTicketComplexity(
+  cartItems: CartItem[],
+): TicketComplexity {
+  let score = 0;
+  let lineCount = 0;
+  const stations = new Set<MenuCategory>();
+  for (const ci of cartItems) {
+    const weight = CATEGORY_COMPLEXITY_WEIGHT[ci.menuItem.category] ?? 0.5;
+    score += weight * ci.quantity;
+    lineCount += ci.quantity;
+    stations.add(ci.menuItem.category);
+  }
+  return {
+    score: Math.round(score * 10) / 10,
+    lineCount,
+    stationCount: stations.size,
+    isComplex: score >= KDS_COMPLEX_THRESHOLD,
+  };
+}
+

@@ -383,7 +383,73 @@ export default async function CapabilitiesPage() {
         {
           name: "Per-segment delivery threshold",
           status: "live",
-          summary: "Free-delivery bar shows a personalised threshold tuned to the customer's lifecycle: first-time 39 PLN, growing (2–4 orders) 49 PLN, regular (5+) 59 PLN, Gold/Platinum 0 PLN. The checkout fee charge uses the same threshold via computeDeliveryFee(_,_, override) and getCustomerSegment(), so the bar and the receipt agree. Audit §2.5 + §3.3.",
+          summary: "Free-delivery bar shows a personalised threshold tuned to the customer's lifecycle: first-time 39 PLN, growing (2–4 orders) 49 PLN, regular (5+) 59 PLN, Gold/Platinum 35 PLN (audit §3 — raised from 0 because VIPs were getting free delivery on 6.90 zł bottles of water, breaking unit economics on a 9 zł courier run). The checkout fee charge uses the same threshold via computeDeliveryFee(_,_, override) and getCustomerSegment(), so the bar and the receipt agree.",
+        },
+        {
+          name: "Delivery-exclusive SKUs + Pantry Pack bundle",
+          status: "live",
+          summary: "Three delivery-only SKUs per truck (audit §3 channel economics): Frozen Tiramisù Box (24/28 zł, ~600g serves 4), Peroni Nastro Azzurro 4-Pack (32/36 zł), Sud Italia EVOO 250ml (35/39 zł). Each carries deliveryOnly:true on MenuItem so the menu page filters them out for dine-in/takeout carts. Delivery-only Pantry Pack bundle composes pizza + frozen tiramisù + beer + olive oil at 15% blended discount — surfaces only when fulfillmentType=delivery. Drives high-AOV pantry pulls customers can't carry from a truck.",
+        },
+        {
+          name: "Per-item packaging cost",
+          status: "live",
+          summary: "MenuItem.packagingCost field captures per-unit delivery packaging in grosze (pizza boxes 180, pasta trays 250, antipasti containers 150, panini wraps 80, drinks 60, desserts 100). totalPackagingCost(cart, fulfillmentType) sums across the order; the bundle low-margin alert + delivery profitability report use it so reported delivery margin reflects boxes + napkins + carrier bag, not naked plate cost. Reverses ~6–10 pp of margin drag previously hidden from the dashboard.",
+        },
+        {
+          name: "KDS ticket complexity scoring",
+          status: "live",
+          summary: "computeTicketComplexity(cart) returns a weighted score (pizza 1.0 / pasta 0.8 / antipasti 0.6 / panini 0.5 / desserts 0.4 / drinks 0.15) summed across qty, plus distinct station count. score ≥ 6 marks the ticket as 'complex' — KDS expo screen surfaces a PRIORITY badge and the line can fire longest-prep items first. Family Feast tickets (typically 9–15 lines across 4 stations) automatically land top-of-screen during the 7pm rush.",
+        },
+        {
+          name: "Tartufata Reale top anchor SKU",
+          status: "live",
+          href: "/admin/menu",
+          summary: "NEW menu item: Tartufata Reale at 79.90 / 89.90 PLN (audit §3 — the Pizza del Pizzaiolo at 49.90 wasn't tall enough to anchor the menu, only +37% above the most expensive standard. Tartufata is +120%, properly bending price perception). Truffle + burrata di Andria + prosciutto DOP + 24-month Parmigiano. Marked menuRole=\"anchor\" so it's excluded from bundle category-slot resolution (can't be folded into discounted bundles where it would either lose margin or distort customer perception of bundle value).",
+        },
+        {
+          name: "Quantity upsell (\"Make it 2\")",
+          status: "live",
+          summary: "getCartSuggestions surfaces a same-id quantity-bump chip when the cart has exactly one pizza or pasta. Chip renders with ×2 glyph + 'Add another' label + '+price' framing; tapping it bumps the line quantity rather than creating a duplicate. UpsellSuggestion.isQuantityBump flag drives the CartUpsell variant. Single highest-leverage QSR pattern previously absent from the engine.",
+        },
+        {
+          name: "Cart-aware default dessert + drink",
+          status: "live",
+          summary: "Audit §3 — sub-40-PLN carts now default the dessert suggestion to Panna Cotta (75% GM) instead of Tiramisù (70% GM); sub-35-PLN carts default the drink to Acqua Minerale instead of Limonata. Budget-cart signal = price-sensitive customer, value tier wins. Tiramisù / Limonata remain the default for premium carts. Logic in getCartSuggestions reads cart subtotal.",
+        },
+        {
+          name: "Garlic Bread side attach",
+          status: "live",
+          href: "/admin/menu",
+          summary: "NEW menu item: Garlic Bread at 9.90 / 10.90 PLN, 78% GM (audit §3). Replaces panini in the pizza-attach cross-sell hierarchy — garlic bread has higher organic attach than panini and serves as the highest-margin lunch lead. Cross-sell rule 1.5 surfaces it on pizza-only carts before suggesting dessert. Pairs with the Pizza & Side combo (any pizza + garlic bread, 12% off).",
+        },
+        {
+          name: "Pizza-led lunch ladder",
+          status: "live",
+          href: "/admin/upsell",
+          summary: "Audit §3 — Neapolitan pizza brand previously had pasta-only lunch bundles. NEW parallel pizza ladder: Pizza Solo (Personal 8\" Margherita + water, 22.90 zł), Pizza Lunch (any pizza + drink + Panna Cotta, 39.90, default), Pizza Lunch+ (any pizza + drink + Tiramisù, 44.90, anchor). Customer cycles between pasta + pizza ladders via the period switcher in the bundle drawer.",
+        },
+        {
+          name: "Pizza Family Pack (fixed-price)",
+          status: "live",
+          href: "/admin/upsell",
+          summary: "NEW family-tier bundle (audit §3) — 3 Margheritas + 1L Limonata at flat 99 PLN. Set price, no maths. Dominates the dynamic family ladder for couple/quad orders where customers want the simplest possible bundle. Default-pushed so it's the first thing the family ladder surfaces. Per-item composition uses suffix slots so both trucks resolve.",
+        },
+        {
+          name: "Late-night slice + party tiers",
+          status: "live",
+          href: "/admin/upsell",
+          summary: "Audit §3 — late-night was a single tier (Late dinner, 22%). Expanded to a real ladder: Slice + drink at 16.90 zł (captures 1AM post-club demographic via the new Margherita slice SKU reheated in 60s), Late dinner (default 20%), Late Party (anchor 28%, 2 pizzas + 4 drinks + 2 desserts — group-of-4 capture). All gated 21:00–24:00 local. Pairs with the new Margherita Personale 8\" + Slice menu SKUs that didn't exist before.",
+        },
+        {
+          name: "Espresso reprice + cost basis",
+          status: "live",
+          summary: "Audit §3 — single highest-leverage change in the system. Espresso re-priced from 7.90 → 9.90 zł (Kraków) and 8.90 → 10.90 zł (Warszawa) to align with speciality-café benchmarks (Tektura, Karma, etc. at 11–14 zł). 60% attach rate × +2 zł = ~PLN 25-30k/year/truck of pure margin previously declined. Highest-margin SKU at 85%+ GM. Default upsell chip + #1 cross-sell rule already pushes it on every pizza/pasta cart.",
+        },
+        {
+          name: "Loyalty rewards reshape",
+          status: "live",
+          href: "/admin/loyalty",
+          summary: "Audit §3 — removed the strictly-dominated 'PLN 10 Off' reward (100 points → 10 zł value, vs Free Drink at 50 pts → 11.90 zł). Customers do the math and avoid bad-ratio rewards, dragging perceived loyalty value. New reward ladder: Free Drink 50pts, Free Garlic Bread 70pts, Free Dessert 120pts, Free Personal Pizza 180pts, Free Pizza 280pts, 25 PLN Off 280pts. Every rung pays out more zł-value than the rung below per point, so customers always feel they're getting better as they save.",
         },
         {
           name: "Contextual pairing graph",
@@ -394,7 +460,7 @@ export default async function CapabilitiesPage() {
           name: "Bundle architecture (Lunch / Family / Late-night)",
           status: "live",
           href: "/admin/upsell",
-          summary: "Three ladders with two pricing modes. **Fixed** (lunch tiers, solo eating) locks composition + price. **Dynamic** (family + late-night tiers) scales mains with cart, keeps add-ons static, prices live as (mains-à-la-carte × mainsPct + cheapest-add-ons × addOnsPct). The `selectSlotItems` helper now drives both `computeBundlePrice` and `buildBundleCartLines` so chip price + final cart line-up reflect the *same* items — closes the limonata margin leak where the chip priced espresso but the cart shipped premium drinks. Defaults: Family 20% blend (10/30 split), Family Feast 28% blend (15/40, default-pushed AND anchor — red Most-picked badge dominates), Feast Deluxe 20% blend (12/32, decoy — obviously dominated on % by the anchor), late-night 22% blend (12/35, single-tap deal at 21:00–24:00). Every dynamic tier has a hard maxMains cap (6/8/12/3) to neutralize 50-pizza abuse. Tap → opens BundleComposerSheet (Domino's Mix & Match): per-unit add-on swap with live price, cancel/confirm. Server caps charged amount at min(server-recomputed, client-snapshot) so admin discount edits between render and checkout can only ever benefit the customer. Combo banner is suppressed when the bundle ladder is showable (Starbucks rule: one upsell). Admin /admin/upsell → Bundle ladders exposes Pricing-mode toggle, Discount %, Split-discount (mains/add-ons %), Min/Max mains, Main categories, Loyalty gate (Gold/Platinum-only tiers), AND a live margin preview per tier using MenuItem.cost so operators can't accidentally tune themselves into red margin. Per-bundle audit log feeds /api/admin/bundle-analytics + a bundle KPI card on /admin/reports (penetration, anchor conversion, decoy CTR, A/B variant uplift). Variant assignment is phone-hashed via src/lib/experiments.ts so client + server agree on the same discount %s for the same customer. Audit §3.2.",
+          summary: "Restructured May 2026 (revenue-audit-5jrVU). Four parallel ladders: (1) pasta-led lunch [Solo 27.90 → Lunch 38.90 → Lunch+ 44.90 → Big Lunch 68.90 decoy], (2) pizza-led lunch — NEW — [Pizza Solo 22.90 → Pizza Lunch 39.90 → Pizza Lunch+ 44.90, hits the hero product], (3) family [Pizza Family Pack fixed 99 zł — NEW — → Family 18% → Family Feast 22% anchor → Feast Deluxe 25% true decoy gated at 6 mains], (4) late-night [Slice + drink 16.90 entry — NEW — → Late dinner 20% default → Late Party 28% anchor — NEW]. Family minimum raised 2→3 (couples were being padded into bundles), Feast Deluxe discount lifted to true scale-economics offer that only dominates at 6+ mains. Hungry tier rebuilt as a true decoy (savings % below Lunch+ so dominance theory works). Anchor SKUs (Tartufata Reale 79.90/89.90, Pizza del Pizzaiolo 49.90/54.90) excluded from category-slot resolution so they can't be folded into discounted bundles. Channel-aware: delivery-only Pantry Pack bundle (frozen tiramisù + Peroni 4-pack + olive oil) surfaces only when fulfillmentType=delivery. Member-only tier visibility flag drives phone collection as conversion lever. Server caps charged amount at min(server-recomputed, client-snapshot). Combo banner suppressed when bundle ladder showable. Audit §3.",
         },
         {
           name: "Bundle experimentation (A/B)",
@@ -479,7 +545,13 @@ export default async function CapabilitiesPage() {
           name: "Combo deals",
           status: "live",
           href: "/admin/crosssell",
-          summary: "Cart-total discounts capped to one combo's worth (cheapest unit per matched category) so quantity doesn't scale the savings. Default ladder: Italian Classic Deal (Margherita + Espresso + Tiramisù, 10% — item-suffix gated so a Quattro Formaggi cart matches a different promo), Pasta Combo (any pasta + drink + dessert, 10%), Lunch Special (any panino + drink, 8%). getActiveComboDeals in src/lib/upsell.ts picks the highest-savings complete combo first, then the highest-potential partial — order-independent so a fully-complete combo never loses to an earlier in-progress one. Admins manage the full set from /admin/crosssell → Combo deals: toggle, rename, edit discount %, min items, required categories, and (new) pick specific menu items to gate the deal on — adding a row to 'Specific items required' converts a generic category combo into an item-locked one. Combo discounts ride to Stripe as an amount_off coupon so the charged total matches the displayed total.",
+          summary: "Cart-total discounts capped to one combo's worth (cheapest unit per matched category). Default ladder rebuilt May 2026: Italian Classic Deal (Margherita + **Limonata** + Tiramisù, 10% — moved off espresso because 60% of carts add espresso anyway; the combo was paying a discount on items customers already buy organically), Pasta Combo (any pasta + drink + dessert, 10%), Pizza & Side (any pizza + garlic bread, 12% — replaced the dead Lunch Special panini+drink combo at 8% which was 2 zł savings ignored by customers). Channel-aware: combos can be flagged dine-in or delivery exclusive. getActiveComboDeals picks the highest-savings complete combo first, then the highest-potential partial — order-independent. Combo discounts ride to Stripe as an amount_off coupon.",
+        },
+        {
+          name: "Item modifiers (pizza crust + premium toppings)",
+          status: "live",
+          href: "/admin/upsell",
+          summary: "Per-item modifier groups (audit §3 — the previously-missing #1 revenue capability). Each MenuItem can carry `modifierGroups[]` — each group has a label, min/max selections, and an option list with priceDelta (added to line price) and costDelta (subtracted from gross margin). Margherita ships with Crust group (Standard / Sourdough +5 / Gluten-free +5) and Premium toppings (Buffalo mozz +9, Extra cheese +6, Truffle oil +8, Prosciutto +12). Diavola ships with Spice level + Premium toppings. Cart math (src/store/cart.ts:getTotal) uses effectiveUnitPrice() which sums modifier priceDelta × qty. Server checkout reuses the same helper so charged total matches displayed total. KDS-flagged options highlight on the kitchen ticket. Operator inventory at /admin/upsell → Item modifiers shows every modifier group per truck with GM% callout.",
         },
         {
           name: "Menu engineering hierarchy",
