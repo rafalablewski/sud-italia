@@ -3,8 +3,18 @@ import { withAdmin } from "@/lib/api-middleware";
 import { hasLocationAccess } from "@/lib/admin-auth";
 import { getUpsellSettings, updateLocationUpsell } from "@/lib/store";
 import { locations } from "@/data/locations";
+import type { MenuCategory } from "@/data/types";
 
 const validSlugs = new Set(locations.map((l) => l.slug));
+
+const validMenuCategories = new Set<MenuCategory>([
+  "pizza",
+  "pasta",
+  "antipasti",
+  "panini",
+  "drinks",
+  "desserts",
+]);
 
 export const GET = withAdmin({}, async () => {
   const settings = await getUpsellSettings();
@@ -34,6 +44,41 @@ export const PUT = withAdmin(
 
     if (!Array.isArray(config.combos)) {
       return NextResponse.json({ error: "Invalid config: combos must be an array" }, { status: 400 });
+    }
+
+    // Validate each combo shape so a typo'd category doesn't silently
+    // disable the deal at checkout — bundles get the same treatment below.
+    for (const c of config.combos) {
+      if (
+        typeof c?.id !== "string" ||
+        c.id.trim().length === 0 ||
+        typeof c?.name !== "string" ||
+        c.name.trim().length === 0 ||
+        typeof c?.description !== "string" ||
+        !Array.isArray(c?.categories) ||
+        c.categories.length === 0 ||
+        typeof c?.discountPercent !== "number" ||
+        c.discountPercent < 1 ||
+        c.discountPercent > 50 ||
+        typeof c?.minItems !== "number" ||
+        !Number.isInteger(c.minItems) ||
+        c.minItems < 1 ||
+        c.minItems > 20 ||
+        typeof c?.active !== "boolean"
+      ) {
+        return NextResponse.json(
+          { error: "Invalid combo — check id, name, categories, discountPercent (1–50), minItems (1–20), active" },
+          { status: 400 },
+        );
+      }
+      for (const cat of c.categories) {
+        if (typeof cat !== "string" || !validMenuCategories.has(cat as MenuCategory)) {
+          return NextResponse.json(
+            { error: `Invalid combo category "${cat}" — must be one of pizza, pasta, antipasti, panini, drinks, desserts` },
+            { status: 400 },
+          );
+        }
+      }
     }
 
     // Optional timeWindows[] (audit §2.3). Validate shape so a typo

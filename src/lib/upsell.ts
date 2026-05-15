@@ -548,7 +548,6 @@ export function getActiveComboDeals(
   missingCategories: MenuCategory[];
   progress: number;
 } {
-  // Resolve combos: use admin config if available, otherwise defaults
   const combos: ComboDeal[] = config?.combos
     ? config.combos
         .filter((c) => c.active)
@@ -558,42 +557,84 @@ export function getActiveComboDeals(
         }))
     : DEFAULT_COMBO_DEALS;
 
+  if (combos.length === 0 || cartItems.length === 0) {
+    return { activeDeal: null, savings: 0, missingCategories: [], progress: 0 };
+  }
+
   const cartCategories = new Set(cartItems.map((ci) => ci.menuItem.category));
+  const totalQuantity = cartItems.reduce((s, ci) => s + ci.quantity, 0);
 
-  for (const deal of combos) {
-    const matched = deal.categories.filter((c) => cartCategories.has(c));
-    const missing = deal.categories.filter((c) => !cartCategories.has(c));
-    const progress = matched.length / deal.categories.length;
-
-    // Calculate savings based only on items that form the combo, not the full cart
-    const comboItemsTotal = cartItems
-      .filter((ci) => deal.categories.includes(ci.menuItem.category))
-      .reduce((sum, ci) => sum + ci.menuItem.price * ci.quantity, 0);
-
-    if (matched.length >= 1 && missing.length > 0) {
-      const potentialSavings = Math.round(
-        comboItemsTotal * (deal.discountPercent / 100)
-      );
-
-      return {
-        activeDeal: deal,
-        savings: potentialSavings,
-        missingCategories: missing as MenuCategory[],
-        progress,
-      };
-    }
-
-    if (missing.length === 0 && cartItems.length >= deal.minItems) {
-      return {
-        activeDeal: deal,
-        savings: Math.round(comboItemsTotal * (deal.discountPercent / 100)),
-        missingCategories: [],
-        progress: 1,
-      };
+  // Cheapest unit price per category present in the cart. Used to cap the
+  // discount at "one combo's worth" — without this a cart of 5 pizzas + drink
+  // + dessert would get 10% off all 5 pizzas, scaling unbounded with qty.
+  const cheapestByCategory = new Map<MenuCategory, number>();
+  for (const ci of cartItems) {
+    const cat = ci.menuItem.category;
+    const prev = cheapestByCategory.get(cat);
+    if (prev === undefined || ci.menuItem.price < prev) {
+      cheapestByCategory.set(cat, ci.menuItem.price);
     }
   }
 
-  return { activeDeal: null, savings: 0, missingCategories: [], progress: 0 };
+  type Scored = {
+    deal: ComboDeal;
+    matched: MenuCategory[];
+    missing: MenuCategory[];
+    progress: number;
+    savings: number;
+    complete: boolean;
+    index: number;
+  };
+
+  const scored: Scored[] = combos.map((deal, index) => {
+    const reqCount = deal.categories.length;
+    const matched = deal.categories.filter((c) => cartCategories.has(c));
+    const missing = deal.categories.filter((c) => !cartCategories.has(c));
+    const progress = reqCount === 0 ? 0 : matched.length / reqCount;
+
+    // One-combo subtotal: cheapest unit from each matched category.
+    const oneComboSubtotal = matched.reduce(
+      (s, c) => s + (cheapestByCategory.get(c) ?? 0),
+      0,
+    );
+    const savings = Math.round(oneComboSubtotal * (deal.discountPercent / 100));
+
+    const complete =
+      reqCount > 0 && missing.length === 0 && totalQuantity >= deal.minItems;
+
+    return { deal, matched, missing, progress, savings, complete, index };
+  });
+
+  // Complete combos always beat partial ones so the customer gets a real
+  // applied discount, not a "you could save X" hint. Within each bucket
+  // we prefer the largest savings; original index breaks ties so the order
+  // the admin set in the config is honoured.
+  const complete = scored.filter((s) => s.complete);
+  if (complete.length > 0) {
+    complete.sort((a, b) => b.savings - a.savings || a.index - b.index);
+    const w = complete[0];
+    return {
+      activeDeal: w.deal,
+      savings: w.savings,
+      missingCategories: [],
+      progress: 1,
+    };
+  }
+
+  const partial = scored.filter(
+    (s) => s.matched.length >= 1 && s.missing.length > 0,
+  );
+  if (partial.length === 0) {
+    return { activeDeal: null, savings: 0, missingCategories: [], progress: 0 };
+  }
+  partial.sort((a, b) => b.savings - a.savings || a.index - b.index);
+  const w = partial[0];
+  return {
+    activeDeal: w.deal,
+    savings: w.savings,
+    missingCategories: w.missing,
+    progress: w.progress,
+  };
 }
 
 // --- Free delivery threshold + fee (m2_12) ------------------------------

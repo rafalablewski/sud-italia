@@ -19,6 +19,7 @@ import {
   getActiveComboDeals,
   getDeliveryThresholdForCustomer,
   getCustomerSegment,
+  computeDeliveryFee,
   UpsellConfig,
   PairingContext,
 } from "@/lib/upsell";
@@ -167,7 +168,6 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
         : 0;
   const tipAmount = useCartStore((s) => s.tipAmount);
   const setTipAmount = useCartStore((s) => s.setTipAmount);
-  const total = subtotal - comboDiscount + tipAmount;
 
   // Per-segment free-delivery threshold (audit §2.5 Uber Eats).
   // Resolves the customer's tier from their points balance and feeds the
@@ -183,6 +183,16 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
   const deliveryThreshold = getDeliveryThresholdForCustomer(deliverySegment);
   const isDeliveryPersonalised =
     !!deliverySegment && getCustomerSegment(deliverySegment) !== "regular";
+
+  // Mirror the server-side fee calculation so the pay-bar shows the same
+  // number Stripe will charge. createOrder.ts:161 calls computeDeliveryFee
+  // with the post-discount subtotal and the same per-segment threshold.
+  const deliveryFee = computeDeliveryFee(
+    subtotal - comboDiscount,
+    fulfillmentType,
+    deliveryThreshold,
+  );
+  const total = subtotal - comboDiscount + deliveryFee + tipAmount;
 
   const isPhoneValid = PHONE_PATTERN.test(customerPhone.trim());
 
@@ -655,7 +665,13 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
           {fulfillmentType === "delivery" && (
             <div className="flex justify-between items-center text-sm text-italia-gray">
               <span>Delivery</span>
-              <span>{total >= 6000 ? <span className="text-italia-green font-medium">Free</span> : "10,00 PLN"}</span>
+              <span>
+                {deliveryFee === 0 ? (
+                  <span className="text-italia-green font-medium">Free</span>
+                ) : (
+                  formatPrice(deliveryFee)
+                )}
+              </span>
             </div>
           )}
           <div className="flex justify-between items-center text-lg font-bold border-t border-gray-100 pt-2">
