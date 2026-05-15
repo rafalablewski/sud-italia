@@ -356,7 +356,13 @@ export default async function CapabilitiesPage() {
           name: "Upsell engine",
           status: "live",
           href: "/admin/upsell",
-          summary: "Cart-context suggestions (espresso + dessert with pizza). Settings here.",
+          summary: "Tiered bundle ladders (Lunch + Family Feast) — good-better-best upgrades surfaced in the cart drawer. Settings + gating rules at /admin/upsell.",
+        },
+        {
+          name: "Cross-sell engine",
+          status: "live",
+          href: "/admin/crosssell",
+          summary: "Cart-context complementary-item suggestions (espresso + dessert with pizza), combo deals, time-of-day banners, and menu badges. Settings at /admin/crosssell.",
         },
         {
           name: "Add-to-cart toast",
@@ -371,8 +377,8 @@ export default async function CapabilitiesPage() {
         {
           name: "Time-of-day banner",
           status: "live",
-          href: "/admin/upsell",
-          summary: "Cart top banner that picks one of five hour-window variants (morning pre-order, lunch combo, afternoon espresso, dinner pairing, late espresso & dessert) based on local clock. Editable per location at /admin/upsell → Time-of-day Banners: variant, hour window, title, sub, badge, CTA, optional add-item id suffix, active toggle. Empty admin list = the five hardcoded DEFAULT_TIME_WINDOWS in upsell.ts. Audit §2.3.",
+          href: "/admin/crosssell",
+          summary: "Cart top banner that picks one of five hour-window variants (morning pre-order, lunch combo, afternoon espresso, dinner pairing, late espresso & dessert) based on local clock. Editable per location at /admin/crosssell → Time-of-day: variant, hour window, title, sub, badge, CTA, optional add-item id suffix, active toggle. Empty admin list = the five hardcoded DEFAULT_TIME_WINDOWS in upsell.ts. Audit §2.3.",
         },
         {
           name: "Per-segment delivery threshold",
@@ -388,7 +394,7 @@ export default async function CapabilitiesPage() {
           name: "Bundle architecture (Lunch / Family Feast)",
           status: "live",
           href: "/admin/upsell",
-          summary: "Decoy + anchor + default-pushed combos surfaced in the cart drawer above the per-item chips. Lunch ladder is hour-gated (default 11:00–14:00); Family Feast ladder is quantity-gated (default ≥5 pizza+pasta items, with a one-line nudge when within 2 of the threshold). Tapping a tier locks the cart subtotal to the bundle's priceGrosze; checkout sends one Stripe line at the bundle price with the composition itemized in the description. Both the bundle ladder (tiers, prices, slot composition, default/anchor/decoy flags) and the availability rules are fully CRUD-editable in /admin/upsell. DEFAULT_BUNDLES + DEFAULT_BUNDLE_RULES in src/lib/bundles.ts fall back when no admin override is saved. Audit §3.2.",
+          summary: "Decoy + anchor + default-pushed combos surfaced in the cart drawer above the per-item chips. Lunch ladder is hour-gated (default 11:00–14:00); Family Feast ladder is quantity-gated (default ≥5 pizza+pasta items, with a one-line nudge when within 2 of the threshold). Tapping a tier locks the cart subtotal to the bundle's priceGrosze; checkout sends one Stripe line at the bundle price with the composition itemized in the description. Both the bundle ladder (tiers, prices, slot composition, default/anchor/decoy flags) and the availability rules are fully CRUD-editable in /admin/upsell → Bundle ladders / Bundle rules. DEFAULT_BUNDLES + DEFAULT_BUNDLE_RULES in src/lib/bundles.ts fall back when no admin override is saved. Audit §3.2.",
         },
         {
           name: "Sud Italia Corporate",
