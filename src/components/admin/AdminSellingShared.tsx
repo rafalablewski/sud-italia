@@ -390,9 +390,13 @@ export function ItemSingleSelect({
 
 export function ComboEditor({
   combos,
+  menu,
   onChange,
 }: {
   combos: ComboDealConfig[];
+  /** Active-location menu used to populate the "specific items required"
+   *  picker. Empty array hides the picker rows but keeps the type stable. */
+  menu: MenuItem[];
   onChange: (combos: ComboDealConfig[]) => void;
 }) {
   const addCombo = () => {
@@ -518,29 +522,141 @@ export function ComboEditor({
               </div>
             </div>
 
-            {combo.requiredItems && combo.requiredItems.length > 0 && (
-              <div>
-                <label className="text-[10px] text-slate-400 block mb-1.5">
-                  Specific items required (read-only)
-                </label>
-                <div className="flex flex-wrap gap-1.5">
-                  {combo.requiredItems.map((r) => (
-                    <span
-                      key={r.suffix}
-                      className="px-2.5 py-1 rounded-lg text-xs font-medium bg-italia-gold/15 text-italia-gold-dark border border-italia-gold/30"
-                    >
-                      {r.label}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
+            <RequiredItemsEditor
+              menu={menu}
+              items={combo.requiredItems}
+              onChange={(next) => updateCombo(i, { requiredItems: next })}
+            />
           </div>
         ))}
         {combos.length === 0 && (
           <p className="text-sm text-slate-500 text-center py-4">No combo deals configured for this location.</p>
         )}
       </div>
+    </div>
+  );
+}
+
+/** Editor for ComboDealConfig.requiredItems — the item-suffix gating that
+ *  drives the Italian Classic Deal pattern (Margherita + Espresso + Tiramisù).
+ *  Stripping everything up to the first '-' yields a suffix that matches the
+ *  same item across all locations (krk- and waw- prefixes both resolve via
+ *  endsWith). Passing undefined when the list empties out keeps the admin
+ *  route's "non-empty array when set" validation happy and reverts the combo
+ *  to category-only mode. */
+function RequiredItemsEditor({
+  menu,
+  items,
+  onChange,
+}: {
+  menu: MenuItem[];
+  items: { suffix: string; label: string }[] | undefined;
+  onChange: (next: { suffix: string; label: string }[] | undefined) => void;
+}) {
+  const list = items ?? [];
+
+  const deriveSuffix = (id: string) => id.replace(/^[^-]+-/, "");
+
+  const update = (i: number, patch: Partial<{ suffix: string; label: string }>) => {
+    onChange(list.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+  };
+
+  const remove = (i: number) => {
+    const next = list.filter((_, idx) => idx !== i);
+    onChange(next.length === 0 ? undefined : next);
+  };
+
+  const add = () => {
+    const first = menu[0];
+    if (!first) return;
+    onChange([
+      ...list,
+      { suffix: deriveSuffix(first.id), label: first.name },
+    ]);
+  };
+
+  // Group menu items by category for the dropdown. Items the admin already
+  // picked still appear in the dropdown so they can change rows independently.
+  const byCategory = new Map<string, MenuItem[]>();
+  for (const m of menu) {
+    const arr = byCategory.get(m.category) ?? [];
+    arr.push(m);
+    byCategory.set(m.category, arr);
+  }
+  const categoryOrder = CATEGORIES.filter((c) => byCategory.has(c));
+
+  return (
+    <div>
+      <label className="text-[10px] text-slate-400 block mb-1.5">
+        Specific items required (optional — overrides &ldquo;any of category&rdquo;)
+      </label>
+      {list.length === 0 ? (
+        <p className="text-[11px] text-slate-500 mb-2">
+          Generic combo: any item in the selected categories qualifies. Add a specific item below to lock the deal
+          to particular menu items (e.g. Italian Classic = Margherita + Espresso + Tiramisù).
+        </p>
+      ) : (
+        <div className="space-y-1.5 mb-2">
+          {list.map((row, i) => {
+            // Find the cart item whose derived suffix matches this row, so
+            // the dropdown reflects what the admin picked previously.
+            const matched = menu.find((m) => deriveSuffix(m.id) === row.suffix);
+            return (
+              <div
+                key={i}
+                className="grid gap-1.5 grid-cols-[1fr_1fr_auto] items-center text-xs"
+              >
+                <select
+                  className="glass-input"
+                  value={matched?.id ?? ""}
+                  onChange={(e) => {
+                    const picked = menu.find((m) => m.id === e.target.value);
+                    if (!picked) return;
+                    update(i, { suffix: deriveSuffix(picked.id), label: picked.name });
+                  }}
+                >
+                  {!matched && (
+                    <option value="">
+                      ⚠ Unknown ({row.suffix})
+                    </option>
+                  )}
+                  {categoryOrder.map((cat) => (
+                    <optgroup key={cat} label={cat}>
+                      {byCategory.get(cat)!.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+                <input
+                  className="glass-input"
+                  value={row.label}
+                  placeholder="Display label"
+                  onChange={(e) => update(i, { label: e.target.value })}
+                />
+                <button
+                  type="button"
+                  onClick={() => remove(i)}
+                  className="text-red-400 hover:text-red-300 p-1"
+                  aria-label="Remove required item"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={add}
+        disabled={menu.length === 0}
+        className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-dashed border-white/20 text-[11px] admin-text-secondary hover:bg-white/5 w-fit disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <Plus className="h-3 w-3" /> Add specific item
+      </button>
     </div>
   );
 }
