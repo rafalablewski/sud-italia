@@ -10,6 +10,8 @@ import {
   BundleAvailabilityRules,
   bundleSavings,
   buildBundleCartLines,
+  computeBundlePrice,
+  isDynamicBundle,
   resolveBundles,
   resolveBundleRules,
   resolveBundleAvailability,
@@ -118,14 +120,20 @@ export function BundleLadder({
   const showFamilyHint = familyAvailability.kind === "hint";
 
   // Filter to the currently shown period AND only bundles whose composition
-  // can be fulfilled at this location's menu — hides the tier rather than
-  // surfacing a broken offer when a slot has zero candidates.
+  // resolves at this location AND whose dynamic gates (minMains) are met by
+  // the current cart — Feast Deluxe stays hidden until the cart has enough
+  // mains to make it viable.
   const visibleBundles = useMemo(() => {
     if (!period || allMenuItems.length === 0) return [];
     return allBundles
       .filter((b) => b.mealPeriod === period)
-      .filter((b) => resolveBundleSlots(b, allMenuItems) !== null);
-  }, [allBundles, allMenuItems, period]);
+      .filter((b) => resolveBundleSlots(b, allMenuItems) !== null)
+      .filter((b) => {
+        if (!isDynamicBundle(b)) return true;
+        const pricing = computeBundlePrice(b, items, allMenuItems);
+        return pricing !== null;
+      });
+  }, [allBundles, allMenuItems, period, items]);
 
   // No ladder + no hint → render nothing.
   if (!locationSlug) return null;
@@ -138,23 +146,31 @@ export function BundleLadder({
     }
     const lines = buildBundleCartLines(bundle, allMenuItems, items, locationSlug);
     if (!lines) return;
-    applyBundle(bundle.id, bundle.priceGrosze, lines, locationSlug);
+    // Dynamic bundles price live off cart + menu; fixed bundles use stored.
+    const pricing = computeBundlePrice(bundle, items, allMenuItems);
+    const priceGrosze = pricing?.priceGrosze ?? (isDynamicBundle(bundle) ? 0 : bundle.priceGrosze);
+    if (priceGrosze <= 0) return;
+    applyBundle(bundle.id, priceGrosze, lines, locationSlug);
   };
 
   // When the hint fires, surface the cheapest family tier's savings so the
-  // copy can read "Save 19 zł — add 1 more pizza or pasta". Drops to a
-  // generic nudge when the savings can't be computed.
+  // copy can read "Save 19 zł — add 1 more pizza or pasta". Dynamic tiers
+  // need cart context to price; we use the current cart so the copy still
+  // reflects what the customer would unlock.
   const familyMinSavings =
     showFamilyHint && allBundles.length > 0
       ? Math.min(
           ...allBundles
             .filter((b) => b.mealPeriod === "family")
-            .map(bundleSavings),
+            .map((b) => bundleSavings(b, items, allMenuItems)),
         )
       : 0;
 
   const ladderHasBoth =
     lunchAvailability.kind === "show" && familyAvailability.kind === "show";
+  const visibleSavings = visibleBundles
+    .map((b) => bundleSavings(b, items, allMenuItems))
+    .filter((s) => s > 0);
   const cols =
     visibleBundles.length === 4 ? 2 : Math.min(visibleBundles.length, 3);
 
@@ -176,10 +192,12 @@ export function BundleLadder({
             <p className="flex items-center gap-2 text-xs font-semibold text-italia-gray uppercase tracking-wide">
               <Sparkles className="h-4 w-4 text-italia-gold" />
               Make it a bundle
-              <span className="text-italia-gold-dark normal-case font-medium tracking-normal">
-                {" "}
-                · save up to {formatPrice(Math.max(...visibleBundles.map(bundleSavings)))}
-              </span>
+              {visibleSavings.length > 0 && (
+                <span className="text-italia-gold-dark normal-case font-medium tracking-normal">
+                  {" "}
+                  · save up to {formatPrice(Math.max(...visibleSavings))}
+                </span>
+              )}
             </p>
             {ladderHasBoth && (
               <button
@@ -203,6 +221,8 @@ export function BundleLadder({
               <BundleChip
                 key={bundle.id}
                 bundle={bundle}
+                cartItems={items}
+                menuItems={allMenuItems}
                 applied={appliedBundleId === bundle.id}
                 onApply={() => handleApply(bundle)}
               />
@@ -216,13 +236,40 @@ export function BundleLadder({
 
 interface ChipProps {
   bundle: BundleTier;
+  cartItems: import("@/data/types").CartItem[];
+  menuItems: MenuItem[];
   applied: boolean;
   onApply: () => void;
 }
 
-function BundleChip({ bundle, applied, onApply }: ChipProps) {
-  const savings = bundleSavings(bundle);
-  const showRef = bundle.refPriceGrosze > bundle.priceGrosze;
+function BundleChip({ bundle, cartItems, menuItems, applied, onApply }: ChipProps) {
+  const pricing = computeBundlePrice(bundle, cartItems, menuItems);
+  const priceGrosze = pricing?.priceGrosze ?? (isDynamicBundle(bundle) ? 0 : bundle.priceGrosze);
+  const refPriceGrosze = pricing?.refPriceGrosze ?? (isDynamicBundle(bundle) ? 0 : bundle.refPriceGrosze);
+  const savings = pricing?.savings ?? 0;
+  const showRef = refPriceGrosze > priceGrosze;
+
+  // Dynamic-tier description: replace "Your mains" prefix with the actual
+  // count + noun so a 3-margherita cart sees "3 pizzas + 2 antipasti +
+  // 4 drinks + tiramisù". Derives the noun from the cart, not the bundle
+  // config, so a mixed pizza+pasta cart reads "mains" while a pure-pizza
+  // cart reads "pizzas".
+  const description = (() => {
+    if (!isDynamicBundle(bundle) || !pricing) return bundle.description;
+    const n = pricing.mainsCount;
+    const mainCats = new Set(
+      cartItems
+        .filter((ci) => bundle.mainCategories.includes(ci.menuItem.category))
+        .map((ci) => ci.menuItem.category),
+    );
+    const noun =
+      mainCats.size === 1
+        ? Array.from(mainCats)[0] === "pizza"
+          ? n === 1 ? "pizza" : "pizzas"
+          : n === 1 ? "pasta" : "pastas"
+        : n === 1 ? "main" : "mains";
+    return bundle.description.replace(/^Your mains/i, `${n} ${noun}`);
+  })();
 
   // Visual ladder roles are defined on the bundle. The default-push tier
   // gets red emphasis; the anchor gets gold; decoy is muted; everything
@@ -274,7 +321,7 @@ function BundleChip({ bundle, applied, onApply }: ChipProps) {
         {bundle.name}
       </div>
       <div className="text-[11px] text-italia-gray leading-snug mt-1 min-h-[28px]">
-        {bundle.description}
+        {description}
       </div>
       <div className="flex items-baseline gap-1.5 mt-1.5">
         <span
@@ -282,11 +329,11 @@ function BundleChip({ bundle, applied, onApply }: ChipProps) {
             applied ? "text-italia-green-dark" : "text-italia-red"
           }`}
         >
-          {formatPrice(bundle.priceGrosze)}
+          {formatPrice(priceGrosze)}
         </span>
         {showRef && (
           <span className="text-[10px] text-italia-gray line-through">
-            {formatPrice(bundle.refPriceGrosze)}
+            {formatPrice(refPriceGrosze)}
           </span>
         )}
       </div>

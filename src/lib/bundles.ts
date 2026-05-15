@@ -3,20 +3,23 @@ import { MenuItem, MenuCategory, CartItem } from "@/data/types";
 /**
  * Bundle architecture (audit §3.2 — decoy + anchor).
  *
- * Bundles are fixed-price combos with a *predetermined composition* — the
- * customer picks Lunch+ and gets pasta + drink + tiramisù for 46 PLN flat.
- * They differ from existing `ComboDeal`s, which apply a percentage discount
- * to whatever the customer happens to assemble.
+ * Two pricing modes:
  *
- * The behavioural shape matters more than the items: each tier uses the
- * decoy + anchor + default-push pattern from Dan Ariely's pricing work.
- *   Solo               — just the headline item, no savings
- *   Lunch (default)    — McDonald's combo effect; visually pre-selected
- *   Lunch+ (anchor)    — best-value badge; the rational pick
- *   Hungry (decoy)     — overshoot tier; makes Lunch+ look reasonable
+ *   fixed   — locked price, locked composition. Lunch tiers use this: a
+ *             customer picks Lunch+ and gets the exact 1 pasta + 1 drink +
+ *             tiramisù at the configured flat price.
  *
- * Composition uses category slots (`any-pasta`) so a single bundle definition
- * works at every location without having to reference per-truck item IDs.
+ *   dynamic — locked add-on composition, but the mains (pizza/pasta) scale
+ *             with whatever the customer already added. Price is computed
+ *             live from menu × cart at apply time. Family tiers use this:
+ *             3 margheritas in cart + tap Family Feast = 3 pizzas + 2 antipasti
+ *             + 4 drinks + tiramisù at (à la carte × 0.72).
+ *
+ * Each tier still uses the decoy + anchor + default-push pattern from
+ * Dan Ariely's pricing work. The behaviour shape matters more than the
+ * items — admins can swap items per location via /admin/upsell. The
+ * `pricingMode` discriminant is optional in stored configs; missing
+ * means "fixed" so pre-existing saved bundles round-trip unchanged.
  */
 
 export type BundleMealPeriod = "lunch" | "family";
@@ -25,19 +28,14 @@ export type BundleSlot =
   | { kind: "category"; category: MenuCategory; quantity: number }
   | { kind: "item"; itemIdSuffix: string; quantity: number };
 
-export interface BundleTier {
+interface BundleBase {
   id: string;
-  /** Short tier label rendered in the chip header — Solo / Lunch / Lunch+ / Hungry. */
+  /** Short tier label rendered in the chip header — Solo / Lunch / Family Feast. */
   tier: string;
   /** Headline used as the chip's name. Keep <24 chars for the cart drawer. */
   name: string;
   /** One-sentence composition copy rendered under the name. */
   description: string;
-  /** Locked bundle price in grosze. */
-  priceGrosze: number;
-  /** "You'd pay" reference price in grosze — drives the strikethrough +
-   *  savings copy. Always greater than priceGrosze for paid tiers. */
-  refPriceGrosze: number;
   composition: BundleSlot[];
   mealPeriod: BundleMealPeriod;
   /** When true, the chip renders with the gold "Best value" badge. */
@@ -50,14 +48,48 @@ export interface BundleTier {
   active: boolean;
 }
 
+export interface BundleFixedTier extends BundleBase {
+  /** Optional — missing = "fixed" for back-compat with pre-existing saved configs. */
+  pricingMode?: "fixed";
+  /** Locked bundle price in grosze. */
+  priceGrosze: number;
+  /** "You'd pay" reference price in grosze — drives the strikethrough +
+   *  savings copy. Always greater than priceGrosze for paid tiers. */
+  refPriceGrosze: number;
+}
+
+export interface BundleDynamicTier extends BundleBase {
+  pricingMode: "dynamic";
+  /** Categories that scale with the cart — typically ["pizza", "pasta"].
+   *  Customer-supplied mains in these categories carry over into the
+   *  bundle 1:1 at their à la carte price (before discount). */
+  mainCategories: MenuCategory[];
+  /** Minimum mains in cart for this tier to apply. The ladder also uses
+   *  this as the "show this chip" gate so a small cart doesn't see the
+   *  bigger tier. */
+  minMains: number;
+  /** Optional cap — Feast Deluxe could be capped at e.g. 6 mains so the
+   *  bundle can't be abused by 50-pizza orders. Undefined = no cap. */
+  maxMains?: number;
+  /** Percentage off the (mains + add-ons) à la carte total. 0–50. */
+  discountPercent: number;
+}
+
+export type BundleTier = BundleFixedTier | BundleDynamicTier;
+
+/** Type guard — treats missing pricingMode as "fixed" so legacy entries work. */
+export function isDynamicBundle(b: BundleTier): b is BundleDynamicTier {
+  return b.pricingMode === "dynamic";
+}
+
 /**
  * Default bundles per location — composition uses category slots so this
  * single list works for both Kraków and Warszawa without referencing
  * per-truck item IDs. Admin can override via LocationUpsellConfig.bundles.
  *
- * Numbers come straight from audit §3.2:
- *   Lunch tier:   26 / 32* / 46* / 58
- *   Family tier:  89 / 119* / 169
+ * Lunch ladder (fixed-price, solo eating):  26 / 32* / 46* / 58
+ * Family ladder (dynamic, scales on mains): 20% / 28%* / 24%* discount
+ *   * = anchor (best % savings)
  */
 export const DEFAULT_BUNDLES: BundleTier[] = [
   // ---- Lunch (audit §3.2, lunch table) ---------------------------------
@@ -121,16 +153,17 @@ export const DEFAULT_BUNDLES: BundleTier[] = [
     active: true,
   },
 
-  // ---- Family Feast (audit §3.2, family table) -------------------------
+  // ---- Family ladder (dynamic — mains scale with cart) -----------------
   {
-    id: "family-classic",
+    id: "family",
     tier: "Family",
-    name: "Two pizzas + sides",
-    description: "2 pizzas + 1 side + 2 drinks",
-    priceGrosze: 8900,
-    refPriceGrosze: 10800,
+    name: "Your pizzas + sides",
+    description: "Your mains + bruschetta + 2 drinks",
+    pricingMode: "dynamic",
+    mainCategories: ["pizza", "pasta"],
+    minMains: 2,
+    discountPercent: 20,
     composition: [
-      { kind: "category", category: "pizza", quantity: 2 },
       { kind: "category", category: "antipasti", quantity: 1 },
       { kind: "category", category: "drinks", quantity: 2 },
     ],
@@ -141,12 +174,13 @@ export const DEFAULT_BUNDLES: BundleTier[] = [
     id: "family-feast",
     tier: "Family Feast",
     name: "Whole-table dinner",
-    description: "2 pizzas + bruschetta + 4 drinks + tiramisù",
-    priceGrosze: 11900,
-    refPriceGrosze: 16200,
+    description: "Your mains + 2 antipasti + 4 drinks + tiramisù",
+    pricingMode: "dynamic",
+    mainCategories: ["pizza", "pasta"],
+    minMains: 2,
+    discountPercent: 28,
     composition: [
-      { kind: "category", category: "pizza", quantity: 2 },
-      { kind: "item", itemIdSuffix: "anti-bruschetta", quantity: 1 },
+      { kind: "category", category: "antipasti", quantity: 2 },
       { kind: "category", category: "drinks", quantity: 4 },
       { kind: "item", itemIdSuffix: "dessert-tiramisu", quantity: 1 },
     ],
@@ -158,11 +192,12 @@ export const DEFAULT_BUNDLES: BundleTier[] = [
     id: "family-deluxe",
     tier: "Feast Deluxe",
     name: "Big group, no leftovers",
-    description: "3 pizzas + 2 sides + 6 drinks + 2 desserts",
-    priceGrosze: 16900,
-    refPriceGrosze: 23200,
+    description: "Your mains + 2 antipasti + 6 drinks + 2 desserts",
+    pricingMode: "dynamic",
+    mainCategories: ["pizza", "pasta"],
+    minMains: 3,
+    discountPercent: 24,
     composition: [
-      { kind: "category", category: "pizza", quantity: 3 },
       { kind: "category", category: "antipasti", quantity: 2 },
       { kind: "category", category: "drinks", quantity: 6 },
       { kind: "category", category: "desserts", quantity: 2 },
@@ -174,14 +209,14 @@ export const DEFAULT_BUNDLES: BundleTier[] = [
 ];
 
 /**
- * Per-ladder availability rules (audit §3.2 — clarification follow-up).
- * The Lunch ladder is hour-gated so it only surfaces during the lunch
- * window; the Family Feast ladder is quantity-gated so it only surfaces
- * once the cart has enough mains to make the bundle worth offering.
+ * Per-ladder availability rules. The Lunch ladder is hour-gated so it
+ * only surfaces during the lunch window; the Family ladder is
+ * quantity-gated. With dynamic bundles each tier carries its own
+ * `minMains`; this rule provides the fallback / ladder-show threshold
+ * used when no bundles are configured.
  *
- * Defaults match the operator brief:
  *   lunch  — 11:00–13:59 local
- *   family — show at ≥5 main items (pizza + pasta); hint when within 2.
+ *   family — show at ≥2 main items (pizza + pasta); hint when within 1.
  *
  * Admins override via LocationUpsellConfig.bundleRules so each truck can
  * tune the windows independently.
@@ -193,7 +228,7 @@ export interface BundleAvailabilityRules {
 
 export const DEFAULT_BUNDLE_RULES: BundleAvailabilityRules = {
   lunch: { startHour: 11, endHour: 14 },
-  family: { minMainItems: 5, hintWithin: 2 },
+  family: { minMainItems: 2, hintWithin: 1 },
 };
 
 export function resolveBundleRules(
@@ -206,7 +241,7 @@ export function resolveBundleRules(
 }
 
 /**
- * Count the cart's "main" items — pizzas + pastas. Family Feast eligibility
+ * Count the cart's "main" items — pizzas + pastas. Family eligibility
  * keys off this; sides, drinks and desserts don't count toward the minimum.
  */
 export function countMainItems(cartItems: CartItem[]): number {
@@ -214,6 +249,20 @@ export function countMainItems(cartItems: CartItem[]): number {
     if (ci.menuItem.category === "pizza" || ci.menuItem.category === "pasta") {
       return sum + ci.quantity;
     }
+    return sum;
+  }, 0);
+}
+
+/** Like countMainItems but with the bundle's own mainCategories — accepts
+ *  any dynamic-bundle category set so an admin can configure pizza-only
+ *  or pasta-only bundles down the road. Falls back to pizza+pasta. */
+function countCartInCategories(
+  cartItems: CartItem[],
+  categories: MenuCategory[],
+): number {
+  const set = new Set(categories);
+  return cartItems.reduce((sum, ci) => {
+    if (set.has(ci.menuItem.category)) return sum + ci.quantity;
     return sum;
   }, 0);
 }
@@ -288,7 +337,8 @@ export interface ResolvedBundleSlot {
 
 /**
  * Resolve every slot in a bundle to candidate menu items at the given
- * location. Returns null if any slot has no candidates (bundle can't be
+ * location, sorted cheapest-first so fallbacks pick the most affordable
+ * option. Returns null if any slot has no candidates (bundle can't be
  * fulfilled here — usually means the menu doesn't carry the antipasto/
  * dessert it requires). The cart UI can then hide the tier rather than
  * surface a broken offer.
@@ -299,18 +349,87 @@ export function resolveBundleSlots(
 ): ResolvedBundleSlot[] | null {
   const out: ResolvedBundleSlot[] = [];
   for (const slot of bundle.composition) {
-    const candidates =
+    const candidates = (
       slot.kind === "item"
         ? menuItems.filter(
             (m) => m.available && m.id.endsWith(slot.itemIdSuffix),
           )
         : menuItems.filter(
             (m) => m.available && m.category === slot.category,
-          );
+          )
+    ).slice().sort((a, b) => a.price - b.price);
     if (candidates.length === 0) return null;
     out.push({ slot, candidates });
   }
   return out;
+}
+
+/**
+ * Compute a bundle's effective price + reference price + savings given
+ * the current cart and menu. For fixed bundles this is just the stored
+ * priceGrosze / refPriceGrosze. For dynamic bundles:
+ *
+ *   mainsSubtotal = Σ cart-mains-in-categories × menu price
+ *   addOnsSubtotal = Σ slot.quantity × cheapest-candidate price
+ *   bundlePrice = round((mainsSubtotal + addOnsSubtotal) × (1 - discountPercent/100))
+ *   refPrice = mainsSubtotal + addOnsSubtotal
+ *
+ * Returns null when a dynamic bundle's add-ons can't be resolved at this
+ * location or the cart fails the min/max mains gate — callers can use
+ * that signal to hide the tier or fall back to a hint.
+ */
+export interface BundlePricing {
+  priceGrosze: number;
+  refPriceGrosze: number;
+  savings: number;
+  /** Actual mains-in-cart count used to compute the price. Useful for
+   *  composition copy ("3 pizzas + ..."). */
+  mainsCount: number;
+}
+
+export function computeBundlePrice(
+  bundle: BundleTier,
+  cartItems: CartItem[],
+  menuItems: MenuItem[],
+): BundlePricing | null {
+  if (!isDynamicBundle(bundle)) {
+    return {
+      priceGrosze: bundle.priceGrosze,
+      refPriceGrosze: bundle.refPriceGrosze,
+      savings: Math.max(0, bundle.refPriceGrosze - bundle.priceGrosze),
+      mainsCount: 0,
+    };
+  }
+
+  const mainsCount = countCartInCategories(cartItems, bundle.mainCategories);
+  if (mainsCount < bundle.minMains) return null;
+  if (bundle.maxMains && mainsCount > bundle.maxMains) return null;
+
+  // Mains: every cart line in mainCategories carries over at à la carte.
+  const mainsSubtotal = cartItems
+    .filter((ci) => bundle.mainCategories.includes(ci.menuItem.category))
+    .reduce((s, ci) => s + ci.menuItem.price * ci.quantity, 0);
+
+  // Add-ons: cheapest candidate per slot × slot.quantity. Resolving uses
+  // available menu items so an out-of-stock anti-bruschetta naturally
+  // pushes the price to the next available bruschetta.
+  const resolved = resolveBundleSlots(bundle, menuItems);
+  if (!resolved) return null;
+  const addOnsSubtotal = resolved.reduce((s, { slot, candidates }) => {
+    // candidates is pre-sorted cheapest-first by resolveBundleSlots.
+    return s + candidates[0].price * slot.quantity;
+  }, 0);
+
+  const refPrice = mainsSubtotal + addOnsSubtotal;
+  const priceGrosze = Math.round(
+    refPrice * (1 - bundle.discountPercent / 100),
+  );
+  return {
+    priceGrosze,
+    refPriceGrosze: refPrice,
+    savings: Math.max(0, refPrice - priceGrosze),
+    mainsCount,
+  };
 }
 
 /**
@@ -322,6 +441,9 @@ export function resolveBundleSlots(
  * Existing-cart items are consumed one-at-a-time, not duplicated en bloc,
  * so a cart with two different pizzas going into the Family ladder keeps
  * both pizzas instead of being collapsed to two of the first match.
+ *
+ * Dynamic bundles preserve all main-category cart lines as-is, then
+ * resolve the static add-on composition from the remaining pool.
  */
 export function buildBundleCartLines(
   bundle: BundleTier,
@@ -332,8 +454,43 @@ export function buildBundleCartLines(
   const resolved = resolveBundleSlots(bundle, menuItems);
   if (!resolved) return null;
 
-  // Flatten the existing cart into a per-unit pool so each existing line
-  // can satisfy at most one slot occurrence. Preserves variety.
+  if (isDynamicBundle(bundle)) {
+    const mainsCount = countCartInCategories(
+      existingCart,
+      bundle.mainCategories,
+    );
+    if (mainsCount < bundle.minMains) return null;
+    if (bundle.maxMains && mainsCount > bundle.maxMains) return null;
+
+    // Mains carry over 1:1 from cart — preserving every line so the
+    // customer's 2 margheritas + 1 quattro stay distinct.
+    const mainsLines: CartItem[] = existingCart
+      .filter((ci) => bundle.mainCategories.includes(ci.menuItem.category))
+      .map((ci) => ({ ...ci, locationSlug }));
+
+    // Add-ons are filled from the non-main remainder of the cart, with
+    // cheapest-available as the fallback.
+    const pool: MenuItem[] = existingCart
+      .filter((ci) => !bundle.mainCategories.includes(ci.menuItem.category))
+      .flatMap((ci) =>
+        Array.from({ length: ci.quantity }, () => ci.menuItem),
+      );
+
+    const addOnLines: CartItem[] = [];
+    for (const { slot, candidates } of resolved) {
+      for (let i = 0; i < slot.quantity; i++) {
+        const matchIdx = pool.findIndex((m) =>
+          candidates.some((c) => c.id === m.id),
+        );
+        const pick = matchIdx >= 0 ? pool[matchIdx] : candidates[0];
+        if (matchIdx >= 0) pool.splice(matchIdx, 1);
+        addOnLines.push({ menuItem: pick, quantity: 1, locationSlug });
+      }
+    }
+    return [...mainsLines, ...addOnLines];
+  }
+
+  // Fixed bundle — flat per-unit pool against the full composition.
   const pool: MenuItem[] = existingCart.flatMap((ci) =>
     Array.from({ length: ci.quantity }, () => ci.menuItem),
   );
@@ -344,8 +501,7 @@ export function buildBundleCartLines(
       const matchIdx = pool.findIndex((m) =>
         candidates.some((c) => c.id === m.id),
       );
-      const pick =
-        matchIdx >= 0 ? pool[matchIdx] : candidates[0];
+      const pick = matchIdx >= 0 ? pool[matchIdx] : candidates[0];
       if (matchIdx >= 0) pool.splice(matchIdx, 1);
       out.push({ menuItem: pick, quantity: 1, locationSlug });
     }
@@ -361,15 +517,47 @@ export function buildBundleCartLines(
  * bundle price — without this, a single-quantity check would let a
  * malicious cart get a 46 PLN tier for 200 PLN of pizza.
  *
- * Algorithm: greedy slot-by-slot consumption against a per-unit pool of
- * the supplied items. Each unit can satisfy at most one slot, so the
- * cart total qty must equal the bundle total qty.
+ * For dynamic bundles, the *non-main* portion of the cart must match the
+ * add-on composition exactly; mains are validated against minMains /
+ * maxMains. For fixed bundles, the whole cart must match line-for-line.
  */
 export function cartSatisfiesBundle(
   bundle: BundleTier,
   cartItems: CartItem[],
   menuItems: MenuItem[],
 ): boolean {
+  if (isDynamicBundle(bundle)) {
+    const mainsCount = countCartInCategories(cartItems, bundle.mainCategories);
+    if (mainsCount < bundle.minMains) return false;
+    if (bundle.maxMains && mainsCount > bundle.maxMains) return false;
+
+    const addOnSlotQty = bundle.composition.reduce(
+      (s, slot) => s + slot.quantity,
+      0,
+    );
+    // Pool of non-main cart units — must exactly match the static slots.
+    const pool: MenuItem[] = cartItems
+      .filter((ci) => !bundle.mainCategories.includes(ci.menuItem.category))
+      .flatMap((ci) =>
+        Array.from({ length: ci.quantity }, () => ci.menuItem),
+      );
+    if (pool.length !== addOnSlotQty) return false;
+
+    const resolved = resolveBundleSlots(bundle, menuItems);
+    if (!resolved) return false;
+
+    for (const { slot, candidates } of resolved) {
+      const candidateIds = new Set(candidates.map((c) => c.id));
+      for (let i = 0; i < slot.quantity; i++) {
+        const idx = pool.findIndex((m) => candidateIds.has(m.id));
+        if (idx === -1) return false;
+        pool.splice(idx, 1);
+      }
+    }
+    return pool.length === 0;
+  }
+
+  // Fixed bundle path — full cart must equal full composition.
   const totalSlotQty = bundle.composition.reduce(
     (s, slot) => s + slot.quantity,
     0,
@@ -380,7 +568,6 @@ export function cartSatisfiesBundle(
   const resolved = resolveBundleSlots(bundle, menuItems);
   if (!resolved) return false;
 
-  // Flatten cart into per-unit pool of MenuItems.
   const pool: MenuItem[] = cartItems.flatMap((ci) =>
     Array.from({ length: ci.quantity }, () => ci.menuItem),
   );
@@ -393,12 +580,24 @@ export function cartSatisfiesBundle(
       pool.splice(idx, 1);
     }
   }
-  // pool should be empty given the qty-equality check above; verify anyway.
   return pool.length === 0;
 }
 
-/** Per-bundle savings in grosze (used in the "Save 18 zł" badge). */
-export function bundleSavings(bundle: BundleTier): number {
+/** Per-bundle savings in grosze (used in the "Save 18 zł" badge). For
+ *  dynamic bundles pass cartItems + menuItems so the savings reflects the
+ *  customer's actual mains count; without those args returns 0 for dynamic
+ *  bundles (caller should compute via computeBundlePrice for accurate copy).
+ */
+export function bundleSavings(
+  bundle: BundleTier,
+  cartItems?: CartItem[],
+  menuItems?: MenuItem[],
+): number {
+  if (isDynamicBundle(bundle)) {
+    if (!cartItems || !menuItems) return 0;
+    const pricing = computeBundlePrice(bundle, cartItems, menuItems);
+    return pricing?.savings ?? 0;
+  }
   return Math.max(0, bundle.refPriceGrosze - bundle.priceGrosze);
 }
 

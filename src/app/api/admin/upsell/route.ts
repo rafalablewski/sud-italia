@@ -175,10 +175,6 @@ export const PUT = withAdmin(
           typeof b?.tier !== "string" ||
           typeof b?.name !== "string" ||
           typeof b?.description !== "string" ||
-          typeof b?.priceGrosze !== "number" ||
-          b.priceGrosze < 0 ||
-          typeof b?.refPriceGrosze !== "number" ||
-          b.refPriceGrosze < 0 ||
           typeof b?.mealPeriod !== "string" ||
           !validMealPeriods.has(b.mealPeriod) ||
           typeof b?.active !== "boolean" ||
@@ -186,9 +182,101 @@ export const PUT = withAdmin(
           b.composition.length === 0
         ) {
           return NextResponse.json(
-            { error: "Invalid bundle — check id, name, prices, mealPeriod, composition" },
+            { error: "Invalid bundle — check id, name, mealPeriod, composition" },
             { status: 400 },
           );
+        }
+        // Pricing mode — "fixed" (default when absent for back-compat) or "dynamic".
+        const pricingMode = b.pricingMode ?? "fixed";
+        if (pricingMode !== "fixed" && pricingMode !== "dynamic") {
+          return NextResponse.json(
+            { error: "Invalid bundle pricingMode — must be 'fixed' or 'dynamic'" },
+            { status: 400 },
+          );
+        }
+        if (pricingMode === "fixed") {
+          if (
+            typeof b?.priceGrosze !== "number" ||
+            b.priceGrosze < 0 ||
+            typeof b?.refPriceGrosze !== "number" ||
+            b.refPriceGrosze < 0
+          ) {
+            return NextResponse.json(
+              { error: "Invalid fixed bundle — priceGrosze and refPriceGrosze must be non-negative numbers" },
+              { status: 400 },
+            );
+          }
+          if (b.refPriceGrosze < b.priceGrosze) {
+            return NextResponse.json(
+              { error: "Invalid bundle — refPriceGrosze must be ≥ priceGrosze (no negative savings)" },
+              { status: 400 },
+            );
+          }
+        } else {
+          // Dynamic — mainCategories non-empty subset of MenuCategory,
+          // minMains ≥ 1, optional maxMains ≥ minMains, discount 0–50,
+          // composition must not contain a main category.
+          if (
+            !Array.isArray(b?.mainCategories) ||
+            b.mainCategories.length === 0
+          ) {
+            return NextResponse.json(
+              { error: "Invalid dynamic bundle — mainCategories must be a non-empty array" },
+              { status: 400 },
+            );
+          }
+          const mainsSet = new Set<string>();
+          for (const cat of b.mainCategories) {
+            if (typeof cat !== "string" || !validMenuCategories.has(cat as MenuCategory)) {
+              return NextResponse.json(
+                { error: `Invalid dynamic bundle mainCategory "${cat}" — must be a MenuCategory` },
+                { status: 400 },
+              );
+            }
+            mainsSet.add(cat);
+          }
+          if (
+            typeof b?.minMains !== "number" ||
+            !Number.isInteger(b.minMains) ||
+            b.minMains < 1 ||
+            b.minMains > 50
+          ) {
+            return NextResponse.json(
+              { error: "Invalid dynamic bundle — minMains must be an integer 1–50" },
+              { status: 400 },
+            );
+          }
+          if (b.maxMains !== undefined && b.maxMains !== null) {
+            if (
+              typeof b.maxMains !== "number" ||
+              !Number.isInteger(b.maxMains) ||
+              b.maxMains < b.minMains ||
+              b.maxMains > 100
+            ) {
+              return NextResponse.json(
+                { error: "Invalid dynamic bundle — maxMains must be an integer ≥ minMains and ≤ 100" },
+                { status: 400 },
+              );
+            }
+          }
+          if (
+            typeof b?.discountPercent !== "number" ||
+            b.discountPercent < 0 ||
+            b.discountPercent > 50
+          ) {
+            return NextResponse.json(
+              { error: "Invalid dynamic bundle — discountPercent must be 0–50" },
+              { status: 400 },
+            );
+          }
+          for (const slot of b.composition) {
+            if (slot?.kind === "category" && typeof slot.category === "string" && mainsSet.has(slot.category)) {
+              return NextResponse.json(
+                { error: `Invalid dynamic bundle — composition slot category "${slot.category}" must not overlap a mainCategory (it would double-count). Use the add-on categories only.` },
+                { status: 400 },
+              );
+            }
+          }
         }
         for (const slot of b.composition) {
           if (

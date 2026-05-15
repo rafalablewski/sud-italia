@@ -63,14 +63,28 @@ export interface BundleConfig {
   tier: string;
   name: string;
   description: string;
-  priceGrosze: number;
-  refPriceGrosze: number;
   composition: BundleSlotConfig[];
   mealPeriod: string;
   isAnchor?: boolean;
   isDecoy?: boolean;
   isDefault?: boolean;
   active: boolean;
+  /** "fixed" (default when omitted, lunch tiers) or "dynamic" (family tiers
+   *  where the mains-count scales with the cart). Round-trips through saves
+   *  via the existing spread; missing = "fixed" for back-compat. */
+  pricingMode?: "fixed" | "dynamic";
+  // ---- fixed-mode fields ----
+  priceGrosze?: number;
+  refPriceGrosze?: number;
+  // ---- dynamic-mode fields ----
+  /** Cart categories that scale with the bundle (typically pizza+pasta). */
+  mainCategories?: string[];
+  /** Min cart-mains for this tier to apply. */
+  minMains?: number;
+  /** Optional cap so a 50-pizza cart can't abuse the discount. */
+  maxMains?: number;
+  /** 0–50. Applied to (mains à la carte + cheapest-add-ons subtotal). */
+  discountPercent?: number;
 }
 
 export interface BundleRulesConfig {
@@ -929,17 +943,39 @@ export function BundlesEditor({
   };
   const remove = (id: string) => onChange(bundles.filter((b) => b.id !== id));
   const addBundle = (mealPeriod: "lunch" | "family") => {
-    const fresh: BundleConfig = {
-      id: `${mealPeriod}-${Math.random().toString(36).slice(2, 8)}`,
-      tier: mealPeriod === "lunch" ? "New Lunch tier" : "New Family tier",
-      name: "Bundle name",
-      description: "What's in it",
-      priceGrosze: mealPeriod === "lunch" ? 3500 : 9900,
-      refPriceGrosze: mealPeriod === "lunch" ? 4000 : 11000,
-      composition: [{ kind: "category", category: mealPeriod === "lunch" ? "pasta" : "pizza", quantity: 1 }],
-      mealPeriod,
-      active: true,
-    };
+    // Lunch tiers stay fixed-price (solo meal, no "X mains" concept).
+    // Family tiers default to dynamic since that's the desired behaviour
+    // for the new ladder. Admins can flip the mode toggle either way.
+    const fresh: BundleConfig =
+      mealPeriod === "lunch"
+        ? {
+            id: `lunch-${Math.random().toString(36).slice(2, 8)}`,
+            tier: "New Lunch tier",
+            name: "Bundle name",
+            description: "What's in it",
+            pricingMode: "fixed",
+            priceGrosze: 3500,
+            refPriceGrosze: 4000,
+            composition: [{ kind: "category", category: "pasta", quantity: 1 }],
+            mealPeriod,
+            active: true,
+          }
+        : {
+            id: `family-${Math.random().toString(36).slice(2, 8)}`,
+            tier: "New Family tier",
+            name: "Bundle name",
+            description: "Your mains + …",
+            pricingMode: "dynamic",
+            mainCategories: ["pizza", "pasta"],
+            minMains: 2,
+            discountPercent: 20,
+            composition: [
+              { kind: "category", category: "antipasti", quantity: 1 },
+              { kind: "category", category: "drinks", quantity: 2 },
+            ],
+            mealPeriod,
+            active: true,
+          };
     onChange([...bundles, fresh]);
   };
 
@@ -1030,10 +1066,42 @@ function BundleTierRow({
   onChange: (patch: Partial<BundleConfig>) => void;
   onRemove: () => void;
 }) {
-  const savings = Math.max(0, bundle.refPriceGrosze - bundle.priceGrosze);
+  const mode: "fixed" | "dynamic" = bundle.pricingMode ?? "fixed";
+  const isDynamic = mode === "dynamic";
+  const savings = !isDynamic
+    ? Math.max(0, (bundle.refPriceGrosze ?? 0) - (bundle.priceGrosze ?? 0))
+    : 0;
+
+  const switchToFixed = () => {
+    onChange({
+      pricingMode: "fixed",
+      priceGrosze: bundle.priceGrosze ?? 9900,
+      refPriceGrosze: bundle.refPriceGrosze ?? 11000,
+      // Clear dynamic-mode fields so the saved shape stays clean.
+      mainCategories: undefined,
+      minMains: undefined,
+      maxMains: undefined,
+      discountPercent: undefined,
+    });
+  };
+  const switchToDynamic = () => {
+    onChange({
+      pricingMode: "dynamic",
+      mainCategories: bundle.mainCategories ?? ["pizza", "pasta"],
+      minMains: bundle.minMains ?? 2,
+      maxMains: bundle.maxMains,
+      discountPercent: bundle.discountPercent ?? 20,
+      // Clear fixed-mode fields so they don't haunt the saved shape.
+      priceGrosze: undefined,
+      refPriceGrosze: undefined,
+    });
+  };
+
+  const mainsSet = new Set(bundle.mainCategories ?? []);
+
   return (
     <div className="rounded-md border border-white/10 bg-black/20 p-3">
-      <div className="grid gap-2 md:grid-cols-[1fr_1fr_140px_140px_auto] items-center">
+      <div className="grid gap-2 md:grid-cols-[1fr_1fr_auto_auto] items-center">
         <input
           className="glass-input"
           value={bundle.tier}
@@ -1046,32 +1114,23 @@ function BundleTierRow({
           placeholder="Bundle name"
           onChange={(e) => onChange({ name: e.target.value })}
         />
-        <label className="flex items-center gap-1 text-xs admin-text-secondary">
-          Price (zł)
-          <input
-            className="glass-input w-20 text-right"
-            type="number"
-            min={0}
-            value={(bundle.priceGrosze / 100).toFixed(2)}
-            onChange={(e) =>
-              onChange({ priceGrosze: Math.round(parseFloat(e.target.value || "0") * 100) })
-            }
-          />
-        </label>
-        <label className="flex items-center gap-1 text-xs admin-text-secondary">
-          You&rsquo;d pay
-          <input
-            className="glass-input w-20 text-right"
-            type="number"
-            min={0}
-            value={(bundle.refPriceGrosze / 100).toFixed(2)}
-            onChange={(e) =>
-              onChange({
-                refPriceGrosze: Math.round(parseFloat(e.target.value || "0") * 100),
-              })
-            }
-          />
-        </label>
+        {/* Pricing-mode toggle — "Fixed" locks both composition + price; "Dynamic" scales mains with cart. */}
+        <div className="inline-flex rounded-md border border-white/10 overflow-hidden text-[11px]">
+          <button
+            type="button"
+            onClick={switchToFixed}
+            className={`px-2 py-1 ${!isDynamic ? "bg-italia-gold/20 text-italia-gold-dark" : "admin-text-secondary"}`}
+          >
+            Fixed
+          </button>
+          <button
+            type="button"
+            onClick={switchToDynamic}
+            className={`px-2 py-1 ${isDynamic ? "bg-italia-gold/20 text-italia-gold-dark" : "admin-text-secondary"}`}
+          >
+            Dynamic
+          </button>
+        </div>
         <button
           type="button"
           onClick={onRemove}
@@ -1084,9 +1143,120 @@ function BundleTierRow({
       <input
         className="glass-input mt-2 w-full"
         value={bundle.description}
-        placeholder="Short description rendered under the bundle name"
+        placeholder="Short description — use 'Your mains' to scale with cart on dynamic bundles"
         onChange={(e) => onChange({ description: e.target.value })}
       />
+
+      {/* Mode-specific pricing inputs */}
+      {!isDynamic ? (
+        <div className="grid gap-2 md:grid-cols-[140px_140px_auto] items-center mt-2">
+          <label className="flex items-center gap-1 text-xs admin-text-secondary">
+            Price (zł)
+            <input
+              className="glass-input w-20 text-right"
+              type="number"
+              min={0}
+              value={((bundle.priceGrosze ?? 0) / 100).toFixed(2)}
+              onChange={(e) =>
+                onChange({ priceGrosze: Math.round(parseFloat(e.target.value || "0") * 100) })
+              }
+            />
+          </label>
+          <label className="flex items-center gap-1 text-xs admin-text-secondary">
+            You&rsquo;d pay
+            <input
+              className="glass-input w-20 text-right"
+              type="number"
+              min={0}
+              value={((bundle.refPriceGrosze ?? 0) / 100).toFixed(2)}
+              onChange={(e) =>
+                onChange({
+                  refPriceGrosze: Math.round(parseFloat(e.target.value || "0") * 100),
+                })
+              }
+            />
+          </label>
+          {savings > 0 && (
+            <span className="text-italia-gold text-xs">Save zł {(savings / 100).toFixed(2)}</span>
+          )}
+        </div>
+      ) : (
+        <div className="mt-2 space-y-2">
+          <div className="grid gap-2 md:grid-cols-[140px_140px_140px] items-center">
+            <label className="flex items-center gap-1 text-xs admin-text-secondary">
+              Discount %
+              <input
+                className="glass-input w-20 text-right"
+                type="number"
+                min={0}
+                max={50}
+                value={bundle.discountPercent ?? 20}
+                onChange={(e) =>
+                  onChange({ discountPercent: clampHour(Number(e.target.value) || 0, 50) })
+                }
+              />
+            </label>
+            <label className="flex items-center gap-1 text-xs admin-text-secondary">
+              Min mains
+              <input
+                className="glass-input w-16 text-right"
+                type="number"
+                min={1}
+                value={bundle.minMains ?? 2}
+                onChange={(e) =>
+                  onChange({ minMains: Math.max(1, Math.round(Number(e.target.value) || 1)) })
+                }
+              />
+            </label>
+            <label className="flex items-center gap-1 text-xs admin-text-secondary">
+              Max (opt)
+              <input
+                className="glass-input w-16 text-right"
+                type="number"
+                min={1}
+                value={bundle.maxMains ?? ""}
+                placeholder="∞"
+                onChange={(e) => {
+                  const v = e.target.value.trim();
+                  onChange({ maxMains: v === "" ? undefined : Math.max(1, Math.round(Number(v))) });
+                }}
+              />
+            </label>
+          </div>
+          <div>
+            <label className="text-[10px] text-slate-400 block mb-1.5">Mains scale on these categories</label>
+            <div className="flex flex-wrap gap-1.5">
+              {(["pizza", "pasta"] as const).map((cat) => {
+                const selected = mainsSet.has(cat);
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => {
+                      const next = new Set(mainsSet);
+                      if (selected) next.delete(cat); else next.add(cat);
+                      onChange({ mainCategories: Array.from(next) });
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+                      selected
+                        ? "bg-italia-red/20 text-italia-red border border-italia-red/30"
+                        : "bg-white/5 text-slate-400 border border-white/10 hover:border-white/25"
+                    }`}
+                  >
+                    {selected && <Check className="h-3 w-3 inline mr-1" />}
+                    {cat}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <p className="text-[10px] text-slate-500">
+            Bundle price = (mains-in-cart × menu price + cheapest add-ons) × (1 − discount/100). Composition below
+            is the static add-on allowance; main categories are filtered out so they can&rsquo;t double-count.
+          </p>
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-3 items-center mt-2 text-xs admin-text-secondary">
         <label className="inline-flex items-center gap-1">
           <input
@@ -1126,12 +1296,10 @@ function BundleTierRow({
           />
           <span>Active</span>
         </label>
-        {savings > 0 && (
-          <span className="text-italia-gold">Save zł {(savings / 100).toFixed(2)}</span>
-        )}
       </div>
       <CompositionEditor
         composition={bundle.composition}
+        excludeCategories={isDynamic ? Array.from(mainsSet) : []}
         onChange={(composition) => onChange({ composition })}
       />
     </div>
@@ -1140,21 +1308,29 @@ function BundleTierRow({
 
 function CompositionEditor({
   composition,
+  excludeCategories = [],
   onChange,
 }: {
   composition: BundleSlotConfig[];
+  /** Categories to hide from the "Any of" dropdown — used in dynamic mode
+   *  so the admin can't pick pizza/pasta in the static composition (the
+   *  bundle's main categories scale via the cart, not the slot). */
+  excludeCategories?: string[];
   onChange: (next: BundleSlotConfig[]) => void;
 }) {
+  const allowedCategories = CATEGORIES.filter((c) => !excludeCategories.includes(c));
   const update = (i: number, patch: Partial<BundleSlotConfig>) => {
     onChange(composition.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
   };
   const remove = (i: number) => onChange(composition.filter((_, idx) => idx !== i));
-  const add = () =>
-    onChange([...composition, { kind: "category", category: "drinks", quantity: 1 }]);
+  const add = () => {
+    const defaultCat = allowedCategories.includes("drinks") ? "drinks" : (allowedCategories[0] ?? "drinks");
+    onChange([...composition, { kind: "category", category: defaultCat, quantity: 1 }]);
+  };
   return (
     <div className="mt-3">
       <p className="text-[11px] uppercase tracking-wide admin-text-secondary font-semibold mb-1">
-        Composition
+        {excludeCategories.length > 0 ? "Static add-ons (mains scale via cart)" : "Composition"}
       </p>
       <div className="grid gap-1.5">
         {composition.map((slot, i) => (
@@ -1183,7 +1359,7 @@ function CompositionEditor({
                 value={slot.category ?? "drinks"}
                 onChange={(e) => update(i, { category: e.target.value })}
               >
-                {CATEGORIES.map((c) => (
+                {allowedCategories.map((c) => (
                   <option key={c} value={c}>
                     {c}
                   </option>

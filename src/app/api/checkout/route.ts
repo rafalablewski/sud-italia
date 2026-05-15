@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "crypto";
 import { getMenuWithOverrides } from "@/data/menus";
 import { getUpsellSettings } from "@/lib/store";
-import { findBundle, type BundleTier } from "@/lib/bundles";
+import { findBundle, computeBundlePrice, type BundleTier } from "@/lib/bundles";
 import { normalizePlPhoneE164 } from "@/lib/phone";
 import { logger } from "@/lib/logger";
 import {
@@ -129,6 +129,12 @@ export async function POST(req: NextRequest) {
                 (locationConfig as { bundles?: BundleTier[] } | null)?.bundles ?? null,
               );
               if (!bundle) return null;
+              // Dynamic bundles compute price from order items × menu;
+              // fixed bundles use the stored price. createOrder already
+              // ran cartSatisfiesBundle, so this just mirrors the same
+              // pricing for Stripe's unit_amount.
+              const pricing = computeBundlePrice(bundle, order.items, menuItems);
+              if (!pricing) return null;
               const composition = order.items
                 .map((i) => `${i.quantity}× ${i.menuItem.name}`)
                 .join(", ");
@@ -140,7 +146,7 @@ export async function POST(req: NextRequest) {
                       name: `Bundle: ${bundle.name}`,
                       description: composition,
                     },
-                    unit_amount: bundle.priceGrosze,
+                    unit_amount: pricing.priceGrosze,
                   },
                   quantity: 1,
                 },

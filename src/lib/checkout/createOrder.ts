@@ -15,7 +15,7 @@ import {
   getActiveComboDeals,
   getDeliveryThresholdForCustomer,
 } from "@/lib/upsell";
-import { findBundle, cartSatisfiesBundle, type BundleTier } from "@/lib/bundles";
+import { findBundle, cartSatisfiesBundle, computeBundlePrice, type BundleTier } from "@/lib/bundles";
 import { calculateTier } from "@/lib/loyalty";
 import { normalizePlPhoneE164 } from "@/lib/phone";
 
@@ -150,7 +150,11 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
       (locationConfig as { bundles?: BundleTier[] } | null)?.bundles ?? null,
     );
     if (bundle && cartSatisfiesBundle(bundle, orderItems, menuItems)) {
-      bundleSubtotal = bundle.priceGrosze;
+      // computeBundlePrice handles both fixed and dynamic tiers — for
+      // dynamic Family Feast it recomputes from the cart's actual mains
+      // count × menu × discount, mirroring what the client showed.
+      const pricing = computeBundlePrice(bundle, orderItems, menuItems);
+      if (pricing) bundleSubtotal = pricing.priceGrosze;
     }
   }
 
