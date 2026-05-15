@@ -1,17 +1,21 @@
-import { createHash } from "crypto";
 import type { BundleTier } from "@/lib/bundles";
-import { getUpsellSettings } from "@/lib/store";
 
 /**
- * A/B-test framework (Sprint 3 #14) for bundle discounts. Per-location,
- * phone-hashed variant assignment so the same customer always sees the
- * same variant across visits + the server can reproduce it at checkout
- * for parity with what the client displayed.
+ * A/B-test framework for bundle discounts — *client-safe* surface.
+ * Per-location, phone-hashed variant assignment so the same customer
+ * always sees the same variant across visits + the server can reproduce
+ * it at checkout for parity with what the client displayed.
  *
  * Stored under LocationUpsellConfig.experiment — single active
  * experiment per location, weighted variants, per-bundle discount
  * overrides. Audit log records the variant id so the operator can A/B
  * uplift on contribution profit, not just AOV.
+ *
+ * This module is *intentionally* free of server-only imports (no
+ * `fs`, no `crypto`, no store) so `"use client"` components can pull it
+ * directly without dragging the Node bundle into the browser. The
+ * server-side resolver that reads upsell-settings.json lives in
+ * `@/lib/experiments-server`.
  */
 
 export interface ExperimentVariant {
@@ -47,82 +51,7 @@ export interface ResolvedVariant {
   applyToBundle: (bundle: BundleTier) => BundleTier;
 }
 
-/** Stable phone-hash → integer in [0, 99]. SHA-256 → first 4 bytes → mod 100. */
-function hashPhoneToBucket(experimentId: string, phoneE164: string): number {
-  const h = createHash("sha256").update(`${experimentId}|${phoneE164}`).digest();
-  const n = (h[0] << 24) | (h[1] << 16) | (h[2] << 8) | h[3];
-  // Coerce to unsigned then bucket. Math.abs keeps the sign-bit case sane.
-  return Math.abs(n) % 100;
-}
-
-/** Browser-safe variant of the bucket hash. Uses the Web Crypto API when
- *  available (every modern mobile browser) and falls back to a simple
- *  multiplicative hash for the rare environments without it. The server
- *  uses the Node SHA-256 above — both produce the same bucket for the
- *  same (experiment id, phone) pair *because* the SHA-256 implementations
- *  are stable. The fallback path is only ever exercised in jsdom-style
- *  tests. */
-export async function resolveClientVariant(
-  experiment: Experiment | null | undefined,
-  phoneE164: string | null | undefined,
-): Promise<ResolvedVariant | null> {
-  if (!experiment || !experiment.active || experiment.variants.length === 0) return null;
-  if (!phoneE164) return null;
-
-  const totalWeight = experiment.variants.reduce((s, v) => s + Math.max(0, v.weight), 0);
-  if (totalWeight <= 0) return null;
-
-  const subtle = typeof globalThis !== "undefined" && (globalThis as { crypto?: { subtle?: SubtleCrypto } }).crypto?.subtle;
-  let bucket: number;
-  if (subtle) {
-    const data = new TextEncoder().encode(`${experiment.id}|${phoneE164}`);
-    const digest = await subtle.digest("SHA-256", data);
-    const bytes = new Uint8Array(digest);
-    const n = (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3];
-    bucket = (Math.abs(n) % 100) / 100;
-  } else {
-    let h = 0;
-    const s = `${experiment.id}|${phoneE164}`;
-    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
-    bucket = (Math.abs(h) % 100) / 100;
-  }
-
-  let cumulative = 0;
-  let picked: ExperimentVariant | null = null;
-  for (const v of experiment.variants) {
-    cumulative += Math.max(0, v.weight) / totalWeight;
-    if (bucket < cumulative) {
-      picked = v;
-      break;
-    }
-  }
-  if (!picked) picked = experiment.variants[experiment.variants.length - 1];
-  const variant = picked;
-
-  return {
-    variantId: variant.id,
-    experimentId: experiment.id,
-    applyToBundle: (bundle) => {
-      const override = variantOverrideFor(variant, bundle.id);
-      if (
-        override.discountPercent === undefined &&
-        override.mainsDiscountPercent === undefined &&
-        override.addOnsDiscountPercent === undefined
-      ) {
-        return bundle;
-      }
-      if (bundle.pricingMode !== "dynamic") return bundle;
-      return {
-        ...bundle,
-        discountPercent: override.discountPercent ?? bundle.discountPercent,
-        mainsDiscountPercent: override.mainsDiscountPercent ?? bundle.mainsDiscountPercent,
-        addOnsDiscountPercent: override.addOnsDiscountPercent ?? bundle.addOnsDiscountPercent,
-      };
-    },
-  };
-}
-
-function variantOverrideFor(
+export function variantOverrideFor(
   variant: ExperimentVariant,
   bundleId: string,
 ): { discountPercent?: number; mainsDiscountPercent?: number; addOnsDiscountPercent?: number } {
@@ -136,41 +65,16 @@ function variantOverrideFor(
   };
 }
 
-/** Resolve the active variant for a customer at a given location. Returns
- *  null when no experiment is active. Used both client-side (cart drawer)
- *  and server-side (checkout reconciliation) so the same variant always
- *  applies for the same phone hash → no client/server drift. */
-export async function resolveCustomerVariant(
-  locationSlug: string,
-  phoneE164: string,
-): Promise<ResolvedVariant | null> {
-  const settings = await getUpsellSettings();
-  const loc = settings[locationSlug] as
-    | { experiment?: Experiment | null }
-    | undefined;
-  const exp = loc?.experiment;
-  if (!exp || !exp.active || exp.variants.length === 0) return null;
-
-  // Normalize weights and pick the variant whose cumulative band the
-  // bucket falls into.
-  const totalWeight = exp.variants.reduce((s, v) => s + Math.max(0, v.weight), 0);
-  if (totalWeight <= 0) return null;
-  const bucket = hashPhoneToBucket(exp.id, phoneE164) / 100; // 0..1
-  let cumulative = 0;
-  let picked: ExperimentVariant | null = null;
-  for (const v of exp.variants) {
-    cumulative += Math.max(0, v.weight) / totalWeight;
-    if (bucket < cumulative) {
-      picked = v;
-      break;
-    }
-  }
-  if (!picked) picked = exp.variants[exp.variants.length - 1];
-
-  const variant = picked;
+/** Build a `ResolvedVariant` from a chosen `ExperimentVariant`. Shared
+ *  between the client and server resolvers so the `applyToBundle`
+ *  contract is identical on both sides. */
+export function buildResolvedVariant(
+  experiment: Experiment,
+  variant: ExperimentVariant,
+): ResolvedVariant {
   return {
     variantId: variant.id,
-    experimentId: exp.id,
+    experimentId: experiment.id,
     applyToBundle: (bundle) => {
       const override = variantOverrideFor(variant, bundle.id);
       if (
@@ -185,13 +89,60 @@ export async function resolveCustomerVariant(
       if (bundle.pricingMode !== "dynamic") return bundle;
       return {
         ...bundle,
-        discountPercent:
-          override.discountPercent ?? bundle.discountPercent,
-        mainsDiscountPercent:
-          override.mainsDiscountPercent ?? bundle.mainsDiscountPercent,
-        addOnsDiscountPercent:
-          override.addOnsDiscountPercent ?? bundle.addOnsDiscountPercent,
+        discountPercent: override.discountPercent ?? bundle.discountPercent,
+        mainsDiscountPercent: override.mainsDiscountPercent ?? bundle.mainsDiscountPercent,
+        addOnsDiscountPercent: override.addOnsDiscountPercent ?? bundle.addOnsDiscountPercent,
       };
     },
   };
+}
+
+/** Pick a variant from the experiment given a stable bucket in [0, 1). */
+export function pickVariantFromBucket(
+  experiment: Experiment,
+  bucket: number,
+): ExperimentVariant | null {
+  const totalWeight = experiment.variants.reduce((s, v) => s + Math.max(0, v.weight), 0);
+  if (totalWeight <= 0) return null;
+  let cumulative = 0;
+  for (const v of experiment.variants) {
+    cumulative += Math.max(0, v.weight) / totalWeight;
+    if (bucket < cumulative) return v;
+  }
+  return experiment.variants[experiment.variants.length - 1] ?? null;
+}
+
+/** Browser-safe variant of the bucket hash. Uses the Web Crypto API
+ *  when available (every modern mobile browser) and falls back to a
+ *  simple multiplicative hash for the rare environments without it.
+ *  The server-side hash in `experiments-server.ts` uses Node's
+ *  `createHash("sha256")` against the same `${experiment.id}|${phone}`
+ *  input — both produce the same bucket because SHA-256 is stable. */
+export async function resolveClientVariant(
+  experiment: Experiment | null | undefined,
+  phoneE164: string | null | undefined,
+): Promise<ResolvedVariant | null> {
+  if (!experiment || !experiment.active || experiment.variants.length === 0) return null;
+  if (!phoneE164) return null;
+
+  const subtle =
+    typeof globalThis !== "undefined" &&
+    (globalThis as { crypto?: { subtle?: SubtleCrypto } }).crypto?.subtle;
+  let bucket: number;
+  if (subtle) {
+    const data = new TextEncoder().encode(`${experiment.id}|${phoneE164}`);
+    const digest = await subtle.digest("SHA-256", data);
+    const bytes = new Uint8Array(digest);
+    const n = (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3];
+    bucket = (Math.abs(n) % 100) / 100;
+  } else {
+    let h = 0;
+    const s = `${experiment.id}|${phoneE164}`;
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+    bucket = (Math.abs(h) % 100) / 100;
+  }
+
+  const picked = pickVariantFromBucket(experiment, bucket);
+  if (!picked) return null;
+  return buildResolvedVariant(experiment, picked);
 }

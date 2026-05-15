@@ -9,7 +9,7 @@ import {
   getUpsellSettings,
   incrementSlotOrders,
 } from "@/lib/store";
-import { resolveCustomerVariant } from "@/lib/experiments";
+import { resolveCustomerVariant } from "@/lib/experiments-server";
 import type { CartItem, FulfillmentType, Order } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
 import {
