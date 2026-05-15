@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
       deliveryAddress,
       tipAmount: rawTip,
       appliedBundleId,
+      appliedBundlePriceGrosze,
     } = parsed.data;
 
     const phoneE164 = normalizePlPhoneE164(customerPhone);
@@ -101,6 +102,7 @@ export async function POST(req: NextRequest) {
       deliveryAddress,
       tipAmount: typeof rawTip === "number" ? rawTip : undefined,
       appliedBundleId,
+      appliedBundlePriceGrosze,
       channel: "web",
     });
     if (!result.ok) {

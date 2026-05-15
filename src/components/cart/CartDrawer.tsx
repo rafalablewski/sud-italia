@@ -301,6 +301,7 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
           specialInstructions: specialInstructions.trim() || undefined,
           tipAmount: tipAmount > 0 ? tipAmount : undefined,
           appliedBundleId: appliedBundleId || undefined,
+          appliedBundlePriceGrosze: appliedBundleId && bundlePriceGrosze > 0 ? bundlePriceGrosze : undefined,
         }),
       });
 

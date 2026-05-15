@@ -43,6 +43,10 @@ export interface CreateOrderInput {
   deliveryAddress?: string;
   tipAmount?: number;
   appliedBundleId?: string;
+  /** Client-shown bundle price snapshot. Server caps the charged amount
+   *  at this value so an admin discount-percent change between render
+   *  and checkout can't silently overcharge the customer. */
+  appliedBundlePriceGrosze?: number;
   /** "web" = browser checkout; "whatsapp" = bot-driven chat. Defaults to web. */
   channel?: Order["channel"];
 }
@@ -154,7 +158,18 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
       // dynamic Family Feast it recomputes from the cart's actual mains
       // count × menu × discount, mirroring what the client showed.
       const pricing = computeBundlePrice(bundle, orderItems, menuItems);
-      if (pricing) bundleSubtotal = pricing.priceGrosze;
+      if (pricing) {
+        // Snapshot guard: never charge more than the chip promised.
+        // Lower of (server-computed, client-shown) protects the customer
+        // when an admin raised the discount mid-checkout AND protects
+        // the operator when an admin lowered it (server-side is the
+        // current truth → customer benefits, never the reverse).
+        const clientSnapshot = input.appliedBundlePriceGrosze;
+        bundleSubtotal =
+          typeof clientSnapshot === "number" && clientSnapshot >= 0
+            ? Math.min(pricing.priceGrosze, clientSnapshot)
+            : pricing.priceGrosze;
+      }
     }
   }
 
