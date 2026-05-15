@@ -818,6 +818,7 @@ interface OrderPayload {
   qualityCheck?: Order["qualityCheck"];
   refund?: Order["refund"];
   dispute?: Order["dispute"];
+  channel?: Order["channel"];
 }
 
 function rowToOrder(row: OrderRow): Order {
@@ -849,6 +850,7 @@ function rowToOrder(row: OrderRow): Order {
     qualityCheck: payload.qualityCheck,
     refund: payload.refund,
     dispute: payload.dispute,
+    channel: payload.channel,
   };
 }
 
@@ -862,6 +864,7 @@ function orderToValues(order: Order) {
     qualityCheck: order.qualityCheck,
     refund: order.refund,
     dispute: order.dispute,
+    channel: order.channel,
   };
   return {
     id: order.id,
@@ -6577,5 +6580,149 @@ export async function deletePushSubscription(endpoint: string): Promise<boolean>
     if (filtered.length === list.length) return false;
     await writeJSON("push-subscriptions.json", filtered);
     return true;
+  });
+}
+
+// --- WhatsApp ordering (sessions + settings) ---------------------------
+//
+// The WhatsApp channel keeps a tiny per-phone session that survives across
+// Meta webhook turns. Cart + slot + LLM history live here so the bot can
+// follow up across messages without re-asking the customer everything.
+// `whatsapp-sessions.json` is the only durable state for the channel —
+// once an order is paid the session is cleared, so the keyspace stays
+// bounded.
+
+export interface WaSession {
+  /** Canonical E.164 PL phone (the key). */
+  phone: string;
+  locationSlug: "krakow" | "warszawa" | null;
+  cartItems: import("@/data/types").CartItem[];
+  fulfillmentType: import("@/data/types").FulfillmentType | null;
+  slotId: string | null;
+  deliveryAddress: {
+    street: string;
+    city: string;
+    postalCode: string;
+    notes?: string;
+  } | null;
+  customerName: string | null;
+  /** Order id created on confirm_and_pay; cleared on order.confirmed. */
+  pendingOrderId: string | null;
+  /** Stripe Checkout Session URL sent to the customer as the Pay button. */
+  pendingPaymentUrl: string | null;
+  /** Trimmed LLM message history (last N turns) for context continuity. */
+  llmMessageHistory: { role: "user" | "assistant"; content: string }[];
+  /** ISO timestamp of the most recent inbound or outbound. TTL anchor. */
+  lastTurnAt: string;
+  /** True once the abandoned-cart reminder has fired so it doesn't repeat. */
+  abandonedNotified?: boolean;
+  /** Stripe Payment Intent for the pending order (set when confirm_and_pay returns). */
+  pendingPaymentIntentId?: string;
+}
+
+const WA_SESSION_TTL_MS = 90 * 60 * 1000; // 90 minutes — drops dormant sessions on read.
+
+function isExpiredWaSession(s: WaSession): boolean {
+  const ts = Date.parse(s.lastTurnAt);
+  if (!Number.isFinite(ts)) return true;
+  return Date.now() - ts > WA_SESSION_TTL_MS;
+}
+
+export async function getWaSession(rawPhone: string): Promise<WaSession | null> {
+  const phone = normalizePlPhoneE164(rawPhone);
+  if (!phone) return null;
+  const all = await readJSON<Record<string, WaSession>>("whatsapp-sessions.json", {});
+  const hit = all[phone];
+  if (!hit) return null;
+  if (isExpiredWaSession(hit)) return null;
+  return hit;
+}
+
+export async function mutateWaSession(
+  rawPhone: string,
+  fn: (current: WaSession) => WaSession,
+): Promise<WaSession | null> {
+  const phone = normalizePlPhoneE164(rawPhone);
+  if (!phone) return null;
+  return withLock("whatsapp-sessions.json", async () => {
+    const all = await readJSON<Record<string, WaSession>>("whatsapp-sessions.json", {});
+    // Drop any sessions that have expired since the last write. Keeps the
+    // keyspace bounded without a separate cleanup cron.
+    for (const k of Object.keys(all)) {
+      if (isExpiredWaSession(all[k])) delete all[k];
+    }
+    const current: WaSession = all[phone] ?? {
+      phone,
+      locationSlug: null,
+      cartItems: [],
+      fulfillmentType: null,
+      slotId: null,
+      deliveryAddress: null,
+      customerName: null,
+      pendingOrderId: null,
+      pendingPaymentUrl: null,
+      llmMessageHistory: [],
+      lastTurnAt: new Date().toISOString(),
+    };
+    const next = fn(current);
+    next.phone = phone;
+    next.lastTurnAt = new Date().toISOString();
+    all[phone] = next;
+    await writeJSON("whatsapp-sessions.json", all);
+    return next;
+  });
+}
+
+export async function clearWaSession(rawPhone: string): Promise<void> {
+  const phone = normalizePlPhoneE164(rawPhone);
+  if (!phone) return;
+  await withLock("whatsapp-sessions.json", async () => {
+    const all = await readJSON<Record<string, WaSession>>("whatsapp-sessions.json", {});
+    if (all[phone]) {
+      delete all[phone];
+      await writeJSON("whatsapp-sessions.json", all);
+    }
+  });
+}
+
+export async function listWaSessions(): Promise<WaSession[]> {
+  const all = await readJSON<Record<string, WaSession>>("whatsapp-sessions.json", {});
+  return Object.values(all).filter((s) => !isExpiredWaSession(s));
+}
+
+export interface WaSettings {
+  enabled: boolean;
+  welcomeMessage: string;
+  optOutPhrases: string[];
+  /** Falls back to this slug when the LLM hasn't pinned a location yet. */
+  defaultLocation: "krakow" | "warszawa" | null;
+  /** Soft daily ceiling for inbound messages from any one phone. */
+  dailyMessageCap: number;
+  /** Approved Meta utility template name used to re-open the 24h window
+   *  for abandoned-cart nudges. Empty string disables that reminder. */
+  reopenTemplate: string;
+}
+
+const DEFAULT_WA_SETTINGS: WaSettings = {
+  enabled: true,
+  welcomeMessage:
+    "Cześć! Tu Sud Italia 🍕 Napisz, co masz ochotę zjeść albo z jakiego miasta jesteś (Kraków / Warszawa).",
+  optOutPhrases: ["STOP", "NIE", "UNSUBSCRIBE"],
+  defaultLocation: null,
+  dailyMessageCap: 60,
+  reopenTemplate: "",
+};
+
+export async function getWaSettings(): Promise<WaSettings> {
+  const stored = await readJSON<Partial<WaSettings>>("whatsapp-settings.json", {});
+  return { ...DEFAULT_WA_SETTINGS, ...stored };
+}
+
+export async function updateWaSettings(updates: Partial<WaSettings>): Promise<WaSettings> {
+  return withLock("whatsapp-settings.json", async () => {
+    const current = await getWaSettings();
+    const next: WaSettings = { ...current, ...updates };
+    await writeJSON("whatsapp-settings.json", next);
+    return next;
   });
 }

@@ -1,24 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "crypto";
-import { generateOrderId } from "@/lib/utils";
 import { getMenuWithOverrides } from "@/data/menus";
-import {
-  getSlotById,
-  incrementSlotOrders,
-  createOrder,
-  addNotification,
-  getUpsellSettings,
-  getCustomer,
-} from "@/lib/store";
-import { FulfillmentType, CartItem } from "@/data/types";
-import { formatPrice } from "@/lib/utils";
-import {
-  computeDeliveryFee,
-  getActiveComboDeals,
-  getDeliveryThresholdForCustomer,
-} from "@/lib/upsell";
-import { findBundle, cartSatisfiesBundle, type BundleTier } from "@/lib/bundles";
-import { calculateTier } from "@/lib/loyalty";
+import { getUpsellSettings } from "@/lib/store";
+import { findBundle, type BundleTier } from "@/lib/bundles";
 import { normalizePlPhoneE164 } from "@/lib/phone";
 import { logger } from "@/lib/logger";
 import {
@@ -29,6 +13,7 @@ import {
 import { enforceRateLimit, getClientIp } from "@/lib/rate-limit";
 import { checkoutBodySchema, parseBody } from "@/lib/api-schemas";
 import { incrCounter, recordHistogram } from "@/lib/metrics";
+import { createOrderFromCart } from "@/lib/checkout/createOrder";
 
 export async function POST(req: NextRequest) {
   const checkoutStart = Date.now();
@@ -47,11 +32,6 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // Shape validation handled by the schema — required fields, enum
-    // values, integer cart quantities, delivery-address-required-when-
-    // delivery refinement, etc. The handler keeps the PL E.164 normalization
-    // step because phone format is a PL-specific business rule, not a
-    // schema-level concern.
     const parsed = await parseBody(req, checkoutBodySchema);
     if ("error" in parsed) return parsed.error;
     const {
@@ -109,205 +89,38 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Validate slot exists and has capacity
-    const slot = await getSlotById(slotId);
-    if (!slot) {
-      return NextResponse.json(
-        { error: "Time slot not found" },
-        { status: 400 }
-      );
-    }
-
-    if (slot.currentOrders >= slot.maxOrders) {
-      return NextResponse.json(
-        { error: "This time slot is full. Please select another." },
-        { status: 400 }
-      );
-    }
-
-    if (!slot.fulfillmentTypes.includes(fulfillmentType as FulfillmentType)) {
-      return NextResponse.json(
-        { error: `This slot does not support ${fulfillmentType}` },
-        { status: 400 }
-      );
-    }
-
-    // Server-side price lookup — never trust client-provided prices
-    const menuItems = await getMenuWithOverrides(locationSlug);
-    const menuItemsById = new Map(menuItems.map((item) => [item.id, item]));
-
-    let calculatedTotal = 0;
-    const verifiedItems: { id: string; name: string; price: number; quantity: number; notes?: string }[] = [];
-    const orderItems: CartItem[] = [];
-
-    const NOTE_MAX_LEN = 140;
-
-    for (const item of items) {
-      const menuItem = menuItemsById.get(item.id);
-      if (!menuItem || !menuItem.available) {
-        return NextResponse.json(
-          { error: `Item "${item.id}" is not available` },
-          { status: 400 }
-        );
-      }
-      if (!item.quantity || item.quantity < 1 || !Number.isInteger(item.quantity)) {
-        return NextResponse.json(
-          { error: `Invalid quantity for "${menuItem.name}"` },
-          { status: 400 }
-        );
-      }
-      // Per-line note is optional, trimmed, length-bounded, and never trusted
-      // for price calculation — it's purely a kitchen-facing string.
-      let notes: string | undefined;
-      if (typeof item.notes === "string") {
-        const trimmed = item.notes.trim();
-        if (trimmed.length > 0) notes = trimmed.slice(0, NOTE_MAX_LEN);
-      }
-      calculatedTotal += menuItem.price * item.quantity;
-      verifiedItems.push({
-        id: menuItem.id,
-        name: menuItem.name,
-        price: menuItem.price,
-        quantity: item.quantity,
-        notes,
-      });
-      orderItems.push({
-        menuItem,
-        quantity: item.quantity,
-        locationSlug,
-        notes,
-      });
-    }
-
-    // Server-side combo discount validation. Bundles (audit §3.2) win over
-    // combos: when an `appliedBundleId` is supplied, we re-resolve it from
-    // the upsell config (or DEFAULT_BUNDLES), validate the cart shape
-    // against its composition, and replace the per-line subtotal with the
-    // bundle's locked price. Combo discount is suppressed in that case so
-    // we don't stack two unrelated savings.
-    const upsellSettings = await getUpsellSettings();
-    const locationConfig = upsellSettings[locationSlug] || null;
-
-    // §3.2 security check: client-supplied appliedBundleId is honoured only
-    // when the cart's actual composition satisfies the bundle slot-for-slot.
-    // Without this the client could post a 46 PLN tier + 200 PLN of pizzas
-    // and steal the discount. cartSatisfiesBundle enforces both total qty
-    // AND per-slot category/item match.
-    let bundleSubtotal: number | null = null;
-    if (appliedBundleId) {
-      const bundle = findBundle(
-        appliedBundleId,
-        (locationConfig as { bundles?: BundleTier[] } | null)?.bundles ?? null,
-      );
-      if (bundle && cartSatisfiesBundle(bundle, orderItems, menuItems)) {
-        bundleSubtotal = bundle.priceGrosze;
-      }
-    }
-
-    let comboDiscount = 0;
-    if (bundleSubtotal !== null) {
-      calculatedTotal = bundleSubtotal;
-    } else {
-      const comboResult = getActiveComboDeals(orderItems, locationConfig);
-      comboDiscount = comboResult.missingCategories.length === 0 ? comboResult.savings : 0;
-      calculatedTotal = calculatedTotal - comboDiscount;
-    }
-    void comboDiscount; // referenced for clarity; pricing already applied above
-
-    // Delivery fee (m2_12). Computed server-side from the post-discount
-    // subtotal so a malicious client can't strip it. Adds a separate
-    // Stripe line item so the customer's receipt itemizes it cleanly.
-    //
-    // Per-segment threshold (audit §2.5): look up the customer by phone
-    // and pass their personalised threshold so the charge matches the
-    // bar the cart drawer displayed. Missing customer falls back to the
-    // 60 PLN default — same behaviour as before.
-    const segmentCustomer = await getCustomer(phoneE164);
-    const segmentThreshold = getDeliveryThresholdForCustomer(
-      segmentCustomer
-        ? {
-            ordersCount: segmentCustomer.orderCount,
-            tier: calculateTier(segmentCustomer.loyaltyPointsBalance),
-          }
-        : null,
-    );
-    const deliveryFee = computeDeliveryFee(
-      calculatedTotal,
-      fulfillmentType,
-      segmentThreshold,
-    );
-    calculatedTotal += deliveryFee;
-
-    // Tip: optional integer grosze. Bound at the cart subtotal (pre-fee)
-    // so a malicious client can't sneak through a 99% tip and then claim
-    // chargeback fraud.
-    let tipAmount = 0;
-    if (typeof rawTip === "number" && Number.isInteger(rawTip) && rawTip > 0) {
-      tipAmount = Math.min(rawTip, calculatedTotal);
-      calculatedTotal += tipAmount;
-    }
-
-    const orderId = generateOrderId();
-
-    // Reserve the slot (atomic with file lock)
-    if (!(await incrementSlotOrders(slotId))) {
-      return NextResponse.json(
-        { error: "This time slot just filled up. Please select another." },
-        { status: 400 }
-      );
-    }
-
-    // Create order record
-    await createOrder({
-      id: orderId,
+    const result = await createOrderFromCart({
+      items,
       locationSlug,
-      items: orderItems,
-      totalAmount: calculatedTotal,
-      status: "pending",
-      customerName: customerName.trim(),
-      customerPhone: phoneE164,
-      fulfillmentType: fulfillmentType as FulfillmentType,
-      // The schema's refine guarantees deliveryAddress is present when
-      // fulfillmentType === "delivery" — the `?? ""` is just to satisfy
-      // TS narrowing through the refine, never the actual fallback.
-      deliveryAddress: fulfillmentType === "delivery" ? (deliveryAddress ?? "").trim() : undefined,
+      customerName,
+      customerPhone,
+      fulfillmentType,
       slotId,
       slotDate,
       slotTime,
-      tipAmount: tipAmount > 0 ? tipAmount : undefined,
-      deliveryFee: deliveryFee > 0 ? deliveryFee : undefined,
-      createdAt: new Date().toISOString(),
+      deliveryAddress,
+      tipAmount: typeof rawTip === "number" ? rawTip : undefined,
+      appliedBundleId,
+      channel: "web",
     });
-
-    // Notify admin
-    await addNotification({
-      type: "new_order",
-      title: "New order received",
-      message: `${customerName.trim()} — ${formatPrice(calculatedTotal)} — ${fulfillmentType} at ${slotTime} · ${orderId}`,
-      locationSlug,
-      orderId,
-    });
-
-    // Check if slot is now full and notify
-    const updatedSlot = await getSlotById(slotId);
-    if (updatedSlot && updatedSlot.currentOrders >= updatedSlot.maxOrders) {
-      await addNotification({
-        type: "slot_full",
-        title: "Time slot full",
-        message: `${slotDate} ${slotTime} slot is now fully booked (${updatedSlot.maxOrders} orders)`,
-        locationSlug,
-      });
+    if (!result.ok) {
+      return NextResponse.json({ error: result.message }, { status: 400 });
     }
+    const { order, deliveryFee, bundleSubtotal } = result;
+    const tipAmount = order.tipAmount ?? 0;
+    const calculatedTotal = order.totalAmount;
 
-    // If Stripe is configured, create a checkout session
+    // Stripe line items mirror the order. Re-resolve the bundle for the
+    // receipt description so the customer sees the composition.
+    const upsellSettings = await getUpsellSettings();
+    const locationConfig = upsellSettings[locationSlug] || null;
+    const menuItems = await getMenuWithOverrides(locationSlug);
+    const menuItemsById = new Map(menuItems.map((m) => [m.id, m]));
+
     if (process.env.STRIPE_SECRET_KEY) {
       const stripe = (await import("stripe")).default;
       const stripeClient = new stripe(process.env.STRIPE_SECRET_KEY);
 
-      // When a bundle is locked (§3.2) Stripe sees one line at the bundle's
-      // locked price, with the composition itemized in the description. The
-      // KDS still gets the per-line CartItem array via the `orderItems`
-      // create above so the kitchen knows what to make.
       const bundleStripeLines: { price_data: { currency: string; product_data: { name: string; description?: string }; unit_amount: number }; quantity: number }[] | null =
         bundleSubtotal !== null && appliedBundleId
           ? (() => {
@@ -316,7 +129,9 @@ export async function POST(req: NextRequest) {
                 (locationConfig as { bundles?: BundleTier[] } | null)?.bundles ?? null,
               );
               if (!bundle) return null;
-              const composition = verifiedItems.map((i) => `${i.quantity}× ${i.name}`).join(", ");
+              const composition = order.items
+                .map((i) => `${i.quantity}× ${i.menuItem.name}`)
+                .join(", ");
               return [
                 {
                   price_data: {
@@ -335,25 +150,23 @@ export async function POST(req: NextRequest) {
 
       const session = await stripeClient.checkout.sessions.create(
         {
-          // BLIK: Add "blik" to payment_method_types when Stripe BLIK is enabled
-          // Requires: Stripe account with BLIK capability enabled for PLN
-          // See: https://docs.stripe.com/payments/blik
           payment_method_types: ["card", "p24", "blik"],
           line_items: [
             ...(bundleStripeLines ??
-              verifiedItems.map((item) => ({
-                price_data: {
-                  currency: "pln",
-                  product_data: {
-                    name: item.name,
-                    ...(item.notes ? { description: item.notes } : {}),
+              order.items.map((i) => {
+                const live = menuItemsById.get(i.menuItem.id);
+                return {
+                  price_data: {
+                    currency: "pln",
+                    product_data: {
+                      name: i.menuItem.name,
+                      ...(i.notes ? { description: i.notes } : {}),
+                    },
+                    unit_amount: live?.price ?? i.menuItem.price,
                   },
-                  unit_amount: item.price,
-                },
-                quantity: item.quantity,
-              }))),
-            // Delivery fee (m2_12) as its own line so the receipt itemizes
-            // it instead of folding it into "Items".
+                  quantity: i.quantity,
+                };
+              })),
             ...(deliveryFee > 0
               ? [
                   {
@@ -366,8 +179,6 @@ export async function POST(req: NextRequest) {
                   },
                 ]
               : []),
-            // Tip as a separate line item so the customer's receipt reads
-            // "Items 28 zł · Delivery 7 zł · Tip 3 zł · Total 38 zł" cleanly.
             ...(tipAmount > 0
               ? [
                   {
@@ -382,10 +193,10 @@ export async function POST(req: NextRequest) {
               : []),
           ],
           mode: "payment",
-          success_url: `${process.env.NEXT_PUBLIC_BASE_URL || req.nextUrl.origin}/order-confirmation?orderId=${orderId}&location=${locationSlug}&session_id={CHECKOUT_SESSION_ID}`,
+          success_url: `${process.env.NEXT_PUBLIC_BASE_URL || req.nextUrl.origin}/order-confirmation?orderId=${order.id}&location=${locationSlug}&session_id={CHECKOUT_SESSION_ID}`,
           cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || req.nextUrl.origin}/locations/${locationSlug}`,
           metadata: {
-            orderId,
+            orderId: order.id,
             locationSlug,
             customerName,
             customerPhone: phoneE164,
@@ -393,12 +204,9 @@ export async function POST(req: NextRequest) {
             slotId,
             slotTime,
             slotDate,
+            channel: "web",
           },
         },
-        // Belt + suspenders: Stripe's own idempotency on session.create. If two
-        // identical retries somehow slip past our DB check (e.g. arriving on
-        // different lambdas within the same millisecond), Stripe returns the
-        // same session for the same key for 24 hours.
         idempotencyHash ? { idempotencyKey: idempotencyHash } : undefined,
       );
 
@@ -407,12 +215,12 @@ export async function POST(req: NextRequest) {
           idempotencyHash,
           stripeSessionId: session.id,
           stripeSessionUrl: session.url,
-          orderId,
+          orderId: order.id,
           locationSlug,
         });
       }
 
-      const stripeResponse = NextResponse.json({ url: session.url, orderId });
+      const stripeResponse = NextResponse.json({ url: session.url, orderId: order.id });
       stripeResponse.cookies.set("sud-italia-customer", phoneE164, {
         httpOnly: false,
         secure: process.env.NODE_ENV === "production",
@@ -426,17 +234,16 @@ export async function POST(req: NextRequest) {
 
     // Fallback: no Stripe configured — return order ID directly (demo mode)
     const response = NextResponse.json({
-      orderId,
+      orderId: order.id,
       total: calculatedTotal,
       message: "Order placed successfully (demo mode — no payment configured)",
     });
 
-    // Set cookie so we recognize this customer on next visit (no login needed)
     response.cookies.set("sud-italia-customer", phoneE164, {
-      httpOnly: false, // needs to be readable client-side for reorder
+      httpOnly: false,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 365, // 1 year
+      maxAge: 60 * 60 * 24 * 365,
       path: "/",
     });
 

@@ -2,6 +2,7 @@ import type { outboxEvents } from "@/db/schema";
 import { logger } from "@/lib/logger";
 import { getEmailProvider } from "@/lib/providers/email";
 import { getSmsProvider } from "@/lib/providers/sms";
+import { getWhatsAppProvider } from "@/lib/providers/whatsapp";
 import { getCustomer, getOrderById } from "@/lib/store";
 import { locations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
@@ -81,6 +82,13 @@ export async function commsDispatcher(event: OutboxRow): Promise<void> {
     case "order.placed": {
       const ctx = await loadContext(payload);
       if (!ctx) return;
+      // WhatsApp orders: the bot already sent the customer a "Pay now"
+      // button as the same flow that created the order. A duplicate SMS
+      // would be noise.
+      if (ctx.order.channel === "whatsapp") {
+        logger.info("comms.skip.whatsapp_already_notified", { eventId: event.id });
+        return;
+      }
       if (ctx.customer.smsOptout) {
         logger.info("comms.skip.sms_optout", { eventId: event.id, type: event.eventType });
         return;
@@ -103,13 +111,17 @@ export async function commsDispatcher(event: OutboxRow): Promise<void> {
         logger.info("comms.skip.sms_optout", { eventId: event.id, type: event.eventType });
         return;
       }
-      const sms = orderReadySms({
+      const body = orderReadySms({
         orderId: ctx.order.id,
         customerName: ctx.customer.name || ctx.order.customerName || "Friend",
         fulfillmentType: ctx.order.fulfillmentType,
         locationName: locationNameFor(ctx.order.locationSlug),
-      });
-      await getSmsProvider().send(ctx.customer.phone, sms.body);
+      }).body;
+      if (ctx.order.channel === "whatsapp") {
+        await getWhatsAppProvider().sendText(ctx.customer.phone, body);
+      } else {
+        await getSmsProvider().send(ctx.customer.phone, body);
+      }
       return;
     }
 
@@ -120,11 +132,15 @@ export async function commsDispatcher(event: OutboxRow): Promise<void> {
         logger.info("comms.skip.sms_optout", { eventId: event.id, type: event.eventType });
         return;
       }
-      const sms = orderCancelledSms({
+      const body = orderCancelledSms({
         orderId: ctx.order.id,
         customerName: ctx.customer.name || ctx.order.customerName || "Friend",
-      });
-      await getSmsProvider().send(ctx.customer.phone, sms.body);
+      }).body;
+      if (ctx.order.channel === "whatsapp") {
+        await getWhatsAppProvider().sendText(ctx.customer.phone, body);
+      } else {
+        await getSmsProvider().send(ctx.customer.phone, body);
+      }
       return;
     }
 
@@ -134,13 +150,17 @@ export async function commsDispatcher(event: OutboxRow): Promise<void> {
       const refund = ctx.order.refund;
       if (!refund) return; // race; will retry on the next drain
       if (!ctx.customer.smsOptout) {
-        const sms = orderRefundedSms({
+        const body = orderRefundedSms({
           orderId: ctx.order.id,
           customerName: ctx.customer.name || ctx.order.customerName || "Friend",
           amountDisplay: formatPrice(refund.amount),
           reasonLabel: refund.reasonCode,
-        });
-        await getSmsProvider().send(ctx.customer.phone, sms.body);
+        }).body;
+        if (ctx.order.channel === "whatsapp") {
+          await getWhatsAppProvider().sendText(ctx.customer.phone, body);
+        } else {
+          await getSmsProvider().send(ctx.customer.phone, body);
+        }
       }
       return;
     }
@@ -148,6 +168,16 @@ export async function commsDispatcher(event: OutboxRow): Promise<void> {
     case "order.confirmed": {
       const ctx = await loadContext(payload);
       if (!ctx) return;
+      // WhatsApp-channel orders get an immediate chat confirmation —
+      // the customer is in an active conversation and expects a reply.
+      if (ctx.order.channel === "whatsapp" && !ctx.customer.smsOptout) {
+        const slotLabel = `${ctx.order.slotDate} ${ctx.order.slotTime}`;
+        const message =
+          ctx.order.fulfillmentType === "delivery"
+            ? `Płatność odebrana ✅ Zamówienie #${ctx.order.id} jedzie do Ciebie na ${slotLabel}. Grazie! 🍕`
+            : `Płatność odebrana ✅ Zamówienie #${ctx.order.id} będzie gotowe do odbioru na ${slotLabel} (${locationNameFor(ctx.order.locationSlug)}). Smacznego! 🍕`;
+        await getWhatsAppProvider().sendText(ctx.customer.phone, message);
+      }
       if (!ctx.customer.email || ctx.customer.emailOptout) return;
       // Referral CTA in the receipt footer. Uses NEXT_PUBLIC_BASE_URL +
       // the customer's phone as the unique handle — the existing referral

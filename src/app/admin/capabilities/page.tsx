@@ -231,6 +231,32 @@ export default async function CapabilitiesPage() {
           envVars: ["NEXT_PUBLIC_VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY"],
           summary: "Run `npx web-push generate-vapid-keys` and set both keys. SW + subscribe endpoint already shipped.",
         },
+        {
+          name: "WhatsApp ordering (Meta Cloud API)",
+          status: has(
+            "WHATSAPP_PHONE_NUMBER_ID",
+            "WHATSAPP_ACCESS_TOKEN",
+            "WHATSAPP_VERIFY_TOKEN",
+            "WHATSAPP_APP_SECRET",
+            "ANTHROPIC_API_KEY",
+            "STRIPE_SECRET_KEY",
+          )
+            ? "live"
+            : "needs-config",
+          envVars: [
+            "WHATSAPP_PHONE_NUMBER_ID",
+            "WHATSAPP_BUSINESS_ACCOUNT_ID",
+            "WHATSAPP_ACCESS_TOKEN",
+            "WHATSAPP_VERIFY_TOKEN",
+            "WHATSAPP_APP_SECRET",
+            "WHATSAPP_API_VERSION",
+            "ANTHROPIC_API_KEY",
+            "STRIPE_SECRET_KEY",
+          ],
+          href: "/admin/whatsapp",
+          summary:
+            "LLM-driven WhatsApp Business ordering: customer messages the number, Claude walks them through menu → cart → slot → Stripe Checkout link in chat. Signature-verified Meta webhook at /api/whatsapp/webhook. Toggle + opt-out controls live at /admin/whatsapp.",
+        },
       ],
     },
     {
