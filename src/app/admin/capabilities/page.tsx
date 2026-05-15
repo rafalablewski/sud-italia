@@ -429,8 +429,8 @@ export default async function CapabilitiesPage() {
         {
           name: "Combo deals",
           status: "live",
-          href: "/admin/menu",
-          summary: "Discount applied to cart total, not display-only.",
+          href: "/admin/crosssell",
+          summary: "Cart-total discounts capped to one combo's worth (cheapest unit per matched category) so quantity doesn't scale the savings. Default ladder: Italian Classic Deal (Margherita + Espresso + Tiramisù, 10% — item-suffix gated so a Quattro Formaggi cart matches a different promo), Pasta Combo (any pasta + drink + dessert, 10%), Lunch Special (any panino + drink, 8%). getActiveComboDeals in src/lib/upsell.ts picks the highest-savings complete combo first, then the highest-potential partial — order-independent so a fully-complete combo never loses to an earlier in-progress one.",
         },
         {
           name: "Menu engineering hierarchy",

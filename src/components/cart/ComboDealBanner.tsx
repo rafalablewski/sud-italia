@@ -1,7 +1,7 @@
 "use client";
 
-import { ComboDeal, COMBO_DEALS, getActiveComboDeals } from "@/lib/upsell";
-import { CartItem, MENU_CATEGORY_LABELS, MenuCategory } from "@/data/types";
+import { COMBO_DEALS, getActiveComboDeals } from "@/lib/upsell";
+import { CartItem, MENU_CATEGORY_LABELS } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
 import { Gift, ChevronRight } from "lucide-react";
 
@@ -10,12 +10,16 @@ interface ComboDealBannerProps {
 }
 
 export function ComboDealBanner({ cartItems }: ComboDealBannerProps) {
-  const { activeDeal, savings, missingCategories, progress } =
+  const { activeDeal, savings, missingCategories, missingItems, progress, isComplete } =
     getActiveComboDeals(cartItems);
 
   if (!activeDeal) return null;
 
-  const isComplete = missingCategories.length === 0;
+  // Item-required combos (Italian Classic Deal) name the specific missing
+  // items; category-only combos fall back to the legacy category copy.
+  const missingLabels = missingItems.length > 0
+    ? missingItems
+    : missingCategories.map((cat) => MENU_CATEGORY_LABELS[cat].toLowerCase());
 
   return (
     <div className="px-5 mt-3">
@@ -58,11 +62,11 @@ export function ComboDealBanner({ cartItems }: ComboDealBannerProps) {
             ) : (
               <p className="text-xs text-italia-gray mt-1">
                 Add{" "}
-                {missingCategories.map((cat, i) => (
-                  <span key={cat}>
-                    {i > 0 && (i === missingCategories.length - 1 ? " & " : ", ")}
+                {missingLabels.map((label, i) => (
+                  <span key={label}>
+                    {i > 0 && (i === missingLabels.length - 1 ? " & " : ", ")}
                     <span className="font-semibold text-italia-dark">
-                      {MENU_CATEGORY_LABELS[cat].toLowerCase()}
+                      {label}
                     </span>
                   </span>
                 ))}{" "}

@@ -145,7 +145,7 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
     calculatedTotal = bundleSubtotal;
   } else {
     const comboResult = getActiveComboDeals(orderItems, locationConfig);
-    const comboDiscount = comboResult.missingCategories.length === 0 ? comboResult.savings : 0;
+    const comboDiscount = comboResult.isComplete ? comboResult.savings : 0;
     calculatedTotal = calculatedTotal - comboDiscount;
   }
 

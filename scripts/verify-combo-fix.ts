@@ -158,6 +158,84 @@ console.log("scenario 7: empty cart short-circuits to null deal");
   expect("savings", r.savings, 0);
 }
 
+const ITALIAN_CLASSIC: ComboDeal = {
+  id: "italian-classic",
+  name: "Italian Classic Deal",
+  description: "Margherita + Espresso + Tiramisù",
+  categories: ["pizza", "drinks", "desserts"],
+  requiredItems: [
+    { suffix: "pizza-margherita", label: "Margherita" },
+    { suffix: "drink-espresso", label: "Espresso" },
+    { suffix: "dessert-tiramisu", label: "Tiramisù" },
+  ],
+  discountPercent: 10,
+  minItems: 3,
+};
+
+console.log("scenario 8: italian-classic — only matches Margherita + Espresso + Tiramisù");
+{
+  const cart = [
+    line(item("krk-pizza-margherita", "pizza", 2790)),
+    line(item("krk-drink-espresso", "drinks", 800)),
+    line(item("krk-dessert-tiramisu", "desserts", 1400)),
+  ];
+  const r = getActiveComboDeals(cart, cfg([ITALIAN_CLASSIC, COMBOS[1], COMBOS[2]]));
+  expect("activeDeal.id", r.activeDeal?.id, "italian-classic");
+  expect("isComplete", r.isComplete, true);
+  expect("missingItems", r.missingItems, []);
+  expect("savings", r.savings, Math.round((2790 + 800 + 1400) * 0.1));
+}
+
+console.log("scenario 9: cart has Quattro Formaggi + Espresso + Tiramisù — Italian Classic must NOT complete (different pizza)");
+{
+  const cart = [
+    line(item("krk-pizza-quattro", "pizza", 3290)),
+    line(item("krk-drink-espresso", "drinks", 800)),
+    line(item("krk-dessert-tiramisu", "desserts", 1400)),
+  ];
+  const r = getActiveComboDeals(cart, cfg([ITALIAN_CLASSIC, COMBOS[1], COMBOS[2]]));
+  // Italian Classic is partial (margherita missing); meal-deal isn't in this
+  // config since we replaced it. Other generic combos require pasta or panini.
+  // So italian-classic wins as the only partial with matched items.
+  expect("activeDeal.id", r.activeDeal?.id, "italian-classic");
+  expect("isComplete", r.isComplete, false);
+  expect("missingItems", r.missingItems, ["Margherita"]);
+}
+
+console.log("scenario 10: cart has Margherita only — partial Italian Classic, friendly missing labels");
+{
+  const cart = [line(item("krk-pizza-margherita", "pizza", 2790))];
+  const r = getActiveComboDeals(cart, cfg([ITALIAN_CLASSIC, COMBOS[1], COMBOS[2]]));
+  expect("activeDeal.id", r.activeDeal?.id, "italian-classic");
+  expect("isComplete", r.isComplete, false);
+  expect("missingItems", r.missingItems, ["Espresso", "Tiramisù"]);
+}
+
+console.log("scenario 11: cross-location — Warszawa item ids also match by suffix");
+{
+  const cart = [
+    line(item("waw-pizza-margherita", "pizza", 2890)),
+    line(item("waw-drink-espresso", "drinks", 850)),
+    line(item("waw-dessert-tiramisu", "desserts", 1450)),
+  ];
+  const r = getActiveComboDeals(cart, cfg([ITALIAN_CLASSIC]));
+  expect("activeDeal.id", r.activeDeal?.id, "italian-classic");
+  expect("isComplete", r.isComplete, true);
+  expect("savings", r.savings, Math.round((2890 + 850 + 1450) * 0.1));
+}
+
+console.log("scenario 12: pasta-combo still works for non-margherita carts");
+{
+  const cart = [
+    line(item("krk-pasta-carbonara", "pasta", 3290)),
+    line(item("krk-drink-espresso", "drinks", 800)),
+    line(item("krk-dessert-tiramisu", "desserts", 1400)),
+  ];
+  const r = getActiveComboDeals(cart, cfg([ITALIAN_CLASSIC, COMBOS[1], COMBOS[2]]));
+  expect("activeDeal.id", r.activeDeal?.id, "pasta-combo");
+  expect("isComplete", r.isComplete, true);
+}
+
 if (failures > 0) {
   console.log(`\n${failures} FAILURE(S)`);
   process.exit(1);

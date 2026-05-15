@@ -163,7 +163,7 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
   const comboDiscount =
     isBundleActive
       ? 0
-      : comboResult.missingCategories.length === 0
+      : comboResult.isComplete
         ? comboResult.savings
         : 0;
   const tipAmount = useCartStore((s) => s.tipAmount);

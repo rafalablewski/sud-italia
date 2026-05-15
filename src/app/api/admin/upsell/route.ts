@@ -79,6 +79,30 @@ export const PUT = withAdmin(
           );
         }
       }
+      // Optional requiredItems[] — item-suffix gating (Italian Classic Deal
+      // style). When present, the combo only activates if the cart contains
+      // an item matching each suffix.
+      if (c.requiredItems !== undefined) {
+        if (!Array.isArray(c.requiredItems) || c.requiredItems.length === 0) {
+          return NextResponse.json(
+            { error: "Invalid combo requiredItems — must be a non-empty array when set" },
+            { status: 400 },
+          );
+        }
+        for (const r of c.requiredItems) {
+          if (
+            typeof r?.suffix !== "string" ||
+            r.suffix.trim().length === 0 ||
+            typeof r?.label !== "string" ||
+            r.label.trim().length === 0
+          ) {
+            return NextResponse.json(
+              { error: "Invalid combo requiredItem — both suffix and label must be non-empty strings" },
+              { status: 400 },
+            );
+          }
+        }
+      }
     }
 
     // Optional timeWindows[] (audit §2.3). Validate shape so a typo

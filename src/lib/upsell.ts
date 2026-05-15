@@ -499,6 +499,16 @@ function contextualReason(
 
 // --- Combo / Bundle Deals ---
 
+export interface ComboDealRequiredItem {
+  /** Suffix matched against menuItem.id with endsWith. Use the part after
+   *  the location prefix, e.g. "pizza-margherita" to match both
+   *  "krk-pizza-margherita" and "waw-pizza-margherita" without needing
+   *  per-truck entries. Mirrors the BundleSlot itemIdSuffix convention. */
+  suffix: string;
+  /** Friendly label rendered in the "still need: Margherita" banner copy. */
+  label: string;
+}
+
 export interface ComboDeal {
   id: string;
   name: string;
@@ -506,15 +516,24 @@ export interface ComboDeal {
   categories: MenuCategory[];
   discountPercent: number;
   minItems: number;
+  /** When set, the combo only activates if the cart contains an item
+   *  matching every required suffix. Generic category-only combos leave
+   *  this undefined and match any item from the listed categories. */
+  requiredItems?: ComboDealRequiredItem[];
 }
 
 // Default combos (used when no admin config exists for the location)
 export const DEFAULT_COMBO_DEALS: ComboDeal[] = [
   {
-    id: "meal-deal",
-    name: "Meal Deal",
-    description: "Any main + drink + dessert",
+    id: "italian-classic",
+    name: "Italian Classic Deal",
+    description: "Margherita + Espresso + Tiramisù",
     categories: ["pizza", "drinks", "desserts"],
+    requiredItems: [
+      { suffix: "pizza-margherita", label: "Margherita" },
+      { suffix: "drink-espresso", label: "Espresso" },
+      { suffix: "dessert-tiramisu", label: "Tiramisù" },
+    ],
     discountPercent: 10,
     minItems: 3,
   },
@@ -539,15 +558,30 @@ export const DEFAULT_COMBO_DEALS: ComboDeal[] = [
 // Keep backward-compatible export
 export const COMBO_DEALS = DEFAULT_COMBO_DEALS;
 
+export interface ComboDealResult {
+  activeDeal: ComboDeal | null;
+  savings: number;
+  /** Categories from `deal.categories` not yet present in the cart. Stays
+   *  populated for category-only combos so the banner can keep its existing
+   *  "add a pizza, drinks" copy. Item-required combos leave this empty and
+   *  use `missingItems` instead. */
+  missingCategories: MenuCategory[];
+  /** Friendly labels for required items still missing from the cart, used
+   *  by item-required combos like "Italian Classic Deal" (Margherita,
+   *  Espresso, Tiramisù). Empty for generic category-only combos. */
+  missingItems: string[];
+  progress: number;
+  /** True only when the combo is fully satisfied — categories matched AND
+   *  every required item matched AND total quantity ≥ minItems. Discount
+   *  callers MUST gate on this rather than `missingCategories.length === 0`
+   *  so item-required combos don't apply prematurely. */
+  isComplete: boolean;
+}
+
 export function getActiveComboDeals(
   cartItems: CartItem[],
   config?: UpsellConfig | null
-): {
-  activeDeal: ComboDeal | null;
-  savings: number;
-  missingCategories: MenuCategory[];
-  progress: number;
-} {
+): ComboDealResult {
   const combos: ComboDeal[] = config?.combos
     ? config.combos
         .filter((c) => c.active)
@@ -557,9 +591,16 @@ export function getActiveComboDeals(
         }))
     : DEFAULT_COMBO_DEALS;
 
-  if (combos.length === 0 || cartItems.length === 0) {
-    return { activeDeal: null, savings: 0, missingCategories: [], progress: 0 };
-  }
+  const empty: ComboDealResult = {
+    activeDeal: null,
+    savings: 0,
+    missingCategories: [],
+    missingItems: [],
+    progress: 0,
+    isComplete: false,
+  };
+
+  if (combos.length === 0 || cartItems.length === 0) return empty;
 
   const cartCategories = new Set(cartItems.map((ci) => ci.menuItem.category));
   const totalQuantity = cartItems.reduce((s, ci) => s + ci.quantity, 0);
@@ -576,10 +617,21 @@ export function getActiveComboDeals(
     }
   }
 
+  // Cheapest unit price matching a given id suffix, undefined when no
+  // cart line matches. Used for item-required combos.
+  const cheapestForSuffix = (suffix: string): number | undefined => {
+    let best: number | undefined;
+    for (const ci of cartItems) {
+      if (!ci.menuItem.id.endsWith(suffix)) continue;
+      if (best === undefined || ci.menuItem.price < best) best = ci.menuItem.price;
+    }
+    return best;
+  };
+
   type Scored = {
     deal: ComboDeal;
-    matched: MenuCategory[];
-    missing: MenuCategory[];
+    missingCategories: MenuCategory[];
+    missingItemLabels: string[];
     progress: number;
     savings: number;
     complete: boolean;
@@ -587,22 +639,58 @@ export function getActiveComboDeals(
   };
 
   const scored: Scored[] = combos.map((deal, index) => {
-    const reqCount = deal.categories.length;
-    const matched = deal.categories.filter((c) => cartCategories.has(c));
-    const missing = deal.categories.filter((c) => !cartCategories.has(c));
-    const progress = reqCount === 0 ? 0 : matched.length / reqCount;
+    const matchedCats = deal.categories.filter((c) => cartCategories.has(c));
+    const missingCats = deal.categories.filter((c) => !cartCategories.has(c));
 
-    // One-combo subtotal: cheapest unit from each matched category.
-    const oneComboSubtotal = matched.reduce(
+    if (deal.requiredItems && deal.requiredItems.length > 0) {
+      // Item-required path: completion gated on suffix matches, not just
+      // categories. Discount calculated against the cheapest matching unit
+      // of each required item (one combo's worth).
+      const required = deal.requiredItems;
+      const matchedReq = required.filter(
+        (r) => cheapestForSuffix(r.suffix) !== undefined,
+      );
+      const missingReq = required.filter(
+        (r) => cheapestForSuffix(r.suffix) === undefined,
+      );
+      const reqProgress = matchedReq.length / required.length;
+      const oneComboSubtotal = matchedReq.reduce(
+        (s, r) => s + (cheapestForSuffix(r.suffix) ?? 0),
+        0,
+      );
+      const savings = Math.round(oneComboSubtotal * (deal.discountPercent / 100));
+      const complete =
+        missingReq.length === 0 && totalQuantity >= deal.minItems;
+      return {
+        deal,
+        missingCategories: complete ? [] : missingCats,
+        missingItemLabels: missingReq.map((r) => r.label),
+        progress: complete ? 1 : reqProgress,
+        savings,
+        complete,
+        index,
+      };
+    }
+
+    // Category-only path (unchanged behaviour).
+    const reqCount = deal.categories.length;
+    const progress = reqCount === 0 ? 0 : matchedCats.length / reqCount;
+    const oneComboSubtotal = matchedCats.reduce(
       (s, c) => s + (cheapestByCategory.get(c) ?? 0),
       0,
     );
     const savings = Math.round(oneComboSubtotal * (deal.discountPercent / 100));
-
     const complete =
-      reqCount > 0 && missing.length === 0 && totalQuantity >= deal.minItems;
-
-    return { deal, matched, missing, progress, savings, complete, index };
+      reqCount > 0 && missingCats.length === 0 && totalQuantity >= deal.minItems;
+    return {
+      deal,
+      missingCategories: missingCats,
+      missingItemLabels: [],
+      progress,
+      savings,
+      complete,
+      index,
+    };
   });
 
   // Complete combos always beat partial ones so the customer gets a real
@@ -617,23 +705,29 @@ export function getActiveComboDeals(
       activeDeal: w.deal,
       savings: w.savings,
       missingCategories: [],
+      missingItems: [],
       progress: 1,
+      isComplete: true,
     };
   }
 
   const partial = scored.filter(
-    (s) => s.matched.length >= 1 && s.missing.length > 0,
+    (s) =>
+      !s.complete &&
+      (s.missingCategories.length < s.deal.categories.length ||
+        (s.missingItemLabels.length > 0 &&
+          s.missingItemLabels.length < (s.deal.requiredItems?.length ?? 0))),
   );
-  if (partial.length === 0) {
-    return { activeDeal: null, savings: 0, missingCategories: [], progress: 0 };
-  }
+  if (partial.length === 0) return empty;
   partial.sort((a, b) => b.savings - a.savings || a.index - b.index);
   const w = partial[0];
   return {
     activeDeal: w.deal,
     savings: w.savings,
-    missingCategories: w.missing,
+    missingCategories: w.missingCategories,
+    missingItems: w.missingItemLabels,
     progress: w.progress,
+    isComplete: false,
   };
 }
 

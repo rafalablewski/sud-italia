@@ -28,6 +28,11 @@ export interface ComboDealConfig {
   discountPercent: number;
   minItems: number;
   active: boolean;
+  /** Optional item-suffix gating (Italian Classic Deal style). Mirrors
+   *  ComboDeal.requiredItems in @/lib/upsell. The admin UI doesn't expose
+   *  an editor yet, but the type is here so the field round-trips through
+   *  saves rather than being stripped by the spread in updateCombo. */
+  requiredItems?: { suffix: string; label: string }[];
 }
 
 /** Mirrors LocationTimeWindow from src/lib/store.ts. Repeated here as a local
@@ -512,6 +517,24 @@ export function ComboEditor({
                 })}
               </div>
             </div>
+
+            {combo.requiredItems && combo.requiredItems.length > 0 && (
+              <div>
+                <label className="text-[10px] text-slate-400 block mb-1.5">
+                  Specific items required (read-only)
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {combo.requiredItems.map((r) => (
+                    <span
+                      key={r.suffix}
+                      className="px-2.5 py-1 rounded-lg text-xs font-medium bg-italia-gold/15 text-italia-gold-dark border border-italia-gold/30"
+                    >
+                      {r.label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         ))}
         {combos.length === 0 && (
