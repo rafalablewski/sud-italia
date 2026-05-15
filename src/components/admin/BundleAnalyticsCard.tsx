@@ -26,6 +26,15 @@ interface BundleAnalytics {
     avgSavingsGrosze: number;
     totalRevenueGrosze: number;
   }[];
+  funnel?: {
+    impressions: number;
+    composerOpens: number;
+    composerAbandons: number;
+    applies: number;
+    composerOpenRate: number;
+    applyFromComposerRate: number;
+  };
+  byCohort?: { cohort: "new" | "repeat" | "unknown"; count: number; avgFinalGrosze: number }[];
 }
 
 const zl = (g: number) => `zł ${(g / 100).toFixed(2)}`;
@@ -186,6 +195,82 @@ export function BundleAnalyticsCard({ locationSlug, days = 30 }: { locationSlug?
                 {" — "}
                 target ≤ 12% (decoy should be dominated by the anchor, not chosen).
               </p>
+            )}
+
+            {data.funnel && data.funnel.impressions > 0 && (
+              <section>
+                <p className="text-[10px] uppercase tracking-wide admin-text-secondary mb-1.5">
+                  Conversion funnel
+                </p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="text-left admin-text-secondary">
+                        <th className="py-1 pr-2">Stage</th>
+                        <th className="py-1 pr-2 text-right">Count</th>
+                        <th className="py-1 pr-2 text-right">vs prior</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-t border-white/5">
+                        <td className="py-1 pr-2 admin-text">Impressions</td>
+                        <td className="py-1 pr-2 text-right admin-text">{data.funnel.impressions}</td>
+                        <td className="py-1 pr-2 text-right admin-text-secondary">—</td>
+                      </tr>
+                      <tr className="border-t border-white/5">
+                        <td className="py-1 pr-2 admin-text">Composer opens</td>
+                        <td className="py-1 pr-2 text-right admin-text">{data.funnel.composerOpens}</td>
+                        <td className="py-1 pr-2 text-right admin-text-secondary">
+                          {(data.funnel.composerOpenRate * 100).toFixed(1)}%
+                        </td>
+                      </tr>
+                      <tr className="border-t border-white/5">
+                        <td className="py-1 pr-2 admin-text">Applied</td>
+                        <td className="py-1 pr-2 text-right admin-text">{data.funnel.applies}</td>
+                        <td className="py-1 pr-2 text-right text-italia-green">
+                          {(data.funnel.applyFromComposerRate * 100).toFixed(1)}%
+                        </td>
+                      </tr>
+                      <tr className="border-t border-white/5 admin-text-secondary">
+                        <td className="py-1 pr-2">Composer abandons</td>
+                        <td className="py-1 pr-2 text-right">{data.funnel.composerAbandons}</td>
+                        <td className="py-1 pr-2 text-right">—</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            )}
+
+            {data.byCohort && data.byCohort.length > 0 && (
+              <section>
+                <p className="text-[10px] uppercase tracking-wide admin-text-secondary mb-1.5">
+                  New vs repeat customer split
+                </p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="text-left admin-text-secondary">
+                        <th className="py-1 pr-2">Cohort</th>
+                        <th className="py-1 pr-2 text-right">Orders</th>
+                        <th className="py-1 pr-2 text-right">Avg paid</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.byCohort.map((c) => (
+                        <tr key={c.cohort} className="border-t border-white/5">
+                          <td className="py-1 pr-2 admin-text capitalize">{c.cohort}</td>
+                          <td className="py-1 pr-2 text-right admin-text">{c.count}</td>
+                          <td className="py-1 pr-2 text-right admin-text">{zl(c.avgFinalGrosze)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-[10px] admin-text-secondary mt-1">
+                  Healthy bundle-acquisition: ≥25% of bundle orders should be from new customers.
+                </p>
+              </section>
             )}
           </div>
         </>

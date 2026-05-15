@@ -269,8 +269,11 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
 
   // Bundle audit — capture pricing snapshot + experiment variant for
   // later cannibalization / margin / A-vs-B analysis. Fire-and-forget;
-  // a write failure here doesn't unwind the order.
+  // a write failure here doesn't unwind the order. Slot + customer
+  // cohort (Sprint 7 #6 + #7) feed the KPI dashboard's capacity and
+  // new-vs-repeat splits.
   if (bundleAuditPayload) {
+    const priorOrderCount = segmentCustomer?.orderCount ?? 0;
     void appendBundleEvent({
       id: `bev_${orderId}`,
       orderId,
@@ -286,6 +289,9 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
       savingsGrosze: bundleAuditPayload.savingsGrosze,
       customerPhone: phoneE164,
       experimentVariant: bundleAuditPayload.experimentVariant,
+      slotId: input.slotId,
+      customerCohort: priorOrderCount === 0 ? "new" : "repeat",
+      customerOrderCount: priorOrderCount,
       createdAt: new Date().toISOString(),
     });
   }

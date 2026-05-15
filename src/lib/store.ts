@@ -3953,6 +3953,18 @@ export interface BundleEvent {
   customerPhone: string;
   /** Experiment variant id when an A/B was running for this customer. */
   experimentVariant?: string;
+  /** Slot the bundle order is fulfilled in — links to capacity / wait
+   *  analytics so the operator can see whether bundles drive slots to
+   *  the brink (Sprint 7 #7). */
+  slotId?: string;
+  /** Customer cohort at the moment the order was placed. "new" = first
+   *  ever order, "repeat" = customer had ≥1 prior order. Used by the
+   *  KPI dashboard to split bundle penetration by acquisition vs LTV
+   *  (Sprint 7 #6). */
+  customerCohort?: "new" | "repeat";
+  /** Total prior order count for the customer at the moment of this
+   *  event — finer-grained LTV signal than the boolean cohort. */
+  customerOrderCount?: number;
   createdAt: string;
 }
 
@@ -3970,6 +3982,48 @@ export async function getBundleEvents(opts?: {
   sinceIso?: string;
 }): Promise<BundleEvent[]> {
   const all = await readJSON<BundleEvent[]>("bundle-events.json", []);
+  return all.filter((e) => {
+    if (opts?.locationSlug && e.locationSlug !== opts.locationSlug) return false;
+    if (opts?.sinceIso && e.createdAt < opts.sinceIso) return false;
+    return true;
+  });
+}
+
+// ─── Bundle funnel events (Sprint 7 #5) ──────────────────────────────────
+//
+// Client-side beacons capture the funnel before the customer commits —
+// ladder impressions, composer opens, abandons. Combined with the
+// BundleEvent log (applies) this gives the operator the full
+// impression → consideration → conversion view that lets them tell
+// "low penetration because no one sees it" from "low penetration because
+// no one likes it".
+
+export type BundleFunnelKind = "impression" | "composer_opened" | "composer_abandoned";
+
+export interface BundleFunnelEvent {
+  id: string;
+  kind: BundleFunnelKind;
+  bundleId: string;
+  locationSlug: string;
+  customerPhone?: string;
+  experimentVariant?: string;
+  createdAt: string;
+}
+
+export async function appendBundleFunnelEvent(event: BundleFunnelEvent): Promise<void> {
+  await withLock("bundle-funnel.json", async () => {
+    const list = await readJSON<BundleFunnelEvent[]>("bundle-funnel.json", []);
+    list.push(event);
+    await writeJSON("bundle-funnel.json", list);
+  });
+  incrCounter(`bundles.funnel.${event.kind}`);
+}
+
+export async function getBundleFunnelEvents(opts?: {
+  locationSlug?: string;
+  sinceIso?: string;
+}): Promise<BundleFunnelEvent[]> {
+  const all = await readJSON<BundleFunnelEvent[]>("bundle-funnel.json", []);
   return all.filter((e) => {
     if (opts?.locationSlug && e.locationSlug !== opts.locationSlug) return false;
     if (opts?.sinceIso && e.createdAt < opts.sinceIso) return false;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Sparkles, ChevronDown, Users } from "lucide-react";
 
 import { useCartStore } from "@/store/cart";
@@ -192,6 +192,67 @@ export function BundleLadder({
   // Make-it-a-Meal). Re-tapping an already-applied bundle clears it.
   const [composerBundle, setComposerBundle] = useState<BundleTier | null>(null);
 
+  // Funnel telemetry — fire once per (period, bundle id set, location)
+  // combination so an idle drawer doesn't repeatedly log the same view.
+  // Uses sendBeacon for fire-and-forget submission that survives unload.
+  const sentImpressionsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!locationSlug || !period) return;
+    for (const b of visibleBundles) {
+      const key = `${locationSlug}|${period}|${b.id}|${variantId ?? ""}`;
+      if (sentImpressionsRef.current.has(key)) continue;
+      sentImpressionsRef.current.add(key);
+      const body = JSON.stringify({
+        kind: "impression",
+        bundleId: b.id,
+        locationSlug,
+        customerPhone: customer?.phone,
+        experimentVariant: variantId ?? undefined,
+      });
+      try {
+        const blob = new Blob([body], { type: "application/json" });
+        if (typeof navigator !== "undefined" && navigator.sendBeacon) {
+          navigator.sendBeacon("/api/customer/bundle-funnel", blob);
+        } else if (typeof fetch !== "undefined") {
+          void fetch("/api/customer/bundle-funnel", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body,
+            keepalive: true,
+          });
+        }
+      } catch {
+        // Funnel beaconing is best-effort.
+      }
+    }
+  }, [visibleBundles, locationSlug, period, customer?.phone, variantId]);
+
+  const sendFunnel = (kind: "composer_opened" | "composer_abandoned", bundleId: string) => {
+    if (!locationSlug) return;
+    const body = JSON.stringify({
+      kind,
+      bundleId,
+      locationSlug,
+      customerPhone: customer?.phone,
+      experimentVariant: variantId ?? undefined,
+    });
+    try {
+      const blob = new Blob([body], { type: "application/json" });
+      if (typeof navigator !== "undefined" && navigator.sendBeacon) {
+        navigator.sendBeacon("/api/customer/bundle-funnel", blob);
+      } else if (typeof fetch !== "undefined") {
+        void fetch("/api/customer/bundle-funnel", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body,
+          keepalive: true,
+        });
+      }
+    } catch {
+      // best-effort
+    }
+  };
+
   // No ladder + no hint → render nothing.
   if (!locationSlug) return null;
   if (!showLadder && !showFamilyHint) return null;
@@ -204,7 +265,13 @@ export function BundleLadder({
     // Open the composer so the customer can review/swap add-on choices
     // before locking. Fixed-bundle taps still open the sheet for parity —
     // they can confirm in one tap if they don't want to change anything.
+    sendFunnel("composer_opened", bundle.id);
     setComposerBundle(bundle);
+  };
+
+  const handleComposerClose = () => {
+    if (composerBundle) sendFunnel("composer_abandoned", composerBundle.id);
+    setComposerBundle(null);
   };
 
   const handleComposerApply = (lines: CartItem[], priceGrosze: number) => {
@@ -355,7 +422,7 @@ export function BundleLadder({
 
       <BundleComposerSheet
         open={composerBundle !== null}
-        onClose={() => setComposerBundle(null)}
+        onClose={handleComposerClose}
         bundle={composerBundle}
         cartItems={items}
         menuItems={allMenuItems}

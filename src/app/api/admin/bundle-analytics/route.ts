@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { withAdmin } from "@/lib/api-middleware";
-import { getBundleEvents, type BundleEvent } from "@/lib/store";
+import {
+  getBundleEvents,
+  getBundleFunnelEvents,
+  type BundleEvent,
+  type BundleFunnelEvent,
+} from "@/lib/store";
 
 /**
  * Bundle KPI aggregator (Sprint 3 #13). Reads the append-only audit log
@@ -39,9 +44,56 @@ interface BundleAnalytics {
   byBundle: BundleRollup[];
   byVariant: VariantRollup[];
   perDay: { date: string; count: number; revenueGrosze: number }[];
+  /** Sprint 7 #5: impression → composer → applied funnel. Apply count
+   *  comes from BundleEvent (already aggregated above) so the funnel
+   *  here ends at composer_opened — the analytics card joins both. */
+  funnel: {
+    impressions: number;
+    composerOpens: number;
+    composerAbandons: number;
+    applies: number;
+    composerOpenRate: number;
+    applyFromComposerRate: number;
+  };
+  /** Sprint 7 #6: new vs repeat customer split. Tells the operator
+   *  whether bundles are driving acquisition or just discounting
+   *  existing repeat customers. */
+  byCohort: { cohort: "new" | "repeat" | "unknown"; count: number; avgFinalGrosze: number }[];
 }
 
-function rollup(events: BundleEvent[], windowDays: number): BundleAnalytics {
+function rollupFunnel(events: BundleFunnelEvent[]) {
+  let impressions = 0;
+  let opens = 0;
+  let abandons = 0;
+  for (const e of events) {
+    if (e.kind === "impression") impressions++;
+    else if (e.kind === "composer_opened") opens++;
+    else if (e.kind === "composer_abandoned") abandons++;
+  }
+  return { impressions, opens, abandons };
+}
+
+function rollupCohort(events: BundleEvent[]) {
+  const buckets = new Map<"new" | "repeat" | "unknown", BundleEvent[]>();
+  for (const e of events) {
+    const k = e.customerCohort ?? "unknown";
+    if (!buckets.has(k)) buckets.set(k, []);
+    buckets.get(k)!.push(e);
+  }
+  return Array.from(buckets.entries()).map(([cohort, list]) => ({
+    cohort,
+    count: list.length,
+    avgFinalGrosze: Math.round(
+      list.reduce((s, e) => s + e.finalPriceGrosze, 0) / list.length,
+    ),
+  }));
+}
+
+function rollup(
+  events: BundleEvent[],
+  funnel: BundleFunnelEvent[],
+  windowDays: number,
+): BundleAnalytics {
   const byBundle = new Map<string, BundleEvent[]>();
   const byVariant = new Map<string, BundleEvent[]>();
   const byDay = new Map<string, BundleEvent[]>();
@@ -104,6 +156,19 @@ function rollup(events: BundleEvent[], windowDays: number): BundleAnalytics {
         revenueGrosze: list.reduce((s, e) => s + e.finalPriceGrosze, 0),
       }))
       .sort((a, b) => a.date.localeCompare(b.date)),
+    funnel: (() => {
+      const f = rollupFunnel(funnel);
+      const applies = events.length;
+      return {
+        impressions: f.impressions,
+        composerOpens: f.opens,
+        composerAbandons: f.abandons,
+        applies,
+        composerOpenRate: f.impressions === 0 ? 0 : f.opens / f.impressions,
+        applyFromComposerRate: f.opens === 0 ? 0 : applies / f.opens,
+      };
+    })(),
+    byCohort: rollupCohort(events),
   };
 }
 
@@ -113,6 +178,9 @@ export const GET = withAdmin({}, async (req) => {
   const days = Math.max(1, Math.min(365, Number(url.searchParams.get("days")) || 30));
   const sinceMs = Date.now() - days * 24 * 60 * 60 * 1000;
   const sinceIso = new Date(sinceMs).toISOString();
-  const events = await getBundleEvents({ locationSlug, sinceIso });
-  return NextResponse.json(rollup(events, days));
+  const [events, funnel] = await Promise.all([
+    getBundleEvents({ locationSlug, sinceIso }),
+    getBundleFunnelEvents({ locationSlug, sinceIso }),
+  ]);
+  return NextResponse.json(rollup(events, funnel, days));
 });
