@@ -13,12 +13,14 @@ import { TierPerkBanner } from "./TierPerkBanner";
 import { BundleLadder } from "./BundleLadder";
 import { CorporateOrderBanner } from "./CorporateOrderBanner";
 import type { BundleTier } from "@/lib/bundles";
+import { isBundleLadderShowable } from "@/lib/bundles";
 import { formatPrice } from "@/lib/utils";
 import {
   getCartSuggestions,
   getActiveComboDeals,
   getDeliveryThresholdForCustomer,
   getCustomerSegment,
+  computeDeliveryFee,
   UpsellConfig,
   PairingContext,
 } from "@/lib/upsell";
@@ -72,6 +74,10 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
   const [phoneError, setPhoneError] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [slotFomo, setSlotFomo] = useState<{ anyLow: boolean } | null>(null);
+  // Sprint 9 #2 — Pret-style "weekly usual" opt-in. Only surfaces when a
+  // bundle is applied (otherwise scheduling à-la-carte is awkward).
+  // Stored client-side and POSTed after checkout success.
+  const [scheduleWeekly, setScheduleWeekly] = useState(false);
   // Fetch location-specific upsell config from admin settings
   const [upsellConfig, setUpsellConfig] = useState<UpsellConfig | null>(null);
   useEffect(() => {
@@ -162,12 +168,11 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
   const comboDiscount =
     isBundleActive
       ? 0
-      : comboResult.missingCategories.length === 0
+      : comboResult.isComplete
         ? comboResult.savings
         : 0;
   const tipAmount = useCartStore((s) => s.tipAmount);
   const setTipAmount = useCartStore((s) => s.setTipAmount);
-  const total = subtotal - comboDiscount + tipAmount;
 
   // Per-segment free-delivery threshold (audit §2.5 Uber Eats).
   // Resolves the customer's tier from their points balance and feeds the
@@ -183,6 +188,16 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
   const deliveryThreshold = getDeliveryThresholdForCustomer(deliverySegment);
   const isDeliveryPersonalised =
     !!deliverySegment && getCustomerSegment(deliverySegment) !== "regular";
+
+  // Mirror the server-side fee calculation so the pay-bar shows the same
+  // number Stripe will charge. createOrder.ts:161 calls computeDeliveryFee
+  // with the post-discount subtotal and the same per-segment threshold.
+  const deliveryFee = computeDeliveryFee(
+    subtotal - comboDiscount,
+    fulfillmentType,
+    deliveryThreshold,
+  );
+  const total = subtotal - comboDiscount + deliveryFee + tipAmount;
 
   const isPhoneValid = PHONE_PATTERN.test(customerPhone.trim());
 
@@ -291,10 +306,49 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
           specialInstructions: specialInstructions.trim() || undefined,
           tipAmount: tipAmount > 0 ? tipAmount : undefined,
           appliedBundleId: appliedBundleId || undefined,
+          appliedBundlePriceGrosze: appliedBundleId && bundlePriceGrosze > 0 ? bundlePriceGrosze : undefined,
         }),
       });
 
       const data = await res.json();
+
+      // Sprint 9 #2 — capture weekly-usual intent fire-and-forget once
+      // the checkout request has returned a Stripe URL or orderId.
+      // We do this BEFORE redirect so the intent persists even if the
+      // customer leaves the success page.
+      if (scheduleWeekly && isBundleActive && appliedBundleId && (data.url || data.orderId)) {
+        const phoneE164 = `+48${customerPhone.trim()}`;
+        const weekdayNames = [
+          "sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday",
+        ];
+        const weekday = weekdayNames[new Date().getDay()];
+        const readyAt = (selectedSlotTime || "12:00").slice(0, 5);
+        // Resolve bundle name from the upsell config (defaults are fine if
+        // missing — server validation only requires the id + a label).
+        const bundleName = appliedBundleId.replace(/-/g, " ");
+        const cartSnapshot = items.map((i) => ({
+          menuItemId: i.menuItem.id,
+          quantity: i.quantity,
+        }));
+        try {
+          void fetch("/api/customer/schedule-bundle", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              customerPhone: phoneE164,
+              locationSlug,
+              bundleId: appliedBundleId,
+              bundleName,
+              weekday,
+              readyAt,
+              cartSnapshot,
+            }),
+            keepalive: true,
+          });
+        } catch {
+          // Best-effort; intent capture failure shouldn't block checkout.
+        }
+      }
 
       if (data.url) {
         // Loyalty auto-enrollment happens server-side via the checkout API
@@ -424,10 +478,24 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
         configRules={
           (upsellConfig as { bundleRules?: import("@/lib/bundles").BundleAvailabilityRules } | null)?.bundleRules ?? null
         }
+        configExperiment={
+          (upsellConfig as { experiment?: import("@/lib/experiments").Experiment | null } | null)?.experiment ?? null
+        }
+        activeComboSavings={comboResult.isComplete ? comboResult.savings : 0}
+        activeComboName={comboResult.isComplete ? comboResult.activeDeal?.name ?? null : null}
       />
 
-      {/* Combo deal banner */}
-      <ComboDealBanner cartItems={items} />
+      {/* Combo deal banner — suppressed when the bundle ladder is showable
+          so we don't show two competing promos at once (Starbucks-rule:
+          one upsell at a time, picked by impact). A 4,99 PLN combo save
+          is psychologically invisible next to a 47 PLN bundle save. */}
+      {!isBundleLadderShowable(
+        items,
+        resolvedMenuItems,
+        (upsellConfig as { bundles?: BundleTier[] } | null)?.bundles ?? null,
+        (upsellConfig as { bundleRules?: import("@/lib/bundles").BundleAvailabilityRules } | null)?.bundleRules ?? null,
+        new Date().getHours(),
+      ) && <ComboDealBanner cartItems={items} />}
 
       {/* Cross-sell suggestions */}
       <CartUpsell suggestions={suggestions} />
@@ -655,7 +723,13 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
           {fulfillmentType === "delivery" && (
             <div className="flex justify-between items-center text-sm text-italia-gray">
               <span>Delivery</span>
-              <span>{total >= 6000 ? <span className="text-italia-green font-medium">Free</span> : "10,00 PLN"}</span>
+              <span>
+                {deliveryFee === 0 ? (
+                  <span className="text-italia-green font-medium">Free</span>
+                ) : (
+                  formatPrice(deliveryFee)
+                )}
+              </span>
             </div>
           )}
           <div className="flex justify-between items-center text-lg font-bold border-t border-gray-100 pt-2">
@@ -667,6 +741,23 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
         <div className="mt-1.5 flex flex-col gap-1 empty:hidden">
           <LoyaltyEarnPreview cartTotal={total} />
         </div>
+
+        {/* Sprint 9 #2 — weekly-usual opt-in. Only when a bundle is
+            applied so the scheduled meal has a clear composition. */}
+        {isBundleActive && (
+          <label className="mt-2 flex items-center gap-2 text-xs text-italia-gray cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={scheduleWeekly}
+              onChange={(e) => setScheduleWeekly(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            <span>
+              🗓️ Make this my <span className="font-semibold">weekly usual</span>
+              {" "}— same order, same time, every week
+            </span>
+          </label>
+        )}
 
         {checkoutError && (
           <div className="mt-2 bg-red-50 border border-red-200 rounded-xl px-3 py-2 text-sm text-red-700 flex items-start gap-2">

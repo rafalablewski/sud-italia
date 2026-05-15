@@ -2,12 +2,14 @@ import { generateOrderId } from "@/lib/utils";
 import { getMenuWithOverrides } from "@/data/menus";
 import {
   addNotification,
+  appendBundleEvent,
   createOrder,
   getCustomer,
   getSlotById,
   getUpsellSettings,
   incrementSlotOrders,
 } from "@/lib/store";
+import { resolveCustomerVariant } from "@/lib/experiments-server";
 import type { CartItem, FulfillmentType, Order } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
 import {
@@ -15,7 +17,7 @@ import {
   getActiveComboDeals,
   getDeliveryThresholdForCustomer,
 } from "@/lib/upsell";
-import { findBundle, cartSatisfiesBundle, type BundleTier } from "@/lib/bundles";
+import { findBundle, cartSatisfiesBundle, computeBundlePrice, type BundleTier } from "@/lib/bundles";
 import { calculateTier } from "@/lib/loyalty";
 import { normalizePlPhoneE164 } from "@/lib/phone";
 
@@ -43,12 +45,29 @@ export interface CreateOrderInput {
   deliveryAddress?: string;
   tipAmount?: number;
   appliedBundleId?: string;
+  /** Client-shown bundle price snapshot. Server caps the charged amount
+   *  at this value so an admin discount-percent change between render
+   *  and checkout can't silently overcharge the customer. */
+  appliedBundlePriceGrosze?: number;
   /** "web" = browser checkout; "whatsapp" = bot-driven chat. Defaults to web. */
   channel?: Order["channel"];
 }
 
 export type CreateOrderResult =
-  | { ok: true; order: Order; deliveryFee: number; bundleSubtotal: number | null }
+  | {
+      ok: true;
+      order: Order;
+      deliveryFee: number;
+      bundleSubtotal: number | null;
+      /** Combo discount in grosze applied to the items subtotal. 0 when no
+       *  combo fired or when a bundle overrode it. Threaded out so the
+       *  Stripe layer can attach an `amount_off` coupon — without this the
+       *  session would charge the pre-discount item total. */
+      comboDiscount: number;
+      /** Friendly name of the applied combo for receipt copy. Null when no
+       *  combo applied. */
+      comboName: string | null;
+    }
   | {
       ok: false;
       code:
@@ -131,22 +150,63 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
   const locationConfig = upsellSettings[input.locationSlug] || null;
 
   let bundleSubtotal: number | null = null;
+  let bundleAuditPayload: {
+    bundleId: string;
+    bundleName: string;
+    pricingMode: "fixed" | "dynamic";
+    mainsCount: number;
+    mainsSubtotalGrosze: number;
+    addOnsSubtotalGrosze: number;
+    refPriceGrosze: number;
+    finalPriceGrosze: number;
+    savingsGrosze: number;
+    experimentVariant?: string;
+  } | null = null;
   if (input.appliedBundleId) {
-    const bundle = findBundle(
-      input.appliedBundleId,
-      (locationConfig as { bundles?: BundleTier[] } | null)?.bundles ?? null,
-    );
+    // Resolve experiment variant first — phone-hashed, stable across
+    // retries. Variant may override discount %s on the bundle config.
+    const variant = await resolveCustomerVariant(input.locationSlug, phoneE164);
+    const configBundles = (locationConfig as { bundles?: BundleTier[] } | null)?.bundles ?? null;
+    const variantBundles = variant
+      ? configBundles?.map((b) => variant.applyToBundle(b)) ?? null
+      : configBundles;
+    const bundle = findBundle(input.appliedBundleId, variantBundles);
     if (bundle && cartSatisfiesBundle(bundle, orderItems, menuItems)) {
-      bundleSubtotal = bundle.priceGrosze;
+      const pricing = computeBundlePrice(bundle, orderItems, menuItems);
+      if (pricing) {
+        // Snapshot guard: never charge more than the chip promised.
+        const clientSnapshot = input.appliedBundlePriceGrosze;
+        bundleSubtotal =
+          typeof clientSnapshot === "number" && clientSnapshot >= 0
+            ? Math.min(pricing.priceGrosze, clientSnapshot)
+            : pricing.priceGrosze;
+        bundleAuditPayload = {
+          bundleId: bundle.id,
+          bundleName: bundle.name,
+          pricingMode: bundle.pricingMode === "dynamic" ? "dynamic" : "fixed",
+          mainsCount: pricing.mainsCount,
+          mainsSubtotalGrosze: pricing.mainsSubtotal,
+          addOnsSubtotalGrosze: pricing.addOnsSubtotal,
+          refPriceGrosze: pricing.refPriceGrosze,
+          finalPriceGrosze: bundleSubtotal,
+          savingsGrosze: Math.max(0, pricing.refPriceGrosze - bundleSubtotal),
+          experimentVariant: variant?.variantId,
+        };
+      }
     }
   }
 
+  let comboDiscount = 0;
+  let comboName: string | null = null;
   if (bundleSubtotal !== null) {
     calculatedTotal = bundleSubtotal;
   } else {
     const comboResult = getActiveComboDeals(orderItems, locationConfig);
-    const comboDiscount = comboResult.missingCategories.length === 0 ? comboResult.savings : 0;
-    calculatedTotal = calculatedTotal - comboDiscount;
+    if (comboResult.isComplete) {
+      comboDiscount = comboResult.savings;
+      comboName = comboResult.activeDeal?.name ?? null;
+      calculatedTotal = calculatedTotal - comboDiscount;
+    }
   }
 
   const segmentCustomer = await getCustomer(phoneE164);
@@ -207,6 +267,80 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
 
   await createOrder(order);
 
+  // Bundle audit — capture pricing snapshot + experiment variant for
+  // later cannibalization / margin / A-vs-B analysis. Fire-and-forget;
+  // a write failure here doesn't unwind the order. Slot + customer
+  // cohort (Sprint 7 #6 + #7) feed the KPI dashboard's capacity and
+  // new-vs-repeat splits. Margin computed at write time so operator
+  // alerts can fire when a bundle goes underwater (Sprint 8 #10).
+  if (bundleAuditPayload) {
+    const priorOrderCount = segmentCustomer?.orderCount ?? 0;
+    // Food cost = Σ MenuItem.cost across every cart line. Items without
+    // a cost field contribute 0 to the cost (conservative for the
+    // operator-protective alert).
+    const foodCost = orderItems.reduce(
+      (s, ci) => s + (ci.menuItem.cost ?? 0) * ci.quantity,
+      0,
+    );
+    const marginRatio =
+      bundleSubtotal !== null && bundleSubtotal > 0
+        ? Math.max(0, (bundleSubtotal - foodCost) / bundleSubtotal)
+        : undefined;
+
+    // Identify the main categories so we can carve out the add-on
+    // composition the customer picked for this bundle — feeds the
+    // composer's "same as last time" pre-fill on the customer's next
+    // visit (Sprint 8 #8).
+    const lookedUp = findBundle(
+      input.appliedBundleId!,
+      (locationConfig as { bundles?: BundleTier[] } | null)?.bundles ?? null,
+    );
+    const mainCats = lookedUp && lookedUp.pricingMode === "dynamic"
+      ? new Set(lookedUp.mainCategories)
+      : new Set<string>();
+    const addOnComposition = orderItems
+      .filter((ci) => !mainCats.has(ci.menuItem.category))
+      .map((ci) => ({ menuItemId: ci.menuItem.id, quantity: ci.quantity }));
+
+    void appendBundleEvent({
+      id: `bev_${orderId}`,
+      orderId,
+      bundleId: bundleAuditPayload.bundleId,
+      bundleName: bundleAuditPayload.bundleName,
+      locationSlug: input.locationSlug,
+      pricingMode: bundleAuditPayload.pricingMode,
+      mainsCount: bundleAuditPayload.mainsCount,
+      mainsSubtotalGrosze: bundleAuditPayload.mainsSubtotalGrosze,
+      addOnsSubtotalGrosze: bundleAuditPayload.addOnsSubtotalGrosze,
+      refPriceGrosze: bundleAuditPayload.refPriceGrosze,
+      finalPriceGrosze: bundleAuditPayload.finalPriceGrosze,
+      savingsGrosze: bundleAuditPayload.savingsGrosze,
+      customerPhone: phoneE164,
+      experimentVariant: bundleAuditPayload.experimentVariant,
+      slotId: input.slotId,
+      customerCohort: priorOrderCount === 0 ? "new" : "repeat",
+      customerOrderCount: priorOrderCount,
+      marginRatio,
+      addOnComposition,
+      createdAt: new Date().toISOString(),
+    });
+
+    // Operator margin alert — when a real bundle order's contribution
+    // margin drops below 40% the operator gets pinged in /admin so they
+    // can re-tune the discount before it bleeds. Threshold matches the
+    // "amber/red" line on BundleMarginPreview so the admin signal and
+    // the live preview agree.
+    if (marginRatio !== undefined && marginRatio < 0.4 && bundleSubtotal !== null) {
+      void addNotification({
+        type: "bundle_low_margin",
+        title: "Bundle margin below 40%",
+        message: `${bundleAuditPayload.bundleName} — ${Math.round(marginRatio * 100)}% margin on ${formatPrice(bundleSubtotal)}. Review discount % in /admin/upsell.`,
+        locationSlug: input.locationSlug,
+        orderId,
+      });
+    }
+  }
+
   await addNotification({
     type: "new_order",
     title: "New order received",
@@ -225,5 +359,5 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
     });
   }
 
-  return { ok: true, order, deliveryFee, bundleSubtotal };
+  return { ok: true, order, deliveryFee, bundleSubtotal, comboDiscount, comboName };
 }

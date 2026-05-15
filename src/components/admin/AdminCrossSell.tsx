@@ -160,6 +160,7 @@ export function AdminCrossSell() {
         <div className="glass-card p-6">
           <ComboEditor
             combos={config.combos}
+            menu={loc.menu}
             onChange={(combos) => updateConfig({ combos })}
           />
         </div>

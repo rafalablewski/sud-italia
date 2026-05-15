@@ -73,10 +73,17 @@ export const checkoutBodySchema = z
     deliveryAddress: z.string().max(500).optional(),
     tipAmount: z.number().int().nonnegative().max(100_000).optional(),
     /** When set, the cart was checked out as a §3.2 bundle. The server
-     *  re-resolves the bundle by id and uses its `priceGrosze` instead of
-     *  summing line prices, so the customer pays exactly what the chip
-     *  promised. */
+     *  re-resolves the bundle by id and recomputes its price, but caps
+     *  the charged amount at what the client showed (see
+     *  appliedBundlePriceGrosze) so an admin discount edit mid-checkout
+     *  can never overcharge the customer. */
     appliedBundleId: z.string().min(1).max(80).optional(),
+    /** Snapshot of the price the chip showed when the customer tapped the
+     *  bundle. Server uses min(serverComputed, clientSnapshot) so a
+     *  discount-percent drop between render and checkout is honoured for
+     *  the customer (operator-protective for hikes, customer-protective
+     *  for drops). Required when appliedBundleId is set. */
+    appliedBundlePriceGrosze: z.number().int().nonnegative().max(1_000_000).optional(),
   })
   .refine(
     (data) =>

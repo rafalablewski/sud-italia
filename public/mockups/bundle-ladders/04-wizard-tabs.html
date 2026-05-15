@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Bundle ladders — Wizard tabs (sketch 04)</title>
+<style>
+  :root {
+    --bg: #0a0d14; --surface-1: #11151f; --surface-2: #161b27; --surface-3: #1d2330;
+    --border: rgba(255,255,255,0.08); --border-strong: rgba(255,255,255,0.16);
+    --fg: #f5f7fa; --fg-muted: #b6bfcd; --fg-subtle: #7d8696;
+    --brand: #c8102e; --gold: #c8a02e; --green: #10b981; --indigo: #6366f1;
+    font-family: -apple-system, "SF Pro Text", "Inter", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px; background: var(--bg); color: var(--fg); }
+  .h { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 18px; }
+  h1 { font-size: 22px; margin: 0; font-weight: 700; }
+  h1 small { font-size: 11px; color: var(--fg-subtle); font-weight: 500; letter-spacing: .06em; text-transform: uppercase; background: var(--surface-2); padding: 2px 8px; border-radius: 6px; margin-left: 6px; }
+
+  .tier-list { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 14px; }
+  .tier-tab { background: var(--surface-1); border: 1px solid var(--border); padding: 10px 16px; border-radius: 10px; cursor: pointer; min-width: 180px; }
+  .tier-tab:hover { border-color: var(--border-strong); }
+  .tier-tab.on { border-color: var(--brand); background: linear-gradient(180deg, rgba(200,16,46,0.08), transparent); }
+  .tier-tab .lab { font-size: 10px; color: var(--fg-subtle); text-transform: uppercase; letter-spacing: .08em; font-weight: 700; }
+  .tier-tab .nm { font-size: 13px; color: var(--fg); font-weight: 600; margin-top: 2px; }
+  .tier-tab .pr { font-size: 11px; color: var(--fg-muted); margin-top: 4px; }
+  .tier-tab .b { display: inline-block; font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 4px; letter-spacing: .04em; text-transform: uppercase; margin-right: 4px; }
+  .b-d { background: var(--brand); color: white; }
+  .b-a { background: var(--gold); color: #1a1a1a; }
+  .b-x { background: var(--surface-3); color: var(--fg-subtle); }
+
+  .editor { background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+  .editor-h { display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+  .editor-name { font-size: 18px; font-weight: 700; flex: 1; }
+
+  .body { display: grid; grid-template-columns: 220px 1fr; min-height: 520px; }
+  .vtabs { border-right: 1px solid var(--border); padding: 14px 0; background: var(--surface-2); }
+  .vtab { padding: 12px 18px; cursor: pointer; display: flex; gap: 12px; align-items: center; }
+  .vtab:hover { background: var(--surface-3); }
+  .vtab.on { background: rgba(99,102,241,0.08); color: var(--fg); }
+  .vtab.on::before { content: ""; display: block; width: 3px; height: 22px; background: var(--indigo); margin-left: -18px; margin-right: 12px; border-radius: 0 3px 3px 0; }
+  .vtab-icon { width: 18px; height: 18px; background: var(--surface-3); border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; color: var(--fg-muted); }
+  .vtab-l { display: block; font-size: 13px; font-weight: 600; }
+  .vtab-c { display: block; font-size: 10px; color: var(--fg-subtle); margin-top: 1px; }
+  .vtab-c.warn { color: var(--gold); }
+
+  .panel { padding: 24px 28px; }
+  .panel h3 { font-size: 16px; margin: 0 0 4px; font-weight: 700; }
+  .panel p.help { font-size: 12px; color: var(--fg-muted); margin: 0 0 18px; }
+  .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; }
+  label.field { display: block; }
+  .field-l { font-size: 10px; color: var(--fg-subtle); margin-bottom: 5px; text-transform: uppercase; letter-spacing: .08em; font-weight: 600; }
+  .input { width: 100%; background: var(--surface-2); color: var(--fg); border: 1px solid var(--border); padding: 9px 11px; border-radius: 7px; font-size: 13px; }
+  .input:focus { outline: 2px solid var(--indigo); outline-offset: -2px; border-color: var(--indigo); }
+
+  .preview { background: linear-gradient(180deg, rgba(16,185,129,0.07), transparent); border: 1px solid rgba(16,185,129,0.18); border-radius: 10px; padding: 14px 16px; margin-top: 18px; }
+  .pv-h { display: flex; justify-content: space-between; font-size: 11px; color: var(--green); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
+  .pv-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .pv-item { font-size: 12px; color: var(--fg-muted); }
+  .pv-item strong { display: block; font-size: 16px; color: var(--fg); margin-top: 2px; }
+  .pv-margin { display: inline-block; padding: 2px 7px; border-radius: 4px; background: rgba(16,185,129,0.18); color: var(--green); font-size: 10px; font-weight: 700; margin-top: 4px; }
+
+  .footer { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; border-top: 1px solid var(--border); background: var(--surface-2); }
+  .next { background: var(--brand); color: white; border: 0; padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .ghost { background: transparent; color: var(--fg-muted); border: 1px solid var(--border); padding: 9px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; }
+</style>
+</head>
+<body>
+  <div class="h">
+    <h1>Bundle ladders <small>SKETCH 04 · WIZARD TABS</small></h1>
+  </div>
+
+  <div class="tier-list">
+    <div class="tier-tab">
+      <div class="lab">Family</div>
+      <div class="nm">Your pizzas + sides</div>
+      <div class="pr">Dynamic · ~88 zł</div>
+    </div>
+    <div class="tier-tab on">
+      <div class="lab"><span class="b b-d">Default</span><span class="b b-a">Anchor</span> Family Feast</div>
+      <div class="nm">Whole-table dinner</div>
+      <div class="pr">Dynamic · ~135 zł</div>
+    </div>
+    <div class="tier-tab">
+      <div class="lab"><span class="b b-x">Decoy</span> Feast Deluxe</div>
+      <div class="nm">Big group, no leftovers</div>
+      <div class="pr">Dynamic · ~172 zł</div>
+    </div>
+    <div class="tier-tab">
+      <div class="lab"><span class="b b-a">Anchor</span> Lunch+</div>
+      <div class="nm">Pasta + drink + tiramisù</div>
+      <div class="pr">Fixed · 46 zł</div>
+    </div>
+    <div class="tier-tab">
+      <div class="lab"><span class="b b-d">Default</span> Late dinner</div>
+      <div class="nm">Pizza + drink + dessert</div>
+      <div class="pr">Dynamic · ~38 zł</div>
+    </div>
+    <div class="tier-tab" style="border-style:dashed;color:var(--fg-subtle);display:flex;align-items:center;justify-content:center;">+ Add tier</div>
+  </div>
+
+  <div class="editor">
+    <div class="editor-h">
+      <div class="editor-name">Family Feast · Whole-table dinner</div>
+      <span class="b b-d" style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;letter-spacing:.04em;text-transform:uppercase;background:var(--brand);color:white;">DEFAULT</span>
+      <span class="b b-a" style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;letter-spacing:.04em;text-transform:uppercase;background:var(--gold);color:#1a1a1a;">ANCHOR</span>
+      <span style="font-size:11px;color:var(--green);">● Active</span>
+    </div>
+
+    <div class="body">
+      <div class="vtabs">
+        <div class="vtab"><span class="vtab-icon">①</span><span><span class="vtab-l">Identity</span><span class="vtab-c">Tier · name · description</span></span></div>
+        <div class="vtab on"><span class="vtab-icon">②</span><span><span class="vtab-l">Pricing</span><span class="vtab-c">15% mains / 40% add-ons</span></span></div>
+        <div class="vtab"><span class="vtab-icon">③</span><span><span class="vtab-l">Composition</span><span class="vtab-c">3 slots · 7 units</span></span></div>
+        <div class="vtab"><span class="vtab-icon">④</span><span><span class="vtab-l">Schedule</span><span class="vtab-c">Fri · Sat · Sun only</span></span></div>
+        <div class="vtab"><span class="vtab-icon">⑤</span><span><span class="vtab-l">Audience</span><span class="vtab-c">All customers</span></span></div>
+        <div class="vtab"><span class="vtab-icon">⑥</span><span><span class="vtab-l">Margin preview</span><span class="vtab-c">~49% (healthy)</span></span></div>
+      </div>
+
+      <div class="panel">
+        <h3>Pricing</h3>
+        <p class="help">Mains-discount % is applied to whatever pizzas/pastas are in the cart; add-ons-discount % is applied to the static composition allowance. Split protects pizza margin while making drinks feel free.</p>
+
+        <div class="row">
+          <label class="field"><div class="field-l">Pricing mode</div>
+            <div style="display:flex;gap:6px;"><button class="input" style="background:var(--surface-3);">Fixed</button><button class="input" style="background:var(--indigo);color:white;border-color:var(--indigo);">Dynamic</button></div>
+          </label>
+          <label class="field"><div class="field-l">Mains discount %</div><input class="input" type="number" value="15"></label>
+          <label class="field"><div class="field-l">Add-ons discount %</div><input class="input" type="number" value="40"></label>
+        </div>
+
+        <div class="row" style="margin-top:14px;">
+          <label class="field"><div class="field-l">Min mains</div><input class="input" type="number" value="2"></label>
+          <label class="field"><div class="field-l">Max mains</div><input class="input" type="number" value="8"></label>
+          <label class="field"><div class="field-l">Mains scale on</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;"><span style="background:rgba(200,16,46,.15);color:var(--brand);padding:6px 10px;border-radius:6px;font-size:11px;font-weight:600;">✓ pizza</span><span style="background:rgba(200,16,46,.15);color:var(--brand);padding:6px 10px;border-radius:6px;font-size:11px;font-weight:600;">✓ pasta</span></div>
+          </label>
+        </div>
+
+        <div class="preview">
+          <div class="pv-h">Live preview · Kraków menu</div>
+          <div class="pv-grid">
+            <div class="pv-item">@2 mains<strong>~101 zł</strong><span class="pv-margin">52% margin</span></div>
+            <div class="pv-item">@3 mains<strong>~135 zł</strong><span class="pv-margin">49% margin</span></div>
+            <div class="pv-item">@4 mains<strong>~169 zł</strong><span class="pv-margin">48% margin</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <button class="ghost">← Identity</button>
+      <span style="font-size:11px;color:var(--fg-subtle);">Step 2 of 6</span>
+      <button class="next">Composition →</button>
+    </div>
+  </div>
+</body>
+</html>

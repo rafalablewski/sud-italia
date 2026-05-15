@@ -162,8 +162,8 @@ T+pay (Stripe sheet)                                                 ⏳ deferre
 | ✅ | "Customers usually add…" (data-driven) | helpful | +9% | `AddToCartToast` seed copy + `CartUpsell` chips |
 | ⛔ | "Make it a large +PLN 6" (modifier) | smart | +14% | **Rejected** — fixed Neapolitan portions are a brand core value (overrules §2.5 Starbucks too) |
 | ✅ | "Add Pizzaiolo's espresso PLN 6" (named, named) | curated | +11% | `CartUpsell` chip with `suggestion.reason` copy |
-| ⏳ | "Family Feast: 2 pizzas + 2 sides + 4 drinks, save PLN 28" | savings | +22% AOV per family order | bundle engine — §3.2 territory, separate sprint |
-| 🟡 | "Lunch combo PLN 39: any pasta + drink" | value | +18% | `TodBanner` lunch variant surfaces the existing meal-deal combo during 11:30–13:00 window |
+| ✅ | "Family Feast: your mains + 2 antipasti + 4 drinks + tiramisù, 28% off" | savings | +22% AOV per family order | §3.2 bundle engine live; `family-feast` tier in `DEFAULT_BUNDLES` (`src/lib/bundles.ts`) is now *dynamic on mains* — every pizza/pasta in cart carries into the bundle 1:1 and price scales from `(mains-à-la-carte + cheapest-add-ons) × 0.72`. Surfaces at ≥2 main items, locks subtotal to the computed price via `appliedBundleId`. Sample: 3 margheritas → PLN 120.74 (save 46.96). |
+| 🟡 | "Lunch combo PLN 39: pasta + drink" | value | +18% | `TodBanner` lunch variant surfaces the generic `pasta-combo` (any pasta + drink + dessert, 10% off) during 11:30–13:00. The category-only combos sit alongside the new item-locked **Italian Classic Deal** (Margherita + Espresso + Tiramisù, 10%) — admins choose either pattern per location at `/admin/crosssell` → Combo deals. |
 | ✅ | "Tap to make it a Gold-Tier order: +pesto bruschetta included" | status | +9% | `TierPerkBanner` — Gold/Platinum-gated, comp'd via price-0 cart line |
 | ⏳ | "Try the new burrata — first 12 today" | scarcity | +6% | needs per-day inventory tracking on seasonal items |
 | ⛔ | **Don't:** "Are you sure you want to add fries?" | annoying | -3% | not shipped |
@@ -175,9 +175,9 @@ T+pay (Stripe sheet)                                                 ⏳ deferre
 | Status | Trigger | Surface | Example |
 |---|---|---|---|
 | ✅ | 07:00–10:00 | Cart top | "Pre-order lunch — beat the noon rush" (`TodBanner` morning variant) |
-| ✅ | 11:00–13:00 (rush) | Cart top | "Lunch combo — pasta + drink, save 10%" (`TodBanner` lunch variant, surfaces the meal-deal combo) |
+| ✅ | 11:00–13:00 (rush) | Cart top | "Lunch combo — pasta + drink, save 10%" (`TodBanner` lunch variant, surfaces the `pasta-combo` / `lunch-special` generic combos or the item-locked Italian Classic Deal, whichever the cart qualifies for) |
 | ✅ | 14:00–16:00 (afternoon) | Cart top | "Espresso break — pickup in 4 min" with one-tap add (`TodBanner` afternoon) |
-| ✅ | 17:00–19:00 | Cart top | "Cooking for the table tonight?" hint with meal-deal pairing (`TodBanner` dinner) |
+| ✅ | 17:00–19:00 | Cart top | "Cooking for the table tonight?" hint with combo pairing (`TodBanner` dinner — surfaces the active combo from `getActiveComboDeals`) |
 | ✅ | 20:00–23:00 | Cart top | "Late-night espresso & dessert" one-tap espresso add (`TodBanner` late) |
 | ⏳ | Rain forecast | Hero card | "Rainy day = warm pasta. Free delivery over PLN 50 today." — needs weather feed wiring |
 | ⏳ | Customer's 3rd order | Cart top | "Loyalty unlock: try the Pizzaiolo's Choice (Platinum-only — comp this one)" — needs lifetime-order trigger |
@@ -204,7 +204,7 @@ From `src/data/menus/krakow.ts` actuals:
 
 ### 2.5 How The Best Operators Upsell
 
-- **McDonald's:** Default-combo psychology. The single button "Make it a meal +PLN X" frames *non*-combo as the deviant choice. AOV uplift: 22%. — 🟡 **partial:** the `TodBanner` lunch variant surfaces the meal-deal combo as the default expectation during 11:00–13:00. The auto-apply when categories match already exists via `getActiveComboDeals`. A "Remove combo" CTA on the applied banner is the follow-up.
+- **McDonald's:** Default-combo psychology. The single button "Make it a meal +PLN X" frames *non*-combo as the deviant choice. AOV uplift: 22%. — 🟡 **partial:** the `TodBanner` lunch variant surfaces the active combo as the default expectation during 11:00–13:00. Auto-apply when categories match exists via `getActiveComboDeals`, which now scores combos by largest savings (complete beats partial, original-index breaks ties) so a fully-satisfied combo always wins over an earlier partial one — fixes the order-dependent short-circuit that previously hid completed discounts. The new item-locked **Italian Classic Deal** (Margherita + Espresso + Tiramisù) is McDonald's-style "make it the Italian Classic" framing, admin-configurable from `/admin/crosssell` → Combo deals. A "Remove combo" CTA on the applied banner is the follow-up.
 - **Starbucks:** Size laddering with named premium ("Venti"). Modifier upsells ("add an espresso shot +PLN 4"). Personalised "your usual" rebuild. — ⛔ **rejected** on the size-laddering / modifier half (fixed Neapolitan portions). The "your usual" rebuild belongs in §5.2.4 habit-loop work.
 - **Uber Eats:** "Frequently bought together" + "Customers near you ordered" + algorithmic free-delivery threshold tuned per user. AOV uplift attributable to algorithmic upsell: 11%. — ✅ **shipped:** per-segment delivery threshold (first-time 39 / regular 60 / Gold/Platinum 0) live in `DeliveryProgress` and respected by the checkout charge via `computeDeliveryFee(_, _, override)`. ML upsell scorer is §9.1.
 - **Domino's:** Pre-checkout "wait, don't forget…" upsell card. Polarising but proven +8% per checkout. — ✅ **shipped via** `CartUpsell` (3-up chips above subtotal).
@@ -253,21 +253,85 @@ follow-up; heuristic composite ships today.
 
 The decoy makes Lunch+ look reasonable. Lunch+ makes Lunch look cheap. The default-push on Lunch creates the McDonald's combo effect. **Predicted AOV: PLN 36–42 vs current PLN 28–32.**
 
-**Bundle tier — Family Feast** (quantity-gated, ≥5 pizza+pasta items; one-line hint at 3–4):
+**Bundle tier — Family** (dynamic — mains scale with cart, quantity-gated at ≥2 pizzas+pastas; one-line hint at 1 main):
 
-| Status | Tier | Composition | Price | "You'd pay" |
-|---|---|---|---:|---:|
-| ✅ | Family | 2 pizzas + side + 2 drinks | PLN 89 | 108 |
-| ✅ | Family Feast (anchor) | 2 pizzas + bruschetta + 4 drinks + tiramisù | **PLN 119** | 162 |
-| ✅ | Feast Deluxe (decoy) | 3 pizzas + 2 sides + 6 drinks + 2 desserts | PLN 169 | 232 |
+The old fixed-composition family ladder locked the cart to "2 pizzas + 1 side + 2 drinks" regardless of how many pizzas the customer added — a 3-margherita cart got rewritten to 2 margheritas and paid a flat price unrelated to volume. The new family ladder is **dynamic on mains, static on add-ons**: every pizza/pasta in the cart carries into the bundle 1:1, the add-on allowance is a fixed composition, and the price is computed live from `(mains-à-la-carte + cheapest-add-ons) × (1 - discountPercent/100)`.
 
-Family Feast becomes the *visually correct* choice.
+| Status | Tier | Composition | Discount | Sample @ 2 mains (Margherita) | Sample @ 3 mains |
+|---|---|---|---:|---:|---:|
+| ✅ | Family | X mains + 1 antipasti + 2 drinks | **20%** | PLN 72.64 (save 18.16) | PLN 94.96 (save 23.74) |
+| ✅ | Family Feast (anchor) | X mains + 2 antipasti + 4 drinks + tiramisù | **28%** | PLN 100.66 (save 39.14) | PLN 120.74 (save 46.96) |
+| ✅ | Feast Deluxe (decoy) | X mains + 2 antipasti + 6 drinks + 2 desserts | **24%** | — gated at ≥3 mains — | PLN 150.25 (save 47.45) |
 
-- ✅ Composition resolution per location (`buildBundleCartLines` in `src/lib/bundles.ts`).
-- ✅ Cart subtotal locks to bundle price on tap (`appliedBundleId` in `src/store/cart.ts`).
-- ✅ Checkout sends one Stripe line at the locked price with composition itemized in description.
-- ✅ Admin editor at `/admin/upsell` → "Bundle ladder" — CRUD tiers, slots, prices, default/anchor/decoy flags per location.
+Sample numbers use Kraków à la carte: Margherita 27.90, espresso 8.00 (cheapest drink), bruschetta 19.00 (cheapest antipasti), tiramisù 14.00. Anchor stays anchor: Family Feast carries the highest % savings; Feast Deluxe has the largest absolute savings on bigger carts but a lower %.
+
+Operator margin holds at 45–50% across all three tiers because the discount applies to a basket that's already weighted toward high-GM add-ons (espresso 87%, drinks 80%, dessert 60%). The strikethrough "you'd pay" reflects real à la carte at this location, so the "Save X" badge is always honest.
+
+- ✅ Schema: discriminated union `BundleFixedTier | BundleDynamicTier` in `src/lib/bundles.ts`. Lunch tiers stay fixed (solo eating, no "scale with mains" concept); family tiers ship dynamic by default.
+- ✅ `computeBundlePrice(bundle, cart, menu)` runs identically client-side (cart drawer chip), server-side (`createOrderFromCart`), and at Stripe-session creation. Same inputs → same number → displayed total always matches the charge.
+- ✅ Composition resolution per location (`buildBundleCartLines` in `src/lib/bundles.ts`). Mains preserved as-is from the cart; add-ons resolved cheapest-first so the customer never gets a worse deal than à la carte.
+- ✅ Cart subtotal locks to the computed dynamic price on tap (`appliedBundleId` in `src/store/cart.ts`).
+- ✅ Checkout sends one Stripe line at the computed price with composition itemized in description.
+- ✅ Admin editor at `/admin/upsell` → "Bundle ladder" — Pricing-mode toggle (Fixed / Dynamic) per tier. Dynamic mode exposes Discount %, Min mains, optional Max mains, and a Main categories multi-select. The composition editor filters out main categories so the admin can't double-count.
 - ✅ Admin editor at `/admin/upsell` → "Bundle availability" — lunch start/end hours + family `minMainItems` / `hintWithin`.
+- ✅ Admin validation: dynamic bundles must declare non-empty `mainCategories`, integer `minMains ≥ 1`, optional `maxMains ≥ minMains`, `discountPercent` ∈ [0, 50], and composition slots cannot reference a main category. Fixed bundles must declare `refPriceGrosze ≥ priceGrosze` (no negative savings via typo).
+- ✅ Back-compat: bundles saved before the rewrite lack `pricingMode` and are treated as fixed; they continue to render + charge at their stored price. Operators opt in to dynamic per tier from the admin UI.
+
+#### 3.2.1 Combo Discount Plumbing ✅ shipped
+
+Bundles collapse to one Stripe line, so the discount is implicit in the price. Combos are different — line items keep their per-item prices on the Stripe receipt, and the discount is attached as a one-shot Stripe coupon (`amount_off = comboDiscount`, `currency = pln`, `duration = once`) via `session.discounts`. Without this, line items summed to the pre-discount subtotal and the customer was charged the full amount while `order.totalAmount` showed the discount — a financial-correctness bug fixed in `/api/checkout/route.ts`. `createOrderFromCart` threads `comboDiscount` + `comboName` onto the success result so the Stripe layer can build the coupon with the right name on the customer's receipt.
+
+Three combo behaviours are now correctness-verified end-to-end (`scripts/verify-combo-fix.ts`):
+
+- **Order-independent scoring.** `getActiveComboDeals` scores every combo, prefers fully-complete ones (largest savings, original-index tiebreak), then partials. Fixes the prior short-circuit where a panino+drink cart got "still need pizza+desserts for meal-deal" instead of the 8% lunch-special applied.
+- **Quantity-capped discount.** Savings = `discountPercent` × cheapest unit per matched category (or per required item suffix). 5 pizzas + drink + dessert no longer scales 10% across all 5 pizzas; one combo's worth caps the savings.
+- **Item-locked combos.** New `requiredItems: { suffix; label }[]` on `ComboDeal` gates a combo on specific menu items via `id.endsWith(suffix)` so the same definition matches `krk-pizza-margherita` and `waw-pizza-margherita`. The default ladder now ships with **Italian Classic Deal** as an item-locked example (Margherita + Espresso + Tiramisù, 10%) — a Quattro Formaggi cart routes to a different promo rather than fraudulently completing this one.
+
+Admin manages combos end-to-end at `/admin/crosssell` → Combo deals: toggle, rename, edit discount %, min items, required categories, **and pick specific menu items** via a grouped-by-category dropdown. The PUT `/api/admin/upsell` route validates `combos[].categories` against the `MenuCategory` enum and validates `requiredItems` shape, so a typo can no longer silently disable a deal at checkout.
+
+#### 3.2.2 A/B experimentation, scarcity, weekday gating ✅ shipped
+
+Operators run their own bundle pricing experiments from `/admin/upsell` → **Experiments** tab. `ExperimentEditor` defines a single per-location experiment with weighted variants and per-bundle discount overrides (single percent OR split mains/add-ons). Variant assignment is phone-hashed: client uses Web Crypto SHA-256 (`src/lib/experiments.ts`), server uses Node `createHash("sha256")` (`src/lib/experiments-server.ts`) — same input → same bucket → same variant on both sides → no client/server price drift. Each `BundleEvent` records the variant id; `BundleAnalyticsCard` rolls up avg paid + avg saved + total revenue per variant for direct AOV / contribution-profit comparison.
+
+Every dynamic bundle row also carries:
+- **Limited until** — ISO date input. Past-dated bundles auto-deactivate via `isBundleActiveNow()` so a "this week only" deal can't accidentally leak past its window.
+- **Active days** — weekday chip selector (Mon–Sun). Empty = all week; otherwise the bundle only surfaces on matching local-day. Drives Friday Family Feast pushes / Wednesday Lunch+ defaults from admin alone.
+
+Both validate server-side and round-trip through saves.
+
+#### 3.2.3 Operator telemetry — funnel, cohort, low-margin alert ✅ shipped
+
+`BundleAnalyticsCard` on `/admin/reports` surfaces (Tier-1 KPI dashboard from §3.2 red-team audit):
+- bundle orders + revenue + total savings given
+- anchor conversion % (target ≥ 55%)
+- decoy click-through % (target ≤ 12%)
+- per-bundle effective discount + avg mains
+- A/B variant uplift table
+- conversion funnel: impressions → composer opens → applied → composer abandons (client beacons via `navigator.sendBeacon`, persisted in `bundle-funnel.json`)
+- new-vs-repeat customer cohort split (target ≥ 25% new-customer share among bundle orders proves bundles drive acquisition, not just discount existing demand)
+
+`BundleEvent.marginRatio` is computed at write time from `MenuItem.cost`. When a real bundle order's contribution margin drops below 40%, `addNotification({ type: "bundle_low_margin", ... })` posts an alert into the operator notification inbox with bundle name + exact margin % + order total. Threshold matches the amber/red line on `BundleMarginPreview` so the live admin preview and the production alert always agree.
+
+Slot id is also persisted on every `BundleEvent` so a follow-up dashboard can correlate bundle take rate vs slot capacity stress.
+
+#### 3.2.4 Composer-sheet psychology + repeat-customer one-tap ✅ shipped
+
+Bundle taps no longer auto-apply — they open `BundleComposerSheet` (Domino's "Mix & Match" pattern). Per-unit pickers for every add-on slot; live price + savings update as the customer swaps; confirm or cancel. Pre-fill stack:
+1. Customer's last applied composition for this same bundle (Sprint 8 #8 — Domino's "Same as last time"; pulled via `GET /api/customer/last-bundle?phone&bundleId&locationSlug`)
+2. Items already in the cart (preserves choices)
+3. Cheapest available at this location (fallback)
+
+When prior composition pre-fills, the composer header shows a gold ★ "Same as your last X — confirm or tweak below" so the customer recognises the one-tap path. Drops the perceived friction Domino's reports a ~7% AOV uplift from.
+
+Combo × bundle clarity (§3.2 audit q3): when an active combo (e.g. Italian Classic Deal -10%) is saving the customer some PLN and a bundle ladder qualifies, the bundle CTA shows the **incremental** savings ("+ X more than your current Italian Classic Deal") AND a discrete italic disclaimer ("Replaces the active Italian Classic Deal"). Customer net-better outcome preserved; framing now matches reality so the badge disappearance isn't a surprise.
+
+#### 3.2.5 Scheduled bundles (weekly usual) — Phase 1 ✅ shipped
+
+Customer opts in via a 🗓️ checkbox under the cart pay-bar when a bundle is applied. On checkout success the client fires-and-forgets a POST to `/api/customer/schedule-bundle` with phone + bundle id + current weekday + slot ready-time + cart snapshot; the server captures a `ScheduledBundleIntent` (status `pending`).
+
+Operator manages the queue at `/admin/scheduled-bundles`: filter by status (pending / active / paused / cancelled), sorted by weekday × ready-time so the layout mirrors the day's fulfilment cadence. Per-row actions: **Approve** (pending → active), **Pause** (active → paused), **Resume** (paused → active), **Cancel** (any → cancelled). PATCH `/api/admin/scheduled-bundles/[id]`.
+
+Phase 2 (Stripe Subscription rebill on the chosen weekday) is gated on `STRIPE_SCHEDULE_WEBHOOK_SECRET` and remains a follow-up — see `docs/audits/2026-05-elite-qsr-future-recommendations.md`.
 
 ### 3.3 Free-Delivery Threshold Architecture ✅ shipped
 

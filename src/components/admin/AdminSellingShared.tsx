@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { krakowMenu } from "@/data/menus/krakow";
 import { warszawaMenu } from "@/data/menus/warszawa";
-import { DEFAULT_TIME_WINDOWS } from "@/lib/upsell";
+import { DEFAULT_COMBO_DEALS, DEFAULT_TIME_WINDOWS } from "@/lib/upsell";
 import { DEFAULT_BUNDLES } from "@/lib/bundles";
 import { useToast } from "./v2/ui/Toast";
 import type { MenuItem, MenuCategory } from "@/data/types";
@@ -28,6 +28,11 @@ export interface ComboDealConfig {
   discountPercent: number;
   minItems: number;
   active: boolean;
+  /** Optional item-suffix gating (Italian Classic Deal style). Mirrors
+   *  ComboDeal.requiredItems in @/lib/upsell. The admin UI doesn't expose
+   *  an editor yet, but the type is here so the field round-trips through
+   *  saves rather than being stripped by the spread in updateCombo. */
+  requiredItems?: { suffix: string; label: string }[];
 }
 
 /** Mirrors LocationTimeWindow from src/lib/store.ts. Repeated here as a local
@@ -58,14 +63,63 @@ export interface BundleConfig {
   tier: string;
   name: string;
   description: string;
-  priceGrosze: number;
-  refPriceGrosze: number;
   composition: BundleSlotConfig[];
   mealPeriod: string;
   isAnchor?: boolean;
   isDecoy?: boolean;
   isDefault?: boolean;
   active: boolean;
+  /** "fixed" (default when omitted, lunch tiers) or "dynamic" (family tiers
+   *  where the mains-count scales with the cart). Round-trips through saves
+   *  via the existing spread; missing = "fixed" for back-compat. */
+  pricingMode?: "fixed" | "dynamic";
+  // ---- fixed-mode fields ----
+  priceGrosze?: number;
+  refPriceGrosze?: number;
+  // ---- dynamic-mode fields ----
+  /** Cart categories that scale with the bundle (typically pizza+pasta). */
+  mainCategories?: string[];
+  /** Min cart-mains for this tier to apply. */
+  minMains?: number;
+  /** Optional cap so a 50-pizza cart can't abuse the discount. */
+  maxMains?: number;
+  /** 0–50. Applied to (mains à la carte + cheapest-add-ons subtotal)
+   *  when the split-mode fields are not set. */
+  discountPercent?: number;
+  /** Split-discount mode: separate %s for mains vs add-ons so the
+   *  operator can protect demand-anchor (pizza) margin while still
+   *  giving away the high-GM attachments. */
+  mainsDiscountPercent?: number;
+  addOnsDiscountPercent?: number;
+  /** Optional loyalty gate. */
+  requiredTier?: "gold" | "platinum";
+  /** Scarcity / time-pressure framing — ISO date (YYYY-MM-DD). When
+   *  present and in the future, the chip shows a "limited until <date>"
+   *  badge. Past dates auto-deactivate the bundle. */
+  limitedUntil?: string;
+  /** Per-day-of-week visibility. Lower-case English day names; when
+   *  unset, the bundle is available all week. When set, the bundle is
+   *  only surfaced when the local weekday matches one of these. */
+  activeDays?: string[];
+}
+
+/** Experiment shape (Sprint 6 #1). Mirrors src/lib/experiments.ts at the
+ *  admin layer with loose `string[]` types so JSON round-trips cleanly. */
+export interface ExperimentVariantConfig {
+  id: string;
+  label: string;
+  weight: number;
+  bundleOverrides?: Record<
+    string,
+    | number
+    | { mainsDiscountPercent?: number; addOnsDiscountPercent?: number; discountPercent?: number }
+  >;
+}
+export interface ExperimentConfig {
+  id: string;
+  name: string;
+  active: boolean;
+  variants: ExperimentVariantConfig[];
 }
 
 export interface BundleRulesConfig {
@@ -83,6 +137,10 @@ export interface LocationConfig {
   timeWindows?: TimeWindowConfig[];
   bundleRules?: BundleRulesConfig;
   bundles?: BundleConfig[];
+  /** Single active per-location A/B experiment (Sprint 6 #1). Resolver
+   *  in src/lib/experiments.ts phone-hashes assignment so client and
+   *  server agree on the same variant for the same customer. */
+  experiment?: ExperimentConfig | null;
 }
 
 export type AllSettings = Record<string, LocationConfig>;
@@ -104,11 +162,19 @@ export const LOCATIONS = [
 
 export const CATEGORIES: MenuCategory[] = ["pizza", "pasta", "antipasti", "panini", "drinks", "desserts"];
 
-export const DEFAULT_COMBOS: ComboDealConfig[] = [
-  { id: "meal-deal", name: "Meal Deal", description: "Any main + drink + dessert", categories: ["pizza", "drinks", "desserts"], discountPercent: 10, minItems: 3, active: true },
-  { id: "pasta-combo", name: "Pasta Combo", description: "Any pasta + drink + dessert", categories: ["pasta", "drinks", "desserts"], discountPercent: 10, minItems: 3, active: true },
-  { id: "lunch-special", name: "Lunch Special", description: "Any panino + drink", categories: ["panini", "drinks"], discountPercent: 8, minItems: 2, active: true },
-];
+// Derive from the server-side DEFAULT_COMBO_DEALS so the admin "no config
+// yet" seed never drifts from the runtime fallback. The active flag isn't
+// on ComboDeal (runtime treats absence as live), so we layer it on here.
+export const DEFAULT_COMBOS: ComboDealConfig[] = DEFAULT_COMBO_DEALS.map((c) => ({
+  id: c.id,
+  name: c.name,
+  description: c.description,
+  categories: [...c.categories],
+  discountPercent: c.discountPercent,
+  minItems: c.minItems,
+  active: true,
+  ...(c.requiredItems ? { requiredItems: c.requiredItems.map((r) => ({ ...r })) } : {}),
+}));
 
 export const DEFAULT_BUNDLE_RULES: BundleRulesConfig = {
   lunch: { startHour: 11, endHour: 14 },
@@ -385,9 +451,13 @@ export function ItemSingleSelect({
 
 export function ComboEditor({
   combos,
+  menu,
   onChange,
 }: {
   combos: ComboDealConfig[];
+  /** Active-location menu used to populate the "specific items required"
+   *  picker. Empty array hides the picker rows but keeps the type stable. */
+  menu: MenuItem[];
   onChange: (combos: ComboDealConfig[]) => void;
 }) {
   const addCombo = () => {
@@ -512,12 +582,142 @@ export function ComboEditor({
                 })}
               </div>
             </div>
+
+            <RequiredItemsEditor
+              menu={menu}
+              items={combo.requiredItems}
+              onChange={(next) => updateCombo(i, { requiredItems: next })}
+            />
           </div>
         ))}
         {combos.length === 0 && (
           <p className="text-sm text-slate-500 text-center py-4">No combo deals configured for this location.</p>
         )}
       </div>
+    </div>
+  );
+}
+
+/** Editor for ComboDealConfig.requiredItems — the item-suffix gating that
+ *  drives the Italian Classic Deal pattern (Margherita + Espresso + Tiramisù).
+ *  Stripping everything up to the first '-' yields a suffix that matches the
+ *  same item across all locations (krk- and waw- prefixes both resolve via
+ *  endsWith). Passing undefined when the list empties out keeps the admin
+ *  route's "non-empty array when set" validation happy and reverts the combo
+ *  to category-only mode. */
+function RequiredItemsEditor({
+  menu,
+  items,
+  onChange,
+}: {
+  menu: MenuItem[];
+  items: { suffix: string; label: string }[] | undefined;
+  onChange: (next: { suffix: string; label: string }[] | undefined) => void;
+}) {
+  const list = items ?? [];
+
+  const deriveSuffix = (id: string) => id.replace(/^[^-]+-/, "");
+
+  const update = (i: number, patch: Partial<{ suffix: string; label: string }>) => {
+    onChange(list.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+  };
+
+  const remove = (i: number) => {
+    const next = list.filter((_, idx) => idx !== i);
+    onChange(next.length === 0 ? undefined : next);
+  };
+
+  const add = () => {
+    const first = menu[0];
+    if (!first) return;
+    onChange([
+      ...list,
+      { suffix: deriveSuffix(first.id), label: first.name },
+    ]);
+  };
+
+  // Group menu items by category for the dropdown. Items the admin already
+  // picked still appear in the dropdown so they can change rows independently.
+  const byCategory = new Map<string, MenuItem[]>();
+  for (const m of menu) {
+    const arr = byCategory.get(m.category) ?? [];
+    arr.push(m);
+    byCategory.set(m.category, arr);
+  }
+  const categoryOrder = CATEGORIES.filter((c) => byCategory.has(c));
+
+  return (
+    <div>
+      <label className="text-[10px] text-slate-400 block mb-1.5">
+        Specific items required (optional — overrides &ldquo;any of category&rdquo;)
+      </label>
+      {list.length === 0 ? (
+        <p className="text-[11px] text-slate-500 mb-2">
+          Generic combo: any item in the selected categories qualifies. Add a specific item below to lock the deal
+          to particular menu items (e.g. Italian Classic = Margherita + Espresso + Tiramisù).
+        </p>
+      ) : (
+        <div className="space-y-1.5 mb-2">
+          {list.map((row, i) => {
+            // Find the cart item whose derived suffix matches this row, so
+            // the dropdown reflects what the admin picked previously.
+            const matched = menu.find((m) => deriveSuffix(m.id) === row.suffix);
+            return (
+              <div
+                key={i}
+                className="grid gap-1.5 grid-cols-[1fr_1fr_auto] items-center text-xs"
+              >
+                <select
+                  className="glass-input"
+                  value={matched?.id ?? ""}
+                  onChange={(e) => {
+                    const picked = menu.find((m) => m.id === e.target.value);
+                    if (!picked) return;
+                    update(i, { suffix: deriveSuffix(picked.id), label: picked.name });
+                  }}
+                >
+                  {!matched && (
+                    <option value="">
+                      ⚠ Unknown ({row.suffix})
+                    </option>
+                  )}
+                  {categoryOrder.map((cat) => (
+                    <optgroup key={cat} label={cat}>
+                      {byCategory.get(cat)!.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+                <input
+                  className="glass-input"
+                  value={row.label}
+                  placeholder="Display label"
+                  onChange={(e) => update(i, { label: e.target.value })}
+                />
+                <button
+                  type="button"
+                  onClick={() => remove(i)}
+                  className="text-red-400 hover:text-red-300 p-1"
+                  aria-label="Remove required item"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={add}
+        disabled={menu.length === 0}
+        className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-dashed border-white/20 text-[11px] admin-text-secondary hover:bg-white/5 w-fit disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <Plus className="h-3 w-3" /> Add specific item
+      </button>
     </div>
   );
 }
@@ -767,247 +967,41 @@ export function TimeWindowsEditor({
   );
 }
 
-export function BundlesEditor({
-  bundles,
-  onChange,
-}: {
-  bundles: BundleConfig[];
-  onChange: (next: BundleConfig[]) => void;
-}) {
-  const lunchBundles = bundles.filter((b) => b.mealPeriod === "lunch");
-  const familyBundles = bundles.filter((b) => b.mealPeriod === "family");
+export const WEEKDAYS = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+] as const;
 
-  const update = (id: string, patch: Partial<BundleConfig>) => {
-    onChange(bundles.map((b) => (b.id === id ? { ...b, ...patch } : b)));
-  };
-  const remove = (id: string) => onChange(bundles.filter((b) => b.id !== id));
-  const addBundle = (mealPeriod: "lunch" | "family") => {
-    const fresh: BundleConfig = {
-      id: `${mealPeriod}-${Math.random().toString(36).slice(2, 8)}`,
-      tier: mealPeriod === "lunch" ? "New Lunch tier" : "New Family tier",
-      name: "Bundle name",
-      description: "What's in it",
-      priceGrosze: mealPeriod === "lunch" ? 3500 : 9900,
-      refPriceGrosze: mealPeriod === "lunch" ? 4000 : 11000,
-      composition: [{ kind: "category", category: mealPeriod === "lunch" ? "pasta" : "pizza", quantity: 1 }],
-      mealPeriod,
-      active: true,
-    };
-    onChange([...bundles, fresh]);
-  };
-
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-3">
-        <div>
-          <label className="text-xs font-semibold admin-text uppercase tracking-wide">
-            Bundle ladder
-          </label>
-          <p className="text-xs admin-text-secondary mt-0.5">
-            Decoy + anchor + default-pushed combos surfaced in the cart drawer.
-            Mark one Lunch tier as <em>default</em> (red &ldquo;Most picked&rdquo;) and one
-            Lunch + one Family tier as <em>anchor</em> (gold &ldquo;Best value&rdquo;).
-          </p>
-        </div>
-      </div>
-
-      <div className="grid gap-4">
-        <BundleLadderSection
-          title="Lunch ladder"
-          bundles={lunchBundles}
-          onUpdate={update}
-          onRemove={remove}
-          onAdd={() => addBundle("lunch")}
-        />
-        <BundleLadderSection
-          title="Family Feast ladder"
-          bundles={familyBundles}
-          onUpdate={update}
-          onRemove={remove}
-          onAdd={() => addBundle("family")}
-        />
-      </div>
-    </div>
-  );
-}
-
-function BundleLadderSection({
-  title,
-  bundles,
-  onUpdate,
-  onRemove,
-  onAdd,
-}: {
-  title: string;
-  bundles: BundleConfig[];
-  onUpdate: (id: string, patch: Partial<BundleConfig>) => void;
-  onRemove: (id: string) => void;
-  onAdd: () => void;
-}) {
-  return (
-    <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-      <div className="flex items-center justify-between mb-3">
-        <p className="admin-text font-semibold text-sm">{title}</p>
-        <button
-          type="button"
-          onClick={onAdd}
-          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-white/20 text-xs admin-text hover:bg-white/10"
-        >
-          <Plus className="h-3 w-3" /> Add tier
-        </button>
-      </div>
-      {bundles.length === 0 ? (
-        <p className="admin-text-secondary text-xs">No tiers yet — add one above.</p>
-      ) : (
-        <div className="grid gap-2">
-          {bundles.map((b) => (
-            <BundleTierRow
-              key={b.id}
-              bundle={b}
-              onChange={(patch) => onUpdate(b.id, patch)}
-              onRemove={() => onRemove(b.id)}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function BundleTierRow({
-  bundle,
-  onChange,
-  onRemove,
-}: {
-  bundle: BundleConfig;
-  onChange: (patch: Partial<BundleConfig>) => void;
-  onRemove: () => void;
-}) {
-  const savings = Math.max(0, bundle.refPriceGrosze - bundle.priceGrosze);
-  return (
-    <div className="rounded-md border border-white/10 bg-black/20 p-3">
-      <div className="grid gap-2 md:grid-cols-[1fr_1fr_140px_140px_auto] items-center">
-        <input
-          className="glass-input"
-          value={bundle.tier}
-          placeholder="Tier label"
-          onChange={(e) => onChange({ tier: e.target.value })}
-        />
-        <input
-          className="glass-input"
-          value={bundle.name}
-          placeholder="Bundle name"
-          onChange={(e) => onChange({ name: e.target.value })}
-        />
-        <label className="flex items-center gap-1 text-xs admin-text-secondary">
-          Price (zł)
-          <input
-            className="glass-input w-20 text-right"
-            type="number"
-            min={0}
-            value={(bundle.priceGrosze / 100).toFixed(2)}
-            onChange={(e) =>
-              onChange({ priceGrosze: Math.round(parseFloat(e.target.value || "0") * 100) })
-            }
-          />
-        </label>
-        <label className="flex items-center gap-1 text-xs admin-text-secondary">
-          You&rsquo;d pay
-          <input
-            className="glass-input w-20 text-right"
-            type="number"
-            min={0}
-            value={(bundle.refPriceGrosze / 100).toFixed(2)}
-            onChange={(e) =>
-              onChange({
-                refPriceGrosze: Math.round(parseFloat(e.target.value || "0") * 100),
-              })
-            }
-          />
-        </label>
-        <button
-          type="button"
-          onClick={onRemove}
-          className="text-red-400 hover:text-red-300"
-          aria-label="Remove tier"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
-      </div>
-      <input
-        className="glass-input mt-2 w-full"
-        value={bundle.description}
-        placeholder="Short description rendered under the bundle name"
-        onChange={(e) => onChange({ description: e.target.value })}
-      />
-      <div className="flex flex-wrap gap-3 items-center mt-2 text-xs admin-text-secondary">
-        <label className="inline-flex items-center gap-1">
-          <input
-            type="checkbox"
-            checked={!!bundle.isDefault}
-            onChange={(e) =>
-              onChange({ isDefault: e.target.checked, isAnchor: e.target.checked ? false : bundle.isAnchor, isDecoy: e.target.checked ? false : bundle.isDecoy })
-            }
-          />
-          <span>Default-pushed (red)</span>
-        </label>
-        <label className="inline-flex items-center gap-1">
-          <input
-            type="checkbox"
-            checked={!!bundle.isAnchor}
-            onChange={(e) =>
-              onChange({ isAnchor: e.target.checked, isDefault: e.target.checked ? false : bundle.isDefault, isDecoy: e.target.checked ? false : bundle.isDecoy })
-            }
-          />
-          <span>Anchor (gold)</span>
-        </label>
-        <label className="inline-flex items-center gap-1">
-          <input
-            type="checkbox"
-            checked={!!bundle.isDecoy}
-            onChange={(e) =>
-              onChange({ isDecoy: e.target.checked, isDefault: e.target.checked ? false : bundle.isDefault, isAnchor: e.target.checked ? false : bundle.isAnchor })
-            }
-          />
-          <span>Decoy</span>
-        </label>
-        <label className="inline-flex items-center gap-1">
-          <input
-            type="checkbox"
-            checked={bundle.active}
-            onChange={(e) => onChange({ active: e.target.checked })}
-          />
-          <span>Active</span>
-        </label>
-        {savings > 0 && (
-          <span className="text-italia-gold">Save zł {(savings / 100).toFixed(2)}</span>
-        )}
-      </div>
-      <CompositionEditor
-        composition={bundle.composition}
-        onChange={(composition) => onChange({ composition })}
-      />
-    </div>
-  );
-}
-
-function CompositionEditor({
+export function CompositionEditor({
   composition,
+  excludeCategories = [],
   onChange,
 }: {
   composition: BundleSlotConfig[];
+  /** Categories to hide from the "Any of" dropdown — used in dynamic mode
+   *  so the admin can't pick pizza/pasta in the static composition (the
+   *  bundle's main categories scale via the cart, not the slot). */
+  excludeCategories?: string[];
   onChange: (next: BundleSlotConfig[]) => void;
 }) {
+  const allowedCategories = CATEGORIES.filter((c) => !excludeCategories.includes(c));
   const update = (i: number, patch: Partial<BundleSlotConfig>) => {
     onChange(composition.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
   };
   const remove = (i: number) => onChange(composition.filter((_, idx) => idx !== i));
-  const add = () =>
-    onChange([...composition, { kind: "category", category: "drinks", quantity: 1 }]);
+  const add = () => {
+    const defaultCat = allowedCategories.includes("drinks") ? "drinks" : (allowedCategories[0] ?? "drinks");
+    onChange([...composition, { kind: "category", category: defaultCat, quantity: 1 }]);
+  };
   return (
     <div className="mt-3">
       <p className="text-[11px] uppercase tracking-wide admin-text-secondary font-semibold mb-1">
-        Composition
+        {excludeCategories.length > 0 ? "Static add-ons (mains scale via cart)" : "Composition"}
       </p>
       <div className="grid gap-1.5">
         {composition.map((slot, i) => (
@@ -1036,7 +1030,7 @@ function CompositionEditor({
                 value={slot.category ?? "drinks"}
                 onChange={(e) => update(i, { category: e.target.value })}
               >
-                {CATEGORIES.map((c) => (
+                {allowedCategories.map((c) => (
                   <option key={c} value={c}>
                     {c}
                   </option>
@@ -1077,6 +1071,305 @@ function CompositionEditor({
         >
           <Plus className="h-3 w-3" /> Add slot
         </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * A/B experiment editor (Sprint 6 #1). Single active experiment per
+ * location with weighted variants and per-bundle discount overrides.
+ * Runtime assignment is phone-hashed in src/lib/experiments.ts so the
+ * same customer always sees the same variant across visits + the
+ * server reproduces it at checkout. Variant ids land in the bundle
+ * audit log so BundleAnalyticsCard can show AOV / contribution uplift
+ * per variant.
+ */
+export function ExperimentEditor({
+  experiment,
+  bundles,
+  onChange,
+}: {
+  experiment: ExperimentConfig | null | undefined;
+  bundles: BundleConfig[];
+  onChange: (next: ExperimentConfig | null) => void;
+}) {
+  // Empty-state nudge: ship a starter experiment that the operator can
+  // tune. Avoids requiring JSON literacy to set up the first A/B.
+  if (!experiment) {
+    return (
+      <div className="rounded-lg border border-white/10 bg-white/5 p-4 space-y-3">
+        <div>
+          <p className="admin-text font-semibold text-sm">No experiment running</p>
+          <p className="text-xs admin-text-secondary mt-1">
+            A/B-test discount %s on any dynamic bundle. Variant assignment is phone-hashed so
+            customers always see the same variant; the audit log records which one bought what,
+            so BundleAnalyticsCard can show AOV uplift per variant.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() =>
+            onChange({
+              id: `exp_${Math.random().toString(36).slice(2, 8)}`,
+              name: "Family Feast discount A/B",
+              active: false,
+              variants: [
+                { id: "control", label: "Control · 28% blend", weight: 50, bundleOverrides: {} },
+                {
+                  id: "variant_a",
+                  label: "Variant A · 22% blend",
+                  weight: 50,
+                  bundleOverrides: {
+                    "family-feast": { mainsDiscountPercent: 12, addOnsDiscountPercent: 32 },
+                  },
+                },
+              ],
+            })
+          }
+          className="v2-btn v2-btn-primary v2-btn-sm w-fit"
+        >
+          <Plus className="h-3 w-3" /> Start an experiment
+        </button>
+      </div>
+    );
+  }
+
+  const totalWeight = experiment.variants.reduce(
+    (s, v) => s + Math.max(0, v.weight),
+    0,
+  );
+  const weightBalanced = totalWeight === 100;
+
+  const update = (patch: Partial<ExperimentConfig>) => {
+    onChange({ ...experiment, ...patch });
+  };
+  const updateVariant = (idx: number, patch: Partial<ExperimentVariantConfig>) => {
+    const variants = experiment.variants.map((v, i) => (i === idx ? { ...v, ...patch } : v));
+    update({ variants });
+  };
+  const removeVariant = (idx: number) => {
+    update({ variants: experiment.variants.filter((_, i) => i !== idx) });
+  };
+  const addVariant = () => {
+    update({
+      variants: [
+        ...experiment.variants,
+        {
+          id: `variant_${experiment.variants.length}`,
+          label: `Variant ${String.fromCharCode(65 + experiment.variants.length)}`,
+          weight: 0,
+          bundleOverrides: {},
+        },
+      ],
+    });
+  };
+
+  return (
+    <div className="rounded-lg border border-white/10 bg-white/5 p-4 space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <input
+            className="glass-input w-full font-semibold"
+            value={experiment.name}
+            onChange={(e) => update({ name: e.target.value })}
+            placeholder="Experiment name"
+          />
+          <p className="text-[10px] admin-text-secondary mt-1">id: {experiment.id}</p>
+        </div>
+        <label className="flex items-center gap-1 text-xs admin-text-secondary">
+          <input
+            type="checkbox"
+            checked={experiment.active}
+            onChange={(e) => update({ active: e.target.checked })}
+          />
+          Active
+        </label>
+        <button
+          type="button"
+          onClick={() => onChange(null)}
+          className="text-red-400 hover:text-red-300"
+          title="Delete experiment"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
+
+      {!weightBalanced && (
+        <p className="text-[11px] text-amber-300">
+          Variant weights sum to {totalWeight}, not 100. Customers are still bucketed via
+          normalized weight, but balance them at 100 for clarity.
+        </p>
+      )}
+
+      <div className="space-y-3">
+        {experiment.variants.map((variant, idx) => (
+          <ExperimentVariantRow
+            key={variant.id}
+            variant={variant}
+            bundles={bundles}
+            onChange={(patch) => updateVariant(idx, patch)}
+            onRemove={() => removeVariant(idx)}
+          />
+        ))}
+      </div>
+
+      <button
+        type="button"
+        onClick={addVariant}
+        className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-dashed border-white/20 text-[11px] admin-text-secondary hover:bg-white/5"
+      >
+        <Plus className="h-3 w-3" /> Add variant
+      </button>
+    </div>
+  );
+}
+
+function ExperimentVariantRow({
+  variant,
+  bundles,
+  onChange,
+  onRemove,
+}: {
+  variant: ExperimentVariantConfig;
+  bundles: BundleConfig[];
+  onChange: (patch: Partial<ExperimentVariantConfig>) => void;
+  onRemove: () => void;
+}) {
+  // Available bundles to override = dynamic bundles. Fixed bundles
+  // ignore discount overrides at runtime so the UI hides them.
+  const overridableBundles = bundles.filter((b) => (b.pricingMode ?? "fixed") === "dynamic");
+  const overrides = variant.bundleOverrides ?? {};
+
+  const setOverride = (bundleId: string, value: ExperimentVariantConfig["bundleOverrides"] extends Record<string, infer V> | undefined ? V : never) => {
+    const next = { ...overrides, [bundleId]: value };
+    onChange({ bundleOverrides: next });
+  };
+  const removeOverride = (bundleId: string) => {
+    const { [bundleId]: _, ...rest } = overrides;
+    onChange({ bundleOverrides: rest });
+  };
+
+  return (
+    <div className="rounded-md border border-white/10 bg-black/20 p-3 space-y-2">
+      <div className="grid gap-2 md:grid-cols-[1fr_1fr_100px_auto] items-center">
+        <input
+          className="glass-input"
+          value={variant.id}
+          onChange={(e) => onChange({ id: e.target.value.replace(/[^a-z0-9_]/g, "").slice(0, 32) })}
+          placeholder="variant_id"
+        />
+        <input
+          className="glass-input"
+          value={variant.label}
+          onChange={(e) => onChange({ label: e.target.value })}
+          placeholder="Display label"
+        />
+        <label className="flex items-center gap-1 text-xs admin-text-secondary">
+          Weight
+          <input
+            className="glass-input w-16 text-right"
+            type="number"
+            min={0}
+            max={100}
+            value={variant.weight}
+            onChange={(e) => onChange({ weight: clampHour(Number(e.target.value) || 0, 100) })}
+          />
+        </label>
+        <button
+          type="button"
+          onClick={onRemove}
+          className="text-red-400 hover:text-red-300"
+          aria-label="Remove variant"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      <div>
+        <p className="text-[10px] uppercase tracking-wide admin-text-secondary mb-1">
+          Per-bundle overrides
+        </p>
+        <div className="space-y-1.5">
+          {overridableBundles.length === 0 && (
+            <p className="text-[11px] text-slate-500">
+              No dynamic bundles in this location to override. Configure dynamic-mode bundles first.
+            </p>
+          )}
+          {overridableBundles.map((b) => {
+            const o = overrides[b.id];
+            const hasOverride = o !== undefined;
+            const oObj = typeof o === "object" ? o : undefined;
+            const oNumber = typeof o === "number" ? o : undefined;
+            return (
+              <div key={b.id} className="grid gap-1.5 grid-cols-[1fr_80px_80px_80px_auto] items-center text-xs">
+                <span className="admin-text">{b.tier}</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={50}
+                  placeholder="disc %"
+                  value={oNumber ?? oObj?.discountPercent ?? ""}
+                  onChange={(e) => {
+                    const v = e.target.value.trim();
+                    if (v === "") {
+                      removeOverride(b.id);
+                    } else {
+                      setOverride(b.id, Math.max(0, Math.min(50, Number(v) || 0)));
+                    }
+                  }}
+                  className="glass-input text-right"
+                />
+                <input
+                  type="number"
+                  min={0}
+                  max={50}
+                  placeholder="mains %"
+                  value={oObj?.mainsDiscountPercent ?? ""}
+                  onChange={(e) => {
+                    const v = e.target.value.trim();
+                    const base = typeof o === "object" ? o : {};
+                    if (v === "" && (base.addOnsDiscountPercent === undefined)) {
+                      removeOverride(b.id);
+                    } else {
+                      setOverride(b.id, {
+                        ...base,
+                        mainsDiscountPercent: v === "" ? undefined : Math.max(0, Math.min(50, Number(v) || 0)),
+                      });
+                    }
+                  }}
+                  className="glass-input text-right"
+                />
+                <input
+                  type="number"
+                  min={0}
+                  max={50}
+                  placeholder="addons %"
+                  value={oObj?.addOnsDiscountPercent ?? ""}
+                  onChange={(e) => {
+                    const v = e.target.value.trim();
+                    const base = typeof o === "object" ? o : {};
+                    if (v === "" && (base.mainsDiscountPercent === undefined)) {
+                      removeOverride(b.id);
+                    } else {
+                      setOverride(b.id, {
+                        ...base,
+                        addOnsDiscountPercent: v === "" ? undefined : Math.max(0, Math.min(50, Number(v) || 0)),
+                      });
+                    }
+                  }}
+                  className="glass-input text-right"
+                />
+                <span className={`text-[10px] ${hasOverride ? "text-italia-gold-dark" : "text-slate-600"}`}>
+                  {hasOverride ? "override" : "default"}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+        <p className="text-[10px] text-slate-500 mt-1">
+          Single &ldquo;disc %&rdquo; replaces the blended discount; split mains/add-ons overrides take precedence.
+        </p>
       </div>
     </div>
   );

@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Bundle ladders — Card grid (sketch 01)</title>
+<style>
+  :root {
+    --bg: #0a0d14;
+    --surface-1: #11151f;
+    --surface-2: #161b27;
+    --surface-3: #1d2330;
+    --surface-hover: #20283a;
+    --border: rgba(255,255,255,0.08);
+    --border-strong: rgba(255,255,255,0.16);
+    --fg: #f5f7fa;
+    --fg-muted: #b6bfcd;
+    --fg-subtle: #7d8696;
+    --brand: #c8102e;
+    --gold: #c8a02e;
+    --green: #10b981;
+    --amber: #f59e0b;
+    --red: #ef4444;
+    font-family: -apple-system, "SF Pro Text", "Inter", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px; background: var(--bg); color: var(--fg); }
+  .page-h { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 4px; }
+  h1 { font-size: 22px; margin: 0 0 2px; font-weight: 700; }
+  .sub { color: var(--fg-muted); font-size: 13px; margin: 0 0 20px; }
+  .filter-row { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .pill { background: var(--surface-2); border: 1px solid var(--border); color: var(--fg-muted); padding: 6px 12px; border-radius: 999px; font-size: 12px; cursor: pointer; }
+  .pill.active { background: var(--surface-3); color: var(--fg); border-color: var(--border-strong); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px; padding: 16px; position: relative; cursor: pointer; transition: transform .15s, border-color .15s; }
+  .card:hover { transform: translateY(-2px); border-color: var(--border-strong); }
+  .card.is-default::before { content: "MOST PICKED"; position: absolute; top: -8px; left: 14px; background: var(--brand); color: white; font-size: 9px; font-weight: 800; padding: 2px 8px; border-radius: 999px; letter-spacing: .08em; }
+  .card.is-anchor::before { content: "BEST VALUE"; position: absolute; top: -8px; left: 14px; background: var(--gold); color: #1a1a1a; font-size: 9px; font-weight: 800; padding: 2px 8px; border-radius: 999px; letter-spacing: .08em; }
+  .card.is-decoy { opacity: .82; }
+  .card.is-inactive { opacity: .55; }
+  .card-h { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  .tier { font-size: 11px; color: var(--fg-subtle); text-transform: uppercase; letter-spacing: .08em; font-weight: 700; }
+  .name { font-size: 15px; font-weight: 700; margin: 2px 0 6px; }
+  .desc { font-size: 12px; color: var(--fg-muted); line-height: 1.4; min-height: 32px; }
+  .mode-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+  .mode-fixed { background: rgba(99,102,241,0.15); color: #a5b4fc; }
+  .mode-dynamic { background: rgba(16,185,129,0.15); color: #6ee7b7; }
+  .price-row { display: flex; align-items: baseline; gap: 8px; margin-top: 12px; }
+  .price-big { font-size: 22px; font-weight: 700; color: var(--brand); }
+  .price-ref { font-size: 11px; color: var(--fg-subtle); text-decoration: line-through; }
+  .price-disc { background: rgba(16,185,129,0.15); color: #6ee7b7; font-size: 11px; padding: 2px 7px; border-radius: 6px; font-weight: 700; }
+  .meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .chip { font-size: 10px; color: var(--fg-subtle); background: var(--surface-2); padding: 3px 8px; border-radius: 6px; }
+  .chip strong { color: var(--fg-muted); font-weight: 600; }
+  .margin { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; }
+  .margin.good { color: var(--green); }
+  .margin.warn { color: var(--amber); }
+  .add-card { display: flex; align-items: center; justify-content: center; min-height: 200px; background: transparent; border: 2px dashed var(--border); cursor: pointer; color: var(--fg-subtle); font-size: 13px; border-radius: 14px; }
+  .add-card:hover { border-color: var(--border-strong); color: var(--fg-muted); background: var(--surface-1); }
+  .section-h { margin: 24px 0 8px; font-size: 11px; color: var(--fg-subtle); text-transform: uppercase; letter-spacing: .12em; font-weight: 700; }
+  .help { margin-top: 24px; padding: 14px 16px; background: var(--surface-2); border-radius: 10px; font-size: 12px; color: var(--fg-muted); }
+</style>
+</head>
+<body>
+  <div class="page-h">
+    <div>
+      <h1>Bundle ladders <span style="font-size:11px;color:var(--fg-subtle);font-weight:500;letter-spacing:.06em;text-transform:uppercase;background:var(--surface-2);padding:2px 8px;border-radius:6px;margin-left:6px;">SKETCH 01 · CARD GRID</span></h1>
+      <p class="sub">Click a card to expand into the full editor. Compact summary at rest — full power when you need it.</p>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="pill">Save changes</button>
+      <button class="pill active">+ Add tier</button>
+    </div>
+  </div>
+
+  <div class="filter-row">
+    <button class="pill active">All (5)</button>
+    <button class="pill">Family (3)</button>
+    <button class="pill">Lunch (1)</button>
+    <button class="pill">Late-night (1)</button>
+    <button class="pill">Inactive (0)</button>
+  </div>
+
+  <p class="section-h">Family ladder</p>
+  <div class="grid">
+    <div class="card">
+      <div class="card-h">
+        <div>
+          <div class="tier">Family · entry</div>
+          <div class="name">Your pizzas + sides</div>
+        </div>
+        <span class="mode-badge mode-dynamic">DYNAMIC</span>
+      </div>
+      <p class="desc">Your mains + bruschetta + 2 drinks. Min 2 / max 6 mains.</p>
+      <div class="price-row">
+        <span class="price-big">~88 zł</span>
+        <span class="price-ref">119 zł</span>
+        <span class="price-disc">−20%</span>
+      </div>
+      <div class="meta">
+        <span class="chip"><strong>10/30</strong> split</span>
+        <span class="chip"><strong>min 2</strong> mains</span>
+        <span class="margin good">● 56% margin</span>
+      </div>
+    </div>
+
+    <div class="card is-default is-anchor">
+      <div class="card-h">
+        <div>
+          <div class="tier">Family Feast · anchor</div>
+          <div class="name">Whole-table dinner</div>
+        </div>
+        <span class="mode-badge mode-dynamic">DYNAMIC</span>
+      </div>
+      <p class="desc">Your mains + 2 antipasti + 4 drinks + tiramisù.</p>
+      <div class="price-row">
+        <span class="price-big">~135 zł</span>
+        <span class="price-ref">187 zł</span>
+        <span class="price-disc">−28%</span>
+      </div>
+      <div class="meta">
+        <span class="chip"><strong>15/40</strong> split</span>
+        <span class="chip"><strong>min 2 / max 8</strong></span>
+        <span class="margin good">● 49% margin</span>
+      </div>
+    </div>
+
+    <div class="card is-decoy">
+      <div class="card-h">
+        <div>
+          <div class="tier">Feast Deluxe · decoy</div>
+          <div class="name">Big group, no leftovers</div>
+        </div>
+        <span class="mode-badge mode-dynamic">DYNAMIC</span>
+      </div>
+      <p class="desc">Your mains + 2 antipasti + 6 drinks + 2 desserts.</p>
+      <div class="price-row">
+        <span class="price-big">~172 zł</span>
+        <span class="price-ref">227 zł</span>
+        <span class="price-disc">−20%</span>
+      </div>
+      <div class="meta">
+        <span class="chip"><strong>12/32</strong> split</span>
+        <span class="chip"><strong>min 3 / max 12</strong></span>
+        <span class="margin good">● 51% margin</span>
+      </div>
+    </div>
+  </div>
+
+  <p class="section-h">Lunch ladder</p>
+  <div class="grid">
+    <div class="card is-anchor">
+      <div class="card-h">
+        <div>
+          <div class="tier">Lunch+ · anchor</div>
+          <div class="name">Pasta + drink + tiramisù</div>
+        </div>
+        <span class="mode-badge mode-fixed">FIXED</span>
+      </div>
+      <p class="desc">A meal you'll remember. Hour-gated 11:00–14:00.</p>
+      <div class="price-row">
+        <span class="price-big">46 zł</span>
+        <span class="price-ref">56 zł</span>
+        <span class="price-disc">−18%</span>
+      </div>
+      <div class="meta">
+        <span class="chip">3 slots</span>
+        <span class="margin good">● 61% margin</span>
+      </div>
+    </div>
+  </div>
+
+  <p class="section-h">Late-night ladder</p>
+  <div class="grid">
+    <div class="card is-default">
+      <div class="card-h">
+        <div>
+          <div class="tier">Late dinner</div>
+          <div class="name">Pizza + drink + dessert</div>
+        </div>
+        <span class="mode-badge mode-dynamic">DYNAMIC</span>
+      </div>
+      <p class="desc">Your pizza + 1 drink + tiramisù. Hour-gated 21:00–24:00.</p>
+      <div class="price-row">
+        <span class="price-big">~38 zł</span>
+        <span class="price-ref">48 zł</span>
+        <span class="price-disc">−22%</span>
+      </div>
+      <div class="meta">
+        <span class="chip"><strong>12/35</strong> split</span>
+        <span class="chip"><strong>min 1 / max 3</strong></span>
+        <span class="margin good">● 58% margin</span>
+      </div>
+    </div>
+    <div class="add-card">+ Add a tier</div>
+  </div>
+
+  <div class="help">
+    <strong>Why card grid:</strong> 80% of operator visits are "scan + don't change". Compact card view shows
+    everything that matters at rest — name, mode, price, discount, margin, scheduling — and only opens the
+    full editor when you tap. The "Most picked" / "Best value" badges + decoy fade are visible at a glance so
+    you can see the ladder shape immediately.
+  </div>
+</body>
+</html>

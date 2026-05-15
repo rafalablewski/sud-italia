@@ -391,10 +391,59 @@ export default async function CapabilitiesPage() {
           summary: "Cart upsell chips re-rank by composite score combining margin × attach, hour-of-day bias (espresso 0.82 at 11:00, 0.31 at 19:00), per-customer attach history (`you added it 3 of last 4 visits`), and a small novelty decay so chips rotate. Pure scorePairing() in upsell.ts; cart drawer feeds context via /api/customer/attach-history. Audit §3.1.",
         },
         {
-          name: "Bundle architecture (Lunch / Family Feast)",
+          name: "Bundle architecture (Lunch / Family / Late-night)",
           status: "live",
           href: "/admin/upsell",
-          summary: "Decoy + anchor + default-pushed combos surfaced in the cart drawer above the per-item chips. Lunch ladder is hour-gated (default 11:00–14:00); Family Feast ladder is quantity-gated (default ≥5 pizza+pasta items, with a one-line nudge when within 2 of the threshold). Tapping a tier locks the cart subtotal to the bundle's priceGrosze; checkout sends one Stripe line at the bundle price with the composition itemized in the description. Both the bundle ladder (tiers, prices, slot composition, default/anchor/decoy flags) and the availability rules are fully CRUD-editable in /admin/upsell → Bundle ladders / Bundle rules. DEFAULT_BUNDLES + DEFAULT_BUNDLE_RULES in src/lib/bundles.ts fall back when no admin override is saved. Audit §3.2.",
+          summary: "Three ladders with two pricing modes. **Fixed** (lunch tiers, solo eating) locks composition + price. **Dynamic** (family + late-night tiers) scales mains with cart, keeps add-ons static, prices live as (mains-à-la-carte × mainsPct + cheapest-add-ons × addOnsPct). The `selectSlotItems` helper now drives both `computeBundlePrice` and `buildBundleCartLines` so chip price + final cart line-up reflect the *same* items — closes the limonata margin leak where the chip priced espresso but the cart shipped premium drinks. Defaults: Family 20% blend (10/30 split), Family Feast 28% blend (15/40, default-pushed AND anchor — red Most-picked badge dominates), Feast Deluxe 20% blend (12/32, decoy — obviously dominated on % by the anchor), late-night 22% blend (12/35, single-tap deal at 21:00–24:00). Every dynamic tier has a hard maxMains cap (6/8/12/3) to neutralize 50-pizza abuse. Tap → opens BundleComposerSheet (Domino's Mix & Match): per-unit add-on swap with live price, cancel/confirm. Server caps charged amount at min(server-recomputed, client-snapshot) so admin discount edits between render and checkout can only ever benefit the customer. Combo banner is suppressed when the bundle ladder is showable (Starbucks rule: one upsell). Admin /admin/upsell → Bundle ladders exposes Pricing-mode toggle, Discount %, Split-discount (mains/add-ons %), Min/Max mains, Main categories, Loyalty gate (Gold/Platinum-only tiers), AND a live margin preview per tier using MenuItem.cost so operators can't accidentally tune themselves into red margin. Per-bundle audit log feeds /api/admin/bundle-analytics + a bundle KPI card on /admin/reports (penetration, anchor conversion, decoy CTR, A/B variant uplift). Variant assignment is phone-hashed via src/lib/experiments.ts so client + server agree on the same discount %s for the same customer. Audit §3.2.",
+        },
+        {
+          name: "Bundle experimentation (A/B)",
+          status: "live",
+          href: "/admin/upsell",
+          summary: "Full A/B harness manageable in /admin/upsell → Experiments tab. ExperimentEditor lets the operator define one per-location experiment with weighted variants and per-bundle discount overrides (single percent OR split mains/add-ons). Customer phone → SHA-256 bucket → stable variant assignment so a customer always sees the same offer across visits and the server can reproduce the variant at checkout. Each BundleEvent records the variant id; /api/admin/bundle-analytics rolls up avg paid + avg saved per variant for direct AOV / contribution-profit comparison on the Reports page. Server resolver in src/lib/experiments.ts; client mirror via Web Crypto SHA-256 so client + server agree.",
+        },
+        {
+          name: "Bundle scarcity + weekday gating",
+          status: "live",
+          href: "/admin/upsell",
+          summary: "Every dynamic bundle row in /admin/upsell carries a 'Limited until' date input + a per-weekday chip selector (Mon–Sun). Past-dated bundles auto-deactivate; weekday-gated bundles only surface on matching local days so operators can run Friday Family Feast pushes / Wednesday Lunch+ defaults without code. Both fields validate server-side and round-trip through saves.",
+        },
+        {
+          name: "Bundle conversion funnel telemetry",
+          status: "live",
+          href: "/admin/reports",
+          summary: "Client beacons (navigator.sendBeacon) capture impression → composer_opened → composer_abandoned events as customers interact with the bundle ladder. Combined with the applied events written by createOrderFromCart, BundleAnalyticsCard shows the full funnel: how many customers see the ladder vs tap into the composer vs confirm vs abandon. Drives 'no-one-sees-it' vs 'no-one-likes-it' diagnosis. Endpoint: POST /api/customer/bundle-funnel; persistence in bundle-funnel.json.",
+        },
+        {
+          name: "Bundle KPI dashboard (new vs repeat + cohort)",
+          status: "live",
+          href: "/admin/reports",
+          summary: "BundleAnalyticsCard on Reports surfaces bundle orders, revenue, total savings given, anchor conversion %, decoy CTR, per-bundle effective discount + avg mains, A/B variant uplift, conversion funnel, AND a new-vs-repeat-customer cohort split (target ≥25% new-customer share among bundle orders proves acquisition role). Slot links persisted per BundleEvent for follow-up capacity analysis.",
+        },
+        {
+          name: "Bundle low-margin operator alert",
+          status: "live",
+          href: "/admin",
+          summary: "Every bundle order's contribution margin is computed at write time using MenuItem.cost (food cost) ÷ finalPriceGrosze. When margin drops below 40%, addNotification posts a `bundle_low_margin` alert into the operator notification inbox with bundle name + exact margin % + order total so the operator can re-tune discount % in /admin/upsell before the next order lands. Threshold matches the amber/red line on the live BundleMarginPreview in the bundle editor.",
+        },
+        {
+          name: "Composer 'same as last time' (repeat-customer one-tap)",
+          status: "live",
+          href: "/admin/upsell",
+          summary: "Bundle composer (Domino's Mix & Match) pre-fills picks from the customer's most-recent applied composition for the same bundle. Customer sees a ★ banner 'Same as your last X — confirm or tweak below' so a repeat order is one tap. Pipeline: BundleEvent.addOnComposition (persisted per order), GET /api/customer/last-bundle, BundleComposerSheet useEffect on open. Drops the perceived friction Domino's reports a ~7% AOV uplift from.",
+        },
+        {
+          name: "Scheduled bundle (weekly usual)",
+          status: has("STRIPE_SCHEDULE_WEBHOOK_SECRET") ? "live" : "needs-config",
+          href: "/admin/scheduled-bundles",
+          summary: "Pret-style 'make this my weekly usual' intent capture + manageable admin queue. Customer opts in via a 🗓️ checkbox under the cart pay-bar when a bundle is applied; POST /api/customer/schedule-bundle persists a ScheduledBundleIntent (bundle id, weekday, ready-time, cart snapshot, status). Operator manages the queue at /admin/scheduled-bundles — filter by status (pending / active / paused / cancelled), see customer phone + bundle + day-time, approve / pause / resume / cancel via PATCH /api/admin/scheduled-bundles/[id]. Sorted by weekday × ready time so it mirrors the day's fulfilment cadence. Phase-2 Stripe Subscription rebill on the chosen weekday is gated on STRIPE_SCHEDULE_WEBHOOK_SECRET; until configured, operators run the recurring fulfilment manually from the queue.",
+          envVars: ["STRIPE_SCHEDULE_WEBHOOK_SECRET"],
+        },
+        {
+          name: "Stripe coupon reuse (combo discounts)",
+          status: "live",
+          href: "/admin/crosssell",
+          summary: "Combo-discount Stripe coupons used to spawn one new Coupon object per checkout, accumulating thousands of orphans in the Stripe account over time. Coupons now use stable ids `sud-<combo-slug>-<amount-grosze>` and the create call catches `resource_already_exists` to reuse the existing coupon. Same charged amount, dramatically fewer Stripe artefacts.",
         },
         {
           name: "Sud Italia Corporate",
@@ -429,8 +478,8 @@ export default async function CapabilitiesPage() {
         {
           name: "Combo deals",
           status: "live",
-          href: "/admin/menu",
-          summary: "Discount applied to cart total, not display-only.",
+          href: "/admin/crosssell",
+          summary: "Cart-total discounts capped to one combo's worth (cheapest unit per matched category) so quantity doesn't scale the savings. Default ladder: Italian Classic Deal (Margherita + Espresso + Tiramisù, 10% — item-suffix gated so a Quattro Formaggi cart matches a different promo), Pasta Combo (any pasta + drink + dessert, 10%), Lunch Special (any panino + drink, 8%). getActiveComboDeals in src/lib/upsell.ts picks the highest-savings complete combo first, then the highest-potential partial — order-independent so a fully-complete combo never loses to an earlier in-progress one. Admins manage the full set from /admin/crosssell → Combo deals: toggle, rename, edit discount %, min items, required categories, and (new) pick specific menu items to gate the deal on — adding a row to 'Specific items required' converts a generic category combo into an item-locked one. Combo discounts ride to Stripe as an amount_off coupon so the charged total matches the displayed total.",
         },
         {
           name: "Menu engineering hierarchy",

@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Bundle ladders — Master/detail (sketch 02)</title>
+<style>
+  :root {
+    --bg: #0a0d14; --surface-1: #11151f; --surface-2: #161b27; --surface-3: #1d2330; --surface-hover: #20283a;
+    --border: rgba(255,255,255,0.08); --border-strong: rgba(255,255,255,0.16);
+    --fg: #f5f7fa; --fg-muted: #b6bfcd; --fg-subtle: #7d8696;
+    --brand: #c8102e; --gold: #c8a02e; --green: #10b981; --amber: #f59e0b; --indigo: #6366f1;
+    font-family: -apple-system, "SF Pro Text", "Inter", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); }
+  .h { padding: 18px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: baseline; }
+  h1 { font-size: 18px; margin: 0; font-weight: 700; }
+  h1 small { font-size: 11px; color: var(--fg-subtle); font-weight: 500; letter-spacing: .06em; text-transform: uppercase; background: var(--surface-2); padding: 2px 8px; border-radius: 6px; margin-left: 6px; }
+  .save { background: var(--brand); color: white; border: 0; padding: 7px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; }
+
+  .layout { display: grid; grid-template-columns: 280px 1fr; min-height: calc(100vh - 60px); }
+  .sidebar { border-right: 1px solid var(--border); padding: 12px 8px; overflow-y: auto; }
+  .group-h { font-size: 10px; color: var(--fg-subtle); text-transform: uppercase; letter-spacing: .1em; font-weight: 700; padding: 12px 12px 6px; }
+  .item { padding: 10px 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; }
+  .item:hover { background: var(--surface-2); }
+  .item.is-active { background: var(--surface-3); }
+  .item-l { flex: 1; min-width: 0; }
+  .item-tier { font-size: 11px; color: var(--fg-subtle); font-weight: 600; }
+  .item-name { font-size: 13px; font-weight: 600; color: var(--fg); }
+  .item-price { font-size: 11px; color: var(--fg-muted); white-space: nowrap; }
+  .item-flag { font-size: 9px; padding: 1px 5px; border-radius: 4px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+  .flag-default { background: var(--brand); color: white; }
+  .flag-anchor { background: var(--gold); color: #1a1a1a; }
+  .flag-decoy { background: var(--surface-3); color: var(--fg-subtle); }
+  .add-tier { display: flex; align-items: center; gap: 6px; color: var(--fg-subtle); padding: 8px 12px; cursor: pointer; font-size: 12px; }
+  .add-tier:hover { color: var(--fg-muted); }
+
+  .editor { padding: 28px 32px; max-width: 880px; }
+  .ed-h { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+  .ed-tier { font-size: 11px; color: var(--fg-subtle); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+  .ed-name { font-size: 24px; font-weight: 700; margin: 2px 0 0; display: flex; align-items: center; gap: 10px; }
+  .ed-sub { color: var(--fg-muted); font-size: 13px; margin: 4px 0 24px; }
+
+  .panel { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; margin-bottom: 14px; }
+  .panel-h { font-size: 11px; color: var(--fg-subtle); text-transform: uppercase; letter-spacing: .08em; font-weight: 700; margin: 0 0 14px; display: flex; align-items: center; justify-content: space-between; }
+  .panel-h .help { font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--fg-subtle); font-size: 11px; }
+  .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+  label.field { display: block; }
+  .field-l { font-size: 10px; color: var(--fg-subtle); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .08em; font-weight: 600; }
+  .input { width: 100%; background: var(--surface-2); color: var(--fg); border: 1px solid var(--border); padding: 7px 10px; border-radius: 6px; font-size: 13px; }
+  .input:focus { outline: 2px solid var(--indigo); outline-offset: -2px; border-color: var(--indigo); }
+  .seg { display: inline-flex; background: var(--surface-2); border-radius: 8px; padding: 2px; border: 1px solid var(--border); }
+  .seg button { background: transparent; color: var(--fg-subtle); border: 0; padding: 5px 10px; font-size: 11px; font-weight: 600; cursor: pointer; border-radius: 6px; }
+  .seg button.on { background: var(--surface-3); color: var(--fg); }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font-size: 11px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border); color: var(--fg-muted); background: var(--surface-2); cursor: pointer; }
+  .chip.on { border-color: var(--brand); color: var(--brand); background: rgba(200,16,46,0.1); }
+  .chip-day { padding: 3px 8px; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
+  .chip-day.on { border-color: var(--gold); color: var(--gold); background: rgba(200,160,46,0.1); }
+
+  .preview { background: linear-gradient(180deg, rgba(16,185,129,0.07), transparent); border: 1px solid rgba(16,185,129,0.18); border-radius: 10px; padding: 14px 16px; margin-top: 12px; }
+  .pv-h { display: flex; justify-content: space-between; font-size: 11px; color: var(--green); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+  .pv-line { display: flex; justify-content: space-between; font-size: 12px; color: var(--fg-muted); margin-top: 3px; }
+  .pv-line strong { color: var(--fg); }
+  .pv-margin { color: var(--green); font-weight: 700; }
+
+  .composition-row { display: grid; grid-template-columns: 110px 1fr 60px auto; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .composition-row:last-child { border-bottom: 0; }
+</style>
+</head>
+<body>
+  <div class="h">
+    <h1>Bundle ladders <small>SKETCH 02 · MASTER / DETAIL</small></h1>
+    <div style="display:flex;gap:8px;">
+      <button class="save" style="background:var(--surface-2);color:var(--fg-muted);border:1px solid var(--border);">Discard</button>
+      <button class="save">Save changes</button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="group-h">Family · 3 tiers</div>
+      <div class="item">
+        <div class="item-l">
+          <div class="item-tier">Family</div>
+          <div class="item-name">Your pizzas + sides</div>
+        </div>
+        <span class="item-price">~88 zł</span>
+      </div>
+      <div class="item is-active">
+        <span class="item-flag flag-default">DEF</span>
+        <div class="item-l">
+          <div class="item-tier">Family Feast · anchor</div>
+          <div class="item-name">Whole-table dinner</div>
+        </div>
+        <span class="item-price">~135 zł</span>
+      </div>
+      <div class="item">
+        <span class="item-flag flag-decoy">DEC</span>
+        <div class="item-l">
+          <div class="item-tier">Feast Deluxe</div>
+          <div class="item-name">Big group, no leftovers</div>
+        </div>
+        <span class="item-price">~172 zł</span>
+      </div>
+
+      <div class="group-h">Lunch · 1 tier</div>
+      <div class="item">
+        <span class="item-flag flag-anchor">ANC</span>
+        <div class="item-l">
+          <div class="item-tier">Lunch+</div>
+          <div class="item-name">Pasta + drink + tiramisù</div>
+        </div>
+        <span class="item-price">46 zł</span>
+      </div>
+
+      <div class="group-h">Late-night · 1 tier</div>
+      <div class="item">
+        <span class="item-flag flag-default">DEF</span>
+        <div class="item-l">
+          <div class="item-tier">Late dinner</div>
+          <div class="item-name">Pizza + drink + dessert</div>
+        </div>
+        <span class="item-price">~38 zł</span>
+      </div>
+
+      <div class="add-tier">+ Add tier</div>
+    </aside>
+
+    <main class="editor">
+      <div class="ed-h">
+        <span class="ed-tier">Family Feast · anchor + default-pushed</span>
+      </div>
+      <h2 class="ed-name">Whole-table dinner <span class="item-flag flag-default">MOST PICKED</span> <span class="item-flag flag-anchor">BEST VALUE</span></h2>
+      <p class="ed-sub">Editing the family-feast bundle. Changes save when you click <strong>Save changes</strong>.</p>
+
+      <div class="panel">
+        <div class="panel-h">Identity <span class="help">Customer-facing</span></div>
+        <div class="row">
+          <label class="field"><div class="field-l">Tier label</div><input class="input" value="Family Feast"></label>
+          <label class="field"><div class="field-l">Bundle name</div><input class="input" value="Whole-table dinner"></label>
+        </div>
+        <label class="field" style="margin-top:10px;"><div class="field-l">Description</div><input class="input" value="Your mains + 2 antipasti + 4 drinks + tiramisù"></label>
+      </div>
+
+      <div class="panel">
+        <div class="panel-h">Pricing <span class="help">Mode + discount</span></div>
+        <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;">
+          <div class="seg" role="group">
+            <button>Fixed</button>
+            <button class="on">Dynamic</button>
+          </div>
+          <label class="field" style="display:flex;align-items:center;gap:8px;"><span class="field-l" style="margin:0;">Mains %</span><input class="input" style="width:70px;" value="15"></label>
+          <label class="field" style="display:flex;align-items:center;gap:8px;"><span class="field-l" style="margin:0;">Add-ons %</span><input class="input" style="width:70px;" value="40"></label>
+          <label class="field" style="display:flex;align-items:center;gap:8px;"><span class="field-l" style="margin:0;">Min mains</span><input class="input" style="width:60px;" value="2"></label>
+          <label class="field" style="display:flex;align-items:center;gap:8px;"><span class="field-l" style="margin:0;">Max mains</span><input class="input" style="width:60px;" value="8"></label>
+        </div>
+
+        <div class="preview">
+          <div class="pv-h">Live preview · Kraków menu</div>
+          <div class="pv-line"><span>2 margheritas + add-ons</span><strong>~101 zł</strong></div>
+          <div class="pv-line"><span>3 margheritas + add-ons</span><strong>~135 zł</strong></div>
+          <div class="pv-line"><span>4 margheritas + add-ons</span><strong>~169 zł</strong></div>
+          <div class="pv-line"><span>Estimated margin</span><span class="pv-margin">~49% (healthy)</span></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-h">Composition <span class="help">Static add-on slots</span></div>
+        <div class="composition-row">
+          <select class="input"><option>Any · category</option><option>Specific item</option></select>
+          <select class="input"><option>antipasti</option><option>drinks</option><option>desserts</option></select>
+          <input class="input" type="number" value="2">
+          <button class="seg" style="background:transparent;border:0;color:var(--fg-subtle);cursor:pointer;">×</button>
+        </div>
+        <div class="composition-row">
+          <select class="input"><option>Any · category</option><option>Specific item</option></select>
+          <select class="input"><option>drinks</option></select>
+          <input class="input" type="number" value="4">
+          <button class="seg" style="background:transparent;border:0;color:var(--fg-subtle);cursor:pointer;">×</button>
+        </div>
+        <div class="composition-row">
+          <select class="input"><option>Specific item</option><option>Any · category</option></select>
+          <select class="input"><option>dessert-tiramisu</option></select>
+          <input class="input" type="number" value="1">
+          <button class="seg" style="background:transparent;border:0;color:var(--fg-subtle);cursor:pointer;">×</button>
+        </div>
+        <button class="seg" style="margin-top:10px;background:transparent;border:1px dashed var(--border);color:var(--fg-subtle);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px;">+ Add slot</button>
+      </div>
+
+      <div class="panel">
+        <div class="panel-h">Audience &amp; scheduling</div>
+        <div class="row">
+          <label class="field">
+            <div class="field-l">Mains scale on</div>
+            <div class="chip-row"><span class="chip on">✓ pizza</span><span class="chip on">✓ pasta</span></div>
+          </label>
+          <label class="field">
+            <div class="field-l">Loyalty gate</div>
+            <select class="input"><option>All customers</option><option>Gold &amp; Platinum only</option><option>Platinum only</option></select>
+          </label>
+          <label class="field">
+            <div class="field-l">Limited until</div>
+            <input class="input" type="date">
+          </label>
+        </div>
+        <label class="field" style="margin-top:10px;">
+          <div class="field-l">Active days · empty = all week</div>
+          <div class="chip-row">
+            <span class="chip chip-day">mon</span><span class="chip chip-day">tue</span><span class="chip chip-day">wed</span><span class="chip chip-day">thu</span><span class="chip chip-day on">fri</span><span class="chip chip-day on">sat</span><span class="chip chip-day on">sun</span>
+          </div>
+        </label>
+        <div class="row" style="margin-top:14px;">
+          <label class="chip" style="cursor:pointer;border-color:var(--brand);color:var(--brand);background:rgba(200,16,46,.1);">✓ Default-pushed (red Most-picked)</label>
+          <label class="chip" style="cursor:pointer;border-color:var(--gold);color:var(--gold);background:rgba(200,160,46,.1);">✓ Anchor (gold Best-value)</label>
+          <label class="chip" style="cursor:pointer;">Decoy</label>
+          <label class="chip" style="cursor:pointer;border-color:var(--green);color:var(--green);background:rgba(16,185,129,.1);">✓ Active</label>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

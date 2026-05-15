@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "crypto";
 import { getMenuWithOverrides } from "@/data/menus";
 import { getUpsellSettings } from "@/lib/store";
-import { findBundle, type BundleTier } from "@/lib/bundles";
+import { findBundle, computeBundlePrice, type BundleTier } from "@/lib/bundles";
 import { normalizePlPhoneE164 } from "@/lib/phone";
 import { logger } from "@/lib/logger";
 import {
@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
       deliveryAddress,
       tipAmount: rawTip,
       appliedBundleId,
+      appliedBundlePriceGrosze,
     } = parsed.data;
 
     const phoneE164 = normalizePlPhoneE164(customerPhone);
@@ -101,12 +102,13 @@ export async function POST(req: NextRequest) {
       deliveryAddress,
       tipAmount: typeof rawTip === "number" ? rawTip : undefined,
       appliedBundleId,
+      appliedBundlePriceGrosze,
       channel: "web",
     });
     if (!result.ok) {
       return NextResponse.json({ error: result.message }, { status: 400 });
     }
-    const { order, deliveryFee, bundleSubtotal } = result;
+    const { order, deliveryFee, bundleSubtotal, comboDiscount, comboName } = result;
     const tipAmount = order.tipAmount ?? 0;
     const calculatedTotal = order.totalAmount;
 
@@ -129,6 +131,12 @@ export async function POST(req: NextRequest) {
                 (locationConfig as { bundles?: BundleTier[] } | null)?.bundles ?? null,
               );
               if (!bundle) return null;
+              // Dynamic bundles compute price from order items × menu;
+              // fixed bundles use the stored price. createOrder already
+              // ran cartSatisfiesBundle, so this just mirrors the same
+              // pricing for Stripe's unit_amount.
+              const pricing = computeBundlePrice(bundle, order.items, menuItems);
+              if (!pricing) return null;
               const composition = order.items
                 .map((i) => `${i.quantity}× ${i.menuItem.name}`)
                 .join(", ");
@@ -140,7 +148,7 @@ export async function POST(req: NextRequest) {
                       name: `Bundle: ${bundle.name}`,
                       description: composition,
                     },
-                    unit_amount: bundle.priceGrosze,
+                    unit_amount: pricing.priceGrosze,
                   },
                   quantity: 1,
                 },
@@ -148,9 +156,55 @@ export async function POST(req: NextRequest) {
             })()
           : null;
 
+      // Combo discounts ride along as a Stripe coupon so the session
+      // total matches order.totalAmount. Bundles already collapse to a
+      // single discounted line above, so they skip this path.
+      //
+      // Sprint 9 #3 — coupon reuse: every checkout used to create a NEW
+      // coupon object, leaving thousands of orphans in the Stripe account
+      // over time. We now use a stable id keyed on (combo, amount) and
+      // catch the "already exists" conflict, so each unique discount
+      // amount lives as a single permanent coupon that gets reused
+      // forever. Idempotent under retries (network or otherwise).
+      let sessionDiscounts: { coupon: string }[] | undefined;
+      if (bundleSubtotal === null && comboDiscount > 0) {
+        const couponSlug = (comboName ?? "combo-discount")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "")
+          .slice(0, 40);
+        const couponId = `sud-${couponSlug}-${comboDiscount}`;
+        let couponIdToUse = couponId;
+        try {
+          await stripeClient.coupons.create({
+            id: couponId,
+            amount_off: comboDiscount,
+            currency: "pln",
+            duration: "once",
+            name: comboName ? `Combo: ${comboName}` : "Combo discount",
+          });
+        } catch (err: unknown) {
+          // resource_already_exists → reuse the existing coupon. Any
+          // other error falls back to one-shot creation (matches prior
+          // behaviour so a Stripe-side oddity never blocks checkout).
+          const code = (err as { code?: string } | null)?.code;
+          if (code !== "resource_already_exists") {
+            const fallback = await stripeClient.coupons.create({
+              amount_off: comboDiscount,
+              currency: "pln",
+              duration: "once",
+              name: comboName ? `Combo: ${comboName}` : "Combo discount",
+            });
+            couponIdToUse = fallback.id;
+          }
+        }
+        sessionDiscounts = [{ coupon: couponIdToUse }];
+      }
+
       const session = await stripeClient.checkout.sessions.create(
         {
           payment_method_types: ["card", "p24", "blik"],
+          ...(sessionDiscounts ? { discounts: sessionDiscounts } : {}),
           line_items: [
             ...(bundleStripeLines ??
               order.items.map((i) => {

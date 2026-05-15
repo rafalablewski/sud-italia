@@ -499,6 +499,16 @@ function contextualReason(
 
 // --- Combo / Bundle Deals ---
 
+export interface ComboDealRequiredItem {
+  /** Suffix matched against menuItem.id with endsWith. Use the part after
+   *  the location prefix, e.g. "pizza-margherita" to match both
+   *  "krk-pizza-margherita" and "waw-pizza-margherita" without needing
+   *  per-truck entries. Mirrors the BundleSlot itemIdSuffix convention. */
+  suffix: string;
+  /** Friendly label rendered in the "still need: Margherita" banner copy. */
+  label: string;
+}
+
 export interface ComboDeal {
   id: string;
   name: string;
@@ -506,15 +516,24 @@ export interface ComboDeal {
   categories: MenuCategory[];
   discountPercent: number;
   minItems: number;
+  /** When set, the combo only activates if the cart contains an item
+   *  matching every required suffix. Generic category-only combos leave
+   *  this undefined and match any item from the listed categories. */
+  requiredItems?: ComboDealRequiredItem[];
 }
 
 // Default combos (used when no admin config exists for the location)
 export const DEFAULT_COMBO_DEALS: ComboDeal[] = [
   {
-    id: "meal-deal",
-    name: "Meal Deal",
-    description: "Any main + drink + dessert",
+    id: "italian-classic",
+    name: "Italian Classic Deal",
+    description: "Margherita + Espresso + Tiramisù",
     categories: ["pizza", "drinks", "desserts"],
+    requiredItems: [
+      { suffix: "pizza-margherita", label: "Margherita" },
+      { suffix: "drink-espresso", label: "Espresso" },
+      { suffix: "dessert-tiramisu", label: "Tiramisù" },
+    ],
     discountPercent: 10,
     minItems: 3,
   },
@@ -539,16 +558,35 @@ export const DEFAULT_COMBO_DEALS: ComboDeal[] = [
 // Keep backward-compatible export
 export const COMBO_DEALS = DEFAULT_COMBO_DEALS;
 
+export interface ComboDealResult {
+  activeDeal: ComboDeal | null;
+  savings: number;
+  /** Categories from `deal.categories` not yet present in the cart. Stays
+   *  populated for category-only combos so the banner can keep its existing
+   *  "add a pizza, drinks" copy. Item-required combos leave this empty and
+   *  use `missingItems` instead. */
+  missingCategories: MenuCategory[];
+  /** Friendly labels for required items still missing from the cart, used
+   *  by item-required combos like "Italian Classic Deal" (Margherita,
+   *  Espresso, Tiramisù). Empty for generic category-only combos. */
+  missingItems: string[];
+  /** Additional cart units needed to satisfy `minItems`. Zero when the
+   *  qty gate is already met. Surfaced so the banner can render "Add 1
+   *  more item" when categories/items are all matched but minItems is
+   *  short. */
+  missingQuantity: number;
+  progress: number;
+  /** True only when the combo is fully satisfied — categories matched AND
+   *  every required item matched AND total quantity ≥ minItems. Discount
+   *  callers MUST gate on this rather than `missingCategories.length === 0`
+   *  so item-required combos don't apply prematurely. */
+  isComplete: boolean;
+}
+
 export function getActiveComboDeals(
   cartItems: CartItem[],
   config?: UpsellConfig | null
-): {
-  activeDeal: ComboDeal | null;
-  savings: number;
-  missingCategories: MenuCategory[];
-  progress: number;
-} {
-  // Resolve combos: use admin config if available, otherwise defaults
+): ComboDealResult {
   const combos: ComboDeal[] = config?.combos
     ? config.combos
         .filter((c) => c.active)
@@ -558,42 +596,177 @@ export function getActiveComboDeals(
         }))
     : DEFAULT_COMBO_DEALS;
 
+  const empty: ComboDealResult = {
+    activeDeal: null,
+    savings: 0,
+    missingCategories: [],
+    missingItems: [],
+    missingQuantity: 0,
+    progress: 0,
+    isComplete: false,
+  };
+
+  if (combos.length === 0 || cartItems.length === 0) return empty;
+
   const cartCategories = new Set(cartItems.map((ci) => ci.menuItem.category));
+  const totalQuantity = cartItems.reduce((s, ci) => s + ci.quantity, 0);
 
-  for (const deal of combos) {
-    const matched = deal.categories.filter((c) => cartCategories.has(c));
-    const missing = deal.categories.filter((c) => !cartCategories.has(c));
-    const progress = matched.length / deal.categories.length;
-
-    // Calculate savings based only on items that form the combo, not the full cart
-    const comboItemsTotal = cartItems
-      .filter((ci) => deal.categories.includes(ci.menuItem.category))
-      .reduce((sum, ci) => sum + ci.menuItem.price * ci.quantity, 0);
-
-    if (matched.length >= 1 && missing.length > 0) {
-      const potentialSavings = Math.round(
-        comboItemsTotal * (deal.discountPercent / 100)
-      );
-
-      return {
-        activeDeal: deal,
-        savings: potentialSavings,
-        missingCategories: missing as MenuCategory[],
-        progress,
-      };
-    }
-
-    if (missing.length === 0 && cartItems.length >= deal.minItems) {
-      return {
-        activeDeal: deal,
-        savings: Math.round(comboItemsTotal * (deal.discountPercent / 100)),
-        missingCategories: [],
-        progress: 1,
-      };
+  // Cheapest unit price per category present in the cart. Used to cap the
+  // discount at "one combo's worth" — without this a cart of 5 pizzas + drink
+  // + dessert would get 10% off all 5 pizzas, scaling unbounded with qty.
+  const cheapestByCategory = new Map<MenuCategory, number>();
+  for (const ci of cartItems) {
+    const cat = ci.menuItem.category;
+    const prev = cheapestByCategory.get(cat);
+    if (prev === undefined || ci.menuItem.price < prev) {
+      cheapestByCategory.set(cat, ci.menuItem.price);
     }
   }
 
-  return { activeDeal: null, savings: 0, missingCategories: [], progress: 0 };
+  // Pre-compute the cheapest unit price per required-item suffix across
+  // every combo's requirements. One O(N · S) pass replaces a per-suffix
+  // scan per call inside the scoring loop.
+  const allSuffixes = new Set<string>();
+  for (const c of combos) {
+    if (c.requiredItems) {
+      for (const r of c.requiredItems) allSuffixes.add(r.suffix);
+    }
+  }
+  const cheapestBySuffix = new Map<string, number>();
+  for (const ci of cartItems) {
+    for (const suffix of allSuffixes) {
+      if (!ci.menuItem.id.endsWith(suffix)) continue;
+      const prev = cheapestBySuffix.get(suffix);
+      if (prev === undefined || ci.menuItem.price < prev) {
+        cheapestBySuffix.set(suffix, ci.menuItem.price);
+      }
+    }
+  }
+
+  type Scored = {
+    deal: ComboDeal;
+    missingCategories: MenuCategory[];
+    missingItemLabels: string[];
+    missingQuantity: number;
+    progress: number;
+    savings: number;
+    complete: boolean;
+    index: number;
+  };
+
+  const scored: Scored[] = combos.map((deal, index) => {
+    // Defensive dedupe — admin UI uses checkboxes/unique pickers but
+    // direct API calls could submit duplicates, which would otherwise
+    // count the same item's price twice in the savings reduce.
+    const uniqueCats = Array.from(new Set(deal.categories));
+    const matchedCats = uniqueCats.filter((c) => cartCategories.has(c));
+    const missingCats = uniqueCats.filter((c) => !cartCategories.has(c));
+    const qtyShort = Math.max(0, deal.minItems - totalQuantity);
+
+    if (deal.requiredItems && deal.requiredItems.length > 0) {
+      // Item-required path: completion gated on suffix matches, not just
+      // categories. Dedupe suffixes by the suffix key so two label aliases
+      // for the same item don't double-count toward savings.
+      const uniqueBySuffix = new Map<string, ComboDealRequiredItem>();
+      for (const r of deal.requiredItems) {
+        if (!uniqueBySuffix.has(r.suffix)) uniqueBySuffix.set(r.suffix, r);
+      }
+      const required = Array.from(uniqueBySuffix.values());
+      const matchedReq = required.filter(
+        (r) => cheapestBySuffix.get(r.suffix) !== undefined,
+      );
+      const missingReq = required.filter(
+        (r) => cheapestBySuffix.get(r.suffix) === undefined,
+      );
+      const reqProgress = matchedReq.length / required.length;
+      const oneComboSubtotal = matchedReq.reduce(
+        (s, r) => s + (cheapestBySuffix.get(r.suffix) ?? 0),
+        0,
+      );
+      const savings = Math.round(oneComboSubtotal * (deal.discountPercent / 100));
+      const complete = missingReq.length === 0 && qtyShort === 0;
+      return {
+        deal,
+        missingCategories: complete ? [] : missingCats,
+        missingItemLabels: missingReq.map((r) => r.label),
+        missingQuantity: complete ? 0 : qtyShort,
+        progress: complete ? 1 : reqProgress,
+        savings,
+        complete,
+        index,
+      };
+    }
+
+    // Category-only path.
+    const reqCount = uniqueCats.length;
+    const progress = reqCount === 0 ? 0 : matchedCats.length / reqCount;
+    const oneComboSubtotal = matchedCats.reduce(
+      (s, c) => s + (cheapestByCategory.get(c) ?? 0),
+      0,
+    );
+    const savings = Math.round(oneComboSubtotal * (deal.discountPercent / 100));
+    const complete =
+      reqCount > 0 && missingCats.length === 0 && qtyShort === 0;
+    return {
+      deal,
+      missingCategories: missingCats,
+      missingItemLabels: [],
+      missingQuantity: complete ? 0 : qtyShort,
+      progress,
+      savings,
+      complete,
+      index,
+    };
+  });
+
+  // Complete combos always beat partial ones so the customer gets a real
+  // applied discount, not a "you could save X" hint. Within each bucket
+  // we prefer the largest savings; original index breaks ties so the order
+  // the admin set in the config is honoured.
+  const complete = scored.filter((s) => s.complete);
+  if (complete.length > 0) {
+    complete.sort((a, b) => b.savings - a.savings || a.index - b.index);
+    const w = complete[0];
+    return {
+      activeDeal: w.deal,
+      savings: w.savings,
+      missingCategories: [],
+      missingItems: [],
+      missingQuantity: 0,
+      progress: 1,
+      isComplete: true,
+    };
+  }
+
+  // Partial: combos with at least one match OR all-matched-but-qty-short
+  // (so the banner can prompt "Add 1 more item to unlock").
+  const partial = scored.filter((s) => {
+    if (s.complete) return false;
+    const anyCategoryMatched =
+      s.missingCategories.length < Array.from(new Set(s.deal.categories)).length;
+    const anyItemMatched =
+      s.deal.requiredItems
+        ? s.missingItemLabels.length <
+          new Set(s.deal.requiredItems.map((r) => r.suffix)).size
+        : false;
+    const qtyOnlyShort =
+      s.missingCategories.length === 0 &&
+      s.missingItemLabels.length === 0 &&
+      s.missingQuantity > 0;
+    return anyCategoryMatched || anyItemMatched || qtyOnlyShort;
+  });
+  if (partial.length === 0) return empty;
+  partial.sort((a, b) => b.savings - a.savings || a.index - b.index);
+  const w = partial[0];
+  return {
+    activeDeal: w.deal,
+    savings: w.savings,
+    missingCategories: w.missingCategories,
+    missingItems: w.missingItemLabels,
+    missingQuantity: w.missingQuantity,
+    progress: w.progress,
+    isComplete: false,
+  };
 }
 
 // --- Free delivery threshold + fee (m2_12) ------------------------------
@@ -752,7 +925,7 @@ export const DEFAULT_TIME_WINDOWS: TimeWindow[] = [
     sub: "Add a pasta and a drink to save 10%",
     badge: "−10%",
     cta: "How it works",
-    comboId: "meal-deal",
+    comboId: "pasta-combo",
   },
   {
     id: "afternoon",
@@ -771,10 +944,10 @@ export const DEFAULT_TIME_WINDOWS: TimeWindow[] = [
     startHour: 17,
     endHour: 19,
     title: "Cooking for the table tonight?",
-    sub: "Multiple pizzas + sides + drinks save 10% via Meal Deal",
+    sub: "Margherita + Espresso + Tiramisù save 10% with our Italian Classic Deal",
     badge: "Tip",
     cta: "What pairs well",
-    comboId: "meal-deal",
+    comboId: "italian-classic",
   },
   {
     id: "late",

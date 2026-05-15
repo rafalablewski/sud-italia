@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Bundle ladders — Drag-and-drop ladder (sketch 08)</title>
+<style>
+  :root {
+    --bg: #0a0d14; --surface-1: #11151f; --surface-2: #161b27; --surface-3: #1d2330;
+    --border: rgba(255,255,255,0.08); --border-strong: rgba(255,255,255,0.16);
+    --fg: #f5f7fa; --fg-muted: #b6bfcd; --fg-subtle: #7d8696;
+    --brand: #c8102e; --gold: #c8a02e; --green: #10b981; --indigo: #6366f1;
+    font-family: -apple-system, "SF Pro Text", "Inter", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px; background: var(--bg); color: var(--fg); }
+  h1 { font-size: 22px; margin: 0 0 4px; font-weight: 700; }
+  h1 small { font-size: 11px; color: var(--fg-subtle); font-weight: 500; letter-spacing: .06em; text-transform: uppercase; background: var(--surface-2); padding: 2px 8px; border-radius: 6px; margin-left: 6px; }
+  .sub { color: var(--fg-muted); font-size: 13px; margin: 0 0 24px; }
+
+  .ladders { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; }
+  .ladder { background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+  .ladder-h { padding: 14px 18px 12px; border-bottom: 1px solid var(--border); }
+  .ladder-h h3 { margin: 0; font-size: 13px; font-weight: 700; }
+  .ladder-h p { margin: 4px 0 0; font-size: 11px; color: var(--fg-subtle); }
+  .ladder-stack { padding: 14px; display: flex; flex-direction: column; gap: 10px; min-height: 320px; }
+
+  .tier {
+    position: relative;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px 12px 36px;
+    cursor: grab;
+    transition: transform .15s, border-color .15s;
+  }
+  .tier:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+  .tier::before {
+    content: "⠿";
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--fg-subtle);
+    font-size: 14px;
+    line-height: 1;
+  }
+  .tier.is-default { border-color: rgba(200,16,46,0.4); background: linear-gradient(180deg, rgba(200,16,46,0.06), var(--surface-2)); }
+  .tier.is-anchor::after {
+    content: "★ BEST VALUE";
+    position: absolute;
+    top: -7px;
+    right: 10px;
+    background: var(--gold);
+    color: #1a1a1a;
+    font-size: 8px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 999px;
+    letter-spacing: .08em;
+  }
+  .tier.is-default .badge-default {
+    position: absolute;
+    top: -7px;
+    left: 28px;
+    background: var(--brand);
+    color: white;
+    font-size: 8px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 999px;
+    letter-spacing: .08em;
+  }
+  .tier.is-decoy { opacity: .82; border-style: dashed; }
+
+  .tier-row1 { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .tier-name { font-size: 13px; font-weight: 700; color: var(--fg); flex: 1; }
+  .tier-price { font-size: 14px; color: var(--brand); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .tier-tier { font-size: 9px; color: var(--fg-subtle); text-transform: uppercase; letter-spacing: .08em; font-weight: 700; margin-bottom: 2px; }
+  .tier-desc { font-size: 11px; color: var(--fg-muted); margin: 4px 0 8px; line-height: 1.4; }
+
+  .tier-meta { display: flex; gap: 6px; flex-wrap: wrap; }
+  .pill { font-size: 9px; padding: 2px 6px; border-radius: 4px; background: var(--surface-3); color: var(--fg-subtle); font-weight: 600; }
+  .pill.good { color: var(--green); background: rgba(16,185,129,0.12); }
+  .pill.warn { color: var(--gold); background: rgba(200,160,46,0.12); }
+
+  .add-tier {
+    background: transparent;
+    border: 2px dashed var(--border);
+    color: var(--fg-subtle);
+    padding: 16px;
+    border-radius: 12px;
+    cursor: pointer;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .add-tier:hover { border-color: var(--border-strong); color: var(--fg-muted); }
+
+  .price-axis {
+    position: absolute;
+    left: -28px;
+    top: 0;
+    bottom: 0;
+    width: 22px;
+    border-right: 1px solid var(--border);
+  }
+
+  .ladder-body { position: relative; }
+
+  .help { margin-top: 24px; padding: 14px 16px; background: var(--surface-2); border-radius: 10px; font-size: 12px; color: var(--fg-muted); }
+  kbd { background: var(--surface-3); padding: 1px 5px; border-radius: 4px; font-size: 10px; font-family: ui-monospace, monospace; border: 1px solid var(--border); }
+
+  .save-bar { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; }
+  .save-bar button { background: var(--brand); color: white; border: 0; padding: 7px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; }
+</style>
+</head>
+<body>
+  <h1>Bundle ladders <small>SKETCH 08 · DRAG TO REORDER</small></h1>
+  <p class="sub">Each ladder is a vertical stack of tiers ordered by price. Drag a tier to reorder; drag across columns to change ladder. Visual matches what the customer sees.</p>
+
+  <div class="save-bar">
+    <button>Save layout</button>
+    <span style="font-size:12px;color:var(--fg-subtle);">Drag the ⠿ handle. Or use <kbd>↑</kbd> <kbd>↓</kbd> when a tier is focused.</span>
+  </div>
+
+  <div class="ladders">
+    <div class="ladder">
+      <div class="ladder-h">
+        <h3>Family ladder</h3>
+        <p>≥ 2 mains · pizza + pasta scale</p>
+      </div>
+      <div class="ladder-stack">
+        <div class="tier">
+          <div class="tier-tier">Family · entry</div>
+          <div class="tier-row1"><div class="tier-name">Your pizzas + sides</div><div class="tier-price">~88 zł</div></div>
+          <p class="tier-desc">Your mains + bruschetta + 2 drinks</p>
+          <div class="tier-meta">
+            <span class="pill">Dyn 10/30</span>
+            <span class="pill">2/6 mains</span>
+            <span class="pill good">56% margin</span>
+          </div>
+        </div>
+
+        <div class="tier is-default is-anchor">
+          <span class="badge-default">★ MOST PICKED</span>
+          <div class="tier-tier">Family Feast</div>
+          <div class="tier-row1"><div class="tier-name">Whole-table dinner</div><div class="tier-price">~135 zł</div></div>
+          <p class="tier-desc">Your mains + 2 antipasti + 4 drinks + tiramisù</p>
+          <div class="tier-meta">
+            <span class="pill">Dyn 15/40</span>
+            <span class="pill">2/8 mains</span>
+            <span class="pill good">49% margin</span>
+            <span class="pill warn">Fri/Sat/Sun</span>
+          </div>
+        </div>
+
+        <div class="tier is-decoy">
+          <div class="tier-tier">Feast Deluxe · decoy</div>
+          <div class="tier-row1"><div class="tier-name">Big group, no leftovers</div><div class="tier-price">~172 zł</div></div>
+          <p class="tier-desc">Your mains + 2 antipasti + 6 drinks + 2 desserts</p>
+          <div class="tier-meta">
+            <span class="pill">Dyn 12/32</span>
+            <span class="pill">3/12 mains</span>
+            <span class="pill good">51% margin</span>
+          </div>
+        </div>
+
+        <button class="add-tier">+ Add tier to Family</button>
+      </div>
+    </div>
+
+    <div class="ladder">
+      <div class="ladder-h">
+        <h3>Lunch ladder</h3>
+        <p>Hour-gated · 11:00–14:00</p>
+      </div>
+      <div class="ladder-stack">
+        <div class="tier is-anchor">
+          <div class="tier-tier">Lunch+ · anchor</div>
+          <div class="tier-row1"><div class="tier-name">Pasta + drink + tiramisù</div><div class="tier-price">46 zł</div></div>
+          <p class="tier-desc">A meal you'll remember.</p>
+          <div class="tier-meta">
+            <span class="pill">Fixed</span>
+            <span class="pill good">61% margin</span>
+            <span class="pill warn">Mon–Fri</span>
+          </div>
+        </div>
+
+        <button class="add-tier">+ Add tier to Lunch</button>
+      </div>
+    </div>
+
+    <div class="ladder">
+      <div class="ladder-h">
+        <h3>Late-night ladder</h3>
+        <p>Hour-gated · 21:00–24:00</p>
+      </div>
+      <div class="ladder-stack">
+        <div class="tier is-default">
+          <span class="badge-default">DEFAULT</span>
+          <div class="tier-tier">Late dinner</div>
+          <div class="tier-row1"><div class="tier-name">Pizza + drink + dessert</div><div class="tier-price">~38 zł</div></div>
+          <p class="tier-desc">Your pizza + 1 drink + tiramisù</p>
+          <div class="tier-meta">
+            <span class="pill">Dyn 12/35</span>
+            <span class="pill">1/3 mains</span>
+            <span class="pill good">58% margin</span>
+          </div>
+        </div>
+
+        <button class="add-tier">+ Add tier to Late-night</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="help">
+    <strong>Why drag-to-reorder:</strong> bundle ladders are inherently visual — the customer sees them
+    stacked. Letting the operator drag tiers in the same shape they ship in cuts the cognitive distance
+    between "what I configured" and "what they see". Click the body of any tier to open a side-sheet for
+    deep editing; drag handle is just for ordering.
+  </div>
+</body>
+</html>

@@ -79,12 +79,17 @@ export function applyTheme(mode: ThemeMode) {
 /**
  * Inline script body that runs before hydration to apply the persisted theme
  * without a flash. Stringify and inject in <head>.
+ *
+ * Dark is the canonical admin design (glassmorphism + brand identity per
+ * CLAUDE.md). Light theme exists but is opt-in only: the boot script does
+ * NOT honour `prefers-color-scheme` because every operator on a light-mode
+ * laptop would otherwise hit the half-finished light surface on first
+ * load. Only an explicit `light` in localStorage flips off dark — which
+ * means the user clicked the sun toggle deliberately.
  */
 export const themeBootScript = `
 (function(){try{
-  var k='${THEME_STORAGE_KEY}';
-  var s=localStorage.getItem(k);
-  var m=s==='light'||s==='dark'?s:(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');
-  document.documentElement.setAttribute('${THEME_ATTR}',m);
+  var s=localStorage.getItem('${THEME_STORAGE_KEY}');
+  document.documentElement.setAttribute('${THEME_ATTR}',s==='light'?'light':'dark');
 }catch(e){document.documentElement.setAttribute('${THEME_ATTR}','dark');}})();
 `.trim();

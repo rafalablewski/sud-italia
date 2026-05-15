@@ -1787,7 +1787,7 @@ export async function getInsights(dateFrom?: string, dateTo?: string): Promise<I
 
 export interface Notification {
   id: string;
-  type: "new_order" | "slot_full" | "daily_summary" | "low_slots" | "order_status";
+  type: "new_order" | "slot_full" | "daily_summary" | "low_slots" | "order_status" | "bundle_low_margin";
   title: string;
   message: string;
   locationSlug?: string;
@@ -3874,8 +3874,243 @@ export interface LocationUpsellConfig {
 
 export type UpsellSettings = Record<string, LocationUpsellConfig>;
 
+/** Replaces legacy `meal-deal` combo entries with the item-locked
+ *  `italian-classic` shape (Margherita + Espresso + Tiramisù). Runs on
+ *  every read of the upsell config so admin UIs and customer-side
+ *  rendering see the renamed combo without a one-shot migration script.
+ *  Preserves the admin's `active` flag in case they had disabled it. */
+function migrateLegacyMealDeal(settings: UpsellSettings): UpsellSettings {
+  let changed = false;
+  const out: UpsellSettings = {};
+  for (const [slug, raw] of Object.entries(settings)) {
+    const cfg = raw as LocationUpsellConfig & {
+      combos?: Array<{
+        id: string;
+        name: string;
+        description: string;
+        categories: string[];
+        discountPercent: number;
+        minItems: number;
+        active: boolean;
+        requiredItems?: { suffix: string; label: string }[];
+      }>;
+    };
+    if (!cfg?.combos?.some((c) => c.id === "meal-deal")) {
+      out[slug] = raw;
+      continue;
+    }
+    changed = true;
+    const migrated = cfg.combos
+      // De-dupe: if both meal-deal and italian-classic somehow coexist in
+      // a saved config (re-import / hand edit), drop meal-deal entirely.
+      .filter((c) => !(c.id === "meal-deal" && cfg.combos!.some((x) => x.id === "italian-classic")))
+      .map((c) => {
+        if (c.id !== "meal-deal") return c;
+        return {
+          id: "italian-classic",
+          name: "Italian Classic Deal",
+          description: "Margherita + Espresso + Tiramisù",
+          categories: ["pizza", "drinks", "desserts"],
+          discountPercent: c.discountPercent,
+          minItems: c.minItems,
+          active: c.active,
+          requiredItems: [
+            { suffix: "pizza-margherita", label: "Margherita" },
+            { suffix: "drink-espresso", label: "Espresso" },
+            { suffix: "dessert-tiramisu", label: "Tiramisù" },
+          ],
+        };
+      });
+    out[slug] = { ...cfg, combos: migrated } as LocationUpsellConfig;
+  }
+  return changed ? out : settings;
+}
+
 export async function getUpsellSettings(): Promise<UpsellSettings> {
-  return readJSON<UpsellSettings>("upsell-settings.json", {});
+  const raw = await readJSON<UpsellSettings>("upsell-settings.json", {});
+  return migrateLegacyMealDeal(raw);
+}
+
+// ─── Bundle audit log (Sprint 3 #12) ─────────────────────────────────────
+//
+// Every order that applies a bundle writes one event here so the operator
+// can answer the cannibalization / margin / tier-mix questions the §3.2
+// red-team audit raised. Append-only JSON; readers aggregate live.
+
+export interface BundleEvent {
+  id: string;
+  orderId: string;
+  bundleId: string;
+  bundleName: string;
+  locationSlug: string;
+  pricingMode: "fixed" | "dynamic";
+  mainsCount: number;
+  mainsSubtotalGrosze: number;
+  addOnsSubtotalGrosze: number;
+  refPriceGrosze: number;
+  finalPriceGrosze: number;
+  savingsGrosze: number;
+  customerPhone: string;
+  /** Experiment variant id when an A/B was running for this customer. */
+  experimentVariant?: string;
+  /** Slot the bundle order is fulfilled in — links to capacity / wait
+   *  analytics so the operator can see whether bundles drive slots to
+   *  the brink (Sprint 7 #7). */
+  slotId?: string;
+  /** Customer cohort at the moment the order was placed. "new" = first
+   *  ever order, "repeat" = customer had ≥1 prior order. Used by the
+   *  KPI dashboard to split bundle penetration by acquisition vs LTV
+   *  (Sprint 7 #6). */
+  customerCohort?: "new" | "repeat";
+  /** Total prior order count for the customer at the moment of this
+   *  event — finer-grained LTV signal than the boolean cohort. */
+  customerOrderCount?: number;
+  /** Estimated contribution margin at this price (0..1). Computed from
+   *  MenuItem.cost at write time so a per-event margin alert can fire
+   *  for operators when a bundle goes underwater (Sprint 8 #10). */
+  marginRatio?: number;
+  /** Per-unit add-on composition the customer picked for this bundle.
+   *  Reused by the composer's "same as last time" one-tap re-apply
+   *  (Sprint 8 #8) — the customer's prior choices pre-fill the new
+   *  composer when they return. */
+  addOnComposition?: { menuItemId: string; quantity: number }[];
+  createdAt: string;
+}
+
+export async function appendBundleEvent(event: BundleEvent): Promise<void> {
+  await withLock("bundle-events.json", async () => {
+    const events = await readJSON<BundleEvent[]>("bundle-events.json", []);
+    events.push(event);
+    await writeJSON("bundle-events.json", events);
+  });
+  incrCounter("bundles.applied");
+}
+
+export async function getBundleEvents(opts?: {
+  locationSlug?: string;
+  sinceIso?: string;
+}): Promise<BundleEvent[]> {
+  const all = await readJSON<BundleEvent[]>("bundle-events.json", []);
+  return all.filter((e) => {
+    if (opts?.locationSlug && e.locationSlug !== opts.locationSlug) return false;
+    if (opts?.sinceIso && e.createdAt < opts.sinceIso) return false;
+    return true;
+  });
+}
+
+// ─── Bundle funnel events (Sprint 7 #5) ──────────────────────────────────
+//
+// Client-side beacons capture the funnel before the customer commits —
+// ladder impressions, composer opens, abandons. Combined with the
+// BundleEvent log (applies) this gives the operator the full
+// impression → consideration → conversion view that lets them tell
+// "low penetration because no one sees it" from "low penetration because
+// no one likes it".
+
+export type BundleFunnelKind = "impression" | "composer_opened" | "composer_abandoned";
+
+export interface BundleFunnelEvent {
+  id: string;
+  kind: BundleFunnelKind;
+  bundleId: string;
+  locationSlug: string;
+  customerPhone?: string;
+  experimentVariant?: string;
+  createdAt: string;
+}
+
+export async function appendBundleFunnelEvent(event: BundleFunnelEvent): Promise<void> {
+  await withLock("bundle-funnel.json", async () => {
+    const list = await readJSON<BundleFunnelEvent[]>("bundle-funnel.json", []);
+    list.push(event);
+    await writeJSON("bundle-funnel.json", list);
+  });
+  incrCounter(`bundles.funnel.${event.kind}`);
+}
+
+export async function getBundleFunnelEvents(opts?: {
+  locationSlug?: string;
+  sinceIso?: string;
+}): Promise<BundleFunnelEvent[]> {
+  const all = await readJSON<BundleFunnelEvent[]>("bundle-funnel.json", []);
+  return all.filter((e) => {
+    if (opts?.locationSlug && e.locationSlug !== opts.locationSlug) return false;
+    if (opts?.sinceIso && e.createdAt < opts.sinceIso) return false;
+    return true;
+  });
+}
+
+// ─── Scheduled bundle intents (Sprint 4 #17) ─────────────────────────────
+//
+// Pret-style "make this my weekly usual" intent capture. Phase 1 just
+// persists the customer's preference + a snapshot of the bundle they
+// applied; Phase 2 wires Stripe Subscriptions to actually rebill on the
+// chosen weekday. Keeping the intent table separate from orders keeps
+// the lifecycle stages clean — intent → review → activate → rebill.
+
+export type Weekday =
+  | "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday";
+
+export interface ScheduledBundleIntent {
+  id: string;
+  customerPhone: string;
+  locationSlug: string;
+  bundleId: string;
+  bundleName: string;
+  weekday: Weekday;
+  /** Wall-clock time the customer wants the order ready (HH:MM). */
+  readyAt: string;
+  /** Cart snapshot — bundle composition at the time of opt-in. */
+  cartSnapshot: { menuItemId: string; quantity: number }[];
+  /** "pending" = captured, awaiting operator review.
+   *  "active"  = operator approved + Stripe Subscription created.
+   *  "paused"  = customer paused (or auto-paused on payment failure).
+   *  "cancelled" = customer cancelled. */
+  status: "pending" | "active" | "paused" | "cancelled";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function appendScheduledBundleIntent(intent: ScheduledBundleIntent): Promise<void> {
+  await withLock("scheduled-bundles.json", async () => {
+    const list = await readJSON<ScheduledBundleIntent[]>("scheduled-bundles.json", []);
+    list.push(intent);
+    await writeJSON("scheduled-bundles.json", list);
+  });
+  incrCounter("scheduled_bundles.captured");
+}
+
+export async function getScheduledBundleIntents(opts?: {
+  locationSlug?: string;
+  customerPhone?: string;
+  status?: ScheduledBundleIntent["status"];
+}): Promise<ScheduledBundleIntent[]> {
+  const all = await readJSON<ScheduledBundleIntent[]>("scheduled-bundles.json", []);
+  return all.filter((s) => {
+    if (opts?.locationSlug && s.locationSlug !== opts.locationSlug) return false;
+    if (opts?.customerPhone && s.customerPhone !== opts.customerPhone) return false;
+    if (opts?.status && s.status !== opts.status) return false;
+    return true;
+  });
+}
+
+export async function updateScheduledBundleIntent(
+  id: string,
+  patch: Partial<Pick<ScheduledBundleIntent, "status" | "weekday" | "readyAt">>,
+): Promise<ScheduledBundleIntent | null> {
+  return withLock("scheduled-bundles.json", async () => {
+    const list = await readJSON<ScheduledBundleIntent[]>("scheduled-bundles.json", []);
+    const idx = list.findIndex((s) => s.id === id);
+    if (idx === -1) return null;
+    const updated: ScheduledBundleIntent = {
+      ...list[idx],
+      ...patch,
+      updatedAt: new Date().toISOString(),
+    };
+    list[idx] = updated;
+    await writeJSON("scheduled-bundles.json", list);
+    return updated;
+  });
 }
 
 export async function updateUpsellSettings(settings: UpsellSettings): Promise<UpsellSettings> {
