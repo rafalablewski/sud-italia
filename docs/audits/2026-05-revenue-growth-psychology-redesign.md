@@ -313,7 +313,7 @@ What shipped:
 - **Hierarchy of menu page.** The default sort is now Pizzaiolo's layout — `compareMenuEngineering()` orders hero → profit-driver → anchor → standards by popularity → alpha tie-break. Sort dropdown still exposes price-low / price-high / rating.
 - **Capability ledger.** `Menu engineering hierarchy` row added to `/admin/capabilities` per CLAUDE.md rule #9.
 
-Mockup: `mockups/menu-engineering.html` (standalone — same Tailwind classes + brand variables as production).
+Mockup: `public/mockups/menu-engineering.html` — served at `/mockups/menu-engineering.html` on any deploy. Same Tailwind classes + brand variables as production.
 
 ### 4.1 The Audit
 
