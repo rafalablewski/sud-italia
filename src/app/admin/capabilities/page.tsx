@@ -434,9 +434,9 @@ export default async function CapabilitiesPage() {
         },
         {
           name: "Scheduled bundle (weekly usual)",
-          status: has("STRIPE_SECRET_KEY", "STRIPE_SCHEDULE_WEBHOOK_SECRET") ? "live" : "needs-config",
-          href: "/admin/upsell",
-          summary: "Pret-style 'make this my weekly usual' intent capture. Customer opts in via a checkbox under the cart pay-bar when a bundle is applied; POST /api/customer/schedule-bundle persists a ScheduledBundleIntent with bundle id, weekday, ready-time, cart snapshot, status. Admin lists pending intents via GET /api/admin/scheduled-bundles. Phase 1 (intent + admin viewer) is shipped; Phase 2 wires Stripe Subscriptions to actually rebill on the chosen weekday (gated on STRIPE_SCHEDULE_WEBHOOK_SECRET — not yet configured).",
+          status: has("STRIPE_SCHEDULE_WEBHOOK_SECRET") ? "live" : "needs-config",
+          href: "/admin/scheduled-bundles",
+          summary: "Pret-style 'make this my weekly usual' intent capture + manageable admin queue. Customer opts in via a 🗓️ checkbox under the cart pay-bar when a bundle is applied; POST /api/customer/schedule-bundle persists a ScheduledBundleIntent (bundle id, weekday, ready-time, cart snapshot, status). Operator manages the queue at /admin/scheduled-bundles — filter by status (pending / active / paused / cancelled), see customer phone + bundle + day-time, approve / pause / resume / cancel via PATCH /api/admin/scheduled-bundles/[id]. Sorted by weekday × ready time so it mirrors the day's fulfilment cadence. Phase-2 Stripe Subscription rebill on the chosen weekday is gated on STRIPE_SCHEDULE_WEBHOOK_SECRET; until configured, operators run the recurring fulfilment manually from the queue.",
           envVars: ["STRIPE_SCHEDULE_WEBHOOK_SECRET"],
         },
         {

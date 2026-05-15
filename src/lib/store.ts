@@ -4094,6 +4094,25 @@ export async function getScheduledBundleIntents(opts?: {
   });
 }
 
+export async function updateScheduledBundleIntent(
+  id: string,
+  patch: Partial<Pick<ScheduledBundleIntent, "status" | "weekday" | "readyAt">>,
+): Promise<ScheduledBundleIntent | null> {
+  return withLock("scheduled-bundles.json", async () => {
+    const list = await readJSON<ScheduledBundleIntent[]>("scheduled-bundles.json", []);
+    const idx = list.findIndex((s) => s.id === id);
+    if (idx === -1) return null;
+    const updated: ScheduledBundleIntent = {
+      ...list[idx],
+      ...patch,
+      updatedAt: new Date().toISOString(),
+    };
+    list[idx] = updated;
+    await writeJSON("scheduled-bundles.json", list);
+    return updated;
+  });
+}
+
 export async function updateUpsellSettings(settings: UpsellSettings): Promise<UpsellSettings> {
   return withLock("upsell-settings.json", async () => {
     await writeJSON("upsell-settings.json", settings);

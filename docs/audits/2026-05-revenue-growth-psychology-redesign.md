@@ -289,6 +289,50 @@ Three combo behaviours are now correctness-verified end-to-end (`scripts/verify-
 
 Admin manages combos end-to-end at `/admin/crosssell` → Combo deals: toggle, rename, edit discount %, min items, required categories, **and pick specific menu items** via a grouped-by-category dropdown. The PUT `/api/admin/upsell` route validates `combos[].categories` against the `MenuCategory` enum and validates `requiredItems` shape, so a typo can no longer silently disable a deal at checkout.
 
+#### 3.2.2 A/B experimentation, scarcity, weekday gating ✅ shipped
+
+Operators run their own bundle pricing experiments from `/admin/upsell` → **Experiments** tab. `ExperimentEditor` defines a single per-location experiment with weighted variants and per-bundle discount overrides (single percent OR split mains/add-ons). Variant assignment is phone-hashed: client uses Web Crypto SHA-256 (`src/lib/experiments.ts`), server uses Node `createHash("sha256")` (`src/lib/experiments-server.ts`) — same input → same bucket → same variant on both sides → no client/server price drift. Each `BundleEvent` records the variant id; `BundleAnalyticsCard` rolls up avg paid + avg saved + total revenue per variant for direct AOV / contribution-profit comparison.
+
+Every dynamic bundle row also carries:
+- **Limited until** — ISO date input. Past-dated bundles auto-deactivate via `isBundleActiveNow()` so a "this week only" deal can't accidentally leak past its window.
+- **Active days** — weekday chip selector (Mon–Sun). Empty = all week; otherwise the bundle only surfaces on matching local-day. Drives Friday Family Feast pushes / Wednesday Lunch+ defaults from admin alone.
+
+Both validate server-side and round-trip through saves.
+
+#### 3.2.3 Operator telemetry — funnel, cohort, low-margin alert ✅ shipped
+
+`BundleAnalyticsCard` on `/admin/reports` surfaces (Tier-1 KPI dashboard from §3.2 red-team audit):
+- bundle orders + revenue + total savings given
+- anchor conversion % (target ≥ 55%)
+- decoy click-through % (target ≤ 12%)
+- per-bundle effective discount + avg mains
+- A/B variant uplift table
+- conversion funnel: impressions → composer opens → applied → composer abandons (client beacons via `navigator.sendBeacon`, persisted in `bundle-funnel.json`)
+- new-vs-repeat customer cohort split (target ≥ 25% new-customer share among bundle orders proves bundles drive acquisition, not just discount existing demand)
+
+`BundleEvent.marginRatio` is computed at write time from `MenuItem.cost`. When a real bundle order's contribution margin drops below 40%, `addNotification({ type: "bundle_low_margin", ... })` posts an alert into the operator notification inbox with bundle name + exact margin % + order total. Threshold matches the amber/red line on `BundleMarginPreview` so the live admin preview and the production alert always agree.
+
+Slot id is also persisted on every `BundleEvent` so a follow-up dashboard can correlate bundle take rate vs slot capacity stress.
+
+#### 3.2.4 Composer-sheet psychology + repeat-customer one-tap ✅ shipped
+
+Bundle taps no longer auto-apply — they open `BundleComposerSheet` (Domino's "Mix & Match" pattern). Per-unit pickers for every add-on slot; live price + savings update as the customer swaps; confirm or cancel. Pre-fill stack:
+1. Customer's last applied composition for this same bundle (Sprint 8 #8 — Domino's "Same as last time"; pulled via `GET /api/customer/last-bundle?phone&bundleId&locationSlug`)
+2. Items already in the cart (preserves choices)
+3. Cheapest available at this location (fallback)
+
+When prior composition pre-fills, the composer header shows a gold ★ "Same as your last X — confirm or tweak below" so the customer recognises the one-tap path. Drops the perceived friction Domino's reports a ~7% AOV uplift from.
+
+Combo × bundle clarity (§3.2 audit q3): when an active combo (e.g. Italian Classic Deal -10%) is saving the customer some PLN and a bundle ladder qualifies, the bundle CTA shows the **incremental** savings ("+ X more than your current Italian Classic Deal") AND a discrete italic disclaimer ("Replaces the active Italian Classic Deal"). Customer net-better outcome preserved; framing now matches reality so the badge disappearance isn't a surprise.
+
+#### 3.2.5 Scheduled bundles (weekly usual) — Phase 1 ✅ shipped
+
+Customer opts in via a 🗓️ checkbox under the cart pay-bar when a bundle is applied. On checkout success the client fires-and-forgets a POST to `/api/customer/schedule-bundle` with phone + bundle id + current weekday + slot ready-time + cart snapshot; the server captures a `ScheduledBundleIntent` (status `pending`).
+
+Operator manages the queue at `/admin/scheduled-bundles`: filter by status (pending / active / paused / cancelled), sorted by weekday × ready-time so the layout mirrors the day's fulfilment cadence. Per-row actions: **Approve** (pending → active), **Pause** (active → paused), **Resume** (paused → active), **Cancel** (any → cancelled). PATCH `/api/admin/scheduled-bundles/[id]`.
+
+Phase 2 (Stripe Subscription rebill on the chosen weekday) is gated on `STRIPE_SCHEDULE_WEBHOOK_SECRET` and remains a follow-up — see `docs/audits/2026-05-elite-qsr-future-recommendations.md`.
+
 ### 3.3 Free-Delivery Threshold Architecture ✅ shipped
 
 The existing copy `delivery.add_more` / `delivery.for_free` is now a
