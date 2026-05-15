@@ -162,8 +162,8 @@ T+pay (Stripe sheet)                                                 ⏳ deferre
 | ✅ | "Customers usually add…" (data-driven) | helpful | +9% | `AddToCartToast` seed copy + `CartUpsell` chips |
 | ⛔ | "Make it a large +PLN 6" (modifier) | smart | +14% | **Rejected** — fixed Neapolitan portions are a brand core value (overrules §2.5 Starbucks too) |
 | ✅ | "Add Pizzaiolo's espresso PLN 6" (named, named) | curated | +11% | `CartUpsell` chip with `suggestion.reason` copy |
-| ⏳ | "Family Feast: 2 pizzas + 2 sides + 4 drinks, save PLN 28" | savings | +22% AOV per family order | bundle engine — §3.2 territory, separate sprint |
-| 🟡 | "Lunch combo PLN 39: any pasta + drink" | value | +18% | `TodBanner` lunch variant surfaces the existing meal-deal combo during 11:30–13:00 window |
+| ✅ | "Family Feast: 2 pizzas + bruschetta + 4 drinks + tiramisù, save PLN 43" | savings | +22% AOV per family order | §3.2 bundle engine live; `family-feast` tier in `DEFAULT_BUNDLES` (`src/lib/bundles.ts`), surfaces in cart drawer at ≥5 main items, locks subtotal to PLN 119 via `appliedBundleId` |
+| 🟡 | "Lunch combo PLN 39: pasta + drink" | value | +18% | `TodBanner` lunch variant surfaces the generic `pasta-combo` (any pasta + drink + dessert, 10% off) during 11:30–13:00. The category-only combos sit alongside the new item-locked **Italian Classic Deal** (Margherita + Espresso + Tiramisù, 10%) — admins choose either pattern per location at `/admin/crosssell` → Combo deals. |
 | ✅ | "Tap to make it a Gold-Tier order: +pesto bruschetta included" | status | +9% | `TierPerkBanner` — Gold/Platinum-gated, comp'd via price-0 cart line |
 | ⏳ | "Try the new burrata — first 12 today" | scarcity | +6% | needs per-day inventory tracking on seasonal items |
 | ⛔ | **Don't:** "Are you sure you want to add fries?" | annoying | -3% | not shipped |
@@ -175,9 +175,9 @@ T+pay (Stripe sheet)                                                 ⏳ deferre
 | Status | Trigger | Surface | Example |
 |---|---|---|---|
 | ✅ | 07:00–10:00 | Cart top | "Pre-order lunch — beat the noon rush" (`TodBanner` morning variant) |
-| ✅ | 11:00–13:00 (rush) | Cart top | "Lunch combo — pasta + drink, save 10%" (`TodBanner` lunch variant, surfaces the meal-deal combo) |
+| ✅ | 11:00–13:00 (rush) | Cart top | "Lunch combo — pasta + drink, save 10%" (`TodBanner` lunch variant, surfaces the `pasta-combo` / `lunch-special` generic combos or the item-locked Italian Classic Deal, whichever the cart qualifies for) |
 | ✅ | 14:00–16:00 (afternoon) | Cart top | "Espresso break — pickup in 4 min" with one-tap add (`TodBanner` afternoon) |
-| ✅ | 17:00–19:00 | Cart top | "Cooking for the table tonight?" hint with meal-deal pairing (`TodBanner` dinner) |
+| ✅ | 17:00–19:00 | Cart top | "Cooking for the table tonight?" hint with combo pairing (`TodBanner` dinner — surfaces the active combo from `getActiveComboDeals`) |
 | ✅ | 20:00–23:00 | Cart top | "Late-night espresso & dessert" one-tap espresso add (`TodBanner` late) |
 | ⏳ | Rain forecast | Hero card | "Rainy day = warm pasta. Free delivery over PLN 50 today." — needs weather feed wiring |
 | ⏳ | Customer's 3rd order | Cart top | "Loyalty unlock: try the Pizzaiolo's Choice (Platinum-only — comp this one)" — needs lifetime-order trigger |
@@ -204,7 +204,7 @@ From `src/data/menus/krakow.ts` actuals:
 
 ### 2.5 How The Best Operators Upsell
 
-- **McDonald's:** Default-combo psychology. The single button "Make it a meal +PLN X" frames *non*-combo as the deviant choice. AOV uplift: 22%. — 🟡 **partial:** the `TodBanner` lunch variant surfaces the meal-deal combo as the default expectation during 11:00–13:00. The auto-apply when categories match already exists via `getActiveComboDeals`. A "Remove combo" CTA on the applied banner is the follow-up.
+- **McDonald's:** Default-combo psychology. The single button "Make it a meal +PLN X" frames *non*-combo as the deviant choice. AOV uplift: 22%. — 🟡 **partial:** the `TodBanner` lunch variant surfaces the active combo as the default expectation during 11:00–13:00. Auto-apply when categories match exists via `getActiveComboDeals`, which now scores combos by largest savings (complete beats partial, original-index breaks ties) so a fully-satisfied combo always wins over an earlier partial one — fixes the order-dependent short-circuit that previously hid completed discounts. The new item-locked **Italian Classic Deal** (Margherita + Espresso + Tiramisù) is McDonald's-style "make it the Italian Classic" framing, admin-configurable from `/admin/crosssell` → Combo deals. A "Remove combo" CTA on the applied banner is the follow-up.
 - **Starbucks:** Size laddering with named premium ("Venti"). Modifier upsells ("add an espresso shot +PLN 4"). Personalised "your usual" rebuild. — ⛔ **rejected** on the size-laddering / modifier half (fixed Neapolitan portions). The "your usual" rebuild belongs in §5.2.4 habit-loop work.
 - **Uber Eats:** "Frequently bought together" + "Customers near you ordered" + algorithmic free-delivery threshold tuned per user. AOV uplift attributable to algorithmic upsell: 11%. — ✅ **shipped:** per-segment delivery threshold (first-time 39 / regular 60 / Gold/Platinum 0) live in `DeliveryProgress` and respected by the checkout charge via `computeDeliveryFee(_, _, override)`. ML upsell scorer is §9.1.
 - **Domino's:** Pre-checkout "wait, don't forget…" upsell card. Polarising but proven +8% per checkout. — ✅ **shipped via** `CartUpsell` (3-up chips above subtotal).
@@ -268,6 +268,18 @@ Family Feast becomes the *visually correct* choice.
 - ✅ Checkout sends one Stripe line at the locked price with composition itemized in description.
 - ✅ Admin editor at `/admin/upsell` → "Bundle ladder" — CRUD tiers, slots, prices, default/anchor/decoy flags per location.
 - ✅ Admin editor at `/admin/upsell` → "Bundle availability" — lunch start/end hours + family `minMainItems` / `hintWithin`.
+
+#### 3.2.1 Combo Discount Plumbing ✅ shipped
+
+Bundles collapse to one Stripe line, so the discount is implicit in the price. Combos are different — line items keep their per-item prices on the Stripe receipt, and the discount is attached as a one-shot Stripe coupon (`amount_off = comboDiscount`, `currency = pln`, `duration = once`) via `session.discounts`. Without this, line items summed to the pre-discount subtotal and the customer was charged the full amount while `order.totalAmount` showed the discount — a financial-correctness bug fixed in `/api/checkout/route.ts`. `createOrderFromCart` threads `comboDiscount` + `comboName` onto the success result so the Stripe layer can build the coupon with the right name on the customer's receipt.
+
+Three combo behaviours are now correctness-verified end-to-end (`scripts/verify-combo-fix.ts`):
+
+- **Order-independent scoring.** `getActiveComboDeals` scores every combo, prefers fully-complete ones (largest savings, original-index tiebreak), then partials. Fixes the prior short-circuit where a panino+drink cart got "still need pizza+desserts for meal-deal" instead of the 8% lunch-special applied.
+- **Quantity-capped discount.** Savings = `discountPercent` × cheapest unit per matched category (or per required item suffix). 5 pizzas + drink + dessert no longer scales 10% across all 5 pizzas; one combo's worth caps the savings.
+- **Item-locked combos.** New `requiredItems: { suffix; label }[]` on `ComboDeal` gates a combo on specific menu items via `id.endsWith(suffix)` so the same definition matches `krk-pizza-margherita` and `waw-pizza-margherita`. The default ladder now ships with **Italian Classic Deal** as an item-locked example (Margherita + Espresso + Tiramisù, 10%) — a Quattro Formaggi cart routes to a different promo rather than fraudulently completing this one.
+
+Admin manages combos end-to-end at `/admin/crosssell` → Combo deals: toggle, rename, edit discount %, min items, required categories, **and pick specific menu items** via a grouped-by-category dropdown. The PUT `/api/admin/upsell` route validates `combos[].categories` against the `MenuCategory` enum and validates `requiredItems` shape, so a typo can no longer silently disable a deal at checkout.
 
 ### 3.3 Free-Delivery Threshold Architecture ✅ shipped
 
