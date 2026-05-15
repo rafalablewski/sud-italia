@@ -291,6 +291,105 @@ export const PUT = withAdmin(
             );
           }
         }
+        // Optional scarcity field (Sprint 6 #4).
+        if (b.limitedUntil !== undefined && b.limitedUntil !== null) {
+          if (typeof b.limitedUntil !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(b.limitedUntil)) {
+            return NextResponse.json(
+              { error: "Invalid bundle.limitedUntil — must be YYYY-MM-DD" },
+              { status: 400 },
+            );
+          }
+        }
+        // Optional weekday gating (Sprint 6 #9).
+        if (b.activeDays !== undefined && b.activeDays !== null) {
+          if (!Array.isArray(b.activeDays)) {
+            return NextResponse.json(
+              { error: "Invalid bundle.activeDays — must be an array of weekday names" },
+              { status: 400 },
+            );
+          }
+          const validDays = new Set([
+            "monday",
+            "tuesday",
+            "wednesday",
+            "thursday",
+            "friday",
+            "saturday",
+            "sunday",
+          ]);
+          for (const d of b.activeDays) {
+            if (typeof d !== "string" || !validDays.has(d)) {
+              return NextResponse.json(
+                { error: `Invalid bundle.activeDays entry "${d}" — expected lowercase English weekday` },
+                { status: 400 },
+              );
+            }
+          }
+        }
+      }
+    }
+
+    // Optional experiment (Sprint 6 #1 — A/B framework).
+    if (config.experiment !== undefined && config.experiment !== null) {
+      const exp = config.experiment;
+      if (
+        typeof exp?.id !== "string" ||
+        exp.id.trim().length === 0 ||
+        typeof exp?.name !== "string" ||
+        typeof exp?.active !== "boolean" ||
+        !Array.isArray(exp?.variants) ||
+        exp.variants.length === 0
+      ) {
+        return NextResponse.json(
+          { error: "Invalid experiment — needs id, name, active, non-empty variants" },
+          { status: 400 },
+        );
+      }
+      const seenVariantIds = new Set<string>();
+      for (const v of exp.variants) {
+        if (
+          typeof v?.id !== "string" ||
+          v.id.trim().length === 0 ||
+          typeof v?.label !== "string" ||
+          typeof v?.weight !== "number" ||
+          v.weight < 0 ||
+          v.weight > 100
+        ) {
+          return NextResponse.json(
+            { error: "Invalid experiment variant — needs id, label, weight 0–100" },
+            { status: 400 },
+          );
+        }
+        if (seenVariantIds.has(v.id)) {
+          return NextResponse.json(
+            { error: `Duplicate experiment variant id "${v.id}"` },
+            { status: 400 },
+          );
+        }
+        seenVariantIds.add(v.id);
+        if (v.bundleOverrides !== undefined && v.bundleOverrides !== null) {
+          if (typeof v.bundleOverrides !== "object") {
+            return NextResponse.json(
+              { error: "Invalid experiment variant bundleOverrides — must be an object" },
+              { status: 400 },
+            );
+          }
+          for (const [bundleId, o] of Object.entries(v.bundleOverrides)) {
+            const okNumber = typeof o === "number" && o >= 0 && o <= 50;
+            const okObject =
+              o !== null &&
+              typeof o === "object" &&
+              Object.values(o as Record<string, unknown>).every(
+                (val) => val === undefined || (typeof val === "number" && val >= 0 && val <= 50),
+              );
+            if (!okNumber && !okObject) {
+              return NextResponse.json(
+                { error: `Invalid experiment override for "${bundleId}" — must be a 0–50 number or {discountPercent?, mainsDiscountPercent?, addOnsDiscountPercent?} with 0–50 values` },
+                { status: 400 },
+              );
+            }
+          }
+        }
       }
     }
 

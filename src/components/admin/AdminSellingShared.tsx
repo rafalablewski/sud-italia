@@ -93,6 +93,33 @@ export interface BundleConfig {
   addOnsDiscountPercent?: number;
   /** Optional loyalty gate. */
   requiredTier?: "gold" | "platinum";
+  /** Scarcity / time-pressure framing — ISO date (YYYY-MM-DD). When
+   *  present and in the future, the chip shows a "limited until <date>"
+   *  badge. Past dates auto-deactivate the bundle. */
+  limitedUntil?: string;
+  /** Per-day-of-week visibility. Lower-case English day names; when
+   *  unset, the bundle is available all week. When set, the bundle is
+   *  only surfaced when the local weekday matches one of these. */
+  activeDays?: string[];
+}
+
+/** Experiment shape (Sprint 6 #1). Mirrors src/lib/experiments.ts at the
+ *  admin layer with loose `string[]` types so JSON round-trips cleanly. */
+export interface ExperimentVariantConfig {
+  id: string;
+  label: string;
+  weight: number;
+  bundleOverrides?: Record<
+    string,
+    | number
+    | { mainsDiscountPercent?: number; addOnsDiscountPercent?: number; discountPercent?: number }
+  >;
+}
+export interface ExperimentConfig {
+  id: string;
+  name: string;
+  active: boolean;
+  variants: ExperimentVariantConfig[];
 }
 
 export interface BundleRulesConfig {
@@ -110,6 +137,10 @@ export interface LocationConfig {
   timeWindows?: TimeWindowConfig[];
   bundleRules?: BundleRulesConfig;
   bundles?: BundleConfig[];
+  /** Single active per-location A/B experiment (Sprint 6 #1). Resolver
+   *  in src/lib/experiments.ts phone-hashes assignment so client and
+   *  server agree on the same variant for the same customer. */
+  experiment?: ExperimentConfig | null;
 }
 
 export type AllSettings = Record<string, LocationConfig>;
@@ -1401,10 +1432,72 @@ function BundleTierRow({
         onChange={(composition) => onChange({ composition })}
       />
 
+      {/* Scarcity / per-day visibility — Sprint 6 #4 + #9. Both fields
+          round-trip through the spread and feed cart-side gating. When
+          either is set, the chip subtitle gets a "limited until 2026-06-30"
+          flavour-text + the ladder filters by weekday. */}
+      <div className="mt-3 grid gap-2 md:grid-cols-[1fr_2fr] items-start">
+        <label className="block">
+          <span className="text-[10px] text-slate-400 block mb-1">
+            Limited until (optional)
+          </span>
+          <input
+            type="date"
+            value={bundle.limitedUntil ?? ""}
+            onChange={(e) =>
+              onChange({ limitedUntil: e.target.value.trim() === "" ? undefined : e.target.value })
+            }
+            className="glass-input text-sm w-full"
+            placeholder="2026-06-30"
+          />
+        </label>
+        <div>
+          <p className="text-[10px] text-slate-400 mb-1">
+            Active days (optional — empty = all week)
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {WEEKDAYS.map((day) => {
+              const selected = (bundle.activeDays ?? []).includes(day);
+              return (
+                <button
+                  key={day}
+                  type="button"
+                  onClick={() => {
+                    const current = new Set(bundle.activeDays ?? []);
+                    if (selected) current.delete(day);
+                    else current.add(day);
+                    onChange({
+                      activeDays: current.size === 0 ? undefined : Array.from(current),
+                    });
+                  }}
+                  className={`px-2 py-0.5 rounded-md text-[10px] font-medium uppercase tracking-wider transition-colors ${
+                    selected
+                      ? "bg-italia-gold/20 text-italia-gold-dark border border-italia-gold/40"
+                      : "bg-white/5 text-slate-400 border border-white/10 hover:border-white/25"
+                  }`}
+                >
+                  {day.slice(0, 3)}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
       <BundleMarginPreview bundle={bundle} menu={menu} />
     </div>
   );
 }
+
+export const WEEKDAYS = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+] as const;
 
 /**
  * Live margin preview for a single bundle tier. Shows the bundle price
@@ -1622,6 +1715,305 @@ function CompositionEditor({
         >
           <Plus className="h-3 w-3" /> Add slot
         </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * A/B experiment editor (Sprint 6 #1). Single active experiment per
+ * location with weighted variants and per-bundle discount overrides.
+ * Runtime assignment is phone-hashed in src/lib/experiments.ts so the
+ * same customer always sees the same variant across visits + the
+ * server reproduces it at checkout. Variant ids land in the bundle
+ * audit log so BundleAnalyticsCard can show AOV / contribution uplift
+ * per variant.
+ */
+export function ExperimentEditor({
+  experiment,
+  bundles,
+  onChange,
+}: {
+  experiment: ExperimentConfig | null | undefined;
+  bundles: BundleConfig[];
+  onChange: (next: ExperimentConfig | null) => void;
+}) {
+  // Empty-state nudge: ship a starter experiment that the operator can
+  // tune. Avoids requiring JSON literacy to set up the first A/B.
+  if (!experiment) {
+    return (
+      <div className="rounded-lg border border-white/10 bg-white/5 p-4 space-y-3">
+        <div>
+          <p className="admin-text font-semibold text-sm">No experiment running</p>
+          <p className="text-xs admin-text-secondary mt-1">
+            A/B-test discount %s on any dynamic bundle. Variant assignment is phone-hashed so
+            customers always see the same variant; the audit log records which one bought what,
+            so BundleAnalyticsCard can show AOV uplift per variant.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() =>
+            onChange({
+              id: `exp_${Math.random().toString(36).slice(2, 8)}`,
+              name: "Family Feast discount A/B",
+              active: false,
+              variants: [
+                { id: "control", label: "Control · 28% blend", weight: 50, bundleOverrides: {} },
+                {
+                  id: "variant_a",
+                  label: "Variant A · 22% blend",
+                  weight: 50,
+                  bundleOverrides: {
+                    "family-feast": { mainsDiscountPercent: 12, addOnsDiscountPercent: 32 },
+                  },
+                },
+              ],
+            })
+          }
+          className="v2-btn v2-btn-primary v2-btn-sm w-fit"
+        >
+          <Plus className="h-3 w-3" /> Start an experiment
+        </button>
+      </div>
+    );
+  }
+
+  const totalWeight = experiment.variants.reduce(
+    (s, v) => s + Math.max(0, v.weight),
+    0,
+  );
+  const weightBalanced = totalWeight === 100;
+
+  const update = (patch: Partial<ExperimentConfig>) => {
+    onChange({ ...experiment, ...patch });
+  };
+  const updateVariant = (idx: number, patch: Partial<ExperimentVariantConfig>) => {
+    const variants = experiment.variants.map((v, i) => (i === idx ? { ...v, ...patch } : v));
+    update({ variants });
+  };
+  const removeVariant = (idx: number) => {
+    update({ variants: experiment.variants.filter((_, i) => i !== idx) });
+  };
+  const addVariant = () => {
+    update({
+      variants: [
+        ...experiment.variants,
+        {
+          id: `variant_${experiment.variants.length}`,
+          label: `Variant ${String.fromCharCode(65 + experiment.variants.length)}`,
+          weight: 0,
+          bundleOverrides: {},
+        },
+      ],
+    });
+  };
+
+  return (
+    <div className="rounded-lg border border-white/10 bg-white/5 p-4 space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <input
+            className="glass-input w-full font-semibold"
+            value={experiment.name}
+            onChange={(e) => update({ name: e.target.value })}
+            placeholder="Experiment name"
+          />
+          <p className="text-[10px] admin-text-secondary mt-1">id: {experiment.id}</p>
+        </div>
+        <label className="flex items-center gap-1 text-xs admin-text-secondary">
+          <input
+            type="checkbox"
+            checked={experiment.active}
+            onChange={(e) => update({ active: e.target.checked })}
+          />
+          Active
+        </label>
+        <button
+          type="button"
+          onClick={() => onChange(null)}
+          className="text-red-400 hover:text-red-300"
+          title="Delete experiment"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
+
+      {!weightBalanced && (
+        <p className="text-[11px] text-amber-300">
+          Variant weights sum to {totalWeight}, not 100. Customers are still bucketed via
+          normalized weight, but balance them at 100 for clarity.
+        </p>
+      )}
+
+      <div className="space-y-3">
+        {experiment.variants.map((variant, idx) => (
+          <ExperimentVariantRow
+            key={variant.id}
+            variant={variant}
+            bundles={bundles}
+            onChange={(patch) => updateVariant(idx, patch)}
+            onRemove={() => removeVariant(idx)}
+          />
+        ))}
+      </div>
+
+      <button
+        type="button"
+        onClick={addVariant}
+        className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-dashed border-white/20 text-[11px] admin-text-secondary hover:bg-white/5"
+      >
+        <Plus className="h-3 w-3" /> Add variant
+      </button>
+    </div>
+  );
+}
+
+function ExperimentVariantRow({
+  variant,
+  bundles,
+  onChange,
+  onRemove,
+}: {
+  variant: ExperimentVariantConfig;
+  bundles: BundleConfig[];
+  onChange: (patch: Partial<ExperimentVariantConfig>) => void;
+  onRemove: () => void;
+}) {
+  // Available bundles to override = dynamic bundles. Fixed bundles
+  // ignore discount overrides at runtime so the UI hides them.
+  const overridableBundles = bundles.filter((b) => (b.pricingMode ?? "fixed") === "dynamic");
+  const overrides = variant.bundleOverrides ?? {};
+
+  const setOverride = (bundleId: string, value: ExperimentVariantConfig["bundleOverrides"] extends Record<string, infer V> | undefined ? V : never) => {
+    const next = { ...overrides, [bundleId]: value };
+    onChange({ bundleOverrides: next });
+  };
+  const removeOverride = (bundleId: string) => {
+    const { [bundleId]: _, ...rest } = overrides;
+    onChange({ bundleOverrides: rest });
+  };
+
+  return (
+    <div className="rounded-md border border-white/10 bg-black/20 p-3 space-y-2">
+      <div className="grid gap-2 md:grid-cols-[1fr_1fr_100px_auto] items-center">
+        <input
+          className="glass-input"
+          value={variant.id}
+          onChange={(e) => onChange({ id: e.target.value.replace(/[^a-z0-9_]/g, "").slice(0, 32) })}
+          placeholder="variant_id"
+        />
+        <input
+          className="glass-input"
+          value={variant.label}
+          onChange={(e) => onChange({ label: e.target.value })}
+          placeholder="Display label"
+        />
+        <label className="flex items-center gap-1 text-xs admin-text-secondary">
+          Weight
+          <input
+            className="glass-input w-16 text-right"
+            type="number"
+            min={0}
+            max={100}
+            value={variant.weight}
+            onChange={(e) => onChange({ weight: clampHour(Number(e.target.value) || 0, 100) })}
+          />
+        </label>
+        <button
+          type="button"
+          onClick={onRemove}
+          className="text-red-400 hover:text-red-300"
+          aria-label="Remove variant"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      <div>
+        <p className="text-[10px] uppercase tracking-wide admin-text-secondary mb-1">
+          Per-bundle overrides
+        </p>
+        <div className="space-y-1.5">
+          {overridableBundles.length === 0 && (
+            <p className="text-[11px] text-slate-500">
+              No dynamic bundles in this location to override. Configure dynamic-mode bundles first.
+            </p>
+          )}
+          {overridableBundles.map((b) => {
+            const o = overrides[b.id];
+            const hasOverride = o !== undefined;
+            const oObj = typeof o === "object" ? o : undefined;
+            const oNumber = typeof o === "number" ? o : undefined;
+            return (
+              <div key={b.id} className="grid gap-1.5 grid-cols-[1fr_80px_80px_80px_auto] items-center text-xs">
+                <span className="admin-text">{b.tier}</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={50}
+                  placeholder="disc %"
+                  value={oNumber ?? oObj?.discountPercent ?? ""}
+                  onChange={(e) => {
+                    const v = e.target.value.trim();
+                    if (v === "") {
+                      removeOverride(b.id);
+                    } else {
+                      setOverride(b.id, Math.max(0, Math.min(50, Number(v) || 0)));
+                    }
+                  }}
+                  className="glass-input text-right"
+                />
+                <input
+                  type="number"
+                  min={0}
+                  max={50}
+                  placeholder="mains %"
+                  value={oObj?.mainsDiscountPercent ?? ""}
+                  onChange={(e) => {
+                    const v = e.target.value.trim();
+                    const base = typeof o === "object" ? o : {};
+                    if (v === "" && (base.addOnsDiscountPercent === undefined)) {
+                      removeOverride(b.id);
+                    } else {
+                      setOverride(b.id, {
+                        ...base,
+                        mainsDiscountPercent: v === "" ? undefined : Math.max(0, Math.min(50, Number(v) || 0)),
+                      });
+                    }
+                  }}
+                  className="glass-input text-right"
+                />
+                <input
+                  type="number"
+                  min={0}
+                  max={50}
+                  placeholder="addons %"
+                  value={oObj?.addOnsDiscountPercent ?? ""}
+                  onChange={(e) => {
+                    const v = e.target.value.trim();
+                    const base = typeof o === "object" ? o : {};
+                    if (v === "" && (base.mainsDiscountPercent === undefined)) {
+                      removeOverride(b.id);
+                    } else {
+                      setOverride(b.id, {
+                        ...base,
+                        addOnsDiscountPercent: v === "" ? undefined : Math.max(0, Math.min(50, Number(v) || 0)),
+                      });
+                    }
+                  }}
+                  className="glass-input text-right"
+                />
+                <span className={`text-[10px] ${hasOverride ? "text-italia-gold-dark" : "text-slate-600"}`}>
+                  {hasOverride ? "override" : "default"}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+        <p className="text-[10px] text-slate-500 mt-1">
+          Single &ldquo;disc %&rdquo; replaces the blended discount; split mains/add-ons overrides take precedence.
+        </p>
       </div>
     </div>
   );

@@ -16,6 +16,8 @@ import {
   resolveBundleAvailability,
   resolveBundleSlots,
 } from "@/lib/bundles";
+import { resolveClientVariant, type Experiment } from "@/lib/experiments";
+import { useCustomer } from "@/store/customer";
 import type { CartItem, MenuItem } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
 import { BundleComposerSheet } from "./BundleComposerSheet";
@@ -28,6 +30,11 @@ interface BundleLadderProps {
   /** Admin-configured availability rules (LocationUpsellConfig.bundleRules).
    *  When unset, DEFAULT_BUNDLE_RULES wins (lunch 11–14, family minMainItems 5). */
   configRules?: Partial<BundleAvailabilityRules> | null;
+  /** Optional A/B experiment configured for this location. When set + the
+   *  customer's phone hashes to a variant with bundle overrides, the
+   *  override is applied client-side BEFORE pricing so the cart shows
+   *  exactly what the server will charge. */
+  configExperiment?: Experiment | null;
   /** Active combo discount (grosze). When > 0 the bundle CTA shows the
    *  *incremental* savings ("save X more than your current Italian
    *  Classic 10%") so the customer doesn't feel like applying the
@@ -59,6 +66,7 @@ export function BundleLadder({
   allMenuItems,
   configBundles,
   configRules,
+  configExperiment = null,
   activeComboSavings = 0,
   activeComboName = null,
 }: BundleLadderProps) {
@@ -67,10 +75,35 @@ export function BundleLadder({
   const appliedBundleId = useCartStore((s) => s.appliedBundleId);
   const applyBundle = useCartStore((s) => s.applyBundle);
   const clearBundle = useCartStore((s) => s.clearBundle);
+  const { customer } = useCustomer();
+
+  // Resolve A/B variant once per customer/experiment combo. SHA-256 hashed
+  // so server reproduces it at checkout — same discount %s on both sides.
+  const [variantApply, setVariantApply] = useState<((b: BundleTier) => BundleTier) | null>(null);
+  const [variantId, setVariantId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!configExperiment?.active || !customer?.phone) {
+      setVariantApply(null);
+      setVariantId(null);
+      return;
+    }
+    let cancelled = false;
+    resolveClientVariant(configExperiment, customer.phone).then((v) => {
+      if (cancelled || !v) return;
+      setVariantApply(() => v.applyToBundle);
+      setVariantId(v.variantId);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [configExperiment, customer?.phone]);
 
   const allBundles = useMemo(
-    () => resolveBundles(configBundles ?? null),
-    [configBundles],
+    () => {
+      const raw = resolveBundles(configBundles ?? null);
+      return variantApply ? raw.map(variantApply) : raw;
+    },
+    [configBundles, variantApply],
   );
 
   const rules = useMemo(

@@ -55,6 +55,73 @@ function hashPhoneToBucket(experimentId: string, phoneE164: string): number {
   return Math.abs(n) % 100;
 }
 
+/** Browser-safe variant of the bucket hash. Uses the Web Crypto API when
+ *  available (every modern mobile browser) and falls back to a simple
+ *  multiplicative hash for the rare environments without it. The server
+ *  uses the Node SHA-256 above — both produce the same bucket for the
+ *  same (experiment id, phone) pair *because* the SHA-256 implementations
+ *  are stable. The fallback path is only ever exercised in jsdom-style
+ *  tests. */
+export async function resolveClientVariant(
+  experiment: Experiment | null | undefined,
+  phoneE164: string | null | undefined,
+): Promise<ResolvedVariant | null> {
+  if (!experiment || !experiment.active || experiment.variants.length === 0) return null;
+  if (!phoneE164) return null;
+
+  const totalWeight = experiment.variants.reduce((s, v) => s + Math.max(0, v.weight), 0);
+  if (totalWeight <= 0) return null;
+
+  const subtle = typeof globalThis !== "undefined" && (globalThis as { crypto?: { subtle?: SubtleCrypto } }).crypto?.subtle;
+  let bucket: number;
+  if (subtle) {
+    const data = new TextEncoder().encode(`${experiment.id}|${phoneE164}`);
+    const digest = await subtle.digest("SHA-256", data);
+    const bytes = new Uint8Array(digest);
+    const n = (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3];
+    bucket = (Math.abs(n) % 100) / 100;
+  } else {
+    let h = 0;
+    const s = `${experiment.id}|${phoneE164}`;
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+    bucket = (Math.abs(h) % 100) / 100;
+  }
+
+  let cumulative = 0;
+  let picked: ExperimentVariant | null = null;
+  for (const v of experiment.variants) {
+    cumulative += Math.max(0, v.weight) / totalWeight;
+    if (bucket < cumulative) {
+      picked = v;
+      break;
+    }
+  }
+  if (!picked) picked = experiment.variants[experiment.variants.length - 1];
+  const variant = picked;
+
+  return {
+    variantId: variant.id,
+    experimentId: experiment.id,
+    applyToBundle: (bundle) => {
+      const override = variantOverrideFor(variant, bundle.id);
+      if (
+        override.discountPercent === undefined &&
+        override.mainsDiscountPercent === undefined &&
+        override.addOnsDiscountPercent === undefined
+      ) {
+        return bundle;
+      }
+      if (bundle.pricingMode !== "dynamic") return bundle;
+      return {
+        ...bundle,
+        discountPercent: override.discountPercent ?? bundle.discountPercent,
+        mainsDiscountPercent: override.mainsDiscountPercent ?? bundle.mainsDiscountPercent,
+        addOnsDiscountPercent: override.addOnsDiscountPercent ?? bundle.addOnsDiscountPercent,
+      };
+    },
+  };
+}
+
 function variantOverrideFor(
   variant: ExperimentVariant,
   bundleId: string,

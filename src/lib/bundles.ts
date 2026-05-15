@@ -46,6 +46,16 @@ interface BundleBase {
    *  visually pre-selected. The McDonald's combo effect. */
   isDefault?: boolean;
   active: boolean;
+  /** Scarcity / time-pressure framing — ISO YYYY-MM-DD. When in the
+   *  future, the chip shows a "limited until <date>" badge to add
+   *  urgency. Past dates auto-deactivate the bundle so an admin who
+   *  shipped a "this week only" deal can't accidentally leave it
+   *  running. */
+  limitedUntil?: string;
+  /** Per-day-of-week gating. Lower-case English day names; empty/unset
+   *  = always available. Drives merchandising on weekly cadences
+   *  (Friday Family Feast push, Wednesday Lunch+ default, etc.). */
+  activeDays?: string[];
 }
 
 export interface BundleFixedTier extends BundleBase {
@@ -391,16 +401,46 @@ export function suggestedBundleMealPeriod(
   return "lunch";
 }
 
+const WEEKDAY_NAMES = [
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+];
+
+/** Returns true when the bundle is *currently* eligible to render —
+ *  active flag set AND limitedUntil not in the past AND today is in
+ *  activeDays (if set). The caller (resolveBundles + cart-side filters)
+ *  uses this so admin-side scarcity / weekday merchandising gates work
+ *  without each touch-point having to re-implement the rules. */
+export function isBundleActiveNow(bundle: BundleTier, now: Date = new Date()): boolean {
+  if (!bundle.active) return false;
+  if (bundle.limitedUntil) {
+    // Compare as YYYY-MM-DD to avoid local-timezone-of-midnight gotchas.
+    const today = now.toISOString().slice(0, 10);
+    if (today > bundle.limitedUntil) return false;
+  }
+  if (bundle.activeDays && bundle.activeDays.length > 0) {
+    const day = WEEKDAY_NAMES[now.getDay()];
+    if (!bundle.activeDays.includes(day)) return false;
+  }
+  return true;
+}
+
 /** Resolve admin-configured + default bundles for a location. Admin entries
  *  win when present so operators can A/B specific tiers without losing the
  *  rest of the ladder. */
 export function resolveBundles(
   configBundles?: BundleTier[] | null,
+  now: Date = new Date(),
 ): BundleTier[] {
   if (configBundles && configBundles.length > 0) {
-    return configBundles.filter((b) => b.active);
+    return configBundles.filter((b) => isBundleActiveNow(b, now));
   }
-  return DEFAULT_BUNDLES.filter((b) => b.active);
+  return DEFAULT_BUNDLES.filter((b) => isBundleActiveNow(b, now));
 }
 
 export interface ResolvedBundleSlot {
