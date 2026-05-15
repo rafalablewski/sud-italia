@@ -184,7 +184,14 @@ const DEFAULT_STAFF_PICKS: Record<string, string[]> = {
 
 const NEW_ITEMS: string[] = [];
 
-export type BadgeType = "popular" | "staff-pick" | "new" | "best-value";
+export type BadgeType =
+  | "popular"
+  | "staff-pick"
+  | "new"
+  | "best-value"
+  | "hero"
+  | "pizzaiolo-choice"
+  | "chef-signature";
 
 // Configurable upsell config shape (matches LocationUpsellConfig from store)
 export interface UpsellConfig {
@@ -233,11 +240,73 @@ export function getItemBadges(
   return badges;
 }
 
+/**
+ * Menu-engineering sort order (audit §4.4 — Hierarchy Of Menu Page).
+ * Hero → Profit-driver → Anchor → standard items by popularity → unranked.
+ * Stable inside each band so the rest of the popularity ranking carries through.
+ *
+ * Drinks and desserts inside a *single category view* still follow this order;
+ * the "drinks bottom of menu" rule from §4.4 is a cross-category hint that's
+ * already enforced by the category tab order in MenuSection.
+ */
+export function compareMenuEngineering(
+  a: { id: string; menuRole?: import("@/data/types").MenuRole },
+  b: { id: string; menuRole?: import("@/data/types").MenuRole },
+  locationSlug: string,
+  config?: UpsellConfig | null,
+): number {
+  const rank = (role?: string) => {
+    if (role === "hero") return 0;
+    if (role === "profit-driver") return 1;
+    if (role === "anchor") return 2;
+    return 3;
+  };
+  const ra = rank(a.menuRole);
+  const rb = rank(b.menuRole);
+  if (ra !== rb) return ra - rb;
+  // Inside the residual band: popularity → alphabetical fallback handled
+  // by callers (MenuSection keeps the alphabetical tiebreak).
+  const popular = config?.popularItems || DEFAULT_POPULAR_ITEMS[locationSlug] || [];
+  const aPop = popular.includes(a.id) ? 0 : 1;
+  const bPop = popular.includes(b.id) ? 0 : 1;
+  return aPop - bPop;
+}
+
+/**
+ * Menu-engineering badges derived directly from the item's `menuRole`
+ * (audit §4.3). Kept separate from `getItemBadges` because:
+ *  - menu role is intrinsic to the item; popularity/staff-pick are admin-
+ *    editable per location,
+ *  - role-based badges drive layout decisions (hero is full-width, profit
+ *    drivers occupy the sweet-spot row) that admin overrides shouldn't move.
+ * Returns the empty array for items without a role so callers can spread it
+ * unconditionally.
+ */
+export function getMenuRoleBadges(item: {
+  menuRole?: import("@/data/types").MenuRole;
+  isLimited?: boolean;
+}): BadgeType[] {
+  const out: BadgeType[] = [];
+  if (item.menuRole === "hero") out.push("hero");
+  if (item.menuRole === "profit-driver") out.push("pizzaiolo-choice");
+  if (item.menuRole === "anchor") out.push("chef-signature");
+  return out;
+}
+
 export const BADGE_CONFIG: Record<BadgeType, { label: string; color: string }> = {
   popular: { label: "Most Popular", color: "bg-italia-red/10 text-italia-red" },
   "staff-pick": { label: "Staff Pick", color: "bg-italia-gold/15 text-italia-gold-dark" },
   new: { label: "New", color: "bg-italia-green/10 text-italia-green" },
   "best-value": { label: "Best Value", color: "bg-purple-50 text-purple-600" },
+  hero: { label: "Our Hero", color: "bg-italia-red text-white" },
+  "pizzaiolo-choice": {
+    label: "Pizzaiolo's Choice",
+    color: "bg-italia-gold/15 text-italia-gold-dark",
+  },
+  "chef-signature": {
+    label: "Chef's Signature",
+    color: "bg-italia-dark text-italia-cream",
+  },
 };
 
 // --- Cross-sell suggestions for the cart ---

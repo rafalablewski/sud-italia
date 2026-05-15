@@ -13,8 +13,8 @@
 
 ## Implementation status
 
-Sections 2 and 3 of this audit are now in production. Every row of the
-design spec carries an inline tick:
+Sections 2, 3, and 4 of this audit are now in production. Every row of
+the design spec carries an inline tick:
 
 - ✅ shipped — live in production on the customer + admin surfaces today
 - 🟡 partial — visible to the customer, with a follow-up scoped (ML
@@ -301,7 +301,19 @@ Estimated revenue per corporate account of 8–12: PLN 1,800–3,200 per month. 
 
 ---
 
-## 4. Menu Engineering & Pricing Psychology
+## 4. Menu Engineering & Pricing Psychology ✅ shipped
+
+Status: §4.2 (charm pricing + price-end alignment), §4.3 (hero / profit-driver / anchor / LTO triangle), and §4.4 (menu page hierarchy) are wired end-to-end. §4.5 is informational and tracks against the new monthly LTO cadence (Pizza del Pizzaiolo rotates each month via `limitedUntil`).
+
+What shipped:
+
+- **Charm pricing.** Every Kraków + Warszawa item re-aligned: pizza ends in 9, premium pasta ends in 5, espresso ends in 9, desserts end in 0. Stripe Checkout, Polish JPK_V7M VAT export, and the recipe-margin seed route all read the new prices directly — no parallel constants to drift.
+- **Premium anchor.** `Pizza del Pizzaiolo` lives in both menus (`krk-pizza-pizzaiolo` PLN 47.90, `waw-pizza-pizzaiolo` PLN 52.90) with `menuRole: "anchor"` + `isLimited: true` + `limitedUntil`. Renders with the dark Chef's Signature treatment and a days-left countdown chip.
+- **Hero / profit-driver triangle.** New `MenuRole` type on `MenuItem`. Margherita = hero (full-width card, cream-gradient frame, "The gateway — start here" subtitle). Quattro Formaggi / Linguine al Pesto / Espresso = profit driver (gold "Pizzaiolo's Choice" badge, ChefHat icon, "quietly his favourite to make" copy).
+- **Hierarchy of menu page.** The default sort is now Pizzaiolo's layout — `compareMenuEngineering()` orders hero → profit-driver → anchor → standards by popularity → alpha tie-break. Sort dropdown still exposes price-low / price-high / rating.
+- **Capability ledger.** `Menu engineering hierarchy` row added to `/admin/capabilities` per CLAUDE.md rule #9.
+
+Mockup: `mockups/menu-engineering.html` (standalone — same Tailwind classes + brand variables as production).
 
 ### 4.1 The Audit
 

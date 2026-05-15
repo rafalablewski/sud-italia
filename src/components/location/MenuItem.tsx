@@ -5,13 +5,32 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { MenuItemImage } from "./MenuItemImage";
 import { formatPrice } from "@/lib/utils";
-import { getItemBadges, BADGE_CONFIG, BadgeType } from "@/lib/upsell";
+import {
+  getItemBadges,
+  getMenuRoleBadges,
+  BADGE_CONFIG,
+  BadgeType,
+} from "@/lib/upsell";
 import { StarRating } from "@/components/rating/StarRating";
 import { getItemRating } from "@/data/ratings";
 import { getItemDetails } from "@/data/kodawari";
 import { ItemDetailDrawer } from "./ItemDetailDrawer";
 import { useCartStore } from "@/store/cart";
-import { Plus, Minus, Check, TrendingUp, Award, Zap, Star, Clock, Flame, Info } from "lucide-react";
+import {
+  Plus,
+  Minus,
+  Check,
+  TrendingUp,
+  Award,
+  Zap,
+  Star,
+  Clock,
+  Flame,
+  Info,
+  Heart,
+  ChefHat,
+  Crown,
+} from "lucide-react";
 import { useState, useEffect } from "react";
 
 interface MenuItemProps {
@@ -19,6 +38,10 @@ interface MenuItemProps {
   locationSlug: string;
   /** From real 7-day order counts at this location */
   popularThisWeek?: boolean;
+  /** When true the card uses the §4.3 hero treatment: bigger thumbnail,
+   *  ribbon, and a "Pizzaiolo's gateway" subtitle. Driven by `item.menuRole`
+   *  but kept as an explicit prop so MenuSection controls layout. */
+  variant?: "default" | "hero";
 }
 
 const TAG_LABELS: Record<string, { label: string; variant: "green" | "red" | "gold" | "default" }> = {
@@ -33,12 +56,22 @@ const BADGE_ICONS: Record<BadgeType, React.ElementType> = {
   "staff-pick": Award,
   new: Zap,
   "best-value": Star,
+  hero: Heart,
+  "pizzaiolo-choice": ChefHat,
+  "chef-signature": Crown,
 };
+
+function daysUntil(iso: string): number {
+  const target = new Date(iso).getTime();
+  if (!Number.isFinite(target)) return 0;
+  return Math.max(0, Math.ceil((target - Date.now()) / 86_400_000));
+}
 
 export function MenuItemCard({
   item,
   locationSlug,
   popularThisWeek = false,
+  variant = "default",
 }: MenuItemProps) {
   const addItem = useCartStore((s) => s.addItem);
   const removeItem = useCartStore((s) => s.removeItem);
@@ -51,9 +84,21 @@ export function MenuItemCard({
   const quantity = cartItem?.quantity ?? 0;
   const inCart = quantity > 0;
 
-  const badges = getItemBadges(item.id, locationSlug);
+  // Menu-engineering badges come first so they take visual priority over
+  // admin-editable "popular"/"staff-pick" chips when both apply.
+  const roleBadges = getMenuRoleBadges(item);
+  const adminBadges = getItemBadges(item.id, locationSlug).filter(
+    // De-dupe: don't render staff-pick if Pizzaiolo's Choice already covers it.
+    (b) => !(b === "staff-pick" && roleBadges.includes("pizzaiolo-choice")),
+  );
+  const badges: BadgeType[] = [...roleBadges, ...adminBadges];
   const itemRating = getItemRating(item.id);
   const details = getItemDetails(item.id);
+  const isHero = variant === "hero" || item.menuRole === "hero";
+  const isAnchor = item.menuRole === "anchor";
+  const ltoDaysLeft =
+    item.isLimited && item.limitedUntil ? daysUntil(item.limitedUntil) : 0;
+  const showLtoChip = item.isLimited && (!item.limitedUntil || ltoDaysLeft > 0);
 
   useEffect(() => {
     if (!justAdded) return;
@@ -83,17 +128,24 @@ export function MenuItemCard({
       details
   );
 
+  // Card frame palette: hero gets the brand cream gradient + red border,
+  // anchor gets the dark "Chef's Signature" treatment, popular still gets
+  // the gold ring, otherwise neutral. inCart still overrides for clarity.
+  const frameClass = !item.available
+    ? "bg-gray-50 border-gray-100 opacity-60"
+    : inCart
+      ? "bg-italia-green/[0.03] border-italia-green/30 shadow-sm shadow-italia-green/5"
+      : isHero
+        ? "bg-gradient-to-br from-italia-cream to-white border-italia-red/30 shadow-md hover:shadow-lg hover:border-italia-red/50"
+        : isAnchor
+          ? "bg-gradient-to-br from-italia-dark/[0.04] to-italia-gold/[0.06] border-italia-gold/40 shadow-md hover:shadow-lg hover:border-italia-gold/60"
+          : isPopular
+            ? "bg-white border-italia-gold/20 shadow-sm hover:shadow-md hover:border-italia-gold/30"
+            : "bg-white border-gray-100 hover:shadow-md hover:border-gray-200";
+
   return (
     <div
-      className={`relative flex flex-col gap-3 p-4 rounded-2xl border transition-all duration-300 ${
-        !item.available
-          ? "bg-gray-50 border-gray-100 opacity-60"
-          : inCart
-            ? "bg-italia-green/[0.03] border-italia-green/30 shadow-sm shadow-italia-green/5"
-            : isPopular
-              ? "bg-white border-italia-gold/20 shadow-sm hover:shadow-md hover:border-italia-gold/30"
-              : "bg-white border-gray-100 hover:shadow-md hover:border-gray-200"
-      }`}
+      className={`relative flex flex-col gap-3 p-4 rounded-2xl border transition-all duration-300 ${frameClass}`}
     >
       {/* Unavailable overlay */}
       {!item.available && (
@@ -131,12 +183,16 @@ export function MenuItemCard({
 
       {/* Row 1: thumbnail + title, description, pairing (full text width beside image) */}
       <div className="flex gap-4 items-start">
-        <div className="flex-shrink-0 self-center">
+        <div className={`flex-shrink-0 self-center ${isHero ? "scale-110 origin-left" : ""}`}>
           <MenuItemImage category={item.category} name={item.name} />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-heading font-semibold text-italia-dark">
+            <h3
+              className={`font-heading font-semibold text-italia-dark ${
+                isHero ? "text-lg sm:text-xl" : isAnchor ? "text-base sm:text-lg" : ""
+              }`}
+            >
               {item.name}
             </h3>
             {item.tags.map((tag) => {
@@ -147,15 +203,44 @@ export function MenuItemCard({
                 </Badge>
               ) : null;
             })}
+            {showLtoChip && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-italia-red/10 text-italia-red border border-italia-red/20">
+                <Clock className="h-3 w-3" />
+                {item.limitedUntil
+                  ? `${ltoDaysLeft}d left`
+                  : "Limited"}
+              </span>
+            )}
           </div>
-          <p className="text-sm text-italia-gray mt-1 leading-relaxed line-clamp-3">
+          <p
+            className={`text-sm text-italia-gray mt-1 leading-relaxed ${
+              isHero ? "line-clamp-none" : "line-clamp-3"
+            }`}
+          >
             {item.description}
           </p>
-          {(item.category === "pizza" || item.category === "pasta") && isPopular && (
-            <p className="text-[11px] text-italia-gold mt-1 font-medium">
-              Pairs perfectly with espresso & tiramisù
+          {isHero && (
+            <p className="text-[11px] text-italia-red mt-1.5 font-medium uppercase tracking-wide">
+              The gateway — start here
             </p>
           )}
+          {item.menuRole === "profit-driver" && (
+            <p className="text-[11px] text-italia-gold-dark mt-1 font-medium">
+              Pizzaiolo&apos;s pick — quietly his favourite to make
+            </p>
+          )}
+          {isAnchor && (
+            <p className="text-[11px] text-italia-gold-dark mt-1 font-medium">
+              Monthly small-batch — black truffle, buffalo mozzarella DOP
+            </p>
+          )}
+          {!isHero && !isAnchor && item.menuRole !== "profit-driver" &&
+            (item.category === "pizza" || item.category === "pasta") &&
+            isPopular && (
+              <p className="text-[11px] text-italia-gold mt-1 font-medium">
+                Pairs perfectly with espresso & tiramisù
+              </p>
+            )}
         </div>
       </div>
 

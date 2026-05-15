@@ -138,8 +138,8 @@ export const POST = withAdmin({ roles: ["owner"] }, async () => {
         id: recipe.id,
         menuItem: "Margherita (Kraków)",
         totalFoodCost: `${(totalCost / 100).toFixed(2)} PLN`,
-        sellingPrice: "28.00 PLN",
-        margin: `${Math.round(((2800 - totalCost) / 2800) * 100)}%`,
+        sellingPrice: "27.90 PLN",
+        margin: `${Math.round(((2790 - totalCost) / 2790) * 100)}%`,
         breakdown,
       },
     });

@@ -12,7 +12,7 @@ import { SeasonalSpecials } from "./SeasonalSpecials";
 import { ReorderSection } from "./ReorderSection";
 import { SpeedGuarantee } from "./SpeedGuarantee";
 import { ComboDealsPreview } from "./ComboDealsPreview";
-import { getItemBadges } from "@/lib/upsell";
+import { compareMenuEngineering, getItemBadges } from "@/lib/upsell";
 import { getItemRating } from "@/data/ratings";
 import { useLiveMenuAvailability } from "@/lib/useLiveMenuAvailability";
 import { Search, X, ArrowUpDown, Check } from "lucide-react";
@@ -20,7 +20,10 @@ import { Search, X, ArrowUpDown, Check } from "lucide-react";
 type MenuSortValue = "default" | "price-low" | "price-high" | "rating";
 
 const MENU_SORT_OPTIONS: { value: MenuSortValue; label: string }[] = [
-  { value: "default", label: "Popular first" },
+  // "default" applies the audit §4.4 hierarchy: hero → profit-driver →
+  // anchor → standard items by popularity. Falls back to alphabetical
+  // inside each band so two equally-rated items resolve deterministically.
+  { value: "default", label: "Pizzaiolo's layout" },
   { value: "price-low", label: "Price: low → high" },
   { value: "price-high", label: "Price: high → low" },
   { value: "rating", label: "Highest rated" },
@@ -87,7 +90,9 @@ export function MenuSection({ items, locationSlug, initialAvailability }: MenuSe
     categories[0]
   );
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<MenuSortValue>("price-low");
+  // Default to the menu-engineering hierarchy (audit §4.4) instead of the
+  // historical price-low default. Users can still flip the sort dropdown.
+  const [sortBy, setSortBy] = useState<MenuSortValue>("default");
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const sortMenuRef = useRef<HTMLDivElement>(null);
   const [hotThisWeekIds, setHotThisWeekIds] = useState<Set<string>>(new Set());
@@ -154,8 +159,11 @@ export function MenuSection({ items, locationSlug, initialAvailability }: MenuSe
     if (sortBy === "price-low") return [...result].sort((a, b) => a.price - b.price);
     if (sortBy === "price-high") return [...result].sort((a, b) => b.price - a.price);
     if (sortBy === "rating") return [...result].sort((a, b) => (getItemRating(b.id)?.rating || 0) - (getItemRating(a.id)?.rating || 0));
-    // "default" — popular items first, then alphabetical
+    // "default" — Pizzaiolo's layout (audit §4.4):
+    //   hero → profit-driver → anchor → standards by popularity → alpha tie-break.
     return [...result].sort((a, b) => {
+      const eng = compareMenuEngineering(a, b, locationSlug);
+      if (eng !== 0) return eng;
       const aPop = getItemBadges(a.id, locationSlug).includes("popular") ? 0 : 1;
       const bPop = getItemBadges(b.id, locationSlug).includes("popular") ? 0 : 1;
       return aPop - bPop || a.name.localeCompare(b.name);
@@ -300,19 +308,27 @@ export function MenuSection({ items, locationSlug, initialAvailability }: MenuSe
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {filteredItems.map((item, index) => (
-            <div
-              key={item.id}
-              className="menu-item-enter"
-              style={{ animationDelay: `${Math.min(index * 0.05, 0.3)}s` }}
-            >
-              <MenuItemCard
-                item={item}
-                locationSlug={locationSlug}
-                popularThisWeek={hotThisWeekIds.has(item.id)}
-              />
-            </div>
-          ))}
+          {filteredItems.map((item, index) => {
+            // Only stretch the hero across both columns when the menu-engineering
+            // sort is in play and we're not in a search view — otherwise the
+            // ordering loses meaning and a stretched card looks arbitrary.
+            const heroSpan =
+              !isSearching && sortBy === "default" && item.menuRole === "hero";
+            return (
+              <div
+                key={item.id}
+                className={`menu-item-enter ${heroSpan ? "lg:col-span-2" : ""}`}
+                style={{ animationDelay: `${Math.min(index * 0.05, 0.3)}s` }}
+              >
+                <MenuItemCard
+                  item={item}
+                  locationSlug={locationSlug}
+                  popularThisWeek={hotThisWeekIds.has(item.id)}
+                  variant={heroSpan ? "hero" : "default"}
+                />
+              </div>
+            );
+          })}
         </div>
 
         {filteredItems.length === 0 && (

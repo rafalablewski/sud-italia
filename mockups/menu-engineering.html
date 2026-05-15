@@ -1,0 +1,618 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mockup — Menu Engineering (Audit §4)</title>
+    <!-- Same dependency the production app pulls — Tailwind v3 via Play CDN
+         renders the same utility surface, then we extend the theme with the
+         brand variables from globals.css so the visuals match 1:1. -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      rel="preconnect"
+      href="https://fonts.googleapis.com"
+    />
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              italia: {
+                red: "#C8102E",
+                "red-dark": "#A00D24",
+                green: "#008C45",
+                "green-dark": "#006B35",
+                cream: "#FFF8F0",
+                "cream-dark": "#F5EDDF",
+                gold: "#B8922E",
+                "gold-dark": "#9A7A24",
+                dark: "#1A1A1A",
+                gray: "#6B7280",
+                "light-gray": "#F3F4F6",
+              },
+            },
+            fontFamily: {
+              heading: ["Georgia", "Times New Roman", "serif"],
+              body: ["system-ui", "-apple-system", "Segoe UI", "Roboto", "sans-serif"],
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      :root {
+        --color-italia-red: #c8102e;
+        --color-italia-red-dark: #a00d24;
+        --color-italia-green: #008c45;
+        --color-italia-gold: #b8922e;
+        --color-italia-gold-dark: #9a7a24;
+        --color-italia-dark: #1a1a1a;
+        --color-italia-gray: #6b7280;
+        --color-italia-cream: #fff8f0;
+      }
+      body {
+        background: #fff8f0;
+        color: #1a1a1a;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+      .font-heading {
+        font-family: Georgia, "Times New Roman", serif;
+      }
+      /* category pill — mirrors globals.css */
+      .category-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.45rem 0.85rem;
+        border-radius: 999px;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        border: 1px solid #e5e7eb;
+        background: #fff;
+        transition: all 0.2s ease;
+      }
+      .category-pill-active {
+        background: var(--color-italia-red);
+        color: #fff;
+        border-color: var(--color-italia-red);
+      }
+      .category-pill-inactive {
+        color: var(--color-italia-gray);
+      }
+      .menu-search {
+        position: relative;
+      }
+      .menu-search-input {
+        width: 100%;
+        padding: 0.75rem 1rem 0.75rem 2.75rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        background: #fff;
+        font-size: 0.9375rem;
+      }
+      .menu-search-icon {
+        position: absolute;
+        left: 0.9rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #9ca3af;
+      }
+      /* —— role-driven card frames (mirrors src/components/location/MenuItem.tsx) —— */
+      .card-base {
+        background: #fff;
+        border: 1px solid #f3f4f6;
+        border-radius: 1rem;
+        padding: 1rem;
+        transition: all 0.25s ease;
+      }
+      .card-base:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+        border-color: #e5e7eb;
+      }
+      .card-hero {
+        background: linear-gradient(135deg, #fff8f0 0%, #ffffff 100%);
+        border-color: rgba(200, 16, 46, 0.3);
+        box-shadow: 0 6px 18px rgba(200, 16, 46, 0.06);
+      }
+      .card-hero:hover {
+        border-color: rgba(200, 16, 46, 0.5);
+        box-shadow: 0 10px 24px rgba(200, 16, 46, 0.1);
+      }
+      .card-anchor {
+        background:
+          linear-gradient(
+            135deg,
+            rgba(26, 26, 26, 0.04) 0%,
+            rgba(184, 146, 46, 0.06) 100%
+          );
+        border-color: rgba(184, 146, 46, 0.4);
+        box-shadow: 0 6px 18px rgba(184, 146, 46, 0.06);
+      }
+      .card-anchor:hover {
+        border-color: rgba(184, 146, 46, 0.6);
+      }
+      .card-profit {
+        background: #fff;
+        border-color: rgba(184, 146, 46, 0.2);
+      }
+      .card-profit:hover {
+        border-color: rgba(184, 146, 46, 0.35);
+      }
+      /* category gradient images (matches src/data/menu-images.ts) */
+      .img-pizza {
+        background: linear-gradient(135deg, #f87171, #fdba74);
+      }
+      .img-pasta {
+        background: linear-gradient(135deg, #fbbf24, #fde047);
+      }
+      .img-drinks {
+        background: linear-gradient(135deg, #60a5fa, #67e8f9);
+      }
+      .img-desserts {
+        background: linear-gradient(135deg, #f472b6, #fda4af);
+      }
+      .img-antipasti {
+        background: linear-gradient(135deg, #4ade80, #6ee7b7);
+      }
+      .img-truffle {
+        background:
+          radial-gradient(circle at 30% 30%, #4b5563 0%, #1f2937 60%, #0b0d12 100%);
+        color: #f5edcf;
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.15rem 0.55rem;
+        border-radius: 9999px;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+      }
+      .chip-hero {
+        background: var(--color-italia-red);
+        color: #fff;
+        box-shadow: 0 1px 2px rgba(200, 16, 46, 0.2);
+      }
+      .chip-pizzaiolo {
+        background: rgba(184, 146, 46, 0.15);
+        color: var(--color-italia-gold-dark);
+      }
+      .chip-signature {
+        background: var(--color-italia-dark);
+        color: var(--color-italia-cream);
+      }
+      .chip-lto {
+        background: rgba(200, 16, 46, 0.1);
+        color: var(--color-italia-red);
+        border: 1px solid rgba(200, 16, 46, 0.2);
+      }
+      .chip-popular {
+        background: rgba(200, 16, 46, 0.1);
+        color: var(--color-italia-red);
+      }
+      .chip-veg {
+        background: rgba(0, 140, 69, 0.08);
+        color: var(--color-italia-green);
+        border: 1px solid rgba(0, 140, 69, 0.15);
+        text-transform: none;
+        letter-spacing: 0;
+        font-weight: 600;
+      }
+      .chip-spicy {
+        background: rgba(200, 16, 46, 0.08);
+        color: var(--color-italia-red);
+        border: 1px solid rgba(200, 16, 46, 0.15);
+        text-transform: none;
+        letter-spacing: 0;
+        font-weight: 600;
+      }
+      .btn-primary {
+        background: var(--color-italia-red);
+        color: #fff;
+        font-weight: 600;
+        padding: 0.55rem 0.9rem;
+        border-radius: 0.75rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-size: 0.875rem;
+        transition: background 0.15s ease;
+      }
+      .btn-primary:hover {
+        background: var(--color-italia-red-dark);
+      }
+      .pricetag-hero {
+        font-size: 1.5rem;
+        font-weight: 800;
+      }
+      .pricetag {
+        font-size: 1.125rem;
+        font-weight: 700;
+      }
+      .strike {
+        text-decoration: line-through;
+        color: #9ca3af;
+        font-weight: 500;
+        font-size: 0.875rem;
+        margin-right: 0.4rem;
+      }
+      .frame-note {
+        position: absolute;
+        top: -10px;
+        left: 12px;
+        padding: 2px 8px;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        border-radius: 999px;
+      }
+      details > summary {
+        list-style: none;
+        cursor: pointer;
+      }
+      details > summary::-webkit-details-marker {
+        display: none;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen">
+    <!-- mock site header to match production -->
+    <header class="bg-white border-b border-gray-100 sticky top-0 z-30">
+      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <a href="#" class="font-heading text-xl font-bold tracking-tight">
+          Sud <span class="text-italia-red">Italia</span>
+        </a>
+        <nav class="hidden md:flex items-center gap-6 text-sm font-medium text-italia-gray">
+          <a href="#">Menu</a><a href="#">Rewards</a><a href="#">Truck</a>
+        </nav>
+        <button class="btn-primary text-xs">View cart</button>
+      </div>
+    </header>
+
+    <!-- preamble: explainer of what changed (helps the user review the mockup) -->
+    <section class="bg-white border-b border-gray-100">
+      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
+        <p class="text-[11px] uppercase tracking-wide font-bold text-italia-red mb-1">
+          Mockup · Audit §4 — Menu Engineering &amp; Pricing Psychology
+        </p>
+        <h1 class="font-heading text-2xl sm:text-3xl font-bold text-italia-dark">
+          Pizzaiolo's layout — hero, profit-driver, anchor
+        </h1>
+        <p class="text-sm text-italia-gray mt-2 max-w-3xl leading-relaxed">
+          Same Tailwind utility surface + brand variables as the production
+          location page (<code class="font-mono text-xs bg-gray-100 px-1 py-0.5 rounded">/locations/[slug]</code>). The
+          three new card variants — <strong>Our Hero</strong> (Margherita, full-width),
+          <strong>Pizzaiolo's Choice</strong> (Quattro Formaggi / Linguine al Pesto / Espresso),
+          and <strong>Chef's Signature</strong> (Pizza del Pizzaiolo — PLN 47.90 anchor with a
+          monthly truffle LTO countdown) — drive the §4.4 hierarchy. All prices follow §4.2
+          charm rules (pizza→9, premium pasta→5, espresso→9, desserts→0).
+        </p>
+        <details class="mt-4">
+          <summary
+            class="inline-flex items-center gap-2 text-xs font-semibold text-italia-red hover:underline"
+          >
+            ▸ Charm pricing diff (Kraków)
+          </summary>
+          <div
+            class="mt-3 text-xs grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1 bg-italia-cream/40 border border-italia-cream-dark rounded-xl p-4"
+          >
+            <div><span class="strike">PLN 28.00</span><strong>PLN 27.90</strong> — Margherita</div>
+            <div><span class="strike">PLN 32.00</span><strong>PLN 31.90</strong> — Diavola</div>
+            <div><span class="strike">PLN 34.00</span><strong>PLN 33.90</strong> — Quattro Formaggi</div>
+            <div><span class="strike">PLN 35.00</span><strong>PLN 34.90</strong> — Prosciutto e Rucola</div>
+            <div><span class="strike">PLN 31.00</span><strong>PLN 30.90</strong> — Ortolana</div>
+            <div><span class="text-italia-gold-dark font-semibold">new</span> <strong>PLN 47.90</strong> — Pizza del Pizzaiolo (anchor + LTO)</div>
+            <div><span class="strike">PLN 29.00</span><strong>PLN 28.95</strong> — Spaghetti Carbonara</div>
+            <div><span class="strike">PLN 30.00</span><strong>PLN 29.95</strong> — Tagliatelle Bolognese</div>
+            <div><span class="strike">PLN 27.00</span><strong>PLN 26.95</strong> — Linguine al Pesto</div>
+            <div><span class="strike">PLN 24.00</span><strong>PLN 23.90</strong> — Penne Arrabbiata</div>
+            <div><span class="strike">PLN 8.00</span><strong>PLN 7.90</strong> — Espresso (impulse)</div>
+            <div><span class="text-italia-gray">unchanged</span> Desserts stay PLN 15.00 / 16.00 / 18.00</div>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- sticky search + sort + category pills (mirrors MenuSection.tsx) -->
+    <div class="sticky top-16 z-20 bg-white border-b border-gray-100 shadow-sm">
+      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3">
+        <div class="menu-search mb-3">
+          <svg class="menu-search-icon" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input type="text" class="menu-search-input" placeholder="Search for pizza, pasta, drinks…" />
+        </div>
+        <div class="flex items-center gap-2 justify-between">
+          <div class="flex items-center gap-2 overflow-x-auto -mx-1 px-1">
+            <span class="category-pill category-pill-active">🍕 Pizza <span class="opacity-80 text-[11px]">6</span></span>
+            <span class="category-pill category-pill-inactive">🍝 Pasta <span class="text-[11px]">4</span></span>
+            <span class="category-pill category-pill-inactive">🥗 Antipasti <span class="text-[11px]">3</span></span>
+            <span class="category-pill category-pill-inactive">🥪 Panini <span class="text-[11px]">2</span></span>
+            <span class="category-pill category-pill-inactive">🥤 Drinks <span class="text-[11px]">4</span></span>
+            <span class="category-pill category-pill-inactive">🍰 Desserts <span class="text-[11px]">3</span></span>
+          </div>
+          <span class="category-pill category-pill-inactive shrink-0 text-xs">
+            ↕ Pizzaiolo's layout
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
+      <h2 class="font-heading text-2xl font-bold text-italia-dark mb-4">Pizza</h2>
+
+      <!-- 2-col grid — hero spans both cols, everything else fits in the engineered hierarchy -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <!-- =================== HERO: Margherita =================== -->
+        <div class="lg:col-span-2 relative">
+          <div class="card-base card-hero relative">
+            <span class="absolute -top-2 right-3 chip chip-hero">♥ Our Hero</span>
+            <span class="frame-note bg-italia-red text-white">Sweet-spot top — Pizzaiolo's layout</span>
+
+            <div class="flex gap-5 items-start">
+              <div class="img-pizza w-24 h-24 sm:w-28 sm:h-28 rounded-2xl flex items-center justify-center shadow-sm shrink-0 text-4xl">
+                🍕
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="font-heading font-bold text-italia-dark text-xl sm:text-2xl">
+                    Margherita
+                  </h3>
+                  <span class="chip chip-veg">Vegetarian</span>
+                </div>
+                <p class="text-italia-gray leading-relaxed mt-2 max-w-prose text-sm">
+                  San Marzano tomato sauce, fior di latte mozzarella, fresh basil,
+                  extra virgin olive oil. The gateway pizza — the one to recognise the
+                  brand by, the one you photograph.
+                </p>
+                <p class="text-[11px] text-italia-red mt-2 font-bold uppercase tracking-wide">
+                  The gateway — start here
+                </p>
+                <div class="flex items-center justify-between mt-4">
+                  <p class="pricetag-hero text-italia-dark">
+                    <span class="strike">PLN 28.00</span>PLN 27.90
+                  </p>
+                  <button class="btn-primary">+ Add</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============ SWEET-SPOT (top-right of below-the-fold row) ============ -->
+        <!-- Eye-tracking studies (Gallup × Cornell): customers land top-left next,
+             then sweep right. Profit driver goes here. -->
+        <div class="relative">
+          <div class="card-base card-profit relative">
+            <span class="absolute -top-2 right-3 chip chip-pizzaiolo">👨‍🍳 Pizzaiolo's Choice</span>
+            <div class="flex gap-4 items-start">
+              <div class="img-pizza w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center shadow-sm shrink-0 text-3xl">🍕</div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="font-heading font-semibold text-italia-dark">Quattro Formaggi</h3>
+                  <span class="chip chip-veg">Vegetarian</span>
+                </div>
+                <p class="text-sm text-italia-gray mt-1 leading-relaxed">
+                  Mozzarella, gorgonzola, fontina, Parmigiano Reggiano, honey drizzle.
+                </p>
+                <p class="text-[11px] text-italia-gold-dark mt-1 font-medium">
+                  Pizzaiolo's pick — quietly his favourite to make
+                </p>
+                <div class="flex items-center justify-between mt-3">
+                  <p class="pricetag text-italia-dark">
+                    <span class="strike">PLN 34.00</span>PLN 33.90
+                  </p>
+                  <button class="btn-primary">+ Add</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============ ANCHOR — Pizza del Pizzaiolo ============ -->
+        <div class="relative">
+          <div class="card-base card-anchor relative">
+            <span class="absolute -top-2 right-3 chip chip-signature">👑 Chef's Signature</span>
+            <span class="frame-note bg-italia-dark text-italia-cream">Anchor · range-extends Diavola</span>
+
+            <div class="flex gap-4 items-start">
+              <div class="img-truffle w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center shadow-md shrink-0 text-3xl">
+                🍕
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="font-heading font-semibold text-italia-dark text-base sm:text-lg">
+                    Pizza del Pizzaiolo
+                  </h3>
+                  <span class="chip chip-veg">Vegetarian</span>
+                  <span class="chip chip-lto">⏱ 46d left</span>
+                </div>
+                <p class="text-sm text-italia-gray mt-1 leading-relaxed">
+                  Black truffle, buffalo mozzarella DOP, San Marzano tomato whisper,
+                  24-month Parmigiano, olive oil.
+                </p>
+                <p class="text-[11px] text-italia-gold-dark mt-1 font-medium">
+                  Monthly small-batch — black truffle, buffalo mozzarella DOP
+                </p>
+                <div class="flex items-center justify-between mt-3">
+                  <p class="pricetag text-italia-dark">PLN 47.90</p>
+                  <button class="btn-primary">+ Add</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============ STANDARDS (ordered by popularity) ============ -->
+        <div class="card-base relative">
+          <span class="absolute -top-2 right-3 chip chip-popular">📈 Most Popular</span>
+          <div class="flex gap-4 items-start">
+            <div class="img-pizza w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center shadow-sm shrink-0 text-3xl">🍕</div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <h3 class="font-heading font-semibold text-italia-dark">Diavola</h3>
+                <span class="chip chip-spicy">Spicy</span>
+              </div>
+              <p class="text-sm text-italia-gray mt-1 leading-relaxed">
+                San Marzano tomatoes, fior di latte, spicy salame calabrese, chili oil.
+              </p>
+              <p class="text-[11px] text-italia-gold mt-1 font-medium">
+                Pairs perfectly with espresso &amp; tiramisù
+              </p>
+              <div class="flex items-center justify-between mt-3">
+                <p class="pricetag text-italia-dark">
+                  <span class="strike">PLN 32.00</span>PLN 31.90
+                </p>
+                <button class="btn-primary">+ Add</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-base">
+          <div class="flex gap-4 items-start">
+            <div class="img-pizza w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center shadow-sm shrink-0 text-3xl">🍕</div>
+            <div class="flex-1 min-w-0">
+              <h3 class="font-heading font-semibold text-italia-dark">Prosciutto e Rucola</h3>
+              <p class="text-sm text-italia-gray mt-1 leading-relaxed">
+                Fior di latte, prosciutto crudo di Parma, wild arugula, shaved
+                Parmigiano, olive oil.
+              </p>
+              <div class="flex items-center justify-between mt-3">
+                <p class="pricetag text-italia-dark">
+                  <span class="strike">PLN 35.00</span>PLN 34.90
+                </p>
+                <button class="btn-primary">+ Add</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-base">
+          <div class="flex gap-4 items-start">
+            <div class="img-pizza w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center shadow-sm shrink-0 text-3xl">🍕</div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <h3 class="font-heading font-semibold text-italia-dark">Ortolana</h3>
+                <span class="chip chip-veg">Vegetarian</span>
+              </div>
+              <p class="text-sm text-italia-gray mt-1 leading-relaxed">
+                Grilled zucchini, eggplant, bell peppers, cherry tomatoes, mozzarella,
+                basil pesto.
+              </p>
+              <div class="flex items-center justify-between mt-3">
+                <p class="pricetag text-italia-dark">
+                  <span class="strike">PLN 31.00</span>PLN 30.90
+                </p>
+                <button class="btn-primary">+ Add</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- pasta peek so reviewer sees premium-ending-in-5 -->
+      <h2 class="font-heading text-2xl font-bold text-italia-dark mt-10 mb-4">Pasta</h2>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="card-base card-profit relative">
+          <span class="absolute -top-2 right-3 chip chip-pizzaiolo">👨‍🍳 Pizzaiolo's Choice</span>
+          <div class="flex gap-4 items-start">
+            <div class="img-pasta w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center shadow-sm shrink-0 text-3xl">🍝</div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <h3 class="font-heading font-semibold text-italia-dark">Linguine al Pesto</h3>
+                <span class="chip chip-veg">Vegetarian</span>
+              </div>
+              <p class="text-sm text-italia-gray mt-1 leading-relaxed">
+                Fresh Genovese basil pesto, pine nuts, Parmigiano, extra virgin olive oil.
+              </p>
+              <p class="text-[11px] text-italia-gold-dark mt-1 font-medium">
+                Pizzaiolo's pick — quietly his favourite to make
+              </p>
+              <div class="flex items-center justify-between mt-3">
+                <p class="pricetag text-italia-dark">
+                  <span class="strike">PLN 27.00</span>PLN 26.95
+                </p>
+                <button class="btn-primary">+ Add</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-base">
+          <div class="flex gap-4 items-start">
+            <div class="img-pasta w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center shadow-sm shrink-0 text-3xl">🍝</div>
+            <div class="flex-1 min-w-0">
+              <h3 class="font-heading font-semibold text-italia-dark">Spaghetti Carbonara</h3>
+              <p class="text-sm text-italia-gray mt-1 leading-relaxed">
+                Guanciale, egg yolk, Pecorino Romano, black pepper — the authentic
+                Roman way.
+              </p>
+              <div class="flex items-center justify-between mt-3">
+                <p class="pricetag text-italia-dark">
+                  <span class="strike">PLN 29.00</span>PLN 28.95
+                </p>
+                <button class="btn-primary">+ Add</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- drinks peek to show espresso-ends-in-9 + profit-driver badge -->
+      <h2 class="font-heading text-2xl font-bold text-italia-dark mt-10 mb-4">Drinks</h2>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="card-base card-profit relative">
+          <span class="absolute -top-2 right-3 chip chip-pizzaiolo">👨‍🍳 Pizzaiolo's Choice</span>
+          <div class="flex gap-4 items-start">
+            <div class="img-drinks w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center shadow-sm shrink-0 text-3xl">☕</div>
+            <div class="flex-1 min-w-0">
+              <h3 class="font-heading font-semibold text-italia-dark">Espresso</h3>
+              <p class="text-sm text-italia-gray mt-1 leading-relaxed">
+                Italian-roasted espresso shot — the highest-leverage attachment.
+              </p>
+              <p class="text-[11px] text-italia-gold-dark mt-1 font-medium">
+                Pizzaiolo's pick — quietly his favourite to make
+              </p>
+              <div class="flex items-center justify-between mt-3">
+                <p class="pricetag text-italia-dark">
+                  <span class="strike">PLN 8.00</span>PLN 7.90
+                </p>
+                <button class="btn-primary">+ Add</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-base">
+          <div class="flex gap-4 items-start">
+            <div class="img-drinks w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center shadow-sm shrink-0 text-3xl">🍋</div>
+            <div class="flex-1 min-w-0">
+              <h3 class="font-heading font-semibold text-italia-dark">Limonata Fresca</h3>
+              <p class="text-sm text-italia-gray mt-1 leading-relaxed">
+                House-made Sicilian lemonade with fresh mint.
+              </p>
+              <div class="flex items-center justify-between mt-3">
+                <p class="pricetag text-italia-dark">
+                  <span class="strike">PLN 12.00</span>PLN 11.90
+                </p>
+                <button class="btn-primary">+ Add</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer class="mt-12 mb-6 text-xs text-italia-gray border-t border-gray-100 pt-6">
+        <p>
+          Mockup — Sud Italia · Menu Engineering &amp; Pricing Psychology · Audit §4.
+          Strikethrough prices show the pre-change values for reviewer reference and
+          are <em>not</em> rendered in the production card. The 46-day LTO countdown
+          is computed from <code class="font-mono text-[11px] bg-gray-100 px-1 py-0.5 rounded">limitedUntil = 2026-06-30</code>
+          against the audit document's 2026-05-15 timestamp.
+        </p>
+      </footer>
+    </main>
+  </body>
+</html>
