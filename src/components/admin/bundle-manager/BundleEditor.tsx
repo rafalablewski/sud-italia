@@ -23,7 +23,20 @@ import {
   WEEKDAYS,
   CATEGORIES,
 } from "@/components/admin/AdminSellingShared";
-import { EDITOR_TABS, type EditorTab } from "./types";
+
+/** Concern-tabs inside the wizard. Defined locally — there's only one
+ *  view (card grid) and one editor, so no need for a separate types
+ *  module. */
+type EditorTab = "identity" | "pricing" | "composition" | "schedule" | "audience" | "margin";
+
+const EDITOR_TABS: { id: EditorTab; label: string; hint: string }[] = [
+  { id: "identity",    label: "Identity",    hint: "Tier · name · description" },
+  { id: "pricing",     label: "Pricing",     hint: "Mode · discount · mains gate" },
+  { id: "composition", label: "Composition", hint: "Static add-on slots" },
+  { id: "schedule",    label: "Schedule",    hint: "Days · scarcity · ladder role" },
+  { id: "audience",    label: "Audience",    hint: "Mains scale · loyalty gate" },
+  { id: "margin",      label: "Margin",      hint: "Live price + cost preview" },
+];
 
 /**
  * Shared bundle editor — the wizard. Every view-mode either embeds this

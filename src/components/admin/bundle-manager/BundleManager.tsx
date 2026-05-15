@@ -1,95 +1,57 @@
 "use client";
 
-import { useCallback, useState, useRef, useEffect } from "react";
-import {
-  Layers,
-  LayoutGrid,
-  PanelLeft,
-  Table,
-  Eye,
-  Rows3,
-  AlignLeft,
-  Gauge,
-  ChevronDown,
-  Smartphone,
-  type LucideIcon,
-} from "lucide-react";
+import { useCallback, useState } from "react";
+import { createPortal } from "react-dom";
+import { Lock, Pencil, Plus, Sparkles, X } from "lucide-react";
 import type { MenuItem } from "@/data/types";
 import type { BundleConfig } from "@/components/admin/AdminSellingShared";
-import {
-  ViewWizard,
-  ViewCardGrid,
-  ViewMasterDetail,
-  ViewSpreadsheet,
-  ViewLivePreview,
-  ViewAccordion,
-  ViewFlatMinimal,
-  ViewMarginDashboard,
-  ViewMobile,
-  makeStarterBundle,
-  type ViewProps,
-} from "./BundleViews";
-import { VIEW_MODES, useBundleViewMode, type ViewMode } from "./types";
+import { BundleEditor, computeMarginSamples, makeStarterBundle } from "./BundleEditor";
 
 /**
  * Top-level orchestrator for the Bundle ladders admin surface.
+ * Renders the card grid (the only view shipped) and opens the shared
+ * BundleEditor in a sheet when an operator taps a card.
  *
- *   <BundleManager bundles={...} menu={...} onChange={...} />
- *
- * Owns:
- *   - the view-mode dropdown (operator picks from 8 list layouts;
- *     persisted to localStorage; auto-overridden to a mobile layout
- *     under 900px so the editor doesn't break on phones).
- *   - the dispatch to whichever view component is active.
- *
- * All views consume the same `bundles` array and emit patches through
- * the same callbacks; the editor experience inside any view is the
- * shared `BundleEditor` wizard. Switching view modes never loses data,
- * never duplicates state, and never requires an explicit save — the
- * standard admin "unsaved changes" indicator on the page header
- * handles persistence the way every other admin surface does.
+ * All CRUD flows back through `onChange(next)` so the parent admin
+ * page owns persistence — same save flow as every other admin surface.
  */
-
 interface Props {
   bundles: BundleConfig[];
   menu: MenuItem[];
   onChange: (next: BundleConfig[]) => void;
 }
 
-const ICON_MAP: Record<ViewMode, LucideIcon> = {
-  "wizard": Layers,
-  "card-grid": LayoutGrid,
-  "master-detail": PanelLeft,
-  "spreadsheet": Table,
-  "live-preview": Eye,
-  "accordion": Rows3,
-  "flat-minimal": AlignLeft,
-  "margin-dashboard": Gauge,
-};
+const MEAL_PERIODS: { id: "family" | "lunch" | "lateNight"; label: string; hint: string }[] = [
+  { id: "family",    label: "Family",     hint: "Group ordering · ≥2 mains gate" },
+  { id: "lunch",     label: "Lunch",      hint: "Solo eating · 11:00–14:00" },
+  { id: "lateNight", label: "Late-night", hint: "21:00–24:00 single-tap" },
+];
 
 export function BundleManager({ bundles, menu, onChange }: Props) {
-  const { effective, preferred, setPreferred, isMobile } = useBundleViewMode();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const editing = bundles.find((b) => b.id === editingId);
 
-  const handleUpdate = useCallback<ViewProps["onUpdate"]>(
-    (id, patch) => onChange(bundles.map((b) => (b.id === id ? { ...b, ...patch } : b))),
+  const onUpdate = useCallback(
+    (id: string, patch: Partial<BundleConfig>) =>
+      onChange(bundles.map((b) => (b.id === id ? { ...b, ...patch } : b))),
     [bundles, onChange],
   );
-  const handleRemove = useCallback<ViewProps["onRemove"]>(
-    (id) => onChange(bundles.filter((b) => b.id !== id)),
+  const onRemove = useCallback(
+    (id: string) => onChange(bundles.filter((b) => b.id !== id)),
     [bundles, onChange],
   );
-  const handleAdd = useCallback<ViewProps["onAdd"]>(
-    (mealPeriod) => onChange([...bundles, makeStarterBundle(mealPeriod)]),
+  const onAdd = useCallback(
+    (mealPeriod: "family" | "lunch" | "lateNight") => {
+      const fresh = makeStarterBundle(mealPeriod);
+      onChange([...bundles, fresh]);
+      // Open the new tier in the editor immediately — operator's intent
+      // when they tap "Add tier" is almost always "and configure it now".
+      setEditingId(fresh.id);
+    },
     [bundles, onChange],
   );
 
-  const viewProps: ViewProps = {
-    bundles,
-    menu,
-    onUpdate: handleUpdate,
-    onAdd: handleAdd,
-    onRemove: handleRemove,
-  };
+  const activeCount = bundles.filter((b) => b.active).length;
 
   return (
     <div className="bm-root">
@@ -97,104 +59,213 @@ export function BundleManager({ bundles, menu, onChange }: Props) {
         <div className="bm-root__head-l">
           <h1 className="bm-root__title">Bundle ladders</h1>
           <p className="bm-root__hint">
-            {bundles.length} {bundles.length === 1 ? "tier" : "tiers"} configured · {bundles.filter((b) => b.active).length} active.
-            Edits save when you press <strong>Save changes</strong> on the page header.
+            {bundles.length} {bundles.length === 1 ? "tier" : "tiers"} configured · {activeCount} active.
+            Tap any tier to open the editor. Changes save when you press <strong>Save changes</strong> on the page header.
           </p>
-        </div>
-        <div className="bm-root__head-r">
-          <ViewSwitcher current={preferred} onChange={setPreferred} isMobileLock={isMobile} />
         </div>
       </header>
 
-      <div className="bm-root__body">
-        {effective === "mobile" || isMobile ? (
-          <ViewMobile {...viewProps} />
-        ) : effective === "wizard" ? (
-          <ViewWizard {...viewProps} />
-        ) : effective === "card-grid" ? (
-          <ViewCardGrid {...viewProps} />
-        ) : effective === "master-detail" ? (
-          <ViewMasterDetail {...viewProps} />
-        ) : effective === "spreadsheet" ? (
-          <ViewSpreadsheet {...viewProps} />
-        ) : effective === "live-preview" ? (
-          <ViewLivePreview {...viewProps} />
-        ) : effective === "accordion" ? (
-          <ViewAccordion {...viewProps} />
-        ) : effective === "flat-minimal" ? (
-          <ViewFlatMinimal {...viewProps} />
-        ) : (
-          <ViewMarginDashboard {...viewProps} />
-        )}
-      </div>
+      {MEAL_PERIODS.map((p) => {
+        const list = bundles.filter((b) => b.mealPeriod === p.id);
+        return (
+          <section key={p.id} className="bm-section">
+            <header className="bm-ph">
+              <div className="bm-ph__txt">
+                <h2 className="bm-ph__label">{p.label} ladder</h2>
+                <span className="bm-ph__hint">{p.hint}</span>
+                <span className="bm-ph__count">{list.length} {list.length === 1 ? "tier" : "tiers"}</span>
+              </div>
+              <button type="button" className="bm-btn bm-btn--ghost" onClick={() => onAdd(p.id)}>
+                <Plus className="bm-icon" /> Add tier
+              </button>
+            </header>
+            {list.length === 0 ? (
+              <EmptyState onAdd={() => onAdd(p.id)} />
+            ) : (
+              <div className="bm-card-grid">
+                {list.map((b) => (
+                  <CardTile key={b.id} bundle={b} menu={menu} onEdit={() => setEditingId(b.id)} />
+                ))}
+              </div>
+            )}
+          </section>
+        );
+      })}
+
+      {editing && (
+        <EditorSheet
+          bundle={editing}
+          menu={menu}
+          onChange={(patch) => onUpdate(editing.id, patch)}
+          onClose={() => setEditingId(null)}
+          onRemove={() => {
+            onRemove(editing.id);
+            setEditingId(null);
+          }}
+        />
+      )}
     </div>
   );
 }
 
-function ViewSwitcher({
-  current,
-  onChange,
-  isMobileLock,
+// ─── Card tile ────────────────────────────────────────────────────────────
+
+function CardTile({
+  bundle,
+  menu,
+  onEdit,
 }: {
-  current: ViewMode;
-  onChange: (m: ViewMode) => void;
-  isMobileLock: boolean;
+  bundle: BundleConfig;
+  menu: MenuItem[];
+  onEdit: () => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const close = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
-  }, [open]);
-
-  const currentDef = VIEW_MODES.find((m) => m.id === current) ?? VIEW_MODES[0];
-  const CurrentIcon = ICON_MAP[currentDef.id];
-
+  const { isDynamic, margin, priceLabel, discountLabel } = summarize(bundle, menu);
+  const tone = marginTone(margin);
   return (
-    <div className="bm-vs" ref={ref}>
-      {isMobileLock && (
-        <span className="bm-vs__mobile-lock" title="Locked to mobile-friendly view on small screens">
-          <Smartphone className="bm-icon-sm" /> mobile
+    <button
+      type="button"
+      onClick={onEdit}
+      className={[
+        "bm-card",
+        bundle.isDefault && "bm-card--default",
+        bundle.isAnchor && "bm-card--anchor",
+        bundle.isDecoy && "bm-card--decoy",
+        !bundle.active && "bm-card--inactive",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <header className="bm-card__head">
+        <div>
+          <span className="bm-card__tier">{bundle.tier}</span>
+          <h3 className="bm-card__name">{bundle.name}</h3>
+        </div>
+        <TierBadges bundle={bundle} />
+      </header>
+      <p className="bm-card__desc">{bundle.description}</p>
+      <div className="bm-card__price">
+        <span className="bm-card__big">{priceLabel}</span>
+        <span className="bm-card__disc">{discountLabel}</span>
+      </div>
+      <footer className="bm-card__foot">
+        <span className={`bm-chip bm-chip--${isDynamic ? "indigo" : "gray"}`}>
+          {isDynamic ? "Dynamic" : "Fixed"}
         </span>
-      )}
-      <button
-        type="button"
-        className="bm-vs__trigger"
-        onClick={() => setOpen(!open)}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        disabled={isMobileLock}
-      >
-        <CurrentIcon className="bm-icon-sm" />
-        <span>{currentDef.label}</span>
-        <ChevronDown className={`bm-icon-sm bm-vs__chev ${open ? "bm-vs__chev--open" : ""}`} />
+        {margin !== null && (
+          <span className={`bm-chip bm-chip--${tone}`}>
+            {Math.round(margin * 100)}% margin
+          </span>
+        )}
+        {bundle.requiredTier && (
+          <span className="bm-chip bm-chip--gold">
+            <Lock className="bm-icon-sm" /> {bundle.requiredTier}
+          </span>
+        )}
+        <span className="bm-card__edit">
+          <Pencil className="bm-icon-sm" /> Edit
+        </span>
+      </footer>
+    </button>
+  );
+}
+
+function TierBadges({ bundle }: { bundle: BundleConfig }) {
+  return (
+    <span className="bm-badges">
+      {bundle.isDefault && <span className="bm-badge bm-badge--red">Most picked</span>}
+      {bundle.isAnchor && <span className="bm-badge bm-badge--gold">Best value</span>}
+      {bundle.isDecoy && <span className="bm-badge bm-badge--gray">Decoy</span>}
+      {!bundle.active && <span className="bm-badge bm-badge--off">Inactive</span>}
+    </span>
+  );
+}
+
+function EmptyState({ onAdd }: { onAdd: () => void }) {
+  return (
+    <div className="bm-empty">
+      <Sparkles className="bm-empty__icon" />
+      <p className="bm-empty__title">No tiers yet</p>
+      <p className="bm-empty__hint">Add your first tier to start serving this ladder.</p>
+      <button type="button" className="bm-btn bm-btn--primary" onClick={onAdd}>
+        <Plus className="bm-icon" /> Add tier
       </button>
-      {open && !isMobileLock && (
-        <ul className="bm-vs__menu" role="listbox">
-          {VIEW_MODES.map((m) => {
-            const Icon = ICON_MAP[m.id];
-            return (
-              <li key={m.id}>
-                <button
-                  type="button"
-                  className={`bm-vs__item ${current === m.id ? "bm-vs__item--on" : ""}`}
-                  onClick={() => { onChange(m.id); setOpen(false); }}
-                >
-                  <Icon className="bm-icon-sm" />
-                  <span className="bm-vs__item-l">
-                    <span className="bm-vs__item-label">{m.label}{m.id === "wizard" ? " (default)" : ""}</span>
-                    <span className="bm-vs__item-hint">{m.hint}</span>
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
     </div>
   );
+}
+
+// ─── Sheet (full editor) ──────────────────────────────────────────────────
+
+function EditorSheet({
+  bundle,
+  menu,
+  onChange,
+  onClose,
+  onRemove,
+}: {
+  bundle: BundleConfig;
+  menu: MenuItem[];
+  onChange: (p: Partial<BundleConfig>) => void;
+  onClose: () => void;
+  onRemove: () => void;
+}) {
+  return createPortal(
+    <div
+      className="bm-sheet-root"
+      role="dialog"
+      aria-modal="true"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="bm-sheet">
+        <header className="bm-sheet__head">
+          <div className="bm-sheet__head-l">
+            <span className="bm-sheet__tier">{bundle.tier}</span>
+            <span className="bm-sheet__name">{bundle.name}</span>
+            <TierBadges bundle={bundle} />
+          </div>
+          <button
+            type="button"
+            className="bm-sheet__close"
+            onClick={onClose}
+            aria-label="Close"
+          >
+            <X className="bm-icon" />
+          </button>
+        </header>
+        <div className="bm-sheet__body">
+          <BundleEditor bundle={bundle} menu={menu} onChange={onChange} onRemove={onRemove} />
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────
+
+function summarize(bundle: BundleConfig, menu: MenuItem[]) {
+  const isDynamic = (bundle.pricingMode ?? "fixed") === "dynamic";
+  const samples = computeMarginSamples(bundle, menu);
+  const primary = samples.find((s) => s.margin !== null) ?? samples[0];
+  const margin = primary?.margin ?? null;
+  const priceLabel = primary?.priceLabel ?? "—";
+  const discountLabel = isDynamic
+    ? bundle.mainsDiscountPercent !== undefined && bundle.addOnsDiscountPercent !== undefined
+      ? `${bundle.mainsDiscountPercent}/${bundle.addOnsDiscountPercent} split`
+      : `−${bundle.discountPercent ?? 0}%`
+    : bundle.refPriceGrosze &&
+        bundle.priceGrosze &&
+        bundle.refPriceGrosze > bundle.priceGrosze
+      ? `save zł ${((bundle.refPriceGrosze - bundle.priceGrosze) / 100).toFixed(2)}`
+      : "fixed";
+  return { isDynamic, margin, priceLabel, discountLabel };
+}
+
+function marginTone(m: number | null): "good" | "ok" | "warn" | "bad" | "muted" {
+  if (m === null) return "muted";
+  if (m >= 0.5) return "good";
+  if (m >= 0.4) return "ok";
+  if (m >= 0.25) return "warn";
+  return "bad";
 }
