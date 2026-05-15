@@ -738,3 +738,41 @@ export function findBundle(
   const all = resolveBundles(configBundles);
   return all.find((b) => b.id === bundleId) ?? null;
 }
+
+/**
+ * Returns true when *any* bundle tier would render in the cart drawer
+ * given the current cart shape, hour, and config. Used by the combo
+ * banner to step aside when the bundle ladder dominates (a 4.99 PLN
+ * combo banner is psychologically invisible next to a 47 PLN bundle
+ * save — Starbucks-style "show one upsell at a time" UX rule).
+ */
+export function isBundleLadderShowable(
+  cartItems: CartItem[],
+  menuItems: MenuItem[],
+  configBundles: BundleTier[] | null | undefined,
+  configRules: Partial<BundleAvailabilityRules> | null | undefined,
+  hour: number,
+): boolean {
+  if (cartItems.length === 0 || menuItems.length === 0) return false;
+  const all = resolveBundles(configBundles ?? null);
+  if (all.length === 0) return false;
+  const rules = resolveBundleRules(configRules ?? null);
+  for (const period of ["lunch", "family", "lateNight"] as BundleMealPeriod[]) {
+    if (!all.some((b) => b.mealPeriod === period)) continue;
+    const av = resolveBundleAvailability(period, cartItems, rules, hour);
+    if (av.kind !== "show") continue;
+    // Need at least one bundle for this period whose slots resolve at the
+    // location AND, for dynamic tiers, meets minMains.
+    const hasViable = all.some((b) => {
+      if (b.mealPeriod !== period) return false;
+      if (resolveBundleSlots(b, menuItems) === null) return false;
+      if (isDynamicBundle(b)) {
+        const pricing = computeBundlePrice(b, cartItems, menuItems);
+        return pricing !== null;
+      }
+      return true;
+    });
+    if (hasViable) return true;
+  }
+  return false;
+}

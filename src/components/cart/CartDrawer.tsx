@@ -13,6 +13,7 @@ import { TierPerkBanner } from "./TierPerkBanner";
 import { BundleLadder } from "./BundleLadder";
 import { CorporateOrderBanner } from "./CorporateOrderBanner";
 import type { BundleTier } from "@/lib/bundles";
+import { isBundleLadderShowable } from "@/lib/bundles";
 import { formatPrice } from "@/lib/utils";
 import {
   getCartSuggestions,
@@ -437,8 +438,17 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
         }
       />
 
-      {/* Combo deal banner */}
-      <ComboDealBanner cartItems={items} />
+      {/* Combo deal banner — suppressed when the bundle ladder is showable
+          so we don't show two competing promos at once (Starbucks-rule:
+          one upsell at a time, picked by impact). A 4,99 PLN combo save
+          is psychologically invisible next to a 47 PLN bundle save. */}
+      {!isBundleLadderShowable(
+        items,
+        resolvedMenuItems,
+        (upsellConfig as { bundles?: BundleTier[] } | null)?.bundles ?? null,
+        (upsellConfig as { bundleRules?: import("@/lib/bundles").BundleAvailabilityRules } | null)?.bundleRules ?? null,
+        new Date().getHours(),
+      ) && <ComboDealBanner cartItems={items} />}
 
       {/* Cross-sell suggestions */}
       <CartUpsell suggestions={suggestions} />

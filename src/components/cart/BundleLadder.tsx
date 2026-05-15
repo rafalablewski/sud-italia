@@ -9,7 +9,6 @@ import {
   BundleMealPeriod,
   BundleAvailabilityRules,
   bundleSavings,
-  buildBundleCartLines,
   computeBundlePrice,
   isDynamicBundle,
   resolveBundles,
@@ -17,8 +16,9 @@ import {
   resolveBundleAvailability,
   resolveBundleSlots,
 } from "@/lib/bundles";
-import type { MenuItem } from "@/data/types";
+import type { CartItem, MenuItem } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
+import { BundleComposerSheet } from "./BundleComposerSheet";
 
 interface BundleLadderProps {
   allMenuItems: MenuItem[];
@@ -73,6 +73,8 @@ export function BundleLadder({
   const hasLunch = allBundles.some((b) => b.mealPeriod === "lunch");
   const hasFamily = allBundles.some((b) => b.mealPeriod === "family");
 
+  const hasLateNight = allBundles.some((b) => b.mealPeriod === "lateNight");
+
   // Recompute the local hour every minute so a customer who lingers in the
   // drawer sees the lunch ladder appear at 11:00 and disappear at 14:00.
   // One-minute resolution is plenty — the hour gate switches on the hour.
@@ -97,20 +99,29 @@ export function BundleLadder({
         : { kind: "hidden" as const },
     [hasFamily, items, rules, hour],
   );
+  const lateNightAvailability = useMemo(
+    () =>
+      hasLateNight
+        ? resolveBundleAvailability("lateNight", items, rules, hour)
+        : { kind: "hidden" as const },
+    [hasLateNight, items, rules, hour],
+  );
 
-  // User's preferred ladder when both are available — drives the header
-  // switcher. We derive the *effective* period below from this preference
-  // intersected with what's actually showable, so the user's choice
-  // survives availability flips without an effect-driven sync.
+  // User's preferred ladder when multiple are available — drives the
+  // header switcher. Effective period intersects preference with what
+  // actually qualifies, so the user's choice survives availability flips.
   const [preferredPeriod, setPreferredPeriod] = useState<BundleMealPeriod>("family");
 
-  // Effective period: respect the user's preference when that ladder is
-  // showable; otherwise fall back to whichever ladder is currently allowed.
   const period: BundleMealPeriod | null = (() => {
     const lunchOk = lunchAvailability.kind === "show";
     const familyOk = familyAvailability.kind === "show";
+    const lateOk = lateNightAvailability.kind === "show";
     if (preferredPeriod === "family" && familyOk) return "family";
     if (preferredPeriod === "lunch" && lunchOk) return "lunch";
+    if (preferredPeriod === "lateNight" && lateOk) return "lateNight";
+    // Late-night dominates when in-window (it's a tight one-tap deal);
+    // otherwise family beats lunch when both qualify.
+    if (lateOk) return "lateNight";
     if (familyOk) return "family";
     if (lunchOk) return "lunch";
     return null;
@@ -135,6 +146,11 @@ export function BundleLadder({
       });
   }, [allBundles, allMenuItems, period, items]);
 
+  // Composer-sheet state — taps don't auto-apply; they open the picker
+  // so the customer can swap defaults (Domino's Mix & Match × McDonald's
+  // Make-it-a-Meal). Re-tapping an already-applied bundle clears it.
+  const [composerBundle, setComposerBundle] = useState<BundleTier | null>(null);
+
   // No ladder + no hint → render nothing.
   if (!locationSlug) return null;
   if (!showLadder && !showFamilyHint) return null;
@@ -144,13 +160,15 @@ export function BundleLadder({
       clearBundle();
       return;
     }
-    const lines = buildBundleCartLines(bundle, allMenuItems, items, locationSlug);
-    if (!lines) return;
-    // Dynamic bundles price live off cart + menu; fixed bundles use stored.
-    const pricing = computeBundlePrice(bundle, items, allMenuItems);
-    const priceGrosze = pricing?.priceGrosze ?? (isDynamicBundle(bundle) ? 0 : bundle.priceGrosze);
-    if (priceGrosze <= 0) return;
-    applyBundle(bundle.id, priceGrosze, lines, locationSlug);
+    // Open the composer so the customer can review/swap add-on choices
+    // before locking. Fixed-bundle taps still open the sheet for parity —
+    // they can confirm in one tap if they don't want to change anything.
+    setComposerBundle(bundle);
+  };
+
+  const handleComposerApply = (lines: CartItem[], priceGrosze: number) => {
+    if (!composerBundle || priceGrosze <= 0) return;
+    applyBundle(composerBundle.id, priceGrosze, lines, locationSlug);
   };
 
   // When the hint fires, surface the cheapest family tier's savings so the
@@ -166,13 +184,43 @@ export function BundleLadder({
         )
       : 0;
 
-  const ladderHasBoth =
-    lunchAvailability.kind === "show" && familyAvailability.kind === "show";
-  const visibleSavings = visibleBundles
-    .map((b) => bundleSavings(b, items, allMenuItems))
-    .filter((s) => s > 0);
-  const cols =
-    visibleBundles.length === 4 ? 2 : Math.min(visibleBundles.length, 3);
+  const availableShown =
+    [lunchAvailability, familyAvailability, lateNightAvailability].filter(
+      (a) => a.kind === "show",
+    ).length;
+
+  // Loss-aversion framing — derived from the largest tier's refPrice
+  // (the "Without the bundle you'd pay X" anchor). Picks the max so the
+  // header copy reflects the biggest available à-la-carte total.
+  const topTierPricing = (() => {
+    let best: { priceGrosze: number; refPriceGrosze: number; savings: number; mainsCount: number } | null = null;
+    for (const b of visibleBundles) {
+      const p = computeBundlePrice(b, items, allMenuItems);
+      if (!p) continue;
+      if (!best || p.refPriceGrosze > best.refPriceGrosze) best = p;
+    }
+    return best;
+  })();
+
+  // Pick the *default-pushed* tier as the primary CTA target. Falls back
+  // to anchor, then highest-savings tier. McDonald's-style "Make it a
+  // Family Feast" pattern frames non-bundling as the deviant choice.
+  const primaryTier =
+    visibleBundles.find((b) => b.isDefault) ??
+    visibleBundles.find((b) => b.isAnchor) ??
+    visibleBundles
+      .slice()
+      .sort(
+        (a, b) =>
+          bundleSavings(b, items, allMenuItems) -
+          bundleSavings(a, items, allMenuItems),
+      )[0];
+  const compareTiers = visibleBundles.filter((b) => b.id !== primaryTier?.id);
+  const primaryPricing = primaryTier
+    ? computeBundlePrice(primaryTier, items, allMenuItems)
+    : null;
+  const primaryIsApplied =
+    primaryTier !== undefined && appliedBundleId === primaryTier.id;
 
   return (
     <div className="px-5 mt-3 space-y-2">
@@ -186,51 +234,162 @@ export function BundleLadder({
         />
       )}
 
-      {showLadder && visibleBundles.length > 0 && (
+      {showLadder && visibleBundles.length > 0 && primaryTier && primaryPricing && (
         <>
           <div className="flex items-baseline justify-between">
             <p className="flex items-center gap-2 text-xs font-semibold text-italia-gray uppercase tracking-wide">
               <Sparkles className="h-4 w-4 text-italia-gold" />
               Make it a bundle
-              {visibleSavings.length > 0 && (
+              {topTierPricing && topTierPricing.savings > 0 && (
                 <span className="text-italia-gold-dark normal-case font-medium tracking-normal">
                   {" "}
-                  · save up to {formatPrice(Math.max(...visibleSavings))}
+                  · without it you&rsquo;d pay {formatPrice(topTierPricing.refPriceGrosze)}
                 </span>
               )}
             </p>
-            {ladderHasBoth && (
+            {availableShown > 1 && (
               <button
                 type="button"
                 onClick={() =>
-                  setPreferredPeriod((p) => (p === "lunch" ? "family" : "lunch"))
+                  setPreferredPeriod((p) => {
+                    // Cycle through the available periods in order.
+                    const order: BundleMealPeriod[] = ["family", "lunch", "lateNight"];
+                    const visible = order.filter((per) =>
+                      per === "lunch"
+                        ? lunchAvailability.kind === "show"
+                        : per === "family"
+                          ? familyAvailability.kind === "show"
+                          : lateNightAvailability.kind === "show",
+                    );
+                    const idx = visible.indexOf(p);
+                    return visible[(idx + 1) % visible.length] ?? p;
+                  })
                 }
                 className="inline-flex items-center gap-0.5 text-[11px] font-medium text-italia-red"
               >
-                {period === "lunch" ? "Lunch" : "Family"}
+                {period === "lunch" ? "Lunch" : period === "family" ? "Family" : "Late dinner"}
                 <ChevronDown className="h-3 w-3" />
               </button>
             )}
           </div>
 
-          <div
-            className="grid gap-2"
-            style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
-          >
-            {visibleBundles.map((bundle) => (
-              <BundleChip
-                key={bundle.id}
-                bundle={bundle}
-                cartItems={items}
-                menuItems={allMenuItems}
-                applied={appliedBundleId === bundle.id}
-                onApply={() => handleApply(bundle)}
-              />
-            ))}
-          </div>
+          {/* Primary CTA — McDonald's "Make it a Meal" pattern. Default-pushed
+              tier (red Most-picked badge) is rendered as a full-width tile so
+              non-bundling reads as the deviant choice. Tap opens the composer
+              sheet so the customer can swap defaults rather than getting
+              cheapest-only. */}
+          <PrimaryBundleCTA
+            bundle={primaryTier}
+            pricing={primaryPricing}
+            applied={primaryIsApplied}
+            onApply={() => handleApply(primaryTier)}
+            mainsCount={primaryPricing.mainsCount}
+          />
+
+          {/* Smaller comparison row: the entry tier + decoy stay visible so
+              the customer perceives the ladder, but they don't compete with
+              the primary CTA for attention. */}
+          {compareTiers.length > 0 && (
+            <div
+              className="grid gap-2"
+              style={{ gridTemplateColumns: `repeat(${Math.min(compareTiers.length, 2)}, minmax(0, 1fr))` }}
+            >
+              {compareTiers.map((bundle) => (
+                <BundleChip
+                  key={bundle.id}
+                  bundle={bundle}
+                  cartItems={items}
+                  menuItems={allMenuItems}
+                  applied={appliedBundleId === bundle.id}
+                  onApply={() => handleApply(bundle)}
+                  compact
+                />
+              ))}
+            </div>
+          )}
         </>
       )}
+
+      <BundleComposerSheet
+        open={composerBundle !== null}
+        onClose={() => setComposerBundle(null)}
+        bundle={composerBundle}
+        cartItems={items}
+        menuItems={allMenuItems}
+        locationSlug={locationSlug}
+        onApply={handleComposerApply}
+      />
     </div>
+  );
+}
+
+interface PrimaryCTAProps {
+  bundle: BundleTier;
+  pricing: { priceGrosze: number; refPriceGrosze: number; savings: number; mainsCount: number };
+  applied: boolean;
+  onApply: () => void;
+  mainsCount: number;
+}
+
+function PrimaryBundleCTA({ bundle, pricing, applied, onApply, mainsCount }: PrimaryCTAProps) {
+  const perPerson = mainsCount > 0 ? Math.round(pricing.priceGrosze / mainsCount) : 0;
+  // Per-person framing only kicks in at ≥3 mains so a 2-person bundle
+  // doesn't get awkward maths. Family Feast at 3 mains ≈ 40 PLN per
+  // person carries the cinema-combo "deal-for-everyone" psychology.
+  const showPerPerson = mainsCount >= 3 && perPerson > 0;
+
+  return (
+    <button
+      type="button"
+      onClick={onApply}
+      className={`w-full rounded-xl border p-3 transition-all text-left animate-fade-in ${
+        applied
+          ? "border-italia-green/40 bg-italia-green/5 cursor-default"
+          : "border-italia-red/40 bg-gradient-to-r from-italia-red/10 to-italia-gold/10 hover:border-italia-red hover:shadow-md cursor-pointer"
+      }`}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span
+              className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
+                applied
+                  ? "bg-italia-green text-white"
+                  : "bg-italia-red text-white"
+              }`}
+            >
+              {applied ? "Applied" : "Most picked"}
+            </span>
+            <span className="font-heading font-bold text-sm text-italia-dark">
+              Make it a {bundle.tier}
+            </span>
+          </div>
+          <p className="text-xs text-italia-gray mt-0.5 leading-snug">
+            {bundle.description}
+            {showPerPerson && (
+              <span className="text-italia-gold-dark font-semibold">
+                {" "}· {formatPrice(perPerson)} per person
+              </span>
+            )}
+          </p>
+        </div>
+        <div className="flex-shrink-0 text-right">
+          <div className="font-heading text-lg font-bold text-italia-red">
+            {formatPrice(pricing.priceGrosze)}
+          </div>
+          {pricing.refPriceGrosze > pricing.priceGrosze && (
+            <div className="text-[10px] text-italia-gray line-through leading-tight">
+              {formatPrice(pricing.refPriceGrosze)}
+            </div>
+          )}
+          {pricing.savings > 0 && (
+            <div className="text-[10px] font-bold text-italia-green-dark uppercase tracking-wider mt-0.5">
+              Save {formatPrice(pricing.savings)}
+            </div>
+          )}
+        </div>
+      </div>
+    </button>
   );
 }
 
@@ -240,9 +399,14 @@ interface ChipProps {
   menuItems: MenuItem[];
   applied: boolean;
   onApply: () => void;
+  /** When true, render in compact comparison-row styling (smaller text,
+   *  no Most-picked/Best-value badges — those are reserved for the
+   *  primary CTA above). Used for the entry tier + decoy when the
+   *  default-pushed tier is the primary CTA. */
+  compact?: boolean;
 }
 
-function BundleChip({ bundle, cartItems, menuItems, applied, onApply }: ChipProps) {
+function BundleChip({ bundle, cartItems, menuItems, applied, onApply, compact = false }: ChipProps) {
   const pricing = computeBundlePrice(bundle, cartItems, menuItems);
   const priceGrosze = pricing?.priceGrosze ?? (isDynamicBundle(bundle) ? 0 : bundle.priceGrosze);
   const refPriceGrosze = pricing?.refPriceGrosze ?? (isDynamicBundle(bundle) ? 0 : bundle.refPriceGrosze);
@@ -271,12 +435,19 @@ function BundleChip({ bundle, cartItems, menuItems, applied, onApply }: ChipProp
     return bundle.description.replace(/^Your mains/i, `${n} ${noun}`);
   })();
 
-  // Visual ladder roles are defined on the bundle. The default-push tier
-  // gets red emphasis; the anchor gets gold; decoy is muted; everything
-  // else is the neutral baseline.
+  // Visual ladder roles are defined on the bundle. Compact mode is used
+  // for the secondary comparison row when a default-pushed tier carries
+  // the primary CTA above — we drop the red/gold badges there so they
+  // don't compete with the primary CTA's "Most picked" treatment.
   const baseClass = (() => {
     if (applied) {
       return "border-italia-green/40 bg-italia-green/5";
+    }
+    if (compact) {
+      // Decoy stays slightly muted to do its dominance-heuristic job.
+      return bundle.isDecoy
+        ? "border-gray-200 bg-white opacity-85 hover:border-italia-gold/40"
+        : "border-gray-200 bg-white hover:border-italia-gold/40";
     }
     if (bundle.isDefault) {
       return "border-italia-red/40 bg-italia-red/5 hover:border-italia-red";
@@ -298,12 +469,12 @@ function BundleChip({ bundle, cartItems, menuItems, applied, onApply }: ChipProp
         applied ? "cursor-default" : "cursor-pointer hover:shadow-sm hover:-translate-y-0.5 active:translate-y-0"
       }`}
     >
-      {!applied && bundle.isDefault && (
+      {!applied && !compact && bundle.isDefault && (
         <span className="absolute -top-2 left-2.5 px-2 py-0.5 rounded-full bg-italia-red text-white text-[9px] font-bold uppercase tracking-wider">
           Most picked
         </span>
       )}
-      {!applied && bundle.isAnchor && (
+      {!applied && !compact && !bundle.isDefault && bundle.isAnchor && (
         <span className="absolute -top-2 left-2.5 px-2 py-0.5 rounded-full bg-italia-gold-dark text-white text-[9px] font-bold uppercase tracking-wider">
           Best value
         </span>
