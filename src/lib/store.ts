@@ -3874,8 +3874,61 @@ export interface LocationUpsellConfig {
 
 export type UpsellSettings = Record<string, LocationUpsellConfig>;
 
+/** Replaces legacy `meal-deal` combo entries with the item-locked
+ *  `italian-classic` shape (Margherita + Espresso + Tiramisù). Runs on
+ *  every read of the upsell config so admin UIs and customer-side
+ *  rendering see the renamed combo without a one-shot migration script.
+ *  Preserves the admin's `active` flag in case they had disabled it. */
+function migrateLegacyMealDeal(settings: UpsellSettings): UpsellSettings {
+  let changed = false;
+  const out: UpsellSettings = {};
+  for (const [slug, raw] of Object.entries(settings)) {
+    const cfg = raw as LocationUpsellConfig & {
+      combos?: Array<{
+        id: string;
+        name: string;
+        description: string;
+        categories: string[];
+        discountPercent: number;
+        minItems: number;
+        active: boolean;
+        requiredItems?: { suffix: string; label: string }[];
+      }>;
+    };
+    if (!cfg?.combos?.some((c) => c.id === "meal-deal")) {
+      out[slug] = raw;
+      continue;
+    }
+    changed = true;
+    const migrated = cfg.combos
+      // De-dupe: if both meal-deal and italian-classic somehow coexist in
+      // a saved config (re-import / hand edit), drop meal-deal entirely.
+      .filter((c) => !(c.id === "meal-deal" && cfg.combos!.some((x) => x.id === "italian-classic")))
+      .map((c) => {
+        if (c.id !== "meal-deal") return c;
+        return {
+          id: "italian-classic",
+          name: "Italian Classic Deal",
+          description: "Margherita + Espresso + Tiramisù",
+          categories: ["pizza", "drinks", "desserts"],
+          discountPercent: c.discountPercent,
+          minItems: c.minItems,
+          active: c.active,
+          requiredItems: [
+            { suffix: "pizza-margherita", label: "Margherita" },
+            { suffix: "drink-espresso", label: "Espresso" },
+            { suffix: "dessert-tiramisu", label: "Tiramisù" },
+          ],
+        };
+      });
+    out[slug] = { ...cfg, combos: migrated } as LocationUpsellConfig;
+  }
+  return changed ? out : settings;
+}
+
 export async function getUpsellSettings(): Promise<UpsellSettings> {
-  return readJSON<UpsellSettings>("upsell-settings.json", {});
+  const raw = await readJSON<UpsellSettings>("upsell-settings.json", {});
+  return migrateLegacyMealDeal(raw);
 }
 
 export async function updateUpsellSettings(settings: UpsellSettings): Promise<UpsellSettings> {

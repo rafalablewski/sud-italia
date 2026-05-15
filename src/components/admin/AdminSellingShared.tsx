@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { krakowMenu } from "@/data/menus/krakow";
 import { warszawaMenu } from "@/data/menus/warszawa";
-import { DEFAULT_TIME_WINDOWS } from "@/lib/upsell";
+import { DEFAULT_COMBO_DEALS, DEFAULT_TIME_WINDOWS } from "@/lib/upsell";
 import { DEFAULT_BUNDLES } from "@/lib/bundles";
 import { useToast } from "./v2/ui/Toast";
 import type { MenuItem, MenuCategory } from "@/data/types";
@@ -109,11 +109,19 @@ export const LOCATIONS = [
 
 export const CATEGORIES: MenuCategory[] = ["pizza", "pasta", "antipasti", "panini", "drinks", "desserts"];
 
-export const DEFAULT_COMBOS: ComboDealConfig[] = [
-  { id: "meal-deal", name: "Meal Deal", description: "Any main + drink + dessert", categories: ["pizza", "drinks", "desserts"], discountPercent: 10, minItems: 3, active: true },
-  { id: "pasta-combo", name: "Pasta Combo", description: "Any pasta + drink + dessert", categories: ["pasta", "drinks", "desserts"], discountPercent: 10, minItems: 3, active: true },
-  { id: "lunch-special", name: "Lunch Special", description: "Any panino + drink", categories: ["panini", "drinks"], discountPercent: 8, minItems: 2, active: true },
-];
+// Derive from the server-side DEFAULT_COMBO_DEALS so the admin "no config
+// yet" seed never drifts from the runtime fallback. The active flag isn't
+// on ComboDeal (runtime treats absence as live), so we layer it on here.
+export const DEFAULT_COMBOS: ComboDealConfig[] = DEFAULT_COMBO_DEALS.map((c) => ({
+  id: c.id,
+  name: c.name,
+  description: c.description,
+  categories: [...c.categories],
+  discountPercent: c.discountPercent,
+  minItems: c.minItems,
+  active: true,
+  ...(c.requiredItems ? { requiredItems: c.requiredItems.map((r) => ({ ...r })) } : {}),
+}));
 
 export const DEFAULT_BUNDLE_RULES: BundleRulesConfig = {
   lunch: { startHour: 11, endHour: 14 },

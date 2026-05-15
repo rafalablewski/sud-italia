@@ -925,7 +925,7 @@ export const DEFAULT_TIME_WINDOWS: TimeWindow[] = [
     sub: "Add a pasta and a drink to save 10%",
     badge: "−10%",
     cta: "How it works",
-    comboId: "meal-deal",
+    comboId: "pasta-combo",
   },
   {
     id: "afternoon",
@@ -944,10 +944,10 @@ export const DEFAULT_TIME_WINDOWS: TimeWindow[] = [
     startHour: 17,
     endHour: 19,
     title: "Cooking for the table tonight?",
-    sub: "Multiple pizzas + sides + drinks save 10% via Meal Deal",
+    sub: "Margherita + Espresso + Tiramisù save 10% with our Italian Classic Deal",
     badge: "Tip",
     cta: "What pairs well",
-    comboId: "meal-deal",
+    comboId: "italian-classic",
   },
   {
     id: "late",
