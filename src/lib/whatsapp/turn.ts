@@ -2,7 +2,12 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { callGateway, fenceUserContent, gatewayConfigured } from "@/lib/ai/gateway";
 import { getDailyBudgetGrosze } from "@/lib/ai/cost";
 import { getWhatsAppProvider } from "@/lib/providers/whatsapp";
-import { mutateWaSession, getWaSettings } from "@/lib/store";
+import {
+  clearWaSession,
+  getWaSettings,
+  loadOrCreateWaSession,
+  setWaSession,
+} from "@/lib/store";
 import { WHATSAPP_SYSTEM_PROMPT } from "@/lib/whatsapp/prompt";
 import { TOOL_DEFINITIONS, executeTool, type ToolContext } from "@/lib/whatsapp/tools";
 import type { InboundMessage } from "@/lib/whatsapp/inbound";
@@ -14,11 +19,11 @@ import { incrCounter } from "@/lib/metrics";
  * (or zero) outbound WhatsApp message. The loop is bounded to 6 tool
  * hops so a model that gets confused can't burn budget endlessly.
  *
- * Conversation continuity: we trim history to the last MAX_HISTORY
- * user/assistant pairs so the prompt-cache prefix stays cheap. Tools
- * already keep their own state in the per-phone WhatsApp session
- * (cart, slot, address) so the model doesn't need long history to
- * remember what's been agreed.
+ * Persistence model: load the session once at the top, mutate it in
+ * memory across tool calls, save it once at the end. Each turn does
+ * one read + one write of whatsapp-sessions.json instead of N — even
+ * a 6-hop turn used to take 8+ round-trips through the locked file
+ * before this refactor.
  */
 
 const MAX_TOOL_HOPS = 6;
@@ -62,30 +67,34 @@ export async function handleInboundTurn(input: HandleTurnInput): Promise<void> {
     return;
   }
 
+  const session = await loadOrCreateWaSession(phone);
+  if (!session) return;
+
   const userText = describeInbound(message);
   const fenced = fenceUserContent("whatsapp_customer_message", userText);
 
-  let history: { role: "user" | "assistant"; content: string }[] = [];
-  await mutateWaSession(phone, (s) => {
-    const turn: { role: "user" | "assistant"; content: string } = {
-      role: "user",
-      content: fenced,
-    };
-    history = [...s.llmMessageHistory, turn].slice(-MAX_HISTORY);
-    return { ...s, llmMessageHistory: history };
-  });
+  const userTurn: { role: "user" | "assistant"; content: string } = {
+    role: "user",
+    content: fenced,
+  };
+  session.llmMessageHistory = [...session.llmMessageHistory, userTurn].slice(-MAX_HISTORY);
 
   // Mark the inbound as read so the customer sees the double tick.
   if (message.id) {
     void provider.markRead(message.id);
   }
 
-  const messages: Anthropic.MessageParam[] = history.map((h) => ({
+  const messages: Anthropic.MessageParam[] = session.llmMessageHistory.map((h) => ({
     role: h.role,
     content: h.content,
   }));
 
-  const ctx: ToolContext = { phone, uiSent: { value: false } };
+  const ctx: ToolContext = {
+    phone,
+    session,
+    uiSent: { value: false },
+    clearOnExit: { value: false },
+  };
   let assistantFinalText = "";
 
   for (let hop = 0; hop < MAX_TOOL_HOPS; hop++) {
@@ -107,6 +116,9 @@ export async function handleInboundTurn(input: HandleTurnInput): Promise<void> {
         phone,
         "Mam problem techniczny. Spróbuj jeszcze raz za chwilę albo zamów na https://sudita.lia 🍕",
       );
+      // Even when the gateway errors, persist whatever progress the
+      // customer made so the next turn picks up where they left off.
+      await persistSessionOnExit(ctx);
       return;
     }
     const msg = result.message;
@@ -145,21 +157,19 @@ export async function handleInboundTurn(input: HandleTurnInput): Promise<void> {
     }
   }
 
-  // Persist the assistant's textual reply into history so the next turn
-  // has continuity. We store an unfenced summary — only inbound user
+  // Append the model's textual reply into history so the next turn
+  // has continuity. We store the unfenced summary — only inbound user
   // text needs the prompt-injection fence.
   if (assistantFinalText) {
-    await mutateWaSession(phone, (s) => {
-      const turn: { role: "user" | "assistant"; content: string } = {
-        role: "assistant",
-        content: assistantFinalText,
-      };
-      return {
-        ...s,
-        llmMessageHistory: [...s.llmMessageHistory, turn].slice(-MAX_HISTORY),
-      };
-    });
+    const assistantTurn: { role: "user" | "assistant"; content: string } = {
+      role: "assistant",
+      content: assistantFinalText,
+    };
+    session.llmMessageHistory = [...session.llmMessageHistory, assistantTurn].slice(-MAX_HISTORY);
   }
+
+  // Single persist at the end of the turn (or single delete on escalation).
+  await persistSessionOnExit(ctx);
 
   // Only send the LLM's final text if no tool already pushed a UI message;
   // otherwise we'd duplicate the cart/slot/CTA we just rendered.
@@ -169,6 +179,14 @@ export async function handleInboundTurn(input: HandleTurnInput): Promise<void> {
     // Safety net — model returned nothing and no tool spoke for us.
     await provider.sendText(phone, "🍕");
   }
+}
+
+async function persistSessionOnExit(ctx: ToolContext): Promise<void> {
+  if (ctx.clearOnExit.value) {
+    await clearWaSession(ctx.phone);
+    return;
+  }
+  await setWaSession(ctx.session);
 }
 
 /**

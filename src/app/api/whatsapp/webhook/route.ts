@@ -9,8 +9,8 @@ import { getWhatsAppProvider } from "@/lib/providers/whatsapp";
 import {
   appendWaMessage,
   getCustomer,
+  getWaSession,
   getWaSettings,
-  mutateWaSession,
 } from "@/lib/store";
 import { incrCounter } from "@/lib/metrics";
 
@@ -157,11 +157,12 @@ async function processOne(message: {
   }
 
   // First-touch welcome: when this is the customer's very first message
-  // and the session is empty, deliver the welcome blurb before handing
+  // (no active session yet) deliver the welcome blurb before handing
   // off to the LLM. Keeps cold-start UX warm even when the model is
-  // momentarily slow.
-  const sessionBefore = await mutateWaSession(phone, (s) => s);
-  if (sessionBefore && sessionBefore.llmMessageHistory.length === 0) {
+  // momentarily slow. Read-only — the turn handler does the actual
+  // session write.
+  const sessionBefore = await getWaSession(phone);
+  if (!sessionBefore || sessionBefore.llmMessageHistory.length === 0) {
     const provider = getWhatsAppProvider();
     await provider.sendText(phone, settings.welcomeMessage);
   }

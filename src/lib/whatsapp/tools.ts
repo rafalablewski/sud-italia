@@ -2,12 +2,11 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { getAvailableMenu } from "@/data/menus";
 import {
   addNotification,
-  clearWaSession,
   getCustomer,
   getSlots,
   getSlotById,
   getUpsellSettings,
-  mutateWaSession,
+  updateOrderStatus,
   type WaSession,
 } from "@/lib/store";
 import { locations } from "@/data/locations";
@@ -45,9 +44,16 @@ type ActiveLocation = (typeof ACTIVE_LOCATIONS)[number];
 export interface ToolContext {
   /** Customer's E.164 PL phone — the session key. */
   phone: string;
+  /** In-memory session loaded once at the start of the turn. Tools
+   *  mutate this directly; the turn loop persists it once at the end.
+   *  Avoids a per-tool read-modify-write of whatsapp-sessions.json. */
+  session: WaSession;
   /** Mark `uiSent: true` if the tool already sent a WA message so the
    *  LLM's wrap-up text isn't a duplicate of what the customer saw. */
   uiSent: { value: boolean };
+  /** Set to true by terminal tools (e.g. escalate_to_human) to tell the
+   *  turn loop to delete the session at the end rather than save it. */
+  clearOnExit: { value: boolean };
 }
 
 export interface ToolResult {
@@ -78,11 +84,6 @@ function shortMenuRow(item: MenuItem) {
     category: item.category,
     tags: item.tags,
   };
-}
-
-async function loadSessionRO(phone: string): Promise<WaSession | null> {
-  const all = await mutateWaSession(phone, (s) => s);
-  return all;
 }
 
 async function recomputeQuote(session: WaSession): Promise<{
@@ -354,19 +355,16 @@ async function tool_setLocation(input: Record<string, unknown>, ctx: ToolContext
   if (!isActiveLocation(slug)) {
     return { ok: false, text: "locationSlug must be 'krakow' or 'warszawa'." };
   }
-  await mutateWaSession(ctx.phone, (s) => {
-    if (s.locationSlug && s.locationSlug !== slug) {
-      // Switching location wipes the cart — items aren't comparable across menus.
-      return { ...s, locationSlug: slug, cartItems: [] };
-    }
-    return { ...s, locationSlug: slug };
-  });
+  if (ctx.session.locationSlug && ctx.session.locationSlug !== slug) {
+    // Switching location wipes the cart — items aren't comparable across menus.
+    ctx.session.cartItems = [];
+  }
+  ctx.session.locationSlug = slug;
   return { ok: true, text: `Location pinned: ${locationName(slug)}.` };
 }
 
 async function tool_searchMenu(input: Record<string, unknown>, ctx: ToolContext): Promise<ToolResult> {
-  const session = await loadSessionRO(ctx.phone);
-  const slug = session?.locationSlug;
+  const slug = ctx.session.locationSlug;
   if (!slug) {
     return {
       ok: false,
@@ -407,34 +405,29 @@ async function tool_addToCart(input: Record<string, unknown>, ctx: ToolContext):
   if (!Number.isInteger(quantity) || quantity < 1 || quantity > 20) {
     return { ok: false, text: "quantity must be an integer between 1 and 20." };
   }
-  const session = await loadSessionRO(ctx.phone);
-  const slug = session?.locationSlug;
+  const slug = ctx.session.locationSlug;
   if (!slug) return { ok: false, text: "Set a location first." };
   const menu = await getAvailableMenu(slug);
   const item = menu.find((m) => m.id === menuItemId);
   if (!item) {
     return { ok: false, text: `Item ${menuItemId} is not on the ${locationName(slug)} menu right now.` };
   }
-  await mutateWaSession(ctx.phone, (s) => {
-    const existing = s.cartItems.findIndex(
-      (c) => c.menuItem.id === item.id && (c.notes ?? "") === notes,
-    );
-    const nextItems = [...s.cartItems];
-    if (existing >= 0) {
-      nextItems[existing] = {
-        ...nextItems[existing],
-        quantity: nextItems[existing].quantity + quantity,
-      };
-    } else {
-      nextItems.push({
-        menuItem: item,
-        quantity,
-        locationSlug: slug,
-        notes: notes || undefined,
-      });
-    }
-    return { ...s, cartItems: nextItems };
-  });
+  const existing = ctx.session.cartItems.findIndex(
+    (c) => c.menuItem.id === item.id && (c.notes ?? "") === notes,
+  );
+  if (existing >= 0) {
+    ctx.session.cartItems[existing] = {
+      ...ctx.session.cartItems[existing],
+      quantity: ctx.session.cartItems[existing].quantity + quantity,
+    };
+  } else {
+    ctx.session.cartItems.push({
+      menuItem: item,
+      quantity,
+      locationSlug: slug,
+      notes: notes || undefined,
+    });
+  }
   return {
     ok: true,
     text: `Added ${quantity}× ${item.name} (${pln(item.price * quantity)}) to the cart.`,
@@ -442,13 +435,12 @@ async function tool_addToCart(input: Record<string, unknown>, ctx: ToolContext):
 }
 
 async function tool_viewCart(ctx: ToolContext): Promise<ToolResult> {
-  const session = await loadSessionRO(ctx.phone);
-  if (!session || session.cartItems.length === 0) {
+  if (ctx.session.cartItems.length === 0) {
     return { ok: true, text: "Cart is empty." };
   }
-  const quote = await recomputeQuote(session);
+  const quote = await recomputeQuote(ctx.session);
   const provider = getWhatsAppProvider();
-  const lines = session.cartItems.map(
+  const lines = ctx.session.cartItems.map(
     (i) => `• ${i.quantity}× ${i.menuItem.name} — ${pln(i.menuItem.price * i.quantity)}`,
   );
   const summary = [
@@ -460,11 +452,11 @@ async function tool_viewCart(ctx: ToolContext): Promise<ToolResult> {
   ]
     .filter(Boolean)
     .join("\n");
-  await provider.sendText(session.phone, summary);
+  await provider.sendText(ctx.session.phone, summary);
   ctx.uiSent.value = true;
   return {
     ok: true,
-    text: `Cart has ${session.cartItems.length} item(s). Subtotal ${pln(quote.subtotal)}, total ${pln(quote.total)}. (Sent breakdown to customer.)`,
+    text: `Cart has ${ctx.session.cartItems.length} item(s). Subtotal ${pln(quote.subtotal)}, total ${pln(quote.total)}. (Sent breakdown to customer.)`,
     data: quote,
   };
 }
@@ -472,18 +464,14 @@ async function tool_viewCart(ctx: ToolContext): Promise<ToolResult> {
 async function tool_removeFromCart(input: Record<string, unknown>, ctx: ToolContext): Promise<ToolResult> {
   const menuItemId = typeof input.menuItemId === "string" ? input.menuItemId : "";
   if (!menuItemId) return { ok: false, text: "menuItemId is required." };
-  let removed = 0;
-  await mutateWaSession(ctx.phone, (s) => {
-    const before = s.cartItems.length;
-    const next = s.cartItems.filter((c) => c.menuItem.id !== menuItemId);
-    removed = before - next.length;
-    return { ...s, cartItems: next };
-  });
+  const before = ctx.session.cartItems.length;
+  ctx.session.cartItems = ctx.session.cartItems.filter((c) => c.menuItem.id !== menuItemId);
+  const removed = before - ctx.session.cartItems.length;
   return { ok: true, text: removed > 0 ? `Removed ${removed} line(s).` : "Item was not in the cart." };
 }
 
 async function tool_clearCart(ctx: ToolContext): Promise<ToolResult> {
-  await mutateWaSession(ctx.phone, (s) => ({ ...s, cartItems: [] }));
+  ctx.session.cartItems = [];
   return { ok: true, text: "Cart cleared." };
 }
 
@@ -492,24 +480,26 @@ async function tool_setFulfillment(input: Record<string, unknown>, ctx: ToolCont
   if (type !== "takeout" && type !== "delivery") {
     return { ok: false, text: "type must be 'takeout' or 'delivery'." };
   }
-  await mutateWaSession(ctx.phone, (s) => ({
-    ...s,
-    fulfillmentType: type as FulfillmentType,
-    // Switching to takeout invalidates a previously-captured address.
-    deliveryAddress: type === "delivery" ? s.deliveryAddress : null,
-  }));
+  ctx.session.fulfillmentType = type as FulfillmentType;
+  // Switching to takeout invalidates a previously-captured address.
+  if (type !== "delivery") {
+    ctx.session.deliveryAddress = null;
+  }
   return { ok: true, text: `Fulfillment set to ${type}.` };
 }
 
 async function tool_listSlots(input: Record<string, unknown>, ctx: ToolContext): Promise<ToolResult> {
-  const session = await loadSessionRO(ctx.phone);
-  if (!session?.locationSlug) return { ok: false, text: "Set a location first." };
+  const { session } = ctx;
+  if (!session.locationSlug) return { ok: false, text: "Set a location first." };
   if (!session.fulfillmentType) {
     return { ok: false, text: "Call set_fulfillment first ('takeout' or 'delivery')." };
   }
+  // Default to "today" in the truck's local time, not UTC. Around midnight
+  // CET/CEST the UTC date is one day behind, and `list_slots` was handing
+  // customers slots for the wrong day. en-CA gives YYYY-MM-DD.
   const date = typeof input.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(input.date)
     ? input.date
-    : new Date().toISOString().slice(0, 10);
+    : new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Warsaw" }).format(new Date());
   const all = await getSlots(session.locationSlug, date);
   const available = all
     .filter((s) => s.status === "active")
@@ -551,14 +541,13 @@ async function tool_setSlot(input: Record<string, unknown>, ctx: ToolContext): P
   if (slot.currentOrders >= slot.maxOrders) {
     return { ok: false, text: "That slot just filled up. Call list_slots and offer another." };
   }
-  const session = await loadSessionRO(ctx.phone);
-  if (session?.fulfillmentType && !slot.fulfillmentTypes.includes(session.fulfillmentType)) {
+  if (ctx.session.fulfillmentType && !slot.fulfillmentTypes.includes(ctx.session.fulfillmentType)) {
     return {
       ok: false,
-      text: `Slot doesn't support ${session.fulfillmentType}. Offer a different slot.`,
+      text: `Slot doesn't support ${ctx.session.fulfillmentType}. Offer a different slot.`,
     };
   }
-  await mutateWaSession(ctx.phone, (s) => ({ ...s, slotId }));
+  ctx.session.slotId = slotId;
   return { ok: true, text: `Slot locked: ${slot.date} ${slot.time}.` };
 }
 
@@ -566,8 +555,7 @@ async function tool_setDeliveryAddress(
   input: Record<string, unknown>,
   ctx: ToolContext,
 ): Promise<ToolResult> {
-  const session = await loadSessionRO(ctx.phone);
-  if (session?.fulfillmentType !== "delivery") {
+  if (ctx.session.fulfillmentType !== "delivery") {
     return { ok: false, text: "Address is only needed for delivery. Set fulfillment to 'delivery' first." };
   }
   const street = typeof input.street === "string" ? input.street.trim() : "";
@@ -577,10 +565,7 @@ async function tool_setDeliveryAddress(
   if (!street || !city || !postalCode) {
     return { ok: false, text: "street, city and postalCode are all required." };
   }
-  await mutateWaSession(ctx.phone, (s) => ({
-    ...s,
-    deliveryAddress: { street, city, postalCode, notes: notes || undefined },
-  }));
+  ctx.session.deliveryAddress = { street, city, postalCode, notes: notes || undefined };
   return {
     ok: true,
     text: `Address captured: ${street}, ${postalCode} ${city}${notes ? ` (${notes})` : ""}.`,
@@ -588,8 +573,8 @@ async function tool_setDeliveryAddress(
 }
 
 async function tool_getSuggestions(ctx: ToolContext): Promise<ToolResult> {
-  const session = await loadSessionRO(ctx.phone);
-  if (!session?.locationSlug || session.cartItems.length === 0) {
+  const { session } = ctx;
+  if (!session.locationSlug || session.cartItems.length === 0) {
     return { ok: false, text: "Need a location and a non-empty cart for suggestions." };
   }
   const menu = await getAvailableMenu(session.locationSlug);
@@ -618,16 +603,15 @@ async function tool_setCustomerName(
 ): Promise<ToolResult> {
   const name = typeof input.name === "string" ? input.name.trim().slice(0, 60) : "";
   if (!name) return { ok: false, text: "name is required." };
-  await mutateWaSession(ctx.phone, (s) => ({ ...s, customerName: name }));
+  ctx.session.customerName = name;
   return { ok: true, text: `Customer name set: ${name}.` };
 }
 
 async function tool_quoteTotal(ctx: ToolContext): Promise<ToolResult> {
-  const session = await loadSessionRO(ctx.phone);
-  if (!session || session.cartItems.length === 0) {
+  if (ctx.session.cartItems.length === 0) {
     return { ok: false, text: "Cart is empty — nothing to quote." };
   }
-  const quote = await recomputeQuote(session);
+  const quote = await recomputeQuote(ctx.session);
   return {
     ok: true,
     text: `Subtotal ${pln(quote.subtotal)}${
@@ -643,8 +627,7 @@ async function tool_confirmAndPay(
   input: Record<string, unknown>,
   ctx: ToolContext,
 ): Promise<ToolResult> {
-  const session = await loadSessionRO(ctx.phone);
-  if (!session) return { ok: false, text: "No session." };
+  const { session } = ctx;
   if (!session.locationSlug) return { ok: false, text: "Location not set." };
   if (session.cartItems.length === 0) return { ok: false, text: "Cart is empty." };
   if (!session.fulfillmentType) return { ok: false, text: "Fulfillment not set." };
@@ -691,22 +674,23 @@ async function tool_confirmAndPay(
 
   const payment = await createWhatsAppPaymentSession(order);
   if (!payment) {
-    // Stripe isn't configured — let the customer know to pay at the truck.
-    await mutateWaSession(ctx.phone, (s) => ({ ...s, pendingOrderId: order.id }));
+    // Stripe isn't configured (demo mode). Confirm the order immediately
+    // so it lands on the KDS and counts in analytics — there's nothing
+    // to wait for and the customer is told to pay at pickup.
+    await updateOrderStatus(order.id, "confirmed");
+    ctx.session.pendingOrderId = order.id;
+    ctx.session.cartItems = [];
     const provider = getWhatsAppProvider();
     await provider.sendText(
       ctx.phone,
       `Zamówienie #${order.id} przyjęte (${pln(order.totalAmount)}). Płatność u kierowcy / przy odbiorze. ${slot.date} ${slot.time}. Smacznego! 🍕`,
     );
     ctx.uiSent.value = true;
-    return { ok: true, text: `Order ${order.id} created. Stripe not configured; customer notified to pay on pickup.` };
+    return { ok: true, text: `Order ${order.id} created and confirmed (demo mode — no Stripe). Customer notified to pay on pickup.` };
   }
 
-  await mutateWaSession(ctx.phone, (s) => ({
-    ...s,
-    pendingOrderId: order.id,
-    pendingPaymentUrl: payment.url,
-  }));
+  ctx.session.pendingOrderId = order.id;
+  ctx.session.pendingPaymentUrl = payment.url;
 
   // Page the operator dashboard so a human can babysit if the customer
   // doesn't tap pay within a few minutes.
@@ -738,14 +722,16 @@ async function tool_escalateToHuman(
   ctx: ToolContext,
 ): Promise<ToolResult> {
   const reason = typeof input.reason === "string" ? input.reason.trim().slice(0, 200) : "(no reason)";
-  const session = await loadSessionRO(ctx.phone);
   await addNotification({
     type: "new_order",
     title: "WhatsApp: human handoff requested",
     message: `${ctx.phone} — ${reason}`,
-    locationSlug: session?.locationSlug ?? "krakow",
+    locationSlug: ctx.session.locationSlug ?? "krakow",
   });
-  await clearWaSession(ctx.phone);
+  // Don't delete the session inline — the turn loop still needs to make
+  // its final write. Signal "clear on exit" so the loop drops the row
+  // after the turn completes instead of resurrecting it via setWaSession.
+  ctx.clearOnExit.value = true;
   const provider = getWhatsAppProvider();
   await provider.sendText(
     ctx.phone,

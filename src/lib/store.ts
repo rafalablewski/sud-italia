@@ -1,5 +1,6 @@
 import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
+import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
 import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop } from "@/data/types";
 import { getActiveLocations, locations as allLocations } from "@/data/locations";
@@ -17,7 +18,7 @@ import { appendOutboxEvent } from "@/lib/outbox";
 import { incrCounter } from "@/lib/metrics";
 import { and, asc, desc, eq, gte, inArray, lt, ne, sql as drizzleSql } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { allergenIncidents as allergenIncidentsTable, auditLog as auditLogTable, brands as brandsTable, customerNotes as customerNotesTable, customers as customersTable, feedback as feedbackTable, franchisees as franchiseesTable, ingredientStock as ingredientStockTable, ingredients as ingredientsTable, kdsTickets as kdsTicketsTable, locationAssignments as locationAssignmentsTable, loyaltyMembers as loyaltyMembersTable, menuItemStation as menuItemStationTable, orderItems as orderItemsTable, orders as ordersTable, pointAdjustments as pointAdjustmentsTable, recipes as recipesTable, royaltyStatements as royaltyStatementsTable, shifts as shiftsTable, slots as slotsTable, staff as staffTable, stations as stationsTable, stockMovements as stockMovementsTable, tempLogs as tempLogsTable, timePunches as timePunchesTable } from "@/db/schema";
+import { allergenIncidents as allergenIncidentsTable, auditLog as auditLogTable, brands as brandsTable, customerNotes as customerNotesTable, customers as customersTable, feedback as feedbackTable, franchisees as franchiseesTable, ingredientStock as ingredientStockTable, ingredients as ingredientsTable, kdsTickets as kdsTicketsTable, locationAssignments as locationAssignmentsTable, loyaltyMembers as loyaltyMembersTable, menuItemStation as menuItemStationTable, orderItems as orderItemsTable, orders as ordersTable, pointAdjustments as pointAdjustmentsTable, recipes as recipesTable, royaltyStatements as royaltyStatementsTable, shifts as shiftsTable, slots as slotsTable, staff as staffTable, stations as stationsTable, stockMovements as stockMovementsTable, tempLogs as tempLogsTable, timePunches as timePunchesTable, whatsappMessages as whatsappMessagesTable } from "@/db/schema";
 import { lte } from "drizzle-orm";
 import { bumpLazyBackfillHit, ensureTable } from "@/db/migrate";
 
@@ -6685,6 +6686,52 @@ export async function clearWaSession(rawPhone: string): Promise<void> {
   });
 }
 
+/**
+ * Load the session for a phone, returning a fresh empty one when none
+ * exists or it has expired. Read-only — no write — so the per-turn
+ * handler can call this once at the top of the request, mutate the
+ * returned object in memory across tool calls, and persist it exactly
+ * once via setWaSession at the end. Replaces N round-trips with 2.
+ */
+export async function loadOrCreateWaSession(rawPhone: string): Promise<WaSession | null> {
+  const phone = normalizePlPhoneE164(rawPhone);
+  if (!phone) return null;
+  const all = await readJSON<Record<string, WaSession>>("whatsapp-sessions.json", {});
+  const hit = all[phone];
+  if (hit && !isExpiredWaSession(hit)) return hit;
+  return {
+    phone,
+    locationSlug: null,
+    cartItems: [],
+    fulfillmentType: null,
+    slotId: null,
+    deliveryAddress: null,
+    customerName: null,
+    pendingOrderId: null,
+    pendingPaymentUrl: null,
+    llmMessageHistory: [],
+    lastTurnAt: new Date().toISOString(),
+  };
+}
+
+/**
+ * Persist a session loaded via loadOrCreateWaSession. Single write per
+ * turn — the lock still protects against concurrent operator actions
+ * (admin reply, session reset) that may race with an inbound webhook.
+ */
+export async function setWaSession(session: WaSession): Promise<void> {
+  const phone = normalizePlPhoneE164(session.phone);
+  if (!phone) return;
+  await withLock("whatsapp-sessions.json", async () => {
+    const all = await readJSON<Record<string, WaSession>>("whatsapp-sessions.json", {});
+    for (const k of Object.keys(all)) {
+      if (isExpiredWaSession(all[k])) delete all[k];
+    }
+    all[phone] = { ...session, phone, lastTurnAt: new Date().toISOString() };
+    await writeJSON("whatsapp-sessions.json", all);
+  });
+}
+
 export async function listWaSessions(): Promise<WaSession[]> {
   const all = await readJSON<Record<string, WaSession>>("whatsapp-sessions.json", {});
   return Object.values(all).filter((s) => !isExpiredWaSession(s));
@@ -6763,9 +6810,109 @@ export interface WaMessage {
 const WA_TRANSCRIPT_MAX_PER_PHONE = 200;
 const WA_TRANSCRIPT_MAX_PHONES = 500;
 
+const WHATSAPP_MESSAGES_DDL = [
+  `CREATE TABLE IF NOT EXISTS whatsapp_messages (
+    id text PRIMARY KEY,
+    phone text NOT NULL,
+    at timestamptz NOT NULL,
+    direction text NOT NULL,
+    kind text NOT NULL,
+    body text NOT NULL DEFAULT '',
+    meta jsonb,
+    actor text NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS whatsapp_messages_phone_at_idx
+    ON whatsapp_messages (phone, at)`,
+  `CREATE INDEX IF NOT EXISTS whatsapp_messages_at_idx
+    ON whatsapp_messages (at)`,
+];
+
+async function ensureWhatsappMessagesTable(): Promise<void> {
+  await ensureTable("whatsapp_messages", WHATSAPP_MESSAGES_DDL);
+}
+
+/**
+ * Probabilistic per-phone cap: trim a phone's oldest rows back to the
+ * limit on ~1% of writes. Avoids running the trim query on every send
+ * (which would defeat the point of moving off the kv_store ring buffer)
+ * while still keeping each conversation bounded over time. Operators
+ * who care about a tight bound can run the same query from a cron later.
+ */
+async function maybeTrimWaTranscript(phone: string): Promise<void> {
+  if (Math.random() > 0.01) return;
+  const db = getDb();
+  if (!db) return;
+  try {
+    // Keep the newest WA_TRANSCRIPT_MAX_PER_PHONE rows for this phone, delete the rest.
+    await db.execute(drizzleSql`
+      DELETE FROM whatsapp_messages
+      WHERE phone = ${phone}
+        AND id NOT IN (
+          SELECT id FROM whatsapp_messages
+          WHERE phone = ${phone}
+          ORDER BY at DESC
+          LIMIT ${WA_TRANSCRIPT_MAX_PER_PHONE}
+        )
+    `);
+  } catch (err) {
+    logger.debug("maybeTrimWaTranscript failed (non-fatal)", {
+      phone,
+      layer: "store.whatsapp",
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
+
+/**
+ * Append one inbound/outbound WhatsApp message to the transcript log.
+ *
+ * Storage path is Postgres-first: each call is an O(log N) indexed insert
+ * — no global lock and no read-then-write of a growing JSON blob like the
+ * earlier kv_store ring buffer. When DATABASE_URL is unset (local dev
+ * without Neon) we fall back to the legacy kv_store implementation so
+ * the dev flow keeps working unchanged.
+ */
 export async function appendWaMessage(rawPhone: string, msg: WaMessage): Promise<void> {
   const phone = normalizePlPhoneE164(rawPhone);
   if (!phone) return;
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureWhatsappMessagesTable();
+      // Deterministic id so retried sends don't double-log. We compose
+      // direction + at + first 64 chars of body; collisions are
+      // vanishingly unlikely for human-scale chat volume.
+      const id = createHash("sha256")
+        .update(`${phone}|${msg.direction}|${msg.at}|${msg.body.slice(0, 64)}|${msg.actor}`)
+        .digest("hex")
+        .slice(0, 32);
+      await db
+        .insert(whatsappMessagesTable)
+        .values({
+          id,
+          phone,
+          at: new Date(msg.at),
+          direction: msg.direction,
+          kind: msg.kind,
+          body: msg.body,
+          meta: msg.meta ?? null,
+          actor: msg.actor,
+        })
+        .onConflictDoNothing();
+      void maybeTrimWaTranscript(phone);
+      return;
+    } catch (err) {
+      logger.warn(
+        "appendWaMessage DB insert failed; falling back to kv ring buffer",
+        { phone, layer: "store.whatsapp" },
+        err,
+      );
+      // Fall through to kv fallback below — better to log somewhere than nowhere.
+    }
+  }
+
+  // Filesystem / kv_store fallback for local dev without a database.
+  // Same per-phone ring-buffer semantics as the original implementation.
   try {
     await withLock("whatsapp-transcripts.json", async () => {
       const all = await readJSON<Record<string, WaMessage[]>>("whatsapp-transcripts.json", {});
@@ -6776,9 +6923,6 @@ export async function appendWaMessage(rawPhone: string, msg: WaMessage): Promise
       }
       all[phone] = existing;
 
-      // Bound the keyspace: when we exceed WA_TRANSCRIPT_MAX_PHONES,
-      // evict the phone with the oldest tail message. Keeps the dump
-      // file manageable without losing recent activity.
       const phones = Object.keys(all);
       if (phones.length > WA_TRANSCRIPT_MAX_PHONES) {
         let oldestPhone = phones[0];
@@ -6797,7 +6941,7 @@ export async function appendWaMessage(rawPhone: string, msg: WaMessage): Promise
     });
   } catch (err) {
     logger.warn(
-      "appendWaMessage failed",
+      "appendWaMessage kv fallback failed",
       { phone, layer: "store.whatsapp" },
       err,
     );
@@ -6807,6 +6951,36 @@ export async function appendWaMessage(rawPhone: string, msg: WaMessage): Promise
 export async function getWaTranscript(rawPhone: string, limit = 100): Promise<WaMessage[]> {
   const phone = normalizePlPhoneE164(rawPhone);
   if (!phone) return [];
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureWhatsappMessagesTable();
+      const cap = Math.max(1, Math.min(500, limit));
+      const rows = await db
+        .select()
+        .from(whatsappMessagesTable)
+        .where(eq(whatsappMessagesTable.phone, phone))
+        .orderBy(desc(whatsappMessagesTable.at))
+        .limit(cap);
+      // Return oldest first so the chat scrolls naturally.
+      return rows
+        .reverse()
+        .map((r) => ({
+          at: r.at.toISOString(),
+          direction: r.direction as WaMessageDirection,
+          kind: r.kind as WaMessageKind,
+          body: r.body,
+          meta: (r.meta as Record<string, unknown> | null) ?? undefined,
+          actor: r.actor as WaMessageActor,
+        }));
+    } catch (err) {
+      logger.warn(
+        "getWaTranscript DB read failed; falling back to kv",
+        { phone, layer: "store.whatsapp" },
+        err,
+      );
+    }
+  }
   const all = await readJSON<Record<string, WaMessage[]>>("whatsapp-transcripts.json", {});
   const list = all[phone] ?? [];
   return list.slice(-limit);
@@ -6820,6 +6994,61 @@ export async function getWaTranscript(rawPhone: string, limit = 100): Promise<Wa
 export async function listWaTranscriptHeads(limit = 100): Promise<
   { phone: string; lastAt: string; lastBody: string; messageCount: number; hasInbound: boolean }[]
 > {
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureWhatsappMessagesTable();
+      const cap = Math.max(1, Math.min(500, limit));
+      // One scan returns per-phone last activity, total count and whether
+      // any inbound message exists. Backed by the (phone, at) index.
+      const rows = await db.execute<{
+        phone: string;
+        last_at: Date;
+        last_body: string;
+        message_count: number;
+        has_inbound: boolean;
+      }>(drizzleSql`
+        SELECT phone,
+               MAX(at) AS last_at,
+               (SELECT body FROM whatsapp_messages m2
+                WHERE m2.phone = m.phone
+                ORDER BY m2.at DESC LIMIT 1) AS last_body,
+               COUNT(*)::int AS message_count,
+               BOOL_OR(direction = 'in') AS has_inbound
+          FROM whatsapp_messages m
+         GROUP BY phone
+         ORDER BY MAX(at) DESC
+         LIMIT ${cap}
+      `);
+      const list = (rows as unknown as { rows?: unknown[] }).rows ?? rows;
+      const arr = Array.isArray(list) ? list : [];
+      return arr.map((r) => {
+        const row = r as {
+          phone: string;
+          last_at: Date | string;
+          last_body: string | null;
+          message_count: number;
+          has_inbound: boolean;
+        };
+        return {
+          phone: row.phone,
+          lastAt:
+            row.last_at instanceof Date
+              ? row.last_at.toISOString()
+              : new Date(row.last_at).toISOString(),
+          lastBody: (row.last_body ?? "").slice(0, 100),
+          messageCount: row.message_count,
+          hasInbound: row.has_inbound,
+        };
+      });
+    } catch (err) {
+      logger.warn(
+        "listWaTranscriptHeads DB read failed; falling back to kv",
+        { layer: "store.whatsapp" },
+        err,
+      );
+    }
+  }
   const all = await readJSON<Record<string, WaMessage[]>>("whatsapp-transcripts.json", {});
   const rows = Object.entries(all).map(([phone, list]) => {
     const last = list[list.length - 1];
@@ -6838,6 +7067,23 @@ export async function listWaTranscriptHeads(limit = 100): Promise<
 export async function deleteWaTranscript(rawPhone: string): Promise<boolean> {
   const phone = normalizePlPhoneE164(rawPhone);
   if (!phone) return false;
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureWhatsappMessagesTable();
+      const result = await db
+        .delete(whatsappMessagesTable)
+        .where(eq(whatsappMessagesTable.phone, phone))
+        .returning({ id: whatsappMessagesTable.id });
+      if (result.length > 0) return true;
+    } catch (err) {
+      logger.warn(
+        "deleteWaTranscript DB delete failed; falling back to kv",
+        { phone, layer: "store.whatsapp" },
+        err,
+      );
+    }
+  }
   return withLock("whatsapp-transcripts.json", async () => {
     const all = await readJSON<Record<string, WaMessage[]>>("whatsapp-transcripts.json", {});
     if (!all[phone]) return false;
