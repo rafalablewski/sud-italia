@@ -1787,7 +1787,7 @@ export async function getInsights(dateFrom?: string, dateTo?: string): Promise<I
 
 export interface Notification {
   id: string;
-  type: "new_order" | "slot_full" | "daily_summary" | "low_slots" | "order_status";
+  type: "new_order" | "slot_full" | "daily_summary" | "low_slots" | "order_status" | "bundle_low_margin";
   title: string;
   message: string;
   locationSlug?: string;
@@ -3965,6 +3965,15 @@ export interface BundleEvent {
   /** Total prior order count for the customer at the moment of this
    *  event — finer-grained LTV signal than the boolean cohort. */
   customerOrderCount?: number;
+  /** Estimated contribution margin at this price (0..1). Computed from
+   *  MenuItem.cost at write time so a per-event margin alert can fire
+   *  for operators when a bundle goes underwater (Sprint 8 #10). */
+  marginRatio?: number;
+  /** Per-unit add-on composition the customer picked for this bundle.
+   *  Reused by the composer's "same as last time" one-tap re-apply
+   *  (Sprint 8 #8) — the customer's prior choices pre-fill the new
+   *  composer when they return. */
+  addOnComposition?: { menuItemId: string; quantity: number }[];
   createdAt: string;
 }
 

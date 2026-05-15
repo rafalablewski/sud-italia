@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Sheet } from "@/components/ui/Sheet";
 import { Button } from "@/components/ui/Button";
 import { formatPrice } from "@/lib/utils";
@@ -34,6 +34,11 @@ interface BundleComposerSheetProps {
   cartItems: CartItem[];
   menuItems: MenuItem[];
   locationSlug: string;
+  /** Customer phone (E.164) — when provided, the composer fetches the
+   *  customer's last applied composition for this bundle and pre-fills
+   *  the picks so a repeat customer can confirm in one tap (Sprint 8
+   *  #8 — Domino's "Same as last time" pattern). */
+  customerPhone?: string | null;
   /** Called with the final composition + computed price when the
    *  customer confirms. The drawer's `applyBundle` flow consumes this
    *  to lock the cart. */
@@ -47,8 +52,28 @@ export function BundleComposerSheet({
   cartItems,
   menuItems,
   locationSlug,
+  customerPhone,
   onApply,
 }: BundleComposerSheetProps) {
+  const [lastComposition, setLastComposition] = useState<{ menuItemId: string; quantity: number }[] | null>(null);
+  const [lastFetchedFor, setLastFetchedFor] = useState<string | null>(null);
+  useEffect(() => {
+    if (!open || !bundle || !customerPhone || !locationSlug) return;
+    const key = `${bundle.id}|${customerPhone}|${locationSlug}`;
+    if (lastFetchedFor === key) return;
+    setLastFetchedFor(key);
+    const qs = new URLSearchParams({
+      phone: customerPhone,
+      bundleId: bundle.id,
+      locationSlug,
+    });
+    fetch(`/api/customer/last-bundle?${qs.toString()}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((data: { composition?: { menuItemId: string; quantity: number }[] | null }) => {
+        setLastComposition(data.composition ?? null);
+      })
+      .catch(() => setLastComposition(null));
+  }, [open, bundle, customerPhone, locationSlug, lastFetchedFor]);
   const resolved = useMemo(
     () => (bundle && menuItems.length > 0 ? resolveBundleSlots(bundle, menuItems) : null),
     [bundle, menuItems],
@@ -69,11 +94,20 @@ export function BundleComposerSheet({
   }, [bundle, resolved, cartItems]);
   const [initSig, setInitSig] = useState<string | null>(null);
   if (open && resolved && lastSig !== null && lastSig !== initSig) {
-    // Initial picks: prefer items already in the customer's cart (preserves
-    // their choices), fall back to cheapest available. Mirrors the logic
-    // in lib/bundles.ts selectSlotItems but lives here so the picker can
-    // mutate independently.
-    const nonMainPool: MenuItem[] = bundle && isDynamicBundle(bundle)
+    // Initial-pick priority for repeat customers:
+    //   1. customer's prior composition for this same bundle (Sprint 8
+    //      #8 — Domino's "Same as last time")
+    //   2. items already in the cart (preserves their choices)
+    //   3. cheapest available at this location (fallback)
+    const priorPool: MenuItem[] = [];
+    if (lastComposition) {
+      for (const entry of lastComposition) {
+        const m = menuItems.find((x) => x.id === entry.menuItemId && x.available);
+        if (!m) continue;
+        for (let i = 0; i < entry.quantity; i++) priorPool.push(m);
+      }
+    }
+    const cartPool: MenuItem[] = bundle && isDynamicBundle(bundle)
       ? cartItems
           .filter((ci) => !bundle.mainCategories.includes(ci.menuItem.category))
           .flatMap((ci) => Array.from({ length: ci.quantity }, () => ci.menuItem))
@@ -82,13 +116,22 @@ export function BundleComposerSheet({
       const slotPicks: MenuItem[] = [];
       const candidateIds = new Set(candidates.map((c) => c.id));
       for (let i = 0; i < slot.quantity; i++) {
-        const idx = nonMainPool.findIndex((m) => candidateIds.has(m.id));
-        if (idx >= 0) {
-          slotPicks.push(nonMainPool[idx]);
-          nonMainPool.splice(idx, 1);
-        } else {
-          slotPicks.push(candidates[0]);
+        // (1) Last-composition pick
+        const priorIdx = priorPool.findIndex((m) => candidateIds.has(m.id));
+        if (priorIdx >= 0) {
+          slotPicks.push(priorPool[priorIdx]);
+          priorPool.splice(priorIdx, 1);
+          continue;
         }
+        // (2) Cart pick
+        const cartIdx = cartPool.findIndex((m) => candidateIds.has(m.id));
+        if (cartIdx >= 0) {
+          slotPicks.push(cartPool[cartIdx]);
+          cartPool.splice(cartIdx, 1);
+          continue;
+        }
+        // (3) Cheapest fallback
+        slotPicks.push(candidates[0]);
       }
       return slotPicks;
     });
@@ -184,6 +227,11 @@ export function BundleComposerSheet({
             <p className="text-xs text-italia-green-dark font-semibold mt-1.5">
               Without the bundle you&rsquo;d pay {formatPrice(livePricing.refPriceGrosze)} ·
               save {formatPrice(livePricing.savings)}
+            </p>
+          )}
+          {lastComposition && lastComposition.length > 0 && (
+            <p className="text-[11px] text-italia-gold-dark font-semibold mt-1.5">
+              ★ Same as your last {bundle.tier} — confirm or tweak below
             </p>
           )}
         </div>

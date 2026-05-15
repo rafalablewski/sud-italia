@@ -427,6 +427,7 @@ export function BundleLadder({
         cartItems={items}
         menuItems={allMenuItems}
         locationSlug={locationSlug}
+        customerPhone={customer?.phone ?? null}
         onApply={handleComposerApply}
       />
     </div>

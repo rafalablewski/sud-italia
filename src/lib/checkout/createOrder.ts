@@ -271,9 +271,37 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
   // later cannibalization / margin / A-vs-B analysis. Fire-and-forget;
   // a write failure here doesn't unwind the order. Slot + customer
   // cohort (Sprint 7 #6 + #7) feed the KPI dashboard's capacity and
-  // new-vs-repeat splits.
+  // new-vs-repeat splits. Margin computed at write time so operator
+  // alerts can fire when a bundle goes underwater (Sprint 8 #10).
   if (bundleAuditPayload) {
     const priorOrderCount = segmentCustomer?.orderCount ?? 0;
+    // Food cost = Σ MenuItem.cost across every cart line. Items without
+    // a cost field contribute 0 to the cost (conservative for the
+    // operator-protective alert).
+    const foodCost = orderItems.reduce(
+      (s, ci) => s + (ci.menuItem.cost ?? 0) * ci.quantity,
+      0,
+    );
+    const marginRatio =
+      bundleSubtotal !== null && bundleSubtotal > 0
+        ? Math.max(0, (bundleSubtotal - foodCost) / bundleSubtotal)
+        : undefined;
+
+    // Identify the main categories so we can carve out the add-on
+    // composition the customer picked for this bundle — feeds the
+    // composer's "same as last time" pre-fill on the customer's next
+    // visit (Sprint 8 #8).
+    const lookedUp = findBundle(
+      input.appliedBundleId!,
+      (locationConfig as { bundles?: BundleTier[] } | null)?.bundles ?? null,
+    );
+    const mainCats = lookedUp && lookedUp.pricingMode === "dynamic"
+      ? new Set(lookedUp.mainCategories)
+      : new Set<string>();
+    const addOnComposition = orderItems
+      .filter((ci) => !mainCats.has(ci.menuItem.category))
+      .map((ci) => ({ menuItemId: ci.menuItem.id, quantity: ci.quantity }));
+
     void appendBundleEvent({
       id: `bev_${orderId}`,
       orderId,
@@ -292,8 +320,25 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
       slotId: input.slotId,
       customerCohort: priorOrderCount === 0 ? "new" : "repeat",
       customerOrderCount: priorOrderCount,
+      marginRatio,
+      addOnComposition,
       createdAt: new Date().toISOString(),
     });
+
+    // Operator margin alert — when a real bundle order's contribution
+    // margin drops below 40% the operator gets pinged in /admin so they
+    // can re-tune the discount before it bleeds. Threshold matches the
+    // "amber/red" line on BundleMarginPreview so the admin signal and
+    // the live preview agree.
+    if (marginRatio !== undefined && marginRatio < 0.4 && bundleSubtotal !== null) {
+      void addNotification({
+        type: "bundle_low_margin",
+        title: "Bundle margin below 40%",
+        message: `${bundleAuditPayload.bundleName} — ${Math.round(marginRatio * 100)}% margin on ${formatPrice(bundleSubtotal)}. Review discount % in /admin/upsell.`,
+        locationSlug: input.locationSlug,
+        orderId,
+      });
+    }
   }
 
   await addNotification({
