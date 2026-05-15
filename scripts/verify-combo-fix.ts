@@ -236,6 +236,79 @@ console.log("scenario 12: pasta-combo still works for non-margherita carts");
   expect("isComplete", r.isComplete, true);
 }
 
+console.log("scenario 13: all categories matched but minItems short — partial with missingQuantity");
+{
+  const cart = [
+    line(item("krk-pasta-carbonara", "pasta", 3290)),
+    line(item("krk-drink-espresso", "drinks", 800)),
+  ];
+  // pasta-combo requires pasta + drinks + desserts AND minItems=3.
+  // Cart has 2 of 3 categories — banner should call out the missing category.
+  const r1 = getActiveComboDeals(cart, cfg([COMBOS[1]]));
+  expect("partial.isComplete", r1.isComplete, false);
+  expect("partial.missingCategories", r1.missingCategories, ["desserts"]);
+  // Add the dessert; now all categories match but min items still ≤ 3.
+  const cart2 = [
+    ...cart,
+    line(item("krk-dessert-tiramisu", "desserts", 1400)),
+  ];
+  const r2 = getActiveComboDeals(cart2, cfg([COMBOS[1]]));
+  expect("now complete", r2.isComplete, true);
+  expect("missingQuantity zeroed", r2.missingQuantity, 0);
+  // Now bump minItems to 4 — same cart should be partial with qty short.
+  const tighter = [{ ...COMBOS[1], minItems: 4 }];
+  const r3 = getActiveComboDeals(cart2, cfg(tighter));
+  expect("qty-only partial isComplete", r3.isComplete, false);
+  expect("missingQuantity > 0", r3.missingQuantity, 1);
+  expect("missingCategories empty", r3.missingCategories, []);
+  expect("missingItems empty", r3.missingItems, []);
+}
+
+console.log("scenario 14: duplicate suffix in requiredItems doesn't double the discount");
+{
+  // Two label aliases for the same suffix; should be deduped so savings
+  // is round(price * pct), not 2 × round(price * pct).
+  const cart = [line(item("krk-pizza-margherita", "pizza", 2790))];
+  const dupSuffix: ComboDeal = {
+    id: "dup-test",
+    name: "Dup",
+    description: "",
+    categories: ["pizza"],
+    requiredItems: [
+      { suffix: "pizza-margherita", label: "Margherita" },
+      { suffix: "pizza-margherita", label: "Margherita again" },
+    ],
+    discountPercent: 10,
+    minItems: 1,
+  };
+  const r = getActiveComboDeals(cart, cfg([dupSuffix]));
+  expect("activeDeal.id", r.activeDeal?.id, "dup-test");
+  expect("isComplete", r.isComplete, true);
+  expect("savings deduped", r.savings, Math.round(2790 * 0.1));
+}
+
+console.log("scenario 15: duplicate categories don't double the discount");
+{
+  // Cart has pizza + drinks; combo declares categories=[pizza, pizza, drinks]
+  // (admin shouldn't be able to save this server-side, but the function
+  // must stay defensive). Savings = (cheapest pizza + cheapest drink) × pct.
+  const cart = [
+    line(item("krk-pizza-margherita", "pizza", 2790)),
+    line(item("krk-drink-espresso", "drinks", 800)),
+  ];
+  const dupCat: ComboDeal = {
+    id: "dup-cat",
+    name: "Dup cat",
+    description: "",
+    categories: ["pizza", "pizza", "drinks"],
+    discountPercent: 10,
+    minItems: 2,
+  };
+  const r = getActiveComboDeals(cart, cfg([dupCat]));
+  expect("isComplete", r.isComplete, true);
+  expect("savings deduped", r.savings, Math.round((2790 + 800) * 0.1));
+}
+
 if (failures > 0) {
   console.log(`\n${failures} FAILURE(S)`);
   process.exit(1);

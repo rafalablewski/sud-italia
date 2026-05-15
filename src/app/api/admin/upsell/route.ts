@@ -79,6 +79,15 @@ export const PUT = withAdmin(
           );
         }
       }
+      // Duplicate categories would otherwise double-count the same item's
+      // price in getActiveComboDeals' savings reduce. Reject at the edge
+      // so the data layer can stay defensive but not paranoid.
+      if (new Set(c.categories).size !== c.categories.length) {
+        return NextResponse.json(
+          { error: "Invalid combo — categories must be unique" },
+          { status: 400 },
+        );
+      }
       // Optional requiredItems[] — item-suffix gating (Italian Classic Deal
       // style). When present, the combo only activates if the cart contains
       // an item matching each suffix.
@@ -89,6 +98,7 @@ export const PUT = withAdmin(
             { status: 400 },
           );
         }
+        const seenSuffixes = new Set<string>();
         for (const r of c.requiredItems) {
           if (
             typeof r?.suffix !== "string" ||
@@ -101,6 +111,13 @@ export const PUT = withAdmin(
               { status: 400 },
             );
           }
+          if (seenSuffixes.has(r.suffix)) {
+            return NextResponse.json(
+              { error: `Invalid combo — requiredItems suffix "${r.suffix}" appears more than once` },
+              { status: 400 },
+            );
+          }
+          seenSuffixes.add(r.suffix);
         }
       }
     }

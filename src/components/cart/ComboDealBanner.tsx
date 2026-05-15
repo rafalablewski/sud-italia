@@ -10,16 +10,28 @@ interface ComboDealBannerProps {
 }
 
 export function ComboDealBanner({ cartItems }: ComboDealBannerProps) {
-  const { activeDeal, savings, missingCategories, missingItems, progress, isComplete } =
+  const { activeDeal, savings, missingCategories, missingItems, missingQuantity, isComplete, progress } =
     getActiveComboDeals(cartItems);
 
   if (!activeDeal) return null;
 
   // Item-required combos (Italian Classic Deal) name the specific missing
-  // items; category-only combos fall back to the legacy category copy.
+  // items; category-only combos fall back to the legacy category copy;
+  // when categories AND items are all matched but minItems is short, we
+  // surface the quantity gap so the banner stays actionable. The earlier
+  // "save ~X PLN" projection was dropped on Gemini's note — for partial
+  // combos it underestimated the eventual saving (it only priced what
+  // was already in the cart, not what the customer would unlock by
+  // adding the missing item) so it actively de-motivated the upsell.
   const missingLabels = missingItems.length > 0
     ? missingItems
     : missingCategories.map((cat) => MENU_CATEGORY_LABELS[cat].toLowerCase());
+  const partialCopy =
+    missingLabels.length > 0
+      ? missingLabels
+      : missingQuantity > 0
+        ? [`${missingQuantity} more item${missingQuantity === 1 ? "" : "s"}`]
+        : [];
 
   return (
     <div className="px-5 mt-3">
@@ -59,20 +71,20 @@ export function ComboDealBanner({ cartItems }: ComboDealBannerProps) {
               <p className="text-sm text-italia-green font-semibold mt-1">
                 You&apos;re saving {formatPrice(savings)}!
               </p>
-            ) : (
+            ) : partialCopy.length > 0 ? (
               <p className="text-xs text-italia-gray mt-1">
                 Add{" "}
-                {missingLabels.map((label, i) => (
+                {partialCopy.map((label, i) => (
                   <span key={label}>
-                    {i > 0 && (i === missingLabels.length - 1 ? " & " : ", ")}
+                    {i > 0 && (i === partialCopy.length - 1 ? " & " : ", ")}
                     <span className="font-semibold text-italia-dark">
                       {label}
                     </span>
                   </span>
                 ))}{" "}
-                to save ~{formatPrice(savings)}
+                to unlock this deal
               </p>
-            )}
+            ) : null}
             {/* Mini progress bar */}
             {!isComplete && (
               <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden mt-2">
