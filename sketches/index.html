@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Bundle ladders — all 10 redesign sketches</title>
+<style>
+  :root {
+    --bg: #0a0d14;
+    --surface-1: #11151f;
+    --surface-2: #161b27;
+    --surface-3: #1d2330;
+    --border: rgba(255,255,255,0.08);
+    --border-strong: rgba(255,255,255,0.16);
+    --fg: #f5f7fa;
+    --fg-muted: #b6bfcd;
+    --fg-subtle: #7d8696;
+    --brand: #c8102e;
+    --gold: #c8a02e;
+    --green: #10b981;
+    --indigo: #6366f1;
+    font-family: -apple-system, "SF Pro Text", "Inter", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  header {
+    background: var(--surface-1);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px 0;
+    flex-shrink: 0;
+  }
+  .title-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+  h1 {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0;
+  }
+  h1 small {
+    font-size: 11px;
+    color: var(--fg-subtle);
+    font-weight: 500;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    background: var(--surface-2);
+    padding: 2px 8px;
+    border-radius: 6px;
+    margin-left: 6px;
+  }
+  .meta {
+    font-size: 12px;
+    color: var(--fg-muted);
+  }
+  .meta strong { color: var(--fg); }
+
+  .tabs {
+    display: flex;
+    gap: 2px;
+    overflow-x: auto;
+    margin: 0 -20px;
+    padding: 0 20px;
+    scrollbar-width: thin;
+  }
+  .tabs::-webkit-scrollbar { height: 6px; }
+  .tabs::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 3px; }
+
+  .tab {
+    background: transparent;
+    border: 0;
+    padding: 12px 14px;
+    color: var(--fg-subtle);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    transition: color .12s, border-color .12s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .tab:hover { color: var(--fg-muted); }
+  .tab.on {
+    color: var(--fg);
+    border-color: var(--brand);
+  }
+  .tab .num {
+    background: var(--surface-3);
+    color: var(--fg-muted);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: ui-monospace, monospace;
+  }
+  .tab.on .num {
+    background: var(--brand);
+    color: white;
+  }
+
+  .preview-frame {
+    flex: 1;
+    border: 0;
+    background: var(--bg);
+    display: block;
+    width: 100%;
+  }
+
+  .footer {
+    background: var(--surface-1);
+    border-top: 1px solid var(--border);
+    padding: 8px 20px;
+    font-size: 11px;
+    color: var(--fg-subtle);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .footer a {
+    color: var(--fg-muted);
+    text-decoration: none;
+    margin-left: 12px;
+  }
+  .footer a:hover { color: var(--fg); text-decoration: underline; }
+  .pin-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .open-new {
+    color: var(--fg-muted);
+    font-size: 11px;
+    text-decoration: none;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 6px;
+  }
+  .open-new:hover {
+    color: var(--fg);
+    border-color: var(--border-strong);
+  }
+
+  /* Compare mode — split-screen iframe pair */
+  body.compare .preview-frame { width: 50%; float: left; border-right: 1px solid var(--border); }
+  body.compare .preview-frame.right { border-right: 0; border-left: 1px solid var(--border); float: right; }
+
+  .controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .control-btn {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--fg-muted);
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .control-btn.on { background: var(--surface-3); color: var(--fg); border-color: var(--border-strong); }
+  .control-btn:hover { color: var(--fg); }
+
+  .frame-wrap { flex: 1; display: flex; min-height: 0; }
+</style>
+</head>
+<body>
+  <header>
+    <div class="title-row">
+      <div>
+        <h1>Bundle ladders <small>10 redesign sketches</small></h1>
+        <p class="meta" id="current-meta" style="margin: 4px 0 0;">Click any tab to preview · use <strong>← →</strong> arrow keys to navigate</p>
+      </div>
+      <div class="controls">
+        <a class="open-new" id="open-new-link" href="01-card-grid.html" target="_blank" rel="noopener">Open in new tab ↗</a>
+        <button class="control-btn" id="toggle-compare">Compare two side-by-side</button>
+      </div>
+    </div>
+
+    <div class="tabs" id="tabs"></div>
+  </header>
+
+  <div class="frame-wrap">
+    <iframe class="preview-frame" id="frame" src="01-card-grid.html"></iframe>
+    <iframe class="preview-frame right" id="frame-right" src="02-master-detail.html" hidden></iframe>
+  </div>
+
+  <div class="footer">
+    <span>Sud Italia · admin/upsell → Bundle ladders redesign drafts</span>
+    <span class="pin-row"><span id="filename">01-card-grid.html</span></span>
+  </div>
+
+<script>
+  // Same five bundles render in every sketch (Family / Family Feast /
+  // Feast Deluxe / Lunch+ / Late-night) so the comparison is honest —
+  // only the layout idea changes between sketches.
+  const SKETCHES = [
+    { n: "01", file: "01-card-grid.html",          name: "Card grid",            blurb: "Compact summary cards. Click to expand." },
+    { n: "02", file: "02-master-detail.html",      name: "Master / detail",      blurb: "Linear-style sidebar list + right-pane editor." },
+    { n: "03", file: "03-spreadsheet.html",        name: "Spreadsheet",          blurb: "Every tier as a row. Edit cells in place." },
+    { n: "04", file: "04-wizard-tabs.html",        name: "Wizard tabs",          blurb: "Vertical tabs per concern (Identity / Pricing / …)." },
+    { n: "05", file: "05-live-preview.html",       name: "Live preview",         blurb: "Form left, customer-facing chip preview right." },
+    { n: "06", file: "06-accordion-compact.html",  name: "Accordion (compact)",  blurb: "Closest to today; collapsed by default." },
+    { n: "07", file: "07-flat-minimal.html",       name: "Flat minimal",         blurb: "Notion-style: zero borders, deep whitespace." },
+    { n: "08", file: "08-ladder-drag.html",        name: "Drag-to-reorder",      blurb: "Visual ladder. Drag handles. 3-column layout." },
+    { n: "09", file: "09-margin-dashboard.html",   name: "Margin dashboard",     blurb: "Each tier as analytics tile with margin gauge." },
+    { n: "10", file: "10-mobile-first.html",       name: "Mobile / tablet",      blurb: "Phone-friendly single column." },
+  ];
+
+  const tabsEl = document.getElementById("tabs");
+  const frameEl = document.getElementById("frame");
+  const frameRightEl = document.getElementById("frame-right");
+  const filenameEl = document.getElementById("filename");
+  const metaEl = document.getElementById("current-meta");
+  const openNewEl = document.getElementById("open-new-link");
+  const toggleEl = document.getElementById("toggle-compare");
+
+  let activeIdx = 0;
+  let rightIdx = 1;
+  let compareMode = false;
+  let activeSide = "left"; // when in compare mode, which side a tap updates
+
+  function renderTabs() {
+    tabsEl.innerHTML = "";
+    SKETCHES.forEach((s, i) => {
+      const b = document.createElement("button");
+      b.className = "tab" + (i === activeIdx ? " on" : "") + (compareMode && i === rightIdx ? " on" : "");
+      b.innerHTML = `<span class="num">${s.n}</span><span>${s.name}</span>`;
+      b.onclick = () => {
+        if (compareMode) {
+          if (activeSide === "left") {
+            activeIdx = i;
+          } else {
+            rightIdx = i;
+          }
+          activeSide = activeSide === "left" ? "right" : "left";
+        } else {
+          activeIdx = i;
+        }
+        applyState();
+      };
+      tabsEl.appendChild(b);
+    });
+  }
+
+  function applyState() {
+    const cur = SKETCHES[activeIdx];
+    frameEl.src = cur.file;
+    filenameEl.textContent = cur.file;
+    openNewEl.href = cur.file;
+    metaEl.innerHTML = `<strong>${cur.name}</strong> — ${cur.blurb}`;
+
+    if (compareMode) {
+      document.body.classList.add("compare");
+      frameRightEl.hidden = false;
+      frameRightEl.src = SKETCHES[rightIdx].file;
+      metaEl.innerHTML += ` · Right pane: <strong>${SKETCHES[rightIdx].name}</strong>`;
+    } else {
+      document.body.classList.remove("compare");
+      frameRightEl.hidden = true;
+    }
+    renderTabs();
+  }
+
+  toggleEl.onclick = () => {
+    compareMode = !compareMode;
+    toggleEl.classList.toggle("on", compareMode);
+    toggleEl.textContent = compareMode ? "Single view" : "Compare two side-by-side";
+    if (compareMode && rightIdx === activeIdx) {
+      rightIdx = (activeIdx + 1) % SKETCHES.length;
+    }
+    applyState();
+  };
+
+  // Keyboard nav for fast comparison (← → cycle, c toggles compare mode)
+  window.addEventListener("keydown", (e) => {
+    if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
+    if (e.key === "ArrowRight") {
+      activeIdx = (activeIdx + 1) % SKETCHES.length;
+      applyState();
+    } else if (e.key === "ArrowLeft") {
+      activeIdx = (activeIdx - 1 + SKETCHES.length) % SKETCHES.length;
+      applyState();
+    } else if (e.key === "c" || e.key === "C") {
+      toggleEl.click();
+    } else if (e.key >= "1" && e.key <= "9") {
+      activeIdx = parseInt(e.key, 10) - 1;
+      applyState();
+    } else if (e.key === "0") {
+      activeIdx = 9;
+      applyState();
+    }
+  });
+
+  applyState();
+</script>
+</body>
+</html>
