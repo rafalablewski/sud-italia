@@ -1916,6 +1916,17 @@ export interface MenuOverride {
   name?: string;
   description?: string;
   /**
+   * Audit §4.3 menu engineering role. Stored as a string so the override
+   * file is forward-compatible with new roles. `null` means "clear the base
+   * role" (e.g. demote the Margherita from hero) — `getMenuWithOverrides`
+   * deletes the field instead of merging when it sees null.
+   */
+  menuRole?: "hero" | "profit-driver" | "anchor" | "lto" | null;
+  /** Audit §4.3 LTO flag. `null` = clear (force off). */
+  isLimited?: boolean | null;
+  /** ISO date `YYYY-MM-DD` for the LTO countdown. `null` = clear. */
+  limitedUntil?: string | null;
+  /**
    * Phase 3 m3_6 menu lockdown: when true, only the brand owner can edit
    * this item. Franchisees can only override price within a configured
    * window (default ±15%). When false / unset, franchisees can manage

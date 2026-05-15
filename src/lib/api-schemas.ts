@@ -270,12 +270,20 @@ export const customerNoteCreateSchema = z.object({
 
 // --- Admin: menu overrides -----------------------------------------------
 
+// Audit §4.3 menu engineering. `null` is the explicit "clear back to seed"
+// value; `undefined` (field absent) means "leave whatever's stored".
+// `isoDate` is the shared YYYY-MM-DD schema defined near the top of this file.
+const menuRoleEnum = z.enum(["hero", "profit-driver", "anchor", "lto"]);
+
 const menuOverrideEditSchema = z.object({
   price: grosze.max(100_000).optional(),
   cost: grosze.max(100_000).optional(),
   available: z.boolean().optional(),
   name: z.string().min(1).max(200).optional(),
   description: z.string().max(1000).optional(),
+  menuRole: menuRoleEnum.nullable().optional(),
+  isLimited: z.boolean().nullable().optional(),
+  limitedUntil: isoDate.nullable().optional(),
 });
 
 /**
@@ -291,6 +299,9 @@ export const menuOverridePutSchema = z
     available: z.boolean().optional(),
     name: z.string().min(1).max(200).optional(),
     description: z.string().max(1000).optional(),
+    menuRole: menuRoleEnum.nullable().optional(),
+    isLimited: z.boolean().nullable().optional(),
+    limitedUntil: isoDate.nullable().optional(),
   })
   .refine((data) => !!data.id || !!data.items, {
     message: "Provide either `id` for single override or `items` map for bulk",

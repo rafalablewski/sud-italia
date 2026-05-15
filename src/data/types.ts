@@ -78,6 +78,18 @@ export interface NutritionInfo {
   sodium?: number;       // mg
 }
 
+/**
+ * Menu engineering role (audit §4.3 — Hero / Profit-Driver / LTO triangle).
+ *  - "hero"          — gateway item; biggest photo, full-width top slot
+ *  - "profit-driver" — high GM × low awareness; "Pizzaiolo's Choice" badge,
+ *                       prioritized after the hero in the sweet-spot row
+ *  - "anchor"        — premium range-extender (PLN 48 Pizza del Pizzaiolo);
+ *                       exists to make tier-2 feel modest, doesn't need volume
+ *  - "lto"           — limited-time / seasonal driver; pairs with isLimited
+ * Unset = standard menu item, ranked by popularity.
+ */
+export type MenuRole = "hero" | "profit-driver" | "anchor" | "lto";
+
 export interface MenuItem {
   id: string;
   name: string;
@@ -88,6 +100,9 @@ export interface MenuItem {
   image?: string;
   tags: ("vegetarian" | "vegan" | "spicy" | "gluten-free")[];
   available: boolean;
+  /** Menu engineering role — see MenuRole. Drives card hierarchy + badges
+   *  on the public menu page. Same item can be `anchor` AND `isLimited`. */
+  menuRole?: MenuRole;
   // Japanese standard (Kodawari) fields
   allergens?: Allergen[];
   nutrition?: NutritionInfo;

@@ -18,7 +18,16 @@ export async function getMenuWithOverrides(locationSlug: string): Promise<MenuIt
   return base.map((item) => {
     const o = overrides[item.id];
     if (!o) return item;
-    return { ...item, ...o };
+    // Merge with `null = clear` semantics so admin can demote a hero or
+    // turn off an LTO without redeploying. Plain shallow-merge would set
+    // the field to null; deleting it lets the renderer fall back to
+    // "no role" / "not limited" without any extra null-checks.
+    const merged: Record<string, unknown> = { ...item };
+    for (const [k, v] of Object.entries(o)) {
+      if (v === null) delete merged[k];
+      else if (v !== undefined) merged[k] = v;
+    }
+    return merged as unknown as MenuItem;
   });
 }
 

@@ -127,7 +127,10 @@ export const PUT = withAdmin(
             (next.price !== undefined && next.price !== prev?.price) ||
             (next.cost !== undefined && next.cost !== prev?.cost) ||
             (next.name !== undefined && next.name !== prev?.name) ||
-            (next.description !== undefined && next.description !== prev?.description);
+            (next.description !== undefined && next.description !== prev?.description) ||
+            (next.menuRole !== undefined && next.menuRole !== prev?.menuRole) ||
+            (next.isLimited !== undefined && next.isLimited !== prev?.isLimited) ||
+            (next.limitedUntil !== undefined && next.limitedUntil !== prev?.limitedUntil);
           if (otherChanged) {
             await appendAuditLog({
               actor: user.email || user.id,

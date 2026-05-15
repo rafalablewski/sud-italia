@@ -2362,6 +2362,13 @@ html { scroll-behavior: smooth; }
 .v2-mng-tag-override { color: var(--info); text-transform: none; font-weight: 600; }
 .v2-mng-tag-info { color: var(--info); text-transform: none; font-weight: 600; }
 .v2-mng-tag-warning { color: var(--warning); text-transform: none; font-weight: 600; }
+/* Audit §4.3 menu engineering chips. Same pattern as -override: tone
+   comes from text color, no background box, interpunct separator from the
+   shared adjacent-tag rule. Keeps the row's typographic rhythm intact. */
+.v2-mng-tag-hero { color: var(--brand); text-transform: none; font-weight: 600; }
+.v2-mng-tag-pizzaiolo { color: var(--warning); text-transform: none; font-weight: 600; }
+.v2-mng-tag-anchor { color: var(--fg); text-transform: none; font-weight: 600; }
+.v2-mng-tag-lto { color: var(--brand); text-transform: none; font-weight: 600; }
 
 /* Values */
 .v2-mng-val {
