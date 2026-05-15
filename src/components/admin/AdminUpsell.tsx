@@ -5,13 +5,13 @@ import { AlertTriangle, Check, Save, Layers, SlidersHorizontal, Construction, Fl
 import { LocationTabs } from "./LocationTabs";
 import { Tabs } from "./v2/ui";
 import {
-  BundlesEditor,
   BundleRulesEditor,
   ExperimentEditor,
   DEFAULT_BUNDLES_FALLBACK,
   DEFAULT_BUNDLE_RULES,
   useSellingSettings,
 } from "./AdminSellingShared";
+import { BundleManager } from "./bundle-manager/BundleManager";
 
 type TabKey = "bundles" | "rules" | "experiments" | "modifiers";
 
@@ -113,7 +113,7 @@ export function AdminUpsell() {
           <p className="text-xs admin-text-secondary mb-4">
             {loc.name} — good-better-best tier upgrades the customer picks between in the cart drawer.
           </p>
-          <BundlesEditor
+          <BundleManager
             bundles={config.bundles ?? DEFAULT_BUNDLES_FALLBACK}
             menu={loc.menu}
             onChange={(bundles) => updateConfig({ bundles })}
