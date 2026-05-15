@@ -156,20 +156,49 @@ export async function POST(req: NextRequest) {
             })()
           : null;
 
-      // Combo discounts ride along as a one-shot Stripe coupon so the
-      // session total matches order.totalAmount. Without this, line items
-      // sum to the pre-discount subtotal and the customer is overcharged.
-      // Bundles already collapse to a single discounted line above, so
-      // they skip this path.
+      // Combo discounts ride along as a Stripe coupon so the session
+      // total matches order.totalAmount. Bundles already collapse to a
+      // single discounted line above, so they skip this path.
+      //
+      // Sprint 9 #3 — coupon reuse: every checkout used to create a NEW
+      // coupon object, leaving thousands of orphans in the Stripe account
+      // over time. We now use a stable id keyed on (combo, amount) and
+      // catch the "already exists" conflict, so each unique discount
+      // amount lives as a single permanent coupon that gets reused
+      // forever. Idempotent under retries (network or otherwise).
       let sessionDiscounts: { coupon: string }[] | undefined;
       if (bundleSubtotal === null && comboDiscount > 0) {
-        const coupon = await stripeClient.coupons.create({
-          amount_off: comboDiscount,
-          currency: "pln",
-          duration: "once",
-          name: comboName ? `Combo: ${comboName}` : "Combo discount",
-        });
-        sessionDiscounts = [{ coupon: coupon.id }];
+        const couponSlug = (comboName ?? "combo-discount")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "")
+          .slice(0, 40);
+        const couponId = `sud-${couponSlug}-${comboDiscount}`;
+        let couponIdToUse = couponId;
+        try {
+          await stripeClient.coupons.create({
+            id: couponId,
+            amount_off: comboDiscount,
+            currency: "pln",
+            duration: "once",
+            name: comboName ? `Combo: ${comboName}` : "Combo discount",
+          });
+        } catch (err: unknown) {
+          // resource_already_exists → reuse the existing coupon. Any
+          // other error falls back to one-shot creation (matches prior
+          // behaviour so a Stripe-side oddity never blocks checkout).
+          const code = (err as { code?: string } | null)?.code;
+          if (code !== "resource_already_exists") {
+            const fallback = await stripeClient.coupons.create({
+              amount_off: comboDiscount,
+              currency: "pln",
+              duration: "once",
+              name: comboName ? `Combo: ${comboName}` : "Combo discount",
+            });
+            couponIdToUse = fallback.id;
+          }
+        }
+        sessionDiscounts = [{ coupon: couponIdToUse }];
       }
 
       const session = await stripeClient.checkout.sessions.create(

@@ -74,6 +74,10 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
   const [phoneError, setPhoneError] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [slotFomo, setSlotFomo] = useState<{ anyLow: boolean } | null>(null);
+  // Sprint 9 #2 — Pret-style "weekly usual" opt-in. Only surfaces when a
+  // bundle is applied (otherwise scheduling à-la-carte is awkward).
+  // Stored client-side and POSTed after checkout success.
+  const [scheduleWeekly, setScheduleWeekly] = useState(false);
   // Fetch location-specific upsell config from admin settings
   const [upsellConfig, setUpsellConfig] = useState<UpsellConfig | null>(null);
   useEffect(() => {
@@ -307,6 +311,44 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
       });
 
       const data = await res.json();
+
+      // Sprint 9 #2 — capture weekly-usual intent fire-and-forget once
+      // the checkout request has returned a Stripe URL or orderId.
+      // We do this BEFORE redirect so the intent persists even if the
+      // customer leaves the success page.
+      if (scheduleWeekly && isBundleActive && appliedBundleId && (data.url || data.orderId)) {
+        const phoneE164 = `+48${customerPhone.trim()}`;
+        const weekdayNames = [
+          "sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday",
+        ];
+        const weekday = weekdayNames[new Date().getDay()];
+        const readyAt = (selectedSlotTime || "12:00").slice(0, 5);
+        // Resolve bundle name from the upsell config (defaults are fine if
+        // missing — server validation only requires the id + a label).
+        const bundleName = appliedBundleId.replace(/-/g, " ");
+        const cartSnapshot = items.map((i) => ({
+          menuItemId: i.menuItem.id,
+          quantity: i.quantity,
+        }));
+        try {
+          void fetch("/api/customer/schedule-bundle", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              customerPhone: phoneE164,
+              locationSlug,
+              bundleId: appliedBundleId,
+              bundleName,
+              weekday,
+              readyAt,
+              cartSnapshot,
+            }),
+            keepalive: true,
+          });
+        } catch {
+          // Best-effort; intent capture failure shouldn't block checkout.
+        }
+      }
 
       if (data.url) {
         // Loyalty auto-enrollment happens server-side via the checkout API
@@ -699,6 +741,23 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
         <div className="mt-1.5 flex flex-col gap-1 empty:hidden">
           <LoyaltyEarnPreview cartTotal={total} />
         </div>
+
+        {/* Sprint 9 #2 — weekly-usual opt-in. Only when a bundle is
+            applied so the scheduled meal has a clear composition. */}
+        {isBundleActive && (
+          <label className="mt-2 flex items-center gap-2 text-xs text-italia-gray cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={scheduleWeekly}
+              onChange={(e) => setScheduleWeekly(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            <span>
+              🗓️ Make this my <span className="font-semibold">weekly usual</span>
+              {" "}— same order, same time, every week
+            </span>
+          </label>
+        )}
 
         {checkoutError && (
           <div className="mt-2 bg-red-50 border border-red-200 rounded-xl px-3 py-2 text-sm text-red-700 flex items-start gap-2">
