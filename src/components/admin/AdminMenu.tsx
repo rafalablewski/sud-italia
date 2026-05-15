@@ -43,6 +43,8 @@ const CATEGORY_ICON: Record<MenuCategory, LucideIcon> = {
   desserts: IceCream,
 };
 
+type MenuRole = "hero" | "profit-driver" | "anchor" | "lto";
+
 interface MenuItemData {
   id: string;
   name: string;
@@ -52,9 +54,36 @@ interface MenuItemData {
   category: MenuCategory;
   tags: string[];
   available: boolean;
+  // Audit §4.3 — surfaced from the merged item so the row can render a
+  // role chip and the dialog can pre-fill the Pizzaiolo's-layout controls.
+  menuRole?: MenuRole;
+  isLimited?: boolean;
+  limitedUntil?: string;
   _hasOverride: boolean;
   _hasRecipe?: boolean;
   _costSource?: "recipe" | "override" | "seed";
+}
+
+const MENU_ROLE_LABEL: Record<MenuRole, string> = {
+  hero: "Our Hero",
+  "profit-driver": "Pizzaiolo's Choice",
+  anchor: "Chef's Signature",
+  lto: "Limited (LTO)",
+};
+
+const MENU_ROLE_OPTIONS: { value: ""; label: string }[] | { value: MenuRole | ""; label: string }[] = [
+  { value: "", label: "No role (default)" },
+  { value: "hero", label: "Hero — full-width gateway card" },
+  { value: "profit-driver", label: "Pizzaiolo's Choice — gold profit-driver badge" },
+  { value: "anchor", label: "Anchor — Chef's Signature, range-extender" },
+  { value: "lto", label: "LTO — limited-time positioning" },
+];
+
+function daysUntilIso(iso: string | undefined | null): number | null {
+  if (!iso) return null;
+  const t = new Date(iso).getTime();
+  if (!Number.isFinite(t)) return null;
+  return Math.max(0, Math.ceil((t - Date.now()) / 86_400_000));
 }
 
 const activeLocations = getActiveLocations();
@@ -109,7 +138,17 @@ export function AdminMenu() {
   }, [fetchMenu]);
 
   const persistChange = useCallback(
-    async (id: string, change: { price?: number; available?: boolean; description?: string }) => {
+    async (
+      id: string,
+      change: {
+        price?: number;
+        available?: boolean;
+        description?: string;
+        menuRole?: MenuRole | null;
+        isLimited?: boolean | null;
+        limitedUntil?: string | null;
+      },
+    ) => {
       const res = await fetch("/api/admin/menu", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -233,7 +272,16 @@ export function AdminMenu() {
     });
   };
 
-  const saveEdit = async (id: string, change: { price?: number; description?: string }) => {
+  const saveEdit = async (
+    id: string,
+    change: {
+      price?: number;
+      description?: string;
+      menuRole?: MenuRole | null;
+      isLimited?: boolean | null;
+      limitedUntil?: string | null;
+    },
+  ) => {
     const ok = await persistChange(id, change);
     if (ok) {
       setItems((arr) =>
@@ -243,6 +291,16 @@ export function AdminMenu() {
                 ...i,
                 ...(change.price !== undefined ? { price: change.price } : {}),
                 ...(change.description !== undefined ? { description: change.description } : {}),
+                // Apply null = clear / undefined = unchanged / value = set
+                ...(change.menuRole !== undefined
+                  ? { menuRole: change.menuRole === null ? undefined : change.menuRole }
+                  : {}),
+                ...(change.isLimited !== undefined
+                  ? { isLimited: change.isLimited === null ? undefined : change.isLimited }
+                  : {}),
+                ...(change.limitedUntil !== undefined
+                  ? { limitedUntil: change.limitedUntil === null ? undefined : change.limitedUntil }
+                  : {}),
                 _hasOverride: true,
               }
             : i,
@@ -458,6 +516,51 @@ export function AdminMenu() {
                         <div className="v2-mng-row-main">
                           <div className="v2-mng-row-headline">
                             <span className="v2-mng-row-name">{item.name}</span>
+                            {item.menuRole && (
+                              <span
+                                className="v2-mng-tag"
+                                style={{
+                                  background:
+                                    item.menuRole === "hero"
+                                      ? "var(--brand-soft-strong)"
+                                      : item.menuRole === "anchor"
+                                        ? "rgba(26,26,26,0.12)"
+                                        : item.menuRole === "lto"
+                                          ? "var(--warning-soft)"
+                                          : "var(--warning-soft)",
+                                  color:
+                                    item.menuRole === "hero"
+                                      ? "var(--brand)"
+                                      : item.menuRole === "anchor"
+                                        ? "var(--fg)"
+                                        : "var(--warning)",
+                                  fontWeight: 600,
+                                }}
+                                title={`Menu engineering role: ${MENU_ROLE_LABEL[item.menuRole]}`}
+                              >
+                                {MENU_ROLE_LABEL[item.menuRole]}
+                              </span>
+                            )}
+                            {item.isLimited && (
+                              <span
+                                className="v2-mng-tag"
+                                style={{
+                                  background: "var(--brand-soft)",
+                                  color: "var(--brand)",
+                                  fontWeight: 600,
+                                }}
+                                title={
+                                  item.limitedUntil
+                                    ? `LTO ends ${item.limitedUntil}`
+                                    : "Limited-time item (no end date)"
+                                }
+                              >
+                                {(() => {
+                                  const d = daysUntilIso(item.limitedUntil);
+                                  return d !== null ? `LTO · ${d}d left` : "LTO";
+                                })()}
+                              </span>
+                            )}
                             {item._hasOverride && (
                               <span className="v2-mng-tag v2-mng-tag-override">Overridden</span>
                             )}
@@ -509,18 +612,33 @@ export function AdminMenu() {
 interface EditDialogProps {
   item: MenuItemData | null;
   onClose: () => void;
-  onSave: (id: string, change: { price?: number; description?: string }) => Promise<void> | void;
+  onSave: (
+    id: string,
+    change: {
+      price?: number;
+      description?: string;
+      menuRole?: MenuRole | null;
+      isLimited?: boolean | null;
+      limitedUntil?: string | null;
+    },
+  ) => Promise<void> | void;
 }
 
 function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
   const [priceStr, setPriceStr] = useState("0.00");
   const [desc, setDesc] = useState("");
+  const [roleStr, setRoleStr] = useState<MenuRole | "">("");
+  const [isLimited, setIsLimited] = useState(false);
+  const [limitedUntil, setLimitedUntil] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (item) {
       setPriceStr((item.price / 100).toFixed(2));
       setDesc(item.description);
+      setRoleStr(item.menuRole ?? "");
+      setIsLimited(Boolean(item.isLimited));
+      setLimitedUntil(item.limitedUntil ?? "");
       setBusy(false);
     }
   }, [item]);
@@ -531,9 +649,25 @@ function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
 
   const submit = async () => {
     const price = Math.round(parseFloat(priceStr || "0") * 100);
-    const change: { price?: number; description?: string } = {};
+    const change: {
+      price?: number;
+      description?: string;
+      menuRole?: MenuRole | null;
+      isLimited?: boolean | null;
+      limitedUntil?: string | null;
+    } = {};
     if (price !== item.price) change.price = price;
     if (desc !== item.description) change.description = desc;
+    // Compare against the merged-display value. `null` signals "clear the
+    // override so the field disappears from the public card"; the API
+    // schema treats null and undefined differently.
+    const nextRole: MenuRole | null = roleStr === "" ? null : roleStr;
+    if (nextRole !== (item.menuRole ?? null)) change.menuRole = nextRole;
+    const nextLimited: boolean | null = isLimited ? true : null;
+    if (nextLimited !== (item.isLimited ?? null)) change.isLimited = nextLimited;
+    const nextUntil: string | null = limitedUntil.trim() === "" ? null : limitedUntil.trim();
+    if (nextUntil !== (item.limitedUntil ?? null)) change.limitedUntil = nextUntil;
+
     if (Object.keys(change).length === 0) {
       onClose();
       return;
@@ -542,6 +676,8 @@ function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
     await onSave(item.id, change);
     setBusy(false);
   };
+
+  const ltoCountdown = daysUntilIso(limitedUntil);
 
   return (
     <Dialog
@@ -578,6 +714,62 @@ function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
           onChange={(e) => setDesc(e.target.value)}
           rows={4}
         />
+        <Select
+          label="Menu engineering role (audit §4.3)"
+          value={roleStr}
+          onChange={(e) => setRoleStr(e.target.value as MenuRole | "")}
+          options={MENU_ROLE_OPTIONS as { value: string; label: string }[]}
+          description={
+            roleStr === "hero"
+              ? "Renders as a full-width gateway card with the red Our Hero ribbon."
+              : roleStr === "profit-driver"
+                ? "Gets the gold Pizzaiolo's Choice badge — high-GM upsell positioning."
+                : roleStr === "anchor"
+                  ? "Dark Chef's Signature treatment — range-extends the rest of the category."
+                  : roleStr === "lto"
+                    ? "Limited-time positioning — pair with the LTO toggle below for the countdown chip."
+                    : "No special treatment — sorted by popularity within the category."
+          }
+        />
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "auto 1fr",
+            gap: "0.5rem 0.75rem",
+            alignItems: "center",
+            padding: "0.625rem 0.75rem",
+            border: "1px solid var(--border)",
+            borderRadius: "var(--radius-md)",
+            background: "var(--surface-2)",
+          }}
+        >
+          <input
+            id={`lto-toggle-${item.id}`}
+            type="checkbox"
+            checked={isLimited}
+            onChange={(e) => setIsLimited(e.target.checked)}
+            style={{ width: 16, height: 16 }}
+          />
+          <label htmlFor={`lto-toggle-${item.id}`} style={{ fontSize: "0.875rem", fontWeight: 500 }}>
+            Limited-time item (LTO)
+          </label>
+          <span style={{ gridColumn: "1 / 3" }}>
+            <Input
+              type="date"
+              label="Available until"
+              value={limitedUntil}
+              onChange={(e) => setLimitedUntil(e.target.value)}
+              disabled={!isLimited}
+              description={
+                isLimited && ltoCountdown !== null
+                  ? `Customer sees a "${ltoCountdown}d left" countdown chip on the card.`
+                  : isLimited
+                    ? "Leave blank for an open-ended limited run (no countdown shown)."
+                    : "Enable the LTO toggle to set a date."
+              }
+            />
+          </span>
+        </div>
       </div>
     </Dialog>
   );

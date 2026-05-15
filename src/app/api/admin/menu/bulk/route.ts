@@ -99,6 +99,18 @@ export const POST = withAdmin(
       else if (source.cost !== target.cost) merged.cost = source.cost;
       if (sourceOverride.description !== undefined) merged.description = sourceOverride.description;
       else if (source.description !== target.description) merged.description = source.description;
+      // Audit §4.3 menu engineering — clone the role + LTO so a hero in
+      // Kraków stays a hero in Warszawa. seed-vs-seed mismatches also
+      // propagate so the target picks up any code-defined role parity.
+      if (sourceOverride.menuRole !== undefined) merged.menuRole = sourceOverride.menuRole;
+      else if (source.menuRole !== target.menuRole)
+        merged.menuRole = (source.menuRole ?? null) as MenuOverride["menuRole"];
+      if (sourceOverride.isLimited !== undefined) merged.isLimited = sourceOverride.isLimited;
+      else if (Boolean(source.isLimited) !== Boolean(target.isLimited))
+        merged.isLimited = source.isLimited ?? null;
+      if (sourceOverride.limitedUntil !== undefined) merged.limitedUntil = sourceOverride.limitedUntil;
+      else if ((source.limitedUntil ?? null) !== (target.limitedUntil ?? null))
+        merged.limitedUntil = source.limitedUntil ?? null;
       // Skip if there's literally nothing to copy.
       if (Object.keys(merged).length === 0) {
         unmatched.push(id);
