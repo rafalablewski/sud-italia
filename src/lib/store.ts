@@ -6726,3 +6726,123 @@ export async function updateWaSettings(updates: Partial<WaSettings>): Promise<Wa
     return next;
   });
 }
+
+// --- WhatsApp transcripts ----------------------------------------------
+//
+// Every inbound + outbound WhatsApp message is logged here so the operator
+// can review what was actually said, take over a conversation, or audit
+// the bot's behaviour after an order is paid. Kept as a flat per-phone
+// ring buffer to bound disk growth: oldest entries drop once a per-phone
+// or global cap is hit.
+
+export type WaMessageDirection = "in" | "out";
+export type WaMessageKind =
+  | "text"
+  | "selection"
+  | "location"
+  | "buttons"
+  | "list"
+  | "cta_url"
+  | "template"
+  | "unsupported";
+export type WaMessageActor = "customer" | "bot" | "operator" | "system";
+
+export interface WaMessage {
+  /** ISO timestamp. */
+  at: string;
+  direction: WaMessageDirection;
+  kind: WaMessageKind;
+  /** Plain-text body for text/selection/template; CTA label or list intro otherwise. */
+  body: string;
+  /** Free-form metadata (button labels, link url, template name, sender label). */
+  meta?: Record<string, unknown>;
+  /** Who produced the message — customer, the bot, an operator, or the system (welcome, opt-out ack). */
+  actor: WaMessageActor;
+}
+
+const WA_TRANSCRIPT_MAX_PER_PHONE = 200;
+const WA_TRANSCRIPT_MAX_PHONES = 500;
+
+export async function appendWaMessage(rawPhone: string, msg: WaMessage): Promise<void> {
+  const phone = normalizePlPhoneE164(rawPhone);
+  if (!phone) return;
+  try {
+    await withLock("whatsapp-transcripts.json", async () => {
+      const all = await readJSON<Record<string, WaMessage[]>>("whatsapp-transcripts.json", {});
+      const existing = all[phone] ?? [];
+      existing.push(msg);
+      if (existing.length > WA_TRANSCRIPT_MAX_PER_PHONE) {
+        existing.splice(0, existing.length - WA_TRANSCRIPT_MAX_PER_PHONE);
+      }
+      all[phone] = existing;
+
+      // Bound the keyspace: when we exceed WA_TRANSCRIPT_MAX_PHONES,
+      // evict the phone with the oldest tail message. Keeps the dump
+      // file manageable without losing recent activity.
+      const phones = Object.keys(all);
+      if (phones.length > WA_TRANSCRIPT_MAX_PHONES) {
+        let oldestPhone = phones[0];
+        let oldestAt = all[oldestPhone][all[oldestPhone].length - 1]?.at ?? "";
+        for (const p of phones) {
+          const tail = all[p][all[p].length - 1]?.at ?? "";
+          if (tail < oldestAt) {
+            oldestAt = tail;
+            oldestPhone = p;
+          }
+        }
+        if (oldestPhone !== phone) delete all[oldestPhone];
+      }
+
+      await writeJSON("whatsapp-transcripts.json", all);
+    });
+  } catch (err) {
+    logger.warn(
+      "appendWaMessage failed",
+      { phone, layer: "store.whatsapp" },
+      err,
+    );
+  }
+}
+
+export async function getWaTranscript(rawPhone: string, limit = 100): Promise<WaMessage[]> {
+  const phone = normalizePlPhoneE164(rawPhone);
+  if (!phone) return [];
+  const all = await readJSON<Record<string, WaMessage[]>>("whatsapp-transcripts.json", {});
+  const list = all[phone] ?? [];
+  return list.slice(-limit);
+}
+
+/**
+ * Distinct phones with at least one transcript entry, newest activity first.
+ * Used by the admin "Conversations" surface so operators can browse historic
+ * chats — not just live sessions.
+ */
+export async function listWaTranscriptHeads(limit = 100): Promise<
+  { phone: string; lastAt: string; lastBody: string; messageCount: number; hasInbound: boolean }[]
+> {
+  const all = await readJSON<Record<string, WaMessage[]>>("whatsapp-transcripts.json", {});
+  const rows = Object.entries(all).map(([phone, list]) => {
+    const last = list[list.length - 1];
+    return {
+      phone,
+      lastAt: last?.at ?? "",
+      lastBody: (last?.body ?? "").slice(0, 100),
+      messageCount: list.length,
+      hasInbound: list.some((m) => m.direction === "in"),
+    };
+  });
+  rows.sort((a, b) => (a.lastAt < b.lastAt ? 1 : -1));
+  return rows.slice(0, limit);
+}
+
+export async function deleteWaTranscript(rawPhone: string): Promise<boolean> {
+  const phone = normalizePlPhoneE164(rawPhone);
+  if (!phone) return false;
+  return withLock("whatsapp-transcripts.json", async () => {
+    const all = await readJSON<Record<string, WaMessage[]>>("whatsapp-transcripts.json", {});
+    if (!all[phone]) return false;
+    delete all[phone];
+    await writeJSON("whatsapp-transcripts.json", all);
+    return true;
+  });
+}

@@ -1,4 +1,5 @@
 import { logger } from "@/lib/logger";
+import { appendWaMessage, type WaMessageActor } from "@/lib/store";
 
 /**
  * WhatsApp Cloud API provider. Talks directly to Meta's Graph API —
@@ -250,6 +251,97 @@ class MetaCloudWhatsAppProvider implements WhatsAppProvider {
   }
 }
 
+/**
+ * Decorator that records every outbound send to the per-phone transcript
+ * log in the kv_store. Wraps any concrete WhatsAppProvider so the logging
+ * concern stays orthogonal to the transport — flip Meta → Twilio later
+ * and the audit trail keeps working unchanged.
+ *
+ * `actor` defaults to "bot" since the vast majority of sends come from
+ * the LLM-driven turn loop or the comms dispatcher. Admin-initiated
+ * sends override this when calling — see the admin reply route.
+ */
+class LoggingWhatsAppProvider implements WhatsAppProvider {
+  readonly name: string;
+  constructor(
+    private readonly inner: WhatsAppProvider,
+    private readonly defaultActor: WaMessageActor = "bot",
+  ) {
+    this.name = `logging(${inner.name})`;
+  }
+
+  private log(
+    to: string,
+    kind: import("@/lib/store").WaMessageKind,
+    body: string,
+    meta?: Record<string, unknown>,
+  ): void {
+    void appendWaMessage(to, {
+      at: new Date().toISOString(),
+      direction: "out",
+      kind,
+      body,
+      meta,
+      actor: this.defaultActor,
+    });
+  }
+
+  async sendText(to: string, body: string) {
+    const result = await this.inner.sendText(to, body);
+    this.log(to, "text", body, { messageId: result.id });
+    return result;
+  }
+
+  async sendInteractiveButtons(to: string, bodyText: string, buttons: WhatsAppButton[]) {
+    const result = await this.inner.sendInteractiveButtons(to, bodyText, buttons);
+    this.log(to, "buttons", bodyText, {
+      messageId: result.id,
+      buttons: buttons.map((b) => ({ id: b.id, title: b.title })),
+    });
+    return result;
+  }
+
+  async sendInteractiveList(
+    to: string,
+    bodyText: string,
+    buttonLabel: string,
+    sections: WhatsAppListSection[],
+  ) {
+    const result = await this.inner.sendInteractiveList(to, bodyText, buttonLabel, sections);
+    this.log(to, "list", bodyText, {
+      messageId: result.id,
+      buttonLabel,
+      rowCount: sections.reduce((s, sec) => s + sec.rows.length, 0),
+    });
+    return result;
+  }
+
+  async sendCtaUrl(to: string, bodyText: string, buttonLabel: string, url: string) {
+    const result = await this.inner.sendCtaUrl(to, bodyText, buttonLabel, url);
+    this.log(to, "cta_url", bodyText, { messageId: result.id, buttonLabel, url });
+    return result;
+  }
+
+  async sendTemplate(
+    to: string,
+    templateName: string,
+    languageCode: string,
+    components?: unknown[],
+  ) {
+    const result = await this.inner.sendTemplate(to, templateName, languageCode, components);
+    this.log(to, "template", `(template:${templateName})`, {
+      messageId: result.id,
+      templateName,
+      languageCode,
+    });
+    return result;
+  }
+
+  async markRead(messageId: string) {
+    await this.inner.markRead(messageId);
+  }
+}
+
 let cached: WhatsAppProvider | undefined;
 
 export function getWhatsAppProvider(): WhatsAppProvider {
@@ -257,12 +349,28 @@ export function getWhatsAppProvider(): WhatsAppProvider {
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID?.trim();
   const accessToken = process.env.WHATSAPP_ACCESS_TOKEN?.trim();
   const apiVersion = process.env.WHATSAPP_API_VERSION?.trim() || "v21.0";
-  if (phoneNumberId && accessToken) {
-    cached = new MetaCloudWhatsAppProvider(phoneNumberId, accessToken, apiVersion);
-  } else {
-    cached = new NoopWhatsAppProvider();
-  }
+  const inner: WhatsAppProvider =
+    phoneNumberId && accessToken
+      ? new MetaCloudWhatsAppProvider(phoneNumberId, accessToken, apiVersion)
+      : new NoopWhatsAppProvider();
+  cached = new LoggingWhatsAppProvider(inner);
   return cached;
+}
+
+/**
+ * Returns a transcript-logging provider tagged with the given actor.
+ * Use this for admin-initiated sends so the transcript correctly
+ * attributes the message to an operator rather than the bot.
+ */
+export function getWhatsAppProviderAs(actor: WaMessageActor): WhatsAppProvider {
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID?.trim();
+  const accessToken = process.env.WHATSAPP_ACCESS_TOKEN?.trim();
+  const apiVersion = process.env.WHATSAPP_API_VERSION?.trim() || "v21.0";
+  const inner: WhatsAppProvider =
+    phoneNumberId && accessToken
+      ? new MetaCloudWhatsAppProvider(phoneNumberId, accessToken, apiVersion)
+      : new NoopWhatsAppProvider();
+  return new LoggingWhatsAppProvider(inner, actor);
 }
 
 export function _setWhatsAppProviderForTests(provider: WhatsAppProvider): void {

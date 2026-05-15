@@ -6,7 +6,12 @@ import { verifyHubChallenge, verifyMetaSignature } from "@/lib/whatsapp/verify";
 import { extractInboundMessages, type MetaWebhookPayload } from "@/lib/whatsapp/inbound";
 import { handleInboundTurn } from "@/lib/whatsapp/turn";
 import { getWhatsAppProvider } from "@/lib/providers/whatsapp";
-import { getCustomer, getWaSettings, mutateWaSession } from "@/lib/store";
+import {
+  appendWaMessage,
+  getCustomer,
+  getWaSettings,
+  mutateWaSession,
+} from "@/lib/store";
 import { incrCounter } from "@/lib/metrics";
 
 /**
@@ -107,6 +112,21 @@ async function processOne(message: {
     );
     return;
   }
+
+  // Persist the inbound to the transcript before any further branching
+  // — opt-outs, errors, and welcome flows all leave a trace.
+  await appendWaMessage(phone, {
+    at: message.timestamp,
+    direction: "in",
+    kind: message.kind,
+    body: message.value,
+    meta: {
+      messageId: message.id,
+      rawType: message.rawType,
+      contactName: message.contactName,
+    },
+    actor: "customer",
+  });
 
   const settings = await getWaSettings();
 
