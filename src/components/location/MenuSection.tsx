@@ -12,7 +12,7 @@ import { SeasonalSpecials } from "./SeasonalSpecials";
 import { ReorderSection } from "./ReorderSection";
 import { SpeedGuarantee } from "./SpeedGuarantee";
 import { ComboDealsPreview } from "./ComboDealsPreview";
-import { compareMenuEngineering, getItemBadges } from "@/lib/upsell";
+import { compareMenuEngineering } from "@/lib/upsell";
 import { getItemRating } from "@/data/ratings";
 import { useLiveMenuAvailability } from "@/lib/useLiveMenuAvailability";
 import { Search, X, ArrowUpDown, Check } from "lucide-react";
@@ -161,12 +161,12 @@ export function MenuSection({ items, locationSlug, initialAvailability }: MenuSe
     if (sortBy === "rating") return [...result].sort((a, b) => (getItemRating(b.id)?.rating || 0) - (getItemRating(a.id)?.rating || 0));
     // "default" — Pizzaiolo's layout (audit §4.4):
     //   hero → profit-driver → anchor → standards by popularity → alpha tie-break.
+    // compareMenuEngineering already does the popularity tie-break inside
+    // its residual band, so we only need an alpha fallback for items that
+    // are equally-ranked across both signals.
     return [...result].sort((a, b) => {
       const eng = compareMenuEngineering(a, b, locationSlug);
-      if (eng !== 0) return eng;
-      const aPop = getItemBadges(a.id, locationSlug).includes("popular") ? 0 : 1;
-      const bPop = getItemBadges(b.id, locationSlug).includes("popular") ? 0 : 1;
-      return aPop - bPop || a.name.localeCompare(b.name);
+      return eng !== 0 ? eng : a.name.localeCompare(b.name);
     });
   }, [itemsLive, activeCategory, searchQuery, isSearching, sortBy, locationSlug]);
 

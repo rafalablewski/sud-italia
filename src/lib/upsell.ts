@@ -1,4 +1,4 @@
-import { MenuItem, MenuCategory, CartItem } from "@/data/types";
+import { MenuItem, MenuCategory, CartItem, MenuRole } from "@/data/types";
 
 // --- Contextual pairing graph (audit §3.1) -----------------------------
 //
@@ -250,8 +250,8 @@ export function getItemBadges(
  * already enforced by the category tab order in MenuSection.
  */
 export function compareMenuEngineering(
-  a: { id: string; menuRole?: import("@/data/types").MenuRole },
-  b: { id: string; menuRole?: import("@/data/types").MenuRole },
+  a: { id: string; menuRole?: MenuRole },
+  b: { id: string; menuRole?: MenuRole },
   locationSlug: string,
   config?: UpsellConfig | null,
 ): number {
@@ -283,7 +283,7 @@ export function compareMenuEngineering(
  * unconditionally.
  */
 export function getMenuRoleBadges(item: {
-  menuRole?: import("@/data/types").MenuRole;
+  menuRole?: MenuRole;
   isLimited?: boolean;
 }): BadgeType[] {
   const out: BadgeType[] = [];

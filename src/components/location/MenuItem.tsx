@@ -96,9 +96,22 @@ export function MenuItemCard({
   const details = getItemDetails(item.id);
   const isHero = variant === "hero" || item.menuRole === "hero";
   const isAnchor = item.menuRole === "anchor";
-  const ltoDaysLeft =
-    item.isLimited && item.limitedUntil ? daysUntil(item.limitedUntil) : 0;
-  const showLtoChip = item.isLimited && (!item.limitedUntil || ltoDaysLeft > 0);
+  // LTO countdown depends on `Date.now()`, which would mismatch between the
+  // SSR pass and client hydration on clock-skew or a day-boundary crossing.
+  // Keep the value `null` for the first client render so the SSR HTML and
+  // the hydrated HTML agree, then fill in the day count after mount. This
+  // is the React-docs idiom for hydration-safe time-derived values; the
+  // lint rule below is overly conservative here.
+  const [ltoDaysLeft, setLtoDaysLeft] = useState<number | null>(null);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional, see comment above
+    setLtoDaysLeft(
+      item.isLimited && item.limitedUntil ? daysUntil(item.limitedUntil) : null,
+    );
+  }, [item.isLimited, item.limitedUntil]);
+  // Suppress the chip once the client knows the LTO has expired (0 days
+  // left). During SSR + first paint we conservatively keep it visible.
+  const showLtoChip = Boolean(item.isLimited) && ltoDaysLeft !== 0;
 
   useEffect(() => {
     if (!justAdded) return;
@@ -206,7 +219,7 @@ export function MenuItemCard({
             {showLtoChip && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-italia-red/10 text-italia-red border border-italia-red/20">
                 <Clock className="h-3 w-3" />
-                {item.limitedUntil
+                {item.limitedUntil && ltoDaysLeft !== null
                   ? `${ltoDaysLeft}d left`
                   : "Limited"}
               </span>

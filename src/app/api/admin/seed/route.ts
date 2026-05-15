@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { withAdmin } from "@/lib/api-middleware";
 import { saveIngredient, saveRecipe } from "@/lib/store";
 import type { Ingredient, Recipe } from "@/data/types";
+import { getMenu } from "@/data/menus";
 
 // Seed data: ingredients with avg Polish market prices (2026)
 const SEED_INGREDIENTS: Ingredient[] = [
@@ -131,15 +132,24 @@ export const POST = withAdmin({ roles: ["owner"] }, async () => {
       });
     }
 
+    // Pull the canonical menu item so the seed verification never drifts
+    // from src/data/menus/krakow.ts when prices change.
+    const seedItem = getMenu("krakow").find((m) => m.id === MARGHERITA_RECIPE.menuItemId);
+    const sellingPriceGrosze = seedItem?.price ?? 0;
+    const menuItemLabel = seedItem ? `${seedItem.name} (Kraków)` : "Margherita (Kraków)";
+
     return NextResponse.json({
       success: true,
       ingredientsSeeded: SEED_INGREDIENTS.length,
       recipe: {
         id: recipe.id,
-        menuItem: "Margherita (Kraków)",
+        menuItem: menuItemLabel,
         totalFoodCost: `${(totalCost / 100).toFixed(2)} PLN`,
-        sellingPrice: "27.90 PLN",
-        margin: `${Math.round(((2790 - totalCost) / 2790) * 100)}%`,
+        sellingPrice: `${(sellingPriceGrosze / 100).toFixed(2)} PLN`,
+        margin:
+          sellingPriceGrosze > 0
+            ? `${Math.round(((sellingPriceGrosze - totalCost) / sellingPriceGrosze) * 100)}%`
+            : "n/a",
         breakdown,
       },
     });
