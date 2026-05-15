@@ -197,6 +197,16 @@ html { scroll-behavior: smooth; }
    Toast/Linear/Stripe-grade. Light + dark. 4px grid. Semantic surface ramps.
    ============================ */
 
+/*
+ * Dark is the default. The selector list applies dark vars to:
+ *   1. an explicit [data-admin-theme="dark"]
+ *   2. any :root that has NO data-admin-theme attribute (boot-script
+ *      not yet run, blocked by CSP, JS disabled, or future SSR paths).
+ * The [data-admin-theme="light"] block below overrides via attribute
+ * specificity when the user has explicitly opted into light. Stops the
+ * "white background of doom" any time the boot script doesn't run.
+ */
+:root:not([data-admin-theme]),
 [data-admin-theme="dark"] {
   color-scheme: dark;
   --bg: #0a0d14;
