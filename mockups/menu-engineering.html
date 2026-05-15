@@ -4,15 +4,25 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Mockup — Menu Engineering (Audit §4)</title>
-    <!-- Same dependency the production app pulls — Tailwind v3 via Play CDN
-         renders the same utility surface, then we extend the theme with the
-         brand variables from globals.css so the visuals match 1:1. -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link
-      rel="preconnect"
-      href="https://fonts.googleapis.com"
-    />
+    <!--
+      Built against the same primitives the production app ships with so
+      visuals are 1:1:
+        • Tailwind via Play CDN (utility surface)
+        • The exact tokens from src/app/globals.css `@theme inline { … }`
+          re-declared in tailwind.config below.
+        • The verbatim .menu-search, .menu-search-input, .menu-search-icon,
+          .menu-item-enter, .category-pill[-active|-inactive] rules copied
+          straight out of globals.css (lines 3845-3913) so spacing, focus
+          rings, and pill heights match.
+        • The MenuItem card DOM mirrors src/components/location/MenuItem.tsx
+          (rounded-2xl border, -top-2/right-3 ribbon, w-16/sm:w-20 thumbnail,
+          meta strip with star rating, price + +/- cart cluster).
+        • Lucide icons (Plus, Heart, ChefHat, Crown, Clock, etc.) inlined as
+          SVGs with the exact paths from lucide.dev so glyphs match.
+    -->
+    <script src="https://cdn.tailwindcss.com?plugins=line-clamp"></script>
     <script>
+      // Mirrors `@theme inline { … }` in src/app/globals.css.
       tailwind.config = {
         theme: {
           extend: {
@@ -32,587 +42,713 @@
               },
             },
             fontFamily: {
-              heading: ["Georgia", "Times New Roman", "serif"],
-              body: ["system-ui", "-apple-system", "Segoe UI", "Roboto", "sans-serif"],
+              heading: ['Georgia', '"Times New Roman"', "serif"],
+              body: ["system-ui", "-apple-system", '"Segoe UI"', "Roboto", "sans-serif"],
+            },
+            animation: {
+              "slide-up": "slide-up 0.4s ease-out",
+              "fade-in": "fade-in 0.3s ease-out",
+              "bounce-in": "bounce-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)",
+            },
+            keyframes: {
+              "slide-up": {
+                from: { opacity: "0", transform: "translateY(12px)" },
+                to: { opacity: "1", transform: "translateY(0)" },
+              },
+              "fade-in": {
+                from: { opacity: "0", transform: "translateY(-4px)" },
+                to: { opacity: "1", transform: "translateY(0)" },
+              },
+              "bounce-in": {
+                "0%": { opacity: "0", transform: "scale(0.3)" },
+                "50%": { transform: "scale(1.05)" },
+                "70%": { transform: "scale(0.95)" },
+                "100%": { opacity: "1", transform: "scale(1)" },
+              },
             },
           },
         },
       };
     </script>
     <style>
+      /* === EXACT TOKEN BLOCK FROM globals.css (`@theme inline { … }`) === */
       :root {
+        --color-background: #fff8f0;
+        --color-foreground: #1a1a1a;
         --color-italia-red: #c8102e;
         --color-italia-red-dark: #a00d24;
         --color-italia-green: #008c45;
+        --color-italia-green-dark: #006b35;
+        --color-italia-cream: #fff8f0;
+        --color-italia-cream-dark: #f5eddf;
         --color-italia-gold: #b8922e;
         --color-italia-gold-dark: #9a7a24;
         --color-italia-dark: #1a1a1a;
         --color-italia-gray: #6b7280;
-        --color-italia-cream: #fff8f0;
+        --color-italia-light-gray: #f3f4f6;
+        --font-heading: Georgia, "Times New Roman", serif;
+        --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
       }
+
       body {
-        background: #fff8f0;
-        color: #1a1a1a;
-        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        background: var(--color-background);
+        color: var(--color-foreground);
+        font-family: var(--font-body);
       }
+      html {
+        scroll-behavior: smooth;
+      }
+
+      *:focus-visible {
+        outline: 2px solid var(--color-italia-red);
+        outline-offset: 2px;
+      }
+
       .font-heading {
-        font-family: Georgia, "Times New Roman", serif;
+        font-family: var(--font-heading);
       }
-      /* category pill — mirrors globals.css */
-      .category-pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.375rem;
-        padding: 0.45rem 0.85rem;
-        border-radius: 999px;
-        font-size: 0.8125rem;
-        font-weight: 600;
-        border: 1px solid #e5e7eb;
-        background: #fff;
-        transition: all 0.2s ease;
-      }
-      .category-pill-active {
-        background: var(--color-italia-red);
-        color: #fff;
-        border-color: var(--color-italia-red);
-      }
-      .category-pill-inactive {
-        color: var(--color-italia-gray);
-      }
+
+      /* === Menu search bar (verbatim from globals.css 3845-3877) === */
       .menu-search {
         position: relative;
       }
       .menu-search-input {
         width: 100%;
         padding: 0.75rem 1rem 0.75rem 2.75rem;
-        border: 1px solid #e5e7eb;
-        border-radius: 12px;
-        background: #fff;
+        border: 2px solid #f3f4f6;
+        border-radius: 1rem;
         font-size: 0.9375rem;
+        color: var(--color-foreground);
+        background: #fff;
+        transition: border-color 0.2s, box-shadow 0.2s;
+      }
+      .menu-search-input:focus {
+        border-color: var(--color-italia-red);
+        outline: none;
+        box-shadow: 0 0 0 4px rgba(200, 16, 46, 0.08);
+      }
+      .menu-search-input::placeholder {
+        color: #9ca3af;
       }
       .menu-search-icon {
         position: absolute;
-        left: 0.9rem;
+        left: 0.875rem;
         top: 50%;
         transform: translateY(-50%);
         color: #9ca3af;
+        pointer-events: none;
       }
-      /* —— role-driven card frames (mirrors src/components/location/MenuItem.tsx) —— */
-      .card-base {
-        background: #fff;
-        border: 1px solid #f3f4f6;
-        border-radius: 1rem;
-        padding: 1rem;
-        transition: all 0.25s ease;
+
+      /* === Card entrance animation (verbatim) === */
+      .menu-item-enter {
+        animation: slide-up 0.35s ease-out both;
       }
-      .card-base:hover {
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-        border-color: #e5e7eb;
+      @keyframes slide-up {
+        from {
+          opacity: 0;
+          transform: translateY(12px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
-      .card-hero {
-        background: linear-gradient(135deg, #fff8f0 0%, #ffffff 100%);
-        border-color: rgba(200, 16, 46, 0.3);
-        box-shadow: 0 6px 18px rgba(200, 16, 46, 0.06);
-      }
-      .card-hero:hover {
-        border-color: rgba(200, 16, 46, 0.5);
-        box-shadow: 0 10px 24px rgba(200, 16, 46, 0.1);
-      }
-      .card-anchor {
-        background:
-          linear-gradient(
-            135deg,
-            rgba(26, 26, 26, 0.04) 0%,
-            rgba(184, 146, 46, 0.06) 100%
-          );
-        border-color: rgba(184, 146, 46, 0.4);
-        box-shadow: 0 6px 18px rgba(184, 146, 46, 0.06);
-      }
-      .card-anchor:hover {
-        border-color: rgba(184, 146, 46, 0.6);
-      }
-      .card-profit {
-        background: #fff;
-        border-color: rgba(184, 146, 46, 0.2);
-      }
-      .card-profit:hover {
-        border-color: rgba(184, 146, 46, 0.35);
-      }
-      /* category gradient images (matches src/data/menu-images.ts) */
-      .img-pizza {
-        background: linear-gradient(135deg, #f87171, #fdba74);
-      }
-      .img-pasta {
-        background: linear-gradient(135deg, #fbbf24, #fde047);
-      }
-      .img-drinks {
-        background: linear-gradient(135deg, #60a5fa, #67e8f9);
-      }
-      .img-desserts {
-        background: linear-gradient(135deg, #f472b6, #fda4af);
-      }
-      .img-antipasti {
-        background: linear-gradient(135deg, #4ade80, #6ee7b7);
-      }
-      .img-truffle {
-        background:
-          radial-gradient(circle at 30% 30%, #4b5563 0%, #1f2937 60%, #0b0d12 100%);
-        color: #f5edcf;
-      }
-      .chip {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.25rem;
-        padding: 0.15rem 0.55rem;
+
+      /* === Category pill (verbatim from globals.css 3884-3913) === */
+      .category-pill {
+        position: relative;
+        white-space: nowrap;
+        padding: 0.5rem 1.25rem;
         border-radius: 9999px;
-        font-size: 10px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.025em;
-      }
-      .chip-hero {
-        background: var(--color-italia-red);
-        color: #fff;
-        box-shadow: 0 1px 2px rgba(200, 16, 46, 0.2);
-      }
-      .chip-pizzaiolo {
-        background: rgba(184, 146, 46, 0.15);
-        color: var(--color-italia-gold-dark);
-      }
-      .chip-signature {
-        background: var(--color-italia-dark);
-        color: var(--color-italia-cream);
-      }
-      .chip-lto {
-        background: rgba(200, 16, 46, 0.1);
-        color: var(--color-italia-red);
-        border: 1px solid rgba(200, 16, 46, 0.2);
-      }
-      .chip-popular {
-        background: rgba(200, 16, 46, 0.1);
-        color: var(--color-italia-red);
-      }
-      .chip-veg {
-        background: rgba(0, 140, 69, 0.08);
-        color: var(--color-italia-green);
-        border: 1px solid rgba(0, 140, 69, 0.15);
-        text-transform: none;
-        letter-spacing: 0;
-        font-weight: 600;
-      }
-      .chip-spicy {
-        background: rgba(200, 16, 46, 0.08);
-        color: var(--color-italia-red);
-        border: 1px solid rgba(200, 16, 46, 0.15);
-        text-transform: none;
-        letter-spacing: 0;
-        font-weight: 600;
-      }
-      .btn-primary {
-        background: var(--color-italia-red);
-        color: #fff;
-        font-weight: 600;
-        padding: 0.55rem 0.9rem;
-        border-radius: 0.75rem;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
         font-size: 0.875rem;
-        transition: background 0.15s ease;
-      }
-      .btn-primary:hover {
-        background: var(--color-italia-red-dark);
-      }
-      .pricetag-hero {
-        font-size: 1.5rem;
-        font-weight: 800;
-      }
-      .pricetag {
-        font-size: 1.125rem;
-        font-weight: 700;
-      }
-      .strike {
-        text-decoration: line-through;
-        color: #9ca3af;
         font-weight: 500;
-        font-size: 0.875rem;
-        margin-right: 0.4rem;
+        transition: all 0.25s ease;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
       }
-      .frame-note {
-        position: absolute;
-        top: -10px;
-        left: 12px;
-        padding: 2px 8px;
-        font-size: 10px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        border-radius: 999px;
+      .category-pill-active {
+        background: var(--color-italia-red);
+        color: #fff;
+        box-shadow: 0 2px 8px rgba(200, 16, 46, 0.3);
       }
-      details > summary {
-        list-style: none;
-        cursor: pointer;
+      .category-pill-inactive {
+        color: var(--color-italia-gray);
+        background: transparent;
       }
-      details > summary::-webkit-details-marker {
-        display: none;
+      .category-pill-inactive:hover {
+        background: #f3f4f6;
+        color: var(--color-italia-dark);
+      }
+
+      /* Tabular nums for the qty stepper (matches the production class) */
+      .tabular-nums {
+        font-variant-numeric: tabular-nums;
       }
     </style>
   </head>
-  <body class="min-h-screen">
-    <!-- mock site header to match production -->
-    <header class="bg-white border-b border-gray-100 sticky top-0 z-30">
+
+  <body class="min-h-screen text-italia-dark antialiased">
+    <!-- ============= Site header (mirrors public layout) ============= -->
+    <header class="sticky top-0 z-30 bg-white border-b border-gray-100">
       <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        <a href="#" class="font-heading text-xl font-bold tracking-tight">
+        <a href="#" class="font-heading text-xl font-bold tracking-tight text-italia-dark">
           Sud <span class="text-italia-red">Italia</span>
         </a>
         <nav class="hidden md:flex items-center gap-6 text-sm font-medium text-italia-gray">
-          <a href="#">Menu</a><a href="#">Rewards</a><a href="#">Truck</a>
+          <a href="#menu" class="hover:text-italia-dark">Menu</a>
+          <a href="#" class="hover:text-italia-dark">Rewards</a>
+          <a href="#" class="hover:text-italia-dark">Truck</a>
         </nav>
-        <button class="btn-primary text-xs">View cart</button>
+        <button
+          class="inline-flex items-center justify-center font-medium rounded-lg bg-italia-red text-white hover:bg-italia-red-dark text-sm px-3 py-1.5"
+        >
+          View cart
+        </button>
       </div>
     </header>
 
-    <!-- preamble: explainer of what changed (helps the user review the mockup) -->
+    <!-- =============== Reviewer preamble (kept out of the menu surface) =============== -->
     <section class="bg-white border-b border-gray-100">
       <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
         <p class="text-[11px] uppercase tracking-wide font-bold text-italia-red mb-1">
           Mockup · Audit §4 — Menu Engineering &amp; Pricing Psychology
         </p>
         <h1 class="font-heading text-2xl sm:text-3xl font-bold text-italia-dark">
-          Pizzaiolo's layout — hero, profit-driver, anchor
+          Pizzaiolo's layout — hero · profit-driver · anchor
         </h1>
         <p class="text-sm text-italia-gray mt-2 max-w-3xl leading-relaxed">
-          Same Tailwind utility surface + brand variables as the production
-          location page (<code class="font-mono text-xs bg-gray-100 px-1 py-0.5 rounded">/locations/[slug]</code>). The
-          three new card variants — <strong>Our Hero</strong> (Margherita, full-width),
-          <strong>Pizzaiolo's Choice</strong> (Quattro Formaggi / Linguine al Pesto / Espresso),
-          and <strong>Chef's Signature</strong> (Pizza del Pizzaiolo — PLN 47.90 anchor with a
-          monthly truffle LTO countdown) — drive the §4.4 hierarchy. All prices follow §4.2
-          charm rules (pizza→9, premium pasta→5, espresso→9, desserts→0).
+          Same Tailwind utility surface, same brand variables, same DOM as
+          <code class="font-mono text-xs bg-gray-100 px-1 py-0.5 rounded">src/components/location/MenuItem.tsx</code>.
+          Three new card variants drive the §4.4 hierarchy: <strong>Our Hero</strong>
+          (Margherita, full-width), <strong>Pizzaiolo&apos;s Choice</strong>
+          (Quattro Formaggi / Linguine al Pesto / Espresso), and
+          <strong>Chef&apos;s Signature</strong> (Pizza del Pizzaiolo — PLN 47.90 anchor with the
+          monthly truffle LTO countdown). Charm pricing per §4.2: pizza→9, premium pasta→5,
+          espresso→9, desserts→0.
         </p>
         <details class="mt-4">
           <summary
-            class="inline-flex items-center gap-2 text-xs font-semibold text-italia-red hover:underline"
+            class="inline-flex items-center gap-2 text-xs font-semibold text-italia-red hover:underline cursor-pointer"
           >
             ▸ Charm pricing diff (Kraków)
           </summary>
           <div
-            class="mt-3 text-xs grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1 bg-italia-cream/40 border border-italia-cream-dark rounded-xl p-4"
+            class="mt-3 text-xs grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1 bg-italia-cream/40 border border-italia-cream-dark rounded-2xl p-4"
           >
-            <div><span class="strike">PLN 28.00</span><strong>PLN 27.90</strong> — Margherita</div>
-            <div><span class="strike">PLN 32.00</span><strong>PLN 31.90</strong> — Diavola</div>
-            <div><span class="strike">PLN 34.00</span><strong>PLN 33.90</strong> — Quattro Formaggi</div>
-            <div><span class="strike">PLN 35.00</span><strong>PLN 34.90</strong> — Prosciutto e Rucola</div>
-            <div><span class="strike">PLN 31.00</span><strong>PLN 30.90</strong> — Ortolana</div>
-            <div><span class="text-italia-gold-dark font-semibold">new</span> <strong>PLN 47.90</strong> — Pizza del Pizzaiolo (anchor + LTO)</div>
-            <div><span class="strike">PLN 29.00</span><strong>PLN 28.95</strong> — Spaghetti Carbonara</div>
-            <div><span class="strike">PLN 30.00</span><strong>PLN 29.95</strong> — Tagliatelle Bolognese</div>
-            <div><span class="strike">PLN 27.00</span><strong>PLN 26.95</strong> — Linguine al Pesto</div>
-            <div><span class="strike">PLN 24.00</span><strong>PLN 23.90</strong> — Penne Arrabbiata</div>
-            <div><span class="strike">PLN 8.00</span><strong>PLN 7.90</strong> — Espresso (impulse)</div>
-            <div><span class="text-italia-gray">unchanged</span> Desserts stay PLN 15.00 / 16.00 / 18.00</div>
+            <div><span class="line-through text-gray-400 mr-2">PLN 28.00</span><strong>PLN 27.90</strong> Margherita</div>
+            <div><span class="line-through text-gray-400 mr-2">PLN 32.00</span><strong>PLN 31.90</strong> Diavola</div>
+            <div><span class="line-through text-gray-400 mr-2">PLN 34.00</span><strong>PLN 33.90</strong> Quattro Formaggi</div>
+            <div><span class="line-through text-gray-400 mr-2">PLN 35.00</span><strong>PLN 34.90</strong> Prosciutto e Rucola</div>
+            <div><span class="line-through text-gray-400 mr-2">PLN 31.00</span><strong>PLN 30.90</strong> Ortolana</div>
+            <div><span class="text-italia-gold-dark font-semibold mr-2">new</span><strong>PLN 47.90</strong> Pizza del Pizzaiolo (anchor + LTO)</div>
+            <div><span class="line-through text-gray-400 mr-2">PLN 29.00</span><strong>PLN 28.95</strong> Spaghetti Carbonara</div>
+            <div><span class="line-through text-gray-400 mr-2">PLN 30.00</span><strong>PLN 29.95</strong> Tagliatelle Bolognese</div>
+            <div><span class="line-through text-gray-400 mr-2">PLN 27.00</span><strong>PLN 26.95</strong> Linguine al Pesto</div>
+            <div><span class="line-through text-gray-400 mr-2">PLN 24.00</span><strong>PLN 23.90</strong> Penne Arrabbiata</div>
+            <div><span class="line-through text-gray-400 mr-2">PLN 8.00</span><strong>PLN 7.90</strong> Espresso (impulse)</div>
+            <div><span class="text-italia-gray mr-2">unchanged</span> Desserts stay 15.00 / 16.00 / 18.00 PLN</div>
           </div>
         </details>
       </div>
     </section>
 
-    <!-- sticky search + sort + category pills (mirrors MenuSection.tsx) -->
-    <div class="sticky top-16 z-20 bg-white border-b border-gray-100 shadow-sm">
-      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3">
-        <div class="menu-search mb-3">
-          <svg class="menu-search-icon" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-          <input type="text" class="menu-search-input" placeholder="Search for pizza, pasta, drinks…" />
-        </div>
-        <div class="flex items-center gap-2 justify-between">
-          <div class="flex items-center gap-2 overflow-x-auto -mx-1 px-1">
-            <span class="category-pill category-pill-active">🍕 Pizza <span class="opacity-80 text-[11px]">6</span></span>
-            <span class="category-pill category-pill-inactive">🍝 Pasta <span class="text-[11px]">4</span></span>
-            <span class="category-pill category-pill-inactive">🥗 Antipasti <span class="text-[11px]">3</span></span>
-            <span class="category-pill category-pill-inactive">🥪 Panini <span class="text-[11px]">2</span></span>
-            <span class="category-pill category-pill-inactive">🥤 Drinks <span class="text-[11px]">4</span></span>
-            <span class="category-pill category-pill-inactive">🍰 Desserts <span class="text-[11px]">3</span></span>
+    <!-- =============== Sticky search + sort (mirrors MenuSection.tsx) =============== -->
+    <section id="menu">
+      <div class="sticky top-16 md:top-20 z-20 bg-white border-b border-gray-100 shadow-sm">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3">
+          <div class="menu-search mb-3">
+            <svg class="menu-search-icon h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" stroke-linejoin="round" d="m20 20-3.5-3.5"/></svg>
+            <input
+              type="text"
+              placeholder="Search for pizza, pasta, drinks..."
+              class="menu-search-input"
+            />
           </div>
-          <span class="category-pill category-pill-inactive shrink-0 text-xs">
-            ↕ Pizzaiolo's layout
-          </span>
+
+          <div class="flex items-center gap-2 mb-1 justify-between">
+            <div class="flex items-center gap-2 overflow-x-auto -mx-1 px-1 scrollbar-hide">
+              <button class="category-pill category-pill-active">
+                <span class="text-base leading-none">🍕</span>
+                Pizza
+                <span class="text-[11px] opacity-80">6</span>
+              </button>
+              <button class="category-pill category-pill-inactive">
+                <span class="text-base leading-none">🍝</span> Pasta
+                <span class="text-[11px]">4</span>
+              </button>
+              <button class="category-pill category-pill-inactive">
+                <span class="text-base leading-none">🥗</span> Antipasti
+                <span class="text-[11px]">3</span>
+              </button>
+              <button class="category-pill category-pill-inactive">
+                <span class="text-base leading-none">🥪</span> Panini
+                <span class="text-[11px]">2</span>
+              </button>
+              <button class="category-pill category-pill-inactive">
+                <span class="text-base leading-none">🥤</span> Drinks
+                <span class="text-[11px]">4</span>
+              </button>
+              <button class="category-pill category-pill-inactive">
+                <span class="text-base leading-none">🍰</span> Desserts
+                <span class="text-[11px]">3</span>
+              </button>
+            </div>
+            <button
+              type="button"
+              class="category-pill category-pill-inactive !p-0 h-10 w-10 min-w-10 shrink-0 justify-center rounded-full"
+              aria-label="Sort menu: Pizzaiolo's layout"
+              title="Pizzaiolo's layout"
+            >
+              <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7h13M16 7l-3-3m3 3-3 3M21 17H8m0 0 3 3m-3-3 3-3"/></svg>
+            </button>
+          </div>
         </div>
       </div>
-    </div>
 
-    <main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
-      <h2 class="font-heading text-2xl font-bold text-italia-dark mb-4">Pizza</h2>
+      <!-- =============== Category content =============== -->
+      <div class="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
+        <h2 class="text-2xl font-heading font-bold text-italia-dark mb-6">Pizza</h2>
 
-      <!-- 2-col grid — hero spans both cols, everything else fits in the engineered hierarchy -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <!-- =================== HERO: Margherita =================== -->
-        <div class="lg:col-span-2 relative">
-          <div class="card-base card-hero relative">
-            <span class="absolute -top-2 right-3 chip chip-hero">♥ Our Hero</span>
-            <span class="frame-note bg-italia-red text-white">Sweet-spot top — Pizzaiolo's layout</span>
-
-            <div class="flex gap-5 items-start">
-              <div class="img-pizza w-24 h-24 sm:w-28 sm:h-28 rounded-2xl flex items-center justify-center shadow-sm shrink-0 text-4xl">
-                🍕
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <!-- ===================== HERO: Margherita (lg:col-span-2) ===================== -->
+          <div class="menu-item-enter lg:col-span-2" style="animation-delay:0s">
+            <div
+              class="relative flex flex-col gap-3 p-4 rounded-2xl border transition-all duration-300 bg-gradient-to-br from-italia-cream to-white border-italia-red/30 shadow-md hover:shadow-lg hover:border-italia-red/50"
+            >
+              <!-- badge ribbon -->
+              <div class="absolute -top-2 right-3 flex flex-wrap justify-end gap-1 max-w-[min(100%,14rem)]">
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-italia-red text-white shadow-sm">
+                  <!-- Heart icon -->
+                  <svg class="h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21s-7-4.5-9.3-9.1C1.4 9.4 2.4 6 5.4 5c2-.7 3.9.3 4.6 1.6.7-1.3 2.6-2.3 4.6-1.6 3 1 4 4.4 2.7 6.9C19 16.5 12 21 12 21Z"/></svg>
+                  Our Hero
+                </span>
               </div>
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2 flex-wrap">
-                  <h3 class="font-heading font-bold text-italia-dark text-xl sm:text-2xl">
-                    Margherita
-                  </h3>
-                  <span class="chip chip-veg">Vegetarian</span>
+
+              <!-- Row 1: thumbnail (scale-110 in hero) + title + description -->
+              <div class="flex gap-4 items-start">
+                <div class="flex-shrink-0 self-center transform scale-110 origin-left">
+                  <div
+                    class="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-red-400 to-orange-300 flex items-center justify-center shadow-sm overflow-hidden"
+                    role="img" aria-label="Margherita"
+                  >
+                    <span class="text-2xl sm:text-3xl select-none drop-shadow-sm">🍕</span>
+                  </div>
                 </div>
-                <p class="text-italia-gray leading-relaxed mt-2 max-w-prose text-sm">
-                  San Marzano tomato sauce, fior di latte mozzarella, fresh basil,
-                  extra virgin olive oil. The gateway pizza — the one to recognise the
-                  brand by, the one you photograph.
-                </p>
-                <p class="text-[11px] text-italia-red mt-2 font-bold uppercase tracking-wide">
-                  The gateway — start here
-                </p>
-                <div class="flex items-center justify-between mt-4">
-                  <p class="pricetag-hero text-italia-dark">
-                    <span class="strike">PLN 28.00</span>PLN 27.90
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <h3 class="font-heading font-semibold text-italia-dark text-lg sm:text-xl">
+                      Margherita
+                    </h3>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Vegetarian</span>
+                  </div>
+                  <p class="text-sm text-italia-gray mt-1 leading-relaxed">
+                    San Marzano tomato sauce, fior di latte mozzarella, fresh basil, extra virgin olive oil
                   </p>
-                  <button class="btn-primary">+ Add</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ============ SWEET-SPOT (top-right of below-the-fold row) ============ -->
-        <!-- Eye-tracking studies (Gallup × Cornell): customers land top-left next,
-             then sweep right. Profit driver goes here. -->
-        <div class="relative">
-          <div class="card-base card-profit relative">
-            <span class="absolute -top-2 right-3 chip chip-pizzaiolo">👨‍🍳 Pizzaiolo's Choice</span>
-            <div class="flex gap-4 items-start">
-              <div class="img-pizza w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center shadow-sm shrink-0 text-3xl">🍕</div>
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2 flex-wrap">
-                  <h3 class="font-heading font-semibold text-italia-dark">Quattro Formaggi</h3>
-                  <span class="chip chip-veg">Vegetarian</span>
-                </div>
-                <p class="text-sm text-italia-gray mt-1 leading-relaxed">
-                  Mozzarella, gorgonzola, fontina, Parmigiano Reggiano, honey drizzle.
-                </p>
-                <p class="text-[11px] text-italia-gold-dark mt-1 font-medium">
-                  Pizzaiolo's pick — quietly his favourite to make
-                </p>
-                <div class="flex items-center justify-between mt-3">
-                  <p class="pricetag text-italia-dark">
-                    <span class="strike">PLN 34.00</span>PLN 33.90
+                  <p class="text-[11px] text-italia-red mt-1.5 font-medium uppercase tracking-wide">
+                    The gateway — start here
                   </p>
-                  <button class="btn-primary">+ Add</button>
+                </div>
+              </div>
+
+              <!-- Row 2: meta strip (rating, time, kcal, Details) -->
+              <div class="flex items-center gap-3 flex-wrap border-t border-gray-100 pt-3">
+                <span class="inline-flex items-center gap-1 text-[12px] text-italia-dark">
+                  <svg class="h-3.5 w-3.5 text-italia-gold" fill="currentColor" viewBox="0 0 24 24"><path d="m12 2 3 7h7l-5.6 4 2.1 7L12 16l-6.5 4 2.1-7L2 9h7Z"/></svg>
+                  4.9 <span class="text-italia-gray">(312)</span>
+                </span>
+                <span class="flex items-center gap-0.5 text-[11px] text-italia-gray">
+                  <svg class="h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 7v5l3 2"/></svg>
+                  9m
+                </span>
+                <span class="flex items-center gap-0.5 text-[11px] text-italia-gray">
+                  <svg class="h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2c-1 4 3 5 3 9a3 3 0 1 1-6 0c0-2 1-3 1-5 0-2-1-3 2-4Z"/></svg>
+                  680 kcal
+                </span>
+                <button class="flex items-center gap-0.5 text-[11px] text-italia-red font-medium hover:underline">
+                  <svg class="h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 8h.01M11 12h1v4h1"/></svg>
+                  Details
+                </button>
+              </div>
+
+              <!-- Row 3: price + add cluster -->
+              <div class="flex items-center justify-between">
+                <p class="text-lg font-bold text-italia-dark">PLN 27.90</p>
+                <div class="flex items-center gap-2">
+                  <button
+                    class="inline-flex items-center justify-center font-medium transition-colors rounded-xl bg-italia-red text-white hover:bg-italia-red-dark text-sm px-3 py-1.5 min-h-[40px] min-w-[72px]"
+                  >
+                    <svg class="h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/></svg>
+                    Add
+                  </button>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- ============ ANCHOR — Pizza del Pizzaiolo ============ -->
-        <div class="relative">
-          <div class="card-base card-anchor relative">
-            <span class="absolute -top-2 right-3 chip chip-signature">👑 Chef's Signature</span>
-            <span class="frame-note bg-italia-dark text-italia-cream">Anchor · range-extends Diavola</span>
-
-            <div class="flex gap-4 items-start">
-              <div class="img-truffle w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center shadow-md shrink-0 text-3xl">
-                🍕
+          <!-- ===================== PROFIT DRIVER: Quattro Formaggi ===================== -->
+          <div class="menu-item-enter" style="animation-delay:0.05s">
+            <div
+              class="relative flex flex-col gap-3 p-4 rounded-2xl border transition-all duration-300 bg-white border-italia-gold/20 shadow-sm hover:shadow-md hover:border-italia-gold/30"
+            >
+              <div class="absolute -top-2 right-3 flex flex-wrap justify-end gap-1 max-w-[min(100%,14rem)]">
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-italia-gold/15 text-italia-gold-dark shadow-sm">
+                  <!-- Lucide ChefHat -->
+                  <svg class="h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 13.87A4 4 0 0 1 7.41 6 5.11 5.11 0 0 1 17 6a4 4 0 0 1 1 7.87V21H6Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M6 17h12"/></svg>
+                  Pizzaiolo's Choice
+                </span>
               </div>
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2 flex-wrap">
-                  <h3 class="font-heading font-semibold text-italia-dark text-base sm:text-lg">
-                    Pizza del Pizzaiolo
-                  </h3>
-                  <span class="chip chip-veg">Vegetarian</span>
-                  <span class="chip chip-lto">⏱ 46d left</span>
+
+              <div class="flex gap-4 items-start">
+                <div class="flex-shrink-0 self-center">
+                  <div class="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-red-400 to-orange-300 flex items-center justify-center shadow-sm overflow-hidden">
+                    <span class="text-2xl sm:text-3xl select-none drop-shadow-sm">🍕</span>
+                  </div>
                 </div>
-                <p class="text-sm text-italia-gray mt-1 leading-relaxed">
-                  Black truffle, buffalo mozzarella DOP, San Marzano tomato whisper,
-                  24-month Parmigiano, olive oil.
-                </p>
-                <p class="text-[11px] text-italia-gold-dark mt-1 font-medium">
-                  Monthly small-batch — black truffle, buffalo mozzarella DOP
-                </p>
-                <div class="flex items-center justify-between mt-3">
-                  <p class="pricetag text-italia-dark">PLN 47.90</p>
-                  <button class="btn-primary">+ Add</button>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <h3 class="font-heading font-semibold text-italia-dark">Quattro Formaggi</h3>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Vegetarian</span>
+                  </div>
+                  <p class="text-sm text-italia-gray mt-1 leading-relaxed line-clamp-3">
+                    Mozzarella, gorgonzola, fontina, Parmigiano Reggiano, honey drizzle
+                  </p>
+                  <p class="text-[11px] text-italia-gold-dark mt-1 font-medium">
+                    Pizzaiolo&apos;s pick — quietly his favourite to make
+                  </p>
                 </div>
               </div>
+
+              <div class="flex items-center gap-3 flex-wrap border-t border-gray-100 pt-3">
+                <span class="inline-flex items-center gap-1 text-[12px] text-italia-dark">
+                  <svg class="h-3.5 w-3.5 text-italia-gold" fill="currentColor" viewBox="0 0 24 24"><path d="m12 2 3 7h7l-5.6 4 2.1 7L12 16l-6.5 4 2.1-7L2 9h7Z"/></svg>
+                  4.7 <span class="text-italia-gray">(184)</span>
+                </span>
+                <span class="flex items-center gap-0.5 text-[11px] text-italia-gray">
+                  <svg class="h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 7v5l3 2"/></svg>
+                  10m
+                </span>
+                <span class="flex items-center gap-0.5 text-[11px] text-italia-gray">
+                  <svg class="h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2c-1 4 3 5 3 9a3 3 0 1 1-6 0c0-2 1-3 1-5 0-2-1-3 2-4Z"/></svg>
+                  840 kcal
+                </span>
+              </div>
+
+              <div class="flex items-center justify-between">
+                <p class="text-lg font-bold text-italia-dark">PLN 33.90</p>
+                <button class="inline-flex items-center justify-center font-medium transition-colors rounded-xl bg-italia-red text-white hover:bg-italia-red-dark text-sm px-3 py-1.5 min-h-[40px] min-w-[72px]">
+                  <svg class="h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/></svg>
+                  Add
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===================== ANCHOR: Pizza del Pizzaiolo ===================== -->
+          <div class="menu-item-enter" style="animation-delay:0.1s">
+            <div
+              class="relative flex flex-col gap-3 p-4 rounded-2xl border transition-all duration-300 bg-gradient-to-br from-italia-dark/[0.04] to-italia-gold/[0.06] border-italia-gold/40 shadow-md hover:shadow-lg hover:border-italia-gold/60"
+            >
+              <div class="absolute -top-2 right-3 flex flex-wrap justify-end gap-1 max-w-[min(100%,14rem)]">
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-italia-dark text-italia-cream shadow-sm">
+                  <!-- Lucide Crown -->
+                  <svg class="h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2 7l4.5 5L12 4l5.5 8L22 7l-1 12H3L2 7Z"/></svg>
+                  Chef's Signature
+                </span>
+              </div>
+
+              <div class="flex gap-4 items-start">
+                <div class="flex-shrink-0 self-center">
+                  <div class="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center shadow-md overflow-hidden"
+                       style="background: radial-gradient(circle at 30% 30%, #4b5563 0%, #1f2937 60%, #0b0d12 100%); color:#f5edcf">
+                    <span class="text-2xl sm:text-3xl select-none drop-shadow-sm">🍕</span>
+                  </div>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <h3 class="font-heading font-semibold text-italia-dark text-base sm:text-lg">
+                      Pizza del Pizzaiolo
+                    </h3>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Vegetarian</span>
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-italia-red/10 text-italia-red border border-italia-red/20">
+                      <svg class="h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 7v5l3 2"/></svg>
+                      46d left
+                    </span>
+                  </div>
+                  <p class="text-sm text-italia-gray mt-1 leading-relaxed line-clamp-3">
+                    Black truffle, buffalo mozzarella DOP, San Marzano tomato whisper,
+                    24-month Parmigiano, olive oil. The Pizzaiolo&apos;s signature — limited
+                    monthly batch.
+                  </p>
+                  <p class="text-[11px] text-italia-gold-dark mt-1 font-medium">
+                    Monthly small-batch — black truffle, buffalo mozzarella DOP
+                  </p>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-between">
+                <p class="text-lg font-bold text-italia-dark">PLN 47.90</p>
+                <button class="inline-flex items-center justify-center font-medium transition-colors rounded-xl bg-italia-red text-white hover:bg-italia-red-dark text-sm px-3 py-1.5 min-h-[40px] min-w-[72px]">
+                  <svg class="h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/></svg>
+                  Add
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===================== STANDARD: Diavola (popular) ===================== -->
+          <div class="menu-item-enter" style="animation-delay:0.15s">
+            <div
+              class="relative flex flex-col gap-3 p-4 rounded-2xl border transition-all duration-300 bg-white border-italia-gold/20 shadow-sm hover:shadow-md hover:border-italia-gold/30"
+            >
+              <div class="absolute -top-2 right-3 flex flex-wrap justify-end gap-1 max-w-[min(100%,14rem)]">
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-italia-red/10 text-italia-red shadow-sm">
+                  <svg class="h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M22 7 13.5 15.5l-5-5L2 17"/><path stroke-linecap="round" stroke-linejoin="round" d="M16 7h6v6"/></svg>
+                  Most Popular
+                </span>
+              </div>
+
+              <div class="flex gap-4 items-start">
+                <div class="flex-shrink-0 self-center">
+                  <div class="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-red-400 to-orange-300 flex items-center justify-center shadow-sm overflow-hidden">
+                    <span class="text-2xl sm:text-3xl select-none drop-shadow-sm">🍕</span>
+                  </div>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <h3 class="font-heading font-semibold text-italia-dark">Diavola</h3>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Spicy</span>
+                  </div>
+                  <p class="text-sm text-italia-gray mt-1 leading-relaxed line-clamp-3">
+                    San Marzano tomatoes, fior di latte, spicy salame calabrese, chili oil
+                  </p>
+                  <p class="text-[11px] text-italia-gold mt-1 font-medium">
+                    Pairs perfectly with espresso &amp; tiramisù
+                  </p>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-between">
+                <p class="text-lg font-bold text-italia-dark">PLN 31.90</p>
+                <button class="inline-flex items-center justify-center font-medium transition-colors rounded-xl bg-italia-red text-white hover:bg-italia-red-dark text-sm px-3 py-1.5 min-h-[40px] min-w-[72px]">
+                  <svg class="h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/></svg>
+                  Add
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===================== STANDARD: Prosciutto e Rucola ===================== -->
+          <div class="menu-item-enter" style="animation-delay:0.2s">
+            <div class="relative flex flex-col gap-3 p-4 rounded-2xl border transition-all duration-300 bg-white border-gray-100 hover:shadow-md hover:border-gray-200">
+              <div class="flex gap-4 items-start">
+                <div class="flex-shrink-0 self-center">
+                  <div class="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-red-400 to-orange-300 flex items-center justify-center shadow-sm overflow-hidden">
+                    <span class="text-2xl sm:text-3xl select-none drop-shadow-sm">🍕</span>
+                  </div>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <h3 class="font-heading font-semibold text-italia-dark">Prosciutto e Rucola</h3>
+                  </div>
+                  <p class="text-sm text-italia-gray mt-1 leading-relaxed line-clamp-3">
+                    Fior di latte, prosciutto crudo di Parma, wild arugula, shaved Parmigiano, olive oil
+                  </p>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-between">
+                <p class="text-lg font-bold text-italia-dark">PLN 34.90</p>
+                <button class="inline-flex items-center justify-center font-medium transition-colors rounded-xl bg-italia-red text-white hover:bg-italia-red-dark text-sm px-3 py-1.5 min-h-[40px] min-w-[72px]">
+                  <svg class="h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/></svg>
+                  Add
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===================== STANDARD: Ortolana ===================== -->
+          <div class="menu-item-enter" style="animation-delay:0.25s">
+            <div class="relative flex flex-col gap-3 p-4 rounded-2xl border transition-all duration-300 bg-white border-gray-100 hover:shadow-md hover:border-gray-200">
+              <div class="flex gap-4 items-start">
+                <div class="flex-shrink-0 self-center">
+                  <div class="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-red-400 to-orange-300 flex items-center justify-center shadow-sm overflow-hidden">
+                    <span class="text-2xl sm:text-3xl select-none drop-shadow-sm">🍕</span>
+                  </div>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <h3 class="font-heading font-semibold text-italia-dark">Ortolana</h3>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Vegetarian</span>
+                  </div>
+                  <p class="text-sm text-italia-gray mt-1 leading-relaxed line-clamp-3">
+                    Grilled zucchini, eggplant, bell peppers, cherry tomatoes, mozzarella, basil pesto
+                  </p>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-between">
+                <p class="text-lg font-bold text-italia-dark">PLN 30.90</p>
+                <button class="inline-flex items-center justify-center font-medium transition-colors rounded-xl bg-italia-red text-white hover:bg-italia-red-dark text-sm px-3 py-1.5 min-h-[40px] min-w-[72px]">
+                  <svg class="h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/></svg>
+                  Add
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- ============ STANDARDS (ordered by popularity) ============ -->
-        <div class="card-base relative">
-          <span class="absolute -top-2 right-3 chip chip-popular">📈 Most Popular</span>
-          <div class="flex gap-4 items-start">
-            <div class="img-pizza w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center shadow-sm shrink-0 text-3xl">🍕</div>
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2 flex-wrap">
-                <h3 class="font-heading font-semibold text-italia-dark">Diavola</h3>
-                <span class="chip chip-spicy">Spicy</span>
+        <!-- =============== Pasta peek (premium ends in 5) =============== -->
+        <h2 class="text-2xl font-heading font-bold text-italia-dark mt-10 mb-6">Pasta</h2>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div class="menu-item-enter" style="animation-delay:0s">
+            <div class="relative flex flex-col gap-3 p-4 rounded-2xl border transition-all duration-300 bg-white border-italia-gold/20 shadow-sm hover:shadow-md hover:border-italia-gold/30">
+              <div class="absolute -top-2 right-3 flex flex-wrap justify-end gap-1 max-w-[min(100%,14rem)]">
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-italia-gold/15 text-italia-gold-dark shadow-sm">
+                  <svg class="h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 13.87A4 4 0 0 1 7.41 6 5.11 5.11 0 0 1 17 6a4 4 0 0 1 1 7.87V21H6Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M6 17h12"/></svg>
+                  Pizzaiolo's Choice
+                </span>
               </div>
-              <p class="text-sm text-italia-gray mt-1 leading-relaxed">
-                San Marzano tomatoes, fior di latte, spicy salame calabrese, chili oil.
-              </p>
-              <p class="text-[11px] text-italia-gold mt-1 font-medium">
-                Pairs perfectly with espresso &amp; tiramisù
-              </p>
-              <div class="flex items-center justify-between mt-3">
-                <p class="pricetag text-italia-dark">
-                  <span class="strike">PLN 32.00</span>PLN 31.90
-                </p>
-                <button class="btn-primary">+ Add</button>
+              <div class="flex gap-4 items-start">
+                <div class="flex-shrink-0 self-center">
+                  <div class="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-300 flex items-center justify-center shadow-sm overflow-hidden">
+                    <span class="text-2xl sm:text-3xl select-none drop-shadow-sm">🍝</span>
+                  </div>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <h3 class="font-heading font-semibold text-italia-dark">Linguine al Pesto</h3>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Vegetarian</span>
+                  </div>
+                  <p class="text-sm text-italia-gray mt-1 leading-relaxed line-clamp-3">
+                    Fresh Genovese basil pesto, pine nuts, Parmigiano, extra virgin olive oil
+                  </p>
+                  <p class="text-[11px] text-italia-gold-dark mt-1 font-medium">
+                    Pizzaiolo&apos;s pick — quietly his favourite to make
+                  </p>
+                </div>
+              </div>
+              <div class="flex items-center justify-between">
+                <p class="text-lg font-bold text-italia-dark">PLN 26.95</p>
+                <button class="inline-flex items-center justify-center font-medium transition-colors rounded-xl bg-italia-red text-white hover:bg-italia-red-dark text-sm px-3 py-1.5 min-h-[40px] min-w-[72px]">
+                  <svg class="h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/></svg>
+                  Add
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="menu-item-enter" style="animation-delay:0.05s">
+            <div class="relative flex flex-col gap-3 p-4 rounded-2xl border transition-all duration-300 bg-white border-gray-100 hover:shadow-md hover:border-gray-200">
+              <div class="flex gap-4 items-start">
+                <div class="flex-shrink-0 self-center">
+                  <div class="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-300 flex items-center justify-center shadow-sm overflow-hidden">
+                    <span class="text-2xl sm:text-3xl select-none drop-shadow-sm">🍝</span>
+                  </div>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <h3 class="font-heading font-semibold text-italia-dark">Spaghetti Carbonara</h3>
+                  <p class="text-sm text-italia-gray mt-1 leading-relaxed line-clamp-3">
+                    Guanciale, egg yolk, Pecorino Romano, black pepper — the authentic Roman way
+                  </p>
+                </div>
+              </div>
+              <div class="flex items-center justify-between">
+                <p class="text-lg font-bold text-italia-dark">PLN 28.95</p>
+                <button class="inline-flex items-center justify-center font-medium transition-colors rounded-xl bg-italia-red text-white hover:bg-italia-red-dark text-sm px-3 py-1.5 min-h-[40px] min-w-[72px]">
+                  <svg class="h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/></svg>
+                  Add
+                </button>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="card-base">
-          <div class="flex gap-4 items-start">
-            <div class="img-pizza w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center shadow-sm shrink-0 text-3xl">🍕</div>
-            <div class="flex-1 min-w-0">
-              <h3 class="font-heading font-semibold text-italia-dark">Prosciutto e Rucola</h3>
-              <p class="text-sm text-italia-gray mt-1 leading-relaxed">
-                Fior di latte, prosciutto crudo di Parma, wild arugula, shaved
-                Parmigiano, olive oil.
-              </p>
-              <div class="flex items-center justify-between mt-3">
-                <p class="pricetag text-italia-dark">
-                  <span class="strike">PLN 35.00</span>PLN 34.90
-                </p>
-                <button class="btn-primary">+ Add</button>
+        <!-- =============== Drinks peek (espresso ends in 9 + profit-driver badge) =============== -->
+        <h2 class="text-2xl font-heading font-bold text-italia-dark mt-10 mb-6">Drinks</h2>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div class="menu-item-enter" style="animation-delay:0s">
+            <div class="relative flex flex-col gap-3 p-4 rounded-2xl border transition-all duration-300 bg-white border-italia-gold/20 shadow-sm hover:shadow-md hover:border-italia-gold/30">
+              <div class="absolute -top-2 right-3 flex flex-wrap justify-end gap-1 max-w-[min(100%,14rem)]">
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-italia-gold/15 text-italia-gold-dark shadow-sm">
+                  <svg class="h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 13.87A4 4 0 0 1 7.41 6 5.11 5.11 0 0 1 17 6a4 4 0 0 1 1 7.87V21H6Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M6 17h12"/></svg>
+                  Pizzaiolo's Choice
+                </span>
+              </div>
+              <div class="flex gap-4 items-start">
+                <div class="flex-shrink-0 self-center">
+                  <div class="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-blue-400 to-cyan-300 flex items-center justify-center shadow-sm overflow-hidden">
+                    <span class="text-2xl sm:text-3xl select-none drop-shadow-sm">☕</span>
+                  </div>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <h3 class="font-heading font-semibold text-italia-dark">Espresso</h3>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Vegan</span>
+                  </div>
+                  <p class="text-sm text-italia-gray mt-1 leading-relaxed line-clamp-3">
+                    Italian-roasted espresso shot
+                  </p>
+                  <p class="text-[11px] text-italia-gold-dark mt-1 font-medium">
+                    Pizzaiolo&apos;s pick — quietly his favourite to make
+                  </p>
+                </div>
+              </div>
+              <div class="flex items-center justify-between">
+                <p class="text-lg font-bold text-italia-dark">PLN 7.90</p>
+                <button class="inline-flex items-center justify-center font-medium transition-colors rounded-xl bg-italia-red text-white hover:bg-italia-red-dark text-sm px-3 py-1.5 min-h-[40px] min-w-[72px]">
+                  <svg class="h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/></svg>
+                  Add
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="menu-item-enter" style="animation-delay:0.05s">
+            <div class="relative flex flex-col gap-3 p-4 rounded-2xl border transition-all duration-300 bg-white border-gray-100 hover:shadow-md hover:border-gray-200">
+              <div class="flex gap-4 items-start">
+                <div class="flex-shrink-0 self-center">
+                  <div class="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-blue-400 to-cyan-300 flex items-center justify-center shadow-sm overflow-hidden">
+                    <span class="text-2xl sm:text-3xl select-none drop-shadow-sm">🍋</span>
+                  </div>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <h3 class="font-heading font-semibold text-italia-dark">Limonata Fresca</h3>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Vegan</span>
+                  </div>
+                  <p class="text-sm text-italia-gray mt-1 leading-relaxed line-clamp-3">
+                    House-made Sicilian lemonade with fresh mint
+                  </p>
+                </div>
+              </div>
+              <div class="flex items-center justify-between">
+                <p class="text-lg font-bold text-italia-dark">PLN 11.90</p>
+                <button class="inline-flex items-center justify-center font-medium transition-colors rounded-xl bg-italia-red text-white hover:bg-italia-red-dark text-sm px-3 py-1.5 min-h-[40px] min-w-[72px]">
+                  <svg class="h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/></svg>
+                  Add
+                </button>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="card-base">
-          <div class="flex gap-4 items-start">
-            <div class="img-pizza w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center shadow-sm shrink-0 text-3xl">🍕</div>
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2 flex-wrap">
-                <h3 class="font-heading font-semibold text-italia-dark">Ortolana</h3>
-                <span class="chip chip-veg">Vegetarian</span>
-              </div>
-              <p class="text-sm text-italia-gray mt-1 leading-relaxed">
-                Grilled zucchini, eggplant, bell peppers, cherry tomatoes, mozzarella,
-                basil pesto.
-              </p>
-              <div class="flex items-center justify-between mt-3">
-                <p class="pricetag text-italia-dark">
-                  <span class="strike">PLN 31.00</span>PLN 30.90
-                </p>
-                <button class="btn-primary">+ Add</button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <footer class="mt-14 mb-8 text-xs text-italia-gray border-t border-gray-100 pt-6 leading-relaxed">
+          <p>
+            Mockup — Sud Italia · Audit §4 (Menu Engineering &amp; Pricing Psychology).
+            DOM and class names mirror <code class="font-mono text-[11px] bg-gray-100 px-1 py-0.5 rounded">src/components/location/MenuItem.tsx</code>
+            and <code class="font-mono text-[11px] bg-gray-100 px-1 py-0.5 rounded">src/components/location/MenuSection.tsx</code>.
+            CSS rules <code class="font-mono text-[11px] bg-gray-100 px-1 py-0.5 rounded">.menu-search</code> /
+            <code class="font-mono text-[11px] bg-gray-100 px-1 py-0.5 rounded">.menu-item-enter</code> /
+            <code class="font-mono text-[11px] bg-gray-100 px-1 py-0.5 rounded">.category-pill</code> are copied verbatim from
+            <code class="font-mono text-[11px] bg-gray-100 px-1 py-0.5 rounded">src/app/globals.css</code> (lines 3845-3913).
+            Strikethrough prices in the diff section are reviewer-only and never appear on the live card.
+            The 46-day countdown is computed from <code class="font-mono text-[11px] bg-gray-100 px-1 py-0.5 rounded">limitedUntil = 2026-06-30</code>
+            against the audit's 2026-05-15 timestamp.
+          </p>
+        </footer>
       </div>
-
-      <!-- pasta peek so reviewer sees premium-ending-in-5 -->
-      <h2 class="font-heading text-2xl font-bold text-italia-dark mt-10 mb-4">Pasta</h2>
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div class="card-base card-profit relative">
-          <span class="absolute -top-2 right-3 chip chip-pizzaiolo">👨‍🍳 Pizzaiolo's Choice</span>
-          <div class="flex gap-4 items-start">
-            <div class="img-pasta w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center shadow-sm shrink-0 text-3xl">🍝</div>
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2 flex-wrap">
-                <h3 class="font-heading font-semibold text-italia-dark">Linguine al Pesto</h3>
-                <span class="chip chip-veg">Vegetarian</span>
-              </div>
-              <p class="text-sm text-italia-gray mt-1 leading-relaxed">
-                Fresh Genovese basil pesto, pine nuts, Parmigiano, extra virgin olive oil.
-              </p>
-              <p class="text-[11px] text-italia-gold-dark mt-1 font-medium">
-                Pizzaiolo's pick — quietly his favourite to make
-              </p>
-              <div class="flex items-center justify-between mt-3">
-                <p class="pricetag text-italia-dark">
-                  <span class="strike">PLN 27.00</span>PLN 26.95
-                </p>
-                <button class="btn-primary">+ Add</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card-base">
-          <div class="flex gap-4 items-start">
-            <div class="img-pasta w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center shadow-sm shrink-0 text-3xl">🍝</div>
-            <div class="flex-1 min-w-0">
-              <h3 class="font-heading font-semibold text-italia-dark">Spaghetti Carbonara</h3>
-              <p class="text-sm text-italia-gray mt-1 leading-relaxed">
-                Guanciale, egg yolk, Pecorino Romano, black pepper — the authentic
-                Roman way.
-              </p>
-              <div class="flex items-center justify-between mt-3">
-                <p class="pricetag text-italia-dark">
-                  <span class="strike">PLN 29.00</span>PLN 28.95
-                </p>
-                <button class="btn-primary">+ Add</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- drinks peek to show espresso-ends-in-9 + profit-driver badge -->
-      <h2 class="font-heading text-2xl font-bold text-italia-dark mt-10 mb-4">Drinks</h2>
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div class="card-base card-profit relative">
-          <span class="absolute -top-2 right-3 chip chip-pizzaiolo">👨‍🍳 Pizzaiolo's Choice</span>
-          <div class="flex gap-4 items-start">
-            <div class="img-drinks w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center shadow-sm shrink-0 text-3xl">☕</div>
-            <div class="flex-1 min-w-0">
-              <h3 class="font-heading font-semibold text-italia-dark">Espresso</h3>
-              <p class="text-sm text-italia-gray mt-1 leading-relaxed">
-                Italian-roasted espresso shot — the highest-leverage attachment.
-              </p>
-              <p class="text-[11px] text-italia-gold-dark mt-1 font-medium">
-                Pizzaiolo's pick — quietly his favourite to make
-              </p>
-              <div class="flex items-center justify-between mt-3">
-                <p class="pricetag text-italia-dark">
-                  <span class="strike">PLN 8.00</span>PLN 7.90
-                </p>
-                <button class="btn-primary">+ Add</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card-base">
-          <div class="flex gap-4 items-start">
-            <div class="img-drinks w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center shadow-sm shrink-0 text-3xl">🍋</div>
-            <div class="flex-1 min-w-0">
-              <h3 class="font-heading font-semibold text-italia-dark">Limonata Fresca</h3>
-              <p class="text-sm text-italia-gray mt-1 leading-relaxed">
-                House-made Sicilian lemonade with fresh mint.
-              </p>
-              <div class="flex items-center justify-between mt-3">
-                <p class="pricetag text-italia-dark">
-                  <span class="strike">PLN 12.00</span>PLN 11.90
-                </p>
-                <button class="btn-primary">+ Add</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <footer class="mt-12 mb-6 text-xs text-italia-gray border-t border-gray-100 pt-6">
-        <p>
-          Mockup — Sud Italia · Menu Engineering &amp; Pricing Psychology · Audit §4.
-          Strikethrough prices show the pre-change values for reviewer reference and
-          are <em>not</em> rendered in the production card. The 46-day LTO countdown
-          is computed from <code class="font-mono text-[11px] bg-gray-100 px-1 py-0.5 rounded">limitedUntil = 2026-06-30</code>
-          against the audit document's 2026-05-15 timestamp.
-        </p>
-      </footer>
-    </main>
+    </section>
   </body>
 </html>
