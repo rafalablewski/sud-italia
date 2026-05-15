@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  clearWaSession,
   getOrderByStripePaymentIntent,
   updateOrder,
   updateOrderStatus,
@@ -56,7 +57,7 @@ export async function POST(req: NextRequest) {
 
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
-      const { orderId } = session.metadata ?? {};
+      const { orderId, channel, customerPhone } = session.metadata ?? {};
 
       if (orderId && session.payment_status === "paid") {
         // Capture the Stripe correlation ids so admin refunds can target the
@@ -72,6 +73,11 @@ export async function POST(req: NextRequest) {
           stripeSessionId: session.id,
           stripePaymentIntentId: paymentIntentId ?? undefined,
         });
+        // For WhatsApp-channel orders, the session has done its job —
+        // wipe it so the customer's next message starts fresh.
+        if (channel === "whatsapp" && customerPhone) {
+          await clearWaSession(customerPhone);
+        }
       }
     }
 

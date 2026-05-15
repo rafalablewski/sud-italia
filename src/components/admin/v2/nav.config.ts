@@ -106,6 +106,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/admin/loyalty", label: "Loyalty", icon: Heart, shortcut: "l", requiredRole: "staff" },
       { href: "/admin/corporate", label: "Corporate", icon: Building2, requiredRole: "manager" },
       { href: "/admin/feedback", label: "Feedback", icon: MessageSquare, requiredRole: "manager" },
+      { href: "/admin/whatsapp", label: "WhatsApp", icon: MessageSquare, requiredRole: "manager" },
     ],
   },
   {

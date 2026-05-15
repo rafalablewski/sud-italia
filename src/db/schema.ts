@@ -829,3 +829,30 @@ export const allergenIncidents = pgTable(
     index("allergen_incidents_severity_idx").on(table.severity),
   ],
 );
+
+/**
+ * Per-message WhatsApp transcript log. Replaces the kv_store ring buffer
+ * so a high-traffic chat doesn't take a global lock on every send. One
+ * row per inbound/outbound; indexes cover the two access patterns the
+ * admin uses: "transcript for one phone, newest first" and "distinct
+ * phones with their last activity".
+ */
+export const whatsappMessages = pgTable(
+  "whatsapp_messages",
+  {
+    id: text("id").primaryKey(),
+    phone: text("phone").notNull(),
+    at: timestamp("at", { withTimezone: true }).notNull(),
+    direction: text("direction").notNull(), // "in" | "out"
+    kind: text("kind").notNull(),
+    body: text("body").notNull().default(""),
+    meta: jsonb("meta"),
+    actor: text("actor").notNull(), // "customer" | "bot" | "operator" | "system"
+  },
+  (table) => [
+    // Per-phone transcript queries — newest first.
+    index("whatsapp_messages_phone_at_idx").on(table.phone, table.at),
+    // Used by listWaTranscriptHeads to find recently-active phones.
+    index("whatsapp_messages_at_idx").on(table.at),
+  ],
+);

@@ -331,6 +331,11 @@ export interface Order {
    *  taps "Assign driver" on the order detail. Used to scope driver-
    *  facing views and to compute delivery margin in m2_14. */
   assignedDriverId?: string;
+  /** Origin channel for the order. Defaults to "web" when absent so
+   *  legacy rows still resolve. The comms dispatcher uses this to pick
+   *  the right outbound transport — WhatsApp replies for whatsapp
+   *  orders, SMS otherwise. */
+  channel?: "web" | "whatsapp";
 }
 
 // --- Inventory (per-location stock for an ingredient) ---
