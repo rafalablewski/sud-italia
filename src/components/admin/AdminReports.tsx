@@ -13,6 +13,7 @@ import {
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
+import { BundleAnalyticsCard } from "./BundleAnalyticsCard";
 import { formatPrice } from "@/lib/utils";
 import { useAdminLocation } from "./v2/LocationContext";
 import { useToast } from "./v2/ui/Toast";
@@ -481,7 +482,19 @@ export function AdminReports() {
         </Card>
       </section>
 
+      <section>
+        <BundleAnalyticsCard locationSlug={location || undefined} days={presetDays(preset)} />
+      </section>
+
       {loading && <div className="v2-page-loading">Loading…</div>}
     </div>
   );
+}
+
+function presetDays(preset: string): number {
+  if (preset === "today") return 1;
+  if (preset === "7d") return 7;
+  if (preset === "30d") return 30;
+  if (preset === "90d") return 90;
+  return 30;
 }

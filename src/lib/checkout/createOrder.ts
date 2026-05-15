@@ -2,12 +2,14 @@ import { generateOrderId } from "@/lib/utils";
 import { getMenuWithOverrides } from "@/data/menus";
 import {
   addNotification,
+  appendBundleEvent,
   createOrder,
   getCustomer,
   getSlotById,
   getUpsellSettings,
   incrementSlotOrders,
 } from "@/lib/store";
+import { resolveCustomerVariant } from "@/lib/experiments";
 import type { CartItem, FulfillmentType, Order } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
 import {
@@ -148,27 +150,48 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
   const locationConfig = upsellSettings[input.locationSlug] || null;
 
   let bundleSubtotal: number | null = null;
+  let bundleAuditPayload: {
+    bundleId: string;
+    bundleName: string;
+    pricingMode: "fixed" | "dynamic";
+    mainsCount: number;
+    mainsSubtotalGrosze: number;
+    addOnsSubtotalGrosze: number;
+    refPriceGrosze: number;
+    finalPriceGrosze: number;
+    savingsGrosze: number;
+    experimentVariant?: string;
+  } | null = null;
   if (input.appliedBundleId) {
-    const bundle = findBundle(
-      input.appliedBundleId,
-      (locationConfig as { bundles?: BundleTier[] } | null)?.bundles ?? null,
-    );
+    // Resolve experiment variant first — phone-hashed, stable across
+    // retries. Variant may override discount %s on the bundle config.
+    const variant = await resolveCustomerVariant(input.locationSlug, phoneE164);
+    const configBundles = (locationConfig as { bundles?: BundleTier[] } | null)?.bundles ?? null;
+    const variantBundles = variant
+      ? configBundles?.map((b) => variant.applyToBundle(b)) ?? null
+      : configBundles;
+    const bundle = findBundle(input.appliedBundleId, variantBundles);
     if (bundle && cartSatisfiesBundle(bundle, orderItems, menuItems)) {
-      // computeBundlePrice handles both fixed and dynamic tiers — for
-      // dynamic Family Feast it recomputes from the cart's actual mains
-      // count × menu × discount, mirroring what the client showed.
       const pricing = computeBundlePrice(bundle, orderItems, menuItems);
       if (pricing) {
         // Snapshot guard: never charge more than the chip promised.
-        // Lower of (server-computed, client-shown) protects the customer
-        // when an admin raised the discount mid-checkout AND protects
-        // the operator when an admin lowered it (server-side is the
-        // current truth → customer benefits, never the reverse).
         const clientSnapshot = input.appliedBundlePriceGrosze;
         bundleSubtotal =
           typeof clientSnapshot === "number" && clientSnapshot >= 0
             ? Math.min(pricing.priceGrosze, clientSnapshot)
             : pricing.priceGrosze;
+        bundleAuditPayload = {
+          bundleId: bundle.id,
+          bundleName: bundle.name,
+          pricingMode: bundle.pricingMode === "dynamic" ? "dynamic" : "fixed",
+          mainsCount: pricing.mainsCount,
+          mainsSubtotalGrosze: pricing.mainsSubtotal,
+          addOnsSubtotalGrosze: pricing.addOnsSubtotal,
+          refPriceGrosze: pricing.refPriceGrosze,
+          finalPriceGrosze: bundleSubtotal,
+          savingsGrosze: Math.max(0, pricing.refPriceGrosze - bundleSubtotal),
+          experimentVariant: variant?.variantId,
+        };
       }
     }
   }
@@ -243,6 +266,29 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
   };
 
   await createOrder(order);
+
+  // Bundle audit — capture pricing snapshot + experiment variant for
+  // later cannibalization / margin / A-vs-B analysis. Fire-and-forget;
+  // a write failure here doesn't unwind the order.
+  if (bundleAuditPayload) {
+    void appendBundleEvent({
+      id: `bev_${orderId}`,
+      orderId,
+      bundleId: bundleAuditPayload.bundleId,
+      bundleName: bundleAuditPayload.bundleName,
+      locationSlug: input.locationSlug,
+      pricingMode: bundleAuditPayload.pricingMode,
+      mainsCount: bundleAuditPayload.mainsCount,
+      mainsSubtotalGrosze: bundleAuditPayload.mainsSubtotalGrosze,
+      addOnsSubtotalGrosze: bundleAuditPayload.addOnsSubtotalGrosze,
+      refPriceGrosze: bundleAuditPayload.refPriceGrosze,
+      finalPriceGrosze: bundleAuditPayload.finalPriceGrosze,
+      savingsGrosze: bundleAuditPayload.savingsGrosze,
+      customerPhone: phoneE164,
+      experimentVariant: bundleAuditPayload.experimentVariant,
+      createdAt: new Date().toISOString(),
+    });
+  }
 
   await addNotification({
     type: "new_order",

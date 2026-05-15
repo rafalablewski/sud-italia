@@ -83,8 +83,16 @@ export interface BundleConfig {
   minMains?: number;
   /** Optional cap so a 50-pizza cart can't abuse the discount. */
   maxMains?: number;
-  /** 0–50. Applied to (mains à la carte + cheapest-add-ons subtotal). */
+  /** 0–50. Applied to (mains à la carte + cheapest-add-ons subtotal)
+   *  when the split-mode fields are not set. */
   discountPercent?: number;
+  /** Split-discount mode: separate %s for mains vs add-ons so the
+   *  operator can protect demand-anchor (pizza) margin while still
+   *  giving away the high-GM attachments. */
+  mainsDiscountPercent?: number;
+  addOnsDiscountPercent?: number;
+  /** Optional loyalty gate. */
+  requiredTier?: "gold" | "platinum";
 }
 
 export interface BundleRulesConfig {
@@ -930,9 +938,13 @@ export function TimeWindowsEditor({
 
 export function BundlesEditor({
   bundles,
+  menu,
   onChange,
 }: {
   bundles: BundleConfig[];
+  /** Location menu — threaded down so each tier can render a live
+   *  margin preview using MenuItem.cost data. */
+  menu: MenuItem[];
   onChange: (next: BundleConfig[]) => void;
 }) {
   const lunchBundles = bundles.filter((b) => b.mealPeriod === "lunch");
@@ -998,6 +1010,7 @@ export function BundlesEditor({
         <BundleLadderSection
           title="Lunch ladder"
           bundles={lunchBundles}
+          menu={menu}
           onUpdate={update}
           onRemove={remove}
           onAdd={() => addBundle("lunch")}
@@ -1005,6 +1018,7 @@ export function BundlesEditor({
         <BundleLadderSection
           title="Family Feast ladder"
           bundles={familyBundles}
+          menu={menu}
           onUpdate={update}
           onRemove={remove}
           onAdd={() => addBundle("family")}
@@ -1017,12 +1031,14 @@ export function BundlesEditor({
 function BundleLadderSection({
   title,
   bundles,
+  menu,
   onUpdate,
   onRemove,
   onAdd,
 }: {
   title: string;
   bundles: BundleConfig[];
+  menu: MenuItem[];
   onUpdate: (id: string, patch: Partial<BundleConfig>) => void;
   onRemove: (id: string) => void;
   onAdd: () => void;
@@ -1047,6 +1063,7 @@ function BundleLadderSection({
             <BundleTierRow
               key={b.id}
               bundle={b}
+              menu={menu}
               onChange={(patch) => onUpdate(b.id, patch)}
               onRemove={() => onRemove(b.id)}
             />
@@ -1059,10 +1076,12 @@ function BundleLadderSection({
 
 function BundleTierRow({
   bundle,
+  menu,
   onChange,
   onRemove,
 }: {
   bundle: BundleConfig;
+  menu: MenuItem[];
   onChange: (patch: Partial<BundleConfig>) => void;
   onRemove: () => void;
 }) {
@@ -1191,6 +1210,7 @@ function BundleTierRow({
                 min={0}
                 max={50}
                 value={bundle.discountPercent ?? 20}
+                disabled={bundle.mainsDiscountPercent !== undefined && bundle.addOnsDiscountPercent !== undefined}
                 onChange={(e) =>
                   onChange({ discountPercent: clampHour(Number(e.target.value) || 0, 50) })
                 }
@@ -1223,32 +1243,110 @@ function BundleTierRow({
               />
             </label>
           </div>
-          <div>
-            <label className="text-[10px] text-slate-400 block mb-1.5">Mains scale on these categories</label>
-            <div className="flex flex-wrap gap-1.5">
-              {(["pizza", "pasta"] as const).map((cat) => {
-                const selected = mainsSet.has(cat);
-                return (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() => {
-                      const next = new Set(mainsSet);
-                      if (selected) next.delete(cat); else next.add(cat);
-                      onChange({ mainCategories: Array.from(next) });
-                    }}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
-                      selected
-                        ? "bg-italia-red/20 text-italia-red border border-italia-red/30"
-                        : "bg-white/5 text-slate-400 border border-white/10 hover:border-white/25"
-                    }`}
-                  >
-                    {selected && <Check className="h-3 w-3 inline mr-1" />}
-                    {cat}
-                  </button>
-                );
-              })}
+
+          {/* Split-discount: protect mains margin while keeping add-on
+              savings compelling. When unset, both default to the single
+              discountPercent field above. */}
+          <div className="rounded-md border border-white/10 bg-white/5 p-2 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] uppercase tracking-wide admin-text-secondary font-semibold">
+                Split discount (advanced)
+              </label>
+              <label className="inline-flex items-center gap-1 text-[11px] admin-text-secondary">
+                <input
+                  type="checkbox"
+                  checked={bundle.mainsDiscountPercent !== undefined || bundle.addOnsDiscountPercent !== undefined}
+                  onChange={(e) =>
+                    onChange(
+                      e.target.checked
+                        ? {
+                            mainsDiscountPercent: bundle.mainsDiscountPercent ?? Math.max(0, (bundle.discountPercent ?? 20) - 10),
+                            addOnsDiscountPercent: bundle.addOnsDiscountPercent ?? Math.min(50, (bundle.discountPercent ?? 20) + 10),
+                          }
+                        : { mainsDiscountPercent: undefined, addOnsDiscountPercent: undefined },
+                    )
+                  }
+                />
+                Enable
+              </label>
             </div>
+            {(bundle.mainsDiscountPercent !== undefined || bundle.addOnsDiscountPercent !== undefined) && (
+              <div className="grid gap-2 md:grid-cols-2">
+                <label className="flex items-center gap-1 text-xs admin-text-secondary">
+                  Mains %
+                  <input
+                    className="glass-input w-20 text-right"
+                    type="number"
+                    min={0}
+                    max={50}
+                    value={bundle.mainsDiscountPercent ?? 0}
+                    onChange={(e) =>
+                      onChange({ mainsDiscountPercent: clampHour(Number(e.target.value) || 0, 50) })
+                    }
+                  />
+                </label>
+                <label className="flex items-center gap-1 text-xs admin-text-secondary">
+                  Add-ons %
+                  <input
+                    className="glass-input w-20 text-right"
+                    type="number"
+                    min={0}
+                    max={50}
+                    value={bundle.addOnsDiscountPercent ?? 0}
+                    onChange={(e) =>
+                      onChange({ addOnsDiscountPercent: clampHour(Number(e.target.value) || 0, 50) })
+                    }
+                  />
+                </label>
+              </div>
+            )}
+            <p className="text-[10px] text-slate-500">
+              Higher add-on % protects pizza margin while keeping savings compelling on drinks/desserts.
+            </p>
+          </div>
+
+          <div className="grid gap-2 md:grid-cols-2">
+            <div>
+              <label className="text-[10px] text-slate-400 block mb-1.5">Mains scale on these categories</label>
+              <div className="flex flex-wrap gap-1.5">
+                {(["pizza", "pasta"] as const).map((cat) => {
+                  const selected = mainsSet.has(cat);
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => {
+                        const next = new Set(mainsSet);
+                        if (selected) next.delete(cat); else next.add(cat);
+                        onChange({ mainCategories: Array.from(next) });
+                      }}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+                        selected
+                          ? "bg-italia-red/20 text-italia-red border border-italia-red/30"
+                          : "bg-white/5 text-slate-400 border border-white/10 hover:border-white/25"
+                      }`}
+                    >
+                      {selected && <Check className="h-3 w-3 inline mr-1" />}
+                      {cat}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <label className="block">
+              <span className="text-[10px] text-slate-400 block mb-1.5">Loyalty gate (optional)</span>
+              <select
+                className="glass-input text-sm w-full"
+                value={bundle.requiredTier ?? ""}
+                onChange={(e) =>
+                  onChange({ requiredTier: e.target.value === "" ? undefined : (e.target.value as "gold" | "platinum") })
+                }
+              >
+                <option value="">All customers</option>
+                <option value="gold">Gold & Platinum only</option>
+                <option value="platinum">Platinum only</option>
+              </select>
+            </label>
           </div>
           <p className="text-[10px] text-slate-500">
             Bundle price = (mains-in-cart × menu price + cheapest add-ons) × (1 − discount/100). Composition below
@@ -1302,6 +1400,130 @@ function BundleTierRow({
         excludeCategories={isDynamic ? Array.from(mainsSet) : []}
         onChange={(composition) => onChange({ composition })}
       />
+
+      <BundleMarginPreview bundle={bundle} menu={menu} />
+    </div>
+  );
+}
+
+/**
+ * Live margin preview for a single bundle tier. Shows the bundle price
+ * and the estimated contribution margin at a few sample cart sizes,
+ * computed off `MenuItem.cost` so the operator can see whether their
+ * configured discount % is still profitable before saving. Critical
+ * during admin tuning — without it the operator flies blind.
+ */
+function BundleMarginPreview({
+  bundle,
+  menu,
+}: {
+  bundle: BundleConfig;
+  menu: MenuItem[];
+}) {
+  const isDynamic = (bundle.pricingMode ?? "fixed") === "dynamic";
+
+  // Pick a representative main for dynamic bundles — defaults to the
+  // cheapest pizza so the preview reflects the most common entry-level
+  // cart shape. Admins eyeballing "what if customer adds a premium
+  // pizza" can verify by adjusting menu prices in /admin/menu.
+  const samplePizza = menu
+    .filter((m) => m.available && m.category === "pizza")
+    .sort((a, b) => a.price - b.price)[0];
+
+  const cheapestByCat = useCallback(
+    (cat: string) =>
+      menu
+        .filter((m) => m.available && m.category === cat)
+        .sort((a, b) => a.price - b.price)[0],
+    [menu],
+  );
+
+  // Compute price + margin at N mains. Mirrors lib/bundles
+  // computeBundlePrice for dynamic; uses stored fixed price otherwise.
+  const sampleAt = (mains: number): { price: number; cost: number; margin: number } | null => {
+    if (!isDynamic) {
+      const price = bundle.priceGrosze ?? 0;
+      if (price === 0) return null;
+      // Fixed-bundle cost: sum each slot's cheapest candidate × qty.
+      let cost = 0;
+      for (const slot of bundle.composition) {
+        const candidate =
+          slot.kind === "item"
+            ? menu.find((m) => m.available && m.id.endsWith(slot.itemIdSuffix ?? ""))
+            : cheapestByCat(slot.category ?? "");
+        if (!candidate) return null;
+        cost += (candidate.cost ?? 0) * slot.quantity;
+      }
+      return { price, cost, margin: price === 0 ? 0 : (price - cost) / price };
+    }
+    if (!samplePizza) return null;
+    if (mains < (bundle.minMains ?? 1)) return null;
+    if (bundle.maxMains && mains > bundle.maxMains) return null;
+    const mainsSubtotal = samplePizza.price * mains;
+    const mainsCost = (samplePizza.cost ?? 0) * mains;
+    let addOnsSubtotal = 0;
+    let addOnsCost = 0;
+    for (const slot of bundle.composition) {
+      const candidate =
+        slot.kind === "item"
+          ? menu.find((m) => m.available && m.id.endsWith(slot.itemIdSuffix ?? ""))
+          : cheapestByCat(slot.category ?? "");
+      if (!candidate) return null;
+      addOnsSubtotal += candidate.price * slot.quantity;
+      addOnsCost += (candidate.cost ?? 0) * slot.quantity;
+    }
+    const mainsPct = bundle.mainsDiscountPercent ?? bundle.discountPercent ?? 0;
+    const addOnsPct = bundle.addOnsDiscountPercent ?? bundle.discountPercent ?? 0;
+    const price = Math.round(
+      mainsSubtotal * (1 - mainsPct / 100) + addOnsSubtotal * (1 - addOnsPct / 100),
+    );
+    const cost = mainsCost + addOnsCost;
+    const margin = price === 0 ? 0 : (price - cost) / price;
+    return { price, cost, margin };
+  };
+
+  const samples = isDynamic
+    ? [Math.max(2, bundle.minMains ?? 2), Math.max(3, (bundle.minMains ?? 2) + 1)]
+        .filter((n, i, a) => a.indexOf(n) === i)
+        .map((n) => ({ n, sample: sampleAt(n) }))
+    : [{ n: 0, sample: sampleAt(0) }];
+
+  const anyMarginSample = samples.find((s) => s.sample !== null)?.sample;
+  if (!anyMarginSample) {
+    return (
+      <div className="mt-2 rounded-md border border-amber-400/30 bg-amber-400/5 px-2 py-1.5 text-[11px] text-amber-300">
+        Margin preview unavailable — composition slots don&rsquo;t resolve at this location&rsquo;s menu.
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-2 rounded-md border border-emerald-400/20 bg-emerald-400/5 px-2 py-1.5 text-[11px] admin-text-secondary">
+      <span className="font-semibold uppercase tracking-wide text-emerald-300">Live margin preview</span>
+      <span className="mx-1 text-slate-500">·</span>
+      {samples.map(({ n, sample }, i) => (
+        <span key={n}>
+          {i > 0 && <span className="mx-1 text-slate-600">·</span>}
+          {isDynamic && <span className="text-slate-400">@{n} mains</span>}{" "}
+          <span className="admin-text">
+            {sample ? `zł ${(sample.price / 100).toFixed(2)}` : "—"}
+          </span>{" "}
+          <span
+            className={
+              sample && sample.margin >= 0.4
+                ? "text-emerald-300 font-semibold"
+                : sample && sample.margin >= 0.25
+                  ? "text-amber-300 font-semibold"
+                  : "text-red-300 font-semibold"
+            }
+          >
+            {sample ? `${Math.round(sample.margin * 100)}% margin` : ""}
+          </span>
+        </span>
+      ))}
+      <p className="text-[10px] text-slate-500 mt-0.5">
+        Uses MenuItem.cost + cheapest-add-on per slot. Margin below 40% = re-check; below 25% = bleeding.
+      </p>
     </div>
   );
 }

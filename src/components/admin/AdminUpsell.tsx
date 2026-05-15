@@ -113,6 +113,7 @@ export function AdminUpsell() {
           </p>
           <BundlesEditor
             bundles={config.bundles ?? DEFAULT_BUNDLES_FALLBACK}
+            menu={loc.menu}
             onChange={(bundles) => updateConfig({ bundles })}
           />
         </div>

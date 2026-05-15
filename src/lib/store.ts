@@ -3931,6 +3931,52 @@ export async function getUpsellSettings(): Promise<UpsellSettings> {
   return migrateLegacyMealDeal(raw);
 }
 
+// ─── Bundle audit log (Sprint 3 #12) ─────────────────────────────────────
+//
+// Every order that applies a bundle writes one event here so the operator
+// can answer the cannibalization / margin / tier-mix questions the §3.2
+// red-team audit raised. Append-only JSON; readers aggregate live.
+
+export interface BundleEvent {
+  id: string;
+  orderId: string;
+  bundleId: string;
+  bundleName: string;
+  locationSlug: string;
+  pricingMode: "fixed" | "dynamic";
+  mainsCount: number;
+  mainsSubtotalGrosze: number;
+  addOnsSubtotalGrosze: number;
+  refPriceGrosze: number;
+  finalPriceGrosze: number;
+  savingsGrosze: number;
+  customerPhone: string;
+  /** Experiment variant id when an A/B was running for this customer. */
+  experimentVariant?: string;
+  createdAt: string;
+}
+
+export async function appendBundleEvent(event: BundleEvent): Promise<void> {
+  await withLock("bundle-events.json", async () => {
+    const events = await readJSON<BundleEvent[]>("bundle-events.json", []);
+    events.push(event);
+    await writeJSON("bundle-events.json", events);
+  });
+  incrCounter("bundles.applied");
+}
+
+export async function getBundleEvents(opts?: {
+  locationSlug?: string;
+  sinceIso?: string;
+}): Promise<BundleEvent[]> {
+  const all = await readJSON<BundleEvent[]>("bundle-events.json", []);
+  return all.filter((e) => {
+    if (opts?.locationSlug && e.locationSlug !== opts.locationSlug) return false;
+    if (opts?.sinceIso && e.createdAt < opts.sinceIso) return false;
+    return true;
+  });
+}
+
 export async function updateUpsellSettings(settings: UpsellSettings): Promise<UpsellSettings> {
   return withLock("upsell-settings.json", async () => {
     await writeJSON("upsell-settings.json", settings);
