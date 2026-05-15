@@ -3977,6 +3977,60 @@ export async function getBundleEvents(opts?: {
   });
 }
 
+// ─── Scheduled bundle intents (Sprint 4 #17) ─────────────────────────────
+//
+// Pret-style "make this my weekly usual" intent capture. Phase 1 just
+// persists the customer's preference + a snapshot of the bundle they
+// applied; Phase 2 wires Stripe Subscriptions to actually rebill on the
+// chosen weekday. Keeping the intent table separate from orders keeps
+// the lifecycle stages clean — intent → review → activate → rebill.
+
+export type Weekday =
+  | "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday";
+
+export interface ScheduledBundleIntent {
+  id: string;
+  customerPhone: string;
+  locationSlug: string;
+  bundleId: string;
+  bundleName: string;
+  weekday: Weekday;
+  /** Wall-clock time the customer wants the order ready (HH:MM). */
+  readyAt: string;
+  /** Cart snapshot — bundle composition at the time of opt-in. */
+  cartSnapshot: { menuItemId: string; quantity: number }[];
+  /** "pending" = captured, awaiting operator review.
+   *  "active"  = operator approved + Stripe Subscription created.
+   *  "paused"  = customer paused (or auto-paused on payment failure).
+   *  "cancelled" = customer cancelled. */
+  status: "pending" | "active" | "paused" | "cancelled";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function appendScheduledBundleIntent(intent: ScheduledBundleIntent): Promise<void> {
+  await withLock("scheduled-bundles.json", async () => {
+    const list = await readJSON<ScheduledBundleIntent[]>("scheduled-bundles.json", []);
+    list.push(intent);
+    await writeJSON("scheduled-bundles.json", list);
+  });
+  incrCounter("scheduled_bundles.captured");
+}
+
+export async function getScheduledBundleIntents(opts?: {
+  locationSlug?: string;
+  customerPhone?: string;
+  status?: ScheduledBundleIntent["status"];
+}): Promise<ScheduledBundleIntent[]> {
+  const all = await readJSON<ScheduledBundleIntent[]>("scheduled-bundles.json", []);
+  return all.filter((s) => {
+    if (opts?.locationSlug && s.locationSlug !== opts.locationSlug) return false;
+    if (opts?.customerPhone && s.customerPhone !== opts.customerPhone) return false;
+    if (opts?.status && s.status !== opts.status) return false;
+    return true;
+  });
+}
+
 export async function updateUpsellSettings(settings: UpsellSettings): Promise<UpsellSettings> {
   return withLock("upsell-settings.json", async () => {
     await writeJSON("upsell-settings.json", settings);
