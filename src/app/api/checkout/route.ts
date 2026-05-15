@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
     if (!result.ok) {
       return NextResponse.json({ error: result.message }, { status: 400 });
     }
-    const { order, deliveryFee, bundleSubtotal } = result;
+    const { order, deliveryFee, bundleSubtotal, comboDiscount, comboName } = result;
     const tipAmount = order.tipAmount ?? 0;
     const calculatedTotal = order.totalAmount;
 
@@ -148,9 +148,26 @@ export async function POST(req: NextRequest) {
             })()
           : null;
 
+      // Combo discounts ride along as a one-shot Stripe coupon so the
+      // session total matches order.totalAmount. Without this, line items
+      // sum to the pre-discount subtotal and the customer is overcharged.
+      // Bundles already collapse to a single discounted line above, so
+      // they skip this path.
+      let sessionDiscounts: { coupon: string }[] | undefined;
+      if (bundleSubtotal === null && comboDiscount > 0) {
+        const coupon = await stripeClient.coupons.create({
+          amount_off: comboDiscount,
+          currency: "pln",
+          duration: "once",
+          name: comboName ? `Combo: ${comboName}` : "Combo discount",
+        });
+        sessionDiscounts = [{ coupon: coupon.id }];
+      }
+
       const session = await stripeClient.checkout.sessions.create(
         {
           payment_method_types: ["card", "p24", "blik"],
+          ...(sessionDiscounts ? { discounts: sessionDiscounts } : {}),
           line_items: [
             ...(bundleStripeLines ??
               order.items.map((i) => {

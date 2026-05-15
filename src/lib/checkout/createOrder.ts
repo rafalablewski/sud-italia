@@ -48,7 +48,20 @@ export interface CreateOrderInput {
 }
 
 export type CreateOrderResult =
-  | { ok: true; order: Order; deliveryFee: number; bundleSubtotal: number | null }
+  | {
+      ok: true;
+      order: Order;
+      deliveryFee: number;
+      bundleSubtotal: number | null;
+      /** Combo discount in grosze applied to the items subtotal. 0 when no
+       *  combo fired or when a bundle overrode it. Threaded out so the
+       *  Stripe layer can attach an `amount_off` coupon — without this the
+       *  session would charge the pre-discount item total. */
+      comboDiscount: number;
+      /** Friendly name of the applied combo for receipt copy. Null when no
+       *  combo applied. */
+      comboName: string | null;
+    }
   | {
       ok: false;
       code:
@@ -141,12 +154,17 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
     }
   }
 
+  let comboDiscount = 0;
+  let comboName: string | null = null;
   if (bundleSubtotal !== null) {
     calculatedTotal = bundleSubtotal;
   } else {
     const comboResult = getActiveComboDeals(orderItems, locationConfig);
-    const comboDiscount = comboResult.isComplete ? comboResult.savings : 0;
-    calculatedTotal = calculatedTotal - comboDiscount;
+    if (comboResult.isComplete) {
+      comboDiscount = comboResult.savings;
+      comboName = comboResult.activeDeal?.name ?? null;
+      calculatedTotal = calculatedTotal - comboDiscount;
+    }
   }
 
   const segmentCustomer = await getCustomer(phoneE164);
@@ -225,5 +243,5 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
     });
   }
 
-  return { ok: true, order, deliveryFee, bundleSubtotal };
+  return { ok: true, order, deliveryFee, bundleSubtotal, comboDiscount, comboName };
 }
