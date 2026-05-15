@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import {
+  AlertTriangle,
   Check,
   Save,
   Star,
@@ -31,8 +32,11 @@ export function AdminCrossSell() {
     loc,
     config,
     loading,
+    loadError,
     saving,
     saved,
+    isDirty,
+    dirtyLocations,
     updateConfig,
     handleSave,
   } = useSellingSettings();
@@ -46,6 +50,28 @@ export function AdminCrossSell() {
     );
   }
 
+  if (loadError) {
+    return (
+      <div className="v2-page">
+        <div className="glass-card p-8 text-center max-w-lg mx-auto">
+          <AlertTriangle className="h-8 w-8 text-red-400 mx-auto mb-3" />
+          <h2 className="font-heading font-bold text-lg admin-text mb-2">
+            Could not load cross-sell settings
+          </h2>
+          <p className="text-sm admin-text-secondary mb-4">{loadError}</p>
+          <p className="text-xs text-slate-400">
+            Editing is disabled — saving now would overwrite production settings with defaults. Refresh to retry.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const dirtyHint =
+    dirtyLocations.size > 1
+      ? `${dirtyLocations.size} locations with unsaved changes`
+      : null;
+
   return (
     <div className="v2-page">
       <header className="v2-page-header">
@@ -53,12 +79,13 @@ export function AdminCrossSell() {
           <h1 className="v2-page-title">Cross-sell</h1>
           <p className="v2-page-subtitle">
             Suggest complementary items alongside what&rsquo;s in the cart — pairings, combos, and contextual nudges.
+            {dirtyHint && <span className="ml-2 text-italia-gold">· {dirtyHint}</span>}
           </p>
         </div>
         <div className="v2-page-actions">
           <button
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || !isDirty}
             className="v2-btn v2-btn-primary v2-btn-sm"
           >
             {saved ? (

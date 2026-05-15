@@ -14,6 +14,8 @@ import {
 import { krakowMenu } from "@/data/menus/krakow";
 import { warszawaMenu } from "@/data/menus/warszawa";
 import { DEFAULT_TIME_WINDOWS } from "@/lib/upsell";
+import { DEFAULT_BUNDLES } from "@/lib/bundles";
+import { useToast } from "./v2/ui/Toast";
 import type { MenuItem, MenuCategory } from "@/data/types";
 
 // ─── Types ───────────────────────────────────────────────────────────────
@@ -113,17 +115,10 @@ export const DEFAULT_BUNDLE_RULES: BundleRulesConfig = {
   family: { minMainItems: 5, hintWithin: 2 },
 };
 
-// Mirror of DEFAULT_BUNDLES from src/lib/bundles.ts. Kept local so this
-// client module doesn't import the server module.
-export const DEFAULT_BUNDLES_FALLBACK: BundleConfig[] = [
-  { id: "lunch-solo", tier: "Solo", name: "Just the pasta", description: "1 pasta of your choice", priceGrosze: 2600, refPriceGrosze: 2600, composition: [{ kind: "category", category: "pasta", quantity: 1 }], mealPeriod: "lunch", active: true },
-  { id: "lunch-classic", tier: "Lunch", name: "Pasta + drink", description: "1 pasta + 1 drink. The classic.", priceGrosze: 3200, refPriceGrosze: 3800, composition: [{ kind: "category", category: "pasta", quantity: 1 }, { kind: "category", category: "drinks", quantity: 1 }], mealPeriod: "lunch", isDefault: true, active: true },
-  { id: "lunch-plus", tier: "Lunch+", name: "Pasta + drink + tiramisù", description: "A meal you'll remember.", priceGrosze: 4600, refPriceGrosze: 5600, composition: [{ kind: "category", category: "pasta", quantity: 1 }, { kind: "category", category: "drinks", quantity: 1 }, { kind: "item", itemIdSuffix: "dessert-tiramisu", quantity: 1 }], mealPeriod: "lunch", isAnchor: true, active: true },
-  { id: "lunch-hungry", tier: "Hungry", name: "+ bruschetta", description: "Pasta, drink, dessert & bruschetta. For a real one.", priceGrosze: 5800, refPriceGrosze: 7600, composition: [{ kind: "category", category: "pasta", quantity: 1 }, { kind: "category", category: "drinks", quantity: 1 }, { kind: "item", itemIdSuffix: "dessert-tiramisu", quantity: 1 }, { kind: "item", itemIdSuffix: "anti-bruschetta", quantity: 1 }], mealPeriod: "lunch", isDecoy: true, active: true },
-  { id: "family-classic", tier: "Family", name: "Two pizzas + sides", description: "2 pizzas + 1 side + 2 drinks", priceGrosze: 8900, refPriceGrosze: 10800, composition: [{ kind: "category", category: "pizza", quantity: 2 }, { kind: "category", category: "antipasti", quantity: 1 }, { kind: "category", category: "drinks", quantity: 2 }], mealPeriod: "family", active: true },
-  { id: "family-feast", tier: "Family Feast", name: "Whole-table dinner", description: "2 pizzas + bruschetta + 4 drinks + tiramisù", priceGrosze: 11900, refPriceGrosze: 16200, composition: [{ kind: "category", category: "pizza", quantity: 2 }, { kind: "item", itemIdSuffix: "anti-bruschetta", quantity: 1 }, { kind: "category", category: "drinks", quantity: 4 }, { kind: "item", itemIdSuffix: "dessert-tiramisu", quantity: 1 }], mealPeriod: "family", isAnchor: true, active: true },
-  { id: "family-deluxe", tier: "Feast Deluxe", name: "Big group, no leftovers", description: "3 pizzas + 2 sides + 6 drinks + 2 desserts", priceGrosze: 16900, refPriceGrosze: 23200, composition: [{ kind: "category", category: "pizza", quantity: 3 }, { kind: "category", category: "antipasti", quantity: 2 }, { kind: "category", category: "drinks", quantity: 6 }, { kind: "category", category: "desserts", quantity: 2 }], mealPeriod: "family", isDecoy: true, active: true },
-];
+// Re-export the canonical defaults from src/lib/bundles.ts. BundleTier is
+// structurally assignable to BundleConfig (narrower category + mealPeriod
+// types), so editors can consume it directly without duplication.
+export const DEFAULT_BUNDLES_FALLBACK: BundleConfig[] = DEFAULT_BUNDLES;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
 
@@ -174,25 +169,40 @@ function defaultsAsConfig(): TimeWindowConfig[] {
  *  settings. Both /admin/upsell and /admin/crosssell mount this hook;
  *  each renders editors for its own slice of the LocationConfig, but the
  *  PUT always writes the full record so the other page's fields are
- *  preserved. */
+ *  preserved.
+ *
+ *  Dirty locations are tracked across tab switches so a user can edit
+ *  Kraków, switch to Warszawa, edit, then hit "Save changes" once and have
+ *  both PUTs fire. If the initial load fails we surface `loadError` and
+ *  refuse to save — without this guard a save would write
+ *  `getDefaultConfig()` over the real production settings. */
 export function useSellingSettings() {
+  const toast = useToast();
   const [settings, setSettings] = useState<AllSettings>({});
   const [activeLocation, setActiveLocation] = useState(LOCATIONS[0].slug);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [dirty, setDirty] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
     fetch("/api/admin/upsell")
-      .then((r) => r.json())
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then((data) => {
         setSettings(data || {});
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch((err) => {
+        setLoadError(err instanceof Error ? err.message : "Failed to load settings");
+        setLoading(false);
+      });
   }, []);
 
-  const loc = LOCATIONS.find((l) => l.slug === activeLocation)!;
+  const loc = LOCATIONS.find((l) => l.slug === activeLocation) ?? LOCATIONS[0];
   const config: LocationConfig = settings[activeLocation] || getDefaultConfig(activeLocation);
 
   const updateConfig = useCallback(
@@ -201,28 +211,54 @@ export function useSellingSettings() {
         const current = prev[activeLocation] || getDefaultConfig(activeLocation);
         return { ...prev, [activeLocation]: { ...current, ...updates } };
       });
+      setDirty((prev) => {
+        if (prev.has(activeLocation)) return prev;
+        const next = new Set(prev);
+        next.add(activeLocation);
+        return next;
+      });
       setSaved(false);
     },
     [activeLocation],
   );
 
   const handleSave = useCallback(async () => {
+    if (loadError) {
+      toast.error("Can't save", "Settings failed to load — reload the page before editing.");
+      return;
+    }
+    if (dirty.size === 0) return;
+
     setSaving(true);
-    const configToSave = settings[activeLocation] || getDefaultConfig(activeLocation);
-    try {
-      const res = await fetch("/api/admin/upsell", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ locationSlug: activeLocation, config: configToSave }),
-      });
-      if (!res.ok) throw new Error("Failed to save");
+    const failures: string[] = [];
+    for (const slug of dirty) {
+      const configToSave = settings[slug] || getDefaultConfig(slug);
+      try {
+        const res = await fetch("/api/admin/upsell", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ locationSlug: slug, config: configToSave }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      } catch {
+        failures.push(slug);
+      }
+    }
+
+    if (failures.length === 0) {
+      setDirty(new Set());
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
-    } catch {
-      alert("Failed to save");
+    } else {
+      // Keep failed locations marked dirty so the next click retries them.
+      setDirty(new Set(failures));
+      const names = failures
+        .map((slug) => LOCATIONS.find((l) => l.slug === slug)?.name ?? slug)
+        .join(", ");
+      toast.error("Couldn't save some locations", names);
     }
     setSaving(false);
-  }, [activeLocation, settings]);
+  }, [dirty, loadError, settings, toast]);
 
   return {
     activeLocation,
@@ -230,8 +266,11 @@ export function useSellingSettings() {
     loc,
     config,
     loading,
+    loadError,
     saving,
     saved,
+    isDirty: dirty.size > 0,
+    dirtyLocations: dirty,
     updateConfig,
     handleSave,
   };
