@@ -13,8 +13,11 @@
 
 ## Implementation status
 
-Sections 2, 3, and 4 of this audit are now in production. Every row of
-the design spec carries an inline tick:
+Sections 2 and 3 are fully in production. Section 4 is mostly in
+production (charm pricing, hero/profit-driver/anchor cards, the LTO
+mechanism, and admin editability — all live; the loss-leader first-order
+espresso bundle and an automated monthly LTO rotation remain open).
+Every row of the design spec carries an inline tick:
 
 - ✅ shipped — live in production on the customer + admin surfaces today
 - 🟡 partial — visible to the customer, with a follow-up scoped (ML
@@ -301,19 +304,22 @@ Estimated revenue per corporate account of 8–12: PLN 1,800–3,200 per month. 
 
 ---
 
-## 4. Menu Engineering & Pricing Psychology ✅ shipped
+## 4. Menu Engineering & Pricing Psychology 🟡 mostly shipped
 
-Status: §4.2 (charm pricing + price-end alignment), §4.3 (hero / profit-driver / anchor / LTO triangle), and §4.4 (menu page hierarchy) are wired end-to-end. §4.5 is informational and tracks against the new monthly LTO cadence (Pizza del Pizzaiolo rotates each month via `limitedUntil`).
+Status snapshot. §4.2 + §4.3 mechanisms + §4.4 hierarchy are in production and admin-editable from `/admin/menu`. The two remaining gaps are §4.3 row 5 (loss-leader first-order espresso bundle) and §4.5 (monthly LTO rotation as a recurring operational cadence — the mechanism ships, the rhythm is a manager action).
 
 What shipped:
 
-- **Charm pricing.** Every Kraków + Warszawa item re-aligned: pizza ends in 9, premium pasta ends in 5, espresso ends in 9, desserts end in 0. Stripe Checkout, Polish JPK_V7M VAT export, and the recipe-margin seed route all read the new prices directly — no parallel constants to drift.
-- **Premium anchor.** `Pizza del Pizzaiolo` lives in both menus (`krk-pizza-pizzaiolo` PLN 47.90, `waw-pizza-pizzaiolo` PLN 52.90) with `menuRole: "anchor"` + `isLimited: true` + `limitedUntil`. Renders with the dark Chef's Signature treatment and a days-left countdown chip.
-- **Hero / profit-driver triangle.** New `MenuRole` type on `MenuItem`. Margherita = hero (full-width card, cream-gradient frame, "The gateway — start here" subtitle). Quattro Formaggi / Linguine al Pesto / Espresso = profit driver (gold "Pizzaiolo's Choice" badge, ChefHat icon, "quietly his favourite to make" copy).
-- **Hierarchy of menu page.** The default sort is now Pizzaiolo's layout — `compareMenuEngineering()` orders hero → profit-driver → anchor → standards by popularity → alpha tie-break. Sort dropdown still exposes price-low / price-high / rating.
-- **Capability ledger.** `Menu engineering hierarchy` row added to `/admin/capabilities` per CLAUDE.md rule #9.
+- ✅ **Charm pricing.** Every Kraków + Warszawa item re-aligned: pizza ends in 9, premium pasta ends in 5, espresso ends in 9, desserts end in 0. Stripe Checkout, Polish JPK_V7M VAT export, and the recipe-margin seed route all read the new prices directly — no parallel constants to drift.
+- ✅ **Premium anchor.** `Pizza del Pizzaiolo` lives in both menus (`krk-pizza-pizzaiolo` PLN 47.90, `waw-pizza-pizzaiolo` PLN 52.90) with `menuRole: "anchor"` + `isLimited: true` + `limitedUntil`. Renders with the dark Chef's Signature treatment and a days-left countdown chip (hydration-safe — countdown defers to `useEffect` so SSR and client first paint agree).
+- ✅ **Hero / profit-driver triangle.** New `MenuRole` type on `MenuItem`. Margherita = hero (full-width card, cream-gradient frame, "The gateway — start here" subtitle). Quattro Formaggi / Linguine al Pesto / Espresso = profit driver (gold "Pizzaiolo's Choice" badge, ChefHat icon, "quietly his favourite to make" copy).
+- ✅ **Hierarchy of menu page.** The default sort is now Pizzaiolo's layout — `compareMenuEngineering()` orders hero → profit-driver → anchor → standards by popularity → alpha tie-break. Sort dropdown still exposes price-low / price-high / rating.
+- ✅ **Admin-editable.** `/admin/menu` edit dialog exposes the role dropdown + LTO toggle + "available until" date picker. `MenuOverride.menuRole / isLimited / limitedUntil` accept `null = clear back to seed`. Cross-location clone (Kraków ↔ Warszawa) propagates the role + LTO state.
+- ✅ **Capability ledger.** `Menu engineering hierarchy` row added to `/admin/capabilities` per CLAUDE.md rule #9.
+- ❌ **Loss-leader first-order espresso bundle** (§4.3 row 5). Not built. Distinct from the anchor — would need a first-order detector (orders count == 0 for the phone) + a comp'd or PLN 12 bundle line in the cart.
+- 🟡 **Monthly LTO rotation cadence** (§4.5). Mechanism shipped (admin can flip role + dates from `/admin/menu`); ongoing rotation is a manager operational action, not yet automated.
 
-Mockup: `public/mockups/menu-engineering.html` — served at `/mockups/menu-engineering.html` on any deploy. Same Tailwind classes + brand variables as production.
+Mockup: `public/mockups/menu-engineering.html` — served at `/mockups/menu-engineering.html` on any deploy. Inline CSS only (production CSP blocks Tailwind CDN); same brand variables + DOM as `src/components/location/MenuItem.tsx`.
 
 ### 4.1 The Audit
 
@@ -330,36 +336,36 @@ Pulling from `src/data/menus/krakow.ts`:
 
 ### 4.2 Pricing Psychology Fixes
 
-1. **Charm pricing.** Move PLN 28.00 → PLN 27.90, PLN 32.00 → PLN 31.90. Empirical lift: 1–3% conversion. Cost: 0.10 PLN per unit. Free money.
-2. **Premium anchor.** Add one PLN 48 "Pizza del Pizzaiolo" with truffle + buffalo mozzarella. Doesn't need to sell much — its purpose is to make PLN 32 Diavola feel modest. Anchor goods lift adjacent AOV 6–11%.
-3. **Decoy bundle (see §3.2).** Decoy doesn't need to sell — purpose is to make tier-2 look correct.
-4. **Tier 1 default-push.** Combo button labelled "Make it a lunch +PLN 6" rather than a separate menu page. Default-effect captures non-deliberators.
-5. **Price-end alignment to category.** Pizza ends in 9 (perceived value), premium pasta ends in 5 (perceived premium), espresso ends in 9 (impulse), desserts end in 0 (perceived quality). Variable endings cue subliminal positioning.
+1. ✅ **Charm pricing.** Move PLN 28.00 → PLN 27.90, PLN 32.00 → PLN 31.90. Empirical lift: 1–3% conversion. Cost: 0.10 PLN per unit. Free money. — *Applied across every Kraków + Warszawa item in `src/data/menus/`.*
+2. ✅ **Premium anchor.** Add one PLN 48 "Pizza del Pizzaiolo" with truffle + buffalo mozzarella. Doesn't need to sell much — its purpose is to make PLN 32 Diavola feel modest. Anchor goods lift adjacent AOV 6–11%. — *Shipped at PLN 47.90 (Kraków) / PLN 52.90 (Warszawa).*
+3. ✅ **Decoy bundle (see §3.2).** Decoy doesn't need to sell — purpose is to make tier-2 look correct. — *Shipped in §3.2 Bundle architecture.*
+4. ✅ **Tier 1 default-push.** Combo button labelled "Make it a lunch +PLN 6" rather than a separate menu page. Default-effect captures non-deliberators. — *Shipped via §3.2 Lunch ladder + §2.3 lunch time-window banner.*
+5. ✅ **Price-end alignment to category.** Pizza ends in 9 (perceived value), premium pasta ends in 5 (perceived premium), espresso ends in 9 (impulse), desserts end in 0 (perceived quality). Variable endings cue subliminal positioning. — *Applied: pizza items end in `90` (e.g. 27.90, 31.90), premium pasta in `95` (Carbonara 28.95, Bolognese 29.95), Espresso 7.90, desserts at 15.00 / 16.00 / 18.00.*
 
 ### 4.3 Hero / Profit-Driver / LTO Triangle
 
-| Role | Item | Why |
-|---|---|---|
-| **Hero** | Margherita | Most photographed, gateway item, recognise-the-brand item. Should be the first card, biggest photo. Currently no photo at all. |
-| **Profit-driver** | Quattro Formaggi / Pesto / Espresso | High GM, low awareness. Badge as "Pizzaiolo's choice", surface in cart upsell. |
-| **LTO (limited-time-offer)** | Truffle / seasonal burrata / Christmas Panettone | Drives novelty visits. `isLimited` + `limitedUntil` already in the type. |
-| **Anchor** | Pizza del Pizzaiolo PLN 48 | Doesn't need volume — needs to exist to range-extend perception. |
-| **Loss leader** | First-order PLN 12 espresso bundle | Trial-driver, recovered via second-visit margin. |
+| Status | Role | Item | Why | Implementation |
+|---|---|---|---|---|
+| ✅ | **Hero** | Margherita | Most photographed, gateway item, recognise-the-brand item. Should be the first card, biggest photo. Currently no photo at all. | `menuRole: "hero"`. Full-width `lg:col-span-2` card with cream→white gradient frame, red "Our Hero" ribbon, scaled-up thumbnail, "The gateway — start here" subtitle. 🟡 *Real photography still pending — the gradient + emoji placeholder ships today.* |
+| ✅ | **Profit-driver** | Quattro Formaggi / Pesto / Espresso | High GM, low awareness. Badge as "Pizzaiolo's choice", surface in cart upsell. | `menuRole: "profit-driver"` on all three. Gold "Pizzaiolo's Choice" badge with ChefHat icon. Already surfaced in cart upsell via the §2.4 margin-ranked engine. |
+| ✅ | **LTO (limited-time-offer)** | Truffle / seasonal burrata / Christmas Panettone | Drives novelty visits. `isLimited` + `limitedUntil` already in the type. | Mechanism shipped: `isLimited` + `limitedUntil` honoured by `MenuItemCard` (hydration-safe day-count chip) + admin-editable from `/admin/menu`. Pizza del Pizzaiolo is the first LTO item live. Future rotations (seasonal burrata, Panettone) are admin actions — see §4.5 status. |
+| ✅ | **Anchor** | Pizza del Pizzaiolo PLN 48 | Doesn't need volume — needs to exist to range-extend perception. | `menuRole: "anchor"`. Dark "Chef's Signature" ribbon + truffle-radial thumbnail + gold-tinted frame. |
+| ❌ | **Loss leader** | First-order PLN 12 espresso bundle | Trial-driver, recovered via second-visit margin. | **Not built.** Would need: order-count lookup keyed on the phone cookie (zero-orders → eligible), a synthetic cart line with the bundle SKU, and a one-time-per-customer guard. Scoped as a follow-up — distinct from the anchor work. |
 
 ### 4.4 Hierarchy Of Menu Page
 
 Eye-tracking studies (Gallup × Cornell, replicated by Sweetgreen): customers eye top-left first, then bottom-right ("sweet spot"). Most expensive items go in the sweet spot. Currently Sud puts items in DB-insertion order. **Re-sort to:**
 
-1. **Top:** Hero photo + Margherita
-2. **Sweet spot:** Profit drivers (premium pizzas, Pizzaiolo's choice)
-3. **Right side:** Anchor premium
-4. **Bottom:** Drinks (the impulse zone)
+1. ✅ **Top:** Hero photo + Margherita — *`lg:col-span-2` hero card at the top of every category that contains a hero item.*
+2. ✅ **Sweet spot:** Profit drivers (premium pizzas, Pizzaiolo's choice) — *`compareMenuEngineering()` ranks profit-driver immediately after hero in the default sort.*
+3. ✅ **Right side:** Anchor premium — *Anchor renders after the profit driver, landing in the visible second-row position on `lg:` viewports.*
+4. 🟡 **Bottom:** Drinks (the impulse zone) — *Implemented as category tab order (`pizza → pasta → antipasti → panini → drinks → desserts` in `MenuSection`), which is the closest analogue to a single-scroll "bottom" since the menu UI uses category tabs rather than one continuous list. Drinks are never first; espresso also carries the profit-driver badge so it surfaces inside the cart-upsell flow on every pizza/pasta order.*
 
 ### 4.5 Comparison To Best-In-Class
 
-- **McDonald's:** ~30 SKUs, every one engineered. Big Mac is a Plowhorse (low margin, draws traffic), McCafé is a Star (high margin, high pop), Apple Pie is a Profit-Driver (high margin, low pop, default-attached).
-- **Sweetgreen:** ~12 base salads, but combinatorics push perceived choice up. Hero item is a chef's signature, rotated quarterly to drive novelty visits.
-- **Singapore QSR (e.g. Genki Sushi, Hai Di Lao):** highly seasonal LTO cadence, weekly menu refresh, conveyor-belt impulse design. Sud should adopt monthly LTO cadence at minimum.
+- **McDonald's:** ~30 SKUs, every one engineered. Big Mac is a Plowhorse (low margin, draws traffic), McCafé is a Star (high margin, high pop), Apple Pie is a Profit-Driver (high margin, low pop, default-attached). — *Informational benchmark; our `MenuRole` taxonomy now matches this discipline (hero / profit-driver / anchor / lto).*
+- **Sweetgreen:** ~12 base salads, but combinatorics push perceived choice up. Hero item is a chef's signature, rotated quarterly to drive novelty visits. — 🟡 *Hero designation shipped; quarterly rotation is a manual admin action today (no scheduled job).* 
+- **Singapore QSR (e.g. Genki Sushi, Hai Di Lao):** highly seasonal LTO cadence, weekly menu refresh, conveyor-belt impulse design. Sud should adopt monthly LTO cadence at minimum. — 🟡 *Mechanism shipped (Pizzaiolo's truffle pizza is the first monthly LTO, `limitedUntil: 2026-06-30`); ongoing monthly rotation is a manager action via `/admin/menu`. ❌ No scheduled cron yet to auto-flip LTOs between months.*
 
 ---
 
