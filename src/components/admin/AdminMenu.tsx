@@ -518,49 +518,27 @@ export function AdminMenu() {
                             <span className="v2-mng-row-name">{item.name}</span>
                             {item.menuRole && (
                               <span
-                                className="v2-mng-tag"
-                                style={{
-                                  background:
-                                    item.menuRole === "hero"
-                                      ? "var(--brand-soft-strong)"
-                                      : item.menuRole === "anchor"
-                                        ? "rgba(26,26,26,0.12)"
-                                        : item.menuRole === "lto"
-                                          ? "var(--warning-soft)"
-                                          : "var(--warning-soft)",
-                                  color:
-                                    item.menuRole === "hero"
-                                      ? "var(--brand)"
-                                      : item.menuRole === "anchor"
-                                        ? "var(--fg)"
-                                        : "var(--warning)",
-                                  fontWeight: 600,
-                                }}
+                                className={`v2-mng-tag v2-mng-tag-${item.menuRole === "profit-driver" ? "pizzaiolo" : item.menuRole}`}
                                 title={`Menu engineering role: ${MENU_ROLE_LABEL[item.menuRole]}`}
                               >
                                 {MENU_ROLE_LABEL[item.menuRole]}
                               </span>
                             )}
-                            {item.isLimited && (
-                              <span
-                                className="v2-mng-tag"
-                                style={{
-                                  background: "var(--brand-soft)",
-                                  color: "var(--brand)",
-                                  fontWeight: 600,
-                                }}
-                                title={
-                                  item.limitedUntil
-                                    ? `LTO ends ${item.limitedUntil}`
-                                    : "Limited-time item (no end date)"
-                                }
-                              >
-                                {(() => {
-                                  const d = daysUntilIso(item.limitedUntil);
-                                  return d !== null ? `LTO · ${d}d left` : "LTO";
-                                })()}
-                              </span>
-                            )}
+                            {item.isLimited && (() => {
+                              const d = daysUntilIso(item.limitedUntil);
+                              return (
+                                <span
+                                  className="v2-mng-tag v2-mng-tag-lto"
+                                  title={
+                                    item.limitedUntil
+                                      ? `LTO ends ${item.limitedUntil}`
+                                      : "Limited-time item (no end date)"
+                                  }
+                                >
+                                  {d !== null ? `LTO · ${d}d left` : "LTO"}
+                                </span>
+                              );
+                            })()}
                             {item._hasOverride && (
                               <span className="v2-mng-tag v2-mng-tag-override">Overridden</span>
                             )}
