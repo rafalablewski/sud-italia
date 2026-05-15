@@ -436,6 +436,8 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
         configRules={
           (upsellConfig as { bundleRules?: import("@/lib/bundles").BundleAvailabilityRules } | null)?.bundleRules ?? null
         }
+        activeComboSavings={comboResult.isComplete ? comboResult.savings : 0}
+        activeComboName={comboResult.isComplete ? comboResult.activeDeal?.name ?? null : null}
       />
 
       {/* Combo deal banner — suppressed when the bundle ladder is showable

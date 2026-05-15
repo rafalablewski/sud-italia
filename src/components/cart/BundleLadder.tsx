@@ -28,6 +28,12 @@ interface BundleLadderProps {
   /** Admin-configured availability rules (LocationUpsellConfig.bundleRules).
    *  When unset, DEFAULT_BUNDLE_RULES wins (lunch 11–14, family minMainItems 5). */
   configRules?: Partial<BundleAvailabilityRules> | null;
+  /** Active combo discount (grosze). When > 0 the bundle CTA shows the
+   *  *incremental* savings ("save X more than your current Italian
+   *  Classic 10%") so the customer doesn't feel like applying the
+   *  bundle silently kills their combo — it's a net-better trade. */
+  activeComboSavings?: number;
+  activeComboName?: string | null;
 }
 
 /**
@@ -53,6 +59,8 @@ export function BundleLadder({
   allMenuItems,
   configBundles,
   configRules,
+  activeComboSavings = 0,
+  activeComboName = null,
 }: BundleLadderProps) {
   const items = useCartStore((s) => s.items);
   const locationSlug = useCartStore((s) => s.locationSlug);
@@ -284,6 +292,8 @@ export function BundleLadder({
             applied={primaryIsApplied}
             onApply={() => handleApply(primaryTier)}
             mainsCount={primaryPricing.mainsCount}
+            activeComboSavings={activeComboSavings}
+            activeComboName={activeComboName}
           />
 
           {/* Smaller comparison row: the entry tier + decoy stay visible so
@@ -329,14 +339,35 @@ interface PrimaryCTAProps {
   applied: boolean;
   onApply: () => void;
   mainsCount: number;
+  activeComboSavings: number;
+  activeComboName: string | null;
 }
 
-function PrimaryBundleCTA({ bundle, pricing, applied, onApply, mainsCount }: PrimaryCTAProps) {
+function PrimaryBundleCTA({
+  bundle,
+  pricing,
+  applied,
+  onApply,
+  mainsCount,
+  activeComboSavings,
+  activeComboName,
+}: PrimaryCTAProps) {
   const perPerson = mainsCount > 0 ? Math.round(pricing.priceGrosze / mainsCount) : 0;
   // Per-person framing only kicks in at ≥3 mains so a 2-person bundle
   // doesn't get awkward maths. Family Feast at 3 mains ≈ 40 PLN per
   // person carries the cinema-combo "deal-for-everyone" psychology.
   const showPerPerson = mainsCount >= 3 && perPerson > 0;
+
+  // Combo × Bundle clarity (user-asked scenario): when a combo deal is
+  // already saving the customer some PLN, the bundle's "save X" copy
+  // would over-promise — applying the bundle replaces the combo, so the
+  // *net* benefit to the customer is bundle savings MINUS combo savings.
+  // We show the bundle's full save (it's still the real à-la-carte gap)
+  // but also surface the honest "extra you save by upgrading" so the
+  // customer doesn't feel cheated when the 10% Italian Classic badge
+  // silently disappears on bundle apply.
+  const incrementalVsCombo =
+    activeComboSavings > 0 ? Math.max(0, pricing.savings - activeComboSavings) : 0;
 
   return (
     <button
@@ -372,6 +403,16 @@ function PrimaryBundleCTA({ bundle, pricing, applied, onApply, mainsCount }: Pri
               </span>
             )}
           </p>
+          {!applied && incrementalVsCombo > 0 && activeComboName && (
+            <p className="text-[11px] text-italia-green-dark font-semibold mt-1 leading-snug">
+              +{formatPrice(incrementalVsCombo)} more than your current {activeComboName}
+            </p>
+          )}
+          {!applied && activeComboSavings > 0 && (
+            <p className="text-[10px] text-italia-gray mt-0.5 leading-snug italic">
+              Replaces the active {activeComboName ?? "combo deal"}.
+            </p>
+          )}
         </div>
         <div className="flex-shrink-0 text-right">
           <div className="font-heading text-lg font-bold text-italia-red">
