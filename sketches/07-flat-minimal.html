@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Bundle ladders — Flat minimal (sketch 07)</title>
+<style>
+  :root {
+    --bg: #0a0d14; --surface-1: #11151f; --surface-2: #161b27;
+    --border: rgba(255,255,255,0.06); --border-strong: rgba(255,255,255,0.12);
+    --fg: #f5f7fa; --fg-muted: #b6bfcd; --fg-subtle: #7d8696;
+    --brand: #c8102e; --gold: #c8a02e; --green: #10b981; --indigo: #6366f1;
+    font-family: -apple-system, "SF Pro Text", "Inter", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 56px 64px; background: var(--bg); color: var(--fg); line-height: 1.5; }
+  .container { max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 32px; margin: 0 0 6px; font-weight: 700; letter-spacing: -0.02em; }
+  h1 small { font-size: 11px; color: var(--fg-subtle); font-weight: 500; letter-spacing: .06em; text-transform: uppercase; background: var(--surface-2); padding: 2px 8px; border-radius: 6px; margin-left: 8px; vertical-align: middle; }
+  .sub { color: var(--fg-muted); font-size: 14px; margin: 0 0 56px; }
+
+  h2 { font-size: 11px; color: var(--fg-subtle); text-transform: uppercase; letter-spacing: .14em; font-weight: 700; margin: 48px 0 20px; }
+  h2:first-of-type { margin-top: 0; }
+
+  .tier { padding: 28px 0; border-bottom: 1px solid var(--border); cursor: pointer; transition: padding-left .2s; }
+  .tier:hover { padding-left: 8px; }
+  .tier:first-child { padding-top: 0; }
+  .tier:last-child { border-bottom: 0; }
+
+  .tier-row1 { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+  .tier-name { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; display: flex; align-items: center; gap: 12px; }
+  .tier-tier { font-size: 11px; color: var(--fg-subtle); text-transform: uppercase; letter-spacing: .1em; font-weight: 700; }
+
+  .b { font-size: 9px; font-weight: 800; padding: 3px 8px; border-radius: 999px; letter-spacing: .08em; text-transform: uppercase; vertical-align: middle; }
+  .b-d { background: var(--brand); color: white; }
+  .b-a { background: var(--gold); color: #1a1a1a; }
+  .b-x { background: rgba(255,255,255,0.08); color: var(--fg-subtle); }
+
+  .tier-price { font-size: 28px; font-weight: 700; color: var(--brand); font-variant-numeric: tabular-nums; }
+  .tier-price small { font-size: 12px; color: var(--fg-subtle); text-decoration: line-through; margin-left: 8px; font-weight: 500; }
+
+  .tier-desc { font-size: 14px; color: var(--fg-muted); margin: 8px 0 16px; }
+
+  .meta { display: flex; gap: 32px; flex-wrap: wrap; font-size: 12px; color: var(--fg-subtle); }
+  .meta b { color: var(--fg-muted); font-weight: 600; }
+  .meta .dot { color: var(--green); }
+
+  .float-add { position: fixed; bottom: 32px; right: 32px; background: var(--brand); color: white; border: 0; padding: 14px 22px; border-radius: 999px; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 8px 24px rgba(200,16,46,0.4); }
+
+  .toolbar { display: flex; gap: 16px; margin-bottom: 32px; align-items: center; font-size: 13px; color: var(--fg-muted); }
+  .toolbar a { color: var(--fg-muted); cursor: pointer; padding-bottom: 3px; border-bottom: 2px solid transparent; }
+  .toolbar a.on { color: var(--fg); border-color: var(--brand); }
+
+  .save-bar { position: fixed; top: 56px; right: 64px; display: flex; gap: 8px; align-items: center; }
+  .save-bar .badge { font-size: 11px; color: var(--gold); }
+  .save-bar button { background: var(--brand); color: white; border: 0; padding: 7px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; }
+
+  .pencil { opacity: 0; transition: opacity .15s; color: var(--fg-subtle); margin-left: 8px; font-size: 14px; }
+  .tier:hover .pencil { opacity: 1; }
+</style>
+</head>
+<body>
+  <div class="save-bar">
+    <span class="badge">3 unsaved</span>
+    <button>Save changes</button>
+  </div>
+
+  <div class="container">
+    <h1>Bundle ladders <small>SKETCH 07 · FLAT MINIMAL</small></h1>
+    <p class="sub">Notion-style. Reading mode by default — click any tier to edit. Maximum signal, minimum chrome.</p>
+
+    <div class="toolbar">
+      <a class="on">All ladders</a>
+      <a>Family</a>
+      <a>Lunch</a>
+      <a>Late-night</a>
+    </div>
+
+    <h2>Family ladder · ≥ 2 mains</h2>
+
+    <div class="tier">
+      <div class="tier-row1">
+        <div>
+          <div class="tier-tier">Family · entry</div>
+          <div class="tier-name">Your pizzas + sides<span class="pencil">✎</span></div>
+        </div>
+        <div class="tier-price">~88 zł <small>119 zł</small></div>
+      </div>
+      <p class="tier-desc">Your mains + bruschetta + 2 drinks. Min 2 / max 6 mains.</p>
+      <div class="meta">
+        <span><b>Dynamic</b> · 10/30 split</span>
+        <span><b>56%</b> margin</span>
+        <span class="dot">● Active</span>
+      </div>
+    </div>
+
+    <div class="tier">
+      <div class="tier-row1">
+        <div>
+          <div class="tier-tier">Family Feast <span class="b b-d">DEFAULT</span> <span class="b b-a">ANCHOR</span></div>
+          <div class="tier-name">Whole-table dinner<span class="pencil">✎</span></div>
+        </div>
+        <div class="tier-price">~135 zł <small>187 zł</small></div>
+      </div>
+      <p class="tier-desc">Your mains + 2 antipasti + 4 drinks + tiramisù. Min 2 / max 8 mains.</p>
+      <div class="meta">
+        <span><b>Dynamic</b> · 15/40 split</span>
+        <span><b>49%</b> margin</span>
+        <span><b>Fri · Sat · Sun</b> only</span>
+        <span class="dot">● Active</span>
+      </div>
+    </div>
+
+    <div class="tier" style="opacity:.85;">
+      <div class="tier-row1">
+        <div>
+          <div class="tier-tier">Feast Deluxe <span class="b b-x">DECOY</span></div>
+          <div class="tier-name">Big group, no leftovers<span class="pencil">✎</span></div>
+        </div>
+        <div class="tier-price">~172 zł <small>227 zł</small></div>
+      </div>
+      <p class="tier-desc">Your mains + 2 antipasti + 6 drinks + 2 desserts. Min 3 / max 12 mains.</p>
+      <div class="meta">
+        <span><b>Dynamic</b> · 12/32 split</span>
+        <span><b>51%</b> margin</span>
+        <span class="dot">● Active</span>
+      </div>
+    </div>
+
+    <h2>Lunch ladder · 11:00–14:00</h2>
+
+    <div class="tier">
+      <div class="tier-row1">
+        <div>
+          <div class="tier-tier">Lunch+ <span class="b b-a">ANCHOR</span></div>
+          <div class="tier-name">Pasta + drink + tiramisù<span class="pencil">✎</span></div>
+        </div>
+        <div class="tier-price">46 zł <small>56 zł</small></div>
+      </div>
+      <p class="tier-desc">A meal you'll remember.</p>
+      <div class="meta">
+        <span><b>Fixed</b> price</span>
+        <span><b>61%</b> margin</span>
+        <span><b>Mon–Fri</b></span>
+        <span class="dot">● Active</span>
+      </div>
+    </div>
+
+    <h2>Late-night · 21:00–24:00</h2>
+
+    <div class="tier">
+      <div class="tier-row1">
+        <div>
+          <div class="tier-tier">Late dinner <span class="b b-d">DEFAULT</span></div>
+          <div class="tier-name">Pizza + drink + dessert<span class="pencil">✎</span></div>
+        </div>
+        <div class="tier-price">~38 zł <small>48 zł</small></div>
+      </div>
+      <p class="tier-desc">Your pizza + 1 drink + tiramisù. Min 1 / max 3 mains.</p>
+      <div class="meta">
+        <span><b>Dynamic</b> · 12/35 split</span>
+        <span><b>58%</b> margin</span>
+        <span class="dot">● Active</span>
+      </div>
+    </div>
+  </div>
+
+  <button class="float-add">+ Add a bundle</button>
+</body>
+</html>

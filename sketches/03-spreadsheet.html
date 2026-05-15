@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Bundle ladders — Spreadsheet (sketch 03)</title>
+<style>
+  :root {
+    --bg: #0a0d14; --surface-1: #11151f; --surface-2: #161b27; --surface-3: #1d2330;
+    --border: rgba(255,255,255,0.08); --border-strong: rgba(255,255,255,0.16);
+    --fg: #f5f7fa; --fg-muted: #b6bfcd; --fg-subtle: #7d8696;
+    --brand: #c8102e; --gold: #c8a02e; --green: #10b981; --amber: #f59e0b; --red: #ef4444; --indigo: #6366f1;
+    font-family: -apple-system, "SF Pro Text", "Inter", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px; background: var(--bg); color: var(--fg); }
+  h1 { font-size: 22px; margin: 0 0 4px; font-weight: 700; }
+  h1 small { font-size: 11px; color: var(--fg-subtle); font-weight: 500; letter-spacing: .06em; text-transform: uppercase; background: var(--surface-2); padding: 2px 8px; border-radius: 6px; margin-left: 6px; }
+  .sub { color: var(--fg-muted); font-size: 13px; margin: 0 0 18px; }
+
+  .controls { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+  .pill { background: var(--surface-2); border: 1px solid var(--border); color: var(--fg-muted); padding: 6px 12px; border-radius: 999px; font-size: 12px; cursor: pointer; }
+  .pill.active { background: var(--surface-3); color: var(--fg); border-color: var(--border-strong); }
+  .save { background: var(--brand); color: white; border: 0; padding: 7px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; margin-left: auto; }
+
+  .table-wrap { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead { background: var(--surface-2); position: sticky; top: 0; }
+  th { font-size: 10px; color: var(--fg-subtle); text-transform: uppercase; letter-spacing: .08em; font-weight: 700; text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  th.r { text-align: right; }
+  td { padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  td.r { text-align: right; }
+  tr:last-child td { border-bottom: 0; }
+  tr.section td { background: rgba(99,102,241,0.06); padding: 6px 12px; font-size: 10px; color: var(--indigo); text-transform: uppercase; letter-spacing: .08em; font-weight: 700; border-bottom: 1px solid var(--border); }
+
+  .cell-input { background: transparent; border: 0; color: var(--fg); padding: 5px 6px; font-size: 12px; width: 100%; border-radius: 4px; }
+  .cell-input:focus { background: var(--surface-2); outline: 2px solid var(--indigo); outline-offset: -2px; }
+  .cell-num { width: 60px; text-align: right; font-variant-numeric: tabular-nums; }
+  td.editable:hover { background: rgba(99,102,241,0.04); cursor: text; }
+
+  .badge { font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; display: inline-block; }
+  .badge-dyn { background: rgba(16,185,129,0.18); color: #6ee7b7; }
+  .badge-fix { background: rgba(99,102,241,0.18); color: #a5b4fc; }
+  .badge-def { background: var(--brand); color: white; margin-right: 4px; }
+  .badge-anc { background: var(--gold); color: #1a1a1a; margin-right: 4px; }
+  .badge-dec { background: var(--surface-3); color: var(--fg-subtle); margin-right: 4px; }
+  .badge-on { background: rgba(16,185,129,0.15); color: var(--green); }
+  .badge-off { background: rgba(239,68,68,0.15); color: var(--red); }
+
+  .margin { font-weight: 700; }
+  .margin.good { color: var(--green); }
+  .margin.warn { color: var(--amber); }
+  .margin.bad { color: var(--red); }
+
+  .toggle { display: inline-flex; gap: 1px; background: var(--surface-3); border-radius: 6px; padding: 2px; }
+  .toggle button { background: transparent; border: 0; color: var(--fg-subtle); font-size: 10px; padding: 3px 7px; border-radius: 4px; cursor: pointer; font-weight: 600; }
+  .toggle button.on { background: var(--surface-1); color: var(--fg); }
+
+  .day-strip { display: inline-flex; gap: 1px; }
+  .day { width: 16px; height: 16px; border-radius: 3px; background: var(--surface-3); display: inline-flex; align-items: center; justify-content: center; font-size: 8px; color: var(--fg-subtle); font-weight: 700; cursor: pointer; }
+  .day.on { background: var(--gold); color: #1a1a1a; }
+
+  .actions-cell { white-space: nowrap; }
+  .icon-btn { background: transparent; border: 0; color: var(--fg-subtle); cursor: pointer; padding: 3px 5px; border-radius: 4px; font-size: 13px; }
+  .icon-btn:hover { background: var(--surface-3); color: var(--fg); }
+
+  .help { margin-top: 14px; padding: 12px 14px; background: var(--surface-2); border-radius: 10px; font-size: 12px; color: var(--fg-muted); }
+  kbd { background: var(--surface-3); padding: 1px 5px; border-radius: 4px; font-size: 10px; font-family: ui-monospace, monospace; border: 1px solid var(--border); }
+</style>
+</head>
+<body>
+  <h1>Bundle ladders <small>SKETCH 03 · SPREADSHEET</small></h1>
+  <p class="sub">Every tier on one screen. Click a cell to edit in place. <kbd>Tab</kbd> across, <kbd>Enter</kbd> to save row.</p>
+
+  <div class="controls">
+    <button class="pill active">All</button>
+    <button class="pill">Active only</button>
+    <button class="pill">Dynamic only</button>
+    <button class="pill">Below 40% margin ⚠</button>
+    <button class="save">Save 0 changes</button>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th>Tier · Name</th>
+          <th>Mode</th>
+          <th class="r">Price / Disc</th>
+          <th class="r">Mains</th>
+          <th class="r">Margin</th>
+          <th>Composition</th>
+          <th>Loyalty</th>
+          <th>Days</th>
+          <th>Limited</th>
+          <th>Flags</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="section"><td colspan="12">Family ladder · 3 tiers</td></tr>
+        <tr>
+          <td><span class="badge badge-on">●</span></td>
+          <td>
+            <input class="cell-input" value="Family · Your pizzas + sides">
+            <div style="font-size:10px;color:var(--fg-subtle);margin-top:1px;">Your mains + bruschetta + 2 drinks</div>
+          </td>
+          <td>
+            <div class="toggle"><button>Fix</button><button class="on">Dyn</button></div>
+          </td>
+          <td class="r">
+            <input class="cell-input cell-num" value="10/30">
+            <div style="font-size:10px;color:var(--fg-subtle);">~88 zł</div>
+          </td>
+          <td class="r"><input class="cell-input cell-num" value="2 / 6"></td>
+          <td class="r margin good">56%</td>
+          <td><span class="badge badge-dyn">1 antipasti · 2 drinks</span></td>
+          <td><span class="badge">All</span></td>
+          <td><div class="day-strip"><span class="day on">M</span><span class="day on">T</span><span class="day on">W</span><span class="day on">T</span><span class="day on">F</span><span class="day on">S</span><span class="day on">S</span></div></td>
+          <td><span style="color:var(--fg-subtle);">—</span></td>
+          <td></td>
+          <td class="actions-cell"><button class="icon-btn">⋯</button></td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-on">●</span></td>
+          <td>
+            <input class="cell-input" value="Family Feast · Whole-table dinner">
+            <div style="font-size:10px;color:var(--fg-subtle);margin-top:1px;">Your mains + 2 antipasti + 4 drinks + tiramisù</div>
+          </td>
+          <td>
+            <div class="toggle"><button>Fix</button><button class="on">Dyn</button></div>
+          </td>
+          <td class="r">
+            <input class="cell-input cell-num" value="15/40">
+            <div style="font-size:10px;color:var(--fg-subtle);">~135 zł</div>
+          </td>
+          <td class="r"><input class="cell-input cell-num" value="2 / 8"></td>
+          <td class="r margin good">49%</td>
+          <td><span class="badge badge-dyn">2 antipasti · 4 drinks · tiramisu</span></td>
+          <td><span class="badge">All</span></td>
+          <td><div class="day-strip"><span class="day on">M</span><span class="day on">T</span><span class="day on">W</span><span class="day on">T</span><span class="day on">F</span><span class="day on">S</span><span class="day on">S</span></div></td>
+          <td><span style="color:var(--fg-subtle);">—</span></td>
+          <td><span class="badge badge-def">Default</span><span class="badge badge-anc">Anchor</span></td>
+          <td class="actions-cell"><button class="icon-btn">⋯</button></td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-on">●</span></td>
+          <td style="opacity:.85;">
+            <input class="cell-input" value="Feast Deluxe · Big group, no leftovers">
+            <div style="font-size:10px;color:var(--fg-subtle);margin-top:1px;">Your mains + 2 antipasti + 6 drinks + 2 desserts</div>
+          </td>
+          <td>
+            <div class="toggle"><button>Fix</button><button class="on">Dyn</button></div>
+          </td>
+          <td class="r">
+            <input class="cell-input cell-num" value="12/32">
+            <div style="font-size:10px;color:var(--fg-subtle);">~172 zł</div>
+          </td>
+          <td class="r"><input class="cell-input cell-num" value="3 / 12"></td>
+          <td class="r margin good">51%</td>
+          <td><span class="badge badge-dyn">2 antipasti · 6 drinks · 2 desserts</span></td>
+          <td><span class="badge">All</span></td>
+          <td><div class="day-strip"><span class="day on">M</span><span class="day on">T</span><span class="day on">W</span><span class="day on">T</span><span class="day on">F</span><span class="day on">S</span><span class="day on">S</span></div></td>
+          <td><span style="color:var(--fg-subtle);">—</span></td>
+          <td><span class="badge badge-dec">Decoy</span></td>
+          <td class="actions-cell"><button class="icon-btn">⋯</button></td>
+        </tr>
+
+        <tr class="section"><td colspan="12">Lunch ladder · 1 tier · 11:00–14:00</td></tr>
+        <tr>
+          <td><span class="badge badge-on">●</span></td>
+          <td>
+            <input class="cell-input" value="Lunch+ · Pasta + drink + tiramisù">
+            <div style="font-size:10px;color:var(--fg-subtle);margin-top:1px;">A meal you'll remember.</div>
+          </td>
+          <td>
+            <div class="toggle"><button class="on">Fix</button><button>Dyn</button></div>
+          </td>
+          <td class="r">
+            <input class="cell-input cell-num" value="46 zł">
+            <div style="font-size:10px;color:var(--fg-subtle);">ref 56 zł · −18%</div>
+          </td>
+          <td class="r"><span style="color:var(--fg-subtle);">—</span></td>
+          <td class="r margin good">61%</td>
+          <td><span class="badge badge-fix">pasta · drink · tiramisu</span></td>
+          <td><span class="badge">All</span></td>
+          <td><div class="day-strip"><span class="day on">M</span><span class="day on">T</span><span class="day on">W</span><span class="day on">T</span><span class="day on">F</span><span class="day">S</span><span class="day">S</span></div></td>
+          <td><span style="color:var(--fg-subtle);">—</span></td>
+          <td><span class="badge badge-anc">Anchor</span></td>
+          <td class="actions-cell"><button class="icon-btn">⋯</button></td>
+        </tr>
+
+        <tr class="section"><td colspan="12">Late-night · 1 tier · 21:00–24:00</td></tr>
+        <tr>
+          <td><span class="badge badge-on">●</span></td>
+          <td>
+            <input class="cell-input" value="Late dinner · Pizza + drink + dessert">
+            <div style="font-size:10px;color:var(--fg-subtle);margin-top:1px;">Your pizza + 1 drink + tiramisù</div>
+          </td>
+          <td>
+            <div class="toggle"><button>Fix</button><button class="on">Dyn</button></div>
+          </td>
+          <td class="r">
+            <input class="cell-input cell-num" value="12/35">
+            <div style="font-size:10px;color:var(--fg-subtle);">~38 zł</div>
+          </td>
+          <td class="r"><input class="cell-input cell-num" value="1 / 3"></td>
+          <td class="r margin good">58%</td>
+          <td><span class="badge badge-dyn">1 drink · tiramisu</span></td>
+          <td><span class="badge">All</span></td>
+          <td><div class="day-strip"><span class="day on">M</span><span class="day on">T</span><span class="day on">W</span><span class="day on">T</span><span class="day on">F</span><span class="day on">S</span><span class="day on">S</span></div></td>
+          <td><span style="color:var(--fg-subtle);">—</span></td>
+          <td><span class="badge badge-def">Default</span></td>
+          <td class="actions-cell"><button class="icon-btn">⋯</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="help">
+    <strong>Why spreadsheet:</strong> for the operator who wants to see <em>everything</em> at once and bulk-tune
+    discounts. Single-cell editing keeps focus tight. Margin column is the safety rail — anything below 40%
+    turns amber/red. The expand button (⋯) opens a side-sheet for slot composition + ad-hoc fields.
+  </div>
+</body>
+</html>

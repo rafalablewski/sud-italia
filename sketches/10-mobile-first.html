@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Bundle ladders — Mobile-first (sketch 10)</title>
+<style>
+  :root {
+    --bg: #0a0d14; --surface-1: #11151f; --surface-2: #161b27; --surface-3: #1d2330;
+    --border: rgba(255,255,255,0.08); --border-strong: rgba(255,255,255,0.16);
+    --fg: #f5f7fa; --fg-muted: #b6bfcd; --fg-subtle: #7d8696;
+    --brand: #c8102e; --gold: #c8a02e; --green: #10b981;
+    font-family: -apple-system, "SF Pro Text", "Inter", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #1a1f2e; color: var(--fg); padding: 24px 0; min-height: 100vh; }
+  .frame {
+    max-width: 420px;
+    margin: 0 auto;
+    background: var(--bg);
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+    min-height: 800px;
+  }
+  .h {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--surface-1);
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .h .back { color: var(--fg-subtle); font-size: 18px; }
+  .h h1 { font-size: 16px; font-weight: 700; margin: 0; flex: 1; }
+  .h h1 small { display: block; font-size: 9px; color: var(--fg-subtle); font-weight: 500; letter-spacing: .06em; text-transform: uppercase; margin-top: 1px; }
+  .h .save { background: var(--brand); color: white; border: 0; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+
+  .filters { display: flex; gap: 6px; padding: 12px 16px; overflow-x: auto; background: var(--surface-1); border-bottom: 1px solid var(--border); }
+  .filters::-webkit-scrollbar { display: none; }
+  .pill { background: var(--surface-2); border: 1px solid var(--border); color: var(--fg-muted); padding: 5px 12px; border-radius: 999px; font-size: 11px; white-space: nowrap; }
+  .pill.on { background: var(--surface-3); color: var(--fg); border-color: var(--border-strong); }
+
+  .group { padding: 18px 16px 6px; }
+  .group h2 { font-size: 10px; color: var(--fg-subtle); text-transform: uppercase; letter-spacing: .12em; font-weight: 800; margin: 0; }
+  .group small { color: var(--fg-subtle); font-size: 10px; }
+
+  .card {
+    background: var(--surface-1);
+    margin: 10px 16px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    position: relative;
+  }
+  .card.is-default { border-color: rgba(200,16,46,0.35); background: linear-gradient(180deg, rgba(200,16,46,0.05), var(--surface-1)); }
+  .card.is-anchor { border-color: rgba(200,160,46,0.35); }
+  .card.is-decoy { opacity: .85; }
+  .card.is-default::before {
+    content: "MOST PICKED";
+    position: absolute;
+    top: -7px;
+    left: 14px;
+    background: var(--brand);
+    color: white;
+    font-size: 8px;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 999px;
+    letter-spacing: .08em;
+  }
+  .card.is-anchor:not(.is-default)::before {
+    content: "BEST VALUE";
+    position: absolute;
+    top: -7px;
+    left: 14px;
+    background: var(--gold);
+    color: #1a1a1a;
+    font-size: 8px;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 999px;
+    letter-spacing: .08em;
+  }
+
+  .lbl { font-size: 9px; color: var(--fg-subtle); text-transform: uppercase; letter-spacing: .08em; font-weight: 700; }
+  .nm { font-size: 16px; font-weight: 700; margin: 2px 0 4px; }
+  .desc { font-size: 12px; color: var(--fg-muted); line-height: 1.5; margin-bottom: 12px; }
+
+  .price { display: flex; align-items: baseline; gap: 8px; margin-bottom: 12px; }
+  .price-big { font-size: 22px; font-weight: 700; color: var(--brand); font-variant-numeric: tabular-nums; }
+  .price-ref { font-size: 11px; color: var(--fg-subtle); text-decoration: line-through; }
+  .price-disc { background: rgba(16,185,129,0.15); color: #6ee7b7; font-size: 10px; padding: 2px 7px; border-radius: 999px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+
+  .stat-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 12px; }
+  .stat { background: var(--surface-2); border-radius: 8px; padding: 8px 10px; }
+  .stat-l { font-size: 9px; color: var(--fg-subtle); text-transform: uppercase; letter-spacing: .06em; font-weight: 700; }
+  .stat-v { font-size: 13px; color: var(--fg); font-weight: 700; margin-top: 3px; font-variant-numeric: tabular-nums; }
+
+  .actions { display: flex; gap: 6px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .actions button { flex: 1; background: transparent; border: 1px solid var(--border); color: var(--fg-muted); padding: 8px; border-radius: 8px; font-size: 12px; font-weight: 600; }
+  .actions button.primary { background: var(--brand); color: white; border-color: var(--brand); }
+
+  .quick-toggle { display: flex; gap: 6px; align-items: center; padding: 6px 0; font-size: 11px; color: var(--fg-muted); }
+  .switch { width: 32px; height: 18px; background: var(--surface-3); border-radius: 999px; padding: 2px; position: relative; }
+  .switch::after { content: ""; display: block; width: 14px; height: 14px; background: var(--fg-muted); border-radius: 999px; transition: transform .15s; }
+  .switch.on { background: rgba(16,185,129,0.4); }
+  .switch.on::after { transform: translateX(14px); background: var(--green); }
+
+  .float-add { position: sticky; bottom: 16px; margin: 16px 16px 0; display: block; width: calc(100% - 32px); background: var(--brand); color: white; border: 0; padding: 14px; border-radius: 12px; font-size: 14px; font-weight: 600; box-shadow: 0 6px 20px rgba(200,16,46,0.4); }
+
+  .meta-mini { display: flex; gap: 8px; flex-wrap: wrap; font-size: 10px; color: var(--fg-subtle); margin-top: 2px; }
+</style>
+</head>
+<body>
+  <div class="frame">
+    <div class="h">
+      <span class="back">←</span>
+      <h1>Bundle ladders<small>SKETCH 10 · MOBILE / TABLET</small></h1>
+      <button class="save">Save</button>
+    </div>
+
+    <div class="filters">
+      <span class="pill on">All (5)</span>
+      <span class="pill">Family</span>
+      <span class="pill">Lunch</span>
+      <span class="pill">Late-night</span>
+      <span class="pill">⚠ Margin</span>
+    </div>
+
+    <div class="group">
+      <h2>Family ladder</h2>
+      <small>≥ 2 mains · pizza + pasta scale</small>
+    </div>
+
+    <div class="card">
+      <div class="lbl">Family · entry</div>
+      <div class="nm">Your pizzas + sides</div>
+      <p class="desc">Your mains + bruschetta + 2 drinks. Min 2 / max 6 mains.</p>
+      <div class="price">
+        <span class="price-big">~88 zł</span>
+        <span class="price-ref">119 zł</span>
+        <span class="price-disc">−20%</span>
+      </div>
+      <div class="stat-row">
+        <div class="stat"><div class="stat-l">Mode</div><div class="stat-v">Dynamic</div></div>
+        <div class="stat"><div class="stat-l">Margin</div><div class="stat-v" style="color:var(--green);">56%</div></div>
+        <div class="stat"><div class="stat-l">Take 30d</div><div class="stat-v">3.2%</div></div>
+      </div>
+      <div class="quick-toggle"><div class="switch on"></div> Active</div>
+      <div class="actions"><button>Edit</button><button>Duplicate</button></div>
+    </div>
+
+    <div class="card is-default is-anchor">
+      <div class="lbl">Family Feast</div>
+      <div class="nm">Whole-table dinner</div>
+      <p class="desc">Your mains + 2 antipasti + 4 drinks + tiramisù. Min 2 / max 8 mains.</p>
+      <div class="price">
+        <span class="price-big">~135 zł</span>
+        <span class="price-ref">187 zł</span>
+        <span class="price-disc">−28%</span>
+      </div>
+      <div class="stat-row">
+        <div class="stat"><div class="stat-l">Mode</div><div class="stat-v">Dynamic</div></div>
+        <div class="stat"><div class="stat-l">Margin</div><div class="stat-v" style="color:var(--green);">49%</div></div>
+        <div class="stat"><div class="stat-l">Take 30d</div><div class="stat-v">8.1%</div></div>
+      </div>
+      <div class="meta-mini">📅 Fri · Sat · Sun · 🎯 Anchor + Default</div>
+      <div class="quick-toggle"><div class="switch on"></div> Active</div>
+      <div class="actions"><button class="primary">Edit</button><button>Duplicate</button></div>
+    </div>
+
+    <div class="card is-decoy">
+      <div class="lbl">Feast Deluxe · decoy</div>
+      <div class="nm">Big group, no leftovers</div>
+      <p class="desc">Your mains + 2 antipasti + 6 drinks + 2 desserts. Min 3 / max 12 mains.</p>
+      <div class="price">
+        <span class="price-big">~172 zł</span>
+        <span class="price-ref">227 zł</span>
+        <span class="price-disc">−20%</span>
+      </div>
+      <div class="stat-row">
+        <div class="stat"><div class="stat-l">Mode</div><div class="stat-v">Dynamic</div></div>
+        <div class="stat"><div class="stat-l">Margin</div><div class="stat-v" style="color:var(--green);">51%</div></div>
+        <div class="stat"><div class="stat-l">Take 30d</div><div class="stat-v">1.4%</div></div>
+      </div>
+      <div class="quick-toggle"><div class="switch on"></div> Active</div>
+      <div class="actions"><button>Edit</button><button>Duplicate</button></div>
+    </div>
+
+    <div class="group">
+      <h2>Lunch ladder</h2>
+      <small>11:00–14:00 hour-gated</small>
+    </div>
+
+    <div class="card is-anchor">
+      <div class="lbl">Lunch+</div>
+      <div class="nm">Pasta + drink + tiramisù</div>
+      <p class="desc">A meal you'll remember.</p>
+      <div class="price">
+        <span class="price-big">46 zł</span>
+        <span class="price-ref">56 zł</span>
+        <span class="price-disc">−18%</span>
+      </div>
+      <div class="stat-row">
+        <div class="stat"><div class="stat-l">Mode</div><div class="stat-v">Fixed</div></div>
+        <div class="stat"><div class="stat-l">Margin</div><div class="stat-v" style="color:var(--green);">61%</div></div>
+        <div class="stat"><div class="stat-l">Take 30d</div><div class="stat-v">22%</div></div>
+      </div>
+      <div class="meta-mini">📅 Mon–Fri</div>
+      <div class="quick-toggle"><div class="switch on"></div> Active</div>
+      <div class="actions"><button>Edit</button><button>Duplicate</button></div>
+    </div>
+
+    <div class="group">
+      <h2>Late-night ladder</h2>
+      <small>21:00–24:00 hour-gated</small>
+    </div>
+
+    <div class="card is-default">
+      <div class="lbl">Late dinner</div>
+      <div class="nm">Pizza + drink + dessert</div>
+      <p class="desc">Your pizza + 1 drink + tiramisù. Min 1 / max 3 mains.</p>
+      <div class="price">
+        <span class="price-big">~38 zł</span>
+        <span class="price-ref">48 zł</span>
+        <span class="price-disc">−22%</span>
+      </div>
+      <div class="stat-row">
+        <div class="stat"><div class="stat-l">Mode</div><div class="stat-v">Dynamic</div></div>
+        <div class="stat"><div class="stat-l">Margin</div><div class="stat-v" style="color:var(--green);">58%</div></div>
+        <div class="stat"><div class="stat-l">Take 30d</div><div class="stat-v">11%</div></div>
+      </div>
+      <div class="quick-toggle"><div class="switch on"></div> Active</div>
+      <div class="actions"><button>Edit</button><button>Duplicate</button></div>
+    </div>
+
+    <button class="float-add">+ Add a bundle</button>
+  </div>
+</body>
+</html>
