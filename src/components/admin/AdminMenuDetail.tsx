@@ -954,20 +954,22 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
                   label: MENU_CATEGORY_LABELS[cc],
                 }))}
               />
-              <div className="v2-detail-tags-row v2-detail-tags-row-locked">
-                <span className="v2-detail-tags-row-label">Tags</span>
-                {MENU_TAGS.map((tag) => {
-                  const on = chain.tags.includes(tag);
-                  return (
-                    <span
-                      key={tag}
-                      className={`v2-chip ${on ? "is-on" : ""}`}
-                      aria-disabled="true"
-                    >
-                      {tag}
-                    </span>
-                  );
-                })}
+              <div className="v2-field">
+                <label className="v2-field-label">Tags</label>
+                <div className="v2-detail-tags-row v2-detail-tags-row-locked">
+                  {MENU_TAGS.map((tag) => {
+                    const on = chain.tags.includes(tag);
+                    return (
+                      <span
+                        key={tag}
+                        className={`v2-chip ${on ? "is-on" : ""}`}
+                        aria-disabled="true"
+                      >
+                        {tag}
+                      </span>
+                    );
+                  })}
+                </div>
               </div>
             </div>
             <Textarea
