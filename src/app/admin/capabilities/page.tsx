@@ -103,6 +103,28 @@ export default async function CapabilitiesPage() {
           href: "/admin/truck",
           summary: "Maintenance log + route planner. Pairs with the public live-truck endpoint.",
         },
+        {
+          name: "DB-backed locations registry",
+          status: has("DATABASE_URL") ? "live" : "needs-config",
+          href: "/admin/locations/manage",
+          envVars: ["DATABASE_URL"],
+          summary:
+            "Add / edit / archive locations from the admin UI — no code change or deploy. Hardcoded src/data/locations.ts is the first-deploy seed only; once the table has rows it wins. 30s in-process cache.",
+        },
+        {
+          name: "Per-location lock scoping",
+          status: has("UPSTASH_REDIS_REST_URL") ? "live" : "needs-config",
+          envVars: ["UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN"],
+          summary:
+            "Order writes scope locks as `orders:${slug}` instead of the global `orders.json`. Lifts the 300 orders/hour ceiling from audit §4 to N × that (one queue per location) and unblocks horizontal scaling.",
+        },
+        {
+          name: "Retention trim (webhook_events, audit_log)",
+          status: has("DATABASE_URL", "CRON_SECRET") ? "live" : "needs-config",
+          envVars: ["DATABASE_URL", "CRON_SECRET"],
+          summary:
+            "Daily cron prunes webhook_events (>30d), checkout_attempts (>7d), audit_log (>180d). Default windows are overridable via RETENTION_*_DAYS env vars. Bytes-deleted is logged for observability.",
+        },
       ],
     },
     {
@@ -737,6 +759,21 @@ export default async function CapabilitiesPage() {
           href: "/admin/schedule",
           summary: "Live revenue-to-labour-cost metric from shifts + time punches.",
         },
+        {
+          name: "Sales per labour hour (SPLH)",
+          status: has("DATABASE_URL") ? "live" : "needs-config",
+          href: "/api/admin/labor-efficiency",
+          envVars: ["DATABASE_URL"],
+          summary:
+            "Daily cron computes yesterday's revenue ÷ paired-punch hours per location. Surfaced on the dashboard with target band 90–140 zł/hr. Bottom-of-range alerts staff-up; top alerts service-quality risk.",
+        },
+        {
+          name: "Schedule-vs-sales gap",
+          status: has("DATABASE_URL") ? "live" : "needs-config",
+          envVars: ["DATABASE_URL"],
+          summary:
+            "Compares today's scheduled hours against the demand-forecast-implied hours-needed (~3 covers/hr/staffer). Surfaces actionable gaps ≥ 2 hours on the dashboard. Uses Claude forecast when ANTHROPIC_API_KEY is set, last-week baseline otherwise.",
+        },
       ],
     },
     {
@@ -754,6 +791,32 @@ export default async function CapabilitiesPage() {
           status: "live",
           href: "/api/admin/reports/tips",
           summary: "Tip totals + tip rate by order. Filters by date range and location.",
+        },
+        {
+          name: "Cohort retention + CLTV",
+          status: has("DATABASE_URL") ? "live" : "needs-config",
+          href: "/admin/reports/cohort",
+          envVars: ["DATABASE_URL"],
+          summary:
+            "Per-cohort retention matrix (% of cohort reordering N months later) + mean CLTV at 30 / 60 / 90 / 180 / 365 day horizons. Computed live from the orders table; cached 60s per location filter.",
+        },
+        {
+          name: "Customer segments (RFM)",
+          status: has("DATABASE_URL") ? "live" : "needs-config",
+          href: "/admin/reports/cohort",
+          envVars: ["DATABASE_URL"],
+          summary:
+            "Weekly rebuild deterministically buckets every paying customer into new / occasional / regular / champion / vip / lapsed using recency-frequency-monetary scores. Drives the data moat: personalized upsell, lapse detection.",
+        },
+        {
+          name: "Referral give-get loop",
+          status: has("DATABASE_URL") ? "live" : "needs-config",
+          href: "/api/referrals",
+          envVars: ["DATABASE_URL"],
+          summary:
+            "Stable per-phone code, /r/CODE landing drops a 30-day cookie, first paid order qualifies the redemption, outbox dispatcher credits 100 points to the referrer + SMSes them the win. Acquisition cost capped at the 10 PLN referee discount.",
+          caveats:
+            "Cart drawer still needs to read the `sud-italia-referral` cookie and apply the 10 PLN discount + post to /api/referrals at checkout. Backend is fully wired; the cart UI hook is the remaining work.",
         },
       ],
     },

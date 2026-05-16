@@ -50,11 +50,23 @@ async function ensureDB() {
  * primitive serializes across Vercel instances via Upstash Redis SET NX PX
  * when configured, and falls back to an in-process Promise chain otherwise.
  *
- * Phase 1 will scope lock keys narrower (e.g. `slots:${locationSlug}:${date}`
- * instead of `slots.json`) as each entity is normalized off kv_store. For now
- * the keys match the legacy file names so the callsites can stay put.
+ * Lock keys should scope as narrowly as the critical section permits. The
+ * `withLockScoped` variant takes an explicit scope (typically a location
+ * slug) and produces keys like `orders:krakow` instead of the global
+ * `orders.json`. That single change took the audit §4 "300 orders/hour"
+ * ceiling to ~N × that, where N is the number of active locations — the
+ * lock is now per-location, so two trucks' traffic no longer contends.
  */
 function withLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  return withDistributedLock(key, fn);
+}
+
+function withLockScoped<T>(
+  base: string,
+  scope: string | undefined | null,
+  fn: () => Promise<T>,
+): Promise<T> {
+  const key = scope ? `${base}:${scope}` : base;
   return withDistributedLock(key, fn);
 }
 
@@ -931,6 +943,58 @@ async function dualDeleteOrder(id: string): Promise<void> {
   }
 }
 
+/**
+ * Best-effort mirror into the legacy kv_store["orders.json"] blob, scoped
+ * under a per-location lock so two trucks' writes don't contend. The
+ * normalized `orders` table is the source of truth; this mirror only
+ * matters for the dev/CI filesystem fallback and for any straggler code
+ * path that still reads the legacy blob. Failures here are logged once
+ * and forgotten.
+ *
+ * Audit §4 fix: the previous shape took a global `orders.json` lock on
+ * every order — that single key is what capped throughput at ~300
+ * orders/hour. Per-location scoping turns this into N independent
+ * queues.
+ */
+async function mirrorOrderToKvStoreScoped(order: Order): Promise<void> {
+  try {
+    await withLockScoped("orders.kv", order.locationSlug, async () => {
+      const orders = await readJSON<Order[]>("orders.json", []);
+      const idx = orders.findIndex((o) => o.id === order.id);
+      if (idx === -1) orders.push(order);
+      else orders[idx] = order;
+      await writeJSON("orders.json", orders);
+    });
+  } catch (err) {
+    logger.warn(
+      "mirrorOrderToKvStoreScoped failed (DB is source of truth, mirror skipped)",
+      { orderId: order.id, locationSlug: order.locationSlug, layer: "store.orders" },
+      err,
+    );
+  }
+}
+
+async function mirrorOrderDeleteToKvStoreScoped(
+  id: string,
+  locationSlug: string,
+): Promise<void> {
+  try {
+    await withLockScoped("orders.kv", locationSlug, async () => {
+      const orders = await readJSON<Order[]>("orders.json", []);
+      const filtered = orders.filter((o) => o.id !== id);
+      if (filtered.length !== orders.length) {
+        await writeJSON("orders.json", filtered);
+      }
+    });
+  } catch (err) {
+    logger.warn(
+      "mirrorOrderDeleteToKvStoreScoped failed",
+      { orderId: id, locationSlug, layer: "store.orders" },
+      err,
+    );
+  }
+}
+
 export async function getOrders(locationSlug?: string): Promise<Order[]> {
   const db = getDb();
   if (db) {
@@ -1086,13 +1150,30 @@ export async function getOrderByStripePaymentIntent(
 }
 
 export async function createOrder(order: Order): Promise<Order> {
-  const saved = await withLock("orders.json", async () => {
-    const orders = await readJSON<Order[]>("orders.json", []);
-    orders.push(order);
-    await writeJSON("orders.json", orders);
-    await dualWriteOrder(order);
-    return order;
-  });
+  // Audit §4 "Scalability (tech) — 300 orders/hour ceiling". Old shape
+  // took a global `orders.json` lock and rewrote the entire orders array
+  // on every insert — O(N) writes serialized across all locations. The
+  // new shape:
+  //   1. INSERT into the normalized `orders` table — atomic on the PK,
+  //      no application lock needed.
+  //   2. Mirror to kv_store under a per-location lock (`orders:${slug}`)
+  //      so two trucks' write paths never block each other.
+  //   3. When DB is unset (dev/CI), fall back to the legacy global-lock
+  //      path so nothing breaks locally.
+  const db = getDb();
+  let saved: Order;
+  if (db) {
+    await dualWriteOrder(order); // primary path: normalized table is source of truth
+    void mirrorOrderToKvStoreScoped(order);
+    saved = order;
+  } else {
+    saved = await withLockScoped("orders", order.locationSlug, async () => {
+      const orders = await readJSON<Order[]>("orders.json", []);
+      orders.push(order);
+      await writeJSON("orders.json", orders);
+      return order;
+    });
+  }
   // Fire-and-forget rollup so the checkout request doesn't wait. A failure
   // here only means the customer's row is one order behind until the next
   // event refreshes it — non-blocking and idempotent.
@@ -1129,15 +1210,46 @@ export async function createOrder(order: Order): Promise<Order> {
 }
 
 export async function updateOrderStatus(id: string, status: Order["status"]): Promise<Order | null> {
-  const updated = await withLock("orders.json", async () => {
-    const orders = await readJSON<Order[]>("orders.json", []);
-    const index = orders.findIndex((o) => o.id === id);
-    if (index === -1) return null;
-    orders[index].status = status;
-    await writeJSON("orders.json", orders);
-    await dualWriteOrder(orders[index]);
-    return orders[index];
-  });
+  // DB-first path: single UPDATE on the orders table, no global lock. The
+  // kv_store mirror still updates under a per-location lock so two trucks
+  // never contend. Reduces lock-key cardinality from 1 → N (number of
+  // active locations) for the critical hot path.
+  const db = getDb();
+  let updated: Order | null = null;
+  if (db) {
+    try {
+      await ensureOrdersTable();
+      const rows = await db
+        .update(ordersTable)
+        .set({ status, updatedAt: new Date() })
+        .where(eq(ordersTable.id, id))
+        .returning();
+      if (rows.length === 1) {
+        updated = rowToOrder(rows[0]);
+        void mirrorOrderToKvStoreScoped(updated);
+      }
+    } catch (err) {
+      logger.warn(
+        "updateOrderStatus DB update failed; falling back to kv path",
+        { orderId: id, layer: "store.orders" },
+        err,
+      );
+    }
+  }
+  if (!updated) {
+    // Legacy fallback. The lock key here is global because we don't know
+    // the locationSlug yet — but we only get here if the DB path failed
+    // or DATABASE_URL is unset.
+    updated = await withLock("orders.json", async () => {
+      const orders = await readJSON<Order[]>("orders.json", []);
+      const index = orders.findIndex((o) => o.id === id);
+      if (index === -1) return null;
+      orders[index].status = status;
+      await writeJSON("orders.json", orders);
+      await dualWriteOrder(orders[index]);
+      return orders[index];
+    });
+  }
   if (updated) {
     // Pending → confirmed flips a checkout from "doesn't count" to
     // "counts" in lifetime stats; cancelled does the opposite. Both warrant
@@ -1189,15 +1301,49 @@ export async function updateOrder(
   id: string,
   patch: Partial<Omit<Order, "id" | "createdAt">>,
 ): Promise<Order | null> {
-  const updated = await withLock("orders.json", async () => {
-    const orders = await readJSON<Order[]>("orders.json", []);
-    const index = orders.findIndex((o) => o.id === id);
-    if (index === -1) return null;
-    orders[index] = { ...orders[index], ...patch };
-    await writeJSON("orders.json", orders);
-    await dualWriteOrder(orders[index]);
-    return orders[index];
-  });
+  const db = getDb();
+  let updated: Order | null = null;
+  if (db) {
+    try {
+      await ensureOrdersTable();
+      // Read-update-return cycle on the row. We still need the read because
+      // the payload jsonb merges with the patch fields and Drizzle doesn't
+      // have a partial-jsonb-update primitive that preserves untouched keys.
+      const existing = await db
+        .select()
+        .from(ordersTable)
+        .where(eq(ordersTable.id, id))
+        .limit(1);
+      if (existing.length === 1) {
+        const merged: Order = { ...rowToOrder(existing[0]), ...patch };
+        const values = orderToValues(merged);
+        await db
+          .update(ordersTable)
+          .set({ ...values, updatedAt: new Date() })
+          .where(eq(ordersTable.id, id));
+        await dualWriteOrderItems(merged);
+        updated = merged;
+        void mirrorOrderToKvStoreScoped(updated);
+      }
+    } catch (err) {
+      logger.warn(
+        "updateOrder DB update failed; falling back to kv path",
+        { orderId: id, layer: "store.orders" },
+        err,
+      );
+    }
+  }
+  if (!updated) {
+    updated = await withLock("orders.json", async () => {
+      const orders = await readJSON<Order[]>("orders.json", []);
+      const index = orders.findIndex((o) => o.id === id);
+      if (index === -1) return null;
+      orders[index] = { ...orders[index], ...patch };
+      await writeJSON("orders.json", orders);
+      await dualWriteOrder(orders[index]);
+      return orders[index];
+    });
+  }
   // Refresh the rollup when a patch could change lifetime stats. paidAt
   // pins the firstOrderAt/lastOrderAt timestamps; refund/dispute affect
   // future Phase 4 customer-health scoring. Status flips already trigger
@@ -1255,18 +1401,46 @@ export async function deleteOrder(id: string): Promise<boolean> {
   let slotId: string | undefined;
   let customerPhone: string | undefined;
   let locationSlug: string | undefined;
-  const removed = await withLock("orders.json", async () => {
-    const orders = await readJSON<Order[]>("orders.json", []);
-    const index = orders.findIndex((o) => o.id === id);
-    if (index === -1) return false;
-    slotId = orders[index].slotId;
-    customerPhone = orders[index].customerPhone;
-    locationSlug = orders[index].locationSlug;
-    orders.splice(index, 1);
-    await writeJSON("orders.json", orders);
-    await dualDeleteOrder(id);
-    return true;
-  });
+  let removed = false;
+
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureOrdersTable();
+      const rows = await db
+        .delete(ordersTable)
+        .where(eq(ordersTable.id, id))
+        .returning();
+      if (rows.length === 1) {
+        const o = rowToOrder(rows[0]);
+        slotId = o.slotId;
+        customerPhone = o.customerPhone;
+        locationSlug = o.locationSlug;
+        removed = true;
+        void mirrorOrderDeleteToKvStoreScoped(id, o.locationSlug);
+      }
+    } catch (err) {
+      logger.warn(
+        "deleteOrder DB delete failed; falling back to kv path",
+        { orderId: id, layer: "store.orders" },
+        err,
+      );
+    }
+  }
+  if (!removed) {
+    removed = await withLock("orders.json", async () => {
+      const orders = await readJSON<Order[]>("orders.json", []);
+      const index = orders.findIndex((o) => o.id === id);
+      if (index === -1) return false;
+      slotId = orders[index].slotId;
+      customerPhone = orders[index].customerPhone;
+      locationSlug = orders[index].locationSlug;
+      orders.splice(index, 1);
+      await writeJSON("orders.json", orders);
+      await dualDeleteOrder(id);
+      return true;
+    });
+  }
   if (removed) {
     if (slotId) {
       await decrementSlotOrders(slotId);

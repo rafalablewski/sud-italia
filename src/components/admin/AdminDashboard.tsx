@@ -8,6 +8,7 @@ import {
   ArrowRight,
   Banknote,
   Boxes,
+  CalendarRange,
   ChefHat,
   Clock,
   ClipboardList,
@@ -19,6 +20,7 @@ import {
   Receipt,
   RefreshCw,
   Star,
+  TrendingUp,
   Users,
 } from "lucide-react";
 import { useAdminLocation } from "./v2/LocationContext";
@@ -172,6 +174,26 @@ export function AdminDashboard() {
     ratio: number | null;
     openShifts: number;
   } | null>(null);
+  const [laborEfficiency, setLaborEfficiency] = useState<{
+    perLocation: {
+      locationSlug: string;
+      yesterday: {
+        date: string;
+        revenueGrosze: number;
+        laborHours: number;
+        splhGrosze: number;
+        rating: "under" | "good" | "over";
+      };
+      today: {
+        date: string;
+        scheduledHours: number;
+        impliedHoursNeeded: number;
+        gapHours: number;
+        forecastSource: "ai" | "trailing-week" | "none";
+        forecastOrders: number;
+      };
+    }[];
+  } | null>(null);
   const [upcomingSlots, setUpcomingSlots] = useState<
     { id: string; time: string; spotsLeft: number; fulfillmentTypes: string[] }[]
   >([]);
@@ -201,13 +223,14 @@ export function AdminDashboard() {
           )
         : Promise.resolve([]);
 
-      const [a, b, ins, ord, notif, labor, slots, stock] = await Promise.all([
+      const [a, b, ins, ord, notif, labor, eff, slots, stock] = await Promise.all([
         fetch(`/api/admin/analytics?from=${from}&to=${to}${locParam}`).then((r) => (r.ok ? r.json() : null)),
         fetch(`/api/admin/analytics?from=${prev.from}&to=${prev.to}${locParam}`).then((r) => (r.ok ? r.json() : null)),
         fetch(`/api/admin/insights?from=${from}&to=${to}`).then((r) => (r.ok ? r.json() : null)),
         fetch(`/api/admin/orders${location ? `?location=${location}` : ""}`).then((r) => (r.ok ? r.json() : [])),
         fetch(`/api/admin/notifications`).then((r) => (r.ok ? r.json() : [])),
         fetch(`/api/admin/labor-ratio${location ? `?location=${location}` : ""}`).then((r) => (r.ok ? r.json() : null)),
+        fetch(`/api/admin/labor-efficiency`).then((r) => (r.ok ? r.json() : null)),
         slotsP,
         stockP,
       ]);
@@ -217,6 +240,7 @@ export function AdminDashboard() {
       setOrders(Array.isArray(ord) ? ord : []);
       setNotifications(Array.isArray(notif) ? notif : []);
       setLaborRatio(labor);
+      setLaborEfficiency(eff);
       setUpcomingSlots(Array.isArray(slots) ? slots : []);
       setLowStock(
         Array.isArray(stock)
@@ -456,7 +480,80 @@ export function AdminDashboard() {
             />
           );
         })()}
+        {(() => {
+          // Sales per labour hour (audit §10/§14 McDonald's-ops). Pulls
+          // yesterday's snapshot from /api/admin/labor-efficiency (cron
+          // backs the cache; the API falls back to live compute on cold
+          // start). Aggregates across visible locations.
+          const perLoc = laborEfficiency?.perLocation ?? [];
+          const filtered = location ? perLoc.filter((p) => p.locationSlug === location) : perLoc;
+          const totalRev = filtered.reduce((s, p) => s + p.yesterday.revenueGrosze, 0);
+          const totalHours = filtered.reduce((s, p) => s + p.yesterday.laborHours, 0);
+          const splhPln = totalHours > 0 ? Math.round(totalRev / totalHours) / 100 : 0;
+          const tone: "success" | "warning" | "danger" | "neutral" =
+            totalHours === 0 ? "neutral" : splhPln < 70 ? "danger" : splhPln > 150 ? "warning" : "success";
+          return (
+            <KpiCard
+              label="Sales / labour hour (yest.)"
+              value={splhPln}
+              display={totalHours === 0 ? "—" : `${splhPln.toFixed(0)} zł/hr`}
+              icon={TrendingUp}
+              tone={tone}
+              higherIsBetter
+              hint={
+                totalHours === 0
+                  ? "No closed shifts yet"
+                  : `${totalHours.toFixed(1)} hrs · target 90–140 zł/hr`
+              }
+            />
+          );
+        })()}
       </section>
+
+      {(() => {
+        // Schedule-vs-sales gap callout (audit §10/§14). One line per
+        // visible location with a non-zero gap. Renders only when a
+        // gap is actionable (≥ 2 hours over- or under-staffed) so we
+        // don't nag on a tight day.
+        const perLoc = laborEfficiency?.perLocation ?? [];
+        const filtered = location ? perLoc.filter((p) => p.locationSlug === location) : perLoc;
+        const actionable = filtered.filter((p) => Math.abs(p.today.gapHours) >= 2);
+        if (actionable.length === 0) return null;
+        return (
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 space-y-2">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <CalendarRange size={16} /> Schedule vs forecast — today
+            </div>
+            <ul className="text-sm space-y-1">
+              {actionable.map((p) => {
+                const over = p.today.gapHours > 0;
+                return (
+                  <li key={p.locationSlug}>
+                    <span className="font-mono opacity-70">{p.locationSlug}</span>
+                    {" — "}
+                    <strong>{p.today.scheduledHours.toFixed(1)}h scheduled</strong>
+                    {" vs "}
+                    <strong>{p.today.impliedHoursNeeded}h needed</strong>
+                    {" "}
+                    <span className={over ? "text-amber-400" : "text-red-400"}>
+                      ({over ? "+" : ""}{p.today.gapHours.toFixed(1)}h)
+                    </span>
+                    {" · "}
+                    <span className="opacity-60 text-xs">
+                      {p.today.forecastSource === "ai"
+                        ? "Claude forecast"
+                        : p.today.forecastSource === "trailing-week"
+                          ? "last week baseline"
+                          : "no signal"}
+                      {p.today.forecastOrders > 0 ? ` · ${p.today.forecastOrders} orders` : ""}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        );
+      })()}
 
       <section className="v2-grid-2-1">
         <Card>

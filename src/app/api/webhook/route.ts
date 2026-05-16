@@ -78,6 +78,28 @@ export async function POST(req: NextRequest) {
         if (channel === "whatsapp" && customerPhone) {
           await clearWaSession(customerPhone);
         }
+        // Audit §6 #5 — referral give-get. If this customer's first
+        // paid order qualifies them as a referee, queue the referrer
+        // reward via the outbox. Fire-and-forget; the outbox dispatcher
+        // owns retries.
+        if (customerPhone) {
+          void (async () => {
+            try {
+              const { qualifyReferralOnFirstPaidOrder } = await import("@/lib/referral-loop");
+              const { getOrdersByPhone } = await import("@/lib/store");
+              const prior = await getOrdersByPhone(customerPhone);
+              const paidCount = prior.filter(
+                (o) => o.id !== orderId && o.status !== "pending" && o.status !== "cancelled",
+              ).length;
+              if (paidCount === 0) {
+                await qualifyReferralOnFirstPaidOrder(customerPhone, orderId);
+              }
+            } catch {
+              // Referral qualification failure is non-fatal; the customer
+              // still gets their order.
+            }
+          })();
+        }
       }
     }
 

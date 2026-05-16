@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logCronRun, withCron } from "@/lib/cron";
-import { getActiveLocations } from "@/data/locations";
+import { getActiveLocationsAsync } from "@/lib/locations-store";
 import { generateParPurchaseOrders } from "@/lib/par-purchase-orders";
 
 /**
@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   const auth = await withCron(req);
   if (auth) return auth;
 
-  const locations = getActiveLocations();
+  const locations = await getActiveLocationsAsync();
   const out: Record<
     string,
     {

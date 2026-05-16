@@ -46,6 +46,16 @@ const ALL_JOBS = [
   // Audit §3.4 — monthly corporate invoice on the 1st of each month.
   { path: "/api/admin/cron/corporate-invoices", everyDay: false, dom: 1 },
   { path: "/api/admin/cron/royalty-weekly", everyDay: false, dow: 1 },
+  // Audit §2 defensibility — weekly RFM rebuild powers the data moat:
+  // personalized upsell, lapse detection, CLTV-by-segment dashboards.
+  { path: "/api/admin/cron/customer-segments-rebuild", everyDay: false, dow: 1 },
+  // Audit §6 #5 — daily retention-trim of webhook_events + audit_log
+  // tables. Without this they grow unbounded and the customer query path
+  // slows over months.
+  { path: "/api/admin/cron/retention-trim", everyDay: true },
+  // Audit §3 — daily sales-per-labor-hour + schedule-vs-sales gap
+  // calculation, written to a daily summary the dashboard can read.
+  { path: "/api/admin/cron/labor-efficiency", everyDay: true },
 ] as const;
 
 function shouldRun(

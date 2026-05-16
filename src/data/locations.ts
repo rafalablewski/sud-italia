@@ -1,5 +1,20 @@
 import { Location } from "./types";
 
+/**
+ * Hardcoded seed list. **Not** the runtime source of truth — that's the
+ * `locations` Postgres table populated via /admin/locations/manage
+ * (m4_1, audit §2 "Scalability (ops)"). This file is:
+ *
+ *   1. The first-deploy fallback when the DB table is empty.
+ *   2. The dev / CI source when DATABASE_URL is unset.
+ *   3. The source for client components that import synchronously
+ *      (landing page, footer, location switcher). The seed should
+ *      stay roughly in sync with the DB; admin edits propagate to
+ *      DB-backed paths (crons, API routes) within ≤ 30 seconds.
+ *
+ * Server-side code that needs the live DB list should import from
+ * `@/lib/locations-store` instead.
+ */
 export const locations: Location[] = [
   {
     slug: "krakow",

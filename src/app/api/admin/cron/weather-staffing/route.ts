@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logCronRun, withCron } from "@/lib/cron";
-import { getActiveLocations } from "@/data/locations";
+import { getActiveLocationsAsync } from "@/lib/locations-store";
 import { logger } from "@/lib/logger";
 
 /**
@@ -18,15 +18,10 @@ import { logger } from "@/lib/logger";
  * Stored in cron log + Sentry; managers will eventually see this as
  * a card on /admin/dashboard. Phase 5 keeps it lightweight.
  *
- * Open-Meteo coordinates: Kraków (50.06°N, 19.94°E), Warszawa
- * (52.23°N, 21.01°E). New locations should ship coords in
- * src/data/locations.ts when expansion lands.
+ * Coordinates come from the locations table (m4_1) — every new truck
+ * ships with lat/lng on creation, so the cron picks it up without a
+ * code change.
  */
-
-const LOCATION_COORDS: Record<string, { lat: number; lng: number }> = {
-  krakow: { lat: 50.06, lng: 19.94 },
-  warszawa: { lat: 52.23, lng: 21.01 },
-};
 
 interface ForecastTip {
   locationSlug: string;
@@ -71,14 +66,14 @@ export async function POST(req: NextRequest) {
   const auth = await withCron(req);
   if (auth) return auth;
 
-  const locations = getActiveLocations();
+  const locations = await getActiveLocationsAsync();
   const tips: ForecastTip[] = [];
   const now = new Date();
   const dow = now.getUTCDay(); // 5=Fri, 6=Sat
 
   for (const loc of locations) {
-    const coords = LOCATION_COORDS[loc.slug];
-    if (!coords) {
+    const coords = loc.coordinates;
+    if (!coords || (coords.lat === 0 && coords.lng === 0)) {
       tips.push({
         locationSlug: loc.slug,
         forecast: null,

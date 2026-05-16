@@ -120,6 +120,13 @@
       "when": 1778670824842,
       "tag": "0016_famous_adam_warlock",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1778936498622,
+      "tag": "0017_little_fat_cobra",
+      "breakpoints": true
     }
   ]
 }
