@@ -2752,6 +2752,39 @@ html { scroll-behavior: smooth; }
   margin-top: -8px;
 }
 
+/* Inline location lens that lives inside a field label — used by the
+ * Slug input on the detail page since slug is the one product-card
+ * field that's actually per-location. Same pill chrome as the modifier
+ * editor's lens but shrunk to label-row size. */
+.v2-inline-lens-label {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.v2-inline-lens-sep {
+  color: var(--fg-subtle);
+  font-weight: 400;
+}
+.v2-inline-lens {
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  color: var(--brand);
+  background-color: transparent;
+  background-image: linear-gradient(45deg, transparent 50%, var(--fg-muted) 50%),
+    linear-gradient(135deg, var(--fg-muted) 50%, transparent 50%);
+  background-position: calc(100% - 8px) 6px, calc(100% - 4px) 6px;
+  background-size: 4px 4px, 4px 4px;
+  background-repeat: no-repeat;
+  border: 0;
+  padding: 0 14px 0 0;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.v2-inline-lens:focus { outline: 1px solid var(--brand); outline-offset: 2px; }
+
 /* ── Modifier editor ────────────────────────────────────────────────────
  * Minimal layout for per-option pricing under the lens. Each group is a
  * subtle card; its options live in inline rows with field-styled inputs

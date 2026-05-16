@@ -79,7 +79,6 @@ interface PerLocationDraft {
 
 interface ChainDraft {
   name: string;
-  slug: string;
   sku: string;
   description: string;
   category: MenuCategory;
@@ -91,7 +90,6 @@ interface ChainDraft {
 function emptyChain(): ChainDraft {
   return {
     name: "",
-    slug: "",
     sku: "",
     description: "",
     category: "pizza",
@@ -132,6 +130,16 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
    *  edits still propagate everywhere; only priceDelta / costDelta
    *  follow the lens. */
   const [modLens, setModLens] = useState<string>("");
+  /** Per-location item ID (slug). Seed items aren't renamable (their id
+   *  lives in src/data/menus/*.ts); custom items can be renamed via
+   *  PATCH /api/admin/menu/custom with `newId`. Stored separately from
+   *  ChainDraft because it never was chain-wide — every variant has
+   *  its own id (e.g. `kra-…` and `war-…` prefixes). */
+  const [slugByLoc, setSlugByLoc] = useState<Record<string, string>>({});
+  const [slugInitialByLoc, setSlugInitialByLoc] = useState<Record<string, string>>({});
+  /** Lens for the slug field. Picks which truck's id the input shows
+   *  + edits. Other product fields stay chain-wide regardless. */
+  const [productLens, setProductLens] = useState<string>("");
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -175,7 +183,6 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
       const primary = present[0];
       const nextChain: ChainDraft = {
         name: primary.name,
-        slug: primary.id,
         sku: primary.sku ?? "",
         description: primary.description,
         category: primary.category,
@@ -188,6 +195,20 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
       };
       setChain(nextChain);
       setChainInitial(JSON.parse(JSON.stringify(nextChain)));
+
+      // Per-location slug seeds + the lens default.
+      const nextSlugByLoc: Record<string, string> = {};
+      for (const v of found) {
+        if (v.item) nextSlugByLoc[v.slug] = v.item.id;
+      }
+      setSlugByLoc(nextSlugByLoc);
+      setSlugInitialByLoc({ ...nextSlugByLoc });
+      const firstPresentForSlug = found.find((v) => v.item)?.slug ?? "";
+      setProductLens((prev) =>
+        prev && found.find((v) => v.slug === prev)?.item
+          ? prev
+          : firstPresentForSlug,
+      );
 
       const nextGroupsByLoc: Record<string, ModifierGroup[]> = {};
       for (const v of found) {
@@ -532,6 +553,20 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
         // via hard-delete. Skip silently for customs.
         if (cur.hidden !== init.hidden) {
           seedPatch.hidden = cur.hidden ? true : null;
+        }
+
+        // Per-location slug rename (custom items only). Seed slugs live
+        // in code so a server PATCH would reject; the input is disabled
+        // for seed variants in the UI as a guard.
+        const curSlug = slugByLoc[v.slug]?.trim() ?? "";
+        const initSlug = slugInitialByLoc[v.slug] ?? "";
+        if (
+          v.item._isCustom &&
+          curSlug &&
+          curSlug !== initSlug &&
+          /^[a-z0-9-]{3,60}$/.test(curSlug)
+        ) {
+          customBody.newId = curSlug;
         }
 
         if (v.item._isCustom) {
@@ -926,13 +961,54 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
               onChange={(e) => setChain((c) => ({ ...c, name: e.target.value }))}
             />
             <div className="v2-detail-form-row" data-cols="3">
-              <Input
-                label="Slug"
-                value={chain.slug}
-                onChange={() => {}}
-                disabled
-                description="Tied to historical orders."
-              />
+              {(() => {
+                const activeVariant = present.find(
+                  (v) => v.slug === productLens,
+                );
+                const activeIsCustom = Boolean(activeVariant?.item._isCustom);
+                const activeCity = activeVariant?.city ?? productLens;
+                return (
+                  <Input
+                    label={
+                      <span className="v2-inline-lens-label">
+                        Slug
+                        {present.length > 1 && (
+                          <>
+                            <span className="v2-inline-lens-sep">·</span>
+                            <select
+                              value={productLens}
+                              onChange={(e) => setProductLens(e.target.value)}
+                              className="v2-inline-lens"
+                              aria-label="Slug lens"
+                            >
+                              {present.map((v) => (
+                                <option key={v.slug} value={v.slug}>
+                                  {v.city}
+                                </option>
+                              ))}
+                            </select>
+                          </>
+                        )}
+                      </span>
+                    }
+                    value={slugByLoc[productLens] ?? ""}
+                    onChange={(e) =>
+                      setSlugByLoc((prev) => ({
+                        ...prev,
+                        [productLens]: e.target.value
+                          .toLowerCase()
+                          .replace(/[^a-z0-9-]/g, ""),
+                      }))
+                    }
+                    disabled={!activeIsCustom}
+                    description={
+                      activeIsCustom
+                        ? `Custom item — renamable. 3–60 chars, lowercase, digits, hyphens.`
+                        : `Seed item at ${activeCity} — slug lives in src/data/menus/*.ts.`
+                    }
+                  />
+                );
+              })()}
               <Input
                 label="SKU"
                 value={chain.sku}
