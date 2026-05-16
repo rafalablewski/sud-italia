@@ -109,6 +109,15 @@ export function AdminAI() {
   const [stock, setStock] = useState<StockRow[]>([]);
   const [faqs, setFaqs] = useState<FaqRow[]>([]);
   const [loading, setLoading] = useState(true);
+  // Audit §3 — Claude-backed forecast pulled from /api/admin/ai/forecast
+  // when the gateway is configured. Falls back to the in-component MA
+  // when the endpoint replies with source="ma" (or never returns).
+  const [aiForecast, setAiForecast] = useState<{
+    source: "claude" | "ma";
+    days: { date: string; predictedOrders: number; lower: number; upper: number }[];
+    reasoning: string;
+    generatedAt: string;
+  } | null>(null);
 
   const [faqDialog, setFaqDialog] = useState<{ open: boolean; faq: FaqRow | null }>({ open: false, faq: null });
 
@@ -118,16 +127,19 @@ export function AdminAI() {
       const from = daysAgo(28);
       const to = isoDate(new Date());
       const locParam = location ? `&location=${location}` : "";
-      const [a, ins, s, f] = await Promise.all([
+      const forecastParam = location ? `?location=${location}` : "";
+      const [a, ins, s, f, fc] = await Promise.all([
         fetch(`/api/admin/analytics?from=${from}&to=${to}${locParam}`).then((r) => (r.ok ? r.json() : null)),
         fetch(`/api/admin/insights?from=${from}&to=${to}`).then((r) => (r.ok ? r.json() : null)),
         fetch(`/api/admin/stock${location ? `?location=${location}` : ""}`).then((r) => (r.ok ? r.json() : [])),
         fetch(`/api/admin/chatbot-faq`).then((r) => (r.ok ? r.json() : [])),
+        fetch(`/api/admin/ai/forecast${forecastParam}`).then((r) => (r.ok ? r.json() : null)),
       ]);
       setSummary(a);
       setInsights(ins);
       setStock(Array.isArray(s) ? s : []);
       setFaqs(Array.isArray(f) ? f : []);
+      setAiForecast(fc && Array.isArray(fc.days) ? fc : null);
     } finally {
       setLoading(false);
     }
@@ -360,22 +372,76 @@ export function AdminAI() {
           </section>
 
           <Card>
-            <CardHeader title="Demand forecast" description="Actual vs 7-day moving average vs naive projection for the next 7 days" />
+            <CardHeader
+              title="Demand forecast"
+              description={
+                aiForecast?.source === "claude"
+                  ? "Claude-backed 7-day forecast. Weekly seasonality, trend, and confidence band."
+                  : "Actual vs 7-day moving average vs naive projection (heuristic — set ANTHROPIC_API_KEY for the Claude forecast)."
+              }
+              actions={
+                aiForecast ? (
+                  <Badge
+                    tone={aiForecast.source === "claude" ? "success" : "warning"}
+                    variant="soft"
+                    dot
+                  >
+                    {aiForecast.source === "claude" ? "Claude" : "Heuristic"}
+                  </Badge>
+                ) : null
+              }
+            />
             <CardBody>
               {forecast.rows.length === 0 ? (
                 <EmptyState icon={Brain} title="Not enough data" description="Forecast appears once orders accumulate." compact />
               ) : (
-                <AreaChart
-                  data={forecast.rows as Array<Record<string, unknown>>}
-                  xKey="date"
-                  series={[
-                    { key: "actual", label: "Actual orders" },
-                    { key: "ma", label: "7-day MA" },
-                    { key: "forecast", label: "Forecast" },
-                  ]}
-                  height={300}
-                  xFormat={(v) => String(v).slice(5)}
-                />
+                <>
+                  <AreaChart
+                    data={(() => {
+                      // When Claude responded, splice the model's
+                      // predicted_orders + upper/lower into the chart
+                      // rows so the operator sees the real forecast
+                      // instead of the MA placeholder.
+                      if (!aiForecast || aiForecast.source !== "claude") {
+                        return forecast.rows as Array<Record<string, unknown>>;
+                      }
+                      const byDate = new Map(
+                        aiForecast.days.map((d) => [d.date, d]),
+                      );
+                      return (forecast.rows as Array<Record<string, unknown>>).map((row) => {
+                        const date = String(row.date ?? "");
+                        const pred = byDate.get(date);
+                        if (!pred) return row;
+                        return {
+                          ...row,
+                          forecast: pred.predictedOrders,
+                          lower: pred.lower,
+                          upper: pred.upper,
+                        };
+                      });
+                    })()}
+                    xKey="date"
+                    series={[
+                      { key: "actual", label: "Actual orders" },
+                      { key: "ma", label: "7-day MA" },
+                      { key: "forecast", label: "Forecast" },
+                      ...(aiForecast?.source === "claude"
+                        ? [
+                            { key: "lower", label: "Lower (80%)" },
+                            { key: "upper", label: "Upper (80%)" },
+                          ]
+                        : []),
+                    ]}
+                    height={300}
+                    xFormat={(v) => String(v).slice(5)}
+                  />
+                  {aiForecast?.reasoning && (
+                    <p className="mt-3 text-sm v2-muted">
+                      <Sparkles className="inline h-3.5 w-3.5 mr-1.5" />
+                      {aiForecast.reasoning}
+                    </p>
+                  )}
+                </>
               )}
             </CardBody>
           </Card>

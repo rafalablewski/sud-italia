@@ -22,7 +22,7 @@ import type { Order, OrderStatus, MenuCategory } from "@/data/types";
 import { MENU_CATEGORY_LABELS } from "@/data/types";
 import { useAdminLocation } from "./v2/LocationContext";
 import { useToast } from "./v2/ui/Toast";
-import { Badge, Button, Card, CardBody, CardHeader, EmptyState, Tabs } from "./v2/ui";
+import { Badge, Button, Card, CardBody, EmptyState, Tabs } from "./v2/ui";
 
 const ACTIVE_STATUSES: OrderStatus[] = ["confirmed", "preparing", "ready"];
 const KDS_COLUMNS: { id: OrderStatus; label: string; tone: "warning" | "info" | "success" }[] = [
@@ -60,16 +60,45 @@ function totalPrepSeconds(order: Order): number {
   return Math.max(0, Math.round((Date.now() - base) / 1000));
 }
 
-function fmtClock(s: number): string {
-  const m = Math.floor(s / 60);
-  const r = s % 60;
-  return `${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
+/**
+ * Seconds remaining until the order's promised-ready timestamp. Returns
+ * null when the order has no SLA (legacy rows before the m2_5 migration,
+ * or orders fired without a recipe-driven promise). Negative values
+ * mean the order is overdue.
+ */
+function remainingSlaSeconds(order: Order): number | null {
+  if (!order.estimatedReadyAt) return null;
+  const target = new Date(order.estimatedReadyAt).getTime();
+  if (!Number.isFinite(target)) return null;
+  return Math.round((target - Date.now()) / 1000);
 }
 
-/** Returns severity tone for a prep timer. */
-function prepTone(seconds: number, status: OrderStatus): "neutral" | "warning" | "danger" {
+function fmtClock(s: number): string {
+  const abs = Math.abs(s);
+  const m = Math.floor(abs / 60);
+  const r = abs % 60;
+  const sign = s < 0 ? "-" : "";
+  return `${sign}${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
+}
+
+/**
+ * Severity tone for a ticket. When the order has a promised-ready SLA
+ * we drive the colour off remaining-vs-target (audit §3 — KDS was
+ * surfacing elapsed-only, which lets a 5-minute order look as urgent
+ * as a 25-minute order). Fall back to elapsed for legacy rows.
+ */
+function prepTone(
+  elapsedSeconds: number,
+  remainingSeconds: number | null,
+  status: OrderStatus,
+): "neutral" | "warning" | "danger" {
   if (status === "ready") return "neutral";
-  const minutes = seconds / 60;
+  if (remainingSeconds !== null) {
+    if (remainingSeconds < 0) return "danger";
+    if (remainingSeconds < 180) return "warning";
+    return "neutral";
+  }
+  const minutes = elapsedSeconds / 60;
   if (minutes > 25) return "danger";
   if (minutes > 12) return "warning";
   return "neutral";
@@ -111,7 +140,9 @@ export function AdminKDS() {
   >([]);
 
   const knownIdsRef = useRef<Set<string>>(new Set());
+  const overdueFiredRef = useRef<Set<string>>(new Set());
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const overdueAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // Tick every second for live timers
   useEffect(() => {
@@ -135,6 +166,30 @@ export function AdminKDS() {
     knownIdsRef.current = currentIds;
   }, [orders, soundOn]);
 
+  // Audio chime on SLA breach — once per ticket. The first time a
+  // ticket crosses 0 seconds remaining we play a more urgent chime,
+  // then remember the id so we don't loop. The set is cleared if the
+  // ticket leaves the active list (bumped/recalled both work).
+  useEffect(() => {
+    const fired = overdueFiredRef.current;
+    const stillActive = new Set(orders.map((o) => o.id));
+    for (const id of Array.from(fired)) {
+      if (!stillActive.has(id)) fired.delete(id);
+    }
+    if (!soundOn) return;
+    for (const o of orders) {
+      if (o.status === "ready") continue;
+      const remaining = remainingSlaSeconds(o);
+      if (remaining === null || remaining >= 0) continue;
+      if (fired.has(o.id)) continue;
+      fired.add(o.id);
+      overdueAudioRef.current?.play().catch(() => {});
+    }
+    // `now` keeps this effect ticking each second so the cross-zero
+    // moment fires the chime even if the underlying orders array
+    // hasn't changed.
+  }, [orders, soundOn, now]);
+
   const visibleByStatus = useMemo(() => {
     const map = new Map<OrderStatus, Order[]>();
     for (const col of KDS_COLUMNS) map.set(col.id, []);
@@ -148,6 +203,50 @@ export function AdminKDS() {
     }
     return map;
   }, [orders, station]);
+
+  // Bump-bar hotkeys (audit §3 — "button-click only" was costing ~3s
+  // per bump at rush). Number keys 1-9 advance the corresponding
+  // ticket in the leftmost column with tickets (the "next action"
+  // column). 0 advances the 10th. Plain digit only — no modifier —
+  // matching how commercial bump-bars wire to a USB number pad.
+  // Ignored while an input/textarea is focused so admins can still
+  // type into search boxes etc.
+  const ticketColumnFlat = useMemo(() => {
+    for (const col of KDS_COLUMNS) {
+      const arr = visibleByStatus.get(col.id) || [];
+      if (arr.length > 0) return arr;
+    }
+    return [] as Order[];
+  }, [visibleByStatus]);
+  const orderById = useMemo(() => {
+    const m = new Map<string, Order>();
+    for (const o of orders) m.set(o.id, o);
+    return m;
+  }, [orders]);
+
+  // Keyboard handler — kept stable so the listener attaches once.
+  // advanceRef points at the latest `advance` closure so the hotkey
+  // always uses fresh state (orders, updatingId).
+  const advanceRef = useRef<(o: Order) => Promise<void>>(async () => {});
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || target?.isContentEditable) return;
+      let index = -1;
+      if (e.key >= "1" && e.key <= "9") index = parseInt(e.key, 10) - 1;
+      else if (e.key === "0") index = 9;
+      if (index < 0) return;
+      const ticket = ticketColumnFlat[index];
+      if (!ticket) return;
+      e.preventDefault();
+      void advanceRef.current(ticket);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [ticketColumnFlat]);
+  void orderById;
 
   const advance = async (o: Order) => {
     const next = nextStatus(o.status);
@@ -183,6 +282,12 @@ export function AdminKDS() {
       setUpdatingId(null);
     }
   };
+
+  // Keep the hotkey ref pointing at the latest closure so it always
+  // resolves to the current state when the cook taps a number key.
+  useEffect(() => {
+    advanceRef.current = advance;
+  });
 
   const recall = async (orderId: string) => {
     setUpdatingId(orderId);
@@ -403,6 +508,10 @@ export function AdminKDS() {
       {/* Chime audio. Public-domain short bell — bundled in /public if available,
           otherwise falls back to a data: WAV so the file does not 404. */}
       <audio ref={audioRef} preload="auto" src="data:audio/wav;base64,UklGRkAAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YRwAAAAAAGn/AAA7AGn/AAA7AGn/AAA7AGn/AAA7AA==" />
+      {/* Second, more attention-grabbing chime fired once per ticket
+          when it crosses the promised-ready deadline. Same data-URI
+          fallback so deployment doesn't depend on shipping an mp3. */}
+      <audio ref={overdueAudioRef} preload="auto" src="data:audio/wav;base64,UklGRkAAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YRwAAAAAAJL/AABuAJL/AABuAJL/AABuAJL/AABuAA==" />
     </div>
   );
 }
@@ -419,7 +528,8 @@ function Ticket({ order, stationFilter, onAdvance, isUpdating, nowMs }: TicketPr
   // nowMs forces a recompute every tick
   void nowMs;
   const seconds = totalPrepSeconds(order);
-  const tone = prepTone(seconds, order.status);
+  const remaining = remainingSlaSeconds(order);
+  const tone = prepTone(seconds, remaining, order.status);
   const byCategory = new Map<MenuCategory, typeof order.items>();
   for (const ci of order.items) {
     const arr = byCategory.get(ci.menuItem.category) || [];
@@ -433,6 +543,19 @@ function Ticket({ order, stationFilter, onAdvance, isUpdating, nowMs }: TicketPr
         <span className="v2-ticket-id mono">{order.id.slice(-6).toUpperCase()}</span>
         <span className={`v2-ticket-timer v2-ticket-timer-${tone}`}>
           <Timer className="h-3 w-3" /> {fmtClock(seconds)}
+          {remaining !== null && order.status !== "ready" && (
+            <span
+              title="Time remaining to promised-ready"
+              style={{
+                marginLeft: "0.4rem",
+                fontWeight: 700,
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              · {remaining < 0 ? "LATE " : "T-"}
+              {fmtClock(Math.abs(remaining))}
+            </span>
+          )}
         </span>
       </header>
       <div className="v2-ticket-meta">

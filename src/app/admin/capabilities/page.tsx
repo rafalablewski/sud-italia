@@ -130,7 +130,14 @@ export default async function CapabilitiesPage() {
         {
           name: "Fire-together stagger + promised-ready SLA",
           status: "live",
-          summary: "Longest-prep first; siblings auto-staggered. Red+audible at <0s to promise.",
+          summary:
+            "Longest-prep first; siblings auto-staggered. KDS surfaces T-MM:SS countdown to promised-ready next to elapsed; tone flips warning < 3 min, danger when LATE. Distinct audible chime once per ticket on first cross of 0 (separate from the new-ticket chime, mutable).",
+        },
+        {
+          name: "KDS bump-bar hotkeys (1–9, 0)",
+          status: "live",
+          summary:
+            "Number keys 1–9 (and 0 = 10) advance the Nth ticket in the leftmost active column — wired to AdminKDS keydown listener. No modifier required; ignored while an input/textarea is focused so admin search still works. Pairs with a USB number pad to remove ~3s of mouse hunt per bump at rush.",
         },
         {
           name: "Mobile KDS layout",
@@ -173,28 +180,41 @@ export default async function CapabilitiesPage() {
           summary: `Default 1000 PLN/day. Current: ${env.AI_DAILY_BUDGET_GROSZE ? `${Number(env.AI_DAILY_BUDGET_GROSZE) / 100} PLN` : "1000 PLN (default)"}.`,
         },
         {
-          name: "Insights dashboard (heuristic)",
+          name: "Insights dashboard (anomalies + reorder)",
           status: "live",
           href: "/admin/ai",
-          summary: "Forecasts, anomalies, reorder suggestions. Statistical — not Claude-backed yet.",
+          summary:
+            "Anomaly tile flags today's revenue / orders / AOV against the trailing 28-day average at ±20%. Reorder tile lists ingredients at or below reorder point with suggested PO cost.",
+          caveats:
+            "Anomalies are simple percentage deltas, not seasonal residuals — a low Tuesday looks the same as a low Monday. Replace with statsforecast STL when time allows.",
         },
         {
-          name: "Demand forecasting",
-          status: "live",
+          name: "Demand forecasting (Claude-backed)",
+          status: gatewayConfigured() ? "live" : "needs-config",
+          envVars: ["ANTHROPIC_API_KEY"],
           href: "/admin/ai",
-          summary: "7-day expected orders per location with weather impact + confidence band.",
+          summary:
+            "/api/admin/ai/forecast feeds the last 60 days of orders + revenue to Claude with a structured-JSON system prompt; returns 7-day predicted_orders + 80% confidence band + 1-2 sentence operator reasoning. Cached 24h per (location, fingerprint). Source ('Claude' / 'Heuristic') is surfaced in the dashboard badge so operators can't mistake one for the other.",
+          caveats:
+            "Falls back to a 7-day moving average + naive projection when ANTHROPIC_API_KEY is unset or the model output is unparseable. The MA fallback is honest fallback — don't ship the forecast tile without the key if you want to call it 'AI'.",
         },
         {
           name: "Dynamic pricing suggestions",
-          status: "live",
+          status: "needs-config",
           href: "/admin/ai",
-          summary: "Margin-based price-change recommendations with revenue-impact estimate.",
+          summary:
+            "Margin-based price-change recommendations were sketched as a UI panel but the recommendation engine is not implemented — the tile renders an empty state. Treat as roadmap.",
+          caveats:
+            "Marked needs-config because no automation is wired. Removing from `live` to keep the capabilities ledger honest (audit §3 row 4).",
         },
         {
           name: "Anomaly detection",
           status: "live",
           href: "/admin/ai",
-          summary: "Flags unusual sales patterns and quality outliers from historic baselines.",
+          summary:
+            "Flags today's metrics that deviate ±20% from the trailing 28-day average. Surfaced as cards on the Insights → Anomalies tab.",
+          caveats:
+            "Heuristic, not Claude-backed. Won't separate weekly seasonality from genuine drops. Good enough for daily sanity check; not 'ML anomaly detection'.",
         },
       ],
     },
@@ -228,8 +248,11 @@ export default async function CapabilitiesPage() {
         {
           name: "Web push notifications",
           status: has("VAPID_PRIVATE_KEY", "NEXT_PUBLIC_VAPID_PUBLIC_KEY") ? "live" : "needs-config",
-          envVars: ["NEXT_PUBLIC_VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY"],
-          summary: "Run `npx web-push generate-vapid-keys` and set both keys. SW + subscribe endpoint already shipped.",
+          envVars: ["NEXT_PUBLIC_VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY", "VAPID_SUBJECT"],
+          summary:
+            "End-to-end wired (audit §3 fix). web-push installed, sendNotification path calls the real push service. Order-confirmation page mounts <PushOptInButton/> — surfaces only when VAPID configured + browser supports push, and silently hides for already-subscribed devices. Outbox dispatcher fans `order.ready` events to every saved subscription per phone, prunes 404/410 endpoints. SW already shipped at /public/sw.js with push + notificationclick handlers.",
+          caveats:
+            "Subscriptions are stored in kv_store push-subscriptions.json — fine at 2 trucks, migrate to a real table when subscription volume exceeds ~10k rows.",
         },
         {
           name: "WhatsApp ordering (Meta Cloud API)",
@@ -243,6 +266,8 @@ export default async function CapabilitiesPage() {
           )
             ? "live"
             : "needs-config",
+          caveats:
+            "Depends on 6 env vars — until they're all set, the channel is inert. Currently `needs-config` until the operator finishes the Meta Cloud API onboarding.",
           envVars: [
             "WHATSAPP_PHONE_NUMBER_ID",
             "WHATSAPP_BUSINESS_ACCOUNT_ID",
@@ -626,13 +651,19 @@ export default async function CapabilitiesPage() {
           name: "Inventory + recipes + stock",
           status: "live",
           href: "/admin/inventory",
-          summary: "Per-ingredient stock, recipe BOMs, variance reports.",
+          summary:
+            "Per-ingredient stock, recipe BOMs, variance reports. Audit §3 fix wired: createOrder now calls consumeRecipeForOrder() (lib/inventory-decrement.ts) — every paid line posts one `consume` stock movement per recipe ingredient with qty (recipe.quantity × wasteFactor / yieldPortions) × portions. Full refunds + cancellations call restoreRecipeForOrder() via the symmetric `adjust` movement so the variance report no longer carries ghost-consumed stock from refunded orders.",
+          caveats:
+            "Partial refunds don't carry line-level data so they don't restore — rare, and the operator can reconcile from the audit log. Recipe rows still need to exist for an item before its order decrements anything — operator is responsible for setting them up in /admin/recipes.",
         },
         {
           name: "Suppliers + purchase orders",
           status: "live",
           href: "/admin/purchase-orders",
-          summary: "Multi-line POs with status workflow.",
+          summary:
+            "Multi-line POs with status workflow + daily PAR-driven draft cron (audit §3 fix). /api/admin/cron/par-purchase-orders walks every location, estimates avg daily usage from the trailing 14 days of `consume` movements, computes lead-time-adjusted thresholds (reorder_point + usage × supplier.leadTimeDays, fallback 3 days), groups missing quantity by supplier, writes one draft PO per supplier per UTC day with id `par-{slug}-{supplierId}-{YYYYMMDD}`. Idempotent on re-run, doesn't overwrite drafts already sent. Operator opens the queue, reviews, taps Send.",
+          caveats:
+            "Drafts are only generated when an ingredient has a supplier set on the ingredient record. Operator still has to email the supplier (Send via the admin UI uses Mailgun if configured); no auto-EDI / supplier API integrations yet.",
         },
         {
           name: "Staff + schedule + time punches",
@@ -915,6 +946,12 @@ export default async function CapabilitiesPage() {
           summary: "Sundays. Recomputes per-location variance vs expected from recipes.",
         },
         {
+          name: "PAR-driven draft POs (daily)",
+          status: "live",
+          summary:
+            "Daily via the dispatcher. /api/admin/cron/par-purchase-orders walks every location and writes draft POs grouped by supplier for ingredients below the lead-time-adjusted reorder threshold. Operator reviews + sends from /admin/purchase-orders. Audit §3 row 2.",
+        },
+        {
           name: "Loyalty expire points (monthly)",
           status: "live",
           summary: "1st of month. Scaffold — TTL config wiring lands in Phase 4 follow-up.",
@@ -976,6 +1013,11 @@ interface Capability {
   summary: string;
   href?: string;
   envVars?: string[];
+  /** Operator-honesty caveat (audit §3). Surfaces an amber callout
+   *  under the summary. Use when the feature is "live" but has a real
+   *  limitation an inspector would otherwise catch in 2 hours of
+   *  diligence (heuristic instead of ML, manual fallback path, etc.). */
+  caveats?: string;
 }
 
 interface CapabilityGroup {
@@ -1014,6 +1056,12 @@ function CapabilityCard({ item }: { item: Capability }) {
         </span>
       </div>
       <p className="admin-text-secondary text-xs leading-relaxed">{item.summary}</p>
+      {item.caveats && (
+        <p className="mt-2 rounded border border-amber-400/30 bg-amber-500/10 px-2 py-1.5 text-[11px] text-amber-100 leading-relaxed">
+          <span className="font-semibold uppercase tracking-wide">Caveat:</span>{" "}
+          {item.caveats}
+        </p>
+      )}
       {item.envVars && item.envVars.length > 0 && item.status !== "live" && (
         <p className="mt-2 text-[10px] admin-text-secondary">
           Set:{" "}

@@ -1118,6 +1118,13 @@ export async function createOrder(order: Order): Promise<Order> {
       totalAmount: order.totalAmount,
     },
   });
+  // Recipe-driven stock decrement (audit §3). Fire-and-forget so a
+  // stock log hiccup never blocks a paid customer, but failures hit
+  // Sentry through the helper's structured logging.
+  void (async () => {
+    const { consumeRecipeForOrder } = await import("@/lib/inventory-decrement");
+    await consumeRecipeForOrder(order);
+  })();
   return saved;
 }
 
@@ -1159,6 +1166,15 @@ export async function updateOrderStatus(id: string, status: Order["status"]): Pr
           status,
         },
       });
+    }
+    // Cancellation returns the predicted ingredient draw to stock so
+    // the variance report doesn't carry ghost consumption. Refund-by-
+    // status (vs the refund API) uses the same path.
+    if (status === "cancelled") {
+      void (async () => {
+        const { restoreRecipeForOrder } = await import("@/lib/inventory-decrement");
+        await restoreRecipeForOrder(updated, "cancel");
+      })();
     }
   }
   return updated;
@@ -7427,4 +7443,18 @@ export async function deleteWaTranscript(rawPhone: string): Promise<boolean> {
     await writeJSON("whatsapp-transcripts.json", all);
     return true;
   });
+}
+
+// --- Generic kv cache helpers (audit §3 AI forecast cache) ----------------
+//
+// Thin public wrappers around the internal readJSON/writeJSON so feature
+// code (e.g. the Claude-backed forecast endpoint) can persist short-lived
+// derived data without each caller learning the kv_store layout.
+
+export async function getCacheJson<T>(key: string, fallback: T): Promise<T> {
+  return readJSON<T>(key, fallback);
+}
+
+export async function setCacheJson<T>(key: string, data: T): Promise<void> {
+  await writeJSON<T>(key, data);
 }

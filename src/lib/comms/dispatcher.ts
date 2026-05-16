@@ -6,6 +6,7 @@ import { getWhatsAppProvider } from "@/lib/providers/whatsapp";
 import { getCustomer, getOrderById } from "@/lib/store";
 import { locations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
+import { pushToCustomer, PUSH_TEMPLATES } from "@/lib/push-notifications";
 import {
   orderCancelledSms,
   orderConfirmedReceiptEmail,
@@ -107,6 +108,23 @@ export async function commsDispatcher(event: OutboxRow): Promise<void> {
     case "order.ready": {
       const ctx = await loadContext(payload);
       if (!ctx) return;
+      // Web push runs alongside SMS — opt-out is per-channel. A
+      // customer who opted out of SMS may still want a push that the
+      // pizza is on the pass; a customer with no push subscription
+      // gets zero noise (pushToCustomer no-ops when there are no
+      // rows).
+      try {
+        await pushToCustomer(
+          ctx.customer.phone,
+          PUSH_TEMPLATES.orderReady(ctx.order.id),
+        );
+      } catch (err) {
+        logger.warn(
+          "comms.push.send_failed",
+          { eventId: event.id, phone: ctx.customer.phone },
+          err,
+        );
+      }
       if (ctx.customer.smsOptout) {
         logger.info("comms.skip.sms_optout", { eventId: event.id, type: event.eventType });
         return;

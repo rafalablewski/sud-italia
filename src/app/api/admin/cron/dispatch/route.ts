@@ -38,6 +38,10 @@ const ALL_JOBS = [
   // lead window.
   { path: "/api/admin/cron/corporate-preorder-reminder", everyDay: true },
   { path: "/api/admin/cron/inventory-variance", everyDay: false, dow: 0 },
+  // Audit §3 row 2 — PAR-driven draft POs every day so the operator
+  // walks in to a populated drafts queue instead of eyeballing the
+  // dough bucket and calling the supplier.
+  { path: "/api/admin/cron/par-purchase-orders", everyDay: true },
   { path: "/api/admin/cron/loyalty-expire-points", everyDay: false, dom: 1 },
   // Audit §3.4 — monthly corporate invoice on the 1st of each month.
   { path: "/api/admin/cron/corporate-invoices", everyDay: false, dom: 1 },
