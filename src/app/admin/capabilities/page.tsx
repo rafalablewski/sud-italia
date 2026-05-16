@@ -448,6 +448,13 @@ export default async function CapabilitiesPage() {
           summary: "computeTicketComplexity(cart) returns a weighted score (pizza 1.0 / pasta 0.8 / antipasti 0.6 / panini 0.5 / desserts 0.4 / drinks 0.15) summed across qty, plus distinct station count. score ≥ 6 marks the ticket as 'complex' — KDS expo screen surfaces a PRIORITY badge and the line can fire longest-prep items first. Family Feast tickets (typically 9–15 lines across 4 stations) automatically land top-of-screen during the 7pm rush.",
         },
         {
+          name: "Master + variants menu (chain-wide list, per-location detail)",
+          status: "live",
+          href: "/admin/menu",
+          summary:
+            "Menu admin is chain-wide. The /admin/menu list renders one row per product (no per-location chips, no location switcher) — values that diverge across trucks surface as a compact range (e.g. 27,90–29,90 zł) plus a 'varies' badge so operators can scan at a glance which SKUs price unevenly. Clicking edit opens /admin/menu/[baseSlug], a dedicated detail page split into (1) per-location pricing — inline price + cost inputs per truck, availability toggle, hide / remove / add buttons, plus 'Apply price to all' and 'Reset overrides' quick actions — and (2) chain-wide product fields (name, description, category, tags, SKU, delivery-only, packaging cost, modifier groups) that propagate to every truck on save. Saves route per-variant: seed rows batch through PUT /api/admin/menu items map; custom rows hit PATCH /api/admin/menu/custom; newly-added locations POST through /api/admin/menu/custom. Scales cleanly to 20+ locations because the list view never enumerates them inline — the detail page is the only surface that does, and it's a scrollable table.",
+        },
+        {
           name: "Tartufata Reale top anchor SKU",
           status: "live",
           href: "/admin/menu",

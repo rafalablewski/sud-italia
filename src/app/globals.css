@@ -2384,6 +2384,36 @@ html { scroll-behavior: smooth; }
   line-clamp: 2;
   -webkit-box-orient: vertical;
 }
+
+/* Chain summary line under the description — one quiet line telling the
+ * operator how many locations this product touches and whether any
+ * values diverge. Replaces the per-location chip strip from the old
+ * per-location view; the detail page is where divergence is editable. */
+.v2-mng-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: var(--text-2xs);
+  color: var(--fg-subtle);
+  letter-spacing: 0.02em;
+}
+.v2-mng-row-meta-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 16px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in oklab, var(--warning) 16%, transparent);
+  color: var(--warning);
+  font-weight: 600;
+  text-transform: lowercase;
+  letter-spacing: 0.04em;
+}
+.v2-mng-row-meta-badge-info {
+  background: color-mix(in oklab, var(--info) 16%, transparent);
+  color: var(--info);
+}
 .v2-mng-dot { color: var(--fg-subtle); margin: 0 6px; }
 
 /* Tags — inline labels separated by an interpunct dot. */
@@ -2481,6 +2511,53 @@ html { scroll-behavior: smooth; }
   text-decoration: line-through;
   text-decoration-thickness: 1px;
 }
+
+/* Per-location pricing table on the menu detail page. One row per active
+ * location, mixing inline price/cost inputs with an availability toggle
+ * and a remove button. Rows for missing locations render the inputs in a
+ * dimmed state so operators can preview what they'd add. */
+.v2-mng-loc-table {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.v2-mng-loc-table-head,
+.v2-mng-loc-table-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.4fr) 120px 120px 80px 110px 56px;
+  align-items: center;
+  column-gap: 12px;
+  padding: 8px 14px;
+}
+.v2-mng-loc-table-head {
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--fg-subtle);
+}
+.v2-mng-loc-table-row {
+  border-top: 1px solid var(--border);
+  background: var(--surface-1);
+}
+.v2-mng-loc-table-row:first-child { border-top: 0; }
+.v2-mng-loc-table-row[data-missing="true"] { background: var(--surface-2); opacity: 0.7; }
+.v2-mng-loc-table-row[data-hidden="true"] { opacity: 0.55; }
+.v2-mng-loc-table-city {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-sm);
+  color: var(--fg);
+}
+.v2-mng-loc-table-city > svg { color: var(--fg-subtle); }
 
 /* Edit icon (Menu) — fades in on hover */
 .v2-mng-edit {
