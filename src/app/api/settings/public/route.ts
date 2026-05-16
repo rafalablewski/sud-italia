@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isCartPresenceEnabled } from "@/lib/cart-presence-config";
-import { getLoyaltySettings, LIVE_WIDGET_LIMIT } from "@/lib/store";
+import { getLoyaltySettings, getSettings, LIVE_WIDGET_LIMIT } from "@/lib/store";
 
 // Public endpoint — returns only non-sensitive settings needed by the frontend
 export async function GET(req: NextRequest) {
-  const settings = await getLoyaltySettings();
+  const [settings, appSettings] = await Promise.all([
+    getLoyaltySettings(),
+    getSettings(),
+  ]);
   const location = req.nextUrl.searchParams.get("location");
 
   // Filter seasonal items by location if specified
@@ -46,5 +49,10 @@ export async function GET(req: NextRequest) {
       availableUntil: item.availableUntil,
       badge: item.badge,
     })),
+    /** Audit §3 — admin-tunable per-segment free-delivery thresholds.
+     *  Cart drawer uses these so the displayed bar matches the actual
+     *  charge calculated server-side. Undefined per-segment fields fall
+     *  back to the SEGMENT_FREE_DELIVERY_THRESHOLD defaults at use. */
+    deliveryThresholds: appSettings.deliveryThresholds ?? null,
   });
 }

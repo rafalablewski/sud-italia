@@ -550,8 +550,20 @@ export default async function CapabilitiesPage() {
         {
           name: "Item modifiers (pizza crust + premium toppings)",
           status: "live",
-          href: "/admin/upsell",
-          summary: "Per-item modifier groups (audit §3 — the previously-missing #1 revenue capability). Each MenuItem can carry `modifierGroups[]` — each group has a label, min/max selections, and an option list with priceDelta (added to line price) and costDelta (subtracted from gross margin). Margherita ships with Crust group (Standard / Sourdough +5 / Gluten-free +5) and Premium toppings (Buffalo mozz +9, Extra cheese +6, Truffle oil +8, Prosciutto +12). Diavola ships with Spice level + Premium toppings. Cart math (src/store/cart.ts:getTotal) uses effectiveUnitPrice() which sums modifier priceDelta × qty. Server checkout reuses the same helper so charged total matches displayed total. KDS-flagged options highlight on the kitchen ticket. Operator inventory at /admin/upsell → Item modifiers shows every modifier group per truck with GM% callout.",
+          href: "/admin/menu",
+          summary: "Per-item modifier groups (audit §3 — the previously-missing #1 revenue capability). Each MenuItem can carry `modifierGroups[]` — each group has a label, min/max selections, and an option list with priceDelta (added to line price) and costDelta (subtracted from gross margin). Margherita ships with Crust group (Standard / Sourdough +5 / Gluten-free +5) and Premium toppings (Buffalo mozz +9, Extra cheese +6, Truffle oil +8, Prosciutto +12). Diavola ships with Spice level + Premium toppings. **Editor lives on /admin/menu** — open any item, the ModifierEditor at the bottom of the dialog manages groups, options, min/max picks, priceDelta, costDelta, KDS-highlight flag. MenuOverride.modifierGroups round-trips through the menu API (validated by api-schemas.ts) so groups persist per-location. Cart math (src/store/cart.ts:getTotal) uses effectiveUnitPrice() which sums modifier priceDelta × qty. Server checkout (createOrder.ts) re-validates every selection against the current menu and reuses the same helper so charged total matches displayed total. Operator at-a-glance inventory at /admin/upsell → Item modifiers shows every modifier group per truck with GM% callout.",
+        },
+        {
+          name: "Delivery-only item flag + packaging cost editor",
+          status: "live",
+          href: "/admin/menu",
+          summary: "Audit §3 channel economics — every menu item edit dialog now exposes (a) a 'Delivery-only item' toggle that hides the SKU from dine-in/takeout carts and (b) a 'Packaging cost' override input (PLN per unit) that beats the category default (pizza 1.80 / pasta 2.50 / antipasti 1.50 / panini 0.80 / drinks 0.60 / desserts 1.00). Used for pantry SKUs (frozen tiramisù, Peroni 4-pack, branded olive oil) that customers can't carry from a truck. MenuOverride.deliveryOnly + packagingCost round-trip through /api/admin/menu (validated by api-schemas.ts) and feed totalPackagingCost() so the bundle low-margin alert + delivery profitability report reflect real delivery economics.",
+        },
+        {
+          name: "Per-segment delivery threshold settings panel",
+          status: "live",
+          href: "/admin/settings",
+          summary: "Audit §3 — /admin/settings → General now carries four threshold inputs (first-time / growing / regular / VIP) that override the hard-coded SEGMENT_FREE_DELIVERY_THRESHOLD defaults. Empty input = use default (39 / 49 / 59 / 35 PLN). Saved overrides flow through getDeliveryThresholdForCustomer() on the server (checkout fee charge) AND through /api/settings/public into the cart drawer (live progress bar) — so retuning one segment instantly affects both the bar the customer sees and the receipt amount Stripe charges, with no code push.",
         },
         {
           name: "Menu engineering hierarchy",

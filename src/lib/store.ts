@@ -1939,6 +1939,21 @@ export interface MenuOverride {
    * is true.
    */
   franchiseePriceMaxDeltaBps?: number;
+  /** Audit §3 channel economics — when true, the item only surfaces on
+   *  delivery carts. `null` = clear back to seed (force the seed flag
+   *  off, e.g. demote a pantry SKU back to dine-in availability). */
+  deliveryOnly?: boolean | null;
+  /** Audit §3 — per-unit packaging cost in grosze for delivery. Lets
+   *  operators tune box/napkin cost per SKU (a Family Feast box costs
+   *  more than a slice wrap). `null` = clear back to category default
+   *  in `CATEGORY_PACKAGING_COST_FALLBACK`. */
+  packagingCost?: number | null;
+  /** Audit §3 — modifier groups (Crust, Premium toppings, Spice level).
+   *  Full structure round-trips so the override CAN replace the seed
+   *  modifiers entirely. `null` = clear, falls back to whatever the
+   *  static menu data ships with. Empty array = no modifiers (overrides
+   *  the seed off). */
+  modifierGroups?: import("@/data/types").ModifierGroup[] | null;
 }
 
 export async function getMenuOverrides(): Promise<Record<string, MenuOverride>> {
@@ -1989,6 +2004,16 @@ export interface AppSettings {
   minOrderAmount: number; // in grosze
   businessPhone: string;
   businessEmail: string;
+  /** Audit §3 — per-segment free-delivery thresholds (grosze). Operators
+   *  retune these without a code push when the LTV per cohort shifts.
+   *  Falls back to the SEGMENT_FREE_DELIVERY_THRESHOLD constants in
+   *  src/lib/upsell.ts when unset. */
+  deliveryThresholds?: {
+    firstTime?: number;
+    growing?: number;
+    regular?: number;
+    vip?: number;
+  };
 }
 
 const DEFAULT_SETTINGS: AppSettings = {

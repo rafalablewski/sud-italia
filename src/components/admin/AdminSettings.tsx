@@ -29,6 +29,12 @@ interface Settings {
   minOrderAmount: number;
   businessPhone: string;
   businessEmail: string;
+  deliveryThresholds?: {
+    firstTime?: number;
+    growing?: number;
+    regular?: number;
+    vip?: number;
+  };
 }
 
 interface AuditEntry {
@@ -61,6 +67,12 @@ export function AdminSettings() {
   const [minOrderStr, setMinOrderStr] = useState("0.00");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  // Audit §3 — per-segment free-delivery thresholds. Empty string = use
+  // the SEGMENT_FREE_DELIVERY_THRESHOLD default for that band.
+  const [thFirstTime, setThFirstTime] = useState("");
+  const [thGrowing, setThGrowing] = useState("");
+  const [thRegular, setThRegular] = useState("");
+  const [thVip, setThVip] = useState("");
   const [saving, setSaving] = useState(false);
 
   const [audit, setAudit] = useState<AuditEntry[]>([]);
@@ -80,6 +92,11 @@ export function AdminSettings() {
     setMinOrderStr((data.minOrderAmount / 100).toFixed(2));
     setPhone(data.businessPhone ?? "");
     setEmail(data.businessEmail ?? "");
+    const t = data.deliveryThresholds;
+    setThFirstTime(typeof t?.firstTime === "number" ? (t.firstTime / 100).toFixed(2) : "");
+    setThGrowing(typeof t?.growing === "number" ? (t.growing / 100).toFixed(2) : "");
+    setThRegular(typeof t?.regular === "number" ? (t.regular / 100).toFixed(2) : "");
+    setThVip(typeof t?.vip === "number" ? (t.vip / 100).toFixed(2) : "");
   }, []);
 
   const fetchAudit = useCallback(async () => {
@@ -103,6 +120,27 @@ export function AdminSettings() {
   const saveGeneral = async () => {
     setSaving(true);
     try {
+      // Audit §3 — parse per-segment thresholds. Empty string = clear back
+      // to the default (the field is omitted from the payload entirely),
+      // any number ≥ 0 = stored override.
+      const parseThreshold = (s: string): number | undefined => {
+        const trimmed = s.trim();
+        if (trimmed === "") return undefined;
+        const value = Math.max(0, Math.round(parseFloat(trimmed) * 100));
+        return Number.isFinite(value) ? value : undefined;
+      };
+      const thresholdsRaw = {
+        firstTime: parseThreshold(thFirstTime),
+        growing: parseThreshold(thGrowing),
+        regular: parseThreshold(thRegular),
+        vip: parseThreshold(thVip),
+      };
+      const thresholdsClean = Object.fromEntries(
+        Object.entries(thresholdsRaw).filter(([, v]) => typeof v === "number"),
+      );
+      const deliveryThresholds =
+        Object.keys(thresholdsClean).length > 0 ? thresholdsClean : null;
+
       const res = await fetch("/api/admin/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -111,6 +149,7 @@ export function AdminSettings() {
           minOrderAmount: Math.round(parseFloat(minOrderStr || "0") * 100),
           businessPhone: phone.trim(),
           businessEmail: email.trim(),
+          deliveryThresholds,
         }),
       });
       if (res.ok) {
@@ -252,53 +291,117 @@ export function AdminSettings() {
       </header>
 
       {tab === "general" && (
-        <Card>
-          <CardHeader title="Business & delivery" description="Customer-facing fees, contact details." />
-          <CardBody>
-            <div className="v2-stack-12">
-              <div className="v2-form-row-2">
-                <Input
-                  label="Delivery fee"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={deliveryFeeStr}
-                  onChange={(e) => setDeliveryFeeStr(e.target.value)}
-                  trailingAdornment={<span className="v2-muted">zł</span>}
-                />
-                <Input
-                  label="Minimum order"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={minOrderStr}
-                  onChange={(e) => setMinOrderStr(e.target.value)}
-                  trailingAdornment={<span className="v2-muted">zł</span>}
-                />
+        <>
+          <Card>
+            <CardHeader title="Business & delivery" description="Customer-facing fees, contact details." />
+            <CardBody>
+              <div className="v2-stack-12">
+                <div className="v2-form-row-2">
+                  <Input
+                    label="Delivery fee"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={deliveryFeeStr}
+                    onChange={(e) => setDeliveryFeeStr(e.target.value)}
+                    trailingAdornment={<span className="v2-muted">zł</span>}
+                  />
+                  <Input
+                    label="Minimum order"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={minOrderStr}
+                    onChange={(e) => setMinOrderStr(e.target.value)}
+                    trailingAdornment={<span className="v2-muted">zł</span>}
+                  />
+                </div>
+                <div className="v2-form-row-2">
+                  <Input
+                    label="Business phone"
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    leadingAdornment={<Phone className="h-3.5 w-3.5" />}
+                  />
+                  <Input
+                    label="Business email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
               </div>
-              <div className="v2-form-row-2">
-                <Input
-                  label="Business phone"
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  leadingAdornment={<Phone className="h-3.5 w-3.5" />}
-                />
-                <Input
-                  label="Business email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardHeader
+              title="Free-delivery thresholds by lifecycle (audit §3)"
+              description="Below the threshold, the standard delivery fee applies. Leave a field blank to use the default (first-time 39 / growing 49 / regular 59 / VIP 35 PLN). Customers see the matching bar in the cart drawer; the checkout charge uses the same threshold so display and receipt agree."
+            />
+            <CardBody>
+              <div className="v2-stack-12">
+                <div className="v2-form-row-2">
+                  <Input
+                    label="First-time (orders < 2)"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={thFirstTime}
+                    onChange={(e) => setThFirstTime(e.target.value)}
+                    trailingAdornment={<span className="v2-muted">zł</span>}
+                    description="Default 39 PLN. Lower removes friction on visit 1 at the cost of unit economics — track repeat rate."
+                  />
+                  <Input
+                    label="Growing (2–4 orders)"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={thGrowing}
+                    onChange={(e) => setThGrowing(e.target.value)}
+                    trailingAdornment={<span className="v2-muted">zł</span>}
+                    description="Default 49 PLN. Bridge tier as the customer builds confidence."
+                  />
+                </div>
+                <div className="v2-form-row-2">
+                  <Input
+                    label="Regular (5+ orders)"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={thRegular}
+                    onChange={(e) => setThRegular(e.target.value)}
+                    trailingAdornment={<span className="v2-muted">zł</span>}
+                    description="Default 59 PLN. Higher — they'll hit it anyway."
+                  />
+                  <Input
+                    label="VIP (Gold / Platinum)"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={thVip}
+                    onChange={(e) => setThVip(e.target.value)}
+                    trailingAdornment={<span className="v2-muted">zł</span>}
+                    description="Default 35 PLN. Floor protects courier economics — set to 0 only if you accept losses on tiny VIP orders."
+                  />
+                </div>
               </div>
-              <div className="v2-form-actions">
-                <Button variant="primary" leadingIcon={<Save className="h-3.5 w-3.5" />} onClick={saveGeneral} loading={saving} disabled={!settings}>
-                  Save settings
-                </Button>
-              </div>
-            </div>
-          </CardBody>
-        </Card>
+            </CardBody>
+          </Card>
+
+          <div className="v2-form-actions">
+            <Button
+              variant="primary"
+              leadingIcon={<Save className="h-3.5 w-3.5" />}
+              onClick={saveGeneral}
+              loading={saving}
+              disabled={!settings}
+            >
+              Save settings
+            </Button>
+          </div>
+        </>
       )}
 
       {tab === "security" && (

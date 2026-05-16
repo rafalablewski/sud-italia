@@ -998,10 +998,32 @@ export function getCustomerSegment(
   return "regular";
 }
 
+export interface DeliveryThresholdOverride {
+  firstTime?: number;
+  growing?: number;
+  regular?: number;
+  vip?: number;
+}
+
 export function getDeliveryThresholdForCustomer(
   customer: CustomerSegmentInput | null | undefined,
+  /** Admin-supplied per-segment overrides (audit §3) — when set, beat
+   *  the SEGMENT_FREE_DELIVERY_THRESHOLD defaults. Undefined per-segment
+   *  values fall back to the defaults so an operator can retune one tier
+   *  without re-setting all four. */
+  override?: DeliveryThresholdOverride | null,
 ): number {
-  return SEGMENT_FREE_DELIVERY_THRESHOLD[getCustomerSegment(customer)];
+  const segment = getCustomerSegment(customer);
+  const map: Record<CustomerSegment, number | undefined> = {
+    "first-time": override?.firstTime,
+    growing: override?.growing,
+    regular: override?.regular,
+    vip: override?.vip,
+  };
+  const fromOverride = map[segment];
+  return typeof fromOverride === "number"
+    ? Math.max(0, fromOverride)
+    : SEGMENT_FREE_DELIVERY_THRESHOLD[segment];
 }
 
 /**
