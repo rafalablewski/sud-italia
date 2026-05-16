@@ -419,8 +419,16 @@ export function ModifierMatrix({
                           </button>
                         </>
                       ) : present.length > 1 ? (
-                        <span>uniform</span>
-                      ) : null}
+                        <>
+                          <span className="v2-mod-across-uniform">uniform</span>
+                          <span aria-hidden />
+                        </>
+                      ) : (
+                        <>
+                          <span aria-hidden />
+                          <span aria-hidden />
+                        </>
+                      )}
                     </span>
                     <button
                       type="button"
