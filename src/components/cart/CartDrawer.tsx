@@ -13,7 +13,6 @@ import { TierPerkBanner } from "./TierPerkBanner";
 import { BundleLadder } from "./BundleLadder";
 import { CorporateOrderBanner } from "./CorporateOrderBanner";
 import type { BundleTier } from "@/lib/bundles";
-import { isBundleLadderShowable } from "@/lib/bundles";
 import { formatPrice } from "@/lib/utils";
 import {
   getCartSuggestions,
@@ -78,15 +77,38 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
   // bundle is applied (otherwise scheduling à-la-carte is awkward).
   // Stored client-side and POSTed after checkout success.
   const [scheduleWeekly, setScheduleWeekly] = useState(false);
-  // Fetch location-specific upsell config from admin settings
+  // Fetch location-specific upsell config from admin settings. The drawer
+  // is rendered unconditionally by FloatingCartButton so it stays mounted
+  // across opens — if we don't aggressively refetch, an admin edit (rename
+  // a combo, add required items) never reaches the customer's cart for
+  // the rest of the session. Three triggers cover the realistic flows:
+  //
+  //   1) Drawer transitions to open (admin tweaks config → customer opens
+  //      cart afterwards).
+  //   2) Tab regains focus (admin tweaks config in one tab while the cart
+  //      tab sits open, then switches back to verify).
+  //   3) locationSlug changes (customer flips between Kraków / Warszawa).
+  //
+  // `cache: "no-store"` plus the route's `force-dynamic` + no-store headers
+  // make sure neither the browser nor a CDN serves a stale payload.
   const [upsellConfig, setUpsellConfig] = useState<UpsellConfig | null>(null);
   useEffect(() => {
     if (!locationSlug) return;
-    fetch(`/api/settings/upsell?location=${locationSlug}`)
-      .then((r) => r.json())
-      .then((data) => { if (data) setUpsellConfig(data); })
-      .catch(() => {});
-  }, [locationSlug]);
+    let cancelled = false;
+    const load = () => {
+      fetch(`/api/settings/upsell?location=${locationSlug}`, { cache: "no-store" })
+        .then((r) => r.json())
+        .then((data) => { if (!cancelled && data) setUpsellConfig(data); })
+        .catch(() => {});
+    };
+    if (open) load();
+    const onFocus = () => { if (open) load(); };
+    window.addEventListener("focus", onFocus);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [locationSlug, open]);
 
   // Per-customer attach history (audit §3.1) — fetched once when the drawer
   // first sees a known phone. Feeds scorePairing() inside getCartSuggestions
@@ -519,22 +541,24 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
         activeComboName={comboResult.isComplete ? comboResult.activeDeal?.name ?? null : null}
       />
 
-      {/* Combo deal banner — suppressed when the bundle ladder is showable
-          so we don't show two competing promos at once (Starbucks-rule:
-          one upsell at a time, picked by impact). A 4,99 PLN combo save
-          is psychologically invisible next to a 47 PLN bundle save. */}
-      {!isBundleLadderShowable(
-        items,
-        resolvedMenuItems,
-        (upsellConfig as { bundles?: BundleTier[] } | null)?.bundles ?? null,
-        (upsellConfig as { bundleRules?: import("@/lib/bundles").BundleAvailabilityRules } | null)?.bundleRules ?? null,
-        new Date().getHours(),
-      ) && (
+      {/* Combo deal banner — suppressed only when a bundle is actually
+          LOCKED into the cart. The previous gate (hide whenever the
+          bundle ladder was merely showable) was too aggressive: a
+          customer who locked Make-it-a-Lunch and then removed the
+          dessert would see neither the bundle savings nor the smaller
+          pasta-combo fallback, so the cart silently dropped both
+          discounts. With no bundle applied, both promos can coexist —
+          the bundle card pitches the bigger save, the combo banner
+          delivers the smaller one on what's already in the cart. When
+          a bundle IS locked, `comboDiscount` is already zeroed above,
+          so showing the banner would be misleading. */}
+      {!isBundleActive && (
         <ComboDealBanner
           cartItems={items}
           fulfillmentType={fulfillmentType}
           allMenuItems={resolvedMenuItems}
           locationSlug={locationSlug}
+          upsellConfig={upsellConfig}
         />
       )}
 

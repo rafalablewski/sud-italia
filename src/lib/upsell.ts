@@ -524,13 +524,20 @@ export const DEFAULT_COMBO_DEALS: ComboDeal[] = [
     discountPercent: 10,
     minItems: 3,
   },
+  // Pasta Combo — honours the lunch TodBanner promise ("Add a pasta and a
+  // drink to save 10%"). Also the graceful fallback when a customer locks
+  // the Lunch bundle (pasta + drink + Panna Cotta) and then removes the
+  // dessert: the cart drops out of the bundle but the 10% combo still
+  // applies on what's left. Keeping dessert OUT of the discount aligns
+  // with the §3 audit rule — dessert has high organic attach we don't
+  // want to subsidise.
   {
     id: "pasta-combo",
     name: "Pasta Combo",
-    description: "Any pasta + drink + dessert",
-    categories: ["pasta", "drinks", "desserts"],
+    description: "Any pasta + drink",
+    categories: ["pasta", "drinks"],
     discountPercent: 10,
-    minItems: 3,
+    minItems: 2,
   },
   // Pizza + Garlic Bread combo — replaces the dead Lunch Special (panini +
   // drink, 2 PLN savings, ignored at 0% activation). Garlic bread has a
@@ -729,11 +736,21 @@ export function getActiveComboDeals(
 
   // Complete combos always beat partial ones so the customer gets a real
   // applied discount, not a "you could save X" hint. Within each bucket
-  // we prefer the largest savings; original index breaks ties so the order
-  // the admin set in the config is honoured.
+  // we prefer the largest savings; on tied savings the item-required
+  // combo wins because it expresses a deliberate cohort the admin
+  // configured (renaming "Pasta Combo" → "Classic Pasta Deal" by adding
+  // requiredItems should make the new deal the visible one even when
+  // both partials yield the same 10% × cheapest-pasta). Index breaks
+  // remaining ties so admin ordering still matters within a class.
+  const itemReqRank = (s: Scored) =>
+    (s.deal.requiredItems?.length ?? 0) > 0 ? 0 : 1;
+  const compareScored = (a: Scored, b: Scored) =>
+    b.savings - a.savings ||
+    itemReqRank(a) - itemReqRank(b) ||
+    a.index - b.index;
   const complete = scored.filter((s) => s.complete);
   if (complete.length > 0) {
-    complete.sort((a, b) => b.savings - a.savings || a.index - b.index);
+    complete.sort(compareScored);
     const w = complete[0];
     return {
       activeDeal: w.deal,
@@ -764,7 +781,7 @@ export function getActiveComboDeals(
     return anyCategoryMatched || anyItemMatched || qtyOnlyShort;
   });
   if (partial.length === 0) return empty;
-  partial.sort((a, b) => b.savings - a.savings || a.index - b.index);
+  partial.sort(compareScored);
   const w = partial[0];
   return {
     activeDeal: w.deal,
