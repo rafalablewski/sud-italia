@@ -42,7 +42,14 @@ export async function getMenuWithOverrides(locationSlug: string): Promise<MenuIt
     void _loc; void _c; void _u;
     merged.push(applyOverride(item as MenuItem));
   }
-  return merged;
+  // Soft-deleted rows (`override.hidden === true`) are filtered out for
+  // the customer + ops surfaces. The admin /api/admin/menu endpoint
+  // surfaces them with a `_hidden` flag so they can be restored via the
+  // "Show hidden" toggle.
+  return merged.filter((item) => {
+    const o = overrides[item.id];
+    return !(o && o.hidden === true);
+  });
 }
 
 export async function getAvailableMenu(locationSlug: string): Promise<MenuItem[]> {

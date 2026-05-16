@@ -328,6 +328,9 @@ const menuOverrideEditSchema = z.object({
   sku: z.string().min(1).max(60).nullable().optional(),
   category: menuCategoryEnum.nullable().optional(),
   tags: z.array(menuTagEnum).max(8).nullable().optional(),
+  // Soft-delete for seed rows — `true` hides from customer + admin lists,
+  // `null` / unset restores. Custom rows hard-delete via the custom API.
+  hidden: z.boolean().nullable().optional(),
 });
 
 /**
@@ -352,6 +355,7 @@ export const menuOverridePutSchema = z
     sku: z.string().min(1).max(60).nullable().optional(),
     category: menuCategoryEnum.nullable().optional(),
     tags: z.array(menuTagEnum).max(8).nullable().optional(),
+    hidden: z.boolean().nullable().optional(),
   })
   .refine((data) => !!data.id || !!data.items, {
     message: "Provide either `id` for single override or `items` map for bulk",
@@ -397,8 +401,16 @@ export const customMenuItemCreateSchema = z.object({
   sku: z.string().min(1).max(60).optional(),
 });
 
-/** PATCH /api/admin/menu/custom — partial edit of an admin-created item. */
+/** PATCH /api/admin/menu/custom — partial edit of an admin-created item.
+ *  `newId` triggers a rename: the row's id is replaced atomically while
+ *  preserving createdAt/locationSlug. */
 export const customMenuItemUpdateSchema = z.object({
+  newId: z
+    .string()
+    .min(3)
+    .max(60)
+    .regex(/^[a-z0-9-]+$/, "Use lowercase letters, digits, and hyphens only")
+    .optional(),
   name: z.string().min(1).max(200).optional(),
   description: z.string().max(1000).optional(),
   price: grosze.max(100_000).optional(),

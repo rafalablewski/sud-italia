@@ -79,6 +79,10 @@ export const GET = withAdmin(
         _hasRecipe: hasRecipe,
         _costSource: hasRecipe ? "recipe" : override?.cost !== undefined ? "override" : "seed",
         _isCustom: Boolean(opts?.isCustom),
+        // Surface the soft-delete flag so the admin UI can offer a
+        // "Show hidden" toggle + restore action. Customer surfaces filter
+        // hidden rows in getMenuWithOverrides() instead.
+        _hidden: override?.hidden === true,
       };
     };
 
@@ -171,6 +175,7 @@ export const PUT = withAdmin(
             (next.category !== undefined && next.category !== prev?.category) ||
             (next.tags !== undefined &&
               JSON.stringify(next.tags) !== JSON.stringify(prev?.tags)) ||
+            (next.hidden !== undefined && next.hidden !== prev?.hidden) ||
             (next.modifierGroups !== undefined &&
               JSON.stringify(next.modifierGroups) !== JSON.stringify(prev?.modifierGroups));
           if (otherChanged) {

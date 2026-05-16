@@ -2166,6 +2166,12 @@ export interface MenuOverride {
    *  static menu data ships with. Empty array = no modifiers (overrides
    *  the seed off). */
   modifierGroups?: import("@/data/types").ModifierGroup[] | null;
+  /** Soft-delete flag for seed items. When `true` the row is filtered
+   *  out of both the customer menu (`getMenuWithOverrides`) and the
+   *  default admin list. Hard-deleting a seed row isn't possible (lives
+   *  in code), so this is the closest operational primitive. `null` /
+   *  unset = visible. Restoreable via the admin "Show hidden" toggle. */
+  hidden?: boolean | null;
 }
 
 export async function getMenuOverrides(): Promise<Record<string, MenuOverride>> {
@@ -2276,6 +2282,32 @@ export async function deleteCustomMenuItem(id: string): Promise<boolean> {
     if (next.length === all.length) return false;
     await writeJSON("custom-menu-items.json", next);
     return true;
+  });
+}
+
+/** Rename a custom menu item by changing its `id` in place. Throws when
+ *  the new id collides with another custom row; callers are responsible
+ *  for checking against the seed catalogue separately. Order history
+ *  retains the old id (operationally acceptable per product call). */
+export async function renameCustomMenuItem(
+  oldId: string,
+  newId: string,
+): Promise<CustomMenuItem | null> {
+  return withLock("custom-menu-items.json", async () => {
+    const all = await readJSON<CustomMenuItem[]>("custom-menu-items.json", []);
+    const idx = all.findIndex((i) => i.id === oldId);
+    if (idx === -1) return null;
+    if (all.some((i, j) => j !== idx && i.id === newId)) {
+      throw new Error(`Custom item with id "${newId}" already exists`);
+    }
+    const renamed: CustomMenuItem = {
+      ...all[idx],
+      id: newId,
+      updatedAt: new Date().toISOString(),
+    };
+    all[idx] = renamed;
+    await writeJSON("custom-menu-items.json", all);
+    return renamed;
   });
 }
 

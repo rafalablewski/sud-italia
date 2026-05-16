@@ -73,10 +73,27 @@ interface MenuItemData {
   /** Admin-created items (vs seed) — surfaces a delete button and routes
    *  edits to the custom-item endpoint instead of the override endpoint. */
   _isCustom?: boolean;
+  /** Soft-deleted seed rows surfaced for the admin "Show hidden" toggle.
+   *  Filtered out of customer surfaces by getMenuWithOverrides(). */
+  _hidden?: boolean;
 }
 
 const activeLocations = getActiveLocations();
 const FALLBACK_LOC = activeLocations[0]?.slug ?? "krakow";
+
+/** Strip a known active-location prefix from an item id. Used to match
+ *  the "same" item across locations (krk-pizza-margherita and
+ *  war-pizza-margherita share the base `pizza-margherita`). Falls back
+ *  to the full id when no known prefix matches. */
+function getBaseSlug(itemId: string): string {
+  for (const loc of activeLocations) {
+    const prefix = loc.slug.slice(0, 3);
+    if (prefix && itemId.startsWith(`${prefix}-`)) {
+      return itemId.slice(prefix.length + 1);
+    }
+  }
+  return itemId;
+}
 
 function marginPct(price: number, cost: number): number {
   if (price <= 0) return 0;
@@ -102,6 +119,10 @@ export function AdminMenu() {
   }, [globalLoc]);
 
   const [items, setItems] = useState<MenuItemData[]>([]);
+  /** Per-location menu snapshot — used by the edit dialog's location
+   *  selector to detect cross-location twins (same base slug at another
+   *  truck) without re-fetching every time the dialog opens. */
+  const [menusByLocation, setMenusByLocation] = useState<Record<string, MenuItemData[]>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<MenuCategory | "all">("all");
@@ -109,15 +130,27 @@ export function AdminMenu() {
   const [creating, setCreating] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [showHidden, setShowHidden] = useState(false);
 
   const fetchMenu = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/menu?location=${pageLoc}`);
-      if (res.ok) {
-        const data: MenuItemData[] = await res.json();
-        setItems(data);
-      }
+      // Fetch the current page's menu plus every other active location's
+      // menu in parallel. The "by location" snapshot powers the edit
+      // dialog's location selector (cross-location twin lookup).
+      const responses = await Promise.all(
+        activeLocations.map((loc) =>
+          fetch(`/api/admin/menu?location=${loc.slug}`).then((r) =>
+            r.ok ? r.json() : ([] as MenuItemData[]),
+          ),
+        ),
+      );
+      const byLoc: Record<string, MenuItemData[]> = {};
+      activeLocations.forEach((loc, idx) => {
+        byLoc[loc.slug] = responses[idx];
+      });
+      setMenusByLocation(byLoc);
+      setItems(byLoc[pageLoc] ?? []);
     } finally {
       setLoading(false);
     }
@@ -142,6 +175,7 @@ export function AdminMenu() {
         deliveryOnly?: boolean | null;
         packagingCost?: number | null;
         modifierGroups?: ModifierGroup[] | null;
+        hidden?: boolean | null;
       },
     ) => {
       const res = await fetch("/api/admin/menu", {
@@ -297,93 +331,130 @@ export function AdminMenu() {
     });
   };
 
+  /** Look up the cross-location twin for a given base slug. Returns the
+   *  matching item from the cached snapshot, plus a hint for which API
+   *  endpoint to use when removing it. */
+  const findTwin = useCallback(
+    (locationSlug: string, baseSlug: string): MenuItemData | null => {
+      const arr = menusByLocation[locationSlug] || [];
+      return arr.find((i) => !i._hidden && getBaseSlug(i.id) === baseSlug) || null;
+    },
+    [menusByLocation],
+  );
+
   const saveEdit = async (
     id: string,
-    change: {
-      name?: string;
-      price?: number;
-      cost?: number;
-      description?: string;
-      category?: MenuCategory;
-      tags?: string[];
-      available?: boolean;
-      sku?: string | null;
-      deliveryOnly?: boolean | null;
-      packagingCost?: number | null;
-      modifierGroups?: ModifierGroup[] | null;
-    },
     isCustom: boolean,
+    submission: EditSubmission,
   ) => {
-    let ok = false;
-    if (isCustom) {
-      // Custom rows store the canonical state directly — the override
-      // pipeline's `null = clear back to seed` sentinel doesn't apply
-      // (there's no seed). Translate it to the concrete "off / empty"
-      // value for each field so unchecking a toggle in the dialog
-      // actually persists.
-      const customChange = {
-        ...(change.name !== undefined ? { name: change.name } : {}),
-        ...(change.description !== undefined ? { description: change.description } : {}),
-        ...(change.price !== undefined ? { price: change.price } : {}),
-        ...(change.cost !== undefined ? { cost: change.cost } : {}),
-        ...(change.category !== undefined ? { category: change.category } : {}),
-        ...(change.tags !== undefined ? { tags: change.tags } : {}),
-        ...(change.available !== undefined ? { available: change.available } : {}),
-        ...(change.sku !== undefined ? { sku: change.sku ?? "" } : {}),
-        ...(change.deliveryOnly !== undefined
-          ? { deliveryOnly: change.deliveryOnly ?? false }
-          : {}),
-        ...(change.packagingCost !== undefined
-          ? { packagingCost: change.packagingCost ?? 0 }
-          : {}),
-        ...(change.modifierGroups !== undefined
-          ? { modifierGroups: change.modifierGroups ?? [] }
-          : {}),
-      };
-      ok = await persistCustomChange(id, customChange);
-    } else {
-      // Seed items go through the override pipeline. Every field is
-      // override-able now (category, tags, sku, cost included) so the
-      // edit form is consistent regardless of storage backend.
-      ok = await persistChange(id, change);
+    const change = submission.fieldChange;
+    const issues: string[] = [];
+
+    // 1) Field changes + rename for the current row.
+    let effectiveId = id;
+    if (Object.keys(change).length > 0 || submission.newId) {
+      let ok = false;
+      if (isCustom) {
+        const customChange = {
+          ...(submission.newId ? { newId: submission.newId } : {}),
+          ...(change.name !== undefined ? { name: change.name } : {}),
+          ...(change.description !== undefined ? { description: change.description } : {}),
+          ...(change.price !== undefined ? { price: change.price } : {}),
+          ...(change.cost !== undefined ? { cost: change.cost } : {}),
+          ...(change.category !== undefined ? { category: change.category } : {}),
+          ...(change.tags !== undefined ? { tags: change.tags } : {}),
+          ...(change.available !== undefined ? { available: change.available } : {}),
+          ...(change.sku !== undefined ? { sku: change.sku ?? "" } : {}),
+          ...(change.deliveryOnly !== undefined
+            ? { deliveryOnly: change.deliveryOnly ?? false }
+            : {}),
+          ...(change.packagingCost !== undefined
+            ? { packagingCost: change.packagingCost ?? 0 }
+            : {}),
+          ...(change.modifierGroups !== undefined
+            ? { modifierGroups: change.modifierGroups ?? [] }
+            : {}),
+        };
+        ok = await persistCustomChange(id, customChange);
+        if (ok && submission.newId) effectiveId = submission.newId;
+      } else {
+        ok = await persistChange(id, change);
+      }
+      if (!ok) issues.push("field changes");
     }
 
-    if (ok) {
-      setItems((arr) =>
-        arr.map((i) =>
-          i.id === id
-            ? {
-                ...i,
-                ...(change.name !== undefined ? { name: change.name } : {}),
-                ...(change.price !== undefined ? { price: change.price } : {}),
-                ...(change.cost !== undefined ? { cost: change.cost } : {}),
-                ...(change.description !== undefined ? { description: change.description } : {}),
-                ...(change.category !== undefined ? { category: change.category } : {}),
-                ...(change.tags !== undefined ? { tags: change.tags } : {}),
-                ...(change.available !== undefined ? { available: change.available } : {}),
-                ...(change.sku !== undefined
-                  ? { sku: change.sku === null ? undefined : change.sku }
-                  : {}),
-                // Apply null = clear / undefined = unchanged / value = set
-                ...(change.deliveryOnly !== undefined
-                  ? { deliveryOnly: change.deliveryOnly === null ? undefined : change.deliveryOnly }
-                  : {}),
-                ...(change.packagingCost !== undefined
-                  ? { packagingCost: change.packagingCost === null ? undefined : change.packagingCost }
-                  : {}),
-                ...(change.modifierGroups !== undefined
-                  ? { modifierGroups: change.modifierGroups === null ? undefined : change.modifierGroups }
-                  : {}),
-                _hasOverride: isCustom ? i._hasOverride : true,
-              }
-            : i,
-        ),
-      );
-      toast.success("Menu item updated");
-      setEditing(null);
-    } else {
-      toast.error("Save failed", "Try again.");
+    // 2) Clone the post-edit item to newly-checked locations.
+    for (const slug of submission.addTo) {
+      const prefix = slug.slice(0, 3) || "loc";
+      const baseSlug = getBaseSlug(effectiveId);
+      const cloneId = `${prefix}-${baseSlug}`;
+      const body = {
+        id: cloneId,
+        locationSlug: slug,
+        name: submission.draft.name,
+        description: submission.draft.description,
+        price: submission.draft.price,
+        cost: submission.draft.cost,
+        category: submission.draft.category,
+        tags: submission.draft.tags,
+        available: submission.draft.available,
+        ...(submission.draft.sku ? { sku: submission.draft.sku } : {}),
+        ...(submission.draft.deliveryOnly ? { deliveryOnly: true } : {}),
+        ...(submission.draft.packagingCost !== undefined
+          ? { packagingCost: submission.draft.packagingCost }
+          : {}),
+        ...(submission.draft.modifierGroups
+          ? { modifierGroups: submission.draft.modifierGroups }
+          : {}),
+      };
+      const res = await fetch("/api/admin/menu/custom", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const locName = activeLocations.find((l) => l.slug === slug)?.city ?? slug;
+        issues.push(`clone to ${locName}`);
+      }
     }
+
+    // 3) Remove the item from newly-unchecked locations.
+    //    - Custom twins: hard-delete via /api/admin/menu/custom?id=…
+    //    - Seed twins: set the hidden override
+    //    - The current location (pageLoc) is treated the same way — if the
+    //      operator unchecked it, that means "remove this from here".
+    const baseSlug = getBaseSlug(effectiveId);
+    for (const slug of submission.removeFrom) {
+      const twin = findTwin(slug, baseSlug);
+      if (!twin) continue;
+      if (twin._isCustom) {
+        const ok = await hardDeleteCustomItem(twin.id);
+        if (!ok) {
+          const locName = activeLocations.find((l) => l.slug === slug)?.city ?? slug;
+          issues.push(`delete at ${locName}`);
+        }
+      } else {
+        const res = await fetch("/api/admin/menu", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ items: { [twin.id]: { hidden: true } } }),
+        });
+        if (!res.ok) {
+          const locName = activeLocations.find((l) => l.slug === slug)?.city ?? slug;
+          issues.push(`hide at ${locName}`);
+        }
+      }
+    }
+
+    if (issues.length > 0) {
+      toast.error("Some changes failed", issues.join(", "));
+    } else {
+      toast.success("Menu item updated");
+    }
+    setEditing(null);
+    // Refresh from server — the orchestration above touched multiple
+    // locations and renames, so optimistic local merging would drift.
+    await fetchMenu();
   };
 
   const createCustomItem = async (draft: {
@@ -457,25 +528,74 @@ export function AdminMenu() {
     return true;
   };
 
-  const deleteCustomItem = async (item: MenuItemData) => {
-    if (!item._isCustom) return;
+  /** Hard-delete an admin-created row at any location. Used by the row
+   *  trash icon (custom items) and the edit dialog's location selector
+   *  when a location is unchecked. Returns true on success so the caller
+   *  can update local state. */
+  const hardDeleteCustomItem = useCallback(
+    async (id: string): Promise<boolean> => {
+      const res = await fetch(`/api/admin/menu/custom?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast.error("Could not delete", err?.error || "Try again.");
+        return false;
+      }
+      return true;
+    },
+    [toast],
+  );
+
+  const deleteItem = async (item: MenuItemData) => {
+    if (item._isCustom) {
+      if (
+        !confirm(
+          `Delete "${item.name}"? This permanently removes the item from this location's menu.`,
+        )
+      ) {
+        return;
+      }
+      const ok = await hardDeleteCustomItem(item.id);
+      if (!ok) return;
+      setItems((arr) => arr.filter((i) => i.id !== item.id));
+      toast.success("Item removed", item.name);
+      return;
+    }
+    // Seed items live in src/data/menus/*.ts and can't be hard-deleted.
+    // The closest primitive is a `hidden` override that filters the row
+    // out of both the customer menu and the default admin list. The
+    // operator can restore via the "Show hidden" toggle.
     if (
       !confirm(
-        `Delete "${item.name}"? This removes the item from the customer menu permanently.`,
+        `"${item.name}" is a seed menu item — it can't be permanently deleted (it lives in code). Hide it from this location instead? You can restore it later via the "Show hidden" toggle.`,
       )
     ) {
       return;
     }
-    const res = await fetch(`/api/admin/menu/custom?id=${encodeURIComponent(item.id)}`, {
-      method: "DELETE",
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      toast.error("Could not delete", err?.error || "Try again.");
+    const ok = await persistChange(item.id, { hidden: true });
+    if (!ok) {
+      toast.error("Could not hide", "Try again.");
       return;
     }
-    setItems((arr) => arr.filter((i) => i.id !== item.id));
-    toast.success("Item removed", item.name);
+    setItems((arr) =>
+      arr.map((i) => (i.id === item.id ? { ...i, _hidden: true, _hasOverride: true } : i)),
+    );
+    toast.success("Item hidden", `${item.name} is no longer visible on this menu.`);
+  };
+
+  /** Clear the `hidden` override flag so a previously soft-deleted seed
+   *  item is restored to the menu. */
+  const restoreItem = async (item: MenuItemData) => {
+    const ok = await persistChange(item.id, { hidden: null });
+    if (!ok) {
+      toast.error("Could not restore", "Try again.");
+      return;
+    }
+    setItems((arr) =>
+      arr.map((i) => (i.id === item.id ? { ...i, _hidden: false } : i)),
+    );
+    toast.success("Item restored", item.name);
   };
 
   // --- Derived ---
@@ -484,9 +604,14 @@ export function AdminMenu() {
     [items],
   );
 
+  const hiddenCount = useMemo(() => items.filter((i) => i._hidden).length, [items]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return items.filter((i) => {
+      // Soft-deleted seed rows hide from the default list. The header
+      // toggle reveals them so operators can restore.
+      if (i._hidden && !showHidden) return false;
       if (category !== "all" && i.category !== category) return false;
       if (!q) return true;
       return (
@@ -495,7 +620,7 @@ export function AdminMenu() {
         i.tags.some((t) => t.toLowerCase().includes(q))
       );
     });
-  }, [items, search, category]);
+  }, [items, search, category, showHidden]);
 
   const grouped = useMemo(() => {
     const m = new Map<MenuCategory, MenuItemData[]>();
@@ -531,6 +656,16 @@ export function AdminMenu() {
               aria-label="Editing location"
             />
           </div>
+          {hiddenCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowHidden((v) => !v)}
+              title={showHidden ? "Hide soft-deleted items" : "Reveal soft-deleted items so you can restore them"}
+            >
+              {showHidden ? "Hide hidden" : `Show hidden (${hiddenCount})`}
+            </Button>
+          )}
           <Button variant="primary" size="sm" onClick={() => setCreating(true)}>
             <Plus className="h-3.5 w-3.5" />
             Add item
@@ -663,7 +798,13 @@ export function AdminMenu() {
                       <li
                         key={item.id}
                         className={`v2-mng-row v2-mng-row-menu ${item.available ? "" : "is-off"}`}
-                        style={isSelected ? { background: "var(--brand-soft)" } : undefined}
+                        style={
+                          item._hidden
+                            ? { background: "var(--surface-2)", opacity: 0.65 }
+                            : isSelected
+                            ? { background: "var(--brand-soft)" }
+                            : undefined
+                        }
                       >
                         <input
                           type="checkbox"
@@ -694,7 +835,10 @@ export function AdminMenu() {
                                 The "Custom" badge was retired — every item
                                 is fully editable, so the storage origin no
                                 longer warrants a visual distinction. */}
-                            {item._hasOverride && (
+                            {item._hidden && (
+                              <span className="v2-mng-tag v2-mng-tag-override" title="Soft-deleted via the trash icon. Restore from the row.">Hidden</span>
+                            )}
+                            {item._hasOverride && !item._hidden && (
                               <span className="v2-mng-tag v2-mng-tag-override">Edited</span>
                             )}
                             {item.sku && (
@@ -720,22 +864,38 @@ export function AdminMenu() {
                         <span className={`v2-mng-val v2-mng-val-margin v2-mng-val-margin-${marginTone(margin)} tabular`}>{margin}%</span>
 
                         <span className="v2-mng-edit-group">
-                          <button
-                            type="button"
-                            className="v2-mng-edit"
-                            onClick={() => setEditing(item)}
-                            aria-label={`Edit ${item.name}`}
-                            title="Edit item"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </button>
-                          {item._isCustom && (
+                          {item._hidden ? (
+                            <button
+                              type="button"
+                              className="v2-mng-edit"
+                              onClick={() => restoreItem(item)}
+                              aria-label={`Restore ${item.name}`}
+                              title="Restore item — un-hide from menu"
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="v2-mng-edit"
+                              onClick={() => setEditing(item)}
+                              aria-label={`Edit ${item.name}`}
+                              title="Edit item"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                          {!item._hidden && (
                             <button
                               type="button"
                               className="v2-mng-edit v2-mng-edit-danger"
-                              onClick={() => deleteCustomItem(item)}
+                              onClick={() => deleteItem(item)}
                               aria-label={`Delete ${item.name}`}
-                              title="Delete item"
+                              title={
+                                item._isCustom
+                                  ? "Delete item (permanent)"
+                                  : "Hide seed item from this location (restoreable)"
+                              }
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </button>
@@ -753,6 +913,8 @@ export function AdminMenu() {
 
       <EditItemDialog
         item={editing}
+        currentSlug={pageLoc}
+        menusByLocation={menusByLocation}
         onClose={() => setEditing(null)}
         onSave={saveEdit}
       />
@@ -767,30 +929,59 @@ export function AdminMenu() {
   );
 }
 
+interface EditSubmission {
+  fieldChange: {
+    name?: string;
+    price?: number;
+    cost?: number;
+    description?: string;
+    category?: MenuCategory;
+    tags?: string[];
+    available?: boolean;
+    sku?: string | null;
+    deliveryOnly?: boolean | null;
+    packagingCost?: number | null;
+    modifierGroups?: ModifierGroup[] | null;
+  };
+  /** Custom-item rename. Ignored for seed items. */
+  newId?: string;
+  /** Location slugs to clone the (post-edit) item to. */
+  addTo: string[];
+  /** Location slugs to remove the item from — for each, the parent
+   *  looks up the twin by base slug and either hard-deletes (custom)
+   *  or sets `hidden: true` (seed). */
+  removeFrom: string[];
+  /** Full snapshot of the edited values, used for cloning. */
+  draft: {
+    name: string;
+    description: string;
+    price: number;
+    cost: number;
+    category: MenuCategory;
+    tags: string[];
+    available: boolean;
+    sku?: string;
+    deliveryOnly?: boolean;
+    packagingCost?: number;
+    modifierGroups?: ModifierGroup[];
+  };
+}
+
 interface EditDialogProps {
   item: MenuItemData | null;
+  currentSlug: string;
+  menusByLocation: Record<string, MenuItemData[]>;
   onClose: () => void;
   onSave: (
     id: string,
-    change: {
-      name?: string;
-      price?: number;
-      cost?: number;
-      description?: string;
-      category?: MenuCategory;
-      tags?: string[];
-      available?: boolean;
-      sku?: string | null;
-      deliveryOnly?: boolean | null;
-      packagingCost?: number | null;
-      modifierGroups?: ModifierGroup[] | null;
-    },
     isCustom: boolean,
+    submission: EditSubmission,
   ) => Promise<void> | void;
 }
 
-function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
+function EditItemDialog({ item, currentSlug, menusByLocation, onClose, onSave }: EditDialogProps) {
   const [name, setName] = useState("");
+  const [idStr, setIdStr] = useState("");
   const [sku, setSku] = useState("");
   const [priceStr, setPriceStr] = useState("0.00");
   const [costStr, setCostStr] = useState("0.00");
@@ -804,9 +995,29 @@ function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
   const [modifierGroups, setModifierGroups] = useState<ModifierGroup[]>([]);
   const [busy, setBusy] = useState(false);
 
+  // Locations where this product currently lives — derived from the
+  // cross-location menu snapshot by base-slug match. Operators
+  // check/uncheck to clone the item to a new truck or remove it from
+  // an existing one (delete for custom rows, hide for seed rows).
+  const initialLocations = useMemo(() => {
+    if (!item) return [currentSlug];
+    const baseSlug = getBaseSlug(item.id);
+    return activeLocations
+      .filter((loc) => {
+        const locItems = menusByLocation[loc.slug] || [];
+        return locItems.some(
+          (i) => !i._hidden && getBaseSlug(i.id) === baseSlug,
+        );
+      })
+      .map((l) => l.slug);
+  }, [item, currentSlug, menusByLocation]);
+
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+
   useEffect(() => {
     if (item) {
       setName(item.name);
+      setIdStr(item.id);
       setSku(item.sku ?? "");
       setPriceStr((item.price / 100).toFixed(2));
       setCostStr((item.cost / 100).toFixed(2));
@@ -826,9 +1037,10 @@ function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
           ? JSON.parse(JSON.stringify(item.modifierGroups))
           : [],
       );
+      setSelectedLocations(initialLocations);
       setBusy(false);
     }
-  }, [item]);
+  }, [item, initialLocations]);
 
   if (!item) {
     return <Dialog open={false} onClose={onClose} />;
@@ -838,22 +1050,13 @@ function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
   // Recipe-attached items get their cost computed from ingredients, so the
   // field is locked regardless of whether the row is seed or custom.
   const canEditCost = !item._hasRecipe;
+  // Seed item IDs live in code (src/data/menus/*.ts) — we can't rename
+  // them at runtime. Custom rows are renameable via the PATCH endpoint.
+  const canEditId = isCustom;
 
   const submit = async () => {
     const price = Math.round(parseFloat(priceStr || "0") * 100);
-    const change: {
-      name?: string;
-      price?: number;
-      cost?: number;
-      description?: string;
-      category?: MenuCategory;
-      tags?: string[];
-      available?: boolean;
-      sku?: string | null;
-      deliveryOnly?: boolean | null;
-      packagingCost?: number | null;
-      modifierGroups?: ModifierGroup[] | null;
-    } = {};
+    const change: EditSubmission["fieldChange"] = {};
     const trimmedName = name.trim();
     if (trimmedName && trimmedName !== item.name) change.name = trimmedName;
     if (price !== item.price) change.price = price;
@@ -899,13 +1102,55 @@ function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
       change.modifierGroups = cleanedGroups.length === 0 ? null : cleanedGroups;
     }
 
-    if (Object.keys(change).length === 0) {
+    const trimmedId = idStr.trim();
+    let newId: string | undefined;
+    if (canEditId && trimmedId !== item.id) {
+      if (!/^[a-z0-9-]{3,60}$/.test(trimmedId)) {
+        alert("Item slug must be 3–60 chars, lowercase letters, digits, and hyphens only.");
+        return;
+      }
+      newId = trimmedId;
+    }
+
+    const addTo = selectedLocations.filter((s) => !initialLocations.includes(s));
+    const removeFrom = initialLocations.filter((s) => !selectedLocations.includes(s));
+
+    const nothingChanged =
+      Object.keys(change).length === 0 &&
+      !newId &&
+      addTo.length === 0 &&
+      removeFrom.length === 0;
+    if (nothingChanged) {
       onClose();
       return;
     }
     setBusy(true);
-    await onSave(item.id, change, isCustom);
+    await onSave(item.id, isCustom, {
+      fieldChange: change,
+      newId,
+      addTo,
+      removeFrom,
+      draft: {
+        name: trimmedName || item.name,
+        description: desc,
+        price,
+        cost: Math.round(parseFloat(costStr || "0") * 100),
+        category: cat,
+        tags,
+        available,
+        ...(trimmedSku ? { sku: trimmedSku } : {}),
+        ...(deliveryOnly ? { deliveryOnly: true } : {}),
+        ...(nextPackaging !== null ? { packagingCost: nextPackaging } : {}),
+        ...(cleanedGroups.length > 0 ? { modifierGroups: cleanedGroups } : {}),
+      },
+    });
     setBusy(false);
+  };
+
+  const toggleLocation = (slug: string) => {
+    setSelectedLocations((prev) =>
+      prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug],
+    );
   };
 
   const toggleTag = (tag: string) => {
@@ -940,6 +1185,19 @@ function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
           description="Customer-facing item name."
         />
         <Input
+          label="Item slug"
+          value={idStr}
+          onChange={(e) =>
+            setIdStr(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))
+          }
+          disabled={!canEditId}
+          description={
+            canEditId
+              ? "Stable identifier used in orders + analytics. Renaming preserves the row; historical orders keep the old slug."
+              : "Seed item slugs live in src/data/menus/*.ts and can't be renamed from the admin."
+          }
+        />
+        <Input
           label="SKU"
           value={sku}
           onChange={(e) => setSku(e.target.value)}
@@ -955,6 +1213,44 @@ function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
             label: MENU_CATEGORY_LABELS[c],
           }))}
         />
+        <div className="v2-field">
+          <label className="v2-field-label">Available at locations</label>
+          <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap" }}>
+            {activeLocations.map((loc) => {
+              const on = selectedLocations.includes(loc.slug);
+              const wasInitial = initialLocations.includes(loc.slug);
+              const willClone = on && !wasInitial;
+              const willRemove = !on && wasInitial;
+              return (
+                <button
+                  key={loc.slug}
+                  type="button"
+                  onClick={() => toggleLocation(loc.slug)}
+                  aria-pressed={on}
+                  className={`v2-chip ${on ? "is-on" : ""}`}
+                  title={
+                    willClone
+                      ? `Clone to ${loc.city} on save`
+                      : willRemove
+                      ? `Remove from ${loc.city} on save (delete custom row / hide seed)`
+                      : on
+                      ? `Currently at ${loc.city}`
+                      : `Not at ${loc.city}`
+                  }
+                >
+                  {loc.city}
+                  {willClone && " +"}
+                  {willRemove && " −"}
+                </button>
+              );
+            })}
+          </div>
+          <p className="v2-field-desc">
+            Check a location to clone this item there on save. Uncheck to
+            remove (custom rows are deleted; seed rows are hidden and can
+            be restored later).
+          </p>
+        </div>
         <Input
           label="Price (PLN)"
           type="number"
