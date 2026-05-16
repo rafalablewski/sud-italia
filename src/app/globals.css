@@ -2964,6 +2964,25 @@ html { scroll-behavior: smooth; }
   font-size: var(--text-sm);
 }
 
+/* Locations manager — repeating row editor for hours-of-operation. Day
+ * label + two time inputs + hover-revealed delete, all on one line so
+ * 5+ rows stay compact in the dialog. */
+.v2-loc-hours { display: flex; flex-direction: column; gap: 6px; }
+.v2-loc-hours-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1.4fr) 110px 110px 32px;
+  align-items: end;
+  gap: 8px;
+}
+.v2-loc-hours-row .v2-mod-icon-btn {
+  opacity: 0;
+  transition: opacity var(--duration-fast);
+  align-self: center;
+  margin-bottom: 2px;
+}
+.v2-loc-hours-row:hover .v2-mod-icon-btn,
+.v2-loc-hours-row:focus-within .v2-mod-icon-btn { opacity: 1; }
+
 /* Shared scope bar — sits between the per-location pricing card and
  * everything else on the detail page. Picks the active truck that
  * the cards below (Product, Modifiers) read + write to. One control
