@@ -10,6 +10,7 @@ import {
   ChevronDown,
   ChevronRight,
   RotateCcw,
+  Lock,
 } from "lucide-react";
 import { krakowMenu } from "@/data/menus/krakow";
 import { warszawaMenu } from "@/data/menus/warszawa";
@@ -371,19 +372,46 @@ export function ItemMultiSelect({
   selected,
   onChange,
   label,
+  intrinsicIds,
+  intrinsicHint,
 }: {
   items: MenuItem[];
   selected: string[];
   onChange: (ids: string[]) => void;
   label: string;
+  /** Items badged from a non-admin source (menu data `menuRole`, location
+   *  defaults). Shown as locked chips so admins see the live homepage state
+   *  even when the editable list is empty. Editing requires changing the
+   *  upstream source. */
+  intrinsicIds?: string[];
+  /** Tooltip text on the lock icon next to each intrinsic chip. */
+  intrinsicHint?: string;
 }) {
   const [adding, setAdding] = useState(false);
+  const intrinsicSet = new Set(intrinsicIds ?? []);
+  // Suppress user chips that are already covered by an intrinsic chip to
+  // avoid duplicates if a saved config redundantly re-lists a menu-role item.
+  const userSelected = selected.filter((id) => !intrinsicSet.has(id));
 
   return (
     <div>
       <label className="text-xs font-semibold admin-text uppercase tracking-wide mb-2 block">{label}</label>
       <div className="flex flex-wrap gap-2 mb-2">
-        {selected.map((id) => {
+        {(intrinsicIds ?? []).map((id) => {
+          const item = items.find((m) => m.id === id);
+          return (
+            <span
+              key={`intrinsic-${id}`}
+              title={intrinsicHint}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-italia-gold/10 text-sm admin-text border border-italia-gold/30"
+            >
+              <span className="text-xs text-italia-gold-dark">{item?.category}</span>
+              {item?.name || id}
+              <Lock className="h-3 w-3 text-italia-gold-dark/70" />
+            </span>
+          );
+        })}
+        {userSelected.map((id) => {
           const item = items.find((m) => m.id === id);
           return (
             <span key={id} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/8 text-sm admin-text border border-white/10">
@@ -410,7 +438,7 @@ export function ItemMultiSelect({
       {adding && (
         <div className="glass-card p-3 mb-2 max-h-48 overflow-y-auto">
           {items
-            .filter((m) => !selected.includes(m.id))
+            .filter((m) => !selected.includes(m.id) && !intrinsicSet.has(m.id))
             .map((m) => (
               <button
                 key={m.id}
