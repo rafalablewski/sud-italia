@@ -12,6 +12,7 @@ import {
   Sparkles,
   Clock,
   Tag,
+  Sandwich,
 } from "lucide-react";
 import { LocationTabs } from "./LocationTabs";
 import { Tabs } from "./v2/ui";
@@ -123,33 +124,44 @@ export function AdminCrossSell() {
           <div>
             <h2 className="font-heading font-bold text-lg admin-text flex items-center gap-2">
               <Star className="h-5 w-5 text-italia-gold" />
-              Cart pairings — {loc.name}
+              Complete your meal — {loc.name}
             </h2>
             <p className="text-xs text-slate-400 mt-1">
-              One-tap-add suggestions that fire when the cart has a pizza or pasta.
+              Four fixed slots that customers see as a horizontal slider above
+              the cart subtotal. Slot 1 (Coffee) → Slot 2 (Dessert) → Slot 3
+              (Side / Garlic Bread) → Slot 4 (Drink). Each slot is one
+              tap-to-add; the chip stays visible after adding so customers
+              can add more of the same item or compare slots side-by-side.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <ItemSingleSelect
               items={loc.menu.filter((m) => m.category === "drinks")}
               value={config.preferredCoffee}
               onChange={(id) => updateConfig({ preferredCoffee: id })}
-              label="Preferred Coffee"
+              label="Slot 1 · Coffee"
               icon={Coffee}
             />
             <ItemSingleSelect
               items={loc.menu.filter((m) => m.category === "desserts")}
               value={config.preferredDessert}
               onChange={(id) => updateConfig({ preferredDessert: id })}
-              label="Preferred Dessert"
+              label="Slot 2 · Dessert"
               icon={IceCream}
+            />
+            <ItemSingleSelect
+              items={loc.menu.filter((m) => m.category === "antipasti")}
+              value={config.preferredGarlicBread ?? ""}
+              onChange={(id) => updateConfig({ preferredGarlicBread: id })}
+              label="Slot 3 · Side"
+              icon={Sandwich}
             />
             <ItemSingleSelect
               items={loc.menu.filter((m) => m.category === "drinks")}
               value={config.preferredDrink}
               onChange={(id) => updateConfig({ preferredDrink: id })}
-              label="Preferred Drink"
+              label="Slot 4 · Drink"
               icon={GlassWater}
             />
           </div>

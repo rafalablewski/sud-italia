@@ -3887,6 +3887,10 @@ export interface LocationUpsellConfig {
   preferredCoffee: string;
   preferredDessert: string;
   preferredDrink: string;
+  /** Audit §3 — fourth slot in "Complete your meal". Admin-configurable
+   *  so operators can swap garlic bread for bruschetta / arancini etc.
+   *  Optional for back-compat with pre-existing saved configs. */
+  preferredGarlicBread?: string;
   combos: LocationComboDeal[];
   /** Optional. Falls back to DEFAULT_TIME_WINDOWS in src/lib/upsell.ts when
    *  unset or empty so existing locations keep working before the admin

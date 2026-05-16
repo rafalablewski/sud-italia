@@ -142,6 +142,8 @@ export interface LocationConfig {
   preferredCoffee: string;
   preferredDessert: string;
   preferredDrink: string;
+  /** Audit §3 — fourth "Complete your meal" slot (Garlic Bread by default). */
+  preferredGarlicBread?: string;
   combos: ComboDealConfig[];
   timeWindows?: TimeWindowConfig[];
   bundleRules?: BundleRulesConfig;
@@ -206,6 +208,7 @@ export function getDefaultConfig(slug: string): LocationConfig {
       staffPicks: ["krk-pizza-quattro-formaggi", "krk-anti-burrata", "krk-pasta-pesto"],
       preferredCoffee: "krk-drink-espresso",
       preferredDessert: "krk-dessert-tiramisu",
+      preferredGarlicBread: "krk-anti-garlic-bread",
       preferredDrink: "krk-drink-limonata",
       combos: DEFAULT_COMBOS.map((c) => ({ ...c })),
     };
@@ -215,6 +218,7 @@ export function getDefaultConfig(slug: string): LocationConfig {
     staffPicks: ["waw-pizza-napoli", "waw-anti-burrata", "waw-pasta-cacio-pepe"],
     preferredCoffee: "waw-drink-espresso",
     preferredDessert: "waw-dessert-tiramisu",
+    preferredGarlicBread: "waw-anti-garlic-bread",
     preferredDrink: "waw-drink-limonata",
     combos: DEFAULT_COMBOS.map((c) => ({ ...c })),
   };

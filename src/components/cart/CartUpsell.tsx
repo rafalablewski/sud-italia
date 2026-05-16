@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Plus, Sparkles, X } from "lucide-react";
+import { Plus, Sparkles } from "lucide-react";
 
 import { useCartStore } from "@/store/cart";
 import { UpsellSuggestion } from "@/lib/upsell";
@@ -13,65 +13,67 @@ interface CartUpsellProps {
 }
 
 /**
- * "Complete your meal" — the cart-upsell surface from audit §2.1.
+ * "Complete your meal" — fixed four-slot panel (audit §3 product
+ * direction: 2026-05-bundle-ladder-revenue-rebuild §user follow-up).
  *
- * Renders up to three one-tap chips in a 3-up grid above the subtotal.
- * Suggestions arrive already margin-ranked from getCartSuggestions
- * (§2.4: espresso first, dessert next, drink third).
+ * Slots in order: Coffee → Dessert → Side (Garlic Bread) → Drink.
+ * Default items: Espresso, Tiramisù, Garlic Bread, Limonata. Every slot
+ * is admin-configurable from /admin/crosssell → Cart pairings.
  *
- * Each chip:
- *   - Tap the body or the + badge while idle → adds to cart, chip flips green
- *   - Tap the × badge while added → removes
- *   - Body of an added chip is non-interactive (cursor: default) so the only
- *     remove target is the explicit × — avoids the "tap-the-whole-thing-
- *     twice" ambiguity that the first iteration suffered from.
- *
- * No toast on add — the green flip is the feedback. The drawer-wide
- * AddToCartToast handles the menu-page seed copy; firing it again here would
- * just pull the eye up.
+ * Behaviour:
+ *   - Always renders the configured chips, even after the customer has
+ *     added the item. The chip is the panel's shape, not a context
+ *     recommendation that can vanish.
+ *   - Tap the body or the + badge → addItem (which increments the qty
+ *     of an existing same-id cart line). No remove-from-chip — customers
+ *     decrement via the cart line itself, where the qty stepper lives.
+ *   - In-cart chips render a green "×N" badge so the customer sees the
+ *     running quantity without leaving the chip.
+ *   - Horizontal slider with snap-x so a fifth or sixth slot wouldn't
+ *     break the layout if admin adds one later (today we cap at 4 in
+ *     getCartSuggestions).
  */
 export function CartUpsell({ suggestions }: CartUpsellProps) {
   const addItem = useCartStore((s) => s.addItem);
-  const removeItem = useCartStore((s) => s.removeItem);
   const locationSlug = useCartStore((s) => s.locationSlug);
   const items = useCartStore((s) => s.items);
 
-  const itemIdsInCart = useMemo(
-    () => new Set(items.map((i) => i.menuItem.id)),
-    [items],
-  );
+  const qtyById = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const ci of items) map.set(ci.menuItem.id, ci.quantity);
+    return map;
+  }, [items]);
 
-  // Cap at three so the grid always tiles cleanly.
-  const visible = suggestions.slice(0, 3);
-  if (visible.length === 0) return null;
+  if (suggestions.length === 0) return null;
 
   return (
-    <div className="px-5 mt-3">
-      <div className="flex items-center gap-2 mb-2">
+    <div className="mt-3">
+      <div className="flex items-center gap-2 mb-2 px-5">
         <Sparkles className="h-4 w-4 text-italia-gold" />
         <p className="text-xs font-semibold text-italia-gray uppercase tracking-wide">
           Complete your meal
         </p>
       </div>
-      <div className="grid grid-cols-3 gap-2">
-        {visible.map((suggestion) => {
-          // Quantity-bump suggestions ("Make it 2") never show the added
-          // state — tapping the chip bumps the qty of the existing line
-          // rather than adding a duplicate. The cart store's addItem
-          // handles same-id increment automatically.
-          const isAdded = !suggestion.isQuantityBump && itemIdsInCart.has(suggestion.item.id);
-          return (
-            <CompleteTheMealChip
-              key={`${suggestion.item.id}-${suggestion.isQuantityBump ? "qty" : "add"}`}
-              suggestion={suggestion}
-              isAdded={isAdded}
-              onAdd={() => {
-                if (locationSlug) addItem(suggestion.item, locationSlug);
-              }}
-              onRemove={() => removeItem(suggestion.item.id)}
-            />
-          );
-        })}
+      {/* Horizontal slider — chips snap into view on touch swipe. Negative
+          margin + padding bleed lets the first/last chip kiss the drawer
+          edge without clipping the focus ring. scrollbar-hide is a Tailwind
+          utility defined in globals.css. */}
+      <div className="overflow-x-auto scrollbar-hide -mx-5 px-5">
+        <div className="flex gap-2 snap-x snap-mandatory pb-1">
+          {suggestions.map((suggestion) => {
+            const qty = qtyById.get(suggestion.item.id) ?? 0;
+            return (
+              <CompleteTheMealChip
+                key={suggestion.item.id}
+                suggestion={suggestion}
+                qty={qty}
+                onAdd={() => {
+                  if (locationSlug) addItem(suggestion.item, locationSlug);
+                }}
+              />
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -79,76 +81,62 @@ export function CartUpsell({ suggestions }: CartUpsellProps) {
 
 interface ChipProps {
   suggestion: UpsellSuggestion;
-  isAdded: boolean;
+  qty: number;
   onAdd: () => void;
-  onRemove: () => void;
 }
 
-function CompleteTheMealChip({ suggestion, isAdded, onAdd, onRemove }: ChipProps) {
-  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isAdded) {
-      onAdd();
-      return;
-    }
-    // Only the × badge removes. The audit-rejected pattern was making the
-    // entire chip body a remove target.
-    const target = e.target as HTMLElement;
-    if (target.closest("[data-remove-target='1']")) onRemove();
-  };
+function CompleteTheMealChip({ suggestion, qty, onAdd }: ChipProps) {
+  const inCart = qty > 0;
 
   return (
-    <div
-      onClick={handleClick}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          if (isAdded) onRemove();
-          else onAdd();
-        }
-      }}
-      data-added={isAdded ? "true" : undefined}
-      className={`relative rounded-xl border p-3 text-center transition-all animate-fade-in select-none ${
-        isAdded
-          ? "bg-italia-green/5 border-italia-green/30 cursor-default"
-          : "bg-italia-cream border-italia-gold/15 cursor-pointer hover:border-italia-gold/40 hover:shadow-sm hover:-translate-y-0.5 active:translate-y-0"
+    <button
+      type="button"
+      onClick={onAdd}
+      aria-label={inCart ? `Add another ${suggestion.item.name}` : `Add ${suggestion.item.name}`}
+      className={`relative shrink-0 snap-start w-[140px] rounded-xl border p-3 text-center transition-all animate-fade-in select-none ${
+        inCart
+          ? "bg-italia-green/5 border-italia-green/40 hover:border-italia-green hover:shadow-sm"
+          : "bg-italia-cream border-italia-gold/15 hover:border-italia-gold/40 hover:shadow-sm hover:-translate-y-0.5 active:translate-y-0"
       }`}
     >
+      {/* In-cart quantity badge — green pill bottom-left so customers see
+          the running count without it competing with the + button. */}
+      {inCart && (
+        <span
+          className="absolute top-2 left-2 px-1.5 py-0.5 rounded-md bg-italia-green text-white text-[10px] font-bold leading-none"
+          aria-label={`${qty} in cart`}
+        >
+          ×{qty}
+        </span>
+      )}
+      {/* + badge — always shown so the affordance to add (or add another)
+          is unambiguous. Tapping the chip body fires the same handler so
+          the badge is decorative-but-targetable. */}
       <span
-        data-remove-target={isAdded ? "1" : undefined}
-        onClick={(e) => {
-          if (!isAdded) return;
-          e.stopPropagation();
-          onRemove();
-        }}
-        aria-label={isAdded ? "Remove" : "Add"}
         className={`absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-md transition-colors ${
-          isAdded
-            ? "bg-white text-italia-dark border border-gray-200 hover:bg-italia-red hover:text-white hover:border-italia-red cursor-pointer"
-            : "bg-italia-red text-white"
+          inCart ? "bg-italia-green text-white" : "bg-italia-red text-white"
         }`}
       >
-        {isAdded ? <X className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+        <Plus className="h-3.5 w-3.5" />
       </span>
 
-      <div className="text-[22px] leading-none mb-1" aria-hidden="true">
-        {suggestion.isQuantityBump ? "✕2" : categoryGlyph(suggestion.item.category)}
+      <div className="text-[22px] leading-none mb-1 mt-0.5" aria-hidden="true">
+        {categoryGlyph(suggestion.item.category)}
       </div>
       <div className="text-sm font-medium text-italia-dark leading-tight truncate">
-        {suggestion.isQuantityBump ? `Add another ${suggestion.item.name}` : suggestion.item.name}
+        {suggestion.item.name}
       </div>
       <div className="text-[11px] text-italia-gray leading-tight truncate mt-0.5">
         {suggestion.reason}
       </div>
       <div
         className={`text-sm font-semibold mt-1.5 ${
-          isAdded ? "text-italia-green-dark" : "text-italia-red"
+          inCart ? "text-italia-green-dark" : "text-italia-red"
         }`}
       >
-        {suggestion.isQuantityBump ? "+" : ""}{formatPrice(suggestion.item.price)}
+        {formatPrice(suggestion.item.price)}
       </div>
-    </div>
+    </button>
   );
 }
 

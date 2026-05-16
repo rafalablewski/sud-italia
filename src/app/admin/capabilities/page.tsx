@@ -407,14 +407,10 @@ export default async function CapabilitiesPage() {
           summary: "NEW menu item: Tartufata Reale at 79.90 / 89.90 PLN (audit §3 — the Pizza del Pizzaiolo at 49.90 wasn't tall enough to anchor the menu, only +37% above the most expensive standard. Tartufata is +120%, properly bending price perception). Truffle + burrata di Andria + prosciutto DOP + 24-month Parmigiano. Marked menuRole=\"anchor\" so it's excluded from bundle category-slot resolution (can't be folded into discounted bundles where it would either lose margin or distort customer perception of bundle value).",
         },
         {
-          name: "Quantity upsell (\"Make it 2\")",
+          name: "Complete-your-meal four-slot panel",
           status: "live",
-          summary: "getCartSuggestions surfaces a same-id quantity-bump chip when the cart has exactly one pizza or pasta. Chip renders with ×2 glyph + 'Add another' label + '+price' framing; tapping it bumps the line quantity rather than creating a duplicate. UpsellSuggestion.isQuantityBump flag drives the CartUpsell variant. Single highest-leverage QSR pattern previously absent from the engine.",
-        },
-        {
-          name: "Cart-aware default dessert + drink",
-          status: "live",
-          summary: "Audit §3 — sub-40-PLN carts now default the dessert suggestion to Panna Cotta (75% GM) instead of Tiramisù (70% GM); sub-35-PLN carts default the drink to Acqua Minerale instead of Limonata. Budget-cart signal = price-sensitive customer, value tier wins. Tiramisù / Limonata remain the default for premium carts. Logic in getCartSuggestions reads cart subtotal.",
+          href: "/admin/crosssell",
+          summary: "Fixed four-slot horizontal slider above the cart subtotal (audit §3 product update). Slots in order: Coffee → Dessert → Side → Drink. Default SKUs: Espresso, Tiramisù, Garlic Bread, Limonata. Each slot is admin-configurable in /admin/crosssell → Cart pairings (preferredCoffee / preferredDessert / preferredGarlicBread / preferredDrink on LocationUpsellConfig). Chips stay visible after the customer adds — tapping again increments the same cart line via addItem's same-id qty bump, and an in-cart green ×N badge surfaces the running count. Replaces the previous 3-chip context-dependent suggestion engine (dynamic rules removed: Make-it-2, pizza-only garlic-bread, pasta-only antipasti, only-drinks-suggest-pizza, sub-40-default-Panna-Cotta). Operators retune the panel without code — change the configured SKU and the slot swaps to whatever they pick (Burrata as the Side, Bufala as the Coffee replacement, etc.).",
         },
         {
           name: "Garlic Bread side attach",
