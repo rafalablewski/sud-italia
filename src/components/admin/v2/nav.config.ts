@@ -23,6 +23,7 @@ import {
   Truck,
   Brain,
   Map,
+  MapPin,
   Settings,
   ShieldCheck,
   Users,
@@ -135,6 +136,8 @@ export const NAV_SECTIONS: NavSection[] = [
     label: "Intelligence",
     items: [
       { href: "/admin/locations", label: "Multi-location", icon: Map, requiredRole: "owner" },
+      { href: "/admin/locations/manage", label: "Manage locations", icon: MapPin, requiredRole: "owner" },
+      { href: "/admin/reports/cohort", label: "Cohort & CLTV", icon: BarChart3, requiredRole: "manager" },
       { href: "/admin/ai", label: "Insights", icon: Brain, requiredRole: "manager" },
       { href: "/admin/expansion", label: "Expansion", icon: Map, requiredRole: "owner" },
     ],

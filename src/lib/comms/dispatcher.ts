@@ -315,6 +315,42 @@ export async function commsDispatcher(event: OutboxRow): Promise<void> {
       return;
     }
 
+    // Referral give-get qualified — the referee just completed their
+    // first paid order. Credit the referrer's loyalty points + SMS them
+    // the win. Idempotency comes from the outbox dedupe on redemption id.
+    case "referral.qualified": {
+      const p = event.payload as {
+        code?: string;
+        ownerPhone?: string;
+        ownerName?: string;
+        refereePhone?: string;
+        rewardPoints?: number;
+      };
+      if (!p.ownerPhone || !p.rewardPoints) {
+        logger.warn("comms.referral.missing_fields", { eventId: event.id });
+        return;
+      }
+      const { addPointAdjustment } = await import("@/lib/store");
+      await addPointAdjustment({
+        phone: p.ownerPhone,
+        amount: p.rewardPoints,
+        reason: `Referral reward (code ${p.code ?? "?"})`,
+        adjustedBy: "system:referral",
+        adjustedAt: new Date().toISOString(),
+      });
+      const owner = await getCustomer(p.ownerPhone);
+      if (!owner || owner.smsOptout) {
+        logger.info("comms.skip.sms_optout", {
+          eventId: event.id,
+          type: event.eventType,
+        });
+        return;
+      }
+      const body = `Sud Italia — Grazie! Your friend's first order landed. ${p.rewardPoints} points (~${(p.rewardPoints / 10).toFixed(0)} zł) just hit your wallet. Buon appetito!`.slice(0, 300);
+      await getSmsProvider().send(p.ownerPhone, body);
+      return;
+    }
+
     default:
       // Unknown event type — let it pass through, but log so an operator
       // notices if we ship a new event without wiring its handler.

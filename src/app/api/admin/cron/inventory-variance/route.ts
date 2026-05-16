@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logCronRun, withCron } from "@/lib/cron";
-import { getActiveLocations } from "@/data/locations";
+import { getActiveLocationsAsync } from "@/lib/locations-store";
 import { computeVariance } from "@/lib/variance";
 
 /**
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   const auth = await withCron(req);
   if (auth) return auth;
 
-  const locations = getActiveLocations();
+  const locations = await getActiveLocationsAsync();
   const to = new Date();
   const from = new Date(to.getTime() - 7 * 24 * 60 * 60 * 1000);
   const out: Record<

@@ -770,6 +770,138 @@ export const royaltyStatements = pgTable(
   ],
 );
 
+/**
+ * Locations master table. Until m4_1 every location lived in
+ * `src/data/locations.ts` and adding a third truck required a code change
+ * plus a deploy — fine at 2 trucks, unworkable at 5+. Now the active list
+ * is owned by this table; the code file is the seed payload used when the
+ * table is empty (first deploy + dev).
+ *
+ * Why a normalized table and not kv_store: locations are joined against
+ * orders / slots / staff / inventory by `location_slug` in dozens of
+ * places, and the admin needs row-level CRUD with timestamps + audit. The
+ * `payload` column carries the rich fields (hours, hero copy, coordinates)
+ * so we don't have to widen the schema every time a marketing field
+ * appears.
+ *
+ * `is_active` drives the public landing page filter; `setup_complete`
+ * mirrors locationAssignments so the franchisee onboarding gate stays in
+ * one place. `display_order` is the operator-facing sort (city pages,
+ * dashboards) — set it explicitly rather than relying on insert order.
+ */
+export const locationsTable = pgTable(
+  "locations",
+  {
+    slug: text("slug").primaryKey(),
+    name: text("name").notNull(),
+    city: text("city").notNull(),
+    address: text("address").notNull(),
+    lat: integer("lat").notNull(), // micro-degrees: lat * 1e6, rounded
+    lng: integer("lng").notNull(),
+    heroImage: text("hero_image").notNull().default(""),
+    description: text("description").notNull().default(""),
+    shortDescription: text("short_description").notNull().default(""),
+    hours: jsonb("hours").notNull().default([]),
+    currency: text("currency").notNull().default("PLN"),
+    servesAlcohol: boolean("serves_alcohol").notNull().default(false),
+    isActive: boolean("is_active").notNull().default(false),
+    displayOrder: integer("display_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("locations_is_active_idx").on(table.isActive),
+    index("locations_display_order_idx").on(table.displayOrder),
+  ],
+);
+
+/**
+ * Per-customer segment assignments (m4_3). Recomputed weekly by the
+ * `customer-segments-rebuild` cron from orders + loyalty + attach
+ * history. The segment is the data moat — surface it on the customer
+ * detail page, drive personalized comms, and let the upsell engine
+ * weight candidates by segment.
+ *
+ * `segment` values: "new" | "occasional" | "regular" | "champion" |
+ * "lapsed" | "vip". Defined in src/lib/customer-segments.ts; the
+ * rebuild job is the only writer.
+ *
+ * `factors` is the explanation payload the admin UI renders so an
+ * operator can see WHY a customer landed in this segment (recency,
+ * frequency, monetary, attach diversity).
+ */
+export const customerSegments = pgTable(
+  "customer_segments",
+  {
+    phone: text("phone").primaryKey(),
+    segment: text("segment").notNull(),
+    rfmScore: integer("rfm_score").notNull(), // 0–999 composite
+    recencyDays: integer("recency_days").notNull(),
+    frequency: integer("frequency").notNull(),
+    monetaryGrosze: integer("monetary_grosze").notNull(),
+    lifetimeValueGrosze: integer("lifetime_value_grosze").notNull(),
+    predictedCltvGrosze: integer("predicted_cltv_grosze").notNull(),
+    factors: jsonb("factors").notNull().default({}),
+    computedAt: timestamp("computed_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("customer_segments_segment_idx").on(table.segment),
+    index("customer_segments_computed_at_idx").on(table.computedAt),
+  ],
+);
+
+/**
+ * Referral codes + redemptions (m4_4). One row per code; every code is
+ * tied to exactly one owner phone. Redemptions append to
+ * `referral_redemptions` below so the give-get accounting is a single
+ * SQL query rather than a JSON scan.
+ *
+ * `code` is short, URL-safe, generated server-side. We index it
+ * explicitly so the public /r/[code] lookup is O(log n).
+ */
+export const referralCodes = pgTable(
+  "referral_codes",
+  {
+    code: text("code").primaryKey(),
+    ownerPhone: text("owner_phone").notNull(),
+    ownerName: text("owner_name").notNull().default(""),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("referral_codes_owner_phone_idx").on(table.ownerPhone),
+  ],
+);
+
+export const referralRedemptions = pgTable(
+  "referral_redemptions",
+  {
+    id: text("id").primaryKey(),
+    code: text("code").notNull(),
+    refereePhone: text("referee_phone").notNull(),
+    orderId: text("order_id"), // populated when the qualifying first order completes
+    rewardGivenGrosze: integer("reward_given_grosze").notNull().default(0), // to referrer
+    discountAppliedGrosze: integer("discount_applied_grosze").notNull().default(0), // to referee
+    status: text("status").notNull().default("pending"), // "pending" | "qualified" | "rewarded" | "void"
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    qualifiedAt: timestamp("qualified_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("referral_redemptions_code_idx").on(table.code),
+    index("referral_redemptions_referee_phone_idx").on(table.refereePhone),
+    index("referral_redemptions_status_idx").on(table.status),
+  ],
+);
+
 // --- Phase 3: compliance-as-code (m3_13-15) ------------------------------
 
 /**
