@@ -519,17 +519,23 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
         activeComboName={comboResult.isComplete ? comboResult.activeDeal?.name ?? null : null}
       />
 
-      {/* Combo deal banner — suppressed when the bundle ladder is showable
-          so we don't show two competing promos at once (Starbucks-rule:
-          one upsell at a time, picked by impact). A 4,99 PLN combo save
-          is psychologically invisible next to a 47 PLN bundle save. */}
-      {!isBundleLadderShowable(
-        items,
-        resolvedMenuItems,
-        (upsellConfig as { bundles?: BundleTier[] } | null)?.bundles ?? null,
-        (upsellConfig as { bundleRules?: import("@/lib/bundles").BundleAvailabilityRules } | null)?.bundleRules ?? null,
-        new Date().getHours(),
-      ) && (
+      {/* Combo deal banner — the Starbucks rule (one upsell at a time)
+          applies only to generic category-only combos that would
+          duplicate the bundle ladder's pitch. Item-specific combos
+          (e.g. Italian Classic — margherita + limonata + tiramisù)
+          capture a distinct cohort the bundle ladder doesn't address:
+          the lunch ladder offers pasta + any drink + panna cotta, the
+          Italian Classic offers pizza + limonata + tiramisù. Different
+          product paths, different desserts — both should render so the
+          customer picks the one matching their craving. */}
+      {((comboResult.activeDeal?.requiredItems?.length ?? 0) > 0 ||
+        !isBundleLadderShowable(
+          items,
+          resolvedMenuItems,
+          (upsellConfig as { bundles?: BundleTier[] } | null)?.bundles ?? null,
+          (upsellConfig as { bundleRules?: import("@/lib/bundles").BundleAvailabilityRules } | null)?.bundleRules ?? null,
+          new Date().getHours(),
+        )) && (
         <ComboDealBanner
           cartItems={items}
           fulfillmentType={fulfillmentType}
