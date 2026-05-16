@@ -43,10 +43,13 @@ export function Sheet({ open, onClose, children, title }: SheetProps) {
         )}
         onClick={onClose}
       />
-      {/* Panel */}
+      {/* Panel — overflow-x-hidden defends the drawer from any descendant
+          that escapes the inner padding (negative margins on sliders, full-
+          bleed banners, etc). Without it the whole drawer becomes
+          horizontally scrollable and reveals empty space past the edge. */}
       <div
         className={cn(
-          "fixed right-0 top-0 z-50 h-full w-full max-w-md bg-white shadow-xl transition-transform duration-300 ease-in-out overflow-y-auto",
+          "fixed right-0 top-0 z-50 h-full w-full max-w-md bg-white shadow-xl transition-transform duration-300 ease-in-out overflow-y-auto overflow-x-hidden",
           open ? "translate-x-0" : "translate-x-full"
         )}
       >
