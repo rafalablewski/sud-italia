@@ -524,13 +524,20 @@ export const DEFAULT_COMBO_DEALS: ComboDeal[] = [
     discountPercent: 10,
     minItems: 3,
   },
+  // Pasta Combo — honours the lunch TodBanner promise ("Add a pasta and a
+  // drink to save 10%"). Also the graceful fallback when a customer locks
+  // the Lunch bundle (pasta + drink + Panna Cotta) and then removes the
+  // dessert: the cart drops out of the bundle but the 10% combo still
+  // applies on what's left. Keeping dessert OUT of the discount aligns
+  // with the §3 audit rule — dessert has high organic attach we don't
+  // want to subsidise.
   {
     id: "pasta-combo",
     name: "Pasta Combo",
-    description: "Any pasta + drink + dessert",
-    categories: ["pasta", "drinks", "desserts"],
+    description: "Any pasta + drink",
+    categories: ["pasta", "drinks"],
     discountPercent: 10,
-    minItems: 3,
+    minItems: 2,
   },
   // Pizza + Garlic Bread combo — replaces the dead Lunch Special (panini +
   // drink, 2 PLN savings, ignored at 0% activation). Garlic bread has a

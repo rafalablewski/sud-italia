@@ -13,7 +13,6 @@ import { TierPerkBanner } from "./TierPerkBanner";
 import { BundleLadder } from "./BundleLadder";
 import { CorporateOrderBanner } from "./CorporateOrderBanner";
 import type { BundleTier } from "@/lib/bundles";
-import { isBundleLadderShowable } from "@/lib/bundles";
 import { formatPrice } from "@/lib/utils";
 import {
   getCartSuggestions,
@@ -519,23 +518,18 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
         activeComboName={comboResult.isComplete ? comboResult.activeDeal?.name ?? null : null}
       />
 
-      {/* Combo deal banner — the Starbucks rule (one upsell at a time)
-          applies only to generic category-only combos that would
-          duplicate the bundle ladder's pitch. Item-specific combos
-          (e.g. Italian Classic — margherita + limonata + tiramisù)
-          capture a distinct cohort the bundle ladder doesn't address:
-          the lunch ladder offers pasta + any drink + panna cotta, the
-          Italian Classic offers pizza + limonata + tiramisù. Different
-          product paths, different desserts — both should render so the
-          customer picks the one matching their craving. */}
-      {((comboResult.activeDeal?.requiredItems?.length ?? 0) > 0 ||
-        !isBundleLadderShowable(
-          items,
-          resolvedMenuItems,
-          (upsellConfig as { bundles?: BundleTier[] } | null)?.bundles ?? null,
-          (upsellConfig as { bundleRules?: import("@/lib/bundles").BundleAvailabilityRules } | null)?.bundleRules ?? null,
-          new Date().getHours(),
-        )) && (
+      {/* Combo deal banner — suppressed only when a bundle is actually
+          LOCKED into the cart. The previous gate (hide whenever the
+          bundle ladder was merely showable) was too aggressive: a
+          customer who locked Make-it-a-Lunch and then removed the
+          dessert would see neither the bundle savings nor the smaller
+          pasta-combo fallback, so the cart silently dropped both
+          discounts. With no bundle applied, both promos can coexist —
+          the bundle card pitches the bigger save, the combo banner
+          delivers the smaller one on what's already in the cart. When
+          a bundle IS locked, `comboDiscount` is already zeroed above,
+          so showing the banner would be misleading. */}
+      {!isBundleActive && (
         <ComboDealBanner
           cartItems={items}
           fulfillmentType={fulfillmentType}
