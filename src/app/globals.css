@@ -2253,12 +2253,13 @@ html { scroll-behavior: smooth; }
 }
 
 .v2-mng-section[data-variant="menu"] {
-  /* Last column holds the edit-group (Pencil + Trash, 24px each + 2px gap).
-   * Must be a fixed width — CSS Grid resolves `auto` per grid container, so
-   * `auto` collapses to 0 on the header (empty placeholder span) but expands
-   * on each row, pushing Price/Cost/Margin out of alignment with their
-   * header labels. 52px = 24 + 2 + 24 + 2px breathing room. */
-  --mng-grid: 20px 20px minmax(0, 1fr) 84px 84px 56px 52px;
+  /* Price + cost columns reserve room for chain-wide ranges
+   * ("27,90 zł–29,90 zł" → ~104px) so divergent products don't wrap onto
+   * two lines. Margin gets a hair more room for "63–71%". Last column
+   * holds the edit-group (Pencil + Trash, 24px each + 2px gap, 52px
+   * total) — kept fixed so the header placeholder doesn't collapse
+   * out of alignment with each row's actions. */
+  --mng-grid: 20px 20px minmax(0, 1fr) 112px 112px 64px 52px;
   --mng-cols-start: 4;
 }
 .v2-mng-select {
@@ -2432,10 +2433,13 @@ html { scroll-behavior: smooth; }
   margin-right: 8px;
   color: var(--fg-subtle);
 }
-.v2-mng-tag-override { color: var(--info); text-transform: none; font-weight: 600; }
-.v2-mng-tag-custom { color: var(--success); text-transform: none; font-weight: 600; }
-.v2-mng-tag-info { color: var(--info); text-transform: none; font-weight: 600; }
-.v2-mng-tag-warning { color: var(--warning); text-transform: none; font-weight: 600; }
+/* State tags inline with the product name. Use the same subtle weight
+ * + lowercase treatment as dietary tags so they sit calmly in the row
+ * — color carries the meaning without screaming. */
+.v2-mng-tag-override { color: var(--info); font-weight: 500; }
+.v2-mng-tag-custom { color: var(--success); font-weight: 500; }
+.v2-mng-tag-info { color: var(--info); font-weight: 500; }
+.v2-mng-tag-warning { color: var(--warning); font-weight: 500; }
 /* Audit §4.3 menu engineering chips. Same pattern as -override: tone
    comes from text color, no background box, interpunct separator from the
    shared adjacent-tag rule. Keeps the row's typographic rhythm intact. */
@@ -2454,6 +2458,7 @@ html { scroll-behavior: smooth; }
   font-size: var(--text-sm);
   text-align: right;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .v2-mng-val-price { color: var(--fg); font-weight: 600; }
 .v2-mng-val-cost { color: var(--fg-muted); }
