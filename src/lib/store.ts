@@ -2117,6 +2117,16 @@ export interface MenuOverride {
   available?: boolean;
   name?: string;
   description?: string;
+  /** Operator-facing inventory code (audit §4.3 — every product has all
+   *  fields editable). `null` clears back to the seed sku. */
+  sku?: string | null;
+  /** Per-location category override. Lets operators relabel a seed item
+   *  (e.g. promote a drink to antipasti for a new menu organization)
+   *  without a code deploy. `null` clears back to seed. */
+  category?: import("@/data/types").MenuCategory | null;
+  /** Per-location dietary tag override. Replaces the seed tag array
+   *  entirely. `null` clears back to seed. */
+  tags?: ("vegetarian" | "vegan" | "spicy" | "gluten-free")[] | null;
   /**
    * Audit §4.3 menu engineering role. Stored as a string so the override
    * file is forward-compatible with new roles. `null` means "clear the base

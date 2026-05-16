@@ -150,6 +150,10 @@ export interface MenuItem {
   image?: string;
   tags: ("vegetarian" | "vegan" | "spicy" | "gluten-free")[];
   available: boolean;
+  /** Operator-facing inventory / accounting code. Distinct from `id` (which
+   *  is the stable database slug). Free-form up to 60 chars so operators
+   *  can plug into existing SKU schemes (e.g. "SI-PIZ-MARG-001"). */
+  sku?: string;
   /** Menu engineering role — see MenuRole. Drives card hierarchy + badges
    *  on the public menu page. Same item can be `anchor` AND `isLimited`. */
   menuRole?: MenuRole;

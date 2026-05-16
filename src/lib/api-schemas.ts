@@ -282,6 +282,17 @@ export const customerNoteCreateSchema = z.object({
 // `isoDate` is the shared YYYY-MM-DD schema defined near the top of this file.
 const menuRoleEnum = z.enum(["hero", "profit-driver", "anchor", "lto"]);
 
+const menuCategoryEnum = z.enum([
+  "pizza",
+  "pasta",
+  "antipasti",
+  "panini",
+  "drinks",
+  "desserts",
+]);
+
+const menuTagEnum = z.enum(["vegetarian", "vegan", "spicy", "gluten-free"]);
+
 // Audit §3 — modifier groups (Crust, Premium toppings, etc.). Round-trip
 // through MenuOverride.modifierGroups. `null` clears back to seed.
 const modifierOptionSchema = z.object({
@@ -312,6 +323,11 @@ const menuOverrideEditSchema = z.object({
   deliveryOnly: z.boolean().nullable().optional(),
   packagingCost: grosze.max(5_000).nullable().optional(),
   modifierGroups: z.array(modifierGroupSchema).max(8).nullable().optional(),
+  // Standardised per-product fields — every menu item exposes the same
+  // editable surface on /admin/menu, including SKU, category, and tags.
+  sku: z.string().min(1).max(60).nullable().optional(),
+  category: menuCategoryEnum.nullable().optional(),
+  tags: z.array(menuTagEnum).max(8).nullable().optional(),
 });
 
 /**
@@ -333,6 +349,9 @@ export const menuOverridePutSchema = z
     deliveryOnly: z.boolean().nullable().optional(),
     packagingCost: grosze.max(5_000).nullable().optional(),
     modifierGroups: z.array(modifierGroupSchema).max(8).nullable().optional(),
+    sku: z.string().min(1).max(60).nullable().optional(),
+    category: menuCategoryEnum.nullable().optional(),
+    tags: z.array(menuTagEnum).max(8).nullable().optional(),
   })
   .refine((data) => !!data.id || !!data.items, {
     message: "Provide either `id` for single override or `items` map for bulk",
@@ -357,17 +376,6 @@ export const menuBulkActionSchema = z
 // LTOs, franchisee one-offs, market-day specials). Stored in
 // `custom-menu-items.json` and merged into getMenuWithOverrides().
 
-const menuCategoryEnum = z.enum([
-  "pizza",
-  "pasta",
-  "antipasti",
-  "panini",
-  "drinks",
-  "desserts",
-]);
-
-const menuTagEnum = z.enum(["vegetarian", "vegan", "spicy", "gluten-free"]);
-
 /** POST /api/admin/menu/custom — create a new admin-managed menu item. */
 export const customMenuItemCreateSchema = z.object({
   id: z
@@ -386,6 +394,7 @@ export const customMenuItemCreateSchema = z.object({
   deliveryOnly: z.boolean().optional(),
   packagingCost: grosze.max(5_000).optional(),
   modifierGroups: z.array(modifierGroupSchema).max(8).optional(),
+  sku: z.string().min(1).max(60).optional(),
 });
 
 /** PATCH /api/admin/menu/custom — partial edit of an admin-created item. */
@@ -400,6 +409,7 @@ export const customMenuItemUpdateSchema = z.object({
   deliveryOnly: z.boolean().optional(),
   packagingCost: grosze.max(5_000).optional(),
   modifierGroups: z.array(modifierGroupSchema).max(8).optional(),
+  sku: z.string().min(1).max(60).optional(),
 });
 
 // --- Admin: users (RBAC) -------------------------------------------------

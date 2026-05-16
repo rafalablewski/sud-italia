@@ -61,6 +61,8 @@ interface MenuItemData {
   category: MenuCategory;
   tags: string[];
   available: boolean;
+  /** Operator-facing inventory / accounting code (audit §4.3). */
+  sku?: string;
   // Audit §3 — channel economics, packaging, and per-item modifiers.
   deliveryOnly?: boolean;
   packagingCost?: number;
@@ -68,8 +70,8 @@ interface MenuItemData {
   _hasOverride: boolean;
   _hasRecipe?: boolean;
   _costSource?: "recipe" | "override" | "seed";
-  /** Admin-created items (vs seed) — surfaces a delete button and lets the
-   *  edit dialog touch every field, not just the override-able ones. */
+  /** Admin-created items (vs seed) — surfaces a delete button and routes
+   *  edits to the custom-item endpoint instead of the override endpoint. */
   _isCustom?: boolean;
 }
 
@@ -130,9 +132,13 @@ export function AdminMenu() {
       id: string,
       change: {
         price?: number;
+        cost?: number;
         available?: boolean;
         name?: string;
         description?: string;
+        category?: MenuCategory | null;
+        tags?: string[] | null;
+        sku?: string | null;
         deliveryOnly?: boolean | null;
         packagingCost?: number | null;
         modifierGroups?: ModifierGroup[] | null;
@@ -162,6 +168,7 @@ export function AdminMenu() {
         category?: MenuCategory;
         tags?: string[];
         available?: boolean;
+        sku?: string;
         deliveryOnly?: boolean;
         packagingCost?: number;
         modifierGroups?: ModifierGroup[];
@@ -299,6 +306,8 @@ export function AdminMenu() {
       description?: string;
       category?: MenuCategory;
       tags?: string[];
+      available?: boolean;
+      sku?: string | null;
       deliveryOnly?: boolean | null;
       packagingCost?: number | null;
       modifierGroups?: ModifierGroup[] | null;
@@ -319,6 +328,8 @@ export function AdminMenu() {
         ...(change.cost !== undefined ? { cost: change.cost } : {}),
         ...(change.category !== undefined ? { category: change.category } : {}),
         ...(change.tags !== undefined ? { tags: change.tags } : {}),
+        ...(change.available !== undefined ? { available: change.available } : {}),
+        ...(change.sku !== undefined ? { sku: change.sku ?? "" } : {}),
         ...(change.deliveryOnly !== undefined
           ? { deliveryOnly: change.deliveryOnly ?? false }
           : {}),
@@ -331,11 +342,10 @@ export function AdminMenu() {
       };
       ok = await persistCustomChange(id, customChange);
     } else {
-      // Seed items go through the override pipeline — drop fields that
-      // aren't override-able (category, tags, cost) and forward the rest.
-      const { category: _c, tags: _t, cost: _co, ...overrideChange } = change;
-      void _c; void _t; void _co;
-      ok = await persistChange(id, overrideChange);
+      // Seed items go through the override pipeline. Every field is
+      // override-able now (category, tags, sku, cost included) so the
+      // edit form is consistent regardless of storage backend.
+      ok = await persistChange(id, change);
     }
 
     if (ok) {
@@ -346,10 +356,14 @@ export function AdminMenu() {
                 ...i,
                 ...(change.name !== undefined ? { name: change.name } : {}),
                 ...(change.price !== undefined ? { price: change.price } : {}),
-                ...(change.cost !== undefined && isCustom ? { cost: change.cost } : {}),
+                ...(change.cost !== undefined ? { cost: change.cost } : {}),
                 ...(change.description !== undefined ? { description: change.description } : {}),
-                ...(change.category !== undefined && isCustom ? { category: change.category } : {}),
-                ...(change.tags !== undefined && isCustom ? { tags: change.tags } : {}),
+                ...(change.category !== undefined ? { category: change.category } : {}),
+                ...(change.tags !== undefined ? { tags: change.tags } : {}),
+                ...(change.available !== undefined ? { available: change.available } : {}),
+                ...(change.sku !== undefined
+                  ? { sku: change.sku === null ? undefined : change.sku }
+                  : {}),
                 // Apply null = clear / undefined = unchanged / value = set
                 ...(change.deliveryOnly !== undefined
                   ? { deliveryOnly: change.deliveryOnly === null ? undefined : change.deliveryOnly }
@@ -373,7 +387,7 @@ export function AdminMenu() {
   };
 
   const createCustomItem = async (draft: {
-    id: string;
+    baseSlug: string;
     name: string;
     description: string;
     price: number;
@@ -381,18 +395,63 @@ export function AdminMenu() {
     category: MenuCategory;
     tags: string[];
     available: boolean;
+    sku?: string;
+    locationSlugs: string[];
   }) => {
-    const res = await fetch("/api/admin/menu/custom", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...draft, locationSlug: pageLoc }),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      toast.error("Could not create item", err?.error || "Try again.");
+    // Each target location gets its own row + globally-unique id (the
+    // POST endpoint rejects id collisions across seed + custom rows so
+    // the merge in getMenuWithOverrides() stays deterministic). We
+    // generate `${locPrefix}-${baseSlug}` per location.
+    const targets = draft.locationSlugs.length > 0 ? draft.locationSlugs : [pageLoc];
+    const failures: { slug: string; error: string }[] = [];
+    for (const slug of targets) {
+      const prefix = slug.slice(0, 3) || "loc";
+      const id = `${prefix}-${draft.baseSlug}`;
+      const body = {
+        id,
+        locationSlug: slug,
+        name: draft.name,
+        description: draft.description,
+        price: draft.price,
+        cost: draft.cost,
+        category: draft.category,
+        tags: draft.tags,
+        available: draft.available,
+        ...(draft.sku ? { sku: draft.sku } : {}),
+      };
+      const res = await fetch("/api/admin/menu/custom", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        failures.push({ slug, error: err?.error || `HTTP ${res.status}` });
+      }
+    }
+
+    if (failures.length === targets.length) {
+      const first = failures[0];
+      toast.error("Could not create item", first.error);
       return false;
     }
-    toast.success("Item added", draft.name);
+    if (failures.length > 0) {
+      const names = failures
+        .map((f) => activeLocations.find((l) => l.slug === f.slug)?.city ?? f.slug)
+        .join(", ");
+      toast.warning(
+        "Item partially created",
+        `${targets.length - failures.length} of ${targets.length} locations saved. Failed: ${names}.`,
+      );
+    } else {
+      const successCount = targets.length;
+      toast.success(
+        "Item added",
+        successCount > 1
+          ? `${draft.name} created at ${successCount} locations.`
+          : draft.name,
+      );
+    }
     setCreating(false);
     await fetchMenu();
     return true;
@@ -631,12 +690,17 @@ export function AdminMenu() {
                                 Staff Pick, New, LTO) are managed and shown
                                 solely from /admin/crosssell → Menu badges.
                                 The admin menu row keeps only the override
-                                state indicator and intrinsic recipe tags. */}
-                            {item._isCustom && (
-                              <span className="v2-mng-tag v2-mng-tag-custom">Custom</span>
+                                state indicator and intrinsic recipe tags.
+                                The "Custom" badge was retired — every item
+                                is fully editable, so the storage origin no
+                                longer warrants a visual distinction. */}
+                            {item._hasOverride && (
+                              <span className="v2-mng-tag v2-mng-tag-override">Edited</span>
                             )}
-                            {item._hasOverride && !item._isCustom && (
-                              <span className="v2-mng-tag v2-mng-tag-override">Overridden</span>
+                            {item.sku && (
+                              <span className="v2-mng-tag" title="SKU / inventory code">
+                                {item.sku}
+                              </span>
                             )}
                             {item.tags.map((t) => (
                               <span key={t} className="v2-mng-tag">{t}</span>
@@ -715,6 +779,8 @@ interface EditDialogProps {
       description?: string;
       category?: MenuCategory;
       tags?: string[];
+      available?: boolean;
+      sku?: string | null;
       deliveryOnly?: boolean | null;
       packagingCost?: number | null;
       modifierGroups?: ModifierGroup[] | null;
@@ -725,11 +791,13 @@ interface EditDialogProps {
 
 function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
   const [name, setName] = useState("");
+  const [sku, setSku] = useState("");
   const [priceStr, setPriceStr] = useState("0.00");
   const [costStr, setCostStr] = useState("0.00");
   const [desc, setDesc] = useState("");
   const [cat, setCat] = useState<MenuCategory>("pizza");
   const [tags, setTags] = useState<string[]>([]);
+  const [available, setAvailable] = useState(true);
   // Audit §3 channel + packaging + modifiers
   const [deliveryOnly, setDeliveryOnly] = useState(false);
   const [packagingStr, setPackagingStr] = useState("");
@@ -739,11 +807,13 @@ function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
   useEffect(() => {
     if (item) {
       setName(item.name);
+      setSku(item.sku ?? "");
       setPriceStr((item.price / 100).toFixed(2));
       setCostStr((item.cost / 100).toFixed(2));
       setDesc(item.description);
       setCat(item.category);
       setTags(item.tags.slice());
+      setAvailable(item.available);
       setDeliveryOnly(Boolean(item.deliveryOnly));
       setPackagingStr(
         typeof item.packagingCost === "number"
@@ -765,7 +835,9 @@ function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
   }
 
   const isCustom = Boolean(item._isCustom);
-  const canEditRecipeCost = isCustom && !item._hasRecipe;
+  // Recipe-attached items get their cost computed from ingredients, so the
+  // field is locked regardless of whether the row is seed or custom.
+  const canEditCost = !item._hasRecipe;
 
   const submit = async () => {
     const price = Math.round(parseFloat(priceStr || "0") * 100);
@@ -776,6 +848,8 @@ function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
       description?: string;
       category?: MenuCategory;
       tags?: string[];
+      available?: boolean;
+      sku?: string | null;
       deliveryOnly?: boolean | null;
       packagingCost?: number | null;
       modifierGroups?: ModifierGroup[] | null;
@@ -783,16 +857,21 @@ function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
     const trimmedName = name.trim();
     if (trimmedName && trimmedName !== item.name) change.name = trimmedName;
     if (price !== item.price) change.price = price;
-    if (canEditRecipeCost) {
+    if (canEditCost) {
       const cost = Math.round(parseFloat(costStr || "0") * 100);
       if (cost !== item.cost) change.cost = cost;
     }
     if (desc !== item.description) change.description = desc;
-    if (isCustom) {
-      if (cat !== item.category) change.category = cat;
-      const tagsChanged =
-        tags.length !== item.tags.length || tags.some((t) => !item.tags.includes(t));
-      if (tagsChanged) change.tags = tags;
+    if (cat !== item.category) change.category = cat;
+    const tagsChanged =
+      tags.length !== item.tags.length || tags.some((t) => !item.tags.includes(t));
+    if (tagsChanged) change.tags = tags;
+    if (available !== item.available) change.available = available;
+    const trimmedSku = sku.trim();
+    if (trimmedSku !== (item.sku ?? "")) {
+      // For seed-backed items, empty string -> null clears the override
+      // back to the seed sku. Custom items just store the empty string.
+      change.sku = trimmedSku === "" ? (isCustom ? "" : null) : trimmedSku;
     }
     const nextDeliveryOnly: boolean | null = deliveryOnly ? true : null;
     if (nextDeliveryOnly !== (item.deliveryOnly ?? null)) {
@@ -841,11 +920,7 @@ function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
       onClose={onClose}
       size="md"
       title={`Edit ${item.name}`}
-      description={
-        isCustom
-          ? "Admin-created item. Changes save immediately to this location."
-          : "Changes apply to this location only via the override system. Reset by clearing the override in the database."
-      }
+      description="Changes apply to this location only. Save to publish."
       footer={
         <>
           <Button variant="ghost" onClick={onClose} disabled={busy}>
@@ -864,17 +939,22 @@ function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
           onChange={(e) => setName(e.target.value)}
           description="Customer-facing item name."
         />
-        {isCustom && (
-          <Select
-            label="Category"
-            value={cat}
-            onChange={(e) => setCat(e.target.value as MenuCategory)}
-            options={CATEGORY_ORDER.map((c) => ({
-              value: c,
-              label: MENU_CATEGORY_LABELS[c],
-            }))}
-          />
-        )}
+        <Input
+          label="SKU"
+          value={sku}
+          onChange={(e) => setSku(e.target.value)}
+          placeholder="e.g. SI-PIZ-MARG-001"
+          description="Operator-facing inventory / accounting code. Leave blank if not tracked."
+        />
+        <Select
+          label="Category"
+          value={cat}
+          onChange={(e) => setCat(e.target.value as MenuCategory)}
+          options={CATEGORY_ORDER.map((c) => ({
+            value: c,
+            label: MENU_CATEGORY_LABELS[c],
+          }))}
+        />
         <Input
           label="Price (PLN)"
           type="number"
@@ -885,48 +965,64 @@ function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
           trailingAdornment={<span className="v2-muted">zł</span>}
           description={`Food cost: ${formatPrice(item.cost)} · Current margin: ${marginPct(item.price, item.cost)}%`}
         />
-        {canEditRecipeCost && (
-          <Input
-            label="Food cost (PLN)"
-            type="number"
-            step="0.01"
-            min="0"
-            value={costStr}
-            onChange={(e) => setCostStr(e.target.value)}
-            trailingAdornment={<span className="v2-muted">zł</span>}
-            description="Per-portion plate cost. Once a recipe is attached this becomes computed automatically and the field is locked."
-          />
-        )}
+        <Input
+          label="Food cost (PLN)"
+          type="number"
+          step="0.01"
+          min="0"
+          value={costStr}
+          onChange={(e) => setCostStr(e.target.value)}
+          disabled={!canEditCost}
+          trailingAdornment={<span className="v2-muted">zł</span>}
+          description={
+            canEditCost
+              ? "Per-portion plate cost. Once a recipe is attached this becomes computed automatically and the field is locked."
+              : "Computed from the attached recipe. Edit ingredients in /admin/recipes to change."
+          }
+        />
         <Textarea
           label="Description"
           value={desc}
           onChange={(e) => setDesc(e.target.value)}
           rows={4}
         />
-        {isCustom && (
-          <div className="v2-field">
-            <label className="v2-field-label">Tags</label>
-            <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap" }}>
-              {MENU_TAGS.map((tag) => {
-                const on = tags.includes(tag);
-                return (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={() => toggleTag(tag)}
-                    aria-pressed={on}
-                    className={`v2-chip ${on ? "is-on" : ""}`}
-                  >
-                    {tag}
-                  </button>
-                );
-              })}
-            </div>
-            <p className="v2-field-desc">
-              Optional dietary markers shown on the menu card.
-            </p>
+        <div className="v2-field">
+          <label className="v2-field-label">Tags</label>
+          <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap" }}>
+            {MENU_TAGS.map((tag) => {
+              const on = tags.includes(tag);
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => toggleTag(tag)}
+                  aria-pressed={on}
+                  className={`v2-chip ${on ? "is-on" : ""}`}
+                >
+                  {tag}
+                </button>
+              );
+            })}
           </div>
-        )}
+          <p className="v2-field-desc">
+            Optional dietary markers shown on the menu card.
+          </p>
+        </div>
+        <label
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            fontSize: "var(--text-sm)",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={available}
+            onChange={(e) => setAvailable(e.target.checked)}
+          />
+          Available to customers
+        </label>
         {/* Menu-engineering role + LTO live in /admin/crosssell → Menu badges
             so the editorial chips have one source of truth. The per-item
             edit dialog stays focused on price, description, channel
@@ -1198,20 +1294,19 @@ function ModifierEditor({
 
 // ─── Create-item dialog ───────────────────────────────────────────────────
 //
-// Spins up a brand-new admin-managed menu item for the current location.
-// IDs are auto-suggested from the name (lowercased + hyphenated) and
+// Spins up a brand-new admin-managed menu item. Operators pick one, two,
+// or all active locations and the dialog issues one POST per location with
+// a per-location id derived from the location slug prefix. IDs are
 // validated server-side against both the seed catalogue and other custom
 // rows so the merge in getMenuWithOverrides() stays deterministic.
 
-function slugifyName(name: string, locationSlug: string): string {
-  const base = name
+function baseSlugFromName(name: string): string {
+  return name
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 40);
-  const prefix = locationSlug.slice(0, 3) || "loc";
-  return base ? `${prefix}-${base}` : "";
 }
 
 interface CreateItemDialogProps {
@@ -1219,7 +1314,7 @@ interface CreateItemDialogProps {
   locationSlug: string;
   onClose: () => void;
   onCreate: (draft: {
-    id: string;
+    baseSlug: string;
     name: string;
     description: string;
     price: number;
@@ -1227,42 +1322,50 @@ interface CreateItemDialogProps {
     category: MenuCategory;
     tags: string[];
     available: boolean;
+    sku?: string;
+    locationSlugs: string[];
   }) => Promise<boolean>;
 }
 
 function CreateItemDialog({ open, locationSlug, onClose, onCreate }: CreateItemDialogProps) {
   const [name, setName] = useState("");
-  const [id, setId] = useState("");
-  const [idTouched, setIdTouched] = useState(false);
+  const [baseSlug, setBaseSlug] = useState("");
+  const [slugTouched, setSlugTouched] = useState(false);
   const [desc, setDesc] = useState("");
+  const [sku, setSku] = useState("");
   const [priceStr, setPriceStr] = useState("");
   const [costStr, setCostStr] = useState("");
   const [cat, setCat] = useState<MenuCategory>("pizza");
   const [tags, setTags] = useState<string[]>([]);
   const [available, setAvailable] = useState(true);
+  const [selectedLocs, setSelectedLocs] = useState<string[]>([locationSlug]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
       setName("");
-      setId("");
-      setIdTouched(false);
+      setBaseSlug("");
+      setSlugTouched(false);
       setDesc("");
+      setSku("");
       setPriceStr("");
       setCostStr("");
       setCat("pizza");
       setTags([]);
       setAvailable(true);
+      setSelectedLocs([locationSlug]);
       setError(null);
       setBusy(false);
     }
-  }, [open]);
+  }, [open, locationSlug]);
 
-  // Auto-derive the id from the typed name until the user manually edits it.
+  // Auto-derive the base slug from the typed name until the operator
+  // manually edits it. The base slug is location-agnostic — each target
+  // location prepends its own 3-char prefix when the row is created.
   useEffect(() => {
-    if (!idTouched) setId(slugifyName(name, locationSlug));
-  }, [name, locationSlug, idTouched]);
+    if (!slugTouched) setBaseSlug(baseSlugFromName(name));
+  }, [name, slugTouched]);
 
   const toggleTag = (tag: string) => {
     setTags((prev) =>
@@ -1270,16 +1373,43 @@ function CreateItemDialog({ open, locationSlug, onClose, onCreate }: CreateItemD
     );
   };
 
+  const toggleLoc = (slug: string) => {
+    setSelectedLocs((prev) =>
+      prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug],
+    );
+  };
+
+  const allSelected = selectedLocs.length === activeLocations.length;
+  const selectAll = () => {
+    if (allSelected) {
+      setSelectedLocs([locationSlug]);
+    } else {
+      setSelectedLocs(activeLocations.map((l) => l.slug));
+    }
+  };
+
+  const idPreview = selectedLocs
+    .map((s) => `${s.slice(0, 3) || "loc"}-${baseSlug}`)
+    .join(", ");
+
   const submit = async () => {
     setError(null);
     const trimmedName = name.trim();
-    const trimmedId = id.trim();
+    const trimmedSlug = baseSlug.trim();
     if (!trimmedName) {
       setError("Name is required.");
       return;
     }
-    if (!/^[a-z0-9-]{3,60}$/.test(trimmedId)) {
-      setError("ID must be 3–60 chars, lowercase letters, digits, and hyphens only.");
+    if (selectedLocs.length === 0) {
+      setError("Select at least one location.");
+      return;
+    }
+    // Per-location id is `${prefix}-${baseSlug}`. The full id must pass
+    // the server regex (3–60 chars, lowercase + hyphens + digits). The
+    // shortest active prefix is 3 chars (krk/war/...), so a single-char
+    // base would still pass — guard at the source instead.
+    if (!/^[a-z0-9-]{1,40}$/.test(trimmedSlug) || trimmedSlug.length < 1) {
+      setError("Item slug must be 1–40 chars, lowercase letters, digits, and hyphens only.");
       return;
     }
     const price = Math.round(parseFloat(priceStr || "0") * 100);
@@ -1292,9 +1422,14 @@ function CreateItemDialog({ open, locationSlug, onClose, onCreate }: CreateItemD
       setError("Food cost cannot be negative.");
       return;
     }
+    const trimmedSku = sku.trim();
+    if (trimmedSku.length > 60) {
+      setError("SKU must be 60 characters or fewer.");
+      return;
+    }
     setBusy(true);
     const ok = await onCreate({
-      id: trimmedId,
+      baseSlug: trimmedSlug,
       name: trimmedName,
       description: desc.trim(),
       price,
@@ -1302,6 +1437,8 @@ function CreateItemDialog({ open, locationSlug, onClose, onCreate }: CreateItemD
       category: cat,
       tags,
       available,
+      ...(trimmedSku ? { sku: trimmedSku } : {}),
+      locationSlugs: selectedLocs,
     });
     setBusy(false);
     if (!ok) {
@@ -1316,7 +1453,7 @@ function CreateItemDialog({ open, locationSlug, onClose, onCreate }: CreateItemD
       onClose={onClose}
       size="md"
       title="Add menu item"
-      description="Create a new admin-managed SKU for this location. Lives alongside the static menu catalogue."
+      description="Pick one or more locations — each gets its own row with a location-prefixed id."
       footer={
         <>
           <Button variant="ghost" onClick={onClose} disabled={busy}>
@@ -1334,6 +1471,46 @@ function CreateItemDialog({ open, locationSlug, onClose, onCreate }: CreateItemD
             {error}
           </div>
         )}
+        <div className="v2-field">
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "0.5rem",
+            }}
+          >
+            <label className="v2-field-label">Locations</label>
+            <button
+              type="button"
+              onClick={selectAll}
+              className="v2-chip"
+              aria-pressed={allSelected}
+            >
+              {allSelected ? "Clear" : "All locations"}
+            </button>
+          </div>
+          <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap" }}>
+            {activeLocations.map((loc) => {
+              const on = selectedLocs.includes(loc.slug);
+              return (
+                <button
+                  key={loc.slug}
+                  type="button"
+                  onClick={() => toggleLoc(loc.slug)}
+                  aria-pressed={on}
+                  className={`v2-chip ${on ? "is-on" : ""}`}
+                >
+                  {loc.city}
+                </button>
+              );
+            })}
+          </div>
+          <p className="v2-field-desc">
+            Each selected location gets a separate row scoped to that truck.
+            Toggle later via /admin/menu per-location.
+          </p>
+        </div>
         <Input
           label="Name"
           value={name}
@@ -1341,13 +1518,24 @@ function CreateItemDialog({ open, locationSlug, onClose, onCreate }: CreateItemD
           placeholder="e.g. Pizza Capricciosa"
         />
         <Input
-          label="Item ID"
-          value={id}
+          label="Item slug"
+          value={baseSlug}
           onChange={(e) => {
-            setId(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""));
-            setIdTouched(true);
+            setBaseSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""));
+            setSlugTouched(true);
           }}
-          description="Stable identifier used in orders + analytics. Auto-derived from the name; edit only if you need a specific slug."
+          description={
+            baseSlug
+              ? `Will create: ${idPreview}`
+              : "Stable identifier used in orders + analytics. Auto-derived from the name."
+          }
+        />
+        <Input
+          label="SKU"
+          value={sku}
+          onChange={(e) => setSku(e.target.value)}
+          placeholder="e.g. SI-PIZ-CAPR-001"
+          description="Operator-facing inventory / accounting code (optional). Same SKU is applied to every selected location."
         />
         <Select
           label="Category"

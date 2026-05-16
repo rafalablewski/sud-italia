@@ -61,9 +61,19 @@ export const GET = withAdmin(
       // An override that contains only `cost` is the recipe-save sync, not a
       // human edit — don't surface "Overridden" for it.
       const overrideKeys = override ? Object.keys(override).filter((k) => k !== "cost") : [];
+      // Apply override with `null = clear back to seed` semantics so admin
+      // reads match the public path (see data/menus/index.ts:applyOverride).
+      // Plain shallow spread would set sku/category/tags to null and break
+      // the renderer; deleting the field falls back to the seed value.
+      const merged: Record<string, unknown> = { ...item };
+      if (override) {
+        for (const [k, v] of Object.entries(override)) {
+          if (v === null) delete merged[k];
+          else if (v !== undefined) merged[k] = v;
+        }
+      }
       return {
-        ...item,
-        ...override,
+        ...(merged as unknown as MenuItem),
         cost,
         _hasOverride: overrideKeys.length > 0,
         _hasRecipe: hasRecipe,
@@ -157,6 +167,10 @@ export const PUT = withAdmin(
             (next.limitedUntil !== undefined && next.limitedUntil !== prev?.limitedUntil) ||
             (next.deliveryOnly !== undefined && next.deliveryOnly !== prev?.deliveryOnly) ||
             (next.packagingCost !== undefined && next.packagingCost !== prev?.packagingCost) ||
+            (next.sku !== undefined && next.sku !== prev?.sku) ||
+            (next.category !== undefined && next.category !== prev?.category) ||
+            (next.tags !== undefined &&
+              JSON.stringify(next.tags) !== JSON.stringify(prev?.tags)) ||
             (next.modifierGroups !== undefined &&
               JSON.stringify(next.modifierGroups) !== JSON.stringify(prev?.modifierGroups));
           if (otherChanged) {

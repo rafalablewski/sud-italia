@@ -80,6 +80,7 @@ export const POST = withAdmin(
       ...(body.deliveryOnly !== undefined ? { deliveryOnly: body.deliveryOnly } : {}),
       ...(body.packagingCost !== undefined ? { packagingCost: body.packagingCost } : {}),
       ...(body.modifierGroups !== undefined ? { modifierGroups: body.modifierGroups } : {}),
+      ...(body.sku !== undefined ? { sku: body.sku } : {}),
       createdAt: now,
       updatedAt: now,
     };
