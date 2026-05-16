@@ -108,16 +108,16 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
   const [busy, setBusy] = useState(false);
   const [notFound, setNotFound] = useState(false);
 
-  const [chain, setChain] = useState<ChainDraft>(emptyChain);
-  const [chainInitial, setChainInitial] = useState<ChainDraft>(emptyChain);
+  /** Product fields are presented chain-wide by default but stored
+   *  per-variant — every active location keeps its own draft so an
+   *  operator can override a name, description, or any other field
+   *  for one truck without forcing every truck to match. The single
+   *  `activeLoc` lens below the per-location pricing card picks
+   *  which draft these inputs read + write to. */
+  const [chainByLoc, setChainByLoc] = useState<Record<string, ChainDraft>>({});
+  const [chainInitialByLoc, setChainInitialByLoc] = useState<Record<string, ChainDraft>>({});
   const [perLoc, setPerLoc] = useState<Record<string, PerLocationDraft>>({});
   const [perLocInitial, setPerLocInitial] = useState<Record<string, PerLocationDraft>>({});
-  /** Per-location modifier groups. Structural fields (group label, min/max,
-   *  option label, KDS flag, costDelta) propagate to every location's array
-   *  via `updateStructure`; pricing fields (priceDelta) write to one
-   *  location only. The canonical structure for rendering is the first
-   *  present variant's groups — if structures drift, the matrix lifts to
-   *  the canonical and operators reconcile on save. */
   const [modifierGroupsByLoc, setModifierGroupsByLoc] = useState<
     Record<string, ModifierGroup[]>
   >({});
@@ -129,17 +129,16 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
    *  time and operators flip the lens to retune another. Structural
    *  edits still propagate everywhere; only priceDelta / costDelta
    *  follow the lens. */
-  const [modLens, setModLens] = useState<string>("");
   /** Per-location item ID (slug). Seed items aren't renamable (their id
    *  lives in src/data/menus/*.ts); custom items can be renamed via
-   *  PATCH /api/admin/menu/custom with `newId`. Stored separately from
-   *  ChainDraft because it never was chain-wide — every variant has
-   *  its own id (e.g. `kra-…` and `war-…` prefixes). */
+   *  PATCH /api/admin/menu/custom with `newId`. */
   const [slugByLoc, setSlugByLoc] = useState<Record<string, string>>({});
   const [slugInitialByLoc, setSlugInitialByLoc] = useState<Record<string, string>>({});
-  /** Lens for the slug field. Picks which truck's id the input shows
-   *  + edits. Other product fields stay chain-wide regardless. */
-  const [productLens, setProductLens] = useState<string>("");
+  /** Single shared lens — picks the active truck for everything
+   *  editable below the per-location pricing card (slug, product
+   *  fields, modifier prices). Defaults to the first present location
+   *  on mount; persisted across saves so the operator stays oriented. */
+  const [activeLoc, setActiveLoc] = useState<string>("");
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -180,50 +179,44 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
         return;
       }
 
-      const primary = present[0];
-      const nextChain: ChainDraft = {
-        name: primary.name,
-        sku: primary.sku ?? "",
-        description: primary.description,
-        category: primary.category,
-        tags: primary.tags.slice(),
-        deliveryOnly: Boolean(primary.deliveryOnly),
-        packagingStr:
-          typeof primary.packagingCost === "number"
-            ? (primary.packagingCost / 100).toFixed(2)
-            : "",
-      };
-      setChain(nextChain);
-      setChainInitial(JSON.parse(JSON.stringify(nextChain)));
-
-      // Per-location slug seeds + the lens default.
+      // Per-variant product draft — every present location seeds its own
+      // ChainDraft so an operator can override a name / description / etc
+      // for one truck. Most operators never touch these so the variants
+      // stay identical in practice.
+      const nextChainByLoc: Record<string, ChainDraft> = {};
       const nextSlugByLoc: Record<string, string> = {};
-      for (const v of found) {
-        if (v.item) nextSlugByLoc[v.slug] = v.item.id;
-      }
-      setSlugByLoc(nextSlugByLoc);
-      setSlugInitialByLoc({ ...nextSlugByLoc });
-      const firstPresentForSlug = found.find((v) => v.item)?.slug ?? "";
-      setProductLens((prev) =>
-        prev && found.find((v) => v.slug === prev)?.item
-          ? prev
-          : firstPresentForSlug,
-      );
-
       const nextGroupsByLoc: Record<string, ModifierGroup[]> = {};
       for (const v of found) {
-        nextGroupsByLoc[v.slug] = v.item?.modifierGroups
+        if (!v.item) continue;
+        nextChainByLoc[v.slug] = {
+          name: v.item.name,
+          sku: v.item.sku ?? "",
+          description: v.item.description,
+          category: v.item.category,
+          tags: v.item.tags.slice(),
+          deliveryOnly: Boolean(v.item.deliveryOnly),
+          packagingStr:
+            typeof v.item.packagingCost === "number"
+              ? (v.item.packagingCost / 100).toFixed(2)
+              : "",
+        };
+        nextSlugByLoc[v.slug] = v.item.id;
+        nextGroupsByLoc[v.slug] = v.item.modifierGroups
           ? JSON.parse(JSON.stringify(v.item.modifierGroups))
           : [];
       }
+      setChainByLoc(nextChainByLoc);
+      setChainInitialByLoc(JSON.parse(JSON.stringify(nextChainByLoc)));
+      setSlugByLoc(nextSlugByLoc);
+      setSlugInitialByLoc({ ...nextSlugByLoc });
       setModifierGroupsByLoc(nextGroupsByLoc);
       setModifierGroupsInitialByLoc(JSON.parse(JSON.stringify(nextGroupsByLoc)));
-      // Default the modifier lens to the first present location so the
-      // editor lights up with real data on first paint, without forcing
-      // operators to make a pick before they can scan. Keep the operator's
-      // current pick across refetches if it's still a present location.
+
+      // One shared lens — defaults to the first present location and
+      // sticks across refetches if the operator's previous pick is
+      // still present.
       const firstPresentSlug = found.find((v) => v.item)?.slug ?? "";
-      setModLens((prev) =>
+      setActiveLoc((prev) =>
         prev && found.find((v) => v.slug === prev)?.item ? prev : firstPresentSlug,
       );
 
@@ -276,6 +269,21 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
     () => present.filter((v) => v.item._hasOverride).length,
     [present],
   );
+
+  // Derived per-lens view into the product draft map. `chain` keeps
+  // its old shape so every JSX handler below can stay as
+  // setChain((c) => ({ ...c, field: value })) — the helper just routes
+  // the write to chainByLoc[activeLoc]. The save loop reads
+  // chainInitialByLoc[v.slug] directly per-variant.
+  const chain = chainByLoc[activeLoc] ?? emptyChain();
+  const setChain = (updater: (prev: ChainDraft) => ChainDraft) => {
+    setChainByLoc((prev) => ({
+      ...prev,
+      [activeLoc]: updater(prev[activeLoc] ?? emptyChain()),
+    }));
+  };
+  const activeVariant = present.find((v) => v.slug === activeLoc);
+  const activeCity = activeVariant?.city ?? activeLoc;
 
   const toggleTag = (tag: string) => {
     setChain((c) => ({
@@ -409,102 +417,88 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
       toast.error("Nothing to save", "Add the product to at least one location first.");
       return;
     }
-    const trimmedName = chain.name.trim();
-    if (!trimmedName) {
-      toast.error("Name required");
+    // Validate every present variant has a non-empty name — operators can
+    // diverge fields per-location but a blank name would render an
+    // unselectable menu card.
+    const blankNames = present.filter(
+      (v) => !(chainByLoc[v.slug]?.name ?? "").trim(),
+    );
+    if (blankNames.length > 0) {
+      toast.error(
+        "Name required",
+        `Blank at ${blankNames.map((v) => v.city).join(", ")}.`,
+      );
       return;
     }
     setBusy(true);
     try {
       const issues: string[] = [];
 
-      // Chain-wide diff — applied uniformly to every present variant. The
-      // bulk-edit endpoint excludes name/sku/modifierGroups, so we route
-      // through PUT /api/admin/menu (seed) + PATCH /custom (custom) and
-      // batch them per variant rather than a single bulk call.
-      const packagingRaw = chain.packagingStr.trim();
-      const nextPackaging: number | null =
-        packagingRaw === ""
-          ? null
-          : Math.max(0, Math.round(parseFloat(packagingRaw || "0") * 100));
-      const initPackaging =
-        chainInitial.packagingStr === ""
-          ? null
-          : Math.max(0, Math.round(parseFloat(chainInitial.packagingStr) * 100));
-      const trimmedSku = chain.sku.trim();
-
-      type ChainPatch = {
-        name?: string;
-        description?: string;
-        category?: MenuCategory;
-        tags?: string[];
-        sku?: string | null;
-        deliveryOnly?: boolean | null;
-        packagingCost?: number | null;
-      };
-      const chainPatch: ChainPatch = {};
-      if (trimmedName !== chainInitial.name.trim()) chainPatch.name = trimmedName;
-      if (chain.description !== chainInitial.description)
-        chainPatch.description = chain.description;
-      if (chain.category !== chainInitial.category)
-        chainPatch.category = chain.category;
-      const tagsChanged =
-        chain.tags.length !== chainInitial.tags.length ||
-        chain.tags.some((t) => !chainInitial.tags.includes(t));
-      if (tagsChanged) chainPatch.tags = chain.tags;
-      if (trimmedSku !== chainInitial.sku.trim()) {
-        chainPatch.sku = trimmedSku === "" ? null : trimmedSku;
-      }
-      if (Boolean(chain.deliveryOnly) !== Boolean(chainInitial.deliveryOnly)) {
-        chainPatch.deliveryOnly = chain.deliveryOnly ? true : null;
-      }
-      if (nextPackaging !== initPackaging) {
-        chainPatch.packagingCost = nextPackaging;
-      }
-      const hasChainChange = Object.keys(chainPatch).length > 0;
-
-      // For each present variant, merge chain-wide patch + per-location
-      // diff and route to the right endpoint.
+      // Per-variant diff. Each present location keeps its own ChainDraft
+      // so an operator can override a name / description / etc. at one
+      // truck without affecting the others; same goes for slug, modifier
+      // pricing, and the per-location pricing inputs. The PUT seed path
+      // and PATCH custom path each accept the full field set so we can
+      // batch every diverged field per row.
       const seedUpdates: Record<string, Record<string, unknown>> = {};
       const customPromises: Promise<{ id: string; ok: boolean }>[] = [];
       for (const v of present) {
         const cur = perLoc[v.slug];
         const init = perLocInitial[v.slug];
+        const chainCur = chainByLoc[v.slug] ?? emptyChain();
+        const chainInit = chainInitialByLoc[v.slug] ?? emptyChain();
         if (!cur || !init) continue;
         const seedPatch: Record<string, unknown> = {};
         const customBody: Record<string, unknown> = {};
 
-        // Chain-wide fields — same values everywhere.
-        if (hasChainChange) {
-          if (chainPatch.name !== undefined) {
-            seedPatch.name = chainPatch.name;
-            customBody.name = chainPatch.name;
-          }
-          if (chainPatch.description !== undefined) {
-            seedPatch.description = chainPatch.description;
-            customBody.description = chainPatch.description;
-          }
-          if (chainPatch.category !== undefined) {
-            seedPatch.category = chainPatch.category;
-            customBody.category = chainPatch.category;
-          }
-          if (chainPatch.tags !== undefined) {
-            seedPatch.tags = chainPatch.tags;
-            customBody.tags = chainPatch.tags;
-          }
-          if (chainPatch.sku !== undefined) {
-            // PUT accepts null to clear; PATCH/custom expects string ("" = empty).
-            seedPatch.sku = chainPatch.sku;
-            customBody.sku = chainPatch.sku ?? "";
-          }
-          if (chainPatch.deliveryOnly !== undefined) {
-            seedPatch.deliveryOnly = chainPatch.deliveryOnly;
-            customBody.deliveryOnly = chainPatch.deliveryOnly ?? false;
-          }
-          if (chainPatch.packagingCost !== undefined) {
-            seedPatch.packagingCost = chainPatch.packagingCost;
-            customBody.packagingCost = chainPatch.packagingCost ?? 0;
-          }
+        // Per-variant product fields.
+        const trimmedName = chainCur.name.trim();
+        if (trimmedName !== chainInit.name.trim()) {
+          seedPatch.name = trimmedName;
+          customBody.name = trimmedName;
+        }
+        if (chainCur.description !== chainInit.description) {
+          seedPatch.description = chainCur.description;
+          customBody.description = chainCur.description;
+        }
+        if (chainCur.category !== chainInit.category) {
+          seedPatch.category = chainCur.category;
+          customBody.category = chainCur.category;
+        }
+        const tagsChanged =
+          chainCur.tags.length !== chainInit.tags.length ||
+          chainCur.tags.some((t) => !chainInit.tags.includes(t));
+        if (tagsChanged) {
+          seedPatch.tags = chainCur.tags;
+          customBody.tags = chainCur.tags;
+        }
+        const trimmedSku = chainCur.sku.trim();
+        if (trimmedSku !== chainInit.sku.trim()) {
+          // PUT accepts null to clear; PATCH/custom expects string ("" = empty).
+          seedPatch.sku = trimmedSku === "" ? null : trimmedSku;
+          customBody.sku = trimmedSku;
+        }
+        if (Boolean(chainCur.deliveryOnly) !== Boolean(chainInit.deliveryOnly)) {
+          seedPatch.deliveryOnly = chainCur.deliveryOnly ? true : null;
+          customBody.deliveryOnly = chainCur.deliveryOnly;
+        }
+        const curPackaging =
+          chainCur.packagingStr.trim() === ""
+            ? null
+            : Math.max(
+                0,
+                Math.round(parseFloat(chainCur.packagingStr.trim()) * 100),
+              );
+        const initPackaging =
+          chainInit.packagingStr.trim() === ""
+            ? null
+            : Math.max(
+                0,
+                Math.round(parseFloat(chainInit.packagingStr.trim()) * 100),
+              );
+        if (curPackaging !== initPackaging) {
+          seedPatch.packagingCost = curPackaging;
+          customBody.packagingCost = curPackaging ?? 0;
         }
 
         // Per-location modifier groups — structural fields are mirrored
@@ -602,14 +596,22 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
       }
 
       // Add to newly-checked locations (present went false → true).
+      // Use the active lens' chain draft as the template — operator's
+      // most recent picks for name / description / etc carry over.
       const additions = variants.filter(
         (v) => perLoc[v.slug]?.present && !perLocInitial[v.slug]?.present,
       );
       if (additions.length > 0) {
-        // Newly-added rows inherit the canonical modifier structure with
-        // its priceDelta values, then drift per-location from there.
+        const template = chainByLoc[activeLoc] ?? emptyChain();
+        const templatePackaging =
+          template.packagingStr.trim() === ""
+            ? null
+            : Math.max(
+                0,
+                Math.round(parseFloat(template.packagingStr.trim()) * 100),
+              );
         const canonicalAddGroups = cleanedModifierGroups(
-          present[0] ? modifierGroupsByLoc[present[0].slug] ?? [] : [],
+          modifierGroupsByLoc[activeLoc] ?? [],
         );
         const cloneResults = await Promise.all(
           additions.map(async (a) => {
@@ -627,16 +629,18 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
             const body = {
               id,
               locationSlug: a.slug,
-              name: trimmedName,
-              description: chain.description,
+              name: template.name.trim(),
+              description: template.description,
               price,
               cost,
-              category: chain.category,
-              tags: chain.tags,
+              category: template.category,
+              tags: template.tags,
               available: draft.available,
-              ...(trimmedSku ? { sku: trimmedSku } : {}),
-              ...(chain.deliveryOnly ? { deliveryOnly: true } : {}),
-              ...(nextPackaging !== null ? { packagingCost: nextPackaging } : {}),
+              ...(template.sku.trim() ? { sku: template.sku.trim() } : {}),
+              ...(template.deliveryOnly ? { deliveryOnly: true } : {}),
+              ...(templatePackaging !== null
+                ? { packagingCost: templatePackaging }
+                : {}),
               ...(canonicalAddGroups.length > 0
                 ? { modifierGroups: canonicalAddGroups }
                 : {}),
@@ -948,10 +952,33 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
         </CardBody>
       </Card>
 
+      {present.length > 1 && (
+        <div className="v2-scope-bar" role="group" aria-label="Active location for editing below">
+          <span className="v2-scope-bar-eyebrow">Editing for</span>
+          <select
+            value={activeLoc}
+            onChange={(e) => setActiveLoc(e.target.value)}
+            className="v2-scope-bar-select"
+            aria-label="Active location"
+          >
+            {present.map((v) => (
+              <option key={v.slug} value={v.slug}>
+                {v.city}
+              </option>
+            ))}
+          </select>
+          <span className="v2-scope-bar-hint">
+            Slug, product fields and modifier prices below apply to{" "}
+            <strong>{activeCity}</strong> only. Switch the lens to retune
+            another truck.
+          </span>
+        </div>
+      )}
+
       <Card>
         <CardBody>
           <div className="v2-detail-head">
-            <h2>Product · chain-wide</h2>
+            <h2>Product</h2>
           </div>
 
           <div className="v2-detail-form">
@@ -962,40 +989,15 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
             />
             <div className="v2-detail-form-row" data-cols="3">
               {(() => {
-                const activeVariant = present.find(
-                  (v) => v.slug === productLens,
-                );
                 const activeIsCustom = Boolean(activeVariant?.item._isCustom);
-                const activeCity = activeVariant?.city ?? productLens;
                 return (
                   <Input
-                    label={
-                      <span className="v2-inline-lens-label">
-                        Slug
-                        {present.length > 1 && (
-                          <>
-                            <span className="v2-inline-lens-sep">·</span>
-                            <select
-                              value={productLens}
-                              onChange={(e) => setProductLens(e.target.value)}
-                              className="v2-inline-lens"
-                              aria-label="Slug lens"
-                            >
-                              {present.map((v) => (
-                                <option key={v.slug} value={v.slug}>
-                                  {v.city}
-                                </option>
-                              ))}
-                            </select>
-                          </>
-                        )}
-                      </span>
-                    }
-                    value={slugByLoc[productLens] ?? ""}
+                    label="Slug"
+                    value={slugByLoc[activeLoc] ?? ""}
                     onChange={(e) =>
                       setSlugByLoc((prev) => ({
                         ...prev,
-                        [productLens]: e.target.value
+                        [activeLoc]: e.target.value
                           .toLowerCase()
                           .replace(/[^a-z0-9-]/g, ""),
                       }))
@@ -1004,7 +1006,7 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
                     description={
                       activeIsCustom
                         ? `Custom item — renamable. 3–60 chars, lowercase, digits, hyphens.`
-                        : `Seed item at ${activeCity} — slug lives in src/data/menus/*.ts.`
+                        : `Seed item — slug lives in src/data/menus/*.ts.`
                     }
                   />
                 );
@@ -1089,8 +1091,7 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
             present={present}
             groupsByLoc={modifierGroupsByLoc}
             setGroupsByLoc={setModifierGroupsByLoc}
-            selectedLoc={modLens}
-            onSelectLoc={setModLens}
+            selectedLoc={activeLoc}
           />
         </CardBody>
       </Card>

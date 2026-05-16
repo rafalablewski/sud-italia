@@ -29,8 +29,10 @@ interface ModifierEditorProps {
       | Record<string, ModifierGroup[]>
       | ((prev: Record<string, ModifierGroup[]>) => Record<string, ModifierGroup[]>),
   ) => void;
+  /** The active truck for per-option priceDelta / costDelta editing.
+   *  Comes from the page-level scope bar — the matrix doesn't own a
+   *  lens of its own anymore. */
   selectedLoc: string;
-  onSelectLoc: (slug: string) => void;
 }
 
 export function ModifierMatrix({
@@ -38,7 +40,6 @@ export function ModifierMatrix({
   groupsByLoc,
   setGroupsByLoc,
   selectedLoc,
-  onSelectLoc,
 }: ModifierEditorProps) {
   // Canonical structure = first present variant's groups. Other variants
   // can have drifted historic data; the editor lifts the canonical names /
@@ -244,21 +245,10 @@ export function ModifierMatrix({
   return (
     <div className="v2-mod-editor">
       <div className="v2-mod-editor-toolbar">
-        <label className="v2-mod-lens">
+        <span className="v2-mod-lens-static">
           <MapPin className="h-3.5 w-3.5" aria-hidden />
-          Pricing for
-          <select
-            value={activeSlug}
-            onChange={(e) => onSelectLoc(e.target.value)}
-            aria-label="Modifier pricing lens"
-          >
-            {present.map((v) => (
-              <option key={v.slug} value={v.slug}>
-                {v.city}
-              </option>
-            ))}
-          </select>
-        </label>
+          Pricing for <strong>{activeCity}</strong>
+        </span>
         <button type="button" className="v2-mod-add-group" onClick={addGroup}>
           + Add group
         </button>
