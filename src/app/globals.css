@@ -2750,12 +2750,16 @@ html { scroll-behavior: smooth; }
   flex-direction: column;
   gap: 14px;
 }
-.v2-mod-editor input[type="number"]::-webkit-outer-spin-button,
-.v2-mod-editor input[type="number"]::-webkit-inner-spin-button {
+/* Kill native number-input spinners across every admin page — operators
+ * type values directly and the chevrons add visual chrome that fights
+ * the minimal design system. Scoped to .v2-page so public pages keep
+ * the platform default. */
+.v2-page input[type="number"]::-webkit-outer-spin-button,
+.v2-page input[type="number"]::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
-.v2-mod-editor input[type="number"] {
+.v2-page input[type="number"] {
   -moz-appearance: textfield;
   appearance: textfield;
 }
