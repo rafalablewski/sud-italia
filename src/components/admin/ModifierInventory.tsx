@@ -156,9 +156,9 @@ function ModifierGroupView({ group }: { group: ModifierGroup }) {
             </span>
             <span className="admin-text-secondary tabular-nums">
               {opt.priceDelta > 0 ? `+${formatPrice(opt.priceDelta)}` : "—"}
-              {typeof opt.costDelta === "number" && opt.costDelta > 0 && (
+              {typeof opt.costDelta === "number" && opt.priceDelta > 0 && (
                 <span className="ml-2 text-[10px]">
-                  ({Math.round(((opt.priceDelta - opt.costDelta) / Math.max(1, opt.priceDelta)) * 100)}% GM)
+                  ({Math.round(((opt.priceDelta - opt.costDelta) / opt.priceDelta) * 100)}% GM)
                 </span>
               )}
             </span>

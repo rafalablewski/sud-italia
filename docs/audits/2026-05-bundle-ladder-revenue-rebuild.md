@@ -107,8 +107,8 @@ Cart math wires through `effectiveUnitPrice()` / `effectiveUnitCost()` so the ca
 
 ### Loyalty
 
-- **Removed "PLN 10 Off"** — strictly dominated by Free Drink (50 pts → 11.90 zł).
-- **New reward ladder:** Free Drink 50 / Free Garlic Bread 70 / Free Dessert 120 / Free Personal Pizza 180 / Free Pizza 280 / 25 PLN Off 280. Every rung pays better zł/point than the rung below.
+- **Removed "PLN 10 Off"** — strictly dominated by Free Drink (50 pts → up to 11.90 zł). Customers who do the math notice and avoid it, dragging perceived loyalty value.
+- **New reward ladder:** Free Drink 50 / Free Garlic Bread 70 / Free Dessert 120 / Free Personal Pizza 180 / Free Pizza 280 / 25 PLN Off 280. No rung is strictly dominated by another (each unlocks a category or threshold the others don't), and the highest-value rungs encourage save-up behaviour rather than instant redemption. Value-per-point intentionally declines as customers save up — that's a standard loyalty-economics pattern that incentivises the higher rungs as aspirational targets while still keeping the 50-pt entry point attractive for fast-redeem customers.
 
 ### Surfaces
 

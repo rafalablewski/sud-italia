@@ -1,62 +1,119 @@
 import Link from "next/link";
-import { Users, Clock, Moon, Sparkles } from "lucide-react";
+import { Users, Clock, Moon, Sparkles, type LucideIcon } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 import { getActiveLocations } from "@/data/locations";
+import { DEFAULT_BUNDLES, isDynamicBundle, type BundleTier } from "@/lib/bundles";
+import { DEFAULT_COMBO_DEALS } from "@/lib/upsell";
+import { formatPrice } from "@/lib/utils";
 
 /**
- * Homepage bundle-architecture showcase (audit §3). Surfaces the four
- * primary value plays — Pizza Family Pack, Pizza Lunch+, Late-Night Slice
- * Combo, Italian Classic Combo — so the homepage answers "what's the
- * deal?" before the customer even opens a location menu.
+ * Homepage bundle showcase (audit §3 — answers "what's the deal?" before
+ * the customer opens a location menu).
  *
- * Each card links to the first active location; the cart drawer's bundle
- * ladder takes over from there with hour / quantity / channel gating.
+ * Numbers + names come from the canonical `DEFAULT_BUNDLES` (lib/bundles)
+ * and `DEFAULT_COMBO_DEALS` (lib/upsell) so the homepage stays in sync with
+ * the seed config. Marketing copy stays local to this component — there's
+ * no per-bundle "homepage subtitle" field in the bundle schema, and adding
+ * one to the runtime schema just to feed the landing page would bloat
+ * every admin save round-trip.
+ *
+ * Per-location admin overrides (LocationUpsellConfig.bundles) do NOT
+ * reflect here — the homepage is location-agnostic. The cart drawer's
+ * bundle ladder shows the actual location-specific pricing once the
+ * customer picks a truck. Operators who retune a bundle dramatically
+ * different from the seed should expect a homepage-vs-cart mismatch
+ * during the experiment; rolling the seed forward fixes it.
  */
-export function BundlesShowcase() {
-  const locations = getActiveLocations();
-  const primaryLocation = locations[0]?.slug ?? "krakow";
+interface ShowcaseCard {
+  icon: LucideIcon;
+  tag: string;
+  title: string;
+  /** Pre-formatted price string ("99 zł" / "Save 10%"). Computed below. */
+  price: string;
+  /** Pre-formatted strikethrough ("103.60 zł") or null. */
+  strike: string | null;
+  copy: string;
+  tone: "red" | "gold" | "dark" | "green";
+}
 
-  const bundles = [
+function findBundleById(id: string): BundleTier | undefined {
+  return DEFAULT_BUNDLES.find((b) => b.id === id);
+}
+
+function priceFromBundle(id: string): {
+  price: string;
+  strike: string | null;
+} {
+  const b = findBundleById(id);
+  if (!b || isDynamicBundle(b)) {
+    // Dynamic bundles don't have a stored price (computed against cart).
+    // The showcase only references fixed bundles for now, but if that
+    // changes the fallback shows a generic "From X zł" using minMains × a
+    // proxy Margherita price — keeps the card legible until the cart pins
+    // an actual number.
+    return { price: "See cart", strike: null };
+  }
+  return {
+    price: formatPrice(b.priceGrosze),
+    strike:
+      b.refPriceGrosze > b.priceGrosze ? formatPrice(b.refPriceGrosze) : null,
+  };
+}
+
+function buildShowcase(): ShowcaseCard[] {
+  const family = priceFromBundle("family-pizza-pack");
+  const pizzaLunch = priceFromBundle("lunch-pizza-plus");
+  const lateSlice = priceFromBundle("late-slice");
+  const italianClassic = DEFAULT_COMBO_DEALS.find((c) => c.id === "italian-classic");
+  const classicDiscount = italianClassic?.discountPercent ?? 10;
+
+  return [
     {
       icon: Users,
       tag: "Family Pack",
-      title: "3 pizzas + 1L drink",
-      price: "99 zł",
-      strike: "105.60 zł",
+      title: findBundleById("family-pizza-pack")?.name ?? "3 pizzas + 1L drink",
+      price: family.price,
+      strike: family.strike,
       copy: "Three Margheritas + a 1L Limonata. Set price, no maths. Couple of friends — sorted.",
-      tone: "red" as const,
+      tone: "red",
     },
     {
       icon: Clock,
-      tag: "Pizza Lunch+",
-      title: "Pizza + drink + Tiramisù",
-      price: "44.90 zł",
-      strike: "54.85 zł",
-      copy: "11:00–14:00 only. Save ~10 zł vs à-la-carte — the premium dessert tier.",
-      tone: "gold" as const,
+      tag: findBundleById("lunch-pizza-plus")?.tier ?? "Pizza Lunch+",
+      title: findBundleById("lunch-pizza-plus")?.name ?? "Pizza + drink + Tiramisù",
+      price: pizzaLunch.price,
+      strike: pizzaLunch.strike,
+      copy: "11:00–14:00 only. Pizza + drink + premium dessert at a flat lunch price.",
+      tone: "gold",
     },
     {
       icon: Moon,
       tag: "Late-Night Slice",
-      title: "Slice + drink",
-      price: "16.90 zł",
-      strike: "17.80 zł",
+      title: findBundleById("late-slice")?.name ?? "Slice + drink",
+      price: lateSlice.price,
+      strike: lateSlice.strike,
       copy: "After 21:00 only. One slice reheated to order in 60 seconds + any drink.",
-      tone: "dark" as const,
+      tone: "dark",
     },
     {
       icon: Sparkles,
-      tag: "Italian Classic",
-      title: "Margherita + Limonata + Tiramisù",
-      price: "Save 10%",
+      tag: italianClassic?.name ?? "Italian Classic",
+      title: italianClassic?.description ?? "Margherita + Limonata + Tiramisù",
+      price: `Save ${classicDiscount}%`,
       strike: null,
-      copy: "Auto-applies at checkout when all three are in your cart. Combine pizza, drink, dessert — instant 10% off.",
-      tone: "green" as const,
+      copy: "Auto-applies at checkout when all three are in your cart. Combine pizza, drink, dessert — instant discount.",
+      tone: "green",
     },
   ];
+}
+
+export function BundlesShowcase() {
+  const locations = getActiveLocations();
+  const primaryLocation = locations[0]?.slug ?? "krakow";
+  const bundles = buildShowcase();
 
   const toneClasses = (
-    tone: "red" | "gold" | "dark" | "green",
+    tone: ShowcaseCard["tone"],
   ): { card: string; tag: string; price: string } => {
     if (tone === "red") {
       return {

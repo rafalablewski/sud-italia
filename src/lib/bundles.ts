@@ -259,14 +259,16 @@ export const DEFAULT_BUNDLES: BundleTier[] = [
   // that DOMINATES the dynamic family ladder for the simple "couple of
   // friends" use case. Composition is opinionated: 3 Margheritas + 1L
   // Limonata. Customer can swap to other pizzas in the composer but
-  // pricing locks here.
+  // pricing locks here. refPrice = 3 × Margherita Kraków (27.90) + Limonata
+  // 1L Kraków (19.90) = 103.60 — matches actual ala carte at the lower-
+  // priced location so the "Save" claim is honest for both trucks.
   {
     id: "family-pizza-pack",
     tier: "Pizza Pack",
     name: "3 pizzas + 1L drink",
     description: "Three pizzas + a 1L bottle. Set price, no maths.",
     priceGrosze: 9900,
-    refPriceGrosze: 10560,
+    refPriceGrosze: 10360,
     composition: [
       { kind: "item", itemIdSuffix: "pizza-margherita", quantity: 3 },
       { kind: "item", itemIdSuffix: "drink-limonata-1l", quantity: 1 },

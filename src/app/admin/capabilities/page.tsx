@@ -445,7 +445,7 @@ export default async function CapabilitiesPage() {
           name: "Loyalty rewards reshape",
           status: "live",
           href: "/admin/loyalty",
-          summary: "Audit §3 — removed the strictly-dominated 'PLN 10 Off' reward (100 points → 10 zł value, vs Free Drink at 50 pts → 11.90 zł). Customers do the math and avoid bad-ratio rewards, dragging perceived loyalty value. New reward ladder: Free Drink 50pts, Free Garlic Bread 70pts, Free Dessert 120pts, Free Personal Pizza 180pts, Free Pizza 280pts, 25 PLN Off 280pts. Every rung pays out more zł-value than the rung below per point, so customers always feel they're getting better as they save.",
+          summary: "Audit §3 — removed the strictly-dominated 'PLN 10 Off' reward (100 points → 10 zł value vs Free Drink at 50 pts → up to 11.90 zł — customers spot the bad ratio and avoid it, dragging perceived loyalty value). New ladder: Free Drink 50pts, Free Garlic Bread 70pts, Free Dessert 120pts, Free Personal Pizza 180pts, Free Pizza 280pts, 25 PLN Off 280pts. No rung is strictly dominated by another (each unlocks a different category or threshold). Value-per-point declines as customers save up — that's intentional save-up incentive economics, with the higher rungs (Free Pizza, 25 zł Off) acting as aspirational targets while the 50-pt entry stays attractive for fast redeem.",
         },
         {
           name: "Contextual pairing graph",
