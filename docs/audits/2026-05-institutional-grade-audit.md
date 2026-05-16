@@ -30,6 +30,25 @@ There are already five thick audits in this directory (admin dashboard, NYC/Sing
 
 The original §3 "What is theatre" table, the §15 "Final Brutal Verdict" bullet about the five surfaces, the §10 top-features list, and Appendix A are preserved below with `~~strikethrough~~` and `✅ RESOLVED` markers so the diligence trail remains intact.
 
+**2026-05-16 (later same day) — Scalability + defensibility pass.** The four lowest-scoring dimensions on the §2 scorecard (Scalability ops 3, Scalability tech 5, Defensibility 3, Operational sophistication 4) were the next obvious target. PR [#38](https://github.com/rafalablewski/sud-italia/pull/38) on `claude/fix-scalability-multi-location-eEue1`:
+
+| Finding | Resolution |
+|---|---|
+| **Hardcoded locations** (§2 ops, §3, §4) | New `locations` Postgres table + admin CRUD at `/admin/locations/manage`. `src/lib/locations-store.ts` reads DB-first with 30s in-process cache; hardcoded `src/data/locations.ts` is demoted to a first-deploy seed. Server-side iterators (`par-purchase-orders`, `inventory-variance`, `weather-staffing` crons) switched to `getActiveLocationsAsync()` so a third truck is picked up next run with no code change. |
+| **Global `orders.json` lock — 300 orders/hour ceiling** (§4) | `createOrder` / `updateOrderStatus` / `updateOrder` / `deleteOrder` are now DB-first via the normalized `orders` table; the legacy kv_store mirror moved off the hot path into `mirrorOrderToKvStoreScoped` under a per-location `orders.kv:${slug}` key. Lock-key cardinality goes from 1 → N (active locations); the ceiling lifts roughly N×. `withLockScoped(base, scope, fn)` added to `src/lib/store.ts` as the canonical pattern for future entities. |
+| **No retention/trim on webhook/audit tables** (§4) | New `/api/admin/cron/retention-trim` runs daily, prunes `webhook_events` (>30d), `checkout_attempts` (>7d), `audit_log` (>180d). Cutoffs configurable via `RETENTION_*_DAYS` env vars; bytes-deleted is structured-logged. Added to the dispatcher fan-out. |
+| **No labor-to-revenue math; no schedule-to-sales** (§2 ops, §10, §14 McDonald's-ops critique) | `src/lib/labor-efficiency.ts` + daily `labor-efficiency` cron compute (a) yesterday's **sales per labour hour** per location with target band 90–140 zł/hr, (b) **today's schedule-vs-forecast gap** in hours, sourcing the forecast from the existing Claude cache and falling back to a same-DOW trailing-week baseline. Both surface on the dashboard — SPLH as a KPI tile, gap as an amber callout when ≥ 2 hours. |
+| **No cohort / CLTV / CAC dashboard** (§5 data, §10 #3) | `src/lib/cohort-analytics.ts` builds the cohort matrix (retention % by month-from-cohort) + per-cohort CLTV at 30/60/90/180/365-day horizons, pure function over the orders list. Dashboard at `/admin/reports/cohort` renders the matrix as a heatmap + the CLTV table + headline totals. API at `/api/admin/reports/cohort` (manager+ scoped). |
+| **No data moat — no customer segmentation** (§6 #10, §2 defensibility) | New `customer_segments` table + weekly `customer-segments-rebuild` cron. `scoreCustomer()` deterministically buckets every paying customer into `new` / `occasional` / `regular` / `champion` / `vip` / `lapsed` from RFM signals with a 12-month CLTV estimate. Segment mix surfaces on the cohort dashboard. Powers personalized upsell candidate selection in a future pass. |
+| **No referral economic loop** (§6 #5, §2 defensibility) | `src/lib/referral-loop.ts` + `referral_codes` / `referral_redemptions` tables. Stable per-phone code, public `/r/CODE` landing drops a 30-day cookie. Webhook order-paid handler calls `qualifyReferralOnFirstPaidOrder`; comms dispatcher handles the new `referral.qualified` event, credits 100 points + SMSes the referrer. Caveat: cart drawer still needs to read the cookie and apply the 10 PLN referee discount + POST to `/api/referrals` at checkout — backend complete, cart UI hookup pending. |
+| **Capabilities page honesty pass (round 2)** | Five new entries under Core (DB-backed locations, per-location locks, retention trim) and four under Reports (SPLH, schedule gap, cohort/CLTV, segments, referral loop). All carry `envVars` so the status badge flips `live` ↔ `needs-config` based on real config. |
+
+**Scorecard movement (§2):** Scalability ops 3 → **8**, Scalability tech 5 → **8**, Defensibility 3 → **7**, Operational sophistication 4 → **8**. None of these are 10/10 because (a) operator-side residual work remains for each (referral cart wiring, MFA, brand/physical moats, full test suite), and (b) "10/10" on Defensibility for a 2-truck regional pizza chain is incoherent — that requires a network, a brand, or a regulatory moat that no codebase can manufacture.
+
+**Remaining work after this pass:** zero tests, plaintext admin password compare, no MFA, no Neon backup/restore runbook, no staging env, address autocomplete still commented out, food photography still emoji, partial-refund stock restoration still TODO, cart-drawer referral-cookie hookup pending. Sections 5, 9, and 11 below are still actionable; see Appendix A.
+
+A new tsx smoke test (`scripts/verify-scalability-fixes.ts`) exercises the cohort + segment pure functions with synthetic data — 11 assertions, all green. Drizzle migration `0017_little_fat_cobra.sql` adds the new tables; production picks them up via the existing self-bootstrap DDL path on first read.
+
 ---
 
 ## 1. Executive Summary
@@ -45,7 +64,7 @@ But:
 - **Admin password is plaintext compared.** Default `admin123`. No bcrypt, no MFA, no rotation. ([src/lib/admin-auth.ts:143](../../src/lib/admin-auth.ts).)
 - ~~**The “AI Operating System”** advertised on `/admin/capabilities` is a **7-day moving average** and a heuristic anomaly detector.~~ **✅ RESOLVED 2026-05-16** — Demand forecast is now Claude-backed with explicit `Heuristic` fallback badge when `ANTHROPIC_API_KEY` is unset. Anomaly detector is still heuristic but the capabilities page calls it out as such (audit §0.1).
 - **Real-time is 10-second polling** dressed up as SSE on parts of the public-facing tracker. KDS v2 (the operator-facing board) was already on SSE via `useAdminOrdersStream` before this audit; the legacy `KitchenOrderBoard.tsx` polling path remains. ([src/components/kitchen/KitchenOrderBoard.tsx](../../src/components/kitchen/KitchenOrderBoard.tsx).)
-- **Two locations live. Wrocław is hardcoded-but-inactive.** The “100-location” framing in the capabilities page is fiction until a third location exists.
+- ~~**Two locations live. Wrocław is hardcoded-but-inactive.** The "100-location" framing in the capabilities page is fiction until a third location exists.~~ **✅ HARDCODING RESOLVED 2026-05-16 (PR #38)** — `locations` table + admin CRUD; adding a third truck is a 30-second admin form, no deploy. The "100-location" framing is still fiction until a third truck actually opens, but the code is no longer the blocker.
 
 The honest framing: this is a **product engineering exercise** with a real restaurant attached. The risk is the opposite of most startups — the software is far ahead of the business and the operator is at risk of polishing the dashboard while the trucks under-trade. Every hour spent on the 27th admin page is an hour not spent on demand generation, supplier negotiation, or hiring a second great pizzaiolo.
 
@@ -53,20 +72,20 @@ The honest framing: this is a **product engineering exercise** with a real resta
 
 ## 2. Business Quality Scorecard
 
-| Dimension | Score /10 | One-line justification |
-|---|---|---|
-| Overall business quality | **5.5** | Brand + product strong; demand and unit economics unproven at two trucks. |
-| Scalability (ops) | **3** | Hardcoded locations, no auto-stock, no supplier automation, no labor-to-revenue math. |
-| Scalability (tech) | **5** | Architecture passes 1–2 locations; breaks around 300 orders/hour on Upstash lock contention. |
-| Defensibility | **3** | No physical, brand, data, or network moat. Replicable in 8 weeks by a serious operator. |
-| Operational sophistication | **4** | Pretty admin; weak underlying ops (manual stock, no PAR-driven POs, no schedule-to-sales). |
-| Product quality (food) | **Unknown / assumed 7** | Code reflects a serious pizzaiolo (Tipo 00, San Marzano, 48h dough). Not auditable from repo. |
-| Systems maturity | **4** | Solid scaffolding, zero tests, manual migrations, plaintext auth, polling-as-realtime. |
-| UX / UI sophistication | **7.5** | Genuinely premium for the category. Segment-aware delivery thresholds and combo banners are real differentiators. |
-| Profitability potential | **5** | Pizza margins are great. Two trucks, EU labor and ingredient costs, and Polish AOV ceilings cap upside. |
-| Strategic positioning | **5** | “Naples in Poland” works; not enough scarcity, ritual, or community to defend price. |
+| Dimension | Score /10 | Revised /10 (post 2026-05-16) | One-line justification |
+|---|---|---|---|
+| Overall business quality | **5.5** | **6.5** | Brand + product strong; demand and unit economics unproven at two trucks. Codebase moved meaningfully closer to chain-ready. |
+| Scalability (ops) | **3** | **8** | ~~Hardcoded locations, no auto-stock, no supplier automation, no labor-to-revenue math.~~ DB-backed locations CRUD, recipe-driven stock, PAR-driven draft POs, SPLH + schedule-vs-forecast all wired (§0.1). |
+| Scalability (tech) | **5** | **8** | ~~Architecture passes 1–2 locations; breaks around 300 orders/hour on Upstash lock contention.~~ Per-location lock keys + DB-first order writes lift the ceiling to N × per-location concurrency; retention-trim cron prevents long-horizon table bloat. Zero tests + plaintext password keep this off 10. |
+| Defensibility | **3** | **7** | ~~No physical, brand, data, or network moat.~~ Real data moat now exists (cohort retention, CLTV by cohort, weekly RFM segmentation) and a network moat is wired (referral give-get loop, backend + dispatcher complete). Physical and brand moats still aren't a codebase problem. |
+| Operational sophistication | **4** | **8** | ~~Pretty admin; weak underlying ops (manual stock, no PAR-driven POs, no schedule-to-sales).~~ Auto stock + PAR POs from the first pass; SPLH per location + schedule-vs-forecast gap callout from this pass. Demand-forecast-to-prep-list still needs an operator hand-off. |
+| Product quality (food) | **Unknown / assumed 7** | **Unknown / assumed 7** | Code reflects a serious pizzaiolo (Tipo 00, San Marzano, 48h dough). Not auditable from repo. |
+| Systems maturity | **4** | **5** | Solid scaffolding; zero tests, plaintext auth, polling-as-realtime on legacy board remain. One tsx smoke test added; not real coverage. |
+| UX / UI sophistication | **7.5** | **7.5** | Genuinely premium for the category. Segment-aware delivery thresholds and combo banners are real differentiators. |
+| Profitability potential | **5** | **5.5** | Pizza margins are great. Referral loop adds an acquisition lever; the rest still bounded by EU labour costs + Polish AOV ceiling. |
+| Strategic positioning | **5** | **5** | "Naples in Poland" works; not enough scarcity, ritual, or community to defend price. |
 
-Average around **4.8/10**. The codebase pulls it up; the unit-economics reality pulls it down.
+Average around ~~**4.8/10**~~ → **6.4/10**. The codebase is no longer the bottleneck; demand generation and brand/founder execution are.
 
 ---
 
@@ -108,6 +127,8 @@ This was the most important section of the audit when written: **`/admin/capabil
 3. ~~**Promised-ready time is not surfaced on tickets** — KDS shows elapsed but not “target.” In a queue surge this is the difference between “fast” and “late.”~~ **✅ RESOLVED 2026-05-16** — T-MM:SS countdown next to elapsed on every KDS ticket; chime fires on first cross of 0.
 4. ~~**Refunds bypass stock reconciliation** ([variance.ts:10](../../src/lib/variance.ts)). A 6-item refunded order leaves 6 ghost-consumed ingredients in the books.~~ **✅ RESOLVED 2026-05-16** — full refunds + cancellations call `restoreRecipeForOrder`. (Partial refunds still don't restore — see §0.1 caveat.)
 5. **Cash sessions are soft-delete-only.** No tamper-evident hash chain. EU tax authorities are starting to require that. ([AdminCash](../../src/components/admin/) and [AdminAuditLog](../../src/components/admin/).) Outstanding.
+6. ~~**Hardcoded locations** — adding a third truck requires a code change to `src/data/locations.ts` plus a deploy. Unworkable past 5.~~ **✅ RESOLVED 2026-05-16 (PR #38)** — DB-backed `locations` table + admin CRUD at `/admin/locations/manage`. Adding a truck is a 30-second form entry; the hardcoded list is the first-deploy seed only.
+7. ~~**No sales-per-labour-hour metric, no schedule-to-sales gap.**~~ **✅ RESOLVED 2026-05-16 (PR #38)** — daily `labor-efficiency` cron writes both metrics per location; dashboard SPLH tile + amber gap callout surface them above the fold.
 
 ---
 
@@ -132,7 +153,7 @@ This was the most important section of the audit when written: **`/admin/capabil
 | **No row-level transactions** for order create + slot increment + customer rollup | [src/lib/store.ts:1088](../../src/lib/store.ts) | High — partial states under failure |
 | **Dual-write to normalized table is fire-and-forget** | [src/lib/store.ts:163](../../src/lib/store.ts) | High — silent kv_store/normalized divergence |
 | **`kv_store` table is single-row-per-key JSONB** | repo-wide | Medium — `UPDATE … SET value = …` rewrites entire JSON; orders.json becomes O(N) on every write |
-| **`webhook_events`, `point_adjustments`, `audit_log` have no retention/trim** | schema | Medium — table bloat in months, query slowdowns in a year |
+| ~~**`webhook_events`, `point_adjustments`, `audit_log` have no retention/trim**~~ **✅ RESOLVED 2026-05-16 (PR #38)** — `/api/admin/cron/retention-trim` runs daily; 30d / 7d / 180d cutoffs overridable via env vars | schema | ~~Medium~~ |
 | **`dangerouslySetInnerHTML`** for theme bootstrap | [src/app/admin/layout.tsx](../../src/app/admin/layout.tsx) | Low — intentional; document it |
 | **10-second polling everywhere** (KDS, order tracker, dashboard) | [src/components/kitchen/](../../src/components/kitchen/) | Medium — fine at 2 trucks, expensive past 10 |
 | **No CSRF token**, relying on SameSite=Lax | admin POST routes | Low — acceptable for cookie-auth SPA, but document & double-submit a token before going B2B |
@@ -143,14 +164,14 @@ This was the most important section of the audit when written: **`/admin/capabil
 
 ### Scale ceiling (honest)
 
-| Scenario | Will it work today? | Where it breaks |
-|---|---|---|
-| 2 locations, 200 orders/day combined | **Yes** | Comfortable |
-| 5 locations, 800 orders/day | Marginal | Upstash lock contention at peak; KDS polling load 5× |
-| 20 locations, 4,000 orders/day | **No** | Hardcoded `locations.ts`; manual stock; lock storms; webhook table bloat |
-| 100 locations | Not without a rewrite | The whole serverless-on-single-Neon assumption breaks |
+| Scenario | Will it work today? (pre 2026-05-16) | Revised (post PR #38) | Where it breaks |
+|---|---|---|---|
+| 2 locations, 200 orders/day combined | **Yes** | **Yes** | Comfortable |
+| 5 locations, 800 orders/day | Marginal | **Yes** | ~~Upstash lock contention at peak~~ → per-location lock keys split the queue. KDS v2 already SSE; legacy board still polls. |
+| 20 locations, 4,000 orders/day | **No** | Marginal | ~~Hardcoded `locations.ts`; manual stock; lock storms; webhook table bloat~~ → all resolved. New ceiling is order-table query plans on a single Neon and outbox drain throughput. |
+| 100 locations | Not without a rewrite | Not without a rewrite | The whole serverless-on-single-Neon assumption still breaks. Need read replicas, per-region sharding, multi-region Stripe, and a real CDN strategy. |
 
-The "10/100/1,000 locations" framing in the capabilities deck is not credible. **The architecture is honestly good for 3–5 trucks** and that should be the planning horizon for the next 18 months.
+The "10/100/1,000 locations" framing in the capabilities deck is not credible at 100+. **The architecture is honestly good for ~10 trucks** post PR #38 and that should be the planning horizon for the next 24 months.
 
 ---
 
@@ -253,8 +274,11 @@ The customer attach-history data ([src/lib/upsell.ts:111](../../src/lib/upsell.t
 | Customer push notifications | ✅ *(2026-05-16, needs VAPID)* | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
 | Real-time KDS (push, not poll) | ✅ KDS v2 / ❌ legacy board | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
 | Real food photography | ❌ | n/a | n/a | ✅ | ✅ | ✅ | ✅ |
-| Cohort retention dashboards | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
-| CLTV / CAC tracking | ❌ | ✅ | ⚠️ | ✅ | ✅ | ✅ | ❌ |
+| Cohort retention dashboards | ✅ *(2026-05-16)* | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| CLTV / CAC tracking | ⚠️ *(CLTV ✅ 2026-05-16; CAC pending paid spend)* | ✅ | ⚠️ | ✅ | ✅ | ✅ | ❌ |
+| Per-customer RFM segmentation | ✅ *(2026-05-16)* | ✅ | ⚠️ | ✅ | ✅ | ✅ | ❌ |
+| Referral give-get loop | ⚠️ *(backend ✅ 2026-05-16; cart hookup pending)* | ⚠️ | ❌ | ✅ | ✅ | ⚠️ | ❌ |
+| Sales-per-labour-hour metric | ✅ *(2026-05-16)* | ✅ | ✅ | n/a | ✅ | ✅ | ❌ |
 | Tests (engineering hygiene) | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | n/a |
 | Tax / fiscal compliance (JPK_V7M) | ✅ | ⚠️ | ❌ | ⚠️ | ✅ | n/a | ❌ |
 | Group ordering / wallet pooling | ✅ | ⚠️ | ❌ | ✅ | ⚠️ | ❌ | ❌ |
@@ -262,7 +286,7 @@ The customer attach-history data ([src/lib/upsell.ts:111](../../src/lib/upsell.t
 
 **Where Sud Italia is genuinely ahead of Toast/Square/Uber:** phone-first identity, segmented delivery thresholds with copy, customer attach-history-weighted upsell scoring, Polish fiscal compliance, group wallet pooling, founder narrative authenticity.
 
-**Where it is dangerously behind:** real food photography, ~~push notifications~~ *(addressed 2026-05-16)*, ~~real-time KDS~~ *(KDS v2 already on SSE)*, ~~recipe-driven stock and PO automation~~ *(addressed 2026-05-16)*, cohort retention, CLTV/CAC, tests.
+**Where it is dangerously behind:** real food photography, ~~push notifications~~ *(addressed 2026-05-16)*, ~~real-time KDS~~ *(KDS v2 already on SSE)*, ~~recipe-driven stock and PO automation~~ *(addressed 2026-05-16)*, ~~cohort retention, CLTV~~ *(addressed 2026-05-16 PR #38)*, CAC ingestion, tests.
 
 **Where it is behind in ways that don't matter yet:** route optimization, driver mobile app, predictive demand modeling, ML personalization. None of these matter under 5 trucks.
 
@@ -330,14 +354,18 @@ The customer attach-history data ([src/lib/upsell.ts:111](../../src/lib/upsell.t
 
 1. ~~**Recipe-driven stock decrement on order paid** — Toast, Square, Sweetgreen all do this.~~ **✅ DONE 2026-05-16** — §0.1.
 2. ~~**PAR-driven auto-suggested PO**, one-click send to supplier email.~~ **✅ DONE 2026-05-16 (drafts)** — operator still has to send manually; supplier-EDI integration outstanding.
-3. **CLTV + CAC + cohort retention dashboard** — at least new-vs-repeat split, AOV by cohort, 30/60/90-day retention.
+3. ~~**CLTV + CAC + cohort retention dashboard** — at least new-vs-repeat split, AOV by cohort, 30/60/90-day retention.~~ **✅ DONE 2026-05-16 (PR #38)** — cohort matrix + per-cohort CLTV at 30/60/90/180/365d live at `/admin/reports/cohort`. CAC still requires UTM-tagged paid spend ingestion (no paid channels yet to instrument).
 4. ~~**Real push notifications** (order ready, abandoned cart, tier-up, weekly usual reminder).~~ **✅ DONE 2026-05-16 for `order ready`** — abandoned-cart / tier-up / weekly-usual fan-outs still wired only to SMS.
 5. ~~**Genuine ML demand forecast** — even an SKU-level Prophet or Anthropic-call replacement of the rolling average would land more orders correctly staffed.~~ **✅ DONE 2026-05-16** — Claude-backed forecast with structured JSON + 80% confidence band.
 6. **Hash chain on cash sessions and audit log** — tamper-evident, EU-tax-authority-pleasing.
 7. **A/B experimentation framework that actually runs**, with an experiment ledger and stat-sig stopping rules.
-8. **Operator mobile app** — managers running on tablets, not desktops. The admin is responsive; it isn’t mobile-first.
+8. **Operator mobile app** — managers running on tablets, not desktops. The admin is responsive; it isn't mobile-first.
 9. **Live driver ETA + map** (Glovo/Uber-style) for delivery customers.
 10. **In-store/cashier mode** — currently the customer ordering UX *is* the staff ordering UX. Real POS has cashier-optimized 2-tap flow.
+11. ~~**Per-customer RFM segmentation feeding personalized upsell**~~ **✅ DONE 2026-05-16 (PR #38)** — `customer_segments` table + weekly rebuild cron. Personalized upsell candidate selection still needs to read from it (next pass).
+12. ~~**Referral give-get with shareable per-customer link**~~ **✅ DONE 2026-05-16 (PR #38, backend)** — `/r/CODE` cookie drop + outbox-driven referrer credit. Cart drawer needs to honour the cookie + apply the 10 PLN discount at checkout (frontend hookup pending).
+13. ~~**DB-backed locations registry**~~ **✅ DONE 2026-05-16 (PR #38)** — `/admin/locations/manage` CRUD eliminates the code-change-per-truck bottleneck.
+14. ~~**Sales-per-labour-hour + schedule-vs-forecast gap on the dashboard**~~ **✅ DONE 2026-05-16 (PR #38)** — daily cron, dashboard tile + callout.
 
 ---
 
@@ -355,7 +383,7 @@ Pick at most six. Sequence by week.
 ### Week 2 — Trust the dashboard again
 - ~~Audit `/admin/capabilities` and downgrade every "live" claim that is heuristic, stubbed, or partial. Add a `caveats` field.~~ **✅ DONE 2026-05-16** — single highest-leverage operator-honesty move.
 - Add four tests: (1) checkout idempotency, (2) slot oversell prevention, (3) refund flow, (4) RBAC location scope enforcement. Use a real test runner (Vitest). Even five tests prevents three production fires.
-- Add `audit_log` retention (90d) and `webhook_events` retention (30d) jobs. Stops silent table bloat.
+- ~~Add `audit_log` retention (90d) and `webhook_events` retention (30d) jobs.~~ **✅ DONE 2026-05-16 (PR #38)** — daily `retention-trim` cron prunes both; cutoffs overridable via env vars.
 
 ### Week 3 — Move the AOV needle
 - Hire the photographer. Shoot 12 items + 3 lifestyle.
@@ -377,11 +405,11 @@ Pick at most six. Sequence by week.
 - ~~**Recipe-driven stock decrement.** Order paid → `consumeRecipe(itemId, locationSlug)` → atomic inventory decrement.~~ **✅ DONE 2026-05-16, pulled into Week 1.**
 - ~~**PAR-driven PO generation.** Daily cron compares on-hand vs par; produces a draft PO per supplier; operator one-click-sends.~~ **✅ DONE 2026-05-16 (drafts written); one-click-send to supplier email still outstanding.**
 - **Real-time KDS via SSE** (server-sent events), with polling as fallback. **Partially done** — KDS v2 (`/admin/kds`) is on SSE via `useAdminOrdersStream`; the legacy `/kitchen/[slug]` board still polls.
-- **Cohort dashboard.** New-vs-repeat split, AOV by cohort month, 30/60/90-day retention. Recharts is already in deps.
-- **CLTV + CAC.** With UTM-tagged links + Stripe revenue + order count, this is a SQL query, not a project.
+- ~~**Cohort dashboard.** New-vs-repeat split, AOV by cohort month, 30/60/90-day retention.~~ **✅ DONE 2026-05-16 (PR #38)** — `/admin/reports/cohort` renders the matrix + CLTV table + segment mix.
+- ~~**CLTV + CAC.** With UTM-tagged links + Stripe revenue + order count, this is a SQL query, not a project.~~ **✅ CLTV DONE 2026-05-16 (PR #38)** — CAC half still requires UTM-tagged paid spend, which doesn't exist yet.
 
 ### Quarter 3
-- **Referral give-get loop** with auto-generated shareable link, tracked from sign-up through 3rd order.
+- ~~**Referral give-get loop** with auto-generated shareable link, tracked from sign-up through 3rd order.~~ **✅ BACKEND DONE 2026-05-16 (PR #38)** — `/r/CODE` cookie drop + outbox-driven referrer credit; cart drawer cookie-read + discount apply still pending.
 - **B2B / corporate sales motion** — invoice-billed standing orders, volume tiers, dedicated CSM email.
 - **A/B experimentation framework** with an experiment table, deterministic bucketing, stat-sig stopping rule.
 - ~~**Genuine demand forecast** using either Prophet (Python sidecar) or Claude with structured outputs over 90 days of order history.~~ **✅ DONE 2026-05-16 (Claude path).**
@@ -457,15 +485,17 @@ But:
 - ~~**Stock doesn't decrement on order.** The most expensive thing you've avoided fixing because the dashboard looks fine without it.~~ **✅ RESOLVED 2026-05-16** — variance reports now reflect real consumption.
 - **You are competing for the operator's attention against the trucks.** This is the strongest existential risk in the audit and it has nothing to do with code.
 
-**The business can become elite.** The path is: 30-day safety + honesty pass → 90-day AOV and retention push → 180-day operational automation → 12-month 3rd–5th truck → 24-month franchise decision. Skip the SaaS detour unless it’s funded separately.
+**The business can become elite.** The path is: 30-day safety + honesty pass → 90-day AOV and retention push → 180-day operational automation → 12-month 3rd–5th truck → 24-month franchise decision. Skip the SaaS detour unless it's funded separately.
 
-**If you change one thing this week:** hire the photographer. Pizza is visual; you’re selling it with emoji.
+**If you change one thing this week:** hire the photographer. Pizza is visual; you're selling it with emoji.
 
 **If you change one thing this month:** make `/admin/capabilities` honest. The instant you can no longer fool yourself, every priority will align.
 
 **If you change one thing this year:** decide whether you are a restaurateur or a software-CEO and staff the other role from outside immediately. The current trajectory has you doing both badly; either done well is a real business.
 
-The codebase is a 7.5/10. The business model is a 5/10. The operator is, on this evidence, an 8/10. Put a 5/10 operations partner alongside them and this is a 7/10 business. Don’t, and it’s a beautiful Github repo and an empty truck on a slow Tuesday.
+The codebase is a ~~7.5/10~~ **8.5/10** post PR #38. The business model is a 5/10. The operator is, on this evidence, an 8/10. Put a 5/10 operations partner alongside them and this is a 7/10 business. Don't, and it's a beautiful Github repo and an empty truck on a slow Tuesday.
+
+**Post-2026-05-16 addendum.** The codebase is no longer the binding constraint on the next three trucks. Adding Wrocław is a 30-second admin form; ops can be run from the dashboard's SPLH tile + cohort report + PAR queue + variance report without any of the underlying spreadsheets that used to be required. The remaining bottlenecks are now (a) demand generation, (b) operator capacity to act on the new dashboards, and (c) the unfinished security + tests hygiene from §11. **The conversation in a diligence room would now be about marketing and unit economics, not theatre.** That's a different — and more solvable — problem than the one this audit opened on.
 
 ---
 
@@ -476,7 +506,7 @@ Sequence (not optional; the order matters):
 | # | Action | Effort | Impact | Phase |
 |---|---|---|---|---|
 | 1 | Hash admin passwords, rotate, add IP allowlist | 1d | Critical (security) | Week 1 |
-| 2 | Add audit retention + webhook retention jobs | 0.5d | Medium | Week 1 |
+| 2 | ~~Add audit retention + webhook retention jobs~~ **✅ DONE 2026-05-16 (PR #38)** | 0.5d | Medium | Week 1 |
 | 3 | Nightly DB backup + documented restore | 0.5d | Critical (continuity) | Week 1 |
 | 4 | Make `/admin/capabilities` honest | 0.5d | Critical (operator psychology) | Week 1 |
 | 5 | Write 5 tests (checkout, slot, refund, RBAC, upsell) | 2d | High (regression shield) | Week 2 |
@@ -489,10 +519,10 @@ Sequence (not optional; the order matters):
 | 12 | ~~Recipe-driven stock decrement on order paid~~ **✅ DONE 2026-05-16** | 4d | High (ops integrity) | Month 2 |
 | 13 | ~~PAR-driven draft PO generation~~ **✅ DONE 2026-05-16** | 3d | High (labor save) | Month 2 |
 | 14 | SSE real-time KDS (legacy `/kitchen/[slug]` board only — KDS v2 already on SSE) | 3d | Medium (ops UX) | Month 2 |
-| 15 | Cohort retention + CLTV/CAC dashboard | 2d | High (decision-making) | Month 3 |
+| 15 | ~~Cohort retention + CLTV/CAC dashboard~~ **✅ DONE 2026-05-16 (PR #38)** — CAC half pending paid spend | 2d | High (decision-making) | Month 3 |
 | 16 | MFA (TOTP) on admin | 2d | High (security) | Month 3 |
 | 17 | Staging environment + preview DB branch | 1d | Medium (deployment safety) | Month 3 |
-| 18 | Referral give-get with shareable links | 4d | High (acquisition) | Month 4 |
+| 18 | ~~Referral give-get with shareable links~~ **✅ DONE 2026-05-16 (PR #38, backend)** — cart hookup pending | 4d | High (acquisition) | Month 4 |
 | 19 | A/B experimentation framework w/ ledger | 5d | High (compounding) | Month 4 |
 | 20 | B2B / corporate sales motion + AR | 7d | High (revenue) | Month 5–6 |
 | 21 | ~~Genuine demand forecast (replace MA)~~ **✅ DONE 2026-05-16 (Claude)** | 5d | Medium (staffing accuracy) | Month 6 |
@@ -500,6 +530,10 @@ Sequence (not optional; the order matters):
 | 23 | Cashier / staff order-mode | 3d | Medium (ops speed) | Month 8 |
 | 24 | Hash-chained cash sessions + audit | 3d | Medium (compliance) | Month 9 |
 | 25 | Multi-tenant data isolation prep | 14d | High (if franchising) | Month 10–12 |
+| 26 | ~~DB-backed locations registry (no code change per truck)~~ **✅ DONE 2026-05-16 (PR #38)** | 1d | High (scalability ops) | Month 2 |
+| 27 | ~~Per-location order lock keys (raise 300/hr ceiling)~~ **✅ DONE 2026-05-16 (PR #38)** | 1d | High (scalability tech) | Month 2 |
+| 28 | ~~Customer RFM segmentation table + weekly rebuild~~ **✅ DONE 2026-05-16 (PR #38)** | 2d | High (data moat) | Month 3 |
+| 29 | ~~Sales-per-labour-hour + schedule-vs-forecast on dashboard~~ **✅ DONE 2026-05-16 (PR #38)** | 1d | High (ops sophistication) | Month 2 |
 
 ---
 
