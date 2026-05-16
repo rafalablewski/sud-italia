@@ -1,22 +1,20 @@
 "use client";
 
 // Per-location modifier editor with a location lens. Group structure
-// (label, min/max, option labels, KDS flag) propagates chain-wide via
-// `updateStructure`, so customer-visible option sets and KDS routing
-// stay consistent across trucks. Per-option `priceDelta` + `costDelta`
-// follow the lens at the top of the card — operators pick one truck,
-// see that truck's prices, retune, and switch to the next.
+// (label, min/max, option labels, KDS flag) propagates chain-wide;
+// per-option priceDelta + costDelta follow the lens at the top of the
+// card. Side-by-side columns were the previous shape but stopped
+// scaling around 5 trucks; the lens keeps the rendered surface at a
+// fixed width regardless of fleet size.
 //
-// Side-by-side columns were the previous shape but stopped scaling
-// around 5 trucks; at 20 the table became unscannable. The lens
-// keeps the UI at a fixed two-column width regardless of fleet size.
-// Each option row carries a small "varies: X–Y zł" chip + "→ all"
-// button so divergences across the chain stay visible from the
-// single-location view, and one click can fan a price out everywhere.
+// Visuals are deliberately quiet: inputs read as plain text until you
+// hover or focus them, native number spinners are suppressed, and
+// remove buttons fade in on row hover so a populated group looks like
+// a calm list rather than a forest of chrome.
 
+import { MapPin, X } from "lucide-react";
 import type { ModifierGroup, ModifierOption } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
-import { Button, Input, Select } from "../v2/ui";
 
 export interface ModifierEditorLocation {
   slug: string;
@@ -237,180 +235,126 @@ export function ModifierMatrix({
 
   if (present.length === 0) {
     return (
-      <p
-        style={{
-          fontSize: "0.75rem",
-          color: "var(--fg-muted)",
-          fontStyle: "italic",
-        }}
-      >
+      <div className="v2-mod-empty">
         Add the product to at least one location to edit modifiers.
-      </p>
+      </div>
     );
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "0.75rem",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "0.5rem",
-            minWidth: 0,
-            flex: 1,
-          }}
-        >
-          <label
-            htmlFor="modifier-lens"
-            style={{
-              fontSize: "var(--text-xs)",
-              color: "var(--fg-muted)",
-              fontWeight: 600,
-              whiteSpace: "nowrap",
-            }}
+    <div className="v2-mod-editor">
+      <div className="v2-mod-editor-toolbar">
+        <label className="v2-mod-lens">
+          <MapPin className="h-3.5 w-3.5" aria-hidden />
+          Pricing for
+          <select
+            value={activeSlug}
+            onChange={(e) => onSelectLoc(e.target.value)}
+            aria-label="Modifier pricing lens"
           >
-            Editing pricing for:
-          </label>
-          <div style={{ minWidth: 180 }}>
-            <Select
-              id="modifier-lens"
-              value={activeSlug}
-              onChange={(e) => onSelectLoc(e.target.value)}
-              options={present.map((v) => ({ value: v.slug, label: v.city }))}
-              aria-label="Modifier pricing lens"
-            />
-          </div>
-        </div>
-        <Button size="sm" variant="ghost" onClick={addGroup}>
+            {present.map((v) => (
+              <option key={v.slug} value={v.slug}>
+                {v.city}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button type="button" className="v2-mod-add-group" onClick={addGroup}>
           + Add group
-        </Button>
+        </button>
       </div>
 
-      {canonical.length === 0 && (
-        <p
-          style={{
-            fontSize: "0.75rem",
-            color: "var(--fg-muted)",
-            fontStyle: "italic",
-          }}
-        >
-          No modifier groups. Customers see the standard price only.
-        </p>
-      )}
+      {canonical.length === 0 ? (
+        <div className="v2-mod-empty">
+          No modifier groups yet. Customers see the standard price only.
+        </div>
+      ) : (
+        canonical.map((group) => (
+          <div key={group.id} className="v2-mod-group">
+            <div className="v2-mod-group-head">
+              <input
+                className="v2-mod-group-title"
+                value={group.label}
+                onChange={(e) => setGroupField(group.id, { label: e.target.value })}
+                aria-label="Group label"
+              />
+              <div className="v2-mod-group-meta">
+                <label>
+                  Min
+                  <input
+                    type="number"
+                    className="v2-mod-num"
+                    min={0}
+                    max={10}
+                    value={String(group.minSelections ?? 0)}
+                    onChange={(e) =>
+                      setGroupField(group.id, {
+                        minSelections: Math.max(0, Number(e.target.value) || 0),
+                      })
+                    }
+                    aria-label={`${group.label} minimum selections`}
+                  />
+                </label>
+                <label>
+                  Max
+                  <input
+                    type="number"
+                    className="v2-mod-num"
+                    min={1}
+                    max={10}
+                    value={String(group.maxSelections ?? 1)}
+                    onChange={(e) =>
+                      setGroupField(group.id, {
+                        maxSelections: Math.max(1, Number(e.target.value) || 1),
+                      })
+                    }
+                    aria-label={`${group.label} maximum selections`}
+                  />
+                </label>
+              </div>
+              <button
+                type="button"
+                className="v2-mod-icon-btn"
+                onClick={() => removeGroup(group.id)}
+                aria-label={`Remove group ${group.label}`}
+                title="Remove group (chain-wide)"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
 
-      {canonical.map((group) => (
-        <div
-          key={group.id}
-          style={{
-            border: "1px solid var(--border)",
-            borderRadius: "var(--radius-md)",
-            background: "var(--surface-2)",
-            display: "flex",
-            flexDirection: "column",
-            gap: "0.5rem",
-            padding: "0.625rem 0.75rem",
-          }}
-        >
-          {/* Structural header — propagates across every location */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "2fr 1fr 1fr auto",
-              gap: "0.5rem",
-              alignItems: "end",
-            }}
-          >
-            <Input
-              label="Group label"
-              value={group.label}
-              onChange={(e) => setGroupField(group.id, { label: e.target.value })}
-            />
-            <Input
-              type="number"
-              min={0}
-              max={10}
-              label="Min picks"
-              value={String(group.minSelections ?? 0)}
-              onChange={(e) =>
-                setGroupField(group.id, {
-                  minSelections: Math.max(0, Number(e.target.value) || 0),
-                })
-              }
-            />
-            <Input
-              type="number"
-              min={1}
-              max={10}
-              label="Max picks"
-              value={String(group.maxSelections ?? 1)}
-              onChange={(e) =>
-                setGroupField(group.id, {
-                  maxSelections: Math.max(1, Number(e.target.value) || 1),
-                })
-              }
-            />
-            <Button size="sm" variant="ghost" onClick={() => removeGroup(group.id)}>
-              Remove group
-            </Button>
-          </div>
-
-          {/* Option rows — pricing belongs to the active lens; the
-           *  variance chip surfaces other trucks' divergent prices so
-           *  operators see the chain spread without leaving this view. */}
-          <table className="v2-mod-matrix">
-            <thead>
-              <tr>
-                <th style={{ minWidth: 160, textAlign: "left" }}>Option</th>
-                <th style={{ width: 48 }} title="Highlight on KDS ticket">
-                  KDS
-                </th>
-                <th style={{ minWidth: 110 }}>Price ({activeCity})</th>
-                <th style={{ minWidth: 110 }}>Cost ({activeCity})</th>
-                <th style={{ minWidth: 140, textAlign: "left" }}>Across chain</th>
-                <th style={{ width: 96 }} aria-label="Actions" />
-              </tr>
-            </thead>
-            <tbody>
+            <div className="v2-mod-rows">
               {group.options.map((option) => {
                 const opt = readOption(activeSlug, group.id, option.id);
                 const priceDelta = opt?.priceDelta ?? 0;
                 const costDelta = opt?.costDelta;
                 const variance = priceVariance(group.id, option.id);
                 return (
-                  <tr key={option.id}>
-                    <td>
-                      <Input
-                        value={option.label}
-                        onChange={(e) =>
-                          setOptionStructure(group.id, option.id, {
-                            label: e.target.value,
-                          })
-                        }
-                        aria-label="Option label"
-                      />
-                    </td>
-                    <td style={{ textAlign: "center" }}>
+                  <div key={option.id} className="v2-mod-row">
+                    <input
+                      className="v2-mod-row-label-input"
+                      value={option.label}
+                      onChange={(e) =>
+                        setOptionStructure(group.id, option.id, {
+                          label: e.target.value,
+                        })
+                      }
+                      aria-label="Option label"
+                    />
+                    <input
+                      type="checkbox"
+                      className="v2-mod-kds"
+                      checked={!!option.flagOnKds}
+                      onChange={(e) =>
+                        setOptionStructure(group.id, option.id, {
+                          flagOnKds: e.target.checked || undefined,
+                        })
+                      }
+                      aria-label={`KDS highlight for ${option.label}`}
+                      title="Highlight on the KDS ticket"
+                    />
+                    <div className="v2-mod-money">
                       <input
-                        type="checkbox"
-                        checked={!!option.flagOnKds}
-                        onChange={(e) =>
-                          setOptionStructure(group.id, option.id, {
-                            flagOnKds: e.target.checked || undefined,
-                          })
-                        }
-                        aria-label={`KDS highlight for ${option.label}`}
-                      />
-                    </td>
-                    <td>
-                      <Input
                         type="number"
                         step="0.01"
                         min="0"
@@ -426,12 +370,12 @@ export function ModifierMatrix({
                             ),
                           )
                         }
-                        trailingAdornment={<span className="v2-muted">zł</span>}
                         aria-label={`${option.label} price at ${activeCity}`}
                       />
-                    </td>
-                    <td>
-                      <Input
+                      <span className="v2-mod-money-suffix">zł</span>
+                    </div>
+                    <div className="v2-mod-money">
+                      <input
                         type="number"
                         step="0.01"
                         min="0"
@@ -451,72 +395,55 @@ export function ModifierMatrix({
                               : Math.max(0, Math.round(parseFloat(raw) * 100)),
                           );
                         }}
-                        placeholder="cost δ"
-                        trailingAdornment={<span className="v2-muted">zł</span>}
+                        placeholder="—"
                         aria-label={`${option.label} cost at ${activeCity}`}
                       />
-                    </td>
-                    <td>
+                      <span className="v2-mod-money-suffix">zł</span>
+                    </div>
+                    <span className="v2-mod-across">
                       {variance ? (
-                        <span
-                          className="v2-mod-variance"
-                          title="Prices across the chain — switch the lens to retune another truck"
-                        >
-                          {formatPrice(variance.min)}–{formatPrice(variance.max)}
-                        </span>
-                      ) : present.length > 1 ? (
-                        <span
-                          className="v2-muted"
-                          style={{ fontSize: "var(--text-2xs)" }}
-                        >
-                          uniform
-                        </span>
-                      ) : null}
-                    </td>
-                    <td style={{ textAlign: "right" }}>
-                      <div
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: 4,
-                          alignItems: "stretch",
-                        }}
-                      >
-                        {present.length > 1 && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
+                        <>
+                          <span
+                            className="v2-mod-across-spread"
+                            title="Price spread across every truck"
+                          >
+                            {formatPrice(variance.min)}–{formatPrice(variance.max)}
+                          </span>
+                          <button
+                            type="button"
+                            className="v2-mod-across-fan"
                             onClick={() => applyPriceDeltaToAll(group.id, option.id)}
-                            title={`Copy ${activeCity}'s price to every location`}
-                            disabled={!variance}
+                            title={`Apply ${activeCity}'s price to every location`}
                           >
                             → all
-                          </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => removeOption(group.id, option.id)}
-                          style={{ color: "var(--danger)" }}
-                          title="Remove option (chain-wide)"
-                        >
-                          ×
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
+                          </button>
+                        </>
+                      ) : present.length > 1 ? (
+                        <span>uniform</span>
+                      ) : null}
+                    </span>
+                    <button
+                      type="button"
+                      className="v2-mod-icon-btn v2-mod-row-remove"
+                      onClick={() => removeOption(group.id, option.id)}
+                      aria-label={`Remove ${option.label}`}
+                      title="Remove option (chain-wide)"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 );
               })}
-            </tbody>
-          </table>
+            </div>
 
-          <div>
-            <Button size="sm" variant="ghost" onClick={() => addOption(group.id)}>
-              + Add option
-            </Button>
+            <div className="v2-mod-foot">
+              <button type="button" onClick={() => addOption(group.id)}>
+                + Add option
+              </button>
+            </div>
           </div>
-        </div>
-      ))}
+        ))
+      )}
     </div>
   );
 }

@@ -1101,9 +1101,7 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
               margin: "0 0 0.75rem",
             }}
           >
-            Group structure (label, min/max, option labels, KDS flag)
-            propagates to every truck. <strong>Price δ + cost δ are
-            edited one location at a time</strong> — pick the truck below.
+            Structure (labels, KDS) stays uniform. Prices follow the lens.
           </p>
           <ModifierMatrix
             present={present}
