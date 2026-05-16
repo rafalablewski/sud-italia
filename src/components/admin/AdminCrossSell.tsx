@@ -239,7 +239,7 @@ export function AdminCrossSell() {
             <div className="glass-card p-6">
               <ItemMultiSelect
                 items={loc.menu}
-                selected={config.popularItems}
+                selected={config.popularItems ?? []}
                 onChange={(ids) => updateConfig({ popularItems: ids })}
                 label="Most Popular — red trending chip"
               />
@@ -247,7 +247,7 @@ export function AdminCrossSell() {
             <div className="glass-card p-6">
               <ItemMultiSelect
                 items={loc.menu}
-                selected={config.staffPicks}
+                selected={config.staffPicks ?? []}
                 onChange={(ids) => updateConfig({ staffPicks: ids })}
                 label="Staff Pick — editorial nudge"
               />

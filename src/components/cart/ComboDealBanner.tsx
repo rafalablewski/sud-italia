@@ -43,6 +43,11 @@ export function ComboDealBanner({
     if (!activeDeal || isComplete) return [];
     if (allMenuItems.length === 0) return [];
 
+    // Only suggest items the kitchen can actually serve — `available: false`
+    // means the operator 86'd the SKU, and offering it via the click-to-apply
+    // would surface a sold-out line at checkout.
+    const isAvailable = (m: MenuItem) => m.available !== false;
+
     if (activeDeal.requiredItems && activeDeal.requiredItems.length > 0) {
       const toAdd: MenuItem[] = [];
       const seen = new Set<string>();
@@ -51,7 +56,9 @@ export function ComboDealBanner({
           ci.menuItem.id.endsWith(req.suffix),
         );
         if (alreadyInCart) continue;
-        const candidate = allMenuItems.find((m) => m.id.endsWith(req.suffix));
+        const candidate = allMenuItems.find(
+          (m) => m.id.endsWith(req.suffix) && isAvailable(m),
+        );
         if (candidate && !seen.has(candidate.id)) {
           toAdd.push(candidate);
           seen.add(candidate.id);
@@ -64,7 +71,9 @@ export function ComboDealBanner({
       const toAdd: MenuItem[] = [];
       const seen = new Set<string>();
       for (const cat of missingCategories) {
-        const candidates = allMenuItems.filter((m) => m.category === cat);
+        const candidates = allMenuItems.filter(
+          (m) => m.category === cat && isAvailable(m),
+        );
         if (candidates.length === 0) continue;
         const cheapest = candidates.reduce((a, b) => (a.price < b.price ? a : b));
         if (!seen.has(cheapest.id)) {
