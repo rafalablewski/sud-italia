@@ -77,15 +77,21 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
   // bundle is applied (otherwise scheduling à-la-carte is awkward).
   // Stored client-side and POSTed after checkout success.
   const [scheduleWeekly, setScheduleWeekly] = useState(false);
-  // Fetch location-specific upsell config from admin settings
+  // Fetch location-specific upsell config from admin settings. Re-runs
+  // every time the drawer transitions to open so an admin edit propagates
+  // on the customer's next cart-open without forcing a hard refresh —
+  // critical because the drawer stays mounted across opens and would
+  // otherwise serve stale combos / time-windows for the whole session.
+  // `cache: "no-store"` defends against the browser HTTP cache rehydrating
+  // an old payload between opens.
   const [upsellConfig, setUpsellConfig] = useState<UpsellConfig | null>(null);
   useEffect(() => {
-    if (!locationSlug) return;
-    fetch(`/api/settings/upsell?location=${locationSlug}`)
+    if (!locationSlug || !open) return;
+    fetch(`/api/settings/upsell?location=${locationSlug}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => { if (data) setUpsellConfig(data); })
       .catch(() => {});
-  }, [locationSlug]);
+  }, [locationSlug, open]);
 
   // Per-customer attach history (audit §3.1) — fetched once when the drawer
   // first sees a known phone. Feeds scorePairing() inside getCartSuggestions
