@@ -351,6 +351,57 @@ export const menuBulkActionSchema = z
     path: ["target"],
   });
 
+// --- Admin: custom menu items --------------------------------------------
+//
+// Operators can add SKUs alongside the static seed catalogue (regional
+// LTOs, franchisee one-offs, market-day specials). Stored in
+// `custom-menu-items.json` and merged into getMenuWithOverrides().
+
+const menuCategoryEnum = z.enum([
+  "pizza",
+  "pasta",
+  "antipasti",
+  "panini",
+  "drinks",
+  "desserts",
+]);
+
+const menuTagEnum = z.enum(["vegetarian", "vegan", "spicy", "gluten-free"]);
+
+/** POST /api/admin/menu/custom — create a new admin-managed menu item. */
+export const customMenuItemCreateSchema = z.object({
+  id: z
+    .string()
+    .min(3)
+    .max(60)
+    .regex(/^[a-z0-9-]+$/, "Use lowercase letters, digits, and hyphens only"),
+  locationSlug,
+  name: z.string().min(1).max(200),
+  description: z.string().max(1000).default(""),
+  price: grosze.max(100_000),
+  cost: grosze.max(100_000),
+  category: menuCategoryEnum,
+  tags: z.array(menuTagEnum).max(8).default([]),
+  available: z.boolean().default(true),
+  deliveryOnly: z.boolean().optional(),
+  packagingCost: grosze.max(5_000).optional(),
+  modifierGroups: z.array(modifierGroupSchema).max(8).optional(),
+});
+
+/** PATCH /api/admin/menu/custom — partial edit of an admin-created item. */
+export const customMenuItemUpdateSchema = z.object({
+  name: z.string().min(1).max(200).optional(),
+  description: z.string().max(1000).optional(),
+  price: grosze.max(100_000).optional(),
+  cost: grosze.max(100_000).optional(),
+  category: menuCategoryEnum.optional(),
+  tags: z.array(menuTagEnum).max(8).optional(),
+  available: z.boolean().optional(),
+  deliveryOnly: z.boolean().optional(),
+  packagingCost: grosze.max(5_000).optional(),
+  modifierGroups: z.array(modifierGroupSchema).max(8).optional(),
+});
+
 // --- Admin: users (RBAC) -------------------------------------------------
 
 export const adminRoleSchema = z.enum(["owner", "manager", "staff", "kitchen"]);

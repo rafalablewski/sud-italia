@@ -1188,6 +1188,30 @@ html { scroll-behavior: smooth; }
 .v2-field-desc { font-size: var(--text-2xs); color: var(--fg-subtle); }
 .v2-field-error { font-size: var(--text-2xs); color: var(--danger); }
 
+/* Compact toggleable chip — used for tag pickers, multi-select filter
+ *  pills inside dialogs. Same visual rhythm as .v2-tab but smaller. */
+.v2-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: var(--text-2xs);
+  font-weight: 500;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--fg-muted);
+  cursor: pointer;
+  text-transform: capitalize;
+  transition: background var(--duration-fast), border-color var(--duration-fast), color var(--duration-fast);
+}
+.v2-chip:hover { background: var(--surface-hover); color: var(--fg); }
+.v2-chip.is-on {
+  background: var(--brand-soft);
+  border-color: color-mix(in oklab, var(--brand) 50%, transparent);
+  color: var(--fg);
+}
+
 .v2-input-wrap {
   position: relative;
   display: flex;
@@ -2207,6 +2231,8 @@ html { scroll-behavior: smooth; }
 .v2-field-inline .v2-select-wrap { min-width: 160px; }
 
 .v2-stack-12 { display: flex; flex-direction: column; gap: 12px; }
+.v2-stack-16 { display: flex; flex-direction: column; gap: 16px; }
+.v2-stack-24 { display: flex; flex-direction: column; gap: 24px; }
 
 .v2-menu-groups { display: flex; flex-direction: column; gap: 16px; }
 /* ============================
@@ -2227,7 +2253,7 @@ html { scroll-behavior: smooth; }
 }
 
 .v2-mng-section[data-variant="menu"] {
-  --mng-grid: 20px 20px minmax(0, 1fr) 84px 84px 56px 28px;
+  --mng-grid: 20px 20px minmax(0, 1fr) 84px 84px 56px auto;
   --mng-cols-start: 4;
 }
 .v2-mng-select {
@@ -2370,6 +2396,7 @@ html { scroll-behavior: smooth; }
   color: var(--fg-subtle);
 }
 .v2-mng-tag-override { color: var(--info); text-transform: none; font-weight: 600; }
+.v2-mng-tag-custom { color: var(--success); text-transform: none; font-weight: 600; }
 .v2-mng-tag-info { color: var(--info); text-transform: none; font-weight: 600; }
 .v2-mng-tag-warning { color: var(--warning); text-transform: none; font-weight: 600; }
 /* Audit §4.3 menu engineering chips. Same pattern as -override: tone
@@ -2432,6 +2459,20 @@ html { scroll-behavior: smooth; }
 .v2-mng-row:hover .v2-mng-edit,
 .v2-mng-row:focus-within .v2-mng-edit { opacity: 1; }
 .v2-mng-edit:hover { color: var(--fg); background: var(--surface-hover); }
+.v2-mng-edit-danger:hover { color: var(--danger); background: var(--danger-soft); }
+
+/* Edit + delete buttons sit side-by-side in the row's action column.
+ *  Both individually fade on hover-only so single-button rows (seed items)
+ *  keep their minimal look, but the wrapper itself always reserves layout
+ *  width so the row doesn't reflow when a delete button appears.        */
+.v2-mng-edit-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  justify-self: end;
+}
+.v2-mng-row:hover .v2-mng-edit-group .v2-mng-edit,
+.v2-mng-row:focus-within .v2-mng-edit-group .v2-mng-edit { opacity: 1; }
 
 /* Action button (Recipes) — pinned right */
 .v2-mng-row-recipes > .v2-btn { justify-self: end; }
@@ -3407,6 +3448,49 @@ html { scroll-behavior: smooth; }
 }
 
 .admin-bg > * { position: relative; z-index: 1; }
+
+/* --- Unified type scale (admin scope) ---
+ *  Every admin page reads from the same `--text-*` tokens defined on
+ *  [data-admin-theme] so the visual size of "small print" / "body" / "page
+ *  title" matches across both v2-* component classes and the older Tailwind
+ *  `text-*` utility classes still scattered through the legacy admin pages.
+ *  Without these scoped overrides Tailwind's text-base (16px) clashes with
+ *  v2 text-base (14px), giving the same row a different size depending on
+ *  whether the author used `text-sm` or `.v2-card-title`. */
+.v2-shell,
+.admin-bg {
+  font-family: var(--font-ui, "Inter", ui-sans-serif, system-ui, sans-serif);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  color: var(--fg, var(--text-primary));
+}
+
+.v2-shell .text-2xs, .admin-bg .text-2xs { font-size: var(--text-2xs); line-height: 1.4; }
+.v2-shell .text-xs,  .admin-bg .text-xs  { font-size: var(--text-xs);  line-height: 1.4; }
+.v2-shell .text-sm,  .admin-bg .text-sm  { font-size: var(--text-sm);  line-height: 1.45; }
+.v2-shell .text-base,.admin-bg .text-base{ font-size: var(--text-base);line-height: 1.5; }
+.v2-shell .text-md,  .admin-bg .text-md  { font-size: var(--text-md);  line-height: 1.45; }
+.v2-shell .text-lg,  .admin-bg .text-lg  { font-size: var(--text-lg);  line-height: 1.4; }
+.v2-shell .text-xl,  .admin-bg .text-xl  { font-size: var(--text-xl);  line-height: 1.35; }
+.v2-shell .text-2xl, .admin-bg .text-2xl { font-size: var(--text-2xl); line-height: 1.25; }
+.v2-shell .text-3xl, .admin-bg .text-3xl { font-size: var(--text-3xl); line-height: 1.2; }
+.v2-shell .text-4xl, .admin-bg .text-4xl { font-size: var(--text-4xl, 2.5rem); line-height: 1.15; }
+
+/* Form controls inherit the admin font family by default so a bare
+ *  <button> or <input> doesn't fall back to the user-agent's Helvetica.
+ *  Component classes (.v2-btn-sm, .glass-input, etc.) layer their own
+ *  font-size on top — only font-family is normalized here so we don't
+ *  override the deliberate type scale they apply. */
+.v2-shell input,
+.v2-shell select,
+.v2-shell textarea,
+.v2-shell button,
+.admin-bg input,
+.admin-bg select,
+.admin-bg textarea,
+.admin-bg button {
+  font-family: inherit;
+}
 
 /* --- Reduced motion --- */
 @media (prefers-reduced-motion: reduce) {

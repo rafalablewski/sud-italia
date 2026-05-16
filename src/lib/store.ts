@@ -2,7 +2,7 @@ import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop } from "@/data/types";
+import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem } from "@/data/types";
 import { getActiveLocations, locations as allLocations } from "@/data/locations";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -2010,6 +2010,76 @@ export async function clearMenuOverrides(ids: string[]): Promise<number> {
     }
     if (removed > 0) await writeJSON("menu-overrides.json", overrides);
     return removed;
+  });
+}
+
+// --- Custom menu items ---
+//
+// Admin-created menu items that live alongside the static seed menu data
+// in src/data/menus/*.ts. The seed menu stays canonical for product/menu
+// engineering decisions (hero, anchor, etc.); custom items let operators
+// add LTOs, regional one-offs, and franchisee-only SKUs without a code
+// deploy. Each row carries its locationSlug so they're scoped to a single
+// truck — they never bleed across.
+//
+// IDs are admin-supplied (slug-style); the API rejects collisions with
+// either the seed catalogue or existing custom rows so the merge in
+// getMenuWithOverrides() is deterministic.
+
+export interface CustomMenuItem extends MenuItem {
+  locationSlug: string;
+  /** ISO timestamp for sort + audit. */
+  createdAt: string;
+  /** Last edit timestamp. Same shape as createdAt. */
+  updatedAt: string;
+}
+
+export async function getCustomMenuItems(locationSlug?: string): Promise<CustomMenuItem[]> {
+  const all = await readJSON<CustomMenuItem[]>("custom-menu-items.json", []);
+  if (!locationSlug) return all;
+  return all.filter((i) => i.locationSlug === locationSlug);
+}
+
+export async function addCustomMenuItem(item: CustomMenuItem): Promise<void> {
+  return withLock("custom-menu-items.json", async () => {
+    const all = await readJSON<CustomMenuItem[]>("custom-menu-items.json", []);
+    if (all.some((i) => i.id === item.id)) {
+      throw new Error(`Custom item with id "${item.id}" already exists`);
+    }
+    all.push(item);
+    await writeJSON("custom-menu-items.json", all);
+  });
+}
+
+export async function updateCustomMenuItem(
+  id: string,
+  patch: Partial<Omit<CustomMenuItem, "id" | "locationSlug" | "createdAt">>,
+): Promise<CustomMenuItem | null> {
+  return withLock("custom-menu-items.json", async () => {
+    const all = await readJSON<CustomMenuItem[]>("custom-menu-items.json", []);
+    const idx = all.findIndex((i) => i.id === id);
+    if (idx === -1) return null;
+    const merged: CustomMenuItem = {
+      ...all[idx],
+      ...patch,
+      id: all[idx].id,
+      locationSlug: all[idx].locationSlug,
+      createdAt: all[idx].createdAt,
+      updatedAt: new Date().toISOString(),
+    };
+    all[idx] = merged;
+    await writeJSON("custom-menu-items.json", all);
+    return merged;
+  });
+}
+
+export async function deleteCustomMenuItem(id: string): Promise<boolean> {
+  return withLock("custom-menu-items.json", async () => {
+    const all = await readJSON<CustomMenuItem[]>("custom-menu-items.json", []);
+    const next = all.filter((i) => i.id !== id);
+    if (next.length === all.length) return false;
+    await writeJSON("custom-menu-items.json", next);
+    return true;
   });
 }
 

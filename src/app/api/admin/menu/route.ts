@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { withAdmin } from "@/lib/api-middleware";
 import {
   appendAuditLog,
+  getCustomMenuItems,
   getIngredients,
   getMenuOverrides,
   getRecipes,
@@ -10,6 +11,7 @@ import {
   type MenuOverride,
 } from "@/lib/store";
 import { getMenu } from "@/data/menus";
+import type { MenuItem } from "@/data/types";
 import { locations } from "@/data/locations";
 import { menuOverridePutSchema, parseBody } from "@/lib/api-schemas";
 
@@ -40,12 +42,15 @@ async function getRecipeCostMap(): Promise<Map<string, number>> {
 export const GET = withAdmin(
   { locationParam: "location" },
   async (_req, _ctx, { locationSlug }) => {
-    const [overrides, recipeCosts] = await Promise.all([
+    const [overrides, recipeCosts, customItems] = await Promise.all([
       getMenuOverrides(),
       getRecipeCostMap(),
+      getCustomMenuItems(),
     ]);
 
-    const enrich = (item: ReturnType<typeof getMenu>[number]) => {
+    const customIds = new Set(customItems.map((c) => c.id));
+
+    const enrich = (item: MenuItem, opts?: { isCustom?: boolean }) => {
       const override = overrides[item.id];
       const recipeCost = recipeCosts.get(item.id);
       const hasRecipe = recipeCost !== undefined;
@@ -63,18 +68,37 @@ export const GET = withAdmin(
         _hasOverride: overrideKeys.length > 0,
         _hasRecipe: hasRecipe,
         _costSource: hasRecipe ? "recipe" : override?.cost !== undefined ? "override" : "seed",
+        _isCustom: Boolean(opts?.isCustom),
       };
     };
 
+    const customByLocation = (slug: string) =>
+      customItems
+        .filter((c) => c.locationSlug === slug)
+        .map(({ locationSlug: _l, createdAt: _c, updatedAt: _u, ...rest }) => {
+          void _l; void _c; void _u;
+          return enrich(rest as MenuItem, { isCustom: true });
+        });
+
     if (locationSlug) {
-      const merged = getMenu(locationSlug).map(enrich);
+      const merged = [
+        ...getMenu(locationSlug)
+          .filter((i) => !customIds.has(i.id))
+          .map((i) => enrich(i)),
+        ...customByLocation(locationSlug),
+      ];
       return NextResponse.json(merged);
     }
 
     const active = locations.filter((l) => l.isActive);
     const result: Record<string, unknown[]> = {};
     for (const loc of active) {
-      result[loc.slug] = getMenu(loc.slug).map(enrich);
+      result[loc.slug] = [
+        ...getMenu(loc.slug)
+          .filter((i) => !customIds.has(i.id))
+          .map((i) => enrich(i)),
+        ...customByLocation(loc.slug),
+      ];
     }
     return NextResponse.json(result);
   },

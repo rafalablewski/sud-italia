@@ -9,9 +9,11 @@ import {
   MapPin,
   Pencil,
   Pizza,
+  Plus,
   Salad,
   Sandwich,
   Search,
+  Trash2,
   UtensilsCrossed,
   type LucideIcon,
 } from "lucide-react";
@@ -31,6 +33,13 @@ import {
   Tabs,
   Textarea,
 } from "./v2/ui";
+
+const MENU_TAGS: ("vegetarian" | "vegan" | "spicy" | "gluten-free")[] = [
+  "vegetarian",
+  "vegan",
+  "spicy",
+  "gluten-free",
+];
 
 const CATEGORY_ORDER: MenuCategory[] = ["pizza", "pasta", "antipasti", "panini", "drinks", "desserts"];
 
@@ -59,6 +68,9 @@ interface MenuItemData {
   _hasOverride: boolean;
   _hasRecipe?: boolean;
   _costSource?: "recipe" | "override" | "seed";
+  /** Admin-created items (vs seed) — surfaces a delete button and lets the
+   *  edit dialog touch every field, not just the override-able ones. */
+  _isCustom?: boolean;
 }
 
 const activeLocations = getActiveLocations();
@@ -92,6 +104,7 @@ export function AdminMenu() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<MenuCategory | "all">("all");
   const [editing, setEditing] = useState<MenuItemData | null>(null);
+  const [creating, setCreating] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
 
@@ -118,6 +131,7 @@ export function AdminMenu() {
       change: {
         price?: number;
         available?: boolean;
+        name?: string;
         description?: string;
         deliveryOnly?: boolean | null;
         packagingCost?: number | null;
@@ -128,6 +142,35 @@ export function AdminMenu() {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ items: { [id]: change } }),
+      });
+      return res.ok;
+    },
+    [],
+  );
+
+  /** Custom-item edits hit a different endpoint — they aren't overrides,
+   *  they're the canonical row. Returns the updated record or null on
+   *  failure so the caller can surface a toast. */
+  const persistCustomChange = useCallback(
+    async (
+      id: string,
+      change: {
+        name?: string;
+        description?: string;
+        price?: number;
+        cost?: number;
+        category?: MenuCategory;
+        tags?: string[];
+        available?: boolean;
+        deliveryOnly?: boolean;
+        packagingCost?: number;
+        modifierGroups?: ModifierGroup[];
+      },
+    ) => {
+      const res = await fetch(`/api/admin/menu/custom?id=${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(change),
       });
       return res.ok;
     },
@@ -250,22 +293,61 @@ export function AdminMenu() {
   const saveEdit = async (
     id: string,
     change: {
+      name?: string;
       price?: number;
+      cost?: number;
       description?: string;
+      category?: MenuCategory;
+      tags?: string[];
       deliveryOnly?: boolean | null;
       packagingCost?: number | null;
       modifierGroups?: ModifierGroup[] | null;
     },
+    isCustom: boolean,
   ) => {
-    const ok = await persistChange(id, change);
+    let ok = false;
+    if (isCustom) {
+      // Custom rows store the canonical state directly — strip the
+      // `null = clear` sentinel the override editor uses and send only
+      // concrete values.
+      const customChange = {
+        ...(change.name !== undefined ? { name: change.name } : {}),
+        ...(change.description !== undefined ? { description: change.description } : {}),
+        ...(change.price !== undefined ? { price: change.price } : {}),
+        ...(change.cost !== undefined ? { cost: change.cost } : {}),
+        ...(change.category !== undefined ? { category: change.category } : {}),
+        ...(change.tags !== undefined ? { tags: change.tags } : {}),
+        ...(change.deliveryOnly !== undefined && change.deliveryOnly !== null
+          ? { deliveryOnly: change.deliveryOnly }
+          : {}),
+        ...(change.packagingCost !== undefined && change.packagingCost !== null
+          ? { packagingCost: change.packagingCost }
+          : {}),
+        ...(change.modifierGroups !== undefined && change.modifierGroups !== null
+          ? { modifierGroups: change.modifierGroups }
+          : {}),
+      };
+      ok = await persistCustomChange(id, customChange);
+    } else {
+      // Seed items go through the override pipeline — drop fields that
+      // aren't override-able (category, tags, cost) and forward the rest.
+      const { category: _c, tags: _t, cost: _co, ...overrideChange } = change;
+      void _c; void _t; void _co;
+      ok = await persistChange(id, overrideChange);
+    }
+
     if (ok) {
       setItems((arr) =>
         arr.map((i) =>
           i.id === id
             ? {
                 ...i,
+                ...(change.name !== undefined ? { name: change.name } : {}),
                 ...(change.price !== undefined ? { price: change.price } : {}),
+                ...(change.cost !== undefined && isCustom ? { cost: change.cost } : {}),
                 ...(change.description !== undefined ? { description: change.description } : {}),
+                ...(change.category !== undefined && isCustom ? { category: change.category } : {}),
+                ...(change.tags !== undefined && isCustom ? { tags: change.tags } : {}),
                 // Apply null = clear / undefined = unchanged / value = set
                 ...(change.deliveryOnly !== undefined
                   ? { deliveryOnly: change.deliveryOnly === null ? undefined : change.deliveryOnly }
@@ -276,7 +358,7 @@ export function AdminMenu() {
                 ...(change.modifierGroups !== undefined
                   ? { modifierGroups: change.modifierGroups === null ? undefined : change.modifierGroups }
                   : {}),
-                _hasOverride: true,
+                _hasOverride: isCustom ? i._hasOverride : true,
               }
             : i,
         ),
@@ -286,6 +368,53 @@ export function AdminMenu() {
     } else {
       toast.error("Save failed", "Try again.");
     }
+  };
+
+  const createCustomItem = async (draft: {
+    id: string;
+    name: string;
+    description: string;
+    price: number;
+    cost: number;
+    category: MenuCategory;
+    tags: string[];
+    available: boolean;
+  }) => {
+    const res = await fetch("/api/admin/menu/custom", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...draft, locationSlug: pageLoc }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      toast.error("Could not create item", err?.error || "Try again.");
+      return false;
+    }
+    toast.success("Item added", draft.name);
+    setCreating(false);
+    await fetchMenu();
+    return true;
+  };
+
+  const deleteCustomItem = async (item: MenuItemData) => {
+    if (!item._isCustom) return;
+    if (
+      !confirm(
+        `Delete "${item.name}"? This removes the item from the customer menu permanently.`,
+      )
+    ) {
+      return;
+    }
+    const res = await fetch(`/api/admin/menu/custom?id=${encodeURIComponent(item.id)}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      toast.error("Could not delete", err?.error || "Try again.");
+      return;
+    }
+    setItems((arr) => arr.filter((i) => i.id !== item.id));
+    toast.success("Item removed", item.name);
   };
 
   // --- Derived ---
@@ -341,6 +470,10 @@ export function AdminMenu() {
               aria-label="Editing location"
             />
           </div>
+          <Button variant="primary" size="sm" onClick={() => setCreating(true)}>
+            <Plus className="h-3.5 w-3.5" />
+            Add item
+          </Button>
         </div>
       </header>
 
@@ -497,7 +630,10 @@ export function AdminMenu() {
                                 solely from /admin/crosssell → Menu badges.
                                 The admin menu row keeps only the override
                                 state indicator and intrinsic recipe tags. */}
-                            {item._hasOverride && (
+                            {item._isCustom && (
+                              <span className="v2-mng-tag v2-mng-tag-custom">Custom</span>
+                            )}
+                            {item._hasOverride && !item._isCustom && (
                               <span className="v2-mng-tag v2-mng-tag-override">Overridden</span>
                             )}
                             {item.tags.map((t) => (
@@ -517,15 +653,28 @@ export function AdminMenu() {
                         </span>
                         <span className={`v2-mng-val v2-mng-val-margin v2-mng-val-margin-${marginTone(margin)} tabular`}>{margin}%</span>
 
-                        <button
-                          type="button"
-                          className="v2-mng-edit"
-                          onClick={() => setEditing(item)}
-                          aria-label={`Edit ${item.name}`}
-                          title="Edit"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </button>
+                        <span className="v2-mng-edit-group">
+                          <button
+                            type="button"
+                            className="v2-mng-edit"
+                            onClick={() => setEditing(item)}
+                            aria-label={`Edit ${item.name}`}
+                            title="Edit item"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          {item._isCustom && (
+                            <button
+                              type="button"
+                              className="v2-mng-edit v2-mng-edit-danger"
+                              onClick={() => deleteCustomItem(item)}
+                              aria-label={`Delete ${item.name}`}
+                              title="Delete item"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </span>
                       </li>
                     );
                   })}
@@ -541,6 +690,13 @@ export function AdminMenu() {
         onClose={() => setEditing(null)}
         onSave={saveEdit}
       />
+
+      <CreateItemDialog
+        open={creating}
+        locationSlug={pageLoc}
+        onClose={() => setCreating(false)}
+        onCreate={createCustomItem}
+      />
     </div>
   );
 }
@@ -551,18 +707,27 @@ interface EditDialogProps {
   onSave: (
     id: string,
     change: {
+      name?: string;
       price?: number;
+      cost?: number;
       description?: string;
+      category?: MenuCategory;
+      tags?: string[];
       deliveryOnly?: boolean | null;
       packagingCost?: number | null;
       modifierGroups?: ModifierGroup[] | null;
     },
+    isCustom: boolean,
   ) => Promise<void> | void;
 }
 
 function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
+  const [name, setName] = useState("");
   const [priceStr, setPriceStr] = useState("0.00");
+  const [costStr, setCostStr] = useState("0.00");
   const [desc, setDesc] = useState("");
+  const [cat, setCat] = useState<MenuCategory>("pizza");
+  const [tags, setTags] = useState<string[]>([]);
   // Audit §3 channel + packaging + modifiers
   const [deliveryOnly, setDeliveryOnly] = useState(false);
   const [packagingStr, setPackagingStr] = useState("");
@@ -571,8 +736,12 @@ function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
 
   useEffect(() => {
     if (item) {
+      setName(item.name);
       setPriceStr((item.price / 100).toFixed(2));
+      setCostStr((item.cost / 100).toFixed(2));
       setDesc(item.description);
+      setCat(item.category);
+      setTags(item.tags.slice());
       setDeliveryOnly(Boolean(item.deliveryOnly));
       setPackagingStr(
         typeof item.packagingCost === "number"
@@ -593,17 +762,36 @@ function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
     return <Dialog open={false} onClose={onClose} />;
   }
 
+  const isCustom = Boolean(item._isCustom);
+  const canEditRecipeCost = isCustom && !item._hasRecipe;
+
   const submit = async () => {
     const price = Math.round(parseFloat(priceStr || "0") * 100);
     const change: {
+      name?: string;
       price?: number;
+      cost?: number;
       description?: string;
+      category?: MenuCategory;
+      tags?: string[];
       deliveryOnly?: boolean | null;
       packagingCost?: number | null;
       modifierGroups?: ModifierGroup[] | null;
     } = {};
+    const trimmedName = name.trim();
+    if (trimmedName && trimmedName !== item.name) change.name = trimmedName;
     if (price !== item.price) change.price = price;
+    if (canEditRecipeCost) {
+      const cost = Math.round(parseFloat(costStr || "0") * 100);
+      if (cost !== item.cost) change.cost = cost;
+    }
     if (desc !== item.description) change.description = desc;
+    if (isCustom) {
+      if (cat !== item.category) change.category = cat;
+      const tagsChanged =
+        tags.length !== item.tags.length || tags.some((t) => !item.tags.includes(t));
+      if (tagsChanged) change.tags = tags;
+    }
     const nextDeliveryOnly: boolean | null = deliveryOnly ? true : null;
     if (nextDeliveryOnly !== (item.deliveryOnly ?? null)) {
       change.deliveryOnly = nextDeliveryOnly;
@@ -635,8 +823,14 @@ function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
       return;
     }
     setBusy(true);
-    await onSave(item.id, change);
+    await onSave(item.id, change, isCustom);
     setBusy(false);
+  };
+
+  const toggleTag = (tag: string) => {
+    setTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+    );
   };
 
   return (
@@ -645,7 +839,11 @@ function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
       onClose={onClose}
       size="md"
       title={`Edit ${item.name}`}
-      description="Changes apply to this location only via the override system. Reset by clearing the override in the database."
+      description={
+        isCustom
+          ? "Admin-created item. Changes save immediately to this location."
+          : "Changes apply to this location only via the override system. Reset by clearing the override in the database."
+      }
       footer={
         <>
           <Button variant="ghost" onClick={onClose} disabled={busy}>
@@ -659,6 +857,23 @@ function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
     >
       <div className="v2-stack-12">
         <Input
+          label="Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          description="Customer-facing item name."
+        />
+        {isCustom && (
+          <Select
+            label="Category"
+            value={cat}
+            onChange={(e) => setCat(e.target.value as MenuCategory)}
+            options={CATEGORY_ORDER.map((c) => ({
+              value: c,
+              label: MENU_CATEGORY_LABELS[c],
+            }))}
+          />
+        )}
+        <Input
           label="Price (PLN)"
           type="number"
           step="0.01"
@@ -668,12 +883,48 @@ function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
           trailingAdornment={<span className="v2-muted">zł</span>}
           description={`Food cost: ${formatPrice(item.cost)} · Current margin: ${marginPct(item.price, item.cost)}%`}
         />
+        {canEditRecipeCost && (
+          <Input
+            label="Food cost (PLN)"
+            type="number"
+            step="0.01"
+            min="0"
+            value={costStr}
+            onChange={(e) => setCostStr(e.target.value)}
+            trailingAdornment={<span className="v2-muted">zł</span>}
+            description="Per-portion plate cost. Once a recipe is attached this becomes computed automatically and the field is locked."
+          />
+        )}
         <Textarea
           label="Description"
           value={desc}
           onChange={(e) => setDesc(e.target.value)}
           rows={4}
         />
+        {isCustom && (
+          <div className="v2-field">
+            <label className="v2-field-label">Tags</label>
+            <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap" }}>
+              {MENU_TAGS.map((tag) => {
+                const on = tags.includes(tag);
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => toggleTag(tag)}
+                    aria-pressed={on}
+                    className={`v2-chip ${on ? "is-on" : ""}`}
+                  >
+                    {tag}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="v2-field-desc">
+              Optional dietary markers shown on the menu card.
+            </p>
+          </div>
+        )}
         {/* Menu-engineering role + LTO live in /admin/crosssell → Menu badges
             so the editorial chips have one source of truth. The per-item
             edit dialog stays focused on price, description, channel
@@ -940,5 +1191,233 @@ function ModifierEditor({
         </div>
       ))}
     </div>
+  );
+}
+
+// ─── Create-item dialog ───────────────────────────────────────────────────
+//
+// Spins up a brand-new admin-managed menu item for the current location.
+// IDs are auto-suggested from the name (lowercased + hyphenated) and
+// validated server-side against both the seed catalogue and other custom
+// rows so the merge in getMenuWithOverrides() stays deterministic.
+
+function slugifyName(name: string, locationSlug: string): string {
+  const base = name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 40);
+  const prefix = locationSlug.slice(0, 3) || "loc";
+  return base ? `${prefix}-${base}` : "";
+}
+
+interface CreateItemDialogProps {
+  open: boolean;
+  locationSlug: string;
+  onClose: () => void;
+  onCreate: (draft: {
+    id: string;
+    name: string;
+    description: string;
+    price: number;
+    cost: number;
+    category: MenuCategory;
+    tags: string[];
+    available: boolean;
+  }) => Promise<boolean>;
+}
+
+function CreateItemDialog({ open, locationSlug, onClose, onCreate }: CreateItemDialogProps) {
+  const [name, setName] = useState("");
+  const [id, setId] = useState("");
+  const [idTouched, setIdTouched] = useState(false);
+  const [desc, setDesc] = useState("");
+  const [priceStr, setPriceStr] = useState("");
+  const [costStr, setCostStr] = useState("");
+  const [cat, setCat] = useState<MenuCategory>("pizza");
+  const [tags, setTags] = useState<string[]>([]);
+  const [available, setAvailable] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      setName("");
+      setId("");
+      setIdTouched(false);
+      setDesc("");
+      setPriceStr("");
+      setCostStr("");
+      setCat("pizza");
+      setTags([]);
+      setAvailable(true);
+      setError(null);
+      setBusy(false);
+    }
+  }, [open]);
+
+  // Auto-derive the id from the typed name until the user manually edits it.
+  useEffect(() => {
+    if (!idTouched) setId(slugifyName(name, locationSlug));
+  }, [name, locationSlug, idTouched]);
+
+  const toggleTag = (tag: string) => {
+    setTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+    );
+  };
+
+  const submit = async () => {
+    setError(null);
+    const trimmedName = name.trim();
+    const trimmedId = id.trim();
+    if (!trimmedName) {
+      setError("Name is required.");
+      return;
+    }
+    if (!/^[a-z0-9-]{3,60}$/.test(trimmedId)) {
+      setError("ID must be 3–60 chars, lowercase letters, digits, and hyphens only.");
+      return;
+    }
+    const price = Math.round(parseFloat(priceStr || "0") * 100);
+    const cost = Math.round(parseFloat(costStr || "0") * 100);
+    if (price <= 0) {
+      setError("Price must be greater than zero.");
+      return;
+    }
+    if (cost < 0) {
+      setError("Food cost cannot be negative.");
+      return;
+    }
+    setBusy(true);
+    const ok = await onCreate({
+      id: trimmedId,
+      name: trimmedName,
+      description: desc.trim(),
+      price,
+      cost,
+      category: cat,
+      tags,
+      available,
+    });
+    setBusy(false);
+    if (!ok) {
+      // onCreate surfaces a toast — keep dialog open so the operator can fix
+      // whatever the server flagged.
+    }
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      size="md"
+      title="Add menu item"
+      description="Create a new admin-managed SKU for this location. Lives alongside the static menu catalogue."
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={busy}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={submit} loading={busy}>
+            Create item
+          </Button>
+        </>
+      }
+    >
+      <div className="v2-stack-12">
+        {error && (
+          <div className="alert-error" role="alert">
+            {error}
+          </div>
+        )}
+        <Input
+          label="Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="e.g. Pizza Capricciosa"
+        />
+        <Input
+          label="Item ID"
+          value={id}
+          onChange={(e) => {
+            setId(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""));
+            setIdTouched(true);
+          }}
+          description="Stable identifier used in orders + analytics. Auto-derived from the name; edit only if you need a specific slug."
+        />
+        <Select
+          label="Category"
+          value={cat}
+          onChange={(e) => setCat(e.target.value as MenuCategory)}
+          options={CATEGORY_ORDER.map((c) => ({
+            value: c,
+            label: MENU_CATEGORY_LABELS[c],
+          }))}
+        />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+          <Input
+            label="Price (PLN)"
+            type="number"
+            step="0.01"
+            min="0"
+            value={priceStr}
+            onChange={(e) => setPriceStr(e.target.value)}
+            trailingAdornment={<span className="v2-muted">zł</span>}
+          />
+          <Input
+            label="Food cost (PLN)"
+            type="number"
+            step="0.01"
+            min="0"
+            value={costStr}
+            onChange={(e) => setCostStr(e.target.value)}
+            trailingAdornment={<span className="v2-muted">zł</span>}
+          />
+        </div>
+        <Textarea
+          label="Description"
+          value={desc}
+          onChange={(e) => setDesc(e.target.value)}
+          rows={3}
+          placeholder="What's in the dish, where the ingredients come from."
+        />
+        <div className="v2-field">
+          <label className="v2-field-label">Tags</label>
+          <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap" }}>
+            {MENU_TAGS.map((tag) => {
+              const on = tags.includes(tag);
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => toggleTag(tag)}
+                  aria-pressed={on}
+                  className={`v2-chip ${on ? "is-on" : ""}`}
+                >
+                  {tag}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <label
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            fontSize: "var(--text-sm)",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={available}
+            onChange={(e) => setAvailable(e.target.checked)}
+          />
+          Available to customers immediately
+        </label>
+      </div>
+    </Dialog>
   );
 }
