@@ -2802,6 +2802,25 @@ html { scroll-behavior: smooth; }
 }
 .v2-scope-bar-hint strong { color: var(--fg); font-weight: 600; }
 
+/* Small "chain-wide" eyebrow chip next to a field label so operators
+ * can tell at a glance that a field is locked across every truck —
+ * the disabled state alone reads as a generic "not editable", the
+ * chip says why. */
+.v2-detail-chain-tag {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 1px 6px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
 /* Static lens label inside the modifier card — was a <select> before
  * the shared scope bar took over. Kept as a read-only label so the
  * card still tells you which truck its prices belong to. */

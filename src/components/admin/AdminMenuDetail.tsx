@@ -451,20 +451,10 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
         const seedPatch: Record<string, unknown> = {};
         const customBody: Record<string, unknown> = {};
 
-        // Per-variant product fields.
-        const trimmedName = chainCur.name.trim();
-        if (trimmedName !== chainInit.name.trim()) {
-          seedPatch.name = trimmedName;
-          customBody.name = trimmedName;
-        }
-        if (chainCur.description !== chainInit.description) {
-          seedPatch.description = chainCur.description;
-          customBody.description = chainCur.description;
-        }
-        if (chainCur.category !== chainInit.category) {
-          seedPatch.category = chainCur.category;
-          customBody.category = chainCur.category;
-        }
+        // Per-variant product fields. Name, category and description are
+        // chain-wide (locked + disabled in the UI), so they intentionally
+        // don't flow into the diff — operators rename / recategorise /
+        // rewrite via a different path. Everything else is per-location.
         const tagsChanged =
           chainCur.tags.length !== chainInit.tags.length ||
           chainCur.tags.some((t) => !chainInit.tags.includes(t));
@@ -983,9 +973,16 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
 
           <div className="v2-detail-form">
             <Input
-              label="Name"
+              label={
+                <>
+                  Name{" "}
+                  <span className="v2-detail-chain-tag">chain-wide</span>
+                </>
+              }
               value={chain.name}
-              onChange={(e) => setChain((c) => ({ ...c, name: e.target.value }))}
+              onChange={() => {}}
+              disabled
+              description="Same across every truck — locked here, edit via API or recreate the product to rename."
             />
             <div className="v2-detail-form-row" data-cols="3">
               {(() => {
@@ -1018,11 +1015,15 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
                 placeholder="e.g. SI-PIZ-MARG-001"
               />
               <Select
-                label="Category"
-                value={chain.category}
-                onChange={(e) =>
-                  setChain((c) => ({ ...c, category: e.target.value as MenuCategory }))
+                label={
+                  <>
+                    Category{" "}
+                    <span className="v2-detail-chain-tag">chain-wide</span>
+                  </>
                 }
+                value={chain.category}
+                onChange={() => {}}
+                disabled
                 options={CATEGORY_ORDER.map((cc) => ({
                   value: cc,
                   label: MENU_CATEGORY_LABELS[cc],
@@ -1030,12 +1031,17 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
               />
             </div>
             <Textarea
-              label="Description"
-              value={chain.description}
-              onChange={(e) =>
-                setChain((c) => ({ ...c, description: e.target.value }))
+              label={
+                <>
+                  Description{" "}
+                  <span className="v2-detail-chain-tag">chain-wide</span>
+                </>
               }
+              value={chain.description}
+              onChange={() => {}}
+              disabled
               rows={3}
+              description="Same across every truck."
             />
             <div className="v2-detail-tags-row">
               <span className="v2-detail-tags-row-label">Tags</span>
