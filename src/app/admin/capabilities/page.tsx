@@ -623,6 +623,13 @@ export default async function CapabilitiesPage() {
             "Every product on /admin/menu exposes the same editable surface regardless of storage origin: name, item slug (renameable for custom rows), SKU (operator inventory code), category, price, food cost (locked when a recipe is attached), description, tags, availability, delivery-only flag, packaging cost override, and modifier groups. Seed-backed items route edits through the MenuOverride pipeline (category/tags/sku join the existing override fields with `null = clear back to seed` semantics); admin-created rows route through /api/admin/menu/custom with PATCH-based atomic renames. The legacy 'Custom' badge was retired. The edit dialog includes an 'Available at locations' multi-select: checking a new location clones the item there (location-prefixed id), unchecking removes it (hard-delete for custom rows, `hidden: true` override for seed rows — restorable via the 'Show hidden' toggle). Trash icon on every row triggers the same delete semantics; a soft-deleted seed row can be restored by the eye-icon action that surfaces when 'Show hidden' is on.",
         },
         {
+          name: "Bulk menu delete (cross-location)",
+          status: "live",
+          href: "/admin/menu",
+          summary:
+            "Operators no longer have to delete the same menu item from each location manually. The AdminMenu bulk toolbar (visible when one or more rows are checked) exposes 'Delete here' (current location only) and 'Delete everywhere' (every active location). The trash icon on a single row that has cross-location twins now also prompts for current-vs-all scope. All three flow through POST /api/admin/menu/bulk with `action:\"delete\"` and `scope:\"current\"|\"all\"`: custom rows hard-delete via deleteCustomMenuItem(), seed rows soft-hide via setMenuOverridesBulk({hidden:true}) (restorable via 'Show hidden'). Cross-location twins are matched case-insensitively by item name. The endpoint authorizes every touched location upfront (rejects the whole batch on any 403) and audit-logs as `menu.bulk_delete` with the full row-by-row teardown plan.",
+        },
+        {
           name: "Customer rollups",
           status: has("DATABASE_URL") ? "live" : "needs-config",
           href: "/admin/customers",

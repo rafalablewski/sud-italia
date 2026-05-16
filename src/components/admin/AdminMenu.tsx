@@ -288,6 +288,53 @@ export function AdminMenu() {
     }
   };
 
+  /** Bulk-delete the selected rows. When `scope === "all"`, the server
+   *  also finds and removes the cross-location twin for each id (matched
+   *  by case-insensitive name). Custom items hard-delete; seed items get
+   *  a `hidden: true` override (restorable via "Show hidden"). */
+  const bulkDelete = async (scope: "current" | "all") => {
+    if (selectedIds.size === 0) return;
+    const ids = [...selectedIds];
+    const message =
+      scope === "all"
+        ? `Delete ${ids.length} ${ids.length === 1 ? "item" : "items"} from ALL locations?\n\nCustom items are removed permanently. Seed items (those baked into the menu code) are hidden and can be restored via "Show hidden".`
+        : `Delete ${ids.length} ${ids.length === 1 ? "item" : "items"} from this location?\n\nCustom items are removed permanently. Seed items are hidden and can be restored via "Show hidden".`;
+    if (!confirm(message)) return;
+    setBulkBusy(true);
+    try {
+      const res = await fetch("/api/admin/menu/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "delete", ids, scope }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const total = data.affected ?? 0;
+        const detail = [
+          data.customDeleted ? `${data.customDeleted} removed` : null,
+          data.seedHidden ? `${data.seedHidden} hidden` : null,
+          data.unresolvedIds?.length ? `${data.unresolvedIds.length} skipped` : null,
+        ]
+          .filter(Boolean)
+          .join(" · ");
+        const headline =
+          scope === "all" ? "Deleted across locations" : "Deleted";
+        if (total > 0) {
+          toast.success(headline, detail || `${total} ${total === 1 ? "item" : "items"} processed.`);
+        } else {
+          toast.warning("Nothing deleted", detail || "No matching rows found.");
+        }
+        setSelectedIds(new Set());
+        await fetchMenu();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast.error("Could not delete", data?.error);
+      }
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
   /** Copies the selected items' price/cost/description overrides to the
    *  matching items in another location, matched by name. */
   const bulkCloneToLocation = async (targetSlug: string) => {
@@ -561,30 +608,86 @@ export function AdminMenu() {
     [toast],
   );
 
+  /** Count how many other active locations carry a twin (same base slug,
+   *  case-insensitive name match against the cached menus). Used to decide
+   *  whether to offer the operator the "Delete from all locations" option. */
+  const countTwins = useCallback(
+    (item: MenuItemData): number => {
+      const baseSlug = getBaseSlug(item.id);
+      const nameKey = item.name.trim().toLowerCase();
+      let count = 0;
+      for (const loc of activeLocations) {
+        if (loc.slug === pageLoc) continue;
+        const arr = menusByLocation[loc.slug] || [];
+        const twin = arr.find(
+          (i) =>
+            !i._hidden &&
+            (getBaseSlug(i.id) === baseSlug || i.name.trim().toLowerCase() === nameKey),
+        );
+        if (twin) count++;
+      }
+      return count;
+    },
+    [menusByLocation, pageLoc],
+  );
+
   const deleteItem = async (item: MenuItemData) => {
-    if (item._isCustom) {
-      if (
-        !confirm(
-          `Delete "${item.name}"? This permanently removes the item from this location's menu.`,
-        )
-      ) {
+    const twinCount = countTwins(item);
+    const verb = item._isCustom
+      ? "permanently delete"
+      : "hide (restorable via Show hidden)";
+    // When the same item exists at other locations, give the operator the
+    // one-click cross-location option so they don't have to switch
+    // locations and repeat the action — the headline of this feature.
+    if (twinCount > 0) {
+      const choice = window.prompt(
+        `"${item.name}" also exists at ${twinCount} other ${twinCount === 1 ? "location" : "locations"}.\n\nType:\n  1 — ${verb} from THIS location only\n  2 — ${verb} from ALL locations\n  (anything else cancels)`,
+        "1",
+      );
+      if (choice !== "1" && choice !== "2") return;
+      if (choice === "2") {
+        // Reuse the bulk endpoint so custom + seed handling stays in one
+        // place. Single-id batch with scope="all".
+        setBulkBusy(true);
+        try {
+          const res = await fetch("/api/admin/menu/bulk", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "delete", ids: [item.id], scope: "all" }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            toast.success(
+              "Deleted across locations",
+              `${item.name} removed from ${data.affected} location${data.affected === 1 ? "" : "s"}.`,
+            );
+            await fetchMenu();
+          } else {
+            const data = await res.json().catch(() => ({}));
+            toast.error("Could not delete", data?.error);
+          }
+        } finally {
+          setBulkBusy(false);
+        }
         return;
       }
+    } else if (
+      !confirm(
+        item._isCustom
+          ? `Delete "${item.name}"? This permanently removes the item from this location's menu.`
+          : `"${item.name}" is a seed menu item — it can't be permanently deleted (it lives in code). Hide it from this location instead? You can restore it later via the "Show hidden" toggle.`,
+      )
+    ) {
+      return;
+    }
+
+    // Single-location path: keep the legacy in-place delete (custom = hard,
+    // seed = hidden override) so we update local state without a refetch.
+    if (item._isCustom) {
       const ok = await hardDeleteCustomItem(item.id);
       if (!ok) return;
       setItems((arr) => arr.filter((i) => i.id !== item.id));
       toast.success("Item removed", item.name);
-      return;
-    }
-    // Seed items live in src/data/menus/*.ts and can't be hard-deleted.
-    // The closest primitive is a `hidden` override that filters the row
-    // out of both the customer menu and the default admin list. The
-    // operator can restore via the "Show hidden" toggle.
-    if (
-      !confirm(
-        `"${item.name}" is a seed menu item — it can't be permanently deleted (it lives in code). Hide it from this location instead? You can restore it later via the "Show hidden" toggle.`,
-      )
-    ) {
       return;
     }
     const ok = await persistChange(item.id, { hidden: true });
@@ -764,6 +867,30 @@ export function AdminMenu() {
             >
               Reset overrides
             </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={bulkBusy}
+              onClick={() => bulkDelete("current")}
+              title="Remove the selected items from this location. Custom items hard-delete; seed items soft-hide (restorable via Show hidden)."
+              style={{ color: "var(--danger)" }}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Delete here
+            </Button>
+            {activeLocations.length > 1 && (
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={bulkBusy}
+                onClick={() => bulkDelete("all")}
+                title="Remove the selected items from every active location. Twins are matched by name across trucks."
+                style={{ color: "var(--danger)" }}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete everywhere
+              </Button>
+            )}
             <Button size="sm" variant="ghost" disabled={bulkBusy} onClick={() => setSelectedIds(new Set())}>
               Clear
             </Button>
