@@ -630,6 +630,13 @@ export default async function CapabilitiesPage() {
             "Operators no longer have to delete the same menu item from each location manually. The AdminMenu bulk toolbar (visible when one or more rows are checked) exposes 'Delete here' (current location only) and 'Delete everywhere' (every active location). The trash icon on a single row that has cross-location twins now also prompts for current-vs-all scope. All three flow through POST /api/admin/menu/bulk with `action:\"delete\"` and `scope:\"current\"|\"all\"`: custom rows hard-delete via deleteCustomMenuItem(), seed rows soft-hide via setMenuOverridesBulk({hidden:true}) (restorable via 'Show hidden'). Cross-location twins are matched case-insensitively by item name. The endpoint authorizes every touched location upfront (rejects the whole batch on any 403) and audit-logs as `menu.bulk_delete` with the full row-by-row teardown plan.",
         },
         {
+          name: "Bulk menu edit + multi-target clone (chain-wide)",
+          status: "live",
+          href: "/admin/menu",
+          summary:
+            "Three composable affordances for chain-wide menu maintenance. (1) **Bulk-edit dialog** — toolbar 'Edit selected' opens a dialog where each field (price, cost, available, category, tags, description, delivery-only, packaging cost) has an 'enable' checkbox; only enabled fields are pushed. Footer offers 'Apply to <current>' or 'Apply everywhere' (fan-out to every twin matched by name). (2) **Per-item 'Apply to all locations' toggle** — the row edit dialog adds a checkbox above the price input that propagates price / cost / description / category / tags / availability / packaging to every other location where the same item exists. Identity fields (name, slug, SKU, modifiers) stay per-row. (3) **Multi-target clone dialog** — replaces the per-location 'Clone → X' buttons with a single 'Clone to…' that lets operators pick any combination of target locations and fans out N parallel bulk clone_to calls, aggregating matched / unmatched / failed counts in one toast. All three flow through POST /api/admin/menu/bulk: new `action:\"edit\"` resolves twins server-side when scope=all, routes seed rows through setMenuOverridesBulk and custom rows through updateCustomMenuItem, authorizes every touched location upfront, and audit-logs as `menu.bulk_edit`.",
+        },
+        {
           name: "Customer rollups",
           status: has("DATABASE_URL") ? "live" : "needs-config",
           href: "/admin/customers",

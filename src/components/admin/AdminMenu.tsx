@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   Coffee,
   Eye,
@@ -140,6 +140,19 @@ export function AdminMenu() {
     items: MenuItemData[];
     scopes: ("current" | "all")[];
     twinLocations: string[];
+  } | null>(null);
+  /** Bulk-edit dialog state. Open when not null; carries the items being
+   *  edited so the dialog can list them, derive twins, and decide which
+   *  scope buttons to offer. */
+  const [editRequest, setEditRequest] = useState<{
+    items: MenuItemData[];
+    twinLocations: string[];
+  } | null>(null);
+  /** Bulk clone-target chooser. The previous per-location "Clone → X"
+   *  buttons forced one location at a time; this dialog lets operators
+   *  pick multiple targets and fans out one bulk call per target. */
+  const [cloneRequest, setCloneRequest] = useState<{
+    items: MenuItemData[];
   } | null>(null);
 
   const fetchMenu = useCallback(async () => {
@@ -344,38 +357,113 @@ export function AdminMenu() {
   );
 
   /** Copies the selected items' price/cost/description overrides to the
-   *  matching items in another location, matched by name. */
-  const bulkCloneToLocation = async (targetSlug: string) => {
-    if (selectedIds.size === 0) return;
+   *  matching items in EACH chosen target location, matched by name. The
+   *  server clone_to endpoint takes a single target, so we fan out per
+   *  target and aggregate the matched/unmatched counts before toasting. */
+  const bulkCloneToLocations = async (targetSlugs: string[]) => {
+    if (selectedIds.size === 0 || targetSlugs.length === 0) return;
     setBulkBusy(true);
     try {
       const ids = [...selectedIds];
-      const res = await fetch("/api/admin/menu/bulk", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "clone_to", ids, target: targetSlug }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const targetLabel =
-          activeLocations.find((l) => l.slug === targetSlug)?.city ?? targetSlug;
-        const msg = data.unmatched > 0
-          ? `${data.matched} cloned to ${targetLabel} · ${data.unmatched} skipped (no matching name).`
-          : `${data.matched} cloned to ${targetLabel}.`;
-        if (data.matched > 0) {
-          toast.success("Cloned across locations", msg);
-        } else {
-          toast.warning("Nothing cloned", msg);
-        }
-        setSelectedIds(new Set());
-      } else {
-        const data = await res.json().catch(() => ({}));
-        toast.error("Could not clone", data?.error);
+      const results = await Promise.all(
+        targetSlugs.map(async (slug) => {
+          const res = await fetch("/api/admin/menu/bulk", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "clone_to", ids, target: slug }),
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            return { slug, ok: false as const, error: err?.error || `HTTP ${res.status}` };
+          }
+          const data = await res.json();
+          return {
+            slug,
+            ok: true as const,
+            matched: data.matched ?? 0,
+            unmatched: data.unmatched ?? 0,
+          };
+        }),
+      );
+      const failures = results.filter((r) => !r.ok);
+      const matched = results.reduce((n, r) => (r.ok ? n + r.matched : n), 0);
+      const unmatched = results.reduce((n, r) => (r.ok ? n + r.unmatched : n), 0);
+      const labels = targetSlugs.map(
+        (s) => activeLocations.find((l) => l.slug === s)?.city ?? s,
+      );
+      if (failures.length === targetSlugs.length) {
+        toast.error("Could not clone", failures[0]?.error);
+        return;
       }
+      const headline =
+        targetSlugs.length === 1
+          ? `Cloned to ${labels[0]}`
+          : `Cloned to ${targetSlugs.length} locations`;
+      const detail = [
+        matched ? `${matched} matched` : null,
+        unmatched ? `${unmatched} skipped` : null,
+        failures.length ? `${failures.length} target${failures.length === 1 ? "" : "s"} failed` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      if (matched > 0) {
+        toast.success(headline, detail || labels.join(", "));
+      } else {
+        toast.warning("Nothing cloned", detail || "No matching names at the targets.");
+      }
+      setSelectedIds(new Set());
     } finally {
       setBulkBusy(false);
     }
   };
+
+  /** Apply a sparse field patch to the selected items (and, when
+   *  scope="all", their twins at every other active location). Server
+   *  resolves twins by name and routes seed rows through the override
+   *  pipeline + custom rows through updateCustomMenuItem in one batch. */
+  const performBulkEdit = useCallback(
+    async (
+      ids: string[],
+      patch: Record<string, unknown>,
+      scope: "current" | "all",
+    ) => {
+      if (ids.length === 0 || Object.keys(patch).length === 0) return;
+      setBulkBusy(true);
+      try {
+        const res = await fetch("/api/admin/menu/bulk", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "edit", ids, scope, patch }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const total = data.affected ?? 0;
+          const detail = [
+            data.seedOverridden ? `${data.seedOverridden} overridden` : null,
+            data.customUpdated ? `${data.customUpdated} updated` : null,
+            data.unresolvedIds?.length ? `${data.unresolvedIds.length} skipped` : null,
+            data.locations?.length ? `${data.locations.length} location${data.locations.length === 1 ? "" : "s"}` : null,
+          ]
+            .filter(Boolean)
+            .join(" · ");
+          const headline = scope === "all" ? "Edited across locations" : "Edited";
+          if (total > 0) {
+            toast.success(headline, detail || `${total} ${total === 1 ? "item" : "items"} updated.`);
+          } else {
+            toast.warning("Nothing updated", detail || "No matching rows.");
+          }
+          setSelectedIds(new Set());
+          await fetchMenu();
+        } else {
+          const data = await res.json().catch(() => ({}));
+          toast.error("Could not edit", data?.error);
+        }
+      } finally {
+        setBulkBusy(false);
+      }
+    },
+    [fetchMenu, toast],
+  );
 
   const toggleSelected = (id: string) => {
     setSelectedIds((prev) => {
@@ -441,6 +529,42 @@ export function AdminMenu() {
     const baseSlug = getBaseSlug(effectiveId);
     const locName = (slug: string) =>
       activeLocations.find((l) => l.slug === slug)?.city ?? slug;
+
+    // 1b) When the operator checked "Apply changes to all locations" in
+    // the edit dialog, also push the same field patch to every twin of
+    // this item at the OTHER active locations. We route through the
+    // bulk endpoint so cross-location twin resolution + custom-vs-seed
+    // routing stays in one place (no client-side fan-out).
+    if (
+      submission.propagateFieldsToAllLocations &&
+      Object.keys(change).length > 0
+    ) {
+      const propagable: Record<string, unknown> = {};
+      // The bulk-edit patch schema covers a strict subset of the edit
+      // dialog's surface — only fields meaningful as a chain-wide patch.
+      // Skip name (renamed per-row) + sku/modifiers (per-row identity).
+      if (change.price !== undefined) propagable.price = change.price;
+      if (change.cost !== undefined) propagable.cost = change.cost;
+      if (change.description !== undefined) propagable.description = change.description;
+      if (change.category !== undefined) propagable.category = change.category;
+      if (change.tags !== undefined) propagable.tags = change.tags;
+      if (change.available !== undefined) propagable.available = change.available;
+      if (change.deliveryOnly !== undefined) propagable.deliveryOnly = change.deliveryOnly;
+      if (change.packagingCost !== undefined) propagable.packagingCost = change.packagingCost;
+      if (Object.keys(propagable).length > 0) {
+        const res = await fetch("/api/admin/menu/bulk", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "edit",
+            ids: [effectiveId],
+            scope: "all",
+            patch: propagable,
+          }),
+        });
+        if (!res.ok) issues.push("propagate to other locations");
+      }
+    }
 
     // 2) Clone the post-edit item to newly-checked locations + 3)
     // remove from newly-unchecked locations. Fanned out in parallel —
@@ -659,6 +783,35 @@ export function AdminMenu() {
     });
   };
 
+  /** Compute the union of twin locations across a set of items — drives
+   *  whether the bulk-edit dialog should offer the "Apply everywhere"
+   *  scope and how the description summarizes reach. */
+  const aggregateTwinLocations = useCallback(
+    (subset: MenuItemData[]): string[] => {
+      const set = new Set<string>();
+      for (const it of subset) {
+        for (const slug of findTwinLocations(it)) set.add(slug);
+      }
+      return [...set];
+    },
+    [findTwinLocations],
+  );
+
+  const openBulkEdit = () => {
+    if (selectedIds.size === 0) return;
+    const selected = items.filter((i) => selectedIds.has(i.id));
+    setEditRequest({
+      items: selected,
+      twinLocations: aggregateTwinLocations(selected),
+    });
+  };
+
+  const openBulkClone = () => {
+    if (selectedIds.size === 0) return;
+    const selected = items.filter((i) => selectedIds.has(i.id));
+    setCloneRequest({ items: selected });
+  };
+
   const confirmDelete = async (scope: "current" | "all") => {
     if (!deleteRequest) return;
     const ids = deleteRequest.items.map((i) => i.id);
@@ -810,20 +963,27 @@ export function AdminMenu() {
             <Button size="sm" variant="ghost" disabled={bulkBusy} onClick={() => bulkSetAvailability(false)}>
               86 (hide)
             </Button>
-            {activeLocations
-              .filter((l) => l.slug !== pageLoc)
-              .map((l) => (
-                <Button
-                  key={l.slug}
-                  size="sm"
-                  variant="ghost"
-                  disabled={bulkBusy}
-                  onClick={() => bulkCloneToLocation(l.slug)}
-                  title={`Copy the selected items' price / cost / description overrides to matching items in ${l.city}.`}
-                >
-                  Clone → {l.city}
-                </Button>
-              ))}
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={bulkBusy}
+              onClick={openBulkEdit}
+              title="Apply price / cost / availability / category / tags / description / packaging across the selected items, optionally fan-out to all locations."
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              Edit selected
+            </Button>
+            {activeLocations.length > 1 && (
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={bulkBusy}
+                onClick={openBulkClone}
+                title="Clone the selected items' price / cost / description overrides to multiple target locations at once."
+              >
+                Clone to…
+              </Button>
+            )}
             <Button
               size="sm"
               variant="ghost"
@@ -1047,6 +1207,36 @@ export function AdminMenu() {
         onCancel={() => setDeleteRequest(null)}
         onConfirm={confirmDelete}
       />
+
+      <BulkEditDialog
+        request={editRequest}
+        currentLocationLabel={
+          activeLocations.find((l) => l.slug === pageLoc)?.city ?? pageLoc
+        }
+        twinLocationLabels={
+          editRequest?.twinLocations.map(
+            (slug) => activeLocations.find((l) => l.slug === slug)?.city ?? slug,
+          ) ?? []
+        }
+        busy={bulkBusy}
+        onCancel={() => setEditRequest(null)}
+        onConfirm={async (patch, scope) => {
+          const ids = editRequest?.items.map((i) => i.id) ?? [];
+          setEditRequest(null);
+          await performBulkEdit(ids, patch, scope);
+        }}
+      />
+
+      <BulkCloneDialog
+        request={cloneRequest}
+        currentLocationSlug={pageLoc}
+        busy={bulkBusy}
+        onCancel={() => setCloneRequest(null)}
+        onConfirm={async (targets) => {
+          setCloneRequest(null);
+          await bulkCloneToLocations(targets);
+        }}
+      />
     </div>
   );
 }
@@ -1178,6 +1368,483 @@ function DeleteMenuItemDialog({
   );
 }
 
+// ─── Bulk edit dialog ─────────────────────────────────────────────────────
+//
+// Apply a sparse field patch to the selected rows in one go. Each field
+// has an "enable" checkbox so operators only push the values they
+// actually want to change — leaving everything else untouched. The
+// footer offers "Apply here" vs "Apply everywhere" so the same patch
+// can fan out to twins at every active location, matched by name.
+
+interface BulkEditDialogProps {
+  request: {
+    items: MenuItemData[];
+    twinLocations: string[];
+  } | null;
+  currentLocationLabel: string;
+  twinLocationLabels: string[];
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: (
+    patch: Record<string, unknown>,
+    scope: "current" | "all",
+  ) => void | Promise<void>;
+}
+
+function BulkEditDialog({
+  request,
+  currentLocationLabel,
+  twinLocationLabels,
+  busy,
+  onCancel,
+  onConfirm,
+}: BulkEditDialogProps) {
+  const open = request !== null;
+  const items = request?.items ?? [];
+
+  // Track which fields the operator wants to push + the value for each.
+  const [enabled, setEnabled] = useState<Record<string, boolean>>({});
+  const [priceStr, setPriceStr] = useState("");
+  const [costStr, setCostStr] = useState("");
+  const [available, setAvailable] = useState(true);
+  const [category, setCategory] = useState<MenuCategory>("pizza");
+  const [tagSet, setTagSet] = useState<string[]>([]);
+  const [description, setDescription] = useState("");
+  const [deliveryOnly, setDeliveryOnly] = useState(false);
+  const [packagingStr, setPackagingStr] = useState("");
+
+  // Reset form whenever a new request opens so stale values from the
+  // previous open don't leak in.
+  useEffect(() => {
+    if (open) {
+      setEnabled({});
+      setPriceStr("");
+      setCostStr("");
+      setAvailable(true);
+      setCategory("pizza");
+      setTagSet([]);
+      setDescription("");
+      setDeliveryOnly(false);
+      setPackagingStr("");
+    }
+  }, [open]);
+
+  if (!open) return <Dialog open={false} onClose={onCancel} />;
+
+  const toggleField = (key: string) =>
+    setEnabled((prev) => ({ ...prev, [key]: !prev[key] }));
+
+  const toggleTag = (tag: string) =>
+    setTagSet((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+    );
+
+  const buildPatch = (): Record<string, unknown> => {
+    const patch: Record<string, unknown> = {};
+    if (enabled.price) {
+      const v = Math.round(parseFloat(priceStr || "0") * 100);
+      if (v >= 0) patch.price = v;
+    }
+    if (enabled.cost) {
+      const v = Math.round(parseFloat(costStr || "0") * 100);
+      if (v >= 0) patch.cost = v;
+    }
+    if (enabled.available) patch.available = available;
+    if (enabled.category) patch.category = category;
+    if (enabled.tags) patch.tags = tagSet;
+    if (enabled.description) patch.description = description;
+    if (enabled.deliveryOnly) patch.deliveryOnly = deliveryOnly ? true : null;
+    if (enabled.packagingCost) {
+      const raw = packagingStr.trim();
+      patch.packagingCost =
+        raw === "" ? null : Math.max(0, Math.round(parseFloat(raw || "0") * 100));
+    }
+    return patch;
+  };
+
+  const patch = buildPatch();
+  const patchKeys = Object.keys(patch);
+  const canSubmit = patchKeys.length > 0 && !busy;
+  const offerAllScope = twinLocationLabels.length > 0;
+
+  const fieldRow = (
+    key: string,
+    label: string,
+    input: ReactNode,
+    hint?: string,
+  ) => (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "auto 1fr",
+        gap: "0.5rem 0.75rem",
+        alignItems: "start",
+        padding: "0.625rem 0.75rem",
+        borderRadius: "var(--radius-md)",
+        border: "1px solid var(--border)",
+        background: enabled[key] ? "var(--brand-soft, var(--surface-2))" : "var(--surface-1)",
+      }}
+    >
+      <input
+        type="checkbox"
+        id={`bulk-edit-${key}`}
+        checked={!!enabled[key]}
+        onChange={() => toggleField(key)}
+        style={{ width: 16, height: 16, marginTop: 2 }}
+      />
+      <label
+        htmlFor={`bulk-edit-${key}`}
+        style={{ fontSize: "0.875rem", fontWeight: 600, cursor: "pointer" }}
+      >
+        {label}
+      </label>
+      <span style={{ gridColumn: "2 / 3" }}>
+        <div style={{ opacity: enabled[key] ? 1 : 0.45 }}>{input}</div>
+        {hint && (
+          <div
+            style={{
+              fontSize: "0.75rem",
+              color: "var(--fg-muted)",
+              marginTop: 4,
+            }}
+          >
+            {hint}
+          </div>
+        )}
+      </span>
+    </div>
+  );
+
+  return (
+    <Dialog
+      open={open}
+      onClose={busy ? () => {} : onCancel}
+      size="lg"
+      title={
+        items.length === 1
+          ? `Edit "${items[0].name}"`
+          : `Edit ${items.length} menu items`
+      }
+      description={
+        offerAllScope
+          ? `Also exists at: ${twinLocationLabels.join(", ")}. Pick which fields to change, then choose scope.`
+          : "Pick which fields to change. Empty fields stay untouched."
+      }
+      footer={
+        <>
+          <Button variant="ghost" onClick={onCancel} disabled={busy}>
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            onClick={() => onConfirm(patch, "current")}
+            disabled={!canSubmit}
+            loading={busy && !offerAllScope}
+          >
+            Apply to {currentLocationLabel}
+          </Button>
+          {offerAllScope && (
+            <Button
+              variant="primary"
+              onClick={() => onConfirm(patch, "all")}
+              disabled={!canSubmit}
+              loading={busy}
+            >
+              Apply everywhere
+            </Button>
+          )}
+        </>
+      }
+    >
+      <div className="v2-stack-12">
+        {items.length > 1 && (
+          <details
+            style={{
+              fontSize: "0.8125rem",
+              color: "var(--fg-muted)",
+              padding: "0.5rem 0.75rem",
+              border: "1px solid var(--border)",
+              borderRadius: "var(--radius-md)",
+              background: "var(--surface-2)",
+            }}
+          >
+            <summary style={{ cursor: "pointer" }}>
+              {items.length} items selected
+            </summary>
+            <ul style={{ margin: "0.5rem 0 0 1.25rem", padding: 0 }}>
+              {items.slice(0, 20).map((i) => (
+                <li key={i.id}>{i.name}</li>
+              ))}
+              {items.length > 20 && (
+                <li style={{ listStyle: "none", opacity: 0.7 }}>
+                  …and {items.length - 20} more
+                </li>
+              )}
+            </ul>
+          </details>
+        )}
+
+        {fieldRow(
+          "price",
+          "Price (PLN)",
+          <Input
+            type="number"
+            step="0.01"
+            min="0"
+            value={priceStr}
+            onChange={(e) => setPriceStr(e.target.value)}
+            disabled={!enabled.price}
+            trailingAdornment={<span className="v2-muted">zł</span>}
+            placeholder="e.g. 27.90"
+          />,
+        )}
+
+        {fieldRow(
+          "cost",
+          "Food cost (PLN)",
+          <Input
+            type="number"
+            step="0.01"
+            min="0"
+            value={costStr}
+            onChange={(e) => setCostStr(e.target.value)}
+            disabled={!enabled.cost}
+            trailingAdornment={<span className="v2-muted">zł</span>}
+            placeholder="e.g. 4.50"
+          />,
+          "Recipe-attached items keep their canonical cost; the override is stored but ignored.",
+        )}
+
+        {fieldRow(
+          "available",
+          "Available to customers",
+          <label
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              fontSize: "0.875rem",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={available}
+              onChange={(e) => setAvailable(e.target.checked)}
+              disabled={!enabled.available}
+            />
+            {available ? "Available" : "Sold out / hidden"}
+          </label>,
+        )}
+
+        {fieldRow(
+          "category",
+          "Category",
+          <Select
+            value={category}
+            onChange={(e) => setCategory(e.target.value as MenuCategory)}
+            disabled={!enabled.category}
+            options={CATEGORY_ORDER.map((c) => ({
+              value: c,
+              label: MENU_CATEGORY_LABELS[c],
+            }))}
+          />,
+        )}
+
+        {fieldRow(
+          "tags",
+          "Tags (replace)",
+          <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap" }}>
+            {MENU_TAGS.map((tag) => {
+              const on = tagSet.includes(tag);
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => toggleTag(tag)}
+                  aria-pressed={on}
+                  className={`v2-chip ${on ? "is-on" : ""}`}
+                  disabled={!enabled.tags}
+                  style={enabled.tags ? undefined : { cursor: "default" }}
+                >
+                  {tag}
+                </button>
+              );
+            })}
+          </div>,
+          "Replaces the tag list — uncheck all to clear.",
+        )}
+
+        {fieldRow(
+          "description",
+          "Description",
+          <Textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            disabled={!enabled.description}
+            rows={3}
+            placeholder="New description for the selected items…"
+          />,
+        )}
+
+        {fieldRow(
+          "deliveryOnly",
+          "Delivery-only",
+          <label
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              fontSize: "0.875rem",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={deliveryOnly}
+              onChange={(e) => setDeliveryOnly(e.target.checked)}
+              disabled={!enabled.deliveryOnly}
+            />
+            {deliveryOnly ? "Delivery only" : "Available on every channel"}
+          </label>,
+        )}
+
+        {fieldRow(
+          "packagingCost",
+          "Packaging cost (PLN)",
+          <Input
+            type="number"
+            step="0.01"
+            min="0"
+            value={packagingStr}
+            onChange={(e) => setPackagingStr(e.target.value)}
+            disabled={!enabled.packagingCost}
+            trailingAdornment={<span className="v2-muted">zł</span>}
+            placeholder="Blank = category default"
+          />,
+          "Per-unit box/wrap cost on delivery orders. Blank clears the override.",
+        )}
+      </div>
+    </Dialog>
+  );
+}
+
+// ─── Bulk clone dialog (multi-target) ────────────────────────────────────
+//
+// Replaces the per-location "Clone → X" buttons in the bulk toolbar.
+// Operators pick any combination of target locations and the parent
+// fans out one bulk clone_to call per target, aggregating the
+// matched / unmatched counts before toasting.
+
+interface BulkCloneDialogProps {
+  request: { items: MenuItemData[] } | null;
+  currentLocationSlug: string;
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: (targets: string[]) => void | Promise<void>;
+}
+
+function BulkCloneDialog({
+  request,
+  currentLocationSlug,
+  busy,
+  onCancel,
+  onConfirm,
+}: BulkCloneDialogProps) {
+  const open = request !== null;
+  const items = request?.items ?? [];
+  const candidates = activeLocations.filter((l) => l.slug !== currentLocationSlug);
+  const [targets, setTargets] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (open) setTargets([]);
+  }, [open]);
+
+  if (!open) return <Dialog open={false} onClose={onCancel} />;
+
+  const toggle = (slug: string) =>
+    setTargets((prev) =>
+      prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug],
+    );
+
+  return (
+    <Dialog
+      open={open}
+      onClose={busy ? () => {} : onCancel}
+      size="md"
+      title={
+        items.length === 1
+          ? `Clone "${items[0].name}" overrides`
+          : `Clone ${items.length} items' overrides`
+      }
+      description="Copies the price / cost / description / role / LTO overrides to the matching items in each selected location. Availability stays a local decision."
+      footer={
+        <>
+          <Button variant="ghost" onClick={onCancel} disabled={busy}>
+            Cancel
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => setTargets(candidates.map((l) => l.slug))}
+            disabled={busy || candidates.length === 0}
+          >
+            Select all
+          </Button>
+          <Button
+            variant="primary"
+            onClick={() => onConfirm(targets)}
+            disabled={targets.length === 0 || busy}
+            loading={busy}
+          >
+            Clone to{" "}
+            {targets.length === 0
+              ? "…"
+              : targets.length === 1
+              ? activeLocations.find((l) => l.slug === targets[0])?.city ?? targets[0]
+              : `${targets.length} locations`}
+          </Button>
+        </>
+      }
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+        {candidates.length === 0 ? (
+          <p style={{ fontSize: "0.875rem", color: "var(--fg-muted)", margin: 0 }}>
+            No other active locations to clone to.
+          </p>
+        ) : (
+          candidates.map((loc) => {
+            const on = targets.includes(loc.slug);
+            return (
+              <label
+                key={loc.slug}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.625rem",
+                  padding: "0.625rem 0.75rem",
+                  border: "1px solid var(--border)",
+                  borderRadius: "var(--radius-md)",
+                  cursor: "pointer",
+                  background: on ? "var(--brand-soft, var(--surface-2))" : "var(--surface-1)",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={on}
+                  onChange={() => toggle(loc.slug)}
+                  style={{ width: 16, height: 16 }}
+                />
+                <span style={{ fontWeight: 600, fontSize: "0.9375rem" }}>{loc.city}</span>
+                <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "var(--fg-muted)" }}>
+                  {loc.slug}
+                </span>
+              </label>
+            );
+          })
+        )}
+      </div>
+    </Dialog>
+  );
+}
+
 interface EditSubmission {
   fieldChange: {
     name?: string;
@@ -1200,6 +1867,10 @@ interface EditSubmission {
    *  looks up the twin by base slug and either hard-deletes (custom)
    *  or sets `hidden: true` (seed). */
   removeFrom: string[];
+  /** When true, the field changes also propagate to every twin of this
+   *  item at other active locations (matched by name). Saves the
+   *  operator from re-opening this dialog for each truck. */
+  propagateFieldsToAllLocations?: boolean;
   /** Full snapshot of the edited values, used for cloning. */
   draft: {
     name: string;
@@ -1262,6 +1933,10 @@ function EditItemDialog({ item, currentSlug, menusByLocation, onClose, onSave }:
   }, [item, currentSlug, menusByLocation]);
 
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+  /** "Apply price/cost/description changes to every other location where
+   *  this item exists." Only meaningful when the item has at least one
+   *  cross-location twin — the dialog renders the checkbox conditionally. */
+  const [propagateAll, setPropagateAll] = useState(false);
 
   useEffect(() => {
     if (item) {
@@ -1287,6 +1962,7 @@ function EditItemDialog({ item, currentSlug, menusByLocation, onClose, onSave }:
           : [],
       );
       setSelectedLocations(initialLocations);
+      setPropagateAll(false);
       setBusy(false);
     }
   }, [item, initialLocations]);
@@ -1379,6 +2055,7 @@ function EditItemDialog({ item, currentSlug, menusByLocation, onClose, onSave }:
       newId,
       addTo,
       removeFrom,
+      propagateFieldsToAllLocations: propagateAll,
       draft: {
         name: trimmedName || item.name,
         description: desc,
@@ -1414,7 +2091,11 @@ function EditItemDialog({ item, currentSlug, menusByLocation, onClose, onSave }:
       onClose={onClose}
       size="md"
       title={`Edit ${item.name}`}
-      description="Changes apply to this location only. Save to publish."
+      description={
+        initialLocations.filter((s) => s !== currentSlug).length > 0
+          ? `Changes apply to ${activeLocations.find((l) => l.slug === currentSlug)?.city ?? currentSlug} unless you tick "Apply to all locations" below.`
+          : "Changes apply to this location only. Save to publish."
+      }
       footer={
         <>
           <Button variant="ghost" onClick={onClose} disabled={busy}>
@@ -1500,6 +2181,47 @@ function EditItemDialog({ item, currentSlug, menusByLocation, onClose, onSave }:
             be restored later).
           </p>
         </div>
+        {initialLocations.filter((s) => s !== currentSlug).length > 0 && (
+          <label
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: "0.5rem",
+              padding: "0.625rem 0.75rem",
+              border: "1px solid var(--border)",
+              borderRadius: "var(--radius-md)",
+              background: "var(--brand-soft, var(--surface-2))",
+              fontSize: "0.875rem",
+              cursor: "pointer",
+            }}
+            title="Propagate the field changes to twins of this item at other locations. Matched by name."
+          >
+            <input
+              type="checkbox"
+              checked={propagateAll}
+              onChange={(e) => setPropagateAll(e.target.checked)}
+              style={{ width: 16, height: 16, marginTop: 2, flexShrink: 0 }}
+            />
+            <span>
+              <strong>Apply price, cost &amp; description changes to all locations.</strong>
+              <span
+                style={{
+                  display: "block",
+                  fontSize: "0.75rem",
+                  color: "var(--fg-muted)",
+                  marginTop: 2,
+                }}
+              >
+                Same item exists at{" "}
+                {initialLocations
+                  .filter((s) => s !== currentSlug)
+                  .map((s) => activeLocations.find((l) => l.slug === s)?.city ?? s)
+                  .join(", ")}
+                . Identity fields (name, slug, SKU, modifiers) only change here.
+              </span>
+            </span>
+          </label>
+        )}
         <Input
           label="Price (PLN)"
           type="number"
