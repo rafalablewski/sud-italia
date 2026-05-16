@@ -2752,6 +2752,41 @@ html { scroll-behavior: smooth; }
   margin-top: -8px;
 }
 
+/* Boolean field rendered as a clickable card so it lines up with the
+ * Input next to it in a 2-col form row — same border, same padding,
+ * same height (~36px). Wrapped in .v2-field so it carries a label
+ * above the control like every other field in the per-location card. */
+.v2-detail-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  min-height: 36px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  color: var(--fg);
+  cursor: pointer;
+  user-select: none;
+  transition: border-color var(--duration-fast), background var(--duration-fast);
+}
+.v2-detail-toggle:hover {
+  border-color: color-mix(in oklab, var(--brand) 60%, var(--border));
+}
+.v2-detail-toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--brand);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.v2-detail-toggle:has(input:checked) {
+  border-color: color-mix(in oklab, var(--brand) 50%, var(--border));
+  background: color-mix(in oklab, var(--brand) 8%, var(--surface-2));
+}
+
 /* Shared scope bar — sits between the per-location pricing card and
  * everything else on the detail page. Picks the active truck that
  * the cards below (Product, Modifiers) read + write to. One control

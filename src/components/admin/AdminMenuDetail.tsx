@@ -1045,16 +1045,6 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
               />
             </div>
             <div className="v2-detail-form-row" data-cols="2">
-              <label className="v2-detail-inline-check">
-                <input
-                  type="checkbox"
-                  checked={chain.deliveryOnly}
-                  onChange={(e) =>
-                    setChain((c) => ({ ...c, deliveryOnly: e.target.checked }))
-                  }
-                />
-                Delivery-only item
-              </label>
               <Input
                 type="number"
                 step="0.01"
@@ -1067,6 +1057,19 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
                 trailingAdornment={<span className="v2-muted">zł</span>}
                 placeholder="Category default"
               />
+              <div className="v2-field">
+                <label className="v2-field-label">Channel</label>
+                <label className="v2-detail-toggle">
+                  <input
+                    type="checkbox"
+                    checked={chain.deliveryOnly}
+                    onChange={(e) =>
+                      setChain((c) => ({ ...c, deliveryOnly: e.target.checked }))
+                    }
+                  />
+                  <span>Delivery-only item</span>
+                </label>
+              </div>
             </div>
           </div>
         </CardBody>
