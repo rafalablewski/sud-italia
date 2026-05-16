@@ -13,6 +13,25 @@ There are already five thick audits in this directory (admin dashboard, NYC/Sing
 
 ---
 
+## 0.1 Resolution log (post-audit)
+
+**2026-05-16 — Theatre-to-function pass.** The five "theatre, not function" surfaces called out in §3 and §15 (Inventory, AI demand forecast, Suppliers/POs, KDS SLA + hotkeys, Push notifications) were wired end-to-end the same day this audit landed. Commit `c863a3a` on `claude/audit-findings-documentation-2gMJh`:
+
+| Surface | Resolution |
+|---|---|
+| **Inventory — recipe-driven stock decrement** | `src/lib/inventory-decrement.ts` posts one `consume` movement per recipe ingredient on every paid order; refunds + cancellations restore via `adjust`. Wired into `createOrder`, `updateOrderStatus`, refund route. Variance report now reflects real consumption. |
+| **Suppliers / POs — PAR-driven drafts** | `src/lib/par-purchase-orders.ts` + `/api/admin/cron/par-purchase-orders` write one draft PO per supplier per UTC day using lead-time-adjusted thresholds from the trailing 14d of `consume` movements. Idempotent on `par-{slug}-{supplierId}-{YYYYMMDD}`. Added to the daily dispatcher. |
+| **AI — Claude demand forecast** | `src/lib/ai/forecast.ts` + `/api/admin/ai/forecast` call Claude for structured-JSON 7-day predicted_orders + 80% confidence band + operator reasoning, cached 24h. Falls back to the 7-day MA when `ANTHROPIC_API_KEY` is unset. Dashboard surfaces a `Claude / Heuristic` source badge so the two aren't conflated. |
+| **KDS — promised-ready SLA + bump-bar hotkeys** | `AdminKDS.tsx` renders T-MM:SS remaining vs `estimatedReadyAt` next to elapsed; tone drives from remaining (warning <3min, danger when LATE). Distinct audible chime fires once per ticket on first cross of 0. Number keys 1–9 + 0 advance the Nth ticket in the leftmost active column. |
+| **Push notifications** | `web-push` installed, real send path live, 404/410 endpoints pruned automatically. Comms dispatcher fans `order.ready` to every saved subscription alongside SMS. New `PushOptInButton` on `/order-confirmation` (high-intent moment), silently hides for unsupported browsers, denied perms, and already-subscribed devices. |
+| **`/admin/capabilities` honesty pass** | Added a `caveats` field rendered as amber callout. Demoted "Dynamic pricing suggestions" from `live` to `needs-config` (no engine). Rewrote Inventory, Suppliers/POs, KDS SLA, KDS hotkeys, Push, Demand forecast, Anomaly, Insights, WhatsApp entries to reflect what's actually wired. |
+
+**Remaining audit findings (untouched by this pass):** zero tests, plaintext admin password compare, 10-second polling on parts of the kitchen UI not reachable from KDS v2, no Neon backup/restore runbook, no MFA, no staging env, no cohort/CLTV/CAC, no food photography, address autocomplete still commented out. Sections 4, 5, 6, 9, and 11 below are unchanged and still actionable.
+
+The original §3 "What is theatre" table, the §15 "Final Brutal Verdict" bullet about the five surfaces, the §10 top-features list, and Appendix A are preserved below with `~~strikethrough~~` and `✅ RESOLVED` markers so the diligence trail remains intact.
+
+---
+
 ## 1. Executive Summary
 
 **One-line verdict:** A genuinely impressive single-operator codebase wearing the costume of a multi-location chain — about 12 months of solo-builder over-engineering disguising a business that has not yet proven it can fill the trucks it already owns.
@@ -22,10 +41,10 @@ The product side is sophisticated for a 2-truck Polish pizza concept: 27 admin p
 But:
 
 - **Zero tests.** None. Not one `.test.ts` file in 126 API routes. ([package.json](../../package.json), no test runner declared.)
-- **Stock does not decrement on order.** Inventory is a manual logbook with a pretty chart. ([src/lib/store.ts:1088](../../src/lib/store.ts) `createOrder` does not consume recipes.)
+- ~~**Stock does not decrement on order.** Inventory is a manual logbook with a pretty chart.~~ **✅ RESOLVED 2026-05-16** — see §0.1 resolution log. `createOrder` now calls `consumeRecipeForOrder` and refunds/cancellations call `restoreRecipeForOrder`.
 - **Admin password is plaintext compared.** Default `admin123`. No bcrypt, no MFA, no rotation. ([src/lib/admin-auth.ts:143](../../src/lib/admin-auth.ts).)
-- **The “AI Operating System”** advertised on `/admin/capabilities` is a **7-day moving average** and a heuristic anomaly detector. ([src/components/admin/AdminAI.tsx:147](../../src/components/admin/AdminAI.tsx).)
-- **Real-time is 10-second polling** dressed up as SSE. ([src/components/kitchen/KitchenOrderBoard.tsx](../../src/components/kitchen/KitchenOrderBoard.tsx).)
+- ~~**The “AI Operating System”** advertised on `/admin/capabilities` is a **7-day moving average** and a heuristic anomaly detector.~~ **✅ RESOLVED 2026-05-16** — Demand forecast is now Claude-backed with explicit `Heuristic` fallback badge when `ANTHROPIC_API_KEY` is unset. Anomaly detector is still heuristic but the capabilities page calls it out as such (audit §0.1).
+- **Real-time is 10-second polling** dressed up as SSE on parts of the public-facing tracker. KDS v2 (the operator-facing board) was already on SSE via `useAdminOrdersStream` before this audit; the legacy `KitchenOrderBoard.tsx` polling path remains. ([src/components/kitchen/KitchenOrderBoard.tsx](../../src/components/kitchen/KitchenOrderBoard.tsx).)
 - **Two locations live. Wrocław is hardcoded-but-inactive.** The “100-location” framing in the capabilities page is fiction until a third location exists.
 
 The honest framing: this is a **product engineering exercise** with a real restaurant attached. The risk is the opposite of most startups — the software is far ahead of the business and the operator is at risk of polishing the dashboard while the trucks under-trade. Every hour spent on the 27th admin page is an hour not spent on demand generation, supplier negotiation, or hiring a second great pizzaiolo.
@@ -68,27 +87,27 @@ Average around **4.8/10**. The codebase pulls it up; the unit-economics reality 
 
 ### What is theatre
 
-| Surface | What it looks like | What it actually is |
-|---|---|---|
-| Inventory | Stock levels, par, reorder points, variance | Manual ledger; **orders do not consume stock**. Variance compares theoretical-from-recipes to manually-logged actuals. [src/components/admin/AdminInventory.tsx:840](../../src/components/admin/AdminInventory.tsx) |
-| Suppliers / POs | Master list + workflow | Operator types orders by hand. No reorder triggers. |
-| AI Operating System | "Demand forecast", "anomaly detection", "dynamic pricing suggestions" | 7-day rolling average and threshold rules. [src/components/admin/AdminAI.tsx:141](../../src/components/admin/AdminAI.tsx) |
-| Cohort retention | Reports page | Not computed. AOV + revenue per date range. No CLTV. |
-| Sales per labor hour | Staff page | Labor cost tracked, never divided by sales. |
-| Promised-ready SLA on KDS | Listed in capabilities | UI shows elapsed only; the “red+audible at <0s” claim is aspirational. [src/components/admin/AdminKDS.tsx:70](../../src/components/admin/AdminKDS.tsx) |
-| KDS bump-bar hotkeys (1–9, 0) | Listed in capabilities | Button-click only. Will cost ~3 seconds per bump at rush. |
-| Push notifications | Listed in capabilities | Templates exist; VAPID keys not configured. |
-| WhatsApp ordering | Listed in capabilities | Stubbed; depends on 9 env vars that aren’t set. |
+| Surface | What it looks like | What it actually is (at audit time) | Resolution |
+|---|---|---|---|
+| Inventory | Stock levels, par, reorder points, variance | Manual ledger; **orders do not consume stock**. Variance compares theoretical-from-recipes to manually-logged actuals. [src/components/admin/AdminInventory.tsx:840](../../src/components/admin/AdminInventory.tsx) | **✅ RESOLVED 2026-05-16** — `consumeRecipeForOrder` posts `consume` movements on every paid order; refunds + cancellations restore. See §0.1. |
+| Suppliers / POs | Master list + workflow | Operator types orders by hand. No reorder triggers. | **✅ RESOLVED 2026-05-16** — daily PAR cron writes one draft PO per supplier per UTC day using lead-time-adjusted thresholds. Operator one-clicks Send. See §0.1. |
+| AI Operating System | "Demand forecast", "anomaly detection", "dynamic pricing suggestions" | 7-day rolling average and threshold rules. [src/components/admin/AdminAI.tsx:141](../../src/components/admin/AdminAI.tsx) | **✅ PARTIALLY RESOLVED 2026-05-16** — Demand forecast is now Claude-backed (structured JSON + 80% confidence band + reasoning) with honest `Heuristic` fallback badge. Anomaly detection is still ±20% delta — capabilities page now calls it out. Dynamic pricing demoted to `needs-config` until an engine exists. |
+| Cohort retention | Reports page | Not computed. AOV + revenue per date range. No CLTV. | Outstanding. Appendix A row 15. |
+| Sales per labor hour | Staff page | Labor cost tracked, never divided by sales. | Outstanding. |
+| Promised-ready SLA on KDS | Listed in capabilities | UI shows elapsed only; the “red+audible at <0s” claim is aspirational. [src/components/admin/AdminKDS.tsx:70](../../src/components/admin/AdminKDS.tsx) | **✅ RESOLVED 2026-05-16** — `AdminKDS` now renders T-MM:SS remaining vs `estimatedReadyAt`, tone drives from remaining, distinct chime fires once per ticket on first cross of 0. See §0.1. |
+| KDS bump-bar hotkeys (1–9, 0) | Listed in capabilities | Button-click only. Will cost ~3 seconds per bump at rush. | **✅ RESOLVED 2026-05-16** — number keys advance the Nth ticket in the leftmost active column; keydown listener attached at the AdminKDS root, ignores input/textarea focus. |
+| Push notifications | Listed in capabilities | Templates exist; VAPID keys not configured. | **✅ RESOLVED 2026-05-16** — `web-push` installed, real send path live, outbox dispatcher fans `order.ready` to every saved subscription, `PushOptInButton` on order-confirmation page. Still requires the operator to generate VAPID keys + set env vars to activate end-to-end in production. |
+| WhatsApp ordering | Listed in capabilities | Stubbed; depends on 9 env vars that aren’t set. | Outstanding. Capabilities page now carries a caveat noting the multi-env-var dependency. |
 
-This is the most important section of the audit: **`/admin/capabilities` is currently selling a chain to its own founder.** It is the single most dangerous file in the repo because it lets the operator believe the business is more automated than it is. Rule #9 of CLAUDE.md is good in principle; in practice, several entries are marked “live” when the underlying work is heuristic, stubbed, or manual. Fix this in week one.
+This was the most important section of the audit when written: **`/admin/capabilities` was selling a chain to its own founder.** Rule #9 of CLAUDE.md is good in principle but several entries were marked “live” when the underlying work was heuristic, stubbed, or manual. As of 2026-05-16 the capabilities page now uses a `caveats` field rendered as an amber callout under any entry where reality and the summary diverge; the audited rows above have been rewritten to match what's actually wired.
 
 ### Operational bottlenecks
 
-1. **Manual stock consumption** — at 100 orders/day, each order touches 4–8 ingredients × 2 trucks = 800–1600 manual moves/day to keep the variance report honest. Nobody will do this. The report decays into noise within 30 days.
-2. **No PAR-driven purchase orders** — the operator wakes up, eyeballs the dough buckets, calls the supplier. This is fine at 2 trucks. It is unsurvivable at 5.
-3. **Promised-ready time is not surfaced on tickets** — KDS shows elapsed but not “target.” In a queue surge this is the difference between “fast” and “late.”
-4. **Refunds bypass stock reconciliation** ([variance.ts:10](../../src/lib/variance.ts)). A 6-item refunded order leaves 6 ghost-consumed ingredients in the books.
-5. **Cash sessions are soft-delete-only.** No tamper-evident hash chain. EU tax authorities are starting to require that. ([AdminCash](../../src/components/admin/) and [AdminAuditLog](../../src/components/admin/).)
+1. ~~**Manual stock consumption** — at 100 orders/day, each order touches 4–8 ingredients × 2 trucks = 800–1600 manual moves/day to keep the variance report honest. Nobody will do this. The report decays into noise within 30 days.~~ **✅ RESOLVED 2026-05-16** — automated via `consumeRecipeForOrder`.
+2. ~~**No PAR-driven purchase orders** — the operator wakes up, eyeballs the dough buckets, calls the supplier. This is fine at 2 trucks. It is unsurvivable at 5.~~ **✅ RESOLVED 2026-05-16** — daily PAR cron now writes draft POs per supplier.
+3. ~~**Promised-ready time is not surfaced on tickets** — KDS shows elapsed but not “target.” In a queue surge this is the difference between “fast” and “late.”~~ **✅ RESOLVED 2026-05-16** — T-MM:SS countdown next to elapsed on every KDS ticket; chime fires on first cross of 0.
+4. ~~**Refunds bypass stock reconciliation** ([variance.ts:10](../../src/lib/variance.ts)). A 6-item refunded order leaves 6 ghost-consumed ingredients in the books.~~ **✅ RESOLVED 2026-05-16** — full refunds + cancellations call `restoreRecipeForOrder`. (Partial refunds still don't restore — see §0.1 caveat.)
+5. **Cash sessions are soft-delete-only.** No tamper-evident hash chain. EU tax authorities are starting to require that. ([AdminCash](../../src/components/admin/) and [AdminAuditLog](../../src/components/admin/).) Outstanding.
 
 ---
 
@@ -228,11 +247,11 @@ The customer attach-history data ([src/lib/upsell.ts:111](../../src/lib/upsell.t
 | Combo deals engine | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ |
 | Contextual upsell (hour × margin × customer history) | ✅ | ⚠️ (basic) | ❌ | ✅ | ✅ | ⚠️ | ❌ |
 | KDS with station routing | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ |
-| Real-time stock decrement | ❌ | ✅ | ✅ | n/a | ✅ | ✅ | ❌ |
-| Recipe-driven PARs + auto-PO | ❌ | ✅ (paid) | ⚠️ | n/a | ✅ | ✅ | ❌ |
+| Real-time stock decrement | ✅ *(2026-05-16)* | ✅ | ✅ | n/a | ✅ | ✅ | ❌ |
+| Recipe-driven PARs + auto-PO | ✅ drafts *(2026-05-16)* | ✅ (paid) | ⚠️ | n/a | ✅ | ✅ | ❌ |
 | Driver dispatch + live ETA | Partial | ⚠️ | ❌ | ✅ | ✅ | ⚠️ | ❌ |
-| Customer push notifications | ❌ (stubbed) | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
-| Real-time KDS (push, not poll) | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Customer push notifications | ✅ *(2026-05-16, needs VAPID)* | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Real-time KDS (push, not poll) | ✅ KDS v2 / ❌ legacy board | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
 | Real food photography | ❌ | n/a | n/a | ✅ | ✅ | ✅ | ✅ |
 | Cohort retention dashboards | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
 | CLTV / CAC tracking | ❌ | ✅ | ⚠️ | ✅ | ✅ | ✅ | ❌ |
@@ -243,7 +262,7 @@ The customer attach-history data ([src/lib/upsell.ts:111](../../src/lib/upsell.t
 
 **Where Sud Italia is genuinely ahead of Toast/Square/Uber:** phone-first identity, segmented delivery thresholds with copy, customer attach-history-weighted upsell scoring, Polish fiscal compliance, group wallet pooling, founder narrative authenticity.
 
-**Where it is dangerously behind:** real food photography, push notifications, real-time KDS, recipe-driven stock and PO automation, cohort retention, CLTV/CAC, tests.
+**Where it is dangerously behind:** real food photography, ~~push notifications~~ *(addressed 2026-05-16)*, ~~real-time KDS~~ *(KDS v2 already on SSE)*, ~~recipe-driven stock and PO automation~~ *(addressed 2026-05-16)*, cohort retention, CLTV/CAC, tests.
 
 **Where it is behind in ways that don't matter yet:** route optimization, driver mobile app, predictive demand modeling, ML personalization. None of these matter under 5 trucks.
 
@@ -305,15 +324,15 @@ The customer attach-history data ([src/lib/upsell.ts:111](../../src/lib/upsell.t
 | 7 | Switch combo copy from "Save 10%" to "Save 5.78 PLN" | 1 hour | +1–2% combo attach |
 | 8 | Activate referral give-get with auto-generated shareable link per phone | 2 days eng | +3–7% net-new acquisition over 60 days |
 | 9 | Build a "Weekly Usual" page accessible from header for Silver+ tier | 2 days eng | +retention for top decile, lifts CLTV materially |
-| 10 | Replace `/admin/capabilities` claims with reality: mark heuristic things heuristic, stubbed things `needs-config` | 0.5 day | Stops you fooling yourself; aligns engineering priority |
+| 10 | ~~Replace `/admin/capabilities` claims with reality: mark heuristic things heuristic, stubbed things `needs-config`~~ **✅ DONE 2026-05-16** | 0.5 day | Stops you fooling yourself; aligns engineering priority |
 
 ### Top 10 features elite competitors would already have
 
-1. **Recipe-driven stock decrement on order paid** — Toast, Square, Sweetgreen all do this.
-2. **PAR-driven auto-suggested PO**, one-click send to supplier email.
+1. ~~**Recipe-driven stock decrement on order paid** — Toast, Square, Sweetgreen all do this.~~ **✅ DONE 2026-05-16** — §0.1.
+2. ~~**PAR-driven auto-suggested PO**, one-click send to supplier email.~~ **✅ DONE 2026-05-16 (drafts)** — operator still has to send manually; supplier-EDI integration outstanding.
 3. **CLTV + CAC + cohort retention dashboard** — at least new-vs-repeat split, AOV by cohort, 30/60/90-day retention.
-4. **Real push notifications** (order ready, abandoned cart, tier-up, weekly usual reminder).
-5. **Genuine ML demand forecast** — even an SKU-level Prophet or Anthropic-call replacement of the rolling average would land more orders correctly staffed.
+4. ~~**Real push notifications** (order ready, abandoned cart, tier-up, weekly usual reminder).~~ **✅ DONE 2026-05-16 for `order ready`** — abandoned-cart / tier-up / weekly-usual fan-outs still wired only to SMS.
+5. ~~**Genuine ML demand forecast** — even an SKU-level Prophet or Anthropic-call replacement of the rolling average would land more orders correctly staffed.~~ **✅ DONE 2026-05-16** — Claude-backed forecast with structured JSON + 80% confidence band.
 6. **Hash chain on cash sessions and audit log** — tamper-evident, EU-tax-authority-pleasing.
 7. **A/B experimentation framework that actually runs**, with an experiment ledger and stat-sig stopping rules.
 8. **Operator mobile app** — managers running on tablets, not desktops. The admin is responsive; it isn’t mobile-first.
@@ -334,7 +353,7 @@ Pick at most six. Sequence by week.
 - Add a manual nightly Neon backup → S3, cron-driven, with a documented restore script.
 
 ### Week 2 — Trust the dashboard again
-- Audit `/admin/capabilities` and downgrade every "live" claim that is heuristic, stubbed, or partial. Add a `caveats` field. This is the single highest-leverage operator-honesty move you can make.
+- ~~Audit `/admin/capabilities` and downgrade every "live" claim that is heuristic, stubbed, or partial. Add a `caveats` field.~~ **✅ DONE 2026-05-16** — single highest-leverage operator-honesty move.
 - Add four tests: (1) checkout idempotency, (2) slot oversell prevention, (3) refund flow, (4) RBAC location scope enforcement. Use a real test runner (Vitest). Even five tests prevents three production fires.
 - Add `audit_log` retention (90d) and `webhook_events` retention (30d) jobs. Stops silent table bloat.
 
@@ -344,7 +363,7 @@ Pick at most six. Sequence by week.
 - Wire address autocomplete.
 
 ### Week 4 — Retention
-- Wire push notifications (VAPID + a single template: order ready).
+- ~~Wire push notifications (VAPID + a single template: order ready).~~ **✅ DONE 2026-05-16** — needs the operator to generate VAPID keys + set env vars to activate in production.
 - Build a `/usual` page that surfaces "Re-order this Tuesday at 7pm" for repeat customers using the existing attach-history data.
 - Switch combo copy to PLN savings.
 
@@ -355,9 +374,9 @@ Pick at most six. Sequence by week.
 ## 12. Medium-Term Improvements (3–12 months)
 
 ### Quarter 2
-- **Recipe-driven stock decrement.** Order paid → `consumeRecipe(itemId, locationSlug)` → atomic inventory decrement. The recipe model already exists; this is wiring, not invention. Unlocks honest variance reports for the first time.
-- **PAR-driven PO generation.** Daily cron compares on-hand vs par; produces a draft PO per supplier; operator one-click-sends.
-- **Real-time KDS via SSE** (server-sent events), with polling as fallback. Drop the 10s default to 2s while building. (`/api/admin/orders/stream` exists in capabilities; finish it.)
+- ~~**Recipe-driven stock decrement.** Order paid → `consumeRecipe(itemId, locationSlug)` → atomic inventory decrement.~~ **✅ DONE 2026-05-16, pulled into Week 1.**
+- ~~**PAR-driven PO generation.** Daily cron compares on-hand vs par; produces a draft PO per supplier; operator one-click-sends.~~ **✅ DONE 2026-05-16 (drafts written); one-click-send to supplier email still outstanding.**
+- **Real-time KDS via SSE** (server-sent events), with polling as fallback. **Partially done** — KDS v2 (`/admin/kds`) is on SSE via `useAdminOrdersStream`; the legacy `/kitchen/[slug]` board still polls.
 - **Cohort dashboard.** New-vs-repeat split, AOV by cohort month, 30/60/90-day retention. Recharts is already in deps.
 - **CLTV + CAC.** With UTM-tagged links + Stripe revenue + order count, this is a SQL query, not a project.
 
@@ -365,7 +384,7 @@ Pick at most six. Sequence by week.
 - **Referral give-get loop** with auto-generated shareable link, tracked from sign-up through 3rd order.
 - **B2B / corporate sales motion** — invoice-billed standing orders, volume tiers, dedicated CSM email.
 - **A/B experimentation framework** with an experiment table, deterministic bucketing, stat-sig stopping rule.
-- **Genuine demand forecast** using either Prophet (Python sidecar) or Claude with structured outputs over 90 days of order history.
+- ~~**Genuine demand forecast** using either Prophet (Python sidecar) or Claude with structured outputs over 90 days of order history.~~ **✅ DONE 2026-05-16 (Claude path).**
 - **MFA on admin** (TOTP).
 - **A staging environment.** Vercel preview deploys + a separate Neon branch.
 
@@ -431,12 +450,12 @@ You have built a Toast-tier ordering and admin platform for a 2-truck Neapolitan
 
 But:
 
-- **Five major surfaces are theatre, not function.** Inventory, AI, suppliers, KDS SLA, push notifications. Anyone investigating this business with a real diligence checklist will find this within 2 hours and the conversation will change tone.
-- **You are one phishing email away from a refund-authority breach.** Hash the password this week.
-- **You have zero tests.** Refund, payment, RBAC. This isn’t hygiene; this is malpractice on a payments-handling codebase.
-- **Real-time is polling.** Honestly the cheapest thing you can fix.
-- **Stock doesn’t decrement on order.** The most expensive thing you’ve avoided fixing because the dashboard looks fine without it.
-- **You are competing for the operator’s attention against the trucks.** This is the strongest existential risk in the audit and it has nothing to do with code.
+- ~~**Five major surfaces are theatre, not function.** Inventory, AI, suppliers, KDS SLA, push notifications. Anyone investigating this business with a real diligence checklist will find this within 2 hours and the conversation will change tone.~~ **✅ RESOLVED 2026-05-16** — all five surfaces wired end-to-end the same day this audit landed (commit `c863a3a`). See §0.1 resolution log. The new diligence question is whether the operator can actually staff this many automations; the code is no longer the bottleneck.
+- **You are one phishing email away from a refund-authority breach.** Hash the password this week. *(Still outstanding.)*
+- **You have zero tests.** Refund, payment, RBAC. This isn't hygiene; this is malpractice on a payments-handling codebase. *(Still outstanding.)*
+- **Real-time is polling on the legacy kitchen board.** Honestly the cheapest thing you can fix. *(KDS v2 is already on SSE.)*
+- ~~**Stock doesn't decrement on order.** The most expensive thing you've avoided fixing because the dashboard looks fine without it.~~ **✅ RESOLVED 2026-05-16** — variance reports now reflect real consumption.
+- **You are competing for the operator's attention against the trucks.** This is the strongest existential risk in the audit and it has nothing to do with code.
 
 **The business can become elite.** The path is: 30-day safety + honesty pass → 90-day AOV and retention push → 180-day operational automation → 12-month 3rd–5th truck → 24-month franchise decision. Skip the SaaS detour unless it’s funded separately.
 
@@ -464,19 +483,19 @@ Sequence (not optional; the order matters):
 | 6 | Food photographer + ItemImage wiring | 1d + shoot | High (AOV + conversion) | Week 3 |
 | 7 | Post-order upsell on confirmation | 1d | High (AOV) | Week 3 |
 | 8 | Address autocomplete | 0.5d | Medium (checkout completion) | Week 3 |
-| 9 | Push notifications (order ready) | 1d | Medium (retention) | Week 4 |
+| 9 | ~~Push notifications (order ready)~~ **✅ DONE 2026-05-16** | 1d | Medium (retention) | Week 4 |
 | 10 | "/usual" page from header for repeat customers | 2d | High (retention) | Week 4 |
 | 11 | Combo copy → PLN savings | 1h | Low (AOV) | Week 4 |
-| 12 | Recipe-driven stock decrement on order paid | 4d | High (ops integrity) | Month 2 |
-| 13 | PAR-driven draft PO generation | 3d | High (labor save) | Month 2 |
-| 14 | SSE real-time KDS | 3d | Medium (ops UX) | Month 2 |
+| 12 | ~~Recipe-driven stock decrement on order paid~~ **✅ DONE 2026-05-16** | 4d | High (ops integrity) | Month 2 |
+| 13 | ~~PAR-driven draft PO generation~~ **✅ DONE 2026-05-16** | 3d | High (labor save) | Month 2 |
+| 14 | SSE real-time KDS (legacy `/kitchen/[slug]` board only — KDS v2 already on SSE) | 3d | Medium (ops UX) | Month 2 |
 | 15 | Cohort retention + CLTV/CAC dashboard | 2d | High (decision-making) | Month 3 |
 | 16 | MFA (TOTP) on admin | 2d | High (security) | Month 3 |
 | 17 | Staging environment + preview DB branch | 1d | Medium (deployment safety) | Month 3 |
 | 18 | Referral give-get with shareable links | 4d | High (acquisition) | Month 4 |
 | 19 | A/B experimentation framework w/ ledger | 5d | High (compounding) | Month 4 |
 | 20 | B2B / corporate sales motion + AR | 7d | High (revenue) | Month 5–6 |
-| 21 | Genuine demand forecast (replace MA) | 5d | Medium (staffing accuracy) | Month 6 |
+| 21 | ~~Genuine demand forecast (replace MA)~~ **✅ DONE 2026-05-16 (Claude)** | 5d | Medium (staffing accuracy) | Month 6 |
 | 22 | Driver dispatch + live ETA | 7d | Medium (delivery NPS) | Month 7 |
 | 23 | Cashier / staff order-mode | 3d | Medium (ops speed) | Month 8 |
 | 24 | Hash-chained cash sessions + audit | 3d | Medium (compliance) | Month 9 |

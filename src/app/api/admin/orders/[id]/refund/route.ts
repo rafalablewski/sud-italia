@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { withAdmin } from "@/lib/api-middleware";
 import { getCurrentActor, hasLocationAccess } from "@/lib/admin-auth";
 import { appendAuditLog, getOrderById, updateOrder } from "@/lib/store";
+import { restoreRecipeForOrder } from "@/lib/inventory-decrement";
 import { logger } from "@/lib/logger";
 import { type OrderRefund } from "@/data/types";
 import { parseBody, refundBodySchema } from "@/lib/api-schemas";
@@ -142,6 +143,15 @@ export const POST = withAdmin<{ params: Promise<{ id: string }> }>(
       newStatus: updated.status,
     },
   });
+
+  // Audit §3 fix — refunds previously bypassed stock reconciliation,
+  // leaving ghost-consumed ingredients in the books. A full refund
+  // returns the recipe-predicted draw. Partial refunds don't carry
+  // line-level data so we leave them; rare and the operator can
+  // reconcile from the audit log.
+  if (type === "full") {
+    void restoreRecipeForOrder(updated, "refund");
+  }
 
     return NextResponse.json(updated);
   },

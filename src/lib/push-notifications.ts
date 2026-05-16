@@ -1,23 +1,21 @@
 /**
- * Push Notification Infrastructure
- *
- * Placeholder for Web Push notification support.
- * When NEXT_PUBLIC_VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY are set,
- * this enables browser push notifications for:
- * - Order status updates ("Your order is ready for pickup!")
- * - Loyalty milestones ("You just reached Silver tier!")
- * - Streak reminders ("Don't break your 5-week streak!")
- * - Flash sales ("20% off pizzas for the next 2 hours!")
+ * Web Push notifications (audit §3 — turns the "templates exist" stub
+ * into a working channel). Wired through the comms dispatcher so
+ * `order.ready` outbox events fan out to every device the customer
+ * has subscribed.
  *
  * Setup:
- * 1. Generate VAPID keys: npx web-push generate-vapid-keys
- * 2. Set NEXT_PUBLIC_VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY in .env
- * 3. Install: npm install web-push
- * 4. Register service worker in src/app/(public)/layout.tsx
- * 5. Create /public/sw.js service worker file
+ *   1. Generate VAPID keys: `npx web-push generate-vapid-keys`
+ *   2. Set `NEXT_PUBLIC_VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`
+ *   3. Redeploy — the SW already ships in /public/sw.js
+ *
+ * When the keys are absent the call path stays safe (logs + returns
+ * false) so dev environments don't crash.
  *
  * Docs: https://web.dev/articles/push-notifications-overview
  */
+
+import { logger } from "@/lib/logger";
 
 export interface PushSubscription {
   phone: string;
@@ -36,51 +34,106 @@ export interface PushMessage {
   tag?: string;
 }
 
-/**
- * Send a push notification to a subscribed customer.
- * Returns true if sent successfully, false if push is not configured.
- */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function sendPushNotification(
-  subscription: PushSubscription,
-  message: PushMessage
-): Promise<boolean> {
-  const { VAPID_PRIVATE_KEY } = process.env;
-  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+let vapidConfigured = false;
 
-  if (!VAPID_PRIVATE_KEY || !publicKey) {
-    console.log(`[Push Stub] Would notify ${subscription.phone}: "${message.title} — ${message.body}"`);
-    return false;
+async function configureVapid(): Promise<typeof import("web-push") | null> {
+  const privateKey = process.env.VAPID_PRIVATE_KEY?.trim();
+  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim();
+  if (!privateKey || !publicKey) return null;
+  const webpush = (await import("web-push")).default;
+  if (!vapidConfigured) {
+    const subject = process.env.VAPID_SUBJECT?.trim() || "mailto:hello@suditalia.pl";
+    webpush.setVapidDetails(subject, publicKey, privateKey);
+    vapidConfigured = true;
   }
-
-  // TODO: Uncomment when web-push is installed
-  // const webpush = (await import("web-push")).default;
-  // webpush.setVapidDetails("mailto:hello@suditalia.pl", publicKey, VAPID_PRIVATE_KEY);
-  // await webpush.sendNotification(
-  //   { endpoint: subscription.endpoint, keys: subscription.keys },
-  //   JSON.stringify({ title: message.title, body: message.body, icon: message.icon, url: message.url })
-  // );
-  return true;
+  return webpush;
 }
 
 /**
- * Fan-out helper (m5_6). Loads every subscription for the given
- * phone from kv_store and pushes the message to each device. Stub
- * mode (no VAPID keys) logs but doesn't throw — keeps the call
- * path safe to wire into the order outbox without gating on
- * production credentials.
+ * Send a push notification to a subscribed customer. Returns true if
+ * the payload was handed to the push service. A 404/410 from the push
+ * service means the subscription is gone — the caller should drop it
+ * (sendPushNotification surfaces a typed `subscriptionGone` outcome
+ * for that case so the fanout can clean up).
+ */
+export async function sendPushNotification(
+  subscription: PushSubscription,
+  message: PushMessage,
+): Promise<{ ok: boolean; subscriptionGone?: boolean }> {
+  const webpush = await configureVapid();
+  if (!webpush) {
+    logger.debug("push.stub.no_vapid", {
+      layer: "push",
+      phone: subscription.phone,
+      title: message.title,
+    });
+    return { ok: false };
+  }
+  try {
+    await webpush.sendNotification(
+      {
+        endpoint: subscription.endpoint,
+        keys: { p256dh: subscription.keys.p256dh, auth: subscription.keys.auth },
+      },
+      JSON.stringify({
+        title: message.title,
+        body: message.body,
+        icon: message.icon,
+        url: message.url,
+        tag: message.tag,
+      }),
+    );
+    return { ok: true };
+  } catch (err) {
+    const statusCode =
+      typeof err === "object" && err !== null && "statusCode" in err
+        ? Number((err as { statusCode: unknown }).statusCode)
+        : 0;
+    if (statusCode === 404 || statusCode === 410) {
+      logger.info("push.subscription_gone", {
+        layer: "push",
+        endpoint: subscription.endpoint.slice(0, 80),
+        statusCode,
+      });
+      return { ok: false, subscriptionGone: true };
+    }
+    logger.warn(
+      "push.send_failed",
+      {
+        layer: "push",
+        phone: subscription.phone,
+        endpoint: subscription.endpoint.slice(0, 80),
+        statusCode,
+      },
+      err,
+    );
+    return { ok: false };
+  }
+}
+
+/**
+ * Fan-out helper. Loads every subscription for the given phone from
+ * kv_store and pushes the message to each device. Stub mode (no VAPID
+ * keys) logs but doesn't throw — keeps the call path safe to wire
+ * into the order outbox without gating on production credentials.
+ *
+ * Subscriptions that the push service reports as gone (404/410) are
+ * removed so they don't get retried.
  */
 export async function pushToCustomer(phone: string, message: PushMessage): Promise<number> {
-  const { listPushSubscriptions } = await import("@/lib/store");
+  const { listPushSubscriptions, deletePushSubscription } = await import("@/lib/store");
   const subs = await listPushSubscriptions(phone);
   if (subs.length === 0) return 0;
   let sent = 0;
   for (const sub of subs) {
-    const ok = await sendPushNotification(
+    const res = await sendPushNotification(
       { phone: sub.phone, endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
       message,
     );
-    if (ok) sent += 1;
+    if (res.ok) sent += 1;
+    if (res.subscriptionGone) {
+      await deletePushSubscription(sub.endpoint).catch(() => {});
+    }
   }
   return sent;
 }

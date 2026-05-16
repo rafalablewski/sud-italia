@@ -9,6 +9,7 @@ import { OrderTracker } from "@/components/order/OrderTracker";
 import { FeedbackSurvey } from "@/components/order/FeedbackSurvey";
 import { CustomerMilestone } from "@/components/order/CustomerMilestone";
 import { LoyaltyPointsEarned } from "@/components/order/LoyaltyPointsEarned";
+import { PushOptInButton } from "@/components/order/PushOptInButton";
 import { CheckCircle, MapPin, ArrowLeft, Share2, Link2, Sparkles, Users } from "lucide-react";
 import { getLocation } from "@/data/locations";
 import { useCustomer } from "@/store/customer";
@@ -79,6 +80,12 @@ function OrderConfirmationContent() {
               <OrderTracker orderId={orderId} locationSlug={locationSlug} />
             </div>
           )}
+
+          {/* Audit §3 — Web push opt-in. Surfaces only when VAPID is
+              configured server-side and the browser supports push. */}
+          <div className="mb-8 flex justify-center animate-slide-up">
+            <PushOptInButton phone={customer?.phone} />
+          </div>
 
           {/* Pickup location */}
           {location && (
