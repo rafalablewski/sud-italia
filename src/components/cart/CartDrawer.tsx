@@ -529,7 +529,14 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
         (upsellConfig as { bundles?: BundleTier[] } | null)?.bundles ?? null,
         (upsellConfig as { bundleRules?: import("@/lib/bundles").BundleAvailabilityRules } | null)?.bundleRules ?? null,
         new Date().getHours(),
-      ) && <ComboDealBanner cartItems={items} fulfillmentType={fulfillmentType} />}
+      ) && (
+        <ComboDealBanner
+          cartItems={items}
+          fulfillmentType={fulfillmentType}
+          allMenuItems={resolvedMenuItems}
+          locationSlug={locationSlug}
+        />
+      )}
 
       {/* Cross-sell suggestions */}
       <CartUpsell suggestions={suggestions} />
@@ -803,33 +810,37 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
           </div>
         )}
 
-        <Button
-          onClick={() => { setCheckoutError(null); handleCheckout(); }}
-          disabled={isSubmitting || !canCheckout}
-          className="w-full min-h-[48px] mt-3"
-          size="md"
-        >
-          {isSubmitting
-            ? "Processing..."
-            : unavailableItems.length > 0
-              ? "Remove sold-out items"
-              : !selectedSlotId
-                ? "Select a time slot"
-                : canCheckout
-                  ? `Pay ${formatPrice(total)}`
-                  : fulfillmentType === "delivery" && !deliveryAddress.trim()
-                    ? "Enter delivery address"
-                    : "Enter name & phone to order"}
-        </Button>
-
-        <button
-          type="button"
-          onClick={() => clearCart()}
-          className="w-full flex items-center justify-center gap-1.5 text-xs py-1.5 mt-1.5 text-italia-gray hover:text-italia-red active:text-italia-red transition-colors"
-        >
-          <Trash2 className="h-3.5 w-3.5 flex-shrink-0" />
-          Clear cart
-        </button>
+        <div className="mt-3 flex items-stretch gap-2">
+          <Button
+            onClick={() => { setCheckoutError(null); handleCheckout(); }}
+            disabled={isSubmitting || !canCheckout}
+            className="flex-1 min-h-[48px]"
+            size="md"
+          >
+            {isSubmitting
+              ? "Processing..."
+              : unavailableItems.length > 0
+                ? "Remove sold-out items"
+                : !selectedSlotId
+                  ? "Select a time slot"
+                  : canCheckout
+                    ? `Pay ${formatPrice(total)}`
+                    : fulfillmentType === "delivery" && !deliveryAddress.trim()
+                      ? "Enter delivery address"
+                      : "Enter name & phone to order"}
+          </Button>
+          <button
+            type="button"
+            onClick={() => {
+              if (window.confirm("Clear your cart?")) clearCart();
+            }}
+            aria-label="Clear cart"
+            title="Clear cart"
+            className="flex-shrink-0 w-12 min-h-[48px] flex items-center justify-center rounded-xl border border-gray-200 text-italia-gray hover:text-italia-red hover:border-italia-red/40 active:scale-[0.97] transition-colors"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
       </div>
     </Sheet>
   );
@@ -864,7 +875,7 @@ function TipPicker({
   if (subtotalGrosze <= 0) return null;
 
   return (
-    <div className="px-5 pt-3">
+    <div className="px-5 pt-3 pb-4">
       <p className="text-xs font-semibold text-italia-gray uppercase tracking-wide mb-2">
         Add a tip — optional
       </p>
