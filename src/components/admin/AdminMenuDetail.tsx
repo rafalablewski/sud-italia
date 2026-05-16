@@ -102,7 +102,6 @@ interface ChainDraft {
   tags: string[];
   deliveryOnly: boolean;
   packagingStr: string;
-  modifierGroups: ModifierGroup[];
 }
 
 function emptyChain(): ChainDraft {
@@ -115,7 +114,6 @@ function emptyChain(): ChainDraft {
     tags: [],
     deliveryOnly: false,
     packagingStr: "",
-    modifierGroups: [],
   };
 }
 
@@ -132,6 +130,18 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
   const [chainInitial, setChainInitial] = useState<ChainDraft>(emptyChain);
   const [perLoc, setPerLoc] = useState<Record<string, PerLocationDraft>>({});
   const [perLocInitial, setPerLocInitial] = useState<Record<string, PerLocationDraft>>({});
+  /** Per-location modifier groups. Structural fields (group label, min/max,
+   *  option label, KDS flag, costDelta) propagate to every location's array
+   *  via `updateStructure`; pricing fields (priceDelta) write to one
+   *  location only. The canonical structure for rendering is the first
+   *  present variant's groups — if structures drift, the matrix lifts to
+   *  the canonical and operators reconcile on save. */
+  const [modifierGroupsByLoc, setModifierGroupsByLoc] = useState<
+    Record<string, ModifierGroup[]>
+  >({});
+  const [modifierGroupsInitialByLoc, setModifierGroupsInitialByLoc] = useState<
+    Record<string, ModifierGroup[]>
+  >({});
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -177,12 +187,18 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
           typeof primary.packagingCost === "number"
             ? (primary.packagingCost / 100).toFixed(2)
             : "",
-        modifierGroups: primary.modifierGroups
-          ? JSON.parse(JSON.stringify(primary.modifierGroups))
-          : [],
       };
       setChain(nextChain);
       setChainInitial(JSON.parse(JSON.stringify(nextChain)));
+
+      const nextGroupsByLoc: Record<string, ModifierGroup[]> = {};
+      for (const v of found) {
+        nextGroupsByLoc[v.slug] = v.item?.modifierGroups
+          ? JSON.parse(JSON.stringify(v.item.modifierGroups))
+          : [];
+      }
+      setModifierGroupsByLoc(nextGroupsByLoc);
+      setModifierGroupsInitialByLoc(JSON.parse(JSON.stringify(nextGroupsByLoc)));
 
       const nextPerLoc: Record<string, PerLocationDraft> = {};
       for (const v of found) {
@@ -379,10 +395,6 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
       // bulk-edit endpoint excludes name/sku/modifierGroups, so we route
       // through PUT /api/admin/menu (seed) + PATCH /custom (custom) and
       // batch them per variant rather than a single bulk call.
-      const cleanedGroups = cleanedModifierGroups(chain.modifierGroups);
-      const initGroups = cleanedModifierGroups(chainInitial.modifierGroups);
-      const groupsChanged =
-        JSON.stringify(cleanedGroups) !== JSON.stringify(initGroups);
       const packagingRaw = chain.packagingStr.trim();
       const nextPackaging: number | null =
         packagingRaw === ""
@@ -402,7 +414,6 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
         sku?: string | null;
         deliveryOnly?: boolean | null;
         packagingCost?: number | null;
-        modifierGroups?: ModifierGroup[] | null;
       };
       const chainPatch: ChainPatch = {};
       if (trimmedName !== chainInitial.name.trim()) chainPatch.name = trimmedName;
@@ -422,9 +433,6 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
       }
       if (nextPackaging !== initPackaging) {
         chainPatch.packagingCost = nextPackaging;
-      }
-      if (groupsChanged) {
-        chainPatch.modifierGroups = cleanedGroups.length === 0 ? null : cleanedGroups;
       }
       const hasChainChange = Object.keys(chainPatch).length > 0;
 
@@ -470,10 +478,17 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
             seedPatch.packagingCost = chainPatch.packagingCost;
             customBody.packagingCost = chainPatch.packagingCost ?? 0;
           }
-          if (chainPatch.modifierGroups !== undefined) {
-            seedPatch.modifierGroups = chainPatch.modifierGroups;
-            customBody.modifierGroups = chainPatch.modifierGroups ?? [];
-          }
+        }
+
+        // Per-location modifier groups — structural fields are mirrored
+        // across locations via updateStructure, but priceDelta/costDelta
+        // diverge per truck. Diff each variant's groups independently and
+        // include the post-cleanup array in the patch when changed.
+        const curGroups = cleanedModifierGroups(modifierGroupsByLoc[v.slug] ?? []);
+        const initGroups = cleanedModifierGroups(modifierGroupsInitialByLoc[v.slug] ?? []);
+        if (JSON.stringify(curGroups) !== JSON.stringify(initGroups)) {
+          seedPatch.modifierGroups = curGroups.length === 0 ? null : curGroups;
+          customBody.modifierGroups = curGroups;
         }
 
         // Per-location fields.
@@ -550,6 +565,11 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
         (v) => perLoc[v.slug]?.present && !perLocInitial[v.slug]?.present,
       );
       if (additions.length > 0) {
+        // Newly-added rows inherit the canonical modifier structure with
+        // its priceDelta values, then drift per-location from there.
+        const canonicalAddGroups = cleanedModifierGroups(
+          present[0] ? modifierGroupsByLoc[present[0].slug] ?? [] : [],
+        );
         const cloneResults = await Promise.all(
           additions.map(async (a) => {
             const draft = perLoc[a.slug];
@@ -576,7 +596,9 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
               ...(trimmedSku ? { sku: trimmedSku } : {}),
               ...(chain.deliveryOnly ? { deliveryOnly: true } : {}),
               ...(nextPackaging !== null ? { packagingCost: nextPackaging } : {}),
-              ...(cleanedGroups.length > 0 ? { modifierGroups: cleanedGroups } : {}),
+              ...(canonicalAddGroups.length > 0
+                ? { modifierGroups: canonicalAddGroups }
+                : {}),
             };
             const res = await fetch("/api/admin/menu/custom", {
               method: "POST",
@@ -1051,118 +1073,256 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
                 />
               </span>
             </div>
-            <ModifierEditor
-              groups={chain.modifierGroups}
-              onChange={(g) => setChain((c) => ({ ...c, modifierGroups: g }))}
-            />
           </div>
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardBody>
+          <h2
+            style={{
+              fontSize: "var(--text-base)",
+              fontWeight: 600,
+              margin: "0 0 4px",
+            }}
+          >
+            Modifiers
+          </h2>
+          <p
+            style={{
+              fontSize: "var(--text-xs)",
+              color: "var(--fg-muted)",
+              margin: "0 0 0.75rem",
+            }}
+          >
+            Group structure (label, min/max, option labels, KDS flag, cost
+            δ) propagates to every truck. <strong>Price δ varies per
+            location</strong> so a +Sourdough surcharge in Szczecin can
+            land at +5 zł while Lublin charges +3 zł.
+          </p>
+          <ModifierMatrix
+            present={present}
+            groupsByLoc={modifierGroupsByLoc}
+            setGroupsByLoc={setModifierGroupsByLoc}
+          />
         </CardBody>
       </Card>
     </div>
   );
 }
 
-// ─── Modifier editor ─────────────────────────────────────────────────────
-//
-// Inline editor for ModifierGroup[]. Lives with the detail page since
-// it's chain-wide — modifiers don't diverge per truck (audit §3 single
-// source of truth for upsell options).
 
-function ModifierEditor({
-  groups,
-  onChange,
-}: {
-  groups: ModifierGroup[];
-  onChange: (next: ModifierGroup[]) => void;
-}) {
-  const update = (i: number, patch: Partial<ModifierGroup>) => {
-    onChange(groups.map((g, idx) => (idx === i ? { ...g, ...patch } : g)));
+// ─── Modifier matrix (per-location pricing) ──────────────────────────────
+//
+// Side-by-side grid for editing modifier options across every present
+// location. Group structure (label, min/max, option labels, KDS flag) is
+// shared — edits propagate to every variant's ModifierGroup[]. Per-option
+// priceDelta + costDelta are independent per location, so Szczecin can
+// charge +5 zł for Sourdough while Lublin charges +3 zł without forking
+// the option ids that customers + KDS rely on.
+//
+// Scales horizontally: location columns sit inside an overflow-x scroller
+// so the option labels + KDS column stay pinned while operators sweep
+// across 20 trucks. Each pricing cell has an inline "Apply to all" button
+// to spread one value across every location.
+
+interface ModifierMatrixProps {
+  present: Array<LocationVariant & { item: MenuItemData }>;
+  groupsByLoc: Record<string, ModifierGroup[]>;
+  setGroupsByLoc: (
+    next:
+      | Record<string, ModifierGroup[]>
+      | ((prev: Record<string, ModifierGroup[]>) => Record<string, ModifierGroup[]>),
+  ) => void;
+}
+
+function ModifierMatrix({ present, groupsByLoc, setGroupsByLoc }: ModifierMatrixProps) {
+  // Canonical structure = first present variant's groups. Other variants
+  // can have drifted historic data; the matrix lifts the canonical names /
+  // KDS flags / option ids so the operator sees one consistent structure,
+  // and per-location priceDelta is read independently from each variant.
+  const canonical = present[0] ? groupsByLoc[present[0].slug] ?? [] : [];
+
+  const updateStructure = (
+    mutator: (groups: ModifierGroup[]) => ModifierGroup[],
+  ) => {
+    setGroupsByLoc((prev) => {
+      const next: Record<string, ModifierGroup[]> = {};
+      for (const v of present) {
+        next[v.slug] = mutator(prev[v.slug] ?? []);
+      }
+      return { ...prev, ...next };
+    });
   };
-  const remove = (i: number) => {
-    onChange(groups.filter((_, idx) => idx !== i));
+
+  const updateOneLocation = (
+    slug: string,
+    mutator: (groups: ModifierGroup[]) => ModifierGroup[],
+  ) => {
+    setGroupsByLoc((prev) => ({
+      ...prev,
+      [slug]: mutator(prev[slug] ?? []),
+    }));
   };
-  const add = () => {
+
+  const addGroup = () => {
     const id = `mod-${Math.random().toString(36).slice(2, 8)}`;
-    onChange([
+    const optionId = `opt-${Math.random().toString(36).slice(2, 8)}`;
+    updateStructure((groups) => [
       ...groups,
       {
         id,
         label: "New group",
         minSelections: 0,
         maxSelections: 1,
-        options: [
-          {
-            id: `opt-${Math.random().toString(36).slice(2, 8)}`,
-            label: "Standard",
-            priceDelta: 0,
-          },
-        ],
+        options: [{ id: optionId, label: "Standard", priceDelta: 0 }],
       },
     ]);
   };
-  const updateOption = (gi: number, oi: number, patch: Partial<ModifierOption>) => {
-    update(gi, {
-      options: groups[gi].options.map((o, idx) =>
-        idx === oi ? { ...o, ...patch } : o,
+
+  const removeGroup = (gid: string) => {
+    updateStructure((groups) => groups.filter((g) => g.id !== gid));
+  };
+
+  const setGroupField = (
+    gid: string,
+    patch: Partial<Omit<ModifierGroup, "options" | "id">>,
+  ) => {
+    updateStructure((groups) =>
+      groups.map((g) => (g.id === gid ? { ...g, ...patch } : g)),
+    );
+  };
+
+  const addOption = (gid: string) => {
+    const oid = `opt-${Math.random().toString(36).slice(2, 8)}`;
+    updateStructure((groups) =>
+      groups.map((g) =>
+        g.id === gid
+          ? {
+              ...g,
+              options: [
+                ...g.options,
+                { id: oid, label: "New option", priceDelta: 0 },
+              ],
+            }
+          : g,
       ),
-    });
+    );
   };
-  const addOption = (gi: number) => {
-    update(gi, {
-      options: [
-        ...groups[gi].options,
-        {
-          id: `opt-${Math.random().toString(36).slice(2, 8)}`,
-          label: "New option",
-          priceDelta: 0,
-        },
-      ],
-    });
+
+  const removeOption = (gid: string, oid: string) => {
+    updateStructure((groups) =>
+      groups.map((g) =>
+        g.id === gid ? { ...g, options: g.options.filter((o) => o.id !== oid) } : g,
+      ),
+    );
   };
-  const removeOption = (gi: number, oi: number) => {
-    update(gi, {
-      options: groups[gi].options.filter((_, idx) => idx !== oi),
+
+  const setOptionStructure = (
+    gid: string,
+    oid: string,
+    patch: Partial<Pick<ModifierOption, "label" | "flagOnKds">>,
+  ) => {
+    updateStructure((groups) =>
+      groups.map((g) =>
+        g.id === gid
+          ? {
+              ...g,
+              options: g.options.map((o) => (o.id === oid ? { ...o, ...patch } : o)),
+            }
+          : g,
+      ),
+    );
+  };
+
+  const setOptionPriceDelta = (
+    slug: string,
+    gid: string,
+    oid: string,
+    priceDelta: number,
+  ) => {
+    updateOneLocation(slug, (groups) =>
+      groups.map((g) =>
+        g.id === gid
+          ? {
+              ...g,
+              options: g.options.map((o) =>
+                o.id === oid ? { ...o, priceDelta } : o,
+              ),
+            }
+          : g,
+      ),
+    );
+  };
+
+  const setOptionCostDelta = (
+    slug: string,
+    gid: string,
+    oid: string,
+    costDelta: number | undefined,
+  ) => {
+    updateOneLocation(slug, (groups) =>
+      groups.map((g) =>
+        g.id === gid
+          ? {
+              ...g,
+              options: g.options.map((o) => (o.id === oid ? { ...o, costDelta } : o)),
+            }
+          : g,
+      ),
+    );
+  };
+
+  const applyPriceDeltaToAll = (gid: string, oid: string, sourceSlug: string) => {
+    const source = groupsByLoc[sourceSlug]?.find((g) => g.id === gid)?.options.find(
+      (o) => o.id === oid,
+    );
+    if (!source) return;
+    const price = source.priceDelta;
+    setGroupsByLoc((prev) => {
+      const next: Record<string, ModifierGroup[]> = { ...prev };
+      for (const v of present) {
+        next[v.slug] = (prev[v.slug] ?? []).map((g) =>
+          g.id === gid
+            ? {
+                ...g,
+                options: g.options.map((o) =>
+                  o.id === oid ? { ...o, priceDelta: price } : o,
+                ),
+              }
+            : g,
+        );
+      }
+      return next;
     });
   };
 
-  return (
-    <div
-      style={{
-        border: "1px solid var(--border)",
-        borderRadius: "var(--radius-md)",
-        padding: "0.75rem",
-        background: "var(--surface-2)",
-        display: "flex",
-        flexDirection: "column",
-        gap: "0.75rem",
-      }}
-    >
-      <div
+  const readOption = (slug: string, gid: string, oid: string): ModifierOption | undefined =>
+    groupsByLoc[slug]?.find((g) => g.id === gid)?.options.find((o) => o.id === oid);
+
+  if (present.length === 0) {
+    return (
+      <p
         style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
+          fontSize: "0.75rem",
+          color: "var(--fg-muted)",
+          fontStyle: "italic",
         }}
       >
-        <div>
-          <p style={{ fontSize: "0.875rem", fontWeight: 600 }}>Item modifiers</p>
-          <p
-            style={{
-              fontSize: "0.75rem",
-              color: "var(--fg-muted)",
-              marginTop: "0.125rem",
-            }}
-          >
-            Optional groups customers pick from at checkout. PriceDelta adds
-            to the line; flagOnKds highlights on the kitchen ticket.
-          </p>
-        </div>
-        <Button size="sm" variant="ghost" onClick={add}>
+        Add the product to at least one location to edit modifiers.
+      </p>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <Button size="sm" variant="ghost" onClick={addGroup}>
           + Add group
         </Button>
       </div>
 
-      {groups.length === 0 && (
+      {canonical.length === 0 && (
         <p
           style={{
             fontSize: "0.75rem",
@@ -1174,39 +1334,41 @@ function ModifierEditor({
         </p>
       )}
 
-      {groups.map((g, gi) => (
+      {canonical.map((group) => (
         <div
-          key={g.id}
+          key={group.id}
           style={{
             border: "1px solid var(--border)",
-            borderRadius: "var(--radius-sm)",
-            padding: "0.625rem",
-            background: "var(--surface)",
+            borderRadius: "var(--radius-md)",
+            background: "var(--surface-2)",
             display: "flex",
             flexDirection: "column",
             gap: "0.5rem",
+            padding: "0.625rem 0.75rem",
           }}
         >
+          {/* Structural header — propagates across every location */}
           <div
             style={{
               display: "grid",
               gridTemplateColumns: "2fr 1fr 1fr auto",
               gap: "0.5rem",
+              alignItems: "end",
             }}
           >
             <Input
               label="Group label"
-              value={g.label}
-              onChange={(e) => update(gi, { label: e.target.value })}
+              value={group.label}
+              onChange={(e) => setGroupField(group.id, { label: e.target.value })}
             />
             <Input
               type="number"
               min={0}
               max={10}
               label="Min picks"
-              value={String(g.minSelections ?? 0)}
+              value={String(group.minSelections ?? 0)}
               onChange={(e) =>
-                update(gi, {
+                setGroupField(group.id, {
                   minSelections: Math.max(0, Number(e.target.value) || 0),
                 })
               }
@@ -1216,99 +1378,169 @@ function ModifierEditor({
               min={1}
               max={10}
               label="Max picks"
-              value={String(g.maxSelections ?? 1)}
+              value={String(group.maxSelections ?? 1)}
               onChange={(e) =>
-                update(gi, {
+                setGroupField(group.id, {
                   maxSelections: Math.max(1, Number(e.target.value) || 1),
                 })
               }
             />
-            <div style={{ alignSelf: "end" }}>
-              <Button size="sm" variant="ghost" onClick={() => remove(gi)}>
-                Remove group
-              </Button>
-            </div>
+            <Button size="sm" variant="ghost" onClick={() => removeGroup(group.id)}>
+              Remove group
+            </Button>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
-            {g.options.map((o, oi) => (
-              <div
-                key={o.id}
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "2fr 1fr 1fr auto auto",
-                  gap: "0.375rem",
-                  alignItems: "center",
-                }}
-              >
-                <Input
-                  label={oi === 0 ? "Option label" : undefined}
-                  value={o.label}
-                  onChange={(e) => updateOption(gi, oi, { label: e.target.value })}
-                />
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  label={oi === 0 ? "Price +zł" : undefined}
-                  value={(o.priceDelta / 100).toFixed(2)}
-                  onChange={(e) =>
-                    updateOption(gi, oi, {
-                      priceDelta: Math.max(
-                        0,
-                        Math.round(parseFloat(e.target.value || "0") * 100),
-                      ),
-                    })
-                  }
-                />
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  label={oi === 0 ? "Cost +zł" : undefined}
-                  value={
-                    typeof o.costDelta === "number"
-                      ? (o.costDelta / 100).toFixed(2)
-                      : ""
-                  }
-                  onChange={(e) => {
-                    const raw = e.target.value.trim();
-                    updateOption(gi, oi, {
-                      costDelta:
-                        raw === ""
-                          ? undefined
-                          : Math.max(0, Math.round(parseFloat(raw) * 100)),
-                    });
-                  }}
-                />
-                <label
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "0.25rem",
-                    fontSize: "0.75rem",
-                    color: "var(--fg-muted)",
-                    whiteSpace: "nowrap",
-                  }}
-                  title="Highlight this option on the KDS ticket."
-                >
-                  <input
-                    type="checkbox"
-                    checked={!!o.flagOnKds}
-                    onChange={(e) =>
-                      updateOption(gi, oi, {
-                        flagOnKds: e.target.checked || undefined,
-                      })
-                    }
-                  />
-                  KDS
-                </label>
-                <Button size="sm" variant="ghost" onClick={() => removeOption(gi, oi)}>
-                  ×
-                </Button>
-              </div>
-            ))}
-            <Button size="sm" variant="ghost" onClick={() => addOption(gi)}>
+          {/* Pricing matrix — one row per option, one column per location */}
+          <div style={{ overflowX: "auto" }}>
+            <table className="v2-mod-matrix">
+              <thead>
+                <tr>
+                  <th style={{ minWidth: 160, textAlign: "left" }}>Option</th>
+                  <th style={{ width: 48 }} title="Highlight on KDS ticket">KDS</th>
+                  {present.map((v) => (
+                    <th key={v.slug} style={{ minWidth: 110 }}>
+                      {v.city}
+                    </th>
+                  ))}
+                  <th style={{ width: 96 }} aria-label="Bulk actions" />
+                </tr>
+              </thead>
+              <tbody>
+                {group.options.map((option) => {
+                  const prices = present.map(
+                    (v) => readOption(v.slug, group.id, option.id)?.priceDelta ?? 0,
+                  );
+                  const varies = new Set(prices).size > 1;
+                  return (
+                    <tr key={option.id}>
+                      <td>
+                        <Input
+                          value={option.label}
+                          onChange={(e) =>
+                            setOptionStructure(group.id, option.id, {
+                              label: e.target.value,
+                            })
+                          }
+                          aria-label="Option label"
+                        />
+                      </td>
+                      <td style={{ textAlign: "center" }}>
+                        <input
+                          type="checkbox"
+                          checked={!!option.flagOnKds}
+                          onChange={(e) =>
+                            setOptionStructure(group.id, option.id, {
+                              flagOnKds: e.target.checked || undefined,
+                            })
+                          }
+                          aria-label={`KDS highlight for ${option.label}`}
+                        />
+                      </td>
+                      {present.map((v) => {
+                        const opt = readOption(v.slug, group.id, option.id);
+                        const priceDelta = opt?.priceDelta ?? 0;
+                        const costDelta = opt?.costDelta;
+                        return (
+                          <td key={v.slug}>
+                            <div
+                              style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: 2,
+                              }}
+                            >
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={(priceDelta / 100).toFixed(2)}
+                                onChange={(e) =>
+                                  setOptionPriceDelta(
+                                    v.slug,
+                                    group.id,
+                                    option.id,
+                                    Math.max(
+                                      0,
+                                      Math.round(parseFloat(e.target.value || "0") * 100),
+                                    ),
+                                  )
+                                }
+                                trailingAdornment={<span className="v2-muted">zł</span>}
+                                aria-label={`${option.label} price at ${v.city}`}
+                              />
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={
+                                  typeof costDelta === "number"
+                                    ? (costDelta / 100).toFixed(2)
+                                    : ""
+                                }
+                                onChange={(e) => {
+                                  const raw = e.target.value.trim();
+                                  setOptionCostDelta(
+                                    v.slug,
+                                    group.id,
+                                    option.id,
+                                    raw === ""
+                                      ? undefined
+                                      : Math.max(0, Math.round(parseFloat(raw) * 100)),
+                                  );
+                                }}
+                                placeholder="cost δ"
+                                trailingAdornment={<span className="v2-muted">zł</span>}
+                                aria-label={`${option.label} cost at ${v.city}`}
+                              />
+                            </div>
+                          </td>
+                        );
+                      })}
+                      <td style={{ textAlign: "right" }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 4,
+                            alignItems: "stretch",
+                          }}
+                        >
+                          {varies && present.length > 1 && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() =>
+                                applyPriceDeltaToAll(
+                                  group.id,
+                                  option.id,
+                                  present[0].slug,
+                                )
+                              }
+                              title="Copy the first location's price to every location"
+                            >
+                              → all
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => removeOption(group.id, option.id)}
+                            style={{ color: "var(--danger)" }}
+                            title="Remove option (chain-wide)"
+                          >
+                            ×
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div>
+            <Button size="sm" variant="ghost" onClick={() => addOption(group.id)}>
               + Add option
             </Button>
           </div>

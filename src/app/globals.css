@@ -2559,6 +2559,35 @@ html { scroll-behavior: smooth; }
 }
 .v2-mng-loc-table-city > svg { color: var(--fg-subtle); }
 
+/* Modifier-matrix table on the menu detail page. Structural columns
+ * (Option, KDS) sit on the left; each location adds a numeric column
+ * with stacked price + cost inputs. The table is wrapped in an
+ * overflow-x scroller so 20 locations stay scannable on a laptop. */
+.v2-mod-matrix {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--text-sm);
+}
+.v2-mod-matrix thead th {
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  color: var(--fg-subtle);
+  padding: 6px 8px;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+  white-space: nowrap;
+}
+.v2-mod-matrix tbody td {
+  padding: 6px 8px;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border);
+}
+.v2-mod-matrix tbody tr:last-child td { border-bottom: 0; }
+
 /* Edit icon (Menu) — fades in on hover */
 .v2-mng-edit {
   width: 24px;
