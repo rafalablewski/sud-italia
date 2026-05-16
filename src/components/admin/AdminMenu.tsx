@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import Link from "next/link";
 import {
   Coffee,
   Eye,
   EyeOff,
   IceCream,
-  MapPin,
   Pencil,
   Pizza,
   Plus,
@@ -17,8 +17,8 @@ import {
   UtensilsCrossed,
   type LucideIcon,
 } from "lucide-react";
-import { formatPrice } from "@/lib/utils";
-import { MENU_CATEGORY_LABELS, type MenuCategory, type ModifierGroup, type ModifierOption } from "@/data/types";
+import { formatPrice, getBaseSlug, marginPct, marginTone } from "@/lib/utils";
+import { MENU_CATEGORY_LABELS, type MenuCategory, type ModifierGroup } from "@/data/types";
 import { getActiveLocations } from "@/data/locations";
 import { useAdminLocation } from "./v2/LocationContext";
 import { useToast } from "./v2/ui/Toast";
@@ -80,21 +80,6 @@ interface MenuItemData {
 
 const activeLocations = getActiveLocations();
 const FALLBACK_LOC = activeLocations[0]?.slug ?? "krakow";
-
-/** Strip a leading short location prefix from an item id so the "same"
- *  item across locations groups under one base slug
- *  (`krk-pizza-margherita` and `waw-pizza-margherita` both → `pizza-margherita`).
- *
- *  Recognises both the seed prefixes hand-rolled in
- *  `src/data/menus/*.ts` (`krk`, `waw`, ...) and the slug-derived
- *  prefixes that `createCustomItem` generates via `slug.slice(0, 3)`
- *  (`kra`, `war`, ...). The earlier implementation only matched the
- *  latter, so seed-item twins were never detected and the admin menu
- *  list duplicated every cross-location product. */
-function getBaseSlug(itemId: string): string {
-  const m = itemId.match(/^[a-z]{2,4}-(.+)$/);
-  return m ? m[1] : itemId;
-}
 
 /** A product as it lives across the chain. One row per base slug in the
  *  admin list, with per-location variants exposed via the `locations`
@@ -164,24 +149,24 @@ function unifyMenus(
   return unified;
 }
 
-function marginPct(price: number, cost: number): number {
-  if (price <= 0) return 0;
-  return Math.round(((price - cost) / price) * 100);
-}
-
-function marginTone(margin: number): "danger" | "warning" | "success" {
-  if (margin < 50) return "danger";
-  if (margin < 65) return "warning";
-  return "success";
+/** Format a possibly-varying numeric value across the chain as a compact
+ *  range (`27,90–29,90 zł`) when locations diverge, or a single value when
+ *  they agree. Caller pre-computes min/max so the same single-pass result
+ *  feeds both this formatter and the variance check. */
+function formatPriceRange(min: number, max: number): string {
+  if (min === max) return formatPrice(min);
+  return `${formatPrice(min)}–${formatPrice(max)}`;
 }
 
 export function AdminMenu() {
   const { location: globalLoc } = useAdminLocation();
   const toast = useToast();
 
-  // Menu is always for a single location — fall back to first active loc when
-  // "All locations" is selected in the sidebar (the menu endpoint requires a
-  // specific location).
+  // The master+variants list is chain-wide — every product renders as one
+  // row regardless of which trucks it lives at. We still track a "primary
+  // lens" though, used by `unifyMenus` to pick which variant's name /
+  // description / tags surface in the row when locations diverge. Default
+  // to the global location switcher's pick, or the first active location.
   const [pageLoc, setPageLoc] = useState<string>(globalLoc || FALLBACK_LOC);
   useEffect(() => {
     if (globalLoc) setPageLoc(globalLoc);
@@ -195,7 +180,6 @@ export function AdminMenu() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<MenuCategory | "all">("all");
-  const [editing, setEditing] = useState<MenuItemData | null>(null);
   const [creating, setCreating] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -227,9 +211,18 @@ export function AdminMenu() {
   const fetchMenu = useCallback(async () => {
     setLoading(true);
     try {
-      // Fetch the current page's menu plus every other active location's
-      // menu in parallel. The "by location" snapshot powers the edit
-      // dialog's location selector (cross-location twin lookup).
+      // One round trip when the session holds chain-wide scope — the
+      // unparameterized GET returns { [slug]: items[] } directly. A
+      // location-scoped manager (e.g. Kraków-only) hits 403 on that call
+      // because withAdmin enforces unrestricted scope when locationParam
+      // is absent; fall back to per-location fetches and silently skip
+      // the ones their session can't read.
+      const all = await fetch("/api/admin/menu");
+      if (all.ok) {
+        const byLoc = (await all.json()) as Record<string, MenuItemData[]>;
+        setMenusByLocation(byLoc);
+        return;
+      }
       const responses = await Promise.all(
         activeLocations.map((loc) =>
           fetch(`/api/admin/menu?location=${loc.slug}`).then((r) =>
@@ -267,64 +260,6 @@ export function AdminMenu() {
   useEffect(() => {
     fetchMenu();
   }, [fetchMenu]);
-
-  const persistChange = useCallback(
-    async (
-      id: string,
-      change: {
-        price?: number;
-        cost?: number;
-        available?: boolean;
-        name?: string;
-        description?: string;
-        category?: MenuCategory | null;
-        tags?: string[] | null;
-        sku?: string | null;
-        deliveryOnly?: boolean | null;
-        packagingCost?: number | null;
-        modifierGroups?: ModifierGroup[] | null;
-        hidden?: boolean | null;
-      },
-    ) => {
-      const res = await fetch("/api/admin/menu", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: { [id]: change } }),
-      });
-      return res.ok;
-    },
-    [],
-  );
-
-  /** Custom-item edits hit a different endpoint — they aren't overrides,
-   *  they're the canonical row. Returns the updated record or null on
-   *  failure so the caller can surface a toast. */
-  const persistCustomChange = useCallback(
-    async (
-      id: string,
-      change: {
-        name?: string;
-        description?: string;
-        price?: number;
-        cost?: number;
-        category?: MenuCategory;
-        tags?: string[];
-        available?: boolean;
-        sku?: string;
-        deliveryOnly?: boolean;
-        packagingCost?: number;
-        modifierGroups?: ModifierGroup[];
-      },
-    ) => {
-      const res = await fetch(`/api/admin/menu/custom?id=${encodeURIComponent(id)}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(change),
-      });
-      return res.ok;
-    },
-    [],
-  );
 
   /** Toggle availability across every visible variant of a unified
    *  product — the eye icon represents the product, not a single
@@ -567,173 +502,6 @@ export function AdminMenu() {
     [fetchMenu, toast],
   );
 
-  /** Look up the cross-location twin for a given base slug. Returns the
-   *  matching item from the cached snapshot, plus a hint for which API
-   *  endpoint to use when removing it. */
-  const findTwin = useCallback(
-    (locationSlug: string, baseSlug: string): MenuItemData | null => {
-      const arr = menusByLocation[locationSlug] || [];
-      return arr.find((i) => !i._hidden && getBaseSlug(i.id) === baseSlug) || null;
-    },
-    [menusByLocation],
-  );
-
-  const saveEdit = async (
-    id: string,
-    isCustom: boolean,
-    submission: EditSubmission,
-  ) => {
-    const change = submission.fieldChange;
-    const issues: string[] = [];
-
-    // 1) Field changes + rename for the current row.
-    let effectiveId = id;
-    if (Object.keys(change).length > 0 || submission.newId) {
-      let ok = false;
-      if (isCustom) {
-        const customChange = {
-          ...(submission.newId ? { newId: submission.newId } : {}),
-          ...(change.name !== undefined ? { name: change.name } : {}),
-          ...(change.description !== undefined ? { description: change.description } : {}),
-          ...(change.price !== undefined ? { price: change.price } : {}),
-          ...(change.cost !== undefined ? { cost: change.cost } : {}),
-          ...(change.category !== undefined ? { category: change.category } : {}),
-          ...(change.tags !== undefined ? { tags: change.tags } : {}),
-          ...(change.available !== undefined ? { available: change.available } : {}),
-          ...(change.sku !== undefined ? { sku: change.sku ?? "" } : {}),
-          ...(change.deliveryOnly !== undefined
-            ? { deliveryOnly: change.deliveryOnly ?? false }
-            : {}),
-          ...(change.packagingCost !== undefined
-            ? { packagingCost: change.packagingCost ?? 0 }
-            : {}),
-          ...(change.modifierGroups !== undefined
-            ? { modifierGroups: change.modifierGroups ?? [] }
-            : {}),
-        };
-        ok = await persistCustomChange(id, customChange);
-        if (ok && submission.newId) effectiveId = submission.newId;
-      } else {
-        ok = await persistChange(id, change);
-      }
-      if (!ok) issues.push("field changes");
-    }
-
-    const baseSlug = getBaseSlug(effectiveId);
-    const locName = (slug: string) =>
-      activeLocations.find((l) => l.slug === slug)?.city ?? slug;
-
-    // 1b) When the operator checked "Apply changes to all locations" in
-    // the edit dialog, also push the same field patch to every twin of
-    // this item at the OTHER active locations. We route through the
-    // bulk endpoint so cross-location twin resolution + custom-vs-seed
-    // routing stays in one place (no client-side fan-out).
-    if (
-      submission.propagateFieldsToAllLocations &&
-      Object.keys(change).length > 0
-    ) {
-      const propagable: Record<string, unknown> = {};
-      // The bulk-edit patch schema covers a strict subset of the edit
-      // dialog's surface — only fields meaningful as a chain-wide patch.
-      // Skip name (renamed per-row) + sku/modifiers (per-row identity).
-      if (change.price !== undefined) propagable.price = change.price;
-      if (change.cost !== undefined) propagable.cost = change.cost;
-      if (change.description !== undefined) propagable.description = change.description;
-      if (change.category !== undefined) propagable.category = change.category;
-      if (change.tags !== undefined) propagable.tags = change.tags;
-      if (change.available !== undefined) propagable.available = change.available;
-      if (change.deliveryOnly !== undefined) propagable.deliveryOnly = change.deliveryOnly;
-      if (change.packagingCost !== undefined) propagable.packagingCost = change.packagingCost;
-      if (Object.keys(propagable).length > 0) {
-        const res = await fetch("/api/admin/menu/bulk", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "edit",
-            ids: [effectiveId],
-            scope: "all",
-            patch: propagable,
-          }),
-        });
-        if (!res.ok) issues.push("propagate to other locations");
-      }
-    }
-
-    // 2) Clone the post-edit item to newly-checked locations + 3)
-    // remove from newly-unchecked locations. Fanned out in parallel —
-    // the custom-items store serialises writes via withLock so
-    // concurrent calls don't corrupt the file.
-    const cloneResults = await Promise.all(
-      submission.addTo.map(async (slug) => {
-        const prefix = slug.slice(0, 3) || "loc";
-        const cloneId = `${prefix}-${baseSlug}`;
-        const body = {
-          id: cloneId,
-          locationSlug: slug,
-          name: submission.draft.name,
-          description: submission.draft.description,
-          price: submission.draft.price,
-          cost: submission.draft.cost,
-          category: submission.draft.category,
-          tags: submission.draft.tags,
-          available: submission.draft.available,
-          ...(submission.draft.sku ? { sku: submission.draft.sku } : {}),
-          ...(submission.draft.deliveryOnly ? { deliveryOnly: true } : {}),
-          ...(submission.draft.packagingCost !== undefined
-            ? { packagingCost: submission.draft.packagingCost }
-            : {}),
-          ...(submission.draft.modifierGroups
-            ? { modifierGroups: submission.draft.modifierGroups }
-            : {}),
-        };
-        const res = await fetch("/api/admin/menu/custom", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        return { slug, ok: res.ok, op: "clone" as const };
-      }),
-    );
-    for (const r of cloneResults) {
-      if (!r.ok) issues.push(`clone to ${locName(r.slug)}`);
-    }
-
-    // Custom twins: hard-delete via /api/admin/menu/custom?id=…
-    // Seed twins: set the `hidden: true` override (restorable).
-    // pageLoc is treated the same — unchecking it removes the row here.
-    const removeResults = await Promise.all(
-      submission.removeFrom.map(async (slug) => {
-        const twin = findTwin(slug, baseSlug);
-        if (!twin) return { slug, ok: true, op: "noop" as const };
-        if (twin._isCustom) {
-          const ok = await hardDeleteCustomItem(twin.id);
-          return { slug, ok, op: "delete" as const };
-        }
-        const res = await fetch("/api/admin/menu", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ items: { [twin.id]: { hidden: true } } }),
-        });
-        return { slug, ok: res.ok, op: "hide" as const };
-      }),
-    );
-    for (const r of removeResults) {
-      if (!r.ok) {
-        issues.push(`${r.op === "hide" ? "hide" : "delete"} at ${locName(r.slug)}`);
-      }
-    }
-
-    if (issues.length > 0) {
-      toast.error("Some changes failed", issues.join(", "));
-    } else {
-      toast.success("Menu item updated");
-    }
-    setEditing(null);
-    // Refresh from server — the orchestration above touched multiple
-    // locations and renames, so optimistic local merging would drift.
-    await fetchMenu();
-  };
-
   const createCustomItem = async (draft: {
     baseSlug: string;
     name: string;
@@ -813,25 +581,6 @@ export function AdminMenu() {
     await fetchMenu();
     return true;
   };
-
-  /** Hard-delete an admin-created row at any location. Used by the row
-   *  trash icon (custom items) and the edit dialog's location selector
-   *  when a location is unchecked. Returns true on success so the caller
-   *  can update local state. */
-  const hardDeleteCustomItem = useCallback(
-    async (id: string): Promise<boolean> => {
-      const res = await fetch(`/api/admin/menu/custom?id=${encodeURIComponent(id)}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        toast.error("Could not delete", err?.error || "Try again.");
-        return false;
-      }
-      return true;
-    },
-    [toast],
-  );
 
   /** Locate the location that owns a given item id by looking it up in
    *  the per-location snapshot. The list is unified across trucks, so
@@ -1000,8 +749,6 @@ export function AdminMenu() {
 
   const unavailableCount = unifiedItems.filter((u) => !u.available).length;
 
-  const locOptions = activeLocations.map((l) => ({ value: l.slug, label: l.city }));
-
   return (
     <div className="v2-page">
       <header className="v2-page-header">
@@ -1013,15 +760,6 @@ export function AdminMenu() {
           </p>
         </div>
         <div className="v2-page-actions">
-          <div className="v2-field-inline" title="Default location for new items and the lens used to pick a row's primary variant.">
-            <MapPin className="h-3.5 w-3.5 v2-muted" />
-            <Select
-              value={pageLoc}
-              onChange={(e) => setPageLoc(e.target.value)}
-              options={locOptions}
-              aria-label="Default location for new items"
-            />
-          </div>
           {hiddenCount > 0 && (
             <Button
               variant="ghost"
@@ -1174,7 +912,6 @@ export function AdminMenu() {
         <div className="v2-mng-groups">
           {grouped.map(([cat, list]) => {
             const Icon = CATEGORY_ICON[cat];
-            const allSingleLocation = list.every((u) => u.locations.length <= 1);
             return (
               <section key={cat} className="v2-mng-section" data-variant="menu">
                 <header className="v2-mng-section-header">
@@ -1183,27 +920,49 @@ export function AdminMenu() {
                     <span className="v2-mng-section-name">{MENU_CATEGORY_LABELS[cat]}</span>
                     <span className="v2-mng-section-count">{list.length}</span>
                   </span>
-                  {allSingleLocation ? (
-                    <>
-                      <span className="v2-mng-col">Price</span>
-                      <span className="v2-mng-col">Cost</span>
-                      <span className="v2-mng-col">Margin</span>
-                      <span aria-hidden />
-                    </>
-                  ) : (
-                    <>
-                      <span className="v2-mng-col" style={{ gridColumn: "span 3", textAlign: "left" }}>
-                        Per-location price · cost · margin
-                      </span>
-                      <span aria-hidden />
-                    </>
-                  )}
+                  <span className="v2-mng-col">Price</span>
+                  <span className="v2-mng-col">Cost</span>
+                  <span className="v2-mng-col">Margin</span>
+                  <span aria-hidden />
                 </header>
                 <ul className="v2-mng-list">
                   {list.map((unified) => {
                     const primary = unified.primary;
-                    const primaryMargin = marginPct(primary.price, primary.cost);
-                    const isMulti = unified.locations.length > 1;
+                    // One sweep across the visible variants computes every
+                    // value the row needs — price + cost min/max plus the
+                    // worst (lowest) margin tone, no intermediate arrays.
+                    // Hidden rows are excluded so soft-deleted trucks don't
+                    // drag the min to zero or skew the margin colour.
+                    let priceMin = Infinity;
+                    let priceMax = -Infinity;
+                    let costMin = Infinity;
+                    let costMax = -Infinity;
+                    let marginMin = Infinity;
+                    let marginMax = -Infinity;
+                    let seen = 0;
+                    for (const l of unified.locations) {
+                      if (l.item._hidden) continue;
+                      const p = l.item.price;
+                      const c = l.item.cost;
+                      if (p < priceMin) priceMin = p;
+                      if (p > priceMax) priceMax = p;
+                      if (c < costMin) costMin = c;
+                      if (c > costMax) costMax = c;
+                      const m = marginPct(p, c);
+                      if (m < marginMin) marginMin = m;
+                      if (m > marginMax) marginMax = m;
+                      seen++;
+                    }
+                    if (seen === 0) {
+                      priceMin = priceMax = primary.price;
+                      costMin = costMax = primary.cost;
+                      marginMin = marginMax = marginPct(primary.price, primary.cost);
+                    }
+                    const priceVaries = priceMin !== priceMax;
+                    const costVaries = costMin !== costMax;
+                    const marginVaries = marginMin !== marginMax;
+                    const worstTone = marginTone(marginMin);
+                    const locCount = unified.locations.length;
                     // Row is "selected" when every variant's id is in
                     // selectedIds; toggling cascades to all variants so
                     // the bulk dialogs see every underlying row.
@@ -1245,10 +1004,10 @@ export function AdminMenu() {
                           className={`v2-mng-toggle ${unified.available ? "is-on" : "is-off"}`}
                           aria-label={unified.available ? "Mark sold out" : "Mark available"}
                           title={
-                            isMulti
+                            locCount > 1
                               ? unified.available
-                                ? `Mark sold out at all ${unified.locations.length} locations`
-                                : `Mark available at all ${unified.locations.length} locations`
+                                ? `Mark sold out at all ${locCount} locations`
+                                : `Mark available at all ${locCount} locations`
                               : unified.available
                               ? "Mark sold out"
                               : "Mark available"
@@ -1276,53 +1035,60 @@ export function AdminMenu() {
                             ))}
                           </div>
                           {unified.description && <p className="v2-mng-row-desc">{unified.description}</p>}
-                          {isMulti && (
-                            <div className="v2-mng-loc-chips" role="list" aria-label="Per-location variants">
-                              {unified.locations.map((l) => {
-                                const lm = marginPct(l.item.price, l.item.cost);
-                                return (
-                                  <span
-                                    key={l.slug}
-                                    role="listitem"
-                                    className="v2-mng-loc-chip"
-                                    data-hidden={l.item._hidden ? "true" : undefined}
-                                    data-off={!l.item.available ? "true" : undefined}
-                                    title={[
-                                      `${l.city} · ${formatPrice(l.item.price)} · ${lm}% margin`,
-                                      l.item._hasOverride ? "edited" : null,
-                                      l.item._hidden ? "hidden" : null,
-                                      !l.item.available ? "86'd" : null,
-                                    ]
-                                      .filter(Boolean)
-                                      .join(" · ")}
-                                  >
-                                    <MapPin className="h-3 w-3" aria-hidden />
-                                    <span className="v2-mng-loc-city">{l.city}</span>
-                                    <span className="v2-mng-loc-price tabular">{formatPrice(l.item.price)}</span>
-                                    <span className="v2-mng-loc-cost tabular">{formatPrice(l.item.cost)}</span>
-                                    <span className={`v2-mng-loc-margin v2-mng-val-margin-${marginTone(lm)} tabular`}>{lm}%</span>
-                                  </span>
-                                );
-                              })}
-                            </div>
-                          )}
+                          <div className="v2-mng-row-meta" aria-label="Chain summary">
+                            <span>
+                              {locCount === 1
+                                ? unified.locations[0]?.city
+                                : `${locCount} locations`}
+                            </span>
+                            {(priceVaries || costVaries) && (
+                              <span className="v2-mng-row-meta-badge" title="Values differ across locations — open the detail page to compare.">
+                                varies
+                              </span>
+                            )}
+                            {unified.hasOverride && !priceVaries && !costVaries && (
+                              <span className="v2-mng-row-meta-badge v2-mng-row-meta-badge-info">
+                                uniform override
+                              </span>
+                            )}
+                          </div>
                         </div>
 
-                        {isMulti ? (
-                          <span style={{ gridColumn: "span 3" }} aria-hidden />
-                        ) : (
-                          <>
-                            <span className="v2-mng-val v2-mng-val-price tabular">{formatPrice(primary.price)}</span>
-                            <span
-                              className="v2-mng-val v2-mng-val-cost tabular"
-                              title={primary._hasRecipe ? "Cost is computed from this item's recipe (canonical)." : primary._costSource === "override" ? "Cost is a manual override." : "Cost is the seed value — no recipe yet."}
-                            >
-                              {formatPrice(primary.cost)}
-                              {primary._hasRecipe && <span className="v2-mng-cost-source"> recipe</span>}
-                            </span>
-                            <span className={`v2-mng-val v2-mng-val-margin v2-mng-val-margin-${marginTone(primaryMargin)} tabular`}>{primaryMargin}%</span>
-                          </>
-                        )}
+                        <span
+                          className="v2-mng-val v2-mng-val-price tabular"
+                          title={
+                            priceVaries
+                              ? `Range across ${locCount} location${locCount === 1 ? "" : "s"}`
+                              : undefined
+                          }
+                        >
+                          {priceVaries
+                            ? formatPriceRange(priceMin, priceMax)
+                            : formatPrice(priceMin)}
+                        </span>
+                        <span
+                          className="v2-mng-val v2-mng-val-cost tabular"
+                          data-recipe={primary._hasRecipe ? "true" : undefined}
+                          title={
+                            primary._hasRecipe
+                              ? "Cost is computed from each location's recipe — edit ingredients in /admin/recipes."
+                              : costVaries
+                              ? `Cost varies across ${locCount} locations`
+                              : primary._costSource === "override"
+                              ? "Manual cost override."
+                              : "Seed cost — no recipe yet."
+                          }
+                        >
+                          {costVaries
+                            ? formatPriceRange(costMin, costMax)
+                            : formatPrice(costMin)}
+                        </span>
+                        <span
+                          className={`v2-mng-val v2-mng-val-margin v2-mng-val-margin-${worstTone} tabular`}
+                          title={marginVaries ? `Range across ${locCount} locations` : undefined}
+                        >
+                          {marginVaries ? `${marginMin}–${marginMax}%` : `${marginMin}%`}
+                        </span>
 
                         <span className="v2-mng-edit-group">
                           {unified.hidden ? (
@@ -1336,19 +1102,14 @@ export function AdminMenu() {
                               <Eye className="h-3.5 w-3.5" />
                             </button>
                           ) : (
-                            <button
-                              type="button"
+                            <Link
+                              href={`/admin/menu/${unified.baseSlug}`}
                               className="v2-mng-edit"
-                              onClick={() => setEditing(primary)}
                               aria-label={`Edit ${unified.name}`}
-                              title={
-                                isMulti
-                                  ? `Edit ${unified.name} — opens the ${unified.locations.find((l) => l.slug === unified.primarySlug)?.city ?? activeLocations[0]?.city ?? ""} variant. Tick "Apply changes to all locations" to fan out.`
-                                  : "Edit item"
-                              }
+                              title={`Edit ${unified.name} — chain-wide details + per-location pricing`}
                             >
                               <Pencil className="h-3.5 w-3.5" />
-                            </button>
+                            </Link>
                           )}
                           {!unified.hidden && (
                             <button
@@ -1357,8 +1118,8 @@ export function AdminMenu() {
                               onClick={() => deleteItem(primary)}
                               aria-label={`Delete ${unified.name}`}
                               title={
-                                isMulti
-                                  ? `Delete ${unified.name} — defaults to deleting at ${unified.locations.find((l) => l.slug === unified.primarySlug)?.city ?? ""}; pick "Delete everywhere" in the dialog to remove from all locations.`
+                                locCount > 1
+                                  ? `Delete ${unified.name} — pick a location or "Delete everywhere" in the dialog.`
                                   : primary._isCustom
                                   ? "Delete item (permanent)"
                                   : "Hide seed item (restoreable)"
@@ -1378,17 +1139,8 @@ export function AdminMenu() {
         </div>
       )}
 
-      <EditItemDialog
-        item={editing}
-        currentSlug={editing ? locationOfItem(editing.id) : pageLoc}
-        menusByLocation={menusByLocation}
-        onClose={() => setEditing(null)}
-        onSave={saveEdit}
-      />
-
       <CreateItemDialog
         open={creating}
-        locationSlug={pageLoc}
         onClose={() => setCreating(false)}
         onCreate={createCustomItem}
       />
@@ -2045,719 +1797,6 @@ function BulkCloneDialog({
   );
 }
 
-interface EditSubmission {
-  fieldChange: {
-    name?: string;
-    price?: number;
-    cost?: number;
-    description?: string;
-    category?: MenuCategory;
-    tags?: string[];
-    available?: boolean;
-    sku?: string | null;
-    deliveryOnly?: boolean | null;
-    packagingCost?: number | null;
-    modifierGroups?: ModifierGroup[] | null;
-  };
-  /** Custom-item rename. Ignored for seed items. */
-  newId?: string;
-  /** Location slugs to clone the (post-edit) item to. */
-  addTo: string[];
-  /** Location slugs to remove the item from — for each, the parent
-   *  looks up the twin by base slug and either hard-deletes (custom)
-   *  or sets `hidden: true` (seed). */
-  removeFrom: string[];
-  /** When true, the field changes also propagate to every twin of this
-   *  item at other active locations (matched by name). Saves the
-   *  operator from re-opening this dialog for each truck. */
-  propagateFieldsToAllLocations?: boolean;
-  /** Full snapshot of the edited values, used for cloning. */
-  draft: {
-    name: string;
-    description: string;
-    price: number;
-    cost: number;
-    category: MenuCategory;
-    tags: string[];
-    available: boolean;
-    sku?: string;
-    deliveryOnly?: boolean;
-    packagingCost?: number;
-    modifierGroups?: ModifierGroup[];
-  };
-}
-
-interface EditDialogProps {
-  item: MenuItemData | null;
-  currentSlug: string;
-  menusByLocation: Record<string, MenuItemData[]>;
-  onClose: () => void;
-  onSave: (
-    id: string,
-    isCustom: boolean,
-    submission: EditSubmission,
-  ) => Promise<void> | void;
-}
-
-function EditItemDialog({ item, currentSlug, menusByLocation, onClose, onSave }: EditDialogProps) {
-  const [name, setName] = useState("");
-  const [idStr, setIdStr] = useState("");
-  const [sku, setSku] = useState("");
-  const [priceStr, setPriceStr] = useState("0.00");
-  const [costStr, setCostStr] = useState("0.00");
-  const [desc, setDesc] = useState("");
-  const [cat, setCat] = useState<MenuCategory>("pizza");
-  const [tags, setTags] = useState<string[]>([]);
-  const [available, setAvailable] = useState(true);
-  // Audit §3 channel + packaging + modifiers
-  const [deliveryOnly, setDeliveryOnly] = useState(false);
-  const [packagingStr, setPackagingStr] = useState("");
-  const [modifierGroups, setModifierGroups] = useState<ModifierGroup[]>([]);
-  const [busy, setBusy] = useState(false);
-
-  // Locations where this product currently lives — derived from the
-  // cross-location menu snapshot by base-slug match. Operators
-  // check/uncheck to clone the item to a new truck or remove it from
-  // an existing one (delete for custom rows, hide for seed rows).
-  const initialLocations = useMemo(() => {
-    if (!item) return [currentSlug];
-    const baseSlug = getBaseSlug(item.id);
-    return activeLocations
-      .filter((loc) => {
-        const locItems = menusByLocation[loc.slug] || [];
-        return locItems.some(
-          (i) => !i._hidden && getBaseSlug(i.id) === baseSlug,
-        );
-      })
-      .map((l) => l.slug);
-  }, [item, currentSlug, menusByLocation]);
-
-  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
-  /** "Apply price/cost/description changes to every other location where
-   *  this item exists." Only meaningful when the item has at least one
-   *  cross-location twin — the dialog renders the checkbox conditionally. */
-  const [propagateAll, setPropagateAll] = useState(false);
-
-  useEffect(() => {
-    if (item) {
-      setName(item.name);
-      setIdStr(item.id);
-      setSku(item.sku ?? "");
-      setPriceStr((item.price / 100).toFixed(2));
-      setCostStr((item.cost / 100).toFixed(2));
-      setDesc(item.description);
-      setCat(item.category);
-      setTags(item.tags.slice());
-      setAvailable(item.available);
-      setDeliveryOnly(Boolean(item.deliveryOnly));
-      setPackagingStr(
-        typeof item.packagingCost === "number"
-          ? (item.packagingCost / 100).toFixed(2)
-          : "",
-      );
-      // Deep clone so dialog edits don't mutate the parent state.
-      setModifierGroups(
-        item.modifierGroups
-          ? JSON.parse(JSON.stringify(item.modifierGroups))
-          : [],
-      );
-      setSelectedLocations(initialLocations);
-      setPropagateAll(false);
-      setBusy(false);
-    }
-  }, [item, initialLocations]);
-
-  if (!item) {
-    return <Dialog open={false} onClose={onClose} />;
-  }
-
-  const isCustom = Boolean(item._isCustom);
-  // Recipe-attached items get their cost computed from ingredients, so the
-  // field is locked regardless of whether the row is seed or custom.
-  const canEditCost = !item._hasRecipe;
-  // Seed item IDs live in code (src/data/menus/*.ts) — we can't rename
-  // them at runtime. Custom rows are renameable via the PATCH endpoint.
-  const canEditId = isCustom;
-
-  const submit = async () => {
-    const price = Math.round(parseFloat(priceStr || "0") * 100);
-    const change: EditSubmission["fieldChange"] = {};
-    const trimmedName = name.trim();
-    if (trimmedName && trimmedName !== item.name) change.name = trimmedName;
-    if (price !== item.price) change.price = price;
-    if (canEditCost) {
-      const cost = Math.round(parseFloat(costStr || "0") * 100);
-      if (cost !== item.cost) change.cost = cost;
-    }
-    if (desc !== item.description) change.description = desc;
-    if (cat !== item.category) change.category = cat;
-    const tagsChanged =
-      tags.length !== item.tags.length || tags.some((t) => !item.tags.includes(t));
-    if (tagsChanged) change.tags = tags;
-    if (available !== item.available) change.available = available;
-    const trimmedSku = sku.trim();
-    if (trimmedSku !== (item.sku ?? "")) {
-      // For seed-backed items, empty string -> null clears the override
-      // back to the seed sku. Custom items just store the empty string.
-      change.sku = trimmedSku === "" ? (isCustom ? "" : null) : trimmedSku;
-    }
-    const nextDeliveryOnly: boolean | null = deliveryOnly ? true : null;
-    if (nextDeliveryOnly !== (item.deliveryOnly ?? null)) {
-      change.deliveryOnly = nextDeliveryOnly;
-    }
-    const packagingRaw = packagingStr.trim();
-    const nextPackaging: number | null =
-      packagingRaw === ""
-        ? null
-        : Math.max(0, Math.round(parseFloat(packagingRaw || "0") * 100));
-    if (nextPackaging !== (item.packagingCost ?? null)) {
-      change.packagingCost = nextPackaging;
-    }
-    // Modifier comparison via JSON equality — admins editing options
-    // re-render the array reference, so identity check would always fire.
-    const cleanedGroups = modifierGroups
-      .filter((g) => g.label.trim().length > 0 && g.options.length > 0)
-      .map((g) => ({
-        ...g,
-        options: g.options.filter((o) => o.label.trim().length > 0),
-      }))
-      .filter((g) => g.options.length > 0);
-    const seedGroups = item.modifierGroups ?? [];
-    if (JSON.stringify(cleanedGroups) !== JSON.stringify(seedGroups)) {
-      change.modifierGroups = cleanedGroups.length === 0 ? null : cleanedGroups;
-    }
-
-    const trimmedId = idStr.trim();
-    let newId: string | undefined;
-    if (canEditId && trimmedId !== item.id) {
-      if (!/^[a-z0-9-]{3,60}$/.test(trimmedId)) {
-        alert("Item slug must be 3–60 chars, lowercase letters, digits, and hyphens only.");
-        return;
-      }
-      newId = trimmedId;
-    }
-
-    const addTo = selectedLocations.filter((s) => !initialLocations.includes(s));
-    const removeFrom = initialLocations.filter((s) => !selectedLocations.includes(s));
-
-    const nothingChanged =
-      Object.keys(change).length === 0 &&
-      !newId &&
-      addTo.length === 0 &&
-      removeFrom.length === 0;
-    if (nothingChanged) {
-      onClose();
-      return;
-    }
-    setBusy(true);
-    await onSave(item.id, isCustom, {
-      fieldChange: change,
-      newId,
-      addTo,
-      removeFrom,
-      propagateFieldsToAllLocations: propagateAll,
-      draft: {
-        name: trimmedName || item.name,
-        description: desc,
-        price,
-        cost: Math.round(parseFloat(costStr || "0") * 100),
-        category: cat,
-        tags,
-        available,
-        ...(trimmedSku ? { sku: trimmedSku } : {}),
-        ...(deliveryOnly ? { deliveryOnly: true } : {}),
-        ...(nextPackaging !== null ? { packagingCost: nextPackaging } : {}),
-        ...(cleanedGroups.length > 0 ? { modifierGroups: cleanedGroups } : {}),
-      },
-    });
-    setBusy(false);
-  };
-
-  const toggleLocation = (slug: string) => {
-    setSelectedLocations((prev) =>
-      prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug],
-    );
-  };
-
-  const toggleTag = (tag: string) => {
-    setTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
-    );
-  };
-
-  return (
-    <Dialog
-      open
-      onClose={onClose}
-      size="md"
-      title={`Edit ${item.name}`}
-      description={
-        initialLocations.filter((s) => s !== currentSlug).length > 0
-          ? `Changes apply to ${activeLocations.find((l) => l.slug === currentSlug)?.city ?? currentSlug} unless you tick "Apply to all locations" below.`
-          : "Changes apply to this location only. Save to publish."
-      }
-      footer={
-        <>
-          <Button variant="ghost" onClick={onClose} disabled={busy}>
-            Cancel
-          </Button>
-          <Button variant="primary" onClick={submit} loading={busy}>
-            Save changes
-          </Button>
-        </>
-      }
-    >
-      <div className="v2-stack-12">
-        <Input
-          label="Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          description="Customer-facing item name."
-        />
-        <Input
-          label="Item slug"
-          value={idStr}
-          onChange={(e) =>
-            setIdStr(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))
-          }
-          disabled={!canEditId}
-          description={
-            canEditId
-              ? "Stable identifier used in orders + analytics. Renaming preserves the row; historical orders keep the old slug."
-              : "Seed item slugs live in src/data/menus/*.ts and can't be renamed from the admin."
-          }
-        />
-        <Input
-          label="SKU"
-          value={sku}
-          onChange={(e) => setSku(e.target.value)}
-          placeholder="e.g. SI-PIZ-MARG-001"
-          description="Operator-facing inventory / accounting code. Leave blank if not tracked."
-        />
-        <Select
-          label="Category"
-          value={cat}
-          onChange={(e) => setCat(e.target.value as MenuCategory)}
-          options={CATEGORY_ORDER.map((c) => ({
-            value: c,
-            label: MENU_CATEGORY_LABELS[c],
-          }))}
-        />
-        <div className="v2-field">
-          <label className="v2-field-label">Available at locations</label>
-          <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap" }}>
-            {activeLocations.map((loc) => {
-              const on = selectedLocations.includes(loc.slug);
-              const wasInitial = initialLocations.includes(loc.slug);
-              const willClone = on && !wasInitial;
-              const willRemove = !on && wasInitial;
-              return (
-                <button
-                  key={loc.slug}
-                  type="button"
-                  onClick={() => toggleLocation(loc.slug)}
-                  aria-pressed={on}
-                  className={`v2-chip ${on ? "is-on" : ""}`}
-                  title={
-                    willClone
-                      ? `Clone to ${loc.city} on save`
-                      : willRemove
-                      ? `Remove from ${loc.city} on save (delete custom row / hide seed)`
-                      : on
-                      ? `Currently at ${loc.city}`
-                      : `Not at ${loc.city}`
-                  }
-                >
-                  {loc.city}
-                  {willClone && " +"}
-                  {willRemove && " −"}
-                </button>
-              );
-            })}
-          </div>
-          <p className="v2-field-desc">
-            Check a location to clone this item there on save. Uncheck to
-            remove (custom rows are deleted; seed rows are hidden and can
-            be restored later).
-          </p>
-        </div>
-        {initialLocations.filter((s) => s !== currentSlug).length > 0 && (
-          <label
-            style={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: "0.5rem",
-              padding: "0.625rem 0.75rem",
-              border: "1px solid var(--border)",
-              borderRadius: "var(--radius-md)",
-              background: "var(--brand-soft, var(--surface-2))",
-              fontSize: "0.875rem",
-              cursor: "pointer",
-            }}
-            title="Propagate the field changes to twins of this item at other locations. Matched by name."
-          >
-            <input
-              type="checkbox"
-              checked={propagateAll}
-              onChange={(e) => setPropagateAll(e.target.checked)}
-              style={{ width: 16, height: 16, marginTop: 2, flexShrink: 0 }}
-            />
-            <span>
-              <strong>Apply price, cost &amp; description changes to all locations.</strong>
-              <span
-                style={{
-                  display: "block",
-                  fontSize: "0.75rem",
-                  color: "var(--fg-muted)",
-                  marginTop: 2,
-                }}
-              >
-                Same item exists at{" "}
-                {initialLocations
-                  .filter((s) => s !== currentSlug)
-                  .map((s) => activeLocations.find((l) => l.slug === s)?.city ?? s)
-                  .join(", ")}
-                . Identity fields (name, slug, SKU, modifiers) only change here.
-              </span>
-            </span>
-          </label>
-        )}
-        <Input
-          label="Price (PLN)"
-          type="number"
-          step="0.01"
-          min="0"
-          value={priceStr}
-          onChange={(e) => setPriceStr(e.target.value)}
-          trailingAdornment={<span className="v2-muted">zł</span>}
-          description={`Food cost: ${formatPrice(item.cost)} · Current margin: ${marginPct(item.price, item.cost)}%`}
-        />
-        <Input
-          label="Food cost (PLN)"
-          type="number"
-          step="0.01"
-          min="0"
-          value={costStr}
-          onChange={(e) => setCostStr(e.target.value)}
-          disabled={!canEditCost}
-          trailingAdornment={<span className="v2-muted">zł</span>}
-          description={
-            canEditCost
-              ? "Per-portion plate cost. Once a recipe is attached this becomes computed automatically and the field is locked."
-              : "Computed from the attached recipe. Edit ingredients in /admin/recipes to change."
-          }
-        />
-        <Textarea
-          label="Description"
-          value={desc}
-          onChange={(e) => setDesc(e.target.value)}
-          rows={4}
-        />
-        <div className="v2-field">
-          <label className="v2-field-label">Tags</label>
-          <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap" }}>
-            {MENU_TAGS.map((tag) => {
-              const on = tags.includes(tag);
-              return (
-                <button
-                  key={tag}
-                  type="button"
-                  onClick={() => toggleTag(tag)}
-                  aria-pressed={on}
-                  className={`v2-chip ${on ? "is-on" : ""}`}
-                >
-                  {tag}
-                </button>
-              );
-            })}
-          </div>
-          <p className="v2-field-desc">
-            Optional dietary markers shown on the menu card.
-          </p>
-        </div>
-        <label
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "0.5rem",
-            fontSize: "var(--text-sm)",
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={available}
-            onChange={(e) => setAvailable(e.target.checked)}
-          />
-          Available to customers
-        </label>
-        {/* Menu-engineering role + LTO live in /admin/crosssell → Menu badges
-            so the editorial chips have one source of truth. The per-item
-            edit dialog stays focused on price, description, channel
-            economics, and modifiers. */}
-
-        {/* Audit §3 — channel economics + packaging cost */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "auto 1fr",
-            gap: "0.5rem 0.75rem",
-            alignItems: "center",
-            padding: "0.625rem 0.75rem",
-            border: "1px solid var(--border)",
-            borderRadius: "var(--radius-md)",
-            background: "var(--surface-2)",
-          }}
-        >
-          <input
-            id={`delivery-only-${item.id}`}
-            type="checkbox"
-            checked={deliveryOnly}
-            onChange={(e) => setDeliveryOnly(e.target.checked)}
-            style={{ width: 16, height: 16 }}
-          />
-          <label htmlFor={`delivery-only-${item.id}`} style={{ fontSize: "0.875rem", fontWeight: 500 }}>
-            Delivery-only item
-          </label>
-          <span style={{ gridColumn: "1 / 3", fontSize: "0.75rem", color: "var(--fg-muted)" }}>
-            When on, the item is hidden from dine-in/takeout carts and only
-            appears when fulfillmentType=&quot;delivery&quot;. Use for pantry
-            SKUs (frozen tiramisù, beer 4-pack, olive oil bottle) that
-            customers can&apos;t carry from a truck.
-          </span>
-          <span style={{ gridColumn: "1 / 3" }}>
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              label="Packaging cost (PLN, optional)"
-              value={packagingStr}
-              onChange={(e) => setPackagingStr(e.target.value)}
-              trailingAdornment={<span className="v2-muted">zł</span>}
-              description="Per-unit box / wrap / napkin cost on delivery orders. Leave blank to use the category default (pizza 1.80 / pasta 2.50 / antipasti 1.50 / panini 0.80 / drinks 0.60 / desserts 1.00)."
-            />
-          </span>
-        </div>
-
-        {/* Audit §3 — per-item modifier editor */}
-        <ModifierEditor groups={modifierGroups} onChange={setModifierGroups} />
-      </div>
-    </Dialog>
-  );
-}
-
-// ─── Modifier editor (audit §3) ──────────────────────────────────────────
-//
-// Lets an operator add/edit modifier groups for a menu item: crust types,
-// premium toppings, spice levels. Each group has a label, min/max
-// selection bounds, and an option list. Options carry priceDelta (added
-// to the line price), optional costDelta (used by the bundle margin
-// alert), and a flagOnKds boolean that highlights the option on the
-// kitchen ticket.
-//
-// Default off — items without modifier groups stay legacy single-price.
-
-function ModifierEditor({
-  groups,
-  onChange,
-}: {
-  groups: ModifierGroup[];
-  onChange: (next: ModifierGroup[]) => void;
-}) {
-  const update = (i: number, patch: Partial<ModifierGroup>) => {
-    onChange(groups.map((g, idx) => (idx === i ? { ...g, ...patch } : g)));
-  };
-  const remove = (i: number) => {
-    onChange(groups.filter((_, idx) => idx !== i));
-  };
-  const add = () => {
-    const id = `mod-${Math.random().toString(36).slice(2, 8)}`;
-    onChange([
-      ...groups,
-      {
-        id,
-        label: "New group",
-        minSelections: 0,
-        maxSelections: 1,
-        options: [{ id: `opt-${Math.random().toString(36).slice(2, 8)}`, label: "Standard", priceDelta: 0 }],
-      },
-    ]);
-  };
-  const updateOption = (gi: number, oi: number, patch: Partial<ModifierOption>) => {
-    update(gi, {
-      options: groups[gi].options.map((o, idx) => (idx === oi ? { ...o, ...patch } : o)),
-    });
-  };
-  const addOption = (gi: number) => {
-    update(gi, {
-      options: [
-        ...groups[gi].options,
-        {
-          id: `opt-${Math.random().toString(36).slice(2, 8)}`,
-          label: "New option",
-          priceDelta: 0,
-        },
-      ],
-    });
-  };
-  const removeOption = (gi: number, oi: number) => {
-    update(gi, {
-      options: groups[gi].options.filter((_, idx) => idx !== oi),
-    });
-  };
-
-  return (
-    <div
-      style={{
-        border: "1px solid var(--border)",
-        borderRadius: "var(--radius-md)",
-        padding: "0.75rem",
-        background: "var(--surface-2)",
-        display: "flex",
-        flexDirection: "column",
-        gap: "0.75rem",
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div>
-          <p style={{ fontSize: "0.875rem", fontWeight: 600 }}>Item modifiers</p>
-          <p style={{ fontSize: "0.75rem", color: "var(--fg-muted)", marginTop: "0.125rem" }}>
-            Optional groups customers pick from at checkout. PriceDelta adds
-            to the line; flagOnKds highlights on the kitchen ticket.
-          </p>
-        </div>
-        <Button size="sm" variant="ghost" onClick={add}>
-          + Add group
-        </Button>
-      </div>
-
-      {groups.length === 0 && (
-        <p style={{ fontSize: "0.75rem", color: "var(--fg-muted)", fontStyle: "italic" }}>
-          No modifier groups. Customers see the standard price only.
-        </p>
-      )}
-
-      {groups.map((g, gi) => (
-        <div
-          key={g.id}
-          style={{
-            border: "1px solid var(--border)",
-            borderRadius: "var(--radius-sm)",
-            padding: "0.625rem",
-            background: "var(--surface)",
-            display: "flex",
-            flexDirection: "column",
-            gap: "0.5rem",
-          }}
-        >
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr auto", gap: "0.5rem" }}>
-            <Input
-              label="Group label"
-              value={g.label}
-              onChange={(e) => update(gi, { label: e.target.value })}
-            />
-            <Input
-              type="number"
-              min={0}
-              max={10}
-              label="Min picks"
-              value={String(g.minSelections ?? 0)}
-              onChange={(e) =>
-                update(gi, { minSelections: Math.max(0, Number(e.target.value) || 0) })
-              }
-            />
-            <Input
-              type="number"
-              min={1}
-              max={10}
-              label="Max picks"
-              value={String(g.maxSelections ?? 1)}
-              onChange={(e) =>
-                update(gi, { maxSelections: Math.max(1, Number(e.target.value) || 1) })
-              }
-            />
-            <div style={{ alignSelf: "end" }}>
-              <Button size="sm" variant="ghost" onClick={() => remove(gi)}>
-                Remove group
-              </Button>
-            </div>
-          </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
-            {g.options.map((o, oi) => (
-              <div
-                key={o.id}
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "2fr 1fr 1fr auto auto",
-                  gap: "0.375rem",
-                  alignItems: "center",
-                }}
-              >
-                <Input
-                  label={oi === 0 ? "Option label" : undefined}
-                  value={o.label}
-                  onChange={(e) => updateOption(gi, oi, { label: e.target.value })}
-                />
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  label={oi === 0 ? "Price +zł" : undefined}
-                  value={(o.priceDelta / 100).toFixed(2)}
-                  onChange={(e) =>
-                    updateOption(gi, oi, {
-                      priceDelta: Math.max(0, Math.round(parseFloat(e.target.value || "0") * 100)),
-                    })
-                  }
-                />
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  label={oi === 0 ? "Cost +zł" : undefined}
-                  value={typeof o.costDelta === "number" ? (o.costDelta / 100).toFixed(2) : ""}
-                  onChange={(e) => {
-                    const raw = e.target.value.trim();
-                    updateOption(gi, oi, {
-                      costDelta:
-                        raw === ""
-                          ? undefined
-                          : Math.max(0, Math.round(parseFloat(raw) * 100)),
-                    });
-                  }}
-                />
-                <label
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "0.25rem",
-                    fontSize: "0.75rem",
-                    color: "var(--fg-muted)",
-                    whiteSpace: "nowrap",
-                  }}
-                  title="Highlight this option on the KDS ticket so the line spots it at a glance."
-                >
-                  <input
-                    type="checkbox"
-                    checked={!!o.flagOnKds}
-                    onChange={(e) => updateOption(gi, oi, { flagOnKds: e.target.checked || undefined })}
-                  />
-                  KDS
-                </label>
-                <Button size="sm" variant="ghost" onClick={() => removeOption(gi, oi)}>
-                  ×
-                </Button>
-              </div>
-            ))}
-            <Button size="sm" variant="ghost" onClick={() => addOption(gi)}>
-              + Add option
-            </Button>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 // ─── Create-item dialog ───────────────────────────────────────────────────
 //
@@ -2778,7 +1817,6 @@ function baseSlugFromName(name: string): string {
 
 interface CreateItemDialogProps {
   open: boolean;
-  locationSlug: string;
   onClose: () => void;
   onCreate: (draft: {
     baseSlug: string;
@@ -2794,7 +1832,7 @@ interface CreateItemDialogProps {
   }) => Promise<boolean>;
 }
 
-function CreateItemDialog({ open, locationSlug, onClose, onCreate }: CreateItemDialogProps) {
+function CreateItemDialog({ open, onClose, onCreate }: CreateItemDialogProps) {
   const [name, setName] = useState("");
   const [baseSlug, setBaseSlug] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
@@ -2805,7 +1843,9 @@ function CreateItemDialog({ open, locationSlug, onClose, onCreate }: CreateItemD
   const [cat, setCat] = useState<MenuCategory>("pizza");
   const [tags, setTags] = useState<string[]>([]);
   const [available, setAvailable] = useState(true);
-  const [selectedLocs, setSelectedLocs] = useState<string[]>([locationSlug]);
+  const [selectedLocs, setSelectedLocs] = useState<string[]>(
+    activeLocations.map((l) => l.slug),
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -2821,11 +1861,11 @@ function CreateItemDialog({ open, locationSlug, onClose, onCreate }: CreateItemD
       setCat("pizza");
       setTags([]);
       setAvailable(true);
-      setSelectedLocs([locationSlug]);
+      setSelectedLocs(activeLocations.map((l) => l.slug));
       setError(null);
       setBusy(false);
     }
-  }, [open, locationSlug]);
+  }, [open]);
 
   // Auto-derive the base slug from the typed name until the operator
   // manually edits it. The base slug is location-agnostic — each target
@@ -2849,7 +1889,7 @@ function CreateItemDialog({ open, locationSlug, onClose, onCreate }: CreateItemD
   const allSelected = selectedLocs.length === activeLocations.length;
   const selectAll = () => {
     if (allSelected) {
-      setSelectedLocs([locationSlug]);
+      setSelectedLocs([]);
     } else {
       setSelectedLocs(activeLocations.map((l) => l.slug));
     }

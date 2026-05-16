@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { MapPin, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Plus, RotateCcw, Trash2 } from "lucide-react";
 import type { Location } from "@/data/types";
 import { useToast } from "./v2/ui/Toast";
 import {
@@ -98,13 +98,18 @@ export function AdminLocationsManager() {
   const toast = useToast();
   const [list, setList] = useState<LocationRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState<{ open: boolean; original: LocationRecord | null; form: FormState }>({
+  const [editing, setEditing] = useState<{
+    open: boolean;
+    original: LocationRecord | null;
+    form: FormState;
+  }>({
     open: false,
     original: null,
     form: EMPTY_FORM,
   });
   const [confirmDelete, setConfirmDelete] = useState<LocationRecord | null>(null);
   const [saving, setSaving] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -164,7 +169,9 @@ export function AdminLocationsManager() {
 
   const remove = async (slug: string) => {
     try {
-      const res = await fetch(`/api/admin/locations?slug=${encodeURIComponent(slug)}`, { method: "DELETE" });
+      const res = await fetch(`/api/admin/locations?slug=${encodeURIComponent(slug)}`, {
+        method: "DELETE",
+      });
       if (!res.ok) throw new Error();
       toast.success("Location removed");
       void refresh();
@@ -174,6 +181,7 @@ export function AdminLocationsManager() {
   };
 
   const reseed = async () => {
+    setBusy(true);
     try {
       const res = await fetch("/api/admin/locations", { method: "PUT" });
       if (!res.ok) throw new Error();
@@ -182,7 +190,13 @@ export function AdminLocationsManager() {
       void refresh();
     } catch {
       toast.error("Re-seed failed");
+    } finally {
+      setBusy(false);
     }
+  };
+
+  const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
+    setEditing((s) => ({ ...s, form: { ...s.form, [key]: value } }));
   };
 
   const cols = useMemo<Column<LocationRecord>[]>(
@@ -190,7 +204,7 @@ export function AdminLocationsManager() {
       {
         key: "slug",
         header: "Slug",
-        cell: (l) => <code className="text-sm font-mono">{l.slug}</code>,
+        cell: (l) => <code className="mono">{l.slug}</code>,
       },
       { key: "name", header: "Name", cell: (l) => l.name },
       { key: "city", header: "City", cell: (l) => l.city },
@@ -198,25 +212,37 @@ export function AdminLocationsManager() {
         key: "active",
         header: "Status",
         cell: (l) =>
-          l.isActive ? <Badge tone="success">Active</Badge> : <Badge tone="neutral">Draft</Badge>,
+          l.isActive ? (
+            <Badge tone="success">Active</Badge>
+          ) : (
+            <Badge tone="neutral">Draft</Badge>
+          ),
       },
       {
         key: "coords",
         header: "Coords",
-        cell: (l) => `${l.coordinates.lat.toFixed(4)}, ${l.coordinates.lng.toFixed(4)}`,
+        cell: (l) =>
+          `${l.coordinates.lat.toFixed(4)}, ${l.coordinates.lng.toFixed(4)}`,
+        align: "right",
       },
       {
         key: "actions",
         header: "",
         align: "right",
         cell: (l) => (
-          <div className="flex justify-end gap-2">
+          <div style={{ display: "inline-flex", gap: 2, justifyContent: "flex-end" }}>
             <Button variant="ghost" size="sm" onClick={() => openEdit(l)}>
               Edit
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(l)}>
-              <Trash2 size={14} />
-            </Button>
+            <button
+              type="button"
+              className="v2-mod-icon-btn"
+              onClick={() => setConfirmDelete(l)}
+              aria-label={`Delete ${l.name}`}
+              title="Delete location"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
           </div>
         ),
       },
@@ -225,32 +251,45 @@ export function AdminLocationsManager() {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold flex items-center gap-2">
-            <MapPin size={22} /> Locations
-          </h1>
-          <p className="text-sm opacity-70 mt-1">
-            Add a new truck without a deploy. Active locations show up on the public landing page and
-            in every dashboard tab. The hardcoded seed in <code>src/data/locations.ts</code> is the
+    <div className="v2-page">
+      <header className="v2-page-header">
+        <div className="v2-page-title-row">
+          <h1 className="v2-page-title">Locations</h1>
+          <p className="v2-page-subtitle">
+            Add a truck without a deploy. Active locations appear on the
+            public landing page and in every admin tab. The hardcoded seed
+            in <code className="mono">src/data/locations.ts</code> is the
             first-deploy fallback only.
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="ghost" onClick={reseed} title="Upsert the in-code seed into the DB">
-            <RefreshCw size={14} /> Re-seed from code
+        <div className="v2-page-actions">
+          <Button
+            variant="ghost"
+            size="sm"
+            loading={busy}
+            onClick={reseed}
+            title="Upsert the in-code seed into the DB"
+          >
+            <RotateCcw className="h-3.5 w-3.5" /> Re-seed from code
           </Button>
-          <Button onClick={openCreate}>
-            <Plus size={14} /> Add location
+          <Button variant="primary" size="sm" onClick={openCreate}>
+            <Plus className="h-3.5 w-3.5" /> Add location
           </Button>
         </div>
-      </div>
+      </header>
 
       <Card>
         <CardBody>
+          <div className="v2-detail-head">
+            <h2>All locations</h2>
+            <span className="v2-detail-head-hint">
+              {list.length} {list.length === 1 ? "row" : "rows"}
+              {" · "}
+              {list.filter((l) => l.isActive).length} active
+            </span>
+          </div>
           {loading ? (
-            <div className="py-10 text-center opacity-60">Loading…</div>
+            <div className="v2-page-loading">Loading…</div>
           ) : list.length === 0 ? (
             <EmptyState
               title="No locations"
@@ -266,173 +305,220 @@ export function AdminLocationsManager() {
         open={editing.open}
         onClose={() => setEditing({ open: false, original: null, form: EMPTY_FORM })}
         title={editing.original ? `Edit ${editing.original.name}` : "New location"}
+        description={
+          editing.original
+            ? "Slug is locked after creation — it's tied to historical orders + URLs."
+            : "Active locations appear on the public landing and the admin location switcher."
+        }
+        size="lg"
+        footer={
+          <>
+            <Button
+              variant="ghost"
+              onClick={() =>
+                setEditing({ open: false, original: null, form: EMPTY_FORM })
+              }
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={save} loading={saving}>
+              {editing.original ? "Save changes" : "Create location"}
+            </Button>
+          </>
+        }
       >
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+        <div className="v2-detail-form">
+          <div className="v2-detail-form-row" data-cols="3">
             <Input
               label="Slug"
               value={editing.form.slug}
               disabled={!!editing.original}
               onChange={(e) =>
-                setEditing((s) => ({ ...s, form: { ...s.form, slug: e.target.value.toLowerCase() } }))
+                setField(
+                  "slug",
+                  e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""),
+                )
               }
               placeholder="e.g. wroclaw"
-            />
-            <Input
-              label="Display order"
-              value={editing.form.displayOrder}
-              onChange={(e) => setEditing((s) => ({ ...s, form: { ...s.form, displayOrder: e.target.value } }))}
+              description={
+                editing.original
+                  ? "Locked — tied to historical orders."
+                  : "3–60 chars · lowercase · digits · hyphens."
+              }
             />
             <Input
               label="Name"
               value={editing.form.name}
-              onChange={(e) => setEditing((s) => ({ ...s, form: { ...s.form, name: e.target.value } }))}
+              onChange={(e) => setField("name", e.target.value)}
+              placeholder="Sud Italia · Wrocław"
             />
             <Input
               label="City"
               value={editing.form.city}
-              onChange={(e) => setEditing((s) => ({ ...s, form: { ...s.form, city: e.target.value } }))}
+              onChange={(e) => setField("city", e.target.value)}
+              placeholder="Wrocław"
             />
+          </div>
+
+          <div className="v2-detail-form-row" data-cols="3">
             <Input
               label="Latitude"
               value={editing.form.lat}
-              onChange={(e) => setEditing((s) => ({ ...s, form: { ...s.form, lat: e.target.value } }))}
+              onChange={(e) => setField("lat", e.target.value)}
               placeholder="50.0614"
+              inputMode="decimal"
             />
             <Input
               label="Longitude"
               value={editing.form.lng}
-              onChange={(e) => setEditing((s) => ({ ...s, form: { ...s.form, lng: e.target.value } }))}
+              onChange={(e) => setField("lng", e.target.value)}
               placeholder="19.9372"
+              inputMode="decimal"
             />
-            <div className="col-span-2">
-              <Input
-                label="Address"
-                value={editing.form.address}
-                onChange={(e) => setEditing((s) => ({ ...s, form: { ...s.form, address: e.target.value } }))}
-              />
-            </div>
-            <div className="col-span-2">
-              <Input
-                label="Hero image path"
-                value={editing.form.heroImage}
-                onChange={(e) =>
-                  setEditing((s) => ({ ...s, form: { ...s.form, heroImage: e.target.value } }))
+            <Input
+              label="Display order"
+              value={editing.form.displayOrder}
+              onChange={(e) => setField("displayOrder", e.target.value)}
+              description="Lower numbers sort first."
+            />
+          </div>
+
+          <Input
+            label="Address"
+            value={editing.form.address}
+            onChange={(e) => setField("address", e.target.value)}
+            placeholder="Rynek Główny, 31-042 Kraków"
+          />
+
+          <Input
+            label="Hero image path"
+            value={editing.form.heroImage}
+            onChange={(e) => setField("heroImage", e.target.value)}
+            placeholder="/images/locations/wroclaw-hero.jpg"
+          />
+
+          <Input
+            label="Short description"
+            value={editing.form.shortDescription}
+            onChange={(e) => setField("shortDescription", e.target.value)}
+            placeholder="Authentic Neapolitan pizza & pasta at Wrocław's Main Square"
+          />
+
+          <Textarea
+            label="Description"
+            value={editing.form.description}
+            onChange={(e) => setField("description", e.target.value)}
+            rows={3}
+            placeholder="Long-form copy shown on the public location page."
+          />
+
+          <div className="v2-field">
+            <div className="v2-detail-head" style={{ marginBottom: 8 }}>
+              <h2>Hours</h2>
+              <button
+                type="button"
+                className="v2-mod-add-group"
+                onClick={() =>
+                  setEditing((s) => ({
+                    ...s,
+                    form: {
+                      ...s.form,
+                      hours: [
+                        ...s.form.hours,
+                        { day: "", open: "11:00", close: "21:00" },
+                      ],
+                    },
+                  }))
                 }
-                placeholder="/images/locations/wroclaw-hero.jpg"
-              />
+              >
+                + Add row
+              </button>
             </div>
-            <div className="col-span-2">
-              <Input
-                label="Short description"
-                value={editing.form.shortDescription}
-                onChange={(e) =>
-                  setEditing((s) => ({ ...s, form: { ...s.form, shortDescription: e.target.value } }))
-                }
-              />
-            </div>
-            <div className="col-span-2">
-              <Textarea
-                label="Description"
-                value={editing.form.description}
-                onChange={(e) =>
-                  setEditing((s) => ({ ...s, form: { ...s.form, description: e.target.value } }))
-                }
-                rows={4}
-              />
+            <div className="v2-loc-hours">
+              {editing.form.hours.map((h, i) => (
+                <div key={i} className="v2-loc-hours-row">
+                  <Input
+                    value={h.day}
+                    onChange={(e) =>
+                      setEditing((s) => {
+                        const next = [...s.form.hours];
+                        next[i] = { ...next[i], day: e.target.value };
+                        return { ...s, form: { ...s.form, hours: next } };
+                      })
+                    }
+                    placeholder="Mon-Thu"
+                    aria-label={`Hours row ${i + 1} day`}
+                  />
+                  <Input
+                    type="time"
+                    value={h.open}
+                    onChange={(e) =>
+                      setEditing((s) => {
+                        const next = [...s.form.hours];
+                        next[i] = { ...next[i], open: e.target.value };
+                        return { ...s, form: { ...s.form, hours: next } };
+                      })
+                    }
+                    aria-label={`Hours row ${i + 1} open`}
+                  />
+                  <Input
+                    type="time"
+                    value={h.close}
+                    onChange={(e) =>
+                      setEditing((s) => {
+                        const next = [...s.form.hours];
+                        next[i] = { ...next[i], close: e.target.value };
+                        return { ...s, form: { ...s.form, hours: next } };
+                      })
+                    }
+                    aria-label={`Hours row ${i + 1} close`}
+                  />
+                  <button
+                    type="button"
+                    className="v2-mod-icon-btn"
+                    onClick={() =>
+                      setEditing((s) => ({
+                        ...s,
+                        form: {
+                          ...s.form,
+                          hours: s.form.hours.filter((_, idx) => idx !== i),
+                        },
+                      }))
+                    }
+                    title="Remove this row"
+                    aria-label={`Remove hours row ${i + 1}`}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
 
-          <div className="space-y-2">
-            <div className="text-sm font-medium">Hours</div>
-            {editing.form.hours.map((h, i) => (
-              <div key={i} className="grid grid-cols-7 gap-2 items-center">
-                <Input
-                  className="col-span-3"
-                  value={h.day}
-                  onChange={(e) =>
-                    setEditing((s) => {
-                      const next = [...s.form.hours];
-                      next[i] = { ...next[i], day: e.target.value };
-                      return { ...s, form: { ...s.form, hours: next } };
-                    })
-                  }
-                  placeholder="Mon-Thu"
+          <div className="v2-detail-form-row" data-cols="2">
+            <div className="v2-field">
+              <label className="v2-field-label">Visibility</label>
+              <label className="v2-detail-toggle">
+                <input
+                  type="checkbox"
+                  checked={editing.form.isActive}
+                  onChange={(e) => setField("isActive", e.target.checked)}
                 />
-                <Input
-                  className="col-span-2"
-                  value={h.open}
-                  onChange={(e) =>
-                    setEditing((s) => {
-                      const next = [...s.form.hours];
-                      next[i] = { ...next[i], open: e.target.value };
-                      return { ...s, form: { ...s.form, hours: next } };
-                    })
-                  }
+                <span>Active — show on public site</span>
+              </label>
+            </div>
+            <div className="v2-field">
+              <label className="v2-field-label">Licensing</label>
+              <label className="v2-detail-toggle">
+                <input
+                  type="checkbox"
+                  checked={editing.form.servesAlcohol}
+                  onChange={(e) => setField("servesAlcohol", e.target.checked)}
                 />
-                <Input
-                  className="col-span-2"
-                  value={h.close}
-                  onChange={(e) =>
-                    setEditing((s) => {
-                      const next = [...s.form.hours];
-                      next[i] = { ...next[i], close: e.target.value };
-                      return { ...s, form: { ...s.form, hours: next } };
-                    })
-                  }
-                />
-              </div>
-            ))}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                setEditing((s) => ({
-                  ...s,
-                  form: {
-                    ...s.form,
-                    hours: [...s.form.hours, { day: "", open: "11:00", close: "21:00" }],
-                  },
-                }))
-              }
-            >
-              + Add row
-            </Button>
-          </div>
-
-          <div className="flex gap-4">
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={editing.form.isActive}
-                onChange={(e) =>
-                  setEditing((s) => ({ ...s, form: { ...s.form, isActive: e.target.checked } }))
-                }
-              />
-              Active (visible on public site)
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={editing.form.servesAlcohol}
-                onChange={(e) =>
-                  setEditing((s) => ({ ...s, form: { ...s.form, servesAlcohol: e.target.checked } }))
-                }
-              />
-              Serves alcohol
-            </label>
-          </div>
-
-          <div className="flex justify-end gap-2 pt-2">
-            <Button
-              variant="ghost"
-              onClick={() => setEditing({ open: false, original: null, form: EMPTY_FORM })}
-            >
-              Cancel
-            </Button>
-            <Button onClick={save} loading={saving}>
-              Save
-            </Button>
+                <span>Serves alcohol</span>
+              </label>
+            </div>
           </div>
         </div>
       </Dialog>
