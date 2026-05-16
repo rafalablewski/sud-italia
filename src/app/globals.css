@@ -2462,6 +2462,14 @@ html { scroll-behavior: smooth; }
 }
 .v2-mng-val-price { color: var(--fg); font-weight: 600; }
 .v2-mng-val-cost { color: var(--fg-muted); }
+/* Quiet flag: recipe-derived costs get a 1px dotted underline so
+ * operators can spot them while scanning, without spending column
+ * width on a "RECIPE" suffix that overflowed into the margin cell. */
+.v2-mng-val-cost[data-recipe="true"] {
+  text-decoration: underline dotted var(--info);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
 .v2-mng-val-margin { font-weight: 600; }
 .v2-mng-val-margin-success { color: var(--success); }
 .v2-mng-val-margin-warning { color: var(--warning); }

@@ -1068,9 +1068,10 @@ export function AdminMenu() {
                         </span>
                         <span
                           className="v2-mng-val v2-mng-val-cost tabular"
+                          data-recipe={primary._hasRecipe ? "true" : undefined}
                           title={
                             primary._hasRecipe
-                              ? "Cost is computed from each location's recipe."
+                              ? "Cost is computed from each location's recipe — edit ingredients in /admin/recipes."
                               : costVaries
                               ? `Cost varies across ${locCount} locations`
                               : primary._costSource === "override"
@@ -1081,7 +1082,6 @@ export function AdminMenu() {
                           {costVaries
                             ? formatPriceRange(costMin, costMax)
                             : formatPrice(costMin)}
-                          {primary._hasRecipe && <span className="v2-mng-cost-source"> recipe</span>}
                         </span>
                         <span
                           className={`v2-mng-val v2-mng-val-margin v2-mng-val-margin-${worstTone} tabular`}
