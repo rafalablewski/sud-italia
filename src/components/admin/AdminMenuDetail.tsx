@@ -285,15 +285,6 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
   const activeVariant = present.find((v) => v.slug === activeLoc);
   const activeCity = activeVariant?.city ?? activeLoc;
 
-  const toggleTag = (tag: string) => {
-    setChain((c) => ({
-      ...c,
-      tags: c.tags.includes(tag)
-        ? c.tags.filter((t) => t !== tag)
-        : [...c.tags, tag],
-    }));
-  };
-
   const setLocField = <K extends keyof PerLocationDraft>(
     slug: string,
     key: K,
@@ -451,17 +442,11 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
         const seedPatch: Record<string, unknown> = {};
         const customBody: Record<string, unknown> = {};
 
-        // Per-variant product fields. Name, category and description are
-        // chain-wide (locked + disabled in the UI), so they intentionally
-        // don't flow into the diff — operators rename / recategorise /
-        // rewrite via a different path. Everything else is per-location.
-        const tagsChanged =
-          chainCur.tags.length !== chainInit.tags.length ||
-          chainCur.tags.some((t) => !chainInit.tags.includes(t));
-        if (tagsChanged) {
-          seedPatch.tags = chainCur.tags;
-          customBody.tags = chainCur.tags;
-        }
+        // Per-variant product fields. Name, category, description and
+        // tags are chain-wide (locked + disabled in the UI), so they
+        // intentionally don't flow into the diff — operators rename /
+        // recategorise / rewrite / retag through a different path.
+        // Everything below is per-location.
         const trimmedSku = chainCur.sku.trim();
         if (trimmedSku !== chainInit.sku.trim()) {
           // PUT accepts null to clear; PATCH/custom expects string ("" = empty).
@@ -942,6 +927,60 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
         </CardBody>
       </Card>
 
+      <Card data-locked="true">
+        <CardBody>
+          <div className="v2-detail-head">
+            <h2>Product · chain-wide</h2>
+            <span className="v2-detail-head-hint">
+              Same across every truck. Locked here.
+            </span>
+          </div>
+
+          <div className="v2-detail-form">
+            <Input
+              label="Name"
+              value={chain.name}
+              onChange={() => {}}
+              disabled
+            />
+            <div className="v2-detail-form-row" data-cols="2">
+              <Select
+                label="Category"
+                value={chain.category}
+                onChange={() => {}}
+                disabled
+                options={CATEGORY_ORDER.map((cc) => ({
+                  value: cc,
+                  label: MENU_CATEGORY_LABELS[cc],
+                }))}
+              />
+              <div className="v2-detail-tags-row v2-detail-tags-row-locked">
+                <span className="v2-detail-tags-row-label">Tags</span>
+                {MENU_TAGS.map((tag) => {
+                  const on = chain.tags.includes(tag);
+                  return (
+                    <span
+                      key={tag}
+                      className={`v2-chip ${on ? "is-on" : ""}`}
+                      aria-disabled="true"
+                    >
+                      {tag}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+            <Textarea
+              label="Description"
+              value={chain.description}
+              onChange={() => {}}
+              disabled
+              rows={3}
+            />
+          </div>
+        </CardBody>
+      </Card>
+
       {present.length > 1 && (
         <div className="v2-scope-bar" role="group" aria-label="Active location for editing below">
           <span className="v2-scope-bar-eyebrow">Editing for</span>
@@ -958,7 +997,7 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
             ))}
           </select>
           <span className="v2-scope-bar-hint">
-            Slug, product fields and modifier prices below apply to{" "}
+            Settings and modifier prices below apply to{" "}
             <strong>{activeCity}</strong> only. Switch the lens to retune
             another truck.
           </span>
@@ -968,23 +1007,11 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
       <Card>
         <CardBody>
           <div className="v2-detail-head">
-            <h2>Product</h2>
+            <h2>Per-location settings</h2>
           </div>
 
           <div className="v2-detail-form">
-            <Input
-              label={
-                <>
-                  Name{" "}
-                  <span className="v2-detail-chain-tag">chain-wide</span>
-                </>
-              }
-              value={chain.name}
-              onChange={() => {}}
-              disabled
-              description="Same across every truck — locked here, edit via API or recreate the product to rename."
-            />
-            <div className="v2-detail-form-row" data-cols="3">
+            <div className="v2-detail-form-row" data-cols="2">
               {(() => {
                 const activeIsCustom = Boolean(activeVariant?.item._isCustom);
                 return (
@@ -1002,8 +1029,8 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
                     disabled={!activeIsCustom}
                     description={
                       activeIsCustom
-                        ? `Custom item — renamable. 3–60 chars, lowercase, digits, hyphens.`
-                        : `Seed item — slug lives in src/data/menus/*.ts.`
+                        ? "Custom — 3–60 chars, lowercase, digits, hyphens."
+                        : "Seed slug lives in src/data/menus/*.ts."
                     }
                   />
                 );
@@ -1014,51 +1041,6 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
                 onChange={(e) => setChain((c) => ({ ...c, sku: e.target.value }))}
                 placeholder="e.g. SI-PIZ-MARG-001"
               />
-              <Select
-                label={
-                  <>
-                    Category{" "}
-                    <span className="v2-detail-chain-tag">chain-wide</span>
-                  </>
-                }
-                value={chain.category}
-                onChange={() => {}}
-                disabled
-                options={CATEGORY_ORDER.map((cc) => ({
-                  value: cc,
-                  label: MENU_CATEGORY_LABELS[cc],
-                }))}
-              />
-            </div>
-            <Textarea
-              label={
-                <>
-                  Description{" "}
-                  <span className="v2-detail-chain-tag">chain-wide</span>
-                </>
-              }
-              value={chain.description}
-              onChange={() => {}}
-              disabled
-              rows={3}
-              description="Same across every truck."
-            />
-            <div className="v2-detail-tags-row">
-              <span className="v2-detail-tags-row-label">Tags</span>
-              {MENU_TAGS.map((tag) => {
-                const on = chain.tags.includes(tag);
-                return (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={() => toggleTag(tag)}
-                    aria-pressed={on}
-                    className={`v2-chip ${on ? "is-on" : ""}`}
-                  >
-                    {tag}
-                  </button>
-                );
-              })}
             </div>
             <div className="v2-detail-form-row" data-cols="2">
               <label className="v2-detail-inline-check">
