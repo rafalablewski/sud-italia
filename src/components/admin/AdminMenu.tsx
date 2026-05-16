@@ -43,8 +43,6 @@ const CATEGORY_ICON: Record<MenuCategory, LucideIcon> = {
   desserts: IceCream,
 };
 
-type MenuRole = "hero" | "profit-driver" | "anchor" | "lto";
-
 interface MenuItemData {
   id: string;
   name: string;
@@ -54,11 +52,6 @@ interface MenuItemData {
   category: MenuCategory;
   tags: string[];
   available: boolean;
-  // Audit §4.3 — surfaced from the merged item so the row can render a
-  // role chip and the dialog can pre-fill the Pizzaiolo's-layout controls.
-  menuRole?: MenuRole;
-  isLimited?: boolean;
-  limitedUntil?: string;
   // Audit §3 — channel economics, packaging, and per-item modifiers.
   deliveryOnly?: boolean;
   packagingCost?: number;
@@ -66,28 +59,6 @@ interface MenuItemData {
   _hasOverride: boolean;
   _hasRecipe?: boolean;
   _costSource?: "recipe" | "override" | "seed";
-}
-
-const MENU_ROLE_LABEL: Record<MenuRole, string> = {
-  hero: "Our Hero",
-  "profit-driver": "Pizzaiolo's Choice",
-  anchor: "Chef's Signature",
-  lto: "Limited (LTO)",
-};
-
-const MENU_ROLE_OPTIONS: { value: ""; label: string }[] | { value: MenuRole | ""; label: string }[] = [
-  { value: "", label: "No role (default)" },
-  { value: "hero", label: "Hero — full-width gateway card" },
-  { value: "profit-driver", label: "Pizzaiolo's Choice — gold profit-driver badge" },
-  { value: "anchor", label: "Anchor — Chef's Signature, range-extender" },
-  { value: "lto", label: "LTO — limited-time positioning" },
-];
-
-function daysUntilIso(iso: string | undefined | null): number | null {
-  if (!iso) return null;
-  const t = new Date(iso).getTime();
-  if (!Number.isFinite(t)) return null;
-  return Math.max(0, Math.ceil((t - Date.now()) / 86_400_000));
 }
 
 const activeLocations = getActiveLocations();
@@ -123,24 +94,6 @@ export function AdminMenu() {
   const [editing, setEditing] = useState<MenuItemData | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
-  // Editorial badge config from /admin/crosssell → Menu badges. Read-only
-  // here; the row renders these chips next to the intrinsic menuRole tag so
-  // the badge layout matches the customer view in one place.
-  const [badgeSets, setBadgeSets] = useState<{
-    hero: Set<string>;
-    pizzaiolo: Set<string>;
-    chef: Set<string>;
-    popular: Set<string>;
-    staffPick: Set<string>;
-    new: Set<string>;
-  }>({
-    hero: new Set(),
-    pizzaiolo: new Set(),
-    chef: new Set(),
-    popular: new Set(),
-    staffPick: new Set(),
-    new: new Set(),
-  });
 
   const fetchMenu = useCallback(async () => {
     setLoading(true);
@@ -159,27 +112,6 @@ export function AdminMenu() {
     fetchMenu();
   }, [fetchMenu]);
 
-  useEffect(() => {
-    let cancelled = false;
-    fetch(`/api/settings/upsell?location=${pageLoc}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((cfg) => {
-        if (cancelled || !cfg) return;
-        setBadgeSets({
-          hero: new Set<string>(cfg.heroItems ?? []),
-          pizzaiolo: new Set<string>(cfg.pizzaioloChoiceItems ?? []),
-          chef: new Set<string>(cfg.chefSignatureItems ?? []),
-          popular: new Set<string>(cfg.popularItems ?? []),
-          staffPick: new Set<string>(cfg.staffPicks ?? []),
-          new: new Set<string>(cfg.newItems ?? []),
-        });
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [pageLoc]);
-
   const persistChange = useCallback(
     async (
       id: string,
@@ -187,9 +119,6 @@ export function AdminMenu() {
         price?: number;
         available?: boolean;
         description?: string;
-        menuRole?: MenuRole | null;
-        isLimited?: boolean | null;
-        limitedUntil?: string | null;
         deliveryOnly?: boolean | null;
         packagingCost?: number | null;
         modifierGroups?: ModifierGroup[] | null;
@@ -323,9 +252,6 @@ export function AdminMenu() {
     change: {
       price?: number;
       description?: string;
-      menuRole?: MenuRole | null;
-      isLimited?: boolean | null;
-      limitedUntil?: string | null;
       deliveryOnly?: boolean | null;
       packagingCost?: number | null;
       modifierGroups?: ModifierGroup[] | null;
@@ -341,15 +267,6 @@ export function AdminMenu() {
                 ...(change.price !== undefined ? { price: change.price } : {}),
                 ...(change.description !== undefined ? { description: change.description } : {}),
                 // Apply null = clear / undefined = unchanged / value = set
-                ...(change.menuRole !== undefined
-                  ? { menuRole: change.menuRole === null ? undefined : change.menuRole }
-                  : {}),
-                ...(change.isLimited !== undefined
-                  ? { isLimited: change.isLimited === null ? undefined : change.isLimited }
-                  : {}),
-                ...(change.limitedUntil !== undefined
-                  ? { limitedUntil: change.limitedUntil === null ? undefined : change.limitedUntil }
-                  : {}),
                 ...(change.deliveryOnly !== undefined
                   ? { deliveryOnly: change.deliveryOnly === null ? undefined : change.deliveryOnly }
                   : {}),
@@ -574,88 +491,12 @@ export function AdminMenu() {
                         <div className="v2-mng-row-main">
                           <div className="v2-mng-row-headline">
                             <span className="v2-mng-row-name">{item.name}</span>
-                            {(() => {
-                              // Effective role badges: union of intrinsic
-                              // `menuRole` and the Menu badges tab selections.
-                              // De-duped so the same item never shows two
-                              // identical chips.
-                              const isHero =
-                                item.menuRole === "hero" ||
-                                badgeSets.hero.has(item.id);
-                              const isPizzaiolo =
-                                item.menuRole === "profit-driver" ||
-                                badgeSets.pizzaiolo.has(item.id);
-                              const isChef =
-                                item.menuRole === "anchor" ||
-                                badgeSets.chef.has(item.id);
-                              return (
-                                <>
-                                  {isHero && (
-                                    <span
-                                      className="v2-mng-tag v2-mng-tag-hero"
-                                      title="Menu badge: Our Hero"
-                                    >
-                                      {MENU_ROLE_LABEL.hero}
-                                    </span>
-                                  )}
-                                  {isPizzaiolo && (
-                                    <span
-                                      className="v2-mng-tag v2-mng-tag-pizzaiolo"
-                                      title="Menu badge: Pizzaiolo's Choice"
-                                    >
-                                      {MENU_ROLE_LABEL["profit-driver"]}
-                                    </span>
-                                  )}
-                                  {isChef && (
-                                    <span
-                                      className="v2-mng-tag v2-mng-tag-anchor"
-                                      title="Menu badge: Chef's Signature"
-                                    >
-                                      {MENU_ROLE_LABEL.anchor}
-                                    </span>
-                                  )}
-                                </>
-                              );
-                            })()}
-                            {item.isLimited && (() => {
-                              const d = daysUntilIso(item.limitedUntil);
-                              return (
-                                <span
-                                  className="v2-mng-tag v2-mng-tag-lto"
-                                  title={
-                                    item.limitedUntil
-                                      ? `LTO ends ${item.limitedUntil}`
-                                      : "Limited-time item (no end date)"
-                                  }
-                                >
-                                  {d !== null ? `LTO · ${d}d left` : "LTO"}
-                                </span>
-                              );
-                            })()}
-                            {badgeSets.popular.has(item.id) && (
-                              <span
-                                className="v2-mng-tag v2-mng-tag-popular"
-                                title="Menu badge: Most Popular"
-                              >
-                                Popular
-                              </span>
-                            )}
-                            {badgeSets.staffPick.has(item.id) && (
-                              <span
-                                className="v2-mng-tag v2-mng-tag-staffpick"
-                                title="Menu badge: Staff Pick"
-                              >
-                                Staff Pick
-                              </span>
-                            )}
-                            {badgeSets.new.has(item.id) && (
-                              <span
-                                className="v2-mng-tag v2-mng-tag-new"
-                                title="Menu badge: New"
-                              >
-                                New
-                              </span>
-                            )}
+                            {/* Editorial / menu-engineering badges (Hero,
+                                Pizzaiolo's Choice, Chef's Signature, Popular,
+                                Staff Pick, New, LTO) are managed and shown
+                                solely from /admin/crosssell → Menu badges.
+                                The admin menu row keeps only the override
+                                state indicator and intrinsic recipe tags. */}
                             {item._hasOverride && (
                               <span className="v2-mng-tag v2-mng-tag-override">Overridden</span>
                             )}
@@ -712,9 +553,6 @@ interface EditDialogProps {
     change: {
       price?: number;
       description?: string;
-      menuRole?: MenuRole | null;
-      isLimited?: boolean | null;
-      limitedUntil?: string | null;
       deliveryOnly?: boolean | null;
       packagingCost?: number | null;
       modifierGroups?: ModifierGroup[] | null;
@@ -725,9 +563,6 @@ interface EditDialogProps {
 function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
   const [priceStr, setPriceStr] = useState("0.00");
   const [desc, setDesc] = useState("");
-  const [roleStr, setRoleStr] = useState<MenuRole | "">("");
-  const [isLimited, setIsLimited] = useState(false);
-  const [limitedUntil, setLimitedUntil] = useState("");
   // Audit §3 channel + packaging + modifiers
   const [deliveryOnly, setDeliveryOnly] = useState(false);
   const [packagingStr, setPackagingStr] = useState("");
@@ -738,9 +573,6 @@ function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
     if (item) {
       setPriceStr((item.price / 100).toFixed(2));
       setDesc(item.description);
-      setRoleStr(item.menuRole ?? "");
-      setIsLimited(Boolean(item.isLimited));
-      setLimitedUntil(item.limitedUntil ?? "");
       setDeliveryOnly(Boolean(item.deliveryOnly));
       setPackagingStr(
         typeof item.packagingCost === "number"
@@ -766,24 +598,12 @@ function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
     const change: {
       price?: number;
       description?: string;
-      menuRole?: MenuRole | null;
-      isLimited?: boolean | null;
-      limitedUntil?: string | null;
       deliveryOnly?: boolean | null;
       packagingCost?: number | null;
       modifierGroups?: ModifierGroup[] | null;
     } = {};
     if (price !== item.price) change.price = price;
     if (desc !== item.description) change.description = desc;
-    // Compare against the merged-display value. `null` signals "clear the
-    // override so the field disappears from the public card"; the API
-    // schema treats null and undefined differently.
-    const nextRole: MenuRole | null = roleStr === "" ? null : roleStr;
-    if (nextRole !== (item.menuRole ?? null)) change.menuRole = nextRole;
-    const nextLimited: boolean | null = isLimited ? true : null;
-    if (nextLimited !== (item.isLimited ?? null)) change.isLimited = nextLimited;
-    const nextUntil: string | null = limitedUntil.trim() === "" ? null : limitedUntil.trim();
-    if (nextUntil !== (item.limitedUntil ?? null)) change.limitedUntil = nextUntil;
     const nextDeliveryOnly: boolean | null = deliveryOnly ? true : null;
     if (nextDeliveryOnly !== (item.deliveryOnly ?? null)) {
       change.deliveryOnly = nextDeliveryOnly;
@@ -818,8 +638,6 @@ function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
     await onSave(item.id, change);
     setBusy(false);
   };
-
-  const ltoCountdown = daysUntilIso(limitedUntil);
 
   return (
     <Dialog
@@ -856,62 +674,10 @@ function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
           onChange={(e) => setDesc(e.target.value)}
           rows={4}
         />
-        <Select
-          label="Menu engineering role (audit §4.3)"
-          value={roleStr}
-          onChange={(e) => setRoleStr(e.target.value as MenuRole | "")}
-          options={MENU_ROLE_OPTIONS as { value: string; label: string }[]}
-          description={
-            roleStr === "hero"
-              ? "Renders as a full-width gateway card with the red Our Hero ribbon."
-              : roleStr === "profit-driver"
-                ? "Gets the gold Pizzaiolo's Choice badge — high-GM upsell positioning."
-                : roleStr === "anchor"
-                  ? "Dark Chef's Signature treatment — range-extends the rest of the category."
-                  : roleStr === "lto"
-                    ? "Limited-time positioning — pair with the LTO toggle below for the countdown chip."
-                    : "No special treatment — sorted by popularity within the category."
-          }
-        />
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "auto 1fr",
-            gap: "0.5rem 0.75rem",
-            alignItems: "center",
-            padding: "0.625rem 0.75rem",
-            border: "1px solid var(--border)",
-            borderRadius: "var(--radius-md)",
-            background: "var(--surface-2)",
-          }}
-        >
-          <input
-            id={`lto-toggle-${item.id}`}
-            type="checkbox"
-            checked={isLimited}
-            onChange={(e) => setIsLimited(e.target.checked)}
-            style={{ width: 16, height: 16 }}
-          />
-          <label htmlFor={`lto-toggle-${item.id}`} style={{ fontSize: "0.875rem", fontWeight: 500 }}>
-            Limited-time item (LTO)
-          </label>
-          <span style={{ gridColumn: "1 / 3" }}>
-            <Input
-              type="date"
-              label="Available until"
-              value={limitedUntil}
-              onChange={(e) => setLimitedUntil(e.target.value)}
-              disabled={!isLimited}
-              description={
-                isLimited && ltoCountdown !== null
-                  ? `Customer sees a "${ltoCountdown}d left" countdown chip on the card.`
-                  : isLimited
-                    ? "Leave blank for an open-ended limited run (no countdown shown)."
-                    : "Enable the LTO toggle to set a date."
-              }
-            />
-          </span>
-        </div>
+        {/* Menu-engineering role + LTO live in /admin/crosssell → Menu badges
+            so the editorial chips have one source of truth. The per-item
+            edit dialog stays focused on price, description, channel
+            economics, and modifiers. */}
 
         {/* Audit §3 — channel economics + packaging cost */}
         <div
