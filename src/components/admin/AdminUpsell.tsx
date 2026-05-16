@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, Check, Save, Layers, SlidersHorizontal, Sliders, FlaskConical } from "lucide-react";
+import { AlertTriangle, Check, Save, Layers, Sliders } from "lucide-react";
 import { LocationTabs } from "./LocationTabs";
 import { Tabs } from "./v2/ui";
 import {
@@ -14,7 +14,7 @@ import {
 import { BundleManager } from "./bundle-manager/BundleManager";
 import { ModifierInventory } from "./ModifierInventory";
 
-type TabKey = "bundles" | "rules" | "experiments" | "modifiers";
+type TabKey = "bundles" | "modifiers";
 
 export function AdminUpsell() {
   const {
@@ -100,9 +100,7 @@ export function AdminUpsell() {
         value={tab}
         onChange={(v) => setTab(v as TabKey)}
         tabs={[
-          { value: "bundles", label: "Bundle ladders", icon: <Layers className="h-3.5 w-3.5" /> },
-          { value: "rules", label: "Bundle rules", icon: <SlidersHorizontal className="h-3.5 w-3.5" /> },
-          { value: "experiments", label: "Experiments (A/B)", icon: <FlaskConical className="h-3.5 w-3.5" /> },
+          { value: "bundles", label: "Bundles", icon: <Layers className="h-3.5 w-3.5" /> },
           { value: "modifiers", label: "Item modifiers", icon: <Sliders className="h-3.5 w-3.5" /> },
         ]}
         variant="underline"
@@ -110,41 +108,49 @@ export function AdminUpsell() {
       />
 
       {tab === "bundles" && (
-        <div className="glass-card p-6">
-          <p className="text-xs admin-text-secondary mb-4">
-            {loc.name} — good-better-best tier upgrades the customer picks between in the cart drawer.
-          </p>
-          <BundleManager
-            bundles={config.bundles ?? DEFAULT_BUNDLES_FALLBACK}
-            menu={loc.menu}
-            onChange={(bundles) => updateConfig({ bundles })}
-          />
-        </div>
-      )}
+        <div className="v2-stack-24">
+          <section className="glass-card p-6">
+            <header className="mb-4">
+              <h2 className="admin-text font-semibold mb-1">Bundle ladders</h2>
+              <p className="admin-text-secondary">
+                {loc.name} — good-better-best tier upgrades the customer picks between in the cart drawer.
+              </p>
+            </header>
+            <BundleManager
+              bundles={config.bundles ?? DEFAULT_BUNDLES_FALLBACK}
+              menu={loc.menu}
+              onChange={(bundles) => updateConfig({ bundles })}
+            />
+          </section>
 
-      {tab === "rules" && (
-        <div className="glass-card p-6">
-          <BundleRulesEditor
-            rules={config.bundleRules ?? DEFAULT_BUNDLE_RULES}
-            onChange={(bundleRules) => updateConfig({ bundleRules })}
-          />
-        </div>
-      )}
+          <section className="glass-card p-6">
+            <header className="mb-4">
+              <h2 className="admin-text font-semibold mb-1">Bundle rules</h2>
+              <p className="admin-text-secondary">
+                Gating thresholds, exclusions, and how ladders compose with other promotions.
+              </p>
+            </header>
+            <BundleRulesEditor
+              rules={config.bundleRules ?? DEFAULT_BUNDLE_RULES}
+              onChange={(bundleRules) => updateConfig({ bundleRules })}
+            />
+          </section>
 
-      {tab === "experiments" && (
-        <div className="glass-card p-6 space-y-4">
-          <div>
-            <p className="text-xs admin-text-secondary">
-              Run a discount A/B on any dynamic bundle in this location. Customers are hashed to
-              a variant by phone so they always see the same offer; the bundle audit log records
-              the variant id so the AOV / contribution uplift is visible on the Reports page.
-            </p>
-          </div>
-          <ExperimentEditor
-            experiment={config.experiment ?? null}
-            bundles={config.bundles ?? DEFAULT_BUNDLES_FALLBACK}
-            onChange={(experiment) => updateConfig({ experiment })}
-          />
+          <section className="glass-card p-6">
+            <header className="mb-4">
+              <h2 className="admin-text font-semibold mb-1">Experiments (A/B)</h2>
+              <p className="admin-text-secondary">
+                Run a discount A/B on any dynamic bundle in this location. Customers are hashed to
+                a variant by phone so they always see the same offer; the bundle audit log records
+                the variant id so the AOV / contribution uplift is visible on the Reports page.
+              </p>
+            </header>
+            <ExperimentEditor
+              experiment={config.experiment ?? null}
+              bundles={config.bundles ?? DEFAULT_BUNDLES_FALLBACK}
+              onChange={(experiment) => updateConfig({ experiment })}
+            />
+          </section>
         </div>
       )}
 

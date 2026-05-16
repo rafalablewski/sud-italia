@@ -1,7 +1,7 @@
 import { MenuItem } from "../types";
 import { krakowMenu } from "./krakow";
 import { warszawaMenu } from "./warszawa";
-import { getMenuOverrides } from "@/lib/store";
+import { getCustomMenuItems, getMenuOverrides } from "@/lib/store";
 
 const baseMenus: Record<string, MenuItem[]> = {
   krakow: krakowMenu,
@@ -14,8 +14,11 @@ export function getMenu(locationSlug: string): MenuItem[] {
 
 export async function getMenuWithOverrides(locationSlug: string): Promise<MenuItem[]> {
   const base = getMenu(locationSlug);
-  const overrides = await getMenuOverrides();
-  return base.map((item) => {
+  const [overrides, customItems] = await Promise.all([
+    getMenuOverrides(),
+    getCustomMenuItems(locationSlug),
+  ]);
+  const applyOverride = (item: MenuItem): MenuItem => {
     const o = overrides[item.id];
     if (!o) return item;
     // Merge with `null = clear` semantics so admin can demote a hero or
@@ -28,7 +31,18 @@ export async function getMenuWithOverrides(locationSlug: string): Promise<MenuIt
       else if (v !== undefined) merged[k] = v;
     }
     return merged as unknown as MenuItem;
-  });
+  };
+  const merged = base.map(applyOverride);
+  // Admin-created items live alongside the seed catalogue. Same override
+  // pipeline applies so an operator can still 86 a custom item or tweak
+  // its price without re-creating the row.
+  for (const custom of customItems) {
+    // Strip the storage-only fields so the consumer never sees them.
+    const { locationSlug: _loc, createdAt: _c, updatedAt: _u, ...item } = custom;
+    void _loc; void _c; void _u;
+    merged.push(applyOverride(item as MenuItem));
+  }
+  return merged;
 }
 
 export async function getAvailableMenu(locationSlug: string): Promise<MenuItem[]> {

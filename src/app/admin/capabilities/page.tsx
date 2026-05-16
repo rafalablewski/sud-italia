@@ -616,6 +616,13 @@ export default async function CapabilitiesPage() {
             "Audit §4 shipped. Items carry a `menuRole` (hero | profit-driver | anchor | lto) that drives card hierarchy on the public menu: Margherita renders as a full-width hero with the cream-gradient frame, Quattro Formaggi / Linguine al Pesto / Espresso get the gold Pizzaiolo's Choice badge, and the new Pizza del Pizzaiolo (Kraków 47.90 PLN / Warszawa 52.90 PLN — truffle + buffalo mozzarella, monthly LTO) renders with the dark Chef's Signature treatment and the days-left countdown. The default menu sort is now Pizzaiolo's layout: hero → profit-driver → anchor → standards by popularity → alpha tie-break (compareMenuEngineering in src/lib/upsell.ts). All Kraków + Warszawa prices re-aligned to the §4.2 charm-pricing rules (pizza ends in 9, premium pasta in 5, espresso in 9, desserts in 0). Fully manager-editable from /admin/menu — the edit dialog exposes the role dropdown and the LTO toggle + 'available until' date, persisted via MenuOverride.{menuRole,isLimited,limitedUntil} with `null = clear back to seed`. Cross-location clone (Kraków ↔ Warszawa) propagates the role + LTO state too.",
         },
         {
+          name: "Custom menu items (admin-created SKUs)",
+          status: "live",
+          href: "/admin/menu",
+          summary:
+            "Operators can add new menu items per location alongside the static seed catalogue — useful for regional LTOs, franchisee-only SKUs, and market-day specials without a code deploy. /admin/menu now exposes an 'Add item' action and a per-row edit dialog that lets managers change the name, category, tags, description, price, food cost, packaging, channel exclusivity (delivery-only), and modifier groups. Custom rows live in `custom-menu-items.json` via the store helpers (addCustomMenuItem / updateCustomMenuItem / deleteCustomMenuItem) and merge into getMenuWithOverrides() with the same override pipeline as seed items (an admin can still 86 or retune a custom row). The /api/admin/menu/custom route is manager+ and rejects id collisions against both the seed catalogue and other custom rows so cart + KDS keep their stable references. Custom items show a green 'Custom' chip on the admin list and gain a trash icon — seed items keep the override-only edit path so the existing menu-engineering metadata can't be accidentally wiped.",
+        },
+        {
           name: "Customer rollups",
           status: has("DATABASE_URL") ? "live" : "needs-config",
           href: "/admin/customers",
