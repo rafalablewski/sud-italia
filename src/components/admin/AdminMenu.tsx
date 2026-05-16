@@ -17,7 +17,7 @@ import {
   UtensilsCrossed,
   type LucideIcon,
 } from "lucide-react";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, getBaseSlug, marginPct, marginTone } from "@/lib/utils";
 import { MENU_CATEGORY_LABELS, type MenuCategory, type ModifierGroup } from "@/data/types";
 import { getActiveLocations } from "@/data/locations";
 import { useAdminLocation } from "./v2/LocationContext";
@@ -80,21 +80,6 @@ interface MenuItemData {
 
 const activeLocations = getActiveLocations();
 const FALLBACK_LOC = activeLocations[0]?.slug ?? "krakow";
-
-/** Strip a leading short location prefix from an item id so the "same"
- *  item across locations groups under one base slug
- *  (`krk-pizza-margherita` and `waw-pizza-margherita` both → `pizza-margherita`).
- *
- *  Recognises both the seed prefixes hand-rolled in
- *  `src/data/menus/*.ts` (`krk`, `waw`, ...) and the slug-derived
- *  prefixes that `createCustomItem` generates via `slug.slice(0, 3)`
- *  (`kra`, `war`, ...). The earlier implementation only matched the
- *  latter, so seed-item twins were never detected and the admin menu
- *  list duplicated every cross-location product. */
-function getBaseSlug(itemId: string): string {
-  const m = itemId.match(/^[a-z]{2,4}-(.+)$/);
-  return m ? m[1] : itemId;
-}
 
 /** A product as it lives across the chain. One row per base slug in the
  *  admin list, with per-location variants exposed via the `locations`
@@ -164,44 +149,13 @@ function unifyMenus(
   return unified;
 }
 
-function marginPct(price: number, cost: number): number {
-  if (price <= 0) return 0;
-  return Math.round(((price - cost) / price) * 100);
-}
-
-function marginTone(margin: number): "danger" | "warning" | "success" {
-  if (margin < 50) return "danger";
-  if (margin < 65) return "warning";
-  return "success";
-}
-
 /** Format a possibly-varying numeric value across the chain as a compact
  *  range (`27,90–29,90 zł`) when locations diverge, or a single value when
- *  they agree. Hidden variants are excluded so soft-deleted rows don't
- *  drag the displayed minimum to 0. */
-function formatPriceRange(values: number[]): string {
-  if (values.length === 0) return "—";
-  const min = Math.min(...values);
-  const max = Math.max(...values);
+ *  they agree. Caller pre-computes min/max so the same single-pass result
+ *  feeds both this formatter and the variance check. */
+function formatPriceRange(min: number, max: number): string {
   if (min === max) return formatPrice(min);
   return `${formatPrice(min)}–${formatPrice(max)}`;
-}
-
-interface MarginRange {
-  min: number;
-  max: number;
-  varies: boolean;
-  worstTone: "danger" | "warning" | "success";
-}
-
-function marginRange(values: { price: number; cost: number }[]): MarginRange {
-  if (values.length === 0) {
-    return { min: 0, max: 0, varies: false, worstTone: "danger" };
-  }
-  const margins = values.map((v) => marginPct(v.price, v.cost));
-  const min = Math.min(...margins);
-  const max = Math.max(...margins);
-  return { min, max, varies: min !== max, worstTone: marginTone(min) };
 }
 
 export function AdminMenu() {
@@ -257,9 +211,18 @@ export function AdminMenu() {
   const fetchMenu = useCallback(async () => {
     setLoading(true);
     try {
-      // Fetch the current page's menu plus every other active location's
-      // menu in parallel. The "by location" snapshot powers the edit
-      // dialog's location selector (cross-location twin lookup).
+      // One round trip when the session holds chain-wide scope — the
+      // unparameterized GET returns { [slug]: items[] } directly. A
+      // location-scoped manager (e.g. Kraków-only) hits 403 on that call
+      // because withAdmin enforces unrestricted scope when locationParam
+      // is absent; fall back to per-location fetches and silently skip
+      // the ones their session can't read.
+      const all = await fetch("/api/admin/menu");
+      if (all.ok) {
+        const byLoc = (await all.json()) as Record<string, MenuItemData[]>;
+        setMenusByLocation(byLoc);
+        return;
+      }
       const responses = await Promise.all(
         activeLocations.map((loc) =>
           fetch(`/api/admin/menu?location=${loc.slug}`).then((r) =>
@@ -965,23 +928,40 @@ export function AdminMenu() {
                 <ul className="v2-mng-list">
                   {list.map((unified) => {
                     const primary = unified.primary;
-                    // Range across visible variants — hidden rows are
-                    // excluded so soft-deleted trucks don't drag the min
-                    // down to zero or skew the margin tone.
-                    const visibleVariants = unified.locations
-                      .filter((l) => !l.item._hidden)
-                      .map((l) => ({ price: l.item.price, cost: l.item.cost }));
-                    const variantsForRange =
-                      visibleVariants.length > 0
-                        ? visibleVariants
-                        : [{ price: primary.price, cost: primary.cost }];
-                    const priceMin = Math.min(...variantsForRange.map((v) => v.price));
-                    const priceMax = Math.max(...variantsForRange.map((v) => v.price));
-                    const costMin = Math.min(...variantsForRange.map((v) => v.cost));
-                    const costMax = Math.max(...variantsForRange.map((v) => v.cost));
+                    // One sweep across the visible variants computes every
+                    // value the row needs — price + cost min/max plus the
+                    // worst (lowest) margin tone, no intermediate arrays.
+                    // Hidden rows are excluded so soft-deleted trucks don't
+                    // drag the min to zero or skew the margin colour.
+                    let priceMin = Infinity;
+                    let priceMax = -Infinity;
+                    let costMin = Infinity;
+                    let costMax = -Infinity;
+                    let marginMin = Infinity;
+                    let marginMax = -Infinity;
+                    let seen = 0;
+                    for (const l of unified.locations) {
+                      if (l.item._hidden) continue;
+                      const p = l.item.price;
+                      const c = l.item.cost;
+                      if (p < priceMin) priceMin = p;
+                      if (p > priceMax) priceMax = p;
+                      if (c < costMin) costMin = c;
+                      if (c > costMax) costMax = c;
+                      const m = marginPct(p, c);
+                      if (m < marginMin) marginMin = m;
+                      if (m > marginMax) marginMax = m;
+                      seen++;
+                    }
+                    if (seen === 0) {
+                      priceMin = priceMax = primary.price;
+                      costMin = costMax = primary.cost;
+                      marginMin = marginMax = marginPct(primary.price, primary.cost);
+                    }
                     const priceVaries = priceMin !== priceMax;
                     const costVaries = costMin !== costMax;
-                    const mr = marginRange(variantsForRange);
+                    const marginVaries = marginMin !== marginMax;
+                    const worstTone = marginTone(marginMin);
                     const locCount = unified.locations.length;
                     // Row is "selected" when every variant's id is in
                     // selectedIds; toggling cascades to all variants so
@@ -1083,7 +1063,7 @@ export function AdminMenu() {
                           }
                         >
                           {priceVaries
-                            ? formatPriceRange(variantsForRange.map((v) => v.price))
+                            ? formatPriceRange(priceMin, priceMax)
                             : formatPrice(priceMin)}
                         </span>
                         <span
@@ -1099,15 +1079,15 @@ export function AdminMenu() {
                           }
                         >
                           {costVaries
-                            ? formatPriceRange(variantsForRange.map((v) => v.cost))
+                            ? formatPriceRange(costMin, costMax)
                             : formatPrice(costMin)}
                           {primary._hasRecipe && <span className="v2-mng-cost-source"> recipe</span>}
                         </span>
                         <span
-                          className={`v2-mng-val v2-mng-val-margin v2-mng-val-margin-${mr.worstTone} tabular`}
-                          title={mr.varies ? `Range across ${locCount} locations` : undefined}
+                          className={`v2-mng-val v2-mng-val-margin v2-mng-val-margin-${worstTone} tabular`}
+                          title={marginVaries ? `Range across ${locCount} locations` : undefined}
                         >
-                          {mr.varies ? `${mr.min}–${mr.max}%` : `${mr.min}%`}
+                          {marginVaries ? `${marginMin}–${marginMax}%` : `${marginMin}%`}
                         </span>
 
                         <span className="v2-mng-edit-group">
