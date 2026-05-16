@@ -24,7 +24,7 @@ import {
   Users,
 } from "lucide-react";
 import { useAdminLocation } from "./v2/LocationContext";
-import { Badge, Button, Card, CardBody, EmptyState, Tabs, type Column, Table } from "./v2/ui";
+import { Badge, Button, Card, CardBody, CardHeader, EmptyState, Tabs, type Column, Table } from "./v2/ui";
 import { AreaChart, BarChart, Heatmap, KpiCard } from "./v2/charts";
 
 type Period = "today" | "7d" | "30d" | "90d";
@@ -520,39 +520,32 @@ export function AdminDashboard() {
         const actionable = filtered.filter((p) => Math.abs(p.today.gapHours) >= 2);
         if (actionable.length === 0) return null;
         return (
-          <div className="v2-callout v2-callout-warning">
-            <div className="v2-callout-head">
-              <CalendarRange className="h-4 w-4" /> Schedule vs forecast — today
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 space-y-2">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <CalendarRange size={16} /> Schedule vs forecast — today
             </div>
-            <ul className="v2-callout-list">
+            <ul className="text-sm space-y-1">
               {actionable.map((p) => {
                 const over = p.today.gapHours > 0;
                 return (
                   <li key={p.locationSlug}>
-                    <span className="mono v2-muted">{p.locationSlug}</span>
+                    <span className="font-mono opacity-70">{p.locationSlug}</span>
                     {" — "}
                     <strong>{p.today.scheduledHours.toFixed(1)}h scheduled</strong>
                     {" vs "}
-                    <strong>{p.today.impliedHoursNeeded}h needed</strong>{" "}
-                    <span
-                      style={{
-                        color: over ? "var(--warning)" : "var(--danger)",
-                        fontWeight: 600,
-                      }}
-                    >
-                      ({over ? "+" : ""}
-                      {p.today.gapHours.toFixed(1)}h)
+                    <strong>{p.today.impliedHoursNeeded}h needed</strong>
+                    {" "}
+                    <span className={over ? "text-amber-400" : "text-red-400"}>
+                      ({over ? "+" : ""}{p.today.gapHours.toFixed(1)}h)
                     </span>
                     {" · "}
-                    <span className="v2-callout-source">
+                    <span className="opacity-60 text-xs">
                       {p.today.forecastSource === "ai"
                         ? "Claude forecast"
                         : p.today.forecastSource === "trailing-week"
                           ? "last week baseline"
                           : "no signal"}
-                      {p.today.forecastOrders > 0
-                        ? ` · ${p.today.forecastOrders} orders`
-                        : ""}
+                      {p.today.forecastOrders > 0 ? ` · ${p.today.forecastOrders} orders` : ""}
                     </span>
                   </li>
                 );
@@ -564,13 +557,16 @@ export function AdminDashboard() {
 
       <section className="v2-grid-2-1">
         <Card>
-          <CardBody>
-            <div className="v2-detail-head">
-              <h2>Revenue &amp; profit trend</h2>
+          <CardHeader
+            title="Revenue & profit trend"
+            description={`Daily totals in zł over the last ${PERIOD_LABEL[period].toLowerCase()}`}
+            actions={
               <Badge tone="info" variant="soft" dot>
                 Live · 30s
               </Badge>
-            </div>
+            }
+          />
+          <CardBody>
             {trendData.length === 0 ? (
               <EmptyState
                 icon={Activity}
@@ -599,13 +595,16 @@ export function AdminDashboard() {
         </Card>
 
         <Card>
-          <CardBody>
-            <div className="v2-detail-head">
-              <h2>Operational alerts</h2>
+          <CardHeader
+            title="Operational alerts"
+            description="Most recent first"
+            actions={
               <Link href="/admin#notifications" className="v2-link-sm">
                 All <ArrowRight className="h-3 w-3" />
               </Link>
-            </div>
+            }
+          />
+          <CardBody>
             {recentAlerts.length === 0 ? (
               <EmptyState icon={Activity} title="All clear" description="No operational warnings." compact />
             ) : (
@@ -631,11 +630,12 @@ export function AdminDashboard() {
 
       <section className="v2-grid-2">
         <Card>
+          <CardHeader
+            title="Top sellers"
+            description="By quantity in the selected period"
+            actions={<Star className="h-4 w-4 v2-muted" aria-hidden />}
+          />
           <CardBody>
-            <div className="v2-detail-head">
-              <h2>Top sellers</h2>
-              <Star className="h-4 w-4 v2-muted" aria-hidden />
-            </div>
             {topSellers.length === 0 ? (
               <EmptyState icon={Flame} title="No best-sellers yet" description="Add menu items and start taking orders." compact />
             ) : (
@@ -651,11 +651,12 @@ export function AdminDashboard() {
         </Card>
 
         <Card>
+          <CardHeader
+            title="Order heatmap"
+            description="Day of week × hour of day"
+            actions={<Coins className="h-4 w-4 v2-muted" aria-hidden />}
+          />
           <CardBody>
-            <div className="v2-detail-head">
-              <h2>Order heatmap</h2>
-              <Coins className="h-4 w-4 v2-muted" aria-hidden />
-            </div>
             {heatCells.length === 0 ? (
               <EmptyState icon={Flame} title="No orders mapped yet" description="Heatmap fills in as orders arrive." compact />
             ) : (
@@ -667,13 +668,11 @@ export function AdminDashboard() {
 
       <section>
         <Card>
+          <CardHeader
+            title="Location performance"
+            description="Side-by-side benchmark for active locations"
+          />
           <CardBody>
-            <div className="v2-detail-head">
-              <h2>Location performance</h2>
-              <span className="v2-detail-head-hint">
-                Side-by-side benchmark for active locations
-              </span>
-            </div>
             {insights?.locationComparison && insights.locationComparison.length > 0 ? (
               <LocationTable rows={insights.locationComparison} />
             ) : (
@@ -813,39 +812,48 @@ function Next60Widget({ location, orders, slots, lowStock, openShifts }: Next60P
     )
     .slice(0, 5);
 
-  const tile = (
-    title: string,
-    count: number,
-    hint: string,
-    tone: "neutral" | "warning" | "danger" | "success",
-    icon: React.ReactNode,
-  ) => (
-    <div className="v2-next60-tile">
-      <div className="v2-next60-tile-label">
+  const tile = (title: string, count: number, hint: string, tone: "neutral" | "warning" | "danger" | "success", icon: React.ReactNode) => (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "0.25rem",
+        padding: "0.75rem 1rem",
+        borderRight: "1px solid var(--border)",
+        minWidth: 0,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--fg-muted)" }}>
         {icon}
         {title}
       </div>
-      <div className="v2-next60-tile-value">
-        <Badge tone={tone} variant="soft">
-          {count}
-        </Badge>
+      <div style={{ fontSize: "1.5rem", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
+        <Badge tone={tone} variant="soft">{count}</Badge>
       </div>
-      <div className="v2-next60-tile-hint">{hint}</div>
+      <div style={{ fontSize: "0.75rem", color: "var(--fg-muted)" }}>{hint}</div>
     </div>
   );
 
   return (
     <Card>
+      <CardHeader
+        title={`Next 60 minutes — until ${horizonClock}`}
+        description={
+          location
+            ? "Slots, tickets, stock, and floor — at a glance."
+            : "Pick a single truck to see live ops here."
+        }
+      />
       <CardBody>
-        <div className="v2-detail-head">
-          <h2>Next 60 minutes · until {horizonClock}</h2>
-          <span className="v2-detail-head-hint">
-            {location
-              ? "Slots, tickets, stock, and floor"
-              : "Pick a single truck to see live ops"}
-          </span>
-        </div>
-        <div className="v2-next60-tiles">
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            border: "1px solid var(--border)",
+            borderRadius: "0.5rem",
+            overflow: "hidden",
+          }}
+        >
           {tile(
             "Slots",
             upcomingSlots.length,
@@ -887,13 +895,22 @@ function Next60Widget({ location, orders, slots, lowStock, openShifts }: Next60P
         </div>
 
         {(dueOrders.length > 0 || sortedLowStock.length > 0) && (
-          <div className="v2-next60-detail">
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+              gap: "0.75rem",
+              marginTop: "0.75rem",
+            }}
+          >
             {dueOrders.length > 0 && (
-              <div className="v2-next60-detail-col">
-                <div className="v2-next60-detail-label">Tickets due</div>
-                <ul className="v2-next60-detail-list">
+              <div>
+                <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--fg-muted)", marginBottom: "0.25rem" }}>
+                  TICKETS DUE
+                </div>
+                <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
                   {dueOrders.map((o) => (
-                    <li key={o.id}>
+                    <li key={o.id} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8125rem" }}>
                       <Link href={`/admin/orders#${o.id}`} className="v2-link-cell">
                         <span className="mono">{o.id.slice(-6).toUpperCase()}</span>
                         <span className="v2-muted"> · {o.customerName || "Guest"}</span>
@@ -905,11 +922,13 @@ function Next60Widget({ location, orders, slots, lowStock, openShifts }: Next60P
               </div>
             )}
             {sortedLowStock.length > 0 && (
-              <div className="v2-next60-detail-col">
-                <div className="v2-next60-detail-label">Low stock</div>
-                <ul className="v2-next60-detail-list">
+              <div>
+                <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--fg-muted)", marginBottom: "0.25rem" }}>
+                  LOW STOCK
+                </div>
+                <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
                   {sortedLowStock.map((s) => (
-                    <li key={s.name}>
+                    <li key={s.name} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8125rem" }}>
                       <Link href="/admin/inventory" className="v2-link-cell">
                         {s.name}
                       </Link>
