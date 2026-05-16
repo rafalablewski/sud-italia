@@ -710,172 +710,150 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
 
       <Card>
         <CardBody>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: "0.75rem",
-              marginBottom: "0.75rem",
-            }}
-          >
-            <div>
-              <h2
-                style={{
-                  fontSize: "var(--text-base)",
-                  fontWeight: 600,
-                  margin: 0,
-                }}
-              >
-                Per-location pricing
-              </h2>
-              <p
-                style={{
-                  fontSize: "var(--text-xs)",
-                  color: "var(--fg-muted)",
-                  margin: "2px 0 0",
-                }}
-              >
-                Price + availability live per truck. Use “Apply to all” when a
-                change should fan out.
-              </p>
-            </div>
-            <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap" }}>
-              <Button
-                size="sm"
-                variant="ghost"
+          <div className="v2-detail-head">
+            <h2>Per-location pricing</h2>
+            <div className="v2-detail-head-actions">
+              <button
+                type="button"
                 onClick={applyPriceToAll}
                 disabled={busy}
                 title="Copy the first row's price to every location"
               >
-                Apply price to all
-              </Button>
+                → all prices
+              </button>
               {!hasRecipeAnywhere && (
-                <Button
-                  size="sm"
-                  variant="ghost"
+                <button
+                  type="button"
                   onClick={applyCostToAll}
                   disabled={busy}
                   title="Copy the first row's cost to every location (no recipe attached)"
                 >
-                  Apply cost to all
-                </Button>
+                  → all costs
+                </button>
               )}
               {isSeedAnywhere && (
-                <Button
-                  size="sm"
-                  variant="ghost"
+                <button
+                  type="button"
                   onClick={resetOverridesEverywhere}
                   disabled={busy}
                   title="Drop every override and revert to seed values"
                 >
-                  <RotateCcw className="h-3.5 w-3.5" /> Reset overrides
-                </Button>
+                  <RotateCcw className="h-3.5 w-3.5" /> Reset
+                </button>
               )}
             </div>
           </div>
 
-          <ul className="v2-mng-loc-table" aria-label="Per-location pricing">
-            <li className="v2-mng-loc-table-head">
-              <span>Location</span>
-              <span style={{ textAlign: "right" }}>Price</span>
-              <span style={{ textAlign: "right" }}>Cost</span>
-              <span style={{ textAlign: "right" }}>Margin</span>
-              <span style={{ textAlign: "center" }}>Status</span>
-              <span aria-hidden />
-            </li>
+          <div className="v2-loc-rows" role="list" aria-label="Per-location pricing">
             {variants.map((v) => {
               const cur = perLoc[v.slug];
               if (!cur) return null;
-              const priceNum =
-                Math.round(parseFloat(cur.price || "0") * 100) || 0;
-              const costNum =
-                Math.round(parseFloat(cur.cost || "0") * 100) || 0;
+              const priceNum = Math.round(parseFloat(cur.price || "0") * 100) || 0;
+              const costNum = Math.round(parseFloat(cur.cost || "0") * 100) || 0;
               const m = marginPct(priceNum, costNum);
               const recipeLocked = Boolean(v.item?._hasRecipe);
+              const state = !cur.present
+                ? "missing"
+                : cur.hidden
+                ? "hidden"
+                : "live";
               return (
-                <li
+                <div
                   key={v.slug}
-                  className="v2-mng-loc-table-row"
-                  data-missing={!cur.present ? "true" : undefined}
-                  data-hidden={cur.hidden ? "true" : undefined}
+                  role="listitem"
+                  className="v2-loc-row"
+                  data-state={state}
                 >
-                  <span className="v2-mng-loc-table-city">
+                  <span className="v2-loc-row-name">
                     <MapPin className="h-3.5 w-3.5" aria-hidden />
                     <strong>{v.city}</strong>
                     {v.item?._isCustom && (
-                      <span className="v2-mng-tag v2-mng-tag-custom">custom</span>
+                      <span className="v2-loc-row-tag v2-loc-row-tag-custom">
+                        custom
+                      </span>
                     )}
                     {v.item?._hasOverride && !v.item?._isCustom && (
-                      <span className="v2-mng-tag v2-mng-tag-override">edited</span>
+                      <span className="v2-loc-row-tag v2-loc-row-tag-edited">
+                        edited
+                      </span>
+                    )}
+                    {cur.hidden && (
+                      <span className="v2-loc-row-tag v2-loc-row-tag-hidden">
+                        hidden
+                      </span>
+                    )}
+                    {!cur.present && (
+                      <span className="v2-loc-row-tag">not at this truck</span>
                     )}
                   </span>
-                  <span style={{ textAlign: "right" }}>
-                    {cur.present ? (
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={cur.price}
-                        onChange={(e) => setLocField(v.slug, "price", e.target.value)}
-                        trailingAdornment={<span className="v2-muted">zł</span>}
-                        aria-label={`Price at ${v.city}`}
-                      />
-                    ) : (
-                      <span className="v2-muted">—</span>
-                    )}
-                  </span>
-                  <span style={{ textAlign: "right" }}>
-                    {cur.present ? (
-                      recipeLocked ? (
-                        <span
-                          title="Computed from this item's recipe — edit ingredients in /admin/recipes."
-                          style={{ fontSize: "var(--text-sm)", color: "var(--fg-muted)" }}
-                        >
-                          {formatPrice(v.item!.cost)}{" "}
-                          <span className="v2-mng-cost-source">recipe</span>
-                        </span>
-                      ) : (
-                        <Input
+
+                  {cur.present ? (
+                    <>
+                      <div className="v2-mod-money">
+                        <input
                           type="number"
                           step="0.01"
                           min="0"
-                          value={cur.cost}
-                          onChange={(e) => setLocField(v.slug, "cost", e.target.value)}
-                          trailingAdornment={<span className="v2-muted">zł</span>}
-                          aria-label={`Cost at ${v.city}`}
+                          value={cur.price}
+                          onChange={(e) =>
+                            setLocField(v.slug, "price", e.target.value)
+                          }
+                          aria-label={`Price at ${v.city}`}
                         />
-                      )
-                    ) : (
-                      <span className="v2-muted">—</span>
-                    )}
-                  </span>
-                  <span
-                    style={{
-                      textAlign: "right",
-                      fontVariantNumeric: "tabular-nums",
-                      fontWeight: 600,
-                    }}
-                    className={`v2-mng-val v2-mng-val-margin v2-mng-val-margin-${marginTone(m)}`}
-                  >
-                    {cur.present ? `${m}%` : "—"}
-                  </span>
-                  <span
-                    style={{
-                      textAlign: "center",
-                      display: "flex",
-                      justifyContent: "center",
-                      gap: "0.25rem",
-                    }}
-                  >
-                    {cur.present ? (
-                      <>
+                        <span className="v2-mod-money-suffix">zł</span>
+                      </div>
+
+                      {recipeLocked ? (
+                        <span
+                          className="v2-loc-row-recipe"
+                          title="Computed from this item's recipe — edit ingredients in /admin/recipes."
+                        >
+                          {formatPrice(v.item!.cost)}
+                          <span className="v2-loc-row-recipe-suffix">
+                            recipe
+                          </span>
+                        </span>
+                      ) : (
+                        <div className="v2-mod-money">
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={cur.cost}
+                            onChange={(e) =>
+                              setLocField(v.slug, "cost", e.target.value)
+                            }
+                            aria-label={`Cost at ${v.city}`}
+                          />
+                          <span className="v2-mod-money-suffix">zł</span>
+                        </div>
+                      )}
+
+                      <span
+                        className={`v2-loc-row-margin v2-loc-row-margin-${marginTone(m)}`}
+                      >
+                        {m}%
+                      </span>
+
+                      <span className="v2-loc-row-actions">
                         <button
                           type="button"
-                          className={`v2-mng-toggle ${cur.available ? "is-on" : ""}`}
-                          onClick={() => setLocField(v.slug, "available", !cur.available)}
-                          title={cur.available ? "Mark sold out" : "Mark available"}
-                          aria-label={cur.available ? "Mark sold out" : "Mark available"}
+                          className="v2-mod-icon-btn"
+                          data-tone="neutral"
+                          data-on={cur.available ? "true" : "false"}
+                          onClick={() =>
+                            setLocField(v.slug, "available", !cur.available)
+                          }
+                          title={
+                            cur.available
+                              ? "Available — click to mark sold out"
+                              : "Sold out — click to mark available"
+                          }
+                          aria-label={
+                            cur.available
+                              ? "Mark sold out at this location"
+                              : "Mark available at this location"
+                          }
                         >
                           {cur.available ? (
                             <Eye className="h-3.5 w-3.5" />
@@ -883,201 +861,144 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
                             <EyeOff className="h-3.5 w-3.5" />
                           )}
                         </button>
-                        {cur.hidden && (
-                          <span
-                            className="v2-mng-tag v2-mng-tag-warning"
-                            title="Soft-deleted at this location"
+                        {cur.hidden ? (
+                          <button
+                            type="button"
+                            className="v2-mod-icon-btn"
+                            data-tone="neutral"
+                            disabled={busy}
+                            onClick={() => restoreLocation(v.slug)}
+                            title="Un-hide at this location"
+                            aria-label={`Restore at ${v.city}`}
                           >
-                            hidden
-                          </span>
+                            <RotateCcw className="h-3.5 w-3.5" />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="v2-mod-icon-btn"
+                            disabled={busy}
+                            onClick={() => removeFromLocation(v.slug)}
+                            title={
+                              v.item?._isCustom
+                                ? "Permanently delete from this location"
+                                : "Hide (restorable) at this location"
+                            }
+                            aria-label={`Remove from ${v.city}`}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
                         )}
-                      </>
-                    ) : (
-                      <span className="v2-mng-tag v2-mng-tag-warning">missing</span>
-                    )}
-                  </span>
-                  <span style={{ textAlign: "right" }}>
-                    {cur.present ? (
-                      cur.hidden ? (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          disabled={busy}
-                          onClick={() => restoreLocation(v.slug)}
-                          title="Un-hide at this location"
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          disabled={busy}
-                          onClick={() => removeFromLocation(v.slug)}
-                          style={{ color: "var(--danger)" }}
-                          title={
-                            v.item?._isCustom
-                              ? "Permanently delete from this location"
-                              : "Hide (restorable) at this location"
-                          }
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      )
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="ghost"
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="v2-loc-row-empty">
+                        No price yet — add the product to start serving here.
+                      </span>
+                      <button
+                        type="button"
+                        className="v2-loc-row-add"
                         disabled={busy}
                         onClick={() => setLocField(v.slug, "present", true)}
                       >
-                        + Add
-                      </Button>
-                    )}
-                  </span>
-                </li>
+                        + Add to truck
+                      </button>
+                    </>
+                  )}
+                </div>
               );
             })}
-          </ul>
+          </div>
         </CardBody>
       </Card>
 
       <Card>
         <CardBody>
-          <h2
-            style={{
-              fontSize: "var(--text-base)",
-              fontWeight: 600,
-              margin: "0 0 4px",
-            }}
-          >
-            Product (chain-wide)
-          </h2>
-          <p
-            style={{
-              fontSize: "var(--text-xs)",
-              color: "var(--fg-muted)",
-              margin: "0 0 0.75rem",
-            }}
-          >
-            Name, description, category, tags, modifiers and packaging are
-            uniform across every truck. Save propagates them to all{" "}
-            {present.length} location{present.length === 1 ? "" : "s"}.
-          </p>
+          <div className="v2-detail-head">
+            <h2>Product · chain-wide</h2>
+          </div>
 
-          <div className="v2-stack-12">
+          <div className="v2-detail-form">
             <Input
               label="Name"
               value={chain.name}
               onChange={(e) => setChain((c) => ({ ...c, name: e.target.value }))}
-              description="Customer-facing item name."
             />
-            <Input
-              label="Item slug"
-              value={chain.slug}
-              onChange={() => {}}
-              disabled
-              description="Stable identifier — tied to historical orders. Rename via the API if you really need to."
-            />
-            <Input
-              label="SKU"
-              value={chain.sku}
-              onChange={(e) => setChain((c) => ({ ...c, sku: e.target.value }))}
-              placeholder="e.g. SI-PIZ-MARG-001"
-              description="Operator-facing inventory / accounting code. Same SKU is applied everywhere."
-            />
-            <Select
-              label="Category"
-              value={chain.category}
-              onChange={(e) =>
-                setChain((c) => ({ ...c, category: e.target.value as MenuCategory }))
-              }
-              options={CATEGORY_ORDER.map((cc) => ({
-                value: cc,
-                label: MENU_CATEGORY_LABELS[cc],
-              }))}
-            />
+            <div className="v2-detail-form-row" data-cols="3">
+              <Input
+                label="Slug"
+                value={chain.slug}
+                onChange={() => {}}
+                disabled
+                description="Tied to historical orders."
+              />
+              <Input
+                label="SKU"
+                value={chain.sku}
+                onChange={(e) => setChain((c) => ({ ...c, sku: e.target.value }))}
+                placeholder="e.g. SI-PIZ-MARG-001"
+              />
+              <Select
+                label="Category"
+                value={chain.category}
+                onChange={(e) =>
+                  setChain((c) => ({ ...c, category: e.target.value as MenuCategory }))
+                }
+                options={CATEGORY_ORDER.map((cc) => ({
+                  value: cc,
+                  label: MENU_CATEGORY_LABELS[cc],
+                }))}
+              />
+            </div>
             <Textarea
               label="Description"
               value={chain.description}
               onChange={(e) =>
                 setChain((c) => ({ ...c, description: e.target.value }))
               }
-              rows={4}
+              rows={3}
             />
-            <div className="v2-field">
-              <label className="v2-field-label">Tags</label>
-              <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap" }}>
-                {MENU_TAGS.map((tag) => {
-                  const on = chain.tags.includes(tag);
-                  return (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => toggleTag(tag)}
-                      aria-pressed={on}
-                      className={`v2-chip ${on ? "is-on" : ""}`}
-                    >
-                      {tag}
-                    </button>
-                  );
-                })}
-              </div>
-              <p className="v2-field-desc">
-                Optional dietary markers shown on the menu card.
-              </p>
+            <div className="v2-detail-tags-row">
+              <span className="v2-detail-tags-row-label">Tags</span>
+              {MENU_TAGS.map((tag) => {
+                const on = chain.tags.includes(tag);
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => toggleTag(tag)}
+                    aria-pressed={on}
+                    className={`v2-chip ${on ? "is-on" : ""}`}
+                  >
+                    {tag}
+                  </button>
+                );
+              })}
             </div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "auto 1fr",
-                gap: "0.5rem 0.75rem",
-                alignItems: "center",
-                padding: "0.625rem 0.75rem",
-                border: "1px solid var(--border)",
-                borderRadius: "var(--radius-md)",
-                background: "var(--surface-2)",
-              }}
-            >
-              <input
-                id="detail-delivery-only"
-                type="checkbox"
-                checked={chain.deliveryOnly}
-                onChange={(e) =>
-                  setChain((c) => ({ ...c, deliveryOnly: e.target.checked }))
-                }
-                style={{ width: 16, height: 16 }}
-              />
-              <label
-                htmlFor="detail-delivery-only"
-                style={{ fontSize: "0.875rem", fontWeight: 500 }}
-              >
+            <div className="v2-detail-form-row" data-cols="2">
+              <label className="v2-detail-inline-check">
+                <input
+                  type="checkbox"
+                  checked={chain.deliveryOnly}
+                  onChange={(e) =>
+                    setChain((c) => ({ ...c, deliveryOnly: e.target.checked }))
+                  }
+                />
                 Delivery-only item
               </label>
-              <span
-                style={{
-                  gridColumn: "1 / 3",
-                  fontSize: "0.75rem",
-                  color: "var(--fg-muted)",
-                }}
-              >
-                Hide from dine-in/takeout. Pantry SKUs (frozen tiramisù, beer
-                4-pack, branded olive oil) live here.
-              </span>
-              <span style={{ gridColumn: "1 / 3" }}>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  label="Packaging cost (PLN, optional)"
-                  value={chain.packagingStr}
-                  onChange={(e) =>
-                    setChain((c) => ({ ...c, packagingStr: e.target.value }))
-                  }
-                  trailingAdornment={<span className="v2-muted">zł</span>}
-                  description="Per-unit box / wrap / napkin cost. Leave blank to use the category default."
-                />
-              </span>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                label="Packaging cost"
+                value={chain.packagingStr}
+                onChange={(e) =>
+                  setChain((c) => ({ ...c, packagingStr: e.target.value }))
+                }
+                trailingAdornment={<span className="v2-muted">zł</span>}
+                placeholder="Category default"
+              />
             </div>
           </div>
         </CardBody>
@@ -1085,24 +1006,9 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
 
       <Card>
         <CardBody>
-          <h2
-            style={{
-              fontSize: "var(--text-base)",
-              fontWeight: 600,
-              margin: "0 0 4px",
-            }}
-          >
-            Modifiers
-          </h2>
-          <p
-            style={{
-              fontSize: "var(--text-xs)",
-              color: "var(--fg-muted)",
-              margin: "0 0 0.75rem",
-            }}
-          >
-            Structure (labels, KDS) stays uniform. Prices follow the lens.
-          </p>
+          <div className="v2-detail-head">
+            <h2>Modifiers</h2>
+          </div>
           <ModifierMatrix
             present={present}
             groupsByLoc={modifierGroupsByLoc}

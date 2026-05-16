@@ -2401,17 +2401,19 @@ html { scroll-behavior: smooth; }
 .v2-mng-row-meta-badge {
   display: inline-flex;
   align-items: center;
-  height: 16px;
-  padding: 0 6px;
-  border-radius: var(--radius-pill);
-  background: color-mix(in oklab, var(--warning) 16%, transparent);
-  color: var(--warning);
+  font-size: var(--text-2xs);
   font-weight: 600;
   text-transform: lowercase;
   letter-spacing: 0.04em;
+  color: var(--warning);
+}
+.v2-mng-row-meta-badge::before {
+  content: "·";
+  margin-right: 6px;
+  color: var(--fg-subtle);
+  font-weight: 500;
 }
 .v2-mng-row-meta-badge-info {
-  background: color-mix(in oklab, var(--info) 16%, transparent);
   color: var(--info);
 }
 .v2-mng-dot { color: var(--fg-subtle); margin: 0 6px; }
@@ -2512,52 +2514,230 @@ html { scroll-behavior: smooth; }
   text-decoration-thickness: 1px;
 }
 
-/* Per-location pricing table on the menu detail page. One row per active
- * location, mixing inline price/cost inputs with an availability toggle
- * and a remove button. Rows for missing locations render the inputs in a
- * dimmed state so operators can preview what they'd add. */
-.v2-mng-loc-table {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+/* ── Menu detail page — shared layout primitives ───────────────────────
+ * Card headers, per-location pricing list, and chain-wide product form
+ * share one quiet visual vocabulary so the page reads as a single
+ * document rather than three competing sections. The modifier editor
+ * (.v2-mod-*) layers on the same patterns. */
+.v2-detail-head {
   display: flex;
-  flex-direction: column;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border);
-  overflow: hidden;
-}
-.v2-mng-loc-table-head,
-.v2-mng-loc-table-row {
-  display: grid;
-  grid-template-columns: minmax(180px, 1.4fr) 120px 120px 80px 110px 56px;
   align-items: center;
-  column-gap: 12px;
-  padding: 8px 14px;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
 }
-.v2-mng-loc-table-head {
-  background: var(--surface-2);
-  border-bottom: 1px solid var(--border);
+.v2-detail-head h2 {
   font-size: var(--text-2xs);
+  font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  font-weight: 600;
   color: var(--fg-subtle);
+  margin: 0;
 }
-.v2-mng-loc-table-row {
-  border-top: 1px solid var(--border);
-  background: var(--surface-1);
-}
-.v2-mng-loc-table-row:first-child { border-top: 0; }
-.v2-mng-loc-table-row[data-missing="true"] { background: var(--surface-2); opacity: 0.7; }
-.v2-mng-loc-table-row[data-hidden="true"] { opacity: 0.55; }
-.v2-mng-loc-table-city {
+.v2-detail-head-actions {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+}
+.v2-detail-head-actions > button {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--fg-muted);
+  background: transparent;
+  border: 0;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color var(--duration-fast), background var(--duration-fast);
+}
+.v2-detail-head-actions > button:hover {
+  color: var(--brand);
+  background: var(--surface-hover);
+}
+.v2-detail-head-actions > button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Per-location pricing list — one row per active location, fully inline.
+ * Recipe-locked cost renders as a read-only money chip with a quiet
+ * "recipe" suffix; missing locations dim and replace the input column
+ * with a single dashed "+ Add to truck" affordance. */
+.v2-loc-rows {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+  overflow: hidden;
+}
+.v2-loc-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) 130px 160px 60px auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  transition: background var(--duration-fast);
+}
+.v2-loc-row + .v2-loc-row { border-top: 1px solid var(--border); }
+.v2-loc-row:hover { background: var(--surface-hover); }
+.v2-loc-row[data-state="missing"] { opacity: 0.7; }
+.v2-loc-row[data-state="hidden"] { opacity: 0.6; }
+
+.v2-loc-row-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-size: var(--text-sm);
   color: var(--fg);
+  min-width: 0;
 }
-.v2-mng-loc-table-city > svg { color: var(--fg-subtle); }
+.v2-loc-row-name > svg { color: var(--fg-subtle); flex-shrink: 0; }
+.v2-loc-row-name strong { font-weight: 600; letter-spacing: -0.01em; }
+
+.v2-loc-row-tag {
+  font-size: var(--text-2xs);
+  font-weight: 500;
+  color: var(--fg-subtle);
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+}
+.v2-loc-row-tag-edited { color: var(--info); }
+.v2-loc-row-tag-custom { color: var(--success); }
+.v2-loc-row-tag-hidden { color: var(--warning); }
+
+.v2-loc-row-recipe {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 4px 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+  cursor: help;
+}
+.v2-loc-row-recipe-suffix {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--info);
+  font-weight: 600;
+}
+
+.v2-loc-row-margin {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-align: right;
+  font-size: var(--text-sm);
+}
+.v2-loc-row-margin-success { color: var(--success); }
+.v2-loc-row-margin-warning { color: var(--warning); }
+.v2-loc-row-margin-danger { color: var(--danger); }
+
+.v2-loc-row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  justify-self: end;
+}
+.v2-loc-row-actions .v2-mod-icon-btn {
+  opacity: 0;
+}
+.v2-loc-row:hover .v2-loc-row-actions .v2-mod-icon-btn,
+.v2-loc-row:focus-within .v2-loc-row-actions .v2-mod-icon-btn {
+  opacity: 1;
+}
+.v2-loc-row-actions .v2-mod-icon-btn[data-tone="neutral"]:hover {
+  color: var(--fg);
+  background: var(--surface-2);
+}
+.v2-loc-row-actions .v2-mod-icon-btn[data-on="true"] {
+  opacity: 1;
+  color: var(--success);
+}
+
+.v2-loc-row-empty {
+  grid-column: 2 / 5;
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+  font-style: italic;
+}
+
+.v2-loc-row-add {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--brand);
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color var(--duration-fast), background var(--duration-fast);
+}
+.v2-loc-row-add:hover {
+  border-color: var(--brand);
+  background: color-mix(in oklab, var(--brand) 8%, transparent);
+}
+
+/* Chain-wide product form — keeps the Input component for label /
+ * description chrome but lays them out in 2-3 column rows so the page
+ * doesn't scroll into oblivion. Inline checkbox + packaging row replaces
+ * the previous bordered "delivery only" box. */
+.v2-detail-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.v2-detail-form-row {
+  display: grid;
+  gap: 12px;
+}
+.v2-detail-form-row[data-cols="2"] { grid-template-columns: 1fr 1fr; }
+.v2-detail-form-row[data-cols="3"] { grid-template-columns: 1.4fr 1fr 1fr; }
+
+.v2-detail-tags-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.v2-detail-tags-row-label {
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+}
+
+.v2-detail-inline-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-sm);
+  color: var(--fg);
+  cursor: pointer;
+  user-select: none;
+}
+.v2-detail-inline-check input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--brand);
+  margin: 0;
+}
+.v2-detail-inline-check-hint {
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+  margin-left: 24px;
+  margin-top: -8px;
+}
 
 /* ── Modifier editor ────────────────────────────────────────────────────
  * Minimal layout for per-option pricing under the lens. Each group is a
