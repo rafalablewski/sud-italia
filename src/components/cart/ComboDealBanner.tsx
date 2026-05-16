@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getActiveComboDeals } from "@/lib/upsell";
+import { getActiveComboDeals, type UpsellConfig } from "@/lib/upsell";
 import { CartItem, MENU_CATEGORY_LABELS, MenuItem } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
 import { useCartStore } from "@/store/cart";
@@ -20,6 +20,14 @@ interface ComboDealBannerProps {
   /** Cart's active location slug. Needed by `addItem` so cross-location adds
    *  reset the cart correctly. */
   locationSlug?: string | null;
+  /** Admin-edited upsell config for the active location. Without this the
+   *  banner used to call getActiveComboDeals with `null`, which silently
+   *  pinned it to DEFAULT_COMBO_DEALS — so renaming "Pasta Combo" to
+   *  "Classic Pasta Deal" in admin had no visible effect on the cart even
+   *  though the discount math (computed separately inside CartDrawer with
+   *  the real config) honoured the override. Pass the config explicitly so
+   *  the banner and the discount stay in sync. */
+  upsellConfig?: UpsellConfig | null;
 }
 
 export function ComboDealBanner({
@@ -27,9 +35,10 @@ export function ComboDealBanner({
   fulfillmentType,
   allMenuItems = [],
   locationSlug,
+  upsellConfig = null,
 }: ComboDealBannerProps) {
   const { activeDeal, savings, missingCategories, missingItems, missingQuantity, isComplete, progress } =
-    getActiveComboDeals(cartItems, null, fulfillmentType);
+    getActiveComboDeals(cartItems, upsellConfig, fulfillmentType);
 
   const addItem = useCartStore((s) => s.addItem);
   const [justApplied, setJustApplied] = useState(false);

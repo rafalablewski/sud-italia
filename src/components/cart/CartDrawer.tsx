@@ -558,6 +558,7 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
           fulfillmentType={fulfillmentType}
           allMenuItems={resolvedMenuItems}
           locationSlug={locationSlug}
+          upsellConfig={upsellConfig}
         />
       )}
 
