@@ -201,6 +201,13 @@ export function AdminCrossSell() {
               the §4.3 menu-engineering hierarchy; Popular / Staff Pick / New
               are editorial highlights that sit alongside.
             </p>
+            <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+              Gold chips with a lock icon are set by the item&rsquo;s{" "}
+              <span className="font-mono text-[11px]">menuRole</span> in the
+              menu data file — they badge on the homepage automatically. Edit
+              the menu item in <span className="font-mono text-[11px]">/admin/menu</span>{" "}
+              to change them. Add extra items via &ldquo;+ Add&rdquo; below.
+            </p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -210,6 +217,8 @@ export function AdminCrossSell() {
                 selected={config.heroItems ?? []}
                 onChange={(ids) => updateConfig({ heroItems: ids })}
                 label="Our Hero — full-width gateway card"
+                intrinsicIds={loc.menu.filter((m) => m.menuRole === "hero").map((m) => m.id)}
+                intrinsicHint="Set by menuRole: 'hero' in the menu data file"
               />
             </div>
             <div className="glass-card p-6">
@@ -218,6 +227,8 @@ export function AdminCrossSell() {
                 selected={config.pizzaioloChoiceItems ?? []}
                 onChange={(ids) => updateConfig({ pizzaioloChoiceItems: ids })}
                 label="Pizzaiolo's Choice — gold profit-driver"
+                intrinsicIds={loc.menu.filter((m) => m.menuRole === "profit-driver").map((m) => m.id)}
+                intrinsicHint="Set by menuRole: 'profit-driver' in the menu data file"
               />
             </div>
             <div className="glass-card p-6">
@@ -226,6 +237,8 @@ export function AdminCrossSell() {
                 selected={config.chefSignatureItems ?? []}
                 onChange={(ids) => updateConfig({ chefSignatureItems: ids })}
                 label="Chef's Signature — range anchor"
+                intrinsicIds={loc.menu.filter((m) => m.menuRole === "anchor").map((m) => m.id)}
+                intrinsicHint="Set by menuRole: 'anchor' in the menu data file"
               />
             </div>
             <div className="glass-card p-6">

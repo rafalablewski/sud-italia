@@ -2444,6 +2444,44 @@ html { scroll-behavior: smooth; }
   margin-left: 2px;
 }
 
+/* Per-location chips for multi-location menu products. Show each
+ * location's price / cost / margin inline below the description so a
+ * single row represents the product across the chain. Compact pill-style
+ * with the same numeric tone palette as .v2-mng-val. */
+.v2-mng-loc-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.v2-mng-loc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-size: var(--text-2xs);
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+.v2-mng-loc-chip > svg { color: var(--fg-subtle); }
+.v2-mng-loc-chip .v2-mng-loc-city {
+  font-weight: 600;
+  color: var(--fg);
+  letter-spacing: 0;
+}
+.v2-mng-loc-chip .v2-mng-loc-price { color: var(--fg); font-weight: 600; }
+.v2-mng-loc-chip .v2-mng-loc-cost { color: var(--fg-muted); }
+.v2-mng-loc-chip .v2-mng-loc-margin { font-weight: 600; }
+.v2-mng-loc-chip[data-off="true"] { opacity: 0.55; }
+.v2-mng-loc-chip[data-hidden="true"] {
+  opacity: 0.45;
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
 /* Edit icon (Menu) — fades in on hover */
 .v2-mng-edit {
   width: 24px;
