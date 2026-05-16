@@ -46,6 +46,28 @@ export const PUT = withAdmin(
       return NextResponse.json({ error: "Invalid config: combos must be an array" }, { status: 400 });
     }
 
+    // Menu-badge selections (audit — Menu badges tab consolidates editorial
+    // badges). Each list is an optional array of item IDs; reject anything
+    // else so a typo doesn't ship the wrong row of chips to production.
+    const badgeListFields = [
+      "popularItems",
+      "staffPicks",
+      "heroItems",
+      "pizzaioloChoiceItems",
+      "chefSignatureItems",
+      "newItems",
+    ] as const;
+    for (const field of badgeListFields) {
+      const val = (config as Record<string, unknown>)[field];
+      if (val === undefined) continue;
+      if (!Array.isArray(val) || val.some((v) => typeof v !== "string" || v.trim().length === 0)) {
+        return NextResponse.json(
+          { error: `Invalid config.${field} — must be an array of item id strings` },
+          { status: 400 },
+        );
+      }
+    }
+
     // Validate each combo shape so a typo'd category doesn't silently
     // disable the deal at checkout — bundles get the same treatment below.
     for (const c of config.combos) {

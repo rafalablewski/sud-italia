@@ -188,22 +188,70 @@ export function AdminCrossSell() {
       )}
 
       {tab === "badges" && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="space-y-6">
           <div className="glass-card p-6">
-            <ItemMultiSelect
-              items={loc.menu}
-              selected={config.popularItems}
-              onChange={(ids) => updateConfig({ popularItems: ids })}
-              label="Popular Items (badges shown on menu)"
-            />
+            <h2 className="font-heading font-bold text-lg admin-text flex items-center gap-2">
+              <Tag className="h-5 w-5 text-italia-gold" />
+              Menu badges — {loc.name}
+            </h2>
+            <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+              Every chip that appears next to a menu item — both in the admin
+              menu list and on the customer-facing menu — is controlled here.
+              Hero / Pizzaiolo&rsquo;s Choice / Chef&rsquo;s Signature drive
+              the §4.3 menu-engineering hierarchy; Popular / Staff Pick / New
+              are editorial highlights that sit alongside.
+            </p>
           </div>
-          <div className="glass-card p-6">
-            <ItemMultiSelect
-              items={loc.menu}
-              selected={config.staffPicks}
-              onChange={(ids) => updateConfig({ staffPicks: ids })}
-              label="Staff Picks (badges shown on menu)"
-            />
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="glass-card p-6">
+              <ItemMultiSelect
+                items={loc.menu}
+                selected={config.heroItems ?? []}
+                onChange={(ids) => updateConfig({ heroItems: ids })}
+                label="Our Hero — full-width gateway card"
+              />
+            </div>
+            <div className="glass-card p-6">
+              <ItemMultiSelect
+                items={loc.menu}
+                selected={config.pizzaioloChoiceItems ?? []}
+                onChange={(ids) => updateConfig({ pizzaioloChoiceItems: ids })}
+                label="Pizzaiolo's Choice — gold profit-driver"
+              />
+            </div>
+            <div className="glass-card p-6">
+              <ItemMultiSelect
+                items={loc.menu}
+                selected={config.chefSignatureItems ?? []}
+                onChange={(ids) => updateConfig({ chefSignatureItems: ids })}
+                label="Chef's Signature — range anchor"
+              />
+            </div>
+            <div className="glass-card p-6">
+              <ItemMultiSelect
+                items={loc.menu}
+                selected={config.newItems ?? []}
+                onChange={(ids) => updateConfig({ newItems: ids })}
+                label="New — launch highlight"
+              />
+            </div>
+            <div className="glass-card p-6">
+              <ItemMultiSelect
+                items={loc.menu}
+                selected={config.popularItems}
+                onChange={(ids) => updateConfig({ popularItems: ids })}
+                label="Most Popular — red trending chip"
+              />
+            </div>
+            <div className="glass-card p-6">
+              <ItemMultiSelect
+                items={loc.menu}
+                selected={config.staffPicks}
+                onChange={(ids) => updateConfig({ staffPicks: ids })}
+                label="Staff Pick — editorial nudge"
+              />
+            </div>
           </div>
         </div>
       )}

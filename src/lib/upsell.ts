@@ -197,6 +197,14 @@ export type BadgeType =
 export interface UpsellConfig {
   popularItems?: string[];
   staffPicks?: string[];
+  /** Menu-engineering badges managed from /admin/crosssell → Menu badges.
+   *  Additive to any intrinsic `menuRole` on the seed item; the resolved
+   *  badge set is the union so an item can be promoted to "Hero" without
+   *  editing the seed data. */
+  heroItems?: string[];
+  pizzaioloChoiceItems?: string[];
+  chefSignatureItems?: string[];
+  newItems?: string[];
   preferredCoffee?: string;
   preferredDessert?: string;
   preferredDrink?: string;
@@ -241,9 +249,10 @@ export function getItemBadges(
   const badges: BadgeType[] = [];
   const popular = config?.popularItems || DEFAULT_POPULAR_ITEMS[locationSlug] || [];
   const staffPicks = config?.staffPicks || DEFAULT_STAFF_PICKS[locationSlug] || [];
+  const newItems = config?.newItems ?? NEW_ITEMS;
   if (popular.includes(itemId)) badges.push("popular");
   if (staffPicks.includes(itemId)) badges.push("staff-pick");
-  if (NEW_ITEMS.includes(itemId)) badges.push("new");
+  if (newItems.includes(itemId)) badges.push("new");
   return badges;
 }
 
@@ -289,14 +298,23 @@ export function compareMenuEngineering(
  * Returns the empty array for items without a role so callers can spread it
  * unconditionally.
  */
-export function getMenuRoleBadges(item: {
-  menuRole?: MenuRole;
-  isLimited?: boolean;
-}): BadgeType[] {
+export function getMenuRoleBadges(
+  item: { id?: string; menuRole?: MenuRole; isLimited?: boolean },
+  config?: UpsellConfig | null,
+): BadgeType[] {
   const out: BadgeType[] = [];
-  if (item.menuRole === "hero") out.push("hero");
-  if (item.menuRole === "profit-driver") out.push("pizzaiolo-choice");
-  if (item.menuRole === "anchor") out.push("chef-signature");
+  const id = item.id;
+  const isHero =
+    item.menuRole === "hero" || (!!id && !!config?.heroItems?.includes(id));
+  const isPizzaiolo =
+    item.menuRole === "profit-driver" ||
+    (!!id && !!config?.pizzaioloChoiceItems?.includes(id));
+  const isChef =
+    item.menuRole === "anchor" ||
+    (!!id && !!config?.chefSignatureItems?.includes(id));
+  if (isHero) out.push("hero");
+  if (isPizzaiolo) out.push("pizzaiolo-choice");
+  if (isChef) out.push("chef-signature");
   return out;
 }
 

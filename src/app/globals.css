@@ -2379,6 +2379,11 @@ html { scroll-behavior: smooth; }
 .v2-mng-tag-pizzaiolo { color: var(--warning); text-transform: none; font-weight: 600; }
 .v2-mng-tag-anchor { color: var(--fg); text-transform: none; font-weight: 600; }
 .v2-mng-tag-lto { color: var(--brand); text-transform: none; font-weight: 600; }
+/* Editorial badges configured from /admin/crosssell → Menu badges.
+   Same tone palette as the role chips so the row stays cohesive. */
+.v2-mng-tag-popular { color: var(--brand); text-transform: none; font-weight: 600; }
+.v2-mng-tag-staffpick { color: var(--warning); text-transform: none; font-weight: 600; }
+.v2-mng-tag-new { color: var(--success); text-transform: none; font-weight: 600; }
 
 /* Values */
 .v2-mng-val {

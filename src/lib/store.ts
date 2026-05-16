@@ -3884,6 +3884,18 @@ export interface LocationBundle {
 export interface LocationUpsellConfig {
   popularItems: string[];
   staffPicks: string[];
+  /** Menu-engineering badges (audit §4.3) consolidated into the cross-sell
+   *  "Menu badges" tab so operators don't have to chase per-item edit
+   *  dialogs. Items listed here render the matching badge in /admin/menu
+   *  and on the customer card, additively to any intrinsic `menuRole` on
+   *  the seed item. Optional for back-compat with pre-existing saved
+   *  configs. */
+  heroItems?: string[];
+  pizzaioloChoiceItems?: string[];
+  chefSignatureItems?: string[];
+  /** Items shown with the green "New" badge. Replaces the previously
+   *  hardcoded NEW_ITEMS constant so launches don't require a deploy. */
+  newItems?: string[];
   preferredCoffee: string;
   preferredDessert: string;
   preferredDrink: string;

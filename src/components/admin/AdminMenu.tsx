@@ -123,6 +123,24 @@ export function AdminMenu() {
   const [editing, setEditing] = useState<MenuItemData | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
+  // Editorial badge config from /admin/crosssell → Menu badges. Read-only
+  // here; the row renders these chips next to the intrinsic menuRole tag so
+  // the badge layout matches the customer view in one place.
+  const [badgeSets, setBadgeSets] = useState<{
+    hero: Set<string>;
+    pizzaiolo: Set<string>;
+    chef: Set<string>;
+    popular: Set<string>;
+    staffPick: Set<string>;
+    new: Set<string>;
+  }>({
+    hero: new Set(),
+    pizzaiolo: new Set(),
+    chef: new Set(),
+    popular: new Set(),
+    staffPick: new Set(),
+    new: new Set(),
+  });
 
   const fetchMenu = useCallback(async () => {
     setLoading(true);
@@ -140,6 +158,27 @@ export function AdminMenu() {
   useEffect(() => {
     fetchMenu();
   }, [fetchMenu]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/settings/upsell?location=${pageLoc}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((cfg) => {
+        if (cancelled || !cfg) return;
+        setBadgeSets({
+          hero: new Set<string>(cfg.heroItems ?? []),
+          pizzaiolo: new Set<string>(cfg.pizzaioloChoiceItems ?? []),
+          chef: new Set<string>(cfg.chefSignatureItems ?? []),
+          popular: new Set<string>(cfg.popularItems ?? []),
+          staffPick: new Set<string>(cfg.staffPicks ?? []),
+          new: new Set<string>(cfg.newItems ?? []),
+        });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [pageLoc]);
 
   const persistChange = useCallback(
     async (
@@ -535,14 +574,49 @@ export function AdminMenu() {
                         <div className="v2-mng-row-main">
                           <div className="v2-mng-row-headline">
                             <span className="v2-mng-row-name">{item.name}</span>
-                            {item.menuRole && (
-                              <span
-                                className={`v2-mng-tag v2-mng-tag-${item.menuRole === "profit-driver" ? "pizzaiolo" : item.menuRole}`}
-                                title={`Menu engineering role: ${MENU_ROLE_LABEL[item.menuRole]}`}
-                              >
-                                {MENU_ROLE_LABEL[item.menuRole]}
-                              </span>
-                            )}
+                            {(() => {
+                              // Effective role badges: union of intrinsic
+                              // `menuRole` and the Menu badges tab selections.
+                              // De-duped so the same item never shows two
+                              // identical chips.
+                              const isHero =
+                                item.menuRole === "hero" ||
+                                badgeSets.hero.has(item.id);
+                              const isPizzaiolo =
+                                item.menuRole === "profit-driver" ||
+                                badgeSets.pizzaiolo.has(item.id);
+                              const isChef =
+                                item.menuRole === "anchor" ||
+                                badgeSets.chef.has(item.id);
+                              return (
+                                <>
+                                  {isHero && (
+                                    <span
+                                      className="v2-mng-tag v2-mng-tag-hero"
+                                      title="Menu badge: Our Hero"
+                                    >
+                                      {MENU_ROLE_LABEL.hero}
+                                    </span>
+                                  )}
+                                  {isPizzaiolo && (
+                                    <span
+                                      className="v2-mng-tag v2-mng-tag-pizzaiolo"
+                                      title="Menu badge: Pizzaiolo's Choice"
+                                    >
+                                      {MENU_ROLE_LABEL["profit-driver"]}
+                                    </span>
+                                  )}
+                                  {isChef && (
+                                    <span
+                                      className="v2-mng-tag v2-mng-tag-anchor"
+                                      title="Menu badge: Chef's Signature"
+                                    >
+                                      {MENU_ROLE_LABEL.anchor}
+                                    </span>
+                                  )}
+                                </>
+                              );
+                            })()}
                             {item.isLimited && (() => {
                               const d = daysUntilIso(item.limitedUntil);
                               return (
@@ -558,6 +632,30 @@ export function AdminMenu() {
                                 </span>
                               );
                             })()}
+                            {badgeSets.popular.has(item.id) && (
+                              <span
+                                className="v2-mng-tag v2-mng-tag-popular"
+                                title="Menu badge: Most Popular"
+                              >
+                                Popular
+                              </span>
+                            )}
+                            {badgeSets.staffPick.has(item.id) && (
+                              <span
+                                className="v2-mng-tag v2-mng-tag-staffpick"
+                                title="Menu badge: Staff Pick"
+                              >
+                                Staff Pick
+                              </span>
+                            )}
+                            {badgeSets.new.has(item.id) && (
+                              <span
+                                className="v2-mng-tag v2-mng-tag-new"
+                                title="Menu badge: New"
+                              >
+                                New
+                              </span>
+                            )}
                             {item._hasOverride && (
                               <span className="v2-mng-tag v2-mng-tag-override">Overridden</span>
                             )}
