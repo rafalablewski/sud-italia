@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { getActiveComboDeals } from "@/lib/upsell";
 import { CartItem, MENU_CATEGORY_LABELS, MenuItem } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
@@ -38,8 +38,8 @@ export function ComboDealBanner({
   // we match every missing suffix against the current location's menu. For
   // pure category combos we pick the cheapest item in each missing category
   // so a single tap completes the combo without forcing the customer to
-  // hunt through the menu.
-  const itemsToAdd = useMemo<MenuItem[]>(() => {
+  // hunt through the menu. Plain computation — React Compiler memoizes.
+  const itemsToAdd: MenuItem[] = (() => {
     if (!activeDeal || isComplete) return [];
     if (allMenuItems.length === 0) return [];
 
@@ -76,7 +76,7 @@ export function ComboDealBanner({
     }
 
     return [];
-  }, [activeDeal, isComplete, allMenuItems, cartItems, missingCategories]);
+  })();
 
   const canApply = !isComplete && itemsToAdd.length > 0 && !!locationSlug;
 
