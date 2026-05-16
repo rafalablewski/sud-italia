@@ -8,6 +8,7 @@ import {
   getCustomMenuItems,
   getMenuOverrides,
   setMenuOverridesBulk,
+  updateCustomMenuItem,
   type MenuOverride,
 } from "@/lib/store";
 import { getMenu } from "@/data/menus";
@@ -15,7 +16,7 @@ import { getActiveLocations } from "@/data/locations";
 import { menuBulkActionSchema, parseBody } from "@/lib/api-schemas";
 
 /**
- * Bulk-action endpoint for AdminMenu. Three actions multiplexed via `action`:
+ * Bulk-action endpoint for AdminMenu. Four actions multiplexed via `action`:
  *
  *   - `reset`: drop the override rows for the given source ids, reverting
  *     them to the static seed values (price/cost/description/available).
@@ -25,6 +26,12 @@ import { menuBulkActionSchema, parseBody } from "@/lib/api-schemas";
  *     case-insensitive name across the seed menu, since item ids are
  *     prefixed per location (`krk-…` vs `waw-…`) but the human-facing
  *     names line up across trucks.
+ *   - `edit`: apply a sparse `patch` (price / cost / available / category
+ *     / tags / description / menuRole / LTO / delivery-only / packaging
+ *     cost) to every given id. When `scope="all"`, each id's cross-location
+ *     twin gets the same patch — so changing San Pellegrino's cost on 15
+ *     trucks is one call, not 15. Seed rows route through the override
+ *     pipeline; custom rows are updated in place.
  *   - `delete`: remove the given items. Custom items hard-delete; seed
  *     items get a `hidden: true` override (restorable). When `scope="all"`,
  *     each id's cross-location twin (matched by case-insensitive name) is
@@ -39,7 +46,145 @@ export const POST = withAdmin(
   async (req, _ctx, { user }) => {
     const parsed = await parseBody(req, menuBulkActionSchema);
     if ("error" in parsed) return parsed.error;
-    const { action, ids, target, scope } = parsed.data;
+    const { action, ids, target, scope, patch } = parsed.data;
+
+    if (action === "edit") {
+      // Same custom-vs-seed + scope expansion as `delete`. For each
+      // resolved row, apply `patch` via the right primitive: seed rows
+      // get the patch merged into their MenuOverride; custom rows are
+      // updated in-place on the canonical row.
+      const editPatch = patch ?? {};
+      const activeLocs = getActiveLocations();
+      const customAll = await getCustomMenuItems();
+      const customById = new Map(customAll.map((c) => [c.id, c]));
+      const seedByLoc = new Map<string, ReturnType<typeof getMenu>>();
+      for (const l of activeLocs) seedByLoc.set(l.slug, getMenu(l.slug));
+
+      type TargetRow = {
+        id: string;
+        kind: "custom" | "seed";
+        locationSlug: string;
+        name: string;
+      };
+      const targets = new Map<string, TargetRow>();
+      const unresolved: string[] = [];
+
+      const resolveRow = (id: string): TargetRow | null => {
+        const c = customById.get(id);
+        if (c) return { id: c.id, kind: "custom", locationSlug: c.locationSlug, name: c.name };
+        for (const [slug, items] of seedByLoc) {
+          const hit = items.find((i) => i.id === id);
+          if (hit) return { id, kind: "seed", locationSlug: slug, name: hit.name };
+        }
+        return null;
+      };
+
+      const findTwins = (row: TargetRow): TargetRow[] => {
+        const key = row.name.trim().toLowerCase();
+        const twins: TargetRow[] = [];
+        for (const l of activeLocs) {
+          if (l.slug === row.locationSlug) continue;
+          const c = customAll.find(
+            (cc) => cc.locationSlug === l.slug && cc.name.trim().toLowerCase() === key,
+          );
+          if (c) {
+            twins.push({ id: c.id, kind: "custom", locationSlug: l.slug, name: c.name });
+            continue;
+          }
+          const seedHit = (seedByLoc.get(l.slug) ?? []).find(
+            (i) => i.name.trim().toLowerCase() === key,
+          );
+          if (seedHit) {
+            twins.push({ id: seedHit.id, kind: "seed", locationSlug: l.slug, name: seedHit.name });
+          }
+        }
+        return twins;
+      };
+
+      for (const id of ids) {
+        const row = resolveRow(id);
+        if (!row) {
+          unresolved.push(id);
+          continue;
+        }
+        targets.set(row.id, row);
+        if (scope === "all") {
+          for (const twin of findTwins(row)) targets.set(twin.id, twin);
+        }
+      }
+
+      // Authorize every touched location upfront.
+      const touched = new Set<string>();
+      for (const r of targets.values()) touched.add(r.locationSlug);
+      for (const slug of touched) {
+        if (!(await hasLocationAccess(slug))) {
+          return NextResponse.json(
+            { error: `Session is not authorized for location "${slug}"` },
+            { status: 403 },
+          );
+        }
+      }
+
+      // Build the seed-overrides write in one shot for atomicity. Custom
+      // updates are sequential because each row mutates its own JSON record.
+      const seedUpdates: Record<string, MenuOverride> = {};
+      const customRows: TargetRow[] = [];
+      for (const row of targets.values()) {
+        if (row.kind === "seed") seedUpdates[row.id] = editPatch as MenuOverride;
+        else customRows.push(row);
+      }
+      if (Object.keys(seedUpdates).length > 0) {
+        await setMenuOverridesBulk(seedUpdates);
+      }
+      // Custom items have no "clear back to seed" notion — translate any
+      // explicit null into undefined so updateCustomMenuItem doesn't
+      // persist `null` as a stored value (CustomMenuItem fields are
+      // string/number/boolean, not nullable).
+      const customPatch: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(editPatch)) {
+        customPatch[k] = v === null ? undefined : v;
+      }
+      let customUpdated = 0;
+      const customFailed: string[] = [];
+      for (const row of customRows) {
+        try {
+          const updated = await updateCustomMenuItem(row.id, customPatch);
+          if (updated) customUpdated++;
+          else customFailed.push(row.id);
+        } catch {
+          customFailed.push(row.id);
+        }
+      }
+
+      await appendAuditLog({
+        actor: user.email || user.id,
+        action: "menu.bulk_edit",
+        entityType: "menu_item",
+        entityId: `batch-of-${targets.size}`,
+        after: {
+          scope: scope ?? "current",
+          patch: editPatch,
+          requestedIds: ids,
+          unresolvedIds: unresolved,
+          seedOverridden: Object.keys(seedUpdates).length,
+          customUpdated,
+          customFailed,
+          locations: [...touched],
+        },
+      });
+
+      return NextResponse.json({
+        ok: true,
+        action: "edit",
+        scope: scope ?? "current",
+        seedOverridden: Object.keys(seedUpdates).length,
+        customUpdated,
+        affected: Object.keys(seedUpdates).length + customUpdated,
+        unresolvedIds: unresolved,
+        customFailedIds: customFailed,
+        locations: [...touched],
+      });
+    }
 
     if (action === "delete") {
       // Resolve every id to its row (custom vs seed) plus, when scope="all",

@@ -2253,7 +2253,12 @@ html { scroll-behavior: smooth; }
 }
 
 .v2-mng-section[data-variant="menu"] {
-  --mng-grid: 20px 20px minmax(0, 1fr) 84px 84px 56px auto;
+  /* Last column holds the edit-group (Pencil + Trash, 24px each + 2px gap).
+   * Must be a fixed width — CSS Grid resolves `auto` per grid container, so
+   * `auto` collapses to 0 on the header (empty placeholder span) but expands
+   * on each row, pushing Price/Cost/Margin out of alignment with their
+   * header labels. 52px = 24 + 2 + 24 + 2px breathing room. */
+  --mng-grid: 20px 20px minmax(0, 1fr) 84px 84px 56px 52px;
   --mng-cols-start: 4;
 }
 .v2-mng-select {

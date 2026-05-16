@@ -362,21 +362,50 @@ export const menuOverridePutSchema = z
     path: ["id"],
   });
 
-/** POST /api/admin/menu/bulk — reset overrides, clone across locations, or
- *  bulk-delete (custom items hard-delete; seed items soft-hide via override).
- *  `scope` only applies to `delete`: "current" deletes just the given ids,
- *  "all" also removes the matching twin in every other active location
- *  (matched by item name, case-insensitive). Defaults to "current". */
+/** Patch shape for the bulk-edit action — the field-by-field subset of
+ *  menuOverrideEditSchema that we allow operators to set in one go. Each
+ *  field is optional; only the keys actually present are applied. Identity
+ *  fields (name, sku, hidden) are intentionally excluded — those make no
+ *  sense as a chain-wide bulk patch. */
+const menuBulkEditPatchSchema = z
+  .object({
+    price: grosze.max(100_000).optional(),
+    cost: grosze.max(100_000).optional(),
+    available: z.boolean().optional(),
+    description: z.string().max(1000).optional(),
+    category: menuCategoryEnum.optional(),
+    tags: z.array(menuTagEnum).max(8).optional(),
+    menuRole: menuRoleEnum.nullable().optional(),
+    isLimited: z.boolean().nullable().optional(),
+    limitedUntil: isoDate.nullable().optional(),
+    deliveryOnly: z.boolean().nullable().optional(),
+    packagingCost: grosze.max(5_000).nullable().optional(),
+  })
+  .refine((p) => Object.keys(p).length > 0, {
+    message: "patch must contain at least one field",
+  });
+
+/** POST /api/admin/menu/bulk — reset overrides, clone across locations,
+ *  bulk-edit fields, or bulk-delete (custom items hard-delete; seed items
+ *  soft-hide via override). `scope` controls cross-location fan-out for
+ *  `edit` and `delete`: "current" touches just the given ids, "all" also
+ *  resolves the matching twin in every other active location (matched
+ *  case-insensitively by item name). Defaults to "current". */
 export const menuBulkActionSchema = z
   .object({
-    action: z.enum(["reset", "clone_to", "delete"]),
+    action: z.enum(["reset", "clone_to", "delete", "edit"]),
     ids: z.array(stableId).min(1).max(500),
     target: locationSlug.optional(),
     scope: z.enum(["current", "all"]).optional(),
+    patch: menuBulkEditPatchSchema.optional(),
   })
   .refine((data) => data.action !== "clone_to" || !!data.target, {
     message: "clone_to requires a `target` location slug",
     path: ["target"],
+  })
+  .refine((data) => data.action !== "edit" || !!data.patch, {
+    message: "edit requires a `patch` object",
+    path: ["patch"],
   });
 
 // --- Admin: custom menu items --------------------------------------------
