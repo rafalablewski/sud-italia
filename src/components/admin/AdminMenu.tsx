@@ -81,18 +81,87 @@ interface MenuItemData {
 const activeLocations = getActiveLocations();
 const FALLBACK_LOC = activeLocations[0]?.slug ?? "krakow";
 
-/** Strip a known active-location prefix from an item id. Used to match
- *  the "same" item across locations (krk-pizza-margherita and
- *  war-pizza-margherita share the base `pizza-margherita`). Falls back
- *  to the full id when no known prefix matches. */
+/** Strip a leading short location prefix from an item id so the "same"
+ *  item across locations groups under one base slug
+ *  (`krk-pizza-margherita` and `waw-pizza-margherita` both → `pizza-margherita`).
+ *
+ *  Recognises both the seed prefixes hand-rolled in
+ *  `src/data/menus/*.ts` (`krk`, `waw`, ...) and the slug-derived
+ *  prefixes that `createCustomItem` generates via `slug.slice(0, 3)`
+ *  (`kra`, `war`, ...). The earlier implementation only matched the
+ *  latter, so seed-item twins were never detected and the admin menu
+ *  list duplicated every cross-location product. */
 function getBaseSlug(itemId: string): string {
+  const m = itemId.match(/^[a-z]{2,4}-(.+)$/);
+  return m ? m[1] : itemId;
+}
+
+/** A product as it lives across the chain. One row per base slug in the
+ *  admin list, with per-location variants exposed via the `locations`
+ *  array so the UI can show city/price/margin chips and bulk ops can
+ *  fan out to every underlying location-scoped row. */
+interface UnifiedItem {
+  baseSlug: string;
+  /** Stable id used by React keys and as the "primary" argument to
+   *  single-item dialogs (edit) — falls back through preferred-location
+   *  → first visible → first hidden. */
+  primary: MenuItemData;
+  primarySlug: string;
+  name: string;
+  description: string;
+  category: MenuCategory;
+  tags: string[];
+  locations: { slug: string; city: string; item: MenuItemData }[];
+  /** True if available at any location. The eye-toggle 86s every variant
+   *  when on, un-86s every variant when off — operator intent is "the
+   *  product", not "this row's variant". */
+  available: boolean;
+  /** True only when hidden everywhere it exists; partial-hide is rendered
+   *  via per-location chips instead. */
+  hidden: boolean;
+  hasOverride: boolean;
+  hasRecipe: boolean;
+}
+
+function unifyMenus(
+  byLoc: Record<string, MenuItemData[]>,
+  preferredSlug: string,
+): UnifiedItem[] {
+  const groups = new Map<string, { slug: string; city: string; item: MenuItemData }[]>();
   for (const loc of activeLocations) {
-    const prefix = loc.slug.slice(0, 3);
-    if (prefix && itemId.startsWith(`${prefix}-`)) {
-      return itemId.slice(prefix.length + 1);
+    const arr = byLoc[loc.slug] || [];
+    for (const item of arr) {
+      const base = getBaseSlug(item.id);
+      const bucket = groups.get(base) || [];
+      bucket.push({ slug: loc.slug, city: loc.city, item });
+      groups.set(base, bucket);
     }
   }
-  return itemId;
+  const unified: UnifiedItem[] = [];
+  for (const [baseSlug, locations] of groups) {
+    const visible = locations.filter((l) => !l.item._hidden);
+    const pick =
+      visible.find((l) => l.slug === preferredSlug) ??
+      visible[0] ??
+      locations.find((l) => l.slug === preferredSlug) ??
+      locations[0];
+    const primary = pick.item;
+    unified.push({
+      baseSlug,
+      primary,
+      primarySlug: pick.slug,
+      name: primary.name,
+      description: primary.description,
+      category: primary.category,
+      tags: primary.tags,
+      locations,
+      available: locations.some((l) => l.item.available && !l.item._hidden),
+      hidden: locations.every((l) => l.item._hidden),
+      hasOverride: locations.some((l) => l.item._hasOverride),
+      hasRecipe: locations.some((l) => l.item._hasRecipe),
+    });
+  }
+  return unified;
 }
 
 function marginPct(price: number, cost: number): number {
@@ -118,10 +187,10 @@ export function AdminMenu() {
     if (globalLoc) setPageLoc(globalLoc);
   }, [globalLoc]);
 
-  const [items, setItems] = useState<MenuItemData[]>([]);
-  /** Per-location menu snapshot — used by the edit dialog's location
-   *  selector to detect cross-location twins (same base slug at another
-   *  truck) without re-fetching every time the dialog opens. */
+  /** Per-location menu snapshot — single source of truth. The render
+   *  derives a unified, deduped view (one row per base slug across all
+   *  locations) so the same product doesn't appear twice when it lives
+   *  at multiple trucks. Optimistic updates mutate this map directly. */
   const [menusByLocation, setMenusByLocation] = useState<Record<string, MenuItemData[]>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -173,11 +242,27 @@ export function AdminMenu() {
         byLoc[loc.slug] = responses[idx];
       });
       setMenusByLocation(byLoc);
-      setItems(byLoc[pageLoc] ?? []);
     } finally {
       setLoading(false);
     }
-  }, [pageLoc]);
+  }, []);
+
+  /** Apply a per-row patch to `menusByLocation` for a set of ids. Used
+   *  for optimistic updates so the unified render reflects the change
+   *  before the network round-trip completes. */
+  const patchItemsInPlace = useCallback(
+    (ids: Iterable<string>, patch: (i: MenuItemData) => MenuItemData) => {
+      const idSet = new Set(ids);
+      setMenusByLocation((prev) => {
+        const next: Record<string, MenuItemData[]> = {};
+        for (const [slug, arr] of Object.entries(prev)) {
+          next[slug] = arr.map((i) => (idSet.has(i.id) ? patch(i) : i));
+        }
+        return next;
+      });
+    },
+    [],
+  );
 
   useEffect(() => {
     fetchMenu();
@@ -241,16 +326,35 @@ export function AdminMenu() {
     [],
   );
 
-  const toggleAvailability = async (item: MenuItemData) => {
-    const next = !item.available;
-    // Optimistic
-    setItems((arr) => arr.map((i) => (i.id === item.id ? { ...i, available: next, _hasOverride: true } : i)));
-    const ok = await persistChange(item.id, { available: next });
-    if (!ok) {
+  /** Toggle availability across every visible variant of a unified
+   *  product — the eye icon represents the product, not a single
+   *  truck's row, so 86'ing fans out to all locations. */
+  const toggleAvailability = async (unified: UnifiedItem) => {
+    const next = !unified.available;
+    const targetIds = unified.locations
+      .filter((l) => !l.item._hidden)
+      .map((l) => l.item.id);
+    if (targetIds.length === 0) return;
+    patchItemsInPlace(targetIds, (i) => ({ ...i, available: next, _hasOverride: true }));
+    const updates: Record<string, { available: boolean }> = {};
+    for (const id of targetIds) updates[id] = { available: next };
+    const res = await fetch("/api/admin/menu", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: updates }),
+    });
+    if (!res.ok) {
       toast.error("Could not save", "Reverting availability.");
-      setItems((arr) => arr.map((i) => (i.id === item.id ? { ...i, available: !next } : i)));
+      patchItemsInPlace(targetIds, (i) => ({ ...i, available: !next }));
     } else {
-      toast.success(next ? "Item available" : "Item hidden", item.name);
+      const locLabel =
+        targetIds.length === 1
+          ? unified.locations.find((l) => l.item.id === targetIds[0])?.city
+          : `${targetIds.length} locations`;
+      toast.success(
+        next ? "Item available" : "Item hidden",
+        `${unified.name}${locLabel ? ` · ${locLabel}` : ""}`,
+      );
     }
   };
 
@@ -266,12 +370,10 @@ export function AdminMenu() {
         body: JSON.stringify({ items: updates }),
       });
       if (res.ok) {
-        setItems((arr) =>
-          arr.map((i) => (selectedIds.has(i.id) ? { ...i, available, _hasOverride: true } : i)),
-        );
+        patchItemsInPlace(selectedIds, (i) => ({ ...i, available, _hasOverride: true }));
         toast.success(
           available ? "Items marked available" : "Items 86'd",
-          `${selectedIds.size} ${selectedIds.size === 1 ? "item" : "items"} updated.`,
+          `${selectedIds.size} ${selectedIds.size === 1 ? "row" : "rows"} updated.`,
         );
         setSelectedIds(new Set());
       } else {
@@ -464,15 +566,6 @@ export function AdminMenu() {
     },
     [fetchMenu, toast],
   );
-
-  const toggleSelected = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
 
   /** Look up the cross-location twin for a given base slug. Returns the
    *  matching item from the cached snapshot, plus a hint for which API
@@ -740,17 +833,32 @@ export function AdminMenu() {
     [toast],
   );
 
-  /** Return the active-location slugs (other than the row's own) that
-   *  carry the same item — matched by base slug OR case-insensitive name.
-   *  Drives the "Delete everywhere" affordance: we only offer it when
-   *  the row actually has twins to clean up. */
+  /** Locate the location that owns a given item id by looking it up in
+   *  the per-location snapshot. The list is unified across trucks, so
+   *  `selectedIds` can mix Kraków / Warszawa rows — we can't assume
+   *  `pageLoc` owns every selected id like the per-location list could. */
+  const locationOfItem = useCallback(
+    (itemId: string): string => {
+      for (const [slug, arr] of Object.entries(menusByLocation)) {
+        if (arr.some((i) => i.id === itemId)) return slug;
+      }
+      return pageLoc;
+    },
+    [menusByLocation, pageLoc],
+  );
+
+  /** Return the active-location slugs (other than the item's own) that
+   *  carry the same product — matched by base slug OR case-insensitive
+   *  name. Drives the "Delete everywhere" affordance: we only offer it
+   *  when the row actually has twins to clean up. */
   const findTwinLocations = useCallback(
     (item: MenuItemData): string[] => {
       const baseSlug = getBaseSlug(item.id);
       const nameKey = item.name.trim().toLowerCase();
+      const ownLoc = locationOfItem(item.id);
       const hits: string[] = [];
       for (const loc of activeLocations) {
-        if (loc.slug === pageLoc) continue;
+        if (loc.slug === ownLoc) continue;
         const arr = menusByLocation[loc.slug] || [];
         const twin = arr.find(
           (i) =>
@@ -761,7 +869,7 @@ export function AdminMenu() {
       }
       return hits;
     },
-    [menusByLocation, pageLoc],
+    [menusByLocation, locationOfItem],
   );
 
   const deleteItem = (item: MenuItemData) => {
@@ -773,9 +881,18 @@ export function AdminMenu() {
     });
   };
 
+  /** Flat union of every variant across all locations — used by the
+   *  bulk dialogs to resolve `selectedIds` (which may span multiple
+   *  trucks now that the list is unified) without limiting to the
+   *  current page's snapshot. */
+  const allItems = useMemo(
+    () => Object.values(menusByLocation).flat(),
+    [menusByLocation],
+  );
+
   const openBulkDelete = (scope: "current" | "all") => {
     if (selectedIds.size === 0) return;
-    const selected = items.filter((i) => selectedIds.has(i.id));
+    const selected = allItems.filter((i) => selectedIds.has(i.id));
     setDeleteRequest({
       items: selected,
       scopes: [scope],
@@ -799,7 +916,7 @@ export function AdminMenu() {
 
   const openBulkEdit = () => {
     if (selectedIds.size === 0) return;
-    const selected = items.filter((i) => selectedIds.has(i.id));
+    const selected = allItems.filter((i) => selectedIds.has(i.id));
     setEditRequest({
       items: selected,
       twinLocations: aggregateTwinLocations(selected),
@@ -808,7 +925,7 @@ export function AdminMenu() {
 
   const openBulkClone = () => {
     if (selectedIds.size === 0) return;
-    const selected = items.filter((i) => selectedIds.has(i.id));
+    const selected = allItems.filter((i) => selectedIds.has(i.id));
     setCloneRequest({ items: selected });
   };
 
@@ -821,54 +938,67 @@ export function AdminMenu() {
   };
 
   /** Clear the `hidden` override flag so a previously soft-deleted seed
-   *  item is restored to the menu. */
-  const restoreItem = async (item: MenuItemData) => {
-    const ok = await persistChange(item.id, { hidden: null });
-    if (!ok) {
+   *  item is restored — fans out across every hidden variant of the
+   *  unified product so the row un-hides everywhere it was soft-deleted. */
+  const restoreUnified = async (unified: UnifiedItem) => {
+    const hiddenIds = unified.locations.filter((l) => l.item._hidden).map((l) => l.item.id);
+    if (hiddenIds.length === 0) return;
+    const updates: Record<string, { hidden: null }> = {};
+    for (const id of hiddenIds) updates[id] = { hidden: null };
+    const res = await fetch("/api/admin/menu", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: updates }),
+    });
+    if (!res.ok) {
       toast.error("Could not restore", "Try again.");
       return;
     }
-    setItems((arr) =>
-      arr.map((i) => (i.id === item.id ? { ...i, _hidden: false } : i)),
-    );
-    toast.success("Item restored", item.name);
+    patchItemsInPlace(hiddenIds, (i) => ({ ...i, _hidden: false }));
+    toast.success("Item restored", unified.name);
   };
 
   // --- Derived ---
-  const categories = useMemo(
-    () => CATEGORY_ORDER.filter((c) => items.some((i) => i.category === c)),
-    [items],
+  const unifiedItems = useMemo(
+    () => unifyMenus(menusByLocation, pageLoc),
+    [menusByLocation, pageLoc],
   );
 
-  const hiddenCount = useMemo(() => items.filter((i) => i._hidden).length, [items]);
+  const categories = useMemo(
+    () => CATEGORY_ORDER.filter((c) => unifiedItems.some((u) => u.category === c)),
+    [unifiedItems],
+  );
+
+  const hiddenCount = useMemo(
+    () => unifiedItems.filter((u) => u.hidden).length,
+    [unifiedItems],
+  );
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return items.filter((i) => {
-      // Soft-deleted seed rows hide from the default list. The header
-      // toggle reveals them so operators can restore.
-      if (i._hidden && !showHidden) return false;
-      if (category !== "all" && i.category !== category) return false;
+    return unifiedItems.filter((u) => {
+      if (u.hidden && !showHidden) return false;
+      if (category !== "all" && u.category !== category) return false;
       if (!q) return true;
       return (
-        i.name.toLowerCase().includes(q) ||
-        i.description.toLowerCase().includes(q) ||
-        i.tags.some((t) => t.toLowerCase().includes(q))
+        u.name.toLowerCase().includes(q) ||
+        u.description.toLowerCase().includes(q) ||
+        u.tags.some((t) => t.toLowerCase().includes(q))
       );
     });
-  }, [items, search, category, showHidden]);
+  }, [unifiedItems, search, category, showHidden]);
 
   const grouped = useMemo(() => {
-    const m = new Map<MenuCategory, MenuItemData[]>();
-    for (const i of filtered) {
-      const arr = m.get(i.category) || [];
-      arr.push(i);
-      m.set(i.category, arr);
+    const m = new Map<MenuCategory, UnifiedItem[]>();
+    for (const u of filtered) {
+      const arr = m.get(u.category) || [];
+      arr.push(u);
+      m.set(u.category, arr);
     }
     return Array.from(m.entries());
   }, [filtered]);
 
-  const unavailableCount = items.filter((i) => !i.available).length;
+  const unavailableCount = unifiedItems.filter((u) => !u.available).length;
 
   const locOptions = activeLocations.map((l) => ({ value: l.slug, label: l.city }));
 
@@ -878,18 +1008,18 @@ export function AdminMenu() {
         <div className="v2-page-title-row">
           <h1 className="v2-page-title">Menu</h1>
           <p className="v2-page-subtitle">
-            {items.length} items
+            {unifiedItems.length} {unifiedItems.length === 1 ? "product" : "products"} across {activeLocations.length} location{activeLocations.length === 1 ? "" : "s"}
             {unavailableCount > 0 && ` · ${unavailableCount} hidden from customers`}
           </p>
         </div>
         <div className="v2-page-actions">
-          <div className="v2-field-inline">
+          <div className="v2-field-inline" title="Default location for new items and the lens used to pick a row's primary variant.">
             <MapPin className="h-3.5 w-3.5 v2-muted" />
             <Select
               value={pageLoc}
               onChange={(e) => setPageLoc(e.target.value)}
               options={locOptions}
-              aria-label="Editing location"
+              aria-label="Default location for new items"
             />
           </div>
           {hiddenCount > 0 && (
@@ -923,11 +1053,11 @@ export function AdminMenu() {
           value={category}
           onChange={(v) => setCategory(v as MenuCategory | "all")}
           tabs={[
-            { value: "all", label: "All", count: items.length },
+            { value: "all", label: "All", count: unifiedItems.length },
             ...categories.map((c) => ({
               value: c,
               label: MENU_CATEGORY_LABELS[c],
-              count: items.filter((i) => i.category === c).length,
+              count: unifiedItems.filter((u) => u.category === c).length,
             })),
           ]}
           variant="pill"
@@ -1031,9 +1161,9 @@ export function AdminMenu() {
           <CardBody>
             <EmptyState
               icon={UtensilsCrossed}
-              title={items.length === 0 ? "No menu items" : "No matches"}
+              title={unifiedItems.length === 0 ? "No menu items" : "No matches"}
               description={
-                items.length === 0
+                unifiedItems.length === 0
                   ? "Menu data lives in src/data/menus/*.ts. Add items there to see them here."
                   : "Clear the search or pick another category."
               }
@@ -1044,6 +1174,7 @@ export function AdminMenu() {
         <div className="v2-mng-groups">
           {grouped.map(([cat, list]) => {
             const Icon = CATEGORY_ICON[cat];
+            const allSingleLocation = list.every((u) => u.locations.length <= 1);
             return (
               <section key={cat} className="v2-mng-section" data-variant="menu">
                 <header className="v2-mng-section-header">
@@ -1052,23 +1183,41 @@ export function AdminMenu() {
                     <span className="v2-mng-section-name">{MENU_CATEGORY_LABELS[cat]}</span>
                     <span className="v2-mng-section-count">{list.length}</span>
                   </span>
-                  <span className="v2-mng-col">Price</span>
-                  <span className="v2-mng-col">Cost</span>
-                  <span className="v2-mng-col">Margin</span>
-                  <span aria-hidden />
+                  {allSingleLocation ? (
+                    <>
+                      <span className="v2-mng-col">Price</span>
+                      <span className="v2-mng-col">Cost</span>
+                      <span className="v2-mng-col">Margin</span>
+                      <span aria-hidden />
+                    </>
+                  ) : (
+                    <>
+                      <span className="v2-mng-col" style={{ gridColumn: "span 3", textAlign: "left" }}>
+                        Per-location price · cost · margin
+                      </span>
+                      <span aria-hidden />
+                    </>
+                  )}
                 </header>
                 <ul className="v2-mng-list">
-                  {list.map((item) => {
-                    const margin = marginPct(item.price, item.cost);
-                    const isSelected = selectedIds.has(item.id);
+                  {list.map((unified) => {
+                    const primary = unified.primary;
+                    const primaryMargin = marginPct(primary.price, primary.cost);
+                    const isMulti = unified.locations.length > 1;
+                    // Row is "selected" when every variant's id is in
+                    // selectedIds; toggling cascades to all variants so
+                    // the bulk dialogs see every underlying row.
+                    const allIds = unified.locations.map((l) => l.item.id);
+                    const allSelected =
+                      allIds.length > 0 && allIds.every((id) => selectedIds.has(id));
                     return (
                       <li
-                        key={item.id}
-                        className={`v2-mng-row v2-mng-row-menu ${item.available ? "" : "is-off"}`}
+                        key={unified.baseSlug}
+                        className={`v2-mng-row v2-mng-row-menu ${unified.available ? "" : "is-off"}`}
                         style={
-                          item._hidden
+                          unified.hidden
                             ? { background: "var(--surface-2)", opacity: 0.65 }
-                            : isSelected
+                            : allSelected
                             ? { background: "var(--brand-soft)" }
                             : undefined
                         }
@@ -1076,68 +1225,113 @@ export function AdminMenu() {
                         <input
                           type="checkbox"
                           className="v2-mng-select"
-                          checked={isSelected}
-                          onChange={() => toggleSelected(item.id)}
-                          aria-label={isSelected ? `Deselect ${item.name}` : `Select ${item.name}`}
+                          checked={allSelected}
+                          onChange={() => {
+                            setSelectedIds((prev) => {
+                              const next = new Set(prev);
+                              if (allIds.every((id) => next.has(id))) {
+                                for (const id of allIds) next.delete(id);
+                              } else {
+                                for (const id of allIds) next.add(id);
+                              }
+                              return next;
+                            });
+                          }}
+                          aria-label={allSelected ? `Deselect ${unified.name}` : `Select ${unified.name}`}
                         />
                         <button
                           type="button"
-                          onClick={() => toggleAvailability(item)}
-                          className={`v2-mng-toggle ${item.available ? "is-on" : "is-off"}`}
-                          aria-label={item.available ? "Mark sold out" : "Mark available"}
-                          title={item.available ? "Mark sold out" : "Mark available"}
+                          onClick={() => toggleAvailability(unified)}
+                          className={`v2-mng-toggle ${unified.available ? "is-on" : "is-off"}`}
+                          aria-label={unified.available ? "Mark sold out" : "Mark available"}
+                          title={
+                            isMulti
+                              ? unified.available
+                                ? `Mark sold out at all ${unified.locations.length} locations`
+                                : `Mark available at all ${unified.locations.length} locations`
+                              : unified.available
+                              ? "Mark sold out"
+                              : "Mark available"
+                          }
                         >
-                          {item.available ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                          {unified.available ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                         </button>
 
                         <div className="v2-mng-row-main">
                           <div className="v2-mng-row-headline">
-                            <span className="v2-mng-row-name">{item.name}</span>
-                            {/* Editorial / menu-engineering badges (Hero,
-                                Pizzaiolo's Choice, Chef's Signature, Popular,
-                                Staff Pick, New, LTO) are managed and shown
-                                solely from /admin/crosssell → Menu badges.
-                                The admin menu row keeps only the override
-                                state indicator and intrinsic recipe tags.
-                                The "Custom" badge was retired — every item
-                                is fully editable, so the storage origin no
-                                longer warrants a visual distinction. */}
-                            {item._hidden && (
-                              <span className="v2-mng-tag v2-mng-tag-override" title="Soft-deleted via the trash icon. Restore from the row.">Hidden</span>
+                            <span className="v2-mng-row-name">{unified.name}</span>
+                            {unified.hidden && (
+                              <span className="v2-mng-tag v2-mng-tag-override" title="Soft-deleted at every location it occupies. Restore from the row.">Hidden</span>
                             )}
-                            {item._hasOverride && !item._hidden && (
-                              <span className="v2-mng-tag v2-mng-tag-override">Edited</span>
+                            {unified.hasOverride && !unified.hidden && (
+                              <span className="v2-mng-tag v2-mng-tag-override" title="At least one location has a manual override on this product.">Edited</span>
                             )}
-                            {item.sku && (
+                            {primary.sku && (
                               <span className="v2-mng-tag" title="SKU / inventory code">
-                                {item.sku}
+                                {primary.sku}
                               </span>
                             )}
-                            {item.tags.map((t) => (
+                            {unified.tags.map((t) => (
                               <span key={t} className="v2-mng-tag">{t}</span>
                             ))}
                           </div>
-                          {item.description && <p className="v2-mng-row-desc">{item.description}</p>}
+                          {unified.description && <p className="v2-mng-row-desc">{unified.description}</p>}
+                          {isMulti && (
+                            <div className="v2-mng-loc-chips" role="list" aria-label="Per-location variants">
+                              {unified.locations.map((l) => {
+                                const lm = marginPct(l.item.price, l.item.cost);
+                                return (
+                                  <span
+                                    key={l.slug}
+                                    role="listitem"
+                                    className="v2-mng-loc-chip"
+                                    data-hidden={l.item._hidden ? "true" : undefined}
+                                    data-off={!l.item.available ? "true" : undefined}
+                                    title={[
+                                      `${l.city} · ${formatPrice(l.item.price)} · ${lm}% margin`,
+                                      l.item._hasOverride ? "edited" : null,
+                                      l.item._hidden ? "hidden" : null,
+                                      !l.item.available ? "86'd" : null,
+                                    ]
+                                      .filter(Boolean)
+                                      .join(" · ")}
+                                  >
+                                    <MapPin className="h-3 w-3" aria-hidden />
+                                    <span className="v2-mng-loc-city">{l.city}</span>
+                                    <span className="v2-mng-loc-price tabular">{formatPrice(l.item.price)}</span>
+                                    <span className="v2-mng-loc-cost tabular">{formatPrice(l.item.cost)}</span>
+                                    <span className={`v2-mng-loc-margin v2-mng-val-margin-${marginTone(lm)} tabular`}>{lm}%</span>
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
 
-                        <span className="v2-mng-val v2-mng-val-price tabular">{formatPrice(item.price)}</span>
-                        <span
-                          className="v2-mng-val v2-mng-val-cost tabular"
-                          title={item._hasRecipe ? "Cost is computed from this item's recipe (canonical)." : item._costSource === "override" ? "Cost is a manual override." : "Cost is the seed value — no recipe yet."}
-                        >
-                          {formatPrice(item.cost)}
-                          {item._hasRecipe && <span className="v2-mng-cost-source"> recipe</span>}
-                        </span>
-                        <span className={`v2-mng-val v2-mng-val-margin v2-mng-val-margin-${marginTone(margin)} tabular`}>{margin}%</span>
+                        {isMulti ? (
+                          <span style={{ gridColumn: "span 3" }} aria-hidden />
+                        ) : (
+                          <>
+                            <span className="v2-mng-val v2-mng-val-price tabular">{formatPrice(primary.price)}</span>
+                            <span
+                              className="v2-mng-val v2-mng-val-cost tabular"
+                              title={primary._hasRecipe ? "Cost is computed from this item's recipe (canonical)." : primary._costSource === "override" ? "Cost is a manual override." : "Cost is the seed value — no recipe yet."}
+                            >
+                              {formatPrice(primary.cost)}
+                              {primary._hasRecipe && <span className="v2-mng-cost-source"> recipe</span>}
+                            </span>
+                            <span className={`v2-mng-val v2-mng-val-margin v2-mng-val-margin-${marginTone(primaryMargin)} tabular`}>{primaryMargin}%</span>
+                          </>
+                        )}
 
                         <span className="v2-mng-edit-group">
-                          {item._hidden ? (
+                          {unified.hidden ? (
                             <button
                               type="button"
                               className="v2-mng-edit"
-                              onClick={() => restoreItem(item)}
-                              aria-label={`Restore ${item.name}`}
-                              title="Restore item — un-hide from menu"
+                              onClick={() => restoreUnified(unified)}
+                              aria-label={`Restore ${unified.name}`}
+                              title="Restore product — un-hide at every location"
                             >
                               <Eye className="h-3.5 w-3.5" />
                             </button>
@@ -1145,23 +1339,29 @@ export function AdminMenu() {
                             <button
                               type="button"
                               className="v2-mng-edit"
-                              onClick={() => setEditing(item)}
-                              aria-label={`Edit ${item.name}`}
-                              title="Edit item"
+                              onClick={() => setEditing(primary)}
+                              aria-label={`Edit ${unified.name}`}
+                              title={
+                                isMulti
+                                  ? `Edit ${unified.name} — opens the ${unified.locations.find((l) => l.slug === unified.primarySlug)?.city ?? activeLocations[0]?.city ?? ""} variant. Tick "Apply changes to all locations" to fan out.`
+                                  : "Edit item"
+                              }
                             >
                               <Pencil className="h-3.5 w-3.5" />
                             </button>
                           )}
-                          {!item._hidden && (
+                          {!unified.hidden && (
                             <button
                               type="button"
                               className="v2-mng-edit v2-mng-edit-danger"
-                              onClick={() => deleteItem(item)}
-                              aria-label={`Delete ${item.name}`}
+                              onClick={() => deleteItem(primary)}
+                              aria-label={`Delete ${unified.name}`}
                               title={
-                                item._isCustom
+                                isMulti
+                                  ? `Delete ${unified.name} — defaults to deleting at ${unified.locations.find((l) => l.slug === unified.primarySlug)?.city ?? ""}; pick "Delete everywhere" in the dialog to remove from all locations.`
+                                  : primary._isCustom
                                   ? "Delete item (permanent)"
-                                  : "Hide seed item from this location (restoreable)"
+                                  : "Hide seed item (restoreable)"
                               }
                             >
                               <Trash2 className="h-3.5 w-3.5" />
@@ -1180,7 +1380,7 @@ export function AdminMenu() {
 
       <EditItemDialog
         item={editing}
-        currentSlug={pageLoc}
+        currentSlug={editing ? locationOfItem(editing.id) : pageLoc}
         menusByLocation={menusByLocation}
         onClose={() => setEditing(null)}
         onSave={saveEdit}
