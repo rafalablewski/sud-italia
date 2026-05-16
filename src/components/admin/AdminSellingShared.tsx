@@ -139,6 +139,13 @@ export interface BundleRulesConfig {
 export interface LocationConfig {
   popularItems: string[];
   staffPicks: string[];
+  /** Editorial menu badges (Hero / Pizzaiolo's Choice / Chef's Signature /
+   *  New) managed from the Menu badges tab. Optional for back-compat with
+   *  saved configs that pre-date the consolidation. */
+  heroItems?: string[];
+  pizzaioloChoiceItems?: string[];
+  chefSignatureItems?: string[];
+  newItems?: string[];
   preferredCoffee: string;
   preferredDessert: string;
   preferredDrink: string;

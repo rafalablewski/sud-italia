@@ -12,7 +12,7 @@ import { SeasonalSpecials } from "./SeasonalSpecials";
 import { ReorderSection } from "./ReorderSection";
 import { SpeedGuarantee } from "./SpeedGuarantee";
 import { ComboDealsPreview } from "./ComboDealsPreview";
-import { compareMenuEngineering } from "@/lib/upsell";
+import { compareMenuEngineering, type UpsellConfig } from "@/lib/upsell";
 import { getItemRating } from "@/data/ratings";
 import { useLiveMenuAvailability } from "@/lib/useLiveMenuAvailability";
 import { Search, X, ArrowUpDown, Check } from "lucide-react";
@@ -42,6 +42,18 @@ interface MenuSectionProps {
 }
 
 export function MenuSection({ items, locationSlug, initialAvailability }: MenuSectionProps) {
+  // Editorial badges from /admin/crosssell → Menu badges. Fetched once per
+  // mount; each MenuItemCard reads from it (no per-item refetch).
+  const [upsellConfig, setUpsellConfig] = useState<UpsellConfig | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/settings/upsell?location=${locationSlug}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => { if (!cancelled && data) setUpsellConfig(data); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [locationSlug]);
+
   const fallbackAvailability = useMemo(() => {
     if (initialAvailability) return initialAvailability;
     const map: Record<string, boolean> = {};
@@ -165,10 +177,10 @@ export function MenuSection({ items, locationSlug, initialAvailability }: MenuSe
     // its residual band, so we only need an alpha fallback for items that
     // are equally-ranked across both signals.
     return [...result].sort((a, b) => {
-      const eng = compareMenuEngineering(a, b, locationSlug);
+      const eng = compareMenuEngineering(a, b, locationSlug, upsellConfig);
       return eng !== 0 ? eng : a.name.localeCompare(b.name);
     });
-  }, [itemsLive, activeCategory, searchQuery, isSearching, sortBy, locationSlug]);
+  }, [itemsLive, activeCategory, searchQuery, isSearching, sortBy, locationSlug, upsellConfig]);
 
   if (categories.length === 0 || (!activeCategory && !isSearching)) {
     return (
@@ -325,6 +337,7 @@ export function MenuSection({ items, locationSlug, initialAvailability }: MenuSe
                   locationSlug={locationSlug}
                   popularThisWeek={hotThisWeekIds.has(item.id)}
                   variant={heroSpan ? "hero" : "default"}
+                  upsellConfig={upsellConfig}
                 />
               </div>
             );

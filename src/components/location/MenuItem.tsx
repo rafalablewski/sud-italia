@@ -10,6 +10,7 @@ import {
   getMenuRoleBadges,
   BADGE_CONFIG,
   BadgeType,
+  type UpsellConfig,
 } from "@/lib/upsell";
 import { StarRating } from "@/components/rating/StarRating";
 import { getItemRating } from "@/data/ratings";
@@ -42,6 +43,10 @@ interface MenuItemProps {
    *  ribbon, and a "Pizzaiolo's gateway" subtitle. Driven by `item.menuRole`
    *  but kept as an explicit prop so MenuSection controls layout. */
   variant?: "default" | "hero";
+  /** Editorial-badge config from /admin/crosssell → Menu badges. When
+   *  present, additive to the item's intrinsic `menuRole` so admins can
+   *  promote items without editing seed data. */
+  upsellConfig?: UpsellConfig | null;
 }
 
 const TAG_LABELS: Record<string, { label: string; variant: "green" | "red" | "gold" | "default" }> = {
@@ -72,6 +77,7 @@ export function MenuItemCard({
   locationSlug,
   popularThisWeek = false,
   variant = "default",
+  upsellConfig,
 }: MenuItemProps) {
   const addItem = useCartStore((s) => s.addItem);
   const removeItem = useCartStore((s) => s.removeItem);
@@ -85,9 +91,11 @@ export function MenuItemCard({
   const inCart = quantity > 0;
 
   // Menu-engineering badges come first so they take visual priority over
-  // admin-editable "popular"/"staff-pick" chips when both apply.
-  const roleBadges = getMenuRoleBadges(item);
-  const adminBadges = getItemBadges(item.id, locationSlug).filter(
+  // admin-editable "popular"/"staff-pick" chips when both apply. Both helpers
+  // honour the cross-sell Menu badges tab when an upsellConfig is supplied,
+  // so admin overrides flow through to the customer card.
+  const roleBadges = getMenuRoleBadges(item, upsellConfig);
+  const adminBadges = getItemBadges(item.id, locationSlug, upsellConfig).filter(
     // De-dupe: don't render staff-pick if Pizzaiolo's Choice already covers it.
     (b) => !(b === "staff-pick" && roleBadges.includes("pizzaiolo-choice")),
   );

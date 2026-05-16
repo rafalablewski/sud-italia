@@ -362,7 +362,7 @@ export default async function CapabilitiesPage() {
           name: "Cross-sell engine",
           status: "live",
           href: "/admin/crosssell",
-          summary: "Cart-context complementary-item suggestions (espresso + dessert with pizza), combo deals, time-of-day banners, and menu badges. Settings at /admin/crosssell.",
+          summary: "Cart-context complementary-item suggestions (espresso + dessert with pizza), combo deals, time-of-day banners, and the consolidated Menu badges editor (Hero / Pizzaiolo's Choice / Chef's Signature / Popular / Staff Pick / New) — every editorial chip surfaced on the admin menu list and customer cards is managed here. Settings at /admin/crosssell.",
         },
         {
           name: "Add-to-cart toast",
