@@ -10,6 +10,7 @@ import {
   type CustomMenuItem,
 } from "@/lib/store";
 import { getMenu } from "@/data/menus";
+import { locations } from "@/data/locations";
 import {
   customMenuItemCreateSchema,
   customMenuItemUpdateSchema,
@@ -27,10 +28,12 @@ import {
  */
 
 function seedHasId(id: string): boolean {
-  // Walk both active and inactive locations so a future relaunch can't
-  // resurrect a previously-shipped id under a new "custom" guise.
-  for (const slug of ["krakow", "warszawa"]) {
-    if (getMenu(slug).some((i) => i.id === id)) return true;
+  // Walk every configured location (active or not) so a future relaunch
+  // can't resurrect a previously-shipped id under a new "custom" guise,
+  // and a new truck added to /data/locations.ts doesn't slip past the
+  // collision check.
+  for (const loc of locations) {
+    if (getMenu(loc.slug).some((i) => i.id === id)) return true;
   }
   return false;
 }
@@ -118,6 +121,12 @@ export const PATCH = withAdmin(
     }
 
     const next = await updateCustomMenuItem(id, patch);
+    if (!next) {
+      // Lost-update race: another tab deleted the row between the
+      // existence check and the write. Surface as a 404 so the UI
+      // refetches instead of silently swallowing the patch.
+      return NextResponse.json({ error: "Item not found" }, { status: 404 });
+    }
     await appendAuditLog({
       actor: user.email || user.id,
       action: "menu.custom_update",

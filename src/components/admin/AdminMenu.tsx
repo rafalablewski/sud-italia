@@ -307,9 +307,11 @@ export function AdminMenu() {
   ) => {
     let ok = false;
     if (isCustom) {
-      // Custom rows store the canonical state directly — strip the
-      // `null = clear` sentinel the override editor uses and send only
-      // concrete values.
+      // Custom rows store the canonical state directly — the override
+      // pipeline's `null = clear back to seed` sentinel doesn't apply
+      // (there's no seed). Translate it to the concrete "off / empty"
+      // value for each field so unchecking a toggle in the dialog
+      // actually persists.
       const customChange = {
         ...(change.name !== undefined ? { name: change.name } : {}),
         ...(change.description !== undefined ? { description: change.description } : {}),
@@ -317,14 +319,14 @@ export function AdminMenu() {
         ...(change.cost !== undefined ? { cost: change.cost } : {}),
         ...(change.category !== undefined ? { category: change.category } : {}),
         ...(change.tags !== undefined ? { tags: change.tags } : {}),
-        ...(change.deliveryOnly !== undefined && change.deliveryOnly !== null
-          ? { deliveryOnly: change.deliveryOnly }
+        ...(change.deliveryOnly !== undefined
+          ? { deliveryOnly: change.deliveryOnly ?? false }
           : {}),
-        ...(change.packagingCost !== undefined && change.packagingCost !== null
-          ? { packagingCost: change.packagingCost }
+        ...(change.packagingCost !== undefined
+          ? { packagingCost: change.packagingCost ?? 0 }
           : {}),
-        ...(change.modifierGroups !== undefined && change.modifierGroups !== null
-          ? { modifierGroups: change.modifierGroups }
+        ...(change.modifierGroups !== undefined
+          ? { modifierGroups: change.modifierGroups ?? [] }
           : {}),
       };
       ok = await persistCustomChange(id, customChange);
