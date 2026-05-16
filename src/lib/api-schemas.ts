@@ -398,7 +398,7 @@ export const customMenuItemCreateSchema = z.object({
   deliveryOnly: z.boolean().optional(),
   packagingCost: grosze.max(5_000).optional(),
   modifierGroups: z.array(modifierGroupSchema).max(8).optional(),
-  sku: z.string().min(1).max(60).optional(),
+  sku: z.string().max(60).optional(),
 });
 
 /** PATCH /api/admin/menu/custom — partial edit of an admin-created item.
@@ -421,7 +421,7 @@ export const customMenuItemUpdateSchema = z.object({
   deliveryOnly: z.boolean().optional(),
   packagingCost: grosze.max(5_000).optional(),
   modifierGroups: z.array(modifierGroupSchema).max(8).optional(),
-  sku: z.string().min(1).max(60).optional(),
+  sku: z.string().max(60).optional(),
 });
 
 // --- Admin: users (RBAC) -------------------------------------------------

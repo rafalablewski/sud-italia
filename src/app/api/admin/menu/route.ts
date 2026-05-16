@@ -63,13 +63,13 @@ export const GET = withAdmin(
       const overrideKeys = override ? Object.keys(override).filter((k) => k !== "cost") : [];
       // Apply override with `null = clear back to seed` semantics so admin
       // reads match the public path (see data/menus/index.ts:applyOverride).
-      // Plain shallow spread would set sku/category/tags to null and break
-      // the renderer; deleting the field falls back to the seed value.
+      // `merged` is initialised as a shallow copy of the seed item, so
+      // skipping null preserves the seed value. Deleting would leave the
+      // field undefined and break required props (category, tags).
       const merged: Record<string, unknown> = { ...item };
       if (override) {
         for (const [k, v] of Object.entries(override)) {
-          if (v === null) delete merged[k];
-          else if (v !== undefined) merged[k] = v;
+          if (v !== null && v !== undefined) merged[k] = v;
         }
       }
       return {

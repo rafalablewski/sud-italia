@@ -383,66 +383,71 @@ export function AdminMenu() {
       if (!ok) issues.push("field changes");
     }
 
-    // 2) Clone the post-edit item to newly-checked locations.
-    for (const slug of submission.addTo) {
-      const prefix = slug.slice(0, 3) || "loc";
-      const baseSlug = getBaseSlug(effectiveId);
-      const cloneId = `${prefix}-${baseSlug}`;
-      const body = {
-        id: cloneId,
-        locationSlug: slug,
-        name: submission.draft.name,
-        description: submission.draft.description,
-        price: submission.draft.price,
-        cost: submission.draft.cost,
-        category: submission.draft.category,
-        tags: submission.draft.tags,
-        available: submission.draft.available,
-        ...(submission.draft.sku ? { sku: submission.draft.sku } : {}),
-        ...(submission.draft.deliveryOnly ? { deliveryOnly: true } : {}),
-        ...(submission.draft.packagingCost !== undefined
-          ? { packagingCost: submission.draft.packagingCost }
-          : {}),
-        ...(submission.draft.modifierGroups
-          ? { modifierGroups: submission.draft.modifierGroups }
-          : {}),
-      };
-      const res = await fetch("/api/admin/menu/custom", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const locName = activeLocations.find((l) => l.slug === slug)?.city ?? slug;
-        issues.push(`clone to ${locName}`);
-      }
+    const baseSlug = getBaseSlug(effectiveId);
+    const locName = (slug: string) =>
+      activeLocations.find((l) => l.slug === slug)?.city ?? slug;
+
+    // 2) Clone the post-edit item to newly-checked locations + 3)
+    // remove from newly-unchecked locations. Fanned out in parallel —
+    // the custom-items store serialises writes via withLock so
+    // concurrent calls don't corrupt the file.
+    const cloneResults = await Promise.all(
+      submission.addTo.map(async (slug) => {
+        const prefix = slug.slice(0, 3) || "loc";
+        const cloneId = `${prefix}-${baseSlug}`;
+        const body = {
+          id: cloneId,
+          locationSlug: slug,
+          name: submission.draft.name,
+          description: submission.draft.description,
+          price: submission.draft.price,
+          cost: submission.draft.cost,
+          category: submission.draft.category,
+          tags: submission.draft.tags,
+          available: submission.draft.available,
+          ...(submission.draft.sku ? { sku: submission.draft.sku } : {}),
+          ...(submission.draft.deliveryOnly ? { deliveryOnly: true } : {}),
+          ...(submission.draft.packagingCost !== undefined
+            ? { packagingCost: submission.draft.packagingCost }
+            : {}),
+          ...(submission.draft.modifierGroups
+            ? { modifierGroups: submission.draft.modifierGroups }
+            : {}),
+        };
+        const res = await fetch("/api/admin/menu/custom", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        return { slug, ok: res.ok, op: "clone" as const };
+      }),
+    );
+    for (const r of cloneResults) {
+      if (!r.ok) issues.push(`clone to ${locName(r.slug)}`);
     }
 
-    // 3) Remove the item from newly-unchecked locations.
-    //    - Custom twins: hard-delete via /api/admin/menu/custom?id=…
-    //    - Seed twins: set the hidden override
-    //    - The current location (pageLoc) is treated the same way — if the
-    //      operator unchecked it, that means "remove this from here".
-    const baseSlug = getBaseSlug(effectiveId);
-    for (const slug of submission.removeFrom) {
-      const twin = findTwin(slug, baseSlug);
-      if (!twin) continue;
-      if (twin._isCustom) {
-        const ok = await hardDeleteCustomItem(twin.id);
-        if (!ok) {
-          const locName = activeLocations.find((l) => l.slug === slug)?.city ?? slug;
-          issues.push(`delete at ${locName}`);
+    // Custom twins: hard-delete via /api/admin/menu/custom?id=…
+    // Seed twins: set the `hidden: true` override (restorable).
+    // pageLoc is treated the same — unchecking it removes the row here.
+    const removeResults = await Promise.all(
+      submission.removeFrom.map(async (slug) => {
+        const twin = findTwin(slug, baseSlug);
+        if (!twin) return { slug, ok: true, op: "noop" as const };
+        if (twin._isCustom) {
+          const ok = await hardDeleteCustomItem(twin.id);
+          return { slug, ok, op: "delete" as const };
         }
-      } else {
         const res = await fetch("/api/admin/menu", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ items: { [twin.id]: { hidden: true } } }),
         });
-        if (!res.ok) {
-          const locName = activeLocations.find((l) => l.slug === slug)?.city ?? slug;
-          issues.push(`hide at ${locName}`);
-        }
+        return { slug, ok: res.ok, op: "hide" as const };
+      }),
+    );
+    for (const r of removeResults) {
+      if (!r.ok) {
+        issues.push(`${r.op === "hide" ? "hide" : "delete"} at ${locName(r.slug)}`);
       }
     }
 
@@ -472,34 +477,43 @@ export function AdminMenu() {
     // Each target location gets its own row + globally-unique id (the
     // POST endpoint rejects id collisions across seed + custom rows so
     // the merge in getMenuWithOverrides() stays deterministic). We
-    // generate `${locPrefix}-${baseSlug}` per location.
+    // generate `${locPrefix}-${baseSlug}` per location and fan the
+    // requests out in parallel — the server serialises writes via
+    // withLock("custom-menu-items.json") so concurrent POSTs are safe.
     const targets = draft.locationSlugs.length > 0 ? draft.locationSlugs : [pageLoc];
-    const failures: { slug: string; error: string }[] = [];
-    for (const slug of targets) {
-      const prefix = slug.slice(0, 3) || "loc";
-      const id = `${prefix}-${draft.baseSlug}`;
-      const body = {
-        id,
-        locationSlug: slug,
-        name: draft.name,
-        description: draft.description,
-        price: draft.price,
-        cost: draft.cost,
-        category: draft.category,
-        tags: draft.tags,
-        available: draft.available,
-        ...(draft.sku ? { sku: draft.sku } : {}),
-      };
-      const res = await fetch("/api/admin/menu/custom", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
+    const results = await Promise.all(
+      targets.map(async (slug) => {
+        const prefix = slug.slice(0, 3) || "loc";
+        const id = `${prefix}-${draft.baseSlug}`;
+        const body = {
+          id,
+          locationSlug: slug,
+          name: draft.name,
+          description: draft.description,
+          price: draft.price,
+          cost: draft.cost,
+          category: draft.category,
+          tags: draft.tags,
+          available: draft.available,
+          ...(draft.sku ? { sku: draft.sku } : {}),
+        };
+        const res = await fetch("/api/admin/menu/custom", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (res.ok) return { slug, ok: true as const };
         const err = await res.json().catch(() => ({}));
-        failures.push({ slug, error: err?.error || `HTTP ${res.status}` });
-      }
-    }
+        return {
+          slug,
+          ok: false as const,
+          error: err?.error || `HTTP ${res.status}`,
+        };
+      }),
+    );
+    const failures = results.flatMap((r) =>
+      r.ok ? [] : [{ slug: r.slug, error: r.error }],
+    );
 
     if (failures.length === targets.length) {
       const first = failures[0];
