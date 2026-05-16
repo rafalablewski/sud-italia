@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Coffee,
   Plus,
@@ -388,7 +388,16 @@ export function ItemMultiSelect({
   intrinsicHint?: string;
 }) {
   const [adding, setAdding] = useState(false);
-  const intrinsicSet = new Set(intrinsicIds ?? []);
+  // O(1) id → item lookup so the chip + picker loops below don't re-scan
+  // `items` on every render (called once per badge category × every keystroke
+  // in a sibling field, since the parent re-renders on any settings edit).
+  const itemsById = useMemo(() => {
+    const m = new Map<string, MenuItem>();
+    for (const it of items) m.set(it.id, it);
+    return m;
+  }, [items]);
+  const intrinsicSet = useMemo(() => new Set(intrinsicIds ?? []), [intrinsicIds]);
+  const selectedSet = useMemo(() => new Set(selected), [selected]);
   // Suppress user chips that are already covered by an intrinsic chip to
   // avoid duplicates if a saved config redundantly re-lists a menu-role item.
   const userSelected = selected.filter((id) => !intrinsicSet.has(id));
@@ -398,7 +407,7 @@ export function ItemMultiSelect({
       <label className="text-xs font-semibold admin-text uppercase tracking-wide mb-2 block">{label}</label>
       <div className="flex flex-wrap gap-2 mb-2">
         {(intrinsicIds ?? []).map((id) => {
-          const item = items.find((m) => m.id === id);
+          const item = itemsById.get(id);
           return (
             <span
               key={`intrinsic-${id}`}
@@ -412,7 +421,7 @@ export function ItemMultiSelect({
           );
         })}
         {userSelected.map((id) => {
-          const item = items.find((m) => m.id === id);
+          const item = itemsById.get(id);
           return (
             <span key={id} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/8 text-sm admin-text border border-white/10">
               <span className="text-xs text-slate-400">{item?.category}</span>
@@ -438,7 +447,7 @@ export function ItemMultiSelect({
       {adding && (
         <div className="glass-card p-3 mb-2 max-h-48 overflow-y-auto">
           {items
-            .filter((m) => !selected.includes(m.id) && !intrinsicSet.has(m.id))
+            .filter((m) => !selectedSet.has(m.id) && !intrinsicSet.has(m.id))
             .map((m) => (
               <button
                 key={m.id}
