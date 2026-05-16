@@ -736,11 +736,21 @@ export function getActiveComboDeals(
 
   // Complete combos always beat partial ones so the customer gets a real
   // applied discount, not a "you could save X" hint. Within each bucket
-  // we prefer the largest savings; original index breaks ties so the order
-  // the admin set in the config is honoured.
+  // we prefer the largest savings; on tied savings the item-required
+  // combo wins because it expresses a deliberate cohort the admin
+  // configured (renaming "Pasta Combo" → "Classic Pasta Deal" by adding
+  // requiredItems should make the new deal the visible one even when
+  // both partials yield the same 10% × cheapest-pasta). Index breaks
+  // remaining ties so admin ordering still matters within a class.
+  const itemReqRank = (s: Scored) =>
+    (s.deal.requiredItems?.length ?? 0) > 0 ? 0 : 1;
+  const compareScored = (a: Scored, b: Scored) =>
+    b.savings - a.savings ||
+    itemReqRank(a) - itemReqRank(b) ||
+    a.index - b.index;
   const complete = scored.filter((s) => s.complete);
   if (complete.length > 0) {
-    complete.sort((a, b) => b.savings - a.savings || a.index - b.index);
+    complete.sort(compareScored);
     const w = complete[0];
     return {
       activeDeal: w.deal,
@@ -771,7 +781,7 @@ export function getActiveComboDeals(
     return anyCategoryMatched || anyItemMatched || qtyOnlyShort;
   });
   if (partial.length === 0) return empty;
-  partial.sort((a, b) => b.savings - a.savings || a.index - b.index);
+  partial.sort(compareScored);
   const w = partial[0];
   return {
     activeDeal: w.deal,
