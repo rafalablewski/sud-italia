@@ -77,20 +77,37 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
   // bundle is applied (otherwise scheduling à-la-carte is awkward).
   // Stored client-side and POSTed after checkout success.
   const [scheduleWeekly, setScheduleWeekly] = useState(false);
-  // Fetch location-specific upsell config from admin settings. Re-runs
-  // every time the drawer transitions to open so an admin edit propagates
-  // on the customer's next cart-open without forcing a hard refresh —
-  // critical because the drawer stays mounted across opens and would
-  // otherwise serve stale combos / time-windows for the whole session.
-  // `cache: "no-store"` defends against the browser HTTP cache rehydrating
-  // an old payload between opens.
+  // Fetch location-specific upsell config from admin settings. The drawer
+  // is rendered unconditionally by FloatingCartButton so it stays mounted
+  // across opens — if we don't aggressively refetch, an admin edit (rename
+  // a combo, add required items) never reaches the customer's cart for
+  // the rest of the session. Three triggers cover the realistic flows:
+  //
+  //   1) Drawer transitions to open (admin tweaks config → customer opens
+  //      cart afterwards).
+  //   2) Tab regains focus (admin tweaks config in one tab while the cart
+  //      tab sits open, then switches back to verify).
+  //   3) locationSlug changes (customer flips between Kraków / Warszawa).
+  //
+  // `cache: "no-store"` plus the route's `force-dynamic` + no-store headers
+  // make sure neither the browser nor a CDN serves a stale payload.
   const [upsellConfig, setUpsellConfig] = useState<UpsellConfig | null>(null);
   useEffect(() => {
-    if (!locationSlug || !open) return;
-    fetch(`/api/settings/upsell?location=${locationSlug}`, { cache: "no-store" })
-      .then((r) => r.json())
-      .then((data) => { if (data) setUpsellConfig(data); })
-      .catch(() => {});
+    if (!locationSlug) return;
+    let cancelled = false;
+    const load = () => {
+      fetch(`/api/settings/upsell?location=${locationSlug}`, { cache: "no-store" })
+        .then((r) => r.json())
+        .then((data) => { if (!cancelled && data) setUpsellConfig(data); })
+        .catch(() => {});
+    };
+    if (open) load();
+    const onFocus = () => { if (open) load(); };
+    window.addEventListener("focus", onFocus);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", onFocus);
+    };
   }, [locationSlug, open]);
 
   // Per-customer attach history (audit §3.1) — fetched once when the drawer
