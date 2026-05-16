@@ -22,7 +22,7 @@ import { getActiveLocations } from "@/data/locations";
 import { formatPrice, getBaseSlug, marginPct, marginTone } from "@/lib/utils";
 import { useToast } from "./v2/ui/Toast";
 import { Button, Card, CardBody, Input, Select, Textarea } from "./v2/ui";
-import { ModifierMatrix } from "./menu/ModifierMatrix";
+import { ModifierMatrix } from "./menu/ModifierEditor";
 
 const MENU_TAGS: ("vegetarian" | "vegan" | "spicy" | "gluten-free")[] = [
   "vegetarian",
@@ -126,6 +126,12 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
   const [modifierGroupsInitialByLoc, setModifierGroupsInitialByLoc] = useState<
     Record<string, ModifierGroup[]>
   >({});
+  /** Lens for the modifier editor. Side-by-side columns don't scale
+   *  past ~5 locations, so the editor shows one truck's prices at a
+   *  time and operators flip the lens to retune another. Structural
+   *  edits still propagate everywhere; only priceDelta / costDelta
+   *  follow the lens. */
+  const [modLens, setModLens] = useState<string>("");
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -191,6 +197,14 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
       }
       setModifierGroupsByLoc(nextGroupsByLoc);
       setModifierGroupsInitialByLoc(JSON.parse(JSON.stringify(nextGroupsByLoc)));
+      // Default the modifier lens to the first present location so the
+      // editor lights up with real data on first paint, without forcing
+      // operators to make a pick before they can scan. Keep the operator's
+      // current pick across refetches if it's still a present location.
+      const firstPresentSlug = found.find((v) => v.item)?.slug ?? "";
+      setModLens((prev) =>
+        prev && found.find((v) => v.slug === prev)?.item ? prev : firstPresentSlug,
+      );
 
       const nextPerLoc: Record<string, PerLocationDraft> = {};
       for (const v of found) {
@@ -1087,15 +1101,16 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
               margin: "0 0 0.75rem",
             }}
           >
-            Group structure (label, min/max, option labels, KDS flag, cost
-            δ) propagates to every truck. <strong>Price δ varies per
-            location</strong> so a +Sourdough surcharge in Szczecin can
-            land at +5 zł while Lublin charges +3 zł.
+            Group structure (label, min/max, option labels, KDS flag)
+            propagates to every truck. <strong>Price δ + cost δ are
+            edited one location at a time</strong> — pick the truck below.
           </p>
           <ModifierMatrix
             present={present}
             groupsByLoc={modifierGroupsByLoc}
             setGroupsByLoc={setModifierGroupsByLoc}
+            selectedLoc={modLens}
+            onSelectLoc={setModLens}
           />
         </CardBody>
       </Card>
