@@ -2787,6 +2787,86 @@ html { scroll-behavior: smooth; }
   background: color-mix(in oklab, var(--brand) 8%, var(--surface-2));
 }
 
+/* ── Cohort & CLTV report ──────────────────────────────────────────────
+ * Same .v2-detail-head heading style as the menu detail page, so the
+ * report reads in the same visual vocabulary. Tables are scrollable
+ * containers with quiet borders + tabular numerics; heat cells get
+ * their colour from inline styles in the JSX. */
+.v2-cohort-segments {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+.v2-cohort-segment {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+}
+.v2-cohort-segment-label {
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+}
+.v2-cohort-segment-value {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+
+.v2-cohort-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+}
+.v2-cohort-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--text-xs);
+}
+.v2-cohort-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+  padding: 8px 10px;
+  white-space: nowrap;
+}
+.v2-cohort-th-cohort { text-align: left; padding-left: 14px; }
+.v2-cohort-th-num,
+.v2-cohort-th-month { text-align: right; min-width: 60px; }
+.v2-cohort-th-month { text-align: center; }
+.v2-cohort-table tbody tr + tr td { border-top: 1px solid var(--border); }
+.v2-cohort-table tbody tr:hover td { background: var(--surface-hover); }
+.v2-cohort-table tbody td {
+  padding: 7px 10px;
+  color: var(--fg);
+}
+.v2-cohort-td-cohort {
+  text-align: left;
+  padding-left: 14px;
+  font-weight: 500;
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+.v2-cohort-td-num { text-align: right; }
+.v2-cohort-td-cell { text-align: center; min-width: 56px; }
+.v2-cohort-td-headline { font-weight: 600; color: var(--success); }
+
 /* Shared scope bar — sits between the per-location pricing card and
  * everything else on the detail page. Picks the active truck that
  * the cards below (Product, Modifiers) read + write to. One control

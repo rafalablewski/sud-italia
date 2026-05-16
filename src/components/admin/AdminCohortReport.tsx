@@ -1,15 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { TrendingUp, Users } from "lucide-react";
-import {
-  Badge,
-  Button,
-  Card,
-  CardBody,
-  CardHeader,
-  EmptyState,
-} from "./v2/ui";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { RotateCcw, TrendingUp, Users } from "lucide-react";
+import { Button, Card, CardBody, EmptyState } from "./v2/ui";
 import { KpiCard } from "./v2/charts";
 import { formatPrice } from "@/lib/utils";
 
@@ -53,6 +46,7 @@ export function AdminCohortReport() {
   const [data, setData] = useState<CohortReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [segmentCounts, setSegmentCounts] = useState<Record<string, number> | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -73,36 +67,78 @@ export function AdminCohortReport() {
   }, [load]);
 
   const rebuild = async () => {
-    await fetch("/api/admin/customer-segments", { method: "POST" });
-    void load();
+    setBusy(true);
+    try {
+      await fetch("/api/admin/customer-segments", { method: "POST" });
+      await load();
+    } finally {
+      setBusy(false);
+    }
   };
 
-  if (loading) return <div className="py-10 text-center opacity-60">Loading…</div>;
-  if (!data) return <EmptyState title="No data" description="No paid orders yet." />;
+  const horizonCols = useMemo(() => {
+    if (!data) return [] as number[];
+    const max = Math.max(0, ...data.cohortsByMonth.map((c) => c.retention.length));
+    return Array.from({ length: Math.min(13, max) }, (_, i) => i);
+  }, [data]);
 
-  const horizonMonths = Math.max(0, ...data.cohortsByMonth.map((c) => c.retention.length));
-  const horizonCols = Array.from({ length: Math.min(13, horizonMonths) }, (_, i) => i);
+  if (loading) {
+    return (
+      <div className="v2-page">
+        <div className="v2-page-loading">Loading cohort report…</div>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="v2-page">
+        <header className="v2-page-header">
+          <div className="v2-page-title-row">
+            <h1 className="v2-page-title">Cohort retention &amp; CLTV</h1>
+            <p className="v2-page-subtitle">No paid orders yet — nothing to bucket.</p>
+          </div>
+        </header>
+        <Card>
+          <CardBody>
+            <EmptyState
+              icon={TrendingUp}
+              title="No data"
+              description="Once orders start landing, every customer is bucketed by their first-paid-order month and retention rolls in here."
+            />
+          </CardBody>
+        </Card>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-2xl font-semibold flex items-center gap-2">
-            <TrendingUp size={22} /> Cohort retention & CLTV
-          </h1>
-          <p className="text-sm opacity-70 mt-1">
-            The data moat. Every customer is bucketed by their first-paid-order month; retention
-            shows what % of that bucket reordered N months later. CLTV columns are mean revenue per
-            cohort customer through each horizon. Refresh after a heavy traffic day for a current view.
+    <div className="v2-page">
+      <header className="v2-page-header">
+        <div className="v2-page-title-row">
+          <h1 className="v2-page-title">Cohort retention &amp; CLTV</h1>
+          <p className="v2-page-subtitle">
+            Every customer is bucketed by their first-paid-order month.
+            Retention shows what % of that bucket reordered N months later;
+            CLTV columns are mean revenue per cohort customer through each
+            horizon. Generated{" "}
+            {new Date(data.generatedAt).toLocaleString("pl-PL")}.
           </p>
         </div>
-        <Button variant="ghost" onClick={rebuild}>
-          Rebuild segments
-        </Button>
-      </div>
+        <div className="v2-page-actions">
+          <Button variant="ghost" size="sm" loading={busy} onClick={rebuild}>
+            <RotateCcw className="h-3.5 w-3.5" /> Rebuild segments
+          </Button>
+        </div>
+      </header>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <KpiCard label="Customers (paid)" value={data.totals.customers} />
+      <section className="v2-kpi-grid">
+        <KpiCard
+          label="Paid customers"
+          value={data.totals.customers}
+          icon={Users}
+          tone="info"
+        />
         <KpiCard
           label="Repeat customers"
           value={data.totals.repeatCustomers}
@@ -119,23 +155,22 @@ export function AdminCohortReport() {
           value={data.totals.medianGrossePerCustomer}
           display={formatPrice(data.totals.medianGrossePerCustomer)}
         />
-      </div>
+      </section>
 
-      {segmentCounts && (
+      {segmentCounts && Object.keys(segmentCounts).length > 0 && (
         <Card>
-          <CardHeader title="Segment mix" description="Recomputed weekly. The data moat is what these mean over time." />
           <CardBody>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div className="v2-detail-head">
+              <h2>Segment mix</h2>
+              <span className="v2-detail-head-hint">Recomputed weekly</span>
+            </div>
+            <div className="v2-cohort-segments">
               {Object.entries(segmentCounts).map(([seg, n]) => (
-                <div
-                  key={seg}
-                  className="rounded border border-white/10 p-3 flex items-center justify-between"
-                >
-                  <div>
-                    <div className="text-xs uppercase opacity-60">{seg}</div>
-                    <div className="text-xl font-semibold">{n.toLocaleString()}</div>
-                  </div>
-                  <Users size={18} className="opacity-40" />
+                <div key={seg} className="v2-cohort-segment">
+                  <span className="v2-cohort-segment-label">{seg}</span>
+                  <span className="v2-cohort-segment-value tabular">
+                    {n.toLocaleString("pl-PL")}
+                  </span>
                 </div>
               ))}
             </div>
@@ -144,19 +179,21 @@ export function AdminCohortReport() {
       )}
 
       <Card>
-        <CardHeader
-          title="Retention matrix"
-          description="Each row: a cohort month. Each cell: % of that cohort who reordered N months later."
-        />
         <CardBody>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
+          <div className="v2-detail-head">
+            <h2>Retention matrix</h2>
+            <span className="v2-detail-head-hint">
+              Rows = cohort month · cells = % of that cohort that reordered N months later
+            </span>
+          </div>
+          <div className="v2-cohort-table-wrap">
+            <table className="v2-cohort-table">
               <thead>
                 <tr>
-                  <th className="text-left py-2 pr-3 sticky left-0 bg-inherit">Cohort</th>
-                  <th className="text-right py-2 pr-3">Size</th>
+                  <th className="v2-cohort-th-cohort">Cohort</th>
+                  <th className="v2-cohort-th-num">Size</th>
                   {horizonCols.map((m) => (
-                    <th key={m} className="text-center py-2 px-2 min-w-[44px]">
+                    <th key={m} className="v2-cohort-th-month">
                       M{m}
                     </th>
                   ))}
@@ -167,22 +204,28 @@ export function AdminCohortReport() {
                   .slice(-18)
                   .reverse()
                   .map((c) => (
-                    <tr key={c.cohortMonth} className="border-t border-white/5">
-                      <td className="py-1.5 pr-3 font-mono sticky left-0 bg-inherit">{c.cohortMonth}</td>
-                      <td className="py-1.5 pr-3 text-right opacity-70">{c.cohortSize}</td>
+                    <tr key={c.cohortMonth}>
+                      <td className="v2-cohort-td-cohort tabular">
+                        {c.cohortMonth}
+                      </td>
+                      <td className="v2-cohort-td-num tabular">
+                        {c.cohortSize}
+                      </td>
                       {horizonCols.map((offset) => {
                         const r = c.retention[offset];
-                        if (!r) return <td key={offset} />;
-                        const pct = c.cohortSize > 0 ? Math.round((r.retained / c.cohortSize) * 100) : 0;
+                        if (!r) return <td key={offset} className="v2-cohort-td-cell" />;
+                        const pct = c.cohortSize > 0
+                          ? Math.round((r.retained / c.cohortSize) * 100)
+                          : 0;
                         return (
                           <td
                             key={offset}
-                            className="text-center py-1.5 px-2"
+                            className="v2-cohort-td-cell tabular"
                             style={{
                               background: pct > 0 ? heatColor(pct) : undefined,
                               color: pct > 30 ? "#fff" : undefined,
                             }}
-                            title={`${r.retained}/${c.cohortSize} reordered (${formatPrice(r.revenueGrosze)})`}
+                            title={`${r.retained}/${c.cohortSize} reordered · ${formatPrice(r.revenueGrosze)}`}
                           >
                             {pct > 0 ? `${pct}%` : "—"}
                           </td>
@@ -197,44 +240,58 @@ export function AdminCohortReport() {
       </Card>
 
       <Card>
-        <CardHeader title="Mean CLTV by cohort" description="Revenue per cohort customer at each horizon." />
         <CardBody>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
+          <div className="v2-detail-head">
+            <h2>Mean CLTV by cohort</h2>
+            <span className="v2-detail-head-hint">
+              Revenue per cohort customer at each horizon
+            </span>
+          </div>
+          <div className="v2-cohort-table-wrap">
+            <table className="v2-cohort-table">
               <thead>
-                <tr className="opacity-70">
-                  <th className="text-left py-2 pr-3">Cohort</th>
-                  <th className="text-right py-2 px-2">Size</th>
-                  <th className="text-right py-2 px-2">30d</th>
-                  <th className="text-right py-2 px-2">60d</th>
-                  <th className="text-right py-2 px-2">90d</th>
-                  <th className="text-right py-2 px-2">180d</th>
-                  <th className="text-right py-2 px-2">365d</th>
+                <tr>
+                  <th className="v2-cohort-th-cohort">Cohort</th>
+                  <th className="v2-cohort-th-num">Size</th>
+                  <th className="v2-cohort-th-num">30d</th>
+                  <th className="v2-cohort-th-num">60d</th>
+                  <th className="v2-cohort-th-num">90d</th>
+                  <th className="v2-cohort-th-num">180d</th>
+                  <th className="v2-cohort-th-num">365d</th>
                 </tr>
               </thead>
               <tbody>
-                {data.cltv.slice(-12).reverse().map((c) => (
-                  <tr key={c.cohortMonth} className="border-t border-white/5">
-                    <td className="py-1.5 pr-3 font-mono">{c.cohortMonth}</td>
-                    <td className="py-1.5 px-2 text-right opacity-70">{c.cohortSize}</td>
-                    <td className="py-1.5 px-2 text-right">{formatPrice(c.cltv30Grosze)}</td>
-                    <td className="py-1.5 px-2 text-right">{formatPrice(c.cltv60Grosze)}</td>
-                    <td className="py-1.5 px-2 text-right">{formatPrice(c.cltv90Grosze)}</td>
-                    <td className="py-1.5 px-2 text-right">{formatPrice(c.cltv180Grosze)}</td>
-                    <td className="py-1.5 px-2 text-right">
-                      <Badge tone="success">{formatPrice(c.cltv365Grosze)}</Badge>
-                    </td>
-                  </tr>
-                ))}
+                {data.cltv
+                  .slice(-12)
+                  .reverse()
+                  .map((c) => (
+                    <tr key={c.cohortMonth}>
+                      <td className="v2-cohort-td-cohort tabular">
+                        {c.cohortMonth}
+                      </td>
+                      <td className="v2-cohort-td-num tabular">{c.cohortSize}</td>
+                      <td className="v2-cohort-td-num tabular">
+                        {formatPrice(c.cltv30Grosze)}
+                      </td>
+                      <td className="v2-cohort-td-num tabular">
+                        {formatPrice(c.cltv60Grosze)}
+                      </td>
+                      <td className="v2-cohort-td-num tabular">
+                        {formatPrice(c.cltv90Grosze)}
+                      </td>
+                      <td className="v2-cohort-td-num tabular">
+                        {formatPrice(c.cltv180Grosze)}
+                      </td>
+                      <td className="v2-cohort-td-num v2-cohort-td-headline tabular">
+                        {formatPrice(c.cltv365Grosze)}
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>
         </CardBody>
       </Card>
-
-      <div className="text-xs opacity-50">
-        Generated at {new Date(data.generatedAt).toLocaleString("pl-PL")}.
-      </div>
     </div>
   );
 }
