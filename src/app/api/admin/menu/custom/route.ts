@@ -6,6 +6,7 @@ import {
   appendAuditLog,
   deleteCustomMenuItem,
   getCustomMenuItems,
+  renameCustomMenuItem,
   updateCustomMenuItem,
   type CustomMenuItem,
 } from "@/lib/store";
@@ -80,6 +81,7 @@ export const POST = withAdmin(
       ...(body.deliveryOnly !== undefined ? { deliveryOnly: body.deliveryOnly } : {}),
       ...(body.packagingCost !== undefined ? { packagingCost: body.packagingCost } : {}),
       ...(body.modifierGroups !== undefined ? { modifierGroups: body.modifierGroups } : {}),
+      ...(body.sku !== undefined ? { sku: body.sku } : {}),
       createdAt: now,
       updatedAt: now,
     };
@@ -106,7 +108,7 @@ export const PATCH = withAdmin(
     }
     const parsed = await parseBody(req, customMenuItemUpdateSchema);
     if ("error" in parsed) return parsed.error;
-    const patch = parsed.data;
+    const { newId, ...patch } = parsed.data;
 
     const all = await getCustomMenuItems();
     const prev = all.find((i) => i.id === id);
@@ -120,7 +122,30 @@ export const PATCH = withAdmin(
       );
     }
 
-    const next = await updateCustomMenuItem(id, patch);
+    // Handle rename first so subsequent patch writes target the new id.
+    let effectiveId = id;
+    if (newId && newId !== id) {
+      if (seedHasId(newId)) {
+        return NextResponse.json(
+          { error: `Item id "${newId}" clashes with the seed catalogue` },
+          { status: 409 },
+        );
+      }
+      try {
+        const renamed = await renameCustomMenuItem(id, newId);
+        if (!renamed) {
+          return NextResponse.json({ error: "Item not found" }, { status: 404 });
+        }
+        effectiveId = newId;
+      } catch (e) {
+        return NextResponse.json(
+          { error: e instanceof Error ? e.message : "Rename failed" },
+          { status: 409 },
+        );
+      }
+    }
+
+    const next = await updateCustomMenuItem(effectiveId, patch);
     if (!next) {
       // Lost-update race: another tab deleted the row between the
       // existence check and the write. Surface as a 404 so the UI
@@ -129,9 +154,9 @@ export const PATCH = withAdmin(
     }
     await appendAuditLog({
       actor: user.email || user.id,
-      action: "menu.custom_update",
+      action: newId && newId !== id ? "menu.custom_rename" : "menu.custom_update",
       entityType: "menu_item",
-      entityId: id,
+      entityId: effectiveId,
       before: prev,
       after: next,
     });

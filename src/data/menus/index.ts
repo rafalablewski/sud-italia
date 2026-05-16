@@ -21,14 +21,13 @@ export async function getMenuWithOverrides(locationSlug: string): Promise<MenuIt
   const applyOverride = (item: MenuItem): MenuItem => {
     const o = overrides[item.id];
     if (!o) return item;
-    // Merge with `null = clear` semantics so admin can demote a hero or
-    // turn off an LTO without redeploying. Plain shallow-merge would set
-    // the field to null; deleting it lets the renderer fall back to
-    // "no role" / "not limited" without any extra null-checks.
+    // `null = clear back to seed` semantics. `merged` is initialised as
+    // a shallow copy of the seed item, so skipping null preserves the
+    // seed value. Deleting the key would leave required fields like
+    // `category` / `tags` undefined and break renderers downstream.
     const merged: Record<string, unknown> = { ...item };
     for (const [k, v] of Object.entries(o)) {
-      if (v === null) delete merged[k];
-      else if (v !== undefined) merged[k] = v;
+      if (v !== null && v !== undefined) merged[k] = v;
     }
     return merged as unknown as MenuItem;
   };
@@ -42,7 +41,14 @@ export async function getMenuWithOverrides(locationSlug: string): Promise<MenuIt
     void _loc; void _c; void _u;
     merged.push(applyOverride(item as MenuItem));
   }
-  return merged;
+  // Soft-deleted rows (`override.hidden === true`) are filtered out for
+  // the customer + ops surfaces. The admin /api/admin/menu endpoint
+  // surfaces them with a `_hidden` flag so they can be restored via the
+  // "Show hidden" toggle.
+  return merged.filter((item) => {
+    const o = overrides[item.id];
+    return !(o && o.hidden === true);
+  });
 }
 
 export async function getAvailableMenu(locationSlug: string): Promise<MenuItem[]> {

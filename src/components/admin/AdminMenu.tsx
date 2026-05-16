@@ -61,6 +61,8 @@ interface MenuItemData {
   category: MenuCategory;
   tags: string[];
   available: boolean;
+  /** Operator-facing inventory / accounting code (audit §4.3). */
+  sku?: string;
   // Audit §3 — channel economics, packaging, and per-item modifiers.
   deliveryOnly?: boolean;
   packagingCost?: number;
@@ -68,13 +70,30 @@ interface MenuItemData {
   _hasOverride: boolean;
   _hasRecipe?: boolean;
   _costSource?: "recipe" | "override" | "seed";
-  /** Admin-created items (vs seed) — surfaces a delete button and lets the
-   *  edit dialog touch every field, not just the override-able ones. */
+  /** Admin-created items (vs seed) — surfaces a delete button and routes
+   *  edits to the custom-item endpoint instead of the override endpoint. */
   _isCustom?: boolean;
+  /** Soft-deleted seed rows surfaced for the admin "Show hidden" toggle.
+   *  Filtered out of customer surfaces by getMenuWithOverrides(). */
+  _hidden?: boolean;
 }
 
 const activeLocations = getActiveLocations();
 const FALLBACK_LOC = activeLocations[0]?.slug ?? "krakow";
+
+/** Strip a known active-location prefix from an item id. Used to match
+ *  the "same" item across locations (krk-pizza-margherita and
+ *  war-pizza-margherita share the base `pizza-margherita`). Falls back
+ *  to the full id when no known prefix matches. */
+function getBaseSlug(itemId: string): string {
+  for (const loc of activeLocations) {
+    const prefix = loc.slug.slice(0, 3);
+    if (prefix && itemId.startsWith(`${prefix}-`)) {
+      return itemId.slice(prefix.length + 1);
+    }
+  }
+  return itemId;
+}
 
 function marginPct(price: number, cost: number): number {
   if (price <= 0) return 0;
@@ -100,6 +119,10 @@ export function AdminMenu() {
   }, [globalLoc]);
 
   const [items, setItems] = useState<MenuItemData[]>([]);
+  /** Per-location menu snapshot — used by the edit dialog's location
+   *  selector to detect cross-location twins (same base slug at another
+   *  truck) without re-fetching every time the dialog opens. */
+  const [menusByLocation, setMenusByLocation] = useState<Record<string, MenuItemData[]>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<MenuCategory | "all">("all");
@@ -107,15 +130,27 @@ export function AdminMenu() {
   const [creating, setCreating] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [showHidden, setShowHidden] = useState(false);
 
   const fetchMenu = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/menu?location=${pageLoc}`);
-      if (res.ok) {
-        const data: MenuItemData[] = await res.json();
-        setItems(data);
-      }
+      // Fetch the current page's menu plus every other active location's
+      // menu in parallel. The "by location" snapshot powers the edit
+      // dialog's location selector (cross-location twin lookup).
+      const responses = await Promise.all(
+        activeLocations.map((loc) =>
+          fetch(`/api/admin/menu?location=${loc.slug}`).then((r) =>
+            r.ok ? r.json() : ([] as MenuItemData[]),
+          ),
+        ),
+      );
+      const byLoc: Record<string, MenuItemData[]> = {};
+      activeLocations.forEach((loc, idx) => {
+        byLoc[loc.slug] = responses[idx];
+      });
+      setMenusByLocation(byLoc);
+      setItems(byLoc[pageLoc] ?? []);
     } finally {
       setLoading(false);
     }
@@ -130,12 +165,17 @@ export function AdminMenu() {
       id: string,
       change: {
         price?: number;
+        cost?: number;
         available?: boolean;
         name?: string;
         description?: string;
+        category?: MenuCategory | null;
+        tags?: string[] | null;
+        sku?: string | null;
         deliveryOnly?: boolean | null;
         packagingCost?: number | null;
         modifierGroups?: ModifierGroup[] | null;
+        hidden?: boolean | null;
       },
     ) => {
       const res = await fetch("/api/admin/menu", {
@@ -162,6 +202,7 @@ export function AdminMenu() {
         category?: MenuCategory;
         tags?: string[];
         available?: boolean;
+        sku?: string;
         deliveryOnly?: boolean;
         packagingCost?: number;
         modifierGroups?: ModifierGroup[];
@@ -290,90 +331,139 @@ export function AdminMenu() {
     });
   };
 
+  /** Look up the cross-location twin for a given base slug. Returns the
+   *  matching item from the cached snapshot, plus a hint for which API
+   *  endpoint to use when removing it. */
+  const findTwin = useCallback(
+    (locationSlug: string, baseSlug: string): MenuItemData | null => {
+      const arr = menusByLocation[locationSlug] || [];
+      return arr.find((i) => !i._hidden && getBaseSlug(i.id) === baseSlug) || null;
+    },
+    [menusByLocation],
+  );
+
   const saveEdit = async (
     id: string,
-    change: {
-      name?: string;
-      price?: number;
-      cost?: number;
-      description?: string;
-      category?: MenuCategory;
-      tags?: string[];
-      deliveryOnly?: boolean | null;
-      packagingCost?: number | null;
-      modifierGroups?: ModifierGroup[] | null;
-    },
     isCustom: boolean,
+    submission: EditSubmission,
   ) => {
-    let ok = false;
-    if (isCustom) {
-      // Custom rows store the canonical state directly — the override
-      // pipeline's `null = clear back to seed` sentinel doesn't apply
-      // (there's no seed). Translate it to the concrete "off / empty"
-      // value for each field so unchecking a toggle in the dialog
-      // actually persists.
-      const customChange = {
-        ...(change.name !== undefined ? { name: change.name } : {}),
-        ...(change.description !== undefined ? { description: change.description } : {}),
-        ...(change.price !== undefined ? { price: change.price } : {}),
-        ...(change.cost !== undefined ? { cost: change.cost } : {}),
-        ...(change.category !== undefined ? { category: change.category } : {}),
-        ...(change.tags !== undefined ? { tags: change.tags } : {}),
-        ...(change.deliveryOnly !== undefined
-          ? { deliveryOnly: change.deliveryOnly ?? false }
-          : {}),
-        ...(change.packagingCost !== undefined
-          ? { packagingCost: change.packagingCost ?? 0 }
-          : {}),
-        ...(change.modifierGroups !== undefined
-          ? { modifierGroups: change.modifierGroups ?? [] }
-          : {}),
-      };
-      ok = await persistCustomChange(id, customChange);
-    } else {
-      // Seed items go through the override pipeline — drop fields that
-      // aren't override-able (category, tags, cost) and forward the rest.
-      const { category: _c, tags: _t, cost: _co, ...overrideChange } = change;
-      void _c; void _t; void _co;
-      ok = await persistChange(id, overrideChange);
+    const change = submission.fieldChange;
+    const issues: string[] = [];
+
+    // 1) Field changes + rename for the current row.
+    let effectiveId = id;
+    if (Object.keys(change).length > 0 || submission.newId) {
+      let ok = false;
+      if (isCustom) {
+        const customChange = {
+          ...(submission.newId ? { newId: submission.newId } : {}),
+          ...(change.name !== undefined ? { name: change.name } : {}),
+          ...(change.description !== undefined ? { description: change.description } : {}),
+          ...(change.price !== undefined ? { price: change.price } : {}),
+          ...(change.cost !== undefined ? { cost: change.cost } : {}),
+          ...(change.category !== undefined ? { category: change.category } : {}),
+          ...(change.tags !== undefined ? { tags: change.tags } : {}),
+          ...(change.available !== undefined ? { available: change.available } : {}),
+          ...(change.sku !== undefined ? { sku: change.sku ?? "" } : {}),
+          ...(change.deliveryOnly !== undefined
+            ? { deliveryOnly: change.deliveryOnly ?? false }
+            : {}),
+          ...(change.packagingCost !== undefined
+            ? { packagingCost: change.packagingCost ?? 0 }
+            : {}),
+          ...(change.modifierGroups !== undefined
+            ? { modifierGroups: change.modifierGroups ?? [] }
+            : {}),
+        };
+        ok = await persistCustomChange(id, customChange);
+        if (ok && submission.newId) effectiveId = submission.newId;
+      } else {
+        ok = await persistChange(id, change);
+      }
+      if (!ok) issues.push("field changes");
     }
 
-    if (ok) {
-      setItems((arr) =>
-        arr.map((i) =>
-          i.id === id
-            ? {
-                ...i,
-                ...(change.name !== undefined ? { name: change.name } : {}),
-                ...(change.price !== undefined ? { price: change.price } : {}),
-                ...(change.cost !== undefined && isCustom ? { cost: change.cost } : {}),
-                ...(change.description !== undefined ? { description: change.description } : {}),
-                ...(change.category !== undefined && isCustom ? { category: change.category } : {}),
-                ...(change.tags !== undefined && isCustom ? { tags: change.tags } : {}),
-                // Apply null = clear / undefined = unchanged / value = set
-                ...(change.deliveryOnly !== undefined
-                  ? { deliveryOnly: change.deliveryOnly === null ? undefined : change.deliveryOnly }
-                  : {}),
-                ...(change.packagingCost !== undefined
-                  ? { packagingCost: change.packagingCost === null ? undefined : change.packagingCost }
-                  : {}),
-                ...(change.modifierGroups !== undefined
-                  ? { modifierGroups: change.modifierGroups === null ? undefined : change.modifierGroups }
-                  : {}),
-                _hasOverride: isCustom ? i._hasOverride : true,
-              }
-            : i,
-        ),
-      );
-      toast.success("Menu item updated");
-      setEditing(null);
-    } else {
-      toast.error("Save failed", "Try again.");
+    const baseSlug = getBaseSlug(effectiveId);
+    const locName = (slug: string) =>
+      activeLocations.find((l) => l.slug === slug)?.city ?? slug;
+
+    // 2) Clone the post-edit item to newly-checked locations + 3)
+    // remove from newly-unchecked locations. Fanned out in parallel —
+    // the custom-items store serialises writes via withLock so
+    // concurrent calls don't corrupt the file.
+    const cloneResults = await Promise.all(
+      submission.addTo.map(async (slug) => {
+        const prefix = slug.slice(0, 3) || "loc";
+        const cloneId = `${prefix}-${baseSlug}`;
+        const body = {
+          id: cloneId,
+          locationSlug: slug,
+          name: submission.draft.name,
+          description: submission.draft.description,
+          price: submission.draft.price,
+          cost: submission.draft.cost,
+          category: submission.draft.category,
+          tags: submission.draft.tags,
+          available: submission.draft.available,
+          ...(submission.draft.sku ? { sku: submission.draft.sku } : {}),
+          ...(submission.draft.deliveryOnly ? { deliveryOnly: true } : {}),
+          ...(submission.draft.packagingCost !== undefined
+            ? { packagingCost: submission.draft.packagingCost }
+            : {}),
+          ...(submission.draft.modifierGroups
+            ? { modifierGroups: submission.draft.modifierGroups }
+            : {}),
+        };
+        const res = await fetch("/api/admin/menu/custom", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        return { slug, ok: res.ok, op: "clone" as const };
+      }),
+    );
+    for (const r of cloneResults) {
+      if (!r.ok) issues.push(`clone to ${locName(r.slug)}`);
     }
+
+    // Custom twins: hard-delete via /api/admin/menu/custom?id=…
+    // Seed twins: set the `hidden: true` override (restorable).
+    // pageLoc is treated the same — unchecking it removes the row here.
+    const removeResults = await Promise.all(
+      submission.removeFrom.map(async (slug) => {
+        const twin = findTwin(slug, baseSlug);
+        if (!twin) return { slug, ok: true, op: "noop" as const };
+        if (twin._isCustom) {
+          const ok = await hardDeleteCustomItem(twin.id);
+          return { slug, ok, op: "delete" as const };
+        }
+        const res = await fetch("/api/admin/menu", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ items: { [twin.id]: { hidden: true } } }),
+        });
+        return { slug, ok: res.ok, op: "hide" as const };
+      }),
+    );
+    for (const r of removeResults) {
+      if (!r.ok) {
+        issues.push(`${r.op === "hide" ? "hide" : "delete"} at ${locName(r.slug)}`);
+      }
+    }
+
+    if (issues.length > 0) {
+      toast.error("Some changes failed", issues.join(", "));
+    } else {
+      toast.success("Menu item updated");
+    }
+    setEditing(null);
+    // Refresh from server — the orchestration above touched multiple
+    // locations and renames, so optimistic local merging would drift.
+    await fetchMenu();
   };
 
   const createCustomItem = async (draft: {
-    id: string;
+    baseSlug: string;
     name: string;
     description: string;
     price: number;
@@ -381,42 +471,145 @@ export function AdminMenu() {
     category: MenuCategory;
     tags: string[];
     available: boolean;
+    sku?: string;
+    locationSlugs: string[];
   }) => {
-    const res = await fetch("/api/admin/menu/custom", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...draft, locationSlug: pageLoc }),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      toast.error("Could not create item", err?.error || "Try again.");
+    // Each target location gets its own row + globally-unique id (the
+    // POST endpoint rejects id collisions across seed + custom rows so
+    // the merge in getMenuWithOverrides() stays deterministic). We
+    // generate `${locPrefix}-${baseSlug}` per location and fan the
+    // requests out in parallel — the server serialises writes via
+    // withLock("custom-menu-items.json") so concurrent POSTs are safe.
+    const targets = draft.locationSlugs.length > 0 ? draft.locationSlugs : [pageLoc];
+    const results = await Promise.all(
+      targets.map(async (slug) => {
+        const prefix = slug.slice(0, 3) || "loc";
+        const id = `${prefix}-${draft.baseSlug}`;
+        const body = {
+          id,
+          locationSlug: slug,
+          name: draft.name,
+          description: draft.description,
+          price: draft.price,
+          cost: draft.cost,
+          category: draft.category,
+          tags: draft.tags,
+          available: draft.available,
+          ...(draft.sku ? { sku: draft.sku } : {}),
+        };
+        const res = await fetch("/api/admin/menu/custom", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (res.ok) return { slug, ok: true as const };
+        const err = await res.json().catch(() => ({}));
+        return {
+          slug,
+          ok: false as const,
+          error: err?.error || `HTTP ${res.status}`,
+        };
+      }),
+    );
+    const failures = results.flatMap((r) =>
+      r.ok ? [] : [{ slug: r.slug, error: r.error }],
+    );
+
+    if (failures.length === targets.length) {
+      const first = failures[0];
+      toast.error("Could not create item", first.error);
       return false;
     }
-    toast.success("Item added", draft.name);
+    if (failures.length > 0) {
+      const names = failures
+        .map((f) => activeLocations.find((l) => l.slug === f.slug)?.city ?? f.slug)
+        .join(", ");
+      toast.warning(
+        "Item partially created",
+        `${targets.length - failures.length} of ${targets.length} locations saved. Failed: ${names}.`,
+      );
+    } else {
+      const successCount = targets.length;
+      toast.success(
+        "Item added",
+        successCount > 1
+          ? `${draft.name} created at ${successCount} locations.`
+          : draft.name,
+      );
+    }
     setCreating(false);
     await fetchMenu();
     return true;
   };
 
-  const deleteCustomItem = async (item: MenuItemData) => {
-    if (!item._isCustom) return;
+  /** Hard-delete an admin-created row at any location. Used by the row
+   *  trash icon (custom items) and the edit dialog's location selector
+   *  when a location is unchecked. Returns true on success so the caller
+   *  can update local state. */
+  const hardDeleteCustomItem = useCallback(
+    async (id: string): Promise<boolean> => {
+      const res = await fetch(`/api/admin/menu/custom?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast.error("Could not delete", err?.error || "Try again.");
+        return false;
+      }
+      return true;
+    },
+    [toast],
+  );
+
+  const deleteItem = async (item: MenuItemData) => {
+    if (item._isCustom) {
+      if (
+        !confirm(
+          `Delete "${item.name}"? This permanently removes the item from this location's menu.`,
+        )
+      ) {
+        return;
+      }
+      const ok = await hardDeleteCustomItem(item.id);
+      if (!ok) return;
+      setItems((arr) => arr.filter((i) => i.id !== item.id));
+      toast.success("Item removed", item.name);
+      return;
+    }
+    // Seed items live in src/data/menus/*.ts and can't be hard-deleted.
+    // The closest primitive is a `hidden` override that filters the row
+    // out of both the customer menu and the default admin list. The
+    // operator can restore via the "Show hidden" toggle.
     if (
       !confirm(
-        `Delete "${item.name}"? This removes the item from the customer menu permanently.`,
+        `"${item.name}" is a seed menu item — it can't be permanently deleted (it lives in code). Hide it from this location instead? You can restore it later via the "Show hidden" toggle.`,
       )
     ) {
       return;
     }
-    const res = await fetch(`/api/admin/menu/custom?id=${encodeURIComponent(item.id)}`, {
-      method: "DELETE",
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      toast.error("Could not delete", err?.error || "Try again.");
+    const ok = await persistChange(item.id, { hidden: true });
+    if (!ok) {
+      toast.error("Could not hide", "Try again.");
       return;
     }
-    setItems((arr) => arr.filter((i) => i.id !== item.id));
-    toast.success("Item removed", item.name);
+    setItems((arr) =>
+      arr.map((i) => (i.id === item.id ? { ...i, _hidden: true, _hasOverride: true } : i)),
+    );
+    toast.success("Item hidden", `${item.name} is no longer visible on this menu.`);
+  };
+
+  /** Clear the `hidden` override flag so a previously soft-deleted seed
+   *  item is restored to the menu. */
+  const restoreItem = async (item: MenuItemData) => {
+    const ok = await persistChange(item.id, { hidden: null });
+    if (!ok) {
+      toast.error("Could not restore", "Try again.");
+      return;
+    }
+    setItems((arr) =>
+      arr.map((i) => (i.id === item.id ? { ...i, _hidden: false } : i)),
+    );
+    toast.success("Item restored", item.name);
   };
 
   // --- Derived ---
@@ -425,9 +618,14 @@ export function AdminMenu() {
     [items],
   );
 
+  const hiddenCount = useMemo(() => items.filter((i) => i._hidden).length, [items]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return items.filter((i) => {
+      // Soft-deleted seed rows hide from the default list. The header
+      // toggle reveals them so operators can restore.
+      if (i._hidden && !showHidden) return false;
       if (category !== "all" && i.category !== category) return false;
       if (!q) return true;
       return (
@@ -436,7 +634,7 @@ export function AdminMenu() {
         i.tags.some((t) => t.toLowerCase().includes(q))
       );
     });
-  }, [items, search, category]);
+  }, [items, search, category, showHidden]);
 
   const grouped = useMemo(() => {
     const m = new Map<MenuCategory, MenuItemData[]>();
@@ -472,6 +670,16 @@ export function AdminMenu() {
               aria-label="Editing location"
             />
           </div>
+          {hiddenCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowHidden((v) => !v)}
+              title={showHidden ? "Hide soft-deleted items" : "Reveal soft-deleted items so you can restore them"}
+            >
+              {showHidden ? "Hide hidden" : `Show hidden (${hiddenCount})`}
+            </Button>
+          )}
           <Button variant="primary" size="sm" onClick={() => setCreating(true)}>
             <Plus className="h-3.5 w-3.5" />
             Add item
@@ -604,7 +812,13 @@ export function AdminMenu() {
                       <li
                         key={item.id}
                         className={`v2-mng-row v2-mng-row-menu ${item.available ? "" : "is-off"}`}
-                        style={isSelected ? { background: "var(--brand-soft)" } : undefined}
+                        style={
+                          item._hidden
+                            ? { background: "var(--surface-2)", opacity: 0.65 }
+                            : isSelected
+                            ? { background: "var(--brand-soft)" }
+                            : undefined
+                        }
                       >
                         <input
                           type="checkbox"
@@ -631,12 +845,20 @@ export function AdminMenu() {
                                 Staff Pick, New, LTO) are managed and shown
                                 solely from /admin/crosssell → Menu badges.
                                 The admin menu row keeps only the override
-                                state indicator and intrinsic recipe tags. */}
-                            {item._isCustom && (
-                              <span className="v2-mng-tag v2-mng-tag-custom">Custom</span>
+                                state indicator and intrinsic recipe tags.
+                                The "Custom" badge was retired — every item
+                                is fully editable, so the storage origin no
+                                longer warrants a visual distinction. */}
+                            {item._hidden && (
+                              <span className="v2-mng-tag v2-mng-tag-override" title="Soft-deleted via the trash icon. Restore from the row.">Hidden</span>
                             )}
-                            {item._hasOverride && !item._isCustom && (
-                              <span className="v2-mng-tag v2-mng-tag-override">Overridden</span>
+                            {item._hasOverride && !item._hidden && (
+                              <span className="v2-mng-tag v2-mng-tag-override">Edited</span>
+                            )}
+                            {item.sku && (
+                              <span className="v2-mng-tag" title="SKU / inventory code">
+                                {item.sku}
+                              </span>
                             )}
                             {item.tags.map((t) => (
                               <span key={t} className="v2-mng-tag">{t}</span>
@@ -656,22 +878,38 @@ export function AdminMenu() {
                         <span className={`v2-mng-val v2-mng-val-margin v2-mng-val-margin-${marginTone(margin)} tabular`}>{margin}%</span>
 
                         <span className="v2-mng-edit-group">
-                          <button
-                            type="button"
-                            className="v2-mng-edit"
-                            onClick={() => setEditing(item)}
-                            aria-label={`Edit ${item.name}`}
-                            title="Edit item"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </button>
-                          {item._isCustom && (
+                          {item._hidden ? (
+                            <button
+                              type="button"
+                              className="v2-mng-edit"
+                              onClick={() => restoreItem(item)}
+                              aria-label={`Restore ${item.name}`}
+                              title="Restore item — un-hide from menu"
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="v2-mng-edit"
+                              onClick={() => setEditing(item)}
+                              aria-label={`Edit ${item.name}`}
+                              title="Edit item"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                          {!item._hidden && (
                             <button
                               type="button"
                               className="v2-mng-edit v2-mng-edit-danger"
-                              onClick={() => deleteCustomItem(item)}
+                              onClick={() => deleteItem(item)}
                               aria-label={`Delete ${item.name}`}
-                              title="Delete item"
+                              title={
+                                item._isCustom
+                                  ? "Delete item (permanent)"
+                                  : "Hide seed item from this location (restoreable)"
+                              }
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </button>
@@ -689,6 +927,8 @@ export function AdminMenu() {
 
       <EditItemDialog
         item={editing}
+        currentSlug={pageLoc}
+        menusByLocation={menusByLocation}
         onClose={() => setEditing(null)}
         onSave={saveEdit}
       />
@@ -703,47 +943,102 @@ export function AdminMenu() {
   );
 }
 
+interface EditSubmission {
+  fieldChange: {
+    name?: string;
+    price?: number;
+    cost?: number;
+    description?: string;
+    category?: MenuCategory;
+    tags?: string[];
+    available?: boolean;
+    sku?: string | null;
+    deliveryOnly?: boolean | null;
+    packagingCost?: number | null;
+    modifierGroups?: ModifierGroup[] | null;
+  };
+  /** Custom-item rename. Ignored for seed items. */
+  newId?: string;
+  /** Location slugs to clone the (post-edit) item to. */
+  addTo: string[];
+  /** Location slugs to remove the item from — for each, the parent
+   *  looks up the twin by base slug and either hard-deletes (custom)
+   *  or sets `hidden: true` (seed). */
+  removeFrom: string[];
+  /** Full snapshot of the edited values, used for cloning. */
+  draft: {
+    name: string;
+    description: string;
+    price: number;
+    cost: number;
+    category: MenuCategory;
+    tags: string[];
+    available: boolean;
+    sku?: string;
+    deliveryOnly?: boolean;
+    packagingCost?: number;
+    modifierGroups?: ModifierGroup[];
+  };
+}
+
 interface EditDialogProps {
   item: MenuItemData | null;
+  currentSlug: string;
+  menusByLocation: Record<string, MenuItemData[]>;
   onClose: () => void;
   onSave: (
     id: string,
-    change: {
-      name?: string;
-      price?: number;
-      cost?: number;
-      description?: string;
-      category?: MenuCategory;
-      tags?: string[];
-      deliveryOnly?: boolean | null;
-      packagingCost?: number | null;
-      modifierGroups?: ModifierGroup[] | null;
-    },
     isCustom: boolean,
+    submission: EditSubmission,
   ) => Promise<void> | void;
 }
 
-function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
+function EditItemDialog({ item, currentSlug, menusByLocation, onClose, onSave }: EditDialogProps) {
   const [name, setName] = useState("");
+  const [idStr, setIdStr] = useState("");
+  const [sku, setSku] = useState("");
   const [priceStr, setPriceStr] = useState("0.00");
   const [costStr, setCostStr] = useState("0.00");
   const [desc, setDesc] = useState("");
   const [cat, setCat] = useState<MenuCategory>("pizza");
   const [tags, setTags] = useState<string[]>([]);
+  const [available, setAvailable] = useState(true);
   // Audit §3 channel + packaging + modifiers
   const [deliveryOnly, setDeliveryOnly] = useState(false);
   const [packagingStr, setPackagingStr] = useState("");
   const [modifierGroups, setModifierGroups] = useState<ModifierGroup[]>([]);
   const [busy, setBusy] = useState(false);
 
+  // Locations where this product currently lives — derived from the
+  // cross-location menu snapshot by base-slug match. Operators
+  // check/uncheck to clone the item to a new truck or remove it from
+  // an existing one (delete for custom rows, hide for seed rows).
+  const initialLocations = useMemo(() => {
+    if (!item) return [currentSlug];
+    const baseSlug = getBaseSlug(item.id);
+    return activeLocations
+      .filter((loc) => {
+        const locItems = menusByLocation[loc.slug] || [];
+        return locItems.some(
+          (i) => !i._hidden && getBaseSlug(i.id) === baseSlug,
+        );
+      })
+      .map((l) => l.slug);
+  }, [item, currentSlug, menusByLocation]);
+
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+
   useEffect(() => {
     if (item) {
       setName(item.name);
+      setIdStr(item.id);
+      setSku(item.sku ?? "");
       setPriceStr((item.price / 100).toFixed(2));
       setCostStr((item.cost / 100).toFixed(2));
       setDesc(item.description);
       setCat(item.category);
       setTags(item.tags.slice());
+      setAvailable(item.available);
       setDeliveryOnly(Boolean(item.deliveryOnly));
       setPackagingStr(
         typeof item.packagingCost === "number"
@@ -756,43 +1051,44 @@ function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
           ? JSON.parse(JSON.stringify(item.modifierGroups))
           : [],
       );
+      setSelectedLocations(initialLocations);
       setBusy(false);
     }
-  }, [item]);
+  }, [item, initialLocations]);
 
   if (!item) {
     return <Dialog open={false} onClose={onClose} />;
   }
 
   const isCustom = Boolean(item._isCustom);
-  const canEditRecipeCost = isCustom && !item._hasRecipe;
+  // Recipe-attached items get their cost computed from ingredients, so the
+  // field is locked regardless of whether the row is seed or custom.
+  const canEditCost = !item._hasRecipe;
+  // Seed item IDs live in code (src/data/menus/*.ts) — we can't rename
+  // them at runtime. Custom rows are renameable via the PATCH endpoint.
+  const canEditId = isCustom;
 
   const submit = async () => {
     const price = Math.round(parseFloat(priceStr || "0") * 100);
-    const change: {
-      name?: string;
-      price?: number;
-      cost?: number;
-      description?: string;
-      category?: MenuCategory;
-      tags?: string[];
-      deliveryOnly?: boolean | null;
-      packagingCost?: number | null;
-      modifierGroups?: ModifierGroup[] | null;
-    } = {};
+    const change: EditSubmission["fieldChange"] = {};
     const trimmedName = name.trim();
     if (trimmedName && trimmedName !== item.name) change.name = trimmedName;
     if (price !== item.price) change.price = price;
-    if (canEditRecipeCost) {
+    if (canEditCost) {
       const cost = Math.round(parseFloat(costStr || "0") * 100);
       if (cost !== item.cost) change.cost = cost;
     }
     if (desc !== item.description) change.description = desc;
-    if (isCustom) {
-      if (cat !== item.category) change.category = cat;
-      const tagsChanged =
-        tags.length !== item.tags.length || tags.some((t) => !item.tags.includes(t));
-      if (tagsChanged) change.tags = tags;
+    if (cat !== item.category) change.category = cat;
+    const tagsChanged =
+      tags.length !== item.tags.length || tags.some((t) => !item.tags.includes(t));
+    if (tagsChanged) change.tags = tags;
+    if (available !== item.available) change.available = available;
+    const trimmedSku = sku.trim();
+    if (trimmedSku !== (item.sku ?? "")) {
+      // For seed-backed items, empty string -> null clears the override
+      // back to the seed sku. Custom items just store the empty string.
+      change.sku = trimmedSku === "" ? (isCustom ? "" : null) : trimmedSku;
     }
     const nextDeliveryOnly: boolean | null = deliveryOnly ? true : null;
     if (nextDeliveryOnly !== (item.deliveryOnly ?? null)) {
@@ -820,13 +1116,55 @@ function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
       change.modifierGroups = cleanedGroups.length === 0 ? null : cleanedGroups;
     }
 
-    if (Object.keys(change).length === 0) {
+    const trimmedId = idStr.trim();
+    let newId: string | undefined;
+    if (canEditId && trimmedId !== item.id) {
+      if (!/^[a-z0-9-]{3,60}$/.test(trimmedId)) {
+        alert("Item slug must be 3–60 chars, lowercase letters, digits, and hyphens only.");
+        return;
+      }
+      newId = trimmedId;
+    }
+
+    const addTo = selectedLocations.filter((s) => !initialLocations.includes(s));
+    const removeFrom = initialLocations.filter((s) => !selectedLocations.includes(s));
+
+    const nothingChanged =
+      Object.keys(change).length === 0 &&
+      !newId &&
+      addTo.length === 0 &&
+      removeFrom.length === 0;
+    if (nothingChanged) {
       onClose();
       return;
     }
     setBusy(true);
-    await onSave(item.id, change, isCustom);
+    await onSave(item.id, isCustom, {
+      fieldChange: change,
+      newId,
+      addTo,
+      removeFrom,
+      draft: {
+        name: trimmedName || item.name,
+        description: desc,
+        price,
+        cost: Math.round(parseFloat(costStr || "0") * 100),
+        category: cat,
+        tags,
+        available,
+        ...(trimmedSku ? { sku: trimmedSku } : {}),
+        ...(deliveryOnly ? { deliveryOnly: true } : {}),
+        ...(nextPackaging !== null ? { packagingCost: nextPackaging } : {}),
+        ...(cleanedGroups.length > 0 ? { modifierGroups: cleanedGroups } : {}),
+      },
+    });
     setBusy(false);
+  };
+
+  const toggleLocation = (slug: string) => {
+    setSelectedLocations((prev) =>
+      prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug],
+    );
   };
 
   const toggleTag = (tag: string) => {
@@ -841,11 +1179,7 @@ function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
       onClose={onClose}
       size="md"
       title={`Edit ${item.name}`}
-      description={
-        isCustom
-          ? "Admin-created item. Changes save immediately to this location."
-          : "Changes apply to this location only via the override system. Reset by clearing the override in the database."
-      }
+      description="Changes apply to this location only. Save to publish."
       footer={
         <>
           <Button variant="ghost" onClick={onClose} disabled={busy}>
@@ -864,17 +1198,73 @@ function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
           onChange={(e) => setName(e.target.value)}
           description="Customer-facing item name."
         />
-        {isCustom && (
-          <Select
-            label="Category"
-            value={cat}
-            onChange={(e) => setCat(e.target.value as MenuCategory)}
-            options={CATEGORY_ORDER.map((c) => ({
-              value: c,
-              label: MENU_CATEGORY_LABELS[c],
-            }))}
-          />
-        )}
+        <Input
+          label="Item slug"
+          value={idStr}
+          onChange={(e) =>
+            setIdStr(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))
+          }
+          disabled={!canEditId}
+          description={
+            canEditId
+              ? "Stable identifier used in orders + analytics. Renaming preserves the row; historical orders keep the old slug."
+              : "Seed item slugs live in src/data/menus/*.ts and can't be renamed from the admin."
+          }
+        />
+        <Input
+          label="SKU"
+          value={sku}
+          onChange={(e) => setSku(e.target.value)}
+          placeholder="e.g. SI-PIZ-MARG-001"
+          description="Operator-facing inventory / accounting code. Leave blank if not tracked."
+        />
+        <Select
+          label="Category"
+          value={cat}
+          onChange={(e) => setCat(e.target.value as MenuCategory)}
+          options={CATEGORY_ORDER.map((c) => ({
+            value: c,
+            label: MENU_CATEGORY_LABELS[c],
+          }))}
+        />
+        <div className="v2-field">
+          <label className="v2-field-label">Available at locations</label>
+          <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap" }}>
+            {activeLocations.map((loc) => {
+              const on = selectedLocations.includes(loc.slug);
+              const wasInitial = initialLocations.includes(loc.slug);
+              const willClone = on && !wasInitial;
+              const willRemove = !on && wasInitial;
+              return (
+                <button
+                  key={loc.slug}
+                  type="button"
+                  onClick={() => toggleLocation(loc.slug)}
+                  aria-pressed={on}
+                  className={`v2-chip ${on ? "is-on" : ""}`}
+                  title={
+                    willClone
+                      ? `Clone to ${loc.city} on save`
+                      : willRemove
+                      ? `Remove from ${loc.city} on save (delete custom row / hide seed)`
+                      : on
+                      ? `Currently at ${loc.city}`
+                      : `Not at ${loc.city}`
+                  }
+                >
+                  {loc.city}
+                  {willClone && " +"}
+                  {willRemove && " −"}
+                </button>
+              );
+            })}
+          </div>
+          <p className="v2-field-desc">
+            Check a location to clone this item there on save. Uncheck to
+            remove (custom rows are deleted; seed rows are hidden and can
+            be restored later).
+          </p>
+        </div>
         <Input
           label="Price (PLN)"
           type="number"
@@ -885,48 +1275,64 @@ function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
           trailingAdornment={<span className="v2-muted">zł</span>}
           description={`Food cost: ${formatPrice(item.cost)} · Current margin: ${marginPct(item.price, item.cost)}%`}
         />
-        {canEditRecipeCost && (
-          <Input
-            label="Food cost (PLN)"
-            type="number"
-            step="0.01"
-            min="0"
-            value={costStr}
-            onChange={(e) => setCostStr(e.target.value)}
-            trailingAdornment={<span className="v2-muted">zł</span>}
-            description="Per-portion plate cost. Once a recipe is attached this becomes computed automatically and the field is locked."
-          />
-        )}
+        <Input
+          label="Food cost (PLN)"
+          type="number"
+          step="0.01"
+          min="0"
+          value={costStr}
+          onChange={(e) => setCostStr(e.target.value)}
+          disabled={!canEditCost}
+          trailingAdornment={<span className="v2-muted">zł</span>}
+          description={
+            canEditCost
+              ? "Per-portion plate cost. Once a recipe is attached this becomes computed automatically and the field is locked."
+              : "Computed from the attached recipe. Edit ingredients in /admin/recipes to change."
+          }
+        />
         <Textarea
           label="Description"
           value={desc}
           onChange={(e) => setDesc(e.target.value)}
           rows={4}
         />
-        {isCustom && (
-          <div className="v2-field">
-            <label className="v2-field-label">Tags</label>
-            <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap" }}>
-              {MENU_TAGS.map((tag) => {
-                const on = tags.includes(tag);
-                return (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={() => toggleTag(tag)}
-                    aria-pressed={on}
-                    className={`v2-chip ${on ? "is-on" : ""}`}
-                  >
-                    {tag}
-                  </button>
-                );
-              })}
-            </div>
-            <p className="v2-field-desc">
-              Optional dietary markers shown on the menu card.
-            </p>
+        <div className="v2-field">
+          <label className="v2-field-label">Tags</label>
+          <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap" }}>
+            {MENU_TAGS.map((tag) => {
+              const on = tags.includes(tag);
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => toggleTag(tag)}
+                  aria-pressed={on}
+                  className={`v2-chip ${on ? "is-on" : ""}`}
+                >
+                  {tag}
+                </button>
+              );
+            })}
           </div>
-        )}
+          <p className="v2-field-desc">
+            Optional dietary markers shown on the menu card.
+          </p>
+        </div>
+        <label
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            fontSize: "var(--text-sm)",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={available}
+            onChange={(e) => setAvailable(e.target.checked)}
+          />
+          Available to customers
+        </label>
         {/* Menu-engineering role + LTO live in /admin/crosssell → Menu badges
             so the editorial chips have one source of truth. The per-item
             edit dialog stays focused on price, description, channel
@@ -1198,20 +1604,19 @@ function ModifierEditor({
 
 // ─── Create-item dialog ───────────────────────────────────────────────────
 //
-// Spins up a brand-new admin-managed menu item for the current location.
-// IDs are auto-suggested from the name (lowercased + hyphenated) and
+// Spins up a brand-new admin-managed menu item. Operators pick one, two,
+// or all active locations and the dialog issues one POST per location with
+// a per-location id derived from the location slug prefix. IDs are
 // validated server-side against both the seed catalogue and other custom
 // rows so the merge in getMenuWithOverrides() stays deterministic.
 
-function slugifyName(name: string, locationSlug: string): string {
-  const base = name
+function baseSlugFromName(name: string): string {
+  return name
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 40);
-  const prefix = locationSlug.slice(0, 3) || "loc";
-  return base ? `${prefix}-${base}` : "";
 }
 
 interface CreateItemDialogProps {
@@ -1219,7 +1624,7 @@ interface CreateItemDialogProps {
   locationSlug: string;
   onClose: () => void;
   onCreate: (draft: {
-    id: string;
+    baseSlug: string;
     name: string;
     description: string;
     price: number;
@@ -1227,42 +1632,50 @@ interface CreateItemDialogProps {
     category: MenuCategory;
     tags: string[];
     available: boolean;
+    sku?: string;
+    locationSlugs: string[];
   }) => Promise<boolean>;
 }
 
 function CreateItemDialog({ open, locationSlug, onClose, onCreate }: CreateItemDialogProps) {
   const [name, setName] = useState("");
-  const [id, setId] = useState("");
-  const [idTouched, setIdTouched] = useState(false);
+  const [baseSlug, setBaseSlug] = useState("");
+  const [slugTouched, setSlugTouched] = useState(false);
   const [desc, setDesc] = useState("");
+  const [sku, setSku] = useState("");
   const [priceStr, setPriceStr] = useState("");
   const [costStr, setCostStr] = useState("");
   const [cat, setCat] = useState<MenuCategory>("pizza");
   const [tags, setTags] = useState<string[]>([]);
   const [available, setAvailable] = useState(true);
+  const [selectedLocs, setSelectedLocs] = useState<string[]>([locationSlug]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
       setName("");
-      setId("");
-      setIdTouched(false);
+      setBaseSlug("");
+      setSlugTouched(false);
       setDesc("");
+      setSku("");
       setPriceStr("");
       setCostStr("");
       setCat("pizza");
       setTags([]);
       setAvailable(true);
+      setSelectedLocs([locationSlug]);
       setError(null);
       setBusy(false);
     }
-  }, [open]);
+  }, [open, locationSlug]);
 
-  // Auto-derive the id from the typed name until the user manually edits it.
+  // Auto-derive the base slug from the typed name until the operator
+  // manually edits it. The base slug is location-agnostic — each target
+  // location prepends its own 3-char prefix when the row is created.
   useEffect(() => {
-    if (!idTouched) setId(slugifyName(name, locationSlug));
-  }, [name, locationSlug, idTouched]);
+    if (!slugTouched) setBaseSlug(baseSlugFromName(name));
+  }, [name, slugTouched]);
 
   const toggleTag = (tag: string) => {
     setTags((prev) =>
@@ -1270,16 +1683,43 @@ function CreateItemDialog({ open, locationSlug, onClose, onCreate }: CreateItemD
     );
   };
 
+  const toggleLoc = (slug: string) => {
+    setSelectedLocs((prev) =>
+      prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug],
+    );
+  };
+
+  const allSelected = selectedLocs.length === activeLocations.length;
+  const selectAll = () => {
+    if (allSelected) {
+      setSelectedLocs([locationSlug]);
+    } else {
+      setSelectedLocs(activeLocations.map((l) => l.slug));
+    }
+  };
+
+  const idPreview = selectedLocs
+    .map((s) => `${s.slice(0, 3) || "loc"}-${baseSlug}`)
+    .join(", ");
+
   const submit = async () => {
     setError(null);
     const trimmedName = name.trim();
-    const trimmedId = id.trim();
+    const trimmedSlug = baseSlug.trim();
     if (!trimmedName) {
       setError("Name is required.");
       return;
     }
-    if (!/^[a-z0-9-]{3,60}$/.test(trimmedId)) {
-      setError("ID must be 3–60 chars, lowercase letters, digits, and hyphens only.");
+    if (selectedLocs.length === 0) {
+      setError("Select at least one location.");
+      return;
+    }
+    // Per-location id is `${prefix}-${baseSlug}`. The full id must pass
+    // the server regex (3–60 chars, lowercase + hyphens + digits). The
+    // shortest active prefix is 3 chars (krk/war/...), so a single-char
+    // base would still pass — guard at the source instead.
+    if (!/^[a-z0-9-]{1,40}$/.test(trimmedSlug) || trimmedSlug.length < 1) {
+      setError("Item slug must be 1–40 chars, lowercase letters, digits, and hyphens only.");
       return;
     }
     const price = Math.round(parseFloat(priceStr || "0") * 100);
@@ -1292,9 +1732,14 @@ function CreateItemDialog({ open, locationSlug, onClose, onCreate }: CreateItemD
       setError("Food cost cannot be negative.");
       return;
     }
+    const trimmedSku = sku.trim();
+    if (trimmedSku.length > 60) {
+      setError("SKU must be 60 characters or fewer.");
+      return;
+    }
     setBusy(true);
     const ok = await onCreate({
-      id: trimmedId,
+      baseSlug: trimmedSlug,
       name: trimmedName,
       description: desc.trim(),
       price,
@@ -1302,6 +1747,8 @@ function CreateItemDialog({ open, locationSlug, onClose, onCreate }: CreateItemD
       category: cat,
       tags,
       available,
+      ...(trimmedSku ? { sku: trimmedSku } : {}),
+      locationSlugs: selectedLocs,
     });
     setBusy(false);
     if (!ok) {
@@ -1316,7 +1763,7 @@ function CreateItemDialog({ open, locationSlug, onClose, onCreate }: CreateItemD
       onClose={onClose}
       size="md"
       title="Add menu item"
-      description="Create a new admin-managed SKU for this location. Lives alongside the static menu catalogue."
+      description="Pick one or more locations — each gets its own row with a location-prefixed id."
       footer={
         <>
           <Button variant="ghost" onClick={onClose} disabled={busy}>
@@ -1334,6 +1781,46 @@ function CreateItemDialog({ open, locationSlug, onClose, onCreate }: CreateItemD
             {error}
           </div>
         )}
+        <div className="v2-field">
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "0.5rem",
+            }}
+          >
+            <label className="v2-field-label">Locations</label>
+            <button
+              type="button"
+              onClick={selectAll}
+              className="v2-chip"
+              aria-pressed={allSelected}
+            >
+              {allSelected ? "Clear" : "All locations"}
+            </button>
+          </div>
+          <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap" }}>
+            {activeLocations.map((loc) => {
+              const on = selectedLocs.includes(loc.slug);
+              return (
+                <button
+                  key={loc.slug}
+                  type="button"
+                  onClick={() => toggleLoc(loc.slug)}
+                  aria-pressed={on}
+                  className={`v2-chip ${on ? "is-on" : ""}`}
+                >
+                  {loc.city}
+                </button>
+              );
+            })}
+          </div>
+          <p className="v2-field-desc">
+            Each selected location gets a separate row scoped to that truck.
+            Toggle later via /admin/menu per-location.
+          </p>
+        </div>
         <Input
           label="Name"
           value={name}
@@ -1341,13 +1828,24 @@ function CreateItemDialog({ open, locationSlug, onClose, onCreate }: CreateItemD
           placeholder="e.g. Pizza Capricciosa"
         />
         <Input
-          label="Item ID"
-          value={id}
+          label="Item slug"
+          value={baseSlug}
           onChange={(e) => {
-            setId(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""));
-            setIdTouched(true);
+            setBaseSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""));
+            setSlugTouched(true);
           }}
-          description="Stable identifier used in orders + analytics. Auto-derived from the name; edit only if you need a specific slug."
+          description={
+            baseSlug
+              ? `Will create: ${idPreview}`
+              : "Stable identifier used in orders + analytics. Auto-derived from the name."
+          }
+        />
+        <Input
+          label="SKU"
+          value={sku}
+          onChange={(e) => setSku(e.target.value)}
+          placeholder="e.g. SI-PIZ-CAPR-001"
+          description="Operator-facing inventory / accounting code (optional). Same SKU is applied to every selected location."
         />
         <Select
           label="Category"

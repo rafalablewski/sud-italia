@@ -61,14 +61,28 @@ export const GET = withAdmin(
       // An override that contains only `cost` is the recipe-save sync, not a
       // human edit — don't surface "Overridden" for it.
       const overrideKeys = override ? Object.keys(override).filter((k) => k !== "cost") : [];
+      // Apply override with `null = clear back to seed` semantics so admin
+      // reads match the public path (see data/menus/index.ts:applyOverride).
+      // `merged` is initialised as a shallow copy of the seed item, so
+      // skipping null preserves the seed value. Deleting would leave the
+      // field undefined and break required props (category, tags).
+      const merged: Record<string, unknown> = { ...item };
+      if (override) {
+        for (const [k, v] of Object.entries(override)) {
+          if (v !== null && v !== undefined) merged[k] = v;
+        }
+      }
       return {
-        ...item,
-        ...override,
+        ...(merged as unknown as MenuItem),
         cost,
         _hasOverride: overrideKeys.length > 0,
         _hasRecipe: hasRecipe,
         _costSource: hasRecipe ? "recipe" : override?.cost !== undefined ? "override" : "seed",
         _isCustom: Boolean(opts?.isCustom),
+        // Surface the soft-delete flag so the admin UI can offer a
+        // "Show hidden" toggle + restore action. Customer surfaces filter
+        // hidden rows in getMenuWithOverrides() instead.
+        _hidden: override?.hidden === true,
       };
     };
 
@@ -157,6 +171,11 @@ export const PUT = withAdmin(
             (next.limitedUntil !== undefined && next.limitedUntil !== prev?.limitedUntil) ||
             (next.deliveryOnly !== undefined && next.deliveryOnly !== prev?.deliveryOnly) ||
             (next.packagingCost !== undefined && next.packagingCost !== prev?.packagingCost) ||
+            (next.sku !== undefined && next.sku !== prev?.sku) ||
+            (next.category !== undefined && next.category !== prev?.category) ||
+            (next.tags !== undefined &&
+              JSON.stringify(next.tags) !== JSON.stringify(prev?.tags)) ||
+            (next.hidden !== undefined && next.hidden !== prev?.hidden) ||
             (next.modifierGroups !== undefined &&
               JSON.stringify(next.modifierGroups) !== JSON.stringify(prev?.modifierGroups));
           if (otherChanged) {
