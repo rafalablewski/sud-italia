@@ -208,7 +208,11 @@ export async function qualifyReferralOnFirstPaidOrder(
       status: "qualified",
       orderId,
       qualifiedAt: new Date(),
-      rewardGivenGrosze: REFERRER_REWARD_POINTS * 100, // 1 PLN per point reference
+      // 10 grosze per loyalty point (= 0.1 PLN) — matches the
+      // dispatcher's `(p.rewardPoints / 10).toFixed(0)` PLN display so
+      // a 100-point reward shows as ~10 PLN, not 100 PLN. (Gemini
+      // review caught a 10× overpayment in the original draft.)
+      rewardGivenGrosze: REFERRER_REWARD_POINTS * 10,
     })
     .where(eq(referralRedemptions.id, redemption.id));
 

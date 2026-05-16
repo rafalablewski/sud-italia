@@ -1,4 +1,4 @@
-import { getLaborCostInRange, getOrders, getShifts, getStaff } from "@/lib/store";
+import { getLaborCostInRange, getOrders, getShifts } from "@/lib/store";
 import { logger } from "@/lib/logger";
 
 /**
@@ -94,22 +94,17 @@ async function computeYesterday(
     orderCount++;
   }
 
-  const { laborGrosze } = await getLaborCostInRange(
+  // Gemini review on PR #38 caught a precision bug here: we were
+  // reconstructing hours as `laborGrosze / avgRate` which is wrong when
+  // staff have different rates. Use the actual paired-punch hours that
+  // `getLaborCostInRange` now returns alongside the cost.
+  const { laborGrosze, laborHours } = await getLaborCostInRange(
     locationSlug,
     dayStart.toISOString(),
     dayEnd.toISOString(),
     dayEnd,
   );
 
-  // Reconstruct hours from cost using the location's avg hourly rate.
-  // Better than pairing punches twice — keeps the math consistent with
-  // the labour-ratio API.
-  const staff = await getStaff(locationSlug);
-  const avgRate =
-    staff.length > 0
-      ? staff.reduce((s, m) => s + (m.hourlyRateGrosze ?? 0), 0) / staff.length
-      : 0;
-  const laborHours = avgRate > 0 ? laborGrosze / avgRate : 0;
   const splhGrosze =
     laborHours > 0 ? Math.round(revenueGrosze / laborHours) : 0;
   const splhPln = splhGrosze / 100;
@@ -124,7 +119,7 @@ async function computeYesterday(
     date,
     revenueGrosze,
     laborGrosze,
-    laborHours: Math.round(laborHours * 100) / 100,
+    laborHours,
     orderCount,
     splhGrosze,
     laborRatio: revenueGrosze > 0 ? Math.round((laborGrosze / revenueGrosze) * 1000) / 1000 : null,

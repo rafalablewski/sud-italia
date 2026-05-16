@@ -51,11 +51,17 @@ async function ensureDB() {
  * when configured, and falls back to an in-process Promise chain otherwise.
  *
  * Lock keys should scope as narrowly as the critical section permits. The
- * `withLockScoped` variant takes an explicit scope (typically a location
- * slug) and produces keys like `orders:krakow` instead of the global
- * `orders.json`. That single change took the audit §4 "300 orders/hour"
- * ceiling to ~N × that, where N is the number of active locations — the
- * lock is now per-location, so two trucks' traffic no longer contends.
+ * `withLockScoped` variant produces per-scope keys — only safe when the
+ * body's reads and writes are also scoped to that key. **Never** use it
+ * as a wrapper around reads/writes of a shared global kv_store blob; a
+ * per-scope lock with a global resource is a race. Gemini code review
+ * caught exactly that bug in the order kv mirror; see
+ * `mirrorOrderToKvStore` comment.
+ *
+ * The user-facing scalability win from PR #38 comes from the DB-first
+ * write path (`dualWriteOrder` → atomic INSERT, no application lock at
+ * all), not from scoping the mirror. The mirror runs `void` from the
+ * caller and takes a global lock for correctness.
  */
 function withLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
   return withDistributedLock(key, fn);
@@ -944,21 +950,26 @@ async function dualDeleteOrder(id: string): Promise<void> {
 }
 
 /**
- * Best-effort mirror into the legacy kv_store["orders.json"] blob, scoped
- * under a per-location lock so two trucks' writes don't contend. The
+ * Best-effort mirror into the legacy kv_store["orders.json"] blob. The
  * normalized `orders` table is the source of truth; this mirror only
  * matters for the dev/CI filesystem fallback and for any straggler code
  * path that still reads the legacy blob. Failures here are logged once
  * and forgotten.
  *
- * Audit §4 fix: the previous shape took a global `orders.json` lock on
- * every order — that single key is what capped throughput at ~300
- * orders/hour. Per-location scoping turns this into N independent
- * queues.
+ * Lock is **global** on the shared key — Gemini code review (PR #38)
+ * caught a race where two locations' scoped locks would each acquire
+ * independently, read the same array, and overwrite each other on
+ * write-back. The user-facing throughput gain still holds because the
+ * primary path (`dualWriteOrder` → atomic INSERT on the normalized
+ * table) is lock-free; this mirror runs as `void` from the caller and
+ * never blocks the request.
+ *
+ * When kv_store["orders.json"] is fully drained (Phase 1 has no other
+ * readers), delete the mirror entirely.
  */
-async function mirrorOrderToKvStoreScoped(order: Order): Promise<void> {
+async function mirrorOrderToKvStore(order: Order): Promise<void> {
   try {
-    await withLockScoped("orders.kv", order.locationSlug, async () => {
+    await withLock("orders.json", async () => {
       const orders = await readJSON<Order[]>("orders.json", []);
       const idx = orders.findIndex((o) => o.id === order.id);
       if (idx === -1) orders.push(order);
@@ -967,19 +978,16 @@ async function mirrorOrderToKvStoreScoped(order: Order): Promise<void> {
     });
   } catch (err) {
     logger.warn(
-      "mirrorOrderToKvStoreScoped failed (DB is source of truth, mirror skipped)",
+      "mirrorOrderToKvStore failed (DB is source of truth, mirror skipped)",
       { orderId: order.id, locationSlug: order.locationSlug, layer: "store.orders" },
       err,
     );
   }
 }
 
-async function mirrorOrderDeleteToKvStoreScoped(
-  id: string,
-  locationSlug: string,
-): Promise<void> {
+async function mirrorOrderDeleteToKvStore(id: string): Promise<void> {
   try {
-    await withLockScoped("orders.kv", locationSlug, async () => {
+    await withLock("orders.json", async () => {
       const orders = await readJSON<Order[]>("orders.json", []);
       const filtered = orders.filter((o) => o.id !== id);
       if (filtered.length !== orders.length) {
@@ -988,8 +996,8 @@ async function mirrorOrderDeleteToKvStoreScoped(
     });
   } catch (err) {
     logger.warn(
-      "mirrorOrderDeleteToKvStoreScoped failed",
-      { orderId: id, locationSlug, layer: "store.orders" },
+      "mirrorOrderDeleteToKvStore failed",
+      { orderId: id, layer: "store.orders" },
       err,
     );
   }
@@ -1152,19 +1160,23 @@ export async function getOrderByStripePaymentIntent(
 export async function createOrder(order: Order): Promise<Order> {
   // Audit §4 "Scalability (tech) — 300 orders/hour ceiling". Old shape
   // took a global `orders.json` lock and rewrote the entire orders array
-  // on every insert — O(N) writes serialized across all locations. The
-  // new shape:
-  //   1. INSERT into the normalized `orders` table — atomic on the PK,
-  //      no application lock needed.
-  //   2. Mirror to kv_store under a per-location lock (`orders:${slug}`)
-  //      so two trucks' write paths never block each other.
+  // on every insert — O(N) writes serialized across all locations *on
+  // the request-blocking path*. The new shape:
+  //   1. INSERT into the normalized `orders` table via dualWriteOrder —
+  //      atomic on the PK, no application lock needed. This is the
+  //      request-blocking path; the user waits for this.
+  //   2. Mirror to the legacy kv_store["orders.json"] as fire-and-forget
+  //      (`void`). The mirror takes a global lock on the shared blob
+  //      (Gemini review on PR #38 caught the race when an earlier draft
+  //      used a per-location key on the global file) but it's off the
+  //      hot path so request latency is unaffected.
   //   3. When DB is unset (dev/CI), fall back to the legacy global-lock
   //      path so nothing breaks locally.
   const db = getDb();
   let saved: Order;
   if (db) {
     await dualWriteOrder(order); // primary path: normalized table is source of truth
-    void mirrorOrderToKvStoreScoped(order);
+    void mirrorOrderToKvStore(order);
     saved = order;
   } else {
     saved = await withLockScoped("orders", order.locationSlug, async () => {
@@ -1226,7 +1238,7 @@ export async function updateOrderStatus(id: string, status: Order["status"]): Pr
         .returning();
       if (rows.length === 1) {
         updated = rowToOrder(rows[0]);
-        void mirrorOrderToKvStoreScoped(updated);
+        void mirrorOrderToKvStore(updated);
       }
     } catch (err) {
       logger.warn(
@@ -1323,7 +1335,7 @@ export async function updateOrder(
           .where(eq(ordersTable.id, id));
         await dualWriteOrderItems(merged);
         updated = merged;
-        void mirrorOrderToKvStoreScoped(updated);
+        void mirrorOrderToKvStore(updated);
       }
     } catch (err) {
       logger.warn(
@@ -1417,7 +1429,7 @@ export async function deleteOrder(id: string): Promise<boolean> {
         customerPhone = o.customerPhone;
         locationSlug = o.locationSlug;
         removed = true;
-        void mirrorOrderDeleteToKvStoreScoped(id, o.locationSlug);
+        void mirrorOrderDeleteToKvStore(id);
       }
     } catch (err) {
       logger.warn(
@@ -5385,13 +5397,18 @@ export async function recordTimePunch(input: Omit<TimePunch, "id" | "occurredAt"
  * Punches outside the window still affect the pairing when they straddle a
  * boundary — we slice the worked seconds down to the requested range so
  * mid-shift snapshots don't double-count.
+ *
+ * Returns `laborHours` alongside the cost so callers don't reconstruct
+ * hours from cost / avg-rate (which loses precision when staff have
+ * heterogeneous rates and uneven shift lengths — Gemini review on PR #38
+ * caught the approximation in labor-efficiency.ts).
  */
 export async function getLaborCostInRange(
   locationSlug: string | undefined,
   fromIso: string,
   toIso: string,
   now: Date = new Date(),
-): Promise<{ laborGrosze: number; openShifts: number }> {
+): Promise<{ laborGrosze: number; laborHours: number; openShifts: number }> {
   const fromMs = new Date(fromIso).getTime();
   const toMs = new Date(toIso).getTime();
   const nowMs = now.getTime();
@@ -5415,6 +5432,7 @@ export async function getLaborCostInRange(
   }
 
   let laborGrosze = 0;
+  let laborSeconds = 0;
   let openShifts = 0;
 
   for (const [staffId, arr] of byStaff) {
@@ -5428,7 +5446,9 @@ export async function getLaborCostInRange(
         const startedAt = Math.max(inAt, fromMs);
         const endedAt = Math.min(t, toMs);
         if (endedAt > startedAt) {
-          laborGrosze += ((endedAt - startedAt) / 1000 / 3600) * member.hourlyRateGrosze;
+          const seconds = (endedAt - startedAt) / 1000;
+          laborSeconds += seconds;
+          laborGrosze += (seconds / 3600) * member.hourlyRateGrosze;
         }
         inAt = null;
       }
@@ -5438,12 +5458,18 @@ export async function getLaborCostInRange(
       const startedAt = Math.max(inAt, fromMs);
       const endedAt = Math.min(nowMs, toMs);
       if (endedAt > startedAt) {
-        laborGrosze += ((endedAt - startedAt) / 1000 / 3600) * member.hourlyRateGrosze;
+        const seconds = (endedAt - startedAt) / 1000;
+        laborSeconds += seconds;
+        laborGrosze += (seconds / 3600) * member.hourlyRateGrosze;
       }
     }
   }
 
-  return { laborGrosze: Math.round(laborGrosze), openShifts };
+  return {
+    laborGrosze: Math.round(laborGrosze),
+    laborHours: Math.round((laborSeconds / 3600) * 100) / 100,
+    openShifts,
+  };
 }
 
 // --- Truck operations ---

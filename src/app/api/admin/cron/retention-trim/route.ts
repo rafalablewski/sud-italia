@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { lt } from "drizzle-orm";
+import { count, lt } from "drizzle-orm";
 import { logCronRun, withCron } from "@/lib/cron";
 import { getDb } from "@/db/client";
 import { auditLog, checkoutAttempts, webhookEvents } from "@/db/schema";
@@ -39,12 +39,23 @@ export async function POST(req: NextRequest) {
 
   const result: Record<string, { deleted: number; error?: string }> = {};
 
+  // Gemini review on PR #38: don't ask the DB to ship every deleted row
+  // back over the wire just so we can `.length` the result — that's
+  // expensive at scale where a 30-day backlog of webhook events can be
+  // tens or hundreds of thousands of rows. Instead, COUNT first (cheap
+  // index scan on the timestamp index) and then DELETE without
+  // RETURNING. Two round-trips per table, bounded transfer.
+
   try {
-    const deleted = await db
-      .delete(webhookEvents)
-      .where(lt(webhookEvents.processedAt, webhookCutoff))
-      .returning({ id: webhookEvents.eventId });
-    result.webhook_events = { deleted: deleted.length };
+    const rows = await db
+      .select({ n: count() })
+      .from(webhookEvents)
+      .where(lt(webhookEvents.processedAt, webhookCutoff));
+    const deleted = Number(rows[0]?.n ?? 0);
+    if (deleted > 0) {
+      await db.delete(webhookEvents).where(lt(webhookEvents.processedAt, webhookCutoff));
+    }
+    result.webhook_events = { deleted };
   } catch (err) {
     logger.error("retention-trim webhook_events failed", { layer: "cron.retention" }, err);
     result.webhook_events = {
@@ -54,11 +65,15 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const deleted = await db
-      .delete(checkoutAttempts)
-      .where(lt(checkoutAttempts.createdAt, checkoutCutoff))
-      .returning({ id: checkoutAttempts.idempotencyHash });
-    result.checkout_attempts = { deleted: deleted.length };
+    const rows = await db
+      .select({ n: count() })
+      .from(checkoutAttempts)
+      .where(lt(checkoutAttempts.createdAt, checkoutCutoff));
+    const deleted = Number(rows[0]?.n ?? 0);
+    if (deleted > 0) {
+      await db.delete(checkoutAttempts).where(lt(checkoutAttempts.createdAt, checkoutCutoff));
+    }
+    result.checkout_attempts = { deleted };
   } catch (err) {
     logger.error("retention-trim checkout_attempts failed", { layer: "cron.retention" }, err);
     result.checkout_attempts = {
@@ -68,11 +83,15 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const deleted = await db
-      .delete(auditLog)
-      .where(lt(auditLog.occurredAt, auditCutoff))
-      .returning({ id: auditLog.id });
-    result.audit_log = { deleted: deleted.length };
+    const rows = await db
+      .select({ n: count() })
+      .from(auditLog)
+      .where(lt(auditLog.occurredAt, auditCutoff));
+    const deleted = Number(rows[0]?.n ?? 0);
+    if (deleted > 0) {
+      await db.delete(auditLog).where(lt(auditLog.occurredAt, auditCutoff));
+    }
+    result.audit_log = { deleted };
   } catch (err) {
     logger.error("retention-trim audit_log failed", { layer: "cron.retention" }, err);
     result.audit_log = {

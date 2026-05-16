@@ -46,7 +46,15 @@ async function ensureLocationsTable(): Promise<void> {
 
 type LocationRow = typeof locationsTable.$inferSelect;
 
-function rowToLocation(row: LocationRow): Location {
+/**
+ * The Location interface doesn't include `displayOrder` (it's a runtime
+ * presentation concern, not a domain field), but the admin manager UI
+ * reads it back on edit. So we widen the return type with a non-Location
+ * field rather than mutate the shared Location interface.
+ */
+export type LocationWithOrder = Location & { displayOrder: number };
+
+function rowToLocation(row: LocationRow): LocationWithOrder {
   return {
     slug: row.slug,
     name: row.name,
@@ -60,6 +68,7 @@ function rowToLocation(row: LocationRow): Location {
     isActive: row.isActive,
     currency: row.currency as "PLN",
     servesAlcohol: row.servesAlcohol,
+    displayOrder: row.displayOrder,
   };
 }
 
@@ -88,13 +97,13 @@ function locationToValues(loc: Location, displayOrder: number) {
 // TTL is short so admin edits propagate within seconds without a manual
 // cache bust on every callsite.
 const CACHE_TTL_MS = 30_000;
-let cache: { value: Location[]; expiresAt: number } | null = null;
+let cache: { value: LocationWithOrder[]; expiresAt: number } | null = null;
 
 export function invalidateLocationsCache(): void {
   cache = null;
 }
 
-async function readFromDb(): Promise<Location[] | null> {
+async function readFromDb(): Promise<LocationWithOrder[] | null> {
   const db = getDb();
   if (!db) return null;
   try {
@@ -120,7 +129,7 @@ async function readFromDb(): Promise<Location[] | null> {
  * has rows it's the source of truth; otherwise we fall back to the
  * hardcoded seed in src/data/locations.ts so a fresh deploy still works.
  */
-export async function getAllLocationsAsync(): Promise<Location[]> {
+export async function getAllLocationsAsync(): Promise<LocationWithOrder[]> {
   const now = Date.now();
   if (cache && cache.expiresAt > now) return cache.value;
   const fromDb = await readFromDb();
@@ -129,15 +138,20 @@ export async function getAllLocationsAsync(): Promise<Location[]> {
     return fromDb;
   }
   const { locations: seed } = await import("@/data/locations");
-  cache = { value: seed, expiresAt: now + CACHE_TTL_MS };
-  return seed;
+  // Seed rows don't have an explicit displayOrder — use array position
+  // so the seed presents in the same order it's declared.
+  const withOrder = seed.map((loc, i) => ({ ...loc, displayOrder: i }));
+  cache = { value: withOrder, expiresAt: now + CACHE_TTL_MS };
+  return withOrder;
 }
 
-export async function getActiveLocationsAsync(): Promise<Location[]> {
+export async function getActiveLocationsAsync(): Promise<LocationWithOrder[]> {
   return (await getAllLocationsAsync()).filter((l) => l.isActive);
 }
 
-export async function getLocationAsync(slug: string): Promise<Location | undefined> {
+export async function getLocationAsync(
+  slug: string,
+): Promise<LocationWithOrder | undefined> {
   return (await getAllLocationsAsync()).find((l) => l.slug === slug);
 }
 

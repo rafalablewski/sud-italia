@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { customerSegments } from "@/db/schema";
 import { ensureTable } from "@/db/migrate";
@@ -221,37 +221,64 @@ export async function rebuildAllCustomerSegments(
     vip: 0,
     lapsed: 0,
   };
-  let scored = 0;
+
+  // Gemini review on PR #38: one INSERT per customer is fine at a few
+  // hundred but quadratic-in-wall-time at chain scale (tens of thousands
+  // of phones × ~100ms HTTP round-trip each). Batch into chunks of 500;
+  // each batch is a single Neon round-trip with N rows in the VALUES
+  // clause and an ON CONFLICT DO UPDATE referencing the EXCLUDED row.
+  const BATCH_SIZE = 500;
+  type SegmentValues = typeof customerSegments.$inferInsert;
+  const batch: SegmentValues[] = [];
 
   for (const [, list] of byPhone) {
     const score = scoreCustomer(list, now);
     if (!score) continue;
+    batch.push({
+      phone: score.phone,
+      segment: score.segment,
+      rfmScore: score.rfmScore,
+      recencyDays: score.recencyDays,
+      frequency: score.frequency,
+      monetaryGrosze: score.monetaryGrosze,
+      lifetimeValueGrosze: score.lifetimeValueGrosze,
+      predictedCltvGrosze: score.predictedCltvGrosze,
+      factors: score.factors,
+      computedAt: now,
+    });
+    counts[score.segment]++;
+  }
+
+  let scored = 0;
+  for (let i = 0; i < batch.length; i += BATCH_SIZE) {
+    const chunk = batch.slice(i, i + BATCH_SIZE);
     try {
-      const values = {
-        phone: score.phone,
-        segment: score.segment,
-        rfmScore: score.rfmScore,
-        recencyDays: score.recencyDays,
-        frequency: score.frequency,
-        monetaryGrosze: score.monetaryGrosze,
-        lifetimeValueGrosze: score.lifetimeValueGrosze,
-        predictedCltvGrosze: score.predictedCltvGrosze,
-        factors: score.factors,
-        computedAt: now,
-      };
       await db
         .insert(customerSegments)
-        .values(values)
+        .values(chunk)
         .onConflictDoUpdate({
           target: customerSegments.phone,
-          set: values,
+          // Reference EXCLUDED.* so the same SET clause works for every
+          // row in the batch (vs. binding to a single literal values
+          // object, which would set every conflicting row to the first
+          // row's values).
+          set: {
+            segment: sql`EXCLUDED.segment`,
+            rfmScore: sql`EXCLUDED.rfm_score`,
+            recencyDays: sql`EXCLUDED.recency_days`,
+            frequency: sql`EXCLUDED.frequency`,
+            monetaryGrosze: sql`EXCLUDED.monetary_grosze`,
+            lifetimeValueGrosze: sql`EXCLUDED.lifetime_value_grosze`,
+            predictedCltvGrosze: sql`EXCLUDED.predicted_cltv_grosze`,
+            factors: sql`EXCLUDED.factors`,
+            computedAt: sql`EXCLUDED.computed_at`,
+          },
         });
-      counts[score.segment]++;
-      scored++;
+      scored += chunk.length;
     } catch (err) {
       logger.warn(
-        "rebuildAllCustomerSegments upsert failed",
-        { phone: score.phone, layer: "customer-segments" },
+        "rebuildAllCustomerSegments batch upsert failed",
+        { batchSize: chunk.length, batchStart: i, layer: "customer-segments" },
         err,
       );
     }
