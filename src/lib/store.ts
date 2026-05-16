@@ -1939,6 +1939,21 @@ export interface MenuOverride {
    * is true.
    */
   franchiseePriceMaxDeltaBps?: number;
+  /** Audit §3 channel economics — when true, the item only surfaces on
+   *  delivery carts. `null` = clear back to seed (force the seed flag
+   *  off, e.g. demote a pantry SKU back to dine-in availability). */
+  deliveryOnly?: boolean | null;
+  /** Audit §3 — per-unit packaging cost in grosze for delivery. Lets
+   *  operators tune box/napkin cost per SKU (a Family Feast box costs
+   *  more than a slice wrap). `null` = clear back to category default
+   *  in `CATEGORY_PACKAGING_COST_FALLBACK`. */
+  packagingCost?: number | null;
+  /** Audit §3 — modifier groups (Crust, Premium toppings, Spice level).
+   *  Full structure round-trips so the override CAN replace the seed
+   *  modifiers entirely. `null` = clear, falls back to whatever the
+   *  static menu data ships with. Empty array = no modifiers (overrides
+   *  the seed off). */
+  modifierGroups?: import("@/data/types").ModifierGroup[] | null;
 }
 
 export async function getMenuOverrides(): Promise<Record<string, MenuOverride>> {
@@ -1989,6 +2004,16 @@ export interface AppSettings {
   minOrderAmount: number; // in grosze
   businessPhone: string;
   businessEmail: string;
+  /** Audit §3 — per-segment free-delivery thresholds (grosze). Operators
+   *  retune these without a code push when the LTV per cohort shifts.
+   *  Falls back to the SEGMENT_FREE_DELIVERY_THRESHOLD constants in
+   *  src/lib/upsell.ts when unset. */
+  deliveryThresholds?: {
+    firstTime?: number;
+    growing?: number;
+    regular?: number;
+    vip?: number;
+  };
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -2083,11 +2108,16 @@ const DEFAULT_LOYALTY_SETTINGS: LoyaltySettings = {
     platinum: { threshold: 5000, multiplier: 3, perks: ["3x points multiplier", "Exclusive menu items", "VIP events"] },
   },
   rewards: [
-    { id: "free-drink", name: "Free Drink", pointsCost: 50, description: "Any drink from the menu", active: true },
-    { id: "10-off", name: "10 PLN Off", pointsCost: 100, description: "Discount on your next order", active: true },
+    // Audit §3 — "10 PLN Off" at 100 points (100 zł spend → 10 zł back) was
+    // strictly dominated by "Free Drink" at 50 pts → 11.90 zł value AND by
+    // "Free Dessert" at 120 pts → 18 zł value. Customers do the maths and
+    // avoid it. Removed.
+    { id: "free-drink", name: "Free Drink", pointsCost: 50, description: "Any drink — espresso, limonata, water", active: true },
+    { id: "free-side", name: "Free Garlic Bread", pointsCost: 70, description: "Pulls-apart garlic bread on the house", active: true },
     { id: "free-dessert", name: "Free Dessert", pointsCost: 120, description: "Any dessert from the menu", active: true },
-    { id: "free-pizza", name: "Free Pizza", pointsCost: 250, description: "Any pizza from the menu", active: true },
-    { id: "25-off", name: "25 PLN Off", pointsCost: 250, description: "Big discount on your next order", active: true },
+    { id: "free-pizza-personale", name: "Free Personal Pizza", pointsCost: 180, description: "8\" Margherita on the house", active: true },
+    { id: "free-pizza", name: "Free Pizza", pointsCost: 280, description: "Any standard pizza from the menu", active: true },
+    { id: "25-off", name: "25 PLN Off", pointsCost: 280, description: "Big discount on your next order", active: true },
   ],
   referral: { referrerPoints: 100, refereeDiscountGrosze: 1000, active: true },
   speedGuarantee: { maxMinutes: 15, guaranteeText: "Ready in 15 minutes or your next drink is free", active: true },
@@ -3791,6 +3821,10 @@ export interface LocationComboDeal {
   discountPercent: number;
   minItems: number;
   active: boolean;
+  /** Optional item-suffix gating (Italian Classic Deal). */
+  requiredItems?: { suffix: string; label: string }[];
+  /** Channel restriction (audit §3). Unset = both channels. */
+  channel?: "dine-in" | "delivery";
 }
 
 /**
@@ -3853,6 +3887,10 @@ export interface LocationUpsellConfig {
   preferredCoffee: string;
   preferredDessert: string;
   preferredDrink: string;
+  /** Audit §3 — fourth slot in "Complete your meal". Admin-configurable
+   *  so operators can swap garlic bread for bruschetta / arancini etc.
+   *  Optional for back-compat with pre-existing saved configs. */
+  preferredGarlicBread?: string;
   combos: LocationComboDeal[];
   /** Optional. Falls back to DEFAULT_TIME_WINDOWS in src/lib/upsell.ts when
    *  unset or empty so existing locations keep working before the admin
@@ -3875,10 +3913,15 @@ export interface LocationUpsellConfig {
 export type UpsellSettings = Record<string, LocationUpsellConfig>;
 
 /** Replaces legacy `meal-deal` combo entries with the item-locked
- *  `italian-classic` shape (Margherita + Espresso + Tiramisù). Runs on
- *  every read of the upsell config so admin UIs and customer-side
- *  rendering see the renamed combo without a one-shot migration script.
- *  Preserves the admin's `active` flag in case they had disabled it. */
+ *  `italian-classic` shape (Margherita + Limonata + Tiramisù — audit §3
+ *  moved the trigger off Espresso because it has 60% organic attach,
+ *  meaning the combo was subsidising a behaviour customers already do
+ *  for free). Also retires the dead `lunch-special` (panino + drink,
+ *  8% off, ~0% activation) — admins who had it disabled keep it dropped;
+ *  admins who had it active see it replaced with the new `pizza-side`
+ *  combo (any pizza + garlic bread, 12%). Runs on every read of the
+ *  upsell config so admin UIs and customer-side rendering see the
+ *  renamed combo without a one-shot migration script. */
 function migrateLegacyMealDeal(settings: UpsellSettings): UpsellSettings {
   let changed = false;
   const out: UpsellSettings = {};
@@ -3895,31 +3938,66 @@ function migrateLegacyMealDeal(settings: UpsellSettings): UpsellSettings {
         requiredItems?: { suffix: string; label: string }[];
       }>;
     };
-    if (!cfg?.combos?.some((c) => c.id === "meal-deal")) {
+    if (
+      !cfg?.combos?.some(
+        (c) => c.id === "meal-deal" || c.id === "lunch-special",
+      ) &&
+      !cfg?.combos?.some(
+        (c) =>
+          c.id === "italian-classic" &&
+          c.requiredItems?.some((r) => r.suffix === "drink-espresso"),
+      )
+    ) {
       out[slug] = raw;
       continue;
     }
     changed = true;
-    const migrated = cfg.combos
+    const migrated = cfg.combos!
       // De-dupe: if both meal-deal and italian-classic somehow coexist in
       // a saved config (re-import / hand edit), drop meal-deal entirely.
-      .filter((c) => !(c.id === "meal-deal" && cfg.combos!.some((x) => x.id === "italian-classic")))
+      .filter(
+        (c) =>
+          !(
+            c.id === "meal-deal" &&
+            cfg.combos!.some((x) => x.id === "italian-classic")
+          ),
+      )
+      // Retire the dead Lunch Special panini combo (audit §3).
+      .filter((c) => c.id !== "lunch-special")
       .map((c) => {
-        if (c.id !== "meal-deal") return c;
-        return {
-          id: "italian-classic",
-          name: "Italian Classic Deal",
-          description: "Margherita + Espresso + Tiramisù",
-          categories: ["pizza", "drinks", "desserts"],
-          discountPercent: c.discountPercent,
-          minItems: c.minItems,
-          active: c.active,
-          requiredItems: [
-            { suffix: "pizza-margherita", label: "Margherita" },
-            { suffix: "drink-espresso", label: "Espresso" },
-            { suffix: "dessert-tiramisu", label: "Tiramisù" },
-          ],
-        };
+        if (c.id === "meal-deal") {
+          return {
+            id: "italian-classic",
+            name: "Italian Classic Deal",
+            description: "Margherita + Limonata + Tiramisù",
+            categories: ["pizza", "drinks", "desserts"],
+            discountPercent: c.discountPercent,
+            minItems: c.minItems,
+            active: c.active,
+            requiredItems: [
+              { suffix: "pizza-margherita", label: "Margherita" },
+              { suffix: "drink-limonata", label: "Limonata" },
+              { suffix: "dessert-tiramisu", label: "Tiramisù" },
+            ],
+          };
+        }
+        // Migrate any existing italian-classic still locked on Espresso
+        // to the new Limonata trigger.
+        if (
+          c.id === "italian-classic" &&
+          c.requiredItems?.some((r) => r.suffix === "drink-espresso")
+        ) {
+          return {
+            ...c,
+            description: "Margherita + Limonata + Tiramisù",
+            requiredItems: c.requiredItems.map((r) =>
+              r.suffix === "drink-espresso"
+                ? { suffix: "drink-limonata", label: "Limonata" }
+                : r,
+            ),
+          };
+        }
+        return c;
       });
     out[slug] = { ...cfg, combos: migrated } as LocationUpsellConfig;
   }

@@ -120,6 +120,15 @@ export const PUT = withAdmin(
           seenSuffixes.add(r.suffix);
         }
       }
+      // Optional channel restriction (audit §3).
+      if (c.channel !== undefined && c.channel !== null) {
+        if (typeof c.channel !== "string" || (c.channel !== "dine-in" && c.channel !== "delivery")) {
+          return NextResponse.json(
+            { error: "Invalid combo.channel — must be 'dine-in' or 'delivery'" },
+            { status: 400 },
+          );
+        }
+      }
     }
 
     // Optional timeWindows[] (audit §2.3). Validate shape so a typo
@@ -168,7 +177,8 @@ export const PUT = withAdmin(
           { status: 400 },
         );
       }
-      const validMealPeriods = new Set(["lunch", "family"]);
+      const validMealPeriods = new Set(["lunch", "family", "lateNight"]);
+      const validChannels = new Set(["dine-in", "delivery"]);
       for (const b of config.bundles) {
         if (
           typeof b?.id !== "string" ||
@@ -300,6 +310,24 @@ export const PUT = withAdmin(
             );
           }
         }
+        // Optional channel restriction (audit §3).
+        if (b.channel !== undefined && b.channel !== null) {
+          if (typeof b.channel !== "string" || !validChannels.has(b.channel)) {
+            return NextResponse.json(
+              { error: "Invalid bundle.channel — must be 'dine-in' or 'delivery'" },
+              { status: 400 },
+            );
+          }
+        }
+        // Optional members-only flag (audit §3).
+        if (b.membersOnly !== undefined && b.membersOnly !== null) {
+          if (typeof b.membersOnly !== "boolean") {
+            return NextResponse.json(
+              { error: "Invalid bundle.membersOnly — must be a boolean" },
+              { status: 400 },
+            );
+          }
+        }
         // Optional weekday gating (Sprint 6 #9).
         if (b.activeDays !== undefined && b.activeDays !== null) {
           if (!Array.isArray(b.activeDays)) {
@@ -419,6 +447,20 @@ export const PUT = withAdmin(
         ) {
           return NextResponse.json(
             { error: "Invalid bundleRules.family — minMainItems ≥ 2; hintWithin ≥ 0" },
+            { status: 400 },
+          );
+        }
+      }
+      if (r?.lateNight) {
+        if (
+          typeof r.lateNight.startHour !== "number" ||
+          typeof r.lateNight.endHour !== "number" ||
+          r.lateNight.startHour < 0 ||
+          r.lateNight.endHour > 24 ||
+          r.lateNight.endHour <= r.lateNight.startHour
+        ) {
+          return NextResponse.json(
+            { error: "Invalid bundleRules.lateNight — startHour/endHour out of range" },
             { status: 400 },
           );
         }

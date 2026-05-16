@@ -1,49 +1,61 @@
 "use client";
 
-import { useMemo } from "react";
-import { Plus, Sparkles, X } from "lucide-react";
+import { memo, useCallback, useMemo } from "react";
+import { Plus, Sparkles } from "lucide-react";
 
 import { useCartStore } from "@/store/cart";
 import { UpsellSuggestion } from "@/lib/upsell";
 import { formatPrice } from "@/lib/utils";
-import type { MenuCategory } from "@/data/types";
+import type { MenuCategory, MenuItem } from "@/data/types";
 
 interface CartUpsellProps {
   suggestions: UpsellSuggestion[];
 }
 
 /**
- * "Complete your meal" — the cart-upsell surface from audit §2.1.
+ * "Complete your meal" — fixed four-slot panel.
  *
- * Renders up to three one-tap chips in a 3-up grid above the subtotal.
- * Suggestions arrive already margin-ranked from getCartSuggestions
- * (§2.4: espresso first, dessert next, drink third).
+ * Slots in order: Coffee → Dessert → Side (Garlic Bread) → Drink. All four
+ * are admin-configurable from /admin/crosssell → Cart pairings; defaults
+ * are Espresso, Tiramisù, Garlic Bread, Limonata.
  *
- * Each chip:
- *   - Tap the body or the + badge while idle → adds to cart, chip flips green
- *   - Tap the × badge while added → removes
- *   - Body of an added chip is non-interactive (cursor: default) so the only
- *     remove target is the explicit × — avoids the "tap-the-whole-thing-
- *     twice" ambiguity that the first iteration suffered from.
+ * Behaviour:
+ *   - Chips render even when the item is in the cart — the panel is the
+ *     shape of "complete your meal," not a context-dependent recommend.
+ *   - Tap the chip → addItem(); cart store's same-id handling increments
+ *     the existing line. The chip shows a green ×N badge with the running
+ *     quantity so the customer sees the effect without leaving the chip.
+ *   - Horizontal scroll-snap so a fifth slot wouldn't break the layout.
  *
- * No toast on add — the green flip is the feedback. The drawer-wide
- * AddToCartToast handles the menu-page seed copy; firing it again here would
- * just pull the eye up.
+ * Performance notes:
+ *   - The slider is contained within the cart drawer's px-5 padding (no
+ *     negative margins). That avoids horizontal overflow on the Sheet
+ *     panel, which previously made the entire drawer scroll sideways.
+ *   - CompleteTheMealChip is React.memo'd and accepts a stable onAdd
+ *     callback per item-id. The cart-store qty for one slot changing no
+ *     longer re-renders the other three slots — only the affected chip.
  */
 export function CartUpsell({ suggestions }: CartUpsellProps) {
   const addItem = useCartStore((s) => s.addItem);
-  const removeItem = useCartStore((s) => s.removeItem);
   const locationSlug = useCartStore((s) => s.locationSlug);
   const items = useCartStore((s) => s.items);
 
-  const itemIdsInCart = useMemo(
-    () => new Set(items.map((i) => i.menuItem.id)),
-    [items],
+  const qtyById = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const ci of items) map.set(ci.menuItem.id, ci.quantity);
+    return map;
+  }, [items]);
+
+  // Stable per-item handler keyed by id keeps React.memo on the chip honest.
+  // Without this, every render produces a fresh closure and the chip re-renders.
+  const handleAdd = useCallback(
+    (item: MenuItem) => {
+      if (locationSlug) addItem(item, locationSlug);
+    },
+    [addItem, locationSlug],
   );
 
-  // Cap at three so the grid always tiles cleanly.
-  const visible = suggestions.slice(0, 3);
-  if (visible.length === 0) return null;
+  if (suggestions.length === 0) return null;
 
   return (
     <div className="px-5 mt-3">
@@ -53,21 +65,20 @@ export function CartUpsell({ suggestions }: CartUpsellProps) {
           Complete your meal
         </p>
       </div>
-      <div className="grid grid-cols-3 gap-2">
-        {visible.map((suggestion) => {
-          const isAdded = itemIdsInCart.has(suggestion.item.id);
-          return (
+      {/* Slider contained within the px-5 padding — no negative margins.
+          touch-pan-x hints the browser to use compositor-thread panning,
+          which is meaningfully smoother on iOS Safari. */}
+      <div className="overflow-x-auto scrollbar-hide touch-pan-x">
+        <div className="flex gap-2 snap-x snap-mandatory pb-1">
+          {suggestions.map((suggestion) => (
             <CompleteTheMealChip
               key={suggestion.item.id}
               suggestion={suggestion}
-              isAdded={isAdded}
-              onAdd={() => {
-                if (locationSlug) addItem(suggestion.item, locationSlug);
-              }}
-              onRemove={() => removeItem(suggestion.item.id)}
+              qty={qtyById.get(suggestion.item.id) ?? 0}
+              onAdd={handleAdd}
             />
-          );
-        })}
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -75,78 +86,86 @@ export function CartUpsell({ suggestions }: CartUpsellProps) {
 
 interface ChipProps {
   suggestion: UpsellSuggestion;
-  isAdded: boolean;
-  onAdd: () => void;
-  onRemove: () => void;
+  qty: number;
+  onAdd: (item: MenuItem) => void;
 }
 
-function CompleteTheMealChip({ suggestion, isAdded, onAdd, onRemove }: ChipProps) {
-  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isAdded) {
-      onAdd();
-      return;
-    }
-    // Only the × badge removes. The audit-rejected pattern was making the
-    // entire chip body a remove target.
-    const target = e.target as HTMLElement;
-    if (target.closest("[data-remove-target='1']")) onRemove();
-  };
+/**
+ * Memoised so adding a Tiramisù doesn't re-render the Espresso, Garlic
+ * Bread, and Limonata chips alongside it. Each chip only re-renders when
+ * its own qty (or suggestion data) changes — meaningful on iOS where each
+ * extra render costs perceptible frames during the localStorage persist.
+ */
+const CompleteTheMealChip = memo(function CompleteTheMealChip({
+  suggestion,
+  qty,
+  onAdd,
+}: ChipProps) {
+  const inCart = qty > 0;
+  const item = suggestion.item;
+
+  // Stable click handler — the chip only re-renders when qty or suggestion
+  // change, and the handler closes over those via the memoized component
+  // body so it doesn't need its own useCallback.
+  const handleClick = () => onAdd(item);
 
   return (
-    <div
+    <button
+      type="button"
       onClick={handleClick}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          if (isAdded) onRemove();
-          else onAdd();
-        }
-      }}
-      data-added={isAdded ? "true" : undefined}
-      className={`relative rounded-xl border p-3 text-center transition-all animate-fade-in select-none ${
-        isAdded
-          ? "bg-italia-green/5 border-italia-green/30 cursor-default"
-          : "bg-italia-cream border-italia-gold/15 cursor-pointer hover:border-italia-gold/40 hover:shadow-sm hover:-translate-y-0.5 active:translate-y-0"
+      aria-label={inCart ? `Add another ${item.name}` : `Add ${item.name}`}
+      // No `transition-all` or `animate-fade-in` — both fire on every render
+      // and cost paints. Hover effects are cheap (transform only) so they
+      // stay; tactile feedback on tap is preserved by `active:translate-y-0`.
+      className={`relative shrink-0 snap-start w-[140px] rounded-xl border p-3 text-center select-none ${
+        inCart
+          ? "bg-italia-green/5 border-italia-green/40"
+          : "bg-italia-cream border-italia-gold/15 hover:border-italia-gold/40 hover:-translate-y-0.5 active:translate-y-0"
       }`}
+      style={{
+        // contain: layout isolates the chip's reflow so a qty badge appearing
+        // doesn't trigger layout of the sibling chips.
+        contain: "layout paint",
+      }}
     >
+      {/* Quantity badge — only mounts when in cart so the badge appearing
+          is the visible "added" feedback. No animation needed; the mount
+          itself is the transition. */}
+      {inCart && (
+        <span
+          className="absolute top-2 left-2 px-1.5 py-0.5 rounded-md bg-italia-green text-white text-[10px] font-bold leading-none"
+          aria-label={`${qty} in cart`}
+        >
+          ×{qty}
+        </span>
+      )}
       <span
-        data-remove-target={isAdded ? "1" : undefined}
-        onClick={(e) => {
-          if (!isAdded) return;
-          e.stopPropagation();
-          onRemove();
-        }}
-        aria-label={isAdded ? "Remove" : "Add"}
-        className={`absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-md transition-colors ${
-          isAdded
-            ? "bg-white text-italia-dark border border-gray-200 hover:bg-italia-red hover:text-white hover:border-italia-red cursor-pointer"
-            : "bg-italia-red text-white"
+        className={`absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-md ${
+          inCart ? "bg-italia-green text-white" : "bg-italia-red text-white"
         }`}
       >
-        {isAdded ? <X className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+        <Plus className="h-3.5 w-3.5" />
       </span>
 
-      <div className="text-[22px] leading-none mb-1" aria-hidden="true">
-        {categoryGlyph(suggestion.item.category)}
+      <div className="text-[22px] leading-none mb-1 mt-0.5" aria-hidden="true">
+        {categoryGlyph(item.category)}
       </div>
       <div className="text-sm font-medium text-italia-dark leading-tight truncate">
-        {suggestion.item.name}
+        {item.name}
       </div>
       <div className="text-[11px] text-italia-gray leading-tight truncate mt-0.5">
         {suggestion.reason}
       </div>
       <div
         className={`text-sm font-semibold mt-1.5 ${
-          isAdded ? "text-italia-green-dark" : "text-italia-red"
+          inCart ? "text-italia-green-dark" : "text-italia-red"
         }`}
       >
-        {formatPrice(suggestion.item.price)}
+        {formatPrice(item.price)}
       </div>
-    </div>
+    </button>
   );
-}
+});
 
 /** Cheap visual identifier per category. Real product photography is the
  *  Top-50 #2 follow-up; until that lands these emojis are at least more

@@ -1,8 +1,82 @@
 "use client";
 
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist, type StateStorage } from "zustand/middleware";
 import { CartItem, MenuItem, FulfillmentType } from "@/data/types";
+import { effectiveUnitPrice } from "@/lib/upsell";
+
+/**
+ * Debounced localStorage adapter. The previous sync-on-every-set
+ * implementation stringified the full cart (including each line's
+ * `menuItem` with `modifierGroups`, allergens, sourcing strings) on
+ * every keystroke — perceptibly laggy on iOS Safari, where localStorage
+ * writes block the main thread for 5–20ms per write. We now coalesce
+ * writes to one per 150ms; survivability across reload is unaffected
+ * (a 150ms window is shorter than any real refresh).
+ *
+ * On `beforeunload` we flush synchronously so an in-flight write isn't
+ * dropped when the user navigates away.
+ */
+function debouncedLocalStorage(delayMs = 150): StateStorage {
+  if (typeof window === "undefined") {
+    // SSR no-op shim
+    return {
+      getItem: () => null,
+      setItem: () => undefined,
+      removeItem: () => undefined,
+    };
+  }
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let pending: { key: string; value: string } | null = null;
+
+  const flush = () => {
+    if (pending) {
+      try {
+        window.localStorage.setItem(pending.key, pending.value);
+      } catch {
+        // Quota / Safari private-mode — drop silently; cart is non-essential
+        // to persist (worst case: cart resets on reload).
+      }
+      pending = null;
+    }
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+  };
+
+  window.addEventListener("beforeunload", flush);
+  // pagehide is the iOS-correct event when the page enters the back/forward
+  // cache; beforeunload alone misses some Safari paths.
+  window.addEventListener("pagehide", flush);
+
+  return {
+    getItem: (name) => {
+      try {
+        return window.localStorage.getItem(name);
+      } catch {
+        return null;
+      }
+    },
+    setItem: (name, value) => {
+      pending = { key: name, value };
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(flush, delayMs);
+    },
+    removeItem: (name) => {
+      pending = null;
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+      try {
+        window.localStorage.removeItem(name);
+      } catch {
+        // ignore
+      }
+    },
+  };
+}
 
 interface CartStore {
   items: CartItem[];
@@ -188,8 +262,10 @@ export const useCartStore = create<CartStore>()(
         if (state.appliedBundleId && state.bundlePriceGrosze > 0) {
           return state.bundlePriceGrosze;
         }
+        // Effective unit price includes any per-line modifier surcharges
+        // (audit §3 — Extra cheese +6, Sourdough crust +5, etc.).
         return state.items.reduce(
-          (sum, item) => sum + item.menuItem.price * item.quantity,
+          (sum, item) => sum + effectiveUnitPrice(item) * item.quantity,
           0
         );
       },
@@ -199,6 +275,7 @@ export const useCartStore = create<CartStore>()(
     }),
     {
       name: "sud-italia-cart",
-    }
-  )
+      storage: createJSONStorage(() => debouncedLocalStorage()),
+    },
+  ),
 );

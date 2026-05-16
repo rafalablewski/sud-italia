@@ -35,6 +35,10 @@ interface BundleLadderProps {
    *  override is applied client-side BEFORE pricing so the cart shows
    *  exactly what the server will charge. */
   configExperiment?: Experiment | null;
+  /** Cart fulfillment type — drives channel-aware bundle filtering
+   *  (audit §3). Delivery-exclusive bundles only render when this is
+   *  "delivery"; dine-in-only bundles only render otherwise. */
+  fulfillmentType?: "takeout" | "delivery";
   /** Active combo discount (grosze). When > 0 the bundle CTA shows the
    *  *incremental* savings ("save X more than your current Italian
    *  Classic 10%") so the customer doesn't feel like applying the
@@ -67,6 +71,7 @@ export function BundleLadder({
   configBundles,
   configRules,
   configExperiment = null,
+  fulfillmentType = "takeout",
   activeComboSavings = 0,
   activeComboName = null,
 }: BundleLadderProps) {
@@ -100,10 +105,12 @@ export function BundleLadder({
 
   const allBundles = useMemo(
     () => {
-      const raw = resolveBundles(configBundles ?? null);
-      return variantApply ? raw.map(variantApply) : raw;
+      const raw = resolveBundles(configBundles ?? null, new Date(), fulfillmentType);
+      const filtered = variantApply ? raw.map(variantApply) : raw;
+      // Hide member-only bundles from anonymous carts (audit §3).
+      return filtered.filter((b) => !b.membersOnly || !!customer?.phone);
     },
-    [configBundles, variantApply],
+    [configBundles, variantApply, fulfillmentType, customer?.phone],
   );
 
   const rules = useMemo(

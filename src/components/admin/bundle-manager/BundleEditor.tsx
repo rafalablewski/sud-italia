@@ -430,6 +430,45 @@ function SchedulePanel({ bundle, onChange }: { bundle: BundleConfig; onChange: (
         </Field>
       </div>
 
+      <div className="bm-grid bm-grid--2">
+        <Field
+          label="Channel"
+          hint="Dine-in surfaces only on truck/takeout carts. Delivery surfaces only on delivery carts. Both = no restriction."
+        >
+          <select
+            className="bm-input"
+            value={bundle.channel ?? ""}
+            onChange={(e) =>
+              onChange({
+                channel:
+                  e.target.value === ""
+                    ? undefined
+                    : (e.target.value as "dine-in" | "delivery"),
+              })
+            }
+          >
+            <option value="">Both channels</option>
+            <option value="dine-in">Dine-in only</option>
+            <option value="delivery">Delivery only</option>
+          </select>
+        </Field>
+        <Field
+          label="Members only"
+          hint="Hide from anonymous carts. Drives phone collection as a conversion lever — customer must have a phone on file."
+        >
+          <label className="bm-toggle">
+            <input
+              type="checkbox"
+              checked={!!bundle.membersOnly}
+              onChange={(e) =>
+                onChange({ membersOnly: e.target.checked || undefined })
+              }
+            />
+            <span>{bundle.membersOnly ? "Members only" : "Anyone"}</span>
+          </label>
+        </Field>
+      </div>
+
       <div className="bm-flags">
         <p className="bm-flags__title">Ladder role</p>
         <p className="bm-flags__hint">

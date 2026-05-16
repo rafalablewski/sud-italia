@@ -56,6 +56,16 @@ interface BundleBase {
    *  = always available. Drives merchandising on weekly cadences
    *  (Friday Family Feast push, Wednesday Lunch+ default, etc.). */
   activeDays?: string[];
+  /** Channel restriction (audit §3 — dine-in vs delivery economics).
+   *  Unset = both channels; "dine-in" = truck-only experience offer;
+   *  "delivery" = delivery-only pantry/heavy-AOV play. */
+  channel?: "dine-in" | "delivery";
+  /** Member-exclusive bundle pricing (audit §3). When true, the bundle
+   *  only surfaces to customers with a non-empty phone on file — i.e.
+   *  customers who have given us a phone number for loyalty. Drives
+   *  phone-collection as a measurable conversion rather than a passive
+   *  ask. */
+  membersOnly?: boolean;
 }
 
 export interface BundleFixedTier extends BundleBase {
@@ -107,33 +117,51 @@ export function isDynamicBundle(b: BundleTier): b is BundleDynamicTier {
  * single list works for both Kraków and Warszawa without referencing
  * per-truck item IDs. Admin can override via LocationUpsellConfig.bundles.
  *
- * Lunch ladder (fixed-price, solo eating):  26 / 32* / 46* / 58
- * Family ladder (dynamic, scales on mains): 20% / 28%* / 24%* discount
- *   * = anchor (best % savings)
+ * Restructured per audit §3 (May 2026):
+ *   1) Parallel lunch ladders — pizza-led AND pasta-led. Previous lunch
+ *      ladder was pasta-only on a Neapolitan-pizza brand.
+ *   2) Family minimum raised to 3 mains (was 2 — was cannibalising
+ *      couple orders).
+ *   3) Family Feast add-ons discount capped at 30% (was 40% — pushed
+ *      blended discount past 25% margin floor).
+ *   4) Feast Deluxe rebuilt as a true decoy (6+ mains gate, higher
+ *      discount only unlocks at scale — anchor dominates at lower counts).
+ *   5) Pizza Family Pack — fixed-price simple bundle for couple/quad
+ *      orders (3 pizzas + 1L drink at 99 / 119 PLN). The simplest possible
+ *      bundle, marketed first.
+ *   6) Late-night expanded into a real ladder — slice tier, classic
+ *      tier, party tier.
+ *   7) Hungry rebuilt as a true decoy — savings % dropped below Lunch+
+ *      so dominance theory works in the right direction.
  */
 export const DEFAULT_BUNDLES: BundleTier[] = [
-  // ---- Lunch (audit §3.2, lunch table) ---------------------------------
+  // ---- Lunch (audit §3, restructured): parallel pasta + pizza ladders.
+  // Pasta ladder kept the original line-up with the decoy fixed.
   {
     id: "lunch-solo",
     tier: "Solo",
-    name: "Just the pasta",
-    description: "1 pasta of your choice",
-    priceGrosze: 2600,
-    refPriceGrosze: 2600,
-    composition: [{ kind: "category", category: "pasta", quantity: 1 }],
+    name: "Pasta + water",
+    description: "1 pasta + 1 mineral water. Anchored in the deal.",
+    priceGrosze: 2790,
+    refPriceGrosze: 2980,
+    composition: [
+      { kind: "category", category: "pasta", quantity: 1 },
+      { kind: "item", itemIdSuffix: "drink-water", quantity: 1 },
+    ],
     mealPeriod: "lunch",
     active: true,
   },
   {
     id: "lunch-classic",
     tier: "Lunch",
-    name: "Pasta + drink",
-    description: "1 pasta + 1 drink. The classic.",
-    priceGrosze: 3200,
-    refPriceGrosze: 3800,
+    name: "Pasta + drink + Panna Cotta",
+    description: "1 pasta + 1 drink + Panna Cotta — the value tier.",
+    priceGrosze: 3890,
+    refPriceGrosze: 4685,
     composition: [
       { kind: "category", category: "pasta", quantity: 1 },
       { kind: "category", category: "drinks", quantity: 1 },
+      { kind: "item", itemIdSuffix: "dessert-panna-cotta", quantity: 1 },
     ],
     mealPeriod: "lunch",
     isDefault: true,
@@ -142,10 +170,10 @@ export const DEFAULT_BUNDLES: BundleTier[] = [
   {
     id: "lunch-plus",
     tier: "Lunch+",
-    name: "Pasta + drink + tiramisù",
-    description: "A meal you'll remember.",
-    priceGrosze: 4600,
-    refPriceGrosze: 5600,
+    name: "Pasta + drink + Tiramisù",
+    description: "Just +6 zł more — the premium dessert.",
+    priceGrosze: 4490,
+    refPriceGrosze: 5485,
     composition: [
       { kind: "category", category: "pasta", quantity: 1 },
       { kind: "category", category: "drinks", quantity: 1 },
@@ -157,35 +185,102 @@ export const DEFAULT_BUNDLES: BundleTier[] = [
   },
   {
     id: "lunch-hungry",
-    tier: "Hungry",
-    name: "+ bruschetta",
-    description: "Pasta, drink, dessert & bruschetta. For a real one.",
-    priceGrosze: 5800,
-    refPriceGrosze: 7600,
+    tier: "Big Lunch",
+    name: "+ bruschetta + espresso",
+    description: "For a real one. Five lines on the bill.",
+    // Hungry priced so its discount % is LOWER than Lunch+ — true decoy.
+    // Lunch+ saves ~18%, Big Lunch saves ~13% on a higher absolute base.
+    // Customer comparison: Big Lunch costs more AND saves less per zloty.
+    priceGrosze: 6890,
+    refPriceGrosze: 7875,
     composition: [
       { kind: "category", category: "pasta", quantity: 1 },
       { kind: "category", category: "drinks", quantity: 1 },
       { kind: "item", itemIdSuffix: "dessert-tiramisu", quantity: 1 },
       { kind: "item", itemIdSuffix: "anti-bruschetta", quantity: 1 },
+      { kind: "item", itemIdSuffix: "drink-espresso", quantity: 1 },
     ],
     mealPeriod: "lunch",
     isDecoy: true,
     active: true,
   },
 
+  // Pizza-led lunch ladder — NEW (audit §3). Pizza is the hero product,
+  // pasta was the only lunch option. Margherita Personale (8") is the
+  // entry size so lunch-lead prices stay below the standard 12".
+  {
+    id: "lunch-pizza-solo",
+    tier: "Pizza Solo",
+    name: "Personal pizza + water",
+    description: "8\" Margherita + mineral water. Quick lunch.",
+    priceGrosze: 2290,
+    refPriceGrosze: 2480,
+    composition: [
+      { kind: "item", itemIdSuffix: "pizza-personale", quantity: 1 },
+      { kind: "item", itemIdSuffix: "drink-water", quantity: 1 },
+    ],
+    mealPeriod: "lunch",
+    active: true,
+  },
+  {
+    id: "lunch-pizza-classic",
+    tier: "Pizza Lunch",
+    name: "Pizza + drink + Panna Cotta",
+    description: "Any pizza + 1 drink + Panna Cotta.",
+    priceGrosze: 3990,
+    refPriceGrosze: 4985,
+    composition: [
+      { kind: "category", category: "pizza", quantity: 1 },
+      { kind: "category", category: "drinks", quantity: 1 },
+      { kind: "item", itemIdSuffix: "dessert-panna-cotta", quantity: 1 },
+    ],
+    mealPeriod: "lunch",
+    isDefault: true,
+    active: true,
+  },
+  {
+    id: "lunch-pizza-plus",
+    tier: "Pizza Lunch+",
+    name: "Pizza + drink + Tiramisù",
+    description: "Just +5 zł more — the premium dessert.",
+    priceGrosze: 4490,
+    refPriceGrosze: 5485,
+    composition: [
+      { kind: "category", category: "pizza", quantity: 1 },
+      { kind: "category", category: "drinks", quantity: 1 },
+      { kind: "item", itemIdSuffix: "dessert-tiramisu", quantity: 1 },
+    ],
+    mealPeriod: "lunch",
+    isAnchor: true,
+    active: true,
+  },
+
+  // Pizza Family Pack — NEW (audit §3). Fixed-price 3-pizza family bundle
+  // that DOMINATES the dynamic family ladder for the simple "couple of
+  // friends" use case. Composition is opinionated: 3 Margheritas + 1L
+  // Limonata. Customer can swap to other pizzas in the composer but
+  // pricing locks here. refPrice = 3 × Margherita Kraków (27.90) + Limonata
+  // 1L Kraków (19.90) = 103.60 — matches actual ala carte at the lower-
+  // priced location so the "Save" claim is honest for both trucks.
+  {
+    id: "family-pizza-pack",
+    tier: "Pizza Pack",
+    name: "3 pizzas + 1L drink",
+    description: "Three pizzas + a 1L bottle. Set price, no maths.",
+    priceGrosze: 9900,
+    refPriceGrosze: 10360,
+    composition: [
+      { kind: "item", itemIdSuffix: "pizza-margherita", quantity: 3 },
+      { kind: "item", itemIdSuffix: "drink-limonata-1l", quantity: 1 },
+    ],
+    mealPeriod: "family",
+    isDefault: true,
+    active: true,
+  },
+
   // ---- Family ladder (dynamic — mains scale with cart) -----------------
-  // Discount calibration follows the §3.2 ladder psychology:
-  //   Family       — entry: 20% blend (10% mains / 30% add-ons protects
-  //                  pizza margin while making drinks feel almost free)
-  //   Family Feast — anchor + default-pushed: 28% blend (15% mains / 40%
-  //                  add-ons). Highest absolute savings AND highest %
-  //                  among any tier the customer would rationally pick.
-  //   Feast Deluxe — decoy at 20% blend (12% mains / 32% add-ons). Lower
-  //                  % AND only marginally larger absolute savings despite
-  //                  costing meaningfully more → Family Feast wins by
-  //                  Ariely's dominance heuristic.
-  // maxMains caps every dynamic tier so a 50-pizza cart can't abuse the
-  // discount (real ops risk, called out in the §3.2 red-team audit).
+  // Audit §3 update — minimum raised from 2 → 3 mains. Discount caps
+  // tightened to keep blended margin ≥ 50%.
   {
     id: "family",
     tier: "Family",
@@ -193,11 +288,11 @@ export const DEFAULT_BUNDLES: BundleTier[] = [
     description: "Your mains + bruschetta + 2 drinks",
     pricingMode: "dynamic",
     mainCategories: ["pizza", "pasta"],
-    minMains: 2,
+    minMains: 3,
     maxMains: 6,
-    discountPercent: 20,
-    mainsDiscountPercent: 10,
-    addOnsDiscountPercent: 30,
+    discountPercent: 18,
+    mainsDiscountPercent: 8,
+    addOnsDiscountPercent: 28,
     composition: [
       { kind: "category", category: "antipasti", quantity: 1 },
       { kind: "category", category: "drinks", quantity: 2 },
@@ -212,18 +307,17 @@ export const DEFAULT_BUNDLES: BundleTier[] = [
     description: "Your mains + 2 antipasti + 4 drinks + tiramisù",
     pricingMode: "dynamic",
     mainCategories: ["pizza", "pasta"],
-    minMains: 2,
+    minMains: 3,
     maxMains: 8,
-    discountPercent: 28,
-    mainsDiscountPercent: 15,
-    addOnsDiscountPercent: 40,
+    discountPercent: 22,
+    mainsDiscountPercent: 12,
+    addOnsDiscountPercent: 30,
     composition: [
       { kind: "category", category: "antipasti", quantity: 2 },
       { kind: "category", category: "drinks", quantity: 4 },
       { kind: "item", itemIdSuffix: "dessert-tiramisu", quantity: 1 },
     ],
     mealPeriod: "family",
-    isDefault: true,
     isAnchor: true,
     active: true,
   },
@@ -234,11 +328,15 @@ export const DEFAULT_BUNDLES: BundleTier[] = [
     description: "Your mains + 2 antipasti + 6 drinks + 2 desserts",
     pricingMode: "dynamic",
     mainCategories: ["pizza", "pasta"],
-    minMains: 3,
+    // True decoy: gate at 6 mains so it only unlocks for very large parties.
+    // At low counts (3–5 mains) the customer sees only Family + Feast, so
+    // Family Feast wins on dominance. At 6+ Feast Deluxe becomes the
+    // genuine best deal (25% blended), rewarding scale.
+    minMains: 6,
     maxMains: 12,
-    discountPercent: 20,
-    mainsDiscountPercent: 12,
-    addOnsDiscountPercent: 32,
+    discountPercent: 25,
+    mainsDiscountPercent: 15,
+    addOnsDiscountPercent: 38,
     composition: [
       { kind: "category", category: "antipasti", quantity: 2 },
       { kind: "category", category: "drinks", quantity: 6 },
@@ -249,11 +347,23 @@ export const DEFAULT_BUNDLES: BundleTier[] = [
     active: true,
   },
 
-  // ---- Late-night (audit §2.3 + §7B) -----------------------------------
-  // After 21:00 decision energy is lower and impulse is higher; a single
-  // tightly-scoped bundle outperforms the full family ladder. Gates on
-  // hour rather than minMains so a 1-pizza late-night cart still
-  // qualifies (the whole point — solo-eater convenience).
+  // ---- Late-night (audit §3 — expanded to a real ladder) ---------------
+  // Slice tier captures the 1AM post-club demographic. Late Party tier
+  // captures the group-of-4 segment.
+  {
+    id: "late-slice",
+    tier: "Slice",
+    name: "Slice + drink",
+    description: "1 slice reheated to order + 1 drink.",
+    priceGrosze: 1690,
+    refPriceGrosze: 1780,
+    composition: [
+      { kind: "item", itemIdSuffix: "pizza-slice", quantity: 1 },
+      { kind: "category", category: "drinks", quantity: 1 },
+    ],
+    mealPeriod: "lateNight",
+    active: true,
+  },
   {
     id: "late-night",
     tier: "Late dinner",
@@ -263,15 +373,60 @@ export const DEFAULT_BUNDLES: BundleTier[] = [
     mainCategories: ["pizza"],
     minMains: 1,
     maxMains: 3,
-    discountPercent: 22,
-    mainsDiscountPercent: 12,
-    addOnsDiscountPercent: 35,
+    discountPercent: 20,
+    mainsDiscountPercent: 10,
+    addOnsDiscountPercent: 32,
     composition: [
       { kind: "category", category: "drinks", quantity: 1 },
       { kind: "item", itemIdSuffix: "dessert-tiramisu", quantity: 1 },
     ],
     mealPeriod: "lateNight",
     isDefault: true,
+    active: true,
+  },
+  {
+    id: "late-party",
+    tier: "Late Party",
+    name: "2 pizzas + 4 drinks + 2 desserts",
+    description: "Pizza party for the group — late-night exclusive.",
+    pricingMode: "dynamic",
+    mainCategories: ["pizza"],
+    minMains: 2,
+    maxMains: 4,
+    discountPercent: 28,
+    mainsDiscountPercent: 15,
+    addOnsDiscountPercent: 38,
+    composition: [
+      { kind: "category", category: "drinks", quantity: 4 },
+      { kind: "category", category: "desserts", quantity: 2 },
+    ],
+    mealPeriod: "lateNight",
+    isAnchor: true,
+    active: true,
+  },
+
+  // ---- Delivery-exclusive bundle (audit §3 — channel economics) -------
+  // "Pantry Pack" — uses delivery-only SKUs the customer can't carry
+  // from a truck. High AOV, high margin, unique to delivery channel.
+  {
+    id: "delivery-pantry",
+    tier: "Pantry Pack",
+    name: "Pizza + pantry trio",
+    description: "Any pizza + frozen tiramisù + Peroni 4-pack + olive oil.",
+    pricingMode: "dynamic",
+    mainCategories: ["pizza"],
+    minMains: 1,
+    maxMains: 3,
+    discountPercent: 15,
+    mainsDiscountPercent: 8,
+    addOnsDiscountPercent: 22,
+    composition: [
+      { kind: "item", itemIdSuffix: "pantry-tiramisu-frozen", quantity: 1 },
+      { kind: "item", itemIdSuffix: "pantry-beer-4pack", quantity: 1 },
+      { kind: "item", itemIdSuffix: "pantry-olive-oil", quantity: 1 },
+    ],
+    mealPeriod: "family",
+    channel: "delivery",
     active: true,
   },
 ];
@@ -297,7 +452,9 @@ export interface BundleAvailabilityRules {
 
 export const DEFAULT_BUNDLE_RULES: BundleAvailabilityRules = {
   lunch: { startHour: 11, endHour: 14 },
-  family: { minMainItems: 2, hintWithin: 1 },
+  // Family minimum raised 2 → 3 (audit §3 — 2-main carts were couples,
+  // not families; bundle add-ons cannibalised AOV).
+  family: { minMainItems: 3, hintWithin: 1 },
   lateNight: { startHour: 21, endHour: 24 },
 };
 
@@ -326,15 +483,22 @@ export function countMainItems(cartItems: CartItem[]): number {
 
 /** Like countMainItems but with the bundle's own mainCategories — accepts
  *  any dynamic-bundle category set so an admin can configure pizza-only
- *  or pasta-only bundles down the road. Falls back to pizza+pasta. */
+ *  or pasta-only bundles down the road. Falls back to pizza+pasta.
+ *
+ *  Anchor SKUs (menuRole="anchor", Tartufata / Pizzaiolo) and delivery-
+ *  only pantry items are excluded — they don't fold into bundle counts.
+ *  A customer with 3 Tartufatas at 80 PLN each shouldn't trigger Family
+ *  Feast at a 22% discount on their anchor-pizza order. */
 function countCartInCategories(
   cartItems: CartItem[],
   categories: MenuCategory[],
 ): number {
   const set = new Set(categories);
   return cartItems.reduce((sum, ci) => {
-    if (set.has(ci.menuItem.category)) return sum + ci.quantity;
-    return sum;
+    if (!set.has(ci.menuItem.category)) return sum;
+    if (ci.menuItem.menuRole === "anchor") return sum;
+    if (ci.menuItem.deliveryOnly) return sum;
+    return sum + ci.quantity;
   }, 0);
 }
 
@@ -432,15 +596,33 @@ export function isBundleActiveNow(bundle: BundleTier, now: Date = new Date()): b
 
 /** Resolve admin-configured + default bundles for a location. Admin entries
  *  win when present so operators can A/B specific tiers without losing the
- *  rest of the ladder. */
+ *  rest of the ladder. Channel-filter applied when fulfillmentType supplied
+ *  so delivery bundles only render on delivery carts. */
 export function resolveBundles(
   configBundles?: BundleTier[] | null,
   now: Date = new Date(),
+  fulfillmentType?: "takeout" | "delivery" | null,
 ): BundleTier[] {
-  if (configBundles && configBundles.length > 0) {
-    return configBundles.filter((b) => isBundleActiveNow(b, now));
-  }
-  return DEFAULT_BUNDLES.filter((b) => isBundleActiveNow(b, now));
+  const source = configBundles && configBundles.length > 0 ? configBundles : DEFAULT_BUNDLES;
+  return source
+    .filter((b) => isBundleActiveNow(b, now))
+    .filter((b) => {
+      if (!b.channel) return true;
+      if (!fulfillmentType) return true; // Pre-checkout — show all.
+      if (b.channel === "delivery") return fulfillmentType === "delivery";
+      return fulfillmentType !== "delivery";
+    });
+}
+
+/** Returns true when this bundle is a member-only offer the supplied
+ *  customer can see. Members-only bundles require a non-empty phone
+ *  signal — audit §3, converts phone-collection into an active lever. */
+export function bundleVisibleToCustomer(
+  bundle: BundleTier,
+  customerPhone: string | null | undefined,
+): boolean {
+  if (!bundle.membersOnly) return true;
+  return !!customerPhone && customerPhone.length > 0;
 }
 
 export interface ResolvedBundleSlot {
@@ -455,6 +637,12 @@ export interface ResolvedBundleSlot {
  * fulfilled here — usually means the menu doesn't carry the antipasto/
  * dessert it requires). The cart UI can then hide the tier rather than
  * surface a broken offer.
+ *
+ * Anchor items (menuRole="anchor", e.g. Tartufata Reale, Pizza del
+ * Pizzaiolo) AND delivery-only pantry items are excluded from category
+ * slots — they exist to range-extend perception or capture delivery AOV,
+ * not to fold into discounted bundles. Item-suffix slots ignore both
+ * filters because they explicitly opt-in to a specific SKU.
  */
 export function resolveBundleSlots(
   bundle: BundleTier,
@@ -468,7 +656,11 @@ export function resolveBundleSlots(
             (m) => m.available && m.id.endsWith(slot.itemIdSuffix),
           )
         : menuItems.filter(
-            (m) => m.available && m.category === slot.category,
+            (m) =>
+              m.available &&
+              m.category === slot.category &&
+              m.menuRole !== "anchor" &&
+              !m.deliveryOnly,
           )
     ).slice().sort((a, b) => a.price - b.price);
     if (candidates.length === 0) return null;
@@ -561,9 +753,16 @@ export function computeBundlePrice(
   if (mainsCount < bundle.minMains) return null;
   if (bundle.maxMains && mainsCount > bundle.maxMains) return null;
 
-  // Mains: every cart line in mainCategories carries over at à la carte.
+  // Mains: every cart line in mainCategories carries over at à la carte —
+  // EXCLUDING anchor SKUs and delivery-only pantry items so the bundle
+  // doesn't discount items that exist to range-extend perception.
   const mainsSubtotal = cartItems
-    .filter((ci) => bundle.mainCategories.includes(ci.menuItem.category))
+    .filter(
+      (ci) =>
+        bundle.mainCategories.includes(ci.menuItem.category) &&
+        ci.menuItem.menuRole !== "anchor" &&
+        !ci.menuItem.deliveryOnly,
+    )
     .reduce((s, ci) => s + ci.menuItem.price * ci.quantity, 0);
 
   // Add-ons: resolve which actual items will fill each slot using the

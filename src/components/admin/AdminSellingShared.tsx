@@ -33,6 +33,9 @@ export interface ComboDealConfig {
    *  an editor yet, but the type is here so the field round-trips through
    *  saves rather than being stripped by the spread in updateCombo. */
   requiredItems?: { suffix: string; label: string }[];
+  /** Channel restriction (audit §3). Unset = both channels; "dine-in"
+   *  = truck only; "delivery" = delivery only. */
+  channel?: "dine-in" | "delivery";
 }
 
 /** Mirrors LocationTimeWindow from src/lib/store.ts. Repeated here as a local
@@ -101,6 +104,12 @@ export interface BundleConfig {
    *  unset, the bundle is available all week. When set, the bundle is
    *  only surfaced when the local weekday matches one of these. */
   activeDays?: string[];
+  /** Channel restriction (audit §3). Unset = both channels; "dine-in"
+   *  = truck only; "delivery" = delivery only. */
+  channel?: "dine-in" | "delivery";
+  /** Member-exclusive pricing (audit §3 — drives phone collection as
+   *  active conversion lever). When true, hidden from anonymous carts. */
+  membersOnly?: boolean;
 }
 
 /** Experiment shape (Sprint 6 #1). Mirrors src/lib/experiments.ts at the
@@ -133,6 +142,8 @@ export interface LocationConfig {
   preferredCoffee: string;
   preferredDessert: string;
   preferredDrink: string;
+  /** Audit §3 — fourth "Complete your meal" slot (Garlic Bread by default). */
+  preferredGarlicBread?: string;
   combos: ComboDealConfig[];
   timeWindows?: TimeWindowConfig[];
   bundleRules?: BundleRulesConfig;
@@ -178,7 +189,9 @@ export const DEFAULT_COMBOS: ComboDealConfig[] = DEFAULT_COMBO_DEALS.map((c) => 
 
 export const DEFAULT_BUNDLE_RULES: BundleRulesConfig = {
   lunch: { startHour: 11, endHour: 14 },
-  family: { minMainItems: 5, hintWithin: 2 },
+  // Audit §3 — family minimum 3 (was 2/5; 2 cannibalised couple orders,
+  // 5 admin default was unreachable). New default aligns with runtime.
+  family: { minMainItems: 3, hintWithin: 1 },
 };
 
 // Re-export the canonical defaults from src/lib/bundles.ts. BundleTier is
@@ -195,6 +208,7 @@ export function getDefaultConfig(slug: string): LocationConfig {
       staffPicks: ["krk-pizza-quattro-formaggi", "krk-anti-burrata", "krk-pasta-pesto"],
       preferredCoffee: "krk-drink-espresso",
       preferredDessert: "krk-dessert-tiramisu",
+      preferredGarlicBread: "krk-anti-garlic-bread",
       preferredDrink: "krk-drink-limonata",
       combos: DEFAULT_COMBOS.map((c) => ({ ...c })),
     };
@@ -204,6 +218,7 @@ export function getDefaultConfig(slug: string): LocationConfig {
     staffPicks: ["waw-pizza-napoli", "waw-anti-burrata", "waw-pasta-cacio-pepe"],
     preferredCoffee: "waw-drink-espresso",
     preferredDessert: "waw-dessert-tiramisu",
+    preferredGarlicBread: "waw-anti-garlic-bread",
     preferredDrink: "waw-drink-limonata",
     combos: DEFAULT_COMBOS.map((c) => ({ ...c })),
   };
@@ -553,6 +568,25 @@ export function ComboEditor({
                   className="glass-input text-sm w-20"
                 />
               </div>
+              <div>
+                <label className="text-[10px] text-slate-400 block mb-1">Channel</label>
+                <select
+                  value={combo.channel ?? ""}
+                  onChange={(e) =>
+                    updateCombo(i, {
+                      channel:
+                        e.target.value === ""
+                          ? undefined
+                          : (e.target.value as "dine-in" | "delivery"),
+                    })
+                  }
+                  className="glass-input text-sm"
+                >
+                  <option value="">Both channels</option>
+                  <option value="dine-in">Dine-in only</option>
+                  <option value="delivery">Delivery only</option>
+                </select>
+              </div>
             </div>
 
             <div>
@@ -599,7 +633,7 @@ export function ComboEditor({
 }
 
 /** Editor for ComboDealConfig.requiredItems — the item-suffix gating that
- *  drives the Italian Classic Deal pattern (Margherita + Espresso + Tiramisù).
+ *  drives the Italian Classic Deal pattern (Margherita + Limonata + Tiramisù).
  *  Stripping everything up to the first '-' yields a suffix that matches the
  *  same item across all locations (krk- and waw- prefixes both resolve via
  *  endsWith). Passing undefined when the list empties out keeps the admin
@@ -654,7 +688,7 @@ function RequiredItemsEditor({
       {list.length === 0 ? (
         <p className="text-[11px] text-slate-500 mb-2">
           Generic combo: any item in the selected categories qualifies. Add a specific item below to lock the deal
-          to particular menu items (e.g. Italian Classic = Margherita + Espresso + Tiramisù).
+          to particular menu items (e.g. Italian Classic = Margherita + Limonata + Tiramisù).
         </p>
       ) : (
         <div className="space-y-1.5 mb-2">

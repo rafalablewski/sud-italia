@@ -1,17 +1,20 @@
 "use client";
 
-import { COMBO_DEALS, getActiveComboDeals } from "@/lib/upsell";
+import { getActiveComboDeals } from "@/lib/upsell";
 import { CartItem, MENU_CATEGORY_LABELS } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
-import { Gift, ChevronRight } from "lucide-react";
+import { Gift } from "lucide-react";
 
 interface ComboDealBannerProps {
   cartItems: CartItem[];
+  /** Cart fulfillment type — drives channel-aware combo filtering
+   *  (audit §3 — channel economics). Optional so legacy callers still work. */
+  fulfillmentType?: "takeout" | "delivery";
 }
 
-export function ComboDealBanner({ cartItems }: ComboDealBannerProps) {
+export function ComboDealBanner({ cartItems, fulfillmentType }: ComboDealBannerProps) {
   const { activeDeal, savings, missingCategories, missingItems, missingQuantity, isComplete, progress } =
-    getActiveComboDeals(cartItems);
+    getActiveComboDeals(cartItems, null, fulfillmentType);
 
   if (!activeDeal) return null;
 

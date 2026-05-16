@@ -164,7 +164,12 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
 
   // Apply combo deal discount to actual total — disabled while a bundle
   // is locked (the bundle's own savings replace the percentage discount).
-  const comboResult = useMemo(() => getActiveComboDeals(items, upsellConfig), [items, upsellConfig]);
+  // Channel-aware: dine-in carts won't see delivery-only combos and vice
+  // versa (audit §3 — channel economics).
+  const comboResult = useMemo(
+    () => getActiveComboDeals(items, upsellConfig, fulfillmentType),
+    [items, upsellConfig, fulfillmentType],
+  );
   const comboDiscount =
     isBundleActive
       ? 0
@@ -185,7 +190,35 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
         tier: calculateTier(loyaltyCustomer.points),
       }
     : null;
-  const deliveryThreshold = getDeliveryThresholdForCustomer(deliverySegment);
+  // Admin-tunable per-segment thresholds (audit §3) — fetched from the
+  // public settings endpoint so the bar reflects whatever the operator
+  // last saved in /admin/settings. Falls back to defaults when unset or
+  // when the fetch hasn't returned yet.
+  const [deliveryThresholdsOverride, setDeliveryThresholdsOverride] = useState<{
+    firstTime?: number;
+    growing?: number;
+    regular?: number;
+    vip?: number;
+  } | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    fetch("/api/settings/public", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled || !data) return;
+        const t = data.deliveryThresholds;
+        if (t && typeof t === "object") setDeliveryThresholdsOverride(t);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
+  const deliveryThreshold = getDeliveryThresholdForCustomer(
+    deliverySegment,
+    deliveryThresholdsOverride,
+  );
   const isDeliveryPersonalised =
     !!deliverySegment && getCustomerSegment(deliverySegment) !== "regular";
 
@@ -481,6 +514,7 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
         configExperiment={
           (upsellConfig as { experiment?: import("@/lib/experiments").Experiment | null } | null)?.experiment ?? null
         }
+        fulfillmentType={fulfillmentType}
         activeComboSavings={comboResult.isComplete ? comboResult.savings : 0}
         activeComboName={comboResult.isComplete ? comboResult.activeDeal?.name ?? null : null}
       />
@@ -495,7 +529,7 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
         (upsellConfig as { bundles?: BundleTier[] } | null)?.bundles ?? null,
         (upsellConfig as { bundleRules?: import("@/lib/bundles").BundleAvailabilityRules } | null)?.bundleRules ?? null,
         new Date().getHours(),
-      ) && <ComboDealBanner cartItems={items} />}
+      ) && <ComboDealBanner cartItems={items} fulfillmentType={fulfillmentType} />}
 
       {/* Cross-sell suggestions */}
       <CartUpsell suggestions={suggestions} />

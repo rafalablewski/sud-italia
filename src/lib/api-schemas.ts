@@ -282,6 +282,23 @@ export const customerNoteCreateSchema = z.object({
 // `isoDate` is the shared YYYY-MM-DD schema defined near the top of this file.
 const menuRoleEnum = z.enum(["hero", "profit-driver", "anchor", "lto"]);
 
+// Audit §3 — modifier groups (Crust, Premium toppings, etc.). Round-trip
+// through MenuOverride.modifierGroups. `null` clears back to seed.
+const modifierOptionSchema = z.object({
+  id: z.string().min(1).max(60),
+  label: z.string().min(1).max(80),
+  priceDelta: grosze.max(20_000),
+  costDelta: grosze.max(20_000).optional(),
+  flagOnKds: z.boolean().optional(),
+});
+const modifierGroupSchema = z.object({
+  id: z.string().min(1).max(60),
+  label: z.string().min(1).max(80),
+  minSelections: z.number().int().min(0).max(10).optional(),
+  maxSelections: z.number().int().min(1).max(10).optional(),
+  options: z.array(modifierOptionSchema).min(1).max(20),
+});
+
 const menuOverrideEditSchema = z.object({
   price: grosze.max(100_000).optional(),
   cost: grosze.max(100_000).optional(),
@@ -291,6 +308,10 @@ const menuOverrideEditSchema = z.object({
   menuRole: menuRoleEnum.nullable().optional(),
   isLimited: z.boolean().nullable().optional(),
   limitedUntil: isoDate.nullable().optional(),
+  // Audit §3 — channel economics + packaging cost + per-item modifiers.
+  deliveryOnly: z.boolean().nullable().optional(),
+  packagingCost: grosze.max(5_000).nullable().optional(),
+  modifierGroups: z.array(modifierGroupSchema).max(8).nullable().optional(),
 });
 
 /**
@@ -309,6 +330,9 @@ export const menuOverridePutSchema = z
     menuRole: menuRoleEnum.nullable().optional(),
     isLimited: z.boolean().nullable().optional(),
     limitedUntil: isoDate.nullable().optional(),
+    deliveryOnly: z.boolean().nullable().optional(),
+    packagingCost: grosze.max(5_000).nullable().optional(),
+    modifierGroups: z.array(modifierGroupSchema).max(8).nullable().optional(),
   })
   .refine((data) => !!data.id || !!data.items, {
     message: "Provide either `id` for single override or `items` map for bulk",

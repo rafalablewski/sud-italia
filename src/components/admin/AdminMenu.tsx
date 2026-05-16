@@ -16,7 +16,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
-import { MENU_CATEGORY_LABELS, type MenuCategory } from "@/data/types";
+import { MENU_CATEGORY_LABELS, type MenuCategory, type ModifierGroup, type ModifierOption } from "@/data/types";
 import { getActiveLocations } from "@/data/locations";
 import { useAdminLocation } from "./v2/LocationContext";
 import { useToast } from "./v2/ui/Toast";
@@ -59,6 +59,10 @@ interface MenuItemData {
   menuRole?: MenuRole;
   isLimited?: boolean;
   limitedUntil?: string;
+  // Audit §3 — channel economics, packaging, and per-item modifiers.
+  deliveryOnly?: boolean;
+  packagingCost?: number;
+  modifierGroups?: ModifierGroup[];
   _hasOverride: boolean;
   _hasRecipe?: boolean;
   _costSource?: "recipe" | "override" | "seed";
@@ -147,6 +151,9 @@ export function AdminMenu() {
         menuRole?: MenuRole | null;
         isLimited?: boolean | null;
         limitedUntil?: string | null;
+        deliveryOnly?: boolean | null;
+        packagingCost?: number | null;
+        modifierGroups?: ModifierGroup[] | null;
       },
     ) => {
       const res = await fetch("/api/admin/menu", {
@@ -280,6 +287,9 @@ export function AdminMenu() {
       menuRole?: MenuRole | null;
       isLimited?: boolean | null;
       limitedUntil?: string | null;
+      deliveryOnly?: boolean | null;
+      packagingCost?: number | null;
+      modifierGroups?: ModifierGroup[] | null;
     },
   ) => {
     const ok = await persistChange(id, change);
@@ -300,6 +310,15 @@ export function AdminMenu() {
                   : {}),
                 ...(change.limitedUntil !== undefined
                   ? { limitedUntil: change.limitedUntil === null ? undefined : change.limitedUntil }
+                  : {}),
+                ...(change.deliveryOnly !== undefined
+                  ? { deliveryOnly: change.deliveryOnly === null ? undefined : change.deliveryOnly }
+                  : {}),
+                ...(change.packagingCost !== undefined
+                  ? { packagingCost: change.packagingCost === null ? undefined : change.packagingCost }
+                  : {}),
+                ...(change.modifierGroups !== undefined
+                  ? { modifierGroups: change.modifierGroups === null ? undefined : change.modifierGroups }
                   : {}),
                 _hasOverride: true,
               }
@@ -598,6 +617,9 @@ interface EditDialogProps {
       menuRole?: MenuRole | null;
       isLimited?: boolean | null;
       limitedUntil?: string | null;
+      deliveryOnly?: boolean | null;
+      packagingCost?: number | null;
+      modifierGroups?: ModifierGroup[] | null;
     },
   ) => Promise<void> | void;
 }
@@ -608,6 +630,10 @@ function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
   const [roleStr, setRoleStr] = useState<MenuRole | "">("");
   const [isLimited, setIsLimited] = useState(false);
   const [limitedUntil, setLimitedUntil] = useState("");
+  // Audit §3 channel + packaging + modifiers
+  const [deliveryOnly, setDeliveryOnly] = useState(false);
+  const [packagingStr, setPackagingStr] = useState("");
+  const [modifierGroups, setModifierGroups] = useState<ModifierGroup[]>([]);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -617,6 +643,18 @@ function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
       setRoleStr(item.menuRole ?? "");
       setIsLimited(Boolean(item.isLimited));
       setLimitedUntil(item.limitedUntil ?? "");
+      setDeliveryOnly(Boolean(item.deliveryOnly));
+      setPackagingStr(
+        typeof item.packagingCost === "number"
+          ? (item.packagingCost / 100).toFixed(2)
+          : "",
+      );
+      // Deep clone so dialog edits don't mutate the parent state.
+      setModifierGroups(
+        item.modifierGroups
+          ? JSON.parse(JSON.stringify(item.modifierGroups))
+          : [],
+      );
       setBusy(false);
     }
   }, [item]);
@@ -633,6 +671,9 @@ function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
       menuRole?: MenuRole | null;
       isLimited?: boolean | null;
       limitedUntil?: string | null;
+      deliveryOnly?: boolean | null;
+      packagingCost?: number | null;
+      modifierGroups?: ModifierGroup[] | null;
     } = {};
     if (price !== item.price) change.price = price;
     if (desc !== item.description) change.description = desc;
@@ -645,6 +686,31 @@ function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
     if (nextLimited !== (item.isLimited ?? null)) change.isLimited = nextLimited;
     const nextUntil: string | null = limitedUntil.trim() === "" ? null : limitedUntil.trim();
     if (nextUntil !== (item.limitedUntil ?? null)) change.limitedUntil = nextUntil;
+    const nextDeliveryOnly: boolean | null = deliveryOnly ? true : null;
+    if (nextDeliveryOnly !== (item.deliveryOnly ?? null)) {
+      change.deliveryOnly = nextDeliveryOnly;
+    }
+    const packagingRaw = packagingStr.trim();
+    const nextPackaging: number | null =
+      packagingRaw === ""
+        ? null
+        : Math.max(0, Math.round(parseFloat(packagingRaw || "0") * 100));
+    if (nextPackaging !== (item.packagingCost ?? null)) {
+      change.packagingCost = nextPackaging;
+    }
+    // Modifier comparison via JSON equality — admins editing options
+    // re-render the array reference, so identity check would always fire.
+    const cleanedGroups = modifierGroups
+      .filter((g) => g.label.trim().length > 0 && g.options.length > 0)
+      .map((g) => ({
+        ...g,
+        options: g.options.filter((o) => o.label.trim().length > 0),
+      }))
+      .filter((g) => g.options.length > 0);
+    const seedGroups = item.modifierGroups ?? [];
+    if (JSON.stringify(cleanedGroups) !== JSON.stringify(seedGroups)) {
+      change.modifierGroups = cleanedGroups.length === 0 ? null : cleanedGroups;
+    }
 
     if (Object.keys(change).length === 0) {
       onClose();
@@ -748,7 +814,267 @@ function EditItemDialog({ item, onClose, onSave }: EditDialogProps) {
             />
           </span>
         </div>
+
+        {/* Audit §3 — channel economics + packaging cost */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "auto 1fr",
+            gap: "0.5rem 0.75rem",
+            alignItems: "center",
+            padding: "0.625rem 0.75rem",
+            border: "1px solid var(--border)",
+            borderRadius: "var(--radius-md)",
+            background: "var(--surface-2)",
+          }}
+        >
+          <input
+            id={`delivery-only-${item.id}`}
+            type="checkbox"
+            checked={deliveryOnly}
+            onChange={(e) => setDeliveryOnly(e.target.checked)}
+            style={{ width: 16, height: 16 }}
+          />
+          <label htmlFor={`delivery-only-${item.id}`} style={{ fontSize: "0.875rem", fontWeight: 500 }}>
+            Delivery-only item
+          </label>
+          <span style={{ gridColumn: "1 / 3", fontSize: "0.75rem", color: "var(--fg-muted)" }}>
+            When on, the item is hidden from dine-in/takeout carts and only
+            appears when fulfillmentType=&quot;delivery&quot;. Use for pantry
+            SKUs (frozen tiramisù, beer 4-pack, olive oil bottle) that
+            customers can&apos;t carry from a truck.
+          </span>
+          <span style={{ gridColumn: "1 / 3" }}>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              label="Packaging cost (PLN, optional)"
+              value={packagingStr}
+              onChange={(e) => setPackagingStr(e.target.value)}
+              trailingAdornment={<span className="v2-muted">zł</span>}
+              description="Per-unit box / wrap / napkin cost on delivery orders. Leave blank to use the category default (pizza 1.80 / pasta 2.50 / antipasti 1.50 / panini 0.80 / drinks 0.60 / desserts 1.00)."
+            />
+          </span>
+        </div>
+
+        {/* Audit §3 — per-item modifier editor */}
+        <ModifierEditor groups={modifierGroups} onChange={setModifierGroups} />
       </div>
     </Dialog>
+  );
+}
+
+// ─── Modifier editor (audit §3) ──────────────────────────────────────────
+//
+// Lets an operator add/edit modifier groups for a menu item: crust types,
+// premium toppings, spice levels. Each group has a label, min/max
+// selection bounds, and an option list. Options carry priceDelta (added
+// to the line price), optional costDelta (used by the bundle margin
+// alert), and a flagOnKds boolean that highlights the option on the
+// kitchen ticket.
+//
+// Default off — items without modifier groups stay legacy single-price.
+
+function ModifierEditor({
+  groups,
+  onChange,
+}: {
+  groups: ModifierGroup[];
+  onChange: (next: ModifierGroup[]) => void;
+}) {
+  const update = (i: number, patch: Partial<ModifierGroup>) => {
+    onChange(groups.map((g, idx) => (idx === i ? { ...g, ...patch } : g)));
+  };
+  const remove = (i: number) => {
+    onChange(groups.filter((_, idx) => idx !== i));
+  };
+  const add = () => {
+    const id = `mod-${Math.random().toString(36).slice(2, 8)}`;
+    onChange([
+      ...groups,
+      {
+        id,
+        label: "New group",
+        minSelections: 0,
+        maxSelections: 1,
+        options: [{ id: `opt-${Math.random().toString(36).slice(2, 8)}`, label: "Standard", priceDelta: 0 }],
+      },
+    ]);
+  };
+  const updateOption = (gi: number, oi: number, patch: Partial<ModifierOption>) => {
+    update(gi, {
+      options: groups[gi].options.map((o, idx) => (idx === oi ? { ...o, ...patch } : o)),
+    });
+  };
+  const addOption = (gi: number) => {
+    update(gi, {
+      options: [
+        ...groups[gi].options,
+        {
+          id: `opt-${Math.random().toString(36).slice(2, 8)}`,
+          label: "New option",
+          priceDelta: 0,
+        },
+      ],
+    });
+  };
+  const removeOption = (gi: number, oi: number) => {
+    update(gi, {
+      options: groups[gi].options.filter((_, idx) => idx !== oi),
+    });
+  };
+
+  return (
+    <div
+      style={{
+        border: "1px solid var(--border)",
+        borderRadius: "var(--radius-md)",
+        padding: "0.75rem",
+        background: "var(--surface-2)",
+        display: "flex",
+        flexDirection: "column",
+        gap: "0.75rem",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div>
+          <p style={{ fontSize: "0.875rem", fontWeight: 600 }}>Item modifiers</p>
+          <p style={{ fontSize: "0.75rem", color: "var(--fg-muted)", marginTop: "0.125rem" }}>
+            Optional groups customers pick from at checkout. PriceDelta adds
+            to the line; flagOnKds highlights on the kitchen ticket.
+          </p>
+        </div>
+        <Button size="sm" variant="ghost" onClick={add}>
+          + Add group
+        </Button>
+      </div>
+
+      {groups.length === 0 && (
+        <p style={{ fontSize: "0.75rem", color: "var(--fg-muted)", fontStyle: "italic" }}>
+          No modifier groups. Customers see the standard price only.
+        </p>
+      )}
+
+      {groups.map((g, gi) => (
+        <div
+          key={g.id}
+          style={{
+            border: "1px solid var(--border)",
+            borderRadius: "var(--radius-sm)",
+            padding: "0.625rem",
+            background: "var(--surface)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.5rem",
+          }}
+        >
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr auto", gap: "0.5rem" }}>
+            <Input
+              label="Group label"
+              value={g.label}
+              onChange={(e) => update(gi, { label: e.target.value })}
+            />
+            <Input
+              type="number"
+              min={0}
+              max={10}
+              label="Min picks"
+              value={String(g.minSelections ?? 0)}
+              onChange={(e) =>
+                update(gi, { minSelections: Math.max(0, Number(e.target.value) || 0) })
+              }
+            />
+            <Input
+              type="number"
+              min={1}
+              max={10}
+              label="Max picks"
+              value={String(g.maxSelections ?? 1)}
+              onChange={(e) =>
+                update(gi, { maxSelections: Math.max(1, Number(e.target.value) || 1) })
+              }
+            />
+            <div style={{ alignSelf: "end" }}>
+              <Button size="sm" variant="ghost" onClick={() => remove(gi)}>
+                Remove group
+              </Button>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
+            {g.options.map((o, oi) => (
+              <div
+                key={o.id}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "2fr 1fr 1fr auto auto",
+                  gap: "0.375rem",
+                  alignItems: "center",
+                }}
+              >
+                <Input
+                  label={oi === 0 ? "Option label" : undefined}
+                  value={o.label}
+                  onChange={(e) => updateOption(gi, oi, { label: e.target.value })}
+                />
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  label={oi === 0 ? "Price +zł" : undefined}
+                  value={(o.priceDelta / 100).toFixed(2)}
+                  onChange={(e) =>
+                    updateOption(gi, oi, {
+                      priceDelta: Math.max(0, Math.round(parseFloat(e.target.value || "0") * 100)),
+                    })
+                  }
+                />
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  label={oi === 0 ? "Cost +zł" : undefined}
+                  value={typeof o.costDelta === "number" ? (o.costDelta / 100).toFixed(2) : ""}
+                  onChange={(e) => {
+                    const raw = e.target.value.trim();
+                    updateOption(gi, oi, {
+                      costDelta:
+                        raw === ""
+                          ? undefined
+                          : Math.max(0, Math.round(parseFloat(raw) * 100)),
+                    });
+                  }}
+                />
+                <label
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.25rem",
+                    fontSize: "0.75rem",
+                    color: "var(--fg-muted)",
+                    whiteSpace: "nowrap",
+                  }}
+                  title="Highlight this option on the KDS ticket so the line spots it at a glance."
+                >
+                  <input
+                    type="checkbox"
+                    checked={!!o.flagOnKds}
+                    onChange={(e) => updateOption(gi, oi, { flagOnKds: e.target.checked || undefined })}
+                  />
+                  KDS
+                </label>
+                <Button size="sm" variant="ghost" onClick={() => removeOption(gi, oi)}>
+                  ×
+                </Button>
+              </div>
+            ))}
+            <Button size="sm" variant="ghost" onClick={() => addOption(gi)}>
+              + Add option
+            </Button>
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
