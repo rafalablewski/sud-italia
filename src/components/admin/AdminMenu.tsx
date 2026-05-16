@@ -131,6 +131,16 @@ export function AdminMenu() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
+  /** Unified delete-confirmation state. `scopes` controls which action
+   *  buttons the dialog footer renders — bulk toolbar buttons pre-pick
+   *  the scope ("current" or "all" alone); the row trash icon offers
+   *  both when the item has a cross-location twin, just "current"
+   *  otherwise. */
+  const [deleteRequest, setDeleteRequest] = useState<{
+    items: MenuItemData[];
+    scopes: ("current" | "all")[];
+    twinLocations: string[];
+  } | null>(null);
 
   const fetchMenu = useCallback(async () => {
     setLoading(true);
@@ -288,52 +298,50 @@ export function AdminMenu() {
     }
   };
 
-  /** Bulk-delete the selected rows. When `scope === "all"`, the server
-   *  also finds and removes the cross-location twin for each id (matched
-   *  by case-insensitive name). Custom items hard-delete; seed items get
-   *  a `hidden: true` override (restorable via "Show hidden"). */
-  const bulkDelete = async (scope: "current" | "all") => {
-    if (selectedIds.size === 0) return;
-    const ids = [...selectedIds];
-    const message =
-      scope === "all"
-        ? `Delete ${ids.length} ${ids.length === 1 ? "item" : "items"} from ALL locations?\n\nCustom items are removed permanently. Seed items (those baked into the menu code) are hidden and can be restored via "Show hidden".`
-        : `Delete ${ids.length} ${ids.length === 1 ? "item" : "items"} from this location?\n\nCustom items are removed permanently. Seed items are hidden and can be restored via "Show hidden".`;
-    if (!confirm(message)) return;
-    setBulkBusy(true);
-    try {
-      const res = await fetch("/api/admin/menu/bulk", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "delete", ids, scope }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const total = data.affected ?? 0;
-        const detail = [
-          data.customDeleted ? `${data.customDeleted} removed` : null,
-          data.seedHidden ? `${data.seedHidden} hidden` : null,
-          data.unresolvedIds?.length ? `${data.unresolvedIds.length} skipped` : null,
-        ]
-          .filter(Boolean)
-          .join(" · ");
-        const headline =
-          scope === "all" ? "Deleted across locations" : "Deleted";
-        if (total > 0) {
-          toast.success(headline, detail || `${total} ${total === 1 ? "item" : "items"} processed.`);
+  /** Calls POST /api/admin/menu/bulk action="delete". Reused by every
+   *  delete entry point (row trash icon + the two bulk toolbar buttons)
+   *  so the toast and refetch behaviour stay consistent. */
+  const performDelete = useCallback(
+    async (ids: string[], scope: "current" | "all", fromBulk: boolean) => {
+      if (ids.length === 0) return;
+      setBulkBusy(true);
+      try {
+        const res = await fetch("/api/admin/menu/bulk", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "delete", ids, scope }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const total = data.affected ?? 0;
+          const detail = [
+            data.customDeleted ? `${data.customDeleted} removed` : null,
+            data.seedHidden ? `${data.seedHidden} hidden` : null,
+            data.unresolvedIds?.length ? `${data.unresolvedIds.length} skipped` : null,
+          ]
+            .filter(Boolean)
+            .join(" · ");
+          const headline = scope === "all" ? "Deleted across locations" : "Deleted";
+          if (total > 0) {
+            toast.success(
+              headline,
+              detail || `${total} ${total === 1 ? "item" : "items"} processed.`,
+            );
+          } else {
+            toast.warning("Nothing deleted", detail || "No matching rows found.");
+          }
+          if (fromBulk) setSelectedIds(new Set());
+          await fetchMenu();
         } else {
-          toast.warning("Nothing deleted", detail || "No matching rows found.");
+          const data = await res.json().catch(() => ({}));
+          toast.error("Could not delete", data?.error);
         }
-        setSelectedIds(new Set());
-        await fetchMenu();
-      } else {
-        const data = await res.json().catch(() => ({}));
-        toast.error("Could not delete", data?.error);
+      } finally {
+        setBulkBusy(false);
       }
-    } finally {
-      setBulkBusy(false);
-    }
-  };
+    },
+    [fetchMenu, toast],
+  );
 
   /** Copies the selected items' price/cost/description overrides to the
    *  matching items in another location, matched by name. */
@@ -608,14 +616,15 @@ export function AdminMenu() {
     [toast],
   );
 
-  /** Count how many other active locations carry a twin (same base slug,
-   *  case-insensitive name match against the cached menus). Used to decide
-   *  whether to offer the operator the "Delete from all locations" option. */
-  const countTwins = useCallback(
-    (item: MenuItemData): number => {
+  /** Return the active-location slugs (other than the row's own) that
+   *  carry the same item — matched by base slug OR case-insensitive name.
+   *  Drives the "Delete everywhere" affordance: we only offer it when
+   *  the row actually has twins to clean up. */
+  const findTwinLocations = useCallback(
+    (item: MenuItemData): string[] => {
       const baseSlug = getBaseSlug(item.id);
       const nameKey = item.name.trim().toLowerCase();
-      let count = 0;
+      const hits: string[] = [];
       for (const loc of activeLocations) {
         if (loc.slug === pageLoc) continue;
         const arr = menusByLocation[loc.slug] || [];
@@ -624,81 +633,38 @@ export function AdminMenu() {
             !i._hidden &&
             (getBaseSlug(i.id) === baseSlug || i.name.trim().toLowerCase() === nameKey),
         );
-        if (twin) count++;
+        if (twin) hits.push(loc.slug);
       }
-      return count;
+      return hits;
     },
     [menusByLocation, pageLoc],
   );
 
-  const deleteItem = async (item: MenuItemData) => {
-    const twinCount = countTwins(item);
-    const verb = item._isCustom
-      ? "permanently delete"
-      : "hide (restorable via Show hidden)";
-    // When the same item exists at other locations, give the operator the
-    // one-click cross-location option so they don't have to switch
-    // locations and repeat the action — the headline of this feature.
-    if (twinCount > 0) {
-      const choice = window.prompt(
-        `"${item.name}" also exists at ${twinCount} other ${twinCount === 1 ? "location" : "locations"}.\n\nType:\n  1 — ${verb} from THIS location only\n  2 — ${verb} from ALL locations\n  (anything else cancels)`,
-        "1",
-      );
-      if (choice !== "1" && choice !== "2") return;
-      if (choice === "2") {
-        // Reuse the bulk endpoint so custom + seed handling stays in one
-        // place. Single-id batch with scope="all".
-        setBulkBusy(true);
-        try {
-          const res = await fetch("/api/admin/menu/bulk", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "delete", ids: [item.id], scope: "all" }),
-          });
-          if (res.ok) {
-            const data = await res.json();
-            toast.success(
-              "Deleted across locations",
-              `${item.name} removed from ${data.affected} location${data.affected === 1 ? "" : "s"}.`,
-            );
-            await fetchMenu();
-          } else {
-            const data = await res.json().catch(() => ({}));
-            toast.error("Could not delete", data?.error);
-          }
-        } finally {
-          setBulkBusy(false);
-        }
-        return;
-      }
-    } else if (
-      !confirm(
-        item._isCustom
-          ? `Delete "${item.name}"? This permanently removes the item from this location's menu.`
-          : `"${item.name}" is a seed menu item — it can't be permanently deleted (it lives in code). Hide it from this location instead? You can restore it later via the "Show hidden" toggle.`,
-      )
-    ) {
-      return;
-    }
+  const deleteItem = (item: MenuItemData) => {
+    const twins = findTwinLocations(item);
+    setDeleteRequest({
+      items: [item],
+      scopes: twins.length > 0 ? ["current", "all"] : ["current"],
+      twinLocations: twins,
+    });
+  };
 
-    // Single-location path: keep the legacy in-place delete (custom = hard,
-    // seed = hidden override) so we update local state without a refetch.
-    if (item._isCustom) {
-      const ok = await hardDeleteCustomItem(item.id);
-      if (!ok) return;
-      setItems((arr) => arr.filter((i) => i.id !== item.id));
-      toast.success("Item removed", item.name);
-      return;
-    }
-    const ok = await persistChange(item.id, { hidden: true });
-    if (!ok) {
-      toast.error("Could not hide", "Try again.");
-      return;
-    }
-    setItems((arr) =>
-      arr.map((i) => (i.id === item.id ? { ...i, _hidden: true, _hasOverride: true } : i)),
-    );
-    toast.success("Item hidden", `${item.name} is no longer visible on this menu.`);
+  const openBulkDelete = (scope: "current" | "all") => {
+    if (selectedIds.size === 0) return;
+    const selected = items.filter((i) => selectedIds.has(i.id));
+    setDeleteRequest({
+      items: selected,
+      scopes: [scope],
+      twinLocations: [],
+    });
+  };
+
+  const confirmDelete = async (scope: "current" | "all") => {
+    if (!deleteRequest) return;
+    const ids = deleteRequest.items.map((i) => i.id);
+    const fromBulk = deleteRequest.items.length > 1 || selectedIds.size > 1;
+    setDeleteRequest(null);
+    await performDelete(ids, scope, fromBulk);
   };
 
   /** Clear the `hidden` override flag so a previously soft-deleted seed
@@ -871,7 +837,7 @@ export function AdminMenu() {
               size="sm"
               variant="ghost"
               disabled={bulkBusy}
-              onClick={() => bulkDelete("current")}
+              onClick={() => openBulkDelete("current")}
               title="Remove the selected items from this location. Custom items hard-delete; seed items soft-hide (restorable via Show hidden)."
               style={{ color: "var(--danger)" }}
             >
@@ -883,7 +849,7 @@ export function AdminMenu() {
                 size="sm"
                 variant="ghost"
                 disabled={bulkBusy}
-                onClick={() => bulkDelete("all")}
+                onClick={() => openBulkDelete("all")}
                 title="Remove the selected items from every active location. Twins are matched by name across trucks."
                 style={{ color: "var(--danger)" }}
               >
@@ -1066,7 +1032,149 @@ export function AdminMenu() {
         onClose={() => setCreating(false)}
         onCreate={createCustomItem}
       />
+
+      <DeleteMenuItemDialog
+        request={deleteRequest}
+        currentLocationLabel={
+          activeLocations.find((l) => l.slug === pageLoc)?.city ?? pageLoc
+        }
+        twinLocationLabels={
+          deleteRequest?.twinLocations.map(
+            (slug) => activeLocations.find((l) => l.slug === slug)?.city ?? slug,
+          ) ?? []
+        }
+        busy={bulkBusy}
+        onCancel={() => setDeleteRequest(null)}
+        onConfirm={confirmDelete}
+      />
     </div>
+  );
+}
+
+interface DeleteMenuItemDialogProps {
+  request: {
+    items: MenuItemData[];
+    scopes: ("current" | "all")[];
+    twinLocations: string[];
+  } | null;
+  currentLocationLabel: string;
+  twinLocationLabels: string[];
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: (scope: "current" | "all") => void;
+}
+
+/** Single confirmation dialog reused by the row trash icon + both bulk
+ *  toolbar buttons. The footer renders one danger button per allowed
+ *  scope (just "Delete here" when the user already picked a scope from
+ *  the toolbar, both buttons when a row has cross-location twins). */
+function DeleteMenuItemDialog({
+  request,
+  currentLocationLabel,
+  twinLocationLabels,
+  busy,
+  onCancel,
+  onConfirm,
+}: DeleteMenuItemDialogProps) {
+  const open = request !== null;
+  const items = request?.items ?? [];
+  const scopes = request?.scopes ?? [];
+  const count = items.length;
+  const customCount = items.filter((i) => i._isCustom).length;
+  const seedCount = count - customCount;
+  const singleName = count === 1 ? items[0].name : null;
+
+  const title = singleName
+    ? `Delete "${singleName}"?`
+    : `Delete ${count} menu items?`;
+
+  return (
+    <Dialog
+      open={open}
+      onClose={busy ? () => {} : onCancel}
+      size="md"
+      title={title}
+      description={
+        twinLocationLabels.length > 0
+          ? `Also exists at: ${twinLocationLabels.join(", ")}.`
+          : undefined
+      }
+      footer={
+        <>
+          <Button variant="ghost" onClick={onCancel} disabled={busy}>
+            Cancel
+          </Button>
+          {scopes.includes("current") && (
+            <Button
+              variant="danger"
+              onClick={() => onConfirm("current")}
+              loading={busy && scopes.length === 1}
+              disabled={busy}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Delete from {currentLocationLabel}
+            </Button>
+          )}
+          {scopes.includes("all") && (
+            <Button
+              variant="danger"
+              onClick={() => onConfirm("all")}
+              loading={busy && scopes.length === 1}
+              disabled={busy}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Delete everywhere
+            </Button>
+          )}
+        </>
+      }
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+        {count > 1 && (
+          <ul
+            style={{
+              listStyle: "disc",
+              paddingLeft: "1.25rem",
+              margin: 0,
+              maxHeight: "10rem",
+              overflowY: "auto",
+              fontSize: "0.875rem",
+            }}
+          >
+            {items.slice(0, 12).map((i) => (
+              <li key={i.id}>{i.name}</li>
+            ))}
+            {items.length > 12 && (
+              <li style={{ listStyle: "none", opacity: 0.7 }}>
+                …and {items.length - 12} more
+              </li>
+            )}
+          </ul>
+        )}
+        <div
+          style={{
+            fontSize: "0.8125rem",
+            color: "var(--text-muted)",
+            lineHeight: 1.5,
+          }}
+        >
+          {customCount > 0 && (
+            <div>
+              <strong>{customCount}</strong>{" "}
+              {customCount === 1 ? "custom item" : "custom items"} will be{" "}
+              <strong>permanently removed</strong>.
+            </div>
+          )}
+          {seedCount > 0 && (
+            <div>
+              <strong>{seedCount}</strong>{" "}
+              {seedCount === 1 ? "seed item" : "seed items"} will be{" "}
+              <strong>hidden</strong> (restorable via &ldquo;Show hidden&rdquo;).
+            </div>
+          )}
+        </div>
+      </div>
+    </Dialog>
   );
 }
 
