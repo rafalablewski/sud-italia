@@ -362,12 +362,17 @@ export const menuOverridePutSchema = z
     path: ["id"],
   });
 
-/** POST /api/admin/menu/bulk — reset overrides or clone across locations. */
+/** POST /api/admin/menu/bulk — reset overrides, clone across locations, or
+ *  bulk-delete (custom items hard-delete; seed items soft-hide via override).
+ *  `scope` only applies to `delete`: "current" deletes just the given ids,
+ *  "all" also removes the matching twin in every other active location
+ *  (matched by item name, case-insensitive). Defaults to "current". */
 export const menuBulkActionSchema = z
   .object({
-    action: z.enum(["reset", "clone_to"]),
+    action: z.enum(["reset", "clone_to", "delete"]),
     ids: z.array(stableId).min(1).max(500),
     target: locationSlug.optional(),
+    scope: z.enum(["current", "all"]).optional(),
   })
   .refine((data) => data.action !== "clone_to" || !!data.target, {
     message: "clone_to requires a `target` location slug",

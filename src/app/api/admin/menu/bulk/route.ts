@@ -4,6 +4,8 @@ import { hasLocationAccess } from "@/lib/admin-auth";
 import {
   appendAuditLog,
   clearMenuOverrides,
+  deleteCustomMenuItem,
+  getCustomMenuItems,
   getMenuOverrides,
   setMenuOverridesBulk,
   type MenuOverride,
@@ -13,7 +15,7 @@ import { getActiveLocations } from "@/data/locations";
 import { menuBulkActionSchema, parseBody } from "@/lib/api-schemas";
 
 /**
- * Bulk-action endpoint for AdminMenu. Two actions multiplexed via `action`:
+ * Bulk-action endpoint for AdminMenu. Three actions multiplexed via `action`:
  *
  *   - `reset`: drop the override rows for the given source ids, reverting
  *     them to the static seed values (price/cost/description/available).
@@ -23,6 +25,11 @@ import { menuBulkActionSchema, parseBody } from "@/lib/api-schemas";
  *     case-insensitive name across the seed menu, since item ids are
  *     prefixed per location (`krk-…` vs `waw-…`) but the human-facing
  *     names line up across trucks.
+ *   - `delete`: remove the given items. Custom items hard-delete; seed
+ *     items get a `hidden: true` override (restorable). When `scope="all"`,
+ *     each id's cross-location twin (matched by case-insensitive name) is
+ *     also removed — operators no longer have to delete the same item
+ *     from each truck manually.
  */
 // Bulk reset / clone touches override pricing across the chain — manager+.
 // clone_to specifies a target location which is validated against the
@@ -32,7 +39,134 @@ export const POST = withAdmin(
   async (req, _ctx, { user }) => {
     const parsed = await parseBody(req, menuBulkActionSchema);
     if ("error" in parsed) return parsed.error;
-    const { action, ids, target } = parsed.data;
+    const { action, ids, target, scope } = parsed.data;
+
+    if (action === "delete") {
+      // Resolve every id to its row (custom vs seed) plus, when scope="all",
+      // its cross-location twins by case-insensitive name match. Custom rows
+      // hard-delete; seed rows get a `hidden: true` override so they can be
+      // restored via the AdminMenu "Show hidden" toggle.
+      const activeLocs = getActiveLocations();
+      const validLocSlugs = new Set(activeLocs.map((l) => l.slug));
+      const customAll = await getCustomMenuItems();
+      const customById = new Map(customAll.map((c) => [c.id, c]));
+      const seedByLoc = new Map<string, ReturnType<typeof getMenu>>();
+      for (const l of activeLocs) seedByLoc.set(l.slug, getMenu(l.slug));
+
+      // For each input id, expand to the set of ids we must delete/hide.
+      // Track per-id origin (custom vs seed) for the right teardown action.
+      type TargetRow = {
+        id: string;
+        kind: "custom" | "seed";
+        locationSlug: string;
+        name: string;
+      };
+      const targetsById = new Map<string, TargetRow>();
+
+      const resolveRow = (id: string): TargetRow | null => {
+        const custom = customById.get(id);
+        if (custom) {
+          return { id: custom.id, kind: "custom", locationSlug: custom.locationSlug, name: custom.name };
+        }
+        for (const [slug, items] of seedByLoc) {
+          const hit = items.find((i) => i.id === id);
+          if (hit) return { id, kind: "seed", locationSlug: slug, name: hit.name };
+        }
+        return null;
+      };
+
+      const findTwins = (row: TargetRow): TargetRow[] => {
+        const key = row.name.trim().toLowerCase();
+        const twins: TargetRow[] = [];
+        for (const slug of validLocSlugs) {
+          if (slug === row.locationSlug) continue;
+          const custom = customAll.find(
+            (c) => c.locationSlug === slug && c.name.trim().toLowerCase() === key,
+          );
+          if (custom) {
+            twins.push({ id: custom.id, kind: "custom", locationSlug: slug, name: custom.name });
+            continue;
+          }
+          const seedItems = seedByLoc.get(slug) ?? [];
+          const seedHit = seedItems.find((i) => i.name.trim().toLowerCase() === key);
+          if (seedHit) {
+            twins.push({ id: seedHit.id, kind: "seed", locationSlug: slug, name: seedHit.name });
+          }
+        }
+        return twins;
+      };
+
+      const unresolved: string[] = [];
+      for (const id of ids) {
+        const row = resolveRow(id);
+        if (!row) {
+          unresolved.push(id);
+          continue;
+        }
+        targetsById.set(row.id, row);
+        if (scope === "all") {
+          for (const twin of findTwins(row)) targetsById.set(twin.id, twin);
+        }
+      }
+
+      // Authorize every location we're about to touch — partial failure is
+      // worse than a 403, so we reject the whole batch if any location is
+      // out of scope.
+      const touchedLocations = new Set<string>();
+      for (const row of targetsById.values()) touchedLocations.add(row.locationSlug);
+      for (const slug of touchedLocations) {
+        if (!(await hasLocationAccess(slug))) {
+          return NextResponse.json(
+            { error: `Session is not authorized for location "${slug}"` },
+            { status: 403 },
+          );
+        }
+      }
+
+      // Apply: custom → DELETE; seed → setMenuOverridesBulk({hidden:true}).
+      const customTargets = [...targetsById.values()].filter((r) => r.kind === "custom");
+      const seedTargets = [...targetsById.values()].filter((r) => r.kind === "seed");
+      let customDeleted = 0;
+      const customFailed: string[] = [];
+      for (const row of customTargets) {
+        const ok = await deleteCustomMenuItem(row.id);
+        if (ok) customDeleted++;
+        else customFailed.push(row.id);
+      }
+      if (seedTargets.length > 0) {
+        const seedUpdates: Record<string, MenuOverride> = {};
+        for (const row of seedTargets) seedUpdates[row.id] = { hidden: true };
+        await setMenuOverridesBulk(seedUpdates);
+      }
+
+      await appendAuditLog({
+        actor: user.email || user.id,
+        action: "menu.bulk_delete",
+        entityType: "menu_item",
+        entityId: `batch-of-${targetsById.size}`,
+        after: {
+          scope: scope ?? "current",
+          requestedIds: ids,
+          unresolvedIds: unresolved,
+          customDeleted,
+          customFailed,
+          seedHidden: seedTargets.length,
+          locations: [...touchedLocations],
+          rows: [...targetsById.values()].map((r) => ({ id: r.id, kind: r.kind, locationSlug: r.locationSlug })),
+        },
+      });
+
+      return NextResponse.json({
+        ok: true,
+        action: "delete",
+        scope: scope ?? "current",
+        customDeleted,
+        seedHidden: seedTargets.length,
+        affected: customDeleted + seedTargets.length,
+        unresolvedIds: unresolved,
+        customFailedIds: customFailed,
+      });
+    }
 
     if (action === "reset") {
       const removed = await clearMenuOverrides(ids);
