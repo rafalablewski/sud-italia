@@ -1,0 +1,1278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Sud Italia — Cart V6 · Pizzo AI Concierge</title>
+<!--
+  V6 — AI-assisted smart upsell cart
+  Sud Italia · Cart / Checkout · mockup 6 of 10
+  Channels: Linear command palette + Perplexity result UI + Arc Browser AI chips + ChatGPT
+  Palette: off-white #FAFAF7, ink #1A1A1A, AI-violet #7C3AED, espresso #4A2C20, italia red #C8102E
+  Mobile-first 390px, responsive 768px+
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  /* ---------- TOKENS ---------- */
+  :root {
+    --bg: #FAFAF7; --bg-grid: rgba(20,20,20,0.045);
+    --ink: #1A1A1A; --ink-2: #3A3A3A; --ink-3: #6B6B6B; --ink-4: #9A9A9A;
+    --card: #FFFFFF; --line: #ECECEC; --line-2: #E2E2E2;
+    --violet: #7C3AED; --violet-50: #F5F0FF; --violet-100: #EADBFF; --violet-200: #D6BBFF;
+    --pink: #EC4899; --espresso: #4A2C20; --italia: #C8102E; --italia-dark: #A20D24;
+    --green: #14804A; --amber: #B45309; --gold: #C99A2E;
+    --shadow-soft: 0 1px 2px rgba(20,20,20,0.04), 0 4px 16px rgba(20,20,20,0.04);
+    --shadow-ai: 0 0 0 1px rgba(124,58,237,0.18), 0 6px 24px rgba(124,58,237,0.10);
+    --r-sm: 8px; --r: 12px; --r-lg: 16px;
+    --t-fast: 160ms cubic-bezier(.22,.61,.36,1);
+    --t: 240ms cubic-bezier(.22,.61,.36,1);
+    --t-slow: 420ms cubic-bezier(.22,.61,.36,1);
+  }
+
+  /* ---------- RESET ---------- */
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "Inter", system-ui, -apple-system, sans-serif;
+    font-feature-settings: "ss01", "cv11";
+    color: var(--ink);
+    background: radial-gradient(circle at 1px 1px, var(--bg-grid) 1px, transparent 0) 0 0 / 18px 18px, var(--bg);
+    -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+    line-height: 1.5; font-size: 14px; min-height: 100vh; padding-bottom: 220px;
+  }
+  button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
+  input, textarea { font: inherit; color: inherit; }
+  ::selection { background: var(--violet-100); color: var(--ink); }
+
+  /* ---------- LAYOUT ---------- */
+  .app { max-width: 480px; margin: 0 auto; padding: 0 16px 24px; }
+  @media (min-width: 768px) {
+    .app { max-width: 720px; padding: 0 24px 32px; }
+    body { padding-bottom: 240px; }
+  }
+
+  /* ---------- HEADER ---------- */
+  .topbar {
+    position: sticky; top: 0; z-index: 30;
+    background: rgba(250,250,247,0.86);
+    backdrop-filter: saturate(140%) blur(12px);
+    -webkit-backdrop-filter: saturate(140%) blur(12px);
+    margin: 0 -16px 16px; padding: 14px 16px 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  @media (min-width: 768px) { .topbar { margin: 0 -24px 20px; padding: 18px 24px 14px; } }
+  .topbar-row { display: flex; align-items: center; gap: 10px; }
+  .h-title { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; margin: 0; }
+  .h-sub { font-size: 11.5px; color: var(--ink-3); margin-top: 2px; }
+  .h-meta { flex: 1; min-width: 0; }
+  .icon-btn {
+    width: 36px; height: 36px; border-radius: 999px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid var(--line); background: var(--card);
+    transition: transform var(--t-fast), background var(--t-fast), border-color var(--t-fast);
+  }
+  .icon-btn:hover { background: #fff; border-color: var(--line-2); transform: translateY(-1px); }
+  .icon-btn svg { width: 16px; height: 16px; stroke: var(--ink); stroke-width: 1.8; fill: none; }
+  .ai-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 10px 5px 8px; font-size: 11.5px; font-weight: 500;
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(124,58,237,0.10), rgba(236,72,153,0.10));
+    border: 1px solid rgba(124,58,237,0.22); color: var(--violet);
+  }
+  .ai-chip .dot {
+    width: 6px; height: 6px; border-radius: 999px;
+    background: linear-gradient(135deg, var(--violet), var(--pink));
+    box-shadow: 0 0 0 2px rgba(124,58,237,0.12);
+  }
+
+  /* ---------- AI CONCIERGE RIBBON ---------- */
+  .concierge {
+    position: relative; border-radius: var(--r-lg); padding: 14px; margin-bottom: 16px;
+    background:
+      radial-gradient(120% 120% at 0% 0%, rgba(124,58,237,0.10), transparent 60%),
+      radial-gradient(120% 120% at 100% 100%, rgba(236,72,153,0.08), transparent 55%),
+      #FFFFFF;
+    border: 1px solid transparent; background-clip: padding-box; box-shadow: var(--shadow-ai);
+  }
+  .concierge::before, .card-ai::before, .ai-input::before, .ai-response::before, .rail-card::before {
+    content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1px;
+    background: linear-gradient(135deg, rgba(124,58,237,0.6), rgba(236,72,153,0.5), rgba(124,58,237,0));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none;
+  }
+  .concierge-top { display: flex; gap: 12px; align-items: flex-start; }
+  .avatar {
+    position: relative; flex: 0 0 auto; width: 38px; height: 38px; border-radius: 999px;
+    background: linear-gradient(135deg, #7C3AED, #EC4899);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 700; font-size: 13px;
+    box-shadow: 0 0 0 2px #fff, 0 0 0 3px rgba(124,58,237,0.35);
+  }
+  .avatar::after {
+    content: ""; position: absolute; bottom: -1px; right: -1px;
+    width: 10px; height: 10px; border-radius: 999px;
+    background: #14804A; border: 2px solid #fff;
+  }
+  .concierge-msg .who { font-size: 12px; color: var(--violet); font-weight: 600; display: inline-flex; align-items: center; gap: 5px; }
+  .concierge-msg .who::after {
+    content: "✦ online"; font-family: "JetBrains Mono", monospace;
+    color: var(--ink-4); font-weight: 400; font-size: 10.5px; margin-left: 6px;
+  }
+  .concierge-msg .greet { color: var(--ink); font-size: 14px; margin-top: 4px; line-height: 1.45; }
+  .shimmer-text {
+    background: linear-gradient(90deg, #1A1A1A 0%, #7C3AED 35%, #EC4899 55%, #1A1A1A 100%);
+    background-size: 220% 100%;
+    -webkit-background-clip: text; background-clip: text;
+    color: transparent; animation: shimmer 4s linear infinite; font-weight: 600;
+  }
+  @keyframes shimmer { to { background-position: -220% 0; } }
+  .quick-actions { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .quick-action {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 10px; background: #fff; border: 1px solid var(--line); border-radius: 999px;
+    font-size: 12.5px; font-weight: 500; color: var(--ink);
+    transition: border-color var(--t-fast), transform var(--t-fast), background var(--t-fast);
+  }
+  .quick-action:hover { border-color: var(--violet-200); transform: translateY(-1px); }
+  .quick-action .spark { font-size: 12px; }
+  .quick-action .why {
+    margin-left: 4px; width: 14px; height: 14px; border-radius: 999px;
+    background: var(--violet-50); color: var(--violet);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 700;
+  }
+
+  /* ---------- SECTION TITLES ---------- */
+  .sec-title {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; color: var(--ink-3);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    font-weight: 600; margin: 18px 4px 8px;
+  }
+  .sec-title .pill {
+    font-family: "JetBrains Mono", monospace; font-size: 10px;
+    color: var(--violet); background: var(--violet-50);
+    padding: 2px 6px; border-radius: 999px;
+    text-transform: none; letter-spacing: 0;
+  }
+
+  /* ---------- CARDS ---------- */
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow-soft); }
+  .card-ai { position: relative; background: #fff; border-radius: var(--r); box-shadow: var(--shadow-ai); border: 1px solid transparent; }
+
+  /* ---------- CART ITEMS ---------- */
+  .items { display: grid; gap: 10px; }
+  .item { padding: 12px; display: grid; grid-template-columns: 48px 1fr auto; gap: 12px; align-items: flex-start; }
+  .item-emoji {
+    width: 48px; height: 48px; border-radius: 10px;
+    background: #FBF7EE; border: 1px solid #F0E9D6;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; line-height: 1;
+  }
+  .item-name { font-weight: 600; font-size: 14.5px; line-height: 1.3; margin: 0; }
+  .item-mods { margin-top: 3px; font-size: 12px; color: var(--ink-3); }
+  .item-meta { margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .tag {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 10.5px; padding: 2px 7px; border-radius: 999px;
+    background: #F4F4F0; color: var(--ink-2); border: 1px solid var(--line);
+  }
+  .tag.veg { background: #F0F9F1; color: var(--green); border-color: #DAEFDD; }
+  .tag.spice { background: #FFF1EC; color: #B23A0F; border-color: #FFD8C8; }
+  .tag.ai { background: linear-gradient(135deg, rgba(124,58,237,0.10), rgba(236,72,153,0.10)); color: var(--violet); border-color: rgba(124,58,237,0.22); }
+  .item-right { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+  .price { font-weight: 700; font-variant-numeric: tabular-nums; font-size: 14.5px; }
+  .qty { display: inline-flex; align-items: center; background: #F4F4F0; border-radius: 999px; border: 1px solid var(--line); overflow: hidden; }
+  .qty button { width: 28px; height: 28px; color: var(--ink); font-weight: 600; transition: background var(--t-fast); }
+  .qty button:hover { background: #E9E9E2; }
+  .qty .n { min-width: 22px; text-align: center; font-family: "JetBrains Mono", monospace; font-size: 12.5px; font-weight: 600; }
+  .item-ai-note {
+    grid-column: 1 / -1; margin-top: 6px; padding: 8px 10px;
+    background: linear-gradient(135deg, rgba(124,58,237,0.06), rgba(236,72,153,0.05));
+    border: 1px dashed rgba(124,58,237,0.25); border-radius: 10px;
+    display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-2);
+  }
+  .item-ai-note .spark { color: var(--violet); flex: 0 0 auto; }
+  .item-ai-note .accept {
+    margin-left: auto; font-size: 11.5px; font-weight: 600; color: var(--violet);
+    border: 1px solid var(--violet-100); background: #fff; padding: 3px 8px; border-radius: 999px;
+  }
+  .item-ai-note .dismiss { font-size: 11.5px; color: var(--ink-4); padding: 3px 4px; }
+
+  /* ---------- SOLD-OUT WARNING ---------- */
+  .soldout {
+    padding: 12px; display: grid; grid-template-columns: 48px 1fr auto; gap: 12px;
+    align-items: center; background: #FFF7F3; border: 1px solid #F4D8C7; border-radius: var(--r);
+  }
+  .soldout .item-emoji { background: #FFE8DC; border-color: #F4C9B0; opacity: 0.7; filter: grayscale(0.4); }
+  .soldout-name { font-weight: 600; font-size: 14px; text-decoration: line-through; color: var(--ink-3); }
+  .soldout-msg { font-size: 12px; color: var(--amber); margin-top: 3px; display: flex; align-items: center; gap: 5px; }
+  .soldout-act { font-size: 12px; font-weight: 600; color: var(--violet); padding: 6px 10px; border-radius: 999px; border: 1px solid var(--violet-100); background: #fff; }
+
+  /* ---------- CORPORATE BANNER ---------- */
+  .corp { margin-top: 10px; padding: 12px 14px; border-radius: var(--r); border: 1px solid var(--line); background: #fff; display: flex; gap: 12px; align-items: center; }
+  .corp-icon { width: 36px; height: 36px; border-radius: 8px; background: #F4F0E6; color: var(--espresso); display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .corp h4 { margin: 0; font-size: 13.5px; font-weight: 600; }
+  .corp p { margin: 2px 0 0; color: var(--ink-3); font-size: 12px; }
+  .corp .go { margin-left: auto; color: var(--ink); font-size: 12px; font-weight: 600; padding: 6px 10px; border: 1px solid var(--line); border-radius: 999px; background: #fff; }
+
+  /* ---------- TIME-OF-DAY BANNER ---------- */
+  .tod { margin-top: 10px; padding: 12px 14px; display: flex; gap: 10px; align-items: center; border-radius: var(--r); }
+  .tod-icon { width: 30px; height: 30px; border-radius: 8px; background: rgba(124,58,237,0.10); color: var(--violet); display: flex; align-items: center; justify-content: center; }
+  .tod-text { font-size: 13px; }
+  .tod-text strong { color: var(--ink); }
+  .tod-text .ai { color: var(--violet); font-weight: 600; }
+  .tod-pill { margin-left: auto; font-family: "JetBrains Mono", monospace; font-size: 10.5px; color: var(--ink-3); padding: 4px 8px; border-radius: 999px; background: #F4F4F0; }
+
+  /* ---------- LOYALTY ---------- */
+  .loyalty { margin-top: 10px; padding: 14px; border-radius: var(--r); }
+  .loyalty-head { display: flex; align-items: center; gap: 10px; }
+  .tier-badge {
+    width: 36px; height: 36px; border-radius: 999px;
+    background: linear-gradient(135deg, #E8C16D, #C99A2E);
+    color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center;
+    font-size: 13px; box-shadow: 0 0 0 2px #fff, 0 0 0 3px rgba(201,154,46,0.32);
+  }
+  .tier-info .label { font-size: 11.5px; color: var(--ink-3); }
+  .tier-info .name { font-weight: 700; font-size: 14px; letter-spacing: -0.01em; }
+  .tier-points { margin-left: auto; text-align: right; font-family: "JetBrains Mono", monospace; }
+  .tier-points .v { font-size: 16px; font-weight: 700; color: var(--ink); }
+  .tier-points .l { font-size: 10.5px; color: var(--ink-4); }
+  .tier-progress { margin-top: 12px; }
+  .tier-bar { height: 6px; background: #F0EBE3; border-radius: 999px; overflow: hidden; position: relative; }
+  .tier-bar > span { display: block; height: 100%; width: 72%; background: linear-gradient(90deg, #E8C16D, #C99A2E); border-radius: 999px; transition: width var(--t-slow); }
+  .tier-pred {
+    margin-top: 8px; padding: 8px 10px; border-radius: 10px;
+    background: linear-gradient(135deg, rgba(124,58,237,0.06), rgba(236,72,153,0.05));
+    border: 1px dashed rgba(124,58,237,0.25);
+    font-size: 12px; display: flex; gap: 8px; align-items: center;
+  }
+  .tier-pred .conf {
+    margin-left: auto; font-family: "JetBrains Mono", monospace; font-size: 10.5px;
+    color: var(--violet); background: #fff; border: 1px solid var(--violet-100);
+    padding: 2px 6px; border-radius: 999px; cursor: help;
+  }
+
+  /* ---------- TIER PERK ---------- */
+  .perk { margin-top: 10px; padding: 12px 14px; border-radius: var(--r); background: #fff; border: 1px solid var(--line); display: flex; align-items: center; gap: 12px; }
+  .perk-icon { width: 34px; height: 34px; border-radius: 8px; background: linear-gradient(135deg, #FFEFC4, #F5D86E); display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .perk-body { flex: 1; }
+  .perk h5 { margin: 0; font-size: 13.5px; font-weight: 600; }
+  .perk p { margin: 2px 0 0; font-size: 12px; color: var(--ink-3); }
+  .perk .redeem { font-size: 12px; font-weight: 600; color: var(--gold); border: 1px solid #F0DD9C; background: #FFFBEF; padding: 6px 10px; border-radius: 999px; }
+
+  /* ---------- BUNDLE LADDER ---------- */
+  .bundle { margin-top: 10px; padding: 14px; border-radius: var(--r); }
+  .bundle-head { display: flex; align-items: center; gap: 8px; }
+  .bundle-head h4 { margin: 0; font-size: 14.5px; font-weight: 700; letter-spacing: -0.01em; }
+  .bundle-head .by { font-size: 11.5px; color: var(--violet); font-weight: 600; margin-left: 4px; }
+  .bundle-head .why-glyph, .rail-head .why-glyph {
+    margin-left: auto; width: 22px; height: 22px; border-radius: 999px;
+    background: var(--violet-50); color: var(--violet);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; cursor: help;
+  }
+  .bundle-items { margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .bundle-item { background: #FAFAF7; border: 1px solid var(--line); border-radius: 10px; padding: 10px; text-align: center; }
+  .bundle-item .em { font-size: 28px; line-height: 1; }
+  .bundle-item .n { font-size: 11.5px; font-weight: 600; margin-top: 4px; }
+  .bundle-item .p { font-family: "JetBrains Mono", monospace; font-size: 10.5px; color: var(--ink-3); margin-top: 2px; }
+  .bundle-foot { margin-top: 12px; display: flex; align-items: center; gap: 10px; }
+  .bundle-foot .save { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--green); font-weight: 600; }
+  .bundle-foot .apply {
+    margin-left: auto; background: var(--ink); color: #fff;
+    padding: 9px 14px; border-radius: 999px; font-size: 12.5px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: transform var(--t-fast), background var(--t-fast);
+  }
+  .bundle-foot .apply:hover { background: #000; transform: translateY(-1px); }
+  .bundle-foot .why { font-size: 11.5px; color: var(--violet); text-decoration: underline dotted; cursor: help; }
+
+  /* ---------- COMBO BANNER ---------- */
+  .combo { margin-top: 10px; padding: 12px 14px; border-radius: var(--r); background: #fff; border: 1px solid var(--line); display: flex; gap: 10px; align-items: center; }
+  .combo-icon { width: 34px; height: 34px; border-radius: 8px; background: linear-gradient(135deg, rgba(200,16,46,0.08), rgba(124,58,237,0.08)); color: var(--italia); display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .combo h5 { margin: 0; font-size: 13.5px; font-weight: 600; }
+  .combo p { margin: 2px 0 0; font-size: 12px; color: var(--ink-3); }
+  .combo .conf-pill { margin-left: auto; font-family: "JetBrains Mono", monospace; font-size: 10.5px; background: var(--violet-50); color: var(--violet); padding: 3px 7px; border-radius: 999px; border: 1px solid var(--violet-100); cursor: help; }
+
+  /* ---------- CROSS-SELL RAIL ---------- */
+  .rail-head { display: flex; align-items: center; gap: 8px; margin: 16px 4px 8px; }
+  .rail-head h3 { margin: 0; font-size: 14.5px; font-weight: 700; letter-spacing: -0.01em; }
+  .rail-head .by { font-size: 11.5px; color: var(--violet); font-weight: 600; background: var(--violet-50); padding: 3px 8px; border-radius: 999px; }
+  .rail { display: flex; gap: 10px; overflow-x: auto; padding: 4px 4px 12px; margin: 0 -4px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+  .rail::-webkit-scrollbar { display: none; }
+  .rail { scrollbar-width: none; }
+  .rail-card {
+    flex: 0 0 168px; scroll-snap-align: start; position: relative;
+    border-radius: 14px; padding: 12px; background: #fff; border: 1px solid transparent;
+    box-shadow: 0 1px 2px rgba(20,20,20,0.04), 0 4px 14px rgba(124,58,237,0.06);
+  }
+  .rail-card .em { width: 100%; height: 88px; border-radius: 10px; background: #FBF7EE; display: flex; align-items: center; justify-content: center; font-size: 44px; }
+  .rail-card .n { font-weight: 600; font-size: 13.5px; margin-top: 8px; line-height: 1.25; }
+  .rail-card .why { margin-top: 4px; font-size: 11px; color: var(--violet); display: flex; align-items: center; gap: 4px; }
+  .rail-card .score { font-family: "JetBrains Mono", monospace; font-size: 9.5px; color: var(--ink-4); }
+  .rail-card .row { margin-top: 8px; display: flex; align-items: center; }
+  .rail-card .row .p { font-family: "JetBrains Mono", monospace; font-size: 12px; font-weight: 700; }
+  .rail-card .row .add {
+    margin-left: auto; width: 26px; height: 26px; border-radius: 999px;
+    background: var(--ink); color: #fff;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-weight: 700; transition: transform var(--t-fast), background var(--t-fast);
+  }
+  .rail-card .row .add:hover { background: var(--violet); transform: rotate(90deg); }
+  .rail-card.added { box-shadow: 0 0 0 1.5px var(--green), 0 4px 14px rgba(20,128,74,0.10); }
+  .rail-card.added::before { background: linear-gradient(135deg, rgba(20,128,74,0.45), rgba(20,128,74,0.20)); }
+  .rail-card.added .add { background: var(--green); }
+
+  /* ---------- QUICK-ADD ---------- */
+  .quickadd { margin-top: 12px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; border-radius: var(--r); }
+  .quickadd .em { width: 38px; height: 38px; border-radius: 8px; background: #FBF7EE; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+  .quickadd .body { flex: 1; }
+  .quickadd .body strong { font-size: 13.5px; }
+  .quickadd .body p { margin: 2px 0 0; font-size: 12px; color: var(--ink-3); }
+  .quickadd .body .ai { color: var(--violet); font-weight: 600; }
+  .quickadd .add {
+    background: var(--ink); color: #fff; padding: 8px 14px; border-radius: 999px;
+    font-size: 12.5px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: background var(--t-fast), transform var(--t-fast);
+  }
+  .quickadd .add:hover { background: #000; transform: translateY(-1px); }
+  .quickadd .add.added { background: var(--green); }
+
+  /* ---------- DELIVERY PROGRESS ---------- */
+  .delprog { margin-top: 14px; padding: 14px; border-radius: var(--r); background: #fff; border: 1px solid var(--line); }
+  .delprog-head { display: flex; align-items: center; gap: 8px; }
+  .delprog-head h5 { margin: 0; font-size: 13.5px; font-weight: 600; }
+  .delprog-head .left { margin-left: auto; font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--italia); font-weight: 600; }
+  .delprog-bar { margin-top: 10px; height: 6px; border-radius: 999px; background: #F0EBE3; overflow: hidden; position: relative; }
+  .delprog-bar > span { display: block; height: 100%; width: 76%; background: linear-gradient(90deg, #C8102E, #EC4899, #7C3AED); border-radius: 999px; }
+  .delprog-nudge {
+    margin-top: 10px; padding: 10px; border-radius: 10px;
+    background: linear-gradient(135deg, rgba(124,58,237,0.06), rgba(236,72,153,0.05));
+    border: 1px dashed rgba(124,58,237,0.25);
+    font-size: 12px; display: flex; align-items: flex-start; gap: 8px;
+  }
+  .delprog-nudge .spark { color: var(--violet); flex: 0 0 auto; }
+  .delprog-nudge .add-tiny { margin-left: auto; font-size: 11.5px; font-weight: 600; color: var(--violet); border: 1px solid var(--violet-100); background: #fff; padding: 4px 9px; border-radius: 999px; flex: 0 0 auto; }
+
+  /* ---------- FULFILLMENT TOGGLE ---------- */
+  .fulfill { margin-top: 14px; }
+  .seg { display: grid; grid-template-columns: 1fr 1fr; background: #F4F4F0; border: 1px solid var(--line); border-radius: 999px; padding: 4px; position: relative; }
+  .seg button { padding: 8px 12px; font-size: 13px; font-weight: 600; color: var(--ink-3); border-radius: 999px; transition: color var(--t-fast); position: relative; z-index: 1; }
+  .seg button.on { color: var(--ink); }
+  .seg .ind { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px); background: #fff; border-radius: 999px; box-shadow: 0 1px 2px rgba(20,20,20,0.08); transition: transform var(--t); }
+  .seg.right .ind { transform: translateX(100%); }
+  .fulfill-ai { margin-top: 8px; font-size: 11.5px; color: var(--ink-3); display: flex; align-items: center; gap: 5px; }
+  .fulfill-ai .spark { color: var(--violet); }
+  .fulfill-ai .undo { margin-left: auto; color: var(--violet); font-weight: 600; }
+
+  /* ---------- ADDRESS ---------- */
+  .field { margin-top: 10px; background: #fff; border: 1px solid var(--line); border-radius: var(--r); padding: 12px; }
+  .field label { display: block; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); font-weight: 600; }
+  .field input, .field textarea { margin-top: 6px; width: 100%; border: 0; outline: 0; background: transparent; font-size: 14px; color: var(--ink); padding: 0; }
+  .field input::placeholder { color: var(--ink-4); }
+  .addr-ai { margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: linear-gradient(135deg, rgba(124,58,237,0.06), rgba(236,72,153,0.05)); border: 1px dashed rgba(124,58,237,0.25); font-size: 12px; display: flex; gap: 8px; align-items: center; }
+  .addr-ai .accept { margin-left: auto; font-size: 11.5px; font-weight: 600; color: var(--violet); background: #fff; border: 1px solid var(--violet-100); padding: 3px 8px; border-radius: 999px; }
+
+  /* ---------- TIME SLOT ---------- */
+  .slots { margin-top: 10px; display: flex; gap: 8px; overflow-x: auto; padding: 0 2px 4px; margin: 10px -2px 0; }
+  .slots::-webkit-scrollbar { display: none; }
+  .slots { scrollbar-width: none; }
+  .slot { flex: 0 0 auto; padding: 10px 12px; border: 1px solid var(--line); background: #fff; border-radius: 12px; text-align: center; min-width: 78px; transition: border-color var(--t-fast), background var(--t-fast); position: relative; }
+  .slot .t { font-family: "JetBrains Mono", monospace; font-weight: 700; font-size: 13px; }
+  .slot .l { font-size: 10.5px; color: var(--ink-3); margin-top: 2px; }
+  .slot.on { border-color: var(--ink); background: var(--ink); color: #fff; }
+  .slot.on .l { color: rgba(255,255,255,0.7); }
+  .slot.rec { border-color: var(--violet-200); box-shadow: 0 0 0 2px rgba(124,58,237,0.06); }
+  .slot.rec::after {
+    content: "✦"; position: absolute; top: -8px; right: -6px;
+    width: 18px; height: 18px;
+    background: linear-gradient(135deg, #7C3AED, #EC4899); color: #fff;
+    border-radius: 999px; display: inline-flex; align-items: center; justify-content: center;
+    font-size: 10px; box-shadow: 0 0 0 2px #FAFAF7;
+  }
+  .slot-ai { margin-top: 6px; font-size: 11.5px; color: var(--violet); display: flex; align-items: center; gap: 5px; }
+
+  /* ---------- CUSTOMER DETAILS ---------- */
+  .cust { margin-top: 10px; padding: 14px; border-radius: var(--r); background: #fff; border: 1px solid var(--line); }
+  .cust-head { display: flex; align-items: center; gap: 8px; }
+  .cust-head h5 { margin: 0; font-size: 13.5px; font-weight: 600; }
+  .cust-head .mem { margin-left: auto; font-size: 10.5px; color: var(--violet); background: var(--violet-50); border: 1px solid var(--violet-100); padding: 3px 7px; border-radius: 999px; font-weight: 600; }
+  .cust-rows { margin-top: 10px; display: grid; gap: 6px; font-size: 13px; }
+  .cust-row { display: flex; align-items: center; gap: 8px; }
+  .cust-row .k { color: var(--ink-3); font-size: 12px; min-width: 64px; }
+  .cust-row .v { font-weight: 500; }
+  .cust-edit { margin-top: 10px; font-size: 12px; font-weight: 600; color: var(--ink); border: 1px solid var(--line); background: #FAFAF7; padding: 6px 10px; border-radius: 999px; }
+
+  /* ---------- TIP ---------- */
+  .tip { margin-top: 12px; padding: 14px; border-radius: var(--r); background: #fff; border: 1px solid var(--line); }
+  .tip-head { display: flex; align-items: center; gap: 8px; }
+  .tip-head h5 { margin: 0; font-size: 13.5px; font-weight: 600; }
+  .tip-head .area-hint { margin-left: auto; font-size: 11px; color: var(--violet); background: var(--violet-50); padding: 3px 7px; border-radius: 999px; border: 1px solid var(--violet-100); cursor: help; }
+  .tip-row { margin-top: 10px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .tip-btn { padding: 9px 4px; border: 1px solid var(--line); background: #FAFAF7; border-radius: 999px; font-size: 12.5px; font-weight: 600; transition: all var(--t-fast); }
+  .tip-btn.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .tip-ai { margin-top: 8px; font-size: 11.5px; color: var(--ink-3); display: flex; align-items: center; gap: 5px; }
+  .tip-ai .spark { color: var(--violet); }
+
+  /* ---------- AI INPUT (above pay bar) ---------- */
+  .ai-input-wrap { position: fixed; bottom: 134px; left: 0; right: 0; z-index: 35; pointer-events: none; padding: 0 12px; }
+  @media (min-width: 768px) { .ai-input-wrap { bottom: 132px; padding: 0 24px; } }
+  .ai-input {
+    max-width: 480px; margin: 0 auto; pointer-events: auto; background: #fff;
+    border-radius: 999px; padding: 8px 8px 8px 14px;
+    display: flex; align-items: center; gap: 10px;
+    box-shadow: var(--shadow-ai); position: relative; border: 1px solid transparent;
+  }
+  @media (min-width: 768px) { .ai-input { max-width: 720px; } }
+  .ai-input .brain { width: 28px; height: 28px; border-radius: 999px; background: linear-gradient(135deg, #7C3AED, #EC4899); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 14px; flex: 0 0 auto; }
+  .ai-input input { flex: 1; border: 0; outline: 0; background: transparent; font-size: 13.5px; min-width: 0; }
+  .ai-input input::placeholder { color: var(--ink-4); }
+  .ai-input .send { width: 32px; height: 32px; border-radius: 999px; background: var(--ink); color: #fff; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; transition: background var(--t-fast); }
+  .ai-input .send:hover { background: #000; }
+  .ai-input .send svg { width: 14px; height: 14px; stroke: #fff; fill: none; stroke-width: 2; }
+
+  /* AI response bubble */
+  .ai-response {
+    max-width: 480px; margin: 0 auto 8px; pointer-events: auto; background: #fff;
+    border-radius: 14px; padding: 10px 12px;
+    display: none; gap: 10px; align-items: flex-start;
+    box-shadow: var(--shadow-ai); position: relative; border: 1px solid transparent;
+  }
+  @media (min-width: 768px) { .ai-response { max-width: 720px; } }
+  .ai-response.show { display: flex; animation: slidein 220ms ease-out; }
+  @keyframes slidein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  .ai-response .av { width: 26px; height: 26px; border-radius: 999px; background: linear-gradient(135deg, #7C3AED, #EC4899); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex: 0 0 auto; }
+  .ai-response .body { font-size: 12.5px; color: var(--ink); line-height: 1.45; }
+  .ai-response .body .who { color: var(--violet); font-weight: 600; font-size: 11.5px; display: block; margin-bottom: 2px; }
+  .ai-response .typing { display: inline-flex; gap: 3px; vertical-align: middle; }
+  .ai-response .typing i { display: inline-block; width: 5px; height: 5px; border-radius: 999px; background: var(--violet); opacity: 0.5; animation: dot 1s infinite ease-in-out; }
+  .ai-response .typing i:nth-child(2) { animation-delay: 0.15s; }
+  .ai-response .typing i:nth-child(3) { animation-delay: 0.30s; }
+  @keyframes dot { 0%, 80%, 100% { transform: translateY(0); opacity: 0.4; } 40% { transform: translateY(-3px); opacity: 1; } }
+
+  /* ---------- PAY BAR ---------- */
+  .paybar {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 30;
+    background: rgba(250,250,247,0.92);
+    backdrop-filter: saturate(140%) blur(14px);
+    -webkit-backdrop-filter: saturate(140%) blur(14px);
+    border-top: 1px solid var(--line);
+    padding: 12px 16px 16px;
+  }
+  @media (min-width: 768px) { .paybar { padding: 14px 24px 18px; } }
+  .pay-inner { max-width: 480px; margin: 0 auto; }
+  @media (min-width: 768px) { .pay-inner { max-width: 720px; } }
+  .pay-rows { display: grid; gap: 3px; font-size: 12.5px; color: var(--ink-3); }
+  .pay-rows .r { display: flex; justify-content: space-between; }
+  .pay-rows .r .v { font-family: "JetBrains Mono", monospace; color: var(--ink); }
+  .pay-rows .r.ai-save {
+    color: var(--violet); font-weight: 600;
+    background: linear-gradient(135deg, rgba(124,58,237,0.06), rgba(236,72,153,0.04));
+    margin: 4px -8px 0; padding: 4px 8px; border-radius: 8px;
+    border: 1px dashed rgba(124,58,237,0.25);
+  }
+  .pay-rows .r.ai-save .v { color: var(--violet); }
+  .pay-total { margin-top: 8px; display: flex; align-items: baseline; justify-content: space-between; }
+  .pay-total .lbl { font-size: 13px; color: var(--ink-3); }
+  .pay-total .v { font-family: "Inter", sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .pay-cta-row { margin-top: 10px; display: grid; grid-template-columns: 1fr 44px; gap: 10px; }
+  .pay-btn {
+    background: var(--italia); color: #fff; font-weight: 700; font-size: 15px;
+    padding: 14px 16px; border-radius: 14px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    transition: background var(--t-fast), transform var(--t-fast); letter-spacing: -0.005em;
+  }
+  .pay-btn:hover { background: var(--italia-dark); transform: translateY(-1px); }
+  .pay-btn .amt { font-family: "JetBrains Mono", monospace; opacity: 0.95; margin-left: 2px; }
+  .pay-clear { background: #fff; border: 1px solid var(--line); border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; transition: border-color var(--t-fast); }
+  .pay-clear:hover { border-color: var(--italia); }
+  .pay-clear svg { width: 16px; height: 16px; stroke: var(--italia); fill: none; stroke-width: 1.8; }
+
+  /* ---------- TOOLTIP & SKELETON ---------- */
+  .tip-tip {
+    position: absolute; bottom: calc(100% + 6px); left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    background: var(--ink); color: #fff; font-size: 11px;
+    padding: 6px 8px; border-radius: 8px; white-space: nowrap;
+    opacity: 0; pointer-events: none;
+    transition: opacity var(--t-fast), transform var(--t-fast); z-index: 50;
+  }
+  .has-tip { position: relative; }
+  .has-tip:hover .tip-tip, .has-tip:focus .tip-tip { opacity: 1; transform: translateX(-50%) translateY(0); }
+  @keyframes skel { to { background-position: -200% 0; } }
+  .rail-card.thinking .em, .rail-card.thinking .n, .rail-card.thinking .why { visibility: hidden; }
+  .rail-card.thinking { overflow: hidden; }
+  .rail-card.thinking::after {
+    content: ""; position: absolute; inset: 12px; border-radius: 8px;
+    background: linear-gradient(90deg, #F0F0EC 0%, #F8F8F4 50%, #F0F0EC 100%);
+    background-size: 200% 100%; animation: skel 1.2s linear infinite;
+  }
+  .row { display: flex; align-items: center; gap: 8px; }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ============= HEADER ============= -->
+  <div class="topbar">
+    <div class="topbar-row">
+      <button class="icon-btn" aria-label="Back">
+        <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="h-meta">
+        <h1 class="h-title">Your Cart</h1>
+        <div class="h-sub">Sud Italia · Kraków · 3 items</div>
+      </div>
+      <span class="ai-chip" title="Personalization is on">
+        <span class="dot"></span>
+        ✨ Personalized for Marco
+      </span>
+      <button class="icon-btn" aria-label="Close">
+        <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ============= AI CONCIERGE RIBBON ============= -->
+  <section class="concierge" aria-label="AI concierge">
+    <div class="concierge-top">
+      <div class="avatar" aria-hidden="true">P</div>
+      <div class="concierge-msg">
+        <div class="who">Pizzo AI</div>
+        <div class="greet">
+          Ciao Marco — based on your last 14 orders, you'd love the
+          <span class="shimmer-text">Tartufina</span> tonight. Lunch detected, so I'll keep it under 20 min.
+        </div>
+      </div>
+    </div>
+    <div class="quick-actions">
+      <button class="quick-action" data-ai-action="reorder">
+        <span class="spark">✨</span> Reorder last Friday
+        <span class="why has-tip" title="Why this suggestion?">?<span class="tip-tip">3 of 4 Fridays in a row</span></span>
+      </button>
+      <button class="quick-action" data-ai-action="glutenfree">
+        <span class="spark">✨</span> Make it gluten-free
+        <span class="why has-tip">?<span class="tip-tip">You've marked GF 6× before</span></span>
+      </button>
+      <button class="quick-action" data-ai-action="under60">
+        <span class="spark">✨</span> Trim under 60 zł
+        <span class="why has-tip">?<span class="tip-tip">Lunch budget heuristic</span></span>
+      </button>
+    </div>
+  </section>
+
+  <!-- ============= CART ITEMS ============= -->
+  <div class="sec-title">In your cart <span class="pill">3 items</span></div>
+  <div class="items" id="items">
+
+    <!-- ITEM 1 -->
+    <article class="card item">
+      <div class="item-emoji">🍕</div>
+      <div>
+        <h3 class="item-name">Margherita D.O.P.</h3>
+        <div class="item-mods">Fior di latte · San Marzano · fresh basil</div>
+        <div class="item-meta">
+          <span class="tag veg">● Vegetarian</span>
+          <span class="tag">28 cm</span>
+        </div>
+      </div>
+      <div class="item-right">
+        <div class="price">38,00 zł</div>
+        <div class="qty" data-qty>
+          <button data-d="-1" aria-label="decrease">−</button>
+          <span class="n">1</span>
+          <button data-d="1" aria-label="increase">+</button>
+        </div>
+      </div>
+      <div class="item-ai-note">
+        <span class="spark">✨</span>
+        <span>Tip: try with <strong>extra basil</strong> — it's your usual on Margherita (8 of last 10 orders).</span>
+        <button class="accept" data-add-mod>+ Add</button>
+        <button class="dismiss" aria-label="dismiss">×</button>
+      </div>
+    </article>
+
+    <!-- ITEM 2 -->
+    <article class="card item">
+      <div class="item-emoji">🍝</div>
+      <div>
+        <h3 class="item-name">Pasta Carbonara</h3>
+        <div class="item-mods">Guanciale · pecorino · black pepper</div>
+        <div class="item-meta">
+          <span class="tag spice">● Mild heat</span>
+          <span class="tag">Egg</span>
+        </div>
+      </div>
+      <div class="item-right">
+        <div class="price">42,00 zł</div>
+        <div class="qty" data-qty>
+          <button data-d="-1" aria-label="decrease">−</button>
+          <span class="n">1</span>
+          <button data-d="1" aria-label="increase">+</button>
+        </div>
+      </div>
+    </article>
+
+    <!-- ITEM 3 -->
+    <article class="card item">
+      <div class="item-emoji">🥗</div>
+      <div>
+        <h3 class="item-name">Caprese di Bufala</h3>
+        <div class="item-mods">Buffalo mozzarella · heirloom tomato · basil oil</div>
+        <div class="item-meta">
+          <span class="tag veg">● Vegetarian</span>
+          <span class="tag ai">✨ AI matched 9/10</span>
+        </div>
+      </div>
+      <div class="item-right">
+        <div class="price">28,00 zł</div>
+        <div class="qty" data-qty>
+          <button data-d="-1" aria-label="decrease">−</button>
+          <span class="n">1</span>
+          <button data-d="1" aria-label="increase">+</button>
+        </div>
+      </div>
+    </article>
+
+    <!-- SOLD-OUT WARNING -->
+    <div class="soldout" role="alert">
+      <div class="item-emoji">🍰</div>
+      <div>
+        <div class="soldout-name">Tiramisù della Casa</div>
+        <div class="soldout-msg">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          Sold out today — Pizzo found you a 94% match below.
+        </div>
+      </div>
+      <button class="soldout-act">See match</button>
+    </div>
+
+    <!-- CORPORATE BANNER -->
+    <div class="corp">
+      <div class="corp-icon">🏢</div>
+      <div>
+        <h4>Ordering for the team?</h4>
+        <p>Group orders, invoiced billing, NIP — Pizzo can split per-person.</p>
+      </div>
+      <button class="corp go">Switch</button>
+    </div>
+
+    <!-- TIME-OF-DAY BANNER -->
+    <div class="tod card">
+      <div class="tod-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      </div>
+      <div class="tod-text">
+        <span class="ai">Lunch detected</span> — quick orders ready in <strong>18 min</strong>.
+      </div>
+      <span class="tod-pill">12:47 · MON</span>
+    </div>
+  </div>
+
+  <!-- ============= LOYALTY ============= -->
+  <div class="sec-title">Loyalty · La Famiglia <span class="pill">silver</span></div>
+  <section class="card loyalty">
+    <div class="loyalty-head">
+      <div class="tier-badge">S</div>
+      <div class="tier-info">
+        <div class="label">You are</div>
+        <div class="name">Silver · La Famiglia</div>
+      </div>
+      <div class="tier-points">
+        <div class="v">1,247</div>
+        <div class="l">points</div>
+      </div>
+    </div>
+    <div class="tier-progress">
+      <div class="tier-bar"><span style="width:72%"></span></div>
+      <div class="row" style="margin-top:6px; font-size:11.5px; color:var(--ink-3);">
+        <span>1,247 / 1,750 to <strong style="color:var(--ink)">Gold</strong></span>
+        <span style="margin-left:auto; font-family:'JetBrains Mono',monospace;">503 pts left</span>
+      </div>
+    </div>
+    <div class="tier-pred">
+      <span style="color:var(--violet);">✨</span>
+      <span><strong>Pizzo predicts</strong> you'll hit Gold in <strong>2 more orders</strong> at your usual cadence.</span>
+      <span class="conf has-tip" tabindex="0">87% conf<span class="tip-tip">Based on 8-week pattern · ±1 order</span></span>
+    </div>
+  </section>
+
+  <!-- ============= TIER PERK ============= -->
+  <div class="perk">
+    <div class="perk-icon">🎁</div>
+    <div class="perk-body">
+      <h5>Silver perk available</h5>
+      <p>Free Limonata when you spend 80+ zł today.</p>
+    </div>
+    <button class="perk redeem">Redeem</button>
+  </div>
+
+  <!-- ============= BUNDLE LADDER (AI CURATED) ============= -->
+  <div class="sec-title">Smart bundle <span class="pill">curated</span></div>
+  <section class="card-ai bundle">
+    <div class="bundle-head">
+      <h4>The Friday Marco</h4>
+      <span class="by">✨ Pizzo curated this for you</span>
+      <span class="why-glyph has-tip" tabindex="0">?<span class="tip-tip">Based on 4 past Friday orders + tonight's weather</span></span>
+    </div>
+    <div class="bundle-items">
+      <div class="bundle-item">
+        <div class="em">🍕</div>
+        <div class="n">Margherita</div>
+        <div class="p">38,00 zł</div>
+      </div>
+      <div class="bundle-item">
+        <div class="em">🥗</div>
+        <div class="n">Caprese</div>
+        <div class="p">28,00 zł</div>
+      </div>
+      <div class="bundle-item">
+        <div class="em">🍷</div>
+        <div class="n">Chianti glass</div>
+        <div class="p">22,00 zł</div>
+      </div>
+    </div>
+    <div class="bundle-foot">
+      <span class="save">save 12,30 zł</span>
+      <button class="why has-tip" tabindex="0">Why this combo?<span class="tip-tip">Pairs with your usual + Friday weather</span></button>
+      <button class="apply" id="bundleApply">
+        <span>Tap to apply</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </section>
+
+  <!-- ============= COMBO DEAL BANNER ============= -->
+  <div class="combo">
+    <div class="combo-icon">🔥</div>
+    <div>
+      <h5>Pizza + Pasta Combo</h5>
+      <p>Save 8 zł when both are in cart — already applied.</p>
+    </div>
+    <span class="conf-pill has-tip" tabindex="0">92% match<span class="tip-tip">92% of similar carts add these</span></span>
+  </div>
+
+  <!-- ============= CROSS-SELL RAIL ============= -->
+  <div class="rail-head">
+    <h3>Pizzo recommends</h3>
+    <span class="by">✨ for Marco</span>
+    <span class="why-glyph has-tip" tabindex="0">?<span class="tip-tip">From 14 of your past orders + cart context</span></span>
+  </div>
+  <div class="rail" id="rail">
+
+    <article class="rail-card" data-id="espresso">
+      <div class="em">☕</div>
+      <div class="n">Espresso Doppio</div>
+      <div class="why">
+        <span>✨ Pairs with Margherita</span>
+        <span class="score">· 96%</span>
+      </div>
+      <div class="row">
+        <span class="p">9,00 zł</span>
+        <button class="add" aria-label="add">+</button>
+      </div>
+    </article>
+
+    <article class="rail-card" data-id="cannoli">
+      <div class="em">🍮</div>
+      <div class="n">Cannoli Siciliani</div>
+      <div class="why">
+        <span>✨ Pairs with Carbonara</span>
+        <span class="score">· 89%</span>
+      </div>
+      <div class="row">
+        <span class="p">18,00 zł</span>
+        <button class="add" aria-label="add">+</button>
+      </div>
+    </article>
+
+    <article class="rail-card" data-id="limonata">
+      <div class="em">🥤</div>
+      <div class="n">Limonata della Costa</div>
+      <div class="why">
+        <span>✨ Cools spicy bites</span>
+        <span class="score">· 84%</span>
+      </div>
+      <div class="row">
+        <span class="p">11,00 zł</span>
+        <button class="add" aria-label="add">+</button>
+      </div>
+    </article>
+
+    <article class="rail-card" data-id="bruschetta">
+      <div class="em">🥖</div>
+      <div class="n">Bruschetta Pomodoro</div>
+      <div class="why">
+        <span>✨ Light starter</span>
+        <span class="score">· 78%</span>
+      </div>
+      <div class="row">
+        <span class="p">16,00 zł</span>
+        <button class="add" aria-label="add">+</button>
+      </div>
+    </article>
+
+    <article class="rail-card thinking" data-id="thinking" aria-busy="true">
+      <div class="em">·</div>
+      <div class="n">Thinking…</div>
+      <div class="why"><span>—</span></div>
+      <div class="row"><span class="p">—</span></div>
+    </article>
+
+  </div>
+
+  <!-- ============= QUICK ADD ============= -->
+  <div class="card-ai quickadd">
+    <div class="em">☕</div>
+    <div class="body">
+      <strong>One-tap: Espresso</strong>
+      <p><span class="ai">✨ Your usual</span> after pasta — added 11 of the last 12 times.</p>
+    </div>
+    <button class="add" id="quickAddBtn">
+      <span>✨ Add</span>
+    </button>
+  </div>
+
+  <!-- ============= DELIVERY PROGRESS ============= -->
+  <section class="delprog">
+    <div class="delprog-head">
+      <h5>Free delivery</h5>
+      <span class="left">9,00 zł left</span>
+    </div>
+    <div class="delprog-bar"><span></span></div>
+    <div class="delprog-nudge">
+      <span class="spark">✨</span>
+      <span>Since you're <strong>9 zł from free delivery</strong>, add a <strong>Limonata (11 zł)</strong> — it pays for itself in delivery savings.</span>
+      <button class="add-tiny" data-add-limo>+ Add</button>
+    </div>
+  </section>
+
+  <!-- ============= FULFILLMENT TOGGLE ============= -->
+  <div class="sec-title">Fulfillment</div>
+  <div class="fulfill">
+    <div class="seg" id="seg">
+      <span class="ind" aria-hidden="true"></span>
+      <button class="on" data-seg="takeout">🚶 Takeout · 18 min</button>
+      <button data-seg="delivery">🛵 Delivery · 34 min</button>
+    </div>
+    <div class="fulfill-ai">
+      <span class="spark">✨</span>
+      <span>Pizzo defaulted to <strong>Takeout</strong> — your address is 280 m from the Kraków truck.</span>
+      <button class="undo">Override</button>
+    </div>
+  </div>
+
+  <!-- ============= ADDRESS ============= -->
+  <div class="field">
+    <label>Delivery address</label>
+    <input id="addr" type="text" value="ul. Florianska 12" />
+    <div class="addr-ai" id="addrSuggest">
+      <span style="color:var(--violet);">✨</span>
+      <span>Did you mean <strong>ul. Floriańska 12</strong>? (with ń)</span>
+      <button class="accept" id="addrAccept">Use suggestion</button>
+    </div>
+  </div>
+
+  <!-- ============= TIME SLOT ============= -->
+  <div class="sec-title">Pickup time <span class="pill">today</span></div>
+  <div class="slots" id="slots">
+    <button class="slot" data-slot><div class="t">17:45</div><div class="l">busy</div></button>
+    <button class="slot" data-slot><div class="t">18:00</div><div class="l">normal</div></button>
+    <button class="slot rec on" data-slot><div class="t">18:15</div><div class="l">quiet</div></button>
+    <button class="slot" data-slot><div class="t">18:30</div><div class="l">normal</div></button>
+    <button class="slot" data-slot><div class="t">18:45</div><div class="l">busy</div></button>
+    <button class="slot" data-slot><div class="t">19:00</div><div class="l">busy</div></button>
+    <button class="slot" data-slot><div class="t">19:15</div><div class="l">normal</div></button>
+  </div>
+  <div class="slot-ai">
+    <span>✨</span>
+    <span>Pizzo recommends <strong>18:15</strong> — usually the quietest 15 min around dinner.</span>
+  </div>
+
+  <!-- ============= CUSTOMER DETAILS ============= -->
+  <section class="cust">
+    <div class="cust-head">
+      <h5>Your details</h5>
+      <span class="mem">✨ Pizzo remembered</span>
+    </div>
+    <div class="cust-rows">
+      <div class="cust-row"><div class="k">Name</div><div class="v">Marco Bianchi</div></div>
+      <div class="cust-row"><div class="k">Phone</div><div class="v">+48 600 ••• 412</div></div>
+      <div class="cust-row"><div class="k">Email</div><div class="v" style="color:var(--ink-3);">optional · skip</div></div>
+    </div>
+    <button class="cust-edit">Edit details</button>
+  </section>
+
+  <!-- ============= TIP ============= -->
+  <section class="tip">
+    <div class="tip-head">
+      <h5>Tip your courier</h5>
+      <span class="area-hint has-tip" tabindex="0">Avg 13% in your area<span class="tip-tip">Based on Stare Miasto, last 30 days</span></span>
+    </div>
+    <div class="tip-row" id="tipRow">
+      <button class="tip-btn" data-tip="0">No tip</button>
+      <button class="tip-btn" data-tip="5">5%</button>
+      <button class="tip-btn on" data-tip="13">13%</button>
+      <button class="tip-btn" data-tip="18">18%</button>
+      <button class="tip-btn" data-tip="custom">Custom</button>
+    </div>
+    <div class="tip-ai">
+      <span class="spark">✨</span>
+      <span>Couriers in your area average <strong>13% tips</strong> — pre-selected to match.</span>
+    </div>
+  </section>
+
+</div><!-- /.app -->
+
+<!-- ============= AI INPUT + RESPONSE BUBBLE ============= -->
+<div class="ai-input-wrap">
+  <div class="ai-response" id="aiResp" role="status" aria-live="polite">
+    <div class="av">P</div>
+    <div class="body">
+      <span class="who">Pizzo AI</span>
+      <span id="aiRespText"><span class="typing"><i></i><i></i><i></i></span></span>
+    </div>
+  </div>
+  <form class="ai-input" id="aiForm" autocomplete="off">
+    <span class="brain" aria-hidden="true">✨</span>
+    <input id="aiBox" type="text" placeholder="Ask Pizzo… (e.g. make it gluten-free)" aria-label="Ask Pizzo" />
+    <button type="submit" class="send" aria-label="Send">
+      <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </form>
+</div>
+
+<!-- ============= STICKY PAY BAR ============= -->
+<div class="paybar">
+  <div class="pay-inner">
+    <div class="pay-rows">
+      <div class="r"><span>Subtotal</span><span class="v" id="paySub">108,00 zł</span></div>
+      <div class="r"><span>Combo discount · Pizza + Pasta</span><span class="v" style="color:var(--green);">−8,00 zł</span></div>
+      <div class="r"><span>Tip · 13%</span><span class="v">14,04 zł</span></div>
+      <div class="r"><span>Delivery</span><span class="v">0,00 zł</span></div>
+      <div class="r ai-save">
+        <span>✨ Pizzo saved you today</span>
+        <span class="v">12,30 zł</span>
+      </div>
+    </div>
+    <div class="pay-total">
+      <div>
+        <div class="lbl">Total to pay</div>
+        <div class="row" style="gap:6px; margin-top:2px;">
+          <span class="v" id="payTotal">114,04 zł</span>
+          <span class="ai-chip" style="padding:3px 8px; font-size:10.5px;"><span class="dot"></span> AI optimized</span>
+        </div>
+      </div>
+      <div></div>
+    </div>
+    <div class="pay-cta-row">
+      <button class="pay-btn" id="payBtn">
+        <span>Pay now</span>
+        <span class="amt">· 114,04 zł</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="pay-clear" aria-label="Clear cart" id="clearBtn">
+        <svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===========================================================
+   V6 — AI-assisted smart upsell cart · Vanilla JS interactions
+   =========================================================== */
+(function () {
+  'use strict';
+
+  // ---------- QTY steppers ----------
+  document.querySelectorAll('[data-qty]').forEach(function (q) {
+    var n = q.querySelector('.n');
+    q.addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-d]');
+      if (!b) return;
+      var d = parseInt(b.getAttribute('data-d'), 10);
+      var v = Math.max(0, parseInt(n.textContent, 10) + d);
+      n.textContent = v;
+      n.animate(
+        [{ transform: 'scale(1.18)' }, { transform: 'scale(1)' }],
+        { duration: 180, easing: 'cubic-bezier(.22,.61,.36,1)' }
+      );
+    });
+  });
+
+  // ---------- Dismiss AI item note ----------
+  document.querySelectorAll('.item-ai-note .dismiss').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var n = b.closest('.item-ai-note');
+      n.style.transition = 'opacity 200ms, height 240ms, margin 240ms, padding 240ms';
+      var h = n.offsetHeight;
+      n.style.height = h + 'px';
+      requestAnimationFrame(function () {
+        n.style.opacity = '0';
+        n.style.height = '0';
+        n.style.marginTop = '0';
+        n.style.padding = '0';
+      });
+      setTimeout(function () { n.remove(); }, 260);
+    });
+  });
+  document.querySelectorAll('.item-ai-note .accept').forEach(function (b) {
+    b.addEventListener('click', function () {
+      b.textContent = '✓ Added';
+      b.style.background = '#F0F9F1';
+      b.style.color = 'var(--green)';
+      b.style.borderColor = '#DAEFDD';
+    });
+  });
+
+  // ---------- Bundle apply ----------
+  var bundleApply = document.getElementById('bundleApply');
+  if (bundleApply) {
+    bundleApply.addEventListener('click', function () {
+      bundleApply.innerHTML = '<span>✓ Bundle applied</span>';
+      bundleApply.style.background = 'var(--green)';
+      bundleApply.disabled = true;
+      animatePaybarSavings();
+    });
+  }
+
+  // ---------- Cross-sell rail add ----------
+  document.querySelectorAll('.rail-card[data-id] .add').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var card = b.closest('.rail-card');
+      if (card.classList.contains('added')) {
+        card.classList.remove('added');
+        b.textContent = '+';
+      } else {
+        card.classList.add('added');
+        b.textContent = '✓';
+        card.animate(
+          [{ transform: 'translateY(0)' }, { transform: 'translateY(-3px)' }, { transform: 'translateY(0)' }],
+          { duration: 260 }
+        );
+      }
+    });
+  });
+
+  // ---------- Skeleton -> AI suggestion materializes ----------
+  var thinkingCard = document.querySelector('.rail-card.thinking');
+  if (thinkingCard) {
+    setTimeout(function () {
+      thinkingCard.classList.remove('thinking');
+      thinkingCard.removeAttribute('aria-busy');
+      thinkingCard.setAttribute('data-id', 'tartufina');
+      thinkingCard.innerHTML =
+        '<div class="em">🍕</div>' +
+        '<div class="n">Tartufina</div>' +
+        '<div class="why"><span>✨ Predicted favorite</span><span class="score">· 92%</span></div>' +
+        '<div class="row"><span class="p">52,00 zł</span><button class="add" aria-label="add">+</button></div>';
+      var addBtn = thinkingCard.querySelector('.add');
+      addBtn.addEventListener('click', function () {
+        thinkingCard.classList.toggle('added');
+        addBtn.textContent = thinkingCard.classList.contains('added') ? '✓' : '+';
+      });
+    }, 1600);
+  }
+
+  // ---------- Quick add ----------
+  var quickBtn = document.getElementById('quickAddBtn');
+  if (quickBtn) {
+    quickBtn.addEventListener('click', function () {
+      if (quickBtn.classList.contains('added')) return;
+      quickBtn.classList.add('added');
+      quickBtn.innerHTML = '<span>✓ Added</span>';
+    });
+  }
+
+  // ---------- Add Limonata (free delivery nudge) ----------
+  var addLimo = document.querySelector('[data-add-limo]');
+  if (addLimo) {
+    addLimo.addEventListener('click', function () {
+      addLimo.textContent = '✓ Added';
+      addLimo.style.background = '#F0F9F1';
+      addLimo.style.color = 'var(--green)';
+      addLimo.style.borderColor = '#DAEFDD';
+      var bar = document.querySelector('.delprog-bar > span');
+      if (bar) bar.style.width = '100%';
+      var left = document.querySelector('.delprog-head .left');
+      if (left) { left.textContent = 'Unlocked'; left.style.color = 'var(--green)'; }
+    });
+  }
+
+  // ---------- Fulfillment segmented ----------
+  var seg = document.getElementById('seg');
+  if (seg) {
+    seg.querySelectorAll('button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        seg.querySelectorAll('button').forEach(function (x) { x.classList.remove('on'); });
+        b.classList.add('on');
+        if (b.getAttribute('data-seg') === 'delivery') {
+          seg.classList.add('right');
+        } else {
+          seg.classList.remove('right');
+        }
+      });
+    });
+  }
+
+  // ---------- Address suggestion accept ----------
+  var addrAccept = document.getElementById('addrAccept');
+  if (addrAccept) {
+    addrAccept.addEventListener('click', function () {
+      document.getElementById('addr').value = 'ul. Floriańska 12';
+      var s = document.getElementById('addrSuggest');
+      s.style.transition = 'opacity 200ms, height 240ms, margin 240ms, padding 240ms';
+      var h = s.offsetHeight;
+      s.style.height = h + 'px';
+      requestAnimationFrame(function () {
+        s.style.opacity = '0';
+        s.style.height = '0';
+        s.style.marginTop = '0';
+        s.style.padding = '0';
+      });
+      setTimeout(function () { s.remove(); }, 260);
+    });
+  }
+
+  // ---------- Time slot picker ----------
+  document.querySelectorAll('[data-slot]').forEach(function (s) {
+    s.addEventListener('click', function () {
+      document.querySelectorAll('[data-slot]').forEach(function (x) { x.classList.remove('on'); });
+      s.classList.add('on');
+    });
+  });
+
+  // ---------- Tip picker ----------
+  document.querySelectorAll('#tipRow .tip-btn').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('#tipRow .tip-btn').forEach(function (x) { x.classList.remove('on'); });
+      b.classList.add('on');
+    });
+  });
+
+  // ---------- Clear cart ----------
+  document.getElementById('clearBtn').addEventListener('click', function () {
+    runAIResponse('I cleared the cart for you. Want me to rebuild your usual Friday order?');
+  });
+
+  // ---------- Pay button ----------
+  document.getElementById('payBtn').addEventListener('click', function () {
+    runAIResponse('Confirming payment with Stripe… (mock — no live charge).');
+  });
+
+  // ---------- AI input ----------
+  var aiForm = document.getElementById('aiForm');
+  var aiBox  = document.getElementById('aiBox');
+
+  function pickResponse(q) {
+    q = (q || '').toLowerCase();
+    if (q.indexOf('gluten') >= 0) {
+      return "Done — I'll mark all 3 items gluten-free. Margherita & Carbonara have a +6 zł GF dough/pasta swap; Caprese already qualifies.";
+    }
+    if (q.indexOf('vegan') >= 0 || q.indexOf('dairy') >= 0) {
+      return "Switching to a vegan-friendly cart: Margherita → Marinara (no cheese), Carbonara → Pomodoro, Caprese removed. Saves 12 zł.";
+    }
+    if (q.indexOf('spicy') >= 0 || q.indexOf('hot') >= 0) {
+      return "I'd suggest swapping Caprese → Diavola (28→34 zł). 89% of customers who like Carbonara also enjoy Diavola.";
+    }
+    if (q.indexOf('cheap') >= 0 || q.indexOf('under') >= 0 || q.indexOf('budget') >= 0) {
+      return "Trimming under 60 zł: keep Margherita + add an espresso = 47 zł. Removing Carbonara and Caprese saves 70 zł.";
+    }
+    if (q.indexOf('faster') >= 0 || q.indexOf('quick') >= 0 || q.indexOf('rush') >= 0) {
+      return "Fastest path: 18:15 takeout. Pasta typically adds 4 min — removing it gets you out in 12 min.";
+    }
+    if (q.indexOf('wine') >= 0 || q.indexOf('drink') >= 0) {
+      return "For your cart, a glass of Chianti (22 zł) pairs at 94%. Limonata pairs at 84% if you'd prefer non-alcoholic.";
+    }
+    if (q.indexOf('reorder') >= 0 || q.indexOf('usual') >= 0 || q.indexOf('last') >= 0) {
+      return "Your last Friday order: Tartufina, Caprese, espresso, Chianti — 121 zł. Apply?";
+    }
+    return "Got it — I can adjust the cart, swap items, or fit a budget. Try: \"make it gluten-free\", \"under 60 zł\", or \"add wine pairing\".";
+  }
+
+  function runAIResponse(text) {
+    var resp = document.getElementById('aiResp');
+    var t = document.getElementById('aiRespText');
+    resp.classList.add('show');
+    t.innerHTML = '<span class="typing"><i></i><i></i><i></i></span>';
+    setTimeout(function () {
+      t.textContent = '';
+      var i = 0;
+      var step = function () {
+        if (i <= text.length) {
+          t.textContent = text.slice(0, i);
+          i += 1;
+          setTimeout(step, 12);
+        }
+      };
+      step();
+    }, 700);
+    clearTimeout(runAIResponse._h);
+    runAIResponse._h = setTimeout(function () {
+      resp.classList.remove('show');
+    }, 7000);
+  }
+
+  aiForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var q = aiBox.value.trim();
+    if (!q) return;
+    runAIResponse(pickResponse(q));
+    aiBox.value = '';
+  });
+
+  // ---------- Concierge quick actions ----------
+  document.querySelectorAll('[data-ai-action]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var k = b.getAttribute('data-ai-action');
+      if (k === 'glutenfree') runAIResponse("Done — I'll mark all 3 items gluten-free. +6 zł each for GF dough & pasta.");
+      else if (k === 'reorder') runAIResponse("Reordering last Friday: Tartufina, Caprese, espresso, Chianti — total 121 zł.");
+      else if (k === 'under60') runAIResponse("Trimmed to under 60 zł: keeping Margherita + espresso. Saves 70 zł.");
+    });
+  });
+
+  // ---------- "Why" glyphs trigger AI response too ----------
+  document.querySelectorAll('.why-glyph').forEach(function (g) {
+    g.addEventListener('click', function () {
+      runAIResponse("Here's why: I cross-referenced your last 14 orders with cart context (Margherita + Carbonara), local weather, and 92% of similar carts. The combo matched best.");
+    });
+  });
+
+  // ---------- Tiny animation when bundle applied ----------
+  function animatePaybarSavings() {
+    var aiSave = document.querySelector('.ai-save .v');
+    if (!aiSave) return;
+    aiSave.animate(
+      [{ transform: 'scale(1)' }, { transform: 'scale(1.15)' }, { transform: 'scale(1)' }],
+      { duration: 380 }
+    );
+  }
+
+  // ---------- Soft entrance for items ----------
+  var items = document.querySelectorAll('#items .item, #items .soldout, #items .corp, #items .tod');
+  items.forEach(function (el, i) {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(4px)';
+    el.style.transition = 'opacity 320ms ease, transform 320ms ease';
+    setTimeout(function () {
+      el.style.opacity = '1';
+      el.style.transform = 'translateY(0)';
+    }, 60 + i * 50);
+  });
+
+  // ---------- Initial greet -> small toast after 2s (subtle) ----------
+  // (Disabled to keep the UI calm; left as a hook.)
+  // setTimeout(function () { runAIResponse("Tip: ask me anything — try \"make it gluten-free\"."); }, 2000);
+
+})();
+</script>
+</body>
+</html>

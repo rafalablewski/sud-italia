@@ -1,0 +1,1467 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Sud Italia — Your Order · V3</title>
+<!--
+  ============================================================
+  V3 — Apple-like glassmorphism checkout
+  Sud Italia · Neapolitan pizza truck · Kraków + Warszawa
+  Premium iOS-native cart/checkout mockup.
+  Inspired by Apple Wallet, Apple Pay sheets, iOS 26
+  control-center aesthetic, macOS Sonoma glass.
+  ============================================================
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  /* =====================================================
+     TOKENS
+  ===================================================== */
+  :root {
+    --red: #FF3B30;       /* iOS red / pomodoro */
+    --green: #34C759;     /* basil */
+    --amber: #FF9500;     /* gold-amber */
+    --ink: #1c1c1e;
+    --ink-2: #3a3a3c;
+    --ink-3: #6b6b70;
+    --ink-4: #9a9aa1;
+    --hairline: rgba(60,60,67,0.18);
+    --hairline-strong: rgba(60,60,67,0.36);
+    --glass: rgba(255,255,255,0.55);
+    --glass-strong: rgba(255,255,255,0.72);
+    --glass-soft: rgba(255,255,255,0.38);
+    --highlight: rgba(255,255,255,0.7);
+    --shadow-lg: 0 24px 60px -20px rgba(40,20,10,0.22), 0 2px 6px -2px rgba(40,20,10,0.10);
+    --shadow-pop: 0 40px 80px -30px rgba(40,20,10,0.30), 0 1px 0 rgba(255,255,255,0.7) inset;
+    --radius-card: 24px;
+    --radius-chip: 14px;
+    --radius-input: 12px;
+    --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    min-height: 100vh;
+    overflow-x: hidden;
+    background: #f6efe6;
+  }
+  .tabular { font-variant-numeric: tabular-nums; }
+
+  /* =====================================================
+     FOOD-PHOTOGRAPHY BLURRED BACKDROP
+  ===================================================== */
+  .backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at 8% 12%, #ffd6b3 0%, transparent 38%),
+      radial-gradient(circle at 92% 8%, #ffb199 0%, transparent 36%),
+      radial-gradient(circle at 78% 92%, #e9d49a 0%, transparent 42%),
+      radial-gradient(circle at 18% 88%, #b8d9a6 0%, transparent 40%),
+      conic-gradient(from 210deg at 50% 50%, #ffe6c2, #ffcaa3, #e6a07a, #c4775c, #e2c08b, #ffe6c2);
+  }
+  .backdrop::before {
+    content: "";
+    position: absolute; inset: -40px;
+    backdrop-filter: blur(80px) saturate(140%);
+    -webkit-backdrop-filter: blur(80px) saturate(140%);
+  }
+  .backdrop::after {
+    content: "";
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(circle at 50% 30%, transparent 0%, rgba(255,240,220,0.18) 60%),
+      linear-gradient(180deg, rgba(255,250,242,0.10), rgba(255,236,214,0.20));
+    pointer-events: none;
+  }
+
+  /* Floating food blobs to imply photography behind glass */
+  .blob {
+    position: fixed;
+    width: 220px; height: 220px;
+    border-radius: 50%;
+    filter: blur(40px);
+    opacity: 0.55;
+    z-index: -1;
+    pointer-events: none;
+  }
+  .blob.b1 { top: -40px; left: -40px; background: radial-gradient(circle, #ff8a5b, transparent 70%); }
+  .blob.b2 { top: 22%; right: -60px; background: radial-gradient(circle, #c4434a, transparent 70%); }
+  .blob.b3 { bottom: 10%; left: -50px; background: radial-gradient(circle, #6fae5a, transparent 70%); }
+  .blob.b4 { bottom: -60px; right: 12%; background: radial-gradient(circle, #ffb648, transparent 70%); }
+
+  /* =====================================================
+     LAYOUT
+  ===================================================== */
+  .shell {
+    width: 100%;
+    max-width: 460px;
+    margin: 0 auto;
+    padding: 14px 14px 180px;
+    position: relative;
+  }
+  @media (min-width: 768px) {
+    .shell {
+      max-width: 980px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+      gap: 20px;
+      padding: 28px 28px 200px;
+    }
+    .shell > .col-a { display: flex; flex-direction: column; gap: 14px; }
+    .shell > .col-b { display: flex; flex-direction: column; gap: 14px; }
+    .header-row, .paybar { grid-column: 1 / -1; }
+  }
+
+  /* =====================================================
+     GLASS CARD
+  ===================================================== */
+  .glass {
+    position: relative;
+    background: var(--glass);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-lg), 0 0 0 0.5px rgba(255,255,255,0.6) inset, 0 1px 0 var(--highlight) inset;
+    border: 0.5px solid rgba(255,255,255,0.5);
+  }
+  .glass.strong {
+    background: var(--glass-strong);
+    box-shadow: var(--shadow-pop);
+  }
+  .pad { padding: 16px; }
+  .pad-lg { padding: 20px; }
+
+  /* =====================================================
+     HEADER
+  ===================================================== */
+  .header-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 4px 4px 10px;
+  }
+  .h-title {
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+    color: var(--ink);
+  }
+  .h-title em {
+    font-style: italic;
+    font-family: 'Inter', serif;
+    font-weight: 600;
+    color: #8a3a2a;
+  }
+  .h-sub {
+    font-size: 13px;
+    color: var(--ink-3);
+    margin-top: 2px;
+    letter-spacing: -0.005em;
+  }
+  .close-chip {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--glass);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 0.5px solid rgba(255,255,255,0.5);
+    box-shadow: 0 1px 0 var(--highlight) inset, 0 4px 14px rgba(40,20,10,0.10);
+    display: grid; place-items: center;
+    color: var(--ink-2);
+    cursor: pointer;
+    transition: transform .25s var(--spring);
+  }
+  .close-chip:active { transform: scale(0.9); }
+  .close-chip svg { width: 14px; height: 14px; }
+
+  /* =====================================================
+     QUICK ADD ROW (top)
+  ===================================================== */
+  .quickadd {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 14px;
+  }
+  .quickadd .avatar {
+    width: 46px; height: 46px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #ffb35e, #ff6a4a);
+    display: grid; place-items: center;
+    font-size: 24px;
+    box-shadow: 0 6px 14px -6px rgba(255,90,60,0.55), 0 1px 0 rgba(255,255,255,0.6) inset;
+  }
+  .quickadd .qa-body { flex: 1; min-width: 0; }
+  .quickadd .qa-eyebrow { font-size: 11px; font-weight: 600; color: var(--amber); letter-spacing: 0.04em; text-transform: uppercase; }
+  .quickadd .qa-title { font-size: 15px; font-weight: 600; color: var(--ink); letter-spacing: -0.015em; }
+  .quickadd .qa-sub { font-size: 12.5px; color: var(--ink-3); }
+  .qa-btn {
+    border: none;
+    background: linear-gradient(180deg, #ff5e54, var(--red));
+    color: #fff;
+    height: 36px; padding: 0 14px;
+    border-radius: 18px;
+    font: 600 13.5px/1 'Inter';
+    letter-spacing: -0.01em;
+    box-shadow: 0 6px 14px -4px rgba(255,59,48,0.45), 0 1px 0 rgba(255,255,255,0.25) inset;
+    cursor: pointer;
+    transition: transform .2s var(--spring);
+  }
+  .qa-btn:active { transform: scale(0.94); }
+
+  /* =====================================================
+     SECTION HEADER
+  ===================================================== */
+  .sect-h {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding: 0 4px;
+    margin: 10px 0 8px;
+  }
+  .sect-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink-3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .sect-meta { font-size: 12px; color: var(--ink-4); }
+
+  /* =====================================================
+     CART ITEM CARDS
+  ===================================================== */
+  .item {
+    display: grid;
+    grid-template-columns: 64px 1fr auto;
+    gap: 14px;
+    align-items: center;
+    padding: 14px;
+    margin-bottom: 10px;
+    transition: transform .25s var(--spring), box-shadow .25s var(--ease);
+  }
+  .item:hover { transform: translateY(-1px); }
+  .item-img {
+    width: 64px; height: 64px;
+    border-radius: 18px;
+    display: grid; place-items: center;
+    font-size: 34px;
+    box-shadow: 0 8px 18px -8px rgba(40,20,10,0.30), 0 1px 0 rgba(255,255,255,0.6) inset;
+    position: relative;
+    overflow: hidden;
+  }
+  .item-img::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(160deg, rgba(255,255,255,0.45), transparent 55%);
+    pointer-events: none;
+  }
+  .img-marg  { background: radial-gradient(circle at 30% 30%, #ffd189, #e23e3e 65%, #8a1b1b); }
+  .img-diav  { background: radial-gradient(circle at 30% 30%, #ff9b6a, #c4292a 65%, #6d1212); }
+  .img-carb  { background: radial-gradient(circle at 30% 30%, #fff0c2, #e6c673 65%, #a37e29); }
+
+  .item-name {
+    font-size: 15.5px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    color: var(--ink);
+  }
+  .item-meta {
+    font-size: 12.5px;
+    color: var(--ink-3);
+    margin-top: 2px;
+  }
+  .item-tags { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+  .tag {
+    font-size: 10.5px; font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.6);
+    border: 0.5px solid rgba(0,0,0,0.06);
+    color: var(--ink-2);
+    letter-spacing: 0.005em;
+  }
+  .tag.green { color: var(--green); background: rgba(52,199,89,0.10); border-color: rgba(52,199,89,0.25); }
+  .tag.red { color: var(--red); background: rgba(255,59,48,0.10); border-color: rgba(255,59,48,0.25); }
+  .tag.amber { color: var(--amber); background: rgba(255,149,0,0.10); border-color: rgba(255,149,0,0.25); }
+
+  .item-right { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+  .price {
+    font: 700 16px/1 'Inter';
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+  .price.small { font-size: 13px; font-weight: 600; }
+  .price .cur { font-size: 11.5px; font-weight: 600; color: var(--ink-3); margin-left: 2px; }
+
+  .stepper {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .stp-btn {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255,255,255,0.85);
+    box-shadow: 0 2px 6px -2px rgba(40,20,10,0.18), 0 0 0 0.5px rgba(0,0,0,0.06) inset;
+    color: var(--ink);
+    cursor: pointer;
+    display: grid; place-items: center;
+    transition: transform .2s var(--spring), background .2s ease;
+    font-size: 16px; font-weight: 500;
+  }
+  .stp-btn:active { transform: scale(0.85); }
+  .stp-btn.plus { background: linear-gradient(180deg, #ff5e54, var(--red)); color: #fff; box-shadow: 0 4px 10px -3px rgba(255,59,48,0.45); }
+  .stp-num {
+    min-width: 16px; text-align: center;
+    font: 600 14px/1 'Inter';
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+
+  /* =====================================================
+     SOLD OUT WARNING ROW
+  ===================================================== */
+  .soldout {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    background: rgba(255,59,48,0.08);
+    border-radius: 18px;
+    border: 0.5px solid rgba(255,59,48,0.25);
+  }
+  .soldout.hidden { display: none; }
+  .soldout .so-ic {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: rgba(255,59,48,0.18);
+    display: grid; place-items: center;
+    color: var(--red);
+  }
+  .soldout .so-body { flex: 1; }
+  .so-title { font-size: 13.5px; font-weight: 600; color: var(--red); letter-spacing: -0.015em; }
+  .so-sub { font-size: 12px; color: var(--ink-3); }
+  .so-action {
+    background: rgba(255,59,48,0.12); border: none; color: var(--red);
+    font: 600 12px/1 'Inter'; padding: 8px 12px;
+    border-radius: 12px; cursor: pointer;
+  }
+
+  /* =====================================================
+     CORPORATE BANNER
+  ===================================================== */
+  .corp {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+  }
+  .corp-dot {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: linear-gradient(135deg, #4a90e2, #1f5fad);
+    display: grid; place-items: center;
+    color: #fff; font: 700 13px/1 'Inter';
+    box-shadow: 0 4px 10px -4px rgba(31,95,173,0.5), 0 1px 0 rgba(255,255,255,0.4) inset;
+  }
+  .corp-body { flex: 1; }
+  .corp-title { font-size: 13.5px; font-weight: 600; letter-spacing: -0.015em; }
+  .corp-sub { font-size: 12px; color: var(--ink-3); }
+
+  /* =====================================================
+     TIME-OF-DAY (APERITIVO)
+  ===================================================== */
+  .aperi {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px;
+    margin-bottom: 10px;
+    background: linear-gradient(135deg, rgba(255,150,80,0.18), rgba(255,90,50,0.12));
+  }
+  .aperi-ico {
+    width: 34px; height: 34px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #ff9b5a, #ff5e3a);
+    display: grid; place-items: center;
+    font-size: 18px;
+    box-shadow: 0 4px 10px -3px rgba(255,90,50,0.45);
+  }
+  .aperi-body { flex: 1; }
+  .aperi-title { font-size: 14px; font-weight: 700; letter-spacing: -0.015em; }
+  .aperi-sub { font-size: 12px; color: var(--ink-3); }
+
+  /* =====================================================
+     LOYALTY
+  ===================================================== */
+  .loy {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+  .loy-ava {
+    width: 42px; height: 42px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ffd76a, #ff9500);
+    display: grid; place-items: center;
+    color: #fff;
+    box-shadow: 0 6px 14px -5px rgba(255,149,0,0.55), 0 1px 0 rgba(255,255,255,0.5) inset;
+  }
+  .loy-body { flex: 1; }
+  .loy-name { font-size: 14.5px; font-weight: 700; letter-spacing: -0.015em; display: flex; align-items: center; gap: 6px; }
+  .loy-pts { font-size: 12.5px; color: var(--ink-3); }
+  .loy-pts b { color: var(--amber); font-weight: 700; }
+  .loy-toggle {
+    font: 600 11.5px/1 'Inter';
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.7);
+    border: 0.5px solid rgba(0,0,0,0.06);
+    color: var(--ink-2);
+    cursor: pointer;
+  }
+  .loy.signedout .loy-ava { background: linear-gradient(135deg, #d9d9d9, #a8a8a8); }
+  .loy.signedout .loy-pts { color: var(--ink-3); }
+
+  /* =====================================================
+     TIER PERK
+  ===================================================== */
+  .tier {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    background: linear-gradient(135deg, rgba(255,215,106,0.18), rgba(255,149,0,0.10));
+  }
+  .tier-ico { font-size: 18px; }
+  .tier-text { font-size: 12.5px; color: var(--ink-2); letter-spacing: -0.005em; }
+  .tier-text b { color: var(--amber); }
+
+  /* =====================================================
+     BUNDLE LADDER — FAMILY FEAST (ring progress)
+  ===================================================== */
+  .bundle {
+    display: grid;
+    grid-template-columns: 64px 1fr;
+    gap: 14px;
+    align-items: center;
+    padding: 16px;
+    margin-bottom: 10px;
+  }
+  .ring {
+    width: 64px; height: 64px;
+    position: relative;
+  }
+  .ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring .track { stroke: rgba(0,0,0,0.08); }
+  .ring .bar { stroke: url(#bundleGrad); stroke-linecap: round; transition: stroke-dashoffset 1s var(--ease); }
+  .ring-label {
+    position: absolute; inset: 0;
+    display: grid; place-items: center;
+    font: 800 14px/1 'Inter';
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+  }
+  .bundle-title { font-size: 14.5px; font-weight: 700; letter-spacing: -0.015em; }
+  .bundle-sub { font-size: 12.5px; color: var(--ink-3); margin-top: 2px; }
+  .bundle-step {
+    margin-top: 8px;
+    display: flex; gap: 6px; flex-wrap: wrap;
+  }
+  .step-pill {
+    font-size: 11px; font-weight: 600;
+    padding: 4px 8px; border-radius: 8px;
+    background: rgba(255,255,255,0.6);
+    color: var(--ink-3);
+    border: 0.5px solid rgba(0,0,0,0.06);
+  }
+  .step-pill.done { background: rgba(52,199,89,0.14); color: var(--green); border-color: rgba(52,199,89,0.25); }
+
+  /* =====================================================
+     COMBO DEAL — linear progress
+  ===================================================== */
+  .combo { padding: 14px; margin-bottom: 10px; }
+  .combo-h { display: flex; align-items: center; gap: 10px; }
+  .combo-ico {
+    width: 34px; height: 34px; border-radius: 12px;
+    background: linear-gradient(135deg, #ff9b5a, var(--red));
+    display: grid; place-items: center;
+    font-size: 18px;
+    box-shadow: 0 4px 10px -3px rgba(255,90,50,0.4);
+  }
+  .combo-title { font-size: 14px; font-weight: 700; letter-spacing: -0.015em; }
+  .combo-sub { font-size: 12px; color: var(--ink-3); }
+  .combo-bar {
+    margin-top: 10px;
+    height: 8px;
+    border-radius: 100px;
+    background: rgba(0,0,0,0.08);
+    overflow: hidden;
+    position: relative;
+  }
+  .combo-bar .fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--amber), var(--red));
+    border-radius: 100px;
+    width: 68%;
+    box-shadow: 0 0 8px rgba(255,90,50,0.4);
+    transition: width 1s var(--spring);
+  }
+  .combo-foot { display: flex; justify-content: space-between; margin-top: 6px; font-size: 11.5px; color: var(--ink-3); }
+  .combo-foot b { color: var(--ink); font-weight: 700; }
+
+  /* =====================================================
+     CROSS-SELL — horizontal scroll
+  ===================================================== */
+  .pair-wrap { margin-bottom: 12px; }
+  .pair-scroll {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding: 4px 14px 14px;
+    margin: 0 -14px;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .pair-scroll::-webkit-scrollbar { display: none; }
+  .pair {
+    flex: 0 0 150px;
+    scroll-snap-align: start;
+    border-radius: 22px;
+    padding: 12px;
+    cursor: pointer;
+    transition: transform .35s var(--spring);
+    perspective: 800px;
+  }
+  .pair:hover { transform: translateY(-3px) rotateX(2deg) rotateY(-2deg); }
+  .pair-hero {
+    width: 100%;
+    aspect-ratio: 1/1;
+    border-radius: 16px;
+    display: grid; place-items: center;
+    font-size: 56px;
+    margin-bottom: 10px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 10px 22px -10px rgba(40,20,10,0.30), 0 1px 0 rgba(255,255,255,0.55) inset;
+  }
+  .pair-hero::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(155deg, rgba(255,255,255,0.5), transparent 50%);
+  }
+  .p-espresso { background: radial-gradient(circle at 30% 25%, #6b3a1e, #2c1709); }
+  .p-tiramisu { background: radial-gradient(circle at 30% 25%, #c79867, #5a3318); }
+  .p-aranci   { background: radial-gradient(circle at 30% 25%, #ffd089, #c46f17); }
+  .p-negroni  { background: radial-gradient(circle at 30% 25%, #ff8868, #8b2218); }
+  .p-bruschetta { background: radial-gradient(circle at 30% 25%, #ff9c5a, #b13a18); }
+
+  .pair-name { font-size: 13.5px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.2; min-height: 32px; }
+  .pair-foot {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 8px;
+  }
+  .pair-plus {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: linear-gradient(180deg, #ff5e54, var(--red));
+    border: none; color: #fff;
+    display: grid; place-items: center;
+    cursor: pointer;
+    box-shadow: 0 4px 10px -3px rgba(255,59,48,0.45);
+    transition: transform .25s var(--spring);
+  }
+  .pair-plus:active { transform: scale(0.85) rotate(90deg); }
+  .pair-plus.added { background: linear-gradient(180deg, #5dd373, var(--green)); }
+
+  /* =====================================================
+     DELIVERY PROGRESS BAR
+  ===================================================== */
+  .delprog { padding: 14px; margin-bottom: 10px; }
+  .delprog-h { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  .delprog-title { font-size: 13.5px; font-weight: 700; letter-spacing: -0.015em; }
+  .delprog-amt { font-size: 12.5px; color: var(--green); font-weight: 700; }
+  .delprog-bar {
+    height: 10px;
+    border-radius: 100px;
+    background: rgba(0,0,0,0.07);
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 0 0 0.5px rgba(0,0,0,0.04) inset, 0 2px 4px -2px rgba(0,0,0,0.10) inset;
+  }
+  .delprog-fill {
+    height: 100%; width: 100%;
+    background: linear-gradient(90deg, #5dd373, var(--green));
+    border-radius: 100px;
+    position: relative;
+    overflow: hidden;
+  }
+  .delprog-fill::after {
+    content: "";
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent 30%, rgba(255,255,255,0.6) 50%, transparent 70%);
+    animation: shimmer 2.4s linear infinite;
+  }
+  @keyframes shimmer {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(100%); }
+  }
+  .delprog-sub { font-size: 12px; color: var(--ink-3); margin-top: 6px; }
+
+  /* =====================================================
+     FULFILLMENT SEGMENTED CONTROL
+  ===================================================== */
+  .segment-wrap {
+    margin-bottom: 12px;
+    padding: 4px;
+    background: rgba(120,120,128,0.15);
+    border-radius: 14px;
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06) inset, 0 0 0 0.5px rgba(0,0,0,0.04);
+  }
+  .seg {
+    border: none;
+    background: transparent;
+    height: 34px;
+    border-radius: 10px;
+    font: 600 13px/1 'Inter';
+    color: var(--ink-2);
+    letter-spacing: -0.01em;
+    cursor: pointer;
+    transition: all .3s var(--spring);
+  }
+  .seg.active {
+    background: var(--glass-strong);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    color: var(--ink);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.7) inset, 0 2px 6px -2px rgba(40,20,10,0.18), 0 0 0 0.5px rgba(0,0,0,0.06);
+  }
+
+  /* =====================================================
+     ADDRESS FIELD
+  ===================================================== */
+  .addr {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    border-radius: 18px;
+  }
+  .addr-pin {
+    width: 32px; height: 32px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #ff8c5a, var(--red));
+    display: grid; place-items: center; color: #fff;
+    box-shadow: 0 4px 10px -3px rgba(255,90,50,0.5);
+  }
+  .addr-input {
+    flex: 1; border: none; background: transparent;
+    font: 500 14px/1 'Inter'; letter-spacing: -0.015em;
+    color: var(--ink);
+    outline: none;
+  }
+  .addr-input::placeholder { color: var(--ink-4); }
+  .addr-edit {
+    font: 600 12px/1 'Inter';
+    color: var(--red);
+    background: transparent; border: none; cursor: pointer;
+    padding: 8px 4px;
+  }
+
+  /* =====================================================
+     TIME SLOT CHIPS
+  ===================================================== */
+  .slots { padding: 14px; margin-bottom: 10px; }
+  .slots-h { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
+  .slots-title { font-size: 13.5px; font-weight: 700; letter-spacing: -0.015em; }
+  .slots-scarcity { font-size: 11.5px; color: var(--red); font-weight: 600; }
+  .slots-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .slot-chip {
+    padding: 9px 12px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.6);
+    border: 0.5px solid rgba(0,0,0,0.08);
+    font: 600 13px/1 'Inter';
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-2);
+    letter-spacing: -0.01em;
+    cursor: pointer;
+    transition: all .25s var(--spring);
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+  }
+  .slot-chip:active { transform: scale(0.94); }
+  .slot-chip.selected {
+    background: linear-gradient(180deg, #ff5e54, var(--red));
+    color: #fff;
+    border-color: rgba(255,59,48,0.3);
+    box-shadow: 0 6px 14px -4px rgba(255,59,48,0.45), 0 1px 0 rgba(255,255,255,0.25) inset;
+  }
+  .slot-chip .slot-tag {
+    font-size: 9.5px; font-weight: 600;
+    color: var(--red);
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .slot-chip.selected .slot-tag { color: rgba(255,255,255,0.85); }
+  .slot-chip.full {
+    background: rgba(0,0,0,0.05);
+    color: var(--ink-4);
+    text-decoration: line-through;
+    cursor: not-allowed;
+  }
+
+  /* =====================================================
+     CUSTOMER DETAILS (FLOATING LABELS)
+  ===================================================== */
+  .details { padding: 14px; margin-bottom: 10px; }
+  .field {
+    position: relative;
+    margin-bottom: 10px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.55);
+    border: 0.5px solid rgba(0,0,0,0.06);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.5) inset;
+  }
+  .field:last-child { margin-bottom: 0; }
+  .field input {
+    width: 100%;
+    border: none; background: transparent;
+    padding: 22px 14px 8px;
+    font: 500 14px/1 'Inter'; letter-spacing: -0.01em;
+    color: var(--ink);
+    outline: none;
+    border-radius: 12px;
+  }
+  .field label {
+    position: absolute; left: 14px; top: 16px;
+    font: 500 13px/1 'Inter'; color: var(--ink-4);
+    pointer-events: none;
+    transition: all .25s var(--ease);
+    letter-spacing: -0.005em;
+  }
+  .field input:focus + label,
+  .field input:not(:placeholder-shown) + label {
+    transform: translateY(-9px) scale(0.78);
+    color: var(--red);
+    font-weight: 600;
+  }
+  .field input:focus ~ .field-glow { opacity: 1; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* =====================================================
+     TIP PICKER
+  ===================================================== */
+  .tip { padding: 14px; margin-bottom: 10px; }
+  .tip-h { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  .tip-title { font-size: 13.5px; font-weight: 700; letter-spacing: -0.015em; }
+  .tip-sub { font-size: 11.5px; color: var(--ink-3); }
+  .tip-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .tip-chip {
+    position: relative;
+    padding: 11px 4px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.6);
+    border: 0.5px solid rgba(0,0,0,0.08);
+    text-align: center;
+    cursor: pointer;
+    transition: all .25s var(--spring);
+  }
+  .tip-chip .pct { font: 700 14px/1 'Inter'; font-variant-numeric: tabular-nums; color: var(--ink); letter-spacing: -0.01em; }
+  .tip-chip .amt { font: 500 10px/1.2 'Inter'; color: var(--ink-3); font-variant-numeric: tabular-nums; margin-top: 4px; }
+  .tip-chip.selected {
+    background: rgba(52,199,89,0.10);
+    border-color: var(--green);
+    box-shadow: 0 0 0 2px rgba(52,199,89,0.30), 0 4px 12px -4px rgba(52,199,89,0.35);
+  }
+  .tip-chip.selected .pct { color: var(--green); }
+  .tip-chip:active { transform: scale(0.94); }
+
+  /* =====================================================
+     STICKY PAY BAR
+  ===================================================== */
+  .paybar {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    padding: 14px 14px max(14px, calc(env(safe-area-inset-bottom) + 6px));
+    z-index: 50;
+    background: rgba(255,250,244,0.65);
+    backdrop-filter: blur(40px) saturate(190%);
+    -webkit-backdrop-filter: blur(40px) saturate(190%);
+    border-top: 0.5px solid rgba(255,255,255,0.6);
+    box-shadow: 0 -16px 40px -16px rgba(40,20,10,0.20), 0 -0.5px 0 rgba(255,255,255,0.8) inset;
+  }
+  .paybar-inner {
+    max-width: 980px; margin: 0 auto;
+  }
+  .breakdown {
+    display: flex; flex-direction: column; gap: 4px;
+    margin-bottom: 10px;
+    padding: 0 4px;
+  }
+  .bd-row { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .bd-row.discount { color: var(--green); font-weight: 600; }
+  .bd-row.total { font-size: 15px; color: var(--ink); font-weight: 700; padding-top: 6px; border-top: 0.5px solid var(--hairline); margin-top: 4px; letter-spacing: -0.02em; }
+  .bd-row.total .v { font-size: 18px; }
+
+  .weekly {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    background: rgba(255,255,255,0.55);
+    border-radius: 14px;
+    border: 0.5px solid rgba(0,0,0,0.06);
+  }
+  .weekly-l { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: var(--ink); letter-spacing: -0.01em; }
+  .weekly-l small { display: block; color: var(--ink-3); font-weight: 500; letter-spacing: 0; }
+  .ios-switch {
+    position: relative;
+    width: 46px; height: 28px;
+    background: rgba(120,120,128,0.20);
+    border-radius: 100px;
+    cursor: pointer;
+    transition: background .25s var(--ease);
+  }
+  .ios-switch::before {
+    content: "";
+    position: absolute; top: 2px; left: 2px;
+    width: 24px; height: 24px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.25), 0 0 0 0.5px rgba(0,0,0,0.04);
+    transition: transform .3s var(--spring);
+  }
+  .ios-switch.on { background: var(--green); }
+  .ios-switch.on::before { transform: translateX(18px); }
+
+  .pay-actions { display: flex; gap: 10px; align-items: stretch; }
+  .clear {
+    flex: 0 0 auto;
+    width: 52px;
+    border-radius: 16px;
+    background: rgba(255,255,255,0.7);
+    border: 0.5px solid rgba(0,0,0,0.06);
+    color: var(--ink-2);
+    cursor: pointer;
+    display: grid; place-items: center;
+    transition: transform .2s var(--spring);
+  }
+  .clear:active { transform: scale(0.92); }
+  .pay-btn {
+    flex: 1;
+    height: 56px;
+    border-radius: 18px;
+    border: none;
+    background: linear-gradient(180deg, #ff5e54, var(--red));
+    color: #fff;
+    font: 700 17px/1 'Inter';
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.015em;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 16px;
+    box-shadow: 0 14px 30px -10px rgba(255,59,48,0.55), 0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 0.5px rgba(255,59,48,0.5);
+    transition: transform .2s var(--spring);
+    position: relative; overflow: hidden;
+  }
+  .pay-btn:active { transform: scale(0.97); }
+  .pay-btn::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(160deg, rgba(255,255,255,0.25), transparent 45%);
+    pointer-events: none;
+  }
+  .pay-face {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 10px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.18);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 0.5px solid rgba(255,255,255,0.28);
+    font: 600 11.5px/1 'Inter';
+    letter-spacing: 0.005em;
+  }
+  .pay-face svg { width: 18px; height: 18px; }
+
+  .wallet-hint {
+    text-align: center;
+    margin-top: 8px;
+    font-size: 11px; color: var(--ink-3);
+    letter-spacing: -0.005em;
+  }
+  .wallet-hint b { color: var(--ink-2); font-weight: 600; }
+
+  /* tiny dot separator */
+  .dot { display: inline-block; width: 3px; height: 3px; border-radius: 50%; background: currentColor; margin: 0 6px 2px; vertical-align: middle; opacity: 0.5; }
+
+  /* press scale */
+  .press { transition: transform .2s var(--spring); }
+  .press:active { transform: scale(0.96); }
+
+  /* item enter animation */
+  @keyframes itemIn { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  .item, .glass { animation: itemIn .5s var(--spring) both; }
+</style>
+</head>
+<body>
+
+<div class="backdrop"></div>
+<div class="blob b1"></div>
+<div class="blob b2"></div>
+<div class="blob b3"></div>
+<div class="blob b4"></div>
+
+<!-- SVG defs for ring gradient -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="bundleGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FF9500" />
+      <stop offset="100%" stop-color="#FF3B30" />
+    </linearGradient>
+  </defs>
+</svg>
+
+<div class="shell">
+
+  <!-- HEADER -->
+  <div class="header-row">
+    <div>
+      <div class="h-title">Your <em>Order</em></div>
+      <div class="h-sub">Sud Italia <span class="dot"></span> Kraków, Rynek Główny</div>
+    </div>
+    <button class="close-chip" aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+
+  <!-- ============ COLUMN A ============ -->
+  <div class="col-a">
+
+    <!-- QUICK-ADD -->
+    <div class="glass quickadd">
+      <div class="avatar">🍕</div>
+      <div class="qa-body">
+        <div class="qa-eyebrow">Just for you</div>
+        <div class="qa-title">Margherita Bufala</div>
+        <div class="qa-sub">Your usual Tuesday order <span class="dot"></span> 29,90 zł</div>
+      </div>
+      <button class="qa-btn">+ Add</button>
+    </div>
+
+    <!-- ITEMS -->
+    <div class="sect-h">
+      <div class="sect-title">In your bag</div>
+      <div class="sect-meta">3 items</div>
+    </div>
+
+    <!-- Margherita -->
+    <div class="glass item">
+      <div class="item-img img-marg">🍕</div>
+      <div>
+        <div class="item-name">Margherita DOP</div>
+        <div class="item-meta">San Marzano <span class="dot"></span> Mozzarella di Bufala</div>
+        <div class="item-tags">
+          <span class="tag green">Vegetariano</span>
+          <span class="tag">Signature</span>
+        </div>
+      </div>
+      <div class="item-right">
+        <div class="price tabular">27,90<span class="cur">zł</span></div>
+        <div class="stepper" data-id="marg">
+          <button class="stp-btn minus" aria-label="Decrease">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"/></svg>
+          </button>
+          <span class="stp-num">1</span>
+          <button class="stp-btn plus" aria-label="Increase">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Diavola -->
+    <div class="glass item">
+      <div class="item-img img-diav">🌶️</div>
+      <div>
+        <div class="item-name">Diavola Calabrese</div>
+        <div class="item-meta">'Nduja <span class="dot"></span> Salame piccante</div>
+        <div class="item-tags">
+          <span class="tag red">Spicy</span>
+          <span class="tag amber">Chef's pick</span>
+        </div>
+      </div>
+      <div class="item-right">
+        <div class="price tabular">32,90<span class="cur">zł</span></div>
+        <div class="stepper" data-id="diav">
+          <button class="stp-btn minus" aria-label="Decrease">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"/></svg>
+          </button>
+          <span class="stp-num">1</span>
+          <button class="stp-btn plus" aria-label="Increase">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Carbonara -->
+    <div class="glass item">
+      <div class="item-img img-carb">🍝</div>
+      <div>
+        <div class="item-name">Pasta Carbonara</div>
+        <div class="item-meta">Guanciale <span class="dot"></span> Pecorino Romano</div>
+        <div class="item-tags">
+          <span class="tag">Classico</span>
+        </div>
+      </div>
+      <div class="item-right">
+        <div class="price tabular">38,00<span class="cur">zł</span></div>
+        <div class="stepper" data-id="carb">
+          <button class="stp-btn minus" aria-label="Decrease">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"/></svg>
+          </button>
+          <span class="stp-num">1</span>
+          <button class="stp-btn plus" aria-label="Increase">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SOLD OUT WARNING -->
+    <div class="soldout" id="soldoutRow">
+      <div class="so-ic">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <div class="so-body">
+        <div class="so-title">Tiramisu sold out tonight</div>
+        <div class="so-sub">Try our Cannoli Siciliani instead — 16,00 zł</div>
+      </div>
+      <button class="so-action">Swap</button>
+    </div>
+
+    <!-- CORPORATE BANNER -->
+    <div class="glass corp">
+      <div class="corp-dot">A</div>
+      <div class="corp-body">
+        <div class="corp-title">Allegro Group corporate account</div>
+        <div class="corp-sub">VAT invoice attached <span class="dot"></span> Pay later, monthly</div>
+      </div>
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#9a9aa1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+    </div>
+
+    <!-- APERITIVO BANNER -->
+    <div class="glass aperi">
+      <div class="aperi-ico">🍸</div>
+      <div class="aperi-body">
+        <div class="aperi-title">Aperitivo hour — 17:00 to 19:00</div>
+        <div class="aperi-sub">Pair a Negroni for 19 zł (–5 zł)</div>
+      </div>
+      <button class="qa-btn">Add</button>
+    </div>
+
+    <!-- LOYALTY (SIGNED IN) -->
+    <div class="glass loy">
+      <div class="loy-ava">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 2 14.39 8.26 21 9.27l-4.78 4.66L17.34 21 12 17.77 6.66 21l1.12-7.07L3 9.27l6.61-1.01L12 2z"/></svg>
+      </div>
+      <div class="loy-body">
+        <div class="loy-name">Marco <span class="tag amber" style="font-weight:700">Gold</span></div>
+        <div class="loy-pts"><b>243 points</b> <span class="dot"></span> 57 to next reward</div>
+      </div>
+      <button class="loy-toggle">Use 100 pts</button>
+    </div>
+
+    <!-- LOYALTY (SIGNED OUT — variant) -->
+    <div class="glass loy signedout" style="display:none" id="loySignedout">
+      <div class="loy-ava">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </div>
+      <div class="loy-body">
+        <div class="loy-name">Earn points on this order</div>
+        <div class="loy-pts">Just your phone — no account needed</div>
+      </div>
+      <button class="loy-toggle">Sign in</button>
+    </div>
+
+    <!-- TIER PERK -->
+    <div class="glass tier">
+      <div class="tier-ico">⭐</div>
+      <div class="tier-text">Gold perk active — <b>free dolce</b> with any pasta order today</div>
+    </div>
+
+    <!-- BUNDLE LADDER -->
+    <div class="glass bundle">
+      <div class="ring">
+        <svg viewBox="0 0 64 64">
+          <circle class="track" cx="32" cy="32" r="26" stroke-width="6" fill="none" />
+          <circle class="bar" cx="32" cy="32" r="26" stroke-width="6" fill="none"
+            stroke-dasharray="163.36" stroke-dashoffset="49" id="bundleRing"/>
+        </svg>
+        <div class="ring-label">70%</div>
+      </div>
+      <div>
+        <div class="bundle-title">Family Feast — almost there</div>
+        <div class="bundle-sub">Add 1 dolce to unlock <b style="color:var(--amber)">–14 zł off</b></div>
+        <div class="bundle-step">
+          <span class="step-pill done">2 pizze</span>
+          <span class="step-pill done">1 pasta</span>
+          <span class="step-pill">1 dolce</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMBO DEAL -->
+    <div class="glass combo">
+      <div class="combo-h">
+        <div class="combo-ico">🔥</div>
+        <div style="flex:1">
+          <div class="combo-title">Pizza + drink combo</div>
+          <div class="combo-sub">Add any drink for <b style="color:var(--red)">–8 zł</b></div>
+        </div>
+      </div>
+      <div class="combo-bar"><div class="fill"></div></div>
+      <div class="combo-foot">
+        <span>Drinks needed: <b>1 more</b></span>
+        <span class="tabular">Save 8,00 zł</span>
+      </div>
+    </div>
+
+    <!-- CROSS-SELL -->
+    <div class="pair-wrap">
+      <div class="sect-h">
+        <div class="sect-title">Pair with your meal</div>
+        <div class="sect-meta">5 picks</div>
+      </div>
+      <div class="pair-scroll">
+        <div class="glass pair">
+          <div class="pair-hero p-espresso">☕</div>
+          <div class="pair-name">Espresso Doppio</div>
+          <div class="pair-foot">
+            <div class="price small tabular">9,00<span class="cur">zł</span></div>
+            <button class="pair-plus" aria-label="Add">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="glass pair">
+          <div class="pair-hero p-tiramisu">🍰</div>
+          <div class="pair-name">Tiramisù della casa</div>
+          <div class="pair-foot">
+            <div class="price small tabular">18,00<span class="cur">zł</span></div>
+            <button class="pair-plus" aria-label="Add">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="glass pair">
+          <div class="pair-hero p-aranci">🍊</div>
+          <div class="pair-name">Aranciata Sicilia</div>
+          <div class="pair-foot">
+            <div class="price small tabular">11,00<span class="cur">zł</span></div>
+            <button class="pair-plus" aria-label="Add">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="glass pair">
+          <div class="pair-hero p-negroni">🍹</div>
+          <div class="pair-name">Negroni classico</div>
+          <div class="pair-foot">
+            <div class="price small tabular">24,00<span class="cur">zł</span></div>
+            <button class="pair-plus" aria-label="Add">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="glass pair">
+          <div class="pair-hero p-bruschetta">🥖</div>
+          <div class="pair-name">Bruschetta al pomodoro</div>
+          <div class="pair-foot">
+            <div class="price small tabular">15,00<span class="cur">zł</span></div>
+            <button class="pair-plus" aria-label="Add">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============ COLUMN B ============ -->
+  <div class="col-b">
+
+    <!-- DELIVERY PROGRESS -->
+    <div class="glass delprog">
+      <div class="delprog-h">
+        <div class="delprog-title">Free delivery unlocked</div>
+        <div class="delprog-amt">+18,90 zł over threshold</div>
+      </div>
+      <div class="delprog-bar"><div class="delprog-fill"></div></div>
+      <div class="delprog-sub">You're saving 9,00 zł on delivery today</div>
+    </div>
+
+    <!-- FULFILLMENT SEGMENT -->
+    <div class="sect-h">
+      <div class="sect-title">Fulfillment</div>
+      <div class="sect-meta">Kraków · Rynek</div>
+    </div>
+    <div class="segment-wrap">
+      <button class="seg" data-seg="pickup">Pickup</button>
+      <button class="seg active" data-seg="delivery">Delivery</button>
+      <button class="seg" data-seg="dinein">Dine-in</button>
+    </div>
+
+    <!-- ADDRESS -->
+    <div class="glass addr">
+      <div class="addr-pin">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      </div>
+      <input class="addr-input" value="ul. Floriańska 23/4, 31-019 Kraków" />
+      <button class="addr-edit">Edit</button>
+    </div>
+
+    <!-- TIME SLOTS -->
+    <div class="glass slots">
+      <div class="slots-h">
+        <div class="slots-title">Delivery time</div>
+        <div class="slots-scarcity">Filling up · 18:30 has 2 of 8 remaining</div>
+      </div>
+      <div class="slots-row">
+        <button class="slot-chip"><span>17:45</span></button>
+        <button class="slot-chip"><span>18:00</span></button>
+        <button class="slot-chip"><span>18:15</span></button>
+        <button class="slot-chip selected">
+          <span>18:30</span>
+          <span class="slot-tag">2 left</span>
+        </button>
+        <button class="slot-chip full"><span>18:45</span></button>
+        <button class="slot-chip"><span>19:00</span></button>
+        <button class="slot-chip"><span>19:15</span></button>
+        <button class="slot-chip"><span>19:30</span></button>
+      </div>
+    </div>
+
+    <!-- CUSTOMER DETAILS -->
+    <div class="glass details">
+      <div class="sect-h" style="padding:0; margin:0 0 12px;">
+        <div class="sect-title">Your details</div>
+        <div class="sect-meta">Phone-based <span class="dot"></span> no password</div>
+      </div>
+      <div class="field">
+        <input id="f-name" type="text" placeholder=" " value="Marco Ricci" />
+        <label for="f-name">Full name</label>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <input id="f-phone" type="tel" placeholder=" " value="+48 600 124 998" />
+          <label for="f-phone">Phone</label>
+        </div>
+        <div class="field">
+          <input id="f-buzzer" type="text" placeholder=" " />
+          <label for="f-buzzer">Buzzer (optional)</label>
+        </div>
+      </div>
+      <div class="field">
+        <input id="f-email" type="email" placeholder=" " />
+        <label for="f-email">Email — for Wallet receipt (optional)</label>
+      </div>
+    </div>
+
+    <!-- TIP PICKER -->
+    <div class="glass tip">
+      <div class="tip-h">
+        <div class="tip-title">Tip the rider</div>
+        <div class="tip-sub">100% to your courier</div>
+      </div>
+      <div class="tip-row">
+        <button class="tip-chip" data-tip="0"><div class="pct">0%</div><div class="amt">—</div></button>
+        <button class="tip-chip" data-tip="5"><div class="pct">5%</div><div class="amt tabular">5,69 zł</div></button>
+        <button class="tip-chip selected" data-tip="10"><div class="pct">10%</div><div class="amt tabular">11,38 zł</div></button>
+        <button class="tip-chip" data-tip="15"><div class="pct">15%</div><div class="amt tabular">17,07 zł</div></button>
+        <button class="tip-chip" data-tip="20"><div class="pct">20%</div><div class="amt tabular">22,76 zł</div></button>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- STICKY PAY BAR -->
+<div class="paybar">
+  <div class="paybar-inner">
+    <div class="breakdown tabular">
+      <div class="bd-row"><span>Subtotal (3 items)</span><span>98,80 zł</span></div>
+      <div class="bd-row discount"><span>Family Feast (when complete)</span><span>–14,00 zł</span></div>
+      <div class="bd-row"><span>Delivery</span><span style="color:var(--green); font-weight:600">Free</span></div>
+      <div class="bd-row"><span>Tip 10%</span><span>11,38 zł</span></div>
+      <div class="bd-row"><span>VAT included</span><span>17,52 zł</span></div>
+      <div class="bd-row total"><span>Total</span><span class="v">113,80 zł</span></div>
+    </div>
+
+    <div class="weekly">
+      <div class="weekly-l">
+        <span>📆</span>
+        <div>
+          Make this my weekly usual
+          <small>Tuesdays at 18:30 — skip anytime</small>
+        </div>
+      </div>
+      <div class="ios-switch" id="weeklySwitch"></div>
+    </div>
+
+    <div class="pay-actions">
+      <button class="clear" aria-label="Clear cart">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+      </button>
+      <button class="pay-btn">
+        <span class="pay-face">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5a1 1 0 0 1 1-1h2"/><path d="M17 4h2a1 1 0 0 1 1 1v2"/><path d="M20 17v2a1 1 0 0 1-1 1h-2"/><path d="M7 20H5a1 1 0 0 1-1-1v-2"/><path d="M9 9v1"/><path d="M15 9v1"/><path d="M9 15s1.2 1.5 3 1.5S15 15 15 15"/><path d="M12 10v3.5"/></svg>
+          Face ID
+        </span>
+        <span>Pay 113,80 zł</span>
+      </button>
+    </div>
+
+    <div class="wallet-hint">
+      <b>Apple Pay</b> ready <span class="dot"></span> Order receipt will save to Wallet
+    </div>
+  </div>
+</div>
+
+<script>
+  /* =========================================================
+     INTERACTIONS — V3 spring-y iOS feel
+  ========================================================= */
+
+  // Steppers
+  document.querySelectorAll('.stepper').forEach(st => {
+    const minus = st.querySelector('.minus');
+    const plus = st.querySelector('.plus');
+    const num = st.querySelector('.stp-num');
+    function set(n) {
+      num.style.transition = 'transform .25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity .2s';
+      num.style.transform = 'scale(1.35)';
+      num.style.opacity = '0.4';
+      setTimeout(() => {
+        num.textContent = String(n);
+        num.style.transform = 'scale(1)';
+        num.style.opacity = '1';
+      }, 110);
+    }
+    minus.addEventListener('click', () => {
+      const n = Math.max(1, parseInt(num.textContent, 10) - 1);
+      set(n);
+    });
+    plus.addEventListener('click', () => {
+      const n = parseInt(num.textContent, 10) + 1;
+      set(n);
+    });
+  });
+
+  // Segmented control
+  document.querySelectorAll('.seg').forEach(s => {
+    s.addEventListener('click', () => {
+      document.querySelectorAll('.seg').forEach(o => o.classList.remove('active'));
+      s.classList.add('active');
+    });
+  });
+
+  // Slot chips
+  document.querySelectorAll('.slot-chip').forEach(c => {
+    if (c.classList.contains('full')) return;
+    c.addEventListener('click', () => {
+      document.querySelectorAll('.slot-chip').forEach(o => o.classList.remove('selected'));
+      c.classList.add('selected');
+    });
+  });
+
+  // Tip chips with spring ring
+  document.querySelectorAll('.tip-chip').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.tip-chip').forEach(o => o.classList.remove('selected'));
+      t.classList.add('selected');
+      // ring pulse
+      t.animate(
+        [
+          { transform: 'scale(1)' },
+          { transform: 'scale(1.08)' },
+          { transform: 'scale(1)' }
+        ],
+        { duration: 380, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }
+      );
+    });
+  });
+
+  // Weekly switch
+  const sw = document.getElementById('weeklySwitch');
+  sw.addEventListener('click', () => sw.classList.toggle('on'));
+
+  // Pair-plus (cross-sell add animation)
+  document.querySelectorAll('.pair-plus').forEach(b => {
+    b.addEventListener('click', e => {
+      e.stopPropagation();
+      b.classList.add('added');
+      b.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+      b.animate(
+        [
+          { transform: 'scale(1) rotate(0)' },
+          { transform: 'scale(1.3) rotate(120deg)' },
+          { transform: 'scale(1) rotate(0)' }
+        ],
+        { duration: 480, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }
+      );
+      setTimeout(() => {
+        b.classList.remove('added');
+        b.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
+      }, 1600);
+    });
+  });
+
+  // Parallax tilt on pair cards
+  document.querySelectorAll('.pair').forEach(p => {
+    p.addEventListener('mousemove', e => {
+      const r = p.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width - 0.5;
+      const y = (e.clientY - r.top) / r.height - 0.5;
+      p.style.transform = `translateY(-3px) rotateX(${-y * 6}deg) rotateY(${x * 8}deg)`;
+    });
+    p.addEventListener('mouseleave', () => {
+      p.style.transform = '';
+    });
+  });
+
+  // Close chip
+  document.querySelector('.close-chip').addEventListener('click', () => {
+    document.querySelector('.close-chip').animate(
+      [{ transform: 'scale(1) rotate(0)' }, { transform: 'scale(0.85) rotate(90deg)' }, { transform: 'scale(1) rotate(0)' }],
+      { duration: 420, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }
+    );
+  });
+
+  // Pay button press feedback
+  document.querySelector('.pay-btn').addEventListener('click', e => {
+    const btn = e.currentTarget;
+    btn.animate(
+      [{ transform: 'scale(1)' }, { transform: 'scale(0.97)' }, { transform: 'scale(1)' }],
+      { duration: 280, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }
+    );
+  });
+
+  // Sold-out swap
+  document.querySelector('.so-action').addEventListener('click', () => {
+    const row = document.getElementById('soldoutRow');
+    row.animate(
+      [{ opacity: 1, transform: 'translateX(0)' }, { opacity: 0, transform: 'translateX(60px)' }],
+      { duration: 360, easing: 'cubic-bezier(0.4, 0, 1, 1)', fill: 'forwards' }
+    ).onfinish = () => { row.classList.add('hidden'); };
+  });
+</script>
+
+</body>
+</html>

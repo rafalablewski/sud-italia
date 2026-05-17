@@ -1,0 +1,1787 @@
+<!--
+  V9 — Minimal monochrome editorial cart
+  Sud Italia · Neapolitan pizza truck · Kraków + Warszawa
+  Channel: NYT Cooking + Aesop + Cereal magazine + Margiela tag UI
+  Palette: warm bone #F4F0E8 / off-white #FAF6EE / ink #0E0E0E / italia-red #B91C1C (used sparingly)
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Sud Italia — Your Order</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  /* ------------------------------------------------------------------
+     V9 — Editorial monochrome
+     Type system: EB Garamond (display, italic asides, numerics) +
+                  Inter (micro-labels, body chrome).
+     ------------------------------------------------------------------ */
+
+  :root {
+    --bone: #F4F0E8;
+    --bone-light: #FAF6EE;
+    --bone-shade: #ECE6DA;
+    --ink: #0E0E0E;
+    --ink-soft: #2A2A28;
+    --ink-mute: #6E6A60;
+    --ink-faint: #9B9689;
+    --hairline: rgba(14, 14, 14, 0.12);
+    --hairline-strong: rgba(14, 14, 14, 0.28);
+    --red: #B91C1C;
+    --red-deep: #7F1414;
+
+    --serif: 'EB Garamond', 'Cormorant Garamond', Georgia, serif;
+    --sans: 'Inter', -apple-system, system-ui, sans-serif;
+
+    --measure: 640px;
+    --gutter: 24px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
+
+  html, body {
+    background: var(--bone);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.5;
+    letter-spacing: 0.005em;
+  }
+
+  body {
+    min-height: 100vh;
+    padding-bottom: 220px;
+    overflow-x: hidden;
+  }
+
+  /* ------------------------------------------------------------------
+     Micro-typography
+     ------------------------------------------------------------------ */
+  .micro {
+    font-family: var(--sans);
+    font-size: 10.5px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--ink);
+  }
+  .micro--mute { color: var(--ink-mute); }
+  .micro--faint { color: var(--ink-faint); }
+
+  .serif { font-family: var(--serif); }
+  .italic { font-style: italic; }
+  .num { font-family: var(--serif); font-feature-settings: "lnum" 1, "tnum" 1; }
+
+  /* ------------------------------------------------------------------
+     Layout shell
+     ------------------------------------------------------------------ */
+  .shell {
+    width: 100%;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 var(--gutter);
+  }
+
+  /* hairlines */
+  .rule {
+    border: 0;
+    height: 1px;
+    background: var(--hairline);
+    margin: 0;
+  }
+  .rule--strong { background: var(--hairline-strong); }
+
+  /* ------------------------------------------------------------------
+     Masthead
+     ------------------------------------------------------------------ */
+  header.mast {
+    padding: 22px 0 14px;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .mast__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .mast__brand {
+    font-family: var(--serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 22px;
+    letter-spacing: 0.005em;
+  }
+  .mast__brand sup {
+    font-family: var(--sans);
+    font-style: normal;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    font-weight: 500;
+    color: var(--ink-mute);
+    margin-left: 6px;
+    vertical-align: 5px;
+  }
+  .mast__close {
+    background: transparent;
+    border: 1px solid var(--hairline);
+    width: 36px; height: 36px;
+    border-radius: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 240ms ease, color 240ms ease, border-color 240ms ease;
+    color: var(--ink);
+  }
+  .mast__close:hover { background: var(--ink); color: var(--bone); border-color: var(--ink); }
+  .mast__close svg { width: 12px; height: 12px; }
+
+  .mast__sub {
+    margin-top: 18px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .mast__title {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 38px;
+    line-height: 1.05;
+    letter-spacing: -0.005em;
+  }
+  .mast__title em { font-style: italic; }
+  .mast__meta {
+    text-align: right;
+  }
+  .mast__meta .micro { display: block; }
+  .mast__meta .num {
+    font-size: 14px;
+    color: var(--ink-mute);
+    margin-top: 4px;
+  }
+  .mast__byline {
+    margin-top: 14px;
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 16px;
+    color: var(--ink-soft);
+    max-width: 56ch;
+  }
+
+  /* ------------------------------------------------------------------
+     Editorial 2-column grid (desktop)
+     ------------------------------------------------------------------ */
+  .grid {
+    display: block;
+    padding: 32px 0 48px;
+  }
+  @media (min-width: 768px) {
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 56px;
+      align-items: start;
+    }
+  }
+  @media (min-width: 1024px) {
+    .grid { grid-template-columns: 1fr 420px; gap: 80px; }
+  }
+
+  /* Section heading — numbered like an article */
+  .sec {
+    margin: 40px 0 0;
+  }
+  .sec:first-child { margin-top: 0; }
+  .sec__head {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--hairline-strong);
+    margin-bottom: 22px;
+  }
+  .sec__num {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-style: italic;
+    color: var(--ink-mute);
+    min-width: 36px;
+  }
+  .sec__title {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    flex: 1;
+  }
+  .sec__story {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--ink-mute);
+    text-align: right;
+  }
+
+  /* ------------------------------------------------------------------
+     Editorial banner rows (corporate, time-of-day, loyalty, perks)
+     ------------------------------------------------------------------ */
+  .editorial-rows {
+    border-top: 1px solid var(--hairline);
+    border-bottom: 1px solid var(--hairline);
+    margin: 6px 0 0;
+  }
+  .er-row {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .er-row:last-child { border-bottom: 0; }
+  .er-row .label {
+    font-family: var(--sans);
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    min-width: 110px;
+  }
+  .er-row .body {
+    font-family: var(--serif);
+    font-size: 16px;
+    line-height: 1.45;
+    color: var(--ink);
+    flex: 1;
+  }
+  .er-row .body em { font-style: italic; color: var(--ink-soft); }
+  .er-row .body strong {
+    font-weight: 500;
+    border-bottom: 1px solid var(--hairline-strong);
+    padding-bottom: 1px;
+  }
+  .er-row .aside {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 13.5px;
+    color: var(--ink-mute);
+    text-align: right;
+    min-width: 92px;
+  }
+
+  /* ------------------------------------------------------------------
+     Loyalty chip
+     ------------------------------------------------------------------ */
+  .loyalty-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 12px;
+    border: 1px solid var(--ink);
+    background: transparent;
+    font-family: var(--sans);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+  .loyalty-tag .dot {
+    width: 6px; height: 6px; background: var(--ink);
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .loyalty-tag .num {
+    font-family: var(--serif);
+    font-size: 13px;
+    letter-spacing: 0;
+    font-style: italic;
+    font-weight: 500;
+  }
+
+  /* ------------------------------------------------------------------
+     CART ITEMS — numbered, big serif italic
+     ------------------------------------------------------------------ */
+  .items { list-style: none; }
+  .item {
+    display: grid;
+    grid-template-columns: 36px 1fr auto;
+    gap: 16px;
+    padding: 26px 0;
+    border-bottom: 1px solid var(--hairline);
+    align-items: start;
+  }
+  .item:first-child { padding-top: 6px; }
+  .item__num {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 22px;
+    color: var(--ink-mute);
+    line-height: 1.1;
+    padding-top: 4px;
+  }
+  .item__body { min-width: 0; }
+  .item__name {
+    font-family: var(--serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 26px;
+    line-height: 1.15;
+    color: var(--ink);
+    letter-spacing: -0.005em;
+  }
+  .item__desc {
+    margin-top: 6px;
+    font-family: var(--serif);
+    font-size: 14.5px;
+    color: var(--ink-mute);
+    line-height: 1.45;
+  }
+  .item__note {
+    margin-top: 10px;
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--ink-soft);
+    padding: 8px 12px;
+    border-left: 2px solid var(--ink);
+    background: rgba(14,14,14,0.03);
+  }
+  .item__note .micro { display: block; margin-bottom: 4px; font-size: 9.5px; color: var(--ink-mute); }
+  .item__footrow {
+    margin-top: 14px;
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    flex-wrap: wrap;
+  }
+  .qty {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--hairline-strong);
+    height: 30px;
+  }
+  .qty button {
+    width: 32px; height: 100%;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 240ms ease, color 240ms ease;
+  }
+  .qty button:hover { background: var(--ink); color: var(--bone); }
+  .qty .val {
+    min-width: 28px;
+    text-align: center;
+    font-family: var(--serif);
+    font-size: 15px;
+    font-feature-settings: "tnum" 1;
+    border-left: 1px solid var(--hairline-strong);
+    border-right: 1px solid var(--hairline-strong);
+    height: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+  }
+  .textlink {
+    background: transparent;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--ink-soft);
+    letter-spacing: 0.02em;
+    border-bottom: 1px solid var(--hairline-strong);
+    padding-bottom: 1px;
+    transition: color 240ms ease, border-color 240ms ease;
+  }
+  .textlink:hover { color: var(--ink); border-color: var(--ink); }
+  .textlink--delete:hover { color: var(--red); border-color: var(--red); }
+
+  .item__price {
+    font-family: var(--serif);
+    font-size: 22px;
+    text-align: right;
+    color: var(--ink);
+    font-feature-settings: "lnum" 1, "tnum" 1;
+    line-height: 1.1;
+    padding-top: 4px;
+  }
+  .item__price small {
+    display: block;
+    font-family: var(--sans);
+    font-size: 10px;
+    color: var(--ink-mute);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-top: 4px;
+    font-weight: 500;
+  }
+
+  /* sold out */
+  .item--sold .item__name { color: var(--ink-mute); text-decoration: line-through 1px var(--ink-faint); }
+  .item--sold .item__price { color: var(--ink-mute); }
+  .soldout {
+    margin-top: 10px;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--hairline-strong);
+    border-bottom: 1px solid var(--hairline-strong);
+    background: rgba(185, 28, 28, 0.04);
+  }
+  .soldout em {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 15px;
+    color: var(--red);
+  }
+  .soldout span {
+    font-family: var(--sans);
+    font-size: 11px;
+    color: var(--ink-mute);
+    letter-spacing: 0.05em;
+  }
+
+  /* ------------------------------------------------------------------
+     Bundle ladder & combo
+     ------------------------------------------------------------------ */
+  .ladder {
+    padding: 22px 0;
+    border-top: 1px solid var(--hairline);
+    border-bottom: 1px solid var(--hairline);
+    margin-top: 8px;
+  }
+  .ladder__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .ladder__title {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-style: italic;
+    letter-spacing: -0.005em;
+  }
+  .ladder__title .micro {
+    display: block;
+    font-size: 9.5px;
+    font-style: normal;
+    margin-bottom: 4px;
+    color: var(--ink-mute);
+  }
+  .ladder__save {
+    font-family: var(--serif);
+    font-size: 14px;
+    color: var(--ink-mute);
+    font-style: italic;
+  }
+  .ladder__bar {
+    margin-top: 16px;
+    height: 1px;
+    background: var(--hairline-strong);
+    position: relative;
+  }
+  .ladder__bar i {
+    position: absolute; left: 0; top: -1px;
+    height: 3px; background: var(--ink);
+    transition: width 600ms cubic-bezier(.22,.61,.36,1);
+  }
+  .ladder__ticks {
+    margin-top: 10px;
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--sans);
+    font-size: 9.5px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .ladder__ticks span.active { color: var(--ink); }
+  .ladder__cta {
+    margin-top: 18px;
+    font-family: var(--serif);
+    font-size: 15px;
+    color: var(--ink-soft);
+    font-style: italic;
+  }
+  .ladder__cta strong { font-style: normal; font-weight: 500; border-bottom: 1px solid var(--hairline-strong); }
+
+  .combo {
+    margin-top: 20px;
+    padding: 16px 0;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .combo .micro { min-width: 110px; }
+  .combo p {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 15.5px;
+    color: var(--ink);
+    flex: 1;
+    line-height: 1.45;
+  }
+  .combo p strong { font-style: normal; font-weight: 500; border-bottom: 1px solid var(--hairline-strong); }
+  .combo button {
+    background: transparent;
+    border: 1px solid var(--ink);
+    padding: 8px 14px;
+    font-family: var(--sans);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink);
+    cursor: pointer;
+    transition: background 240ms ease, color 240ms ease;
+  }
+  .combo button:hover { background: var(--ink); color: var(--bone); }
+  .combo button.added { background: var(--ink); color: var(--bone); }
+
+  /* ------------------------------------------------------------------
+     Cross-sell / pairing notes
+     ------------------------------------------------------------------ */
+  .pairings { list-style: none; }
+  .pair {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 18px;
+    padding: 18px 0;
+    border-bottom: 1px solid var(--hairline);
+    align-items: center;
+  }
+  .pair:first-child { padding-top: 6px; }
+  .pair:last-child { border-bottom: 0; }
+  .pair__name {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 20px;
+    line-height: 1.2;
+  }
+  .pair__desc {
+    margin-top: 4px;
+    font-family: var(--serif);
+    font-size: 14px;
+    color: var(--ink-mute);
+    line-height: 1.4;
+    max-width: 60ch;
+  }
+  .pair__foot {
+    margin-top: 6px;
+    font-family: var(--sans);
+    font-size: 9.5px;
+    color: var(--ink-faint);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+  .pair__right {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+  }
+  .pair__price {
+    font-family: var(--serif);
+    font-size: 17px;
+    font-feature-settings: "lnum" 1, "tnum" 1;
+  }
+  .pair__add {
+    background: transparent;
+    border: 0;
+    padding: 0 0 1px 0;
+    font-family: var(--sans);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink);
+    border-bottom: 1px solid var(--ink);
+    cursor: pointer;
+    transition: color 240ms ease, border-color 240ms ease, letter-spacing 240ms ease;
+  }
+  .pair__add:hover { letter-spacing: 0.22em; }
+  .pair__add.added { color: var(--ink-mute); border-color: var(--ink-mute); }
+
+  /* Quick-add essay-style row */
+  .quickadd {
+    margin-top: 22px;
+    padding: 18px 18px;
+    border: 1px solid var(--hairline-strong);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 18px;
+    align-items: center;
+  }
+  .quickadd__essay {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 15px;
+    color: var(--ink-soft);
+    line-height: 1.45;
+  }
+  .quickadd__essay strong {
+    font-style: normal;
+    font-weight: 500;
+    color: var(--ink);
+    border-bottom: 1px solid var(--hairline-strong);
+  }
+  .quickadd button {
+    background: var(--ink);
+    color: var(--bone);
+    border: 1px solid var(--ink);
+    padding: 10px 16px;
+    font-family: var(--sans);
+    font-size: 10.5px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 240ms ease, color 240ms ease;
+  }
+  .quickadd button:hover { background: transparent; color: var(--ink); }
+
+  /* ------------------------------------------------------------------
+     Delivery meter
+     ------------------------------------------------------------------ */
+  .meter { padding: 22px 0; border-top: 1px solid var(--hairline); border-bottom: 1px solid var(--hairline); }
+  .meter__head {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+  }
+  .meter__head .micro { letter-spacing: 0.22em; }
+  .meter__head em {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--ink-mute);
+  }
+  .meter__bar { margin-top: 12px; height: 1px; background: var(--hairline-strong); position: relative; }
+  .meter__bar i { position: absolute; left: 0; top: -1px; height: 3px; background: var(--ink); }
+  .meter__foot {
+    margin-top: 10px;
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--ink-mute);
+  }
+
+  /* ------------------------------------------------------------------
+     Fulfillment toggle (text links, underlined active)
+     ------------------------------------------------------------------ */
+  .fulfill {
+    margin-top: 8px;
+    display: flex; align-items: baseline; gap: 24px;
+  }
+  .fulfill button {
+    background: transparent; border: 0; padding: 4px 0;
+    font-family: var(--serif);
+    font-size: 19px;
+    font-style: italic;
+    color: var(--ink-mute);
+    cursor: pointer;
+    transition: color 240ms ease;
+  }
+  .fulfill button.active {
+    color: var(--ink);
+    border-bottom: 1px solid var(--ink);
+  }
+  .fulfill button:hover { color: var(--ink); }
+
+  /* ------------------------------------------------------------------
+     Form — underlined inputs only
+     ------------------------------------------------------------------ */
+  .field { margin-top: 22px; }
+  .field label {
+    display: block;
+    font-family: var(--sans);
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    margin-bottom: 6px;
+  }
+  .field input, .field textarea {
+    width: 100%;
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--hairline-strong);
+    padding: 8px 0 8px;
+    font-family: var(--serif);
+    font-size: 17px;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 240ms ease;
+    font-style: italic;
+  }
+  .field input::placeholder, .field textarea::placeholder { color: var(--ink-faint); font-style: italic; }
+  .field input:focus, .field textarea:focus { border-color: var(--ink); }
+  .field-grid { display: grid; gap: 22px; }
+  @media (min-width: 480px) {
+    .field-grid { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* Time slot list */
+  .slots { list-style: none; margin-top: 6px; }
+  .slots li {
+    padding: 14px 0;
+    border-bottom: 1px solid var(--hairline);
+    display: grid;
+    grid-template-columns: 80px 1fr auto;
+    gap: 16px;
+    align-items: baseline;
+    cursor: pointer;
+    transition: background 240ms ease;
+  }
+  .slots li:hover { background: rgba(14,14,14,0.025); }
+  .slots li.selected {
+    background: rgba(14,14,14,0.045);
+  }
+  .slots li.selected .slot__time { color: var(--ink); }
+  .slots li.selected .slot__radio i { background: var(--ink); }
+  .slot__time {
+    font-family: var(--serif);
+    font-size: 19px;
+    font-feature-settings: "lnum" 1, "tnum" 1;
+    color: var(--ink-soft);
+  }
+  .slot__label {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--ink-mute);
+  }
+  .slot__label em { color: var(--red); font-style: italic; }
+  .slot__radio {
+    width: 14px; height: 14px;
+    border: 1px solid var(--hairline-strong);
+    border-radius: 50%;
+    position: relative;
+  }
+  .slot__radio i {
+    position: absolute;
+    inset: 3px;
+    background: transparent;
+    border-radius: 50%;
+    transition: background 240ms ease;
+  }
+
+  /* ------------------------------------------------------------------
+     Tip picker — small chips, underlined when selected
+     ------------------------------------------------------------------ */
+  .tips {
+    display: flex; gap: 22px; flex-wrap: wrap; align-items: baseline;
+    margin-top: 4px;
+  }
+  .tips button {
+    background: transparent;
+    border: 0;
+    padding: 4px 2px;
+    font-family: var(--serif);
+    font-size: 16px;
+    font-style: italic;
+    color: var(--ink-mute);
+    cursor: pointer;
+    transition: color 240ms ease;
+  }
+  .tips button.active {
+    color: var(--ink);
+    border-bottom: 1px solid var(--ink);
+  }
+  .tips button:hover { color: var(--ink); }
+
+  /* ------------------------------------------------------------------
+     Aside column (desktop) — summary excerpts
+     ------------------------------------------------------------------ */
+  .aside-col {}
+  .aside-card {
+    border: 1px solid var(--hairline-strong);
+    padding: 22px;
+    background: var(--bone-light);
+  }
+  .aside-card h4 {
+    font-family: var(--sans);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--hairline);
+    margin-bottom: 14px;
+  }
+  .aside-card .line {
+    display: flex; justify-content: space-between;
+    padding: 6px 0;
+    font-family: var(--serif);
+    font-size: 15px;
+    color: var(--ink-soft);
+  }
+  .aside-card .line .num { font-size: 16px; }
+  .aside-card .line.discount { color: var(--ink-mute); font-style: italic; }
+  .aside-card .line.total {
+    border-top: 1px solid var(--hairline-strong);
+    margin-top: 10px;
+    padding-top: 14px;
+    font-size: 22px;
+    color: var(--ink);
+  }
+  .aside-card .line.total .num { font-size: 24px; color: var(--red); }
+  .aside-foot {
+    margin-top: 16px;
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 13.5px;
+    color: var(--ink-mute);
+    line-height: 1.5;
+  }
+  .aside-foot sup {
+    font-family: var(--sans);
+    font-size: 9px;
+    color: var(--ink-faint);
+    margin-right: 3px;
+    vertical-align: 5px;
+  }
+
+  /* ------------------------------------------------------------------
+     Olive branch divider (inline SVG)
+     ------------------------------------------------------------------ */
+  .olive {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    margin: 44px 0;
+  }
+  .olive .line { flex: 1; height: 1px; background: var(--hairline); }
+  .olive svg { width: 64px; height: 24px; color: var(--ink-mute); }
+
+  /* ------------------------------------------------------------------
+     Sticky pay bar
+     ------------------------------------------------------------------ */
+  .paybar {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    background: var(--bone-light);
+    border-top: 1px solid var(--hairline-strong);
+    padding: 14px 0 16px;
+    z-index: 50;
+    box-shadow: 0 -8px 24px -16px rgba(14,14,14,0.18);
+  }
+  .paybar__inner {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 var(--gutter);
+  }
+  .paybar__rows {
+    display: none;
+  }
+  @media (min-width: 640px) {
+    .paybar__rows {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--hairline);
+      margin-bottom: 12px;
+    }
+    .paybar__rows .col {
+      display: flex; justify-content: space-between;
+      font-family: var(--serif);
+      font-size: 14px;
+      color: var(--ink-mute);
+    }
+    .paybar__rows .col span:last-child {
+      font-family: var(--serif);
+      font-feature-settings: "lnum" 1, "tnum" 1;
+      color: var(--ink);
+    }
+  }
+  .paybar__main {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 12px;
+    align-items: center;
+  }
+  .paybar__totals {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .paybar__totals .micro { color: var(--ink-mute); }
+  .paybar__totals .amt {
+    font-family: var(--serif);
+    font-size: 28px;
+    font-feature-settings: "lnum" 1, "tnum" 1;
+    color: var(--red);
+    line-height: 1;
+  }
+  .paybar__trash {
+    background: transparent;
+    border: 1px solid var(--hairline-strong);
+    width: 44px; height: 44px;
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: background 240ms ease, color 240ms ease, border-color 240ms ease;
+    color: var(--ink);
+  }
+  .paybar__trash:hover { background: var(--ink); color: var(--bone); border-color: var(--ink); }
+  .paybar__trash svg { width: 14px; height: 14px; }
+
+  .paybar__cta {
+    background: var(--ink);
+    color: var(--red);
+    border: 0;
+    padding: 14px 22px;
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 12.5px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 14px;
+    transition: background 240ms ease, color 240ms ease, letter-spacing 240ms ease;
+    height: 52px;
+  }
+  .paybar__cta:hover { background: var(--red); color: var(--bone); letter-spacing: 0.26em; }
+  .paybar__cta .num {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 18px;
+    letter-spacing: 0;
+    color: inherit;
+  }
+  .paybar__cta svg { width: 14px; height: 14px; }
+
+  .weekly {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-mute);
+    cursor: pointer;
+    user-select: none;
+  }
+  .weekly .box {
+    width: 14px; height: 14px;
+    border: 1px solid var(--hairline-strong);
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: background 240ms ease, border-color 240ms ease;
+  }
+  .weekly.active .box { background: var(--ink); border-color: var(--ink); }
+  .weekly .box svg { width: 9px; height: 9px; color: var(--bone); opacity: 0; transition: opacity 240ms ease; }
+  .weekly.active .box svg { opacity: 1; }
+  .weekly__wrap {
+    grid-column: 1 / -1;
+    padding-top: 10px;
+    border-top: 1px solid var(--hairline);
+    margin-top: 10px;
+    display: flex; justify-content: flex-end;
+  }
+
+  /* ------------------------------------------------------------------
+     Reveal animations — opacity fade-ins, museum slow
+     ------------------------------------------------------------------ */
+  .reveal {
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 900ms ease, transform 900ms ease;
+  }
+  .reveal.in { opacity: 1; transform: none; }
+
+  /* Footnotes */
+  .footnotes {
+    margin: 40px 0 0;
+    padding-top: 22px;
+    border-top: 1px solid var(--hairline);
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-mute);
+    line-height: 1.6;
+  }
+  .footnotes sup {
+    font-family: var(--sans);
+    font-style: normal;
+    font-size: 9px;
+    color: var(--ink-faint);
+    margin-right: 3px;
+    vertical-align: 5px;
+  }
+
+  /* small-screen tweaks */
+  @media (max-width: 480px) {
+    .mast__title { font-size: 30px; }
+    .item__name { font-size: 22px; }
+    .item__price { font-size: 19px; }
+    .ladder__title { font-size: 19px; }
+    .item { grid-template-columns: 26px 1fr auto; gap: 12px; }
+    .item__num { font-size: 18px; }
+    .paybar__cta { padding: 12px 14px; font-size: 11.5px; letter-spacing: 0.18em; }
+    .paybar__cta .num { font-size: 16px; }
+    .paybar__totals .amt { font-size: 22px; }
+  }
+
+</style>
+</head>
+<body>
+
+<!-- ============================ MASTHEAD ============================ -->
+<header class="mast">
+  <div class="shell">
+    <div class="mast__row">
+      <div class="mast__brand">Sud Italia<sup>EST. 2014 · NAPOLI · KRK · WAW</sup></div>
+      <button class="mast__close" aria-label="Close">
+        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1">
+          <path d="M1 1L11 11M11 1L1 11" />
+        </svg>
+      </button>
+    </div>
+
+    <div class="mast__sub">
+      <h1 class="mast__title">Your <em>order</em>, considered.</h1>
+      <div class="mast__meta">
+        <span class="micro">Your Order · 03 Items</span>
+        <span class="num">Saturday, 17 May · 18:14</span>
+      </div>
+    </div>
+
+    <p class="mast__byline">
+      A short table of selections from the truck on plac Nowy. We have made notes
+      where the kitchen would, with respect, suggest something to accompany them.
+    </p>
+  </div>
+</header>
+
+<!-- ============================ MAIN GRID ============================ -->
+<main class="shell grid">
+
+  <!-- LEFT EDITORIAL COLUMN -->
+  <div class="main-col">
+
+    <!-- ============ Editorial banners stack ============ -->
+    <section class="sec reveal">
+      <div class="sec__head">
+        <span class="sec__num">00</span>
+        <span class="sec__title">A Few Notes &nbsp;·&nbsp; Before We Begin</span>
+        <span class="sec__story">Reading time, two minutes</span>
+      </div>
+
+      <div class="editorial-rows">
+        <div class="er-row">
+          <span class="label">Account</span>
+          <p class="body">
+            <em>Covered by</em> <strong>Sud Italia Corporate</strong>
+            <em>· your team account at Allegro sp. z o.o. The first 80,00 zł is on the house.</em>
+          </p>
+          <span class="aside">Auto-applied</span>
+        </div>
+
+        <div class="er-row">
+          <span class="label">The Hour</span>
+          <p class="body">
+            <em>It is 18:14.</em> <strong>From the bar — Negroni hour.</strong>
+            <em>The cocktail trolley is on, until twenty past seven.</em>
+          </p>
+          <span class="aside">Until 19:20</span>
+        </div>
+
+        <div class="er-row">
+          <span class="label">Membership</span>
+          <p class="body" style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+            <span class="loyalty-tag">
+              <span class="dot"></span>
+              Member · Marco
+              <span class="num">243 pts</span>
+            </span>
+            <em>—  earning at 1 pt per zł, redeemable from 250.</em>
+          </p>
+          <span class="aside">7 pts to go</span>
+        </div>
+
+        <div class="er-row">
+          <span class="label">Tier perk</span>
+          <p class="body">
+            <em>Member benefit —</em> <strong>a complimentary antipasto</strong>
+            <em>on this order, courtesy of the kitchen. Choose at the counter.</em>
+          </p>
+          <span class="aside">On the house</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 01 — Your selections ============ -->
+    <section class="sec reveal">
+      <div class="sec__head">
+        <span class="sec__num">01</span>
+        <span class="sec__title">Your Selections</span>
+        <span class="sec__story">Three items, in order of arrival</span>
+      </div>
+
+      <ul class="items" id="items">
+
+        <!-- Item 1 -->
+        <li class="item" data-price="42.00">
+          <div class="item__num">01</div>
+          <div class="item__body">
+            <div class="item__name">Margherita D.O.P.</div>
+            <p class="item__desc">
+              San Marzano tomato, fior di latte from Agerola, basil from
+              the windowbox, a hand of Parmigiano. The truck's keystone.
+            </p>
+            <div class="item__note">
+              <span class="micro">Note for the kitchen</span>
+              extra basil, please — and lightly charred if it can be done.
+            </div>
+            <div class="item__footrow">
+              <div class="qty" data-qty="1">
+                <button data-step="-1" aria-label="decrease">−</button>
+                <span class="val">1</span>
+                <button data-step="+1" aria-label="increase">+</button>
+              </div>
+              <button class="textlink">edit note</button>
+              <button class="textlink textlink--delete">remove</button>
+            </div>
+          </div>
+          <div class="item__price">
+            <span class="amt">42,00 zł</span>
+            <small>Single</small>
+          </div>
+        </li>
+
+        <!-- Item 2 -->
+        <li class="item" data-price="48.00">
+          <div class="item__num">02</div>
+          <div class="item__body">
+            <div class="item__name">Diavola del Vesuvio</div>
+            <p class="item__desc">
+              Spicy Calabrian salame, smoked scamorza, a thread of
+              chilli honey from a small producer in Sorrento.
+            </p>
+            <div class="item__footrow">
+              <div class="qty" data-qty="1">
+                <button data-step="-1" aria-label="decrease">−</button>
+                <span class="val">1</span>
+                <button data-step="+1" aria-label="increase">+</button>
+              </div>
+              <button class="textlink">add a note</button>
+              <button class="textlink textlink--delete">remove</button>
+            </div>
+          </div>
+          <div class="item__price">
+            <span class="amt">48,00 zł</span>
+            <small>Single</small>
+          </div>
+        </li>
+
+        <!-- Item 3 — sold out scenario -->
+        <li class="item item--sold" data-price="36.00">
+          <div class="item__num">03</div>
+          <div class="item__body">
+            <div class="item__name">Burrata di Andria</div>
+            <p class="item__desc">
+              Whole burrata from Puglia, dressed with Sicilian olive oil
+              and Maldon salt. <em>(Last of today's delivery.)</em>
+            </p>
+            <div class="soldout">
+              <em>Sold out.</em>
+              <span>Remove to continue, or substitute with Bufala campana.</span>
+            </div>
+            <div class="item__footrow">
+              <button class="textlink">substitute · Bufala</button>
+              <button class="textlink textlink--delete">remove</button>
+            </div>
+          </div>
+          <div class="item__price">
+            <span class="amt">36,00 zł</span>
+            <small>Unavailable</small>
+          </div>
+        </li>
+
+      </ul>
+    </section>
+
+    <!-- ============ 02 — Bundle ladder + combo ============ -->
+    <section class="sec reveal">
+      <div class="sec__head">
+        <span class="sec__num">02</span>
+        <span class="sec__title">The Pairing</span>
+        <span class="sec__story">From the kitchen, with respect</span>
+      </div>
+
+      <div class="ladder">
+        <div class="ladder__head">
+          <div class="ladder__title">
+            <span class="micro">The Family Feast</span>
+            <em>Four pizzas, two sides, two desserts.</em>
+          </div>
+          <span class="ladder__save">save up to 28,00 zł</span>
+        </div>
+        <div class="ladder__bar"><i style="width: 50%;"></i></div>
+        <div class="ladder__ticks">
+          <span class="active">2 of 4</span>
+          <span>+ sides</span>
+          <span>+ dessert</span>
+          <span>complete</span>
+        </div>
+        <div class="ladder__cta">
+          <strong>Add 2 more pizzas</strong>, and the feast applies — saving you 28,00 zł.
+        </div>
+      </div>
+
+      <div class="combo">
+        <span class="micro">The Combo</span>
+        <p>
+          <em>The Italian Classic —</em>
+          <strong>10% off when you add Limonata and Tiramisù</strong>.
+          A small ritual at the end of the meal.
+        </p>
+        <button id="combo-btn">Add the pair</button>
+      </div>
+    </section>
+
+    <!-- ============ Olive branch divider ============ -->
+    <div class="olive" aria-hidden="true">
+      <span class="line"></span>
+      <svg viewBox="0 0 64 24" fill="none" stroke="currentColor" stroke-width="0.9">
+        <path d="M2 12 C 14 12, 22 12, 32 12 S 50 12, 62 12"/>
+        <path d="M14 10 C 16 6, 20 6, 22 10 Z" fill="currentColor" fill-opacity="0.1"/>
+        <path d="M22 14 C 24 18, 28 18, 30 14 Z" fill="currentColor" fill-opacity="0.1"/>
+        <path d="M34 10 C 36 6, 40 6, 42 10 Z" fill="currentColor" fill-opacity="0.1"/>
+        <path d="M42 14 C 44 18, 48 18, 50 14 Z" fill="currentColor" fill-opacity="0.1"/>
+        <circle cx="32" cy="12" r="1.3" fill="currentColor"/>
+      </svg>
+      <span class="line"></span>
+    </div>
+
+    <!-- ============ 02b — From the pairing notes ============ -->
+    <section class="sec reveal">
+      <div class="sec__head">
+        <span class="sec__num">02</span>
+        <span class="sec__title">From The Pairing Notes</span>
+        <span class="sec__story">Four small things, well-chosen</span>
+      </div>
+
+      <ul class="pairings">
+        <li class="pair">
+          <div>
+            <div class="pair__name">Espresso</div>
+            <p class="pair__desc">
+              A clean, single-origin Neapolitan finish — Caffè Borbone, pulled short.
+              Two seconds of bitterness, the meal closed.
+            </p>
+            <div class="pair__foot">Single shot · 60 ml</div>
+          </div>
+          <div class="pair__right">
+            <span class="pair__price">8,00 zł</span>
+            <button class="pair__add">Add →</button>
+          </div>
+        </li>
+
+        <li class="pair">
+          <div>
+            <div class="pair__name">Tiramisù <em>della nonna</em></div>
+            <p class="pair__desc">
+              Savoiardi, mascarpone, cocoa from Amedei. Made in the morning,
+              kept cold, eaten with a small spoon at the end.
+            </p>
+            <div class="pair__foot">Made in-house · 110 g</div>
+          </div>
+          <div class="pair__right">
+            <span class="pair__price">22,00 zł</span>
+            <button class="pair__add">Add →</button>
+          </div>
+        </li>
+
+        <li class="pair">
+          <div>
+            <div class="pair__name">Falanghina, chilled</div>
+            <p class="pair__desc">
+              Dry, salty, mineral — pairs with the Margherita exactly as it should.
+              From Vesuvio, 2023. <em>Glass.</em>
+            </p>
+            <div class="pair__foot">125 ml · 12.5% vol</div>
+          </div>
+          <div class="pair__right">
+            <span class="pair__price">26,00 zł</span>
+            <button class="pair__add">Add →</button>
+          </div>
+        </li>
+
+        <li class="pair">
+          <div>
+            <div class="pair__name">Limonata della Costiera</div>
+            <p class="pair__desc">
+              Made with Amalfi lemons and still water — sharp, unsweet, the bottle
+              cold from the chest by the door.
+            </p>
+            <div class="pair__foot">330 ml · still</div>
+          </div>
+          <div class="pair__right">
+            <span class="pair__price">12,00 zł</span>
+            <button class="pair__add">Add →</button>
+          </div>
+        </li>
+      </ul>
+
+      <div class="quickadd">
+        <p class="quickadd__essay">
+          A line we keep coming back to: a small bowl of <strong>Castelvetrano olives</strong>
+          while you wait. Five minutes, with a glass of something cold.
+        </p>
+        <button id="quickadd-btn">Add · 9,00 zł</button>
+      </div>
+    </section>
+
+    <!-- ============ 03 — Delivery progress + fulfillment ============ -->
+    <section class="sec reveal">
+      <div class="sec__head">
+        <span class="sec__num">03</span>
+        <span class="sec__title">Getting It To You</span>
+        <span class="sec__story">Delivery or pickup, at your convenience</span>
+      </div>
+
+      <div class="meter">
+        <div class="meter__head">
+          <span class="micro">Free Delivery · 9,00 zł Remaining</span>
+          <em>spend a little more, save the fee</em>
+        </div>
+        <div class="meter__bar"><i style="width: 89%;"></i></div>
+        <p class="meter__foot">
+          You are at 81,00 zł toward a free 90,00 zł threshold —
+          <em>perhaps the espresso would close the gap.</em>
+        </p>
+      </div>
+
+      <div class="fulfill">
+        <button class="active" data-method="delivery">Delivery</button>
+        <button data-method="pickup">Pickup at the truck</button>
+        <button data-method="dinein">Dine on the square</button>
+      </div>
+
+      <div class="field">
+        <label>Delivery address</label>
+        <input type="text" value="ul. Józefa 12 / 4, Kazimierz, Kraków" />
+      </div>
+
+      <div class="field">
+        <label>Floor &amp; notes for the rider</label>
+        <input type="text" placeholder="2nd floor, courtyard entrance — the brown door." />
+      </div>
+
+      <!-- Time slot picker -->
+      <div class="sec" style="margin-top: 28px;">
+        <div class="sec__head">
+          <span class="sec__num">04</span>
+          <span class="sec__title">Choose A Time</span>
+          <span class="sec__story">Tonight, between now and ten o'clock</span>
+        </div>
+
+        <ul class="slots" id="slots">
+          <li data-slot="1">
+            <span class="slot__time">18:45</span>
+            <span class="slot__label"><em>two slots remain</em></span>
+            <span class="slot__radio"><i></i></span>
+          </li>
+          <li data-slot="2" class="selected">
+            <span class="slot__time">19:00</span>
+            <span class="slot__label"><em>recommended — kitchen is calm</em></span>
+            <span class="slot__radio"><i></i></span>
+          </li>
+          <li data-slot="3">
+            <span class="slot__time">19:30</span>
+            <span class="slot__label">five slots remain</span>
+            <span class="slot__radio"><i></i></span>
+          </li>
+          <li data-slot="4">
+            <span class="slot__time">20:00</span>
+            <span class="slot__label">open</span>
+            <span class="slot__radio"><i></i></span>
+          </li>
+          <li data-slot="5">
+            <span class="slot__time">20:30</span>
+            <span class="slot__label">open</span>
+            <span class="slot__radio"><i></i></span>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============ 05 — Your details ============ -->
+    <section class="sec reveal">
+      <div class="sec__head">
+        <span class="sec__num">05</span>
+        <span class="sec__title">Your Details</span>
+        <span class="sec__story">Only what we need to find you</span>
+      </div>
+
+      <div class="field-grid">
+        <div class="field">
+          <label>Name</label>
+          <input type="text" value="Marco Lombardi" />
+        </div>
+        <div class="field">
+          <label>Phone</label>
+          <input type="tel" value="+48 600 142 098" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Email <em style="font-family:var(--serif); font-size:11px; color:var(--ink-faint); text-transform:none; letter-spacing:0;">— optional, for the receipt</em></label>
+        <input type="email" placeholder="marco@example.com" />
+      </div>
+    </section>
+
+    <!-- ============ 06 — Tip ============ -->
+    <section class="sec reveal">
+      <div class="sec__head">
+        <span class="sec__num">06</span>
+        <span class="sec__title">A Note For The Rider</span>
+        <span class="sec__story">If the night is cold, perhaps a little more</span>
+      </div>
+
+      <div class="tips" id="tips">
+        <button data-tip="0">no tip</button>
+        <button data-tip="5" class="active">5 zł</button>
+        <button data-tip="10">10 zł</button>
+        <button data-tip="15">15 zł</button>
+        <button data-tip="custom">custom amount</button>
+      </div>
+      <p style="margin-top:14px; font-family:var(--serif); font-style:italic; font-size:13.5px; color:var(--ink-mute);">
+        100% of the tip goes to the rider on the bike tonight.
+      </p>
+    </section>
+
+    <!-- ============ Footnotes ============ -->
+    <div class="footnotes">
+      <p><sup>1</sup> All prices in Polish złoty (zł), including VAT at 8% on prepared food.</p>
+      <p><sup>2</sup> Pairings are suggestions of the kitchen — they are not commissions or promotions.</p>
+      <p><sup>3</sup> Sud Italia is independently owned, with two trucks in Kraków and one in Warszawa. Flour from Caputo; tomatoes from a co-operative outside Salerno.</p>
+    </div>
+  </div>
+
+  <!-- RIGHT ASIDE COLUMN — summary, desktop only -->
+  <aside class="aside-col reveal">
+    <div class="aside-card">
+      <h4>The Reckoning</h4>
+      <div class="line"><span>Subtotal · 2 items</span><span class="num" id="sum-subtotal">90,00 zł</span></div>
+      <div class="line"><span>Bundle discount</span><span class="num" id="sum-bundle">— 8,00 zł</span></div>
+      <div class="line discount" id="combo-line" style="display:none;"><span>Italian Classic · 10%</span><span class="num" id="sum-combo">— 0,00 zł</span></div>
+      <div class="line"><span>Delivery</span><span class="num" id="sum-delivery">9,00 zł</span></div>
+      <div class="line"><span>Tip for the rider</span><span class="num" id="sum-tip">5,00 zł</span></div>
+      <div class="line"><span>Points earned</span><span class="num">+ 96 pts</span></div>
+      <div class="line total"><span>Total</span><span class="num" id="sum-total">96,00 zł</span></div>
+
+      <p class="aside-foot">
+        <sup>a</sup> Your account at Allegro covers the first <strong style="font-style:normal; font-weight:500;">80,00 zł</strong>. The remainder is charged to your card on file.
+      </p>
+      <p class="aside-foot" style="margin-top:10px;">
+        <sup>b</sup> An invoice will be issued to the company tax ID we have on record.
+      </p>
+    </div>
+
+    <div class="aside-card" style="margin-top:20px;">
+      <h4>About the kitchen</h4>
+      <p style="font-family:var(--serif); font-style:italic; font-size:14px; color:var(--ink-soft); line-height:1.55;">
+        Sud Italia opened on plac Nowy in the spring of 2014, with one truck,
+        a wood oven from Naples, and the conviction that a Margherita ought to
+        be made in ninety seconds or not at all. Twelve years on, the recipe
+        has not changed.
+      </p>
+      <p style="margin-top:12px; font-family:var(--sans); font-size:10px; letter-spacing:0.18em; text-transform:uppercase; color:var(--ink-mute);">
+        — The Editors
+      </p>
+    </div>
+  </aside>
+
+</main>
+
+<!-- ============================ STICKY PAY BAR ============================ -->
+<div class="paybar" role="region" aria-label="Order total and pay">
+  <div class="paybar__inner">
+    <div class="paybar__rows">
+      <div class="col"><span>Subtotal</span><span class="num" id="bar-subtotal">90,00 zł</span></div>
+      <div class="col"><span>Delivery + tip</span><span class="num" id="bar-fee">14,00 zł</span></div>
+      <div class="col"><span>Bundle &amp; combo</span><span class="num" id="bar-disc">— 8,00 zł</span></div>
+    </div>
+
+    <div class="paybar__main">
+      <div class="paybar__totals">
+        <span class="micro">Total to pay</span>
+        <span class="amt num" id="bar-total">96,00 zł</span>
+      </div>
+
+      <button class="paybar__trash" aria-label="Empty cart">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1">
+          <path d="M2 3.5h10M5 3.5V2.2c0-.6.5-1.2 1.2-1.2h1.6c.7 0 1.2.6 1.2 1.2v1.3M3.6 3.5l.5 8.4c0 .6.5 1.1 1.2 1.1h3.4c.6 0 1.1-.5 1.2-1.1l.5-8.4M6 6.2v4.2M8 6.2v4.2"/>
+        </svg>
+      </button>
+
+      <button class="paybar__cta">
+        <span>Pay</span>
+        <span class="num" id="cta-total">96,00 zł</span>
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.2">
+          <path d="M1 7h12M8 2l5 5-5 5"/>
+        </svg>
+      </button>
+
+      <label class="weekly__wrap">
+        <span class="weekly" id="weekly">
+          <span class="box">
+            <svg viewBox="0 0 9 9" fill="none" stroke="currentColor" stroke-width="1.3">
+              <path d="M1 4.5L3.5 7L8 1.5"/>
+            </svg>
+          </span>
+          <em>Save as my <strong style="font-style:normal; font-weight:500;">weekly usual</strong> — repeats every Saturday, 19:00.</em>
+        </span>
+      </label>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* ----------------------------------------------------------------
+     V9 — light, slow, museum-tempo interactivity.
+     No springs. No bounces. Opacity fades.
+     ---------------------------------------------------------------- */
+
+  // ----- helpers ---------------------------------------------------
+  const fmt = (n) => n.toFixed(2).replace('.', ',') + ' zł';
+  const fmtNeg = (n) => '— ' + n.toFixed(2).replace('.', ',') + ' zł';
+
+  const state = {
+    items: [
+      { id: 'margh', name: 'Margherita D.O.P.', price: 42.00, qty: 1, sold: false },
+      { id: 'diav',  name: 'Diavola del Vesuvio', price: 48.00, qty: 1, sold: false },
+      { id: 'burr',  name: 'Burrata di Andria', price: 36.00, qty: 1, sold: true  }
+    ],
+    pairings: { added: new Set() },
+    quickadd: false,
+    combo: false,
+    delivery: 9.00,
+    tip: 5.00,
+    bundleDiscount: 8.00,
+    method: 'delivery'
+  };
+
+  // ----- compute & render totals -----------------------------------
+  function compute() {
+    let subtotal = 0;
+    state.items.forEach(it => { if (!it.sold) subtotal += it.price * it.qty; });
+
+    // pairings
+    const pairingPrices = {
+      'Espresso': 8.00,
+      'Tiramisù della nonna': 22.00,
+      'Falanghina, chilled': 26.00,
+      'Limonata della Costiera': 12.00
+    };
+    let pairTotal = 0;
+    state.pairings.added.forEach(name => { pairTotal += pairingPrices[name] || 0; });
+    subtotal += pairTotal;
+    if (state.quickadd) subtotal += 9.00;
+
+    // combo: 10% off limonata + tiramisu when both added
+    let comboDisc = 0;
+    if (state.combo) {
+      comboDisc = (pairingPrices['Limonata della Costiera'] + pairingPrices['Tiramisù della nonna']) * 0.10;
+    }
+
+    const delivery = state.method === 'delivery' ? state.delivery : 0;
+    const tip = state.tip;
+    const bundle = state.bundleDiscount;
+    const total = Math.max(0, subtotal - bundle - comboDisc + delivery + tip);
+
+    return { subtotal, bundle, comboDisc, delivery, tip, total, pairTotal };
+  }
+
+  function render() {
+    const r = compute();
+    const itemCount = state.items.filter(i => !i.sold).reduce((a,i)=>a+i.qty,0)
+      + state.pairings.added.size + (state.quickadd ? 1 : 0);
+
+    // aside card
+    document.getElementById('sum-subtotal').textContent = fmt(r.subtotal);
+    document.getElementById('sum-bundle').textContent  = fmtNeg(r.bundle);
+    document.getElementById('sum-delivery').textContent= state.method === 'delivery' ? fmt(r.delivery) : '— gratis';
+    document.getElementById('sum-tip').textContent     = fmt(r.tip);
+    document.getElementById('sum-total').textContent   = fmt(r.total);
+
+    const comboLine = document.getElementById('combo-line');
+    if (state.combo) {
+      comboLine.style.display = 'flex';
+      document.getElementById('sum-combo').textContent = fmtNeg(r.comboDisc);
+    } else {
+      comboLine.style.display = 'none';
+    }
+
+    // pay bar
+    document.getElementById('bar-subtotal').textContent = fmt(r.subtotal);
+    document.getElementById('bar-fee').textContent      = fmt(r.delivery + r.tip);
+    document.getElementById('bar-disc').textContent     = fmtNeg(r.bundle + r.comboDisc);
+    document.getElementById('bar-total').textContent    = fmt(r.total);
+    document.getElementById('cta-total').textContent    = fmt(r.total);
+  }
+
+  // ----- qty steppers ----------------------------------------------
+  document.querySelectorAll('.item').forEach((node, idx) => {
+    const qtyEl = node.querySelector('.qty');
+    if (!qtyEl) return;
+    qtyEl.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const step = parseInt(btn.dataset.step, 10);
+        const valEl = qtyEl.querySelector('.val');
+        let v = parseInt(valEl.textContent, 10) + step;
+        if (v < 1) v = 1; if (v > 9) v = 9;
+        valEl.textContent = v;
+        if (state.items[idx]) state.items[idx].qty = v;
+        render();
+      });
+    });
+  });
+
+  // ----- pairing add toggle ----------------------------------------
+  document.querySelectorAll('.pair__add').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const name = btn.closest('.pair').querySelector('.pair__name').textContent.trim();
+      if (state.pairings.added.has(name)) {
+        state.pairings.added.delete(name);
+        btn.classList.remove('added');
+        btn.textContent = 'Add →';
+      } else {
+        state.pairings.added.add(name);
+        btn.classList.add('added');
+        btn.textContent = 'Added ·  remove';
+      }
+      render();
+    });
+  });
+
+  // ----- quick add -------------------------------------------------
+  const quickaddBtn = document.getElementById('quickadd-btn');
+  quickaddBtn.addEventListener('click', () => {
+    state.quickadd = !state.quickadd;
+    quickaddBtn.textContent = state.quickadd ? 'Added · remove' : 'Add · 9,00 zł';
+    quickaddBtn.style.background = state.quickadd ? 'transparent' : '';
+    quickaddBtn.style.color = state.quickadd ? 'var(--ink)' : '';
+    render();
+  });
+
+  // ----- combo deal -------------------------------------------------
+  const comboBtn = document.getElementById('combo-btn');
+  comboBtn.addEventListener('click', () => {
+    state.combo = !state.combo;
+    comboBtn.classList.toggle('added', state.combo);
+    comboBtn.textContent = state.combo ? 'Pair added' : 'Add the pair';
+    // also add the two items to pairings if not present
+    if (state.combo) {
+      ['Limonata della Costiera', 'Tiramisù della nonna'].forEach(n => {
+        if (!state.pairings.added.has(n)) {
+          state.pairings.added.add(n);
+          document.querySelectorAll('.pair').forEach(p => {
+            if (p.querySelector('.pair__name').textContent.trim() === n) {
+              const b = p.querySelector('.pair__add');
+              b.classList.add('added');
+              b.textContent = 'Added ·  remove';
+            }
+          });
+        }
+      });
+    }
+    render();
+  });
+
+  // ----- fulfillment toggle ----------------------------------------
+  document.querySelectorAll('.fulfill button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.fulfill button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.method = btn.dataset.method;
+      render();
+    });
+  });
+
+  // ----- time slots ------------------------------------------------
+  document.querySelectorAll('#slots li').forEach(li => {
+    li.addEventListener('click', () => {
+      document.querySelectorAll('#slots li').forEach(l => l.classList.remove('selected'));
+      li.classList.add('selected');
+    });
+  });
+
+  // ----- tip picker ------------------------------------------------
+  document.querySelectorAll('#tips button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#tips button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const t = btn.dataset.tip;
+      state.tip = t === 'custom' ? 8.00 : (t === '0' ? 0 : parseFloat(t));
+      render();
+    });
+  });
+
+  // ----- weekly usual toggle ---------------------------------------
+  const weekly = document.getElementById('weekly');
+  weekly.addEventListener('click', (e) => {
+    e.preventDefault();
+    weekly.classList.toggle('active');
+  });
+
+  // ----- remove links ----------------------------------------------
+  document.querySelectorAll('.textlink--delete').forEach((btn, idx) => {
+    btn.addEventListener('click', () => {
+      const li = btn.closest('.item');
+      // confirm gently in copy
+      btn.textContent = 'removing…';
+      li.style.transition = 'opacity 800ms ease, max-height 800ms ease';
+      li.style.opacity = '0';
+      setTimeout(() => {
+        li.style.maxHeight = '0';
+        li.style.overflow = 'hidden';
+        li.style.padding = '0';
+        li.style.borderBottom = '0';
+      }, 600);
+    });
+  });
+
+  // ----- gentle reveal on scroll -----------------------------------
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('in');
+        io.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.08 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+  // initial paint
+  render();
+
+  // gently reveal the first sections on load
+  window.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.reveal').forEach((el, i) => {
+      setTimeout(() => el.classList.add('in'), 120 + i * 90);
+    });
+  });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1512 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>Sud Italia — Your Cart (V4 Domino's-style)</title>
+<!--
+  ============================================================
+  V4 — Domino's-style fast conversion cart
+  ============================================================
+  Channel: aggressive QSR pizza ordering.
+  Inspired by Domino's app, Papa John's, McDonald's kiosk.
+  Loud, fast, deal-saturated, no shame about pushing the upsell.
+
+  Palette:
+    - Cream base #FFF6E5
+    - Italia red #D62828 / deep red #B91C1C
+    - Yellow deal #FFD43B
+    - Success green #16A34A
+    - Trust blue #1D4ED8
+
+  Typography:
+    - Archivo Black (display) + Inter (body)
+    - ALL-CAPS labels, chunky numbers
+
+  Built mobile-first (390px). Desktop kicks in at 768px.
+  Vanilla JS: live countdown, qty steppers, deal animation,
+  tip picker, real total recalc, confetti on bundle unlock.
+  ============================================================
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  /* ---------- RESET ---------- */
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    background:#FFF6E5;
+    color:#1A1208;
+    line-height:1.4;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    overflow-x:hidden;
+  }
+  button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+  input,select{font-family:inherit;font-size:inherit;color:inherit}
+  img,svg{display:block;max-width:100%}
+  ul{list-style:none}
+
+  :root{
+    --cream:#FFF6E5;
+    --cream-2:#FFEFCB;
+    --red:#D62828;
+    --red-dark:#B91C1C;
+    --red-deep:#7F1414;
+    --yellow:#FFD43B;
+    --yellow-dark:#F0B000;
+    --green:#16A34A;
+    --green-dark:#0F7A36;
+    --blue:#1D4ED8;
+    --ink:#1A1208;
+    --muted:#6B5A3A;
+    --line:#F0C674;
+    --shadow:0 6px 0 rgba(127,20,20,0.15);
+  }
+
+  .display{font-family:'Archivo Black',Inter,sans-serif;letter-spacing:.01em;text-transform:uppercase}
+  .mono-num{font-variant-numeric:tabular-nums}
+
+  /* ---------- LAYOUT SHELL ---------- */
+  .app{
+    max-width:430px;
+    margin:0 auto;
+    background:var(--cream);
+    min-height:100vh;
+    position:relative;
+    padding-bottom:230px;
+    box-shadow:0 0 0 1px rgba(0,0,0,.04);
+  }
+  @media (min-width:768px){
+    .app{
+      max-width:1180px;
+      display:grid;
+      grid-template-columns:1fr 380px;
+      grid-template-areas:"main pay";
+      padding-bottom:0;
+      gap:0;
+      background:var(--cream);
+    }
+    .main-col{grid-area:main;padding:0 24px 60px}
+    .pay-col{grid-area:pay;position:sticky;top:0;align-self:start;height:100vh;overflow-y:auto;background:#fff;border-left:3px solid var(--red)}
+  }
+  .main-col{padding:0 14px 14px}
+  .pay-col{display:contents}
+  @media (min-width:768px){.pay-col{display:block}}
+
+  /* ---------- HEADER ---------- */
+  .topbar{
+    background:var(--red);
+    color:#fff;
+    padding:14px 16px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    position:sticky;
+    top:0;
+    z-index:40;
+    box-shadow:0 4px 0 var(--red-deep);
+  }
+  .topbar .close{
+    width:38px;height:38px;border-radius:10px;
+    background:rgba(0,0,0,.18);
+    display:grid;place-items:center;
+    transition:transform .15s ease;
+  }
+  .topbar .close:hover{transform:rotate(90deg)}
+  .topbar h1{font-family:'Archivo Black';font-size:24px;letter-spacing:.02em;line-height:1}
+  .topbar .save-badge{
+    margin-left:auto;
+    background:var(--green);
+    color:#fff;
+    padding:6px 10px;
+    border-radius:999px;
+    font-weight:900;
+    font-size:11px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    box-shadow:0 3px 0 var(--green-dark);
+    display:inline-flex;align-items:center;gap:6px;
+    animation:savePulse 2s ease-in-out infinite;
+  }
+  @keyframes savePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+
+  .crumb{
+    background:var(--red-deep);
+    color:#FFD;
+    text-align:center;
+    font-size:11px;
+    letter-spacing:.18em;
+    padding:6px;
+    text-transform:uppercase;
+    font-weight:700;
+  }
+
+  /* ---------- DEALS CAROUSEL ---------- */
+  .deals-strip{
+    padding:14px 0 4px;
+    overflow-x:auto;
+    scroll-snap-type:x mandatory;
+    -webkit-overflow-scrolling:touch;
+  }
+  .deals-strip::-webkit-scrollbar{display:none}
+  .deals-row{
+    display:flex;
+    gap:10px;
+    padding:0 14px;
+    min-width:max-content;
+  }
+  .deal-card{
+    flex:0 0 240px;
+    scroll-snap-align:start;
+    border-radius:18px;
+    padding:14px;
+    color:#fff;
+    position:relative;
+    overflow:hidden;
+    box-shadow:0 6px 0 rgba(0,0,0,.12);
+    cursor:pointer;
+    transition:transform .15s ease;
+  }
+  .deal-card:hover{transform:translateY(-3px) rotate(-.5deg)}
+  .deal-card:nth-child(1){background:linear-gradient(135deg,#D62828,#7F1414)}
+  .deal-card:nth-child(2){background:linear-gradient(135deg,#F0B000,#D62828);color:#1A1208}
+  .deal-card:nth-child(3){background:linear-gradient(135deg,#0F7A36,#16A34A)}
+  .deal-card:nth-child(4){background:linear-gradient(135deg,#1D4ED8,#7F1414)}
+  .deal-card .deal-emoji{font-size:38px;line-height:1;margin-bottom:6px;filter:drop-shadow(0 2px 0 rgba(0,0,0,.25))}
+  .deal-card .deal-title{font-family:'Archivo Black';font-size:18px;line-height:1.05;letter-spacing:.01em;margin-bottom:8px}
+  .deal-card .deal-price{font-family:'Archivo Black';font-size:28px;line-height:1}
+  .deal-card .deal-strike{text-decoration:line-through;opacity:.7;font-size:14px;margin-left:6px;font-weight:700}
+  .deal-card .deal-add{
+    margin-top:10px;
+    background:#fff;color:#B91C1C;
+    padding:7px 12px;border-radius:999px;
+    font-weight:900;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+    display:inline-flex;align-items:center;gap:6px;
+    box-shadow:0 3px 0 rgba(0,0,0,.18);
+  }
+  .deal-card:nth-child(2) .deal-add{color:#7F1414}
+  .deal-burst{
+    position:absolute;top:8px;right:8px;
+    width:54px;height:54px;
+    transform:rotate(15deg);
+  }
+
+  /* ---------- SECTION HEADINGS ---------- */
+  .section-title{
+    font-family:'Archivo Black';
+    text-transform:uppercase;
+    font-size:14px;
+    letter-spacing:.1em;
+    margin:18px 4px 8px;
+    color:var(--ink);
+    display:flex;align-items:center;gap:8px;
+  }
+  .section-title .bar{flex:1;height:3px;background:var(--ink);opacity:.15;border-radius:2px}
+
+  /* ---------- ALERT BANNERS ---------- */
+  .banner{
+    border-radius:14px;
+    padding:12px 14px;
+    margin:10px 0;
+    display:flex;
+    gap:10px;
+    align-items:center;
+    border:2px solid;
+    font-weight:600;
+    font-size:13px;
+  }
+  .banner .ic{
+    flex:0 0 38px;height:38px;border-radius:10px;display:grid;place-items:center;color:#fff;font-size:20px;
+  }
+  .banner.sold-out{background:#FFE9E9;border-color:#D62828;color:#7F1414}
+  .banner.sold-out .ic{background:#D62828}
+  .banner.corp{background:#E6EDFF;border-color:#1D4ED8;color:#0E2766}
+  .banner.corp .ic{background:#1D4ED8}
+  .banner.lunch{background:#FFEFCB;border-color:#F0B000;color:#5A3A00}
+  .banner.lunch .ic{background:#F0B000;color:#1A1208}
+  .banner .label-mini{
+    display:block;font-family:'Archivo Black';font-size:11px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:2px;
+  }
+  .banner a{color:inherit;text-decoration:underline;font-weight:800}
+
+  /* ---------- CART ITEMS ---------- */
+  .cart-card{
+    background:#fff;
+    border:3px solid var(--red);
+    border-radius:18px;
+    padding:12px;
+    margin:10px 0;
+    box-shadow:0 5px 0 rgba(127,20,20,.18);
+    display:flex;
+    gap:12px;
+    position:relative;
+  }
+  .cart-card .photo{
+    flex:0 0 84px;height:84px;border-radius:14px;
+    display:grid;place-items:center;
+    font-size:42px;
+    background:linear-gradient(135deg,#FFD43B,#D62828);
+    box-shadow:inset 0 -10px 0 rgba(0,0,0,.1);
+  }
+  .cart-card.veg .photo{background:linear-gradient(135deg,#16A34A,#FFD43B)}
+  .cart-card.dessert .photo{background:linear-gradient(135deg,#7F1414,#F0B000)}
+  .cart-card.drink .photo{background:linear-gradient(135deg,#1D4ED8,#16A34A)}
+  .cart-card .body{flex:1;min-width:0}
+  .cart-card .name{font-family:'Archivo Black';font-size:16px;line-height:1.1;margin-bottom:2px}
+  .cart-card .sub{color:var(--muted);font-size:12px;font-weight:500;margin-bottom:6px}
+  .cart-card .price-row{display:flex;align-items:baseline;gap:8px;margin-top:6px}
+  .cart-card .price{font-family:'Archivo Black';font-size:18px;color:var(--red)}
+  .cart-card .strike{font-size:13px;color:var(--muted);text-decoration:line-through;font-weight:700}
+  .cart-card .saved{
+    font-size:10px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;
+    background:var(--green);color:#fff;padding:2px 6px;border-radius:6px;
+  }
+  .cart-card .qty{
+    position:absolute;
+    right:10px;bottom:10px;
+    display:inline-flex;align-items:center;gap:6px;
+    background:var(--cream-2);
+    border:2px solid var(--red);
+    border-radius:999px;padding:3px 6px;
+  }
+  .qty button{
+    width:26px;height:26px;border-radius:999px;background:var(--red);color:#fff;font-weight:900;font-size:16px;display:grid;place-items:center;line-height:1;
+  }
+  .qty button:hover{background:var(--red-dark)}
+  .qty .val{font-family:'Archivo Black';font-size:15px;min-width:18px;text-align:center}
+
+  .remove-x{
+    position:absolute;top:6px;right:8px;
+    width:24px;height:24px;border-radius:999px;
+    background:rgba(0,0,0,.08);color:#7F1414;font-weight:900;display:grid;place-items:center;
+    font-size:12px;
+  }
+  .remove-x:hover{background:var(--red);color:#fff}
+
+  .tag-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .tag{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:6px;background:#FFEFCB;color:#7F1414}
+  .tag.hot{background:var(--red);color:#fff}
+  .tag.veg{background:#DFFBE6;color:#0F7A36}
+
+  /* ---------- LOYALTY XP BAR ---------- */
+  .xp-card{
+    background:#1A1208;color:#FFD43B;
+    border-radius:18px;
+    padding:14px;
+    margin:10px 0;
+    position:relative;overflow:hidden;
+  }
+  .xp-card::after{
+    content:"";position:absolute;inset:0;
+    background:radial-gradient(circle at 80% 30%,rgba(255,212,59,.18),transparent 60%);
+    pointer-events:none;
+  }
+  .xp-card .row1{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .xp-card .tier{
+    font-family:'Archivo Black';font-size:14px;
+    display:inline-flex;align-items:center;gap:6px;
+    background:linear-gradient(135deg,#FFD43B,#F0B000);
+    color:#1A1208;padding:4px 10px;border-radius:999px;
+  }
+  .xp-card .pts{font-family:'Archivo Black';font-size:22px;color:#FFD43B}
+  .xp-bar{
+    height:14px;background:#3a2a0c;border-radius:999px;overflow:hidden;position:relative;
+    border:1px solid rgba(255,212,59,.4);
+  }
+  .xp-bar-fill{
+    height:100%;width:48.6%;
+    background:linear-gradient(90deg,#FFD43B,#16A34A);
+    border-radius:999px;
+    position:relative;
+    animation:shimmer 2.4s linear infinite;
+    background-size:200% 100%;
+  }
+  @keyframes shimmer{0%{background-position:0 0}100%{background-position:200% 0}}
+  .xp-card .sub{font-size:12px;color:#FFEFCB;margin-top:6px;font-weight:600}
+  .xp-card .sub b{color:#fff}
+
+  .perk-banner{
+    background:linear-gradient(135deg,#FFD43B,#F0B000);
+    border:3px solid #1A1208;
+    border-radius:14px;
+    padding:12px;
+    display:flex;gap:10px;align-items:center;
+    margin:10px 0;
+    box-shadow:0 5px 0 rgba(0,0,0,.18);
+  }
+  .perk-banner .gold-coin{
+    width:46px;height:46px;border-radius:999px;
+    background:radial-gradient(circle at 30% 30%,#fff,#FFD43B 60%,#7F1414);
+    display:grid;place-items:center;font-size:22px;
+    box-shadow:0 3px 0 rgba(0,0,0,.25);
+  }
+  .perk-banner .perk-title{font-family:'Archivo Black';font-size:14px;letter-spacing:.04em}
+  .perk-banner .perk-sub{font-size:12px;font-weight:700;color:#7F1414}
+
+  /* ---------- BUNDLE LADDER ---------- */
+  .bundle-card{
+    background:linear-gradient(180deg,#D62828,#7F1414);
+    color:#fff;
+    border-radius:20px;
+    padding:16px;
+    margin:14px 0;
+    position:relative;
+    overflow:hidden;
+    box-shadow:0 6px 0 rgba(0,0,0,.25);
+  }
+  .bundle-card::before{
+    content:"";position:absolute;top:-30px;right:-30px;width:140px;height:140px;
+    background:radial-gradient(circle,rgba(255,212,59,.4),transparent 60%);
+  }
+  .bundle-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .bundle-head .b-icon{width:50px;height:50px;border-radius:14px;background:#FFD43B;color:#7F1414;display:grid;place-items:center;font-size:28px;box-shadow:0 3px 0 rgba(0,0,0,.25)}
+  .bundle-head h3{font-family:'Archivo Black';font-size:20px;line-height:1}
+  .bundle-head .sub{font-size:12px;opacity:.9;font-weight:600;margin-top:2px}
+  .bundle-prog{
+    display:flex;gap:6px;margin:12px 0;
+  }
+  .bundle-prog .step{
+    flex:1;height:42px;border-radius:10px;
+    border:2px dashed rgba(255,212,59,.7);
+    display:grid;place-items:center;
+    font-size:22px;
+    background:rgba(0,0,0,.18);
+    position:relative;
+  }
+  .bundle-prog .step.done{
+    background:#FFD43B;color:#7F1414;border:2px solid #FFD43B;
+    box-shadow:0 3px 0 rgba(0,0,0,.25);
+  }
+  .bundle-prog .step.done::after{
+    content:"✓";position:absolute;top:-6px;right:-6px;
+    width:18px;height:18px;border-radius:999px;background:var(--green);color:#fff;
+    font-size:11px;display:grid;place-items:center;font-weight:900;
+  }
+  .bundle-info{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+  .bundle-info .progtxt{font-family:'Archivo Black';font-size:13px;letter-spacing:.04em}
+  .bundle-info .saveBig{background:var(--green);color:#fff;padding:4px 10px;border-radius:8px;font-family:'Archivo Black';font-size:12px;letter-spacing:.06em}
+  .bundle-add{
+    width:100%;background:#FFD43B;color:#7F1414;
+    padding:14px;border-radius:14px;
+    font-family:'Archivo Black';font-size:18px;letter-spacing:.04em;
+    box-shadow:0 5px 0 rgba(0,0,0,.25);
+    display:flex;align-items:center;justify-content:center;gap:10px;
+    transition:transform .12s ease;
+  }
+  .bundle-add:hover{transform:translateY(-2px)}
+  .bundle-add:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.25)}
+
+  /* ---------- COMBO BANNER ---------- */
+  .combo-banner{
+    background:#fff;border:3px solid #FFD43B;border-radius:16px;
+    padding:12px 12px 12px 14px;
+    display:flex;align-items:center;gap:12px;
+    margin:10px 0;position:relative;
+    box-shadow:0 5px 0 rgba(240,176,0,.35);
+  }
+  .ribbon{
+    position:absolute;top:-10px;left:14px;
+    background:#FFD43B;color:#7F1414;
+    padding:4px 10px;border-radius:8px;
+    font-family:'Archivo Black';font-size:11px;letter-spacing:.1em;
+    box-shadow:0 3px 0 rgba(0,0,0,.18);
+  }
+  .combo-banner .em{font-size:32px}
+  .combo-banner .ct{font-family:'Archivo Black';font-size:15px}
+  .combo-banner .sub{font-size:12px;color:var(--muted);font-weight:600}
+  .combo-banner .applied{
+    margin-left:auto;background:var(--green);color:#fff;padding:6px 10px;border-radius:999px;
+    font-family:'Archivo Black';font-size:11px;letter-spacing:.06em;
+  }
+
+  /* ---------- FLASH DEAL ---------- */
+  .flash-card{
+    background:linear-gradient(135deg,#1A1208,#7F1414);
+    color:#fff;border-radius:18px;padding:14px;margin:12px 0;
+    position:relative;overflow:hidden;
+    border:3px solid #FFD43B;
+    box-shadow:0 6px 0 rgba(0,0,0,.3);
+  }
+  .flash-card .row{display:flex;align-items:center;gap:12px}
+  .flash-card .em{font-size:42px}
+  .flash-card .t{font-family:'Archivo Black';font-size:18px}
+  .flash-card .s{font-size:12px;font-weight:600;opacity:.9;margin-top:2px}
+  .timer{
+    margin-top:10px;display:flex;align-items:center;justify-content:space-between;
+    background:rgba(0,0,0,.3);border-radius:10px;padding:8px 10px;
+  }
+  .timer .lab{font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:800;color:#FFD43B}
+  .timer .clk{font-family:'Archivo Black';font-size:22px;letter-spacing:.04em;color:#fff}
+  .flash-add{
+    display:block;margin-top:10px;width:100%;
+    background:var(--red);color:#fff;
+    padding:14px;border-radius:12px;
+    font-family:'Archivo Black';font-size:18px;letter-spacing:.04em;
+    box-shadow:0 5px 0 rgba(0,0,0,.35);
+    transition:transform .12s ease;
+  }
+  .flash-add:hover{transform:translateY(-2px) rotate(-.5deg)}
+  .flash-card .corner{position:absolute;top:8px;right:8px;font-family:'Archivo Black';font-size:10px;letter-spacing:.1em;background:#FFD43B;color:#7F1414;padding:3px 7px;border-radius:6px}
+
+  /* ---------- POPULAR ADD-ONS GRID ---------- */
+  .addon-grid{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:10px;
+    margin:6px 0 4px;
+  }
+  @media (min-width:768px){.addon-grid{grid-template-columns:repeat(3,1fr)}}
+  .addon{
+    background:#fff;border:2px solid #FFE3B1;border-radius:14px;
+    padding:10px;position:relative;
+    box-shadow:0 4px 0 rgba(0,0,0,.06);
+    transition:transform .12s ease,border-color .12s ease;
+  }
+  .addon:hover{transform:translateY(-2px);border-color:var(--red)}
+  .addon .ph{
+    width:100%;aspect-ratio:1.5/1;border-radius:10px;
+    display:grid;place-items:center;
+    font-size:38px;
+    background:linear-gradient(135deg,#FFD43B,#D62828);
+    margin-bottom:8px;
+  }
+  .addon.veg .ph{background:linear-gradient(135deg,#16A34A,#FFD43B)}
+  .addon.drink .ph{background:linear-gradient(135deg,#1D4ED8,#FFD43B)}
+  .addon.sweet .ph{background:linear-gradient(135deg,#7F1414,#F0B000)}
+  .addon .nm{font-family:'Archivo Black';font-size:13px;line-height:1.05;margin-bottom:2px;min-height:30px}
+  .addon .pr{font-family:'Archivo Black';font-size:14px;color:var(--red)}
+  .addon .row3{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+  .addon .scarce{position:absolute;top:6px;left:6px;background:var(--red);color:#fff;font-size:9px;font-weight:900;letter-spacing:.06em;padding:2px 6px;border-radius:6px;text-transform:uppercase}
+  .addon .stars{position:absolute;top:6px;right:6px;background:#FFD43B;color:#7F1414;font-size:9px;font-weight:900;padding:2px 5px;border-radius:6px;display:flex;align-items:center;gap:2px}
+  .addon .add-btn{
+    background:var(--red);color:#fff;
+    padding:6px 10px;border-radius:999px;
+    font-family:'Archivo Black';font-size:11px;letter-spacing:.06em;
+    display:inline-flex;align-items:center;gap:4px;
+    box-shadow:0 3px 0 rgba(0,0,0,.18);
+    transition:transform .12s ease,background .12s ease;
+  }
+  .addon .add-btn:hover{transform:scale(1.08)}
+  .addon .add-btn.added{background:var(--green);box-shadow:0 3px 0 var(--green-dark)}
+
+  /* ---------- DELIVERY PROGRESS ---------- */
+  .deliv-prog{
+    background:#fff;border:2px dashed var(--red);border-radius:14px;
+    padding:12px;margin:12px 0;position:relative;
+  }
+  .deliv-prog .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px}
+  .deliv-prog .head .t{font-family:'Archivo Black';font-size:13px;letter-spacing:.04em;color:#7F1414;display:flex;align-items:center;gap:6px}
+  .deliv-prog .head .arr{font-size:18px;animation:bounceX 1s ease-in-out infinite}
+  @keyframes bounceX{0%,100%{transform:translateX(0)}50%{transform:translateX(6px)}}
+  .deliv-bar{height:14px;background:#FFE3B1;border-radius:999px;overflow:hidden}
+  .deliv-bar-fill{height:100%;width:88%;background:linear-gradient(90deg,#FFD43B,#16A34A);border-radius:999px;transition:width .5s ease}
+  .deliv-prog .stamps{display:flex;justify-content:space-between;margin-top:6px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+
+  /* ---------- FULFILLMENT TABS ---------- */
+  .fulfill{display:flex;gap:10px;margin:10px 0}
+  .fulfill .tab{
+    flex:1;background:#fff;border:3px solid #FFE3B1;border-radius:14px;
+    padding:12px;text-align:center;font-family:'Archivo Black';font-size:13px;letter-spacing:.04em;
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    transition:transform .12s ease,border-color .12s ease;
+  }
+  .fulfill .tab.active{background:var(--red);color:#fff;border-color:var(--red-deep);box-shadow:0 4px 0 var(--red-deep)}
+  .fulfill .tab svg{width:22px;height:22px}
+
+  /* ---------- ADDRESS / DETAILS / CUSTOMER ---------- */
+  .field{
+    background:#fff;border:2px solid #FFE3B1;border-radius:14px;
+    padding:10px 12px;margin:8px 0;
+    display:flex;align-items:center;gap:10px;
+  }
+  .field input,.field select{
+    flex:1;border:none;outline:none;background:transparent;
+    font-weight:600;font-size:14px;color:var(--ink);
+  }
+  .field .lbl{font-size:10px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:#7F1414;margin-right:4px}
+  .field svg{width:22px;height:22px;color:var(--red);flex:0 0 auto}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .field-row .field{margin:0}
+
+  /* ---------- TIME SLOTS ---------- */
+  .slot-grid{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+  .slot{
+    background:#fff;border:2px solid #FFE3B1;border-radius:999px;
+    padding:8px 12px;font-weight:800;font-size:13px;
+    display:inline-flex;align-items:center;gap:6px;
+    transition:transform .1s ease;position:relative;
+  }
+  .slot:hover{transform:translateY(-2px)}
+  .slot.active{background:var(--red);color:#fff;border-color:var(--red-deep);box-shadow:0 3px 0 var(--red-deep)}
+  .slot.full{opacity:.4;text-decoration:line-through;cursor:not-allowed}
+  .slot .badge-mini{
+    position:absolute;top:-8px;right:-6px;
+    background:#FFD43B;color:#7F1414;font-size:9px;font-weight:900;letter-spacing:.04em;
+    padding:2px 5px;border-radius:6px;text-transform:uppercase;
+    box-shadow:0 2px 0 rgba(0,0,0,.18);
+    animation:wiggle 1.5s ease-in-out infinite;
+  }
+  @keyframes wiggle{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
+
+  /* ---------- TIPS ---------- */
+  .tips{display:flex;gap:6px;margin:8px 0;flex-wrap:wrap}
+  .tip{
+    flex:1;min-width:60px;
+    background:#fff;border:2px solid #FFE3B1;border-radius:12px;
+    padding:10px 6px;text-align:center;
+    font-family:'Archivo Black';font-size:15px;
+    transition:transform .1s ease,border-color .12s ease;
+  }
+  .tip .pct{font-size:12px;display:block;letter-spacing:.06em;color:var(--muted);font-family:Inter;font-weight:800;margin-top:2px}
+  .tip.active{background:var(--red);color:#fff;border-color:var(--red-deep);box-shadow:0 0 0 4px rgba(214,40,40,.18),0 4px 0 var(--red-deep)}
+  .tip.active .pct{color:#FFE9C0}
+  .tip-custom{flex:1.4;display:flex;align-items:center;gap:6px;padding:6px;border:2px solid #FFE3B1;border-radius:12px;background:#fff}
+  .tip-custom input{width:100%;border:none;outline:none;background:transparent;font-family:'Archivo Black';font-size:15px;text-align:center}
+  .tip-custom .zl{font-family:'Archivo Black';font-size:14px;color:var(--muted);padding-right:4px}
+
+  /* ---------- SOCIAL PROOF / TRUST ---------- */
+  .proof{
+    background:#fff;border:2px solid #FFE3B1;border-radius:14px;
+    padding:10px 12px;margin:10px 0;
+    display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700;color:#7F1414;
+  }
+  .proof .pem{font-size:22px}
+  .proof b{font-family:'Archivo Black';font-size:15px;color:var(--ink)}
+
+  /* ---------- STICKY PAY BAR ---------- */
+  .pay-bar{
+    position:fixed;left:0;right:0;bottom:0;
+    background:#fff;border-top:4px solid var(--red);
+    padding:10px 12px 12px;
+    z-index:50;
+    box-shadow:0 -10px 30px rgba(127,20,20,.18);
+  }
+  .pay-bar .urg{
+    background:var(--red);color:#fff;
+    text-align:center;padding:6px;border-radius:8px;
+    font-family:'Archivo Black';font-size:12px;letter-spacing:.06em;
+    margin-bottom:8px;
+    display:flex;align-items:center;justify-content:center;gap:6px;
+    animation:urgentBlink 1.6s ease-in-out infinite;
+  }
+  @keyframes urgentBlink{0%,100%{background:var(--red)}50%{background:#7F1414}}
+  .pay-bar .lines{font-size:12px;line-height:1.5;margin-bottom:6px}
+  .pay-bar .lines .ln{display:flex;justify-content:space-between}
+  .pay-bar .lines .ln.disc b{color:var(--green)}
+  .pay-bar .lines .ln b{font-weight:800;font-variant-numeric:tabular-nums}
+  .pay-bar .ttl{
+    display:flex;justify-content:space-between;align-items:baseline;
+    padding-top:6px;border-top:2px dashed #FFD43B;margin-top:4px;
+  }
+  .pay-bar .ttl .lab{font-family:'Archivo Black';font-size:14px;letter-spacing:.06em}
+  .pay-bar .ttl .val{font-family:'Archivo Black';font-size:30px;color:var(--red);line-height:1}
+  .pay-bar .row-btn{display:flex;gap:8px;margin-top:8px}
+  .pay-now{
+    flex:1;background:var(--red);color:#fff;
+    padding:16px;border-radius:14px;
+    font-family:'Archivo Black';font-size:18px;letter-spacing:.04em;
+    box-shadow:0 6px 0 var(--red-deep),0 0 0 4px rgba(214,40,40,.2);
+    transition:transform .12s ease;
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    animation:payGlow 2.5s ease-in-out infinite;
+  }
+  @keyframes payGlow{0%,100%{box-shadow:0 6px 0 var(--red-deep),0 0 0 4px rgba(214,40,40,.2)}50%{box-shadow:0 6px 0 var(--red-deep),0 0 0 10px rgba(214,40,40,.12)}}
+  .pay-now:hover{transform:translateY(-2px) scale(1.01)}
+  .pay-now:active{transform:translateY(2px);box-shadow:0 2px 0 var(--red-deep)}
+  .clear-cart{
+    background:#FFEFCB;color:#7F1414;
+    padding:0 14px;border-radius:14px;
+    font-family:'Archivo Black';font-size:12px;letter-spacing:.04em;
+    box-shadow:0 4px 0 rgba(127,20,20,.18);
+    display:grid;place-items:center;
+  }
+
+  @media (min-width:768px){
+    .pay-bar{
+      position:sticky;
+      bottom:auto;top:0;
+      box-shadow:none;border-top:none;
+      padding:20px;
+    }
+  }
+
+  /* ---------- CONFETTI ---------- */
+  .confetti{
+    position:fixed;inset:0;pointer-events:none;z-index:100;display:none;overflow:hidden;
+  }
+  .confetti.show{display:block}
+  .conf-piece{
+    position:absolute;top:-20px;width:10px;height:14px;
+    animation:confetti-fall linear forwards;
+    border-radius:2px;
+  }
+  @keyframes confetti-fall{
+    0%{transform:translateY(0) rotate(0deg);opacity:1}
+    100%{transform:translateY(100vh) rotate(720deg);opacity:0}
+  }
+
+  /* ---------- BOUNCE-ADD ANIM ---------- */
+  @keyframes bounceAdd{
+    0%{transform:scale(1)}
+    30%{transform:scale(1.18) rotate(-3deg)}
+    60%{transform:scale(.95) rotate(2deg)}
+    100%{transform:scale(1)}
+  }
+  .bounce{animation:bounceAdd .5s ease}
+
+  /* ---------- DESKTOP REFLOW ---------- */
+  @media (min-width:768px){
+    .topbar{border-radius:0}
+    .crumb{font-size:13px}
+    .deals-row{padding:0}
+    .deal-card{flex:0 0 270px}
+  }
+
+  /* ---------- TOAST ---------- */
+  .toast{
+    position:fixed;left:50%;transform:translateX(-50%) translateY(20px);
+    bottom:240px;z-index:60;
+    background:#1A1208;color:#FFD43B;
+    padding:10px 16px;border-radius:999px;
+    font-family:'Archivo Black';font-size:13px;letter-spacing:.04em;
+    opacity:0;pointer-events:none;
+    transition:opacity .25s ease,transform .25s ease;
+    box-shadow:0 6px 18px rgba(0,0,0,.3);
+    display:inline-flex;align-items:center;gap:8px;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  @media (min-width:768px){.toast{bottom:40px}}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- =================== MAIN COLUMN =================== -->
+  <div class="main-col">
+
+    <!-- =================== HEADER =================== -->
+    <header class="topbar">
+      <button class="close" aria-label="Close cart">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <h1 class="display">Your Cart</h1>
+      <span class="save-badge">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>
+        Saving <span id="savingBadge">28</span> zł
+      </span>
+    </header>
+    <div class="crumb">Sud Italia · Kraków Truck · Cart · Step 2 of 3</div>
+
+    <!-- =================== DEALS CAROUSEL =================== -->
+    <div class="deals-strip" aria-label="Hot deals carousel">
+      <div class="deals-row">
+
+        <button class="deal-card" data-bundle-deal data-add="79" data-name="2 Pizzas + 2 Cokes Bundle">
+          <svg class="deal-burst" viewBox="0 0 100 100" aria-hidden="true">
+            <path d="M50 2 L58 22 L80 12 L72 34 L96 38 L76 52 L92 72 L68 68 L70 92 L52 76 L40 96 L34 72 L10 78 L22 58 L0 50 L20 38 L4 18 L28 22 L30 0 L50 8 Z" fill="#FFD43B" stroke="#1A1208" stroke-width="2"/>
+            <text x="50" y="52" text-anchor="middle" font-family="Archivo Black" font-size="14" fill="#7F1414">DEAL!</text>
+          </svg>
+          <div class="deal-emoji">🍕🥤</div>
+          <div class="deal-title">2 Pizzas + 2 Cokes</div>
+          <div class="deal-price">79 zł<span class="deal-strike">102 zł</span></div>
+          <span class="deal-add">+ ADD BUNDLE
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </span>
+        </button>
+
+        <button class="deal-card" data-bundle-deal data-add="-28" data-name="Family Feast">
+          <svg class="deal-burst" viewBox="0 0 100 100" aria-hidden="true">
+            <path d="M50 2 L58 22 L80 12 L72 34 L96 38 L76 52 L92 72 L68 68 L70 92 L52 76 L40 96 L34 72 L10 78 L22 58 L0 50 L20 38 L4 18 L28 22 L30 0 L50 8 Z" fill="#D62828" stroke="#1A1208" stroke-width="2"/>
+            <text x="50" y="52" text-anchor="middle" font-family="Archivo Black" font-size="13" fill="#fff">-28 zł</text>
+          </svg>
+          <div class="deal-emoji">👨‍👩‍👧‍👦</div>
+          <div class="deal-title">Family Feast Pack</div>
+          <div class="deal-price">119 zł<span class="deal-strike">147 zł</span></div>
+          <span class="deal-add">+ ADD FEAST
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </span>
+        </button>
+
+        <button class="deal-card" data-bundle-deal data-add="49" data-name="Pizza + Pasta Combo">
+          <svg class="deal-burst" viewBox="0 0 100 100" aria-hidden="true">
+            <path d="M50 2 L58 22 L80 12 L72 34 L96 38 L76 52 L92 72 L68 68 L70 92 L52 76 L40 96 L34 72 L10 78 L22 58 L0 50 L20 38 L4 18 L28 22 L30 0 L50 8 Z" fill="#FFD43B" stroke="#1A1208" stroke-width="2"/>
+            <text x="50" y="52" text-anchor="middle" font-family="Archivo Black" font-size="12" fill="#7F1414">COMBO</text>
+          </svg>
+          <div class="deal-emoji">🍕🍝</div>
+          <div class="deal-title">Pizza + Pasta Combo</div>
+          <div class="deal-price">49 zł<span class="deal-strike">62 zł</span></div>
+          <span class="deal-add">+ ADD COMBO
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </span>
+        </button>
+
+        <button class="deal-card" data-bundle-deal data-add="0" data-name="Free Tiramisù">
+          <svg class="deal-burst" viewBox="0 0 100 100" aria-hidden="true">
+            <path d="M50 2 L58 22 L80 12 L72 34 L96 38 L76 52 L92 72 L68 68 L70 92 L52 76 L40 96 L34 72 L10 78 L22 58 L0 50 L20 38 L4 18 L28 22 L30 0 L50 8 Z" fill="#16A34A" stroke="#1A1208" stroke-width="2"/>
+            <text x="50" y="52" text-anchor="middle" font-family="Archivo Black" font-size="12" fill="#fff">FREE</text>
+          </svg>
+          <div class="deal-emoji">🍰</div>
+          <div class="deal-title">Free Tiramisù over 100 zł</div>
+          <div class="deal-price">FREE<span class="deal-strike">18 zł</span></div>
+          <span class="deal-add">UNLOCK NOW
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </span>
+        </button>
+
+      </div>
+    </div>
+
+    <!-- =================== ALERT BANNERS =================== -->
+    <div class="banner sold-out">
+      <div class="ic">⚠️</div>
+      <div>
+        <span class="label-mini">Heads up</span>
+        We just sold out of <b>Calzone Napoletano</b> for tonight. We replaced it with Margherita on this order.
+      </div>
+    </div>
+
+    <div class="banner corp">
+      <div class="ic">🏢</div>
+      <div>
+        <span class="label-mini">Corporate orders</span>
+        Ordering for 10+ people? <a href="#">Switch to corporate mode</a> for invoicing & VAT.
+      </div>
+    </div>
+
+    <div class="banner lunch">
+      <div class="ic">⚡</div>
+      <div>
+        <span class="label-mini">Lunch Rush — Kraków</span>
+        Orders placed in the next <b>22 min</b> are ready in <b>18 min</b>.
+      </div>
+    </div>
+
+    <!-- =================== LOYALTY XP =================== -->
+    <h2 class="section-title">Your Rewards <span class="bar"></span></h2>
+    <div class="xp-card">
+      <div class="row1">
+        <span class="tier">⭐ GOLD MEMBER</span>
+        <span class="pts">243 / 500 pts</span>
+      </div>
+      <div class="xp-bar"><div class="xp-bar-fill"></div></div>
+      <div class="sub">Only <b>257 pts</b> to unlock <b>FREE PIZZA</b> reward. This order will earn you <b id="ptsEarn">+114 pts</b>.</div>
+    </div>
+
+    <div class="perk-banner">
+      <div class="gold-coin">🥇</div>
+      <div>
+        <div class="perk-title">Gold Perk Unlocked</div>
+        <div class="perk-sub">+1 FREE side (garlic bread or olives) — auto-added at checkout.</div>
+      </div>
+    </div>
+
+    <!-- =================== CART ITEMS =================== -->
+    <h2 class="section-title">In Your Cart <span class="bar"></span></h2>
+
+    <div class="cart-card" data-item data-price="42" data-qty="1">
+      <button class="remove-x">✕</button>
+      <div class="photo">🍕</div>
+      <div class="body">
+        <div class="name">Margherita DOP</div>
+        <div class="sub">San Marzano · Fior di latte · Basil</div>
+        <div class="tag-row">
+          <span class="tag hot">Bestseller</span>
+          <span class="tag">28 cm</span>
+        </div>
+        <div class="price-row">
+          <span class="price mono-num">42,00 zł</span>
+          <span class="strike">52,00 zł</span>
+          <span class="saved">−10 zł</span>
+        </div>
+      </div>
+      <div class="qty">
+        <button class="dec">−</button>
+        <span class="val">1</span>
+        <button class="inc">+</button>
+      </div>
+    </div>
+
+    <div class="cart-card veg" data-item data-price="44" data-qty="1">
+      <button class="remove-x">✕</button>
+      <div class="photo">🍕</div>
+      <div class="body">
+        <div class="name">Diavola Forte</div>
+        <div class="sub">Spicy salame · Chili honey · Mozzarella</div>
+        <div class="tag-row">
+          <span class="tag hot">🌶 Hot</span>
+          <span class="tag">28 cm</span>
+        </div>
+        <div class="price-row">
+          <span class="price mono-num">44,00 zł</span>
+          <span class="strike">54,00 zł</span>
+          <span class="saved">−10 zł</span>
+        </div>
+      </div>
+      <div class="qty">
+        <button class="dec">−</button>
+        <span class="val">1</span>
+        <button class="inc">+</button>
+      </div>
+    </div>
+
+    <div class="cart-card dessert" data-item data-price="22" data-qty="2">
+      <button class="remove-x">✕</button>
+      <div class="photo">🍝</div>
+      <div class="body">
+        <div class="name">Cacio e Pepe</div>
+        <div class="sub">Tonnarelli · Pecorino · Black pepper</div>
+        <div class="tag-row">
+          <span class="tag veg">Veg</span>
+          <span class="tag">Roman classic</span>
+        </div>
+        <div class="price-row">
+          <span class="price mono-num">22,00 zł</span>
+        </div>
+      </div>
+      <div class="qty">
+        <button class="dec">−</button>
+        <span class="val">2</span>
+        <button class="inc">+</button>
+      </div>
+    </div>
+
+    <div class="cart-card drink" data-item data-price="9" data-qty="2">
+      <button class="remove-x">✕</button>
+      <div class="photo">🥤</div>
+      <div class="body">
+        <div class="name">Coca-Cola 0,33L</div>
+        <div class="sub">Ice cold · Glass bottle</div>
+        <div class="tag-row">
+          <span class="tag">Bundle eligible</span>
+        </div>
+        <div class="price-row">
+          <span class="price mono-num">9,00 zł</span>
+        </div>
+      </div>
+      <div class="qty">
+        <button class="dec">−</button>
+        <span class="val">2</span>
+        <button class="inc">+</button>
+      </div>
+    </div>
+
+    <!-- =================== BUNDLE LADDER =================== -->
+    <div class="bundle-card" id="bundleCard">
+      <div class="bundle-head">
+        <div class="b-icon">🏆</div>
+        <div>
+          <h3>Family Feast Bundle</h3>
+          <div class="sub">4 pizzas + 4 drinks = save 28 zł instantly</div>
+        </div>
+      </div>
+      <div class="bundle-prog" id="bundleProg">
+        <div class="step done">🍕</div>
+        <div class="step done">🍕</div>
+        <div class="step">🍕</div>
+        <div class="step">🍕</div>
+      </div>
+      <div class="bundle-info">
+        <span class="progtxt"><span id="bundleCount">2</span> OF 4 PIZZAS</span>
+        <span class="saveBig">SAVE 28 zł WHEN UNLOCKED</span>
+      </div>
+      <button class="bundle-add" id="bundleAdd">
+        + ADD 2 MORE PIZZAS — JUST 19 zł EACH
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+
+    <!-- =================== COMBO BANNER =================== -->
+    <div class="combo-banner">
+      <span class="ribbon">ITALIAN CLASSIC −10%</span>
+      <div class="em">🍷</div>
+      <div>
+        <div class="ct">Pizza + Pasta Combo Applied</div>
+        <div class="sub">Auto-discount of 10% on this bundle.</div>
+      </div>
+      <span class="applied">✓ ACTIVE</span>
+    </div>
+
+    <!-- =================== FLASH DEAL =================== -->
+    <div class="flash-card">
+      <span class="corner">FLASH</span>
+      <div class="row">
+        <div class="em">☕</div>
+        <div>
+          <div class="t">ESPRESSO BREAK</div>
+          <div class="s">Hot Italian espresso · adds 4 min to your order</div>
+        </div>
+      </div>
+      <div class="timer">
+        <span class="lab">⏰ Flash deal ends in</span>
+        <span class="clk mono-num" id="flashTimer">14:32</span>
+      </div>
+      <button class="flash-add" id="flashAdd">+ ADD ESPRESSO — 9 zł</button>
+    </div>
+
+    <!-- =================== POPULAR ADD-ONS =================== -->
+    <h2 class="section-title">Popular Add-Ons <span class="bar"></span></h2>
+    <div class="addon-grid">
+
+      <div class="addon">
+        <span class="scarce">SELLING FAST</span>
+        <span class="stars">★ 4.9</span>
+        <div class="ph">🧄</div>
+        <div class="nm">Garlic Bread</div>
+        <div class="pr mono-num">12,00 zł</div>
+        <div class="row3">
+          <span style="font-size:11px;color:var(--muted);font-weight:700">+8% pts</span>
+          <button class="add-btn" data-addon data-price="12" data-name="Garlic Bread">+ ADD</button>
+        </div>
+      </div>
+
+      <div class="addon sweet">
+        <span class="scarce">LAST 6 LEFT</span>
+        <span class="stars">★ 5.0</span>
+        <div class="ph">🍰</div>
+        <div class="nm">Tiramisù</div>
+        <div class="pr mono-num">18,00 zł</div>
+        <div class="row3">
+          <span style="font-size:11px;color:var(--muted);font-weight:700">House recipe</span>
+          <button class="add-btn" data-addon data-price="18" data-name="Tiramisù">+ ADD</button>
+        </div>
+      </div>
+
+      <div class="addon veg">
+        <span class="stars">★ 4.8</span>
+        <div class="ph">🫒</div>
+        <div class="nm">Olives Bowl</div>
+        <div class="pr mono-num">8,00 zł</div>
+        <div class="row3">
+          <span style="font-size:11px;color:var(--muted);font-weight:700">Castelvetrano</span>
+          <button class="add-btn" data-addon data-price="8" data-name="Olives Bowl">+ ADD</button>
+        </div>
+      </div>
+
+      <div class="addon drink">
+        <span class="scarce">HOT</span>
+        <span class="stars">★ 4.7</span>
+        <div class="ph">🍾</div>
+        <div class="nm">Aperol Spritz</div>
+        <div class="pr mono-num">24,00 zł</div>
+        <div class="row3">
+          <span style="font-size:11px;color:var(--muted);font-weight:700">18+</span>
+          <button class="add-btn" data-addon data-price="24" data-name="Aperol Spritz">+ ADD</button>
+        </div>
+      </div>
+
+      <div class="addon veg">
+        <span class="stars">★ 4.9</span>
+        <div class="ph">🥗</div>
+        <div class="nm">Caprese Salad</div>
+        <div class="pr mono-num">19,00 zł</div>
+        <div class="row3">
+          <span style="font-size:11px;color:var(--muted);font-weight:700">Buffalo mozz.</span>
+          <button class="add-btn" data-addon data-price="19" data-name="Caprese Salad">+ ADD</button>
+        </div>
+      </div>
+
+      <div class="addon">
+        <span class="scarce">NEW</span>
+        <span class="stars">★ 4.8</span>
+        <div class="ph">🧀</div>
+        <div class="nm">Burrata Extra</div>
+        <div class="pr mono-num">14,00 zł</div>
+        <div class="row3">
+          <span style="font-size:11px;color:var(--muted);font-weight:700">Top any pie</span>
+          <button class="add-btn" data-addon data-price="14" data-name="Burrata Extra">+ ADD</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- =================== SOCIAL PROOF =================== -->
+    <div class="proof">
+      <span class="pem">🔥</span>
+      <div>
+        <b>1,247 orders</b> made today in <b>Kraków</b>
+        <div style="font-size:11px;font-weight:600;color:var(--muted)">Truck #2 · Rynek Główny · Avg wait 18 min</div>
+      </div>
+    </div>
+
+    <!-- =================== DELIVERY PROGRESS =================== -->
+    <div class="deliv-prog">
+      <div class="head">
+        <span class="t">🚚 ADD <span id="freeDelLeft">9</span> zł FOR FREE DELIVERY!</span>
+        <span class="arr">➜</span>
+      </div>
+      <div class="deliv-bar"><div class="deliv-bar-fill" id="delivFill" style="width:88%"></div></div>
+      <div class="stamps">
+        <span>0 zł</span>
+        <span>100 zł · FREE</span>
+      </div>
+    </div>
+
+    <!-- =================== FULFILLMENT =================== -->
+    <h2 class="section-title">How To Get It <span class="bar"></span></h2>
+    <div class="fulfill">
+      <button class="tab active" data-fulfill="delivery">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+        DELIVERY
+      </button>
+      <button class="tab" data-fulfill="pickup">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12"/></svg>
+        PICKUP
+      </button>
+    </div>
+
+    <!-- =================== ADDRESS =================== -->
+    <h2 class="section-title">Delivery Address <span class="bar"></span></h2>
+    <div class="field">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      <span class="lbl">Address</span>
+      <input type="text" placeholder="ul. Floriańska 23/5, Kraków" value="ul. Floriańska 23/5, Kraków" />
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <span class="lbl">Floor</span>
+        <input type="text" placeholder="3rd" value="3rd" />
+      </div>
+      <div class="field">
+        <span class="lbl">Code</span>
+        <input type="text" placeholder="#4271" value="#4271" />
+      </div>
+    </div>
+
+    <!-- =================== TIME SLOTS =================== -->
+    <h2 class="section-title">Pick A Time <span class="bar"></span></h2>
+    <div class="slot-grid" id="slotGrid">
+      <button class="slot">ASAP · ~18 min<span class="badge-mini">FAST</span></button>
+      <button class="slot active">17:30</button>
+      <button class="slot">17:45</button>
+      <button class="slot">18:00<span class="badge-mini">ONLY 2 LEFT!</span></button>
+      <button class="slot">18:15</button>
+      <button class="slot full">18:30</button>
+      <button class="slot">18:45</button>
+      <button class="slot">19:00</button>
+    </div>
+
+    <!-- =================== CUSTOMER DETAILS =================== -->
+    <h2 class="section-title">Quick Details <span class="bar"></span></h2>
+    <div class="field-row">
+      <div class="field">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.37 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.33 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        <input type="tel" placeholder="+48 600 000 000" value="+48 600 123 456" />
+      </div>
+      <div class="field">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        <input type="email" placeholder="email (optional)" value="" />
+      </div>
+    </div>
+
+    <!-- =================== TIP =================== -->
+    <h2 class="section-title">Tip Your Pizzaiolo <span class="bar"></span></h2>
+    <div class="tips" id="tipPicker">
+      <button class="tip" data-tip="0">0<span class="pct">No tip</span></button>
+      <button class="tip" data-tip="10">10%<span class="pct">≈ X zł</span></button>
+      <button class="tip active" data-tip="15">15%<span class="pct">Pre-selected</span></button>
+      <button class="tip" data-tip="20">20%<span class="pct">Generous</span></button>
+      <div class="tip-custom">
+        <input type="number" id="tipCustom" placeholder="Custom" min="0" />
+        <span class="zl">zł</span>
+      </div>
+    </div>
+
+    <div class="proof" style="background:#E6F8EB;border-color:#16A34A;color:#0F7A36;margin-top:14px">
+      <span class="pem">🛡️</span>
+      <div>
+        <b>Hot &amp; Fresh Guarantee</b>
+        <div style="font-size:11px;font-weight:600;color:#3a6a4d">Delivered hot or your next order is on us.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- =================== STICKY PAY BAR =================== -->
+  <div class="pay-bar" id="payBar">
+    <div class="urg">⏰ ORDER NOW — ONLY 3 SLOTS LEFT AT 18:00</div>
+    <div class="lines">
+      <div class="ln"><span>Subtotal (<span id="lineCount">5</span> items)</span><b class="mono-num"><span id="subtotal">142,00</span> zł</b></div>
+      <div class="ln disc"><span>Deals saved you</span><b class="mono-num">−<span id="discount">28,00</span> zł</b></div>
+      <div class="ln"><span>Tip (<span id="tipPctTxt">15</span>%)</span><b class="mono-num"><span id="tipAmt">17,10</span> zł</b></div>
+      <div class="ln"><span>Delivery</span><b class="mono-num">5,90 zł</b></div>
+    </div>
+    <div class="ttl">
+      <span class="lab">TOTAL</span>
+      <span class="val mono-num"><span id="grandTotal">137,00</span> zł</span>
+    </div>
+    <div class="row-btn">
+      <button class="clear-cart" id="clearCart" aria-label="Clear cart">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>
+      </button>
+      <button class="pay-now" id="payBtn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+        PAY <span id="payTotal">137,00</span> zł NOW
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Confetti overlay -->
+<div class="confetti" id="confetti"></div>
+
+<!-- Toast -->
+<div class="toast" id="toast">✓ ADDED!</div>
+
+<script>
+/* =====================================================
+   V4 — Domino's-style fast conversion cart
+   Vanilla JS — qty steppers, deal animation, countdown,
+   tip picker, real total recalc, confetti popper.
+   ===================================================== */
+(function(){
+  'use strict';
+
+  /* ---------- STATE ---------- */
+  const state = {
+    items: [], // populated from DOM
+    addons: {}, // name -> {price, qty}
+    tipPct: 15,
+    tipCustom: null,
+    deliveryFee: 5.90,
+    bundleSaving: 28,
+    fulfillment: 'delivery',
+    flashAdded: false,
+  };
+
+  /* ---------- HELPERS ---------- */
+  const $ = (sel,ctx=document)=>ctx.querySelector(sel);
+  const $$ = (sel,ctx=document)=>Array.from(ctx.querySelectorAll(sel));
+  const fmt = n => n.toFixed(2).replace('.',',');
+
+  function readItems(){
+    state.items = $$('.cart-card[data-item]').map(el=>({
+      el,
+      price: parseFloat(el.dataset.price),
+      qty: parseInt(el.dataset.qty,10)
+    }));
+  }
+
+  function calcTotals(){
+    let subtotal = 0;
+    let count = 0;
+    state.items.forEach(it=>{
+      subtotal += it.price * it.qty;
+      count += it.qty;
+    });
+    Object.values(state.addons).forEach(a=>{
+      subtotal += a.price * a.qty;
+      count += a.qty;
+    });
+
+    const discount = state.bundleSaving;
+    const afterDisc = Math.max(0, subtotal - discount);
+    let tip;
+    if(state.tipCustom!=null && !isNaN(state.tipCustom)){
+      tip = state.tipCustom;
+    } else {
+      tip = afterDisc * (state.tipPct/100);
+    }
+    const total = afterDisc + tip + state.deliveryFee;
+
+    // update DOM
+    $('#subtotal').textContent = fmt(subtotal);
+    $('#discount').textContent = fmt(discount);
+    $('#tipAmt').textContent = fmt(tip);
+    $('#tipPctTxt').textContent = state.tipCustom!=null?'custom':state.tipPct;
+    $('#grandTotal').textContent = fmt(total);
+    $('#payTotal').textContent = fmt(total);
+    $('#lineCount').textContent = count;
+    $('#savingBadge').textContent = Math.round(discount);
+    // Points: 1pt per zł
+    $('#ptsEarn').textContent = '+'+Math.round(afterDisc)+' pts';
+
+    // Free delivery progress
+    const goal = 100;
+    const pct = Math.min(100,(subtotal/goal)*100);
+    $('#delivFill').style.width = pct+'%';
+    const left = Math.max(0,goal-subtotal);
+    $('#freeDelLeft').textContent = fmt(left).replace(',00','');
+    if(left<=0){
+      $('.deliv-prog .head .t').innerHTML = '🎉 FREE DELIVERY UNLOCKED!';
+      state.deliveryFee = 0;
+    }
+  }
+
+  /* ---------- QTY STEPPERS ---------- */
+  $$('.cart-card[data-item]').forEach(card=>{
+    const val = card.querySelector('.qty .val');
+    const dec = card.querySelector('.dec');
+    const inc = card.querySelector('.inc');
+    const remove = card.querySelector('.remove-x');
+
+    dec.addEventListener('click',()=>{
+      let q = parseInt(card.dataset.qty,10);
+      if(q>1){
+        q--;
+        card.dataset.qty = q;
+        val.textContent = q;
+        card.classList.add('bounce');
+        setTimeout(()=>card.classList.remove('bounce'),500);
+        readItems();
+        calcTotals();
+      }
+    });
+    inc.addEventListener('click',()=>{
+      let q = parseInt(card.dataset.qty,10);
+      q++;
+      card.dataset.qty = q;
+      val.textContent = q;
+      card.classList.add('bounce');
+      setTimeout(()=>card.classList.remove('bounce'),500);
+      readItems();
+      calcTotals();
+      // pizza count -> bundle ladder progress
+      updateBundleProgress();
+    });
+    remove.addEventListener('click',()=>{
+      if(!confirm('Remove this item from your cart?')) return;
+      card.style.transition='all .3s ease';
+      card.style.transform='translateX(120%)';
+      card.style.opacity='0';
+      setTimeout(()=>{
+        card.remove();
+        readItems();
+        calcTotals();
+        updateBundleProgress();
+      },300);
+    });
+  });
+
+  /* ---------- BUNDLE LADDER ---------- */
+  function pizzaQty(){
+    let q = 0;
+    state.items.forEach(it=>{
+      const name = it.el.querySelector('.name').textContent.toLowerCase();
+      if(name.includes('margherita')||name.includes('diavola')||name.includes('marinara')) q += it.qty;
+    });
+    return q;
+  }
+  function updateBundleProgress(){
+    const steps = $$('#bundleProg .step');
+    const q = pizzaQty();
+    steps.forEach((s,i)=>{
+      if(i<q) s.classList.add('done');
+      else s.classList.remove('done');
+    });
+    $('#bundleCount').textContent = Math.min(q,4);
+    const left = Math.max(0,4-q);
+    const btn = $('#bundleAdd');
+    if(left===0){
+      btn.innerHTML = '✓ FAMILY FEAST UNLOCKED — SAVED 28 zł';
+      btn.style.background = '#16A34A';
+      btn.style.color = '#fff';
+      if(!state._confettiFired){
+        state._confettiFired = true;
+        fireConfetti();
+        showToast('🎉 FAMILY FEAST UNLOCKED! −28 zł');
+      }
+    } else {
+      btn.innerHTML = `+ ADD ${left} MORE PIZZA${left>1?'S':''} — JUST 19 zł EACH <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12h14M12 5l7 7-7 7"/></svg>`;
+      btn.style.background = '';
+      btn.style.color = '';
+      state._confettiFired = false;
+    }
+  }
+
+  $('#bundleAdd').addEventListener('click',()=>{
+    // Simulate adding one pizza
+    const margherita = $('.cart-card[data-item]');
+    if(margherita){
+      let q = parseInt(margherita.dataset.qty,10) + 1;
+      margherita.dataset.qty = q;
+      margherita.querySelector('.qty .val').textContent = q;
+      margherita.classList.add('bounce');
+      setTimeout(()=>margherita.classList.remove('bounce'),500);
+      readItems();
+      calcTotals();
+      updateBundleProgress();
+      showToast('+ 1 PIZZA ADDED');
+    }
+  });
+
+  /* ---------- DEAL CARDS ---------- */
+  $$('[data-bundle-deal]').forEach(card=>{
+    card.addEventListener('click',()=>{
+      card.classList.add('bounce');
+      setTimeout(()=>card.classList.remove('bounce'),500);
+      showToast('✓ DEAL APPLIED — '+card.dataset.name.toUpperCase());
+      fireConfetti(12);
+    });
+  });
+
+  /* ---------- ADDON GRID ---------- */
+  $$('[data-addon]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const name = btn.dataset.name;
+      const price = parseFloat(btn.dataset.price);
+      if(btn.classList.contains('added')){
+        // remove
+        delete state.addons[name];
+        btn.classList.remove('added');
+        btn.textContent = '+ ADD';
+      } else {
+        state.addons[name] = {price, qty:1};
+        btn.classList.add('added');
+        btn.textContent = '✓ ADDED';
+        btn.closest('.addon').classList.add('bounce');
+        setTimeout(()=>btn.closest('.addon').classList.remove('bounce'),500);
+        showToast('✓ '+name.toUpperCase()+' ADDED');
+      }
+      calcTotals();
+    });
+  });
+
+  /* ---------- FLASH ADD ---------- */
+  $('#flashAdd').addEventListener('click',function(){
+    if(state.flashAdded){
+      state.flashAdded = false;
+      delete state.addons['Espresso'];
+      this.textContent = '+ ADD ESPRESSO — 9 zł';
+      this.style.background = '';
+    } else {
+      state.flashAdded = true;
+      state.addons['Espresso'] = {price:9,qty:1};
+      this.textContent = '✓ ESPRESSO ADDED';
+      this.style.background = '#16A34A';
+      this.classList.add('bounce');
+      setTimeout(()=>this.classList.remove('bounce'),500);
+      showToast('☕ ESPRESSO ADDED');
+    }
+    calcTotals();
+  });
+
+  /* ---------- COUNTDOWN ---------- */
+  let flashSecs = 14*60 + 32;
+  const flashEl = $('#flashTimer');
+  setInterval(()=>{
+    if(flashSecs<=0){
+      flashEl.textContent='00:00';
+      return;
+    }
+    flashSecs--;
+    const m = Math.floor(flashSecs/60);
+    const s = flashSecs%60;
+    flashEl.textContent = String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+  },1000);
+
+  /* ---------- FULFILLMENT TABS ---------- */
+  $$('.fulfill .tab').forEach(tab=>{
+    tab.addEventListener('click',()=>{
+      $$('.fulfill .tab').forEach(t=>t.classList.remove('active'));
+      tab.classList.add('active');
+      state.fulfillment = tab.dataset.fulfill;
+      if(state.fulfillment==='pickup'){
+        state.deliveryFee = 0;
+      } else {
+        state.deliveryFee = 5.90;
+      }
+      calcTotals();
+    });
+  });
+
+  /* ---------- TIME SLOTS ---------- */
+  $$('#slotGrid .slot').forEach(s=>{
+    if(s.classList.contains('full')) return;
+    s.addEventListener('click',()=>{
+      $$('#slotGrid .slot').forEach(x=>x.classList.remove('active'));
+      s.classList.add('active');
+    });
+  });
+
+  /* ---------- TIP PICKER ---------- */
+  $$('#tipPicker .tip').forEach(t=>{
+    t.addEventListener('click',()=>{
+      $$('#tipPicker .tip').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      state.tipPct = parseInt(t.dataset.tip,10);
+      state.tipCustom = null;
+      $('#tipCustom').value = '';
+      calcTotals();
+    });
+  });
+  $('#tipCustom').addEventListener('input',(e)=>{
+    const v = parseFloat(e.target.value);
+    if(!isNaN(v) && v>=0){
+      state.tipCustom = v;
+      $$('#tipPicker .tip').forEach(x=>x.classList.remove('active'));
+      calcTotals();
+    } else if(e.target.value===''){
+      state.tipCustom = null;
+      calcTotals();
+    }
+  });
+
+  /* ---------- CLEAR / PAY ---------- */
+  $('#clearCart').addEventListener('click',()=>{
+    if(confirm('Clear your entire cart?')){
+      $$('.cart-card[data-item]').forEach(c=>c.remove());
+      state.items = [];
+      state.addons = {};
+      $$('[data-addon]').forEach(b=>{b.classList.remove('added');b.textContent='+ ADD';});
+      calcTotals();
+      updateBundleProgress();
+      showToast('Cart cleared');
+    }
+  });
+  $('#payBtn').addEventListener('click',function(){
+    this.style.transform='scale(.97)';
+    setTimeout(()=>this.style.transform='',150);
+    showToast('🔒 Redirecting to secure checkout...');
+  });
+
+  /* ---------- CONFETTI ---------- */
+  function fireConfetti(count=80){
+    const c = $('#confetti');
+    c.innerHTML = '';
+    c.classList.add('show');
+    const colors = ['#D62828','#FFD43B','#16A34A','#1D4ED8','#7F1414','#fff'];
+    for(let i=0;i<count;i++){
+      const p = document.createElement('div');
+      p.className = 'conf-piece';
+      p.style.left = (Math.random()*100)+'%';
+      p.style.background = colors[Math.floor(Math.random()*colors.length)];
+      p.style.animationDuration = (1.5+Math.random()*2)+'s';
+      p.style.animationDelay = (Math.random()*0.4)+'s';
+      p.style.width = (6+Math.random()*8)+'px';
+      p.style.height = (10+Math.random()*8)+'px';
+      p.style.transform = `rotate(${Math.random()*360}deg)`;
+      c.appendChild(p);
+    }
+    setTimeout(()=>{c.classList.remove('show');c.innerHTML='';},3500);
+  }
+
+  /* ---------- TOAST ---------- */
+  let toastT;
+  function showToast(msg){
+    const t = $('#toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastT);
+    toastT = setTimeout(()=>t.classList.remove('show'),2200);
+  }
+
+  /* ---------- INIT ---------- */
+  readItems();
+  calcTotals();
+  updateBundleProgress();
+
+  // Auto-fire a small celebration after 2s for demo (showing deal saving)
+  setTimeout(()=>{
+    fireConfetti(30);
+    showToast('🎉 GOLD MEMBER PERKS ACTIVE');
+  },1200);
+
+})();
+</script>
+
+</body>
+</html>
