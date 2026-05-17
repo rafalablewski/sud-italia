@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { Bell, BellOff, ChevronRight, Clock, Download, LogOut, MapPin, Pin, Search, Sparkles, Sun } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Bell, BellOff, ChevronRight, Clock, Download, LogOut, MapPin, Monitor, Pin, Search, Sparkles, Sun } from "lucide-react";
 import type { AdminRole } from "@/lib/admin-roles";
 import { ALL_NAV_ITEMS, filterNavForRole, NAV_SECTIONS } from "../nav.config";
 import { BottomSheet } from "./BottomSheet";
@@ -15,6 +15,7 @@ import { useInstallPrompt } from "./useInstallPrompt";
 import { useNavHistory } from "./useNavHistory";
 import { ThemeToggle } from "../ThemeToggle";
 import { haptic } from "./haptics";
+import { getForceDesktop, setForceDesktop } from "./useIsMobile";
 
 interface Props {
   open: boolean;
@@ -35,6 +36,10 @@ export function MoreDrawer({ open, onClose, role }: Props) {
   const autoTheme = useAutoTheme();
   const install = useInstallPrompt();
   const [pushSettingsOpen, setPushSettingsOpen] = useState(false);
+  const [desktopForced, setDesktopForced] = useState(false);
+  useEffect(() => {
+    if (open) setDesktopForced(getForceDesktop());
+  }, [open]);
   const sections = useMemo(
     () => filterNavForRole(role) || NAV_SECTIONS,
     [role],
@@ -243,6 +248,26 @@ export function MoreDrawer({ open, onClose, role }: Props) {
             </button>
             <ThemeToggle />
           </div>
+        </div>
+
+        <div className="v2-m-more-footer-row">
+          <div className="v2-m-more-footer-label">
+            <Monitor className="h-3.5 w-3.5" aria-hidden /> Desktop view
+          </div>
+          <button
+            type="button"
+            className={`v2-m-chip ${desktopForced ? "is-active" : ""}`}
+            onClick={() => {
+              const next = !desktopForced;
+              setDesktopForced(next);
+              setForceDesktop(next);
+              haptic("light");
+            }}
+            aria-pressed={desktopForced}
+            title="Render every admin page with the full desktop layout. Useful for pages that aren't fully wired up for mobile yet."
+          >
+            {desktopForced ? "On" : "Off"}
+          </button>
         </div>
 
         {install.available && !install.installed && (

@@ -17,6 +17,7 @@ import {
   PullToRefresh,
   type MobileListItem,
 } from "../v2/mobile";
+import { MobileMenuItemEditor, type MobileMenuItemPatch } from "./MobileMenuItemEditor";
 
 const CATEGORIES: (MenuCategory | "all")[] = [
   "all",
@@ -50,6 +51,7 @@ export function MobileMenu() {
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
+  const [editing, setEditing] = useState<MenuItem | null>(null);
   const activeLocations = useMemo(() => getActiveLocations(), []);
 
   useEffect(() => {
@@ -121,6 +123,31 @@ export function MobileMenu() {
     }
   };
 
+  const applyPatch = (id: string, patch: MobileMenuItemPatch) => {
+    setItems((arr) =>
+      arr.map((i) => {
+        if (i.id !== id) return i;
+        return {
+          ...i,
+          ...(patch.name !== undefined ? { name: patch.name } : {}),
+          ...(patch.description !== undefined ? { description: patch.description } : {}),
+          ...(patch.price !== undefined ? { price: patch.price } : {}),
+          ...(patch.cost !== undefined ? { cost: patch.cost } : {}),
+          ...(patch.category !== undefined ? { category: patch.category } : {}),
+          ...(patch.tags !== undefined ? { tags: patch.tags as MenuItem["tags"] } : {}),
+          ...(patch.available !== undefined ? { available: patch.available } : {}),
+          ...(patch.deliveryOnly !== undefined
+            ? { deliveryOnly: patch.deliveryOnly ?? undefined }
+            : {}),
+          ...(patch.packagingCost !== undefined
+            ? { packagingCost: patch.packagingCost ?? undefined }
+            : {}),
+          ...(patch.sku !== undefined ? { sku: patch.sku ?? undefined } : {}),
+        };
+      }),
+    );
+  };
+
   const rows: MobileListItem<MenuItem>[] = filtered.map((it) => ({
     id: it.id,
     data: it,
@@ -129,7 +156,7 @@ export function MobileMenu() {
     title: it.name,
     subtitle: `${MENU_CATEGORY_LABELS[it.category] ?? it.category}${it.tags.length ? ` · ${it.tags.join(", ")}` : ""}`,
     trailing: formatPrice(it.price),
-    onTap: () => toggleAvailability(it),
+    onTap: () => setEditing(it),
     rightAction: it.available
       ? {
           label: "86",
@@ -162,7 +189,8 @@ export function MobileMenu() {
     );
 
   return (
-    <PullToRefresh onRefresh={refresh}>
+    <>
+      <PullToRefresh onRefresh={refresh}>
       <MobilePage
         toolbar={
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -237,12 +265,21 @@ export function MobileMenu() {
                 color: "var(--fg-subtle)",
               }}
             >
-              <Tag className="h-3 w-3" aria-hidden /> Tap to 86
+              <Tag className="h-3 w-3" aria-hidden /> Tap to edit · swipe to 86
             </span>
           }
         />
         <MobileList items={rows} virtualizeAt={64} empty={empty} loading={loading} />
       </MobilePage>
     </PullToRefresh>
+    <MobileMenuItemEditor
+      item={editing}
+      onClose={() => setEditing(null)}
+      onSaved={(patch) => {
+        if (editing) applyPatch(editing.id, patch);
+        setEditing(null);
+      }}
+    />
+    </>
   );
 }
