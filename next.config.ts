@@ -76,12 +76,43 @@ const SECURITY_HEADERS = [
   },
 ];
 
+/**
+ * Relaxed CSP for /mockups/* — these are static design artifacts (HTML
+ * concept files) that pull Google Fonts via @import, which the production
+ * CSP would otherwise block. Everything else (frame-ancestors, nosniff,
+ * referrer policy, permissions policy, HSTS) stays identical.
+ */
+const MOCKUP_HEADERS = [
+  ...SECURITY_HEADERS.filter((h) => h.key !== "Content-Security-Policy"),
+  {
+    key: "Content-Security-Policy",
+    value: [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "img-src 'self' data: blob: https:",
+      "font-src 'self' data: https://fonts.gstatic.com",
+      "connect-src 'self'",
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+      "object-src 'none'",
+    ].join("; "),
+  },
+];
+
 const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: "/:path*",
+        // Negative-lookahead so the strict CSP doesn't double-up on /mockups/*
+        // (browsers intersect duplicate CSP headers, so leaving both would
+        // re-block the fonts even after the relaxed rule is added).
+        source: "/((?!mockups/).*)",
         headers: SECURITY_HEADERS,
+      },
+      {
+        source: "/mockups/:path*",
+        headers: MOCKUP_HEADERS,
       },
     ];
   },
