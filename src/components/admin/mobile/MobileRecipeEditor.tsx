@@ -88,6 +88,14 @@ function displayStep(unit: string | undefined): string {
   if (unit === "bunch") return "0.1";
   return "1";
 }
+/** Number(input) returns NaN for "abc"/"1.2.3" and Infinity for "1e500" —
+ *  either one breaks the live cost math + ships null over JSON.stringify.
+ *  Floor everything invalid back to 0 at the input boundary so the rest
+ *  of the editor can assume a clean finite number. */
+function safeNumber(raw: string): number {
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : 0;
+}
 function factorToPercent(wf: number): number {
   if (!Number.isFinite(wf) || wf <= 1) return 0;
   return Math.round((wf - 1) * 100);
@@ -119,31 +127,38 @@ export function MobileRecipeEditor({
   const [busy, setBusy] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
+  const ingredientMap = useMemo(() => {
+    const m = new Map<string, IngredientData>();
+    for (const i of ingredients) m.set(i.id, i);
+    return m;
+  }, [ingredients]);
+
   useEffect(() => {
     if (!menuItem) return;
     const ings = recipe?.enrichedIngredients ?? recipe?.ingredients ?? [];
     setRows(
-      ings.map((r) => ({
-        ingredientId: r.ingredientId,
-        quantity: r.quantity,
-        wasteFactor: r.wasteFactor ?? 1,
-        name: r.name,
-        unit: r.unit,
-        unitCost: r.unitCost,
-      })),
+      ings.map((r) => {
+        // The API enriches recipes server-side, but if the payload ever
+        // ships unenriched (older snapshots, partial responses) we fall
+        // back to the ingredients lookup so the row still renders with
+        // a name + unit + price instead of "undefined / NaN cost".
+        const ref = ingredientMap.get(r.ingredientId);
+        return {
+          ingredientId: r.ingredientId,
+          quantity: r.quantity,
+          wasteFactor: r.wasteFactor ?? 1,
+          name: r.name ?? ref?.name,
+          unit: r.unit ?? ref?.unit,
+          unitCost: r.unitCost ?? ref?.costPerUnit,
+        };
+      }),
     );
     setYieldPortions(recipe?.yieldPortions ?? 1);
     setPrepTime(recipe?.prepTimeMinutes ? String(recipe.prepTimeMinutes) : "");
     setNotes(recipe?.notes ?? "");
     setPickerId("");
     setConfirmingDelete(false);
-  }, [menuItem, recipe]);
-
-  const ingredientMap = useMemo(() => {
-    const m = new Map<string, IngredientData>();
-    for (const i of ingredients) m.set(i.id, i);
-    return m;
-  }, [ingredients]);
+  }, [menuItem, recipe, ingredientMap]);
 
   if (!menuItem) {
     return <BottomSheet open={false} onClose={onClose}>{null}</BottomSheet>;
@@ -179,8 +194,11 @@ export function MobileRecipeEditor({
     setRows((arr) => arr.filter((r) => r.ingredientId !== id));
   };
 
-  const lineCost = (r: EnrichedRecipeIngredient) =>
-    Math.round((r.unitCost ?? 0) * r.quantity * (r.wasteFactor || 1));
+  const lineCost = (r: EnrichedRecipeIngredient) => {
+    const qty = Number.isFinite(r.quantity) ? r.quantity : 0;
+    const wf = Number.isFinite(r.wasteFactor) && r.wasteFactor > 0 ? r.wasteFactor : 1;
+    return Math.round((r.unitCost ?? 0) * qty * wf);
+  };
   const totalCost = rows.reduce((acc, r) => acc + lineCost(r), 0);
   const perPortion = yieldPortions > 0 ? Math.round(totalCost / yieldPortions) : totalCost;
   const margin =
@@ -191,6 +209,37 @@ export function MobileRecipeEditor({
     margin < 50 ? "danger" : margin < 65 ? "warning" : "success";
 
   const save = async () => {
+    // Reject any row where the qty/waste went non-finite — `JSON.stringify`
+    // would coerce NaN to null and silently corrupt the recipe on the
+    // server. Surface the bad row instead so the operator can fix it.
+    const badRow = rows.find(
+      (r) =>
+        !Number.isFinite(r.quantity) ||
+        r.quantity < 0 ||
+        !Number.isFinite(r.wasteFactor) ||
+        r.wasteFactor < 1,
+    );
+    if (badRow) {
+      toast.error(
+        "Invalid quantity or waste",
+        `Check the row for ${badRow.name ?? badRow.ingredientId}.`,
+      );
+      return;
+    }
+    if (!Number.isFinite(yieldPortions) || yieldPortions < 1) {
+      toast.error("Yield must be at least 1 portion");
+      return;
+    }
+    let prepTimeMinutes: number | undefined;
+    if (prepTime.trim() !== "") {
+      const n = Number(prepTime);
+      if (!Number.isFinite(n) || n < 0) {
+        toast.error("Invalid prep time");
+        return;
+      }
+      prepTimeMinutes = Math.round(n);
+    }
+
     setBusy(true);
     try {
       const res = await fetch("/api/admin/recipes", {
@@ -203,7 +252,7 @@ export function MobileRecipeEditor({
             quantity: r.quantity,
             wasteFactor: r.wasteFactor,
           })),
-          prepTimeMinutes: prepTime ? Number(prepTime) : undefined,
+          prepTimeMinutes,
           yieldPortions,
           notes,
         }),
@@ -411,7 +460,10 @@ export function MobileRecipeEditor({
                         value={toDisplayQty(r.quantity, r.unit)}
                         onChange={(e) =>
                           updateRow(r.ingredientId, {
-                            quantity: fromDisplayQty(Number(e.target.value), r.unit),
+                            quantity: Math.max(
+                              0,
+                              fromDisplayQty(safeNumber(e.target.value), r.unit),
+                            ),
                           })
                         }
                         style={inputStyle}
@@ -428,7 +480,9 @@ export function MobileRecipeEditor({
                         value={factorToPercent(r.wasteFactor)}
                         onChange={(e) =>
                           updateRow(r.ingredientId, {
-                            wasteFactor: percentToFactor(Number(e.target.value)),
+                            wasteFactor: percentToFactor(
+                              Math.min(100, Math.max(0, safeNumber(e.target.value))),
+                            ),
                           })
                         }
                         style={inputStyle}
