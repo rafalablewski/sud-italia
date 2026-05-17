@@ -10,8 +10,8 @@ import {
   buildBundleCartLines,
   cartSatisfiesBundle,
   computeBundlePrice,
-} from "../../src/lib/bundles";
-import type { CartItem, MenuCategory, MenuItem } from "../../src/data/types";
+} from "@/lib/bundles";
+import type { CartItem, MenuCategory, MenuItem } from "@/data/types";
 
 const item = (id: string, category: MenuCategory, price: number): MenuItem => ({
   id,
