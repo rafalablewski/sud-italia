@@ -6,6 +6,7 @@ import {
   Mail,
   MessageSquare,
   Phone,
+  Share2,
   Sparkles,
   Star,
   StickyNote,
@@ -19,6 +20,8 @@ import {
   type StatItem,
   StatRow,
 } from "../v2/mobile";
+import { canShare, share } from "../v2/mobile/share";
+import { useToast } from "../v2/ui/Toast";
 
 interface CustomerDetail {
   phone: string;
@@ -87,8 +90,23 @@ function fmtDate(iso?: string): string {
  * and notes are surfaced inline at the bottom — not buried in tabs.
  */
 export function MobileCustomerDetail({ phone }: Props) {
+  const toast = useToast();
   const [data, setData] = useState<CustomerDetail | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const onShare = async () => {
+    if (!data) return;
+    const total = formatPrice(data.totals.totalSpent);
+    const orders = data.totals.orderCount;
+    const result = await share({
+      title: `Customer · ${data.member?.name || phone}`,
+      text: `${orders} order${orders === 1 ? "" : "s"} · ${total} lifetime · ${data.totals.spendablePoints} pts`,
+      url: typeof window !== "undefined" ? window.location.href : undefined,
+    });
+    if (result.via === "copy" && result.delivered) {
+      toast.success("Link copied");
+    }
+  };
 
   const refresh = async () => {
     setLoading(true);
@@ -142,7 +160,22 @@ export function MobileCustomerDetail({ phone }: Props) {
   return (
     <PullToRefresh onRefresh={refresh}>
       <MobilePage>
-        <PageHeader title={name} subtitle={phone} />
+        <PageHeader
+          title={name}
+          subtitle={phone}
+          actions={
+            canShare() || (typeof navigator !== "undefined" && navigator.clipboard) ? (
+              <button
+                type="button"
+                className="v2-m-icon-btn"
+                onClick={onShare}
+                aria-label="Share"
+              >
+                <Share2 className="h-5 w-5" />
+              </button>
+            ) : null
+          }
+        />
 
         <div
           style={{

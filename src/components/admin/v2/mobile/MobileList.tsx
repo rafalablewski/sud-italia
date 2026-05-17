@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { ChevronRight } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { SwipeRow } from "./SwipeRow";
@@ -36,6 +36,7 @@ export interface MobileListItem<R> {
 }
 
 import type { MultiSelectApi } from "./useMultiSelect";
+import { MobileListSkeleton } from "./Skeleton";
 
 interface Props<R> {
   items: MobileListItem<R>[];
@@ -56,6 +57,15 @@ interface Props<R> {
    * When active, taps toggle selection instead of firing `onTap`.
    */
   multi?: MultiSelectApi<string>;
+  /**
+   * When true AND `items.length === 0`, render a pulse-skeleton list
+   * instead of the empty state. Use during a first-load while the
+   * fetch is in flight; refresh-while-data-present keeps showing the
+   * current rows.
+   */
+  loading?: boolean;
+  /** How many skeleton rows to render while loading. Defaults to 6. */
+  skeletonRows?: number;
 }
 
 /**
@@ -70,14 +80,43 @@ export function MobileList<R>({
   virtualizeAt,
   virtualizeThreshold = 100,
   multi,
+  loading,
+  skeletonRows = 6,
 }: Props<R>) {
   const shouldVirtualize =
     virtualizeAt !== undefined && items.length >= virtualizeThreshold;
 
+  // Auto-skeleton on initial mount when no `loading` prop was passed:
+  // we assume the parent will fetch and hydrate `items` shortly. We
+  // show skeleton rows for up to 4 s — if data hasn't landed by then,
+  // the explicit empty state takes over so the user isn't stuck.
+  const [autoLoading, setAutoLoading] = useState(items.length === 0);
+  const hadData = useRef(items.length > 0);
+  useEffect(() => {
+    if (items.length > 0) {
+      hadData.current = true;
+      setAutoLoading(false);
+      return;
+    }
+    if (hadData.current) {
+      // Once we've shown real data, refreshing into an empty state
+      // shouldn't re-flash skeletons — that would feel like a regression.
+      setAutoLoading(false);
+      return;
+    }
+    const t = window.setTimeout(() => setAutoLoading(false), 4000);
+    return () => window.clearTimeout(t);
+  }, [items.length]);
+
+  const showSkeleton =
+    items.length === 0 && (loading === undefined ? autoLoading : loading);
+
   return (
     <div className="v2-m-list-wrap">
       {caption && <div className="v2-m-list-caption">{caption}</div>}
-      {items.length === 0 ? (
+      {showSkeleton ? (
+        <MobileListSkeleton rows={skeletonRows} />
+      ) : items.length === 0 ? (
         <div className="v2-m-list-empty">{empty ?? "Nothing here yet."}</div>
       ) : shouldVirtualize ? (
         <VirtualList items={items} rowHeight={virtualizeAt!} multi={multi} />

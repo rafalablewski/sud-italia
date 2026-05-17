@@ -135,11 +135,21 @@ To validate the redesign and inform Phase 2 prioritisation:
 If we keep going, this is the order that closes real value. Items above the line are doable in-session; items below need a separate project.
 
 — in-session enhancements layered on after P0–P2 closure —
-1. **Skeleton screens** — `<Skeleton>`, `<StatCardSkeleton>`, `<ListRowSkeleton>`, `<MobileListSkeleton>` shipped. Wired in MobileDashboard's KPI pager + MobileCustomers; can be sprinkled into the other list views as polish increments.
-2. **Spring physics on sheet drag-release** — BottomSheet's snap-back now uses a velocity-scaled cubic-bezier with iOS-style overshoot. FAB press uses a snap-down/spring-up curve.
-3. **PWA install prompt** — `useInstallPrompt` hook + MoreDrawer footer row that shows only when `beforeinstallprompt` fires (Chrome/Edge/Samsung; Safari intentionally has no prompt).
-4. **Auto theme** — `useAutoTheme` hook + MoreDrawer "Auto" chip toggle. Flips dark→light at 07:00 and back at 19:00 local. Re-schedules at each hour boundary so it never drifts.
-5. **Action timing telemetry** — `useActionTiming` hook + `/api/admin/telemetry` sink. Wired into KDS bump (`kds.bump`), orders refund (`orders.refund`), and orders comp (`orders.comp`) spans. Uses `navigator.sendBeacon` so spans survive page unload. Backs the audit's success criteria (≤ 12s refund, ≤ 1.5s bump).
+1. **Skeleton screens** — `<Skeleton>`, `<StatCardSkeleton>`, `<ListRowSkeleton>`, `<MobileListSkeleton>` + auto-wired into `MobileList` (every view shows skeleton rows on first load with a 4 s timeout fallback, no per-view plumbing needed).
+2. **Spring physics on sheet drag-release** — BottomSheet snap-back uses a velocity-scaled cubic-bezier with iOS-style overshoot. FAB press uses a snap-down/spring-up curve.
+3. **PWA install prompt** — `useInstallPrompt` + MoreDrawer chip (Chrome/Edge/Samsung). `IosInstallHint` banner with Share → Add to Home Screen instruction (iOS Safari).
+4. **Auto theme** — `useAutoTheme` + "Auto" chip in MoreDrawer. Flips dark→light at 07:00 / 19:00 local; reschedules at each hour boundary.
+5. **Action timing telemetry** — `useActionTiming` + `/api/admin/telemetry` POST/GET. Persists to `telemetry_spans` (Postgres) with `(span, occurred_at)` index. p50/p95/count/lastAt aggregations. Spans: `kds.bump`, `orders.refund`, `orders.comp`, `orders.advance`, `customers.lookup`, `inventory.adjust`, `dashboard.glance`, `alerts.view`, `ai.agent.open`.
+6. **Server-side push fanout** — `pushToAdmins()` + structured `Notification.data` payload + per-category opt-in (`admin_push_prefs` table) + `PushSettingsSheet` UI. Test-push endpoint + button. Dispute hook wired from Stripe webhook. Slot-pressure auto-fires when `currentOrders === maxOrders - 1`.
+7. **Multi-tone KDS audio** — `playKdsCue("newOrder" | "overdue" | "ready" | "test")` with distinct tonal shapes (C5→G5 rise / A3 low pulse / C6 chime).
+8. **Web Share API** — `canShare()` + `share()` with clipboard fallback. Customer detail header surfaces a Share button.
+9. **Onboarding tour** — 3-step coach-mark for FAB / swipe / bell. Persists "seen" in localStorage.
+10. **Long-press nav peek** — Bottom-nav tabs reveal a tooltip with route + Open shortcut on long-press. Prefetches the route on pointerdown.
+11. **Idle-time route prefetch** — `useIdlePrefetch` warms bottom-nav routes via `requestIdleCallback` (setTimeout fallback).
+12. **Full-screen alerts view** — `/admin/alerts` route + `MobileAlerts`. Filter chips (Unread / Orders / Slots / Stock / Money), today/yesterday/older bucketing, mark-all-read. Reachable from Home action queue and **long-press of the topbar bell**.
+13. **Service-worker offline shell** — `sw.js` v2 caches `/admin`, `/admin/login`, `/admin/orders`, `/admin/kds`, `/admin/inventory` cache-first.
+14. **Background Sync API for KDS replay** — `useOfflineQueue` registers `sud-italia-admin-kds-queue` sync tag. SW posts `flush` message → page drains. Replays after the tab was closed (Chromium); falls back to `online` event on Safari.
+15. **Page transition animations** — `<PageTransition>` wraps shell content. Forward pushes slide-in-from-right, back navigations slide-in-from-left, both with iOS-style ease. Reduced-motion collapses to opacity-only.
 
 — separate project (out of session scope) —
 3. **Driver app** (P2.1) — geo + push + photo proof. Needs Capacitor or PWA-with-GPS-permissions + S3 wiring + driver auth (not the admin auth).

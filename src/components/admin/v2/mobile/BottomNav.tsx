@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import {
   ChefHat,
   ClipboardList,
@@ -16,6 +16,7 @@ import type { LucideIcon } from "lucide-react";
 import type { AdminRole } from "@/lib/admin-roles";
 import { ALL_NAV_ITEMS } from "../nav.config";
 import { haptic } from "./haptics";
+import { useIdlePrefetch } from "./useIdlePrefetch";
 
 interface NavSlot {
   href: string;
@@ -103,6 +104,13 @@ export function BottomNav({ role, onOpenMore, onTriggerQuick }: Props) {
     return pathname === href || pathname.startsWith(href + "/");
   };
 
+  // Prefetch the slots' routes during idle time. Skip __more__ — its
+  // handler opens a sheet, not a route.
+  const prefetchRoutes = slots
+    .map((s) => s.href)
+    .filter((h) => h !== "__more__");
+  useIdlePrefetch(prefetchRoutes);
+
   return (
     <nav className="v2-m-bottom-nav" aria-label="Primary navigation">
       <div className="v2-m-bottom-nav-inner">
@@ -155,16 +163,92 @@ function NavItem({
       </button>
     );
   }
+  return <PeekableLink slot={slot} active={active} />;
+}
+
+function PeekableLink({ slot, active }: { slot: NavSlot; active: boolean }) {
+  const router = useRouter();
+  const Icon = slot.icon;
+  const [peek, setPeek] = useState(false);
+  const timer = useRef<number | null>(null);
+
+  const startTimer = () => {
+    if (timer.current) window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => {
+      setPeek(true);
+      haptic("medium");
+    }, 450);
+  };
+  const cancelTimer = () => {
+    if (timer.current) {
+      window.clearTimeout(timer.current);
+      timer.current = null;
+    }
+  };
+
+  // Prefetch the route the moment the user touches the tab — feels
+  // immediate when they release.
+  const handlePointerDown = () => {
+    try {
+      router.prefetch(slot.href);
+    } catch {
+      /* non-fatal */
+    }
+    startTimer();
+  };
+  const handleClick = (e: React.MouseEvent) => {
+    if (peek) {
+      // Long-press already opened the peek — eat the click that follows.
+      e.preventDefault();
+      return;
+    }
+    haptic("light");
+  };
+
+  // Auto-close the peek when the user taps anywhere else.
+  useEffect(() => {
+    if (!peek) return;
+    const onAny = (e: PointerEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (el && el.closest(`[data-peek-for="${slot.href}"]`)) return;
+      setPeek(false);
+    };
+    window.addEventListener("pointerdown", onAny, { capture: true });
+    return () => window.removeEventListener("pointerdown", onAny, { capture: true });
+  }, [peek, slot.href]);
+
   return (
-    <Link
-      href={slot.href}
-      onClick={() => haptic("light")}
-      className={`v2-m-bottom-nav-item ${active ? "is-active" : ""}`}
-      aria-current={active ? "page" : undefined}
-    >
-      <Icon className="v2-m-bottom-nav-icon" aria-hidden />
-      <span className="v2-m-bottom-nav-label">{slot.label}</span>
-    </Link>
+    <span style={{ position: "relative" }} data-peek-for={slot.href}>
+      <Link
+        href={slot.href}
+        onClick={handleClick}
+        onPointerDown={handlePointerDown}
+        onPointerUp={cancelTimer}
+        onPointerCancel={cancelTimer}
+        onPointerLeave={cancelTimer}
+        className={`v2-m-bottom-nav-item ${active ? "is-active" : ""}`}
+        aria-current={active ? "page" : undefined}
+      >
+        <Icon className="v2-m-bottom-nav-icon" aria-hidden />
+        <span className="v2-m-bottom-nav-label">{slot.label}</span>
+      </Link>
+      {peek && (
+        <div className="v2-m-nav-peek" role="tooltip">
+          <div className="v2-m-nav-peek-title">{slot.label}</div>
+          <div className="v2-m-nav-peek-href">{slot.href}</div>
+          <button
+            type="button"
+            className="v2-m-chip"
+            onClick={() => {
+              setPeek(false);
+              router.push(slot.href);
+            }}
+          >
+            Open
+          </button>
+        </div>
+      )}
+    </span>
   );
 }
 

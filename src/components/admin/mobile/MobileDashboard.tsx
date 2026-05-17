@@ -26,6 +26,7 @@ import {
 import { AreaChart } from "../v2/charts";
 import { Sparkline } from "../v2/charts/Sparkline";
 import { StatCardSkeleton } from "../v2/mobile/Skeleton";
+import { useActionTiming } from "../v2/mobile/useActionTiming";
 
 type Period = "today" | "7d" | "30d" | "90d";
 
@@ -129,6 +130,19 @@ export function MobileDashboard() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [lowStock, setLowStock] = useState<LowStockRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const timing = useActionTiming();
+
+  // "Glance" = mount → first paint of the hero KPI. We stop the span the
+  // moment the summary lands, which is the operator-visible "I can read
+  // it" event. Target ≤ 5s per the audit's top-3 owner actions.
+  useEffect(() => {
+    timing.start("dashboard.glance");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    if (summary) timing.stop("dashboard.glance");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [summary]);
 
   const fetchAll = useCallback(async () => {
     const { from, to } = dateRange(period);
@@ -300,7 +314,7 @@ export function MobileDashboard() {
         {recentAlerts.length > 0 && (
           <Section
             title="Action queue"
-            action={<Link href="/admin/orders">View all</Link>}
+            action={<Link href="/admin/alerts">View all</Link>}
           >
             <ul role="list" className="v2-m-list">
               {recentAlerts.map((a) => (

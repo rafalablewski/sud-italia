@@ -241,7 +241,7 @@ export function MobileMenu() {
             </span>
           }
         />
-        <MobileList items={rows} virtualizeAt={64} empty={empty} />
+        <MobileList items={rows} virtualizeAt={64} empty={empty} loading={loading} />
       </MobilePage>
     </PullToRefresh>
   );

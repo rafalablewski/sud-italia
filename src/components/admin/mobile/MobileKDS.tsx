@@ -27,6 +27,7 @@ import {
 } from "../v2/mobile";
 import { useActionTiming } from "../v2/mobile/useActionTiming";
 import { haptic } from "../v2/mobile/haptics";
+import { playKdsCue } from "../v2/mobile/kdsAudio";
 import { CloudOff } from "lucide-react";
 
 const LANES: { id: OrderStatus; label: string; tone: "warning" | "info" | "success" }[] = [
@@ -101,7 +102,8 @@ export function MobileKDS() {
   const [station, setStation] = useState<MenuCategory | "all">("all");
   const [, forceTick] = useState(0);
   const lastIdsRef = useRef<Set<string>>(new Set());
-  const audioCtxRef = useRef<AudioContext | null>(null);
+  const overdueAnnouncedRef = useRef<Set<string>>(new Set());
+  const readyAnnouncedRef = useRef<Set<string>>(new Set());
   const [busy, setBusy] = useState<string | null>(null);
 
   // Offline queue — kitchens in basement walk-ins lose wifi briefly. Bump
@@ -148,32 +150,40 @@ export function MobileKDS() {
     const currentIds = new Set(orders.filter((o) => o.status === "confirmed").map((o) => o.id));
     const newlyConfirmed = Array.from(currentIds).filter((id) => !lastIdsRef.current.has(id));
     if (newlyConfirmed.length > 0 && lastIdsRef.current.size > 0) {
-      // Beep — short triangle wave so it cuts through kitchen noise.
-      try {
-        const Ctx =
-          (typeof window !== "undefined" &&
-            ((window.AudioContext as typeof AudioContext) ||
-              (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)) ||
-          null;
-        if (Ctx) {
-          if (!audioCtxRef.current) audioCtxRef.current = new Ctx();
-          const ctx = audioCtxRef.current;
-          const o = ctx.createOscillator();
-          const g = ctx.createGain();
-          o.frequency.value = 880;
-          o.type = "triangle";
-          g.gain.value = 0.15;
-          o.connect(g);
-          g.connect(ctx.destination);
-          o.start();
-          o.stop(ctx.currentTime + 0.18);
-        }
-      } catch {
-        /* audio blocked — non-fatal */
-      }
+      playKdsCue("newOrder");
       haptic("medium");
     }
     lastIdsRef.current = currentIds;
+  }, [orders, muted, paused]);
+
+  // Overdue + ready cues — fire once per ticket per state transition.
+  useEffect(() => {
+    if (muted || paused) return;
+    for (const o of orders) {
+      if (o.status === "preparing" || o.status === "confirmed") {
+        const r = remainingSec(o);
+        if (r !== null && r < 0 && !overdueAnnouncedRef.current.has(o.id)) {
+          overdueAnnouncedRef.current.add(o.id);
+          playKdsCue("overdue");
+          haptic("warning");
+        }
+      }
+      if (o.status === "ready" && !readyAnnouncedRef.current.has(o.id)) {
+        readyAnnouncedRef.current.add(o.id);
+        playKdsCue("ready");
+      }
+    }
+    // Prune so memory doesn't grow unbounded across a long service.
+    const currentIds = new Set(orders.map((o) => o.id));
+    for (const id of overdueAnnouncedRef.current) {
+      if (!currentIds.has(id)) overdueAnnouncedRef.current.delete(id);
+    }
+    for (const id of readyAnnouncedRef.current) {
+      if (!currentIds.has(id)) readyAnnouncedRef.current.delete(id);
+    }
+    // The tick effect already forces a re-render every 1s, so this effect
+    // re-runs and discovers newly-overdue tickets without a dedicated
+    // interval.
   }, [orders, muted, paused]);
 
   const filtered = useMemo(() => {

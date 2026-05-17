@@ -9,6 +9,7 @@ import {
   PullToRefresh,
   type MobileListItem,
 } from "../v2/mobile";
+import { useFirstLoad } from "../v2/mobile/useFirstLoad";
 
 interface Supplier {
   id: string;
@@ -23,12 +24,17 @@ interface Supplier {
 export function MobileSuppliers() {
   const [rows, setRows] = useState<Supplier[]>([]);
   const [q, setQ] = useState("");
+  const { loading, markLoaded } = useFirstLoad();
 
   const refresh = async () => {
     const r = await fetch("/api/admin/suppliers");
-    if (!r.ok) return;
+    if (!r.ok) {
+      markLoaded();
+      return;
+    }
     const data = await r.json();
     setRows(Array.isArray(data) ? data : []);
+    markLoaded();
   };
 
   useEffect(() => { refresh(); }, []);
@@ -96,7 +102,7 @@ export function MobileSuppliers() {
         }
       >
         <PageHeader title="Suppliers" subtitle={`${filtered.length} total`} />
-        <MobileList items={items} />
+        <MobileList items={items} loading={loading} />
       </MobilePage>
     </PullToRefresh>
   );

@@ -5,7 +5,10 @@ import { useEffect, useState, type ReactNode } from "react";
 import type { AdminRole } from "@/lib/admin-roles";
 import { useAdminShell } from "../ShellContext";
 import { BottomNav } from "./BottomNav";
+import { IosInstallHint } from "./IosInstallHint";
 import { MoreDrawer } from "./MoreDrawer";
+import { OnboardingTour } from "./OnboardingTour";
+import { PageTransition } from "./PageTransition";
 import { QuickActionSheet } from "./QuickActionSheet";
 import { MobileCommandPalette } from "./MobileCommandPalette";
 import { MobileNotifications } from "./MobileNotifications";
@@ -68,7 +71,7 @@ export function MobileShell({ children }: Props) {
     <div className="v2-m-shell" data-detail={isDetail ? "true" : "false"} data-viewport={viewport}>
       <MobileTopbar showBack={isDetail} />
       <main className="v2-m-content" id="main">
-        {children}
+        <PageTransition>{children}</PageTransition>
       </main>
       <BottomNav
         role={role}
@@ -84,6 +87,8 @@ export function MobileShell({ children }: Props) {
         onClose={closeNotif}
         onChanged={bumpNotifications}
       />
+      <IosInstallHint />
+      <OnboardingTour />
       {/* notificationsVersion is consumed by topbar bell — referencing it here
           keeps the value in scope and lint-clean while reminding maintainers
           that this shell sits inside the shared ShellContext. */}

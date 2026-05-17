@@ -8,6 +8,7 @@ import { ALL_NAV_ITEMS, filterNavForRole, NAV_SECTIONS } from "../nav.config";
 import { BottomSheet } from "./BottomSheet";
 import { setBottomNavPin } from "./BottomNav";
 import { useAdminLocation } from "../LocationContext";
+import { PushSettingsSheet } from "./PushSettingsSheet";
 import { useAdminPush } from "./useAdminPush";
 import { useAutoTheme } from "./useAutoTheme";
 import { useInstallPrompt } from "./useInstallPrompt";
@@ -33,6 +34,7 @@ export function MoreDrawer({ open, onClose, role }: Props) {
   const push = useAdminPush();
   const autoTheme = useAutoTheme();
   const install = useInstallPrompt();
+  const [pushSettingsOpen, setPushSettingsOpen] = useState(false);
   const sections = useMemo(
     () => filterNavForRole(role) || NAV_SECTIONS,
     [role],
@@ -263,25 +265,37 @@ export function MoreDrawer({ open, onClose, role }: Props) {
             <div className="v2-m-more-footer-label">
               <Bell className="h-3.5 w-3.5" aria-hidden /> Push alerts
             </div>
-            <button
-              type="button"
-              className={`v2-m-chip ${push.subscribed ? "is-active" : ""}`}
-              disabled={push.busy}
-              onClick={() =>
-                push.subscribed ? push.unsubscribe() : push.subscribe()
-              }
-              aria-pressed={push.subscribed}
-            >
-              {push.subscribed ? (
-                <>
-                  <Bell className="h-3 w-3" aria-hidden /> On
-                </>
-              ) : (
-                <>
-                  <BellOff className="h-3 w-3" aria-hidden /> Off
-                </>
+            <div style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
+              <button
+                type="button"
+                className={`v2-m-chip ${push.subscribed ? "is-active" : ""}`}
+                disabled={push.busy}
+                onClick={() =>
+                  push.subscribed ? push.unsubscribe() : push.subscribe()
+                }
+                aria-pressed={push.subscribed}
+              >
+                {push.subscribed ? (
+                  <>
+                    <Bell className="h-3 w-3" aria-hidden /> On
+                  </>
+                ) : (
+                  <>
+                    <BellOff className="h-3 w-3" aria-hidden /> Off
+                  </>
+                )}
+              </button>
+              {push.subscribed && (
+                <button
+                  type="button"
+                  className="v2-m-chip"
+                  onClick={() => setPushSettingsOpen(true)}
+                  aria-label="Push category settings"
+                >
+                  Settings
+                </button>
               )}
-            </button>
+            </div>
           </div>
         )}
 
@@ -294,6 +308,10 @@ export function MoreDrawer({ open, onClose, role }: Props) {
           <span>Log out</span>
         </button>
       </div>
+      <PushSettingsSheet
+        open={pushSettingsOpen}
+        onClose={() => setPushSettingsOpen(false)}
+      />
     </BottomSheet>
   );
 }

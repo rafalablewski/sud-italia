@@ -11,6 +11,10 @@
  * the call path stays safe (logs + returns 0) so dev environments don't
  * crash. Subscriptions the push service reports as gone (404/410) are
  * pruned eagerly so we don't keep retrying dead endpoints.
+ *
+ * Per-user category opt-in lives in `admin_push_prefs` — operators can
+ * mute specific categories (e.g. "no new_order pings, but yes refunds")
+ * without unsubscribing entirely.
  */
 
 import { sql } from "drizzle-orm";
@@ -28,15 +32,42 @@ interface AdminPushSubscription {
   auth: string;
 }
 
+export type AdminPushCategory =
+  | "new_order"
+  | "slot_full"
+  | "low_slots"
+  | "order_status"
+  | "bundle_low_margin"
+  | "dispute"
+  | "low_stock"
+  | "cash_variance"
+  | "refund"
+  | "test";
+
+const DEFAULT_CATEGORY_PREFS: Record<AdminPushCategory, boolean> = {
+  new_order: true,
+  slot_full: true,
+  low_slots: true,
+  order_status: false, // chatty — opt-in only
+  bundle_low_margin: true,
+  dispute: true,
+  low_stock: true,
+  cash_variance: true,
+  refund: true,
+  test: true,
+};
+
 interface AdminPushOptions {
   /** Restrict the fan-out to specific admin user ids. Defaults to all. */
   userIds?: string[];
   /** When set, the fan-out skips this id — used so the actor of an action
    *  doesn't push themselves a notification about their own action. */
   excludeUserId?: string;
-  /** Optional dedupe tag — only the latest push with the same tag stays
-   *  visible on the user's lock screen. Defaults to event topic if absent. */
-  tag?: string;
+  /** Category the push falls under — used to filter against each user's
+   *  per-category opt-in preferences. */
+  category?: AdminPushCategory;
+  /** When set, only push when |varianceGrosze| is at least this much. */
+  varianceGrosze?: number;
 }
 
 async function ensureTable(): Promise<void> {
@@ -51,6 +82,63 @@ async function ensureTable(): Promise<void> {
       created_at timestamptz NOT NULL DEFAULT now()
     )
   `);
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS admin_push_prefs (
+      user_id text PRIMARY KEY,
+      muted_categories text[] NOT NULL DEFAULT '{}',
+      updated_at timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+}
+
+async function getMutedCategories(): Promise<Map<string, Set<string>>> {
+  const db = getDb();
+  if (!db) return new Map();
+  const rows = (await db.execute(sql`
+    SELECT user_id, muted_categories FROM admin_push_prefs
+  `)) as unknown as { user_id: string; muted_categories: string[] }[];
+  const out = new Map<string, Set<string>>();
+  for (const r of rows) {
+    out.set(r.user_id, new Set(r.muted_categories ?? []));
+  }
+  return out;
+}
+
+export async function getAdminPushPrefs(
+  userId: string,
+): Promise<{ muted: AdminPushCategory[] }> {
+  const db = getDb();
+  if (!db) return { muted: [] };
+  await ensureTable();
+  const rows = (await db.execute(sql`
+    SELECT muted_categories FROM admin_push_prefs WHERE user_id = ${userId}
+  `)) as unknown as { muted_categories: string[] }[];
+  const muted = (rows[0]?.muted_categories ?? []) as AdminPushCategory[];
+  return { muted };
+}
+
+export async function setAdminPushPrefs(
+  userId: string,
+  muted: AdminPushCategory[],
+): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  await ensureTable();
+  await db.execute(sql`
+    INSERT INTO admin_push_prefs (user_id, muted_categories, updated_at)
+    VALUES (${userId}, ${muted}::text[], now())
+    ON CONFLICT (user_id) DO UPDATE
+    SET muted_categories = EXCLUDED.muted_categories, updated_at = now()
+  `);
+}
+
+/** Server-side toggle for whether *any* admin should be paged for a
+ *  category. Right now it's the static default table; future revisions
+ *  can read from settings. Exported so the notification fanout can early-
+ *  exit before pulling subscriptions. */
+export function adminPushCategoryEnabled(category: string): boolean {
+  const known = (DEFAULT_CATEGORY_PREFS as Record<string, boolean>)[category];
+  return known !== false; // unknown categories default to enabled
 }
 
 async function listAdminSubscriptions(
@@ -59,9 +147,6 @@ async function listAdminSubscriptions(
   const db = getDb();
   if (!db) return [];
   await ensureTable();
-  // No subscriptions yet → cheap exit before building a WHERE clause.
-  // The query is small (≤ N admins × small number of devices each) so we
-  // don't bother with pagination yet.
   const include = opts.userIds && opts.userIds.length > 0 ? opts.userIds : null;
   let rows: { user_id: string; endpoint: string; p256dh: string; auth: string }[];
   if (include) {
@@ -75,14 +160,21 @@ async function listAdminSubscriptions(
       SELECT user_id, endpoint, p256dh, auth FROM admin_push_subscriptions
     `)) as unknown as typeof rows;
   }
-  return rows
-    .filter((r) => !opts.excludeUserId || r.user_id !== opts.excludeUserId)
-    .map((r) => ({
-      userId: r.user_id,
-      endpoint: r.endpoint,
-      p256dh: r.p256dh,
-      auth: r.auth,
-    }));
+  let filtered = rows.filter(
+    (r) => !opts.excludeUserId || r.user_id !== opts.excludeUserId,
+  );
+  // Per-user category mute. `test` pushes always go through — they're
+  // explicit user actions.
+  if (opts.category && opts.category !== "test") {
+    const muted = await getMutedCategories();
+    filtered = filtered.filter((r) => !muted.get(r.user_id)?.has(opts.category!));
+  }
+  return filtered.map((r) => ({
+    userId: r.user_id,
+    endpoint: r.endpoint,
+    p256dh: r.p256dh,
+    auth: r.auth,
+  }));
 }
 
 async function dropDeadEndpoint(endpoint: string): Promise<void> {
@@ -129,6 +221,7 @@ export async function pushToAdmins(
     logger.info("admin.push.sent", {
       layer: "admin-push",
       tag: message.tag,
+      category: opts.category,
       sent,
       subs: subs.length,
     });
@@ -180,5 +273,11 @@ export const ADMIN_PUSH_TEMPLATES = {
     body: `${locationSlug} is below reorder point on ${count === 1 ? "one item" : `${count} items`}.`,
     url: "/admin/inventory",
     tag: `admin:low-stock:${locationSlug}`,
+  }),
+  test: (actor: string): PushMessage => ({
+    title: "Test push 🔔",
+    body: `Sent from your account (${actor}).`,
+    url: "/admin",
+    tag: "admin:test",
   }),
 } as const;

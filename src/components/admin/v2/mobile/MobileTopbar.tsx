@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Bell, Search } from "lucide-react";
 import { ALL_NAV_ITEMS } from "../nav.config";
 import { useAdminShell } from "../ShellContext";
@@ -88,20 +88,60 @@ export function MobileTopbar({ title, showBack }: Props) {
         >
           <Search className="h-5 w-5" />
         </button>
-        <button
-          type="button"
-          onClick={openNotifications}
-          aria-label={unread > 0 ? `${unread} unread notifications` : "Notifications"}
-          className="v2-m-icon-btn v2-m-bell"
-        >
-          <Bell className="h-5 w-5" />
-          {unread > 0 && (
-            <span className="v2-m-bell-badge" aria-hidden>
-              {unread > 9 ? "9+" : unread}
-            </span>
-          )}
-        </button>
+        <BellButton openNotifications={openNotifications} unread={unread} />
       </div>
     </header>
+  );
+}
+
+/** Bell with long-press shortcut to the full-screen `/admin/alerts` view. */
+function BellButton({
+  openNotifications,
+  unread,
+}: {
+  openNotifications: () => void;
+  unread: number;
+}) {
+  const router = useRouter();
+  const timer = useRef<number | null>(null);
+  const longPressed = useRef(false);
+
+  const start = () => {
+    longPressed.current = false;
+    if (timer.current) window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => {
+      longPressed.current = true;
+      router.push("/admin/alerts");
+    }, 450);
+  };
+  const cancel = () => {
+    if (timer.current) {
+      window.clearTimeout(timer.current);
+      timer.current = null;
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onPointerDown={start}
+      onPointerUp={cancel}
+      onPointerLeave={cancel}
+      onPointerCancel={cancel}
+      onClick={() => {
+        // Long-press already navigated — skip the bottom-sheet open.
+        if (longPressed.current) return;
+        openNotifications();
+      }}
+      aria-label={unread > 0 ? `${unread} unread notifications` : "Notifications"}
+      className="v2-m-icon-btn v2-m-bell"
+    >
+      <Bell className="h-5 w-5" />
+      {unread > 0 && (
+        <span className="v2-m-bell-badge" aria-hidden>
+          {unread > 9 ? "9+" : unread}
+        </span>
+      )}
+    </button>
   );
 }

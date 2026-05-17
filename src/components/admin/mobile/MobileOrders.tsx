@@ -118,6 +118,7 @@ export function MobileOrders() {
     const target = statusOverride ?? PIPELINE_NEXT[order.status];
     if (!target) return;
     setBusy(order.id);
+    timing.start("orders.advance");
     const prevStatus = order.status;
     setOrders((arr) =>
       arr.map((o) => (o.id === order.id ? { ...o, status: target } : o)),
@@ -137,6 +138,7 @@ export function MobileOrders() {
       );
       toast.error("Could not update order");
     } finally {
+      timing.stop("orders.advance", { from: prevStatus, to: target });
       setBusy(null);
     }
   };

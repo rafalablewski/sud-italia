@@ -28,15 +28,23 @@ export { SwipeRow } from "./SwipeRow";
 export { haptic } from "./haptics";
 export { useIsMobile } from "./useIsMobile";
 export { BarcodeScanner } from "./BarcodeScanner";
+export { IosInstallHint } from "./IosInstallHint";
+export { OnboardingTour } from "./OnboardingTour";
+export { PageTransition } from "./PageTransition";
+export { PushSettingsSheet } from "./PushSettingsSheet";
 export {
   Skeleton,
   StatCardSkeleton,
   ListRowSkeleton,
   MobileListSkeleton,
 } from "./Skeleton";
+export { canShare, share } from "./share";
+export { playKdsCue } from "./kdsAudio";
 export { useActionTiming } from "./useActionTiming";
 export { useAdminPush } from "./useAdminPush";
 export { useAutoTheme } from "./useAutoTheme";
+export { useFirstLoad } from "./useFirstLoad";
+export { useIdlePrefetch } from "./useIdlePrefetch";
 export { useInstallPrompt } from "./useInstallPrompt";
 export { useMultiSelect, type MultiSelectApi } from "./useMultiSelect";
 export { useNavHistory } from "./useNavHistory";

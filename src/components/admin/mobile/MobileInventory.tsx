@@ -23,6 +23,7 @@ import {
   SegmentControl,
 } from "../v2/mobile";
 import { BarcodeScanner } from "../v2/mobile/BarcodeScanner";
+import { useActionTiming } from "../v2/mobile/useActionTiming";
 
 interface StockRow {
   ingredientId: string;
@@ -71,6 +72,7 @@ export function MobileInventory() {
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState<StockRow | null>(null);
   const [scanning, setScanning] = useState(false);
+  const timing = useActionTiming();
   const [busy, setBusy] = useState<string | null>(null);
 
   // Mirror the global location when it changes — but stock is always scoped
@@ -125,6 +127,7 @@ export function MobileInventory() {
   ) => {
     if (qty <= 0) return;
     setBusy(row.ingredientId);
+    timing.start("inventory.adjust");
     // Optimistic — receive adds, waste/consume subtract, adjust sets directly.
     setStock((arr) =>
       arr.map((s) =>
@@ -160,6 +163,7 @@ export function MobileInventory() {
       // Rollback by refetching.
       refresh();
     } finally {
+      timing.stop("inventory.adjust", { type, qty });
       setBusy(null);
     }
   };

@@ -6,6 +6,7 @@ import { BellOff, CheckCheck, RefreshCcw } from "lucide-react";
 import { BottomSheet } from "./BottomSheet";
 import { SwipeRow } from "./SwipeRow";
 import { haptic } from "./haptics";
+import { useActionTiming } from "./useActionTiming";
 
 interface NotificationRow {
   id: string;
@@ -70,8 +71,15 @@ export function MobileNotifications({ open, onClose, onChanged }: Props) {
     }
   }, []);
 
+  const timing = useActionTiming();
   useEffect(() => {
-    if (open) load();
+    if (open) {
+      timing.start("alerts.view");
+      load();
+    } else {
+      timing.stop("alerts.view");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, load]);
 
   const visible = items.filter((n) => {

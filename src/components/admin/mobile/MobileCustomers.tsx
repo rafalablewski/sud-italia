@@ -13,6 +13,7 @@ import {
   type MobileListItem,
 } from "../v2/mobile";
 import { MobileListSkeleton } from "../v2/mobile/Skeleton";
+import { useActionTiming } from "../v2/mobile/useActionTiming";
 
 interface CustomerSummary {
   phone: string;
@@ -75,10 +76,28 @@ function relTime(iso?: string): string {
 export function MobileCustomers() {
   const router = useRouter();
   const { location } = useAdminLocation();
+  const timing = useActionTiming();
   const [rows, setRows] = useState<CustomerSummary[]>([]);
   const [filter, setFilter] = useState<Filter>("all");
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
+
+  // Time-to-customer-lookup span — starts when the page mounts, ends
+  // when the operator either taps into a row or types ≥ 2 chars into
+  // the search box. Either signal counts as "found what I was looking for".
+  useEffect(() => {
+    timing.start("customers.lookup");
+    return () => {
+      timing.stop("customers.lookup", { committed: false });
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    if (q.trim().length >= 2) {
+      timing.stop("customers.lookup", { committed: true, via: "search" });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q]);
 
   const refresh = async () => {
     setLoading(true);
@@ -132,7 +151,10 @@ export function MobileCustomers() {
     subtitle: `${c.orderCount} order${c.orderCount === 1 ? "" : "s"} · ${relTime(c.lastOrderAt)}`,
     trailing: fmtCurrency(c.totalSpent),
     status: { label: STATUS_LABEL[c.status], tone: STATUS_TONE[c.status] },
-    onTap: (row) => router.push(`/admin/customers/${encodeURIComponent(row.phone)}`),
+    onTap: (row) => {
+      timing.stop("customers.lookup", { committed: true, via: "tap" });
+      router.push(`/admin/customers/${encodeURIComponent(row.phone)}`);
+    },
   }));
 
   return (

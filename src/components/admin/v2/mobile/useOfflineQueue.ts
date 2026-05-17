@@ -104,7 +104,7 @@ export function useOfflineQueue({ storageKey, maxAttempts = 5 }: QueueOptions) {
     }
   }, [read, write, maxAttempts]);
 
-  // Initial pending count + online listeners.
+  // Initial pending count + online listeners + Background Sync wiring.
   useEffect(() => {
     setPending(read().length);
     const goOn = () => {
@@ -114,6 +114,35 @@ export function useOfflineQueue({ storageKey, maxAttempts = 5 }: QueueOptions) {
     const goOff = () => setOnline(false);
     window.addEventListener("online", goOn);
     window.addEventListener("offline", goOff);
+
+    // When the SW fires the matching sync tag (browser was offline +
+    // came back while the tab was hidden / closed), it posts back a
+    // flush message — we respond by draining. Only the kds queue has
+    // a registered sync tag today; namespacing the message lets us
+    // add more later without changing this hook.
+    const onMessage = (e: MessageEvent) => {
+      const t = (e.data as { type?: string } | null)?.type;
+      if (t && t.startsWith("sud-italia-") && t.endsWith("/flush")) {
+        void drain();
+      }
+    };
+    if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+      navigator.serviceWorker.addEventListener("message", onMessage);
+    }
+
+    // Register Background Sync where supported (Chromium-based). On
+    // Safari this no-ops; the `online` listener handles replay.
+    if (storageKey === "sud-admin-kds-queue") {
+      navigator.serviceWorker?.ready
+        .then((reg) => {
+          const sync = (reg as unknown as {
+            sync?: { register: (tag: string) => Promise<void> };
+          }).sync;
+          return sync?.register("sud-italia-admin-kds-queue");
+        })
+        .catch(() => {});
+    }
+
     const ticker = window.setInterval(() => {
       if (navigator.onLine) void drain();
     }, 30_000);
@@ -121,8 +150,11 @@ export function useOfflineQueue({ storageKey, maxAttempts = 5 }: QueueOptions) {
       window.removeEventListener("online", goOn);
       window.removeEventListener("offline", goOff);
       window.clearInterval(ticker);
+      if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+        navigator.serviceWorker.removeEventListener("message", onMessage);
+      }
     };
-  }, [drain, read]);
+  }, [drain, read, storageKey]);
 
   /**
    * Try to send `init` immediately; if offline or network fails, queue

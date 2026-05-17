@@ -119,7 +119,7 @@ export const POST = withAdmin<{ params: Promise<{ id: string }> }>(
         const formatted = `${variance >= 0 ? "+" : ""}${(variance / 100).toFixed(2)} zł`;
         pushToAdmins(
           ADMIN_PUSH_TEMPLATES.cashVariance(updated.locationSlug, formatted),
-          { excludeUserId: user.id },
+          { excludeUserId: user.id, category: "cash_variance", varianceGrosze: variance },
         ).catch(() => {});
       }
       return NextResponse.json(updated);
