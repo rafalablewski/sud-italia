@@ -703,6 +703,75 @@ export interface AdminUser {
   createdAt: string;
 }
 
+// --- Business costs (operating expenses ledger) ---
+
+export type BusinessCostCategory =
+  | "payroll"
+  | "rent"
+  | "utilities"
+  | "insurance"
+  | "fuel"
+  | "vehicle"
+  | "maintenance"
+  | "licenses"
+  | "marketing"
+  | "ingredients"
+  | "equipment"
+  | "software"
+  | "professional"
+  | "tax"
+  | "other";
+
+/** Sub-role used when category=payroll so KPIs can split labor by craft. */
+export type BusinessCostPayrollRole =
+  | "pizzaiolo"
+  | "chef"
+  | "sous-chef"
+  | "kitchen-porter"
+  | "waiter"
+  | "barista"
+  | "driver"
+  | "manager"
+  | "cleaner"
+  | "other";
+
+export type BusinessCostFrequency =
+  | "one-off"
+  | "daily"
+  | "weekly"
+  | "monthly"
+  | "quarterly"
+  | "yearly";
+
+export type BusinessCostStatus = "active" | "archived";
+
+export interface BusinessCost {
+  id: string;
+  /** Human label, e.g. "Truck rent Kraków", "Pizzaiolo Marco Rossi". */
+  name: string;
+  category: BusinessCostCategory;
+  /** Free-form when not payroll; constrained payroll role otherwise. */
+  payrollRole?: BusinessCostPayrollRole;
+  vendor?: string;
+  /** Cost per `frequency` period, in grosze (1 PLN = 100 grosze). */
+  amountGrosze: number;
+  frequency: BusinessCostFrequency;
+  /** Location slug, or undefined for chain-wide. */
+  locationSlug?: string;
+  status: BusinessCostStatus;
+  /** ISO date (YYYY-MM-DD) the cost begins (or the date of a one-off). */
+  startDate?: string;
+  /** ISO date the cost ended — set when archiving recurring costs. */
+  endDate?: string;
+  /** ISO date next payment is due — operator reminder for recurring items. */
+  nextDueDate?: string;
+  paymentMethod?: "card" | "bank-transfer" | "cash" | "direct-debit" | "other";
+  taxDeductible?: boolean;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // --- Audit log ---
 
 export interface AuditLogEntry {

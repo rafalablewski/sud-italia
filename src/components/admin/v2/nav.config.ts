@@ -28,6 +28,7 @@ import {
   ShieldCheck,
   Users,
   Layers,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import { ROLE_RANK, type AdminRole } from "@/lib/admin-roles";
@@ -118,6 +119,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/admin/reports", label: "Reports", icon: BarChart3, shortcut: "r", requiredRole: "manager" },
       { href: "/admin/cash", label: "Cash", icon: Banknote, requiredRole: "manager" },
+      { href: "/admin/business-costs", label: "Business costs", icon: Wallet, requiredRole: "manager" },
     ],
   },
   {

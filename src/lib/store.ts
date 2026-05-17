@@ -2,7 +2,7 @@ import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem } from "@/data/types";
+import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost } from "@/data/types";
 import { getActiveLocations, locations as allLocations } from "@/data/locations";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -7843,6 +7843,78 @@ export async function deleteWaTranscript(rawPhone: string): Promise<boolean> {
     if (!all[phone]) return false;
     delete all[phone];
     await writeJSON("whatsapp-transcripts.json", all);
+    return true;
+  });
+}
+
+// --- Business costs (operating expense ledger) ---------------------------
+
+const BUSINESS_COSTS_KEY = "business-costs.json";
+
+export interface BusinessCostFilters {
+  locationSlug?: string;
+  category?: BusinessCost["category"];
+  status?: BusinessCost["status"];
+}
+
+export async function getBusinessCosts(filters?: BusinessCostFilters): Promise<BusinessCost[]> {
+  const all = await readJSON<BusinessCost[]>(BUSINESS_COSTS_KEY, []);
+  let list = all;
+  if (filters?.locationSlug) {
+    list = list.filter((c) => !c.locationSlug || c.locationSlug === filters.locationSlug);
+  }
+  if (filters?.category) list = list.filter((c) => c.category === filters.category);
+  if (filters?.status) list = list.filter((c) => c.status === filters.status);
+  return list.slice().sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
+
+export async function getBusinessCost(id: string): Promise<BusinessCost | null> {
+  const list = await readJSON<BusinessCost[]>(BUSINESS_COSTS_KEY, []);
+  return list.find((c) => c.id === id) ?? null;
+}
+
+export async function saveBusinessCost(
+  input: Omit<BusinessCost, "id" | "createdAt" | "updatedAt"> & {
+    id?: string;
+    createdAt?: string;
+  },
+): Promise<BusinessCost> {
+  return withLock(BUSINESS_COSTS_KEY, async () => {
+    const list = await readJSON<BusinessCost[]>(BUSINESS_COSTS_KEY, []);
+    const now = new Date().toISOString();
+    const cost: BusinessCost = {
+      id: input.id || `cost-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      name: input.name,
+      category: input.category,
+      payrollRole: input.payrollRole,
+      vendor: input.vendor,
+      amountGrosze: Math.max(0, Math.round(input.amountGrosze)),
+      frequency: input.frequency,
+      locationSlug: input.locationSlug,
+      status: input.status,
+      startDate: input.startDate,
+      endDate: input.endDate,
+      nextDueDate: input.nextDueDate,
+      paymentMethod: input.paymentMethod,
+      taxDeductible: input.taxDeductible,
+      notes: input.notes,
+      createdAt: input.createdAt ?? now,
+      updatedAt: now,
+    };
+    const i = list.findIndex((c) => c.id === cost.id);
+    if (i >= 0) list[i] = cost;
+    else list.push(cost);
+    await writeJSON(BUSINESS_COSTS_KEY, list);
+    return cost;
+  });
+}
+
+export async function deleteBusinessCost(id: string): Promise<boolean> {
+  return withLock(BUSINESS_COSTS_KEY, async () => {
+    const list = await readJSON<BusinessCost[]>(BUSINESS_COSTS_KEY, []);
+    const filtered = list.filter((c) => c.id !== id);
+    if (filtered.length === list.length) return false;
+    await writeJSON(BUSINESS_COSTS_KEY, filtered);
     return true;
   });
 }

@@ -749,6 +749,13 @@ export default async function CapabilitiesPage() {
           summary: "Open/close drawer, drops, variance vs orders. History rows can be hidden (soft) or deleted (audit-logged).",
         },
         {
+          name: "Business costs ledger",
+          status: "live",
+          href: "/admin/business-costs",
+          summary:
+            "Operating expense register — payroll (pizzaiolo, chefs, waiting staff), rent, utilities, fuel, insurance, licenses, software, one-off purchases. Recurring amounts auto-normalised to grosze/month for like-for-like totals; KPI cards show monthly recurring, annualised, payroll subtotal, and one-off spend over the last 30 days. Per-location scoping (or chain-wide), category and payroll-role breakdowns, archive vs delete, next-due reminders.",
+        },
+        {
           name: "Slots",
           status: "live",
           href: "/admin/slots",
