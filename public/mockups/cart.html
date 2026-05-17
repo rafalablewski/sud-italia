@@ -8351,19 +8351,20 @@
   /* ============================================================
      BUNDLES
      ============================================================ */
-  /* Wider than the default 1180px .page-inner, but never edge-to-edge:
-     always leave a parchment gutter on the sides, hard-capped at 1500px wide. */
-  #bundles .page-inner {
+  /* Bundles section (homepage + cloned on location pages). Wider than
+     the default 1180px page-inner but always leaves a parchment gutter
+     against the iframe edges, hard-capped at 1500px on huge screens. */
+  .bundles-section .page-inner {
     width: min(calc(100% - 48px), 1500px);
     max-width: none;
     margin: 0 auto;
     padding: 0;
   }
   @media (min-width: 768px) {
-    #bundles .page-inner { width: min(calc(100% - 96px), 1500px); }
+    .bundles-section .page-inner { width: min(calc(100% - 96px), 1500px); }
   }
   @media (min-width: 1400px) {
-    #bundles .page-inner { width: min(calc(100% - 128px), 1500px); }
+    .bundles-section .page-inner { width: min(calc(100% - 128px), 1500px); }
   }
   .bundles {
     display: grid;
@@ -9656,44 +9657,9 @@
   .loc-bundles-strip {
     margin-top: 8px;
   }
-  /* Bundles inside location pages — robust full-bleed pattern:
-     - Strip itself escapes the 700px .loc-section cap via the classic
-       `left: calc(50% - 50vw); width: 100vw` trick (works in every browser).
-     - The four cards inside are capped by .bundles { max-width } with auto
-       margins, so on wide screens parchment is visible on the sides.
-     - Strip side padding ensures a minimum gutter even on narrow screens. */
-  .loc-section .loc-bundles-strip {
-    position: relative;
-    left: calc(50% - 50vw);
-    width: 100vw;
-    margin-left: 0;
-    margin-right: 0;
-    padding-left: 24px;
-    padding-right: 24px;
-    box-sizing: border-box;
-  }
-  .loc-section .loc-bundles-strip > .bundles {
-    max-width: 1500px;
-    margin-left: auto;
-    margin-right: auto;
-  }
-  .loc-section .loc-bundles-strip > .loc-card-eyebrow {
-    max-width: 1500px;
-    margin-left: auto;
-    margin-right: auto;
-  }
-  @media (min-width: 768px) {
-    .loc-section .loc-bundles-strip {
-      padding-left: 48px;
-      padding-right: 48px;
-    }
-  }
-  @media (min-width: 1400px) {
-    .loc-section .loc-bundles-strip {
-      padding-left: 64px;
-      padding-right: 64px;
-    }
-  }
+  /* Bundles in location pages: rendered as a full bundles-section sibling
+     of .loc-section (see HTML), so the same .bundles-section .page-inner
+     CSS above applies — no escape gymnastics needed. */
   /* Guard against horizontal scroll caused by 100vw inside iframes */
   html, body { overflow-x: hidden; }
 
@@ -10134,7 +10100,7 @@
   <!-- ============================================================
        BUNDLES
        ============================================================ -->
-  <section class=&quot;ps&quot; id=&quot;bundles&quot;>
+  <section class=&quot;ps bundles-section&quot; id=&quot;bundles&quot;>
     <div class=&quot;page-inner&quot;>
       <div class=&quot;ps-head&quot;>
         <div class=&quot;ps-eyebrow&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Today's bundles&quot; data-pl=&quot;Dzisiejsze zestawy&quot;>Today's bundles</span> · <span class=&quot;bi-sec&quot;>menù del giorno</span></div>
@@ -11024,12 +10990,22 @@
       </div>
     </div>
 
-    <!-- BUNDLES -->
-    <div class=&quot;loc-bundles-strip&quot;>
-      <div class=&quot;loc-card-eyebrow&quot; style=&quot;padding-left:4px;&quot;>menù del giorno &amp;middot; today's bundles</div>
-      <div class=&quot;bundles&quot; style=&quot;margin-top:8px;&quot;>
+    </div>
+
+  <!-- BUNDLES (full section, sibling of .loc-section) -->
+  <section class=&quot;ps bundles-section&quot; id=&quot;bundles-kr&quot;>
+    <div class=&quot;page-inner&quot;>
+      <div class=&quot;ps-head&quot;>
+        <div class=&quot;ps-eyebrow&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Today's bundles&quot; data-pl=&quot;Dzisiejsze zestawy&quot;>Today's bundles</span> · <span class=&quot;bi-sec&quot;>menù del giorno</span></div>
+        <h2 class=&quot;ps-title&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Pick a bundle.&quot; data-pl=&quot;Wybierz zestaw.&quot;>Pick a bundle.</span> <span class=&quot;bi-pri&quot; data-en=&quot;Skip the maths.&quot; data-pl=&quot;Bez liczenia.&quot;>Skip the maths.</span></h2>
+        <p class=&quot;ps-sub&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Four ways to dine well —&quot; data-pl=&quot;Cztery sposoby, by zjeść dobrze —&quot;>Four ways to dine well —</span> <em>Famiglia</em> <span class=&quot;bi-pri&quot; data-en=&quot;for friends,&quot; data-pl=&quot;dla znajomych,&quot;>for friends,</span> <em>Pranzo</em> <span class=&quot;bi-pri&quot; data-en=&quot;for the noon rush,&quot; data-pl=&quot;na lunch,&quot;>for the noon rush,</span> <em>Spicchio</em> <span class=&quot;bi-pri&quot; data-en=&quot;for the late-night crew,&quot; data-pl=&quot;dla nocnych marków,&quot;>for the late-night crew,</span> <em>Il Classico</em> <span class=&quot;bi-pri&quot; data-en=&quot;if you're building dinner the proper way.&quot; data-pl=&quot;jeśli budujesz kolację po włosku.&quot;>if you're building dinner the proper way.</span></p>
+      </div>
+
+      <div class=&quot;bundles&quot;>
+        <!-- Famiglia -->
         <article class=&quot;bundle b-family&quot;>
           <div class=&quot;bundle-icon&quot; aria-hidden=&quot;true&quot;>
+            <!-- three figures -->
             <svg width=&quot;32&quot; height=&quot;32&quot; viewBox=&quot;0 0 32 32&quot; fill=&quot;none&quot;>
               <circle cx=&quot;9&quot; cy=&quot;11&quot; r=&quot;3&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.6&quot; fill=&quot;rgba(255,255,255,0.4)&quot;/>
               <circle cx=&quot;16&quot; cy=&quot;9&quot; r=&quot;3.4&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.6&quot; fill=&quot;rgba(255,255,255,0.4)&quot;/>
@@ -11039,36 +11015,45 @@
               <path d=&quot;M18 21 C 19 19, 21 18, 23 18 C 26 18, 29 21, 29 26&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.6&quot; fill=&quot;none&quot;/>
             </svg>
           </div>
-          <span class=&quot;bundle-tag&quot;>per 2&amp;ndash;3 persone</span>
+          <span class=&quot;bundle-tag&quot;><span class=&quot;bi-pri&quot; data-en=&quot;for 2–3 people&quot; data-pl=&quot;dla 2–3 osób&quot;>for 2–3 people</span> <span class=&quot;bi-sec&quot;>· per 2–3 persone</span></span>
           <h3 class=&quot;bundle-name&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Family Pack&quot; data-pl=&quot;Pakiet Rodzinny&quot;>Family Pack</span><span class=&quot;en bi-sec&quot;>Famiglia</span></h3>
           <div class=&quot;bundle-price&quot;>
             <span class=&quot;now num&quot;>99,00 zł</span>
             <span class=&quot;was num&quot;>103,60 zł</span>
           </div>
-          <p class=&quot;bundle-desc&quot;>Tre <em>Margherite</em> + 1L di <em>limonata</em>.</p>
+          <p class=&quot;bundle-desc&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Three Margheritas + 1L of limonata. Set price, no maths. A bunch of friends — sorted.&quot; data-pl=&quot;Trzy Margherity + 1L limonaty. Stała cena, bez liczenia. Paczka znajomych — załatwione.&quot;>Three Margheritas + 1L of limonata. Set price, no maths. A bunch of friends — sorted.</span></p>
         </article>
+
+        <!-- Pranzo -->
         <article class=&quot;bundle b-lunch&quot;>
           <div class=&quot;bundle-icon&quot; aria-hidden=&quot;true&quot;>
+            <!-- sundial clock -->
             <svg width=&quot;32&quot; height=&quot;32&quot; viewBox=&quot;0 0 32 32&quot; fill=&quot;none&quot;>
               <circle cx=&quot;16&quot; cy=&quot;16&quot; r=&quot;11&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.6&quot; fill=&quot;rgba(255,255,255,0.4)&quot;/>
+              <path d=&quot;M16 5 L16 7 M16 25 L16 27 M5 16 L7 16 M25 16 L27 16&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.4&quot; stroke-linecap=&quot;round&quot;/>
               <path d=&quot;M16 16 L16 9 M16 16 L21 18&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.6&quot; stroke-linecap=&quot;round&quot;/>
               <circle cx=&quot;16&quot; cy=&quot;16&quot; r=&quot;1.4&quot; fill=&quot;currentColor&quot;/>
+              <path d=&quot;M9 23 C 12 25, 20 25, 23 23&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.4&quot; fill=&quot;none&quot; opacity=&quot;0.5&quot;/>
             </svg>
           </div>
-          <span class=&quot;bundle-tag&quot;>11:00&amp;ndash;14:00</span>
+          <span class=&quot;bundle-tag&quot;><span class=&quot;bi-pri&quot; data-en=&quot;11:00–14:00 only&quot; data-pl=&quot;tylko 11:00–14:00&quot;>11:00–14:00 only</span> <span class=&quot;bi-sec&quot;>· soltanto</span></span>
           <h3 class=&quot;bundle-name&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Pizza Lunch+&quot; data-pl=&quot;Pizza Lunch+&quot;>Pizza Lunch+</span><span class=&quot;en bi-sec&quot;>Pranzo</span></h3>
           <div class=&quot;bundle-price&quot;>
             <span class=&quot;now num&quot;>44,90 zł</span>
             <span class=&quot;was num&quot;>54,85 zł</span>
           </div>
-          <p class=&quot;bundle-desc&quot;>Pizza + bibita + dolce a prezzo fisso.</p>
+          <p class=&quot;bundle-desc&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Pizza + drink + a premium dolce at a flat price. For those who eat standing up — but eat well.&quot; data-pl=&quot;Pizza + napój + dolce premium w stałej cenie. Dla tych, co jedzą na stojąco — ale dobrze.&quot;>Pizza + drink + a premium dolce at a flat price. For those who eat standing up — but eat well.</span></p>
         </article>
+
+        <!-- Spicchio Notturno -->
         <article class=&quot;bundle b-night&quot;>
           <div class=&quot;bundle-icon&quot; aria-hidden=&quot;true&quot;>
+            <!-- crescent moon -->
             <svg width=&quot;32&quot; height=&quot;32&quot; viewBox=&quot;0 0 32 32&quot; fill=&quot;none&quot;>
               <path d=&quot;M21 6 A 11 11 0 1 0 21 26 A 8 8 0 0 1 21 6 Z&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.6&quot; fill=&quot;rgba(255,255,255,0.4)&quot;/>
               <circle cx=&quot;9&quot; cy=&quot;11&quot; r=&quot;0.8&quot; fill=&quot;currentColor&quot;/>
               <circle cx=&quot;13&quot; cy=&quot;20&quot; r=&quot;0.8&quot; fill=&quot;currentColor&quot;/>
+              <circle cx=&quot;6&quot; cy=&quot;17&quot; r=&quot;0.6&quot; fill=&quot;currentColor&quot;/>
             </svg>
           </div>
           <span class=&quot;bundle-tag&quot;><span class=&quot;bi-pri&quot; data-en=&quot;after 21:00&quot; data-pl=&quot;po 21:00&quot;>after 21:00</span> <span class=&quot;bi-sec&quot;>· dopo le 21:00</span></span>
@@ -11077,21 +11062,39 @@
             <span class=&quot;now num&quot;>16,90 zł</span>
             <span class=&quot;was num&quot;>17,80 zł</span>
           </div>
-          <p class=&quot;bundle-desc&quot;>Una fetta riscaldata in 60s + bibita.</p>
+          <p class=&quot;bundle-desc&quot;><span class=&quot;bi-pri&quot; data-en=&quot;A slice reheated in 60 seconds in the wood-fired oven + a drink. For those who come home late.&quot; data-pl=&quot;Kawałek odgrzewany w 60 sekund w piecu opalanym drewnem + napój. Dla tych, co wracają późno.&quot;>A slice reheated in 60 seconds in the wood-fired oven + a drink. For those who come home late.</span></p>
         </article>
+
+        <!-- Il Classico -->
         <article class=&quot;bundle b-classic&quot;>
           <div class=&quot;bundle-icon&quot; aria-hidden=&quot;true&quot;>
+            <!-- sparkle -->
             <svg width=&quot;32&quot; height=&quot;32&quot; viewBox=&quot;0 0 32 32&quot; fill=&quot;none&quot;>
-              <path d=&quot;M16 3 L18 13 L28 16 L18 19 L16 29 L14 19 L4 16 L14 13 Z&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.6&quot; fill=&quot;rgba(255,255,255,0.4)&quot; stroke-linejoin=&quot;round&quot;/>
+              <path d=&quot;M16 3 L18 13 L28 16 L18 19 L16 29 L14 19 L4 16 L14 13 Z&quot;
+                    stroke=&quot;currentColor&quot; stroke-width=&quot;1.6&quot; fill=&quot;rgba(255,255,255,0.4)&quot; stroke-linejoin=&quot;round&quot;/>
+              <path d=&quot;M25 5 L26 8 L29 9 L26 10 L25 13 L24 10 L21 9 L24 8 Z&quot;
+                    stroke=&quot;currentColor&quot; stroke-width=&quot;1&quot; fill=&quot;currentColor&quot; fill-opacity=&quot;0.3&quot; stroke-linejoin=&quot;round&quot;/>
             </svg>
           </div>
           <span class=&quot;bundle-tag&quot;><span class=&quot;bi-pri&quot; data-en=&quot;automatic&quot; data-pl=&quot;automatyczny&quot;>automatic</span> <span class=&quot;bi-sec&quot;>· automatico</span></span>
           <h3 class=&quot;bundle-name&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Italian Classic&quot; data-pl=&quot;Włoski Klasyk&quot;>Italian Classic</span><span class=&quot;en bi-sec&quot;>Il Classico</span></h3>
-          <div class=&quot;bundle-price&quot;><span class=&quot;savings&quot;>−10%</span></div>
-          <p class=&quot;bundle-desc&quot;>Margherita + limonata + tiramisù = sconto.</p>
+          <div class=&quot;bundle-price&quot;>
+            <span class=&quot;savings&quot;>−10%</span>
+          </div>
+          <p class=&quot;bundle-desc&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Activates automatically when you have a Margherita, a Limonata and a Tiramisù in your cart.&quot; data-pl=&quot;Aktywuje się automatycznie, gdy masz w koszyku Margheritę, Limonatę i Tiramisù.&quot;>Activates automatically when you have a Margherita, a Limonata and a Tiramisù in your cart.</span></p>
         </article>
       </div>
+
+      <p class=&quot;bundle-foot-note&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Bundles activate automatically in your cart when eligible.&quot; data-pl=&quot;Zestawy aktywują się automatycznie w koszyku, gdy są dostępne.&quot;>Bundles activate automatically in your cart when eligible.</span></p>
+      <div class=&quot;bundle-cta-wrap&quot;>
+        <a class=&quot;hero-cta&quot; href=&quot;#menu&quot;>
+          <span class=&quot;bi-pri&quot; data-en=&quot;Order now&quot; data-pl=&quot;Zamów&quot;>Order now</span> <span class=&quot;it bi-sec&quot;>· inizia un ordine</span> &amp;rarr;
+        </a>
+      </div>
     </div>
+  </section>
+
+  <div class=&quot;loc-section&quot;>
 
     <!-- CTA -->
     <div class=&quot;order-cta-wrap&quot;>
@@ -11632,12 +11635,22 @@
       </div>
     </div>
 
-    <!-- BUNDLES -->
-    <div class=&quot;loc-bundles-strip&quot;>
-      <div class=&quot;loc-card-eyebrow&quot; style=&quot;padding-left:4px;&quot;>menù del giorno &amp;middot; today's bundles</div>
-      <div class=&quot;bundles&quot; style=&quot;margin-top:8px;&quot;>
+    </div>
+
+  <!-- BUNDLES (full section, sibling of .loc-section) -->
+  <section class=&quot;ps bundles-section&quot; id=&quot;bundles-wa&quot;>
+    <div class=&quot;page-inner&quot;>
+      <div class=&quot;ps-head&quot;>
+        <div class=&quot;ps-eyebrow&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Today's bundles&quot; data-pl=&quot;Dzisiejsze zestawy&quot;>Today's bundles</span> · <span class=&quot;bi-sec&quot;>menù del giorno</span></div>
+        <h2 class=&quot;ps-title&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Pick a bundle.&quot; data-pl=&quot;Wybierz zestaw.&quot;>Pick a bundle.</span> <span class=&quot;bi-pri&quot; data-en=&quot;Skip the maths.&quot; data-pl=&quot;Bez liczenia.&quot;>Skip the maths.</span></h2>
+        <p class=&quot;ps-sub&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Four ways to dine well —&quot; data-pl=&quot;Cztery sposoby, by zjeść dobrze —&quot;>Four ways to dine well —</span> <em>Famiglia</em> <span class=&quot;bi-pri&quot; data-en=&quot;for friends,&quot; data-pl=&quot;dla znajomych,&quot;>for friends,</span> <em>Pranzo</em> <span class=&quot;bi-pri&quot; data-en=&quot;for the noon rush,&quot; data-pl=&quot;na lunch,&quot;>for the noon rush,</span> <em>Spicchio</em> <span class=&quot;bi-pri&quot; data-en=&quot;for the late-night crew,&quot; data-pl=&quot;dla nocnych marków,&quot;>for the late-night crew,</span> <em>Il Classico</em> <span class=&quot;bi-pri&quot; data-en=&quot;if you're building dinner the proper way.&quot; data-pl=&quot;jeśli budujesz kolację po włosku.&quot;>if you're building dinner the proper way.</span></p>
+      </div>
+
+      <div class=&quot;bundles&quot;>
+        <!-- Famiglia -->
         <article class=&quot;bundle b-family&quot;>
           <div class=&quot;bundle-icon&quot; aria-hidden=&quot;true&quot;>
+            <!-- three figures -->
             <svg width=&quot;32&quot; height=&quot;32&quot; viewBox=&quot;0 0 32 32&quot; fill=&quot;none&quot;>
               <circle cx=&quot;9&quot; cy=&quot;11&quot; r=&quot;3&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.6&quot; fill=&quot;rgba(255,255,255,0.4)&quot;/>
               <circle cx=&quot;16&quot; cy=&quot;9&quot; r=&quot;3.4&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.6&quot; fill=&quot;rgba(255,255,255,0.4)&quot;/>
@@ -11647,36 +11660,45 @@
               <path d=&quot;M18 21 C 19 19, 21 18, 23 18 C 26 18, 29 21, 29 26&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.6&quot; fill=&quot;none&quot;/>
             </svg>
           </div>
-          <span class=&quot;bundle-tag&quot;>per 2&amp;ndash;3 persone</span>
+          <span class=&quot;bundle-tag&quot;><span class=&quot;bi-pri&quot; data-en=&quot;for 2–3 people&quot; data-pl=&quot;dla 2–3 osób&quot;>for 2–3 people</span> <span class=&quot;bi-sec&quot;>· per 2–3 persone</span></span>
           <h3 class=&quot;bundle-name&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Family Pack&quot; data-pl=&quot;Pakiet Rodzinny&quot;>Family Pack</span><span class=&quot;en bi-sec&quot;>Famiglia</span></h3>
           <div class=&quot;bundle-price&quot;>
             <span class=&quot;now num&quot;>99,00 zł</span>
             <span class=&quot;was num&quot;>103,60 zł</span>
           </div>
-          <p class=&quot;bundle-desc&quot;>Tre <em>Margherite</em> + 1L di <em>limonata</em>.</p>
+          <p class=&quot;bundle-desc&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Three Margheritas + 1L of limonata. Set price, no maths. A bunch of friends — sorted.&quot; data-pl=&quot;Trzy Margherity + 1L limonaty. Stała cena, bez liczenia. Paczka znajomych — załatwione.&quot;>Three Margheritas + 1L of limonata. Set price, no maths. A bunch of friends — sorted.</span></p>
         </article>
+
+        <!-- Pranzo -->
         <article class=&quot;bundle b-lunch&quot;>
           <div class=&quot;bundle-icon&quot; aria-hidden=&quot;true&quot;>
+            <!-- sundial clock -->
             <svg width=&quot;32&quot; height=&quot;32&quot; viewBox=&quot;0 0 32 32&quot; fill=&quot;none&quot;>
               <circle cx=&quot;16&quot; cy=&quot;16&quot; r=&quot;11&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.6&quot; fill=&quot;rgba(255,255,255,0.4)&quot;/>
+              <path d=&quot;M16 5 L16 7 M16 25 L16 27 M5 16 L7 16 M25 16 L27 16&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.4&quot; stroke-linecap=&quot;round&quot;/>
               <path d=&quot;M16 16 L16 9 M16 16 L21 18&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.6&quot; stroke-linecap=&quot;round&quot;/>
               <circle cx=&quot;16&quot; cy=&quot;16&quot; r=&quot;1.4&quot; fill=&quot;currentColor&quot;/>
+              <path d=&quot;M9 23 C 12 25, 20 25, 23 23&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.4&quot; fill=&quot;none&quot; opacity=&quot;0.5&quot;/>
             </svg>
           </div>
-          <span class=&quot;bundle-tag&quot;>11:00&amp;ndash;14:00</span>
+          <span class=&quot;bundle-tag&quot;><span class=&quot;bi-pri&quot; data-en=&quot;11:00–14:00 only&quot; data-pl=&quot;tylko 11:00–14:00&quot;>11:00–14:00 only</span> <span class=&quot;bi-sec&quot;>· soltanto</span></span>
           <h3 class=&quot;bundle-name&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Pizza Lunch+&quot; data-pl=&quot;Pizza Lunch+&quot;>Pizza Lunch+</span><span class=&quot;en bi-sec&quot;>Pranzo</span></h3>
           <div class=&quot;bundle-price&quot;>
             <span class=&quot;now num&quot;>44,90 zł</span>
             <span class=&quot;was num&quot;>54,85 zł</span>
           </div>
-          <p class=&quot;bundle-desc&quot;>Pizza + bibita + dolce a prezzo fisso.</p>
+          <p class=&quot;bundle-desc&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Pizza + drink + a premium dolce at a flat price. For those who eat standing up — but eat well.&quot; data-pl=&quot;Pizza + napój + dolce premium w stałej cenie. Dla tych, co jedzą na stojąco — ale dobrze.&quot;>Pizza + drink + a premium dolce at a flat price. For those who eat standing up — but eat well.</span></p>
         </article>
+
+        <!-- Spicchio Notturno -->
         <article class=&quot;bundle b-night&quot;>
           <div class=&quot;bundle-icon&quot; aria-hidden=&quot;true&quot;>
+            <!-- crescent moon -->
             <svg width=&quot;32&quot; height=&quot;32&quot; viewBox=&quot;0 0 32 32&quot; fill=&quot;none&quot;>
               <path d=&quot;M21 6 A 11 11 0 1 0 21 26 A 8 8 0 0 1 21 6 Z&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.6&quot; fill=&quot;rgba(255,255,255,0.4)&quot;/>
               <circle cx=&quot;9&quot; cy=&quot;11&quot; r=&quot;0.8&quot; fill=&quot;currentColor&quot;/>
               <circle cx=&quot;13&quot; cy=&quot;20&quot; r=&quot;0.8&quot; fill=&quot;currentColor&quot;/>
+              <circle cx=&quot;6&quot; cy=&quot;17&quot; r=&quot;0.6&quot; fill=&quot;currentColor&quot;/>
             </svg>
           </div>
           <span class=&quot;bundle-tag&quot;><span class=&quot;bi-pri&quot; data-en=&quot;after 21:00&quot; data-pl=&quot;po 21:00&quot;>after 21:00</span> <span class=&quot;bi-sec&quot;>· dopo le 21:00</span></span>
@@ -11685,21 +11707,39 @@
             <span class=&quot;now num&quot;>16,90 zł</span>
             <span class=&quot;was num&quot;>17,80 zł</span>
           </div>
-          <p class=&quot;bundle-desc&quot;>Una fetta riscaldata in 60s + bibita.</p>
+          <p class=&quot;bundle-desc&quot;><span class=&quot;bi-pri&quot; data-en=&quot;A slice reheated in 60 seconds in the wood-fired oven + a drink. For those who come home late.&quot; data-pl=&quot;Kawałek odgrzewany w 60 sekund w piecu opalanym drewnem + napój. Dla tych, co wracają późno.&quot;>A slice reheated in 60 seconds in the wood-fired oven + a drink. For those who come home late.</span></p>
         </article>
+
+        <!-- Il Classico -->
         <article class=&quot;bundle b-classic&quot;>
           <div class=&quot;bundle-icon&quot; aria-hidden=&quot;true&quot;>
+            <!-- sparkle -->
             <svg width=&quot;32&quot; height=&quot;32&quot; viewBox=&quot;0 0 32 32&quot; fill=&quot;none&quot;>
-              <path d=&quot;M16 3 L18 13 L28 16 L18 19 L16 29 L14 19 L4 16 L14 13 Z&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.6&quot; fill=&quot;rgba(255,255,255,0.4)&quot; stroke-linejoin=&quot;round&quot;/>
+              <path d=&quot;M16 3 L18 13 L28 16 L18 19 L16 29 L14 19 L4 16 L14 13 Z&quot;
+                    stroke=&quot;currentColor&quot; stroke-width=&quot;1.6&quot; fill=&quot;rgba(255,255,255,0.4)&quot; stroke-linejoin=&quot;round&quot;/>
+              <path d=&quot;M25 5 L26 8 L29 9 L26 10 L25 13 L24 10 L21 9 L24 8 Z&quot;
+                    stroke=&quot;currentColor&quot; stroke-width=&quot;1&quot; fill=&quot;currentColor&quot; fill-opacity=&quot;0.3&quot; stroke-linejoin=&quot;round&quot;/>
             </svg>
           </div>
           <span class=&quot;bundle-tag&quot;><span class=&quot;bi-pri&quot; data-en=&quot;automatic&quot; data-pl=&quot;automatyczny&quot;>automatic</span> <span class=&quot;bi-sec&quot;>· automatico</span></span>
           <h3 class=&quot;bundle-name&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Italian Classic&quot; data-pl=&quot;Włoski Klasyk&quot;>Italian Classic</span><span class=&quot;en bi-sec&quot;>Il Classico</span></h3>
-          <div class=&quot;bundle-price&quot;><span class=&quot;savings&quot;>−10%</span></div>
-          <p class=&quot;bundle-desc&quot;>Margherita + limonata + tiramisù = sconto.</p>
+          <div class=&quot;bundle-price&quot;>
+            <span class=&quot;savings&quot;>−10%</span>
+          </div>
+          <p class=&quot;bundle-desc&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Activates automatically when you have a Margherita, a Limonata and a Tiramisù in your cart.&quot; data-pl=&quot;Aktywuje się automatycznie, gdy masz w koszyku Margheritę, Limonatę i Tiramisù.&quot;>Activates automatically when you have a Margherita, a Limonata and a Tiramisù in your cart.</span></p>
         </article>
       </div>
+
+      <p class=&quot;bundle-foot-note&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Bundles activate automatically in your cart when eligible.&quot; data-pl=&quot;Zestawy aktywują się automatycznie w koszyku, gdy są dostępne.&quot;>Bundles activate automatically in your cart when eligible.</span></p>
+      <div class=&quot;bundle-cta-wrap&quot;>
+        <a class=&quot;hero-cta&quot; href=&quot;#menu&quot;>
+          <span class=&quot;bi-pri&quot; data-en=&quot;Order now&quot; data-pl=&quot;Zamów&quot;>Order now</span> <span class=&quot;it bi-sec&quot;>· inizia un ordine</span> &amp;rarr;
+        </a>
+      </div>
     </div>
+  </section>
+
+  <div class=&quot;loc-section&quot;>
 
     <!-- CTA -->
     <div class=&quot;order-cta-wrap&quot;>
