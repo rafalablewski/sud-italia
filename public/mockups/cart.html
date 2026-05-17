@@ -9656,26 +9656,42 @@
   .loc-bundles-strip {
     margin-top: 8px;
   }
-  /* Bundles inside location pages: escape the 700px .loc-section cap,
-     stay capped at 1500px wide, and ALWAYS keep a 24px+ parchment gutter
-     against the viewport edges — never edge-to-edge. */
+  /* Bundles inside location pages — robust full-bleed pattern:
+     - Strip itself escapes the 700px .loc-section cap via the classic
+       `left: calc(50% - 50vw); width: 100vw` trick (works in every browser).
+     - The four cards inside are capped by .bundles { max-width } with auto
+       margins, so on wide screens parchment is visible on the sides.
+     - Strip side padding ensures a minimum gutter even on narrow screens. */
   .loc-section .loc-bundles-strip {
-    width: min(calc(100vw - 48px), 1500px);
-    margin-left: calc((100% - min(100vw - 48px, 1500px)) / 2);
+    position: relative;
+    left: calc(50% - 50vw);
+    width: 100vw;
+    margin-left: 0;
     margin-right: 0;
-    padding-left: 0;
-    padding-right: 0;
+    padding-left: 24px;
+    padding-right: 24px;
+    box-sizing: border-box;
+  }
+  .loc-section .loc-bundles-strip > .bundles {
+    max-width: 1500px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .loc-section .loc-bundles-strip > .loc-card-eyebrow {
+    max-width: 1500px;
+    margin-left: auto;
+    margin-right: auto;
   }
   @media (min-width: 768px) {
     .loc-section .loc-bundles-strip {
-      width: min(calc(100vw - 96px), 1500px);
-      margin-left: calc((100% - min(100vw - 96px, 1500px)) / 2);
+      padding-left: 48px;
+      padding-right: 48px;
     }
   }
   @media (min-width: 1400px) {
     .loc-section .loc-bundles-strip {
-      width: min(calc(100vw - 128px), 1500px);
-      margin-left: calc((100% - min(100vw - 128px, 1500px)) / 2);
+      padding-left: 64px;
+      padding-right: 64px;
     }
   }
   /* Guard against horizontal scroll caused by 100vw inside iframes */
