@@ -7755,6 +7755,14 @@
     position: relative;
     transition: color .2s ease;
   }
+  .nav-links a .bi-sec,
+  .nav-links a .it.bi-sec {
+    /* stack the Italian caption on its own line under the primary */
+    display: block;
+    margin-left: 0;
+    line-height: 1.1;
+    margin-top: 1px;
+  }
   .nav-links a .it {
     font-family: var(--serif-body);
     font-style: italic;
@@ -7783,6 +7791,9 @@
   @media (min-width: 900px) {
     .nav-right { margin-left: 0; }
   }
+  .nav-links a svg, .nav-cart svg, .loc-cta svg, .hero-cta svg,
+  .mini-item svg, .mi-add svg, .pair-add svg, .field-label svg,
+  .back-chip svg, .hero-kicker svg { flex-shrink: 0; }
   .nav-cart {
     display: inline-flex; align-items: center; gap: 8px;
     background: var(--parchment-deep);
@@ -7853,6 +7864,11 @@
     border-bottom: 1px dashed var(--line-soft);
   }
   .nav-mobile-menu a:last-child { border-bottom: none; }
+  .nav-mobile-menu a .bi-sec,
+  .nav-mobile-menu a .it.bi-sec {
+    display: inline;
+    margin-left: 6px;
+  }
   .nav-mobile-menu a .it {
     font-family: var(--serif-body);
     font-style: italic;
@@ -7860,6 +7876,10 @@
     font-size: 13px;
     margin-left: 6px;
   }
+
+  /* hours line in location cards: Italian on its own row */
+  .hours-line.bi-stack { gap: 2px; }
+  .hours-line .bi-sec { display: block; }
 
   /* ============================================================
      LANGUAGE PICKER (primary language; Italian is always 2nd)
@@ -8035,11 +8055,16 @@
     transform: translateY(-2px);
     box-shadow: 0 16px 28px -10px rgba(184,92,56,0.6);
   }
-  .hero-cta .it {
+  .hero-cta .it,
+  .hero-cta .bi-sec {
     font-style: italic;
     font-weight: 500;
-    opacity: 0.85;
+    color: rgba(255, 247, 232, 0.78); /* light parchment on terracotta */
+    opacity: 1; /* color handles the muting */
   }
+  .hero-cta:hover .bi-sec { color: rgba(255, 247, 232, 0.92); }
+  .hero-cta.ghost .bi-sec { color: rgba(122, 43, 43, 0.65); }
+  .hero-cta.ghost:hover .bi-sec { color: rgba(122, 43, 43, 0.85); }
   .hero-cta.ghost {
     background: transparent;
     color: var(--oxblood);
@@ -9040,7 +9065,9 @@
     color: var(--parchment);
     transform: translateX(-2px);
   }
-  .back-chip svg { display: block; }
+  .back-chip svg { display: block; flex-shrink: 0; }
+  .back-chip .bi-sec { color: rgba(122, 43, 43, 0.6); }
+  .back-chip:hover .bi-sec { color: rgba(255, 247, 232, 0.88); }
 
   .loc-hero {
     position: relative;
@@ -9298,10 +9325,34 @@
 
   /* Mini menu list */
   .mini-menu {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
     margin-top: 8px;
+  }
+  @media (min-width: 640px) {
+    .mini-menu { grid-template-columns: 1fr 1fr; gap: 14px; }
+  }
+  /* On narrow screens, allow a more compact mini-item so two cols fit */
+  .mini-item { align-items: flex-start; }
+  .mini-item-foot {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; margin-top: 8px;
+  }
+  .mini-item .mini-add {
+    appearance: none; border: 0;
+    background: var(--terracotta); color: var(--parchment);
+    font-family: var(--serif-display); font-style: italic;
+    font-weight: 500; font-size: 13px;
+    padding: 6px 14px; border-radius: 999px;
+    cursor: pointer; transition: background .15s ease, transform .15s ease;
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .mini-item .mini-add:hover {
+    background: var(--terracotta-dark); transform: translateY(-1px);
+  }
+  .mini-item .mini-add.added {
+    background: var(--basil); color: var(--parchment);
   }
   .mini-tabs {
     display: flex;
@@ -9887,7 +9938,7 @@
                   <circle cx=&quot;10&quot; cy=&quot;10&quot; r=&quot;7.5&quot; stroke=&quot;#B85C38&quot; stroke-width=&quot;1.5&quot; fill=&quot;none&quot;/>
                   <path d=&quot;M10 5 L10 10 L13.5 12.5&quot; stroke=&quot;#B85C38&quot; stroke-width=&quot;1.5&quot; stroke-linecap=&quot;round&quot;/>
                 </svg>
-                <div><span class=&quot;bi-pri&quot; data-en=&quot;Mon–Thu 11:00–21:00 · Fri–Sat 11:00–23:00 · Sun 12:00–20:00&quot; data-pl=&quot;Pon–Czw 11:00–21:00 · Pt–Sob 11:00–23:00 · Nd 12:00–20:00&quot;>Mon–Thu 11:00–21:00 · Fri–Sat 11:00–23:00 · Sun 12:00–20:00</span> <span class=&quot;it bi-sec&quot;>Lun–Gio · Ven–Sab · Dom</span></div>
+                <div class=&quot;hours-line bi-stack&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Mon–Thu 11:00–21:00 · Fri–Sat 11:00–23:00 · Sun 12:00–20:00&quot; data-pl=&quot;Pon–Czw 11:00–21:00 · Pt–Sob 11:00–23:00 · Nd 12:00–20:00&quot;>Mon–Thu 11:00–21:00 · Fri–Sat 11:00–23:00 · Sun 12:00–20:00</span><span class=&quot;it bi-sec&quot;>Lun–Gio 11:00–21:00 · Ven–Sab 11:00–23:00 · Dom 12:00–20:00</span></div>
               </div>
             </div>
             <p class=&quot;loc-desc&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Authentic Neapolitan pizza &amp; pasta right on the Rynek — next to the fountain.&quot; data-pl=&quot;Autentyczna pizza neapolitańska i makarony w sercu Rynku — przy fontannie.&quot;>Authentic Neapolitan pizza &amp; pasta right on the Rynek — next to the fountain.</span></p>
@@ -9951,7 +10002,7 @@
                   <circle cx=&quot;10&quot; cy=&quot;10&quot; r=&quot;7.5&quot; stroke=&quot;#B85C38&quot; stroke-width=&quot;1.5&quot; fill=&quot;none&quot;/>
                   <path d=&quot;M10 5 L10 10 L13.5 12.5&quot; stroke=&quot;#B85C38&quot; stroke-width=&quot;1.5&quot; stroke-linecap=&quot;round&quot;/>
                 </svg>
-                <div><span class=&quot;bi-pri&quot; data-en=&quot;Mon–Thu 11:00–22:00 · Fri–Sat 11:00–24:00 · Sun 12:00–21:00&quot; data-pl=&quot;Pon–Czw 11:00–22:00 · Pt–Sob 11:00–24:00 · Nd 12:00–21:00&quot;>Mon–Thu 11:00–22:00 · Fri–Sat 11:00–24:00 · Sun 12:00–21:00</span> <span class=&quot;it bi-sec&quot;>Lun–Gio · Ven–Sab · Dom</span></div>
+                <div class=&quot;hours-line bi-stack&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Mon–Thu 11:00–22:00 · Fri–Sat 11:00–24:00 · Sun 12:00–21:00&quot; data-pl=&quot;Pon–Czw 11:00–22:00 · Pt–Sob 11:00–24:00 · Nd 12:00–21:00&quot;>Mon–Thu 11:00–22:00 · Fri–Sat 11:00–24:00 · Sun 12:00–21:00</span><span class=&quot;it bi-sec&quot;>Lun–Gio 11:00–22:00 · Ven–Sab 11:00–24:00 · Dom 12:00–21:00</span></div>
               </div>
             </div>
             <p class=&quot;loc-desc&quot;><span class=&quot;bi-pri&quot; data-en=&quot;A Vespa, an oven, a neighborhood — Śródmieście meets Vesuvius.&quot; data-pl=&quot;Vespa, piec, dzielnica — Śródmieście spotyka Wezuwiusz.&quot;>A Vespa, an oven, a neighborhood — Śródmieście meets Vesuvius.</span></p>
@@ -10666,7 +10717,10 @@
             <div class=&quot;mini-desc&quot;>La pizza preferita di Kraków &amp;middot; the local favourite</div>
             <span class=&quot;mini-pick-tag&quot;>★ La regina di Giuseppe</span>
           </div>
-          <div class=&quot;mini-price&quot;>36,00 zł</div>
+          <div class=&quot;mini-item-foot&quot;>
+            <div class=&quot;mini-price&quot;>36,00 zł</div>
+            <button class=&quot;mini-add&quot; type=&quot;button&quot; aria-label=&quot;Add to cart&quot;>+ <span class=&quot;bi-pri&quot; data-en=&quot;Add&quot; data-pl=&quot;Dodaj&quot;>Add</span></button>
+          </div>
         </div>
         <div class=&quot;mini-item&quot;>
           <div class=&quot;mini-emoji&quot; aria-hidden=&quot;true&quot;>
@@ -10681,7 +10735,10 @@
             <div class=&quot;mini-name&quot;>Diavola<span class=&quot;en&quot;>Spianata calabrese, mozzarella, olio piccante</span></div>
             <div class=&quot;mini-desc&quot;>Per i coraggiosi &amp;middot; for the brave</div>
           </div>
-          <div class=&quot;mini-price&quot;>41,00 zł</div>
+          <div class=&quot;mini-item-foot&quot;>
+            <div class=&quot;mini-price&quot;>41,00 zł</div>
+            <button class=&quot;mini-add&quot; type=&quot;button&quot; aria-label=&quot;Add to cart&quot;>+ <span class=&quot;bi-pri&quot; data-en=&quot;Add&quot; data-pl=&quot;Dodaj&quot;>Add</span></button>
+          </div>
         </div>
         <div class=&quot;mini-item&quot;>
           <div class=&quot;mini-emoji&quot; aria-hidden=&quot;true&quot;>
@@ -10696,7 +10753,10 @@
             <div class=&quot;mini-name&quot;>Bufala<span class=&quot;en&quot;>Pomodoro, mozzarella di bufala DOP, basilico</span></div>
             <div class=&quot;mini-desc&quot;>Cremosa come va &amp;middot; creamy, as it should be</div>
           </div>
-          <div class=&quot;mini-price&quot;>46,00 zł</div>
+          <div class=&quot;mini-item-foot&quot;>
+            <div class=&quot;mini-price&quot;>46,00 zł</div>
+            <button class=&quot;mini-add&quot; type=&quot;button&quot; aria-label=&quot;Add to cart&quot;>+ <span class=&quot;bi-pri&quot; data-en=&quot;Add&quot; data-pl=&quot;Dodaj&quot;>Add</span></button>
+          </div>
         </div>
         <div class=&quot;mini-item&quot;>
           <div class=&quot;mini-emoji&quot; aria-hidden=&quot;true&quot;>
@@ -10712,7 +10772,10 @@
             <div class=&quot;mini-name&quot;>Quattro Formaggi<span class=&quot;en&quot;>Fior di latte, gorgonzola, parmigiano, pecorino</span></div>
             <div class=&quot;mini-desc&quot;>Quattro voci, un coro &amp;middot; four voices, one chord</div>
           </div>
-          <div class=&quot;mini-price&quot;>44,00 zł</div>
+          <div class=&quot;mini-item-foot&quot;>
+            <div class=&quot;mini-price&quot;>44,00 zł</div>
+            <button class=&quot;mini-add&quot; type=&quot;button&quot; aria-label=&quot;Add to cart&quot;>+ <span class=&quot;bi-pri&quot; data-en=&quot;Add&quot; data-pl=&quot;Dodaj&quot;>Add</span></button>
+          </div>
         </div>
         <div class=&quot;mini-item&quot;>
           <div class=&quot;mini-emoji&quot; aria-hidden=&quot;true&quot;>
@@ -10744,7 +10807,10 @@
             <div class=&quot;mini-name&quot;>Spaghetti Carbonara<span class=&quot;en&quot;>Guanciale, pecorino, tuorlo, pepe</span></div>
             <div class=&quot;mini-desc&quot;>La ricetta romana &amp;middot; the Roman recipe</div>
           </div>
-          <div class=&quot;mini-price&quot;>38,00 zł</div>
+          <div class=&quot;mini-item-foot&quot;>
+            <div class=&quot;mini-price&quot;>38,00 zł</div>
+            <button class=&quot;mini-add&quot; type=&quot;button&quot; aria-label=&quot;Add to cart&quot;>+ <span class=&quot;bi-pri&quot; data-en=&quot;Add&quot; data-pl=&quot;Dodaj&quot;>Add</span></button>
+          </div>
         </div>
         <div class=&quot;mini-item&quot;>
           <div class=&quot;mini-emoji&quot; aria-hidden=&quot;true&quot;>
@@ -10758,7 +10824,10 @@
             <div class=&quot;mini-name&quot;>Penne all'Arrabbiata<span class=&quot;en&quot;>Pomodoro, aglio, peperoncino, basilico</span></div>
             <div class=&quot;mini-desc&quot;>Semplice, decisa &amp;middot; simple, decisive</div>
           </div>
-          <div class=&quot;mini-price&quot;>34,00 zł</div>
+          <div class=&quot;mini-item-foot&quot;>
+            <div class=&quot;mini-price&quot;>34,00 zł</div>
+            <button class=&quot;mini-add&quot; type=&quot;button&quot; aria-label=&quot;Add to cart&quot;>+ <span class=&quot;bi-pri&quot; data-en=&quot;Add&quot; data-pl=&quot;Dodaj&quot;>Add</span></button>
+          </div>
         </div>
         <div class=&quot;mini-item&quot;>
           <div class=&quot;mini-emoji&quot; aria-hidden=&quot;true&quot;>
@@ -10772,7 +10841,10 @@
             <div class=&quot;mini-name&quot;>Pesto Genovese<span class=&quot;en&quot;>Trofie, basilico, pinoli, parmigiano</span></div>
             <div class=&quot;mini-desc&quot;>Dal mortaio, mai dal mixer &amp;middot; mortar, not mixer</div>
           </div>
-          <div class=&quot;mini-price&quot;>36,00 zł</div>
+          <div class=&quot;mini-item-foot&quot;>
+            <div class=&quot;mini-price&quot;>36,00 zł</div>
+            <button class=&quot;mini-add&quot; type=&quot;button&quot; aria-label=&quot;Add to cart&quot;>+ <span class=&quot;bi-pri&quot; data-en=&quot;Add&quot; data-pl=&quot;Dodaj&quot;>Add</span></button>
+          </div>
         </div>
         <div class=&quot;mini-item&quot;>
           <div class=&quot;mini-emoji&quot; aria-hidden=&quot;true&quot;>
@@ -10802,7 +10874,10 @@
             <div class=&quot;mini-name&quot;>Vino della casa &amp;middot; rosso<span class=&quot;en&quot;>Aglianico del Vulture, calice 150ml</span></div>
             <div class=&quot;mini-desc&quot;>Si beve, non si analizza &amp;middot; you drink it, you don't analyse</div>
           </div>
-          <div class=&quot;mini-price&quot;>22,00 zł</div>
+          <div class=&quot;mini-item-foot&quot;>
+            <div class=&quot;mini-price&quot;>22,00 zł</div>
+            <button class=&quot;mini-add&quot; type=&quot;button&quot; aria-label=&quot;Add to cart&quot;>+ <span class=&quot;bi-pri&quot; data-en=&quot;Add&quot; data-pl=&quot;Dodaj&quot;>Add</span></button>
+          </div>
         </div>
         <div class=&quot;mini-item&quot;>
           <div class=&quot;mini-emoji&quot; aria-hidden=&quot;true&quot;>
@@ -10815,7 +10890,10 @@
             <div class=&quot;mini-name&quot;>Limonata della casa<span class=&quot;en&quot;>Limone di Sorrento, zucchero di canna</span></div>
             <div class=&quot;mini-desc&quot;>Aspra come deve essere &amp;middot; tart, as it should be</div>
           </div>
-          <div class=&quot;mini-price&quot;>14,00 zł</div>
+          <div class=&quot;mini-item-foot&quot;>
+            <div class=&quot;mini-price&quot;>14,00 zł</div>
+            <button class=&quot;mini-add&quot; type=&quot;button&quot; aria-label=&quot;Add to cart&quot;>+ <span class=&quot;bi-pri&quot; data-en=&quot;Add&quot; data-pl=&quot;Dodaj&quot;>Add</span></button>
+          </div>
         </div>
         <div class=&quot;mini-item&quot;>
           <div class=&quot;mini-emoji&quot; aria-hidden=&quot;true&quot;>
@@ -10828,7 +10906,10 @@
             <div class=&quot;mini-name&quot;>Espresso<span class=&quot;en&quot;>Caffè Borbone, miscela napoletana</span></div>
             <div class=&quot;mini-desc&quot;>Stretto, come si beve a Napoli &amp;middot; short, the Naples way</div>
           </div>
-          <div class=&quot;mini-price&quot;>9,00 zł</div>
+          <div class=&quot;mini-item-foot&quot;>
+            <div class=&quot;mini-price&quot;>9,00 zł</div>
+            <button class=&quot;mini-add&quot; type=&quot;button&quot; aria-label=&quot;Add to cart&quot;>+ <span class=&quot;bi-pri&quot; data-en=&quot;Add&quot; data-pl=&quot;Dodaj&quot;>Add</span></button>
+          </div>
         </div>
         <div class=&quot;mini-item&quot;>
           <div class=&quot;mini-emoji&quot; aria-hidden=&quot;true&quot;>
@@ -10841,7 +10922,10 @@
             <div class=&quot;mini-name&quot;>Acqua frizzante<span class=&quot;en&quot;>San Pellegrino, 500ml</span></div>
             <div class=&quot;mini-desc&quot;>Le bollicine giuste &amp;middot; the right kind of fizz</div>
           </div>
-          <div class=&quot;mini-price&quot;>8,00 zł</div>
+          <div class=&quot;mini-item-foot&quot;>
+            <div class=&quot;mini-price&quot;>8,00 zł</div>
+            <button class=&quot;mini-add&quot; type=&quot;button&quot; aria-label=&quot;Add to cart&quot;>+ <span class=&quot;bi-pri&quot; data-en=&quot;Add&quot; data-pl=&quot;Dodaj&quot;>Add</span></button>
+          </div>
         </div>
       </div>
     </div>
@@ -11164,7 +11248,10 @@
             <div class=&quot;mini-desc&quot;>La firma di Anna &amp;middot; Anna's signature</div>
             <span class=&quot;mini-pick-tag&quot;>★ La fiamma di Varsavia</span>
           </div>
-          <div class=&quot;mini-price&quot;>41,00 zł</div>
+          <div class=&quot;mini-item-foot&quot;>
+            <div class=&quot;mini-price&quot;>41,00 zł</div>
+            <button class=&quot;mini-add&quot; type=&quot;button&quot; aria-label=&quot;Add to cart&quot;>+ <span class=&quot;bi-pri&quot; data-en=&quot;Add&quot; data-pl=&quot;Dodaj&quot;>Add</span></button>
+          </div>
         </div>
         <div class=&quot;mini-item&quot;>
           <div class=&quot;mini-emoji&quot; aria-hidden=&quot;true&quot;>
@@ -11179,7 +11266,10 @@
             <div class=&quot;mini-name&quot;>Margherita<span class=&quot;en&quot;>San Marzano DOP, fior di latte, basilico</span></div>
             <div class=&quot;mini-desc&quot;>La regina che non passa mai &amp;middot; the queen, always</div>
           </div>
-          <div class=&quot;mini-price&quot;>36,00 zł</div>
+          <div class=&quot;mini-item-foot&quot;>
+            <div class=&quot;mini-price&quot;>36,00 zł</div>
+            <button class=&quot;mini-add&quot; type=&quot;button&quot; aria-label=&quot;Add to cart&quot;>+ <span class=&quot;bi-pri&quot; data-en=&quot;Add&quot; data-pl=&quot;Dodaj&quot;>Add</span></button>
+          </div>
         </div>
         <div class=&quot;mini-item&quot;>
           <div class=&quot;mini-emoji&quot; aria-hidden=&quot;true&quot;>
@@ -11193,7 +11283,10 @@
             <div class=&quot;mini-name&quot;>Tartufata<span class=&quot;en&quot;>Crema di tartufo, fior di latte, prosciutto</span></div>
             <div class=&quot;mini-desc&quot;>Per le serate eleganti &amp;middot; for elegant nights</div>
           </div>
-          <div class=&quot;mini-price&quot;>54,00 zł</div>
+          <div class=&quot;mini-item-foot&quot;>
+            <div class=&quot;mini-price&quot;>54,00 zł</div>
+            <button class=&quot;mini-add&quot; type=&quot;button&quot; aria-label=&quot;Add to cart&quot;>+ <span class=&quot;bi-pri&quot; data-en=&quot;Add&quot; data-pl=&quot;Dodaj&quot;>Add</span></button>
+          </div>
         </div>
         <div class=&quot;mini-item&quot;>
           <div class=&quot;mini-emoji&quot; aria-hidden=&quot;true&quot;>
@@ -11208,7 +11301,10 @@
             <div class=&quot;mini-name&quot;>Vesuvio<span class=&quot;en&quot;>Pomodoro, salame, olive nere, capperi</span></div>
             <div class=&quot;mini-desc&quot;>Un'eruzione di sapori &amp;middot; an eruption of flavour</div>
           </div>
-          <div class=&quot;mini-price&quot;>45,00 zł</div>
+          <div class=&quot;mini-item-foot&quot;>
+            <div class=&quot;mini-price&quot;>45,00 zł</div>
+            <button class=&quot;mini-add&quot; type=&quot;button&quot; aria-label=&quot;Add to cart&quot;>+ <span class=&quot;bi-pri&quot; data-en=&quot;Add&quot; data-pl=&quot;Dodaj&quot;>Add</span></button>
+          </div>
         </div>
         <div class=&quot;mini-item&quot;>
           <div class=&quot;mini-emoji&quot; aria-hidden=&quot;true&quot;>
@@ -11240,7 +11336,10 @@
             <div class=&quot;mini-name&quot;>Penne all'Arrabbiata<span class=&quot;en&quot;>Pomodoro, aglio, peperoncino, basilico</span></div>
             <div class=&quot;mini-desc&quot;>Semplice, decisa &amp;middot; simple, decisive</div>
           </div>
-          <div class=&quot;mini-price&quot;>34,00 zł</div>
+          <div class=&quot;mini-item-foot&quot;>
+            <div class=&quot;mini-price&quot;>34,00 zł</div>
+            <button class=&quot;mini-add&quot; type=&quot;button&quot; aria-label=&quot;Add to cart&quot;>+ <span class=&quot;bi-pri&quot; data-en=&quot;Add&quot; data-pl=&quot;Dodaj&quot;>Add</span></button>
+          </div>
         </div>
         <div class=&quot;mini-item&quot;>
           <div class=&quot;mini-emoji&quot; aria-hidden=&quot;true&quot;>
@@ -11255,7 +11354,10 @@
             <div class=&quot;mini-name&quot;>Spaghetti Carbonara<span class=&quot;en&quot;>Guanciale, pecorino, tuorlo, pepe</span></div>
             <div class=&quot;mini-desc&quot;>Solo quattro ingredienti &amp;middot; just four ingredients</div>
           </div>
-          <div class=&quot;mini-price&quot;>38,00 zł</div>
+          <div class=&quot;mini-item-foot&quot;>
+            <div class=&quot;mini-price&quot;>38,00 zł</div>
+            <button class=&quot;mini-add&quot; type=&quot;button&quot; aria-label=&quot;Add to cart&quot;>+ <span class=&quot;bi-pri&quot; data-en=&quot;Add&quot; data-pl=&quot;Dodaj&quot;>Add</span></button>
+          </div>
         </div>
         <div class=&quot;mini-item&quot;>
           <div class=&quot;mini-emoji&quot; aria-hidden=&quot;true&quot;>
@@ -11269,7 +11371,10 @@
             <div class=&quot;mini-name&quot;>Ravioli al brasato<span class=&quot;en&quot;>Ragù di manzo brasato al Nebbiolo</span></div>
             <div class=&quot;mini-desc&quot;>Per le sere d'inverno &amp;middot; for winter evenings</div>
           </div>
-          <div class=&quot;mini-price&quot;>46,00 zł</div>
+          <div class=&quot;mini-item-foot&quot;>
+            <div class=&quot;mini-price&quot;>46,00 zł</div>
+            <button class=&quot;mini-add&quot; type=&quot;button&quot; aria-label=&quot;Add to cart&quot;>+ <span class=&quot;bi-pri&quot; data-en=&quot;Add&quot; data-pl=&quot;Dodaj&quot;>Add</span></button>
+          </div>
         </div>
         <div class=&quot;mini-item&quot;>
           <div class=&quot;mini-emoji&quot; aria-hidden=&quot;true&quot;>
@@ -11299,7 +11404,10 @@
             <div class=&quot;mini-name&quot;>Negroni Sbagliato<span class=&quot;en&quot;>Campari, vermouth rosso, Prosecco</span></div>
             <div class=&quot;mini-desc&quot;>L'errore più felice &amp;middot; the happiest mistake</div>
           </div>
-          <div class=&quot;mini-price&quot;>28,00 zł</div>
+          <div class=&quot;mini-item-foot&quot;>
+            <div class=&quot;mini-price&quot;>28,00 zł</div>
+            <button class=&quot;mini-add&quot; type=&quot;button&quot; aria-label=&quot;Add to cart&quot;>+ <span class=&quot;bi-pri&quot; data-en=&quot;Add&quot; data-pl=&quot;Dodaj&quot;>Add</span></button>
+          </div>
         </div>
         <div class=&quot;mini-item&quot;>
           <div class=&quot;mini-emoji&quot; aria-hidden=&quot;true&quot;>
@@ -11312,7 +11420,10 @@
             <div class=&quot;mini-name&quot;>Espresso<span class=&quot;en&quot;>Caffè Borbone, miscela napoletana</span></div>
             <div class=&quot;mini-desc&quot;>Stretto, come a Napoli &amp;middot; short, the Naples way</div>
           </div>
-          <div class=&quot;mini-price&quot;>9,00 zł</div>
+          <div class=&quot;mini-item-foot&quot;>
+            <div class=&quot;mini-price&quot;>9,00 zł</div>
+            <button class=&quot;mini-add&quot; type=&quot;button&quot; aria-label=&quot;Add to cart&quot;>+ <span class=&quot;bi-pri&quot; data-en=&quot;Add&quot; data-pl=&quot;Dodaj&quot;>Add</span></button>
+          </div>
         </div>
         <div class=&quot;mini-item&quot;>
           <div class=&quot;mini-emoji&quot; aria-hidden=&quot;true&quot;>
@@ -11325,7 +11436,10 @@
             <div class=&quot;mini-name&quot;>Limonata della casa<span class=&quot;en&quot;>Limone di Sorrento, zucchero di canna</span></div>
             <div class=&quot;mini-desc&quot;>Aspra, com'è giusto &amp;middot; tart, as it should be</div>
           </div>
-          <div class=&quot;mini-price&quot;>14,00 zł</div>
+          <div class=&quot;mini-item-foot&quot;>
+            <div class=&quot;mini-price&quot;>14,00 zł</div>
+            <button class=&quot;mini-add&quot; type=&quot;button&quot; aria-label=&quot;Add to cart&quot;>+ <span class=&quot;bi-pri&quot; data-en=&quot;Add&quot; data-pl=&quot;Dodaj&quot;>Add</span></button>
+          </div>
         </div>
         <div class=&quot;mini-item&quot;>
           <div class=&quot;mini-emoji&quot; aria-hidden=&quot;true&quot;>
@@ -11338,7 +11452,10 @@
             <div class=&quot;mini-name&quot;>Acqua frizzante<span class=&quot;en&quot;>San Pellegrino, 500ml</span></div>
             <div class=&quot;mini-desc&quot;>Le bollicine giuste &amp;middot; the right kind of fizz</div>
           </div>
-          <div class=&quot;mini-price&quot;>8,00 zł</div>
+          <div class=&quot;mini-item-foot&quot;>
+            <div class=&quot;mini-price&quot;>8,00 zł</div>
+            <button class=&quot;mini-add&quot; type=&quot;button&quot; aria-label=&quot;Add to cart&quot;>+ <span class=&quot;bi-pri&quot; data-en=&quot;Add&quot; data-pl=&quot;Dodaj&quot;>Add</span></button>
+          </div>
         </div>
       </div>
     </div>
@@ -12572,6 +12689,43 @@
   document.querySelectorAll('[data-open-cart]').forEach(function (b) {
     b.addEventListener('click', function () {
       openSheet();
+    });
+  });
+
+
+  // Wire location-page mini-add buttons to bump cart count + show toast
+  document.querySelectorAll('.mini-add').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      btn.classList.add('added');
+      var pri = btn.querySelector('.bi-pri');
+      if (pri) {
+        var lang = document.documentElement.getAttribute('data-lang') || 'en';
+        pri.textContent = lang === 'pl' ? 'Dodano' : 'Added';
+        pri.setAttribute('data-en', 'Added');
+        pri.setAttribute('data-pl', 'Dodano');
+      }
+      var cc = document.getElementById('nav-cart-count');
+      if (cc) {
+        var n = parseInt(cc.textContent, 10) || 0;
+        cc.textContent = String(n + 1);
+      }
+      var fc = document.getElementById('float-cart-count');
+      if (fc) {
+        var m = parseInt(fc.textContent, 10) || 0;
+        fc.textContent = String(m + 1);
+      }
+      toast('Aggiunto · added');
+      setTimeout(function () {
+        if (!btn.dataset.locked) {
+          btn.classList.remove('added');
+          if (pri) {
+            var lang2 = document.documentElement.getAttribute('data-lang') || 'en';
+            pri.textContent = lang2 === 'pl' ? 'Dodaj' : 'Add';
+            pri.setAttribute('data-en', 'Add');
+            pri.setAttribute('data-pl', 'Dodaj');
+          }
+        }
+      }, 1800);
     });
   });
 
