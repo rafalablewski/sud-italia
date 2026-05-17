@@ -6341,3 +6341,143 @@ select.pub-input {
 
 /* ============== HIDE LEGACY MOBILE TOPBAR HAMBURGER WHEN MOBILESHELL OWNS THE CHROME ============== */
 .v2-m-shell .v2-icon-btn.v2-mobile-only { display: none; }
+
+/* ============================================================
+   ADMIN v2 — MOBILE REFINEMENTS
+   The first pass leaned operational/dense; this layer tunes the
+   system toward Stripe / Linear restraint:
+     – flatter surfaces (no gradient cards, lighter shadows)
+     – softer brand emphasis (no glow on active tabs)
+     – lighter type ramp (drop hero from 32 → 26)
+     – tighter rhythm but more whitespace per card
+     – calmer status colors (less saturated soft variants)
+   Override-only — no structural changes.
+   ============================================================ */
+
+/* Surfaces — flatten the stat cards, drop the gradient */
+.v2-m-stat {
+  background: var(--surface-1);
+  box-shadow: none;
+  padding: 18px;
+  gap: 10px;
+  min-height: 132px;
+}
+
+/* Hero number — smaller, less assertive */
+.v2-m-stat-value { font-size: 26px; font-weight: 600; letter-spacing: -0.022em; }
+
+/* Stat icon — outline-only, no filled chip */
+.v2-m-stat-icon {
+  background: transparent;
+  width: 24px;
+  height: 24px;
+  color: var(--fg-subtle);
+}
+
+/* Page title — drop from 22px / 700 to 19px / 600 */
+.v2-m-page-title {
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+/* Section labels — even quieter */
+.v2-m-section-title {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--fg-subtle);
+  font-weight: 500;
+}
+
+/* Cards / lists — drop the elevation, thinner separators */
+.v2-m-list { box-shadow: none; }
+.v2-m-list li + li { border-top-color: color-mix(in oklab, var(--border) 70%, transparent); }
+.v2-m-list-row { min-height: 60px; padding: 13px 14px; }
+.v2-m-list-title { font-weight: 500; font-size: 14.5px; }
+.v2-m-list-sub { font-weight: 400; }
+.v2-m-list-metric { font-weight: 500; }
+
+/* Pills — softer, less candy */
+.v2-m-pill {
+  font-weight: 500;
+  letter-spacing: 0;
+  padding: 2px 8px;
+}
+
+/* Bottom nav — flat, no glow */
+.v2-m-bottom-nav {
+  background: var(--surface-1);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.v2-m-bottom-nav-item.is-active .v2-m-bottom-nav-icon { filter: none; }
+.v2-m-bottom-nav-label { font-weight: 500; letter-spacing: 0; }
+
+/* FAB — quieter shadow, no glow ring */
+.v2-m-bottom-fab {
+  box-shadow:
+    0 1px 2px rgba(0,0,0,0.25),
+    0 6px 16px color-mix(in oklab, var(--brand) 28%, transparent);
+}
+
+/* Topbar — drop the heavy brand square in favor of a subtler mark */
+.v2-m-brand {
+  background: transparent;
+  color: var(--brand);
+  width: auto;
+  height: 32px;
+  padding: 0 4px 0 0;
+}
+.v2-m-brand-mark {
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.03em;
+}
+
+/* Topbar title — slightly heavier than body, not bold */
+.v2-m-topbar-title { font-weight: 500; }
+
+/* Buttons — calmer */
+.v2-m-btn { font-weight: 500; letter-spacing: 0; }
+.v2-m-btn-primary {
+  box-shadow: 0 1px 2px color-mix(in oklab, var(--brand) 30%, transparent);
+}
+
+/* Chips — flatter */
+.v2-m-chip { font-weight: 500; }
+.v2-m-chip.is-active { font-weight: 500; }
+
+/* Segment control — less shadow on the active pill */
+.v2-m-segment-opt.is-active { box-shadow: none; border: 1px solid var(--border); }
+
+/* Sheets — softer header, more breathing room */
+.v2-m-sheet-title { font-weight: 600; font-size: 17px; }
+.v2-m-sheet-header { padding-bottom: 14px; }
+.v2-m-sheet-body { gap: 16px; padding: 16px 18px; }
+
+/* Notifications row — flatter, lighter unread highlight */
+.v2-m-notif-row {
+  background: transparent;
+  border: 1px solid var(--border);
+}
+.v2-m-notif-row.is-unread {
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+.v2-m-notif-title { font-weight: 500; }
+
+/* Page header gets a touch more breathing room */
+.v2-m-page-header { padding: 4px 0 10px; }
+.v2-m-page-body { gap: 18px; }
+
+/* Drill-in tiles in the dashboard — strip down */
+.v2-m-page-body .card,
+.v2-m-page-body [class*="card"] { box-shadow: none; }
+
+/* Stat-row dots — softer */
+.v2-m-statrow-dots span.is-active { transform: scale(1.3); }
+
+/* Light theme — even gentler shadows */
+[data-admin-theme="light"] .v2-m-stat,
+[data-admin-theme="light"] .v2-m-list { box-shadow: none; }
+[data-admin-theme="light"] .v2-m-bottom-nav { background: var(--surface-1); }

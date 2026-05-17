@@ -66,15 +66,15 @@ html, body {
 .topbar-left { display: inline-flex; gap: 10px; align-items: center; }
 .topbar-right { display: inline-flex; gap: 4px; align-items: center; }
 .brand-mark {
-  width: 32px; height: 32px;
-  background: var(--brand); color: var(--brand-fg);
-  border-radius: 9px;
-  font-size: 12px; font-weight: 700;
-  display: inline-flex; align-items: center; justify-content: center;
-  letter-spacing: -0.02em;
+  width: auto; height: 32px;
+  background: transparent; color: var(--brand);
+  font-size: 13px; font-weight: 600;
+  display: inline-flex; align-items: center;
+  letter-spacing: 0.03em;
+  padding-right: 4px;
 }
 .title {
-  font-size: 16px; font-weight: 600; letter-spacing: -0.01em;
+  font-size: 16px; font-weight: 500; letter-spacing: -0.01em;
 }
 .iconbtn {
   width: 40px; height: 40px;
@@ -114,7 +114,7 @@ html, body {
   backdrop-filter: blur(8px);
 }
 .page-title {
-  font-size: 22px; font-weight: 700; letter-spacing: -0.018em; margin: 0;
+  font-size: 19px; font-weight: 600; letter-spacing: -0.015em; margin: 0;
 }
 .page-subtitle { font-size: 12px; color: var(--fg-subtle); margin-top: 2px; }
 .section-label {
@@ -138,11 +138,11 @@ html, body {
 .stat {
   flex: 0 0 100%;
   scroll-snap-align: center;
-  background: linear-gradient(180deg, var(--surface-1), var(--surface-2));
+  background: var(--surface-1);
   border: 1px solid var(--border);
   border-radius: 14px;
-  padding: 14px;
-  display: flex; flex-direction: column; gap: 8px;
+  padding: 18px;
+  display: flex; flex-direction: column; gap: 10px;
   min-height: 132px;
 }
 .stat-top { display: flex; align-items: center; justify-content: space-between; }
@@ -151,13 +151,15 @@ html, body {
   text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500;
 }
 .stat-value {
-  font-size: 32px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.05;
+  font-size: 26px; font-weight: 600; letter-spacing: -0.022em; line-height: 1.05;
   font-variant-numeric: tabular-nums;
 }
 .stat-icon {
-  width: 30px; height: 30px; border-radius: 9px;
+  width: 24px; height: 24px;
   display: inline-flex; align-items: center; justify-content: center;
-  font-size: 15px;
+  font-size: 13px;
+  color: var(--fg-subtle);
+  background: transparent !important;
 }
 .stat-bottom { display: flex; align-items: center; gap: 8px; }
 .delta {
@@ -189,7 +191,7 @@ html, body {
   font-size: 15px; flex-shrink: 0;
 }
 .row-stack { display: flex; flex-direction: column; min-width: 0; flex: 1; gap: 2px; }
-.row-title { font-size: 14.5px; font-weight: 600; letter-spacing: -0.01em; }
+.row-title { font-size: 14.5px; font-weight: 500; letter-spacing: -0.01em; }
 .row-sub { font-size: 12px; color: var(--fg-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .row-trail { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .metric { font-size: 14.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -266,8 +268,7 @@ html, body {
 .bottom-nav {
   position: absolute; left: 0; right: 0; bottom: 0;
   height: 76px;
-  background: color-mix(in oklab, var(--surface-1) 92%, transparent);
-  backdrop-filter: blur(14px);
+  background: var(--surface-1);
   border-top: 1px solid var(--border);
   display: grid;
   grid-template-columns: 1fr 1fr 72px 1fr 1fr;
@@ -280,9 +281,7 @@ html, body {
 }
 .nav-tab .icon { font-size: 20px; }
 .nav-tab.active { color: var(--brand); }
-.nav-tab.active .icon {
-  filter: drop-shadow(0 0 8px rgba(200,16,46,0.6));
-}
+.nav-tab.active .icon { filter: none; }
 .nav-fab {
   justify-self: center; align-self: center;
   width: 52px; height: 52px;
@@ -291,7 +290,9 @@ html, body {
   color: var(--brand-fg);
   display: inline-flex; align-items: center; justify-content: center;
   font-size: 22px;
-  box-shadow: 0 4px 18px rgba(200,16,46,0.5);
+  box-shadow:
+    0 1px 2px rgba(0,0,0,0.25),
+    0 6px 16px rgba(200,16,46,0.28);
 }
 
 .empty {

@@ -26,10 +26,15 @@ import {
 } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
 import { formatSlotDate } from "@/lib/format";
+import dynamic from "next/dynamic";
 import { useAdminLocation } from "./v2/LocationContext";
 import { useIsMobile } from "./v2/mobile";
-import { MobileOrders } from "./mobile/MobileOrders";
 import { useToast } from "./v2/ui/Toast";
+
+const MobileOrders = dynamic(
+  () => import("./mobile/MobileOrders").then((m) => m.MobileOrders),
+  { ssr: false },
+);
 import {
   Badge,
   Button,
