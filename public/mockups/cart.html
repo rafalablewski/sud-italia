@@ -7862,6 +7862,50 @@
   }
 
   /* ============================================================
+     LANGUAGE PICKER (primary language; Italian is always 2nd)
+     ============================================================ */
+  .lang-picker {
+    display: inline-flex; align-items: center;
+    background: rgba(184, 92, 56, 0.06);
+    border: 1px solid rgba(184, 92, 56, 0.25);
+    border-radius: 999px; padding: 2px; gap: 2px;
+  }
+  .lang-opt {
+    appearance: none; border: 0; background: transparent;
+    font-family: var(--sans, var(--serif-body));
+    font-size: 11px; font-weight: 600; letter-spacing: 0.12em;
+    color: var(--muted); padding: 5px 10px; border-radius: 999px;
+    cursor: pointer; transition: background 0.16s ease, color 0.16s ease; line-height: 1;
+  }
+  .lang-opt:hover { color: var(--terracotta-dark); }
+  .lang-opt.active {
+    background: var(--terracotta); color: #FFF7E8;
+    box-shadow: 0 1px 2px rgba(122, 43, 43, 0.15);
+  }
+  @media (max-width: 640px) { .lang-opt { padding: 5px 8px; font-size: 10px; } }
+
+  /* ============================================================
+     BILINGUAL TEXT SYSTEM
+     ============================================================ */
+  .bi { display: inline; }
+  .bi-sep { display: inline-block; margin: 0 0.4em; opacity: 0.4; font-weight: 400; }
+  .bi-sec {
+    font-family: var(--serif-display); font-style: italic; color: var(--muted);
+    font-weight: 400; font-size: 0.82em; letter-spacing: 0;
+    text-transform: none; opacity: 0.78;
+  }
+  .bi-stack { display: flex; flex-direction: column; gap: 4px; }
+  .bi-stack .bi-sec {
+    font-size: 0.7em; font-style: italic; color: var(--muted);
+    letter-spacing: 0.04em; text-transform: none; opacity: 0.72;
+  }
+  .sr-only {
+    position: absolute; width: 1px; height: 1px;
+    padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0);
+    white-space: nowrap; border: 0;
+  }
+
+  /* ============================================================
      HERO
      ============================================================ */
   .hero {
@@ -9620,6 +9664,7 @@
 </style>
 </head>
 <body>
+<span id=&quot;lang-live&quot; class=&quot;sr-only&quot; role=&quot;status&quot; aria-live=&quot;polite&quot;></span>
 
 <!-- ============================================================
      STICKY TOP NAV
@@ -9639,19 +9684,24 @@
       </span>
       <div>
         <div class=&quot;brand-name&quot;>Sud Italia</div>
-        <div class=&quot;brand-sub&quot;>pizza napoletana · dal 2019</div>
+        <div class=&quot;brand-sub&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Neapolitan pizza&quot; data-pl=&quot;Pizza neapolitańska&quot;>Neapolitan pizza</span> · <span class=&quot;bi-sec&quot;>pizza napoletana</span> · <span class=&quot;bi-pri&quot; data-en=&quot;since 2019&quot; data-pl=&quot;od 2019&quot;>since 2019</span></div>
       </div>
     </a>
 
     <ul class=&quot;nav-links&quot;>
-      <li><a href=&quot;#menu&quot;>Menù <span class=&quot;it&quot;>menu</span></a></li>
-      <li><a href=&quot;#bundles&quot;>Menù del giorno <span class=&quot;it&quot;>bundles</span></a></li>
-      <li><a href=&quot;#locations&quot;>Botteghe <span class=&quot;it&quot;>locations</span></a></li>
-      <li><a href=&quot;#famiglia&quot;>La famiglia <span class=&quot;it&quot;>story</span></a></li>
-      <li><a href=&quot;#soci&quot;>Soci <span class=&quot;it&quot;>rewards</span></a></li>
+      <li><a href=&quot;#menu&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Menu&quot; data-pl=&quot;Menu&quot;>Menu</span> <span class=&quot;it bi-sec&quot;>Menù</span></a></li>
+      <li><a href=&quot;#bundles&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Bundles&quot; data-pl=&quot;Zestawy&quot;>Bundles</span> <span class=&quot;it bi-sec&quot;>Menù del giorno</span></a></li>
+      <li><a href=&quot;#locations&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Locations&quot; data-pl=&quot;Lokalizacje&quot;>Locations</span> <span class=&quot;it bi-sec&quot;>Botteghe</span></a></li>
+      <li><a href=&quot;#famiglia&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Story&quot; data-pl=&quot;Historia&quot;>Story</span> <span class=&quot;it bi-sec&quot;>La famiglia</span></a></li>
+      <li><a href=&quot;#soci&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Rewards&quot; data-pl=&quot;Nagrody&quot;>Rewards</span> <span class=&quot;it bi-sec&quot;>Soci</span></a></li>
     </ul>
 
     <div class=&quot;nav-right&quot;>
+      <!-- Language picker (primary lang first; Italian is always second on the page) -->
+      <div class=&quot;lang-picker&quot; role=&quot;radiogroup&quot; aria-label=&quot;Primary language&quot;>
+        <button class=&quot;lang-opt active&quot; type=&quot;button&quot; data-set-lang=&quot;en&quot; role=&quot;radio&quot; aria-checked=&quot;true&quot;>EN</button>
+        <button class=&quot;lang-opt&quot; type=&quot;button&quot; data-set-lang=&quot;pl&quot; role=&quot;radio&quot; aria-checked=&quot;false&quot;>PL</button>
+      </div>
       <button class=&quot;nav-cart&quot; id=&quot;nav-cart-btn&quot; aria-label=&quot;Open cart&quot;>
         <svg width=&quot;18&quot; height=&quot;18&quot; viewBox=&quot;0 0 20 20&quot; fill=&quot;none&quot; aria-hidden=&quot;true&quot;>
           <path d=&quot;M3 5 L17 5 L15 14 L5 14 Z&quot; stroke=&quot;#3D2817&quot; stroke-width=&quot;1.5&quot; stroke-linejoin=&quot;round&quot;/>
@@ -9660,7 +9710,7 @@
           <circle cx=&quot;13&quot; cy=&quot;17&quot; r=&quot;1.2&quot; fill=&quot;#3D2817&quot;/>
           <path d=&quot;M6 8 L14 8 M6 11 L14 11&quot; stroke=&quot;#B85C38&quot; stroke-width=&quot;1&quot; opacity=&quot;0.6&quot;/>
         </svg>
-        <span>carrello</span>
+        <span class=&quot;bi-pri&quot; data-en=&quot;Cart&quot; data-pl=&quot;Koszyk&quot;>Cart</span>
         <span class=&quot;cart-count&quot; id=&quot;nav-cart-count&quot;>3</span>
       </button>
       <button class=&quot;nav-mobile-btn&quot; id=&quot;nav-mobile-btn&quot; aria-label=&quot;Open menu&quot;>
@@ -9671,11 +9721,11 @@
     </div>
   </div>
   <div class=&quot;nav-mobile-menu&quot; id=&quot;nav-mobile-menu&quot;>
-    <a href=&quot;#menu&quot;>Menù <span class=&quot;it&quot;>menu</span></a>
-    <a href=&quot;#bundles&quot;>Menù del giorno <span class=&quot;it&quot;>bundles</span></a>
-    <a href=&quot;#locations&quot;>Botteghe <span class=&quot;it&quot;>locations</span></a>
-    <a href=&quot;#famiglia&quot;>La famiglia <span class=&quot;it&quot;>story</span></a>
-    <a href=&quot;#soci&quot;>Soci <span class=&quot;it&quot;>rewards</span></a>
+    <a href=&quot;#menu&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Menu&quot; data-pl=&quot;Menu&quot;>Menu</span> <span class=&quot;it bi-sec&quot;>Menù</span></a>
+    <a href=&quot;#bundles&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Bundles&quot; data-pl=&quot;Zestawy&quot;>Bundles</span> <span class=&quot;it bi-sec&quot;>Menù del giorno</span></a>
+    <a href=&quot;#locations&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Locations&quot; data-pl=&quot;Lokalizacje&quot;>Locations</span> <span class=&quot;it bi-sec&quot;>Botteghe</span></a>
+    <a href=&quot;#famiglia&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Story&quot; data-pl=&quot;Historia&quot;>Story</span> <span class=&quot;it bi-sec&quot;>La famiglia</span></a>
+    <a href=&quot;#soci&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Rewards&quot; data-pl=&quot;Nagrody&quot;>Rewards</span> <span class=&quot;it bi-sec&quot;>Soci</span></a>
   </div>
 </nav>
 
@@ -9734,10 +9784,10 @@
     <div class=&quot;hero-inner&quot;>
       <span class=&quot;hero-kicker&quot;>
         <span class=&quot;dot&quot; aria-hidden=&quot;true&quot;></span>
-        Aperto ora · open now · Kraków · Warszawa
+        <span class=&quot;bi-pri&quot; data-en=&quot;Open now&quot; data-pl=&quot;Otwarte teraz&quot;>Open now</span> · <span class=&quot;bi-sec&quot;>aperto ora</span> · Kraków · Warszawa
       </span>
-      <h1>La pizza, <span class=&quot;it&quot;>fatta come a Napoli</span></h1>
-      <div class=&quot;hero-en&quot;>Pizza the way it's made in Napoli</div>
+      <h1><span class=&quot;bi-pri&quot; data-en=&quot;Pizza, the way it's made in Naples&quot; data-pl=&quot;Pizza, tak jak robi się w Neapolu&quot;>Pizza, the way it's made in Naples</span></h1>
+      <div class=&quot;hero-en&quot;><span class=&quot;it&quot;>La pizza, fatta come a Napoli</span></div>
       <svg class=&quot;hero-underline&quot; width=&quot;220&quot; height=&quot;18&quot; viewBox=&quot;0 0 220 18&quot; fill=&quot;none&quot; aria-hidden=&quot;true&quot;>
         <path d=&quot;M4 11 C 40 4, 80 16, 110 9 S 180 4, 216 12&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;2&quot; stroke-linecap=&quot;round&quot; fill=&quot;none&quot;/>
         <circle cx=&quot;216&quot; cy=&quot;12&quot; r=&quot;1.8&quot; fill=&quot;currentColor&quot;/>
@@ -9754,21 +9804,21 @@
             <path d=&quot;M10 18 C 6 12, 3 9, 3 6 A 7 7 0 0 1 17 6 C 17 9, 14 12, 10 18 Z&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.6&quot; fill=&quot;rgba(244,245,240,0.15)&quot;/>
             <circle cx=&quot;10&quot; cy=&quot;6.5&quot; r=&quot;2.4&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.5&quot; fill=&quot;none&quot;/>
           </svg>
-          Ordina a Kraków <span class=&quot;it&quot;>· Order in Kraków</span>
+          <span class=&quot;bi-pri&quot; data-en=&quot;Order in Kraków&quot; data-pl=&quot;Zamów w Krakowie&quot;>Order in Kraków</span> <span class=&quot;it bi-sec&quot;>· Ordina a Kraków</span>
         </button>
         <button class=&quot;hero-cta&quot; data-loc=&quot;warszawa&quot; data-route=&quot;warszawa&quot;>
           <svg width=&quot;18&quot; height=&quot;18&quot; viewBox=&quot;0 0 20 20&quot; fill=&quot;none&quot; aria-hidden=&quot;true&quot;>
             <path d=&quot;M10 18 C 6 12, 3 9, 3 6 A 7 7 0 0 1 17 6 C 17 9, 14 12, 10 18 Z&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.6&quot; fill=&quot;rgba(244,245,240,0.15)&quot;/>
             <circle cx=&quot;10&quot; cy=&quot;6.5&quot; r=&quot;2.4&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.5&quot; fill=&quot;none&quot;/>
           </svg>
-          Ordina a Warszawa <span class=&quot;it&quot;>· Order in Warszawa</span>
+          <span class=&quot;bi-pri&quot; data-en=&quot;Order in Warszawa&quot; data-pl=&quot;Zamów w Warszawie&quot;>Order in Warszawa</span> <span class=&quot;it bi-sec&quot;>· Ordina a Warszawa</span>
         </button>
         <button class=&quot;hero-cta ghost&quot; id=&quot;story-btn&quot;>
           <svg width=&quot;18&quot; height=&quot;18&quot; viewBox=&quot;0 0 20 20&quot; fill=&quot;none&quot; aria-hidden=&quot;true&quot;>
             <path d=&quot;M4 3 L16 3 L16 17 L4 17 Z&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.5&quot; fill=&quot;none&quot;/>
             <path d=&quot;M7 7 L13 7 M7 10 L13 10 M7 13 L11 13&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.3&quot; stroke-linecap=&quot;round&quot;/>
           </svg>
-          La nostra storia <span class=&quot;it&quot;>· Our Story</span>
+          <span class=&quot;bi-pri&quot; data-en=&quot;Our Story&quot; data-pl=&quot;Nasza historia&quot;>Our Story</span> <span class=&quot;it bi-sec&quot;>· La nostra storia</span>
         </button>
       </div>
 
@@ -9782,9 +9832,9 @@
   <section class=&quot;ps alt&quot; id=&quot;locations&quot;>
     <div class=&quot;page-inner&quot;>
       <div class=&quot;ps-head&quot;>
-        <div class=&quot;ps-eyebrow&quot;>Le botteghe · the trucks</div>
-        <h2 class=&quot;ps-title&quot;>Due indirizzi, <span class=&quot;it&quot;>una sola famiglia</span></h2>
-        <p class=&quot;ps-sub&quot;>Two trucks, one kitchen, one nonna who taught us the dough.</p>
+        <div class=&quot;ps-eyebrow&quot;><span class=&quot;bi-pri&quot; data-en=&quot;The trucks&quot; data-pl=&quot;Nasze lokale&quot;>The trucks</span> · <span class=&quot;bi-sec&quot;>le botteghe</span></div>
+        <h2 class=&quot;ps-title&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Two addresses,&quot; data-pl=&quot;Dwa adresy,&quot;>Two addresses,</span> <span class=&quot;it&quot;>one family</span></h2>
+        <p class=&quot;ps-sub bi-pri&quot; data-en=&quot;Two trucks, one kitchen, one nonna who taught us the dough.&quot; data-pl=&quot;Dwa lokale, jedna kuchnia, jedna nonna, która nauczyła nas ciasta.&quot;>Two trucks, one kitchen, one nonna who taught us the dough.</p>
       </div>
 
       <div class=&quot;locs&quot;>
@@ -9822,7 +9872,7 @@
           <div class=&quot;loc-body&quot;>
             <div class=&quot;loc-head&quot;>
               <div class=&quot;loc-name&quot;>Kraków</div>
-              <span class=&quot;loc-status&quot;><span class=&quot;terra-dot&quot;></span> Aperto ora · open</span>
+              <span class=&quot;loc-status&quot;><span class=&quot;terra-dot&quot;></span> <span class=&quot;bi-pri&quot; data-en=&quot;Open now&quot; data-pl=&quot;Otwarte teraz&quot;>Open now</span> <span class=&quot;it bi-sec&quot;>· aperto ora</span></span>
             </div>
             <div class=&quot;loc-info&quot;>
               <div class=&quot;loc-info-row&quot;>
@@ -9837,13 +9887,13 @@
                   <circle cx=&quot;10&quot; cy=&quot;10&quot; r=&quot;7.5&quot; stroke=&quot;#B85C38&quot; stroke-width=&quot;1.5&quot; fill=&quot;none&quot;/>
                   <path d=&quot;M10 5 L10 10 L13.5 12.5&quot; stroke=&quot;#B85C38&quot; stroke-width=&quot;1.5&quot; stroke-linecap=&quot;round&quot;/>
                 </svg>
-                <div>Lun–Gio 11:00–21:00 · Ven–Sab 11:00–23:00 · Dom 12:00–20:00</div>
+                <div><span class=&quot;bi-pri&quot; data-en=&quot;Mon–Thu 11:00–21:00 · Fri–Sat 11:00–23:00 · Sun 12:00–20:00&quot; data-pl=&quot;Pon–Czw 11:00–21:00 · Pt–Sob 11:00–23:00 · Nd 12:00–20:00&quot;>Mon–Thu 11:00–21:00 · Fri–Sat 11:00–23:00 · Sun 12:00–20:00</span> <span class=&quot;it bi-sec&quot;>Lun–Gio · Ven–Sab · Dom</span></div>
               </div>
             </div>
-            <p class=&quot;loc-desc&quot;>Autentica pizza napoletana e pasta in pieno Rynek — accanto alla fontana.</p>
-            <p class=&quot;loc-note&quot;>Da Giuseppe e famiglia · cooked by Giuseppe and family</p>
+            <p class=&quot;loc-desc&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Authentic Neapolitan pizza &amp; pasta right on the Rynek — next to the fountain.&quot; data-pl=&quot;Autentyczna pizza neapolitańska i makarony w sercu Rynku — przy fontannie.&quot;>Authentic Neapolitan pizza &amp; pasta right on the Rynek — next to the fountain.</span></p>
+            <p class=&quot;loc-note&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Cooked by Giuseppe and family&quot; data-pl=&quot;Gotuje Giuseppe z rodziną&quot;>Cooked by Giuseppe and family</span> <span class=&quot;it bi-sec&quot;>· da Giuseppe e famiglia</span></p>
             <a class=&quot;loc-cta&quot; href=&quot;#/locations/krakow&quot; data-route=&quot;krakow&quot;>
-              Vedi il menù &amp; ordina <span class=&quot;it&quot;>· View Menu &amp; Order</span> &amp;rarr;
+              <span class=&quot;bi-pri&quot; data-en=&quot;View Menu &amp; Order&quot; data-pl=&quot;Zobacz menu i zamów&quot;>View Menu &amp; Order</span> <span class=&quot;it bi-sec&quot;>· vedi il menù &amp; ordina</span> &amp;rarr;
             </a>
           </div>
         </article>
@@ -9886,7 +9936,7 @@
           <div class=&quot;loc-body&quot;>
             <div class=&quot;loc-head&quot;>
               <div class=&quot;loc-name&quot;>Warszawa</div>
-              <span class=&quot;loc-status&quot;><span class=&quot;terra-dot&quot;></span> Aperto ora · open</span>
+              <span class=&quot;loc-status&quot;><span class=&quot;terra-dot&quot;></span> <span class=&quot;bi-pri&quot; data-en=&quot;Open now&quot; data-pl=&quot;Otwarte teraz&quot;>Open now</span> <span class=&quot;it bi-sec&quot;>· aperto ora</span></span>
             </div>
             <div class=&quot;loc-info&quot;>
               <div class=&quot;loc-info-row&quot;>
@@ -9901,13 +9951,13 @@
                   <circle cx=&quot;10&quot; cy=&quot;10&quot; r=&quot;7.5&quot; stroke=&quot;#B85C38&quot; stroke-width=&quot;1.5&quot; fill=&quot;none&quot;/>
                   <path d=&quot;M10 5 L10 10 L13.5 12.5&quot; stroke=&quot;#B85C38&quot; stroke-width=&quot;1.5&quot; stroke-linecap=&quot;round&quot;/>
                 </svg>
-                <div>Lun–Gio 11:00–22:00 · Ven–Sab 11:00–24:00 · Dom 12:00–21:00</div>
+                <div><span class=&quot;bi-pri&quot; data-en=&quot;Mon–Thu 11:00–22:00 · Fri–Sat 11:00–24:00 · Sun 12:00–21:00&quot; data-pl=&quot;Pon–Czw 11:00–22:00 · Pt–Sob 11:00–24:00 · Nd 12:00–21:00&quot;>Mon–Thu 11:00–22:00 · Fri–Sat 11:00–24:00 · Sun 12:00–21:00</span> <span class=&quot;it bi-sec&quot;>Lun–Gio · Ven–Sab · Dom</span></div>
               </div>
             </div>
-            <p class=&quot;loc-desc&quot;>Una Vespa, un forno, un quartiere — Śródmieście incontra il Vesuvio.</p>
-            <p class=&quot;loc-note&quot;>Da Anna pizzaiola · cooked by Anna and crew</p>
+            <p class=&quot;loc-desc&quot;><span class=&quot;bi-pri&quot; data-en=&quot;A Vespa, an oven, a neighborhood — Śródmieście meets Vesuvius.&quot; data-pl=&quot;Vespa, piec, dzielnica — Śródmieście spotyka Wezuwiusz.&quot;>A Vespa, an oven, a neighborhood — Śródmieście meets Vesuvius.</span></p>
+            <p class=&quot;loc-note&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Cooked by Anna and crew&quot; data-pl=&quot;Pizzę robi Anna z ekipą&quot;>Cooked by Anna and crew</span> <span class=&quot;it bi-sec&quot;>· da Anna pizzaiola</span></p>
             <a class=&quot;loc-cta&quot; href=&quot;#/locations/warszawa&quot; data-route=&quot;warszawa&quot;>
-              Vedi il menù &amp; ordina <span class=&quot;it&quot;>· View Menu &amp; Order</span> &amp;rarr;
+              <span class=&quot;bi-pri&quot; data-en=&quot;View Menu &amp; Order&quot; data-pl=&quot;Zobacz menu i zamów&quot;>View Menu &amp; Order</span> <span class=&quot;it bi-sec&quot;>· vedi il menù &amp; ordina</span> &amp;rarr;
             </a>
           </div>
         </article>
@@ -9922,9 +9972,9 @@
   <section class=&quot;ps&quot; id=&quot;bundles&quot;>
     <div class=&quot;page-inner&quot;>
       <div class=&quot;ps-head&quot;>
-        <div class=&quot;ps-eyebrow&quot;>Menù del giorno · bundles</div>
-        <h2 class=&quot;ps-title&quot;><span class=&quot;it&quot;>Scegli un menù.</span> Skip the maths.</h2>
-        <p class=&quot;ps-sub&quot;>Four ways to dine well — <em>Famiglia</em> for friends, <em>Pranzo</em> for the noon rush, <em>Spicchio</em> for the late-night crew, <em>Il Classico</em> if you're building dinner the proper way.</p>
+        <div class=&quot;ps-eyebrow&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Today's bundles&quot; data-pl=&quot;Dzisiejsze zestawy&quot;>Today's bundles</span> · <span class=&quot;bi-sec&quot;>menù del giorno</span></div>
+        <h2 class=&quot;ps-title&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Pick a bundle.&quot; data-pl=&quot;Wybierz zestaw.&quot;>Pick a bundle.</span> <span class=&quot;bi-pri&quot; data-en=&quot;Skip the maths.&quot; data-pl=&quot;Bez liczenia.&quot;>Skip the maths.</span></h2>
+        <p class=&quot;ps-sub&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Four ways to dine well —&quot; data-pl=&quot;Cztery sposoby, by zjeść dobrze —&quot;>Four ways to dine well —</span> <em>Famiglia</em> <span class=&quot;bi-pri&quot; data-en=&quot;for friends,&quot; data-pl=&quot;dla znajomych,&quot;>for friends,</span> <em>Pranzo</em> <span class=&quot;bi-pri&quot; data-en=&quot;for the noon rush,&quot; data-pl=&quot;na lunch,&quot;>for the noon rush,</span> <em>Spicchio</em> <span class=&quot;bi-pri&quot; data-en=&quot;for the late-night crew,&quot; data-pl=&quot;dla nocnych marków,&quot;>for the late-night crew,</span> <em>Il Classico</em> <span class=&quot;bi-pri&quot; data-en=&quot;if you're building dinner the proper way.&quot; data-pl=&quot;jeśli budujesz kolację po włosku.&quot;>if you're building dinner the proper way.</span></p>
       </div>
 
       <div class=&quot;bundles&quot;>
@@ -9941,13 +9991,13 @@
               <path d=&quot;M18 21 C 19 19, 21 18, 23 18 C 26 18, 29 21, 29 26&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.6&quot; fill=&quot;none&quot;/>
             </svg>
           </div>
-          <span class=&quot;bundle-tag&quot;>per 2–3 persone</span>
-          <h3 class=&quot;bundle-name&quot;>Famiglia<span class=&quot;en&quot;>Family Pack</span></h3>
+          <span class=&quot;bundle-tag&quot;><span class=&quot;bi-pri&quot; data-en=&quot;for 2–3 people&quot; data-pl=&quot;dla 2–3 osób&quot;>for 2–3 people</span> <span class=&quot;bi-sec&quot;>· per 2–3 persone</span></span>
+          <h3 class=&quot;bundle-name&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Family Pack&quot; data-pl=&quot;Pakiet Rodzinny&quot;>Family Pack</span><span class=&quot;en bi-sec&quot;>Famiglia</span></h3>
           <div class=&quot;bundle-price&quot;>
             <span class=&quot;now num&quot;>99,00 zł</span>
             <span class=&quot;was num&quot;>103,60 zł</span>
           </div>
-          <p class=&quot;bundle-desc&quot;>Tre <em>Margherite</em> + 1L di <em>limonata</em>. Prezzo unico, niente conti. Una coppia di amici, sistemati.</p>
+          <p class=&quot;bundle-desc&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Three Margheritas + 1L of limonata. Set price, no maths. A bunch of friends — sorted.&quot; data-pl=&quot;Trzy Margherity + 1L limonaty. Stała cena, bez liczenia. Paczka znajomych — załatwione.&quot;>Three Margheritas + 1L of limonata. Set price, no maths. A bunch of friends — sorted.</span></p>
         </article>
 
         <!-- Pranzo -->
@@ -9962,13 +10012,13 @@
               <path d=&quot;M9 23 C 12 25, 20 25, 23 23&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.4&quot; fill=&quot;none&quot; opacity=&quot;0.5&quot;/>
             </svg>
           </div>
-          <span class=&quot;bundle-tag&quot;>11:00–14:00 soltanto</span>
-          <h3 class=&quot;bundle-name&quot;>Pranzo<span class=&quot;en&quot;>Pizza Lunch+</span></h3>
+          <span class=&quot;bundle-tag&quot;><span class=&quot;bi-pri&quot; data-en=&quot;11:00–14:00 only&quot; data-pl=&quot;tylko 11:00–14:00&quot;>11:00–14:00 only</span> <span class=&quot;bi-sec&quot;>· soltanto</span></span>
+          <h3 class=&quot;bundle-name&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Pizza Lunch+&quot; data-pl=&quot;Pizza Lunch+&quot;>Pizza Lunch+</span><span class=&quot;en bi-sec&quot;>Pranzo</span></h3>
           <div class=&quot;bundle-price&quot;>
             <span class=&quot;now num&quot;>44,90 zł</span>
             <span class=&quot;was num&quot;>54,85 zł</span>
           </div>
-          <p class=&quot;bundle-desc&quot;>Pizza + bibita + un dolce <em>premium</em> a prezzo fisso. Per chi mangia in piedi, ma mangia bene.</p>
+          <p class=&quot;bundle-desc&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Pizza + drink + a premium dolce at a flat price. For those who eat standing up — but eat well.&quot; data-pl=&quot;Pizza + napój + dolce premium w stałej cenie. Dla tych, co jedzą na stojąco — ale dobrze.&quot;>Pizza + drink + a premium dolce at a flat price. For those who eat standing up — but eat well.</span></p>
         </article>
 
         <!-- Spicchio Notturno -->
@@ -9982,13 +10032,13 @@
               <circle cx=&quot;6&quot; cy=&quot;17&quot; r=&quot;0.6&quot; fill=&quot;currentColor&quot;/>
             </svg>
           </div>
-          <span class=&quot;bundle-tag&quot;>dopo le 21:00</span>
-          <h3 class=&quot;bundle-name&quot;>Spicchio Notturno<span class=&quot;en&quot;>Late-Night Slice</span></h3>
+          <span class=&quot;bundle-tag&quot;><span class=&quot;bi-pri&quot; data-en=&quot;after 21:00&quot; data-pl=&quot;po 21:00&quot;>after 21:00</span> <span class=&quot;bi-sec&quot;>· dopo le 21:00</span></span>
+          <h3 class=&quot;bundle-name&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Late-Night Slice&quot; data-pl=&quot;Nocna Pizza&quot;>Late-Night Slice</span><span class=&quot;en bi-sec&quot;>Spicchio Notturno</span></h3>
           <div class=&quot;bundle-price&quot;>
             <span class=&quot;now num&quot;>16,90 zł</span>
             <span class=&quot;was num&quot;>17,80 zł</span>
           </div>
-          <p class=&quot;bundle-desc&quot;>Una fetta riscaldata in 60 secondi nel forno a legna + bibita. Per chi rientra tardi.</p>
+          <p class=&quot;bundle-desc&quot;><span class=&quot;bi-pri&quot; data-en=&quot;A slice reheated in 60 seconds in the wood-fired oven + a drink. For those who come home late.&quot; data-pl=&quot;Kawałek odgrzewany w 60 sekund w piecu opalanym drewnem + napój. Dla tych, co wracają późno.&quot;>A slice reheated in 60 seconds in the wood-fired oven + a drink. For those who come home late.</span></p>
         </article>
 
         <!-- Il Classico -->
@@ -10002,19 +10052,19 @@
                     stroke=&quot;currentColor&quot; stroke-width=&quot;1&quot; fill=&quot;currentColor&quot; fill-opacity=&quot;0.3&quot; stroke-linejoin=&quot;round&quot;/>
             </svg>
           </div>
-          <span class=&quot;bundle-tag&quot;>automatico</span>
-          <h3 class=&quot;bundle-name&quot;>Il Classico<span class=&quot;en&quot;>Save 10%</span></h3>
+          <span class=&quot;bundle-tag&quot;><span class=&quot;bi-pri&quot; data-en=&quot;automatic&quot; data-pl=&quot;automatyczny&quot;>automatic</span> <span class=&quot;bi-sec&quot;>· automatico</span></span>
+          <h3 class=&quot;bundle-name&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Italian Classic&quot; data-pl=&quot;Włoski Klasyk&quot;>Italian Classic</span><span class=&quot;en bi-sec&quot;>Il Classico</span></h3>
           <div class=&quot;bundle-price&quot;>
             <span class=&quot;savings&quot;>−10%</span>
           </div>
-          <p class=&quot;bundle-desc&quot;>Si attiva <em>automaticamente</em> quando hai una <em>Margherita</em>, una <em>Limonata</em> e un <em>Tiramisù</em> nel carrello.</p>
+          <p class=&quot;bundle-desc&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Activates automatically when you have a Margherita, a Limonata and a Tiramisù in your cart.&quot; data-pl=&quot;Aktywuje się automatycznie, gdy masz w koszyku Margheritę, Limonatę i Tiramisù.&quot;>Activates automatically when you have a Margherita, a Limonata and a Tiramisù in your cart.</span></p>
         </article>
       </div>
 
-      <p class=&quot;bundle-foot-note&quot;>I menù si attivano automaticamente nel carrello quando idonei.</p>
+      <p class=&quot;bundle-foot-note&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Bundles activate automatically in your cart when eligible.&quot; data-pl=&quot;Zestawy aktywują się automatycznie w koszyku, gdy są dostępne.&quot;>Bundles activate automatically in your cart when eligible.</span></p>
       <div class=&quot;bundle-cta-wrap&quot;>
         <a class=&quot;hero-cta&quot; href=&quot;#menu&quot;>
-          Inizia un ordine <span class=&quot;it&quot;>· Order now</span> &amp;rarr;
+          <span class=&quot;bi-pri&quot; data-en=&quot;Order now&quot; data-pl=&quot;Zamów&quot;>Order now</span> <span class=&quot;it bi-sec&quot;>· inizia un ordine</span> &amp;rarr;
         </a>
       </div>
     </div>
@@ -10025,7 +10075,7 @@
        ============================================================ -->
   <section class=&quot;famiglia&quot; id=&quot;famiglia&quot;>
     <div class=&quot;page-inner&quot;>
-      <blockquote>Una pizza, una storia. Lievita 36 ore — come fa la nonna Concetta a Soccavo, dal 1974.</blockquote>
+      <blockquote><span class=&quot;bi-pri&quot; data-en=&quot;A pizza, a story. Risen for 36 hours — the way nonna Concetta does it in Soccavo, since 1974.&quot; data-pl=&quot;Pizza, historia. Wyrasta przez 36 godzin — tak jak robi to nonna Concetta w Soccavo, od 1974 roku.&quot;>A pizza, a story. Risen for 36 hours — the way nonna Concetta does it in Soccavo, since 1974.</span></blockquote>
       <cite>Giuseppe Esposito · Pizzaiolo</cite>
     </div>
   </section>
@@ -10036,9 +10086,9 @@
   <section class=&quot;ps alt&quot; id=&quot;menu&quot;>
     <div class=&quot;page-inner&quot;>
       <div class=&quot;ps-head&quot;>
-        <div class=&quot;ps-eyebrow&quot;>Il menù · the menu</div>
-        <h2 class=&quot;ps-title&quot;>Quello che <span class=&quot;it&quot;>esce dal forno</span></h2>
-        <p class=&quot;ps-sub&quot;>Cinque pizze del giorno, una pasta dello chef, e un caffè per chiudere. <em>Sempre.</em></p>
+        <div class=&quot;ps-eyebrow&quot;><span class=&quot;bi-pri&quot; data-en=&quot;The menu&quot; data-pl=&quot;Menu&quot;>The menu</span> · <span class=&quot;bi-sec&quot;>il menù</span></div>
+        <h2 class=&quot;ps-title&quot;><span class=&quot;bi-pri&quot; data-en=&quot;What comes out of&quot; data-pl=&quot;To, co wychodzi z&quot;>What comes out of</span> <span class=&quot;it&quot;>the oven</span></h2>
+        <p class=&quot;ps-sub&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Five pizzas of the day, one chef's pasta, and an espresso to close. Always.&quot; data-pl=&quot;Pięć pizz dnia, jeden makaron od szefa kuchni, espresso na koniec. Zawsze.&quot;>Five pizzas of the day, one chef's pasta, and an espresso to close. Always.</span></p>
       </div>
 
       <!-- search -->
@@ -10047,26 +10097,26 @@
           <circle cx=&quot;9&quot; cy=&quot;9&quot; r=&quot;6.5&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.6&quot; fill=&quot;none&quot;/>
           <path d=&quot;M14 14 L20 20&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.6&quot; stroke-linecap=&quot;round&quot;/>
         </svg>
-        <input id=&quot;menu-search-input&quot; type=&quot;search&quot; placeholder=&quot;Cerca pizza, pasta, vino…&quot; autocomplete=&quot;off&quot; />
+        <input id=&quot;menu-search-input&quot; type=&quot;search&quot; placeholder=&quot;Search pizza, pasta, wine…&quot; data-ph-en=&quot;Search pizza, pasta, wine…&quot; data-ph-pl=&quot;Szukaj pizzy, makaronu, wina…&quot; autocomplete=&quot;off&quot; />
       </div>
 
       <!-- live activity -->
       <div class=&quot;live-act&quot;>
         <span class=&quot;pip&quot; aria-hidden=&quot;true&quot;></span>
-        <span><strong class=&quot;num&quot;>6 ordini</strong> nell'ultima ora</span>
+        <span><strong class=&quot;num&quot;>6</strong> <span class=&quot;bi-pri&quot; data-en=&quot;orders in the last hour&quot; data-pl=&quot;zamówień w ostatniej godzinie&quot;>orders in the last hour</span> <span class=&quot;bi-sec&quot;>· 6 ordini nell'ultima ora</span></span>
         <span style=&quot;opacity:.5;&quot;>·</span>
-        <span>In tendenza: <span class=&quot;trend&quot;>Spaghetti Carbonara</span></span>
+        <span><span class=&quot;bi-pri&quot; data-en=&quot;Trending&quot; data-pl=&quot;Popularne&quot;>Trending</span><span class=&quot;bi-sec&quot;> · in tendenza</span>: <span class=&quot;trend&quot;>Spaghetti Carbonara</span></span>
       </div>
 
       <!-- category tabs -->
       <div class=&quot;cat-tabs&quot; id=&quot;cat-tabs&quot; role=&quot;tablist&quot;>
-        <button class=&quot;cat-tab on&quot; data-cat=&quot;all&quot;>Tutto <span class=&quot;count&quot;>14</span></button>
+        <button class=&quot;cat-tab on&quot; data-cat=&quot;all&quot;><span class=&quot;bi-pri&quot; data-en=&quot;All&quot; data-pl=&quot;Wszystko&quot;>All</span> <span class=&quot;count&quot;>14</span></button>
         <button class=&quot;cat-tab&quot; data-cat=&quot;pizza&quot;>Pizza <span class=&quot;count&quot;>9</span></button>
         <button class=&quot;cat-tab&quot; data-cat=&quot;pasta&quot;>Pasta <span class=&quot;count&quot;>4</span></button>
-        <button class=&quot;cat-tab&quot; data-cat=&quot;antipasti&quot;>Antipasti <span class=&quot;count&quot;>5</span></button>
+        <button class=&quot;cat-tab&quot; data-cat=&quot;antipasti&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Starters&quot; data-pl=&quot;Przystawki&quot;>Starters</span> <span class=&quot;bi-sec&quot;>· antipasti</span> <span class=&quot;count&quot;>5</span></button>
         <button class=&quot;cat-tab&quot; data-cat=&quot;panini&quot;>Panini <span class=&quot;count&quot;>2</span></button>
-        <button class=&quot;cat-tab&quot; data-cat=&quot;drinks&quot;>Bibite <span class=&quot;count&quot;>5</span></button>
-        <button class=&quot;cat-tab&quot; data-cat=&quot;desserts&quot;>Dolci <span class=&quot;count&quot;>4</span></button>
+        <button class=&quot;cat-tab&quot; data-cat=&quot;drinks&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Drinks&quot; data-pl=&quot;Napoje&quot;>Drinks</span> <span class=&quot;bi-sec&quot;>· bibite</span> <span class=&quot;count&quot;>5</span></button>
+        <button class=&quot;cat-tab&quot; data-cat=&quot;desserts&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Desserts&quot; data-pl=&quot;Desery&quot;>Desserts</span> <span class=&quot;bi-sec&quot;>· dolci</span> <span class=&quot;count&quot;>4</span></button>
       </div>
 
       <!-- 15-minute guarantee -->
@@ -10082,8 +10132,8 @@
           </svg>
         </div>
         <div class=&quot;guarantee-text&quot;>
-          <div class=&quot;guarantee-title&quot;>15 minuti garantiti</div>
-          <div class=&quot;guarantee-sub&quot;>Ready in 15 minutes — or your next drink's on us.</div>
+          <div class=&quot;guarantee-title&quot;><span class=&quot;bi-pri&quot; data-en=&quot;15 minutes guaranteed&quot; data-pl=&quot;15 minut gwarancji&quot;>15 minutes guaranteed</span> <span class=&quot;bi-sec&quot;>· 15 minuti garantiti</span></div>
+          <div class=&quot;guarantee-sub&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Ready in 15 minutes — or your next drink's on us.&quot; data-pl=&quot;Gotowe w 15 minut — albo następny napój na nasz koszt.&quot;>Ready in 15 minutes — or your next drink's on us.</span></div>
         </div>
       </div>
 
@@ -10102,7 +10152,7 @@
             </svg>
           </div>
           <div class=&quot;combo-card-body&quot;>
-            <div class=&quot;combo-card-title&quot;>Il Classico · Italian Classic</div>
+            <div class=&quot;combo-card-title&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Italian Classic&quot; data-pl=&quot;Włoski Klasyk&quot;>Italian Classic</span> <span class=&quot;bi-sec&quot;>· Il Classico</span></div>
             <div class=&quot;combo-card-sub&quot;>Margherita + Limonata + Tiramisù</div>
           </div>
           <div class=&quot;wax-seal&quot; aria-label=&quot;10 percent discount&quot;>−10%</div>
@@ -10121,7 +10171,7 @@
             </svg>
           </div>
           <div class=&quot;combo-card-body&quot;>
-            <div class=&quot;combo-card-title&quot;>Pasta Classica · Classic Pasta Deal</div>
+            <div class=&quot;combo-card-title&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Classic Pasta Deal&quot; data-pl=&quot;Klasyk Makaronowy&quot;>Classic Pasta Deal</span> <span class=&quot;bi-sec&quot;>· Pasta Classica</span></div>
             <div class=&quot;combo-card-sub&quot;>Carbonara + Pane + Acqua frizzante</div>
           </div>
           <div class=&quot;wax-seal&quot; aria-label=&quot;10 percent discount&quot;>−10%</div>
@@ -10138,7 +10188,7 @@
           <circle cx=&quot;15.5&quot; cy=&quot;8.5&quot; r=&quot;1.4&quot; fill=&quot;currentColor&quot;/>
           <circle cx=&quot;8.5&quot; cy=&quot;15.5&quot; r=&quot;1.4&quot; fill=&quot;currentColor&quot;/>
         </svg>
-        Sorprendimi <span style=&quot;opacity:.6;&quot;>· Surprise me</span>
+        <span class=&quot;bi-pri&quot; data-en=&quot;Surprise me&quot; data-pl=&quot;Zaskocz mnie&quot;>Surprise me</span> <span class=&quot;bi-sec&quot;>· sorprendimi</span>
       </button>
 
       <!-- menu items -->
@@ -10147,8 +10197,8 @@
         <!-- Margherita -->
         <article class=&quot;mi&quot; data-cat=&quot;pizza&quot; data-name=&quot;margherita&quot; data-key=&quot;mi-margherita&quot; data-price=&quot;27.9&quot;>
           <div class=&quot;mi-flags&quot;>
-            <span class=&quot;flag&quot;>Our Hero</span>
-            <span class=&quot;flag gold&quot;>Most Popular</span>
+            <span class=&quot;flag&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Our Hero&quot; data-pl=&quot;Nasza Duma&quot;>Our Hero</span></span>
+            <span class=&quot;flag gold&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Most Popular&quot; data-pl=&quot;Najpopularniejsze&quot;>Most Popular</span></span>
           </div>
           <div class=&quot;mi-top&quot;>
             <div class=&quot;mi-illus&quot; aria-hidden=&quot;true&quot;>
@@ -10164,17 +10214,17 @@
               </svg>
             </div>
             <div class=&quot;mi-info&quot;>
-              <h3 class=&quot;mi-name&quot;>Margherita<span class=&quot;en&quot;>The Gateway — Start Here</span></h3>
+              <h3 class=&quot;mi-name&quot;>Margherita<span class=&quot;en bi-pri&quot; data-en=&quot;The Gateway — Start Here&quot; data-pl=&quot;Brama — Zacznij tu&quot;>The Gateway — Start Here</span></h3>
               <div class=&quot;mi-origin&quot;>San Marzano DOP · fior di latte di Agerola · basilico fresco · olio EVO</div>
               <div class=&quot;mi-chips&quot;>
-                <span class=&quot;chip&quot;>Vegetariano · Vegetarian</span>
-                <span class=&quot;chip it&quot;>36h lievitazione</span>
+                <span class=&quot;chip&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Vegetarian&quot; data-pl=&quot;Wegetariańskie&quot;>Vegetarian</span> <span class=&quot;bi-sec&quot;>· vegetariano</span></span>
+                <span class=&quot;chip&quot;><span class=&quot;bi-pri&quot; data-en=&quot;36h proofing&quot; data-pl=&quot;36h wyrastania&quot;>36h proofing</span> <span class=&quot;bi-sec&quot;>· 36h lievitazione</span></span>
               </div>
               <div class=&quot;mi-meta&quot;>
                 <span><span class=&quot;star&quot;>★</span> 4.8 <span style=&quot;opacity:.6;&quot;>(342)</span></span>
                 <span>8 min</span>
                 <span>720 kcal</span>
-                <button class=&quot;details&quot; type=&quot;button&quot;>Dettagli · Details</button>
+                <button class=&quot;details&quot; type=&quot;button&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Details&quot; data-pl=&quot;Szczegóły&quot;>Details</span> <span class=&quot;bi-sec&quot;>· dettagli</span></button>
               </div>
             </div>
           </div>
@@ -10182,7 +10232,7 @@
             <div class=&quot;mi-price num&quot;>27,90 zł</div>
             <div class=&quot;mi-action-slot&quot;>
               <div class=&quot;mi-in-cart&quot;>
-                <span class=&quot;mi-in-cart-note&quot;><span class=&quot;num&quot;>3</span> nel carrello · in cart</span>
+                <span class=&quot;mi-in-cart-note&quot;><span class=&quot;num&quot;>3</span> <span class=&quot;bi-pri&quot; data-en=&quot;in cart&quot; data-pl=&quot;w koszyku&quot;>in cart</span> <span class=&quot;bi-sec&quot;>· nel carrello</span></span>
                 <div class=&quot;qty&quot; data-mi=&quot;mi-margherita&quot; data-price=&quot;27.9&quot;>
                   <button data-act=&quot;dec&quot;>−</button>
                   <span class=&quot;n&quot;>3</span>
@@ -10209,22 +10259,22 @@
               </svg>
             </div>
             <div class=&quot;mi-info&quot;>
-              <h3 class=&quot;mi-name&quot;>Diavola<span class=&quot;en&quot;>For the brave</span></h3>
+              <h3 class=&quot;mi-name&quot;>Diavola<span class=&quot;en bi-pri&quot; data-en=&quot;For the brave&quot; data-pl=&quot;Dla odważnych&quot;>For the brave</span></h3>
               <div class=&quot;mi-origin&quot;>Spianata piccante calabrese · mozzarella · olio al peperoncino</div>
               <div class=&quot;mi-chips&quot;>
-                <span class=&quot;chip warn&quot;>Piccante · Spicy</span>
+                <span class=&quot;chip warn&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Spicy&quot; data-pl=&quot;Pikantne&quot;>Spicy</span> <span class=&quot;bi-sec&quot;>· piccante</span></span>
               </div>
               <div class=&quot;mi-meta&quot;>
                 <span><span class=&quot;star&quot;>★</span> 4.6 <span style=&quot;opacity:.6;&quot;>(187)</span></span>
                 <span>9 min</span>
                 <span>820 kcal</span>
-                <button class=&quot;details&quot; type=&quot;button&quot;>Dettagli · Details</button>
+                <button class=&quot;details&quot; type=&quot;button&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Details&quot; data-pl=&quot;Szczegóły&quot;>Details</span> <span class=&quot;bi-sec&quot;>· dettagli</span></button>
               </div>
             </div>
           </div>
           <div class=&quot;mi-foot&quot;>
             <div class=&quot;mi-price num&quot;>32,50 zł</div>
-            <button class=&quot;mi-add&quot; data-mi-add=&quot;mi-diavola&quot; data-price=&quot;32.5&quot;>+ Aggiungi <span class=&quot;it&quot;>· Add</span></button>
+            <button class=&quot;mi-add&quot; data-mi-add=&quot;mi-diavola&quot; data-price=&quot;32.5&quot;>+ <span class=&quot;bi-pri&quot; data-en=&quot;Add&quot; data-pl=&quot;Dodaj&quot;>Add</span> <span class=&quot;it bi-sec&quot;>· aggiungi</span></button>
           </div>
         </article>
 
@@ -10244,22 +10294,22 @@
               </svg>
             </div>
             <div class=&quot;mi-info&quot;>
-              <h3 class=&quot;mi-name&quot;>Spaghetti Carbonara<span class=&quot;en&quot;>In tendenza · Trending</span></h3>
+              <h3 class=&quot;mi-name&quot;>Spaghetti Carbonara<span class=&quot;en bi-pri&quot; data-en=&quot;Trending&quot; data-pl=&quot;Popularne&quot;>Trending</span></h3>
               <div class=&quot;mi-origin&quot;>Guanciale di Amatrice · pecorino romano DOP · tuorlo d'uovo · pepe nero — <em>no cream, mai</em></div>
               <div class=&quot;mi-chips&quot;>
-                <span class=&quot;chip gold&quot;>In tendenza</span>
+                <span class=&quot;chip gold&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Trending&quot; data-pl=&quot;Popularne&quot;>Trending</span> <span class=&quot;bi-sec&quot;>· in tendenza</span></span>
               </div>
               <div class=&quot;mi-meta&quot;>
                 <span><span class=&quot;star&quot;>★</span> 4.9 <span style=&quot;opacity:.6;&quot;>(214)</span></span>
                 <span>11 min</span>
                 <span>780 kcal</span>
-                <button class=&quot;details&quot; type=&quot;button&quot;>Dettagli · Details</button>
+                <button class=&quot;details&quot; type=&quot;button&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Details&quot; data-pl=&quot;Szczegóły&quot;>Details</span> <span class=&quot;bi-sec&quot;>· dettagli</span></button>
               </div>
             </div>
           </div>
           <div class=&quot;mi-foot&quot;>
             <div class=&quot;mi-price num&quot;>34,00 zł</div>
-            <button class=&quot;mi-add&quot; data-mi-add=&quot;mi-carbonara2&quot; data-price=&quot;34&quot;>+ Aggiungi <span class=&quot;it&quot;>· Add</span></button>
+            <button class=&quot;mi-add&quot; data-mi-add=&quot;mi-carbonara2&quot; data-price=&quot;34&quot;>+ <span class=&quot;bi-pri&quot; data-en=&quot;Add&quot; data-pl=&quot;Dodaj&quot;>Add</span> <span class=&quot;it bi-sec&quot;>· aggiungi</span></button>
           </div>
         </article>
 
@@ -10269,9 +10319,9 @@
             <svg width=&quot;12&quot; height=&quot;10&quot; viewBox=&quot;0 0 14 10&quot; fill=&quot;none&quot; aria-hidden=&quot;true&quot;>
               <path d=&quot;M1 9 L2 3 L5 6 L7 1 L9 6 L12 3 L13 9 Z&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.2&quot; fill=&quot;currentColor&quot; fill-opacity=&quot;0.3&quot; stroke-linejoin=&quot;round&quot;/>
             </svg>
-            Chef's signature
+            <span class=&quot;bi-pri&quot; data-en=&quot;Chef's signature&quot; data-pl=&quot;Specjalność Szefa Kuchni&quot;>Chef's signature</span>
           </span>
-          <span class=&quot;countdown-pill&quot;>44 giorni · 44d left</span>
+          <span class=&quot;countdown-pill&quot;><span class=&quot;bi-pri&quot; data-en=&quot;44 days left&quot; data-pl=&quot;zostały 44 dni&quot;>44 days left</span> <span class=&quot;bi-sec&quot;>· 44 giorni</span></span>
           <div class=&quot;mi-top&quot;>
             <div class=&quot;mi-illus&quot; aria-hidden=&quot;true&quot;>
               <svg width=&quot;62&quot; height=&quot;62&quot; viewBox=&quot;0 0 62 62&quot; fill=&quot;none&quot;>
@@ -10286,23 +10336,23 @@
               </svg>
             </div>
             <div class=&quot;mi-info&quot;>
-              <h3 class=&quot;mi-name&quot; style=&quot;margin-top:18px;&quot;>Tartufina<span class=&quot;en&quot;>Limited Edition</span></h3>
+              <h3 class=&quot;mi-name&quot; style=&quot;margin-top:18px;&quot;>Tartufina<span class=&quot;en bi-pri&quot; data-en=&quot;Limited Edition&quot; data-pl=&quot;Edycja Limitowana&quot;>Limited Edition</span></h3>
               <div class=&quot;mi-origin&quot;>Tartufo nero d'Umbria · funghi porcini · scamorza affumicata · prezzemolo</div>
               <div class=&quot;mi-chips&quot;>
-                <span class=&quot;chip gold&quot;>Edizione limitata</span>
-                <span class=&quot;chip&quot;>Vegetariano</span>
+                <span class=&quot;chip gold&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Limited edition&quot; data-pl=&quot;Edycja limitowana&quot;>Limited edition</span> <span class=&quot;bi-sec&quot;>· edizione limitata</span></span>
+                <span class=&quot;chip&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Vegetarian&quot; data-pl=&quot;Wegetariańskie&quot;>Vegetarian</span> <span class=&quot;bi-sec&quot;>· vegetariano</span></span>
               </div>
               <div class=&quot;mi-meta&quot;>
                 <span><span class=&quot;star&quot;>★</span> 4.9 <span style=&quot;opacity:.6;&quot;>(58)</span></span>
                 <span>10 min</span>
                 <span>880 kcal</span>
-                <button class=&quot;details&quot; type=&quot;button&quot;>Dettagli · Details</button>
+                <button class=&quot;details&quot; type=&quot;button&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Details&quot; data-pl=&quot;Szczegóły&quot;>Details</span> <span class=&quot;bi-sec&quot;>· dettagli</span></button>
               </div>
             </div>
           </div>
           <div class=&quot;mi-foot&quot;>
             <div class=&quot;mi-price num&quot;>58,00 zł</div>
-            <button class=&quot;mi-add&quot; data-mi-add=&quot;mi-tartufina&quot; data-price=&quot;58&quot;>+ Aggiungi <span class=&quot;it&quot;>· Add</span></button>
+            <button class=&quot;mi-add&quot; data-mi-add=&quot;mi-tartufina&quot; data-price=&quot;58&quot;>+ <span class=&quot;bi-pri&quot; data-en=&quot;Add&quot; data-pl=&quot;Dodaj&quot;>Add</span> <span class=&quot;it bi-sec&quot;>· aggiungi</span></button>
           </div>
         </article>
 
@@ -10331,13 +10381,13 @@
                 <span><span class=&quot;star&quot;>★</span> 4.7 <span style=&quot;opacity:.6;&quot;>(126)</span></span>
                 <span>10 min</span>
                 <span>910 kcal</span>
-                <button class=&quot;details&quot; type=&quot;button&quot;>Dettagli · Details</button>
+                <button class=&quot;details&quot; type=&quot;button&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Details&quot; data-pl=&quot;Szczegóły&quot;>Details</span> <span class=&quot;bi-sec&quot;>· dettagli</span></button>
               </div>
             </div>
           </div>
           <div class=&quot;mi-foot&quot;>
             <div class=&quot;mi-price num&quot;>36,00 zł</div>
-            <button class=&quot;mi-add&quot; data-mi-add=&quot;mi-capricciosa&quot; data-price=&quot;36&quot;>+ Aggiungi <span class=&quot;it&quot;>· Add</span></button>
+            <button class=&quot;mi-add&quot; data-mi-add=&quot;mi-capricciosa&quot; data-price=&quot;36&quot;>+ <span class=&quot;bi-pri&quot; data-en=&quot;Add&quot; data-pl=&quot;Dodaj&quot;>Add</span> <span class=&quot;it bi-sec&quot;>· aggiungi</span></button>
           </div>
         </article>
 
@@ -10355,12 +10405,12 @@
   <section class=&quot;ps dark&quot; id=&quot;soci&quot; style=&quot;padding:60px 0;&quot;>
     <div class=&quot;page-inner&quot; style=&quot;display:grid; grid-template-columns:1fr; gap:30px; align-items:center;&quot;>
       <div style=&quot;text-align:center;&quot;>
-        <div class=&quot;ps-eyebrow&quot;>Soci e amici · membership</div>
-        <h2 class=&quot;ps-title&quot; style=&quot;color:var(--parchment);&quot;>Una pizza, <span class=&quot;it&quot; style=&quot;color:var(--ochre-light);&quot;>una storia</span></h2>
-        <p class=&quot;ps-sub&quot; style=&quot;color:rgba(244,245,240,0.7);&quot;>Earn <strong style=&quot;color:var(--ochre-light); font-style:normal;&quot;>1 punto</strong> for each złoty spent. No app to install — your phone number remembers you. <em>Famiglia Oro</em> at 300 punti unlocks an <em>antipasto della casa</em> on every visit.</p>
+        <div class=&quot;ps-eyebrow&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Members &amp; friends&quot; data-pl=&quot;Soci i przyjaciele&quot;>Members &amp; friends</span> <span class=&quot;bi-sec&quot;>· soci e amici</span></div>
+        <h2 class=&quot;ps-title&quot; style=&quot;color:var(--parchment);&quot;><span class=&quot;bi-pri&quot; data-en=&quot;A pizza,&quot; data-pl=&quot;Pizza,&quot;>A pizza,</span> <span class=&quot;it&quot; style=&quot;color:var(--ochre-light);&quot;>una storia</span></h2>
+        <p class=&quot;ps-sub&quot; style=&quot;color:rgba(244,245,240,0.7);&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Earn&quot; data-pl=&quot;Zdobądź&quot;>Earn</span> <strong style=&quot;color:var(--ochre-light); font-style:normal;&quot;>1 <span class=&quot;bi-pri&quot; data-en=&quot;point&quot; data-pl=&quot;punkt&quot;>point</span></strong> <span class=&quot;bi-pri&quot; data-en=&quot;for each złoty spent. No app to install — your phone number remembers you.&quot; data-pl=&quot;za każdą wydaną złotówkę. Bez instalowania aplikacji — Twój numer telefonu Cię pamięta.&quot;>for each złoty spent. No app to install — your phone number remembers you.</span> <em>Famiglia Oro</em> <span class=&quot;bi-pri&quot; data-en=&quot;at 300 points unlocks an&quot; data-pl=&quot;po 300 punktach odblokowuje&quot;>at 300 points unlocks an</span> <em>antipasto della casa</em> <span class=&quot;bi-pri&quot; data-en=&quot;on every visit.&quot; data-pl=&quot;przy każdej wizycie.&quot;>on every visit.</span></p>
         <div style=&quot;margin-top:22px;&quot;>
           <button class=&quot;hero-cta&quot; id=&quot;soci-cta&quot; style=&quot;display:inline-flex;&quot;>
-            Inizia a guadagnare punti <span class=&quot;it&quot;>· Start earning</span> &amp;rarr;
+            <span class=&quot;bi-pri&quot; data-en=&quot;Start earning points&quot; data-pl=&quot;Zacznij zdobywać punkty&quot;>Start earning points</span> <span class=&quot;it bi-sec&quot;>· inizia a guadagnare punti</span> &amp;rarr;
           </button>
         </div>
       </div>
@@ -10382,11 +10432,11 @@
             </svg>
             Sud Italia
           </div>
-          <p>Pizza napoletana, fatta a mano, cotta nel forno a legna. Two trucks. One Vesuvius.</p>
+          <p><span class=&quot;bi-pri&quot; data-en=&quot;Neapolitan pizza, made by hand, cooked in the wood-fired oven. Two trucks. One Vesuvius.&quot; data-pl=&quot;Neapolitańska pizza, robiona ręcznie, pieczona w piecu opalanym drewnem. Dwa lokale. Jeden Wezuwiusz.&quot;>Neapolitan pizza, made by hand, cooked in the wood-fired oven. Two trucks. One Vesuvius.</span></p>
           <div class=&quot;pfoot-trico&quot;></div>
         </div>
         <div>
-          <h4>Menù</h4>
+          <h4><span class=&quot;bi-pri&quot; data-en=&quot;Menu&quot; data-pl=&quot;Menu&quot;>Menu</span></h4>
           <ul>
             <li><a href=&quot;#menu&quot;>Pizza</a></li>
             <li><a href=&quot;#menu&quot;>Pasta</a></li>
@@ -10396,20 +10446,20 @@
           </ul>
         </div>
         <div>
-          <h4>Botteghe</h4>
+          <h4><span class=&quot;bi-pri&quot; data-en=&quot;Locations&quot; data-pl=&quot;Lokalizacje&quot;>Locations</span></h4>
           <ul>
             <li><a href=&quot;#locations&quot;>Kraków · Rynek Główny 12</a></li>
             <li><a href=&quot;#locations&quot;>Warszawa · Plac Trzech Krzyży 4</a></li>
-            <li><a href=&quot;#famiglia&quot;>La nostra storia</a></li>
-            <li><a href=&quot;#soci&quot;>Programma fedeltà</a></li>
+            <li><a href=&quot;#famiglia&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Our story&quot; data-pl=&quot;Nasza historia&quot;>Our story</span></a></li>
+            <li><a href=&quot;#soci&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Loyalty programme&quot; data-pl=&quot;Program lojalnościowy&quot;>Loyalty programme</span></a></li>
           </ul>
         </div>
         <div>
-          <h4>Per le aziende</h4>
+          <h4><span class=&quot;bi-pri&quot; data-en=&quot;For businesses&quot; data-pl=&quot;Dla firm&quot;>For businesses</span> <span class=&quot;bi-sec&quot;>· per le aziende</span></h4>
           <ul>
-            <li><a href=&quot;#&quot;>Team lunch &amp;mdash; invoiced</a></li>
-            <li><a href=&quot;#&quot;>Eventi privati</a></li>
-            <li><a href=&quot;#&quot;>Contattaci</a></li>
+            <li><a href=&quot;#&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Team lunch — invoiced&quot; data-pl=&quot;Lunch dla zespołu — faktura&quot;>Team lunch — invoiced</span></a></li>
+            <li><a href=&quot;#&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Private events&quot; data-pl=&quot;Imprezy prywatne&quot;>Private events</span> <span class=&quot;bi-sec&quot;>· eventi privati</span></a></li>
+            <li><a href=&quot;#&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Contact us&quot; data-pl=&quot;Skontaktuj się&quot;>Contact us</span> <span class=&quot;bi-sec&quot;>· contattaci</span></a></li>
             <li><a href=&quot;#&quot;>+48 512 040 040</a></li>
           </ul>
         </div>
@@ -10433,7 +10483,7 @@
       <svg width=&quot;14&quot; height=&quot;14&quot; viewBox=&quot;0 0 14 14&quot; fill=&quot;none&quot; aria-hidden=&quot;true&quot;>
         <path d=&quot;M9 2 L4 7 L9 12&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.6&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; fill=&quot;none&quot;/>
       </svg>
-      <span>La casa <span class=&quot;it&quot; style=&quot;font-style:italic;opacity:0.8;&quot;>&amp;middot; Home</span></span>
+      <span><span class=&quot;bi-pri&quot; data-en=&quot;Home&quot; data-pl=&quot;Strona główna&quot;>Home</span> <span class=&quot;it bi-sec&quot; style=&quot;font-style:italic;opacity:0.8;&quot;>&amp;middot; la casa</span></span>
     </a>
   </div>
 
@@ -10485,11 +10535,11 @@
         <path d=&quot;M84 138 C 87 134, 90 134, 92 132 C 90 137, 88 139, 84 140&quot; stroke=&quot;#4A7C59&quot; stroke-width=&quot;1.2&quot; fill=&quot;#4A7C59&quot; fill-opacity=&quot;0.3&quot;/>
       </svg>
       <div class=&quot;loc-hero-tricolore&quot; aria-hidden=&quot;true&quot;></div>
-      <h1 class=&quot;loc-hero-name&quot; id=&quot;krakow-name&quot;>Kraków<span class=&quot;it&quot; style=&quot;display:block;font-size:0.55em;margin-top:6px;&quot;>&amp;middot; la nostra prima casa</span></h1>
-      <p class=&quot;loc-hero-sub&quot;>Da Giuseppe, nel cuore del Rynek &amp;middot; <em>where it all began</em></p>
+      <h1 class=&quot;loc-hero-name&quot; id=&quot;krakow-name&quot;>Kraków<span class=&quot;bi-sec it&quot; style=&quot;display:block;font-size:0.55em;margin-top:6px;color:var(--terracotta);&quot;>&amp;middot; <span class=&quot;bi-pri&quot; data-en=&quot;our first home&quot; data-pl=&quot;nasz pierwszy dom&quot;>our first home</span> &amp;middot; la nostra prima casa</span></h1>
+      <p class=&quot;loc-hero-sub&quot;><span class=&quot;bi-pri&quot; data-en=&quot;With Giuseppe, in the heart of the Rynek&quot; data-pl=&quot;U Giuseppe, w sercu Rynku&quot;>With Giuseppe, in the heart of the Rynek</span> <span class=&quot;bi-sec&quot;>&amp;middot; da Giuseppe, nel cuore del Rynek</span> &amp;middot; <em><span class=&quot;bi-pri&quot; data-en=&quot;where it all began&quot; data-pl=&quot;gdzie wszystko się zaczęło&quot;>where it all began</span></em></p>
       <span class=&quot;loc-hero-status&quot;>
         <span class=&quot;terra-dot&quot;></span>
-        Aperto fino alle 21:00 &amp;middot; Open until 21:00
+        <span class=&quot;bi-pri&quot; data-en=&quot;Open until 21:00&quot; data-pl=&quot;Otwarte do 21:00&quot;>Open until 21:00</span> <span class=&quot;bi-sec&quot;>&amp;middot; aperto fino alle 21:00</span>
       </span>
     </div>
   </header>
@@ -10499,7 +10549,7 @@
 
     <!-- Address -->
     <div class=&quot;loc-card-soft&quot;>
-      <div class=&quot;loc-card-eyebrow&quot;>l'indirizzo &amp;middot; the address</div>
+      <div class=&quot;loc-card-eyebrow&quot;><span class=&quot;bi-pri&quot; data-en=&quot;the address&quot; data-pl=&quot;adres&quot;>the address</span> <span class=&quot;bi-sec&quot;>&amp;middot; l'indirizzo</span></div>
       <div class=&quot;addr-row&quot;>
         <svg width=&quot;22&quot; height=&quot;22&quot; viewBox=&quot;0 0 22 22&quot; fill=&quot;none&quot; aria-hidden=&quot;true&quot;>
           <path d=&quot;M11 20 C 6.5 13, 3 10, 3 6.5 A 8 8 0 0 1 19 6.5 C 19 10, 15.5 13, 11 20 Z&quot; stroke=&quot;#B85C38&quot; stroke-width=&quot;1.6&quot; fill=&quot;rgba(184,92,56,0.12)&quot;/>
@@ -10515,8 +10565,8 @@
 
     <!-- Hours -->
     <div class=&quot;loc-card-soft&quot;>
-      <div class=&quot;loc-card-eyebrow&quot;>orari della settimana &amp;middot; opening hours</div>
-      <h2 class=&quot;loc-card-title&quot;>Quando il forno è acceso<span class=&quot;en&quot;>When the oven is lit</span></h2>
+      <div class=&quot;loc-card-eyebrow&quot;><span class=&quot;bi-pri&quot; data-en=&quot;opening hours&quot; data-pl=&quot;godziny otwarcia&quot;>opening hours</span> <span class=&quot;bi-sec&quot;>&amp;middot; orari della settimana</span></div>
+      <h2 class=&quot;loc-card-title&quot;><span class=&quot;bi-pri&quot; data-en=&quot;When the oven is lit&quot; data-pl=&quot;Kiedy piec jest rozgrzany&quot;>When the oven is lit</span><span class=&quot;en bi-sec&quot;>Quando il forno è acceso</span></h2>
       <div class=&quot;hours-grid&quot; role=&quot;table&quot;>
         <div class=&quot;hours-cell&quot;><div class=&quot;hours-day-it&quot;>Lun</div><div class=&quot;hours-day-en&quot;>Mon</div><div class=&quot;hours-time&quot;>11:00<br/>21:00</div></div>
         <div class=&quot;hours-cell&quot;><div class=&quot;hours-day-it&quot;>Mar</div><div class=&quot;hours-day-en&quot;>Tue</div><div class=&quot;hours-time&quot;>11:00<br/>21:00</div></div>
@@ -10530,8 +10580,8 @@
 
     <!-- Contact -->
     <div class=&quot;loc-card-soft&quot;>
-      <div class=&quot;loc-card-eyebrow&quot;>scrivici &amp;middot; drop us a line</div>
-      <h2 class=&quot;loc-card-title&quot;>Per parlare con la cucina<span class=&quot;en&quot;>To speak with the kitchen</span></h2>
+      <div class=&quot;loc-card-eyebrow&quot;><span class=&quot;bi-pri&quot; data-en=&quot;drop us a line&quot; data-pl=&quot;napisz do nas&quot;>drop us a line</span> <span class=&quot;bi-sec&quot;>&amp;middot; scrivici</span></div>
+      <h2 class=&quot;loc-card-title&quot;><span class=&quot;bi-pri&quot; data-en=&quot;To speak with the kitchen&quot; data-pl=&quot;Aby porozmawiać z kuchnią&quot;>To speak with the kitchen</span><span class=&quot;en bi-sec&quot;>Per parlare con la cucina</span></h2>
       <div class=&quot;contact-grid&quot;>
         <a class=&quot;contact-row&quot; href=&quot;tel:+48512040040&quot;>
           <svg width=&quot;22&quot; height=&quot;22&quot; viewBox=&quot;0 0 22 22&quot; fill=&quot;none&quot; aria-hidden=&quot;true&quot;>
@@ -10594,12 +10644,12 @@
 
     <!-- MENU -->
     <div class=&quot;loc-card-soft&quot;>
-      <div class=&quot;loc-card-eyebrow&quot;>il menu di questa cucina &amp;middot; menu from this kitchen</div>
-      <h2 class=&quot;loc-card-title&quot;>Cosa esce dal forno oggi<span class=&quot;en&quot;>What comes out of the oven today</span></h2>
+      <div class=&quot;loc-card-eyebrow&quot;><span class=&quot;bi-pri&quot; data-en=&quot;menu from this kitchen&quot; data-pl=&quot;menu z tej kuchni&quot;>menu from this kitchen</span> <span class=&quot;bi-sec&quot;>&amp;middot; il menu di questa cucina</span></div>
+      <h2 class=&quot;loc-card-title&quot;><span class=&quot;bi-pri&quot; data-en=&quot;What comes out of the oven today&quot; data-pl=&quot;Co dziś wychodzi z pieca&quot;>What comes out of the oven today</span><span class=&quot;en bi-sec&quot;>Cosa esce dal forno oggi</span></h2>
       <div class=&quot;mini-tabs&quot; role=&quot;tablist&quot; data-loc=&quot;krakow&quot;>
         <button class=&quot;mini-tab on&quot; data-cat=&quot;pizza&quot;>Pizza</button>
         <button class=&quot;mini-tab&quot; data-cat=&quot;pasta&quot;>Pasta</button>
-        <button class=&quot;mini-tab&quot; data-cat=&quot;drinks&quot;>Bibite</button>
+        <button class=&quot;mini-tab&quot; data-cat=&quot;drinks&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Drinks&quot; data-pl=&quot;Napoje&quot;>Drinks</span></button>
       </div>
       <div class=&quot;mini-menu&quot; data-cat-list=&quot;krakow-pizza&quot;>
         <div class=&quot;mini-item hero-pick&quot;>
@@ -10798,32 +10848,32 @@
 
     <!-- PICKUP SLOTS -->
     <div class=&quot;loc-card-soft&quot;>
-      <div class=&quot;loc-card-eyebrow&quot;>orari del ritiro oggi &amp;middot; today's pickup slots</div>
-      <h2 class=&quot;loc-card-title&quot;>Quando passi a prenderla<span class=&quot;en&quot;>When you'll swing by</span></h2>
+      <div class=&quot;loc-card-eyebrow&quot;><span class=&quot;bi-pri&quot; data-en=&quot;today's pickup slots&quot; data-pl=&quot;dzisiejsze terminy odbioru&quot;>today's pickup slots</span> <span class=&quot;bi-sec&quot;>&amp;middot; orari del ritiro oggi</span></div>
+      <h2 class=&quot;loc-card-title&quot;><span class=&quot;bi-pri&quot; data-en=&quot;When you'll swing by&quot; data-pl=&quot;Kiedy odbierzesz&quot;>When you'll swing by</span><span class=&quot;en bi-sec&quot;>Quando passi a prenderla</span></h2>
       <div class=&quot;pickup-slots&quot; role=&quot;radiogroup&quot; aria-label=&quot;Pickup slots Kraków&quot;>
         <button class=&quot;pickup-slot&quot; role=&quot;radio&quot; aria-checked=&quot;false&quot;>
           <div class=&quot;ps-time&quot;>17:30</div>
-          <div class=&quot;ps-scar&quot;>disponibile</div>
+          <div class=&quot;ps-scar&quot;><span class=&quot;bi-pri&quot; data-en=&quot;available&quot; data-pl=&quot;dostępne&quot;>available</span></div>
         </button>
         <button class=&quot;pickup-slot on&quot; role=&quot;radio&quot; aria-checked=&quot;true&quot;>
           <div class=&quot;ps-time&quot;>18:00</div>
-          <div class=&quot;ps-scar&quot;>ultimi 2 posti</div>
+          <div class=&quot;ps-scar&quot;><span class=&quot;bi-pri&quot; data-en=&quot;2 slots left&quot; data-pl=&quot;zostały 2 miejsca&quot;>2 slots left</span></div>
         </button>
         <button class=&quot;pickup-slot&quot; role=&quot;radio&quot; aria-checked=&quot;false&quot;>
           <div class=&quot;ps-time&quot;>18:30</div>
-          <div class=&quot;ps-scar&quot;>disponibile</div>
+          <div class=&quot;ps-scar&quot;><span class=&quot;bi-pri&quot; data-en=&quot;available&quot; data-pl=&quot;dostępne&quot;>available</span></div>
         </button>
         <button class=&quot;pickup-slot&quot; role=&quot;radio&quot; aria-checked=&quot;false&quot;>
           <div class=&quot;ps-time&quot;>19:00</div>
-          <div class=&quot;ps-scar&quot;>ultimi 3 posti</div>
+          <div class=&quot;ps-scar&quot;><span class=&quot;bi-pri&quot; data-en=&quot;3 slots left&quot; data-pl=&quot;zostały 3 miejsca&quot;>3 slots left</span></div>
         </button>
         <button class=&quot;pickup-slot&quot; disabled aria-disabled=&quot;true&quot;>
           <div class=&quot;ps-time&quot;>19:30</div>
-          <div class=&quot;ps-scar&quot;>completo</div>
+          <div class=&quot;ps-scar&quot;><span class=&quot;bi-pri&quot; data-en=&quot;full&quot; data-pl=&quot;pełne&quot;>full</span></div>
         </button>
         <button class=&quot;pickup-slot&quot; role=&quot;radio&quot; aria-checked=&quot;false&quot;>
           <div class=&quot;ps-time&quot;>20:00</div>
-          <div class=&quot;ps-scar&quot;>disponibile</div>
+          <div class=&quot;ps-scar&quot;><span class=&quot;bi-pri&quot; data-en=&quot;available&quot; data-pl=&quot;dostępne&quot;>available</span></div>
         </button>
       </div>
     </div>
@@ -10844,7 +10894,7 @@
             </svg>
           </div>
           <span class=&quot;bundle-tag&quot;>per 2&amp;ndash;3 persone</span>
-          <h3 class=&quot;bundle-name&quot;>Famiglia<span class=&quot;en&quot;>Family Pack</span></h3>
+          <h3 class=&quot;bundle-name&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Family Pack&quot; data-pl=&quot;Pakiet Rodzinny&quot;>Family Pack</span><span class=&quot;en bi-sec&quot;>Famiglia</span></h3>
           <div class=&quot;bundle-price&quot;>
             <span class=&quot;now num&quot;>99,00 zł</span>
             <span class=&quot;was num&quot;>103,60 zł</span>
@@ -10860,7 +10910,7 @@
             </svg>
           </div>
           <span class=&quot;bundle-tag&quot;>11:00&amp;ndash;14:00</span>
-          <h3 class=&quot;bundle-name&quot;>Pranzo<span class=&quot;en&quot;>Pizza Lunch+</span></h3>
+          <h3 class=&quot;bundle-name&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Pizza Lunch+&quot; data-pl=&quot;Pizza Lunch+&quot;>Pizza Lunch+</span><span class=&quot;en bi-sec&quot;>Pranzo</span></h3>
           <div class=&quot;bundle-price&quot;>
             <span class=&quot;now num&quot;>44,90 zł</span>
             <span class=&quot;was num&quot;>54,85 zł</span>
@@ -10875,8 +10925,8 @@
               <circle cx=&quot;13&quot; cy=&quot;20&quot; r=&quot;0.8&quot; fill=&quot;currentColor&quot;/>
             </svg>
           </div>
-          <span class=&quot;bundle-tag&quot;>dopo le 21:00</span>
-          <h3 class=&quot;bundle-name&quot;>Spicchio Notturno<span class=&quot;en&quot;>Late-Night Slice</span></h3>
+          <span class=&quot;bundle-tag&quot;><span class=&quot;bi-pri&quot; data-en=&quot;after 21:00&quot; data-pl=&quot;po 21:00&quot;>after 21:00</span> <span class=&quot;bi-sec&quot;>· dopo le 21:00</span></span>
+          <h3 class=&quot;bundle-name&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Late-Night Slice&quot; data-pl=&quot;Nocna Pizza&quot;>Late-Night Slice</span><span class=&quot;en bi-sec&quot;>Spicchio Notturno</span></h3>
           <div class=&quot;bundle-price&quot;>
             <span class=&quot;now num&quot;>16,90 zł</span>
             <span class=&quot;was num&quot;>17,80 zł</span>
@@ -10889,8 +10939,8 @@
               <path d=&quot;M16 3 L18 13 L28 16 L18 19 L16 29 L14 19 L4 16 L14 13 Z&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.6&quot; fill=&quot;rgba(255,255,255,0.4)&quot; stroke-linejoin=&quot;round&quot;/>
             </svg>
           </div>
-          <span class=&quot;bundle-tag&quot;>automatico</span>
-          <h3 class=&quot;bundle-name&quot;>Il Classico<span class=&quot;en&quot;>Save 10%</span></h3>
+          <span class=&quot;bundle-tag&quot;><span class=&quot;bi-pri&quot; data-en=&quot;automatic&quot; data-pl=&quot;automatyczny&quot;>automatic</span> <span class=&quot;bi-sec&quot;>· automatico</span></span>
+          <h3 class=&quot;bundle-name&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Italian Classic&quot; data-pl=&quot;Włoski Klasyk&quot;>Italian Classic</span><span class=&quot;en bi-sec&quot;>Il Classico</span></h3>
           <div class=&quot;bundle-price&quot;><span class=&quot;savings&quot;>−10%</span></div>
           <p class=&quot;bundle-desc&quot;>Margherita + limonata + tiramisù = sconto.</p>
         </article>
@@ -10900,7 +10950,7 @@
     <!-- CTA -->
     <div class=&quot;order-cta-wrap&quot;>
       <button class=&quot;order-cta-big&quot; data-open-cart data-loc=&quot;krakow&quot;>
-        Ordina da questa cucina <span class=&quot;it&quot;>· Order from this kitchen</span> &amp;rarr;
+        <span class=&quot;bi-pri&quot; data-en=&quot;Order from this kitchen&quot; data-pl=&quot;Zamów z tej kuchni&quot;>Order from this kitchen</span> <span class=&quot;it bi-sec&quot;>· ordina da questa cucina</span> &amp;rarr;
       </button>
     </div>
 
@@ -10926,7 +10976,7 @@
       <svg width=&quot;14&quot; height=&quot;14&quot; viewBox=&quot;0 0 14 14&quot; fill=&quot;none&quot; aria-hidden=&quot;true&quot;>
         <path d=&quot;M9 2 L4 7 L9 12&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.6&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; fill=&quot;none&quot;/>
       </svg>
-      <span>La casa <span class=&quot;it&quot; style=&quot;font-style:italic;opacity:0.8;&quot;>&amp;middot; Home</span></span>
+      <span><span class=&quot;bi-pri&quot; data-en=&quot;Home&quot; data-pl=&quot;Strona główna&quot;>Home</span> <span class=&quot;it bi-sec&quot; style=&quot;font-style:italic;opacity:0.8;&quot;>&amp;middot; la casa</span></span>
     </a>
   </div>
 
@@ -10980,11 +11030,11 @@
         <path d=&quot;M298 48 C 294 44, 290 44, 288 46 C 290 50, 294 50, 298 48&quot; stroke=&quot;#4A7C59&quot; stroke-width=&quot;1.2&quot; fill=&quot;#4A7C59&quot; fill-opacity=&quot;0.4&quot;/>
       </svg>
       <div class=&quot;loc-hero-tricolore&quot; aria-hidden=&quot;true&quot;></div>
-      <h1 class=&quot;loc-hero-name&quot; id=&quot;warszawa-name&quot;>Warszawa<span class=&quot;it&quot; style=&quot;display:block;font-size:0.55em;margin-top:6px;&quot;>&amp;middot; nel cuore di Śródmieście</span></h1>
-      <p class=&quot;loc-hero-sub&quot;>Da Anna, pizzaiola di via Nowy Świat &amp;middot; <em>the pizzaiola of Nowy Świat</em></p>
+      <h1 class=&quot;loc-hero-name&quot; id=&quot;warszawa-name&quot;>Warszawa<span class=&quot;bi-sec it&quot; style=&quot;display:block;font-size:0.55em;margin-top:6px;color:var(--terracotta);&quot;>&amp;middot; <span class=&quot;bi-pri&quot; data-en=&quot;in the heart of Śródmieście&quot; data-pl=&quot;w sercu Śródmieścia&quot;>in the heart of Śródmieście</span> &amp;middot; nel cuore di Śródmieście</span></h1>
+      <p class=&quot;loc-hero-sub&quot;><span class=&quot;bi-pri&quot; data-en=&quot;With Anna, the pizzaiola of Nowy Świat&quot; data-pl=&quot;U Anny, pizzaioli z Nowego Światu&quot;>With Anna, the pizzaiola of Nowy Świat</span> <span class=&quot;bi-sec&quot;>&amp;middot; da Anna, pizzaiola di via Nowy Świat</span></p>
       <span class=&quot;loc-hero-status&quot;>
         <span class=&quot;terra-dot&quot;></span>
-        Aperto fino alle 21:00 &amp;middot; Open until 21:00
+        <span class=&quot;bi-pri&quot; data-en=&quot;Open until 21:00&quot; data-pl=&quot;Otwarte do 21:00&quot;>Open until 21:00</span> <span class=&quot;bi-sec&quot;>&amp;middot; aperto fino alle 21:00</span>
       </span>
     </div>
   </header>
@@ -10994,7 +11044,7 @@
 
     <!-- Address -->
     <div class=&quot;loc-card-soft&quot;>
-      <div class=&quot;loc-card-eyebrow&quot;>l'indirizzo &amp;middot; the address</div>
+      <div class=&quot;loc-card-eyebrow&quot;><span class=&quot;bi-pri&quot; data-en=&quot;the address&quot; data-pl=&quot;adres&quot;>the address</span> <span class=&quot;bi-sec&quot;>&amp;middot; l'indirizzo</span></div>
       <div class=&quot;addr-row&quot;>
         <svg width=&quot;22&quot; height=&quot;22&quot; viewBox=&quot;0 0 22 22&quot; fill=&quot;none&quot; aria-hidden=&quot;true&quot;>
           <path d=&quot;M11 20 C 6.5 13, 3 10, 3 6.5 A 8 8 0 0 1 19 6.5 C 19 10, 15.5 13, 11 20 Z&quot; stroke=&quot;#B85C38&quot; stroke-width=&quot;1.6&quot; fill=&quot;rgba(184,92,56,0.12)&quot;/>
@@ -11010,8 +11060,8 @@
 
     <!-- Hours -->
     <div class=&quot;loc-card-soft&quot;>
-      <div class=&quot;loc-card-eyebrow&quot;>orari della settimana &amp;middot; opening hours</div>
-      <h2 class=&quot;loc-card-title&quot;>Quando il forno è acceso<span class=&quot;en&quot;>When the oven is lit</span></h2>
+      <div class=&quot;loc-card-eyebrow&quot;><span class=&quot;bi-pri&quot; data-en=&quot;opening hours&quot; data-pl=&quot;godziny otwarcia&quot;>opening hours</span> <span class=&quot;bi-sec&quot;>&amp;middot; orari della settimana</span></div>
+      <h2 class=&quot;loc-card-title&quot;><span class=&quot;bi-pri&quot; data-en=&quot;When the oven is lit&quot; data-pl=&quot;Kiedy piec jest rozgrzany&quot;>When the oven is lit</span><span class=&quot;en bi-sec&quot;>Quando il forno è acceso</span></h2>
       <div class=&quot;hours-grid&quot; role=&quot;table&quot;>
         <div class=&quot;hours-cell&quot;><div class=&quot;hours-day-it&quot;>Lun</div><div class=&quot;hours-day-en&quot;>Mon</div><div class=&quot;hours-time&quot;>11:00<br/>22:00</div></div>
         <div class=&quot;hours-cell&quot;><div class=&quot;hours-day-it&quot;>Mar</div><div class=&quot;hours-day-en&quot;>Tue</div><div class=&quot;hours-time&quot;>11:00<br/>22:00</div></div>
@@ -11025,8 +11075,8 @@
 
     <!-- Contact -->
     <div class=&quot;loc-card-soft&quot;>
-      <div class=&quot;loc-card-eyebrow&quot;>scrivici &amp;middot; drop us a line</div>
-      <h2 class=&quot;loc-card-title&quot;>Per parlare con la cucina<span class=&quot;en&quot;>To speak with the kitchen</span></h2>
+      <div class=&quot;loc-card-eyebrow&quot;><span class=&quot;bi-pri&quot; data-en=&quot;drop us a line&quot; data-pl=&quot;napisz do nas&quot;>drop us a line</span> <span class=&quot;bi-sec&quot;>&amp;middot; scrivici</span></div>
+      <h2 class=&quot;loc-card-title&quot;><span class=&quot;bi-pri&quot; data-en=&quot;To speak with the kitchen&quot; data-pl=&quot;Aby porozmawiać z kuchnią&quot;>To speak with the kitchen</span><span class=&quot;en bi-sec&quot;>Per parlare con la cucina</span></h2>
       <div class=&quot;contact-grid&quot;>
         <a class=&quot;contact-row&quot; href=&quot;tel:+48512080080&quot;>
           <svg width=&quot;22&quot; height=&quot;22&quot; viewBox=&quot;0 0 22 22&quot; fill=&quot;none&quot; aria-hidden=&quot;true&quot;>
@@ -11090,12 +11140,12 @@
 
     <!-- MENU -->
     <div class=&quot;loc-card-soft&quot;>
-      <div class=&quot;loc-card-eyebrow&quot;>il menu di questa cucina &amp;middot; menu from this kitchen</div>
-      <h2 class=&quot;loc-card-title&quot;>Cosa esce dal forno oggi<span class=&quot;en&quot;>What comes out of the oven today</span></h2>
+      <div class=&quot;loc-card-eyebrow&quot;><span class=&quot;bi-pri&quot; data-en=&quot;menu from this kitchen&quot; data-pl=&quot;menu z tej kuchni&quot;>menu from this kitchen</span> <span class=&quot;bi-sec&quot;>&amp;middot; il menu di questa cucina</span></div>
+      <h2 class=&quot;loc-card-title&quot;><span class=&quot;bi-pri&quot; data-en=&quot;What comes out of the oven today&quot; data-pl=&quot;Co dziś wychodzi z pieca&quot;>What comes out of the oven today</span><span class=&quot;en bi-sec&quot;>Cosa esce dal forno oggi</span></h2>
       <div class=&quot;mini-tabs&quot; role=&quot;tablist&quot; data-loc=&quot;warszawa&quot;>
         <button class=&quot;mini-tab on&quot; data-cat=&quot;pizza&quot;>Pizza</button>
         <button class=&quot;mini-tab&quot; data-cat=&quot;pasta&quot;>Pasta</button>
-        <button class=&quot;mini-tab&quot; data-cat=&quot;drinks&quot;>Bibite</button>
+        <button class=&quot;mini-tab&quot; data-cat=&quot;drinks&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Drinks&quot; data-pl=&quot;Napoje&quot;>Drinks</span></button>
       </div>
       <div class=&quot;mini-menu&quot; data-cat-list=&quot;warszawa-pizza&quot;>
         <div class=&quot;mini-item hero-pick&quot;>
@@ -11295,12 +11345,12 @@
 
     <!-- PICKUP SLOTS -->
     <div class=&quot;loc-card-soft&quot;>
-      <div class=&quot;loc-card-eyebrow&quot;>orari del ritiro oggi &amp;middot; today's pickup slots</div>
-      <h2 class=&quot;loc-card-title&quot;>Quando passi a prenderla<span class=&quot;en&quot;>When you'll swing by</span></h2>
+      <div class=&quot;loc-card-eyebrow&quot;><span class=&quot;bi-pri&quot; data-en=&quot;today's pickup slots&quot; data-pl=&quot;dzisiejsze terminy odbioru&quot;>today's pickup slots</span> <span class=&quot;bi-sec&quot;>&amp;middot; orari del ritiro oggi</span></div>
+      <h2 class=&quot;loc-card-title&quot;><span class=&quot;bi-pri&quot; data-en=&quot;When you'll swing by&quot; data-pl=&quot;Kiedy odbierzesz&quot;>When you'll swing by</span><span class=&quot;en bi-sec&quot;>Quando passi a prenderla</span></h2>
       <div class=&quot;pickup-slots&quot; role=&quot;radiogroup&quot; aria-label=&quot;Pickup slots Warszawa&quot;>
         <button class=&quot;pickup-slot&quot; role=&quot;radio&quot; aria-checked=&quot;false&quot;>
           <div class=&quot;ps-time&quot;>17:30</div>
-          <div class=&quot;ps-scar&quot;>disponibile</div>
+          <div class=&quot;ps-scar&quot;><span class=&quot;bi-pri&quot; data-en=&quot;available&quot; data-pl=&quot;dostępne&quot;>available</span></div>
         </button>
         <button class=&quot;pickup-slot&quot; role=&quot;radio&quot; aria-checked=&quot;false&quot;>
           <div class=&quot;ps-time&quot;>18:00</div>
@@ -11308,19 +11358,19 @@
         </button>
         <button class=&quot;pickup-slot on&quot; role=&quot;radio&quot; aria-checked=&quot;true&quot;>
           <div class=&quot;ps-time&quot;>18:30</div>
-          <div class=&quot;ps-scar&quot;>ultimi 2 posti</div>
+          <div class=&quot;ps-scar&quot;><span class=&quot;bi-pri&quot; data-en=&quot;2 slots left&quot; data-pl=&quot;zostały 2 miejsca&quot;>2 slots left</span></div>
         </button>
         <button class=&quot;pickup-slot&quot; disabled aria-disabled=&quot;true&quot;>
           <div class=&quot;ps-time&quot;>19:00</div>
-          <div class=&quot;ps-scar&quot;>completo</div>
+          <div class=&quot;ps-scar&quot;><span class=&quot;bi-pri&quot; data-en=&quot;full&quot; data-pl=&quot;pełne&quot;>full</span></div>
         </button>
         <button class=&quot;pickup-slot&quot; role=&quot;radio&quot; aria-checked=&quot;false&quot;>
           <div class=&quot;ps-time&quot;>19:30</div>
-          <div class=&quot;ps-scar&quot;>ultimi 3 posti</div>
+          <div class=&quot;ps-scar&quot;><span class=&quot;bi-pri&quot; data-en=&quot;3 slots left&quot; data-pl=&quot;zostały 3 miejsca&quot;>3 slots left</span></div>
         </button>
         <button class=&quot;pickup-slot&quot; role=&quot;radio&quot; aria-checked=&quot;false&quot;>
           <div class=&quot;ps-time&quot;>20:00</div>
-          <div class=&quot;ps-scar&quot;>disponibile</div>
+          <div class=&quot;ps-scar&quot;><span class=&quot;bi-pri&quot; data-en=&quot;available&quot; data-pl=&quot;dostępne&quot;>available</span></div>
         </button>
       </div>
     </div>
@@ -11341,7 +11391,7 @@
             </svg>
           </div>
           <span class=&quot;bundle-tag&quot;>per 2&amp;ndash;3 persone</span>
-          <h3 class=&quot;bundle-name&quot;>Famiglia<span class=&quot;en&quot;>Family Pack</span></h3>
+          <h3 class=&quot;bundle-name&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Family Pack&quot; data-pl=&quot;Pakiet Rodzinny&quot;>Family Pack</span><span class=&quot;en bi-sec&quot;>Famiglia</span></h3>
           <div class=&quot;bundle-price&quot;>
             <span class=&quot;now num&quot;>99,00 zł</span>
             <span class=&quot;was num&quot;>103,60 zł</span>
@@ -11357,7 +11407,7 @@
             </svg>
           </div>
           <span class=&quot;bundle-tag&quot;>11:00&amp;ndash;14:00</span>
-          <h3 class=&quot;bundle-name&quot;>Pranzo<span class=&quot;en&quot;>Pizza Lunch+</span></h3>
+          <h3 class=&quot;bundle-name&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Pizza Lunch+&quot; data-pl=&quot;Pizza Lunch+&quot;>Pizza Lunch+</span><span class=&quot;en bi-sec&quot;>Pranzo</span></h3>
           <div class=&quot;bundle-price&quot;>
             <span class=&quot;now num&quot;>44,90 zł</span>
             <span class=&quot;was num&quot;>54,85 zł</span>
@@ -11372,8 +11422,8 @@
               <circle cx=&quot;13&quot; cy=&quot;20&quot; r=&quot;0.8&quot; fill=&quot;currentColor&quot;/>
             </svg>
           </div>
-          <span class=&quot;bundle-tag&quot;>dopo le 21:00</span>
-          <h3 class=&quot;bundle-name&quot;>Spicchio Notturno<span class=&quot;en&quot;>Late-Night Slice</span></h3>
+          <span class=&quot;bundle-tag&quot;><span class=&quot;bi-pri&quot; data-en=&quot;after 21:00&quot; data-pl=&quot;po 21:00&quot;>after 21:00</span> <span class=&quot;bi-sec&quot;>· dopo le 21:00</span></span>
+          <h3 class=&quot;bundle-name&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Late-Night Slice&quot; data-pl=&quot;Nocna Pizza&quot;>Late-Night Slice</span><span class=&quot;en bi-sec&quot;>Spicchio Notturno</span></h3>
           <div class=&quot;bundle-price&quot;>
             <span class=&quot;now num&quot;>16,90 zł</span>
             <span class=&quot;was num&quot;>17,80 zł</span>
@@ -11386,8 +11436,8 @@
               <path d=&quot;M16 3 L18 13 L28 16 L18 19 L16 29 L14 19 L4 16 L14 13 Z&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.6&quot; fill=&quot;rgba(255,255,255,0.4)&quot; stroke-linejoin=&quot;round&quot;/>
             </svg>
           </div>
-          <span class=&quot;bundle-tag&quot;>automatico</span>
-          <h3 class=&quot;bundle-name&quot;>Il Classico<span class=&quot;en&quot;>Save 10%</span></h3>
+          <span class=&quot;bundle-tag&quot;><span class=&quot;bi-pri&quot; data-en=&quot;automatic&quot; data-pl=&quot;automatyczny&quot;>automatic</span> <span class=&quot;bi-sec&quot;>· automatico</span></span>
+          <h3 class=&quot;bundle-name&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Italian Classic&quot; data-pl=&quot;Włoski Klasyk&quot;>Italian Classic</span><span class=&quot;en bi-sec&quot;>Il Classico</span></h3>
           <div class=&quot;bundle-price&quot;><span class=&quot;savings&quot;>−10%</span></div>
           <p class=&quot;bundle-desc&quot;>Margherita + limonata + tiramisù = sconto.</p>
         </article>
@@ -11397,7 +11447,7 @@
     <!-- CTA -->
     <div class=&quot;order-cta-wrap&quot;>
       <button class=&quot;order-cta-big&quot; data-open-cart data-loc=&quot;warszawa&quot;>
-        Ordina da questa cucina <span class=&quot;it&quot;>· Order from this kitchen</span> &amp;rarr;
+        <span class=&quot;bi-pri&quot; data-en=&quot;Order from this kitchen&quot; data-pl=&quot;Zamów z tej kuchni&quot;>Order from this kitchen</span> <span class=&quot;it bi-sec&quot;>· ordina da questa cucina</span> &amp;rarr;
       </button>
     </div>
 
@@ -11433,7 +11483,7 @@
      CART SHEET (slide-up containing the original cart drawer)
      ============================================================ -->
 <div class=&quot;cart-overlay&quot; id=&quot;cart-overlay&quot; aria-hidden=&quot;true&quot;></div>
-<aside class=&quot;cart-sheet&quot; id=&quot;cart-sheet&quot; role=&quot;dialog&quot; aria-modal=&quot;true&quot; aria-label=&quot;Il tuo ordine&quot;>
+<aside class=&quot;cart-sheet&quot; id=&quot;cart-sheet&quot; role=&quot;dialog&quot; aria-modal=&quot;true&quot; aria-label=&quot;Your order&quot;>
   <div class=&quot;cart-grip&quot; aria-hidden=&quot;true&quot;></div>
   <div class=&quot;cart-scroll&quot;>
 
@@ -11455,8 +11505,8 @@
           </svg>
         </span>
         <div>
-          <h1>Il tuo ordine</h1>
-          <div class=&quot;top-sub&quot;>— your order</div>
+          <h1><span class=&quot;bi-pri&quot; data-en=&quot;Your order&quot; data-pl=&quot;Twoje zamówienie&quot;>Your order</span></h1>
+          <div class=&quot;top-sub&quot;>— <span class=&quot;it&quot;>il tuo ordine</span></div>
         </div>
       </div>
       <button class=&quot;close-btn&quot; aria-label=&quot;Close&quot;>
@@ -11484,8 +11534,8 @@
       </svg>
     </div>
     <div class=&quot;tod-text&quot;>
-      <div class=&quot;tod-title&quot;>L'ora dell'aperitivo</div>
-      <div class=&quot;tod-sub&quot;>17:42 — pair tonight's pizza with a Negroni Sbagliato.</div>
+      <div class=&quot;tod-title&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Aperitivo hour&quot; data-pl=&quot;Pora aperitivo&quot;>Aperitivo hour</span> <span class=&quot;it bi-sec&quot;>· l'ora dell'aperitivo</span></div>
+      <div class=&quot;tod-sub&quot;>17:42 — <span class=&quot;bi-pri&quot; data-en=&quot;pair tonight's pizza with a Negroni Sbagliato.&quot; data-pl=&quot;zestaw dzisiejszą pizzę z Negroni Sbagliato.&quot;>pair tonight's pizza with a Negroni Sbagliato.</span></div>
     </div>
   </div>
 
@@ -11501,10 +11551,10 @@
       </svg>
     </div>
     <div style=&quot;flex:1;&quot;>
-      <div class=&quot;corp-title&quot;>Sud Italia per le aziende</div>
-      <div class=&quot;corp-sub&quot;>Team lunch · invoiced · delivered warm</div>
+      <div class=&quot;corp-title&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Sud Italia for businesses&quot; data-pl=&quot;Sud Italia dla firm&quot;>Sud Italia for businesses</span> <span class=&quot;it bi-sec&quot;>· per le aziende</span></div>
+      <div class=&quot;corp-sub&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Team lunch · invoiced · delivered warm&quot; data-pl=&quot;Lunch dla zespołu · faktura · dostarczony ciepły&quot;>Team lunch · invoiced · delivered warm</span></div>
     </div>
-    <button class=&quot;corp-cta&quot;>Scopri</button>
+    <button class=&quot;corp-cta&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Discover&quot; data-pl=&quot;Sprawdź&quot;>Discover</span></button>
   </div>
 
   <!-- ============================================================
@@ -11512,16 +11562,16 @@
        ============================================================ -->
   <div class=&quot;loyalty&quot;>
     <div class=&quot;loyalty-head&quot;>
-      <span>Soci e amici · Membership</span>
+      <span><span class=&quot;bi-pri&quot; data-en=&quot;Membership&quot; data-pl=&quot;Członkostwo&quot;>Membership</span> <span class=&quot;bi-sec&quot;>· soci e amici</span></span>
       <span class=&quot;num&quot;>N° 0427</span>
     </div>
-    <div class=&quot;loyalty-name&quot;>Ciao, Aleksandra</div>
+    <div class=&quot;loyalty-name&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Hi&quot; data-pl=&quot;Cześć&quot;>Hi</span>, Aleksandra</div>
     <div class=&quot;loyalty-meta&quot;>
-      <span class=&quot;loyalty-pts num&quot;>243 punti</span>
-      <span>· 57 to <em class=&quot;it&quot;>Famiglia Oro</em></span>
+      <span class=&quot;loyalty-pts num&quot;>243 <span class=&quot;bi-pri&quot; data-en=&quot;points&quot; data-pl=&quot;punktów&quot;>points</span> <span class=&quot;bi-sec&quot;>· punti</span></span>
+      <span>· 57 <span class=&quot;bi-pri&quot; data-en=&quot;to&quot; data-pl=&quot;do&quot;>to</span> <em class=&quot;it&quot;>Famiglia Oro</em></span>
     </div>
     <div class=&quot;loyalty-bar&quot;><span></span></div>
-    <div class=&quot;loyalty-foot&quot;>&quot;Una pizza, una storia.&quot; — earn 1 punto for each złoty spent.</div>
+    <div class=&quot;loyalty-foot&quot;><em>&quot;Una pizza, una storia.&quot;</em> — <span class=&quot;bi-pri&quot; data-en=&quot;earn 1 point for each złoty spent.&quot; data-pl=&quot;zdobądź 1 punkt za każdą wydaną złotówkę.&quot;>earn 1 point for each złoty spent.</span></div>
   </div>
 
   <div class=&quot;perk&quot;>
@@ -11533,7 +11583,7 @@
     </div>
     <div>
       <div class=&quot;perk-title&quot;>Famiglia Oro</div>
-      <div class=&quot;perk-sub&quot;>A complimentary <em class=&quot;it&quot;>antipasto della casa</em> on us — added at the truck.</div>
+      <div class=&quot;perk-sub&quot;><span class=&quot;bi-pri&quot; data-en=&quot;A complimentary&quot; data-pl=&quot;Bezpłatne&quot;>A complimentary</span> <em class=&quot;it&quot;>antipasto della casa</em> <span class=&quot;bi-pri&quot; data-en=&quot;on us — added at the truck.&quot; data-pl=&quot;od nas — dodane przy odbiorze.&quot;>on us — added at the truck.</span></div>
     </div>
   </div>
 
@@ -11541,7 +11591,7 @@
        2. CART ITEMS
        ============================================================ -->
   <div class=&quot;section&quot; style=&quot;padding-top: 26px;&quot;>
-    <div class=&quot;section-title&quot;>Il tavolo · The table</div>
+    <div class=&quot;section-title&quot;><span class=&quot;bi-pri&quot; data-en=&quot;The table&quot; data-pl=&quot;Stół&quot;>The table</span> <span class=&quot;bi-sec&quot;>· il tavolo</span></div>
 
     <div class=&quot;items&quot; style=&quot;padding-left:0; padding-right:0;&quot;>
 
@@ -11571,8 +11621,8 @@
               <button data-act=&quot;inc&quot;>+</button>
             </div>
             <div class=&quot;item-actions&quot;>
-              <button>nota</button>
-              <button>rimuovi</button>
+              <button><span class=&quot;bi-pri&quot; data-en=&quot;note&quot; data-pl=&quot;notatka&quot;>note</span> <span class=&quot;bi-sec&quot;>· nota</span></button>
+              <button><span class=&quot;bi-pri&quot; data-en=&quot;remove&quot; data-pl=&quot;usuń&quot;>remove</span> <span class=&quot;bi-sec&quot;>· rimuovi</span></button>
             </div>
           </div>
         </div>
@@ -11596,7 +11646,7 @@
             <div class=&quot;item-name&quot;>Diavola</div>
             <div class=&quot;item-price num&quot;>41,00 zł</div>
           </div>
-          <div class=&quot;item-origin&quot;>Spianata piccante calabrese · mozzarella · olio al peperoncino — for the brave.</div>
+          <div class=&quot;item-origin&quot;>Spianata piccante calabrese · mozzarella · olio al peperoncino — <span class=&quot;bi-pri&quot; data-en=&quot;for the brave.&quot; data-pl=&quot;dla odważnych.&quot;>for the brave.</span></div>
           <div class=&quot;item-foot&quot;>
             <div class=&quot;qty&quot; data-item=&quot;diavola&quot; data-price=&quot;41&quot;>
               <button data-act=&quot;dec&quot;>−</button>
@@ -11604,8 +11654,8 @@
               <button data-act=&quot;inc&quot;>+</button>
             </div>
             <div class=&quot;item-actions&quot;>
-              <button>nota</button>
-              <button>rimuovi</button>
+              <button><span class=&quot;bi-pri&quot; data-en=&quot;note&quot; data-pl=&quot;notatka&quot;>note</span> <span class=&quot;bi-sec&quot;>· nota</span></button>
+              <button><span class=&quot;bi-pri&quot; data-en=&quot;remove&quot; data-pl=&quot;usuń&quot;>remove</span> <span class=&quot;bi-sec&quot;>· rimuovi</span></button>
             </div>
           </div>
         </div>
@@ -11629,7 +11679,7 @@
             <div class=&quot;item-name&quot;>Carbonara</div>
             <div class=&quot;item-price num&quot;>38,00 zł</div>
           </div>
-          <div class=&quot;item-origin&quot;>Guanciale di Amatrice · pecorino romano · tuorlo d'uovo — no cream, mai.</div>
+          <div class=&quot;item-origin&quot;>Guanciale di Amatrice · pecorino romano · tuorlo d'uovo — <span class=&quot;bi-pri&quot; data-en=&quot;no cream, ever.&quot; data-pl=&quot;bez śmietany, nigdy.&quot;>no cream, ever.</span> <span class=&quot;bi-sec&quot;>· mai</span></div>
           <div class=&quot;item-foot&quot;>
             <div class=&quot;qty&quot; data-item=&quot;carbonara&quot; data-price=&quot;38&quot;>
               <button data-act=&quot;dec&quot;>−</button>
@@ -11637,8 +11687,8 @@
               <button data-act=&quot;inc&quot;>+</button>
             </div>
             <div class=&quot;item-actions&quot;>
-              <button>nota</button>
-              <button>rimuovi</button>
+              <button><span class=&quot;bi-pri&quot; data-en=&quot;note&quot; data-pl=&quot;notatka&quot;>note</span> <span class=&quot;bi-sec&quot;>· nota</span></button>
+              <button><span class=&quot;bi-pri&quot; data-en=&quot;remove&quot; data-pl=&quot;usuń&quot;>remove</span> <span class=&quot;bi-sec&quot;>· rimuovi</span></button>
             </div>
           </div>
         </div>
@@ -11659,10 +11709,10 @@
       </svg>
     </div>
     <div>
-      <div class=&quot;sold-out-title&quot;><em class=&quot;it&quot;>Burrata pugliese</em> — esaurita</div>
-      <div class=&quot;sold-out-sub&quot;>This morning's batch from Andria is finished. We'll have fresh tomorrow at 11:00.</div>
+      <div class=&quot;sold-out-title&quot;><em class=&quot;it&quot;>Burrata pugliese</em> — <span class=&quot;bi-pri&quot; data-en=&quot;sold out&quot; data-pl=&quot;wyprzedane&quot;>sold out</span> <span class=&quot;bi-sec&quot;>· esaurita</span></div>
+      <div class=&quot;sold-out-sub&quot;><span class=&quot;bi-pri&quot; data-en=&quot;This morning's batch from Andria is finished. We'll have fresh tomorrow at 11:00.&quot; data-pl=&quot;Dzisiejsza partia z Andrii się skończyła. Świeża będzie jutro o 11:00.&quot;>This morning's batch from Andria is finished. We'll have fresh tomorrow at 11:00.</span></div>
     </div>
-    <button class=&quot;sold-out-cta&quot;>Notify me</button>
+    <button class=&quot;sold-out-cta&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Notify me&quot; data-pl=&quot;Powiadom mnie&quot;>Notify me</span></button>
   </div>
 
   <!-- subtle divider -->
@@ -11681,10 +11731,10 @@
        ============================================================ -->
   <div class=&quot;ladder&quot;>
     <div class=&quot;ladder-head&quot;>
-      <div class=&quot;ladder-title&quot;>Festa di famiglia</div>
-      <div class=&quot;ladder-pct&quot;>62% there</div>
+      <div class=&quot;ladder-title&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Family feast&quot; data-pl=&quot;Rodzinna uczta&quot;>Family feast</span> <span class=&quot;it bi-sec&quot;>· festa di famiglia</span></div>
+      <div class=&quot;ladder-pct&quot;>62% <span class=&quot;bi-pri&quot; data-en=&quot;there&quot; data-pl=&quot;osiągnięte&quot;>there</span></div>
     </div>
-    <div class=&quot;ladder-sub&quot;>Cross the next threshold — share a feast with the family.</div>
+    <div class=&quot;ladder-sub&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Cross the next threshold — share a feast with the family.&quot; data-pl=&quot;Przekrocz następny próg — dziel ucztę z rodziną.&quot;>Cross the next threshold — share a feast with the family.</span></div>
     <div class=&quot;ladder-track&quot;>
       <div class=&quot;ladder-rail&quot;><div class=&quot;ladder-fill&quot;></div></div>
       <div class=&quot;ladder-marks&quot;>
@@ -11701,7 +11751,7 @@
       <span>280 zł</span>
     </div>
     <div class=&quot;ladder-foot&quot;>
-      Add <strong>just 32,00 zł</strong> more to unlock a complimentary <em class=&quot;it&quot;>tiramisù della nonna</em> — burned into the oven door for those who reach it.
+      <span class=&quot;bi-pri&quot; data-en=&quot;Add&quot; data-pl=&quot;Dodaj&quot;>Add</span> <strong><span class=&quot;bi-pri&quot; data-en=&quot;just&quot; data-pl=&quot;jeszcze&quot;>just</span> 32,00 zł</strong> <span class=&quot;bi-pri&quot; data-en=&quot;more to unlock a complimentary&quot; data-pl=&quot;aby odblokować gratisowe&quot;>more to unlock a complimentary</span> <em class=&quot;it&quot;>tiramisù della nonna</em> — <span class=&quot;bi-pri&quot; data-en=&quot;burned into the oven door for those who reach it.&quot; data-pl=&quot;wypalone na drzwiach pieca dla tych, którzy dotrą do mety.&quot;>burned into the oven door for those who reach it.</span>
     </div>
   </div>
 
@@ -11720,8 +11770,8 @@
       </svg>
     </div>
     <div>
-      <div class=&quot;combo-title&quot;>Il classico — Italian Classic</div>
-      <div class=&quot;combo-sub&quot;>Margherita + Diavola + 2 bibite · applied at checkout.</div>
+      <div class=&quot;combo-title&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Italian Classic&quot; data-pl=&quot;Włoski Klasyk&quot;>Italian Classic</span> <span class=&quot;bi-sec&quot;>— il classico</span></div>
+      <div class=&quot;combo-sub&quot;>Margherita + Diavola + 2 <span class=&quot;bi-pri&quot; data-en=&quot;drinks&quot; data-pl=&quot;napoje&quot;>drinks</span> <span class=&quot;bi-sec&quot;>· bibite</span> · <span class=&quot;bi-pri&quot; data-en=&quot;applied at checkout.&quot; data-pl=&quot;naliczany przy zamówieniu.&quot;>applied at checkout.</span></div>
     </div>
     <div class=&quot;combo-tag&quot;>−10%</div>
   </div>
@@ -11730,10 +11780,10 @@
        10. CROSS-SELL — Pairs beautifully with
        ============================================================ -->
   <div class=&quot;pairs&quot;>
-    <div class=&quot;pairs-kicker&quot;>Tonight's pairing</div>
-    <h2 class=&quot;pairs-title&quot;>Pairs beautifully with —</h2>
+    <div class=&quot;pairs-kicker&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Tonight's pairing&quot; data-pl=&quot;Dzisiejsze pairing&quot;>Tonight's pairing</span> <span class=&quot;bi-sec&quot;>· l'abbinamento di stasera</span></div>
+    <h2 class=&quot;pairs-title&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Pairs beautifully with —&quot; data-pl=&quot;Pasuje pięknie do —&quot;>Pairs beautifully with —</span></h2>
     <div style=&quot;font-size:12.5px; color:var(--muted); font-style:italic; margin-bottom:4px;&quot;>
-      Our pizzaiolo suggests, sommelier-style.
+      <span class=&quot;bi-pri&quot; data-en=&quot;Our pizzaiolo suggests, sommelier-style.&quot; data-pl=&quot;Nasz pizzaiolo poleca, jak sommelier.&quot;>Our pizzaiolo suggests, sommelier-style.</span>
     </div>
 
     <!-- Pair 1: Limonata -->
@@ -11748,10 +11798,10 @@
       </div>
       <div class=&quot;pair-body&quot;>
         <div class=&quot;pair-name&quot;>Limonata di Sicilia</div>
-        <div class=&quot;pair-origin&quot;>Lemons from Siracusa · still · 250ml</div>
+        <div class=&quot;pair-origin&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Lemons from Siracusa · still · 250ml&quot; data-pl=&quot;Cytryny z Syrakuz · niegazowana · 250ml&quot;>Lemons from Siracusa · still · 250ml</span></div>
         <div class=&quot;pair-meta&quot;>
           <span class=&quot;pair-price num&quot;>9,50 zł</span>
-          <button class=&quot;pair-add&quot;>+ Aggiungi</button>
+          <button class=&quot;pair-add&quot;>+ <span class=&quot;bi-pri&quot; data-en=&quot;Add&quot; data-pl=&quot;Dodaj&quot;>Add</span> <span class=&quot;bi-sec&quot;>· aggiungi</span></button>
         </div>
       </div>
     </div>
@@ -11768,10 +11818,10 @@
       </div>
       <div class=&quot;pair-body&quot;>
         <div class=&quot;pair-name&quot;>Negroni Sbagliato</div>
-        <div class=&quot;pair-origin&quot;>Campari · vermouth rosso · prosecco — sparkling.</div>
+        <div class=&quot;pair-origin&quot;>Campari · vermouth rosso · prosecco — <span class=&quot;bi-pri&quot; data-en=&quot;sparkling.&quot; data-pl=&quot;musujące.&quot;>sparkling.</span></div>
         <div class=&quot;pair-meta&quot;>
           <span class=&quot;pair-price num&quot;>24,00 zł</span>
-          <button class=&quot;pair-add&quot;>+ Aggiungi</button>
+          <button class=&quot;pair-add&quot;>+ <span class=&quot;bi-pri&quot; data-en=&quot;Add&quot; data-pl=&quot;Dodaj&quot;>Add</span> <span class=&quot;bi-sec&quot;>· aggiungi</span></button>
         </div>
       </div>
     </div>
@@ -11791,10 +11841,10 @@
       </div>
       <div class=&quot;pair-body&quot;>
         <div class=&quot;pair-name&quot;>Tiramisù della nonna</div>
-        <div class=&quot;pair-origin&quot;><em class=&quot;it&quot;>Last 3 portions of this morning's batch.</em></div>
+        <div class=&quot;pair-origin&quot;><em><span class=&quot;bi-pri&quot; data-en=&quot;Last 3 portions of this morning's batch.&quot; data-pl=&quot;Ostatnie 3 porcje z dzisiejszej partii.&quot;>Last 3 portions of this morning's batch.</span></em></div>
         <div class=&quot;pair-meta&quot;>
           <span class=&quot;pair-price num&quot;>18,00 zł</span>
-          <button class=&quot;pair-add&quot;>+ Aggiungi</button>
+          <button class=&quot;pair-add&quot;>+ <span class=&quot;bi-pri&quot; data-en=&quot;Add&quot; data-pl=&quot;Dodaj&quot;>Add</span> <span class=&quot;bi-sec&quot;>· aggiungi</span></button>
         </div>
       </div>
     </div>
@@ -11814,10 +11864,10 @@
       </svg>
     </div>
     <div class=&quot;quick-text&quot;>
-      <div class=&quot;quick-title&quot;>Un espresso?</div>
-      <div class=&quot;quick-sub&quot;>Ready in 4 min · the beans come from Napoli · 7,00 zł</div>
+      <div class=&quot;quick-title&quot;><span class=&quot;bi-pri&quot; data-en=&quot;An espresso?&quot; data-pl=&quot;Espresso?&quot;>An espresso?</span> <span class=&quot;bi-sec&quot;>· un espresso?</span></div>
+      <div class=&quot;quick-sub&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Ready in 4 min · the beans come from Napoli · 7,00 zł&quot; data-pl=&quot;Gotowe w 4 min · ziarna z Neapolu · 7,00 zł&quot;>Ready in 4 min · the beans come from Napoli · 7,00 zł</span></div>
     </div>
-    <button class=&quot;quick-btn&quot; id=&quot;add-espresso&quot;>+ Sì</button>
+    <button class=&quot;quick-btn&quot; id=&quot;add-espresso&quot;>+ <span class=&quot;bi-pri&quot; data-en=&quot;Yes&quot; data-pl=&quot;Tak&quot;>Yes</span> <span class=&quot;bi-sec&quot;>· sì</span></button>
   </div>
 
   <!-- divider -->
@@ -11852,64 +11902,64 @@
         </svg>
       </div>
     </div>
-    <div class=&quot;delivery-foot&quot;>Add a little more — and our rider Marco pedals it on the house.</div>
+    <div class=&quot;delivery-foot&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Add a little more — and our rider Marco pedals it on the house.&quot; data-pl=&quot;Dorzuć trochę więcej — a nasz dostawca Marco przywiezie na koszt domu.&quot;>Add a little more — and our rider Marco pedals it on the house.</span></div>
   </div>
 
   <!-- ============================================================
        13. FULFILLMENT TOGGLE
        ============================================================ -->
   <div class=&quot;section&quot; style=&quot;padding-bottom: 0;&quot;>
-    <div class=&quot;section-title&quot;>Come lo vuoi · How</div>
+    <div class=&quot;section-title&quot;><span class=&quot;bi-pri&quot; data-en=&quot;How&quot; data-pl=&quot;Jak&quot;>How</span> <span class=&quot;bi-sec&quot;>· come lo vuoi</span></div>
   </div>
   <div class=&quot;fulfill&quot; id=&quot;fulfill&quot;>
-    <button data-mode=&quot;takeaway&quot; class=&quot;on&quot;>Asporto <span style=&quot;opacity:.6&quot;>·</span> <span class=&quot;it&quot;>takeaway</span></button>
-    <button data-mode=&quot;delivery&quot;>Consegna <span style=&quot;opacity:.6&quot;>·</span> <span class=&quot;it&quot;>delivery</span></button>
+    <button data-mode=&quot;takeaway&quot; class=&quot;on&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Takeaway&quot; data-pl=&quot;Na wynos&quot;>Takeaway</span> <span style=&quot;opacity:.6&quot;>·</span> <span class=&quot;it bi-sec&quot;>asporto</span></button>
+    <button data-mode=&quot;delivery&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Delivery&quot; data-pl=&quot;Dostawa&quot;>Delivery</span> <span style=&quot;opacity:.6&quot;>·</span> <span class=&quot;it bi-sec&quot;>consegna</span></button>
   </div>
 
   <!-- ============================================================
        14. DELIVERY ADDRESS
        ============================================================ -->
   <div class=&quot;field&quot; id=&quot;addr-field&quot;>
-    <label class=&quot;field-label&quot;>Indirizzo · Address</label>
+    <label class=&quot;field-label&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Address&quot; data-pl=&quot;Adres&quot;>Address</span> <span class=&quot;bi-sec&quot;>· indirizzo</span></label>
     <input class=&quot;field-input&quot; type=&quot;text&quot;
            value=&quot;ul. Floriańska 27 / 4, Kraków&quot;
-           placeholder=&quot;Where shall we send it?&quot; />
+           placeholder=&quot;Where shall we send it?&quot; data-ph-en=&quot;Where shall we send it?&quot; data-ph-pl=&quot;Gdzie mamy dostarczyć?&quot; />
   </div>
 
   <!-- ============================================================
        15. TIME SLOT PICKER
        ============================================================ -->
   <div class=&quot;section&quot; style=&quot;padding-bottom: 0;&quot;>
-    <div class=&quot;section-title&quot;>A che ora · Time</div>
+    <div class=&quot;section-title&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Time&quot; data-pl=&quot;Czas&quot;>Time</span> <span class=&quot;bi-sec&quot;>· a che ora</span></div>
   </div>
   <div class=&quot;slots&quot; id=&quot;slots&quot;>
-    <button class=&quot;slot&quot;>17:45<span class=&quot;scarce&quot;>pronto subito</span></button>
-    <button class=&quot;slot on&quot;>18:00<span class=&quot;scarce&quot;>ultimi 2 posti</span></button>
-    <button class=&quot;slot&quot;>18:15<span class=&quot;scarce&quot;>libero</span></button>
-    <button class=&quot;slot&quot;>18:30<span class=&quot;scarce&quot;>libero</span></button>
-    <button class=&quot;slot&quot;>18:45<span class=&quot;scarce&quot;>libero</span></button>
-    <button class=&quot;slot&quot;>19:00<span class=&quot;scarce&quot;>ultimi 4</span></button>
-    <button class=&quot;slot&quot;>19:15<span class=&quot;scarce&quot;>libero</span></button>
+    <button class=&quot;slot&quot;>17:45<span class=&quot;scarce&quot;><span class=&quot;bi-pri&quot; data-en=&quot;ready now&quot; data-pl=&quot;gotowe od razu&quot;>ready now</span> <span class=&quot;bi-sec&quot;>· pronto subito</span></span></button>
+    <button class=&quot;slot on&quot;>18:00<span class=&quot;scarce&quot;><span class=&quot;bi-pri&quot; data-en=&quot;2 slots left&quot; data-pl=&quot;zostały 2 miejsca&quot;>2 slots left</span> <span class=&quot;bi-sec&quot;>· ultimi 2 posti</span></span></button>
+    <button class=&quot;slot&quot;>18:15<span class=&quot;scarce&quot;><span class=&quot;bi-pri&quot; data-en=&quot;available&quot; data-pl=&quot;dostępne&quot;>available</span> <span class=&quot;bi-sec&quot;>· libero</span></span></button>
+    <button class=&quot;slot&quot;>18:30<span class=&quot;scarce&quot;><span class=&quot;bi-pri&quot; data-en=&quot;available&quot; data-pl=&quot;dostępne&quot;>available</span> <span class=&quot;bi-sec&quot;>· libero</span></span></button>
+    <button class=&quot;slot&quot;>18:45<span class=&quot;scarce&quot;><span class=&quot;bi-pri&quot; data-en=&quot;available&quot; data-pl=&quot;dostępne&quot;>available</span> <span class=&quot;bi-sec&quot;>· libero</span></span></button>
+    <button class=&quot;slot&quot;>19:00<span class=&quot;scarce&quot;><span class=&quot;bi-pri&quot; data-en=&quot;4 left&quot; data-pl=&quot;zostały 4&quot;>4 left</span> <span class=&quot;bi-sec&quot;>· ultimi 4</span></span></button>
+    <button class=&quot;slot&quot;>19:15<span class=&quot;scarce&quot;><span class=&quot;bi-pri&quot; data-en=&quot;available&quot; data-pl=&quot;dostępne&quot;>available</span> <span class=&quot;bi-sec&quot;>· libero</span></span></button>
   </div>
 
   <!-- ============================================================
        16. CUSTOMER DETAILS
        ============================================================ -->
   <div class=&quot;section&quot; style=&quot;padding-bottom: 0; padding-top: 22px;&quot;>
-    <div class=&quot;section-title&quot;>Dettagli · You</div>
+    <div class=&quot;section-title&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Your details&quot; data-pl=&quot;Twoje dane&quot;>Your details</span> <span class=&quot;bi-sec&quot;>· dettagli</span></div>
   </div>
   <div class=&quot;form-row&quot;>
     <div class=&quot;field&quot;>
-      <label class=&quot;field-label&quot;>Nome · Name</label>
+      <label class=&quot;field-label&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Name&quot; data-pl=&quot;Imię&quot;>Name</span> <span class=&quot;bi-sec&quot;>· nome</span></label>
       <input class=&quot;field-input&quot; type=&quot;text&quot; value=&quot;Aleksandra&quot; />
     </div>
     <div class=&quot;field&quot;>
-      <label class=&quot;field-label&quot;>Telefono · Phone</label>
+      <label class=&quot;field-label&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Phone&quot; data-pl=&quot;Telefon&quot;>Phone</span> <span class=&quot;bi-sec&quot;>· telefono</span></label>
       <input class=&quot;field-input&quot; type=&quot;tel&quot; value=&quot;+48 512 ••• •••&quot; />
     </div>
   </div>
   <div class=&quot;field&quot;>
-    <label class=&quot;field-label&quot;>Email <span style=&quot;opacity:.5; font-weight:400; letter-spacing:0; text-transform:none; font-family:var(--serif-body); font-style:italic; font-size:12px;&quot;>(optional, for the receipt)</span></label>
+    <label class=&quot;field-label&quot;>Email <span style=&quot;opacity:.5; font-weight:400; letter-spacing:0; text-transform:none; font-family:var(--serif-body); font-style:italic; font-size:12px;&quot;><span class=&quot;bi-pri&quot; data-en=&quot;(optional, for the receipt)&quot; data-pl=&quot;(opcjonalne, do paragonu)&quot;>(optional, for the receipt)</span></span></label>
     <input class=&quot;field-input&quot; type=&quot;email&quot; placeholder=&quot;ale@esempio.it&quot; />
   </div>
 
@@ -11917,24 +11967,24 @@
        17. TIP PICKER
        ============================================================ -->
   <div class=&quot;section&quot; style=&quot;padding-bottom: 0; padding-top: 22px;&quot;>
-    <div class=&quot;section-title&quot;>Una mancia · A tip for the crew</div>
+    <div class=&quot;section-title&quot;><span class=&quot;bi-pri&quot; data-en=&quot;A tip for the crew&quot; data-pl=&quot;Napiwek dla ekipy&quot;>A tip for the crew</span> <span class=&quot;bi-sec&quot;>· una mancia</span></div>
   </div>
   <div class=&quot;tips&quot; id=&quot;tips&quot;>
     <button class=&quot;tip&quot;>
       0%
-      <span class=&quot;tip-label&quot;>grazie no</span>
+      <span class=&quot;tip-label&quot;><span class=&quot;bi-pri&quot; data-en=&quot;no thanks&quot; data-pl=&quot;nie, dziękuję&quot;>no thanks</span></span>
     </button>
     <button class=&quot;tip on&quot;>
       10%
-      <span class=&quot;tip-label&quot;>gentile</span>
+      <span class=&quot;tip-label&quot;><span class=&quot;bi-pri&quot; data-en=&quot;kind&quot; data-pl=&quot;miło&quot;>kind</span></span>
     </button>
     <button class=&quot;tip&quot;>
       15%
-      <span class=&quot;tip-label&quot;>generoso</span>
+      <span class=&quot;tip-label&quot;><span class=&quot;bi-pri&quot; data-en=&quot;generous&quot; data-pl=&quot;hojnie&quot;>generous</span></span>
     </button>
     <button class=&quot;tip&quot;>
       20%
-      <span class=&quot;tip-label&quot;>famiglia</span>
+      <span class=&quot;tip-label&quot;><span class=&quot;bi-pri&quot; data-en=&quot;family&quot; data-pl=&quot;rodzina&quot;>family</span></span>
     </button>
   </div>
 
@@ -11954,15 +12004,15 @@
   <div class=&quot;paybar-inner&quot;>
     <div class=&quot;totals&quot;>
       <div class=&quot;totals-row&quot;>
-        <span class=&quot;label&quot;>Subtotale</span>
+        <span class=&quot;label&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Subtotal&quot; data-pl=&quot;Suma częściowa&quot;>Subtotal</span> <span class=&quot;bi-sec&quot;>· subtotale</span></span>
         <span class=&quot;val num&quot; id=&quot;r-sub&quot;>115,00 zł</span>
       </div>
       <div class=&quot;totals-row discount&quot;>
-        <span class=&quot;label&quot;>Il classico · −10%</span>
+        <span class=&quot;label&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Italian Classic&quot; data-pl=&quot;Włoski Klasyk&quot;>Italian Classic</span> <span class=&quot;bi-sec&quot;>· il classico</span> · −10%</span>
         <span class=&quot;val num&quot; id=&quot;r-combo&quot;>−11,50 zł</span>
       </div>
       <div class=&quot;totals-row&quot;>
-        <span class=&quot;label&quot;>Consegna</span>
+        <span class=&quot;label&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Delivery&quot; data-pl=&quot;Dostawa&quot;>Delivery</span> <span class=&quot;bi-sec&quot;>· consegna</span></span>
         <span class=&quot;val num&quot; id=&quot;r-deliv&quot;>0,00 zł</span>
       </div>
       <div class=&quot;totals-row&quot;>
@@ -11970,7 +12020,7 @@
         <span class=&quot;val num&quot; id=&quot;r-tip&quot;>10,30 zł</span>
       </div>
       <div class=&quot;totals-row total&quot;>
-        <span class=&quot;label it&quot;>Totale · Total</span>
+        <span class=&quot;label&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Total&quot; data-pl=&quot;Razem&quot;>Total</span> <span class=&quot;bi-sec it&quot;>· totale</span></span>
         <span class=&quot;val num&quot; id=&quot;r-total&quot;>113,80 zł</span>
         <!-- coffee stain -->
         <svg class=&quot;stain&quot; viewBox=&quot;0 0 40 40&quot; aria-hidden=&quot;true&quot;>
@@ -11981,9 +12031,9 @@
     </div>
     <div class=&quot;pay-actions&quot;>
       <button class=&quot;pay-cta&quot; id=&quot;pay-btn&quot;>
-        Procedi al pagamento <span class=&quot;it&quot;>· Pay</span> <span class=&quot;num&quot;>113,80 zł</span>
+        <span class=&quot;bi-pri&quot; data-en=&quot;Pay&quot; data-pl=&quot;Zapłać&quot;>Pay</span> <span class=&quot;it bi-sec&quot;>· procedi al pagamento</span> <span class=&quot;num&quot;>113,80 zł</span>
       </button>
-      <button class=&quot;pay-clear&quot; id=&quot;clear-btn&quot; title=&quot;Clear cart&quot;>svuota</button>
+      <button class=&quot;pay-clear&quot; id=&quot;clear-btn&quot; title=&quot;Clear cart&quot;><span class=&quot;bi-pri&quot; data-en=&quot;clear&quot; data-pl=&quot;wyczyść&quot;>clear</span> <span class=&quot;bi-sec&quot;>· svuota</span></button>
     </div>
   </div>
 </div>
@@ -11991,7 +12041,7 @@
   </div><!-- /.cart-scroll -->
 </aside><!-- /.cart-sheet -->
 
-<div class=&quot;toast&quot; id=&quot;toast&quot;>Aggiunto al carrello</div>
+<div class=&quot;toast&quot; id=&quot;toast&quot; data-en=&quot;Added to cart&quot; data-pl=&quot;Dodano do koszyka&quot;>Added to cart</div>
 
 <!-- ============================================================
      VANILLA JS — gentle interactivity
@@ -11999,6 +12049,52 @@
 <script>
 (function () {
   'use strict';
+
+  // ============================================================
+  // LANGUAGE PICKER — primary language (Italian is always 2nd)
+  // ============================================================
+  var LANG_KEY = 'sud-italia-v8-lang';
+  var SUPPORTED = ['en', 'pl'];
+  function getStoredLang() {
+    try {
+      var v = localStorage.getItem(LANG_KEY);
+      if (v &amp;&amp; SUPPORTED.indexOf(v) >= 0) return v;
+    } catch (e) {}
+    return 'en';
+  }
+  function applyLang(lang) {
+    if (SUPPORTED.indexOf(lang) < 0) lang = 'en';
+    document.documentElement.setAttribute('lang', lang);
+    document.documentElement.setAttribute('data-lang', lang);
+    document.body &amp;&amp; document.body.setAttribute('data-lang', lang);
+    var nodes = document.querySelectorAll('[data-en],[data-pl]');
+    for (var i = 0; i < nodes.length; i++) {
+      var el = nodes[i];
+      if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') continue;
+      var val = el.getAttribute('data-' + lang);
+      if (val != null) el.textContent = val;
+    }
+    var phNodes = document.querySelectorAll('[data-ph-en],[data-ph-pl]');
+    for (var p = 0; p < phNodes.length; p++) {
+      var pv = phNodes[p].getAttribute('data-ph-' + lang);
+      if (pv != null) phNodes[p].setAttribute('placeholder', pv);
+    }
+    var opts = document.querySelectorAll('.lang-opt[data-set-lang]');
+    for (var j = 0; j < opts.length; j++) {
+      var on = opts[j].getAttribute('data-set-lang') === lang;
+      opts[j].classList.toggle('active', on);
+      opts[j].setAttribute('aria-checked', on ? 'true' : 'false');
+    }
+    try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
+    var live = document.getElementById('lang-live');
+    if (live) live.textContent = lang === 'pl' ? 'Język główny: polski' : 'Primary language: English';
+  }
+  document.addEventListener('click', function (e) {
+    var btn = e.target &amp;&amp; e.target.closest ? e.target.closest('.lang-opt[data-set-lang]') : null;
+    if (!btn) return;
+    applyLang(btn.getAttribute('data-set-lang'));
+  });
+  applyLang(getStoredLang());
 
   // ----- Toast -----
   var toastEl = document.getElementById('toast');
@@ -12063,17 +12159,23 @@
     if (tp)  tp.textContent  = fmt(t.tip);
     if (tt)  tt.textContent  = fmt(t.total);
 
-    // pay button number
+    // pay button number — keep bilingual structure intact, only update the price.
     var pay = document.getElementById('pay-btn');
     if (pay) {
-      pay.innerHTML = 'Procedi al pagamento <span class=&quot;it&quot;>· Pay</span> <span class=&quot;num&quot;>' + fmt(t.total) + '</span>';
+      var numEl = pay.querySelector('.num');
+      if (numEl) numEl.textContent = fmt(t.total);
     }
 
-    // tip row label
+    // tip row label — preserve bilingual structure; only update percent.
     var tipRow = tp ? tp.parentElement : null;
     if (tipRow) {
       var lbl = tipRow.querySelector('.label');
-      if (lbl) lbl.textContent = 'Mancia · ' + state.tipPct + '%';
+      if (lbl) {
+        var lang = document.documentElement.getAttribute('data-lang') || 'en';
+        var en = 'Tip', pl = 'Napiwek', it = 'mancia';
+        var primary = lang === 'pl' ? pl : en;
+        lbl.innerHTML = '<span class=&quot;bi-pri&quot; data-en=&quot;' + en + '&quot; data-pl=&quot;' + pl + '&quot;>' + primary + '</span> <span class=&quot;bi-sec&quot;>· ' + it + '</span> · ' + state.tipPct + '%';
+      }
     }
 
     // cart count badges (count distinct items with qty > 0, plus extras count if any)
@@ -12209,7 +12311,7 @@
       document.querySelectorAll('.mi-add').forEach(function (b) {
         if (b.classList.contains('added')) {
           b.classList.remove('added');
-          b.innerHTML = '+ Aggiungi <span class=&quot;it&quot;>· Add</span>';
+          b.innerHTML = '+ <span class=&quot;bi-pri&quot; data-en=&quot;Add&quot; data-pl=&quot;Dodaj&quot;>Add</span> <span class=&quot;it bi-sec&quot;>· aggiungi</span>';
         }
       });
       toast('Carrello svuotato');
@@ -12604,13 +12706,16 @@
         state.extras -= price;
         state.extrasCount = Math.max(0, state.extrasCount - 1);
         b.classList.remove('added');
-        b.innerHTML = '+ Aggiungi <span class=&quot;it&quot;>· Add</span>';
+        b.innerHTML = '+ <span class=&quot;bi-pri&quot; data-en=&quot;Add&quot; data-pl=&quot;Dodaj&quot;>Add</span> <span class=&quot;it bi-sec&quot;>· aggiungi</span>';
         toast('Rimosso dal carrello');
       } else {
         state.extras += price;
         state.extrasCount += 1;
         b.classList.add('added');
-        b.innerHTML = '✓ Aggiunto <span class=&quot;it&quot;>· in cart</span>';
+        var lng = document.documentElement.getAttribute('data-lang') || 'en';
+        var addedEn = '✓ Added', addedPl = '✓ Dodano';
+        var addedPrim = lng === 'pl' ? addedPl : addedEn;
+        b.innerHTML = '<span class=&quot;bi-pri&quot; data-en=&quot;' + addedEn + '&quot; data-pl=&quot;' + addedPl + '&quot;>' + addedPrim + '</span> <span class=&quot;bi-sec it&quot;>· aggiunto</span>';
         var miName = b.closest('.mi') &amp;&amp; b.closest('.mi').querySelector('.mi-name');
         var clean = miName ? miName.firstChild.textContent.trim() : 'piatto';
         toast(clean + ' aggiunta al carrello');
