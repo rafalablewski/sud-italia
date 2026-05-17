@@ -8351,17 +8351,18 @@
   /* ============================================================
      BUNDLES
      ============================================================ */
-  /* Full-bleed: bundle cards span the viewport instead of being capped
-     by the 1180px .page-inner constraint used elsewhere on the page. */
+  /* Wider than the 1180px page-inner used elsewhere, but still leaves
+     parchment on the sides so the four cards don't touch the viewport edge. */
   #bundles .page-inner {
-    max-width: none;
+    max-width: 1500px;
+    margin: 0 auto;
     padding: 0 20px;
   }
   @media (min-width: 768px) {
     #bundles .page-inner { padding: 0 48px; }
   }
   @media (min-width: 1400px) {
-    #bundles .page-inner { padding: 0 80px; }
+    #bundles .page-inner { padding: 0 64px; }
   }
   .bundles {
     display: grid;
@@ -9655,10 +9656,11 @@
     margin-top: 8px;
   }
   /* Bundles inside location pages: break out of the .loc-section 700px cap
-     so the four cards span the viewport instead of looking pinched. */
+     but cap to 1500px and leave parchment on the sides so the cards don't
+     touch the viewport edges. */
   .loc-section .loc-bundles-strip {
-    margin-left: calc(50% - 50vw);
-    margin-right: calc(50% - 50vw);
+    margin-left: calc(50% - min(50vw, 750px));
+    margin-right: calc(50% - min(50vw, 750px));
     padding-left: 20px;
     padding-right: 20px;
   }
@@ -9670,8 +9672,8 @@
   }
   @media (min-width: 1400px) {
     .loc-section .loc-bundles-strip {
-      padding-left: 80px;
-      padding-right: 80px;
+      padding-left: 64px;
+      padding-right: 64px;
     }
   }
   /* Guard against horizontal scroll caused by 100vw inside iframes */
