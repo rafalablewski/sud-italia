@@ -9377,16 +9377,26 @@
   @media (min-width: 768px) {
     .mini-menu { grid-template-columns: 1fr 1fr; gap: 18px; }
   }
-  /* Escape the 700px .loc-section cap for the entire menu card */
+  /* Menu inside a location page: unwrap the card chrome so the menu
+     reads as a full-width section, not a card-within-a-card. The
+     .loc-menu-card div still exists for routing/scoping, but visually
+     it inherits the page parchment background. */
   .loc-section .loc-card-soft.loc-menu-card {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    padding: 0;
+    border-radius: 0;
     max-width: none;
     margin-left: calc(50% - 50vw + 20px);
     margin-right: calc(50% - 50vw + 20px);
+    margin-top: 14px;
   }
   @media (min-width: 768px) {
     .loc-section .loc-card-soft.loc-menu-card {
       margin-left: calc(50% - 50vw + 48px);
       margin-right: calc(50% - 50vw + 48px);
+      margin-top: 24px;
     }
   }
   @media (min-width: 1400px) {
@@ -9395,6 +9405,16 @@
       margin-right: calc(50% - 50vw + 80px);
     }
   }
+  /* Recompose the menu heading as a section header, not a card title */
+  .loc-menu-card .loc-card-eyebrow {
+    padding-left: 4px;
+    margin-bottom: 8px;
+  }
+  .loc-menu-card .loc-card-title {
+    padding-left: 0;
+    margin-bottom: 16px;
+  }
+  .loc-menu-card .mini-tabs { padding-left: 0; }
   .mini-item {
     align-items: flex-start;
     gap: 14px;
