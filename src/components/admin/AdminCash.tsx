@@ -13,8 +13,15 @@ import {
   Trash2,
   Unlock,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useAdminLocation } from "./v2/LocationContext";
+import { useIsMobile } from "./v2/mobile";
 import { useToast } from "./v2/ui/Toast";
+
+const MobileCash = dynamic(
+  () => import("./mobile/MobileCash").then((m) => m.MobileCash),
+  { ssr: false },
+);
 import {
   Badge,
   Button,
@@ -58,6 +65,14 @@ function varianceTone(g: number): "success" | "warning" | "danger" {
 }
 
 export function AdminCash() {
+  const { isMobile, ready } = useIsMobile();
+  if (ready && isMobile) {
+    return <MobileCash />;
+  }
+  return <AdminCashDesktop />;
+}
+
+function AdminCashDesktop() {
   const { location: globalLoc } = useAdminLocation();
   const toast = useToast();
 

@@ -3,33 +3,47 @@
 import { useEffect, useState } from "react";
 
 /**
- * SSR-safe viewport detection. Matches the existing desktop sidebar
- * breakpoint in globals.css (`@media (max-width: 900px)`) so the mobile
- * shell mounts in the same regime where the sidebar would otherwise hide.
- *
- * We expose both the live boolean and the "ready" flag so consumers can
- * render skeletons on first paint instead of flickering between layouts.
+ * SSR-safe viewport detection. Phones (≤ 720px) get the full mobile
+ * shell; tablet-portrait (720–900px) gets the mobile shell with a wider
+ * content max-width and the bottom nav still anchored to thumb-reach.
+ * Desktop (≥ 900px) gets the regular sidebar chrome — matches the
+ * existing `@media (max-width: 900px)` rules.
  */
 const MOBILE_QUERY = "(max-width: 900px)";
+const TABLET_QUERY = "(min-width: 720px) and (max-width: 900px)";
 
-export function useIsMobile(): { isMobile: boolean; ready: boolean } {
+export type Viewport = "phone" | "tablet" | "desktop";
+
+export function useIsMobile(): { isMobile: boolean; isTablet: boolean; viewport: Viewport; ready: boolean } {
   const [isMobile, setIsMobile] = useState(false);
+  const [isTablet, setIsTablet] = useState(false);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const mql = window.matchMedia(MOBILE_QUERY);
-    const apply = () => setIsMobile(mql.matches);
+    const mqlMobile = window.matchMedia(MOBILE_QUERY);
+    const mqlTablet = window.matchMedia(TABLET_QUERY);
+    const apply = () => {
+      setIsMobile(mqlMobile.matches);
+      setIsTablet(mqlTablet.matches);
+    };
     apply();
     setReady(true);
-    // Safari < 14 still fires on `addListener`; modern browsers use
-    // `addEventListener`. Use the modern path with a fallback.
-    if (mql.addEventListener) {
-      mql.addEventListener("change", apply);
-      return () => mql.removeEventListener("change", apply);
-    }
-    mql.addListener(apply);
-    return () => mql.removeListener(apply);
+    const sub = (mql: MediaQueryList) => {
+      if (mql.addEventListener) {
+        mql.addEventListener("change", apply);
+        return () => mql.removeEventListener("change", apply);
+      }
+      mql.addListener(apply);
+      return () => mql.removeListener(apply);
+    };
+    const unsubA = sub(mqlMobile);
+    const unsubB = sub(mqlTablet);
+    return () => {
+      unsubA();
+      unsubB();
+    };
   }, []);
 
-  return { isMobile, ready };
+  const viewport: Viewport = isTablet ? "tablet" : isMobile ? "phone" : "desktop";
+  return { isMobile, isTablet, viewport, ready };
 }

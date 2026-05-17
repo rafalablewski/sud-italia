@@ -13,8 +13,15 @@ import {
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { getActiveLocations } from "@/data/locations";
+import dynamic from "next/dynamic";
 import { useAdminLocation } from "./v2/LocationContext";
+import { useIsMobile } from "./v2/mobile";
 import { useToast } from "./v2/ui/Toast";
+
+const MobileSlots = dynamic(
+  () => import("./mobile/MobileSlots").then((m) => m.MobileSlots),
+  { ssr: false },
+);
 import {
   Badge,
   Button,
@@ -86,6 +93,14 @@ function utilTone(u: number): "success" | "info" | "warning" | "danger" {
 type View = "day" | "week";
 
 export function AdminSlots() {
+  const { isMobile, ready } = useIsMobile();
+  if (ready && isMobile) {
+    return <MobileSlots />;
+  }
+  return <AdminSlotsDesktop />;
+}
+
+function AdminSlotsDesktop() {
   const { location: globalLoc } = useAdminLocation();
   const toast = useToast();
   const [pageLoc, setPageLoc] = useState<string>(globalLoc || FALLBACK_LOC);

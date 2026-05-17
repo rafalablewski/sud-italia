@@ -102,7 +102,14 @@ export default async function CapabilitiesPage() {
           status: "live",
           href: "/admin",
           summary:
-            "Bottom-nav + topbar + FAB + bottom-sheet mobile chrome activates automatically below 900px. Same APIs as desktop; redesigned home/orders/KDS/inventory views. See docs/mobile-*.md and mockups/mobile/.",
+            "Bottom-nav + topbar + FAB + bottom-sheet mobile chrome activates automatically below 900px (tablet band 720–900 inherits the same chrome). Same APIs as desktop. Mobile-native views for: Dashboard, Orders (+ refund + comp + bulk select), KDS (with offline queue), Inventory (with barcode scan), Customers (+ detail), Schedule, Reports, Cohort, Loyalty, Cash, Feedback, Settings, AI Insights, WhatsApp, Audit log, Compliance, Users, Suppliers, POs, Menu, Recipes, Slots, Locations, Truck, Expansion. Config surfaces (growth/upsell/crosssell/scheduled-bundles/corporate) intentionally stay desktop-only — see docs/mobile-*.md.",
+        },
+        {
+          name: "Mobile admin push notifications",
+          status: has("NEXT_PUBLIC_VAPID_PUBLIC_KEY") ? "needs-config" : "needs-config",
+          envVars: ["NEXT_PUBLIC_VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY"],
+          summary:
+            "Client opt-in shipped in the More drawer footer. POST/DELETE /api/admin/push/subscribe stores per-user subscriptions in admin_push_subscriptions. Server-side emission (cron + order/cash/slot event hooks) is the remaining backend task.",
         },
         {
           name: "Truck ops admin",

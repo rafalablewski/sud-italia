@@ -25,36 +25,51 @@
 
 ---
 
-## P1 — Phase 2 (4–6 weeks after Phase 1)
+## P1 — Status
 
-| # | Item | Why | LOC est. |
-|---|---|---|---|
-| 1.1 | Mobile Reports + Cohort | Reports is medium-high risk in the audit; cohort needs a phone-native representation entirely. | ~400 |
-| 1.2 | Mobile Loyalty (3 tabs) | High-traffic admin surface during loyalty config. | ~350 |
-| 1.3 | Mobile Cash sessions (open / drop / close) | Cash session close-out is touched daily. | ~280 |
-| 1.4 | Mobile Feedback (with AI sentiment chips) | Already moderately mobile-friendly; needs the swipe respond / mark-read patterns. | ~200 |
-| 1.5 | Mobile Settings tabs | Owner / manager touches monthly; lower urgency. | ~250 |
-| 1.6 | Tiny `useSpring` hook for sheet + FAB physics | Closes the Linear-polish gap. | ~250 |
-| 1.7 | Per-day "Frequent" section in MoreDrawer | Toast-style "Recent" — learns from nav clicks. | ~80 |
-| 1.8 | Tablet breakpoint band (720–1024) with hybrid chrome | iPad-mini-portrait deserves better than mobile chrome. | ~200 |
-| 1.9 | Push notifications via Web Push API | Owner gets a tap-able "Refund requested" / "Cash variance > 50 zł". | ~300 |
-| 1.10 | Capability-gated barcode for Receive in Stock | `BarcodeDetector` API or `getUserMedia` fallback. | ~250 |
+| # | Item | Status |
+|---|---|:---:|
+| 1.1 | Mobile Reports + Cohort | ✅ shipped |
+| 1.2 | Mobile Loyalty (3 tabs) | ✅ shipped |
+| 1.3 | Mobile Cash sessions | ✅ shipped (open / drop / close sheets) |
+| 1.4 | Mobile Feedback | ✅ shipped (with AI sentiment chips + status advance) |
+| 1.5 | Mobile Settings tabs | ✅ shipped (3 tabs; danger-zone hidden on mobile) |
+| 1.6 | Spring physics hook | ✅ shipped (`useSpring`) |
+| 1.7 | "Frequent" section in MoreDrawer | ✅ shipped (decayed-weight scoring + "Recent" alongside) |
+| 1.8 | Tablet breakpoint band | ✅ shipped (`useIsMobile` now reports `viewport: "phone" | "tablet" | "desktop"`) |
+| 1.9 | Push notifications | ✅ client opt-in + admin subscribe endpoint shipped; server-side emission (triggered by order/cash/slot events) is the next backend task |
+| 1.10 | Barcode scanner for Receive | ✅ shipped (`BarcodeDetector` API with manual-entry fallback on iOS) |
+
+---
+
+## P2 — Status
+
+| # | Item | Status |
+|---|---|:---:|
+| 2.1 | Driver app surface (`/admin/truck` mobile) | 🟡 list/route browse shipped (`MobileTruck`); real-time GPS push from driver phones is a separate driver-app project |
+| 2.2 | Voice-driven mutations beyond palette search | ⏳ palette has voice input; voice-triggered mutations require an intent parser + confirmation UI — backlog |
+| 2.3 | Photo proof on delivery completion | ⏳ requires driver app + S3 upload pipeline |
+| 2.4 | Drag-drop bundle editor on tablet | ⏳ explicit desktop-only per audit; tablet would need a touch-DnD rewrite |
+| 2.5 | Franchisee-scoped dashboards | 🟡 location filter already enforced via role; UI is the same shape — no special view needed yet |
+| 2.6 | Mobile WhatsApp inbox UI | ✅ shipped (`MobileWhatsApp` — list + chat thread + send) |
+| 2.7 | Mobile AI agent | ✅ uses existing `OpsAgentChat` which is already chat-shaped and responsive |
+| 2.8 | Mobile audit log + compliance + users + suppliers + POs | ✅ shipped (`MobileAuditLog`, `MobileCompliance`, `MobileUsers`, `MobileSuppliers`, `MobilePurchaseOrders`) |
+| 2.9 | Mobile menu + recipes + slots | ✅ shipped (read-mostly with toggle-86 and day pager respectively) |
+| 2.10 | Mobile multi-location comparison + expansion | ✅ shipped (`MobileLocations`, `MobileExpansion`) |
+| 2.11 | Mobile AI insights | ✅ shipped (`MobileAI` — forecast / anomalies / reorder / staffing) |
 
 ---
 
-## P2 — Phase 3 (8–12 weeks)
+## Still desktop-only (intentional per audit § "What doesn't belong on mobile")
 
-| # | Item | Why |
-|---|---|---|
-| 2.1 | Driver app surface (`/admin/truck` mobile) | Real-time location updates from driver phones; in-route action sheet (Mark picked, Mark delivered, Call customer). |
-| 2.2 | Voice-driven actions ("Comp the last order for table 5") | Beyond palette search — voice-triggered mutations. |
-| 2.3 | Photo proof on delivery completion | Camera capture; image upload to Stripe receipt. |
-| 2.4 | Drag-drop bundle editor on tablet | Bundle manager today is desktop-only. |
-| 2.5 | Mobile-specific dashboards for franchisee role | Franchisee sees rolled-up KPIs across their scope only. |
-| 2.6 | Mobile-specific WhatsApp inbox UI | The chat flow on desktop is rudimentary; mobile deserves Telegram-grade chat UX. |
-| 2.7 | Mobile AI-agent voice mode | Conversational ops assistant. Long-tail dependency on the AI agent endpoint maturing. |
+These config surfaces are touched weekly+, are dominated by multi-row forms or drag-drop, and would be hostile to phone editing. The mobile shell still wraps them so they're navigable, but the editing UX stays desktop.
 
----
+- `/admin/growth` — loyalty tiers, rewards, referral, live widgets
+- `/admin/upsell` — bundle ladder editor with drag-drop tier reorder
+- `/admin/crosssell` — multi-tab pairings / combos / time windows / badges
+- `/admin/scheduled-bundles` — date-range bundle editor
+- `/admin/corporate` — B2B account terms multi-step form
+- `/admin/locations/manage` — long location form with per-day hours + map picker
 
 ## P3 — Phase 4+ (aspirational)
 

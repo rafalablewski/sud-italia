@@ -2,7 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { History, Minus, Plus, RefreshCw, Search } from "lucide-react";
+import dynamic from "next/dynamic";
+import { useIsMobile } from "./v2/mobile";
 import { useToast } from "./v2/ui/Toast";
+
+const MobileAuditLog = dynamic(
+  () => import("./mobile/MobileAuditLog").then((m) => m.MobileAuditLog),
+  { ssr: false },
+);
 import {
   Badge,
   Button,
@@ -53,6 +60,14 @@ function fmtTime(iso: string): string {
 }
 
 export function AuditLog() {
+  const { isMobile, ready } = useIsMobile();
+  if (ready && isMobile) {
+    return <MobileAuditLog />;
+  }
+  return <AuditLogDesktop />;
+}
+
+function AuditLogDesktop() {
   const toast = useToast();
   const [entries, setEntries] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);

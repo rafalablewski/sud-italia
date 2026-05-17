@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { ChevronRight, LogOut, MapPin, Pin, Search } from "lucide-react";
+import { Bell, BellOff, ChevronRight, Clock, LogOut, MapPin, Pin, Search, Sparkles } from "lucide-react";
 import type { AdminRole } from "@/lib/admin-roles";
-import { filterNavForRole, NAV_SECTIONS } from "../nav.config";
+import { ALL_NAV_ITEMS, filterNavForRole, NAV_SECTIONS } from "../nav.config";
 import { BottomSheet } from "./BottomSheet";
 import { setBottomNavPin } from "./BottomNav";
 import { useAdminLocation } from "../LocationContext";
+import { useAdminPush } from "./useAdminPush";
+import { useNavHistory } from "./useNavHistory";
 import { ThemeToggle } from "../ThemeToggle";
 import { haptic } from "./haptics";
 
@@ -25,10 +27,20 @@ interface Props {
 export function MoreDrawer({ open, onClose, role }: Props) {
   const [q, setQ] = useState("");
   const { location, setLocation, activeLocations } = useAdminLocation();
+  const { recent, frequent } = useNavHistory();
+  const push = useAdminPush();
   const sections = useMemo(
     () => filterNavForRole(role) || NAV_SECTIONS,
     [role],
   );
+
+  const navByHref = useMemo(() => {
+    const m = new Map(ALL_NAV_ITEMS.map((n) => [n.href, n]));
+    return m;
+  }, []);
+
+  // Frequent/Recent are only useful when the user hasn't typed a query.
+  const showShortcuts = q.trim().length === 0;
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -66,6 +78,78 @@ export function MoreDrawer({ open, onClose, role }: Props) {
       </div>
 
       <div className="v2-m-more-sections">
+        {showShortcuts && frequent.length > 0 && (
+          <div className="v2-m-more-section">
+            <div className="v2-m-more-section-label">
+              <Sparkles
+                className="h-3 w-3"
+                aria-hidden
+                style={{ display: "inline", marginRight: 4, verticalAlign: -1, color: "var(--brand)" }}
+              />
+              Frequent
+            </div>
+            <ul role="list">
+              {frequent.map((href) => {
+                const item = navByHref.get(href);
+                if (!item) return null;
+                const Icon = item.icon;
+                return (
+                  <li key={`freq-${href}`}>
+                    <Link
+                      href={href}
+                      onClick={() => {
+                        haptic("light");
+                        onClose();
+                      }}
+                      className="v2-m-more-item"
+                    >
+                      <Icon className="v2-m-more-item-icon" aria-hidden />
+                      <span className="v2-m-more-item-label">{item.label}</span>
+                      <ChevronRight className="v2-m-more-item-chev" aria-hidden />
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+
+        {showShortcuts && recent.length > 0 && (
+          <div className="v2-m-more-section">
+            <div className="v2-m-more-section-label">
+              <Clock
+                className="h-3 w-3"
+                aria-hidden
+                style={{ display: "inline", marginRight: 4, verticalAlign: -1 }}
+              />
+              Recent
+            </div>
+            <ul role="list">
+              {recent.map((href) => {
+                const item = navByHref.get(href);
+                if (!item) return null;
+                const Icon = item.icon;
+                return (
+                  <li key={`recent-${href}`}>
+                    <Link
+                      href={href}
+                      onClick={() => {
+                        haptic("light");
+                        onClose();
+                      }}
+                      className="v2-m-more-item"
+                    >
+                      <Icon className="v2-m-more-item-icon" aria-hidden />
+                      <span className="v2-m-more-item-label">{item.label}</span>
+                      <ChevronRight className="v2-m-more-item-chev" aria-hidden />
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+
         {filtered.map((section) => (
           <div key={section.id} className="v2-m-more-section">
             <div className="v2-m-more-section-label">{section.label}</div>
@@ -143,6 +227,33 @@ export function MoreDrawer({ open, onClose, role }: Props) {
           <div className="v2-m-more-footer-label">Theme</div>
           <ThemeToggle />
         </div>
+
+        {push.supported && push.configured && (
+          <div className="v2-m-more-footer-row">
+            <div className="v2-m-more-footer-label">
+              <Bell className="h-3.5 w-3.5" aria-hidden /> Push alerts
+            </div>
+            <button
+              type="button"
+              className={`v2-m-chip ${push.subscribed ? "is-active" : ""}`}
+              disabled={push.busy}
+              onClick={() =>
+                push.subscribed ? push.unsubscribe() : push.subscribe()
+              }
+              aria-pressed={push.subscribed}
+            >
+              {push.subscribed ? (
+                <>
+                  <Bell className="h-3 w-3" aria-hidden /> On
+                </>
+              ) : (
+                <>
+                  <BellOff className="h-3 w-3" aria-hidden /> Off
+                </>
+              )}
+            </button>
+          </div>
+        )}
 
         <button
           type="button"

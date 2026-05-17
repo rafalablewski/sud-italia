@@ -10,6 +10,7 @@ import { QuickActionSheet } from "./QuickActionSheet";
 import { MobileCommandPalette } from "./MobileCommandPalette";
 import { MobileNotifications } from "./MobileNotifications";
 import { MobileTopbar } from "./MobileTopbar";
+import { useIsMobile } from "./useIsMobile";
 
 interface Props {
   children: ReactNode;
@@ -34,6 +35,7 @@ function isDetailRoute(pathname: string): boolean {
  */
 export function MobileShell({ children }: Props) {
   const pathname = usePathname();
+  const { viewport } = useIsMobile();
   const { paletteOpen, closePalette, notifOpen, closeNotif, notificationsVersion, bumpNotifications } =
     useAdminShell();
   const [role, setRole] = useState<AdminRole | null>(null);
@@ -63,7 +65,7 @@ export function MobileShell({ children }: Props) {
   const isDetail = isDetailRoute(pathname);
 
   return (
-    <div className="v2-m-shell" data-detail={isDetail ? "true" : "false"}>
+    <div className="v2-m-shell" data-detail={isDetail ? "true" : "false"} data-viewport={viewport}>
       <MobileTopbar showBack={isDetail} />
       <main className="v2-m-content" id="main">
         {children}

@@ -27,6 +27,7 @@ import {
   type MobileListItem,
 } from "../v2/mobile";
 import { useToast } from "../v2/ui/Toast";
+import { CompSheet } from "./CompSheet";
 import { RefundSheet } from "./RefundSheet";
 
 const PIPELINE_NEXT: Partial<Record<OrderStatus, OrderStatus>> = {
@@ -91,6 +92,7 @@ export function MobileOrders() {
   const [q, setQ] = useState("");
   const [detail, setDetail] = useState<Order | null>(null);
   const [refunding, setRefunding] = useState<Order | null>(null);
+  const [comping, setComping] = useState<Order | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const multi = useMultiSelect();
 
@@ -340,6 +342,10 @@ export function MobileOrders() {
               setRefunding(detail);
               setDetail(null);
             }}
+            onComp={() => {
+              setComping(detail);
+              setDetail(null);
+            }}
             busy={busy === detail.id}
           />
         )}
@@ -352,6 +358,14 @@ export function MobileOrders() {
           setOrders((arr) => arr.map((o) => (o.id === updated.id ? updated : o)));
         }}
       />
+
+      <CompSheet
+        order={comping}
+        onClose={() => setComping(null)}
+        onCompApplied={(updated) => {
+          setOrders((arr) => arr.map((o) => (o.id === updated.id ? updated : o)));
+        }}
+      />
     </PullToRefresh>
   );
 }
@@ -360,11 +374,13 @@ function OrderDetail({
   order,
   onCancel,
   onRefund,
+  onComp,
   busy,
 }: {
   order: Order;
   onCancel: () => void;
   onRefund: () => void;
+  onComp: () => void;
   busy: boolean;
 }) {
   return (
@@ -449,17 +465,28 @@ function OrderDetail({
         </section>
       )}
 
-      <div style={{ display: "flex", gap: 8 }}>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         {order.paidAt && !order.refund && (
-          <button
-            type="button"
-            onClick={onRefund}
-            disabled={busy}
-            className="v2-m-btn v2-m-btn-ghost"
-            style={{ flex: 1 }}
-          >
-            <Undo2 className="h-4 w-4" aria-hidden /> Refund
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={onRefund}
+              disabled={busy}
+              className="v2-m-btn v2-m-btn-ghost"
+              style={{ flex: "1 1 0" }}
+            >
+              <Undo2 className="h-4 w-4" aria-hidden /> Refund
+            </button>
+            <button
+              type="button"
+              onClick={onComp}
+              disabled={busy}
+              className="v2-m-btn v2-m-btn-ghost"
+              style={{ flex: "1 1 0" }}
+            >
+              Comp
+            </button>
+          </>
         )}
         {order.status !== "completed" && order.status !== "cancelled" && (
           <button
@@ -467,7 +494,7 @@ function OrderDetail({
             onClick={onCancel}
             disabled={busy}
             className="v2-m-btn v2-m-btn-ghost"
-            style={{ flex: 1, color: "var(--danger)" }}
+            style={{ flex: "1 1 0", color: "var(--danger)" }}
           >
             <RotateCcw className="h-4 w-4" aria-hidden /> Cancel
           </button>

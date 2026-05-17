@@ -6,6 +6,7 @@ import {
   Boxes,
   Minus,
   Plus,
+  ScanLine,
   Search,
   TrendingDown,
   TrendingUp,
@@ -21,6 +22,7 @@ import {
   PullToRefresh,
   SegmentControl,
 } from "../v2/mobile";
+import { BarcodeScanner } from "../v2/mobile/BarcodeScanner";
 
 interface StockRow {
   ingredientId: string;
@@ -68,6 +70,7 @@ export function MobileInventory() {
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState<StockRow | null>(null);
+  const [scanning, setScanning] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
 
   // Mirror the global location when it changes — but stock is always scoped
@@ -210,7 +213,20 @@ export function MobileInventory() {
           </div>
         }
       >
-        <PageHeader title="Stock" subtitle={pageLoc.toUpperCase()} />
+        <PageHeader
+          title="Stock"
+          subtitle={pageLoc.toUpperCase()}
+          actions={
+            <button
+              type="button"
+              className="v2-m-icon-btn"
+              aria-label="Scan barcode"
+              onClick={() => setScanning(true)}
+            >
+              <ScanLine className="h-5 w-5" />
+            </button>
+          }
+        />
 
         <ul role="list" className="v2-m-list">
           {filtered.map((row) => {
@@ -265,6 +281,25 @@ export function MobileInventory() {
         onCommit={(type, qty, reason) => {
           if (editing) applyMovement(editing, type, qty, reason);
           setEditing(null);
+        }}
+      />
+
+      <BarcodeScanner
+        open={scanning}
+        onClose={() => setScanning(false)}
+        onDetected={(code) => {
+          setScanning(false);
+          // Match against ingredient SKU (lowercased), then name fallback.
+          const needle = code.trim().toLowerCase();
+          const hit =
+            stock.find((s) => s.name.toLowerCase().includes(needle)) ??
+            null;
+          if (hit) {
+            setEditing(hit);
+            toast.success("Matched", hit.name);
+          } else {
+            toast.warning("No match", code);
+          }
         }}
       />
     </PullToRefresh>
