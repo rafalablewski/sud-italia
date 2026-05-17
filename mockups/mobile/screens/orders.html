@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mobile Orders — Sud Italia</title>
+<link rel="stylesheet" href="../assets/screen.css" />
+</head>
+<body>
+<div class="shell">
+  <div class="statusbar">
+    <span>9:41</span>
+    <span class="icons">●●● ● 100%</span>
+  </div>
+  <header class="topbar">
+    <div class="topbar-left">
+      <span class="brand-mark">SI</span>
+      <span class="title">Orders</span>
+    </div>
+    <div class="topbar-right">
+      <button class="iconbtn"><span class="glyph gl-search"></span></button>
+      <button class="iconbtn">
+        <span class="glyph gl-bell"></span>
+        <span class="badge">4</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="content">
+    <div class="toolbar">
+      <div class="segment">
+        <div class="segment-opt active">Live (14)</div>
+        <div class="segment-opt">Pending</div>
+        <div class="segment-opt">Prep</div>
+        <div class="segment-opt">Ready</div>
+        <div class="segment-opt">Done</div>
+      </div>
+      <label style="display:flex;gap:8px;align-items:center;padding:6px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;color:var(--fg-subtle)">
+        <span class="glyph gl-search"></span>
+        <input type="search" placeholder="Search by name, phone, ID…" style="flex:1;background:transparent;border:0;outline:0;color:var(--fg);font-size:14.5px" />
+      </label>
+    </div>
+
+    <div>
+      <h1 class="page-title">Orders</h1>
+      <div class="page-subtitle">14 active · KRAKÓW</div>
+    </div>
+
+    <ul class="list">
+      <!-- order with swipe revealed -->
+      <li style="position:relative;overflow:hidden">
+        <div style="position:absolute;left:0;top:0;bottom:0;width:96px;background:var(--success);color:white;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px">Mark ready</div>
+        <div class="row" style="background:var(--surface-1);transform:translateX(72px);transition:transform 200ms ease">
+          <span class="row-icon tone-info"><span class="glyph gl-clock"></span></span>
+          <div class="row-stack">
+            <div class="row-title">Anna K. · 42.50 zł</div>
+            <div class="row-sub">#A8C72D · 3m ago · delivery</div>
+          </div>
+          <span class="row-trail"><span class="pill info">Preparing</span></span>
+        </div>
+      </li>
+      <li>
+        <div class="row">
+          <span class="row-icon tone-warning"><span class="glyph gl-clock"></span></span>
+          <div class="row-stack">
+            <div class="row-title">Marco R. · 88.00 zł</div>
+            <div class="row-sub">#A8C71F · 1m ago · takeout</div>
+          </div>
+          <span class="row-trail"><span class="pill warning">Pending</span></span>
+        </div>
+      </li>
+      <li>
+        <div class="row">
+          <span class="row-icon tone-info"><span class="glyph gl-clock"></span></span>
+          <div class="row-stack">
+            <div class="row-title">Patrycja S. · 36.00 zł</div>
+            <div class="row-sub">#A8C712 · 7m ago · delivery</div>
+          </div>
+          <span class="row-trail"><span class="pill info">Preparing</span></span>
+        </div>
+      </li>
+      <li>
+        <div class="row">
+          <span class="row-icon tone-success"><span class="glyph gl-checkall"></span></span>
+          <div class="row-stack">
+            <div class="row-title">Kuba M. · 64.50 zł</div>
+            <div class="row-sub">#A8C70A · 12m ago · takeout</div>
+          </div>
+          <span class="row-trail"><span class="pill success">Ready</span></span>
+        </div>
+      </li>
+      <li>
+        <div class="row">
+          <span class="row-icon tone-info"><span class="glyph gl-clock"></span></span>
+          <div class="row-stack">
+            <div class="row-title">Tom L. · 142.00 zł</div>
+            <div class="row-sub">#A8C701 · 18m ago · delivery</div>
+          </div>
+          <span class="row-trail"><span class="pill info">Preparing</span></span>
+        </div>
+      </li>
+      <li>
+        <div class="row">
+          <span class="row-icon tone-warning"><span class="glyph gl-clock"></span></span>
+          <div class="row-stack">
+            <div class="row-title">Daria K. · 28.00 zł</div>
+            <div class="row-sub">#A8C6F8 · 22m ago · takeout</div>
+          </div>
+          <span class="row-trail"><span class="pill warning">Pending</span></span>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <nav class="bottom-nav">
+    <div class="nav-tab"><span class="icon glyph gl-home"></span><span>Home</span></div>
+    <div class="nav-tab active"><span class="icon glyph gl-orders"></span><span>Orders</span></div>
+    <div class="nav-fab glyph gl-plus"></div>
+    <div class="nav-tab"><span class="icon glyph gl-stock"></span><span>Stock</span></div>
+    <div class="nav-tab"><span class="icon glyph gl-grid"></span><span>More</span></div>
+  </nav>
+</div>
+</body>
+</html>

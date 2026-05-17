@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mobile Palette — Sud Italia</title>
+<link rel="stylesheet" href="../assets/screen.css" />
+</head>
+<body>
+<div class="shell">
+  <div class="statusbar">
+    <span>9:41</span>
+    <span class="icons">●●● ● 100%</span>
+  </div>
+
+  <div style="padding:4px 8px 8px;display:flex;align-items:center;gap:6px;background:var(--surface-1);border-bottom:1px solid var(--border)">
+    <button class="iconbtn">‹</button>
+    <label style="flex:1;display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;color:var(--fg-subtle)">
+      <span class="glyph gl-search"></span>
+      <input type="search" placeholder="Search orders, customers, menu…" value="anna" style="flex:1;background:transparent;border:0;outline:0;color:var(--fg);font-size:14.5px"/>
+    </label>
+    <button class="iconbtn active"><span class="glyph gl-mic"></span></button>
+  </div>
+
+  <div class="content" style="padding:12px 14px 24px">
+    <h3 class="section-label">Pages</h3>
+    <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px">
+      <li style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px"><span class="glyph gl-users" style="font-size:18px;color:var(--fg-muted)"></span><span style="flex:1">Customers</span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;background:var(--surface-3);border:1px solid var(--border);padding:2px 6px;border-radius:6px;color:var(--fg-muted)">g c</span></li>
+      <li style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px"><span class="glyph gl-orders" style="font-size:18px;color:var(--fg-muted)"></span><span style="flex:1">Orders</span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;background:var(--surface-3);border:1px solid var(--border);padding:2px 6px;border-radius:6px;color:var(--fg-muted)">g o</span></li>
+    </ul>
+
+    <h3 class="section-label">Results</h3>
+    <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px">
+      <li style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:var(--surface-2)">
+        <span class="pill brand" style="text-transform:uppercase;font-size:10.5px">CUST</span>
+        <div style="display:flex;flex-direction:column;min-width:0;flex:1">
+          <span style="font-size:14.5px;font-weight:500">Anna Kowalska</span>
+          <span style="font-size:12px;color:var(--fg-subtle)">+48 555 111 008</span>
+        </div>
+      </li>
+      <li style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px">
+        <span class="pill brand" style="text-transform:uppercase;font-size:10.5px">CUST</span>
+        <div style="display:flex;flex-direction:column;min-width:0;flex:1">
+          <span style="font-size:14.5px;font-weight:500">Anna Nowak</span>
+          <span style="font-size:12px;color:var(--fg-subtle)">+48 555 222 314</span>
+        </div>
+      </li>
+      <li style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px">
+        <span class="pill info" style="text-transform:uppercase;font-size:10.5px">ORDER</span>
+        <div style="display:flex;flex-direction:column;min-width:0;flex:1">
+          <span style="font-size:14.5px;font-weight:500">Order #1083</span>
+          <span style="font-size:12px;color:var(--fg-subtle)">Anna K. · 42.50 zł</span>
+        </div>
+      </li>
+      <li style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px">
+        <span class="pill info" style="text-transform:uppercase;font-size:10.5px">ORDER</span>
+        <div style="display:flex;flex-direction:column;min-width:0;flex:1">
+          <span style="font-size:14.5px;font-weight:500">Order #1054</span>
+          <span style="font-size:12px;color:var(--fg-subtle)">Anna K. · 38.00 zł</span>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+</div>
+</body>
+</html>

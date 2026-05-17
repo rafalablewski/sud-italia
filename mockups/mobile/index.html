@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Sud Italia — Mobile Admin Mockups</title>
+<style>
+  :root {
+    --bg: #0a0d14;
+    --surface-1: #11151f;
+    --surface-2: #161b27;
+    --surface-3: #1d2330;
+    --border: rgba(255,255,255,0.06);
+    --fg: #f5f7fa;
+    --fg-muted: #b6bfcd;
+    --fg-subtle: #7d8696;
+    --brand: #c8102e;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --info: #6366f1;
+    font-family: "Inter", system-ui, sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg); min-height: 100vh; }
+  body { padding: 32px 24px 64px; }
+  header.master {
+    max-width: 1280px;
+    margin: 0 auto 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  header.master h1 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  header.master p {
+    margin: 0;
+    color: var(--fg-subtle);
+    font-size: 14px;
+    max-width: 740px;
+    line-height: 1.55;
+  }
+  header.master .pill {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+    align-self: flex-start;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(200,16,46,0.15);
+    color: var(--brand);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .grid {
+    max-width: 1280px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+    gap: 36px 28px;
+  }
+  .device {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .device-meta { display: flex; flex-direction: column; gap: 2px; }
+  .device-meta h2 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+  .device-meta p  { margin: 0; color: var(--fg-subtle); font-size: 12.5px; line-height: 1.45; }
+
+  .phone {
+    width: 390px;
+    height: 844px;
+    background: var(--surface-1);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 44px;
+    padding: 14px;
+    position: relative;
+    box-shadow:
+      0 0 0 8px #0a0d14,
+      0 0 0 10px rgba(255,255,255,0.06),
+      0 30px 80px rgba(0,0,0,0.55);
+    overflow: hidden;
+  }
+  .phone .notch {
+    position: absolute;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 124px;
+    height: 28px;
+    background: #000;
+    border-radius: 18px;
+    z-index: 50;
+  }
+  .screen {
+    position: absolute;
+    inset: 14px;
+    border-radius: 32px;
+    overflow: hidden;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+  }
+  iframe.screen-frame {
+    border: 0;
+    width: 100%;
+    height: 100%;
+  }
+  .device-meta .links {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+  }
+  .device-meta .links a {
+    font-size: 11px;
+    color: var(--info);
+    text-decoration: none;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: rgba(99,102,241,0.1);
+  }
+  @media (max-width: 800px) {
+    body { padding: 16px 8px 64px; }
+    .phone { transform: scale(0.85); transform-origin: top center; }
+  }
+</style>
+</head>
+<body>
+  <header class="master">
+    <span class="pill">Mobile mockups</span>
+    <h1>Sud Italia — Mobile Admin</h1>
+    <p>
+      High-fidelity clickable mockups of the redesigned mobile admin. Same brand identity,
+      same dark glassmorphism palette, same Inter / JetBrains Mono pairing — but restructured
+      for a 390×844 phone and an operator under service pressure. Tap any screen to open it
+      full-size.
+    </p>
+  </header>
+  <main class="grid">
+
+    <div class="device">
+      <div class="device-meta">
+        <h2>Home — Owner / manager</h2>
+        <p>Hero KPI pager, action queue, low-stock alerts, revenue trend, drill-in. Pull-to-refresh on the whole page; 60-min focus implicit in the live timestamp.</p>
+        <div class="links"><a href="screens/dashboard.html" target="_blank">Open full-screen ↗</a></div>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen"><iframe class="screen-frame" src="screens/dashboard.html" title="Mobile dashboard"></iframe></div>
+      </div>
+    </div>
+
+    <div class="device">
+      <div class="device-meta">
+        <h2>Orders — live operational list</h2>
+        <p>SSE-streamed orders, segmented filter chips, swipe right to advance status, swipe left to cancel, long-press for bulk. Tap to open the full detail sheet with the status-advance CTA stuck to the bottom.</p>
+        <div class="links"><a href="screens/orders.html" target="_blank">Open full-screen ↗</a></div>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen"><iframe class="screen-frame" src="screens/orders.html" title="Mobile orders"></iframe></div>
+      </div>
+    </div>
+
+    <div class="device">
+      <div class="device-meta">
+        <h2>KDS — kitchen on a propped phone</h2>
+        <p>One lane at a time on mobile; segmented switcher and chip filters at the top, big elapsed clock, hands-busy bump button at 44pt minimum. Audio + haptic on new tickets (user-gesture-gated).</p>
+        <div class="links"><a href="screens/kds.html" target="_blank">Open full-screen ↗</a></div>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen"><iframe class="screen-frame" src="screens/kds.html" title="Mobile KDS"></iframe></div>
+      </div>
+    </div>
+
+    <div class="device">
+      <div class="device-meta">
+        <h2>Stock — adjust without a modal</h2>
+        <p>Status chips and a 2-line ingredient list. Tap a row → bottom sheet with a Stepper, quick presets (1 / 5 / 10 / 25), and a delta preview. Reuses /api/admin/stock-movements with optimistic UI + Undo toast.</p>
+        <div class="links"><a href="screens/inventory.html" target="_blank">Open full-screen ↗</a></div>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen"><iframe class="screen-frame" src="screens/inventory.html" title="Mobile inventory"></iframe></div>
+      </div>
+    </div>
+
+    <div class="device">
+      <div class="device-meta">
+        <h2>Notifications — bottom sheet</h2>
+        <p>Full-height sheet with filter chips (All / Orders / Slots / Daily). Swipe-left dismiss, swipe-right read. Pull-to-refresh, mark-all-read in the sticky footer.</p>
+        <div class="links"><a href="screens/notifications.html" target="_blank">Open full-screen ↗</a></div>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen"><iframe class="screen-frame" src="screens/notifications.html" title="Mobile notifications"></iframe></div>
+      </div>
+    </div>
+
+    <div class="device">
+      <div class="device-meta">
+        <h2>Command palette — full-screen + voice</h2>
+        <p>Topbar search opens a full-screen palette. Voice icon is capability-gated. Pages section + live search across orders / customers / menu / ingredients via /api/admin/search.</p>
+        <div class="links"><a href="screens/palette.html" target="_blank">Open full-screen ↗</a></div>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen"><iframe class="screen-frame" src="screens/palette.html" title="Mobile command palette"></iframe></div>
+      </div>
+    </div>
+
+    <div class="device">
+      <div class="device-meta">
+        <h2>Quick actions — FAB sheet</h2>
+        <p>Centre FAB opens a 6-up role-filtered action sheet. New order / Refund / Comp / Adjust stock / Reach customer / Open till. Each respects the user's role from /api/admin/me.</p>
+        <div class="links"><a href="screens/quick.html" target="_blank">Open full-screen ↗</a></div>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen"><iframe class="screen-frame" src="screens/quick.html" title="Mobile quick actions"></iframe></div>
+      </div>
+    </div>
+
+    <div class="device">
+      <div class="device-meta">
+        <h2>More — sectioned nav drawer</h2>
+        <p>The bottom-nav More tab. Search + every other admin section in role-filtered groups. Long-press the pin icon → pin to bottom nav. Footer carries location switcher, theme toggle, and log-out.</p>
+        <div class="links"><a href="screens/more.html" target="_blank">Open full-screen ↗</a></div>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen"><iframe class="screen-frame" src="screens/more.html" title="Mobile more drawer"></iframe></div>
+      </div>
+    </div>
+
+  </main>
+</body>
+</html>

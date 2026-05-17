@@ -24,6 +24,8 @@ import {
   Users,
 } from "lucide-react";
 import { useAdminLocation } from "./v2/LocationContext";
+import { useIsMobile } from "./v2/mobile";
+import { MobileDashboard } from "./mobile/MobileDashboard";
 import { Badge, Button, Card, CardBody, CardHeader, EmptyState, Tabs, type Column, Table } from "./v2/ui";
 import { AreaChart, BarChart, Heatmap, KpiCard } from "./v2/charts";
 
@@ -160,6 +162,14 @@ function dayOfWeek(iso: string): number {
 }
 
 export function AdminDashboard() {
+  const { isMobile, ready } = useIsMobile();
+  if (ready && isMobile) {
+    return <MobileDashboard />;
+  }
+  return <AdminDashboardDesktop />;
+}
+
+function AdminDashboardDesktop() {
   const [period, setPeriod] = useState<Period>("7d");
   const { location } = useAdminLocation();
 

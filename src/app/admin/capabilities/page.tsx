@@ -98,6 +98,13 @@ export default async function CapabilitiesPage() {
           summary: "Recent system alerts surfaced in the shell — new orders, slot capacity, low stock.",
         },
         {
+          name: "Mobile admin shell",
+          status: "live",
+          href: "/admin",
+          summary:
+            "Bottom-nav + topbar + FAB + bottom-sheet mobile chrome activates automatically below 900px. Same APIs as desktop; redesigned home/orders/KDS/inventory views. See docs/mobile-*.md and mockups/mobile/.",
+        },
+        {
           name: "Truck ops admin",
           status: "live",
           href: "/admin/truck",

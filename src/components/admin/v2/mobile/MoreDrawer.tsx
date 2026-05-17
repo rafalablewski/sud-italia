@@ -1,0 +1,158 @@
+"use client";
+
+import Link from "next/link";
+import { useMemo, useState } from "react";
+import { ChevronRight, LogOut, MapPin, Pin, Search } from "lucide-react";
+import type { AdminRole } from "@/lib/admin-roles";
+import { filterNavForRole, NAV_SECTIONS } from "../nav.config";
+import { BottomSheet } from "./BottomSheet";
+import { setBottomNavPin } from "./BottomNav";
+import { useAdminLocation } from "../LocationContext";
+import { ThemeToggle } from "../ThemeToggle";
+import { haptic } from "./haptics";
+
+interface Props {
+  open: boolean;
+  onClose: () => void;
+  role: AdminRole | null;
+}
+
+/**
+ * Bottom-sheet listing every nav item not in the bottom nav, grouped
+ * by section. Long-press a row → pin to the bottom nav (replaces slot 2).
+ * Footer holds location switcher, theme toggle, and logout.
+ */
+export function MoreDrawer({ open, onClose, role }: Props) {
+  const [q, setQ] = useState("");
+  const { location, setLocation, activeLocations } = useAdminLocation();
+  const sections = useMemo(
+    () => filterNavForRole(role) || NAV_SECTIONS,
+    [role],
+  );
+
+  const filtered = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    if (!needle) return sections;
+    return sections
+      .map((s) => ({
+        ...s,
+        items: s.items.filter((i) => i.label.toLowerCase().includes(needle)),
+      }))
+      .filter((s) => s.items.length > 0);
+  }, [sections, q]);
+
+  const handleLogout = async () => {
+    await fetch("/api/admin/logout", { method: "POST" });
+    window.location.href = "/admin/login";
+  };
+
+  return (
+    <BottomSheet
+      open={open}
+      onClose={onClose}
+      title="All sections"
+      size="full"
+    >
+      <div className="v2-m-more-search">
+        <Search className="h-4 w-4" aria-hidden />
+        <input
+          type="search"
+          inputMode="search"
+          placeholder="Search…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          aria-label="Search navigation"
+        />
+      </div>
+
+      <div className="v2-m-more-sections">
+        {filtered.map((section) => (
+          <div key={section.id} className="v2-m-more-section">
+            <div className="v2-m-more-section-label">{section.label}</div>
+            <ul role="list">
+              {section.items.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      onClick={() => {
+                        haptic("light");
+                        onClose();
+                      }}
+                      className="v2-m-more-item"
+                    >
+                      <Icon className="v2-m-more-item-icon" aria-hidden />
+                      <span className="v2-m-more-item-label">{item.label}</span>
+                      <button
+                        type="button"
+                        className="v2-m-more-item-pin"
+                        aria-label={`Pin ${item.label} to bottom nav`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setBottomNavPin(item.href);
+                          haptic("success");
+                        }}
+                      >
+                        <Pin className="h-3.5 w-3.5" />
+                      </button>
+                      <ChevronRight
+                        className="v2-m-more-item-chev"
+                        aria-hidden
+                      />
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
+        {filtered.length === 0 && (
+          <div className="v2-m-more-empty">No matches.</div>
+        )}
+      </div>
+
+      <div className="v2-m-more-footer">
+        <div className="v2-m-more-footer-row">
+          <div className="v2-m-more-footer-label">
+            <MapPin className="h-3.5 w-3.5" aria-hidden /> Location
+          </div>
+          <div className="v2-m-more-loc-segments" role="group" aria-label="Active location">
+            <button
+              type="button"
+              className={`v2-m-more-loc-btn ${location === "" ? "is-active" : ""}`}
+              onClick={() => setLocation("")}
+            >
+              All
+            </button>
+            {activeLocations.map((l) => (
+              <button
+                key={l.slug}
+                type="button"
+                className={`v2-m-more-loc-btn ${location === l.slug ? "is-active" : ""}`}
+                onClick={() => setLocation(l.slug)}
+              >
+                {l.city}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="v2-m-more-footer-row">
+          <div className="v2-m-more-footer-label">Theme</div>
+          <ThemeToggle />
+        </div>
+
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="v2-m-more-logout"
+        >
+          <LogOut className="h-3.5 w-3.5" aria-hidden />
+          <span>Log out</span>
+        </button>
+      </div>
+    </BottomSheet>
+  );
+}

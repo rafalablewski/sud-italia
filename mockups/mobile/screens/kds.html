@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mobile KDS — Sud Italia</title>
+<link rel="stylesheet" href="../assets/screen.css" />
+</head>
+<body>
+<div class="shell">
+  <div class="statusbar">
+    <span>9:41</span>
+    <span class="icons">●●● ● 100%</span>
+  </div>
+  <header class="topbar">
+    <div class="topbar-left">
+      <span class="brand-mark">SI</span>
+      <span class="title">Kitchen</span>
+    </div>
+    <div class="topbar-right">
+      <button class="iconbtn"><span class="glyph gl-bell"></span></button>
+      <button class="iconbtn active"><span class="glyph gl-pause"></span></button>
+    </div>
+  </header>
+
+  <div class="content">
+    <div class="toolbar">
+      <div class="segment">
+        <div class="segment-opt">New (2)</div>
+        <div class="segment-opt active">In progress (5)</div>
+        <div class="segment-opt">Ready (1)</div>
+      </div>
+      <div class="chip-strip">
+        <div class="chip active">All</div>
+        <div class="chip">Pizza<span class="chip-count">3</span></div>
+        <div class="chip">Pasta<span class="chip-count">1</span></div>
+        <div class="chip">Antipasti</div>
+        <div class="chip">Panini</div>
+        <div class="chip">Drinks</div>
+      </div>
+    </div>
+
+    <div>
+      <h1 class="page-title">In progress</h1>
+      <div class="page-subtitle">5 tickets · KRAKÓW</div>
+    </div>
+
+    <!-- Ticket: overdue -->
+    <article class="card" style="background:color-mix(in oklab,var(--danger) 12%,var(--surface-1));border-color:rgba(239,68,68,0.4);padding:14px;display:flex;flex-direction:column;gap:10px">
+      <header style="display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:12px;color:var(--fg-subtle);text-transform:uppercase;letter-spacing:0.06em">#C71F8A</div>
+          <div style="font-size:16px;font-weight:700">Anna K.</div>
+        </div>
+        <div class="tabular" style="font-size:44px;font-weight:700;letter-spacing:-0.04em;line-height:1;color:var(--danger)">19:42</div>
+      </header>
+      <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px">
+        <li style="display:flex;gap:8px;font-size:15px;font-weight:500"><span class="tabular" style="font-weight:700;color:var(--brand);min-width:26px">2×</span><span style="flex:1">Pizza Margherita</span><span style="font-size:11px;text-transform:uppercase;color:var(--fg-subtle)">pizza</span></li>
+        <li style="display:flex;gap:8px;font-size:15px;font-weight:500"><span class="tabular" style="font-weight:700;color:var(--brand);min-width:26px">1×</span><span style="flex:1">Caprese salad</span><span style="font-size:11px;text-transform:uppercase;color:var(--fg-subtle)">antipasti</span></li>
+      </ul>
+      <div style="padding:8px;border-radius:8px;background:var(--warning-soft);color:var(--warning);font-size:13px;font-weight:600">⚠ No onions, extra basil</div>
+      <footer style="display:flex;align-items:center;justify-content:space-between;padding-top:6px;border-top:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--warning)">
+          <span class="glyph gl-clock"></span><span class="tabular">Overdue 4:42</span>
+        </div>
+        <button style="display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 16px;border-radius:10px;background:var(--brand);color:var(--brand-fg);font-size:13px;font-weight:600;border:0">Mark ready</button>
+      </footer>
+    </article>
+
+    <!-- Ticket: warning -->
+    <article class="card" style="background:color-mix(in oklab,var(--warning) 10%,var(--surface-1));border-color:rgba(245,158,11,0.35);padding:14px;display:flex;flex-direction:column;gap:10px">
+      <header style="display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:12px;color:var(--fg-subtle);text-transform:uppercase;letter-spacing:0.06em">#C71F71</div>
+          <div style="font-size:16px;font-weight:700">Marco R.</div>
+        </div>
+        <div class="tabular" style="font-size:44px;font-weight:700;letter-spacing:-0.04em;line-height:1;color:var(--warning)">12:08</div>
+      </header>
+      <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px">
+        <li style="display:flex;gap:8px;font-size:15px;font-weight:500"><span class="tabular" style="font-weight:700;color:var(--brand);min-width:26px">1×</span><span style="flex:1">Pizza Diavola</span><span style="font-size:11px;text-transform:uppercase;color:var(--fg-subtle)">pizza</span></li>
+        <li style="display:flex;gap:8px;font-size:15px;font-weight:500"><span class="tabular" style="font-weight:700;color:var(--brand);min-width:26px">1×</span><span style="flex:1">Spaghetti carbonara</span><span style="font-size:11px;text-transform:uppercase;color:var(--fg-subtle)">pasta</span></li>
+      </ul>
+      <footer style="display:flex;align-items:center;justify-content:space-between;padding-top:6px;border-top:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--fg-muted)">
+          <span class="glyph gl-clock"></span><span class="tabular">Due 2:52</span>
+        </div>
+        <button style="display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 16px;border-radius:10px;background:var(--brand);color:var(--brand-fg);font-size:13px;font-weight:600;border:0">Mark ready</button>
+      </footer>
+    </article>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;padding-top:4px">
+      <button style="min-height:40px;padding:0 14px;border-radius:10px;background:var(--surface-2);border:1px solid var(--border);color:var(--fg);font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:4px"><span class="glyph gl-chev-l"></span> Prev lane</button>
+      <button style="min-height:40px;padding:0 14px;border-radius:10px;background:var(--surface-2);border:1px solid var(--border);color:var(--fg);font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:4px">Next lane <span class="glyph gl-chev"></span></button>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <div class="nav-tab active"><span class="icon glyph gl-chef"></span><span>KDS</span></div>
+    <div class="nav-tab"><span class="icon glyph gl-orders"></span><span>Orders</span></div>
+    <div class="nav-fab glyph gl-plus"></div>
+    <div class="nav-tab"><span class="icon glyph gl-stock"></span><span>Stock</span></div>
+    <div class="nav-tab"><span class="icon glyph gl-grid"></span><span>More</span></div>
+  </nav>
+</div>
+</body>
+</html>
