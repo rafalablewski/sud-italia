@@ -10789,14 +10789,113 @@
 
     <!-- MENU -->
     <div class=&quot;loc-card-soft loc-menu-card&quot;>
-      <div class=&quot;loc-card-eyebrow&quot;><span class=&quot;bi-pri&quot; data-en=&quot;menu from this kitchen&quot; data-pl=&quot;menu z tej kuchni&quot;>menu from this kitchen</span> <span class=&quot;bi-sec&quot;>&amp;middot; il menu di questa cucina</span></div>
-      <h2 class=&quot;loc-card-title&quot;><span class=&quot;bi-pri&quot; data-en=&quot;What comes out of the oven today&quot; data-pl=&quot;Co dziś wychodzi z pieca&quot;>What comes out of the oven today</span><span class=&quot;en bi-sec&quot;>Cosa esce dal forno oggi</span></h2>
-      <div class=&quot;mini-tabs&quot; role=&quot;tablist&quot; data-loc=&quot;krakow&quot;>
-        <button class=&quot;mini-tab on&quot; data-cat=&quot;all&quot;><span class=&quot;bi-pri&quot; data-en=&quot;All&quot; data-pl=&quot;Wszystko&quot;>All</span></button>
-        <button class=&quot;mini-tab&quot; data-cat=&quot;pizza&quot;>Pizza</button>
-        <button class=&quot;mini-tab&quot; data-cat=&quot;pasta&quot;>Pasta</button>
-        <button class=&quot;mini-tab&quot; data-cat=&quot;drinks&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Drinks&quot; data-pl=&quot;Napoje&quot;>Drinks</span></button>
+      <div class=&quot;ps-head&quot;>
+        <div class=&quot;ps-eyebrow&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Menu from Kraków&quot; data-pl=&quot;Menu z Krakowa&quot;>Menu from Kraków</span> · <span class=&quot;bi-sec&quot;>il menù di Kraków</span></div>
+        <h2 class=&quot;ps-title&quot;><span class=&quot;bi-pri&quot; data-en=&quot;What comes out of&quot; data-pl=&quot;To, co wychodzi z&quot;>What comes out of</span> <span class=&quot;it&quot;>the oven</span></h2>
+        <p class=&quot;ps-sub&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Five pizzas of the day, one chef's pasta, and an espresso to close. Always.&quot; data-pl=&quot;Pięć pizz dnia, jeden makaron od szefa kuchni, espresso na koniec. Zawsze.&quot;>Five pizzas of the day, one chef's pasta, and an espresso to close. Always.</span></p>
       </div>
+
+      <!-- search -->
+      <div class=&quot;menu-search&quot;>
+        <svg width=&quot;20&quot; height=&quot;20&quot; viewBox=&quot;0 0 22 22&quot; fill=&quot;none&quot; aria-hidden=&quot;true&quot;>
+          <circle cx=&quot;9&quot; cy=&quot;9&quot; r=&quot;6.5&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.6&quot; fill=&quot;none&quot;/>
+          <path d=&quot;M14 14 L20 20&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.6&quot; stroke-linecap=&quot;round&quot;/>
+        </svg>
+        <input id=&quot;menu-search-input-kr&quot; type=&quot;search&quot; placeholder=&quot;Search pizza, pasta, wine…&quot; data-ph-en=&quot;Search pizza, pasta, wine…&quot; data-ph-pl=&quot;Szukaj pizzy, makaronu, wina…&quot; autocomplete=&quot;off&quot; />
+      </div>
+
+      <!-- live activity -->
+      <div class=&quot;live-act&quot;>
+        <span class=&quot;pip&quot; aria-hidden=&quot;true&quot;></span>
+        <span><strong class=&quot;num&quot;>6</strong> <span class=&quot;bi-pri&quot; data-en=&quot;orders in the last hour&quot; data-pl=&quot;zamówień w ostatniej godzinie&quot;>orders in the last hour</span> <span class=&quot;bi-sec&quot;>· 6 ordini nell'ultima ora</span></span>
+        <span style=&quot;opacity:.5;&quot;>·</span>
+        <span><span class=&quot;bi-pri&quot; data-en=&quot;Trending&quot; data-pl=&quot;Popularne&quot;>Trending</span><span class=&quot;bi-sec&quot;> · in tendenza</span>: <span class=&quot;trend&quot;>Spaghetti Carbonara</span></span>
+      </div>
+
+      <!-- category tabs -->
+      <div class=&quot;cat-tabs&quot; id=&quot;cat-tabs-kr&quot; role=&quot;tablist&quot;>
+        <button class=&quot;cat-tab on&quot; data-cat=&quot;all&quot;><span class=&quot;bi-pri&quot; data-en=&quot;All&quot; data-pl=&quot;Wszystko&quot;>All</span> <span class=&quot;count&quot;>14</span></button>
+        <button class=&quot;cat-tab&quot; data-cat=&quot;pizza&quot;>Pizza <span class=&quot;count&quot;>9</span></button>
+        <button class=&quot;cat-tab&quot; data-cat=&quot;pasta&quot;>Pasta <span class=&quot;count&quot;>4</span></button>
+        <button class=&quot;cat-tab&quot; data-cat=&quot;antipasti&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Starters&quot; data-pl=&quot;Przystawki&quot;>Starters</span> <span class=&quot;bi-sec&quot;>· antipasti</span> <span class=&quot;count&quot;>5</span></button>
+        <button class=&quot;cat-tab&quot; data-cat=&quot;panini&quot;>Panini <span class=&quot;count&quot;>2</span></button>
+        <button class=&quot;cat-tab&quot; data-cat=&quot;drinks&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Drinks&quot; data-pl=&quot;Napoje&quot;>Drinks</span> <span class=&quot;bi-sec&quot;>· bibite</span> <span class=&quot;count&quot;>5</span></button>
+        <button class=&quot;cat-tab&quot; data-cat=&quot;desserts&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Desserts&quot; data-pl=&quot;Desery&quot;>Desserts</span> <span class=&quot;bi-sec&quot;>· dolci</span> <span class=&quot;count&quot;>4</span></button>
+      </div>
+
+      <!-- 15-minute guarantee -->
+      <div class=&quot;guarantee&quot;>
+        <div class=&quot;guarantee-icon&quot; aria-hidden=&quot;true&quot;>
+          <!-- sundial -->
+          <svg width=&quot;56&quot; height=&quot;56&quot; viewBox=&quot;0 0 56 56&quot; fill=&quot;none&quot;>
+            <circle cx=&quot;28&quot; cy=&quot;28&quot; r=&quot;18&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.8&quot; fill=&quot;rgba(184,92,56,0.06)&quot;/>
+            <path d=&quot;M28 12 L28 14 M28 42 L28 44 M12 28 L14 28 M42 28 L44 28&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.4&quot; stroke-linecap=&quot;round&quot;/>
+            <path d=&quot;M28 28 L28 16 M28 28 L36 32&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.8&quot; stroke-linecap=&quot;round&quot;/>
+            <circle cx=&quot;28&quot; cy=&quot;28&quot; r=&quot;1.8&quot; fill=&quot;currentColor&quot;/>
+            <path d=&quot;M16 42 C 22 46, 34 46, 40 42&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.3&quot; fill=&quot;none&quot; opacity=&quot;0.5&quot;/>
+          </svg>
+        </div>
+        <div class=&quot;guarantee-text&quot;>
+          <div class=&quot;guarantee-title&quot;><span class=&quot;bi-pri&quot; data-en=&quot;15 minutes guaranteed&quot; data-pl=&quot;15 minut gwarancji&quot;>15 minutes guaranteed</span> <span class=&quot;bi-sec&quot;>· 15 minuti garantiti</span></div>
+          <div class=&quot;guarantee-sub&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Ready in 15 minutes — or your next drink's on us.&quot; data-pl=&quot;Gotowe w 15 minut — albo następny napój na nasz koszt.&quot;>Ready in 15 minutes — or your next drink's on us.</span></div>
+        </div>
+      </div>
+
+      <!-- combo deals -->
+      <div class=&quot;combos&quot;>
+        <div class=&quot;combo-card&quot;>
+          <div class=&quot;combo-card-illus&quot; aria-hidden=&quot;true&quot;>
+            <!-- pizza icon -->
+            <svg width=&quot;40&quot; height=&quot;40&quot; viewBox=&quot;0 0 40 40&quot; fill=&quot;none&quot;>
+              <path d=&quot;M6 32 L20 6 L34 32 Z&quot; fill=&quot;#C9A23E&quot; fill-opacity=&quot;0.18&quot; stroke=&quot;#B85C38&quot; stroke-width=&quot;1.5&quot; stroke-linejoin=&quot;round&quot;/>
+              <path d=&quot;M6 32 L34 32&quot; stroke=&quot;#7A2B2B&quot; stroke-width=&quot;1.5&quot;/>
+              <circle cx=&quot;16&quot; cy=&quot;24&quot; r=&quot;2&quot; fill=&quot;#7A2B2B&quot;/>
+              <circle cx=&quot;24&quot; cy=&quot;22&quot; r=&quot;2&quot; fill=&quot;#7A2B2B&quot;/>
+              <circle cx=&quot;20&quot; cy=&quot;28&quot; r=&quot;2&quot; fill=&quot;#7A2B2B&quot;/>
+              <circle cx=&quot;19&quot; cy=&quot;16&quot; r=&quot;1.5&quot; fill=&quot;#4A7C59&quot;/>
+            </svg>
+          </div>
+          <div class=&quot;combo-card-body&quot;>
+            <div class=&quot;combo-card-title&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Italian Classic&quot; data-pl=&quot;Włoski Klasyk&quot;>Italian Classic</span> <span class=&quot;bi-sec&quot;>· Il Classico</span></div>
+            <div class=&quot;combo-card-sub&quot;>Margherita + Limonata + Tiramisù</div>
+          </div>
+          <div class=&quot;wax-seal&quot; aria-label=&quot;10 percent discount&quot;>−10%</div>
+        </div>
+
+        <div class=&quot;combo-card&quot;>
+          <div class=&quot;combo-card-illus&quot; aria-hidden=&quot;true&quot;>
+            <!-- pasta -->
+            <svg width=&quot;40&quot; height=&quot;40&quot; viewBox=&quot;0 0 40 40&quot; fill=&quot;none&quot;>
+              <circle cx=&quot;20&quot; cy=&quot;22&quot; r=&quot;13&quot; stroke=&quot;#C9A23E&quot; stroke-width=&quot;1.5&quot; fill=&quot;#F2E2C2&quot;/>
+              <path d=&quot;M12 20 C 14 17, 18 17, 20 20 C 22 23, 26 23, 28 20&quot; stroke=&quot;#C9A23E&quot; stroke-width=&quot;1.2&quot; fill=&quot;none&quot;/>
+              <path d=&quot;M12 24 C 14 21, 18 21, 20 24 C 22 27, 26 27, 28 24&quot; stroke=&quot;#C9A23E&quot; stroke-width=&quot;1.2&quot; fill=&quot;none&quot;/>
+              <path d=&quot;M12 22 C 14 19, 18 19, 20 22 C 22 25, 26 25, 28 22&quot; stroke=&quot;#B85C38&quot; stroke-width=&quot;1.2&quot; fill=&quot;none&quot;/>
+              <circle cx=&quot;18&quot; cy=&quot;20&quot; r=&quot;1.2&quot; fill=&quot;#7A2B2B&quot;/>
+              <circle cx=&quot;25&quot; cy=&quot;24&quot; r=&quot;1.2&quot; fill=&quot;#7A2B2B&quot;/>
+            </svg>
+          </div>
+          <div class=&quot;combo-card-body&quot;>
+            <div class=&quot;combo-card-title&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Classic Pasta Deal&quot; data-pl=&quot;Klasyk Makaronowy&quot;>Classic Pasta Deal</span> <span class=&quot;bi-sec&quot;>· Pasta Classica</span></div>
+            <div class=&quot;combo-card-sub&quot;>Carbonara + Pane + Acqua frizzante</div>
+          </div>
+          <div class=&quot;wax-seal&quot; aria-label=&quot;10 percent discount&quot;>−10%</div>
+        </div>
+      </div>
+
+      <!-- surprise me -->
+      <button class=&quot;surprise&quot; id=&quot;surprise-btn-kr&quot;>
+        <svg width=&quot;22&quot; height=&quot;22&quot; viewBox=&quot;0 0 24 24&quot; fill=&quot;none&quot; aria-hidden=&quot;true&quot;>
+          <rect x=&quot;4&quot; y=&quot;4&quot; width=&quot;16&quot; height=&quot;16&quot; rx=&quot;3&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.6&quot; fill=&quot;rgba(201,162,62,0.1)&quot;/>
+          <circle cx=&quot;8.5&quot; cy=&quot;8.5&quot; r=&quot;1.4&quot; fill=&quot;currentColor&quot;/>
+          <circle cx=&quot;15.5&quot; cy=&quot;15.5&quot; r=&quot;1.4&quot; fill=&quot;currentColor&quot;/>
+          <circle cx=&quot;12&quot; cy=&quot;12&quot; r=&quot;1.4&quot; fill=&quot;currentColor&quot;/>
+          <circle cx=&quot;15.5&quot; cy=&quot;8.5&quot; r=&quot;1.4&quot; fill=&quot;currentColor&quot;/>
+          <circle cx=&quot;8.5&quot; cy=&quot;15.5&quot; r=&quot;1.4&quot; fill=&quot;currentColor&quot;/>
+        </svg>
+        <span class=&quot;bi-pri&quot; data-en=&quot;Surprise me&quot; data-pl=&quot;Zaskocz mnie&quot;>Surprise me</span> <span class=&quot;bi-sec&quot;>· sorprendimi</span>
+      </button>
+
+      <!-- menu items -->
       <div class=&quot;menu-items&quot; id=&quot;menu-items-kr&quot;>
 
         <!-- Margherita -->
@@ -10996,6 +11095,10 @@
           </div>
         </article>
 
+      </div>
+
+      <div id=&quot;menu-empty&quot; style=&quot;display:none; text-align:center; padding:32px 12px; font-family: var(--serif-display); font-style: italic; color: var(--muted); font-size: 17px;&quot;>
+        Nessun piatto trovato — <em>try another word, amico.</em>
       </div>
     </div>
 
@@ -11293,14 +11396,113 @@
 
     <!-- MENU -->
     <div class=&quot;loc-card-soft loc-menu-card&quot;>
-      <div class=&quot;loc-card-eyebrow&quot;><span class=&quot;bi-pri&quot; data-en=&quot;menu from this kitchen&quot; data-pl=&quot;menu z tej kuchni&quot;>menu from this kitchen</span> <span class=&quot;bi-sec&quot;>&amp;middot; il menu di questa cucina</span></div>
-      <h2 class=&quot;loc-card-title&quot;><span class=&quot;bi-pri&quot; data-en=&quot;What comes out of the oven today&quot; data-pl=&quot;Co dziś wychodzi z pieca&quot;>What comes out of the oven today</span><span class=&quot;en bi-sec&quot;>Cosa esce dal forno oggi</span></h2>
-      <div class=&quot;mini-tabs&quot; role=&quot;tablist&quot; data-loc=&quot;warszawa&quot;>
-        <button class=&quot;mini-tab on&quot; data-cat=&quot;all&quot;><span class=&quot;bi-pri&quot; data-en=&quot;All&quot; data-pl=&quot;Wszystko&quot;>All</span></button>
-        <button class=&quot;mini-tab&quot; data-cat=&quot;pizza&quot;>Pizza</button>
-        <button class=&quot;mini-tab&quot; data-cat=&quot;pasta&quot;>Pasta</button>
-        <button class=&quot;mini-tab&quot; data-cat=&quot;drinks&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Drinks&quot; data-pl=&quot;Napoje&quot;>Drinks</span></button>
+      <div class=&quot;ps-head&quot;>
+        <div class=&quot;ps-eyebrow&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Menu from Warszawa&quot; data-pl=&quot;Menu z Warszawy&quot;>Menu from Warszawa</span> · <span class=&quot;bi-sec&quot;>il menù di Warszawa</span></div>
+        <h2 class=&quot;ps-title&quot;><span class=&quot;bi-pri&quot; data-en=&quot;What comes out of&quot; data-pl=&quot;To, co wychodzi z&quot;>What comes out of</span> <span class=&quot;it&quot;>the oven</span></h2>
+        <p class=&quot;ps-sub&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Five pizzas of the day, one chef's pasta, and an espresso to close. Always.&quot; data-pl=&quot;Pięć pizz dnia, jeden makaron od szefa kuchni, espresso na koniec. Zawsze.&quot;>Five pizzas of the day, one chef's pasta, and an espresso to close. Always.</span></p>
       </div>
+
+      <!-- search -->
+      <div class=&quot;menu-search&quot;>
+        <svg width=&quot;20&quot; height=&quot;20&quot; viewBox=&quot;0 0 22 22&quot; fill=&quot;none&quot; aria-hidden=&quot;true&quot;>
+          <circle cx=&quot;9&quot; cy=&quot;9&quot; r=&quot;6.5&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.6&quot; fill=&quot;none&quot;/>
+          <path d=&quot;M14 14 L20 20&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.6&quot; stroke-linecap=&quot;round&quot;/>
+        </svg>
+        <input id=&quot;menu-search-input-wa&quot; type=&quot;search&quot; placeholder=&quot;Search pizza, pasta, wine…&quot; data-ph-en=&quot;Search pizza, pasta, wine…&quot; data-ph-pl=&quot;Szukaj pizzy, makaronu, wina…&quot; autocomplete=&quot;off&quot; />
+      </div>
+
+      <!-- live activity -->
+      <div class=&quot;live-act&quot;>
+        <span class=&quot;pip&quot; aria-hidden=&quot;true&quot;></span>
+        <span><strong class=&quot;num&quot;>6</strong> <span class=&quot;bi-pri&quot; data-en=&quot;orders in the last hour&quot; data-pl=&quot;zamówień w ostatniej godzinie&quot;>orders in the last hour</span> <span class=&quot;bi-sec&quot;>· 6 ordini nell'ultima ora</span></span>
+        <span style=&quot;opacity:.5;&quot;>·</span>
+        <span><span class=&quot;bi-pri&quot; data-en=&quot;Trending&quot; data-pl=&quot;Popularne&quot;>Trending</span><span class=&quot;bi-sec&quot;> · in tendenza</span>: <span class=&quot;trend&quot;>Spaghetti Carbonara</span></span>
+      </div>
+
+      <!-- category tabs -->
+      <div class=&quot;cat-tabs&quot; id=&quot;cat-tabs-wa&quot; role=&quot;tablist&quot;>
+        <button class=&quot;cat-tab on&quot; data-cat=&quot;all&quot;><span class=&quot;bi-pri&quot; data-en=&quot;All&quot; data-pl=&quot;Wszystko&quot;>All</span> <span class=&quot;count&quot;>14</span></button>
+        <button class=&quot;cat-tab&quot; data-cat=&quot;pizza&quot;>Pizza <span class=&quot;count&quot;>9</span></button>
+        <button class=&quot;cat-tab&quot; data-cat=&quot;pasta&quot;>Pasta <span class=&quot;count&quot;>4</span></button>
+        <button class=&quot;cat-tab&quot; data-cat=&quot;antipasti&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Starters&quot; data-pl=&quot;Przystawki&quot;>Starters</span> <span class=&quot;bi-sec&quot;>· antipasti</span> <span class=&quot;count&quot;>5</span></button>
+        <button class=&quot;cat-tab&quot; data-cat=&quot;panini&quot;>Panini <span class=&quot;count&quot;>2</span></button>
+        <button class=&quot;cat-tab&quot; data-cat=&quot;drinks&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Drinks&quot; data-pl=&quot;Napoje&quot;>Drinks</span> <span class=&quot;bi-sec&quot;>· bibite</span> <span class=&quot;count&quot;>5</span></button>
+        <button class=&quot;cat-tab&quot; data-cat=&quot;desserts&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Desserts&quot; data-pl=&quot;Desery&quot;>Desserts</span> <span class=&quot;bi-sec&quot;>· dolci</span> <span class=&quot;count&quot;>4</span></button>
+      </div>
+
+      <!-- 15-minute guarantee -->
+      <div class=&quot;guarantee&quot;>
+        <div class=&quot;guarantee-icon&quot; aria-hidden=&quot;true&quot;>
+          <!-- sundial -->
+          <svg width=&quot;56&quot; height=&quot;56&quot; viewBox=&quot;0 0 56 56&quot; fill=&quot;none&quot;>
+            <circle cx=&quot;28&quot; cy=&quot;28&quot; r=&quot;18&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.8&quot; fill=&quot;rgba(184,92,56,0.06)&quot;/>
+            <path d=&quot;M28 12 L28 14 M28 42 L28 44 M12 28 L14 28 M42 28 L44 28&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.4&quot; stroke-linecap=&quot;round&quot;/>
+            <path d=&quot;M28 28 L28 16 M28 28 L36 32&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.8&quot; stroke-linecap=&quot;round&quot;/>
+            <circle cx=&quot;28&quot; cy=&quot;28&quot; r=&quot;1.8&quot; fill=&quot;currentColor&quot;/>
+            <path d=&quot;M16 42 C 22 46, 34 46, 40 42&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.3&quot; fill=&quot;none&quot; opacity=&quot;0.5&quot;/>
+          </svg>
+        </div>
+        <div class=&quot;guarantee-text&quot;>
+          <div class=&quot;guarantee-title&quot;><span class=&quot;bi-pri&quot; data-en=&quot;15 minutes guaranteed&quot; data-pl=&quot;15 minut gwarancji&quot;>15 minutes guaranteed</span> <span class=&quot;bi-sec&quot;>· 15 minuti garantiti</span></div>
+          <div class=&quot;guarantee-sub&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Ready in 15 minutes — or your next drink's on us.&quot; data-pl=&quot;Gotowe w 15 minut — albo następny napój na nasz koszt.&quot;>Ready in 15 minutes — or your next drink's on us.</span></div>
+        </div>
+      </div>
+
+      <!-- combo deals -->
+      <div class=&quot;combos&quot;>
+        <div class=&quot;combo-card&quot;>
+          <div class=&quot;combo-card-illus&quot; aria-hidden=&quot;true&quot;>
+            <!-- pizza icon -->
+            <svg width=&quot;40&quot; height=&quot;40&quot; viewBox=&quot;0 0 40 40&quot; fill=&quot;none&quot;>
+              <path d=&quot;M6 32 L20 6 L34 32 Z&quot; fill=&quot;#C9A23E&quot; fill-opacity=&quot;0.18&quot; stroke=&quot;#B85C38&quot; stroke-width=&quot;1.5&quot; stroke-linejoin=&quot;round&quot;/>
+              <path d=&quot;M6 32 L34 32&quot; stroke=&quot;#7A2B2B&quot; stroke-width=&quot;1.5&quot;/>
+              <circle cx=&quot;16&quot; cy=&quot;24&quot; r=&quot;2&quot; fill=&quot;#7A2B2B&quot;/>
+              <circle cx=&quot;24&quot; cy=&quot;22&quot; r=&quot;2&quot; fill=&quot;#7A2B2B&quot;/>
+              <circle cx=&quot;20&quot; cy=&quot;28&quot; r=&quot;2&quot; fill=&quot;#7A2B2B&quot;/>
+              <circle cx=&quot;19&quot; cy=&quot;16&quot; r=&quot;1.5&quot; fill=&quot;#4A7C59&quot;/>
+            </svg>
+          </div>
+          <div class=&quot;combo-card-body&quot;>
+            <div class=&quot;combo-card-title&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Italian Classic&quot; data-pl=&quot;Włoski Klasyk&quot;>Italian Classic</span> <span class=&quot;bi-sec&quot;>· Il Classico</span></div>
+            <div class=&quot;combo-card-sub&quot;>Margherita + Limonata + Tiramisù</div>
+          </div>
+          <div class=&quot;wax-seal&quot; aria-label=&quot;10 percent discount&quot;>−10%</div>
+        </div>
+
+        <div class=&quot;combo-card&quot;>
+          <div class=&quot;combo-card-illus&quot; aria-hidden=&quot;true&quot;>
+            <!-- pasta -->
+            <svg width=&quot;40&quot; height=&quot;40&quot; viewBox=&quot;0 0 40 40&quot; fill=&quot;none&quot;>
+              <circle cx=&quot;20&quot; cy=&quot;22&quot; r=&quot;13&quot; stroke=&quot;#C9A23E&quot; stroke-width=&quot;1.5&quot; fill=&quot;#F2E2C2&quot;/>
+              <path d=&quot;M12 20 C 14 17, 18 17, 20 20 C 22 23, 26 23, 28 20&quot; stroke=&quot;#C9A23E&quot; stroke-width=&quot;1.2&quot; fill=&quot;none&quot;/>
+              <path d=&quot;M12 24 C 14 21, 18 21, 20 24 C 22 27, 26 27, 28 24&quot; stroke=&quot;#C9A23E&quot; stroke-width=&quot;1.2&quot; fill=&quot;none&quot;/>
+              <path d=&quot;M12 22 C 14 19, 18 19, 20 22 C 22 25, 26 25, 28 22&quot; stroke=&quot;#B85C38&quot; stroke-width=&quot;1.2&quot; fill=&quot;none&quot;/>
+              <circle cx=&quot;18&quot; cy=&quot;20&quot; r=&quot;1.2&quot; fill=&quot;#7A2B2B&quot;/>
+              <circle cx=&quot;25&quot; cy=&quot;24&quot; r=&quot;1.2&quot; fill=&quot;#7A2B2B&quot;/>
+            </svg>
+          </div>
+          <div class=&quot;combo-card-body&quot;>
+            <div class=&quot;combo-card-title&quot;><span class=&quot;bi-pri&quot; data-en=&quot;Classic Pasta Deal&quot; data-pl=&quot;Klasyk Makaronowy&quot;>Classic Pasta Deal</span> <span class=&quot;bi-sec&quot;>· Pasta Classica</span></div>
+            <div class=&quot;combo-card-sub&quot;>Carbonara + Pane + Acqua frizzante</div>
+          </div>
+          <div class=&quot;wax-seal&quot; aria-label=&quot;10 percent discount&quot;>−10%</div>
+        </div>
+      </div>
+
+      <!-- surprise me -->
+      <button class=&quot;surprise&quot; id=&quot;surprise-btn-wa&quot;>
+        <svg width=&quot;22&quot; height=&quot;22&quot; viewBox=&quot;0 0 24 24&quot; fill=&quot;none&quot; aria-hidden=&quot;true&quot;>
+          <rect x=&quot;4&quot; y=&quot;4&quot; width=&quot;16&quot; height=&quot;16&quot; rx=&quot;3&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.6&quot; fill=&quot;rgba(201,162,62,0.1)&quot;/>
+          <circle cx=&quot;8.5&quot; cy=&quot;8.5&quot; r=&quot;1.4&quot; fill=&quot;currentColor&quot;/>
+          <circle cx=&quot;15.5&quot; cy=&quot;15.5&quot; r=&quot;1.4&quot; fill=&quot;currentColor&quot;/>
+          <circle cx=&quot;12&quot; cy=&quot;12&quot; r=&quot;1.4&quot; fill=&quot;currentColor&quot;/>
+          <circle cx=&quot;15.5&quot; cy=&quot;8.5&quot; r=&quot;1.4&quot; fill=&quot;currentColor&quot;/>
+          <circle cx=&quot;8.5&quot; cy=&quot;15.5&quot; r=&quot;1.4&quot; fill=&quot;currentColor&quot;/>
+        </svg>
+        <span class=&quot;bi-pri&quot; data-en=&quot;Surprise me&quot; data-pl=&quot;Zaskocz mnie&quot;>Surprise me</span> <span class=&quot;bi-sec&quot;>· sorprendimi</span>
+      </button>
+
+      <!-- menu items -->
       <div class=&quot;menu-items&quot; id=&quot;menu-items-wa&quot;>
 
         <!-- Margherita -->
@@ -11500,6 +11702,10 @@
           </div>
         </article>
 
+      </div>
+
+      <div id=&quot;menu-empty&quot; style=&quot;display:none; text-align:center; padding:32px 12px; font-family: var(--serif-display); font-style: italic; color: var(--muted); font-size: 17px;&quot;>
+        Nessun piatto trovato — <em>try another word, amico.</em>
       </div>
     </div>
 
@@ -12879,22 +13085,63 @@
     if (menuEmpty) menuEmpty.style.display = (visible === 0) ? 'block' : 'none';
   }
 
-  document.querySelectorAll('#cat-tabs .cat-tab').forEach(function (t) {
-    t.addEventListener('click', function () {
-      document.querySelectorAll('#cat-tabs .cat-tab').forEach(function (x) { x.classList.remove('on'); });
-      t.classList.add('on');
-      currentCat = t.getAttribute('data-cat') || 'all';
-      applyMenuFilters();
+  // Generic wiring so cloned cat-tabs / search / surprise btns on the
+  // location pages get the same behaviour as the homepage menu section.
+  function wireCatTabsGroup(root) {
+    var tabs = root.querySelectorAll('.cat-tab');
+    if (!tabs.length) return;
+    var parent = root.parentElement;
+    var grid = parent &amp;&amp; parent.querySelector('.menu-items');
+    if (!grid) return;
+    var items = grid.querySelectorAll('.mi');
+    tabs.forEach(function (t) {
+      t.addEventListener('click', function () {
+        tabs.forEach(function (x) { x.classList.remove('on'); });
+        t.classList.add('on');
+        var cat = t.getAttribute('data-cat') || 'all';
+        items.forEach(function (it) {
+          if (cat === 'all' || it.getAttribute('data-cat') === cat) it.classList.remove('hidden-by-filter');
+          else it.classList.add('hidden-by-filter');
+        });
+      });
+    });
+  }
+  document.querySelectorAll('.cat-tabs').forEach(wireCatTabsGroup);
+
+  // Keep the homepage-specific search/surprise tied to the existing handler
+  // (location-page search/surprise share the same JS via duplicate IDs not
+  // possible, so wire them generically here too).
+  document.querySelectorAll('[id^=&quot;menu-search-input&quot;]').forEach(function (input) {
+    input.addEventListener('input', function () {
+      var card = input.closest('.page-inner, .loc-menu-card');
+      if (!card) return;
+      var grid = card.querySelector('.menu-items');
+      if (!grid) return;
+      var q = (input.value || '').trim().toLowerCase();
+      grid.querySelectorAll('.mi').forEach(function (it) {
+        var name = (it.getAttribute('data-name') || it.textContent || '').toLowerCase();
+        if (!q || name.indexOf(q) >= 0) it.classList.remove('hidden-by-search');
+        else it.classList.add('hidden-by-search');
+      });
     });
   });
 
-  var searchInput = document.getElementById('menu-search-input');
-  if (searchInput) {
-    searchInput.addEventListener('input', function () {
-      currentSearch = (searchInput.value || '').trim().toLowerCase();
-      applyMenuFilters();
+  document.querySelectorAll('[id^=&quot;surprise-btn&quot;]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var card = btn.closest('.page-inner, .loc-menu-card');
+      if (!card) return;
+      var grid = card.querySelector('.menu-items');
+      if (!grid) return;
+      var visible = Array.from(grid.querySelectorAll('.mi')).filter(function (el) {
+        return !el.classList.contains('hidden-by-filter') &amp;&amp; !el.classList.contains('hidden-by-search');
+      });
+      if (!visible.length) { toast('Try another category.'); return; }
+      var pick = visible[Math.floor(Math.random() * visible.length)];
+      pick.classList.add('surprise-pick');
+      pick.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(function () { pick.classList.remove('surprise-pick'); }, 2400);
     });
-  }
+  });
 
   // Surprise me — picks a random visible menu item and pulses it
   var surpriseBtn = document.getElementById('surprise-btn');
