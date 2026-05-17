@@ -9465,6 +9465,28 @@
   .loc-bundles-strip {
     margin-top: 8px;
   }
+  /* Bundles inside location pages: break out of the .loc-section 700px cap
+     so the four cards span the viewport instead of looking pinched. */
+  .loc-section .loc-bundles-strip {
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+  @media (min-width: 768px) {
+    .loc-section .loc-bundles-strip {
+      padding-left: 48px;
+      padding-right: 48px;
+    }
+  }
+  @media (min-width: 1400px) {
+    .loc-section .loc-bundles-strip {
+      padding-left: 80px;
+      padding-right: 80px;
+    }
+  }
+  /* Guard against horizontal scroll caused by 100vw inside iframes */
+  html, body { overflow-x: hidden; }
 
   /* ============================================================
      CART SHEET (modal / slide-up containing the original cart)
@@ -12391,6 +12413,24 @@
   });
   // initial route on load
   activatePage(routeFromHash(), { scroll: false, smooth: false });
+
+  // Defensive: srcdoc iframes don't reliably honor default <a href=&quot;#/...&quot;> link
+  // clicks in Chromium — the action can navigate the TOP window instead of the
+  // iframe. Intercept route hashes (#/...) and update window.location.hash
+  // explicitly so the hashchange listener (and activatePage) always run.
+  document.addEventListener('click', function (e) {
+    var a = e.target &amp;&amp; e.target.closest ? e.target.closest('a[href^=&quot;#/&quot;]') : null;
+    if (!a) return;
+    var href = a.getAttribute('href') || '';
+    if (!href) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (window.location.hash !== href) {
+      window.location.hash = href;
+    } else {
+      activatePage(routeFromHash(), { scroll: true });
+    }
+  }, true);
 
   // ============================================================
   // HERO CTAs (location) — route to location page
