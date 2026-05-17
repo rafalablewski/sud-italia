@@ -47,7 +47,7 @@ The original §3 "What is theatre" table, the §15 "Final Brutal Verdict" bullet
 
 **Remaining work after this pass:** zero tests, plaintext admin password compare, no MFA, no Neon backup/restore runbook, no staging env, address autocomplete still commented out, food photography still emoji, partial-refund stock restoration still TODO, cart-drawer referral-cookie hookup pending. Sections 5, 9, and 11 below are still actionable; see Appendix A.
 
-A new tsx smoke test (`scripts/verify-scalability-fixes.ts`) exercises the cohort + segment pure functions with synthetic data — 11 assertions, all green. Drizzle migration `0017_little_fat_cobra.sql` adds the new tables; production picks them up via the existing self-bootstrap DDL path on first read.
+A new tsx smoke test (`scripts/legacy/verify-scalability-fixes.ts`) exercises the cohort + segment pure functions with synthetic data — 11 assertions, all green. Drizzle migration `0017_little_fat_cobra.sql` adds the new tables; production picks them up via the existing self-bootstrap DDL path on first read.
 
 ---
 

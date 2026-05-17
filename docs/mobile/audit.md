@@ -2,7 +2,7 @@
 
 **Date:** 2026-05-17
 **Scope:** Every admin surface in `src/app/admin/*` and its shell, evaluated for mobile readiness, restructuring need, and ergonomic risk.
-**Companion docs:** `mobile-ux-strategy.md`, `mobile-navigation.md`, `mobile-design-system.md`
+**Companion docs:** `ux-strategy.md`, `navigation.md`, `design-system.md`
 **Source of truth:** code, not assumption — every claim references the file path or component name.
 
 ---
@@ -117,7 +117,7 @@ From `src/components/admin/v2/hooks/useShortcuts.ts` and `CommandPalette.tsx`:
 
 ## 4. Operational flows — observed
 
-Five flows account for the majority of operator time. Each is mapped today and redesigned in `mobile-ux-strategy.md`.
+Five flows account for the majority of operator time. Each is mapped today and redesigned in `ux-strategy.md`.
 
 ### 4.1 Refund flow
 - **Today (desktop):** Orders → click row → modal → "Refund" → confirm dialog → reason text → confirm.

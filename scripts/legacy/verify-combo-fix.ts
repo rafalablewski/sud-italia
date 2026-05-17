@@ -2,11 +2,11 @@
  * Verification harness for the getActiveComboDeals rewrite (claude/fix-promo-bugs-HMguT).
  *
  * Runs the five scenarios from the plan as assertions. Exits non-zero on
- * any mismatch. Invoke with `npx tsx scripts/verify-combo-fix.ts`.
+ * any mismatch. Invoke with `npx tsx scripts/legacy/verify-combo-fix.ts`.
  */
 
-import { getActiveComboDeals, type ComboDeal } from "../src/lib/upsell";
-import type { CartItem, MenuCategory, MenuItem } from "../src/data/types";
+import { getActiveComboDeals, type ComboDeal } from "../../src/lib/upsell";
+import type { CartItem, MenuCategory, MenuItem } from "../../src/data/types";
 
 const item = (id: string, category: MenuCategory, price: number): MenuItem => ({
   id,
