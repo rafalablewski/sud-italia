@@ -16,6 +16,7 @@ import {
   PullToRefresh,
   type MobileListItem,
 } from "../v2/mobile";
+import { MobileRecipeEditor } from "./MobileRecipeEditor";
 
 const FALLBACK_LOC = getActiveLocations()[0]?.slug ?? "krakow";
 
@@ -31,6 +32,23 @@ interface RecipeRow {
   menuItemId: string;
   calculatedCost?: number;
   yieldPortions: number;
+  enrichedIngredients?: Array<{
+    ingredientId: string;
+    quantity: number;
+    wasteFactor: number;
+    name?: string;
+    unit?: string;
+    unitCost?: number;
+  }>;
+  prepTimeMinutes?: number;
+  notes?: string;
+}
+
+interface IngredientData {
+  id: string;
+  name: string;
+  unit: string;
+  costPerUnit: number;
 }
 
 interface CombinedRow {
@@ -53,7 +71,9 @@ export function MobileRecipes() {
   const [pageLoc, setPageLoc] = useState<string>(globalLoc || FALLBACK_LOC);
   const [items, setItems] = useState<MenuItemRow[]>([]);
   const [recipes, setRecipes] = useState<RecipeRow[]>([]);
+  const [ingredients, setIngredients] = useState<IngredientData[]>([]);
   const [cat, setCat] = useState<MenuCategory | "all">("all");
+  const [editing, setEditing] = useState<{ id: string; name: string; price: number } | null>(null);
   const activeLocations = useMemo(() => getActiveLocations(), []);
 
   useEffect(() => {
@@ -61,15 +81,18 @@ export function MobileRecipes() {
   }, [globalLoc]);
 
   const refresh = async () => {
-    // Menu list is per-location; recipes are chain-wide (keyed by menuItemId).
-    const [m, r] = await Promise.all([
+    // Menu list is per-location; recipes + ingredients are chain-wide
+    // (recipes keyed by menuItemId, ingredients keyed by id).
+    const [m, r, i] = await Promise.all([
       fetch(`/api/admin/menu?location=${encodeURIComponent(pageLoc)}`).then((res) =>
         res.ok ? res.json() : [],
       ),
       fetch("/api/admin/recipes").then((res) => (res.ok ? res.json() : [])),
+      fetch("/api/admin/ingredients").then((res) => (res.ok ? res.json() : [])),
     ]);
     setItems(Array.isArray(m) ? m : []);
     setRecipes(Array.isArray(r) ? r : []);
+    setIngredients(Array.isArray(i) ? i : []);
   };
 
   useEffect(() => {
@@ -95,6 +118,12 @@ export function MobileRecipes() {
       });
   }, [items, recipes, cat]);
 
+  const recipeByMenuId = useMemo(() => {
+    const m = new Map<string, RecipeRow>();
+    for (const r of recipes) m.set(r.menuItemId, r);
+    return m;
+  }, [recipes]);
+
   const rows: MobileListItem<CombinedRow>[] = combined.map((r) => {
     const cost = r.recipeCost ?? r.baseCost;
     const margin = r.price ? ((r.price - cost) / r.price) * 100 : 0;
@@ -109,6 +138,8 @@ export function MobileRecipes() {
       subtitle: `${MENU_CATEGORY_LABELS[r.category] ?? r.category} · ${r.hasRecipe ? "recipe" : "no recipe"}`,
       trailing: `${formatPrice(cost)}`,
       status: { label: `${margin.toFixed(0)}%`, tone },
+      onTap: () =>
+        setEditing({ id: r.id, name: r.name, price: r.price }),
     };
   });
 
@@ -123,40 +154,52 @@ export function MobileRecipes() {
   ];
 
   return (
-    <PullToRefresh onRefresh={refresh}>
-      <MobilePage
-        toolbar={
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <ChipStrip ariaLabel="Location">
-              {activeLocations.map((l) => (
-                <Chip
-                  key={l.slug}
-                  label={l.city}
-                  active={pageLoc === l.slug}
-                  onClick={() => setPageLoc(l.slug)}
-                />
-              ))}
-            </ChipStrip>
-            <ChipStrip ariaLabel="Category">
-              {CATS.map((c) => (
-                <Chip
-                  key={c}
-                  label={c === "all" ? "All" : MENU_CATEGORY_LABELS[c]}
-                  active={cat === c}
-                  onClick={() => setCat(c)}
-                  count={c === "all" ? items.length : items.filter((i) => i.category === c).length}
-                />
-              ))}
-            </ChipStrip>
-          </div>
-        }
-      >
-        <PageHeader
-          title="Recipes"
-          subtitle={`${combined.length} items · ${pageLoc.toUpperCase()}`}
-        />
-        <MobileList items={rows} virtualizeAt={64} />
-      </MobilePage>
-    </PullToRefresh>
+    <>
+      <PullToRefresh onRefresh={refresh}>
+        <MobilePage
+          toolbar={
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <ChipStrip ariaLabel="Location">
+                {activeLocations.map((l) => (
+                  <Chip
+                    key={l.slug}
+                    label={l.city}
+                    active={pageLoc === l.slug}
+                    onClick={() => setPageLoc(l.slug)}
+                  />
+                ))}
+              </ChipStrip>
+              <ChipStrip ariaLabel="Category">
+                {CATS.map((c) => (
+                  <Chip
+                    key={c}
+                    label={c === "all" ? "All" : MENU_CATEGORY_LABELS[c]}
+                    active={cat === c}
+                    onClick={() => setCat(c)}
+                    count={c === "all" ? items.length : items.filter((i) => i.category === c).length}
+                  />
+                ))}
+              </ChipStrip>
+            </div>
+          }
+        >
+          <PageHeader
+            title="Recipes"
+            subtitle={`${combined.length} items · ${pageLoc.toUpperCase()} · tap to edit`}
+          />
+          <MobileList items={rows} virtualizeAt={64} />
+        </MobilePage>
+      </PullToRefresh>
+      <MobileRecipeEditor
+        menuItem={editing}
+        recipe={editing ? recipeByMenuId.get(editing.id) : undefined}
+        ingredients={ingredients}
+        onClose={() => setEditing(null)}
+        onSaved={async () => {
+          setEditing(null);
+          await refresh();
+        }}
+      />
+    </>
   );
 }

@@ -26,7 +26,7 @@ export { SegmentControl, type SegmentOption } from "./SegmentControl";
 export { StatRow, type StatItem } from "./StatRow";
 export { SwipeRow } from "./SwipeRow";
 export { haptic } from "./haptics";
-export { useIsMobile } from "./useIsMobile";
+export { useIsMobile, getForceDesktop, setForceDesktop } from "./useIsMobile";
 export { BarcodeScanner } from "./BarcodeScanner";
 export { IosInstallHint } from "./IosInstallHint";
 export { OnboardingTour } from "./OnboardingTour";

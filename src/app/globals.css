@@ -5276,8 +5276,9 @@ select.pub-input {
   color: var(--fg);
   font-family: var(--font-ui);
   /* Reserve the bottom nav + safe-area at the shell level so pages
-     don't have to know about the chrome. */
-  padding-bottom: calc(64px + var(--m-safe-bottom));
+     don't have to know about the chrome. The FAB pokes up above the
+     nav, so we keep a little extra breathing room. */
+  padding-bottom: calc(60px + var(--m-safe-bottom));
 }
 
 /* ----- Topbar ----- */
@@ -5372,37 +5373,46 @@ select.pub-input {
   position: fixed;
   left: 0; right: 0; bottom: 0;
   z-index: var(--m-z-bottom-nav);
-  background: color-mix(in oklab, var(--surface-1) 92%, transparent);
-  backdrop-filter: saturate(180%) blur(14px);
-  -webkit-backdrop-filter: saturate(180%) blur(14px);
+  background: color-mix(in oklab, var(--surface-1) 94%, transparent);
+  backdrop-filter: saturate(180%) blur(18px);
+  -webkit-backdrop-filter: saturate(180%) blur(18px);
   border-top: 1px solid var(--border);
   padding-bottom: var(--m-safe-bottom);
 }
 .v2-m-bottom-nav-inner {
   display: grid;
-  grid-template-columns: 1fr 1fr 72px 1fr 1fr;
+  grid-template-columns: 1fr 1fr 76px 1fr 1fr;
   align-items: stretch;
-  height: 64px;
+  height: 60px;
+  position: relative;
 }
 .v2-m-bottom-nav-item {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 4px;
+  padding: 6px 4px;
   background: transparent;
   border: 0;
   color: var(--fg-subtle);
   text-decoration: none;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: color var(--m-dur-instant) var(--m-ease);
+  transition: color var(--m-dur-instant) var(--m-ease), transform var(--m-dur-fast) var(--m-ease);
+  min-width: 0;
 }
-.v2-m-bottom-nav-icon { width: 22px; height: 22px; }
+.v2-m-bottom-nav-item:active { transform: scale(0.94); }
+.v2-m-bottom-nav-icon { width: 22px; height: 22px; flex-shrink: 0; }
 .v2-m-bottom-nav-label {
   font-size: 10.5px;
   font-weight: 500;
   letter-spacing: -0.005em;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 .v2-m-bottom-nav-item.is-active {
   color: var(--brand);
@@ -5414,16 +5424,17 @@ select.pub-input {
 .v2-m-bottom-fab {
   align-self: center;
   justify-self: center;
-  width: 52px;
-  height: 52px;
-  border-radius: var(--m-fab-radius);
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
   background: var(--brand);
   color: var(--brand-fg);
-  border: 0;
+  border: 3px solid var(--surface-1);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  margin-top: -18px;
   /* Refined shadow is layered in the refinement section near EOF. */
   /* Spring-y press: snap down on active, bounce back on release. */
   transition: transform var(--m-dur-fast) cubic-bezier(0.34, 1.4, 0.5, 1);
@@ -5968,6 +5979,74 @@ select.pub-input {
   justify-content: flex-end;
 }
 
+/* ----- Mobile form layout (used inside bottom sheets) ----- */
+.v2-m-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.v2-m-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+.v2-m-toggle-row-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--fg);
+}
+.v2-m-toggle-row input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--brand);
+  cursor: pointer;
+}
+
+/* ----- Recipe editor KPIs ----- */
+.v2-m-rcp-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.v2-m-rcp-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  min-width: 0;
+}
+.v2-m-rcp-kpi-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--fg-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.v2-m-rcp-kpi-value {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--fg);
+  line-height: 1.1;
+}
+.v2-m-rcp-kpi-value.tone-success { color: var(--success); }
+.v2-m-rcp-kpi-value.tone-warning { color: var(--warning); }
+.v2-m-rcp-kpi-value.tone-danger { color: var(--danger); }
+.v2-m-rcp-kpi-hint {
+  font-size: 10.5px;
+  color: var(--fg-subtle);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ============== MORE DRAWER ============== */
 .v2-m-more-search {
   display: flex;
@@ -6417,8 +6496,8 @@ select.pub-input {
 /* FAB — quieter shadow, no glow ring */
 .v2-m-bottom-fab {
   box-shadow:
-    0 1px 2px rgba(0,0,0,0.25),
-    0 6px 16px color-mix(in oklab, var(--brand) 28%, transparent);
+    0 2px 4px rgba(0,0,0,0.2),
+    0 8px 22px color-mix(in oklab, var(--brand) 32%, transparent);
 }
 
 /* Topbar — drop the heavy brand square in favor of a subtler mark */
@@ -6488,7 +6567,7 @@ select.pub-input {
   position: fixed;
   left: 12px;
   right: 12px;
-  bottom: calc(64px + var(--m-safe-bottom) + 12px);
+  bottom: calc(60px + var(--m-safe-bottom) + 12px);
   z-index: var(--m-z-toast);
   display: flex;
   align-items: center;
@@ -6809,3 +6888,31 @@ select.pub-input {
     animation: none !important;
   }
 }
+
+/* ============== EXIT DESKTOP VIEW (mobile escape hatch) ============== */
+/* Floating button shown only when a phone-sized viewport has the
+   force-desktop override on — gives the user a way back to mobile
+   without hunting for the toggle inside the desktop chrome. */
+.v2-exit-desktop-view {
+  position: fixed;
+  right: 14px;
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  z-index: 90;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-1);
+  color: var(--fg);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-ui);
+  cursor: pointer;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.18),
+    0 8px 24px rgba(0, 0, 0, 0.22);
+  -webkit-tap-highlight-color: transparent;
+}
+.v2-exit-desktop-view:active { transform: scale(0.96); }
