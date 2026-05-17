@@ -23,9 +23,19 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useAdminLocation } from "./v2/LocationContext";
+import { useIsMobile } from "./v2/mobile";
 import { Badge, Button, Card, CardBody, CardHeader, EmptyState, Tabs, type Column, Table } from "./v2/ui";
 import { AreaChart, BarChart, Heatmap, KpiCard } from "./v2/charts";
+
+// Code-split the mobile view so a desktop user never downloads it (and vice
+// versa). `ssr: false` is safe — the mobile branch only runs after the
+// viewport probe completes on the client.
+const MobileDashboard = dynamic(
+  () => import("./mobile/MobileDashboard").then((m) => m.MobileDashboard),
+  { ssr: false },
+);
 
 type Period = "today" | "7d" | "30d" | "90d";
 
@@ -160,6 +170,14 @@ function dayOfWeek(iso: string): number {
 }
 
 export function AdminDashboard() {
+  const { isMobile, ready } = useIsMobile();
+  if (ready && isMobile) {
+    return <MobileDashboard />;
+  }
+  return <AdminDashboardDesktop />;
+}
+
+function AdminDashboardDesktop() {
   const [period, setPeriod] = useState<Period>("7d");
   const { location } = useAdminLocation();
 

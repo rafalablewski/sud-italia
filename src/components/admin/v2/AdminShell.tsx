@@ -11,6 +11,8 @@ import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { ToastProvider } from "./ui/Toast";
 import { useShortcuts } from "./hooks/useShortcuts";
+import { useIsMobile } from "./mobile/useIsMobile";
+import { MobileShell } from "./mobile/MobileShell";
 import { ALL_NAV_ITEMS } from "./nav.config";
 
 interface Props {
@@ -23,6 +25,7 @@ export function AdminShell({ children }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const isBare = BARE_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"));
+  const { isMobile, ready: isMobileReady } = useIsMobile();
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -38,7 +41,8 @@ export function AdminShell({ children }: Props) {
     setHelpOpen(false);
   }, [pathname]);
 
-  // Lock scroll while any overlay is open
+  // Lock scroll while any overlay is open (only relevant for the desktop
+  // chrome — mobile sheets lock body scroll independently).
   const anyOverlay = mobileOpen || paletteOpen || notifOpen || helpOpen;
   useEffect(() => {
     if (!anyOverlay) return;
@@ -50,8 +54,14 @@ export function AdminShell({ children }: Props) {
   }, [anyOverlay]);
 
   const openPalette = useCallback(() => setPaletteOpen(true), []);
+  const closePalette = useCallback(() => setPaletteOpen(false), []);
   const openNotifications = useCallback(() => setNotifOpen(true), []);
+  const closeNotif = useCallback(() => setNotifOpen(false), []);
   const openHelp = useCallback(() => setHelpOpen(true), []);
+  const bumpNotifications = useCallback(
+    () => setNotifVersion((v) => v + 1),
+    [],
+  );
 
   const onGoto = useCallback(
     (key: string) => {
@@ -64,8 +74,28 @@ export function AdminShell({ children }: Props) {
   useShortcuts({ onOpenPalette: openPalette, onOpenHelp: openHelp, onOpenNotifications: openNotifications, onGoto });
 
   const ctxValue = useMemo<ShellOverlays>(
-    () => ({ openPalette, openNotifications, openHelp, notificationsVersion: notifVersion }),
-    [openPalette, openNotifications, openHelp, notifVersion],
+    () => ({
+      openPalette,
+      closePalette,
+      openNotifications,
+      closeNotif,
+      openHelp,
+      paletteOpen,
+      notifOpen,
+      notificationsVersion: notifVersion,
+      bumpNotifications,
+    }),
+    [
+      openPalette,
+      closePalette,
+      openNotifications,
+      closeNotif,
+      openHelp,
+      paletteOpen,
+      notifOpen,
+      notifVersion,
+      bumpNotifications,
+    ],
   );
 
   if (isBare) {
@@ -76,31 +106,41 @@ export function AdminShell({ children }: Props) {
     <AdminLocationProvider>
       <ShellContext.Provider value={ctxValue}>
         <ToastProvider>
-        <div className="v2-shell">
-          <Sidebar />
+          {/* Until the matchMedia probe has fired, render a layout-neutral
+              container so SSR + first-paint never flash the wrong chrome. */}
+          {!isMobileReady ? (
+            <div className="v2-shell-boot" aria-hidden>
+              {children}
+            </div>
+          ) : isMobile ? (
+            <MobileShell>{children}</MobileShell>
+          ) : (
+            <div className="v2-shell">
+              <Sidebar />
 
-          {mobileOpen && (
-            <div className="v2-mobile-drawer" role="dialog" aria-modal="true" aria-label="Navigation">
-              <div className="v2-mobile-scrim" onClick={() => setMobileOpen(false)} aria-hidden />
-              <div className="v2-mobile-panel">
-                <Sidebar isMobile onCloseMobile={() => setMobileOpen(false)} />
+              {mobileOpen && (
+                <div className="v2-mobile-drawer" role="dialog" aria-modal="true" aria-label="Navigation">
+                  <div className="v2-mobile-scrim" onClick={() => setMobileOpen(false)} aria-hidden />
+                  <div className="v2-mobile-panel">
+                    <Sidebar isMobile onCloseMobile={() => setMobileOpen(false)} />
+                  </div>
+                </div>
+              )}
+
+              <div className="v2-main">
+                <Topbar onOpenMobileNav={() => setMobileOpen(true)} />
+                <main className="v2-content">{children}</main>
               </div>
+
+              <CommandPalette open={paletteOpen} onClose={closePalette} />
+              <NotificationPanel
+                open={notifOpen}
+                onClose={closeNotif}
+                onChanged={bumpNotifications}
+              />
+              <ShortcutsHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
             </div>
           )}
-
-          <div className="v2-main">
-            <Topbar onOpenMobileNav={() => setMobileOpen(true)} />
-            <main className="v2-content">{children}</main>
-          </div>
-
-          <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
-          <NotificationPanel
-            open={notifOpen}
-            onClose={() => setNotifOpen(false)}
-            onChanged={() => setNotifVersion((v) => v + 1)}
-          />
-          <ShortcutsHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
-        </div>
         </ToastProvider>
       </ShellContext.Provider>
     </AdminLocationProvider>

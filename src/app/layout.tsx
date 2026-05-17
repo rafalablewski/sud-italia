@@ -1,7 +1,16 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { SITE_NAME, SITE_DESCRIPTION } from "@/lib/constants";
 import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
+
+export const viewport: Viewport = {
+  // viewport-fit=cover unlocks env(safe-area-inset-*) on notched phones —
+  // the mobile admin's topbar + bottom-nav rely on it to clear the notch
+  // and home indicator.
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 export const metadata: Metadata = {
   title: {

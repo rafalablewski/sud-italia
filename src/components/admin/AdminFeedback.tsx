@@ -12,8 +12,15 @@ import {
   Sparkles,
   Star,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useAdminLocation } from "./v2/LocationContext";
+import { useIsMobile } from "./v2/mobile";
 import { useToast } from "./v2/ui/Toast";
+
+const MobileFeedback = dynamic(
+  () => import("./mobile/MobileFeedback").then((m) => m.MobileFeedback),
+  { ssr: false },
+);
 import {
   Badge,
   Button,
@@ -92,6 +99,14 @@ function fmtDate(iso?: string): string {
 }
 
 export function AdminFeedback() {
+  const { isMobile, ready } = useIsMobile();
+  if (ready && isMobile) {
+    return <MobileFeedback />;
+  }
+  return <AdminFeedbackDesktop />;
+}
+
+function AdminFeedbackDesktop() {
   const { location } = useAdminLocation();
   const toast = useToast();
   const [list, setList] = useState<FeedbackEntry[]>([]);

@@ -3,9 +3,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CalendarDays, MapPin, Plus, Trash2 } from "lucide-react";
 import type { Shift, ShiftStatus, StaffMember, StaffRole } from "@/data/types";
+import dynamic from "next/dynamic";
 import { getActiveLocations } from "@/data/locations";
 import { useAdminLocation } from "./v2/LocationContext";
+import { useIsMobile } from "./v2/mobile";
 import { useToast } from "./v2/ui/Toast";
+
+const MobileSchedule = dynamic(
+  () => import("./mobile/MobileSchedule").then((m) => m.MobileSchedule),
+  { ssr: false },
+);
 import {
   Badge,
   Button,
@@ -90,6 +97,14 @@ interface ShiftDialogState {
 }
 
 export function AdminSchedule() {
+  const { isMobile, ready } = useIsMobile();
+  if (ready && isMobile) {
+    return <MobileSchedule />;
+  }
+  return <AdminScheduleDesktop />;
+}
+
+function AdminScheduleDesktop() {
   const { location: globalLoc } = useAdminLocation();
   const toast = useToast();
   const [pageLoc, setPageLoc] = useState<string>(globalLoc || FALLBACK_LOC);

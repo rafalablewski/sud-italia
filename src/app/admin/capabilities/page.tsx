@@ -98,6 +98,27 @@ export default async function CapabilitiesPage() {
           summary: "Recent system alerts surfaced in the shell — new orders, slot capacity, low stock.",
         },
         {
+          name: "Mobile admin shell",
+          status: "live",
+          href: "/admin",
+          summary:
+            "Bottom-nav + topbar + FAB + bottom-sheet mobile chrome activates automatically below 900px (tablet band 720–900 inherits the same chrome). Same APIs as desktop. Mobile-native views for: Dashboard, Orders (+ refund + comp + bulk select), KDS (with offline queue), Inventory (with barcode scan), Customers (+ detail), Schedule, Reports, Cohort, Loyalty, Cash, Feedback, Settings, AI Insights, WhatsApp, Audit log, Compliance, Users, Suppliers, POs, Menu, Recipes, Slots, Locations, Truck, Expansion. Config surfaces (growth/upsell/crosssell/scheduled-bundles/corporate) intentionally stay desktop-only — see docs/mobile-*.md.",
+        },
+        {
+          name: "Mobile admin push notifications",
+          status: has("NEXT_PUBLIC_VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY") ? "live" : "needs-config",
+          envVars: ["NEXT_PUBLIC_VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY"],
+          summary:
+            "Full pipeline live: client opt-in in More drawer → /api/admin/push/subscribe → admin_push_subscriptions table → pushToAdmins() server helper. Fan-out from addNotification (new order / slot pressure / slot full / low stock / bundle low margin), cash close with |variance| ≥ 50 zł, and refund processed (excluding the actor). Dead-endpoint pruning on 404/410.",
+        },
+        {
+          name: "Mobile operator-action telemetry",
+          status: "live",
+          href: "/api/admin/telemetry",
+          summary:
+            "useActionTiming + /api/admin/telemetry capture span timings via navigator.sendBeacon. Wired on kds.bump, orders.refund, orders.comp. Backs the audit's ≤ 12s refund / ≤ 1.5s bump targets.",
+        },
+        {
           name: "Truck ops admin",
           status: "live",
           href: "/admin/truck",

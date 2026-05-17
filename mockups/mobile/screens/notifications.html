@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mobile Notifications — Sud Italia</title>
+<link rel="stylesheet" href="../assets/screen.css" />
+</head>
+<body>
+<div class="shell">
+  <div class="statusbar">
+    <span>9:41</span>
+    <span class="icons">●●● ● 100%</span>
+  </div>
+  <header class="topbar">
+    <div class="topbar-left"><span class="brand-mark">SI</span><span class="title">Home</span></div>
+    <div class="topbar-right">
+      <button class="iconbtn"><span class="glyph gl-search"></span></button>
+      <button class="iconbtn active"><span class="glyph gl-bell"></span><span class="badge">4</span></button>
+    </div>
+  </header>
+
+  <div class="content" style="filter:blur(0.5px) brightness(0.6)">
+    <div class="toolbar">
+      <div class="segment"><div class="segment-opt active">Today</div><div class="segment-opt">7d</div><div class="segment-opt">30d</div><div class="segment-opt">90d</div></div>
+    </div>
+    <div><h1 class="page-title">KRAKÓW</h1><div class="page-subtitle">Live • 14:42</div></div>
+    <ul class="list">
+      <li><div class="row"><span class="row-icon tone-info"><span class="glyph gl-orders"></span></span><div class="row-stack"><div class="row-title">Order #1083 placed</div><div class="row-sub">Anna K. · 42 zł</div></div></div></li>
+    </ul>
+  </div>
+
+  <div class="scrim"></div>
+  <div class="sheet" style="height:84%">
+    <div class="sheet-handle"><span></span></div>
+    <div class="sheet-header">
+      <div class="sheet-title">Notifications <span class="pill brand" style="margin-left:8px">4 new</span></div>
+      <button class="iconbtn">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="chip-strip">
+        <div class="chip active">All</div>
+        <div class="chip">Orders</div>
+        <div class="chip">Slots</div>
+        <div class="chip">Summary</div>
+      </div>
+
+      <ul class="list" style="background:transparent;border:0;display:flex;flex-direction:column;gap:6px">
+        <li>
+          <div class="row" style="background:var(--surface-2);border:1px solid var(--border-strong);border-radius:12px;padding:12px 14px">
+            <span style="width:8px;height:8px;border-radius:50%;background:var(--brand);box-shadow:0 0 0 3px rgba(200,16,46,0.22);flex-shrink:0"></span>
+            <div class="row-stack">
+              <div class="row-title">New order from Anna K.</div>
+              <div class="row-sub">Order #1083 · 42.50 zł · delivery</div>
+            </div>
+            <span style="font-size:11px;color:var(--fg-subtle)" class="tabular">3m</span>
+          </div>
+        </li>
+        <li>
+          <div class="row" style="background:var(--surface-2);border:1px solid var(--border-strong);border-radius:12px;padding:12px 14px">
+            <span style="width:8px;height:8px;border-radius:50%;background:var(--warning);flex-shrink:0"></span>
+            <div class="row-stack">
+              <div class="row-title">Slot 19:00 full</div>
+              <div class="row-sub">7/7 booked — consider extending</div>
+            </div>
+            <span style="font-size:11px;color:var(--fg-subtle)" class="tabular">8m</span>
+          </div>
+        </li>
+        <li style="position:relative;overflow:hidden">
+          <div style="position:absolute;right:0;top:0;bottom:0;width:96px;background:var(--danger);color:white;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;border-radius:12px">Dismiss</div>
+          <div class="row" style="background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:12px 14px;transform:translateX(-72px);transition:transform 200ms">
+            <span style="width:8px;height:8px;border-radius:50%;background:var(--info);flex-shrink:0"></span>
+            <div class="row-stack">
+              <div class="row-title">Order #1082 ready</div>
+              <div class="row-sub">Marco R. picked up</div>
+            </div>
+            <span style="font-size:11px;color:var(--fg-subtle)" class="tabular">14m</span>
+          </div>
+        </li>
+        <li>
+          <div class="row" style="background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:12px 14px">
+            <span style="width:8px;height:8px;border-radius:50%;background:var(--success);flex-shrink:0"></span>
+            <div class="row-stack">
+              <div class="row-title">Daily summary ready</div>
+              <div class="row-sub">12,840 zł yesterday</div>
+            </div>
+            <span style="font-size:11px;color:var(--fg-subtle)" class="tabular">2h</span>
+          </div>
+        </li>
+      </ul>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:space-between;padding:12px 18px;border-top:1px solid var(--border)">
+      <button style="display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 14px;border-radius:10px;background:var(--surface-2);border:1px solid var(--border);color:var(--fg);font-size:13px;font-weight:600">↺ Refresh</button>
+      <button style="display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 14px;border-radius:10px;background:var(--brand);color:var(--brand-fg);font-size:13px;font-weight:600;border:0">✓✓ Mark all read</button>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <div class="nav-tab active"><span class="icon glyph gl-home"></span><span>Home</span></div>
+    <div class="nav-tab"><span class="icon glyph gl-orders"></span><span>Orders</span></div>
+    <div class="nav-fab glyph gl-plus"></div>
+    <div class="nav-tab"><span class="icon glyph gl-stock"></span><span>Stock</span></div>
+    <div class="nav-tab"><span class="icon glyph gl-grid"></span><span>More</span></div>
+  </nav>
+</div>
+</body>
+</html>

@@ -110,6 +110,18 @@ export const POST = withAdmin<{ params: Promise<{ id: string }> }>(
           varianceGrosze: updated.varianceGrosze,
         },
       });
+      // Wake managers when the till closed outside tolerance. 50 zł is the
+      // smallest amount worth interrupting someone for — anything below
+      // that is realistic float drift; above is operator attention.
+      const variance = updated.varianceGrosze ?? 0;
+      if (Math.abs(variance) >= 5000) {
+        const { pushToAdmins, ADMIN_PUSH_TEMPLATES } = await import("@/lib/admin-push");
+        const formatted = `${variance >= 0 ? "+" : ""}${(variance / 100).toFixed(2)} zł`;
+        pushToAdmins(
+          ADMIN_PUSH_TEMPLATES.cashVariance(updated.locationSlug, formatted),
+          { excludeUserId: user.id, category: "cash_variance", varianceGrosze: variance },
+        ).catch(() => {});
+      }
       return NextResponse.json(updated);
     }
 

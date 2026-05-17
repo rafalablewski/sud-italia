@@ -20,8 +20,15 @@ import {
 import { formatPrice, getBaseSlug, marginPct, marginTone } from "@/lib/utils";
 import { MENU_CATEGORY_LABELS, type MenuCategory, type ModifierGroup } from "@/data/types";
 import { getActiveLocations } from "@/data/locations";
+import dynamic from "next/dynamic";
 import { useAdminLocation } from "./v2/LocationContext";
+import { useIsMobile } from "./v2/mobile";
 import { useToast } from "./v2/ui/Toast";
+
+const MobileMenu = dynamic(
+  () => import("./mobile/MobileMenu").then((m) => m.MobileMenu),
+  { ssr: false },
+);
 import {
   Button,
   Card,
@@ -159,6 +166,14 @@ function formatPriceRange(min: number, max: number): string {
 }
 
 export function AdminMenu() {
+  const { isMobile, ready } = useIsMobile();
+  if (ready && isMobile) {
+    return <MobileMenu />;
+  }
+  return <AdminMenuDesktop />;
+}
+
+function AdminMenuDesktop() {
   const { location: globalLoc } = useAdminLocation();
   const toast = useToast();
 

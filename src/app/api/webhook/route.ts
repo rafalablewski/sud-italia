@@ -162,6 +162,23 @@ export async function POST(req: NextRequest) {
             reason: dispute.reason,
             amount: dispute.amount,
           });
+
+          // Surface as an in-app admin notification (fans out to push too).
+          // Only on the first `created` event — subsequent updates churn
+          // the same dispute and don't deserve a re-page.
+          if (event.type === "charge.dispute.created") {
+            const { addNotification } = await import("@/lib/store");
+            addNotification({
+              type: "dispute",
+              title: `Dispute opened · ${(dispute.amount / 100).toFixed(2)} zł`,
+              message: `Stripe flagged order #${order.id.slice(-6)} (${dispute.reason}).`,
+              locationSlug: order.locationSlug,
+              orderId: order.id,
+              data: { totalGrosze: dispute.amount },
+            }).catch(() => {
+              /* notification persistence failures are non-fatal */
+            });
+          }
         } else {
           logger.warn("Dispute event for unknown order", {
             paymentIntentId,

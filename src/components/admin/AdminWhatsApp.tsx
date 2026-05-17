@@ -19,7 +19,14 @@ import {
   ShieldAlert,
   Users,
 } from "lucide-react";
+import dynamic from "next/dynamic";
+import { useIsMobile } from "./v2/mobile";
 import { useToast } from "./v2/ui/Toast";
+
+const MobileWhatsApp = dynamic(
+  () => import("./mobile/MobileWhatsApp").then((m) => m.MobileWhatsApp),
+  { ssr: false },
+);
 import {
   Badge,
   Button,
@@ -220,6 +227,14 @@ function mergeConversations(
 // ---- main component -----------------------------------------------------
 
 export function AdminWhatsApp() {
+  const { isMobile, ready } = useIsMobile();
+  if (ready && isMobile) {
+    return <MobileWhatsApp />;
+  }
+  return <AdminWhatsAppDesktop />;
+}
+
+function AdminWhatsAppDesktop() {
   const toast = useToast();
   const [tab, setTab] = useState<"conversations" | "settings">("conversations");
   const [settings, setSettings] = useState<WaSettings | null>(null);

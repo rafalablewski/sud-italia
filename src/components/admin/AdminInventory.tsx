@@ -22,8 +22,15 @@ import {
   type StockMovementType,
 } from "@/data/types";
 import { getActiveLocations } from "@/data/locations";
+import dynamic from "next/dynamic";
 import { useAdminLocation } from "./v2/LocationContext";
+import { useIsMobile } from "./v2/mobile";
 import { useToast } from "./v2/ui/Toast";
+
+const MobileInventory = dynamic(
+  () => import("./mobile/MobileInventory").then((m) => m.MobileInventory),
+  { ssr: false },
+);
 import {
   Badge,
   Button,
@@ -119,6 +126,14 @@ function fmtTime(iso: string | undefined): string {
 }
 
 export function AdminInventory() {
+  const { isMobile, ready } = useIsMobile();
+  if (ready && isMobile) {
+    return <MobileInventory />;
+  }
+  return <AdminInventoryDesktop />;
+}
+
+function AdminInventoryDesktop() {
   const { location: globalLoc } = useAdminLocation();
   const toast = useToast();
   const [pageLoc, setPageLoc] = useState<string>(globalLoc || FALLBACK_LOC);

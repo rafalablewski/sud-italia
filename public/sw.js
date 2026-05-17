@@ -22,16 +22,32 @@
  * caches are pruned on activate.
  */
 
-const VERSION = "v1";
+const VERSION = "v2";
 const STATIC_CACHE = `sud-italia-static-${VERSION}`;
 const RUNTIME_CACHE = `sud-italia-runtime-${VERSION}`;
 
 const STATIC_ASSETS = [
   "/",
+  "/admin",
+  "/admin/login",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
 ];
+
+/** Admin shell paths that should be served cache-first so a cold-start
+ *  on a flaky network still paints the operator UI. The page-data
+ *  itself (RSC payload) still hits the network when online. */
+const ADMIN_SHELL_PATHS = [
+  /^\/admin$/,
+  /^\/admin\/orders$/,
+  /^\/admin\/kds$/,
+  /^\/admin\/inventory$/,
+];
+
+function isAdminShell(url) {
+  return ADMIN_SHELL_PATHS.some((re) => re.test(url.pathname));
+}
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -97,6 +113,28 @@ self.addEventListener("fetch", (event) => {
 
   // HTML / shell — cache-first.
   if (req.destination === "document") {
+    // Admin shell: serve cached shell instantly when available; the page
+    // hydrates from network once data fetches resolve. Fallback to the
+    // generic / cached shell if the specific route was never cached.
+    if (isAdminShell(url)) {
+      event.respondWith(
+        caches.match(req).then(
+          (cached) =>
+            cached ||
+            fetch(req)
+              .then((res) => {
+                if (res.ok) {
+                  caches
+                    .open(STATIC_CACHE)
+                    .then((cache) => cache.put(req, res.clone()));
+                }
+                return res;
+              })
+              .catch(() => caches.match("/admin") || caches.match("/")),
+        ),
+      );
+      return;
+    }
     event.respondWith(
       caches.match(req).then(
         (cached) =>
@@ -131,12 +169,28 @@ self.addEventListener("sync", (event) => {
   if (event.tag === "sud-italia-outbox") {
     event.waitUntil(flushOutbox());
   }
+  if (event.tag === "sud-italia-admin-kds-queue") {
+    event.waitUntil(flushAdminKdsQueue());
+  }
 });
 
 async function flushOutbox() {
   const clients = await self.clients.matchAll({ includeUncontrolled: true });
   for (const client of clients) {
     client.postMessage({ type: "sud-italia-outbox/flush" });
+  }
+}
+
+/** Mobile KDS offline queue replay. The page-level helper
+ *  (`useOfflineQueue` in src/components/admin/v2/mobile/useOfflineQueue.ts)
+ *  persists pending bumps to localStorage. When the user is offline and
+ *  closes the tab, only Background Sync can replay them — we fire a
+ *  message to any open client so its in-page replay loop runs. If no
+ *  client is open, the queue sits and replays on the next session. */
+async function flushAdminKdsQueue() {
+  const clients = await self.clients.matchAll({ includeUncontrolled: true });
+  for (const client of clients) {
+    client.postMessage({ type: "sud-italia-admin-kds-queue/flush" });
   }
 }
 

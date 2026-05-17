@@ -4,7 +4,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { RotateCcw, TrendingUp, Users } from "lucide-react";
 import { Button, Card, CardBody, EmptyState } from "./v2/ui";
 import { KpiCard } from "./v2/charts";
+import dynamic from "next/dynamic";
 import { formatPrice } from "@/lib/utils";
+import { useIsMobile } from "./v2/mobile";
+
+const MobileCohortReport = dynamic(
+  () => import("./mobile/MobileCohortReport").then((m) => m.MobileCohortReport),
+  { ssr: false },
+);
 
 interface CohortRow {
   cohortMonth: string;
@@ -43,6 +50,14 @@ function heatColor(pct: number): string {
 }
 
 export function AdminCohortReport() {
+  const { isMobile, ready } = useIsMobile();
+  if (ready && isMobile) {
+    return <MobileCohortReport />;
+  }
+  return <AdminCohortReportDesktop />;
+}
+
+function AdminCohortReportDesktop() {
   const [data, setData] = useState<CohortReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [segmentCounts, setSegmentCounts] = useState<Record<string, number> | null>(null);

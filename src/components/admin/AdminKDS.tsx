@@ -20,9 +20,16 @@ import {
 } from "lucide-react";
 import type { Order, OrderStatus, MenuCategory } from "@/data/types";
 import { MENU_CATEGORY_LABELS } from "@/data/types";
+import dynamic from "next/dynamic";
 import { useAdminLocation } from "./v2/LocationContext";
+import { useIsMobile } from "./v2/mobile";
 import { useToast } from "./v2/ui/Toast";
 import { Badge, Button, Card, CardBody, EmptyState, Tabs } from "./v2/ui";
+
+const MobileKDS = dynamic(
+  () => import("./mobile/MobileKDS").then((m) => m.MobileKDS),
+  { ssr: false },
+);
 
 const ACTIVE_STATUSES: OrderStatus[] = ["confirmed", "preparing", "ready"];
 const KDS_COLUMNS: { id: OrderStatus; label: string; tone: "warning" | "info" | "success" }[] = [
@@ -111,6 +118,14 @@ function ticketCategories(order: Order): MenuCategory[] {
 }
 
 export function AdminKDS() {
+  const { isMobile, ready } = useIsMobile();
+  if (ready && isMobile) {
+    return <MobileKDS />;
+  }
+  return <AdminKDSDesktop />;
+}
+
+function AdminKDSDesktop() {
   const { location } = useAdminLocation();
   const toast = useToast();
 

@@ -144,6 +144,24 @@ export const POST = withAdmin<{ params: Promise<{ id: string }> }>(
     },
   });
 
+  // Notify other admins about the refund so concurrent operators can see
+  // it in their lock-screen. The actor doesn't need a push about their
+  // own action — passes through excludeUserId.
+  void (async () => {
+    try {
+      const { pushToAdmins, ADMIN_PUSH_TEMPLATES } = await import("@/lib/admin-push");
+      const { getCurrentAdminUser } = await import("@/lib/admin-auth");
+      const me = await getCurrentAdminUser();
+      const amountZl = `${(refundAmount / 100).toFixed(2)} zł`;
+      await pushToAdmins(
+        ADMIN_PUSH_TEMPLATES.refundProcessed(orderId, amountZl, actor),
+        me ? { excludeUserId: me.id } : {},
+      );
+    } catch {
+      /* push is best-effort */
+    }
+  })();
+
   // Audit §3 fix — refunds previously bypassed stock reconciliation,
   // leaving ghost-consumed ingredients in the books. A full refund
   // returns the recipe-predicted draw. Partial refunds don't carry

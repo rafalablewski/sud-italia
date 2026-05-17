@@ -11,8 +11,15 @@ import {
   ShoppingBag,
   Trophy,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { getActiveLocations } from "@/data/locations";
+import { useIsMobile } from "./v2/mobile";
 import { Badge, Card, CardBody, CardHeader, EmptyState, Tabs } from "./v2/ui";
+
+const MobileLocations = dynamic(
+  () => import("./mobile/MobileLocations").then((m) => m.MobileLocations),
+  { ssr: false },
+);
 import { AreaChart, BarChart, KpiCard } from "./v2/charts";
 import { formatPrice } from "@/lib/utils";
 
@@ -85,6 +92,14 @@ function dateRange(period: Period): { from: string; to: string } {
 const activeLocations = getActiveLocations();
 
 export function AdminLocations() {
+  const { isMobile, ready } = useIsMobile();
+  if (ready && isMobile) {
+    return <MobileLocations />;
+  }
+  return <AdminLocationsDesktop />;
+}
+
+function AdminLocationsDesktop() {
   const [period, setPeriod] = useState<Period>("30d");
   const [insights, setInsights] = useState<InsightsData | null>(null);
   const [perLoc, setPerLoc] = useState<Map<string, SummaryData>>(new Map());

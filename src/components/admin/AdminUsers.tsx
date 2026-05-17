@@ -4,7 +4,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pencil, Plus, Search, ShieldCheck, Trash2, UserCog } from "lucide-react";
 import type { AdminRole, AdminUser, AdminUserStatus } from "@/data/types";
 import { getActiveLocations } from "@/data/locations";
+import dynamic from "next/dynamic";
+import { useIsMobile } from "./v2/mobile";
 import { useToast } from "./v2/ui/Toast";
+
+const MobileUsers = dynamic(
+  () => import("./mobile/MobileUsers").then((m) => m.MobileUsers),
+  { ssr: false },
+);
 import {
   Badge,
   Button,
@@ -47,6 +54,14 @@ const activeLocations = getActiveLocations();
 type DialogState = { open: boolean; user: AdminUser | null };
 
 export function AdminUsers() {
+  const { isMobile, ready } = useIsMobile();
+  if (ready && isMobile) {
+    return <MobileUsers />;
+  }
+  return <AdminUsersDesktop />;
+}
+
+function AdminUsersDesktop() {
   const toast = useToast();
   const [list, setList] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);

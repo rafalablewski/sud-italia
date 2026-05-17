@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mobile Stock — Sud Italia</title>
+<link rel="stylesheet" href="../assets/screen.css" />
+</head>
+<body>
+<div class="shell">
+  <div class="statusbar">
+    <span>9:41</span>
+    <span class="icons">●●● ● 100%</span>
+  </div>
+  <header class="topbar">
+    <div class="topbar-left">
+      <span class="brand-mark">SI</span>
+      <span class="title">Stock</span>
+    </div>
+    <div class="topbar-right">
+      <button class="iconbtn"><span class="glyph gl-search"></span></button>
+      <button class="iconbtn"><span class="glyph gl-bell"></span><span class="badge">4</span></button>
+    </div>
+  </header>
+
+  <div class="content" style="filter:blur(0.5px) brightness(0.65)">
+    <div class="toolbar">
+      <div class="segment">
+        <div class="segment-opt">All (42)</div>
+        <div class="segment-opt active">Out (3)</div>
+        <div class="segment-opt">Low (8)</div>
+        <div class="segment-opt">OK (31)</div>
+      </div>
+    </div>
+    <h1 class="page-title" style="margin:8px 0 0">Stock</h1>
+    <div class="page-subtitle" style="margin-bottom:6px">KRAKÓW</div>
+    <ul class="list">
+      <li>
+        <div class="row">
+          <span class="row-icon tone-danger"><span class="glyph gl-warning"></span></span>
+          <div class="row-stack">
+            <div class="row-title">Mozzarella di Bufala</div>
+            <div class="row-sub">0 kg · par 8 · reorder 5</div>
+            <span style="display:block;height:3px;background:var(--surface-3);border-radius:2px;margin-top:6px;overflow:hidden"><span style="display:block;height:100%;width:0%;background:var(--danger)"></span></span>
+          </div>
+          <span class="pill danger">OUT</span>
+        </div>
+      </li>
+      <li>
+        <div class="row">
+          <span class="row-icon tone-warning"><span class="glyph gl-stock"></span></span>
+          <div class="row-stack">
+            <div class="row-title">San Marzano tomatoes</div>
+            <div class="row-sub">8 cans · par 18 · reorder 15</div>
+            <span style="display:block;height:3px;background:var(--surface-3);border-radius:2px;margin-top:6px;overflow:hidden"><span style="display:block;height:100%;width:44%;background:var(--warning)"></span></span>
+          </div>
+          <span class="pill warning">LOW</span>
+        </div>
+      </li>
+      <li>
+        <div class="row">
+          <span class="row-icon tone-warning"><span class="glyph gl-stock"></span></span>
+          <div class="row-stack">
+            <div class="row-title">'00' flour</div>
+            <div class="row-sub">12 kg · par 25 · reorder 18</div>
+            <span style="display:block;height:3px;background:var(--surface-3);border-radius:2px;margin-top:6px;overflow:hidden"><span style="display:block;height:100%;width:48%;background:var(--warning)"></span></span>
+          </div>
+          <span class="pill warning">LOW</span>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- Adjust sheet -->
+  <div class="scrim"></div>
+  <div class="sheet">
+    <div class="sheet-handle"><span></span></div>
+    <div class="sheet-header">
+      <div class="sheet-title">Mozzarella di Bufala</div>
+      <button class="iconbtn">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="segment">
+        <div class="segment-opt active">Receive</div>
+        <div class="segment-opt">Waste</div>
+        <div class="segment-opt">Consume</div>
+        <div class="segment-opt">Adjust</div>
+      </div>
+      <div style="padding:14px;background:var(--surface-2);border-radius:12px;display:grid;grid-template-columns:1fr 56px;gap:10px;align-items:center">
+        <div>
+          <div style="font-size:11px;color:var(--fg-subtle);text-transform:uppercase;letter-spacing:0.06em">Quantity</div>
+          <div style="font-size:28px;font-weight:700;letter-spacing:-0.02em">5 <span style="font-size:14px;color:var(--fg-subtle);font-weight:500">kg</span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <button style="min-height:40px;border-radius:10px;background:var(--surface-1);border:1px solid var(--border);color:var(--fg);font-size:16px;font-weight:600">＋</button>
+          <button style="min-height:40px;border-radius:10px;background:var(--surface-1);border:1px solid var(--border);color:var(--fg);font-size:16px;font-weight:600">−</button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
+        <div class="chip" style="justify-content:center">1</div>
+        <div class="chip active" style="justify-content:center">5</div>
+        <div class="chip" style="justify-content:center">10</div>
+        <div class="chip" style="justify-content:center">25</div>
+      </div>
+      <input type="text" placeholder="Reason (optional)" value="" style="padding:10px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;color:var(--fg);font-size:16px;outline:0" />
+      <div style="display:flex;justify-content:space-between;padding:8px 12px;background:var(--surface-2);border-radius:10px;font-size:13px">
+        <span style="color:var(--fg-subtle)">Current</span>
+        <span class="tabular" style="font-weight:600">0 → 5 kg ▲</span>
+      </div>
+      <button style="display:inline-flex;justify-content:center;align-items:center;min-height:46px;border-radius:12px;background:var(--brand);color:var(--brand-fg);font-size:15px;font-weight:600;border:0">Receive 5 kg</button>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <div class="nav-tab"><span class="icon glyph gl-home"></span><span>Home</span></div>
+    <div class="nav-tab"><span class="icon glyph gl-orders"></span><span>Orders</span></div>
+    <div class="nav-fab glyph gl-plus"></div>
+    <div class="nav-tab active"><span class="icon glyph gl-stock"></span><span>Stock</span></div>
+    <div class="nav-tab"><span class="icon glyph gl-grid"></span><span>More</span></div>
+  </nav>
+</div>
+</body>
+</html>

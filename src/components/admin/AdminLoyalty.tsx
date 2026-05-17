@@ -15,8 +15,15 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { formatPrice } from "@/lib/utils";
+import { useIsMobile } from "./v2/mobile";
 import { useToast } from "./v2/ui/Toast";
+
+const MobileLoyalty = dynamic(
+  () => import("./mobile/MobileLoyalty").then((m) => m.MobileLoyalty),
+  { ssr: false },
+);
 import {
   Badge,
   Button,
@@ -100,6 +107,14 @@ function fmtDate(iso?: string): string {
 }
 
 export function AdminLoyalty() {
+  const { isMobile, ready } = useIsMobile();
+  if (ready && isMobile) {
+    return <MobileLoyalty />;
+  }
+  return <AdminLoyaltyDesktop />;
+}
+
+function AdminLoyaltyDesktop() {
   const toast = useToast();
   const [tab, setTab] = useState<TabKey>("members");
 

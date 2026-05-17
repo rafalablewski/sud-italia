@@ -387,6 +387,11 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
     message: `${order.customerName} — ${formatPrice(calculatedTotal)} — ${input.fulfillmentType} at ${input.slotTime} · ${orderId}`,
     locationSlug: input.locationSlug,
     orderId,
+    data: {
+      customerName: order.customerName,
+      totalGrosze: calculatedTotal,
+      slotTime: input.slotTime,
+    },
   });
 
   const updatedSlot = await getSlotById(input.slotId);
@@ -396,6 +401,19 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
       title: "Time slot full",
       message: `${input.slotDate} ${input.slotTime} slot is now fully booked (${updatedSlot.maxOrders} orders)`,
       locationSlug: input.locationSlug,
+      data: { slotTime: input.slotTime },
+    });
+  } else if (updatedSlot && updatedSlot.currentOrders >= updatedSlot.maxOrders - 1) {
+    // One spot left → slot pressure ping so the operator can extend or
+    // bump prep cadence. Only fires the moment we cross to "1 left", not
+    // every order after that, because each tick the slot stays at 1 left
+    // would re-page.
+    await addNotification({
+      type: "low_slots",
+      title: "Slot almost full",
+      message: `${input.slotDate} ${input.slotTime} only has 1 spot left.`,
+      locationSlug: input.locationSlug,
+      data: { slotTime: input.slotTime },
     });
   }
 

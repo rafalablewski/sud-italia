@@ -1987,14 +1987,40 @@ export async function getInsights(dateFrom?: string, dateTo?: string): Promise<I
 
 // --- Notifications ---
 
+/**
+ * Structured payload attached to a notification when callers want to drive
+ * push templates (and future surfaces) without re-parsing the `message`
+ * string. All fields optional + backwards-compatible — legacy rows skip
+ * the field and downstream consumers fall back to the message regex.
+ */
+export interface NotificationData {
+  customerName?: string;
+  totalGrosze?: number;
+  slotTime?: string;
+  varianceGrosze?: number;
+  ingredientCount?: number;
+  itemName?: string;
+  actor?: string;
+}
+
 export interface Notification {
   id: string;
-  type: "new_order" | "slot_full" | "daily_summary" | "low_slots" | "order_status" | "bundle_low_margin";
+  type:
+    | "new_order"
+    | "slot_full"
+    | "daily_summary"
+    | "low_slots"
+    | "order_status"
+    | "bundle_low_margin"
+    | "dispute"
+    | "low_stock";
   title: string;
   message: string;
   locationSlug?: string;
   /** When set (e.g. new_order), removed when the order is deleted from admin. */
   orderId?: string;
+  /** Structured payload for downstream surfaces (push, future filters). */
+  data?: NotificationData;
   createdAt: string;
   read: boolean;
 }
@@ -2004,19 +2030,83 @@ export async function getNotifications(): Promise<Notification[]> {
 }
 
 export async function addNotification(notif: Omit<Notification, "id" | "createdAt" | "read">): Promise<Notification> {
-  return withLock("notifications.json", async () => {
+  const entry = await withLock("notifications.json", async () => {
     const notifications = await readJSON<Notification[]>("notifications.json", []);
-    const entry: Notification = {
+    const e: Notification = {
       ...notif,
       id: `notif-${crypto.randomUUID()}`,
       createdAt: new Date().toISOString(),
       read: false,
     };
-    notifications.unshift(entry);
+    notifications.unshift(e);
     if (notifications.length > 100) notifications.length = 100;
     await writeJSON("notifications.json", notifications);
-    return entry;
+    return e;
   });
+
+  // Fan out to subscribed admin devices (when VAPID keys are configured).
+  // Dynamic import so the push module isn't pulled into the customer-facing
+  // bundle, and so a push failure can never block the notification write.
+  fanOutAdminPush(entry).catch((err) => {
+    logger.warn("admin.push.fanout_failed", { layer: "store", type: entry.type }, err);
+  });
+
+  return entry;
+}
+
+async function fanOutAdminPush(n: Notification): Promise<void> {
+  // Only fire for types operators want to be paged on. Daily_summary is
+  // intentionally excluded — it's an EOD digest, no need to wake anyone.
+  if (n.type === "daily_summary") return;
+  const { pushToAdmins, ADMIN_PUSH_TEMPLATES, adminPushCategoryEnabled } =
+    await import("@/lib/admin-push");
+  if (!adminPushCategoryEnabled(n.type)) return;
+  const t = ADMIN_PUSH_TEMPLATES;
+  // Prefer structured data; fall back to regex over the human message for
+  // legacy rows. The regex paths stay as a defensive backstop, not the
+  // primary parser.
+  const data = n.data ?? {};
+  const customerName =
+    data.customerName ?? n.message.split(" · ")[0] ?? "Someone";
+  const totalZl =
+    typeof data.totalGrosze === "number"
+      ? `${(data.totalGrosze / 100).toFixed(2)} zł`
+      : (n.message.match(/(\d+(?:\.\d+)?\s*zł)/i)?.[1] ?? "—");
+  const slotTime =
+    data.slotTime ?? n.message.match(/(\d{2}:\d{2})/)?.[1] ?? n.title;
+  const varianceZl =
+    typeof data.varianceGrosze === "number"
+      ? `${data.varianceGrosze >= 0 ? "+" : ""}${(data.varianceGrosze / 100).toFixed(2)} zł`
+      : null;
+
+  const message =
+    n.type === "new_order" && n.orderId
+      ? t.newOrder(n.orderId, customerName, totalZl)
+      : n.type === "slot_full" && n.locationSlug
+        ? t.slotFull(n.locationSlug, slotTime)
+        : n.type === "low_slots" && n.locationSlug
+          ? t.slotPressure(n.locationSlug, slotTime)
+          : n.type === "dispute" && n.orderId
+            ? t.disputeOpened(n.orderId, totalZl)
+            : n.type === "low_stock" && n.locationSlug
+              ? t.lowStock(n.locationSlug, data.ingredientCount ?? 1)
+              : n.type === "bundle_low_margin"
+                ? {
+                    title: n.title,
+                    body: n.message,
+                    url: "/admin/upsell",
+                    tag: `admin:${n.type}`,
+                  }
+                : {
+                    title: n.title,
+                    body: n.message,
+                    url: "/admin",
+                    tag: `admin:${n.type}`,
+                  };
+  await pushToAdmins(message, {
+    category: n.type,
+    varianceGrosze: data.varianceGrosze,
+  } as { category: typeof n.type; varianceGrosze?: number });
 }
 
 export async function markNotificationRead(id: string): Promise<boolean> {
