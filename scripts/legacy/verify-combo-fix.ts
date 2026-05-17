@@ -5,8 +5,8 @@
  * any mismatch. Invoke with `npx tsx scripts/legacy/verify-combo-fix.ts`.
  */
 
-import { getActiveComboDeals, type ComboDeal } from "../../src/lib/upsell";
-import type { CartItem, MenuCategory, MenuItem } from "../../src/data/types";
+import { getActiveComboDeals, type ComboDeal } from "@/lib/upsell";
+import type { CartItem, MenuCategory, MenuItem } from "@/data/types";
 
 const item = (id: string, category: MenuCategory, price: number): MenuItem => ({
   id,
