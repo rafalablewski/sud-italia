@@ -21,9 +21,12 @@ import {
   ChipStrip,
   MobilePage,
   PageHeader,
+  PullToRefresh,
   SegmentControl,
+  useOfflineQueue,
 } from "../v2/mobile";
 import { haptic } from "../v2/mobile/haptics";
+import { CloudOff } from "lucide-react";
 
 const LANES: { id: OrderStatus; label: string; tone: "warning" | "info" | "success" }[] = [
   { id: "confirmed", label: "New", tone: "warning" },
@@ -100,7 +103,12 @@ export function MobileKDS() {
   const audioCtxRef = useRef<AudioContext | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
-  const { orders } = useAdminOrdersStream(location, { paused });
+  // Offline queue — kitchens in basement walk-ins lose wifi briefly. Bump
+  // events queue locally and replay on reconnect so the line keeps moving
+  // without losing state.
+  const offline = useOfflineQueue({ storageKey: "sud-admin-kds-queue" });
+
+  const { orders, refresh } = useAdminOrdersStream(location, { paused });
 
   // 1s timer for prep clocks; slows to 5s when hidden.
   useEffect(() => {
@@ -183,17 +191,21 @@ export function MobileKDS() {
     setBusy(order.id);
     haptic("success");
     try {
-      const r = await fetch("/api/admin/orders", {
+      const delivered = await offline.send("/api/admin/orders", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: order.id, status: target }),
       });
-      if (!r.ok) throw new Error("status update failed");
-      toast.success(
-        order.status === "ready" ? "Bumped" : target === "preparing" ? "Started prep" : "Marked ready",
-      );
-    } catch {
-      toast.error("Could not advance order");
+      if (delivered) {
+        toast.success(
+          order.status === "ready"
+            ? "Bumped"
+            : target === "preparing"
+              ? "Started prep"
+              : "Marked ready",
+        );
+      } else {
+        toast.warning("Saved offline", "Will sync when back online.");
+      }
     } finally {
       setBusy(null);
     }
@@ -208,6 +220,7 @@ export function MobileKDS() {
   const currentLaneIdx = LANES.findIndex((l) => l.id === lane);
 
   return (
+    <PullToRefresh onRefresh={() => refresh()} disabled={paused}>
     <MobilePage
       toolbar={
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -233,6 +246,32 @@ export function MobileKDS() {
         </div>
       }
     >
+      {(!offline.online || offline.pending > 0) && (
+        <div
+          role="status"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "8px 12px",
+            background: offline.online ? "var(--info-soft)" : "var(--warning-soft)",
+            color: offline.online ? "var(--info)" : "var(--warning)",
+            border: `1px solid ${
+              offline.online
+                ? "color-mix(in oklab, var(--info) 30%, transparent)"
+                : "color-mix(in oklab, var(--warning) 30%, transparent)"
+            }`,
+            borderRadius: 10,
+            fontSize: 12.5,
+            fontWeight: 500,
+          }}
+        >
+          <CloudOff className="h-4 w-4" aria-hidden />
+          {offline.online
+            ? `Syncing ${offline.pending} queued action${offline.pending === 1 ? "" : "s"}…`
+            : `Offline · ${offline.pending} queued · syncs on reconnect`}
+        </div>
+      )}
       <PageHeader
         title="Kitchen"
         subtitle={`${filtered.length} ticket${filtered.length === 1 ? "" : "s"} • ${LANES[currentLaneIdx]?.label}`}
@@ -308,6 +347,7 @@ export function MobileKDS() {
         </button>
       </div>
     </MobilePage>
+    </PullToRefresh>
   );
 }
 

@@ -11,6 +11,7 @@
 
 export { BottomNav, setBottomNavPin } from "./BottomNav";
 export { BottomSheet } from "./BottomSheet";
+export { BulkActionBar } from "./BulkActionBar";
 export { Chip, ChipStrip } from "./Chip";
 export { MobileCommandPalette } from "./MobileCommandPalette";
 export { MobileList, type MobileListItem } from "./MobileList";
@@ -26,3 +27,6 @@ export { StatRow, type StatItem } from "./StatRow";
 export { SwipeRow } from "./SwipeRow";
 export { haptic } from "./haptics";
 export { useIsMobile } from "./useIsMobile";
+export { useMultiSelect, type MultiSelectApi } from "./useMultiSelect";
+export { useOfflineQueue } from "./useOfflineQueue";
+export { useVirtual } from "./useVirtual";

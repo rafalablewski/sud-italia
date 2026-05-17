@@ -12,8 +12,15 @@ import {
   Sparkles,
   Users,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { formatPrice } from "@/lib/utils";
 import { useAdminLocation } from "./v2/LocationContext";
+import { useIsMobile } from "./v2/mobile";
+
+const MobileCustomers = dynamic(
+  () => import("./mobile/MobileCustomers").then((m) => m.MobileCustomers),
+  { ssr: false },
+);
 import {
   Badge,
   Button,
@@ -77,6 +84,14 @@ function fmtDate(iso?: string): string {
 }
 
 export function AdminCustomers() {
+  const { isMobile, ready } = useIsMobile();
+  if (ready && isMobile) {
+    return <MobileCustomers />;
+  }
+  return <AdminCustomersDesktop />;
+}
+
+function AdminCustomersDesktop() {
   const { location } = useAdminLocation();
   const [list, setList] = useState<CustomerSummary[]>([]);
   const [triggers, setTriggers] = useState<TriggerRow[]>([]);

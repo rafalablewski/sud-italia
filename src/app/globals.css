@@ -6481,3 +6481,84 @@ select.pub-input {
 [data-admin-theme="light"] .v2-m-stat,
 [data-admin-theme="light"] .v2-m-list { box-shadow: none; }
 [data-admin-theme="light"] .v2-m-bottom-nav { background: var(--surface-1); }
+
+/* ============== BULK ACTION BAR ============== */
+.v2-m-bulkbar {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(64px + var(--m-safe-bottom) + 12px);
+  z-index: var(--m-z-toast);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+  box-shadow: var(--m-elev-2);
+  transform: translateY(calc(100% + 12px));
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform var(--m-dur-base) var(--m-ease),
+    opacity var(--m-dur-base) var(--m-ease);
+}
+.v2-m-bulkbar.is-open {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+.v2-m-bulkbar-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: var(--surface-2);
+  border: 0;
+  color: var(--fg-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.v2-m-bulkbar-count {
+  font-size: var(--m-text-sm);
+  font-weight: 500;
+  color: var(--fg);
+}
+.v2-m-bulkbar-actions {
+  margin-left: auto;
+  display: inline-flex;
+  gap: 6px;
+}
+
+/* ============== MULTI-SELECT CHECKBOX ============== */
+.v2-m-list-check {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  border: 1.5px solid var(--border-strong);
+  flex-shrink: 0;
+  position: relative;
+  transition: background var(--m-dur-instant) var(--m-ease), border-color var(--m-dur-instant) var(--m-ease);
+}
+.v2-m-list-check.is-on {
+  background: var(--brand);
+  border-color: var(--brand);
+}
+.v2-m-list-check.is-on::after {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 2px;
+  width: 6px;
+  height: 11px;
+  border-right: 2px solid var(--brand-fg);
+  border-bottom: 2px solid var(--brand-fg);
+  transform: rotate(45deg);
+}
+.v2-m-list-row.is-selected { background: var(--brand-soft); }
+@media (prefers-reduced-motion: reduce) {
+  .v2-m-bulkbar { transition: none; }
+}

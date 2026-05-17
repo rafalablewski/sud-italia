@@ -8,12 +8,14 @@ import {
   Clock,
   RotateCcw,
   Search,
+  Undo2,
 } from "lucide-react";
 import type { Order, OrderStatus } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
 import { useAdminLocation } from "../v2/LocationContext";
 import {
   BottomSheet,
+  BulkActionBar,
   Chip,
   ChipStrip,
   MobilePage,
@@ -21,9 +23,11 @@ import {
   PageHeader,
   PullToRefresh,
   SegmentControl,
+  useMultiSelect,
   type MobileListItem,
 } from "../v2/mobile";
 import { useToast } from "../v2/ui/Toast";
+import { RefundSheet } from "./RefundSheet";
 
 const PIPELINE_NEXT: Partial<Record<OrderStatus, OrderStatus>> = {
   pending: "confirmed",
@@ -86,7 +90,9 @@ export function MobileOrders() {
   const [filter, setFilter] = useState<Filter>("live");
   const [q, setQ] = useState("");
   const [detail, setDetail] = useState<Order | null>(null);
+  const [refunding, setRefunding] = useState<Order | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const multi = useMultiSelect();
 
   // Mirror stream into local state so optimistic mutations can shadow it
   // until the server confirms.
@@ -166,6 +172,7 @@ export function MobileOrders() {
       subtitle: `${o.id.slice(-6)} · ${fmtAgo(o.createdAt)} · ${o.fulfillmentType}`,
       status: { label: STATUS_LABEL[o.status], tone: STATUS_TONE[o.status] },
       onTap: () => setDetail(o),
+      onLongPress: () => multi.toggle(o.id),
       rightAction: next
         ? {
             label: STATUS_LABEL[next],
@@ -183,6 +190,28 @@ export function MobileOrders() {
           : undefined,
     };
   });
+
+  const bulkAdvance = async () => {
+    const targets = filtered.filter((o) => multi.selected.has(o.id));
+    multi.clear();
+    for (const o of targets) {
+      if (PIPELINE_NEXT[o.status]) {
+        // Sequential is intentional — concurrent PUTs on the same backing
+        // store can collide on the in-memory lock during local dev.
+        await advanceStatus(o);
+      }
+    }
+  };
+
+  const bulkCancel = async () => {
+    const targets = filtered.filter(
+      (o) => multi.selected.has(o.id) && o.status !== "completed" && o.status !== "cancelled",
+    );
+    multi.clear();
+    for (const o of targets) {
+      await advanceStatus(o, "cancelled");
+    }
+  };
 
   return (
     <PullToRefresh onRefresh={refresh}>
@@ -248,6 +277,7 @@ export function MobileOrders() {
 
         <MobileList
           items={items}
+          multi={multi}
           empty={
             <div className="v2-m-empty">
               <div className="v2-m-empty-title">No orders</div>
@@ -255,6 +285,25 @@ export function MobileOrders() {
             </div>
           }
         />
+
+        <BulkActionBar open={multi.isActive} count={multi.count} onClear={multi.clear}>
+          <button
+            type="button"
+            className="v2-m-btn v2-m-btn-ghost"
+            onClick={bulkCancel}
+            disabled={multi.count === 0}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="v2-m-btn v2-m-btn-primary"
+            onClick={bulkAdvance}
+            disabled={multi.count === 0}
+          >
+            Advance
+          </button>
+        </BulkActionBar>
       </MobilePage>
 
       <BottomSheet
@@ -280,13 +329,44 @@ export function MobileOrders() {
           ) : null
         }
       >
-        {detail && <OrderDetail order={detail} onCancel={() => { advanceStatus(detail, "cancelled"); setDetail(null); }} busy={busy === detail.id} />}
+        {detail && (
+          <OrderDetail
+            order={detail}
+            onCancel={() => {
+              advanceStatus(detail, "cancelled");
+              setDetail(null);
+            }}
+            onRefund={() => {
+              setRefunding(detail);
+              setDetail(null);
+            }}
+            busy={busy === detail.id}
+          />
+        )}
       </BottomSheet>
+
+      <RefundSheet
+        order={refunding}
+        onClose={() => setRefunding(null)}
+        onRefunded={(updated) => {
+          setOrders((arr) => arr.map((o) => (o.id === updated.id ? updated : o)));
+        }}
+      />
     </PullToRefresh>
   );
 }
 
-function OrderDetail({ order, onCancel, busy }: { order: Order; onCancel: () => void; busy: boolean }) {
+function OrderDetail({
+  order,
+  onCancel,
+  onRefund,
+  busy,
+}: {
+  order: Order;
+  onCancel: () => void;
+  onRefund: () => void;
+  busy: boolean;
+}) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <div
@@ -369,16 +449,54 @@ function OrderDetail({ order, onCancel, busy }: { order: Order; onCancel: () => 
         </section>
       )}
 
-      {order.status !== "completed" && order.status !== "cancelled" && (
-        <button
-          type="button"
-          onClick={onCancel}
-          disabled={busy}
-          className="v2-m-btn v2-m-btn-ghost"
-          style={{ color: "var(--danger)" }}
+      <div style={{ display: "flex", gap: 8 }}>
+        {order.paidAt && !order.refund && (
+          <button
+            type="button"
+            onClick={onRefund}
+            disabled={busy}
+            className="v2-m-btn v2-m-btn-ghost"
+            style={{ flex: 1 }}
+          >
+            <Undo2 className="h-4 w-4" aria-hidden /> Refund
+          </button>
+        )}
+        {order.status !== "completed" && order.status !== "cancelled" && (
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={busy}
+            className="v2-m-btn v2-m-btn-ghost"
+            style={{ flex: 1, color: "var(--danger)" }}
+          >
+            <RotateCcw className="h-4 w-4" aria-hidden /> Cancel
+          </button>
+        )}
+      </div>
+
+      {order.refund && (
+        <div
+          style={{
+            padding: 12,
+            background: "var(--surface-2)",
+            border: "1px solid var(--border)",
+            borderRadius: 10,
+            display: "flex",
+            flexDirection: "column",
+            gap: 4,
+          }}
         >
-          <RotateCcw className="h-4 w-4" aria-hidden /> Cancel order
-        </button>
+          <div style={{ fontSize: 11, color: "var(--fg-subtle)", textTransform: "uppercase", letterSpacing: 0.04 }}>
+            Refund on record
+          </div>
+          <div style={{ fontSize: 14, fontWeight: 500 }}>
+            {order.refund.type === "full" ? "Full" : "Partial"} ·{" "}
+            <span className="tabular">{formatPrice(order.refund.amount)}</span>
+          </div>
+          {order.refund.notes && (
+            <div style={{ fontSize: 12, color: "var(--fg-subtle)" }}>{order.refund.notes}</div>
+          )}
+        </div>
       )}
     </div>
   );

@@ -6,24 +6,22 @@
 
 ---
 
-## P0 — Ship before Phase-1 cohort goes live
+## P0 — Status
 
-Items that materially affect day-1 operator experience. Estimated total: ~2 weeks of focused work.
+| # | Item | Status | Notes |
+|---|---|:---:|---|
+| 0.1 | Wire pull-to-refresh on Customers, Reports, Cash, Schedule, KDS | ✅ shipped (KDS, Customers, Schedule); Reports/Cash inherit desktop and will pick it up when redesigned | |
+| 0.2 | Dynamic-import mobile views | ✅ shipped | All five mobile pages (Dashboard, Orders, KDS, Inventory, Customers, Schedule) imported via `next/dynamic({ ssr: false })` |
+| 0.3 | Long-press multi-select + `BulkActionBar` | ✅ shipped | `useMultiSelect` + `BulkActionBar` in v2/mobile; wired into MobileOrders with bulk advance + bulk cancel |
+| 0.4 | Virtualized `MobileList` | ✅ shipped | `useVirtual` hook + opt-in `virtualizeAt` prop; auto-engages at ≥ 100 rows. Wired in MobileCustomers |
+| 0.5 | Offline KDS queue | ✅ shipped | `useOfflineQueue` (localStorage-backed); MobileKDS uses it for bump events; banner shows online / queued state |
+| 0.6 | Refund flow as a bottom sheet | ✅ shipped | `RefundSheet` with mode toggle + reason chips + amount validation; opens from order detail |
+| 0.7 | Comp / discount flow | 🟡 partially shipped | Refund's `manager_comp` reason covers the common case ("on the house"). Full Comp-sheet with item-level select still pending — P1 |
+| 0.8 | Mobile Customers list + detail | 🟡 list shipped | `MobileCustomers` list with virtualization; detail still falls through to the desktop component (functional, just dense) |
+| 0.9 | Mobile Schedule (day-view) | ✅ shipped | `MobileSchedule` day-pager + add/edit shift sheet; replaces the week-grid that the audit flagged Critical |
+| 0.10 | Lighthouse mobile pass | ⏳ pending | Pending live env access |
 
-| # | Item | Why | LOC est. | Files |
-|---|---|---|---|---|
-| 0.1 | Wire pull-to-refresh on Customers, Reports, Cash, Schedule, KDS | Universal expected gesture; currently only on Dashboard / Orders / Inventory. | ~10 per page | mobile views |
-| 0.2 | Dynamic-import mobile views in their `AdminX.tsx` wrappers | Today both desktop and mobile bundles ship; mobile users pay desktop's bytes. | ~5 per page | `next/dynamic` |
-| 0.3 | Long-press multi-select + `BulkActionBar` | Power-user parity with desktop's checkbox column. | ~120 | new `useMultiSelect.ts`, `BulkActionBar.tsx` |
-| 0.4 | Virtualized `MobileList` | Customers + Audit log are unbounded; a 5k-row list will jank on a 4G phone. | ~80 | new `useVirtual.ts` |
-| 0.5 | Offline KDS queue (IndexedDB or in-memory + replay on reconnect) | Basement-wifi kitchens break the optimistic-UI promise without this. | ~150 | new `useOfflineQueue.ts`, wire in `MobileKDS` |
-| 0.6 | Refund flow as a true bottom sheet (currently stubbed via palette) | Refund is the #2 most-frequent operator action. | ~150 | new `RefundSheet.tsx`, wire on `MobileOrders` |
-| 0.7 | Comp / discount flow as a bottom sheet | Same urgency as refund. | ~150 | new `CompSheet.tsx` |
-| 0.8 | Mobile Customers list + detail | Customers tab is exposed in the staff bottom nav but still falls through to desktop list. | ~200 | new `MobileCustomers.tsx`, `MobileCustomerDetail.tsx` |
-| 0.9 | Mobile Schedule (day-view) | Schedule is rated critical-risk in the audit; currently falls through to the desktop week grid. | ~250 | new `MobileSchedule.tsx` |
-| 0.10 | Lighthouse mobile pass (≥ 90 perf, 100 a11y) | Validation, not a feature. Likely surfaces ~5 small fixes. | ~50 | spot fixes |
-
-**Estimated effort:** 60–70 engineering hours.
+**Shipped this round:** P0.2 through P0.6, P0.9, partial P0.8.
 
 ---
 
