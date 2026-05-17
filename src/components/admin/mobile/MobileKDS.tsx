@@ -25,6 +25,7 @@ import {
   SegmentControl,
   useOfflineQueue,
 } from "../v2/mobile";
+import { useActionTiming } from "../v2/mobile/useActionTiming";
 import { haptic } from "../v2/mobile/haptics";
 import { CloudOff } from "lucide-react";
 
@@ -107,6 +108,7 @@ export function MobileKDS() {
   // events queue locally and replay on reconnect so the line keeps moving
   // without losing state.
   const offline = useOfflineQueue({ storageKey: "sud-admin-kds-queue" });
+  const timing = useActionTiming();
 
   const { orders, refresh } = useAdminOrdersStream(location, { paused });
 
@@ -190,6 +192,7 @@ export function MobileKDS() {
     if (!target) return;
     setBusy(order.id);
     haptic("success");
+    timing.start("kds.bump");
     try {
       const delivered = await offline.send("/api/admin/orders", {
         method: "PUT",
@@ -207,6 +210,7 @@ export function MobileKDS() {
         toast.warning("Saved offline", "Will sync when back online.");
       }
     } finally {
+      timing.stop("kds.bump", { fromStatus: order.status, toStatus: target });
       setBusy(null);
     }
   };

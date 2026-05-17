@@ -37,7 +37,7 @@
 | 1.6 | Spring physics hook | ✅ shipped (`useSpring`) |
 | 1.7 | "Frequent" section in MoreDrawer | ✅ shipped (decayed-weight scoring + "Recent" alongside) |
 | 1.8 | Tablet breakpoint band | ✅ shipped (`useIsMobile` now reports `viewport: "phone" | "tablet" | "desktop"`) |
-| 1.9 | Push notifications | ✅ client opt-in + admin subscribe endpoint shipped; server-side emission (triggered by order/cash/slot events) is the next backend task |
+| 1.9 | Push notifications | ✅ full pipeline shipped — client opt-in + `/api/admin/push/subscribe` + `admin_push_subscriptions` table + `pushToAdmins()` server helper + fanout from `addNotification()`, cash close (variance ≥ 50 zł), and refund processed (excludes the actor) |
 | 1.10 | Barcode scanner for Receive | ✅ shipped (`BarcodeDetector` API with manual-entry fallback on iOS) |
 
 ---
@@ -134,9 +134,12 @@ To validate the redesign and inform Phase 2 prioritisation:
 
 If we keep going, this is the order that closes real value. Items above the line are doable in-session; items below need a separate project.
 
-— in-session —
-1. **Server-side push emission** — admin push subscription store + opt-in UI is shipped; need a `sendAdminPush(event)` helper called from order/created, slot capacity ≤ 1, cash variance > N, and refund/disputed hooks. Pulls in the `web-push` npm package + VAPID env vars.
-2. **Frequent-item virtualization for Audit log + Stock movements** — both already wired through MobileList; they engage at ≥ 100 rows automatically. No code change unless the auto-threshold proves wrong in production.
+— in-session enhancements layered on after P0–P2 closure —
+1. **Skeleton screens** — `<Skeleton>`, `<StatCardSkeleton>`, `<ListRowSkeleton>`, `<MobileListSkeleton>` shipped. Wired in MobileDashboard's KPI pager + MobileCustomers; can be sprinkled into the other list views as polish increments.
+2. **Spring physics on sheet drag-release** — BottomSheet's snap-back now uses a velocity-scaled cubic-bezier with iOS-style overshoot. FAB press uses a snap-down/spring-up curve.
+3. **PWA install prompt** — `useInstallPrompt` hook + MoreDrawer footer row that shows only when `beforeinstallprompt` fires (Chrome/Edge/Samsung; Safari intentionally has no prompt).
+4. **Auto theme** — `useAutoTheme` hook + MoreDrawer "Auto" chip toggle. Flips dark→light at 07:00 and back at 19:00 local. Re-schedules at each hour boundary so it never drifts.
+5. **Action timing telemetry** — `useActionTiming` hook + `/api/admin/telemetry` sink. Wired into KDS bump (`kds.bump`), orders refund (`orders.refund`), and orders comp (`orders.comp`) spans. Uses `navigator.sendBeacon` so spans survive page unload. Backs the audit's success criteria (≤ 12s refund, ≤ 1.5s bump).
 
 — separate project (out of session scope) —
 3. **Driver app** (P2.1) — geo + push + photo proof. Needs Capacitor or PWA-with-GPS-permissions + S3 wiring + driver auth (not the admin auth).

@@ -5424,10 +5424,11 @@ select.pub-input {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 4px 18px color-mix(in oklab, var(--brand) 50%, transparent);
-  transition: transform var(--m-dur-fast) var(--m-ease);
+  /* Refined shadow is layered in the refinement section near EOF. */
+  /* Spring-y press: snap down on active, bounce back on release. */
+  transition: transform var(--m-dur-fast) cubic-bezier(0.34, 1.4, 0.5, 1);
 }
-.v2-m-bottom-fab:active { transform: scale(0.94); }
+.v2-m-bottom-fab:active { transform: scale(0.92); transition-duration: var(--m-dur-instant); }
 
 /* ============== PAGE LAYOUT ============== */
 .v2-m-page {
@@ -6561,4 +6562,38 @@ select.pub-input {
 .v2-m-list-row.is-selected { background: var(--brand-soft); }
 @media (prefers-reduced-motion: reduce) {
   .v2-m-bulkbar { transition: none; }
+}
+
+/* ============== SKELETON ============== */
+.v2-m-skel {
+  display: inline-block;
+  background: var(--surface-2);
+  position: relative;
+  overflow: hidden;
+  animation: v2-m-skel-pulse 1.4s ease-in-out infinite;
+}
+.v2-m-skel[data-tone="soft"] { background: var(--surface-3); }
+.v2-m-skel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in oklab, var(--fg) 6%, transparent) 50%,
+    transparent 100%
+  );
+  transform: translateX(-100%);
+  animation: v2-m-skel-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes v2-m-skel-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+@keyframes v2-m-skel-shimmer {
+  100% { transform: translateX(100%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .v2-m-skel { animation: none; }
+  .v2-m-skel::after { animation: none; display: none; }
 }

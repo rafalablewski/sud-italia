@@ -106,10 +106,17 @@ export default async function CapabilitiesPage() {
         },
         {
           name: "Mobile admin push notifications",
-          status: has("NEXT_PUBLIC_VAPID_PUBLIC_KEY") ? "needs-config" : "needs-config",
+          status: has("NEXT_PUBLIC_VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY") ? "live" : "needs-config",
           envVars: ["NEXT_PUBLIC_VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY"],
           summary:
-            "Client opt-in shipped in the More drawer footer. POST/DELETE /api/admin/push/subscribe stores per-user subscriptions in admin_push_subscriptions. Server-side emission (cron + order/cash/slot event hooks) is the remaining backend task.",
+            "Full pipeline live: client opt-in in More drawer → /api/admin/push/subscribe → admin_push_subscriptions table → pushToAdmins() server helper. Fan-out from addNotification (new order / slot pressure / slot full / low stock / bundle low margin), cash close with |variance| ≥ 50 zł, and refund processed (excluding the actor). Dead-endpoint pruning on 404/410.",
+        },
+        {
+          name: "Mobile operator-action telemetry",
+          status: "live",
+          href: "/api/admin/telemetry",
+          summary:
+            "useActionTiming + /api/admin/telemetry capture span timings via navigator.sendBeacon. Wired on kds.bump, orders.refund, orders.comp. Backs the audit's ≤ 12s refund / ≤ 1.5s bump targets.",
         },
         {
           name: "Truck ops admin",

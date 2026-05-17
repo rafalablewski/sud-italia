@@ -96,13 +96,21 @@ export function BottomSheet({
     const dt = Date.now() - dragStart.current.time;
     const velocity = dy / Math.max(dt, 1);
     const height = panelRef.current.getBoundingClientRect().height;
-    panelRef.current.style.transition = "";
     const shouldClose = dy > height * 0.35 || velocity > 0.8;
     if (shouldClose) {
       haptic("light");
       handleClose();
     } else {
+      // Snap back with a velocity-scaled spring — faster the further the
+      // finger dragged, but always feels alive (never instant). The
+      // overshoot cubic-bezier mimics the iOS sheet rebound.
+      const dur = Math.min(420, Math.max(180, dy * 1.6));
+      panelRef.current.style.transition = `transform ${dur}ms cubic-bezier(0.34, 1.18, 0.5, 1)`;
       panelRef.current.style.transform = "translateY(0)";
+      // Clear the transition after it runs so future drags start clean.
+      window.setTimeout(() => {
+        if (panelRef.current) panelRef.current.style.transition = "";
+      }, dur + 30);
     }
     dragStart.current = null;
     dragOffset.current = 0;

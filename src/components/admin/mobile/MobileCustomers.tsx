@@ -12,6 +12,7 @@ import {
   SegmentControl,
   type MobileListItem,
 } from "../v2/mobile";
+import { MobileListSkeleton } from "../v2/mobile/Skeleton";
 
 interface CustomerSummary {
   phone: string;
@@ -188,19 +189,23 @@ export function MobileCustomers() {
           subtitle={loading ? "Loading…" : `${filtered.length} of ${rows.length}`}
         />
 
-        <MobileList
-          items={items}
-          virtualizeAt={64}
-          empty={
-            <div className="v2-m-empty">
-              <User className="h-6 w-6" aria-hidden />
-              <div className="v2-m-empty-title">No customers</div>
-              <div className="v2-m-empty-desc">
-                Nothing matches this filter.
+        {loading && rows.length === 0 ? (
+          <MobileListSkeleton rows={6} />
+        ) : (
+          <MobileList
+            items={items}
+            virtualizeAt={64}
+            empty={
+              <div className="v2-m-empty">
+                <User className="h-6 w-6" aria-hidden />
+                <div className="v2-m-empty-title">No customers</div>
+                <div className="v2-m-empty-desc">
+                  Nothing matches this filter.
+                </div>
               </div>
-            </div>
-          }
-        />
+            }
+          />
+        )}
       </MobilePage>
     </PullToRefresh>
   );

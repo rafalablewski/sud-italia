@@ -25,6 +25,7 @@ import {
 } from "../v2/mobile";
 import { AreaChart } from "../v2/charts";
 import { Sparkline } from "../v2/charts/Sparkline";
+import { StatCardSkeleton } from "../v2/mobile/Skeleton";
 
 type Period = "today" | "7d" | "30d" | "90d";
 
@@ -284,7 +285,17 @@ export function MobileDashboard() {
           }
         />
 
-        <StatRow items={stats} />
+        {loading && !summary ? (
+          <div className="v2-m-statrow">
+            <div className="v2-m-statrow-track" aria-busy="true">
+              <StatCardSkeleton />
+              <StatCardSkeleton />
+              <StatCardSkeleton />
+            </div>
+          </div>
+        ) : (
+          <StatRow items={stats} />
+        )}
 
         {recentAlerts.length > 0 && (
           <Section

@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Bell, BellOff, ChevronRight, Clock, LogOut, MapPin, Pin, Search, Sparkles } from "lucide-react";
+import { Bell, BellOff, ChevronRight, Clock, Download, LogOut, MapPin, Pin, Search, Sparkles, Sun } from "lucide-react";
 import type { AdminRole } from "@/lib/admin-roles";
 import { ALL_NAV_ITEMS, filterNavForRole, NAV_SECTIONS } from "../nav.config";
 import { BottomSheet } from "./BottomSheet";
 import { setBottomNavPin } from "./BottomNav";
 import { useAdminLocation } from "../LocationContext";
 import { useAdminPush } from "./useAdminPush";
+import { useAutoTheme } from "./useAutoTheme";
+import { useInstallPrompt } from "./useInstallPrompt";
 import { useNavHistory } from "./useNavHistory";
 import { ThemeToggle } from "../ThemeToggle";
 import { haptic } from "./haptics";
@@ -29,6 +31,8 @@ export function MoreDrawer({ open, onClose, role }: Props) {
   const { location, setLocation, activeLocations } = useAdminLocation();
   const { recent, frequent } = useNavHistory();
   const push = useAdminPush();
+  const autoTheme = useAutoTheme();
+  const install = useInstallPrompt();
   const sections = useMemo(
     () => filterNavForRole(role) || NAV_SECTIONS,
     [role],
@@ -225,8 +229,34 @@ export function MoreDrawer({ open, onClose, role }: Props) {
 
         <div className="v2-m-more-footer-row">
           <div className="v2-m-more-footer-label">Theme</div>
-          <ThemeToggle />
+          <div style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
+            <button
+              type="button"
+              className={`v2-m-chip ${autoTheme.enabled ? "is-active" : ""}`}
+              onClick={autoTheme.toggle}
+              aria-pressed={autoTheme.enabled}
+              title="Auto-switch dark/light by hour (07:00 / 19:00)"
+            >
+              <Sun className="h-3 w-3" aria-hidden /> Auto
+            </button>
+            <ThemeToggle />
+          </div>
         </div>
+
+        {install.available && !install.installed && (
+          <div className="v2-m-more-footer-row">
+            <div className="v2-m-more-footer-label">
+              <Download className="h-3.5 w-3.5" aria-hidden /> Install
+            </div>
+            <button
+              type="button"
+              className="v2-m-chip"
+              onClick={() => install.prompt()}
+            >
+              Add to home screen
+            </button>
+          </div>
+        )}
 
         {push.supported && push.configured && (
           <div className="v2-m-more-footer-row">

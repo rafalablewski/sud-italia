@@ -29,6 +29,7 @@ import {
 import { useToast } from "../v2/ui/Toast";
 import { CompSheet } from "./CompSheet";
 import { RefundSheet } from "./RefundSheet";
+import { useActionTiming } from "../v2/mobile/useActionTiming";
 
 const PIPELINE_NEXT: Partial<Record<OrderStatus, OrderStatus>> = {
   pending: "confirmed",
@@ -95,6 +96,7 @@ export function MobileOrders() {
   const [comping, setComping] = useState<Order | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const multi = useMultiSelect();
+  const timing = useActionTiming();
 
   // Mirror stream into local state so optimistic mutations can shadow it
   // until the server confirms.
@@ -339,10 +341,12 @@ export function MobileOrders() {
               setDetail(null);
             }}
             onRefund={() => {
+              timing.start("orders.refund");
               setRefunding(detail);
               setDetail(null);
             }}
             onComp={() => {
+              timing.start("orders.comp");
               setComping(detail);
               setDetail(null);
             }}
@@ -353,16 +357,24 @@ export function MobileOrders() {
 
       <RefundSheet
         order={refunding}
-        onClose={() => setRefunding(null)}
+        onClose={() => {
+          timing.stop("orders.refund", { committed: false });
+          setRefunding(null);
+        }}
         onRefunded={(updated) => {
+          timing.stop("orders.refund", { committed: true, orderId: updated.id });
           setOrders((arr) => arr.map((o) => (o.id === updated.id ? updated : o)));
         }}
       />
 
       <CompSheet
         order={comping}
-        onClose={() => setComping(null)}
+        onClose={() => {
+          timing.stop("orders.comp", { committed: false });
+          setComping(null);
+        }}
         onCompApplied={(updated) => {
+          timing.stop("orders.comp", { committed: true, orderId: updated.id });
           setOrders((arr) => arr.map((o) => (o.id === updated.id ? updated : o)));
         }}
       />

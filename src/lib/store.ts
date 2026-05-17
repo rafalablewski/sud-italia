@@ -2004,19 +2004,51 @@ export async function getNotifications(): Promise<Notification[]> {
 }
 
 export async function addNotification(notif: Omit<Notification, "id" | "createdAt" | "read">): Promise<Notification> {
-  return withLock("notifications.json", async () => {
+  const entry = await withLock("notifications.json", async () => {
     const notifications = await readJSON<Notification[]>("notifications.json", []);
-    const entry: Notification = {
+    const e: Notification = {
       ...notif,
       id: `notif-${crypto.randomUUID()}`,
       createdAt: new Date().toISOString(),
       read: false,
     };
-    notifications.unshift(entry);
+    notifications.unshift(e);
     if (notifications.length > 100) notifications.length = 100;
     await writeJSON("notifications.json", notifications);
-    return entry;
+    return e;
   });
+
+  // Fan out to subscribed admin devices (when VAPID keys are configured).
+  // Dynamic import so the push module isn't pulled into the customer-facing
+  // bundle, and so a push failure can never block the notification write.
+  fanOutAdminPush(entry).catch((err) => {
+    logger.warn("admin.push.fanout_failed", { layer: "store", type: entry.type }, err);
+  });
+
+  return entry;
+}
+
+async function fanOutAdminPush(n: Notification): Promise<void> {
+  // Only fire for types operators want to be paged on. Daily_summary is
+  // intentionally excluded — it's an EOD digest, no need to wake anyone.
+  if (n.type === "daily_summary") return;
+  const { pushToAdmins, ADMIN_PUSH_TEMPLATES } = await import("@/lib/admin-push");
+  const t = ADMIN_PUSH_TEMPLATES;
+  const message =
+    n.type === "new_order" && n.orderId
+      ? t.newOrder(
+          n.orderId,
+          n.message.split(" · ")[0] || "Someone",
+          n.message.match(/(\d+(?:\.\d+)?\s*zł)/i)?.[1] || "—",
+        )
+      : n.type === "slot_full" && n.locationSlug
+        ? t.slotFull(n.locationSlug, n.message.match(/(\d{2}:\d{2})/)?.[1] || n.title)
+        : n.type === "low_slots" && n.locationSlug
+          ? t.slotPressure(n.locationSlug, n.message.match(/(\d{2}:\d{2})/)?.[1] || n.title)
+          : n.type === "bundle_low_margin"
+            ? { title: n.title, body: n.message, url: "/admin/upsell", tag: `admin:${n.type}` }
+            : { title: n.title, body: n.message, url: "/admin", tag: `admin:${n.type}` };
+  await pushToAdmins(message);
 }
 
 export async function markNotificationRead(id: string): Promise<boolean> {
