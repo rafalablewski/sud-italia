@@ -33,14 +33,16 @@ const SECURITY_HEADERS = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   {
     key: "Permissions-Policy",
+    // Only directives currently recognised by mainstream browsers (Chrome
+    // logs `Unrecognized feature` warnings for anything else and silently
+    // drops it, so listing them adds nothing). `ambient-light-sensor`,
+    // `battery`, and `document-domain` were removed in 2024 once Chrome
+    // stopped registering them as Permissions Policy features.
     value: [
       "accelerometer=()",
-      "ambient-light-sensor=()",
       "autoplay=()",
-      "battery=()",
       "camera=()",
       "display-capture=()",
-      "document-domain=()",
       "encrypted-media=()",
       "fullscreen=(self)",
       "geolocation=()",
