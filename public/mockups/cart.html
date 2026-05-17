@@ -7904,6 +7904,79 @@
   }
   @media (max-width: 640px) { .lang-opt { padding: 5px 8px; font-size: 10px; } }
 
+
+  /* ============================================================
+     LIVE ACTIVITY TICKER — slim dark banner under the top nav.
+     Mirrors the original main page's live stats in v8's voice:
+     espresso bar, parchment + ochre text, basil + ochre + oxblood icons.
+     ============================================================ */
+  .live-ticker {
+    background: linear-gradient(180deg, #2D1810 0%, #3D2817 100%);
+    color: rgba(244, 245, 240, 0.92);
+    font-family: var(--serif-body);
+    font-size: 13px;
+    border-bottom: 1px solid rgba(201, 162, 62, 0.16);
+    box-shadow: 0 1px 0 rgba(0,0,0,0.18) inset;
+  }
+  .live-ticker-inner {
+    max-width: 1500px;
+    margin: 0 auto;
+    padding: 9px 18px;
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .live-ticker-inner::-webkit-scrollbar { display: none; }
+  @media (min-width: 768px) {
+    .live-ticker-inner { padding: 10px 36px; gap: 28px; }
+  }
+  .live-stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .live-stat svg { flex-shrink: 0; }
+  .live-stat .pulse {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #4A7C59;
+    box-shadow: 0 0 0 0 rgba(74,124,89,0.7);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(74,124,89,0); }
+    50%      { box-shadow: 0 0 0 5px rgba(74,124,89,0.18); }
+  }
+  .live-stat strong {
+    color: #F2E2C2;
+    font-style: normal;
+    font-weight: 600;
+    font-family: var(--serif-display);
+    font-feature-settings: &quot;tnum&quot; 1, &quot;lnum&quot; 1;
+  }
+  .live-stat .lt-en { font-weight: 500; }
+  .live-stat .lt-it {
+    font-style: italic;
+    color: rgba(201, 162, 62, 0.72);
+    font-size: 0.9em;
+    margin-left: 4px;
+  }
+  .live-divider {
+    width: 1px;
+    height: 14px;
+    background: rgba(201, 162, 62, 0.22);
+    flex-shrink: 0;
+  }
+  @media (max-width: 640px) {
+    .live-ticker { font-size: 12px; }
+    .live-stat .lt-it { display: none; }
+  }
+
   /* ============================================================
      BILINGUAL TEXT SYSTEM — colour overrides for dark surfaces only
      ============================================================ */
@@ -9860,6 +9933,44 @@
   </div>
 </nav>
 
+<div class=&quot;live-ticker&quot; aria-label=&quot;Live restaurant activity&quot;>
+  <div class=&quot;live-ticker-inner&quot;>
+    <span class=&quot;live-stat&quot;>
+      <span class=&quot;pulse&quot; aria-hidden=&quot;true&quot;></span>
+      <svg width=&quot;16&quot; height=&quot;16&quot; viewBox=&quot;0 0 20 20&quot; fill=&quot;none&quot; aria-hidden=&quot;true&quot;>
+        <circle cx=&quot;6.5&quot; cy=&quot;6.5&quot; r=&quot;2.6&quot; stroke=&quot;#C9A23E&quot; stroke-width=&quot;1.4&quot; fill=&quot;rgba(201,162,62,0.18)&quot;/>
+        <circle cx=&quot;13.5&quot; cy=&quot;6.5&quot; r=&quot;2.6&quot; stroke=&quot;#C9A23E&quot; stroke-width=&quot;1.4&quot; fill=&quot;rgba(201,162,62,0.18)&quot;/>
+        <path d=&quot;M2 17 C 2 14, 4 12, 6.5 12 C 9 12, 11 14, 11 17&quot; stroke=&quot;#C9A23E&quot; stroke-width=&quot;1.4&quot; fill=&quot;none&quot; stroke-linecap=&quot;round&quot;/>
+        <path d=&quot;M9 17 C 9 14, 11 12, 13.5 12 C 16 12, 18 14, 18 17&quot; stroke=&quot;#C9A23E&quot; stroke-width=&quot;1.4&quot; fill=&quot;none&quot; stroke-linecap=&quot;round&quot;/>
+      </svg>
+      <span><strong id=&quot;live-orders-hour&quot;>12</strong> <span class=&quot;lt-en&quot;><span class=&quot;bi-pri&quot; data-en=&quot;orders in the last hour&quot; data-pl=&quot;zamówień w ostatniej godzinie&quot;>orders in the last hour</span></span><span class=&quot;lt-it&quot;>· nell'ultima ora</span></span>
+    </span>
+    <span class=&quot;live-divider&quot; aria-hidden=&quot;true&quot;></span>
+    <span class=&quot;live-stat&quot;>
+      <svg width=&quot;16&quot; height=&quot;16&quot; viewBox=&quot;0 0 20 20&quot; fill=&quot;none&quot; aria-hidden=&quot;true&quot;>
+        <path d=&quot;M10 18 C 6 18, 4 15, 4 12 C 4 9, 6 7, 7 6 C 7 9, 9 8, 9 6 C 9 4, 11 3, 12 2 C 12 5, 16 6, 16 12 C 16 15, 14 18, 10 18 Z&quot; stroke=&quot;#CD212A&quot; stroke-width=&quot;1.4&quot; fill=&quot;rgba(205,33,42,0.25)&quot;/>
+        <path d=&quot;M10 16 C 8 16, 7 14, 8 12 C 9 11, 11 11, 11 9 C 12 11, 13 12, 12 14 C 12 15, 11 16, 10 16 Z&quot; fill=&quot;#E6C97A&quot; fill-opacity=&quot;0.55&quot;/>
+      </svg>
+      <span><strong id=&quot;live-orders-prep&quot;>5</strong> <span class=&quot;lt-en&quot;><span class=&quot;bi-pri&quot; data-en=&quot;orders being prepared&quot; data-pl=&quot;zamówień w przygotowaniu&quot;>orders being prepared</span></span><span class=&quot;lt-it&quot;>· in preparazione</span></span>
+    </span>
+    <span class=&quot;live-divider&quot; aria-hidden=&quot;true&quot;></span>
+    <span class=&quot;live-stat&quot;>
+      <svg width=&quot;16&quot; height=&quot;16&quot; viewBox=&quot;0 0 20 20&quot; fill=&quot;none&quot; aria-hidden=&quot;true&quot;>
+        <path d=&quot;M3 13 L8 8 L11 11 L17 5&quot; stroke=&quot;#4A7C59&quot; stroke-width=&quot;1.6&quot; fill=&quot;none&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot;/>
+        <path d=&quot;M13 5 L17 5 L17 9&quot; stroke=&quot;#4A7C59&quot; stroke-width=&quot;1.6&quot; fill=&quot;none&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot;/>
+      </svg>
+      <span><span class=&quot;bi-pri&quot; data-en=&quot;Trending&quot; data-pl=&quot;Popularne&quot;>Trending</span><span class=&quot;lt-it&quot;>· in tendenza</span>: <strong id=&quot;live-trending&quot;>Margherita</strong></span>
+    </span>
+    <span class=&quot;live-divider&quot; aria-hidden=&quot;true&quot;></span>
+    <span class=&quot;live-stat&quot;>
+      <svg width=&quot;16&quot; height=&quot;16&quot; viewBox=&quot;0 0 20 20&quot; fill=&quot;none&quot; aria-hidden=&quot;true&quot;>
+        <path d=&quot;M11 2 L4 12 L9 12 L8 18 L16 7 L11 7 Z&quot; stroke=&quot;#C9A23E&quot; stroke-width=&quot;1.4&quot; fill=&quot;rgba(201,162,62,0.4)&quot; stroke-linejoin=&quot;round&quot;/>
+      </svg>
+      <span><span class=&quot;bi-pri&quot; data-en=&quot;Avg prep&quot; data-pl=&quot;Średni czas&quot;>Avg prep</span><span class=&quot;lt-it&quot;>· tempo medio</span>: <strong id=&quot;live-avg-prep&quot;>14 min</strong></span>
+    </span>
+  </div>
+</div>
+
 <div id=&quot;top&quot;></div>
 
 <main class=&quot;page&quot;>
@@ -11097,18 +11208,6 @@
   <div class=&quot;loc-section&quot;>
 
     <!-- CTA -->
-    <div class=&quot;order-cta-wrap&quot;>
-      <button class=&quot;order-cta-big&quot; data-open-cart data-loc=&quot;krakow&quot;>
-        <span class=&quot;bi-pri&quot; data-en=&quot;Order from this kitchen&quot; data-pl=&quot;Zamów z tej kuchni&quot;>Order from this kitchen</span> <span class=&quot;it bi-sec&quot;>· ordina da questa cucina</span> &amp;rarr;
-      </button>
-    </div>
-
-    <div class=&quot;loc-live-row&quot;>
-      <span class=&quot;loc-live&quot;>
-        <span class=&quot;pip&quot; aria-hidden=&quot;true&quot;></span>
-        <strong class=&quot;num&quot;>47</strong>&amp;nbsp;ordini oggi da Kraków &amp;middot; 47 orders from Kraków today
-      </span>
-    </div>
 
   
     <!-- MOVED TO BOTTOM — adres / godziny / contact / story / pickup -->
@@ -11742,18 +11841,7 @@
   <div class=&quot;loc-section&quot;>
 
     <!-- CTA -->
-    <div class=&quot;order-cta-wrap&quot;>
-      <button class=&quot;order-cta-big&quot; data-open-cart data-loc=&quot;warszawa&quot;>
-        <span class=&quot;bi-pri&quot; data-en=&quot;Order from this kitchen&quot; data-pl=&quot;Zamów z tej kuchni&quot;>Order from this kitchen</span> <span class=&quot;it bi-sec&quot;>· ordina da questa cucina</span> &amp;rarr;
-      </button>
-    </div>
 
-    <div class=&quot;loc-live-row&quot;>
-      <span class=&quot;loc-live&quot;>
-        <span class=&quot;pip&quot; aria-hidden=&quot;true&quot;></span>
-        <strong class=&quot;num&quot;>63</strong>&amp;nbsp;ordini oggi da Warszawa &amp;middot; 63 orders from Warszawa today
-      </span>
-    </div>
 
   
     <!-- MOVED TO BOTTOM — adres / godziny / contact / story / pickup -->
@@ -13310,6 +13398,32 @@
     });
   }
 
+
+  // Live activity ticker — gentle increments / variations every few seconds.
+  (function () {
+    var oh = document.getElementById('live-orders-hour');
+    var op = document.getElementById('live-orders-prep');
+    var tr = document.getElementById('live-trending');
+    var ap = document.getElementById('live-avg-prep');
+    if (!oh &amp;&amp; !op &amp;&amp; !tr &amp;&amp; !ap) return;
+    var trending = ['Margherita', 'Spaghetti Carbonara', 'Diavola', 'Tartufina', 'Tiramisù'];
+    setInterval(function () {
+      if (oh &amp;&amp; Math.random() < 0.4) {
+        oh.textContent = String(parseInt(oh.textContent, 10) + 1);
+      }
+      if (op &amp;&amp; Math.random() < 0.3) {
+        var n = parseInt(op.textContent, 10);
+        op.textContent = String(Math.max(2, Math.min(11, n + (Math.random() < 0.5 ? 1 : -1))));
+      }
+      if (tr &amp;&amp; Math.random() < 0.18) {
+        tr.textContent = trending[Math.floor(Math.random() * trending.length)];
+      }
+      if (ap &amp;&amp; Math.random() < 0.2) {
+        var m = parseInt(ap.textContent, 10);
+        ap.textContent = Math.max(11, Math.min(18, m + (Math.random() < 0.5 ? 1 : -1))) + ' min';
+      }
+    }, 5000);
+  })();
 })();
 </script>
 
