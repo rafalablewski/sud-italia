@@ -5742,6 +5742,22 @@
   // initial run — suppress smooth scroll on first paint
   applyRoute({ suppressScroll: true });
 
+  // srcdoc iframes don't reliably honor <a href=&quot;#/...&quot;> link clicks — the
+  // default action can navigate the TOP window in Chromium. Intercept every
+  // hash link and set window.location.hash explicitly so the router fires.
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('a[href^=&quot;#&quot;]');
+    if (!a) return;
+    const href = a.getAttribute('href') || '';
+    if (href === '#' || a.hasAttribute('data-nav')) return;
+    e.preventDefault();
+    if (window.location.hash !== href) {
+      window.location.hash = href;
+    } else {
+      applyRoute();
+    }
+  });
+
   /* ------------------------------------------------------
      NAV — sticky scrolled state + smooth anchors
      ------------------------------------------------------ */
@@ -8234,6 +8250,18 @@
   /* ============================================================
      BUNDLES
      ============================================================ */
+  /* Full-bleed: bundle cards span the viewport instead of being capped
+     by the 1180px .page-inner constraint used elsewhere on the page. */
+  #bundles .page-inner {
+    max-width: none;
+    padding: 0 20px;
+  }
+  @media (min-width: 768px) {
+    #bundles .page-inner { padding: 0 48px; }
+  }
+  @media (min-width: 1400px) {
+    #bundles .page-inner { padding: 0 80px; }
+  }
   .bundles {
     display: grid;
     grid-template-columns: 1fr;
@@ -8244,6 +8272,9 @@
   }
   @media (min-width: 1000px) {
     .bundles { grid-template-columns: repeat(4, 1fr); gap: 22px; }
+  }
+  @media (min-width: 1400px) {
+    .bundles { gap: 28px; }
   }
   .bundle {
     --accent: var(--terracotta);
