@@ -7905,8 +7905,42 @@
   @media (max-width: 640px) { .lang-opt { padding: 5px 8px; font-size: 10px; } }
 
   /* ============================================================
-     BILINGUAL TEXT SYSTEM
+     BILINGUAL TEXT SYSTEM — colour overrides for buttons/dark surfaces
      ============================================================ */
+  /* Terracotta filled buttons / dark surfaces: light parchment italic */
+  .loc-cta .bi-sec,
+  .mini-add .bi-sec,
+  .pair-add .bi-sec,
+  .mi-add .bi-sec,
+  .pay-cta .bi-sec,
+  .corp .bi-sec,
+  .corp-cta .bi-sec,
+  .combo .bi-sec,
+  .combo-sub .bi-sec,
+  .combo-title .bi-sec,
+  .perk .bi-sec,
+  .ladder .bi-sec,
+  .ladder-foot .bi-sec,
+  .loc-hero .bi-sec,
+  .hero .bi-sec,
+  .quick .bi-sec,
+  .nav-cart .bi-sec,
+  .soci .bi-sec,
+  #soci .bi-sec,
+  .pfoot .bi-sec {
+    color: rgba(255, 247, 232, 0.72);
+    opacity: 1;
+  }
+  .loc-cta:hover .bi-sec,
+  .mini-add:hover .bi-sec,
+  .pair-add:hover .bi-sec,
+  .mi-add:hover .bi-sec,
+  .pay-cta:hover .bi-sec,
+  .corp-cta:hover .bi-sec { color: rgba(255, 247, 232, 0.92); }
+  /* Inverted ghost buttons (oxblood text on parchment) */
+  .hero-cta.ghost .bi-sec { color: rgba(122, 43, 43, 0.65); }
+  .hero-cta.ghost:hover .bi-sec { color: rgba(122, 43, 43, 0.92); }
+  /* Plain inline secondaries (default — muted brown italic) */
   .bi { display: inline; }
   .bi-sep { display: inline-block; margin: 0 0.4em; opacity: 0.4; font-weight: 400; }
   .bi-sec {
@@ -8036,6 +8070,7 @@
   }
   .hero-cta {
     display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    flex-wrap: wrap;
     background: var(--terracotta);
     color: var(--parchment);
     border: 1px solid var(--terracotta-dark);
@@ -8296,6 +8331,7 @@
   }
   .loc-cta {
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    flex-wrap: wrap; text-align: center;
     background: var(--terracotta);
     color: var(--parchment);
     border: 1px solid var(--terracotta-dark);
@@ -9142,6 +9178,7 @@
   .loc-section { padding: 22px 18px; max-width: 700px; margin: 0 auto; }
   @media (min-width: 768px) { .loc-section { padding: 28px 24px; } }
 
+  .loc-card-soft svg[width] { flex-shrink: 0; }
   .loc-card-soft {
     background:
       linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(248,239,222,0.6) 100%),
@@ -9185,7 +9222,7 @@
     line-height: 1.45;
     color: var(--ink);
   }
-  .addr-row svg { flex: 0 0 22px; }
+  .addr-row svg { flex: 0 0 22px; width: 22px; height: 22px; }
   .addr-row strong {
     display: block;
     font-family: var(--serif-display);
@@ -9245,6 +9282,7 @@
   @media (min-width: 540px) {
     .contact-grid { grid-template-columns: 1fr 1fr; }
   }
+  .contact-row svg { flex-shrink: 0; width: 22px; height: 22px; }
   .contact-row {
     display: flex;
     gap: 10px;
@@ -9324,17 +9362,26 @@
   }
 
   /* Mini menu list */
+  /* Location-page menu: single-column full-width rows so each item is
+     easy to scan and tap, matching the homepage menu's feel. */
   .mini-menu {
-    display: grid;
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
     gap: 12px;
     margin-top: 8px;
   }
-  @media (min-width: 640px) {
-    .mini-menu { grid-template-columns: 1fr 1fr; gap: 14px; }
+  .mini-item {
+    align-items: flex-start;
+    gap: 16px;
+    padding: 16px 16px;
   }
-  /* On narrow screens, allow a more compact mini-item so two cols fit */
-  .mini-item { align-items: flex-start; }
+  .mini-item .mini-emoji {
+    width: 56px; height: 56px;
+    border-radius: 12px;
+    flex: 0 0 56px;
+  }
+  .mini-item .mini-emoji svg { width: 32px; height: 32px; }
+  .mini-item .mini-name { font-size: 18px; }
   .mini-item-foot {
     display: flex; align-items: center; justify-content: space-between;
     gap: 10px; margin-top: 8px;
@@ -9343,10 +9390,11 @@
     appearance: none; border: 0;
     background: var(--terracotta); color: var(--parchment);
     font-family: var(--serif-display); font-style: italic;
-    font-weight: 500; font-size: 13px;
-    padding: 6px 14px; border-radius: 999px;
+    font-weight: 500; font-size: 14px;
+    padding: 9px 18px; border-radius: 999px;
     cursor: pointer; transition: background .15s ease, transform .15s ease;
     white-space: nowrap; flex-shrink: 0;
+    display: inline-flex; align-items: center; gap: 6px;
   }
   .mini-item .mini-add:hover {
     background: var(--terracotta-dark); transform: translateY(-1px);
