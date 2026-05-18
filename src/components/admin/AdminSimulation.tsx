@@ -1361,6 +1361,29 @@ export function AdminSimulation() {
     return () => clearTimeout(handle);
   }, [scenario, persist]);
 
+  // Detect when the headline KPI row has actually pinned under the
+  // topbar, so we can swap to a compact card layout while stuck.
+  const kpiSectionRef = useRef<HTMLElement>(null);
+  const [kpiStuck, setKpiStuck] = useState(false);
+  useEffect(() => {
+    if (loading) return;
+    const onScroll = () => {
+      const el = kpiSectionRef.current;
+      if (!el) return;
+      const topbar = document.querySelector(".v2-topbar, .v2-m-topbar") as HTMLElement | null;
+      const offset = (topbar?.offsetHeight ?? 53) + 1;
+      const next = el.getBoundingClientRect().top <= offset;
+      setKpiStuck((prev) => (prev === next ? prev : next));
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, [loading]);
+
   // Two derived scenarios:
   //   leverScenario     = assumptions applied, weather NOT applied. Fed
   //                       to the projection so per-month weather lands
@@ -1615,7 +1638,10 @@ export function AdminSimulation() {
         </div>
       </header>
 
-      <section className="v2-kpi-grid v2-kpi-grid-sticky">
+      <section
+        ref={kpiSectionRef}
+        className={`v2-kpi-grid v2-kpi-grid-sticky${kpiStuck ? " is-stuck" : ""}`}
+      >
         <KpiCard
           label="Monthly revenue"
           value={computed.monthlyRevenue / 100}

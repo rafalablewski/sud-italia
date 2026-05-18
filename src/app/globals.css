@@ -1859,10 +1859,32 @@ html { scroll-behavior: smooth; }
   backdrop-filter: saturate(140%) blur(10px);
   -webkit-backdrop-filter: saturate(140%) blur(10px);
   border-bottom: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+  transition: padding var(--duration-fast), gap var(--duration-fast);
 }
 .v2-m-shell .v2-kpi-grid-sticky {
   top: calc(48px + var(--m-safe-top));
 }
+.v2-kpi-grid-sticky .v2-kpi {
+  transition: padding var(--duration-fast), min-height var(--duration-fast), gap var(--duration-fast);
+}
+.v2-kpi-grid-sticky .v2-kpi-value {
+  transition: font-size var(--duration-fast);
+}
+
+/* Compact layout while pinned. */
+.v2-kpi-grid-sticky.is-stuck {
+  padding: 6px var(--page-pad);
+  gap: 8px;
+}
+.v2-kpi-grid-sticky.is-stuck .v2-kpi {
+  padding: 6px 10px;
+  min-height: 0;
+  gap: 2px;
+}
+.v2-kpi-grid-sticky.is-stuck .v2-kpi-icon { display: none; }
+.v2-kpi-grid-sticky.is-stuck .v2-kpi-foot { display: none; }
+.v2-kpi-grid-sticky.is-stuck .v2-kpi-value { font-size: var(--text-lg); }
+.v2-kpi-grid-sticky.is-stuck .v2-kpi-label { font-size: var(--text-2xs); }
 
 /* 2:1 split (chart + sidebar list) */
 .v2-grid-2-1 {
