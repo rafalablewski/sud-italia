@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
+  AlertTriangle,
   Banknote,
+  Brain,
   Calculator,
   CalendarRange,
   ChefHat,
@@ -12,6 +14,7 @@ import {
   Gauge,
   Grid3X3,
   HandCoins,
+  Lightbulb,
   LineChart as LineChartIcon,
   PiggyBank,
   Plus,
@@ -2345,6 +2348,8 @@ export function AdminSimulation() {
         </CardBody>
       </Card>
 
+      <AiEnhancementsCard scenario={effectiveScenario!} computed={computed} />
+
       <ConfirmDialog
         open={seedConfirmOpen}
         onClose={() => setSeedConfirmOpen(false)}
@@ -3237,6 +3242,258 @@ function WeatherCalendarCard({ weather, baseOrdersPerDay, baseDaysOpen, onChange
             value={`+${Math.round(peakBonus + eventBonus).toLocaleString("pl-PL")}`}
           />
         </div>
+      </CardBody>
+    </Card>
+  );
+}
+
+// --- AI enhancements card ------------------------------------------------
+
+interface AiSuggestion {
+  category: "revenue" | "cost" | "risk" | "operations";
+  severity: "high" | "medium" | "low";
+  title: string;
+  problem: string;
+  recommendation: string;
+  estimatedImpactGrosze?: number;
+}
+
+const CATEGORY_LABEL: Record<AiSuggestion["category"], string> = {
+  revenue: "Revenue",
+  cost: "Cost",
+  risk: "Risk",
+  operations: "Operations",
+};
+
+const CATEGORY_TONE: Record<AiSuggestion["category"], "success" | "warning" | "danger" | "info"> = {
+  revenue: "success",
+  cost: "warning",
+  risk: "danger",
+  operations: "info",
+};
+
+const SEVERITY_TONE: Record<AiSuggestion["severity"], "danger" | "warning" | "neutral"> = {
+  high: "danger",
+  medium: "warning",
+  low: "neutral",
+};
+
+interface AiEnhancementsCardProps {
+  scenario: SimulationScenario;
+  computed: Computed;
+}
+
+function AiEnhancementsCard({ scenario, computed }: AiEnhancementsCardProps) {
+  const [suggestions, setSuggestions] = useState<AiSuggestion[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [needsConfig, setNeedsConfig] = useState(false);
+  const [generatedAt, setGeneratedAt] = useState<string | null>(null);
+
+  const generate = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    setNeedsConfig(false);
+    try {
+      const res = await fetch("/api/admin/simulation/enhance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scenario,
+          computed: {
+            monthlyRevenue: computed.monthlyRevenue,
+            monthlyCogs: computed.monthlyCogs,
+            laborMonthly: computed.laborMonthly,
+            fixedTotal: computed.fixedTotal,
+            paymentFees: computed.paymentFees,
+            totalCost: computed.totalCost,
+            netProfit: computed.netProfit,
+            margin: computed.margin,
+            breakEvenOrdersPerDay: computed.breakEvenOrdersPerDay,
+            breakEvenOrdersPerMonth: computed.breakEvenOrdersPerMonth,
+            laborPct: computed.laborPct,
+            primeCostPct: computed.primeCostPct,
+            revenuePerLaborHour: computed.revenuePerLaborHour,
+            profitPerOrder: computed.profitPerOrder,
+            paybackMonths: computed.paybackMonths,
+            laborByRole: computed.laborByRole,
+          },
+        }),
+      });
+      if (res.status === 503) {
+        setNeedsConfig(true);
+        setSuggestions(null);
+        return;
+      }
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        setError(data?.error ?? `Request failed (${res.status})`);
+        return;
+      }
+      const data = (await res.json()) as {
+        suggestions: AiSuggestion[];
+        generatedAt: string;
+      };
+      setSuggestions(data.suggestions);
+      setGeneratedAt(data.generatedAt);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not reach the AI endpoint");
+    } finally {
+      setLoading(false);
+    }
+  }, [scenario, computed]);
+
+  return (
+    <Card>
+      <CardHeader
+        title="AI-generated enhancements"
+        description="Claude reviews the scenario above and proposes specific changes to net profit, cost or risk — grounded in the actual numbers."
+        actions={
+          <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+            {generatedAt && (
+              <span className="v2-muted text-xs">
+                Generated {new Date(generatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              </span>
+            )}
+            <Button
+              size="sm"
+              variant={suggestions ? "ghost" : "primary"}
+              leadingIcon={loading ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Brain className="h-3.5 w-3.5" />}
+              onClick={generate}
+              disabled={loading}
+            >
+              {loading ? "Analysing…" : suggestions ? "Regenerate" : "Generate suggestions"}
+            </Button>
+          </span>
+        }
+      />
+      <CardBody>
+        {needsConfig && (
+          <div
+            style={{
+              padding: 14,
+              borderRadius: 10,
+              background: "var(--warning-soft, rgba(245, 158, 11, 0.1))",
+              border: "1px solid var(--warning, #f59e0b)",
+              color: "var(--warning, #f59e0b)",
+              display: "flex",
+              gap: 10,
+              alignItems: "flex-start",
+              fontSize: 13,
+            }}
+          >
+            <AlertTriangle className="h-4 w-4" aria-hidden style={{ flexShrink: 0, marginTop: 2 }} />
+            <div>
+              <strong>AI not configured.</strong> Set <code>ANTHROPIC_API_KEY</code> in your
+              environment to enable Claude-powered suggestions. The simulator works fine
+              without it — every chart and KPI on this page is computed locally.
+            </div>
+          </div>
+        )}
+        {error && !needsConfig && (
+          <div
+            style={{
+              padding: 14,
+              borderRadius: 10,
+              background: "var(--danger-soft, rgba(239, 68, 68, 0.1))",
+              border: "1px solid var(--danger, #ef4444)",
+              color: "var(--danger, #ef4444)",
+              fontSize: 13,
+            }}
+          >
+            {error}
+          </div>
+        )}
+        {!suggestions && !loading && !needsConfig && !error && (
+          <div
+            style={{
+              padding: 28,
+              textAlign: "center",
+              color: "var(--fg-muted)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 10,
+            }}
+          >
+            <Lightbulb className="h-8 w-8" aria-hidden />
+            <div style={{ fontSize: 14 }}>
+              Click <strong>Generate suggestions</strong> to get 4–6 actionable enhancements
+              based on the current scenario.
+            </div>
+          </div>
+        )}
+        {loading && (
+          <div className="v2-stack-12">
+            {[0, 1, 2, 3].map((i) => (
+              <div
+                key={i}
+                style={{
+                  height: 88,
+                  borderRadius: 10,
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--border)",
+                  opacity: 0.6 - i * 0.1,
+                }}
+              />
+            ))}
+          </div>
+        )}
+        {suggestions && suggestions.length === 0 && !loading && (
+          <div className="v2-muted text-sm" style={{ textAlign: "center", padding: 20 }}>
+            No suggestions returned — the scenario may already be well-tuned. Try
+            adjusting an input and regenerating.
+          </div>
+        )}
+        {suggestions && suggestions.length > 0 && (
+          <ul style={{ display: "flex", flexDirection: "column", gap: 10, padding: 0, margin: 0, listStyle: "none" }}>
+            {suggestions.map((s, i) => (
+              <li
+                key={i}
+                style={{
+                  padding: 14,
+                  borderRadius: 10,
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--border)",
+                  borderLeft: `4px solid var(--${SEVERITY_TONE[s.severity] === "danger" ? "danger" : SEVERITY_TONE[s.severity] === "warning" ? "warning" : "border"}, ${SEVERITY_TONE[s.severity] === "danger" ? "#ef4444" : SEVERITY_TONE[s.severity] === "warning" ? "#f59e0b" : "#94a3b8"})`,
+                }}
+              >
+                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 6 }}>
+                  <Badge tone={CATEGORY_TONE[s.category]} variant="soft" dot>
+                    {CATEGORY_LABEL[s.category]}
+                  </Badge>
+                  <Badge tone={SEVERITY_TONE[s.severity]} variant="outline">
+                    {s.severity}
+                  </Badge>
+                  <strong style={{ fontSize: 14 }}>{s.title}</strong>
+                  {typeof s.estimatedImpactGrosze === "number" && s.estimatedImpactGrosze !== 0 && (
+                    <span
+                      className="tabular"
+                      style={{
+                        marginLeft: "auto",
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color:
+                          s.estimatedImpactGrosze > 0
+                            ? "var(--success, #10b981)"
+                            : "var(--danger, #ef4444)",
+                      }}
+                    >
+                      {s.estimatedImpactGrosze > 0 ? "+" : "−"}
+                      {formatPrice(Math.abs(s.estimatedImpactGrosze))} / mo
+                    </span>
+                  )}
+                </div>
+                <div className="v2-muted" style={{ fontSize: 13, marginBottom: 6, lineHeight: 1.5 }}>
+                  <strong style={{ color: "var(--fg)" }}>What&apos;s happening:</strong> {s.problem}
+                </div>
+                <div style={{ fontSize: 13, lineHeight: 1.5 }}>
+                  <strong>Recommendation:</strong> {s.recommendation}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </CardBody>
     </Card>
   );

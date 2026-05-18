@@ -763,6 +763,14 @@ export default async function CapabilitiesPage() {
             "Sandbox monthly P&L. Pick a menu scenario (Takeaway / Balanced / Premium / Family / Aperitivo) to load avg ticket + COGS + behavior levers in one click; tune orders/day, labor mix and fixed costs from there. Includes 9 behavior levers (coffee/dessert/antipasti/aperitivo/premium-toppings/pasta-primo attach, combo conversion, recession stress, delivery share), 5 weather/calendar levers (rain, heat, holidays, school dip, event days), live KPIs (labor % / prime cost % / revenue per labor hour / profit per order / setup payback), two 2-D heatmaps (orders × ticket, food cost × ticket), Conservative / Realistic / Optimistic comparison, ±20% sensitivity, and a 12-month projection compounding wage + ingredient inflation through four seasonal multipliers. Every concept has an info button with an amateur-friendly explanation. Master toggle in Settings → General. Defaults are Warsaw 2026 (gross × 1.22 ZUS narzut, food-truck pitch fees). Zero writes to the business-costs ledger.",
         },
         {
+          name: "Simulation AI enhancements",
+          status: has("ANTHROPIC_API_KEY") ? "live" : "needs-config",
+          href: "/admin/simulation",
+          envVars: ["ANTHROPIC_API_KEY"],
+          summary:
+            "Below the sensitivity row on /admin/simulation, a Claude-powered card analyses the current scenario (revenue inputs + assumptions + weather + computed KPIs) and returns 4–6 specific enhancements with category (revenue/cost/risk/operations), severity, problem (citing real numbers), recommendation, and an estimated monthly grosze impact. Manual trigger (button click) to bound API spend. Degrades gracefully to a needs-config banner when the API key is missing — the rest of the simulator stays fully functional without AI.",
+        },
+        {
           name: "Slots",
           status: "live",
           href: "/admin/slots",
