@@ -100,9 +100,15 @@ const DEFAULT_ASSUMPTIONS: SimulationAssumptions = {
   premiumToppingsAttach: { attachPct: 0.15, avgPriceGrosze: 700, cogsPct: 0.30 },
   pastaPrimoAttach: { attachPct: 0.18, avgPriceGrosze: 3200, cogsPct: 0.26 },
   comboConversion: { pct: 0.20, addonGrosze: 2500, discountGrosze: 600, addonCogsPct: 0.25 },
-  cheapestPizzaShift: { pp: 0, ticketDeltaGrosze: 300, cogsDeltaGrosze: 100 },
+  cheapestPizzaShift: { pp: 0, ticketDeltaGrosze: 1000, cogsDeltaGrosze: 400 },
   deliveryShare: { pct: 0.25, packagingCostGrosze: 250, extraProcessorPct: 0, avgFeeGrosze: 800 },
 };
+
+/** Variable-vs-fixed labor split — share of total labor that flexes
+ *  with seasonal volume (the rest stays at full headcount). 0.4 means
+ *  a 30% volume swing translates into a 12% labor swing, which is the
+ *  industry rule of thumb for restaurants. */
+const LABOR_SEASONAL_FLEX = 0.4;
 
 const DEFAULT_WEATHER: SimulationWeather = {
   rainyDayMultiplier: 0.75,
@@ -210,17 +216,17 @@ function computeScenario(s: SimulationScenario): Computed {
   };
 }
 
-/** Project the scenario across 12 months, applying seasonal volume
- *  multipliers and monthly inflation drift on labor + COGS + fixed
- *  costs. Returns one row per month. */
+/** Project the scenario across 12 months. Input is the assumptions-only
+ *  scenario (no weather applied); weather is composed per-month inside
+ *  so seasonal effects (heatwave only in summer, school dip only in
+ *  Jul/Aug) land in the right months. Labor flexes with seasonal
+ *  volume via LABOR_SEASONAL_FLEX. Fixed costs inflate at wage CPI
+ *  (closer proxy than food CPI for rent/SaaS/accountant). */
 function projectTwelveMonths(s: SimulationScenario, startMonth = 0) {
   const seasonality = s.seasonality ?? DEFAULT_SEASONALITY;
+  const w = s.weather;
   const wageMonthly = (1 + (s.wageInflationPct ?? 0)) ** (1 / 12) - 1;
   const cogsMonthly = (1 + (s.ingredientInflationPct ?? 0)) ** (1 / 12) - 1;
-  const baseLaborHours = s.labor.reduce(
-    (sum, l) => sum + l.headcount * l.hoursPerWeek * WEEKS_PER_MONTH,
-    0,
-  );
   const baseLaborMonthly = s.labor.reduce(
     (sum, l) =>
       sum + l.headcount * l.hoursPerWeek * WEEKS_PER_MONTH * l.hourlyRateGrosze,
@@ -244,13 +250,25 @@ function projectTwelveMonths(s: SimulationScenario, startMonth = 0) {
     const monthIndex = (startMonth + i) % 12;
     const season = MONTH_TO_SEASON[monthIndex];
     const seasonMult = seasonality[season];
-    const orders = s.ordersPerDay * seasonMult * s.daysOpenPerMonth;
+    const weatherMult = monthVolumeMult(monthIndex, w);
+    const closedDays = w?.holidayClosedDaysPerMonth ?? 0;
+    const daysOpen = Math.max(0, s.daysOpenPerMonth - closedDays);
+    let monthDailyOrders = s.ordersPerDay * seasonMult * weatherMult;
+    if (w && daysOpen > 0) {
+      const baseDaily = s.ordersPerDay;
+      const peakBonus = w.holidayPeakDaysPerMonth * (w.holidayPeakMultiplier - 1) * baseDaily;
+      const eventBonus = w.eventDaysPerMonth * (w.eventDayMultiplier - 1) * baseDaily;
+      monthDailyOrders += (peakBonus + eventBonus) / daysOpen;
+    }
+    const orders = monthDailyOrders * daysOpen;
     const wageMult = (1 + wageMonthly) ** i;
     const cogsMult = (1 + cogsMonthly) ** i;
+    // Labor partially flexes with seasonal volume — fixed share stays put.
+    const laborFlex = 1 + LABOR_SEASONAL_FLEX * (seasonMult - 1);
     const revenue = Math.round(orders * s.avgTicketGrosze);
     const cogs = Math.round(revenue * s.cogsPct * cogsMult);
-    const labor = Math.round(baseLaborMonthly * wageMult);
-    const fixed = Math.round(baseFixed * cogsMult);
+    const labor = Math.round(baseLaborMonthly * wageMult * laborFlex);
+    const fixed = Math.round(baseFixed * wageMult);
     const payment = Math.round(revenue * (s.paymentProcessorPct ?? 0));
     const netProfit = revenue - cogs - labor - fixed - payment;
     rows.push({
@@ -264,8 +282,6 @@ function projectTwelveMonths(s: SimulationScenario, startMonth = 0) {
       netProfit: Math.round(netProfit / 100),
     });
   }
-  // suppress unused-var lint — baseLaborHours kept for downstream tweaks
-  void baseLaborHours;
   return rows;
 }
 
@@ -440,47 +456,78 @@ function attachDelta(
   return { ticket, cogs };
 }
 
-/** Fold the behavior + weather levers into the scenario. Returns a new
- *  scenario where ordersPerDay × avgTicket × cogsPct already absorb every
- *  lever — so every downstream chart, KPI, heatmap and projection picks
- *  them up without further changes. */
-function applyAssumptionsAndWeather(s: SimulationScenario): SimulationScenario {
+/** Volume multiplier for a single month (0=Jan, 11=Dec). Rain applies
+ *  year-round; heatwaves fire only in Jun–Aug; the school-holiday lunch
+ *  dip fires only in Jul–Aug. Used by both the headline annual-average
+ *  view and the per-month 12-month projection. */
+function monthVolumeMult(monthIndex: number, w: SimulationWeather | undefined): number {
+  if (!w) return 1;
+  let m = w.rainyShare * w.rainyDayMultiplier + (1 - w.rainyShare);
+  // Heatwaves are a summer phenomenon — Jun (5), Jul (6), Aug (7).
+  if (monthIndex >= 5 && monthIndex <= 7) {
+    m *= w.heatwaveShare * w.heatwaveMultiplier + (1 - w.heatwaveShare);
+  }
+  // Polish school holidays — Jul (6) + Aug (7) only.
+  if (monthIndex === 6 || monthIndex === 7) {
+    m *= w.schoolHolidayLunchMultiplier;
+  }
+  return m;
+}
+
+/** Average volume multiplier across all 12 months — the right composite
+ *  for the headline "single typical month" view. */
+function averageAnnualVolumeMult(w: SimulationWeather | undefined): number {
+  if (!w) return 1;
+  let sum = 0;
+  for (let i = 0; i < 12; i++) sum += monthVolumeMult(i, w);
+  return sum / 12;
+}
+
+/** Fold the behavior levers (attach rates, combo, recession stress,
+ *  delivery share) into the per-order ticket + COGS. Returns a new
+ *  scenario with updated avgTicketGrosze + cogsPct + paymentProcessorPct
+ *  but the same ordersPerDay + daysOpenPerMonth (weather is separate). */
+function applyAssumptions(s: SimulationScenario): SimulationScenario {
   const a = s.assumptions;
-  const w = s.weather;
+  if (!a) return s;
 
   let extraTicket = 0;
   let extraCogs = 0;
+  let extraProcessorPct = 0;
 
-  if (a) {
-    for (const lever of [
-      a.coffeeAttach,
-      a.dessertAttach,
-      a.antipastiAttach,
-      a.aperitivoAttach,
-      a.premiumToppingsAttach,
-      a.pastaPrimoAttach,
-    ]) {
-      const d = attachDelta(lever);
-      extraTicket += d.ticket;
-      extraCogs += d.cogs;
-    }
-    if (a.comboConversion && !leverOff(a.comboConversion)) {
-      const c = a.comboConversion;
-      extraTicket += c.pct * (c.addonGrosze - c.discountGrosze);
-      extraCogs += c.pct * c.addonGrosze * c.addonCogsPct;
-    }
-    if (a.cheapestPizzaShift && !leverOff(a.cheapestPizzaShift)) {
-      extraTicket -= a.cheapestPizzaShift.pp * a.cheapestPizzaShift.ticketDeltaGrosze;
-      extraCogs -= a.cheapestPizzaShift.pp * a.cheapestPizzaShift.cogsDeltaGrosze;
-    }
-    if (a.deliveryShare && !leverOff(a.deliveryShare)) {
-      const dShare = a.deliveryShare;
-      extraTicket += dShare.pct * dShare.avgFeeGrosze;
-      const ticketBeforeDelivery = s.avgTicketGrosze + extraTicket - dShare.pct * dShare.avgFeeGrosze;
-      extraCogs +=
-        dShare.pct *
-        (dShare.packagingCostGrosze + ticketBeforeDelivery * dShare.extraProcessorPct);
-    }
+  for (const lever of [
+    a.coffeeAttach,
+    a.dessertAttach,
+    a.antipastiAttach,
+    a.aperitivoAttach,
+    a.premiumToppingsAttach,
+    a.pastaPrimoAttach,
+  ]) {
+    const d = attachDelta(lever);
+    extraTicket += d.ticket;
+    extraCogs += d.cogs;
+  }
+  if (a.comboConversion && !leverOff(a.comboConversion)) {
+    const c = a.comboConversion;
+    extraTicket += c.pct * (c.addonGrosze - c.discountGrosze);
+    extraCogs += c.pct * c.addonGrosze * c.addonCogsPct;
+  }
+  if (a.cheapestPizzaShift && !leverOff(a.cheapestPizzaShift)) {
+    extraTicket -= a.cheapestPizzaShift.pp * a.cheapestPizzaShift.ticketDeltaGrosze;
+    extraCogs -= a.cheapestPizzaShift.pp * a.cheapestPizzaShift.cogsDeltaGrosze;
+  }
+  if (a.deliveryShare && !leverOff(a.deliveryShare)) {
+    const dShare = a.deliveryShare;
+    // Fee revenue lifts the average ticket.
+    extraTicket += dShare.pct * dShare.avgFeeGrosze;
+    // Packaging is a real per-order cost-of-goods.
+    extraCogs += dShare.pct * dShare.packagingCostGrosze;
+    // Extra processor fee is a payment cost, not a goods cost — fold into
+    // the effective paymentProcessorPct so it lands under "Payment fees"
+    // in the cost pie. Applied as deliveryShare × extraRate × revenue
+    // (correct because delivery orders are deliveryShare of total volume,
+    // and the fee is computed on the full order revenue inc. delivery fee).
+    extraProcessorPct += dShare.pct * dShare.extraProcessorPct;
   }
 
   const newTicket = Math.max(0, s.avgTicketGrosze + extraTicket);
@@ -488,38 +535,35 @@ function applyAssumptionsAndWeather(s: SimulationScenario): SimulationScenario {
   const totalCogsValue = Math.max(0, baselineCogsValue + extraCogs);
   const newCogsPct = newTicket > 0 ? Math.min(1, totalCogsValue / newTicket) : s.cogsPct;
 
-  // Weather + calendar — modify effective ordersPerDay / daysOpen.
-  let volumeMult = 1;
-  let daysOpen = s.daysOpenPerMonth;
-  let ordersPerDay = s.ordersPerDay;
-  if (w) {
-    volumeMult *= w.rainyShare * w.rainyDayMultiplier + (1 - w.rainyShare);
-    volumeMult *= w.heatwaveShare * w.heatwaveMultiplier + (1 - w.heatwaveShare);
-    // School-holiday lunch dip — applies only to summer months. Annualised as 2/12.
-    const summerShare = 2 / 12;
-    volumeMult *= summerShare * w.schoolHolidayLunchMultiplier + (1 - summerShare);
-    // Holiday closures: reduce effective days open.
-    daysOpen = Math.max(0, s.daysOpenPerMonth - w.holidayClosedDaysPerMonth);
-    // Peak + event days: extra orders/month re-amortised across the (now-shorter) month.
-    ordersPerDay = s.ordersPerDay * volumeMult;
-    if (daysOpen > 0) {
-      const baseDaily = s.ordersPerDay; // pre-multiplier daily volume for bonus math
-      const peakBonus =
-        w.holidayPeakDaysPerMonth * (w.holidayPeakMultiplier - 1) * baseDaily;
-      const eventBonus =
-        w.eventDaysPerMonth * (w.eventDayMultiplier - 1) * baseDaily;
-      ordersPerDay += (peakBonus + eventBonus) / daysOpen;
-    }
-  }
+  return {
+    ...s,
+    avgTicketGrosze: newTicket,
+    cogsPct: newCogsPct,
+    paymentProcessorPct: Math.max(0, Math.min(1, (s.paymentProcessorPct ?? 0) + extraProcessorPct)),
+  };
+}
 
+/** Annualised weather effects → ordersPerDay + daysOpen. Used by the
+ *  headline view; the projection applies weather per-month instead. */
+function applyAnnualWeather(s: SimulationScenario): SimulationScenario {
+  const w = s.weather;
+  if (!w) return s;
+  const avgMult = averageAnnualVolumeMult(w);
+  const daysOpen = Math.max(0, s.daysOpenPerMonth - w.holidayClosedDaysPerMonth);
+  let ordersPerDay = s.ordersPerDay * avgMult;
+  if (daysOpen > 0) {
+    const baseDaily = s.ordersPerDay;
+    const peakBonus = w.holidayPeakDaysPerMonth * (w.holidayPeakMultiplier - 1) * baseDaily;
+    const eventBonus = w.eventDaysPerMonth * (w.eventDayMultiplier - 1) * baseDaily;
+    ordersPerDay += (peakBonus + eventBonus) / daysOpen;
+  }
   return {
     ...s,
     ordersPerDay,
-    avgTicketGrosze: newTicket,
-    cogsPct: newCogsPct,
     daysOpenPerMonth: daysOpen,
   };
 }
+
 
 /** Three saved-scenario archetypes derived from the active one. */
 function deriveArchetypes(s: SimulationScenario) {
@@ -1316,13 +1360,21 @@ export function AdminSimulation() {
     [],
   );
 
-  // effectiveScenario folds the assumption + weather levers into the
-  // scenario values, then feeds every chart, matrix, projection and KPI
-  // on this page from a single source of truth.
-  const effectiveScenario = useMemo<SimulationScenario | null>(() => {
+  // Two derived scenarios:
+  //   leverScenario     = assumptions applied, weather NOT applied. Fed
+  //                       to the projection so per-month weather lands
+  //                       in the right months.
+  //   effectiveScenario = leverScenario + annualised weather. Feeds the
+  //                       headline KPIs, P&L, pie, heatmaps, archetypes
+  //                       and ±20% sensitivity row.
+  const leverScenario = useMemo<SimulationScenario | null>(() => {
     if (!scenario) return null;
-    return applyAssumptionsAndWeather(scenario);
+    return applyAssumptions(scenario);
   }, [scenario]);
+  const effectiveScenario = useMemo<SimulationScenario | null>(() => {
+    if (!leverScenario) return null;
+    return applyAnnualWeather(leverScenario);
+  }, [leverScenario]);
   const computed = useMemo(
     () => (effectiveScenario ? computeScenario(effectiveScenario) : null),
     [effectiveScenario],
@@ -1355,13 +1407,11 @@ export function AdminSimulation() {
       daysOpenPerMonth: 28,
       cogsPct: 0.3,
       labor: [
-        { id: "pizzaiolo", role: "pizzaiolo", headcount: 2, hoursPerWeek: 66, hourlyRateGrosze: 4300 },
-        { id: "chef", role: "chef", headcount: 1, hoursPerWeek: 66, hourlyRateGrosze: 3700 },
-        { id: "sous-chef", role: "sous-chef", headcount: 1, hoursPerWeek: 48, hourlyRateGrosze: 3300 },
-        { id: "barista", role: "barista", headcount: 1, hoursPerWeek: 60, hourlyRateGrosze: 3900 },
-        { id: "waiter", role: "waiter", headcount: 2, hoursPerWeek: 60, hourlyRateGrosze: 4000 },
-        { id: "kitchen-porter", role: "kitchen-porter", headcount: 1, hoursPerWeek: 36, hourlyRateGrosze: 3000 },
-        { id: "manager", role: "manager", headcount: 1, hoursPerWeek: 50, hourlyRateGrosze: 5500 },
+        { id: "pizzaiolo", role: "pizzaiolo", headcount: 1, hoursPerWeek: 60, hourlyRateGrosze: 4300 },
+        { id: "chef", role: "chef", headcount: 1, hoursPerWeek: 60, hourlyRateGrosze: 3700 },
+        { id: "waiter", role: "waiter", headcount: 1, hoursPerWeek: 60, hourlyRateGrosze: 4000 },
+        { id: "barista", role: "barista", headcount: 1, hoursPerWeek: 48, hourlyRateGrosze: 3900 },
+        { id: "manager", role: "manager", headcount: 1, hoursPerWeek: 40, hourlyRateGrosze: 5500 },
       ],
       fixedCosts: {
         rent: 250_000,
@@ -1505,7 +1555,7 @@ export function AdminSimulation() {
     { key: "realistic", label: "Realistic (current)", scenario: archetypes.realistic, hint: "as entered" },
     { key: "optimistic", label: "Optimistic", scenario: archetypes.optimistic, hint: "+15% orders · −2pp COGS" },
   ];
-  const projection = projectTwelveMonths(effectiveScenario!);
+  const projection = projectTwelveMonths(leverScenario!);
   const projectionTotals = projection.reduce(
     (acc, r) => ({
       revenue: acc.revenue + r.revenue,

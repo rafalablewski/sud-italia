@@ -7939,13 +7939,15 @@ export function defaultSimulationScenario(): SimulationScenario {
   // to the nearest 50 grosze. Operators who'd rather think in pure
   // brutto can divide by 1.22.
   const labor: SimulationLaborLine[] = [
-    { id: "pizzaiolo",     role: "pizzaiolo",     headcount: 2, hoursPerWeek: 66, hourlyRateGrosze: 4300 },
-    { id: "chef",          role: "chef",          headcount: 1, hoursPerWeek: 66, hourlyRateGrosze: 3700 },
-    { id: "sous-chef",     role: "sous-chef",     headcount: 1, hoursPerWeek: 48, hourlyRateGrosze: 3300 },
-    { id: "barista",       role: "barista",       headcount: 1, hoursPerWeek: 60, hourlyRateGrosze: 3900 },
-    { id: "waiter",        role: "waiter",        headcount: 2, hoursPerWeek: 60, hourlyRateGrosze: 4000 },
-    { id: "kitchen-porter",role: "kitchen-porter",headcount: 1, hoursPerWeek: 36, hourlyRateGrosze: 3000 },
-    { id: "manager",       role: "manager",       headcount: 1, hoursPerWeek: 50, hourlyRateGrosze: 5500 },
+    // Right-sized for a food-truck doing ~70 orders/day: one
+    // pizzaiolo + one chef on the line, one waiter, one cashier, and
+    // the owner-manager part-time. No sous-chef or kitchen porter —
+    // trucks don't have either; line cooks handle prep + cleanup.
+    { id: "pizzaiolo", role: "pizzaiolo", headcount: 1, hoursPerWeek: 60, hourlyRateGrosze: 4300 },
+    { id: "chef",      role: "chef",      headcount: 1, hoursPerWeek: 60, hourlyRateGrosze: 3700 },
+    { id: "waiter",    role: "waiter",    headcount: 1, hoursPerWeek: 60, hourlyRateGrosze: 4000 },
+    { id: "barista",   role: "barista",   headcount: 1, hoursPerWeek: 48, hourlyRateGrosze: 3900 },
+    { id: "manager",   role: "manager",   headcount: 1, hoursPerWeek: 40, hourlyRateGrosze: 5500 },
   ];
   const fixedCosts: SimulationScenario["fixedCosts"] = {
     rent: 250_000,         // 2 500 zł — Warsaw food-truck pitch (1 200–3 000 zł range)
@@ -8001,10 +8003,13 @@ export function defaultSimulationAssumptions(): SimulationAssumptions {
       addonCogsPct: 0.25,
     },
     // Cheapest-pizza shift is a stress lever — default off (0 pp).
+    // Per-1pp deltas calibrated so a 20pp shift toward Margherita drops
+    // AOV by ~2 zł and COGS by ~0.80 zł (Margherita is ~10 zł cheaper
+    // than the avg premium pie and ~4 zł cheaper to make).
     cheapestPizzaShift: {
       pp: 0,
-      ticketDeltaGrosze: 300,
-      cogsDeltaGrosze: 100,
+      ticketDeltaGrosze: 1000,
+      cogsDeltaGrosze: 400,
     },
     deliveryShare: {
       pct: 0.25,
