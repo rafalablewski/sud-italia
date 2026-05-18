@@ -22,6 +22,7 @@ import {
   Sparkles,
   Truck,
   Brain,
+  LineChart,
   Map,
   MapPin,
   Settings,
@@ -46,6 +47,12 @@ export interface NavItem {
    * owner sees everything.
    */
   requiredRole?: AdminRole;
+  /**
+   * Optional settings-driven gate. When set, the sidebar hides this item
+   * unless the corresponding boolean in /api/admin/settings is true.
+   * The page itself still enforces the same check server-side.
+   */
+  featureFlag?: "simulation";
 }
 
 export interface NavSection {
@@ -120,6 +127,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/admin/reports", label: "Reports", icon: BarChart3, shortcut: "r", requiredRole: "manager" },
       { href: "/admin/cash", label: "Cash", icon: Banknote, requiredRole: "manager" },
       { href: "/admin/business-costs", label: "Business costs", icon: Wallet, requiredRole: "manager" },
+      { href: "/admin/simulation", label: "Simulation", icon: LineChart, requiredRole: "manager", featureFlag: "simulation" },
     ],
   },
   {
@@ -160,20 +168,27 @@ export const NAV_SECTIONS: NavSection[] = [
 export const ALL_NAV_ITEMS: NavItem[] = NAV_SECTIONS.flatMap((s) => s.items);
 
 /**
- * Filter the nav for a given role (m2_31). Items without a requiredRole
- * are always visible; items with one are kept when the user's rank is at
- * least the required rank. Sections with no remaining items get dropped.
+ * Filter the nav for a given role (m2_31) and feature-flag map. Items
+ * without a requiredRole are always visible role-wise; items with one
+ * are kept when the user's rank is at least the required rank. Items
+ * with a featureFlag are kept only when the corresponding flag is true.
+ * Sections with no remaining items get dropped.
  *
  * `null` role = no session = render an empty nav (the layout itself
  * handles redirect to /admin/login).
  */
-export function filterNavForRole(role: AdminRole | null): NavSection[] {
+export function filterNavForRole(
+  role: AdminRole | null,
+  flags?: { simulation?: boolean },
+): NavSection[] {
   if (!role) return [];
   const userRank = ROLE_RANK[role];
   return NAV_SECTIONS.map((section) => ({
     ...section,
-    items: section.items.filter(
-      (item) => !item.requiredRole || ROLE_RANK[item.requiredRole] <= userRank,
-    ),
+    items: section.items.filter((item) => {
+      if (item.requiredRole && ROLE_RANK[item.requiredRole] > userRank) return false;
+      if (item.featureFlag === "simulation" && !flags?.simulation) return false;
+      return true;
+    }),
   })).filter((section) => section.items.length > 0);
 }

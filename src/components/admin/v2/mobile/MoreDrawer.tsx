@@ -37,12 +37,27 @@ export function MoreDrawer({ open, onClose, role }: Props) {
   const install = useInstallPrompt();
   const [pushSettingsOpen, setPushSettingsOpen] = useState(false);
   const [desktopForced, setDesktopForced] = useState(false);
+  const [simulationEnabled, setSimulationEnabled] = useState(false);
   useEffect(() => {
     if (open) setDesktopForced(getForceDesktop());
   }, [open]);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/admin/settings")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (!cancelled && j) setSimulationEnabled(!!j.simulationEnabled);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const sections = useMemo(
-    () => filterNavForRole(role) || NAV_SECTIONS,
-    [role],
+    () =>
+      filterNavForRole(role, { simulation: simulationEnabled }) ||
+      NAV_SECTIONS,
+    [role, simulationEnabled],
   );
 
   const navByHref = useMemo(() => {

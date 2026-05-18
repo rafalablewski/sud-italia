@@ -772,6 +772,39 @@ export interface BusinessCost {
   updatedAt: string;
 }
 
+// --- Finance simulation (sandbox monthly P&L) ----------------------------
+//
+// A what-if scenario operators tweak inside /admin/simulation. Pure
+// projection — never feeds the real business-costs ledger. Persists to
+// simulation-scenarios.json so reopening the page picks up where the
+// operator left off.
+
+export interface SimulationLaborLine {
+  id: string;
+  role: BusinessCostPayrollRole;
+  /** Number of people on this role line. */
+  headcount: number;
+  /** Per-person hours per week (service + prep + close-down). */
+  hoursPerWeek: number;
+  /** Per-person gross pay rate in grosze / hour. */
+  hourlyRateGrosze: number;
+}
+
+export interface SimulationScenario {
+  /** Average orders served per operating day. */
+  ordersPerDay: number;
+  /** Average order ticket size in grosze. */
+  avgTicketGrosze: number;
+  /** How many days per month the truck is open. */
+  daysOpenPerMonth: number;
+  /** Food cost ratio (0–1). 0.30 = ingredients eat 30% of revenue. */
+  cogsPct: number;
+  labor: SimulationLaborLine[];
+  /** Fixed monthly costs in grosze, keyed by business-cost category. */
+  fixedCosts: Partial<Record<BusinessCostCategory, number>>;
+  updatedAt: string;
+}
+
 // --- Audit log ---
 
 export interface AuditLogEntry {

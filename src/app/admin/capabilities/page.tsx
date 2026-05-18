@@ -756,6 +756,13 @@ export default async function CapabilitiesPage() {
             "Operating expense register — payroll (pizzaiolo, chefs, waiting staff), rent, utilities, fuel, insurance, licenses, software, one-off purchases. Recurring amounts auto-normalised to grosze/month for like-for-like totals; KPI cards show monthly recurring, annualised, payroll subtotal, and one-off spend over the last 30 days. Per-location scoping (or chain-wide), category and payroll-role breakdowns, archive vs delete, next-due reminders.",
         },
         {
+          name: "Finance simulation (sandbox P&L)",
+          status: "live",
+          href: "/admin/simulation",
+          summary:
+            "Sandbox monthly P&L: type orders/day, ticket size, labor mix and fixed costs → instant revenue, cost-by-category, net profit, margin and break-even, plus a −20% / +20% sensitivity row. Master toggle in Settings → General (off by default; nav link is hidden until enabled). Zero writes to the business-costs ledger — defaults reflect a 12-22 service window with pizza/pasta/coffee/dessert mix; optional 'Seed from last 30 days' button populates from the real ledger one-way.",
+        },
+        {
           name: "Slots",
           status: "live",
           href: "/admin/slots",
