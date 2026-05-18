@@ -823,6 +823,20 @@ export interface SimulationAttachLever {
   cogsPct: number;
 }
 
+/** A "what if cheese price drops 10%" or "what if we cut dough weight 10%"
+ *  lever. Multiplies the base-pizza COGS by `(1 + cogsShare × costDeltaPct)`
+ *  so an ingredient that's 25% of COGS getting 10% more expensive lifts
+ *  total COGS by 2.5%. Use positive deltas for cost rises / extra usage,
+ *  negatives for cost drops / recipe trims. */
+export interface SimulationIngredientLever {
+  /** When false, excluded from the math without losing the configured values. */
+  enabled?: boolean;
+  /** What share of base pizza COGS this ingredient represents (0–1). */
+  cogsShare: number;
+  /** Price (or usage) change as a fraction. +0.20 = +20%, −0.10 = −10%. */
+  costDeltaPct: number;
+}
+
 /** Behavioral assumption levers. Each lever folds into effective ticket
  *  and COGS — operators tune attach rates instead of plain revenue. Every
  *  lever has an `enabled` flag so the operator can isolate the impact of
@@ -865,6 +879,21 @@ export interface SimulationAssumptions {
     extraProcessorPct: number;
     /** Average delivery fee revenue per order, in grosze. */
     avgFeeGrosze: number;
+  };
+  /** Ingredient cost stress tests — recipe + supplier "what ifs". Each
+   *  lever has a calibration share (what % of base-pizza COGS it represents)
+   *  and an editable cost-delta the operator can flex up or down. */
+  ingredients?: {
+    mozzarella?: SimulationIngredientLever;
+    tomato?: SimulationIngredientLever;
+    flour?: SimulationIngredientLever;
+    doughWeight?: SimulationIngredientLever;
+    oliveOil?: SimulationIngredientLever;
+    curedMeats?: SimulationIngredientLever;
+    buffaloMozz?: SimulationIngredientLever;
+    eggs?: SimulationIngredientLever;
+    ovenFuel?: SimulationIngredientLever;
+    packaging?: SimulationIngredientLever;
   };
 }
 

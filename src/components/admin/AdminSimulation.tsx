@@ -16,11 +16,13 @@ import {
   HandCoins,
   Lightbulb,
   LineChart as LineChartIcon,
+  Percent,
   PiggyBank,
   Plus,
   RefreshCw,
   Save,
   Scale,
+  Shield,
   Sliders,
   Sparkles,
   Trash2,
@@ -35,6 +37,7 @@ import type {
   BusinessCostPayrollRole,
   SimulationAssumptions,
   SimulationAttachLever,
+  SimulationIngredientLever,
   SimulationLaborLine,
   SimulationScenario,
   SimulationSeasonality,
@@ -102,7 +105,58 @@ const DEFAULT_ASSUMPTIONS: SimulationAssumptions = {
   comboConversion: { pct: 0.20, addonGrosze: 2500, discountGrosze: 600, addonCogsPct: 0.25 },
   cheapestPizzaShift: { pp: 0, ticketDeltaGrosze: 1000, cogsDeltaGrosze: 400 },
   deliveryShare: { pct: 0.25, packagingCostGrosze: 250, extraProcessorPct: 0, avgFeeGrosze: 800 },
+  ingredients: {
+    mozzarella: { enabled: true, cogsShare: 0.28, costDeltaPct: 0 },
+    tomato: { enabled: true, cogsShare: 0.10, costDeltaPct: 0 },
+    flour: { enabled: true, cogsShare: 0.06, costDeltaPct: 0 },
+    doughWeight: { enabled: true, cogsShare: 0.06, costDeltaPct: 0 },
+    oliveOil: { enabled: true, cogsShare: 0.05, costDeltaPct: 0 },
+    curedMeats: { enabled: true, cogsShare: 0.07, costDeltaPct: 0 },
+    buffaloMozz: { enabled: true, cogsShare: 0.03, costDeltaPct: 0 },
+    eggs: { enabled: true, cogsShare: 0.02, costDeltaPct: 0 },
+    ovenFuel: { enabled: true, cogsShare: 0.04, costDeltaPct: 0 },
+    packaging: { enabled: true, cogsShare: 0.03, costDeltaPct: 0 },
+  },
 };
+
+type IngredientKey =
+  | "mozzarella"
+  | "tomato"
+  | "flour"
+  | "doughWeight"
+  | "oliveOil"
+  | "curedMeats"
+  | "buffaloMozz"
+  | "eggs"
+  | "ovenFuel"
+  | "packaging";
+
+/** Backfill ingredient defaults for scenarios saved before this feature existed.
+ *  Without this an older saved scenario would render zero ingredient rows. */
+function normalizeScenario(s: SimulationScenario): SimulationScenario {
+  const existing = s.assumptions?.ingredients ?? {};
+  const merged = { ...DEFAULT_ASSUMPTIONS.ingredients, ...existing };
+  return {
+    ...s,
+    assumptions: {
+      ...(s.assumptions ?? DEFAULT_ASSUMPTIONS),
+      ingredients: merged,
+    },
+  };
+}
+
+const INGREDIENT_LEVERS: { key: IngredientKey; label: string; hint: string }[] = [
+  { key: "mozzarella", label: "Mozzarella fior di latte", hint: "Biggest single line — every pizza uses 100–120 g." },
+  { key: "tomato", label: "Tomato sauce", hint: "San Marzano DOP vs domestic — swap can shave 25%." },
+  { key: "flour", label: "Tipo 00 flour", hint: "Caputo / Pivetti vs Polish double-zero." },
+  { key: "doughWeight", label: "Dough weight per pizza", hint: "Recipe lever — going from 280 g to 250 g is −10.7%." },
+  { key: "oliveOil", label: "Extra virgin olive oil", hint: "Italian EVOO — exposed to bad-harvest spikes." },
+  { key: "curedMeats", label: "Cured meats", hint: "Prosciutto, 'nduja, salami — used on ~40% of pizzas." },
+  { key: "buffaloMozz", label: "Buffalo mozzarella (premium)", hint: "Bufala / burrata swap on the premium menu." },
+  { key: "eggs", label: "Eggs", hint: "Dough enrichment + carbonara + tiramisu." },
+  { key: "ovenFuel", label: "Oven fuel (wood / gas)", hint: "Wood pellets, propane — winter heating premium." },
+  { key: "packaging", label: "Packaging (boxes, napkins)", hint: "Pizza boxes + napkins + takeaway bags." },
+];
 
 /** Variable-vs-fixed labor split — share of total labor that flexes
  *  with seasonal volume (the rest stays at full headcount). 0.4 means
@@ -147,8 +201,11 @@ interface Computed {
   breakEvenRevenue: number;
   laborByRole: { role: BusinessCostPayrollRole; grosze: number }[];
   laborHoursPerMonth: number;
+  foodCostPct: number;
   laborPct: number;
   primeCostPct: number;
+  contributionMarginPct: number;
+  marginOfSafetyPct: number;
   revenuePerLaborHour: number;
   profitPerOrder: number;
   paybackMonths: number | null;
@@ -183,9 +240,13 @@ function computeScenario(s: SimulationScenario): Computed {
   const breakEvenOrdersPerDay =
     s.daysOpenPerMonth > 0 ? breakEvenOrdersPerMonth / s.daysOpenPerMonth : 0;
   const breakEvenRevenue = breakEvenOrdersPerMonth * s.avgTicketGrosze;
+  const foodCostPct = monthlyRevenue > 0 ? monthlyCogs / monthlyRevenue : 0;
   const laborPct = monthlyRevenue > 0 ? laborMonthly / monthlyRevenue : 0;
   const primeCostPct =
     monthlyRevenue > 0 ? (monthlyCogs + laborMonthly) / monthlyRevenue : 0;
+  const contributionMarginPct = Math.max(0, contributionRatio);
+  const marginOfSafetyPct =
+    monthlyRevenue > 0 ? (monthlyRevenue - breakEvenRevenue) / monthlyRevenue : 0;
   const revenuePerLaborHour =
     laborHoursPerMonth > 0 ? monthlyRevenue / laborHoursPerMonth : 0;
   const monthlyOrders = s.ordersPerDay * s.daysOpenPerMonth;
@@ -206,8 +267,11 @@ function computeScenario(s: SimulationScenario): Computed {
     breakEvenOrdersPerMonth,
     breakEvenRevenue,
     laborHoursPerMonth,
+    foodCostPct,
     laborPct,
     primeCostPct,
+    contributionMarginPct,
+    marginOfSafetyPct,
     revenuePerLaborHour,
     profitPerOrder,
     paybackMonths,
@@ -530,8 +594,17 @@ function applyAssumptions(s: SimulationScenario): SimulationScenario {
     extraProcessorPct += dShare.pct * dShare.extraProcessorPct;
   }
 
+  let ingredientMultiplier = 1;
+  if (a.ingredients) {
+    for (const lever of Object.values(a.ingredients)) {
+      if (!lever || lever.enabled === false) continue;
+      ingredientMultiplier += lever.cogsShare * lever.costDeltaPct;
+    }
+  }
+  ingredientMultiplier = Math.max(0, ingredientMultiplier);
+
   const newTicket = Math.max(0, s.avgTicketGrosze + extraTicket);
-  const baselineCogsValue = s.avgTicketGrosze * s.cogsPct;
+  const baselineCogsValue = s.avgTicketGrosze * s.cogsPct * ingredientMultiplier;
   const totalCogsValue = Math.max(0, baselineCogsValue + extraCogs);
   const newCogsPct = newTicket > 0 ? Math.min(1, totalCogsValue / newTicket) : s.cogsPct;
 
@@ -924,6 +997,38 @@ const HELP = {
   },
 
   // Weather + calendar
+  ingredientLevers: {
+    title: "Ingredient cost stress tests",
+    body: (
+      <>
+        <p>
+          Ten recipe + supplier &quot;what ifs&quot; that flex the base-pizza
+          COGS. Each lever has two numbers:
+        </p>
+        <ul style={{ margin: "8px 0", paddingLeft: 20, listStyle: "disc" }}>
+          <li>
+            <strong>Share of COGS</strong> — what fraction of base-pizza
+            food cost this ingredient represents. Calibrate to your actual
+            recipe (mozz is ~28%, tomato ~10%, flour ~6%, etc).
+          </li>
+          <li>
+            <strong>Cost change</strong> — the &quot;what if&quot; itself.
+            +20% = supplier raised price 20% or recipe uses 20% more. −10% =
+            cheaper supplier or trimmed portion.
+          </li>
+        </ul>
+        <p>
+          Impact = share × delta, applied to base-pizza COGS only. So a 25%
+          cheese line getting 10% more expensive lifts total COGS by 2.5 pp.
+          Attach items (coffee, dessert, etc) keep their own COGS.
+        </p>
+        <p className="v2-muted text-sm">
+          Toggle a single lever off to compare with vs without, or use the
+          {" "}<em>All off</em> button up top to clear every stress test.
+        </p>
+      </>
+    ),
+  },
   weatherOverview: {
     title: "Weather & calendar",
     body: (
@@ -1102,8 +1207,13 @@ const HELP = {
     title: "Operations KPIs",
     body: (
       <>
-        <p>The five numbers professional restaurateurs watch every week:</p>
+        <p>The eight numbers professional restaurateurs watch every week:</p>
         <ul style={{ margin: "8px 0", paddingLeft: 20, listStyle: "disc" }}>
+          <li>
+            <strong>Food cost % of revenue</strong> — ingredient discipline.
+            Target ≤ 30%. Over 32% means recipes are leaking margin or prices
+            are too soft.
+          </li>
           <li>
             <strong>Labor % of revenue</strong> — target ≤ 30%. Over 35%? You&apos;re
             overstaffed or under-pricing.
@@ -1111,6 +1221,16 @@ const HELP = {
           <li>
             <strong>Prime cost %</strong> — COGS + labor as % of revenue. The
             single most-watched number in the industry; ≤ 60–65% is healthy.
+          </li>
+          <li>
+            <strong>Contribution margin</strong> — share of each PLN of revenue
+            left after variable costs (COGS + payment fees) to cover fixed
+            costs and profit. Below 55% and there&apos;s no room for rent shocks.
+          </li>
+          <li>
+            <strong>Margin of safety</strong> — how far revenue can fall before
+            you hit break-even. Below 10% and one bad week wipes you out;
+            above 25% is comfortable.
           </li>
           <li>
             <strong>Revenue per labor hour</strong> — how productive each
@@ -1301,7 +1421,7 @@ export function AdminSimulation() {
       const res = await fetch("/api/admin/simulation");
       if (res.ok) {
         const data = (await res.json()) as SimulationScenario;
-        setScenario(data);
+        setScenario(normalizeScenario(data));
         dirtyRef.current = false;
       }
     } finally {
@@ -1361,6 +1481,29 @@ export function AdminSimulation() {
     return () => clearTimeout(handle);
   }, [scenario, persist]);
 
+  // Detect when the headline KPI row has actually pinned under the
+  // topbar, so we can swap to a compact card layout while stuck.
+  const kpiSectionRef = useRef<HTMLElement>(null);
+  const [kpiStuck, setKpiStuck] = useState(false);
+  useEffect(() => {
+    if (loading) return;
+    const onScroll = () => {
+      const el = kpiSectionRef.current;
+      if (!el) return;
+      const topbar = document.querySelector(".v2-topbar, .v2-m-topbar") as HTMLElement | null;
+      const offset = (topbar?.offsetHeight ?? 55) + 1;
+      const next = el.getBoundingClientRect().top <= offset;
+      setKpiStuck((prev) => (prev === next ? prev : next));
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, [loading]);
+
   // Two derived scenarios:
   //   leverScenario     = assumptions applied, weather NOT applied. Fed
   //                       to the projection so per-month weather lands
@@ -1392,7 +1535,7 @@ export function AdminSimulation() {
       toast.error("Could not seed from history");
       return;
     }
-    const seeded = (await res.json()) as SimulationScenario;
+    const seeded = normalizeScenario((await res.json()) as SimulationScenario);
     setScenario(seeded);
     await persist(seeded);
     toast.success("Seeded from the last 30 days");
@@ -1615,7 +1758,10 @@ export function AdminSimulation() {
         </div>
       </header>
 
-      <section className="v2-kpi-grid">
+      <section
+        ref={kpiSectionRef}
+        className={`v2-kpi-grid v2-kpi-grid-sticky${kpiStuck ? " is-stuck" : ""}`}
+      >
         <KpiCard
           label="Monthly revenue"
           value={computed.monthlyRevenue / 100}
@@ -1849,6 +1995,7 @@ export function AdminSimulation() {
       <BehaviorAssumptionsCard
         assumptions={scenario.assumptions ?? DEFAULT_ASSUMPTIONS}
         baseTicketGrosze={scenario.avgTicketGrosze}
+        baseCogsPct={scenario.cogsPct}
         onChange={(next) => update((s) => ({ ...s, assumptions: next }))}
       />
 
@@ -1951,6 +2098,14 @@ export function AdminSimulation() {
       </div>
       <section className="v2-kpi-grid">
         <KpiCard
+          label="Food cost % revenue"
+          value={computed.foodCostPct * 100}
+          format={(n) => `${n.toFixed(1)}%`}
+          icon={Utensils}
+          tone={computed.foodCostPct > 0.32 ? "danger" : computed.foodCostPct > 0.28 ? "warning" : "success"}
+          hint="Industry target ≤ 30%"
+        />
+        <KpiCard
           label="Labor cost % revenue"
           value={computed.laborPct * 100}
           format={(n) => `${n.toFixed(1)}%`}
@@ -1965,6 +2120,22 @@ export function AdminSimulation() {
           icon={Scale}
           tone={computed.primeCostPct > 0.65 ? "danger" : computed.primeCostPct > 0.6 ? "warning" : "success"}
           hint="COGS + labor — keep ≤ 60–65%"
+        />
+        <KpiCard
+          label="Contribution margin"
+          value={computed.contributionMarginPct * 100}
+          format={(n) => `${n.toFixed(1)}%`}
+          icon={Percent}
+          tone={computed.contributionMarginPct < 0.55 ? "danger" : computed.contributionMarginPct < 0.65 ? "warning" : "success"}
+          hint="Per PLN after COGS + fees"
+        />
+        <KpiCard
+          label="Margin of safety"
+          value={computed.marginOfSafetyPct * 100}
+          format={(n) => `${n.toFixed(1)}%`}
+          icon={Shield}
+          tone={computed.marginOfSafetyPct < 0.1 ? "danger" : computed.marginOfSafetyPct < 0.25 ? "warning" : "success"}
+          hint="Demand drop you can absorb"
         />
         <KpiCard
           label="Revenue / labor hour"
@@ -2070,6 +2241,7 @@ export function AdminSimulation() {
               xLabels={ordersTicketMatrix.xLabels}
               yLabels={ordersTicketMatrix.yLabels}
               rowHeight={36}
+              diverging
               format={(n) =>
                 `${n < 0 ? "−" : ""}${Math.abs(Math.round(n / 100)).toLocaleString("pl-PL")} zł`
               }
@@ -2094,6 +2266,7 @@ export function AdminSimulation() {
               xLabels={cogsTicketMatrix.xLabels}
               yLabels={cogsTicketMatrix.yLabels}
               rowHeight={36}
+              diverging
               format={(n) =>
                 `${n < 0 ? "−" : ""}${Math.abs(Math.round(n / 100)).toLocaleString("pl-PL")} zł`
               }
@@ -2741,18 +2914,109 @@ function AttachLeverRow({ label, hint, lever, baseTicketGrosze, onChange, help }
   );
 }
 
+interface IngredientRowProps {
+  label: string;
+  hint: string;
+  lever: SimulationIngredientLever;
+  baseCogsValueGrosze: number;
+  onChange: (next: SimulationIngredientLever) => void;
+}
+
+function IngredientLeverRow({ label, hint, lever, baseCogsValueGrosze, onChange }: IngredientRowProps) {
+  const enabled = lever.enabled !== false;
+  const cogsImpactPp = lever.cogsShare * lever.costDeltaPct * 100;
+  const cogsImpactGrosze = Math.round(baseCogsValueGrosze * lever.cogsShare * lever.costDeltaPct);
+  const sign = cogsImpactPp > 0 ? "+" : cogsImpactPp < 0 ? "−" : "±";
+  return (
+    <div className="grid grid-cols-12 gap-2 items-end" style={{ opacity: enabled ? 1 : 0.55 }}>
+      <div className="col-span-12 md:col-span-4">
+        <div className="text-sm font-medium" style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+          <LeverSwitch
+            enabled={enabled}
+            onChange={(next) => onChange({ ...lever, enabled: next })}
+            ariaLabel={`Toggle ${label}`}
+          />
+          <span>{label}</span>
+        </div>
+        <div className="v2-muted text-xs">{hint}</div>
+      </div>
+      <div className="col-span-6 md:col-span-3">
+        <Input
+          label="Share of COGS"
+          type="number"
+          step="0.5"
+          min="0"
+          max="100"
+          value={(lever.cogsShare * 100).toFixed(1)}
+          onChange={(e) =>
+            onChange({
+              ...lever,
+              cogsShare: Math.max(0, Math.min(1, (parseFloat(e.target.value) || 0) / 100)),
+            })
+          }
+          trailingAdornment={<span className="v2-muted">%</span>}
+        />
+      </div>
+      <div className="col-span-6 md:col-span-3">
+        <Input
+          label="Cost change"
+          type="number"
+          step="1"
+          min="-100"
+          max="500"
+          value={(lever.costDeltaPct * 100).toFixed(0)}
+          onChange={(e) =>
+            onChange({
+              ...lever,
+              costDeltaPct: Math.max(-1, Math.min(5, (parseFloat(e.target.value) || 0) / 100)),
+            })
+          }
+          trailingAdornment={<span className="v2-muted">%</span>}
+        />
+      </div>
+      <div className="col-span-12 md:col-span-2 text-xs v2-muted text-right">
+        {enabled ? (
+          <>
+            <span style={{ color: cogsImpactPp > 0 ? "var(--danger)" : cogsImpactPp < 0 ? "var(--success)" : undefined }}>
+              {sign}{Math.abs(cogsImpactPp).toFixed(2)}% COGS
+            </span>
+            <br />
+            <span className="opacity-70">
+              {sign}{formatPrice(Math.abs(cogsImpactGrosze))} / order
+            </span>
+          </>
+        ) : (
+          <span className="opacity-70">Excluded from math</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 interface BehaviorCardProps {
   assumptions: SimulationAssumptions;
   baseTicketGrosze: number;
+  baseCogsPct: number;
   onChange: (next: SimulationAssumptions) => void;
 }
 
-function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, onChange }: BehaviorCardProps) {
+function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, baseCogsPct, onChange }: BehaviorCardProps) {
   const a = assumptions;
+  const baseCogsValueGrosze = baseTicketGrosze * baseCogsPct;
   const set = <K extends keyof SimulationAssumptions>(key: K, value: SimulationAssumptions[K]) =>
     onChange({ ...a, [key]: value });
 
+  const setIngredient = (key: IngredientKey, value: SimulationIngredientLever) => {
+    onChange({ ...a, ingredients: { ...(a.ingredients ?? {}), [key]: value } });
+  };
+
   const setAllEnabled = (enabled: boolean) => {
+    const flippedIngredients: NonNullable<SimulationAssumptions["ingredients"]> = {};
+    if (a.ingredients) {
+      for (const [k, v] of Object.entries(a.ingredients)) {
+        if (v) flippedIngredients[k as IngredientKey] = { ...v, enabled };
+      }
+    }
     onChange({
       ...a,
       coffeeAttach: a.coffeeAttach ? { ...a.coffeeAttach, enabled } : a.coffeeAttach,
@@ -2764,6 +3028,7 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, onChange }: Be
       comboConversion: a.comboConversion ? { ...a.comboConversion, enabled } : a.comboConversion,
       cheapestPizzaShift: a.cheapestPizzaShift ? { ...a.cheapestPizzaShift, enabled } : a.cheapestPizzaShift,
       deliveryShare: a.deliveryShare ? { ...a.deliveryShare, enabled } : a.deliveryShare,
+      ingredients: a.ingredients ? flippedIngredients : a.ingredients,
     });
   };
 
@@ -3093,6 +3358,42 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, onChange }: Be
                 />
               </div>
             </div>
+          )}
+
+          {a.ingredients && (
+            <>
+              <div className="border-t border-[var(--border)] pt-3" />
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <h3 className="v2-section-h" style={{ margin: 0, fontSize: "var(--text-md)" }}>
+                  Ingredient cost stress tests
+                </h3>
+                <InfoButton
+                  title={HELP.ingredientLevers.title}
+                  label="About ingredient cost stress tests"
+                  size="sm"
+                >
+                  {HELP.ingredientLevers.body}
+                </InfoButton>
+              </div>
+              <div className="v2-muted text-xs" style={{ marginTop: -4 }}>
+                Recipe + supplier &quot;what ifs&quot;. Each lever&apos;s impact = share of COGS × cost
+                change, applied to the base-pizza COGS only (attach items unaffected).
+              </div>
+              {INGREDIENT_LEVERS.map(({ key, label, hint }) => {
+                const lever = a.ingredients?.[key];
+                if (!lever) return null;
+                return (
+                  <IngredientLeverRow
+                    key={key}
+                    label={label}
+                    hint={hint}
+                    lever={lever}
+                    baseCogsValueGrosze={baseCogsValueGrosze}
+                    onChange={(v) => setIngredient(key, v)}
+                  />
+                );
+              })}
+            </>
           )}
         </div>
       </CardBody>
