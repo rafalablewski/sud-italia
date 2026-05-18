@@ -421,11 +421,18 @@ const MENU_SCENARIOS: MenuScenarioPreset[] = [
 
 const MENU_SCENARIO_BY_ID = new Map(MENU_SCENARIOS.map((s) => [s.id, s]));
 
-/** Per-order ticket + cost adjustment from a single attach lever. */
+/** True when a lever has the `enabled` flag explicitly off. Unset = on. */
+function leverOff(lever: { enabled?: boolean } | undefined): boolean {
+  return !!lever && lever.enabled === false;
+}
+
+/** Per-order ticket + cost adjustment from a single attach lever. Returns
+ *  zero when the lever is disabled, so the operator can toggle on/off
+ *  without losing the configured values. */
 function attachDelta(
   lever: SimulationAttachLever | undefined,
 ): { ticket: number; cogs: number } {
-  if (!lever) return { ticket: 0, cogs: 0 };
+  if (!lever || lever.enabled === false) return { ticket: 0, cogs: 0 };
   const ticket = lever.attachPct * lever.avgPriceGrosze;
   const cogs = lever.attachPct * lever.avgPriceGrosze * lever.cogsPct;
   return { ticket, cogs };
@@ -455,20 +462,20 @@ function applyAssumptionsAndWeather(s: SimulationScenario): SimulationScenario {
       extraTicket += d.ticket;
       extraCogs += d.cogs;
     }
-    if (a.comboConversion) {
+    if (a.comboConversion && !leverOff(a.comboConversion)) {
       const c = a.comboConversion;
       extraTicket += c.pct * (c.addonGrosze - c.discountGrosze);
       extraCogs += c.pct * c.addonGrosze * c.addonCogsPct;
     }
-    if (a.sizeUpsell) {
+    if (a.sizeUpsell && !leverOff(a.sizeUpsell)) {
       extraTicket += a.sizeUpsell.pct * a.sizeUpsell.priceDeltaGrosze;
       extraCogs += a.sizeUpsell.pct * a.sizeUpsell.costDeltaGrosze;
     }
-    if (a.cheapestPizzaShift) {
+    if (a.cheapestPizzaShift && !leverOff(a.cheapestPizzaShift)) {
       extraTicket -= a.cheapestPizzaShift.pp * a.cheapestPizzaShift.ticketDeltaGrosze;
       extraCogs -= a.cheapestPizzaShift.pp * a.cheapestPizzaShift.cogsDeltaGrosze;
     }
-    if (a.deliveryShare) {
+    if (a.deliveryShare && !leverOff(a.deliveryShare)) {
       const dShare = a.deliveryShare;
       extraTicket += dShare.pct * dShare.avgFeeGrosze;
       const ticketBeforeDelivery = s.avgTicketGrosze + extraTicket - dShare.pct * dShare.avgFeeGrosze;
@@ -691,6 +698,15 @@ const HELP = {
           Every lever folds into the same effective ticket + COGS that the rest
           of the page uses. Drag one slider and the headline KPIs, P&amp;L, pie
           chart, heatmaps, projection and break-even all update live.
+        </p>
+        <p>
+          <strong>Toggle on/off:</strong> each lever has a green &quot;On&quot;
+          pill in the corner. Click it to flip the lever off — its values stay
+          configured but it&apos;s excluded from the math. Use this to isolate
+          the impact of a single hypothesis (&quot;what would my P&amp;L look
+          like without the coffee attach?&quot;) or use the <em>All off</em>
+          {" "}button in the card header to see the raw baseline ticket × volume
+          without any behavioral lifts.
         </p>
         <p className="v2-muted text-sm">
           Defaults are tuned to a Neapolitan truck in Warsaw 2026. Tune them to
@@ -1433,26 +1449,32 @@ export function AdminSimulation() {
         ...(s.assumptions ?? DEFAULT_ASSUMPTIONS),
         coffeeAttach: {
           ...(s.assumptions?.coffeeAttach ?? DEFAULT_ASSUMPTIONS.coffeeAttach!),
+          enabled: true,
           attachPct: preset.attach.coffee,
         },
         dessertAttach: {
           ...(s.assumptions?.dessertAttach ?? DEFAULT_ASSUMPTIONS.dessertAttach!),
+          enabled: true,
           attachPct: preset.attach.dessert,
         },
         antipastiAttach: {
           ...(s.assumptions?.antipastiAttach ?? DEFAULT_ASSUMPTIONS.antipastiAttach!),
+          enabled: true,
           attachPct: preset.attach.antipasti,
         },
         aperitivoAttach: {
           ...(s.assumptions?.aperitivoAttach ?? DEFAULT_ASSUMPTIONS.aperitivoAttach!),
+          enabled: true,
           attachPct: preset.attach.aperitivo,
         },
         premiumToppingsAttach: {
           ...(s.assumptions?.premiumToppingsAttach ?? DEFAULT_ASSUMPTIONS.premiumToppingsAttach!),
+          enabled: true,
           attachPct: preset.attach.premiumToppings,
         },
         pastaPrimoAttach: {
           ...(s.assumptions?.pastaPrimoAttach ?? DEFAULT_ASSUMPTIONS.pastaPrimoAttach!),
+          enabled: true,
           attachPct: preset.attach.pastaPrimo,
         },
       },
@@ -2480,6 +2502,58 @@ function LabelWithInfo({
   );
 }
 
+/** Clickable on/off pill for behavior assumption levers. Toggling off
+ *  preserves the lever's values but excludes it from the math, so the
+ *  operator can compare with vs without instantly. */
+function LeverSwitch({
+  enabled,
+  onChange,
+  ariaLabel,
+}: {
+  enabled: boolean;
+  onChange: (next: boolean) => void;
+  ariaLabel: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={enabled}
+      aria-label={ariaLabel}
+      onClick={() => onChange(!enabled)}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        padding: "4px 10px",
+        borderRadius: 999,
+        border: `1.5px solid ${enabled ? "var(--success, #10b981)" : "var(--border)"}`,
+        background: enabled ? "var(--success-soft, rgba(16, 185, 129, 0.12))" : "var(--surface-2)",
+        color: enabled ? "var(--success, #10b981)" : "var(--fg-muted)",
+        cursor: "pointer",
+        fontSize: 11,
+        fontWeight: 600,
+        letterSpacing: 0.04,
+        textTransform: "uppercase",
+        fontFamily: "inherit",
+        lineHeight: 1,
+        transition: "border-color 0.15s, background 0.15s, color 0.15s",
+      }}
+    >
+      <span
+        aria-hidden
+        style={{
+          width: 7,
+          height: 7,
+          borderRadius: 999,
+          background: enabled ? "var(--success, #10b981)" : "var(--fg-subtle)",
+        }}
+      />
+      {enabled ? "On" : "Off"}
+    </button>
+  );
+}
+
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div>
@@ -2541,15 +2615,21 @@ interface AttachRowProps {
 }
 
 function AttachLeverRow({ label, hint, lever, baseTicketGrosze, onChange, help }: AttachRowProps) {
+  const enabled = lever.enabled !== false;
   // Per-order projected ticket lift = attachPct × price; margin = (1 − cogsPct) × ticket lift.
   const ticketLift = lever.attachPct * lever.avgPriceGrosze;
   const cogsLift = ticketLift * lever.cogsPct;
   const marginLift = ticketLift - cogsLift;
   const pctOfBase = baseTicketGrosze > 0 ? (ticketLift / baseTicketGrosze) * 100 : 0;
   return (
-    <div className="grid grid-cols-12 gap-2 items-end">
+    <div className="grid grid-cols-12 gap-2 items-end" style={{ opacity: enabled ? 1 : 0.55 }}>
       <div className="col-span-12 md:col-span-4">
-        <div className="text-sm font-medium" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <div className="text-sm font-medium" style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+          <LeverSwitch
+            enabled={enabled}
+            onChange={(next) => onChange({ ...lever, enabled: next })}
+            ariaLabel={`Toggle ${label}`}
+          />
           <span>{label}</span>
           {help && (
             <InfoButton title={help.title} label={`About ${help.title.toLowerCase()}`} size="sm">
@@ -2610,11 +2690,17 @@ function AttachLeverRow({ label, hint, lever, baseTicketGrosze, onChange, help }
         />
       </div>
       <div className="col-span-12 md:col-span-2 text-xs v2-muted text-right">
-        +{formatPrice(Math.round(ticketLift))} AOV
-        <br />
-        +{formatPrice(Math.round(marginLift))} margin
-        <br />
-        <span className="opacity-70">{pctOfBase.toFixed(1)}% of ticket</span>
+        {enabled ? (
+          <>
+            +{formatPrice(Math.round(ticketLift))} AOV
+            <br />
+            +{formatPrice(Math.round(marginLift))} margin
+            <br />
+            <span className="opacity-70">{pctOfBase.toFixed(1)}% of ticket</span>
+          </>
+        ) : (
+          <span className="opacity-70">Excluded from math</span>
+        )}
       </div>
     </div>
   );
@@ -2631,13 +2717,35 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, onChange }: Be
   const set = <K extends keyof SimulationAssumptions>(key: K, value: SimulationAssumptions[K]) =>
     onChange({ ...a, [key]: value });
 
+  const setAllEnabled = (enabled: boolean) => {
+    onChange({
+      ...a,
+      coffeeAttach: a.coffeeAttach ? { ...a.coffeeAttach, enabled } : a.coffeeAttach,
+      dessertAttach: a.dessertAttach ? { ...a.dessertAttach, enabled } : a.dessertAttach,
+      antipastiAttach: a.antipastiAttach ? { ...a.antipastiAttach, enabled } : a.antipastiAttach,
+      aperitivoAttach: a.aperitivoAttach ? { ...a.aperitivoAttach, enabled } : a.aperitivoAttach,
+      premiumToppingsAttach: a.premiumToppingsAttach ? { ...a.premiumToppingsAttach, enabled } : a.premiumToppingsAttach,
+      pastaPrimoAttach: a.pastaPrimoAttach ? { ...a.pastaPrimoAttach, enabled } : a.pastaPrimoAttach,
+      comboConversion: a.comboConversion ? { ...a.comboConversion, enabled } : a.comboConversion,
+      sizeUpsell: a.sizeUpsell ? { ...a.sizeUpsell, enabled } : a.sizeUpsell,
+      cheapestPizzaShift: a.cheapestPizzaShift ? { ...a.cheapestPizzaShift, enabled } : a.cheapestPizzaShift,
+      deliveryShare: a.deliveryShare ? { ...a.deliveryShare, enabled } : a.deliveryShare,
+    });
+  };
+
   return (
     <Card>
       <CardHeader
         title="Behavior assumptions"
-        description="Tune attach rates, combos and channel mix — every lever folds into effective ticket + COGS, then flows into every KPI, heatmap and projection below."
+        description="Tune attach rates, combos and channel mix — every lever folds into effective ticket + COGS, then flows into every KPI, heatmap and projection below. Toggle a lever off to see the P&L without it."
         actions={
           <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+            <Button size="sm" variant="ghost" onClick={() => setAllEnabled(true)}>
+              All on
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setAllEnabled(false)}>
+              All off
+            </Button>
             <InfoButton title={HELP.assumptionsOverview.title} label="About behavior assumptions">{HELP.assumptionsOverview.body}</InfoButton>
             <Sparkles className="h-4 w-4 v2-muted" />
           </span>
@@ -2709,9 +2817,14 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, onChange }: Be
           <div className="border-t border-[var(--border)] pt-3" />
 
           {a.comboConversion && (
-            <div className="grid grid-cols-12 gap-2 items-end">
+            <div className="grid grid-cols-12 gap-2 items-end" style={{ opacity: a.comboConversion.enabled === false ? 0.55 : 1 }}>
               <div className="col-span-12 md:col-span-4">
-                <div className="text-sm font-medium" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <div className="text-sm font-medium" style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                  <LeverSwitch
+                    enabled={a.comboConversion.enabled !== false}
+                    onChange={(next) => set("comboConversion", { ...a.comboConversion!, enabled: next })}
+                    ariaLabel="Toggle combo conversion"
+                  />
                   <span>Combo conversion</span>
                   <InfoButton title={HELP.comboConversion.title} label="About combo conversion" size="sm">{HELP.comboConversion.body}</InfoButton>
                 </div>
@@ -2789,9 +2902,14 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, onChange }: Be
           )}
 
           {a.sizeUpsell && (
-            <div className="grid grid-cols-12 gap-2 items-end">
+            <div className="grid grid-cols-12 gap-2 items-end" style={{ opacity: a.sizeUpsell.enabled === false ? 0.55 : 1 }}>
               <div className="col-span-12 md:col-span-4">
-                <div className="text-sm font-medium" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <div className="text-sm font-medium" style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                  <LeverSwitch
+                    enabled={a.sizeUpsell.enabled !== false}
+                    onChange={(next) => set("sizeUpsell", { ...a.sizeUpsell!, enabled: next })}
+                    ariaLabel="Toggle size / crust upsell"
+                  />
                   <span>Size / crust upsell</span>
                   <InfoButton title={HELP.sizeUpsell.title} label="About size upsell" size="sm">{HELP.sizeUpsell.body}</InfoButton>
                 </div>
@@ -2852,9 +2970,14 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, onChange }: Be
           )}
 
           {a.cheapestPizzaShift && (
-            <div className="grid grid-cols-12 gap-2 items-end">
+            <div className="grid grid-cols-12 gap-2 items-end" style={{ opacity: a.cheapestPizzaShift.enabled === false ? 0.55 : 1 }}>
               <div className="col-span-12 md:col-span-4">
-                <div className="text-sm font-medium" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <div className="text-sm font-medium" style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                  <LeverSwitch
+                    enabled={a.cheapestPizzaShift.enabled !== false}
+                    onChange={(next) => set("cheapestPizzaShift", { ...a.cheapestPizzaShift!, enabled: next })}
+                    ariaLabel="Toggle cheapest-pizza shift"
+                  />
                   <span>Cheapest-pizza shift (recession stress)</span>
                   <InfoButton title={HELP.cheapestPizzaShift.title} label="About cheapest-pizza shift" size="sm">{HELP.cheapestPizzaShift.body}</InfoButton>
                 </div>
@@ -2915,9 +3038,14 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, onChange }: Be
           )}
 
           {a.deliveryShare && (
-            <div className="grid grid-cols-12 gap-2 items-end">
+            <div className="grid grid-cols-12 gap-2 items-end" style={{ opacity: a.deliveryShare.enabled === false ? 0.55 : 1 }}>
               <div className="col-span-12 md:col-span-4">
-                <div className="text-sm font-medium" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <div className="text-sm font-medium" style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                  <LeverSwitch
+                    enabled={a.deliveryShare.enabled !== false}
+                    onChange={(next) => set("deliveryShare", { ...a.deliveryShare!, enabled: next })}
+                    ariaLabel="Toggle delivery channel share"
+                  />
                   <span>Delivery channel share</span>
                   <InfoButton title={HELP.deliveryShare.title} label="About delivery share" size="sm">{HELP.deliveryShare.body}</InfoButton>
                 </div>

@@ -8091,6 +8091,7 @@ function hydrateAttach(
   if (!fallback) return saved as SimulationAttachLever | undefined;
   if (!saved) return fallback;
   return {
+    enabled: typeof saved.enabled === "boolean" ? saved.enabled : true,
     attachPct: clamp01(saved.attachPct, fallback.attachPct),
     avgPriceGrosze: Math.round(clampNonNeg(saved.avgPriceGrosze, fallback.avgPriceGrosze)),
     cogsPct: clamp01(saved.cogsPct, fallback.cogsPct),
@@ -8112,6 +8113,7 @@ function hydrateAssumptions(
     pastaPrimoAttach: hydrateAttach(saved.pastaPrimoAttach, fb.pastaPrimoAttach),
     comboConversion: saved.comboConversion
       ? {
+          enabled: typeof saved.comboConversion.enabled === "boolean" ? saved.comboConversion.enabled : true,
           pct: clamp01(saved.comboConversion.pct, fb.comboConversion?.pct ?? 0),
           addonGrosze: Math.round(
             clampNonNeg(saved.comboConversion.addonGrosze, fb.comboConversion?.addonGrosze ?? 0),
@@ -8124,6 +8126,7 @@ function hydrateAssumptions(
       : fb.comboConversion,
     sizeUpsell: saved.sizeUpsell
       ? {
+          enabled: typeof saved.sizeUpsell.enabled === "boolean" ? saved.sizeUpsell.enabled : true,
           pct: clamp01(saved.sizeUpsell.pct, fb.sizeUpsell?.pct ?? 0),
           priceDeltaGrosze: Math.round(
             clampNonNeg(saved.sizeUpsell.priceDeltaGrosze, fb.sizeUpsell?.priceDeltaGrosze ?? 0),
@@ -8135,6 +8138,7 @@ function hydrateAssumptions(
       : fb.sizeUpsell,
     cheapestPizzaShift: saved.cheapestPizzaShift
       ? {
+          enabled: typeof saved.cheapestPizzaShift.enabled === "boolean" ? saved.cheapestPizzaShift.enabled : true,
           pp: clamp01(saved.cheapestPizzaShift.pp, fb.cheapestPizzaShift?.pp ?? 0),
           ticketDeltaGrosze: Math.round(
             clampNonNeg(saved.cheapestPizzaShift.ticketDeltaGrosze, fb.cheapestPizzaShift?.ticketDeltaGrosze ?? 0),
@@ -8146,6 +8150,7 @@ function hydrateAssumptions(
       : fb.cheapestPizzaShift,
     deliveryShare: saved.deliveryShare
       ? {
+          enabled: typeof saved.deliveryShare.enabled === "boolean" ? saved.deliveryShare.enabled : true,
           pct: clamp01(saved.deliveryShare.pct, fb.deliveryShare?.pct ?? 0),
           packagingCostGrosze: Math.round(
             clampNonNeg(saved.deliveryShare.packagingCostGrosze, fb.deliveryShare?.packagingCostGrosze ?? 0),

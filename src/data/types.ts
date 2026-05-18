@@ -812,6 +812,9 @@ export interface SimulationMenuMixLine {
 
 /** A "X% of orders attach an espresso (avg 9 zł, 12% COGS)" lever. */
 export interface SimulationAttachLever {
+  /** When false, the lever's values are preserved but excluded from the math.
+   *  Default: true. Lets operators flip on/off to compare with vs without. */
+  enabled?: boolean;
   /** Share of orders that get this add-on (0–1). */
   attachPct: number;
   /** Average price added per attached order, in grosze. */
@@ -821,7 +824,9 @@ export interface SimulationAttachLever {
 }
 
 /** Behavioral assumption levers. Each lever folds into effective ticket
- *  and COGS — operators tune attach rates instead of plain revenue. */
+ *  and COGS — operators tune attach rates instead of plain revenue. Every
+ *  lever has an `enabled` flag so the operator can isolate the impact of
+ *  a single hypothesis. */
 export interface SimulationAssumptions {
   coffeeAttach?: SimulationAttachLever;
   dessertAttach?: SimulationAttachLever;
@@ -831,6 +836,7 @@ export interface SimulationAssumptions {
   pastaPrimoAttach?: SimulationAttachLever;
   /** Combo: X% of mains convert to a combo (main + drink + dessert) at a discount. */
   comboConversion?: {
+    enabled?: boolean;
     pct: number;
     /** Typical combo addon price (drink + dessert), in grosze. */
     addonGrosze: number;
@@ -841,6 +847,7 @@ export interface SimulationAssumptions {
   };
   /** Size/crust upsell: X% of pizzas pay +N zł for sourdough / 33 cm. */
   sizeUpsell?: {
+    enabled?: boolean;
     pct: number;
     priceDeltaGrosze: number;
     costDeltaGrosze: number;
@@ -848,6 +855,7 @@ export interface SimulationAssumptions {
   /** Cheapest-pizza recession shift, in percentage points. Positive = more
    *  Margherita/Marinara share, lower AOV, lower COGS. */
   cheapestPizzaShift?: {
+    enabled?: boolean;
     pp: number;
     /** Per-pp drop in AOV in grosze. */
     ticketDeltaGrosze: number;
@@ -856,6 +864,7 @@ export interface SimulationAssumptions {
   };
   /** Delivery channel share (0–1) with packaging + processor + fee deltas. */
   deliveryShare?: {
+    enabled?: boolean;
     pct: number;
     /** Per-order extra packaging cost, in grosze. */
     packagingCostGrosze: number;
