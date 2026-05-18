@@ -1294,7 +1294,6 @@ export function AdminSimulation() {
   const [seedConfirmOpen, setSeedConfirmOpen] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const dirtyRef = useRef(false);
-  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchScenario = useCallback(async () => {
     setLoading(true);
@@ -1336,29 +1335,31 @@ export function AdminSimulation() {
     [toast],
   );
 
-  // Debounced auto-save on edits — 1 s after the last keystroke.
+  // Pure state update — never triggers side effects from inside the
+  // setState updater (React forbids it). The autosave effect below
+  // listens for `scenario` changes and debounces a save 1 s after the
+  // last edit.
   const update = useCallback(
     (mut: (prev: SimulationScenario) => SimulationScenario) => {
-      setScenario((prev) => {
-        if (!prev) return prev;
-        const next = mut(prev);
-        dirtyRef.current = true;
-        if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
-        autosaveTimer.current = setTimeout(() => {
-          if (dirtyRef.current) persist(next, { quiet: true });
-        }, 1000);
-        return next;
-      });
-    },
-    [persist],
-  );
-
-  useEffect(
-    () => () => {
-      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+      setScenario((prev) => (prev ? mut(prev) : prev));
+      dirtyRef.current = true;
     },
     [],
   );
+
+  // Debounced auto-save. Fires 1 s after `scenario` settles; the
+  // initial load also marks dirty=false (in fetchScenario) so the
+  // first idle tick doesn't re-save what we just fetched.
+  useEffect(() => {
+    if (!scenario || !dirtyRef.current) return;
+    const handle = setTimeout(() => {
+      if (dirtyRef.current) {
+        dirtyRef.current = false;
+        persist(scenario, { quiet: true });
+      }
+    }, 1000);
+    return () => clearTimeout(handle);
+  }, [scenario, persist]);
 
   // Two derived scenarios:
   //   leverScenario     = assumptions applied, weather NOT applied. Fed
@@ -1448,7 +1449,7 @@ export function AdminSimulation() {
       labor: [
         ...s.labor,
         {
-          id: `line-${Date.now().toString(36)}`,
+          id: `line-${crypto.randomUUID()}`,
           role: "other",
           headcount: 1,
           hoursPerWeek: 40,
@@ -1664,7 +1665,7 @@ export function AdminSimulation() {
                 min="0"
                 value={String(scenario.ordersPerDay)}
                 onChange={(e) =>
-                  update((s) => ({ ...s, ordersPerDay: Math.max(0, parseInt(e.target.value || "0", 10)) }))
+                  update((s) => ({ ...s, ordersPerDay: Math.max(0, (parseInt(e.target.value, 10) || 0)) }))
                 }
               />
               <Input
@@ -1676,7 +1677,7 @@ export function AdminSimulation() {
                 onChange={(e) =>
                   update((s) => ({
                     ...s,
-                    avgTicketGrosze: Math.max(0, Math.round(parseFloat(e.target.value || "0") * 100)),
+                    avgTicketGrosze: Math.max(0, Math.round((parseFloat(e.target.value) || 0) * 100)),
                   }))
                 }
                 trailingAdornment={<span className="v2-muted">zł</span>}
@@ -1690,7 +1691,7 @@ export function AdminSimulation() {
                 onChange={(e) =>
                   update((s) => ({
                     ...s,
-                    daysOpenPerMonth: Math.max(0, Math.min(31, parseInt(e.target.value || "0", 10))),
+                    daysOpenPerMonth: Math.max(0, Math.min(31, (parseInt(e.target.value, 10) || 0))),
                   }))
                 }
               />
@@ -1704,7 +1705,7 @@ export function AdminSimulation() {
                 onChange={(e) =>
                   update((s) => ({
                     ...s,
-                    cogsPct: Math.max(0, Math.min(1, parseFloat(e.target.value || "0") / 100)),
+                    cogsPct: Math.max(0, Math.min(1, (parseFloat(e.target.value) || 0) / 100)),
                   }))
                 }
                 trailingAdornment={<span className="v2-muted">%</span>}
@@ -1755,7 +1756,7 @@ export function AdminSimulation() {
                         value={String(line.headcount)}
                         onChange={(e) =>
                           updateLabor(line.id, {
-                            headcount: Math.max(0, parseInt(e.target.value || "0", 10)),
+                            headcount: Math.max(0, (parseInt(e.target.value, 10) || 0)),
                           })
                         }
                       />
@@ -1768,7 +1769,7 @@ export function AdminSimulation() {
                         value={String(line.hoursPerWeek)}
                         onChange={(e) =>
                           updateLabor(line.id, {
-                            hoursPerWeek: Math.max(0, parseInt(e.target.value || "0", 10)),
+                            hoursPerWeek: Math.max(0, (parseInt(e.target.value, 10) || 0)),
                           })
                         }
                       />
@@ -1784,7 +1785,7 @@ export function AdminSimulation() {
                           updateLabor(line.id, {
                             hourlyRateGrosze: Math.max(
                               0,
-                              Math.round(parseFloat(e.target.value || "0") * 100),
+                              Math.round((parseFloat(e.target.value) || 0) * 100),
                             ),
                           })
                         }
@@ -2124,7 +2125,7 @@ export function AdminSimulation() {
               onChange={(e) =>
                 update((s) => ({
                   ...s,
-                  wageInflationPct: Math.max(0, Math.min(1, parseFloat(e.target.value || "0") / 100)),
+                  wageInflationPct: Math.max(0, Math.min(1, (parseFloat(e.target.value) || 0) / 100)),
                 }))
               }
               trailingAdornment={<span className="v2-muted">%</span>}
@@ -2140,7 +2141,7 @@ export function AdminSimulation() {
               onChange={(e) =>
                 update((s) => ({
                   ...s,
-                  ingredientInflationPct: Math.max(0, Math.min(1, parseFloat(e.target.value || "0") / 100)),
+                  ingredientInflationPct: Math.max(0, Math.min(1, (parseFloat(e.target.value) || 0) / 100)),
                 }))
               }
               trailingAdornment={<span className="v2-muted">%</span>}
@@ -2156,7 +2157,7 @@ export function AdminSimulation() {
               onChange={(e) =>
                 update((s) => ({
                   ...s,
-                  paymentProcessorPct: Math.max(0, Math.min(0.1, parseFloat(e.target.value || "0") / 100)),
+                  paymentProcessorPct: Math.max(0, Math.min(0.1, (parseFloat(e.target.value) || 0) / 100)),
                 }))
               }
               trailingAdornment={<span className="v2-muted">%</span>}
@@ -2171,7 +2172,7 @@ export function AdminSimulation() {
               onChange={(e) =>
                 update((s) => ({
                   ...s,
-                  setupCostGrosze: Math.max(0, Math.round(parseFloat(e.target.value || "0") * 100)),
+                  setupCostGrosze: Math.max(0, Math.round((parseFloat(e.target.value) || 0) * 100)),
                 }))
               }
               trailingAdornment={<span className="v2-muted">zł</span>}
@@ -2189,7 +2190,7 @@ export function AdminSimulation() {
                   ...s,
                   seasonality: {
                     ...(s.seasonality ?? DEFAULT_SEASONALITY),
-                    winter: Math.max(0, Math.min(3, parseFloat(e.target.value || "0"))),
+                    winter: Math.max(0, Math.min(3, (parseFloat(e.target.value) || 0))),
                   },
                 }))
               }
@@ -2207,7 +2208,7 @@ export function AdminSimulation() {
                   ...s,
                   seasonality: {
                     ...(s.seasonality ?? DEFAULT_SEASONALITY),
-                    summer: Math.max(0, Math.min(3, parseFloat(e.target.value || "0"))),
+                    summer: Math.max(0, Math.min(3, (parseFloat(e.target.value) || 0))),
                   },
                 }))
               }
@@ -2225,7 +2226,7 @@ export function AdminSimulation() {
                   ...s,
                   seasonality: {
                     ...(s.seasonality ?? DEFAULT_SEASONALITY),
-                    spring: Math.max(0, Math.min(3, parseFloat(e.target.value || "0"))),
+                    spring: Math.max(0, Math.min(3, (parseFloat(e.target.value) || 0))),
                   },
                 }))
               }
@@ -2243,7 +2244,7 @@ export function AdminSimulation() {
                   ...s,
                   seasonality: {
                     ...(s.seasonality ?? DEFAULT_SEASONALITY),
-                    autumn: Math.max(0, Math.min(3, parseFloat(e.target.value || "0"))),
+                    autumn: Math.max(0, Math.min(3, (parseFloat(e.target.value) || 0))),
                   },
                 }))
               }
@@ -2684,7 +2685,7 @@ function AttachLeverRow({ label, hint, lever, baseTicketGrosze, onChange, help }
           onChange={(e) =>
             onChange({
               ...lever,
-              attachPct: Math.max(0, Math.min(1, parseFloat(e.target.value || "0") / 100)),
+              attachPct: Math.max(0, Math.min(1, (parseFloat(e.target.value) || 0) / 100)),
             })
           }
           trailingAdornment={<span className="v2-muted">%</span>}
@@ -2700,7 +2701,7 @@ function AttachLeverRow({ label, hint, lever, baseTicketGrosze, onChange, help }
           onChange={(e) =>
             onChange({
               ...lever,
-              avgPriceGrosze: Math.max(0, Math.round(parseFloat(e.target.value || "0") * 100)),
+              avgPriceGrosze: Math.max(0, Math.round((parseFloat(e.target.value) || 0) * 100)),
             })
           }
           trailingAdornment={<span className="v2-muted">zł</span>}
@@ -2717,7 +2718,7 @@ function AttachLeverRow({ label, hint, lever, baseTicketGrosze, onChange, help }
           onChange={(e) =>
             onChange({
               ...lever,
-              cogsPct: Math.max(0, Math.min(1, parseFloat(e.target.value || "0") / 100)),
+              cogsPct: Math.max(0, Math.min(1, (parseFloat(e.target.value) || 0) / 100)),
             })
           }
           trailingAdornment={<span className="v2-muted">%</span>}
@@ -2876,7 +2877,7 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, onChange }: Be
                   onChange={(e) =>
                     set("comboConversion", {
                       ...a.comboConversion!,
-                      pct: Math.max(0, Math.min(1, parseFloat(e.target.value || "0") / 100)),
+                      pct: Math.max(0, Math.min(1, (parseFloat(e.target.value) || 0) / 100)),
                     })
                   }
                   trailingAdornment={<span className="v2-muted">%</span>}
@@ -2892,7 +2893,7 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, onChange }: Be
                   onChange={(e) =>
                     set("comboConversion", {
                       ...a.comboConversion!,
-                      addonGrosze: Math.max(0, Math.round(parseFloat(e.target.value || "0") * 100)),
+                      addonGrosze: Math.max(0, Math.round((parseFloat(e.target.value) || 0) * 100)),
                     })
                   }
                   trailingAdornment={<span className="v2-muted">zł</span>}
@@ -2908,7 +2909,7 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, onChange }: Be
                   onChange={(e) =>
                     set("comboConversion", {
                       ...a.comboConversion!,
-                      discountGrosze: Math.max(0, Math.round(parseFloat(e.target.value || "0") * 100)),
+                      discountGrosze: Math.max(0, Math.round((parseFloat(e.target.value) || 0) * 100)),
                     })
                   }
                   trailingAdornment={<span className="v2-muted">zł</span>}
@@ -2925,7 +2926,7 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, onChange }: Be
                   onChange={(e) =>
                     set("comboConversion", {
                       ...a.comboConversion!,
-                      addonCogsPct: Math.max(0, Math.min(1, parseFloat(e.target.value || "0") / 100)),
+                      addonCogsPct: Math.max(0, Math.min(1, (parseFloat(e.target.value) || 0) / 100)),
                     })
                   }
                   trailingAdornment={<span className="v2-muted">%</span>}
@@ -2961,7 +2962,7 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, onChange }: Be
                   onChange={(e) =>
                     set("cheapestPizzaShift", {
                       ...a.cheapestPizzaShift!,
-                      pp: Math.max(0, Math.min(1, parseFloat(e.target.value || "0") / 100)),
+                      pp: Math.max(0, Math.min(1, (parseFloat(e.target.value) || 0) / 100)),
                     })
                   }
                   trailingAdornment={<span className="v2-muted">pp</span>}
@@ -2977,7 +2978,7 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, onChange }: Be
                   onChange={(e) =>
                     set("cheapestPizzaShift", {
                       ...a.cheapestPizzaShift!,
-                      ticketDeltaGrosze: Math.max(0, Math.round(parseFloat(e.target.value || "0") * 100)),
+                      ticketDeltaGrosze: Math.max(0, Math.round((parseFloat(e.target.value) || 0) * 100)),
                     })
                   }
                   trailingAdornment={<span className="v2-muted">zł</span>}
@@ -2993,7 +2994,7 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, onChange }: Be
                   onChange={(e) =>
                     set("cheapestPizzaShift", {
                       ...a.cheapestPizzaShift!,
-                      cogsDeltaGrosze: Math.max(0, Math.round(parseFloat(e.target.value || "0") * 100)),
+                      cogsDeltaGrosze: Math.max(0, Math.round((parseFloat(e.target.value) || 0) * 100)),
                     })
                   }
                   trailingAdornment={<span className="v2-muted">zł</span>}
@@ -3030,7 +3031,7 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, onChange }: Be
                   onChange={(e) =>
                     set("deliveryShare", {
                       ...a.deliveryShare!,
-                      pct: Math.max(0, Math.min(1, parseFloat(e.target.value || "0") / 100)),
+                      pct: Math.max(0, Math.min(1, (parseFloat(e.target.value) || 0) / 100)),
                     })
                   }
                   trailingAdornment={<span className="v2-muted">%</span>}
@@ -3048,7 +3049,7 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, onChange }: Be
                       ...a.deliveryShare!,
                       packagingCostGrosze: Math.max(
                         0,
-                        Math.round(parseFloat(e.target.value || "0") * 100),
+                        Math.round((parseFloat(e.target.value) || 0) * 100),
                       ),
                     })
                   }
@@ -3068,7 +3069,7 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, onChange }: Be
                       ...a.deliveryShare!,
                       extraProcessorPct: Math.max(
                         0,
-                        Math.min(0.1, parseFloat(e.target.value || "0") / 100),
+                        Math.min(0.1, (parseFloat(e.target.value) || 0) / 100),
                       ),
                     })
                   }
@@ -3085,7 +3086,7 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, onChange }: Be
                   onChange={(e) =>
                     set("deliveryShare", {
                       ...a.deliveryShare!,
-                      avgFeeGrosze: Math.max(0, Math.round(parseFloat(e.target.value || "0") * 100)),
+                      avgFeeGrosze: Math.max(0, Math.round((parseFloat(e.target.value) || 0) * 100)),
                     })
                   }
                   trailingAdornment={<span className="v2-muted">zł</span>}
@@ -3147,7 +3148,7 @@ function WeatherCalendarCard({ weather, baseOrdersPerDay, baseDaysOpen, onChange
             max="3"
             value={w.rainyDayMultiplier.toFixed(2)}
             onChange={(e) =>
-              patch({ rainyDayMultiplier: Math.max(0, Math.min(3, parseFloat(e.target.value || "0"))) })
+              patch({ rainyDayMultiplier: Math.max(0, Math.min(3, (parseFloat(e.target.value) || 0))) })
             }
             description="Default 0.75 — 25% volume drop on rainy days."
           />
@@ -3159,7 +3160,7 @@ function WeatherCalendarCard({ weather, baseOrdersPerDay, baseDaysOpen, onChange
             max="100"
             value={String(Math.round(w.rainyShare * 100))}
             onChange={(e) =>
-              patch({ rainyShare: Math.max(0, Math.min(1, parseFloat(e.target.value || "0") / 100)) })
+              patch({ rainyShare: Math.max(0, Math.min(1, (parseFloat(e.target.value) || 0) / 100)) })
             }
             trailingAdornment={<span className="v2-muted">%</span>}
             description="Share of days that are rainy (Warsaw avg ~30%)."
@@ -3172,7 +3173,7 @@ function WeatherCalendarCard({ weather, baseOrdersPerDay, baseDaysOpen, onChange
             max="3"
             value={w.heatwaveMultiplier.toFixed(2)}
             onChange={(e) =>
-              patch({ heatwaveMultiplier: Math.max(0, Math.min(3, parseFloat(e.target.value || "0"))) })
+              patch({ heatwaveMultiplier: Math.max(0, Math.min(3, (parseFloat(e.target.value) || 0))) })
             }
             description="Default 1.40 — patio evenings drive +40%."
           />
@@ -3184,7 +3185,7 @@ function WeatherCalendarCard({ weather, baseOrdersPerDay, baseDaysOpen, onChange
             max="100"
             value={String(Math.round(w.heatwaveShare * 100))}
             onChange={(e) =>
-              patch({ heatwaveShare: Math.max(0, Math.min(1, parseFloat(e.target.value || "0") / 100)) })
+              patch({ heatwaveShare: Math.max(0, Math.min(1, (parseFloat(e.target.value) || 0) / 100)) })
             }
             trailingAdornment={<span className="v2-muted">%</span>}
             description="Share of evenings hot enough to fire the bonus."
@@ -3200,7 +3201,7 @@ function WeatherCalendarCard({ weather, baseOrdersPerDay, baseDaysOpen, onChange
               patch({
                 holidayClosedDaysPerMonth: Math.max(
                   0,
-                  Math.min(31, parseFloat(e.target.value || "0")),
+                  Math.min(31, (parseFloat(e.target.value) || 0)),
                 ),
               })
             }
@@ -3217,7 +3218,7 @@ function WeatherCalendarCard({ weather, baseOrdersPerDay, baseDaysOpen, onChange
               patch({
                 holidayPeakDaysPerMonth: Math.max(
                   0,
-                  Math.min(31, parseFloat(e.target.value || "0")),
+                  Math.min(31, (parseFloat(e.target.value) || 0)),
                 ),
               })
             }
@@ -3231,7 +3232,7 @@ function WeatherCalendarCard({ weather, baseOrdersPerDay, baseDaysOpen, onChange
             max="5"
             value={w.holidayPeakMultiplier.toFixed(2)}
             onChange={(e) =>
-              patch({ holidayPeakMultiplier: Math.max(0, Math.min(5, parseFloat(e.target.value || "0"))) })
+              patch({ holidayPeakMultiplier: Math.max(0, Math.min(5, (parseFloat(e.target.value) || 0))) })
             }
             description="Default 1.60 — peak days run hot."
           />
@@ -3246,7 +3247,7 @@ function WeatherCalendarCard({ weather, baseOrdersPerDay, baseDaysOpen, onChange
               patch({
                 schoolHolidayLunchMultiplier: Math.max(
                   0,
-                  Math.min(2, parseFloat(e.target.value || "0")),
+                  Math.min(2, (parseFloat(e.target.value) || 0)),
                 ),
               })
             }
@@ -3261,7 +3262,7 @@ function WeatherCalendarCard({ weather, baseOrdersPerDay, baseDaysOpen, onChange
             value={w.eventDaysPerMonth.toFixed(1)}
             onChange={(e) =>
               patch({
-                eventDaysPerMonth: Math.max(0, Math.min(31, parseFloat(e.target.value || "0"))),
+                eventDaysPerMonth: Math.max(0, Math.min(31, (parseFloat(e.target.value) || 0))),
               })
             }
             description="Street fairs, food-truck rallies, Nocny Market."
@@ -3274,7 +3275,7 @@ function WeatherCalendarCard({ weather, baseOrdersPerDay, baseDaysOpen, onChange
             max="5"
             value={w.eventDayMultiplier.toFixed(2)}
             onChange={(e) =>
-              patch({ eventDayMultiplier: Math.max(0, Math.min(5, parseFloat(e.target.value || "0"))) })
+              patch({ eventDayMultiplier: Math.max(0, Math.min(5, (parseFloat(e.target.value) || 0))) })
             }
             description="Default 1.50 — busy event evenings."
           />

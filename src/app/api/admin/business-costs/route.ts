@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAdmin } from "@/lib/api-middleware";
-import { hasLocationAccess } from "@/lib/admin-auth";
+import { hasLocationAccess, LOCATION_SCOPE_ALL } from "@/lib/admin-auth";
 import {
   deleteBusinessCost,
   getBusinessCosts,
@@ -62,7 +62,23 @@ export const GET = withAdmin(
     const sp = req.nextUrl.searchParams;
     const filters: BusinessCostFilters = {};
     const loc = sp.get("location");
-    if (loc) filters.locationSlug = loc;
+    if (loc) {
+      if (!(await hasLocationAccess(loc))) {
+        return NextResponse.json(
+          { error: `Session is not authorized for location "${loc}"` },
+          { status: 403 },
+        );
+      }
+      filters.locationSlug = loc;
+    } else if (!(await hasLocationAccess(LOCATION_SCOPE_ALL))) {
+      // No slug = chain-wide query. Must hold unrestricted scope —
+      // otherwise a location-scoped manager could read other locations'
+      // costs simply by omitting ?location=.
+      return NextResponse.json(
+        { error: "Cross-location read requires unrestricted scope" },
+        { status: 403 },
+      );
+    }
     const cat = sp.get("category");
     if (cat && VALID_CATEGORIES.includes(cat as BusinessCostCategory)) {
       filters.category = cat as BusinessCostCategory;

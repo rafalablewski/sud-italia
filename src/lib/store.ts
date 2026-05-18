@@ -2,7 +2,7 @@ import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, BusinessCostPayrollRole, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationWeather } from "@/data/types";
+import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationWeather } from "@/data/types";
 import { getActiveLocations, locations as allLocations } from "@/data/locations";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -8271,27 +8271,37 @@ export async function seedSimulationFromHistory(): Promise<SimulationScenario> {
   const costs = await readJSON<BusinessCost[]>(BUSINESS_COSTS_KEY, []);
   const active = costs.filter((c) => c.status === "active");
 
-  const payrollByRole = new Map<BusinessCostPayrollRole, number>();
+  // Seed one labor line per payroll ledger entry so the operator can
+  // simulate per-person changes (raises, hours cuts, hires) — aggregating
+  // by role would conflate "1 manager at 9 000 zł" with "3 line cooks
+  // at 3 000 zł each" into a single synthetic row.
+  const payrollLines: BusinessCost[] = [];
   const fixed: Partial<Record<BusinessCostCategory, number>> = {};
   for (const c of active) {
     if (c.frequency === "one-off") continue;
-    const monthly = Math.round(c.amountGrosze * FREQUENCY_TO_MONTHS_INTERNAL[c.frequency]);
     if (c.category === "payroll") {
-      const role = c.payrollRole ?? "other";
-      payrollByRole.set(role, (payrollByRole.get(role) ?? 0) + monthly);
+      payrollLines.push(c);
     } else {
+      const monthly = Math.round(c.amountGrosze * FREQUENCY_TO_MONTHS_INTERNAL[c.frequency]);
       fixed[c.category] = (fixed[c.category] ?? 0) + monthly;
     }
   }
 
   const labor: SimulationLaborLine[] =
-    payrollByRole.size > 0
-      ? Array.from(payrollByRole.entries()).map(([role, monthlyGrosze]) => {
+    payrollLines.length > 0
+      ? payrollLines.map((c, i) => {
+          const monthlyGrosze = Math.round(
+            c.amountGrosze * FREQUENCY_TO_MONTHS_INTERNAL[c.frequency],
+          );
+          // 40 h/week × 4.345 weeks/month = 173.8 h/month as the default
+          // shape for a single full-time hire. Operator can refine
+          // headcount/hours/rate per line afterwards.
           const monthlyHours = 40 * 4.345;
-          const hourlyRateGrosze = monthlyHours > 0 ? Math.round(monthlyGrosze / monthlyHours) : 0;
+          const hourlyRateGrosze =
+            monthlyHours > 0 ? Math.round(monthlyGrosze / monthlyHours) : 0;
           return {
-            id: `seed-${role}`,
-            role,
+            id: `seed-${c.id ?? i}`,
+            role: c.payrollRole ?? "other",
             headcount: 1,
             hoursPerWeek: 40,
             hourlyRateGrosze,
