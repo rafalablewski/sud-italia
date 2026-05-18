@@ -1847,6 +1847,23 @@ html { scroll-behavior: smooth; }
   gap: 12px;
 }
 
+/* Sticky variant — pins under the topbar (53px desktop, 48px+safe-top mobile). */
+.v2-kpi-grid-sticky {
+  position: sticky;
+  top: 53px;
+  z-index: 15;
+  margin-left: calc(var(--page-pad) * -1);
+  margin-right: calc(var(--page-pad) * -1);
+  padding: 10px var(--page-pad);
+  background: color-mix(in oklab, var(--bg) 90%, transparent);
+  backdrop-filter: saturate(140%) blur(10px);
+  -webkit-backdrop-filter: saturate(140%) blur(10px);
+  border-bottom: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+}
+.v2-m-shell .v2-kpi-grid-sticky {
+  top: calc(48px + var(--m-safe-top));
+}
+
 /* 2:1 split (chart + sidebar list) */
 .v2-grid-2-1 {
   display: grid;

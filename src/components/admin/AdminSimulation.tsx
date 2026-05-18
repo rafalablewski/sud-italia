@@ -1615,7 +1615,7 @@ export function AdminSimulation() {
         </div>
       </header>
 
-      <section className="v2-kpi-grid">
+      <section className="v2-kpi-grid v2-kpi-grid-sticky">
         <KpiCard
           label="Monthly revenue"
           value={computed.monthlyRevenue / 100}
