@@ -703,6 +703,142 @@ export interface AdminUser {
   createdAt: string;
 }
 
+// --- Business costs (operating expenses ledger) ---
+
+export type BusinessCostCategory =
+  | "payroll"
+  | "rent"
+  | "utilities"
+  | "insurance"
+  | "fuel"
+  | "vehicle"
+  | "maintenance"
+  | "licenses"
+  | "marketing"
+  | "ingredients"
+  | "equipment"
+  | "software"
+  | "professional"
+  | "tax"
+  | "other";
+
+/** Sub-role used when category=payroll so KPIs can split labor by craft. */
+export type BusinessCostPayrollRole =
+  | "pizzaiolo"
+  | "chef"
+  | "sous-chef"
+  | "kitchen-porter"
+  | "waiter"
+  | "barista"
+  | "driver"
+  | "manager"
+  | "cleaner"
+  | "other";
+
+export type BusinessCostFrequency =
+  | "one-off"
+  | "daily"
+  | "weekly"
+  | "monthly"
+  | "quarterly"
+  | "yearly";
+
+export type BusinessCostStatus = "active" | "archived";
+
+export interface BusinessCost {
+  id: string;
+  /** Human label, e.g. "Truck rent Kraków", "Pizzaiolo Marco Rossi". */
+  name: string;
+  category: BusinessCostCategory;
+  /** Free-form when not payroll; constrained payroll role otherwise. */
+  payrollRole?: BusinessCostPayrollRole;
+  vendor?: string;
+  /** Cost per `frequency` period, in grosze (1 PLN = 100 grosze). */
+  amountGrosze: number;
+  frequency: BusinessCostFrequency;
+  /** Location slug, or undefined for chain-wide. */
+  locationSlug?: string;
+  status: BusinessCostStatus;
+  /** ISO date (YYYY-MM-DD) the cost begins (or the date of a one-off). */
+  startDate?: string;
+  /** ISO date the cost ended — set when archiving recurring costs. */
+  endDate?: string;
+  /** ISO date next payment is due — operator reminder for recurring items. */
+  nextDueDate?: string;
+  paymentMethod?: "card" | "bank-transfer" | "cash" | "direct-debit" | "other";
+  taxDeductible?: boolean;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// --- Finance simulation (sandbox monthly P&L) ----------------------------
+//
+// A what-if scenario operators tweak inside /admin/simulation. Pure
+// projection — never feeds the real business-costs ledger. Persists to
+// simulation-scenarios.json so reopening the page picks up where the
+// operator left off.
+
+export interface SimulationLaborLine {
+  id: string;
+  role: BusinessCostPayrollRole;
+  /** Number of people on this role line. */
+  headcount: number;
+  /** Per-person hours per week (service + prep + close-down). */
+  hoursPerWeek: number;
+  /** Per-person gross pay rate in grosze / hour. */
+  hourlyRateGrosze: number;
+}
+
+export interface SimulationSeasonality {
+  /** Multiplier applied to ordersPerDay for Dec/Jan/Feb. */
+  winter: number;
+  /** Multiplier applied to ordersPerDay for Mar/Apr/May. */
+  spring: number;
+  /** Multiplier applied to ordersPerDay for Jun/Jul/Aug. */
+  summer: number;
+  /** Multiplier applied to ordersPerDay for Sep/Oct/Nov. */
+  autumn: number;
+}
+
+export interface SimulationMenuMixLine {
+  menuItemId: string;
+  /** Share of orders this item represents (0–1). The mix sums to ~1. */
+  weight: number;
+}
+
+export interface SimulationScenario {
+  /** Average orders served per operating day. */
+  ordersPerDay: number;
+  /** Average order ticket size in grosze. */
+  avgTicketGrosze: number;
+  /** How many days per month the truck is open. */
+  daysOpenPerMonth: number;
+  /** Food cost ratio (0–1). 0.30 = ingredients eat 30% of revenue. */
+  cogsPct: number;
+  labor: SimulationLaborLine[];
+  /** Fixed monthly costs in grosze, keyed by business-cost category. */
+  fixedCosts: Partial<Record<BusinessCostCategory, number>>;
+  /** Annual wage inflation (0–1). Drives the 12-month projection. */
+  wageInflationPct?: number;
+  /** Annual ingredient + fixed-cost inflation (0–1). */
+  ingredientInflationPct?: number;
+  /** Card processor blended fee as fraction of revenue (e.g. 0.019 Stripe). */
+  paymentProcessorPct?: number;
+  /** Setup cost in grosze (truck buildout, deposits, fit-out) — payback calc. */
+  setupCostGrosze?: number;
+  /** Seasonal multipliers on ordersPerDay across the four quarters. */
+  seasonality?: SimulationSeasonality;
+  /** Optional menu mix. When non-empty, the page derives avgTicketGrosze
+   *  + cogsPct from the items' prices + recipe-derived costs and the
+   *  weights here — the simple inputs become display-only. */
+  menuMix?: SimulationMenuMixLine[];
+  /** Location slug whose menu the mix was built from — pinned so the
+   *  page can reload the same items consistently. */
+  menuMixLocation?: string;
+  updatedAt: string;
+}
+
 // --- Audit log ---
 
 export interface AuditLogEntry {

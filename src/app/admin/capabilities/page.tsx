@@ -749,6 +749,20 @@ export default async function CapabilitiesPage() {
           summary: "Open/close drawer, drops, variance vs orders. History rows can be hidden (soft) or deleted (audit-logged).",
         },
         {
+          name: "Business costs ledger",
+          status: "live",
+          href: "/admin/business-costs",
+          summary:
+            "Operating expense register — payroll (pizzaiolo, chefs, waiting staff), rent, utilities, fuel, insurance, licenses, software, one-off purchases. Recurring amounts auto-normalised to grosze/month for like-for-like totals; KPI cards show monthly recurring, annualised, payroll subtotal, and one-off spend over the last 30 days. Per-location scoping (or chain-wide), category and payroll-role breakdowns, archive vs delete, next-due reminders.",
+        },
+        {
+          name: "Finance simulation (sandbox P&L)",
+          status: "live",
+          href: "/admin/simulation",
+          summary:
+            "Sandbox monthly P&L wired to real menu / recipe / ingredient data. Type orders/day, ticket size (or set a weighted menu mix derived from the current menu + recipe costs), labor mix and fixed costs → revenue, cost-by-category, net profit, margin, break-even (per hour / day / month / revenue), labor % and prime cost % vs benchmarks, payback months for the setup cost, two 2-D heatmaps (orders × ticket, food cost × ticket), Conservative / Realistic / Optimistic comparison, ±20% volume sensitivity, and a 12-month projection that compounds wage + ingredient inflation and applies four seasonal multipliers. Master toggle in Settings → General. Defaults are Warsaw 2026 (gross × 1.22 ZUS narzut, food-truck pitch fees). Zero writes to the business-costs ledger.",
+        },
+        {
           name: "Slots",
           status: "live",
           href: "/admin/slots",

@@ -19,6 +19,7 @@ export function Sidebar({ onCloseMobile, isMobile = false }: Props) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [role, setRole] = useState<AdminRole | null>(null);
+  const [simulationEnabled, setSimulationEnabled] = useState(false);
 
   useEffect(() => {
     try {
@@ -43,15 +44,33 @@ export function Sidebar({ onCloseMobile, isMobile = false }: Props) {
       .catch(() => {
         /* non-fatal */
       });
+    const loadSettings = () => {
+      fetch("/api/admin/settings")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => {
+          if (!cancelled && j) setSimulationEnabled(!!j.simulationEnabled);
+        })
+        .catch(() => {
+          /* non-fatal */
+        });
+    };
+    loadSettings();
+    // AdminSettings dispatches this when a toggle persists so the nav
+    // updates without a full page reload.
+    window.addEventListener("sud-admin-settings-updated", loadSettings);
     return () => {
       cancelled = true;
+      window.removeEventListener("sud-admin-settings-updated", loadSettings);
     };
   }, []);
 
   // If we have a role, filter; otherwise show everything (pre-fetch state).
   const sections = useMemo(
-    () => (role ? filterNavForRole(role) : NAV_SECTIONS),
-    [role],
+    () =>
+      role
+        ? filterNavForRole(role, { simulation: simulationEnabled })
+        : NAV_SECTIONS,
+    [role, simulationEnabled],
   );
 
   const toggleCollapsed = useCallback(() => {

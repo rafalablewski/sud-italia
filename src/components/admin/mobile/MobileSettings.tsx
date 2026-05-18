@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { History, Lock, Settings as SettingsIcon, ShieldAlert } from "lucide-react";
+import { FlaskConical, History, Lock, Settings as SettingsIcon, ShieldAlert } from "lucide-react";
 import { useToast } from "../v2/ui/Toast";
 import {
   MobilePage,
@@ -22,6 +22,7 @@ interface Settings {
     regular?: number;
     vip?: number;
   };
+  simulationEnabled?: boolean;
 }
 
 type Tab = "general" | "security" | "audit";
@@ -45,6 +46,7 @@ export function MobileSettings() {
   const [tab, setTab] = useState<Tab>("general");
   const [settings, setSettings] = useState<Settings | null>(null);
   const [busy, setBusy] = useState(false);
+  const [simBusy, setSimBusy] = useState(false);
   const [audits, setAudits] = useState<AuditEntry[]>([]);
 
   const refresh = async () => {
@@ -61,6 +63,28 @@ export function MobileSettings() {
       .then((r) => (r.ok ? r.json() : []))
       .then((data) => setAudits(Array.isArray(data) ? data : []));
   }, [tab]);
+
+  const toggleSimulation = async (next: boolean) => {
+    if (!settings) return;
+    setSimBusy(true);
+    setSettings({ ...settings, simulationEnabled: next }); // optimistic
+    try {
+      const r = await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ simulationEnabled: next }),
+      });
+      if (!r.ok) {
+        setSettings({ ...settings, simulationEnabled: !next });
+        toast.error("Could not update toggle");
+        return;
+      }
+      toast.success(next ? "Simulation enabled" : "Simulation disabled");
+      window.dispatchEvent(new Event("sud-admin-settings-updated"));
+    } finally {
+      setSimBusy(false);
+    }
+  };
 
   const save = async () => {
     if (!settings) return;
@@ -134,6 +158,17 @@ export function MobileSettings() {
                   onChange={(v) => setSettings({ ...settings, businessEmail: v })}
                 />
               </div>
+            </Section>
+
+            <Section title="Finance simulation (sandbox)">
+              <ToggleField
+                label="Show Simulation in the Finance nav"
+                description="Sandbox monthly P&L modeller. Nothing here writes to your real business-costs ledger."
+                checked={!!settings.simulationEnabled}
+                disabled={simBusy}
+                onChange={toggleSimulation}
+                icon={<FlaskConical className="h-4 w-4" aria-hidden />}
+              />
             </Section>
 
             <button
@@ -300,6 +335,54 @@ function NumField({
         }}
       />
       {suffix && <span style={{ color: "var(--fg-subtle)", fontSize: 12 }}>{suffix}</span>}
+    </label>
+  );
+}
+
+function ToggleField({
+  label,
+  description,
+  checked,
+  disabled,
+  onChange,
+  icon,
+}: {
+  label: string;
+  description?: string;
+  checked: boolean;
+  disabled?: boolean;
+  onChange: (next: boolean) => void;
+  icon?: React.ReactNode;
+}) {
+  return (
+    <label
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        padding: "12px 14px",
+        background: "var(--surface-2)",
+        border: "1px solid var(--border)",
+        borderRadius: 10,
+        opacity: disabled ? 0.6 : 1,
+      }}
+    >
+      {icon && <span style={{ color: "var(--fg-muted)" }}>{icon}</span>}
+      <span style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
+        <span style={{ fontSize: 14, color: "var(--fg)" }}>{label}</span>
+        {description && (
+          <span style={{ fontSize: 12, color: "var(--fg-subtle)", lineHeight: 1.4 }}>
+            {description}
+          </span>
+        )}
+      </span>
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.checked)}
+        style={{ width: 22, height: 22, accentColor: "var(--brand)" }}
+      />
     </label>
   );
 }

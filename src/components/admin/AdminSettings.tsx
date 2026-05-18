@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  FlaskConical,
   History,
   KeyRound,
   Phone,
@@ -42,6 +43,7 @@ interface Settings {
     regular?: number;
     vip?: number;
   };
+  simulationEnabled?: boolean;
 }
 
 interface AuditEntry {
@@ -88,7 +90,9 @@ function AdminSettingsDesktop() {
   const [thGrowing, setThGrowing] = useState("");
   const [thRegular, setThRegular] = useState("");
   const [thVip, setThVip] = useState("");
+  const [simulationEnabled, setSimulationEnabled] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [simBusy, setSimBusy] = useState(false);
 
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [auditLoading, setAuditLoading] = useState(true);
@@ -112,6 +116,7 @@ function AdminSettingsDesktop() {
     setThGrowing(typeof t?.growing === "number" ? (t.growing / 100).toFixed(2) : "");
     setThRegular(typeof t?.regular === "number" ? (t.regular / 100).toFixed(2) : "");
     setThVip(typeof t?.vip === "number" ? (t.vip / 100).toFixed(2) : "");
+    setSimulationEnabled(!!data.simulationEnabled);
   }, []);
 
   const fetchAudit = useCallback(async () => {
@@ -175,6 +180,28 @@ function AdminSettingsDesktop() {
       }
     } finally {
       setSaving(false);
+    }
+  };
+
+  const toggleSimulation = async (next: boolean) => {
+    setSimBusy(true);
+    setSimulationEnabled(next); // optimistic
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ simulationEnabled: next }),
+      });
+      if (res.ok) {
+        toast.success(next ? "Simulation enabled" : "Simulation disabled");
+        window.dispatchEvent(new Event("sud-admin-settings-updated"));
+        await Promise.all([fetchSettings(), fetchAudit()]);
+      } else {
+        setSimulationEnabled(!next); // revert
+        toast.error("Could not update toggle");
+      }
+    } finally {
+      setSimBusy(false);
     }
   };
 
@@ -402,6 +429,32 @@ function AdminSettingsDesktop() {
                   />
                 </div>
               </div>
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardHeader
+              title="Finance simulation (sandbox)"
+              description="Sandbox monthly P&L: type orders/day, ticket size, labor mix and fixed costs to see net profit, margin and break-even. Persists separately from the real business-costs ledger — nothing here writes to your books."
+              actions={<FlaskConical className="h-4 w-4 v2-muted" />}
+            />
+            <CardBody>
+              <label className="v2-field">
+                <span className="v2-field-label">Show Simulation in the Finance nav</span>
+                <span className="inline-flex items-center gap-2 mt-1">
+                  <input
+                    type="checkbox"
+                    checked={simulationEnabled}
+                    onChange={(e) => toggleSimulation(e.target.checked)}
+                    disabled={simBusy}
+                  />
+                  <span className="v2-muted text-sm">
+                    {simulationEnabled
+                      ? "Visible at /admin/simulation."
+                      : "Hidden from the sidebar and command palette. The page redirects here when off."}
+                  </span>
+                </span>
+              </label>
             </CardBody>
           </Card>
 
