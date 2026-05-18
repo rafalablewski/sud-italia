@@ -703,6 +703,228 @@ export interface AdminUser {
   createdAt: string;
 }
 
+// --- Business costs (operating expenses ledger) ---
+
+export type BusinessCostCategory =
+  | "payroll"
+  | "rent"
+  | "utilities"
+  | "insurance"
+  | "fuel"
+  | "vehicle"
+  | "maintenance"
+  | "licenses"
+  | "marketing"
+  | "ingredients"
+  | "equipment"
+  | "software"
+  | "professional"
+  | "tax"
+  | "other";
+
+/** Sub-role used when category=payroll so KPIs can split labor by craft. */
+export type BusinessCostPayrollRole =
+  | "pizzaiolo"
+  | "chef"
+  | "sous-chef"
+  | "kitchen-porter"
+  | "waiter"
+  | "barista"
+  | "driver"
+  | "manager"
+  | "cleaner"
+  | "other";
+
+export type BusinessCostFrequency =
+  | "one-off"
+  | "daily"
+  | "weekly"
+  | "monthly"
+  | "quarterly"
+  | "yearly";
+
+export type BusinessCostStatus = "active" | "archived";
+
+export interface BusinessCost {
+  id: string;
+  /** Human label, e.g. "Truck rent Kraków", "Pizzaiolo Marco Rossi". */
+  name: string;
+  category: BusinessCostCategory;
+  /** Free-form when not payroll; constrained payroll role otherwise. */
+  payrollRole?: BusinessCostPayrollRole;
+  vendor?: string;
+  /** Cost per `frequency` period, in grosze (1 PLN = 100 grosze). */
+  amountGrosze: number;
+  frequency: BusinessCostFrequency;
+  /** Location slug, or undefined for chain-wide. */
+  locationSlug?: string;
+  status: BusinessCostStatus;
+  /** ISO date (YYYY-MM-DD) the cost begins (or the date of a one-off). */
+  startDate?: string;
+  /** ISO date the cost ended — set when archiving recurring costs. */
+  endDate?: string;
+  /** ISO date next payment is due — operator reminder for recurring items. */
+  nextDueDate?: string;
+  paymentMethod?: "card" | "bank-transfer" | "cash" | "direct-debit" | "other";
+  taxDeductible?: boolean;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// --- Finance simulation (sandbox monthly P&L) ----------------------------
+//
+// A what-if scenario operators tweak inside /admin/simulation. Pure
+// projection — never feeds the real business-costs ledger. Persists to
+// simulation-scenarios.json so reopening the page picks up where the
+// operator left off.
+
+export interface SimulationLaborLine {
+  id: string;
+  role: BusinessCostPayrollRole;
+  /** Number of people on this role line. */
+  headcount: number;
+  /** Per-person hours per week (service + prep + close-down). */
+  hoursPerWeek: number;
+  /** Per-person gross pay rate in grosze / hour. */
+  hourlyRateGrosze: number;
+}
+
+export interface SimulationSeasonality {
+  /** Multiplier applied to ordersPerDay for Dec/Jan/Feb. */
+  winter: number;
+  /** Multiplier applied to ordersPerDay for Mar/Apr/May. */
+  spring: number;
+  /** Multiplier applied to ordersPerDay for Jun/Jul/Aug. */
+  summer: number;
+  /** Multiplier applied to ordersPerDay for Sep/Oct/Nov. */
+  autumn: number;
+}
+
+export interface SimulationMenuMixLine {
+  menuItemId: string;
+  /** Share of orders this item represents (0–1). The mix sums to ~1.
+   *  Deprecated: kept for backward compatibility with saved scenarios.
+   *  The simulator no longer reads this — operators pick from a small
+   *  set of preset menu scenarios instead. */
+  weight: number;
+}
+
+/** A "X% of orders attach an espresso (avg 9 zł, 12% COGS)" lever. */
+export interface SimulationAttachLever {
+  /** When false, the lever's values are preserved but excluded from the math.
+   *  Default: true. Lets operators flip on/off to compare with vs without. */
+  enabled?: boolean;
+  /** Share of orders that get this add-on (0–1). */
+  attachPct: number;
+  /** Average price added per attached order, in grosze. */
+  avgPriceGrosze: number;
+  /** COGS ratio for this add-on (0–1). */
+  cogsPct: number;
+}
+
+/** Behavioral assumption levers. Each lever folds into effective ticket
+ *  and COGS — operators tune attach rates instead of plain revenue. Every
+ *  lever has an `enabled` flag so the operator can isolate the impact of
+ *  a single hypothesis. */
+export interface SimulationAssumptions {
+  coffeeAttach?: SimulationAttachLever;
+  dessertAttach?: SimulationAttachLever;
+  antipastiAttach?: SimulationAttachLever;
+  aperitivoAttach?: SimulationAttachLever;
+  premiumToppingsAttach?: SimulationAttachLever;
+  pastaPrimoAttach?: SimulationAttachLever;
+  /** Combo: X% of mains convert to a combo (main + drink + dessert) at a discount. */
+  comboConversion?: {
+    enabled?: boolean;
+    pct: number;
+    /** Typical combo addon price (drink + dessert), in grosze. */
+    addonGrosze: number;
+    /** Bundle discount per combo, in grosze. */
+    discountGrosze: number;
+    /** COGS ratio for the addon portion (0–1). */
+    addonCogsPct: number;
+  };
+  /** Cheapest-pizza recession shift, in percentage points. Positive = more
+   *  Margherita/Marinara share, lower AOV, lower COGS. */
+  cheapestPizzaShift?: {
+    enabled?: boolean;
+    pp: number;
+    /** Per-pp drop in AOV in grosze. */
+    ticketDeltaGrosze: number;
+    /** Per-pp drop in COGS in grosze. */
+    cogsDeltaGrosze: number;
+  };
+  /** Delivery channel share (0–1) with packaging + processor + fee deltas. */
+  deliveryShare?: {
+    enabled?: boolean;
+    pct: number;
+    /** Per-order extra packaging cost, in grosze. */
+    packagingCostGrosze: number;
+    /** Additional processor fee on the delivery share (e.g. 0.005 = +0.5pp). */
+    extraProcessorPct: number;
+    /** Average delivery fee revenue per order, in grosze. */
+    avgFeeGrosze: number;
+  };
+}
+
+/** Weather + calendar levers — modify effective ordersPerDay and daysOpen. */
+export interface SimulationWeather {
+  /** Multiplier on volume for rainy days (e.g. 0.75 = -25%). */
+  rainyDayMultiplier: number;
+  /** Share of days that are rainy in a typical month (0–1). */
+  rainyShare: number;
+  /** Multiplier on volume for hot patio evenings. */
+  heatwaveMultiplier: number;
+  /** Share of evenings hot enough to apply the heatwave bonus (0–1). */
+  heatwaveShare: number;
+  /** Closed days per month due to Polish holidays (Easter / NYE / 25 Dec / etc). */
+  holidayClosedDaysPerMonth: number;
+  /** Peak days per month (NYE, Valentine's, Mother's Day, etc). */
+  holidayPeakDaysPerMonth: number;
+  /** Multiplier on volume for peak days. */
+  holidayPeakMultiplier: number;
+  /** Lunch volume multiplier in July + August (offices empty). */
+  schoolHolidayLunchMultiplier: number;
+  /** Event days per month (street fairs, food-truck rallies). */
+  eventDaysPerMonth: number;
+  /** Volume multiplier on event days. */
+  eventDayMultiplier: number;
+}
+
+export interface SimulationScenario {
+  /** Average orders served per operating day. */
+  ordersPerDay: number;
+  /** Average order ticket size in grosze. */
+  avgTicketGrosze: number;
+  /** How many days per month the truck is open. */
+  daysOpenPerMonth: number;
+  /** Food cost ratio (0–1). 0.30 = ingredients eat 30% of revenue. */
+  cogsPct: number;
+  labor: SimulationLaborLine[];
+  /** Fixed monthly costs in grosze, keyed by business-cost category. */
+  fixedCosts: Partial<Record<BusinessCostCategory, number>>;
+  /** Annual wage inflation (0–1). Drives the 12-month projection. */
+  wageInflationPct?: number;
+  /** Annual ingredient + fixed-cost inflation (0–1). */
+  ingredientInflationPct?: number;
+  /** Card processor blended fee as fraction of revenue (e.g. 0.019 Stripe). */
+  paymentProcessorPct?: number;
+  /** Setup cost in grosze (truck buildout, deposits, fit-out) — payback calc. */
+  setupCostGrosze?: number;
+  /** Seasonal multipliers on ordersPerDay across the four quarters. */
+  seasonality?: SimulationSeasonality;
+  /** Id of the active menu scenario preset (e.g. "balanced", "premium").
+   *  Picking a preset loads avgTicketGrosze + cogsPct + assumption levers
+   *  in one click. Operators can still tweak any value afterwards. */
+  menuScenario?: string;
+  /** Behavioral attach / upsell levers — fold into effective ticket + COGS. */
+  assumptions?: SimulationAssumptions;
+  /** Weather + Polish-holiday calendar levers — modify effective volume. */
+  weather?: SimulationWeather;
+  updatedAt: string;
+}
+
 // --- Audit log ---
 
 export interface AuditLogEntry {

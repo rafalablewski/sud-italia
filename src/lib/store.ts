@@ -2,7 +2,7 @@ import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem } from "@/data/types";
+import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationWeather } from "@/data/types";
 import { getActiveLocations, locations as allLocations } from "@/data/locations";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -2418,6 +2418,9 @@ export interface AppSettings {
     regular?: number;
     vip?: number;
   };
+  /** Master toggle for /admin/simulation. When false the nav link is
+   *  hidden and the page redirects to /admin. */
+  simulationEnabled?: boolean;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -7846,6 +7849,482 @@ export async function deleteWaTranscript(rawPhone: string): Promise<boolean> {
     return true;
   });
 }
+
+// --- Business costs (operating expense ledger) ---------------------------
+
+const BUSINESS_COSTS_KEY = "business-costs.json";
+
+export interface BusinessCostFilters {
+  locationSlug?: string;
+  category?: BusinessCost["category"];
+  status?: BusinessCost["status"];
+}
+
+export async function getBusinessCosts(filters?: BusinessCostFilters): Promise<BusinessCost[]> {
+  const all = await readJSON<BusinessCost[]>(BUSINESS_COSTS_KEY, []);
+  let list = all;
+  if (filters?.locationSlug) {
+    list = list.filter((c) => !c.locationSlug || c.locationSlug === filters.locationSlug);
+  }
+  if (filters?.category) list = list.filter((c) => c.category === filters.category);
+  if (filters?.status) list = list.filter((c) => c.status === filters.status);
+  return list.slice().sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
+
+export async function getBusinessCost(id: string): Promise<BusinessCost | null> {
+  const list = await readJSON<BusinessCost[]>(BUSINESS_COSTS_KEY, []);
+  return list.find((c) => c.id === id) ?? null;
+}
+
+export async function saveBusinessCost(
+  input: Omit<BusinessCost, "id" | "createdAt" | "updatedAt"> & {
+    id?: string;
+    createdAt?: string;
+  },
+): Promise<BusinessCost> {
+  return withLock(BUSINESS_COSTS_KEY, async () => {
+    const list = await readJSON<BusinessCost[]>(BUSINESS_COSTS_KEY, []);
+    const now = new Date().toISOString();
+    const cost: BusinessCost = {
+      id: input.id || `cost-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      name: input.name,
+      category: input.category,
+      payrollRole: input.payrollRole,
+      vendor: input.vendor,
+      amountGrosze: Math.max(0, Math.round(input.amountGrosze)),
+      frequency: input.frequency,
+      locationSlug: input.locationSlug,
+      status: input.status,
+      startDate: input.startDate,
+      endDate: input.endDate,
+      nextDueDate: input.nextDueDate,
+      paymentMethod: input.paymentMethod,
+      taxDeductible: input.taxDeductible,
+      notes: input.notes,
+      createdAt: input.createdAt ?? now,
+      updatedAt: now,
+    };
+    const i = list.findIndex((c) => c.id === cost.id);
+    if (i >= 0) list[i] = cost;
+    else list.push(cost);
+    await writeJSON(BUSINESS_COSTS_KEY, list);
+    return cost;
+  });
+}
+
+export async function deleteBusinessCost(id: string): Promise<boolean> {
+  return withLock(BUSINESS_COSTS_KEY, async () => {
+    const list = await readJSON<BusinessCost[]>(BUSINESS_COSTS_KEY, []);
+    const filtered = list.filter((c) => c.id !== id);
+    if (filtered.length === list.length) return false;
+    await writeJSON(BUSINESS_COSTS_KEY, filtered);
+    return true;
+  });
+}
+
+// --- Finance simulation (sandbox monthly P&L) ----------------------------
+//
+// Pure projection sandbox — never touches business-costs.json. Defaults
+// are tuned to a Neapolitan pizza truck operating in Warsaw 2026, with
+// labor schedules anchored to a 12:00–22:00 service window plus ~1 h
+// prep and ~1 h close-down (≈ 11 h staff day, 6 days/week). Hourly
+// rates bake in the ~22% Polish employer narzut (ZUS social + Labour
+// Fund) so a "rate × hours" multiplication lands at FULL employer
+// cost — same convention the business-costs ledger uses.
+
+const SIMULATION_KEY = "simulation-scenarios.json";
+
+export function defaultSimulationScenario(): SimulationScenario {
+  // Hourly rates: brutto Warsaw 2026 × 1.22 employer narzut, rounded
+  // to the nearest 50 grosze. Operators who'd rather think in pure
+  // brutto can divide by 1.22.
+  const labor: SimulationLaborLine[] = [
+    // Right-sized for a food-truck doing ~70 orders/day: one
+    // pizzaiolo + one chef on the line, one waiter, one cashier, and
+    // the owner-manager part-time. No sous-chef or kitchen porter —
+    // trucks don't have either; line cooks handle prep + cleanup.
+    { id: "pizzaiolo", role: "pizzaiolo", headcount: 1, hoursPerWeek: 60, hourlyRateGrosze: 4300 },
+    { id: "chef",      role: "chef",      headcount: 1, hoursPerWeek: 60, hourlyRateGrosze: 3700 },
+    { id: "waiter",    role: "waiter",    headcount: 1, hoursPerWeek: 60, hourlyRateGrosze: 4000 },
+    { id: "barista",   role: "barista",   headcount: 1, hoursPerWeek: 48, hourlyRateGrosze: 3900 },
+    { id: "manager",   role: "manager",   headcount: 1, hoursPerWeek: 40, hourlyRateGrosze: 5500 },
+  ];
+  const fixedCosts: SimulationScenario["fixedCosts"] = {
+    rent: 250_000,         // 2 500 zł — Warsaw food-truck pitch (1 200–3 000 zł range)
+    utilities: 120_000,    // 1 200 zł — electric + water + gas (lower than full restaurant)
+    fuel: 80_000,          //   800 zł — vehicle + generator
+    vehicle: 70_000,       //   700 zł — maintenance + amortyzacja
+    insurance: 60_000,     //   600 zł — OC działalności + truck OC/AC blended (400–1 000)
+    licenses: 25_000,      //   250 zł — SANEPID + permits, annual fees / 12
+    marketing: 150_000,    // 1 500 zł — moderate organic + paid social
+    software: 25_000,      //   250 zł — GoPOS Pro (~100) + KDS + analytics
+    professional: 40_000,  //   400 zł — biuro rachunkowe ryczałt
+    tax: 180_000,          // 1 800 zł — ZUS właściciel + lokalne opłaty (excl. CIT)
+    maintenance: 40_000,   //   400 zł — equipment service
+    other: 30_000,         //   300 zł — buffer
+  };
+  return {
+    ordersPerDay: 70,
+    avgTicketGrosze: 6500,
+    daysOpenPerMonth: 28,
+    cogsPct: 0.30,
+    labor,
+    fixedCosts,
+    wageInflationPct: 0.07,
+    ingredientInflationPct: 0.04,
+    paymentProcessorPct: 0.019,
+    setupCostGrosze: 25_000_000,
+    seasonality: {
+      winter: 0.70,
+      spring: 1.00,
+      summer: 1.30,
+      autumn: 1.00,
+    },
+    menuScenario: "balanced",
+    assumptions: defaultSimulationAssumptions(),
+    weather: defaultSimulationWeather(),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+/** Behavioral levers tuned to a Neapolitan pizza truck in Warsaw 2026. */
+export function defaultSimulationAssumptions(): SimulationAssumptions {
+  return {
+    coffeeAttach:           { attachPct: 0.25, avgPriceGrosze: 900,  cogsPct: 0.12 },
+    dessertAttach:          { attachPct: 0.12, avgPriceGrosze: 1600, cogsPct: 0.28 },
+    antipastiAttach:        { attachPct: 0.08, avgPriceGrosze: 2400, cogsPct: 0.32 },
+    aperitivoAttach:        { attachPct: 0.10, avgPriceGrosze: 2200, cogsPct: 0.22 },
+    premiumToppingsAttach:  { attachPct: 0.15, avgPriceGrosze: 700,  cogsPct: 0.30 },
+    pastaPrimoAttach:       { attachPct: 0.18, avgPriceGrosze: 3200, cogsPct: 0.26 },
+    comboConversion: {
+      pct: 0.20,
+      addonGrosze: 2500,
+      discountGrosze: 600,
+      addonCogsPct: 0.25,
+    },
+    // Cheapest-pizza shift is a stress lever — default off (0 pp).
+    // Per-1pp deltas calibrated so a 20pp shift toward Margherita drops
+    // AOV by ~2 zł and COGS by ~0.80 zł (Margherita is ~10 zł cheaper
+    // than the avg premium pie and ~4 zł cheaper to make).
+    cheapestPizzaShift: {
+      pp: 0,
+      ticketDeltaGrosze: 1000,
+      cogsDeltaGrosze: 400,
+    },
+    deliveryShare: {
+      pct: 0.25,
+      packagingCostGrosze: 250,
+      extraProcessorPct: 0,
+      avgFeeGrosze: 800,
+    },
+  };
+}
+
+/** Weather + Polish calendar baseline for Warsaw 2026. */
+export function defaultSimulationWeather(): SimulationWeather {
+  return {
+    rainyDayMultiplier: 0.75,
+    rainyShare: 0.30,
+    heatwaveMultiplier: 1.40,
+    heatwaveShare: 0.10,
+    holidayClosedDaysPerMonth: 1.0,
+    holidayPeakDaysPerMonth: 1.0,
+    holidayPeakMultiplier: 1.60,
+    schoolHolidayLunchMultiplier: 0.85,
+    eventDaysPerMonth: 1,
+    eventDayMultiplier: 1.50,
+  };
+}
+
+export async function getSimulationScenario(): Promise<SimulationScenario> {
+  const saved = await readJSON<Partial<SimulationScenario> | null>(SIMULATION_KEY, null);
+  if (!saved || !Array.isArray(saved.labor) || typeof saved.ordersPerDay !== "number") {
+    return defaultSimulationScenario();
+  }
+  const defaults = defaultSimulationScenario();
+  return {
+    ordersPerDay: saved.ordersPerDay ?? defaults.ordersPerDay,
+    avgTicketGrosze: saved.avgTicketGrosze ?? defaults.avgTicketGrosze,
+    daysOpenPerMonth: saved.daysOpenPerMonth ?? defaults.daysOpenPerMonth,
+    cogsPct: typeof saved.cogsPct === "number" ? saved.cogsPct : defaults.cogsPct,
+    labor: saved.labor.length > 0 ? saved.labor : defaults.labor,
+    fixedCosts: saved.fixedCosts ?? defaults.fixedCosts,
+    wageInflationPct:
+      typeof saved.wageInflationPct === "number"
+        ? saved.wageInflationPct
+        : defaults.wageInflationPct,
+    ingredientInflationPct:
+      typeof saved.ingredientInflationPct === "number"
+        ? saved.ingredientInflationPct
+        : defaults.ingredientInflationPct,
+    paymentProcessorPct:
+      typeof saved.paymentProcessorPct === "number"
+        ? saved.paymentProcessorPct
+        : defaults.paymentProcessorPct,
+    setupCostGrosze:
+      typeof saved.setupCostGrosze === "number"
+        ? saved.setupCostGrosze
+        : defaults.setupCostGrosze,
+    seasonality: saved.seasonality ?? defaults.seasonality,
+    menuScenario:
+      typeof saved.menuScenario === "string" ? saved.menuScenario : defaults.menuScenario,
+    assumptions: hydrateAssumptions(saved.assumptions, defaults.assumptions),
+    weather: hydrateWeather(saved.weather, defaults.weather),
+    updatedAt: saved.updatedAt ?? defaults.updatedAt,
+  };
+}
+
+function clamp01(n: unknown, fallback: number): number {
+  if (typeof n !== "number" || !Number.isFinite(n)) return fallback;
+  return Math.max(0, Math.min(1, n));
+}
+
+function clampNonNeg(n: unknown, fallback: number): number {
+  if (typeof n !== "number" || !Number.isFinite(n)) return fallback;
+  return Math.max(0, n);
+}
+
+function hydrateAttach(
+  saved: Partial<SimulationAttachLever> | undefined,
+  fallback: SimulationAttachLever | undefined,
+): SimulationAttachLever | undefined {
+  if (!fallback) return saved as SimulationAttachLever | undefined;
+  if (!saved) return fallback;
+  return {
+    enabled: typeof saved.enabled === "boolean" ? saved.enabled : true,
+    attachPct: clamp01(saved.attachPct, fallback.attachPct),
+    avgPriceGrosze: Math.round(clampNonNeg(saved.avgPriceGrosze, fallback.avgPriceGrosze)),
+    cogsPct: clamp01(saved.cogsPct, fallback.cogsPct),
+  };
+}
+
+function hydrateAssumptions(
+  saved: SimulationAssumptions | undefined,
+  fallback: SimulationAssumptions | undefined,
+): SimulationAssumptions | undefined {
+  const fb = fallback ?? defaultSimulationAssumptions();
+  if (!saved) return fb;
+  return {
+    coffeeAttach: hydrateAttach(saved.coffeeAttach, fb.coffeeAttach),
+    dessertAttach: hydrateAttach(saved.dessertAttach, fb.dessertAttach),
+    antipastiAttach: hydrateAttach(saved.antipastiAttach, fb.antipastiAttach),
+    aperitivoAttach: hydrateAttach(saved.aperitivoAttach, fb.aperitivoAttach),
+    premiumToppingsAttach: hydrateAttach(saved.premiumToppingsAttach, fb.premiumToppingsAttach),
+    pastaPrimoAttach: hydrateAttach(saved.pastaPrimoAttach, fb.pastaPrimoAttach),
+    comboConversion: saved.comboConversion
+      ? {
+          enabled: typeof saved.comboConversion.enabled === "boolean" ? saved.comboConversion.enabled : true,
+          pct: clamp01(saved.comboConversion.pct, fb.comboConversion?.pct ?? 0),
+          addonGrosze: Math.round(
+            clampNonNeg(saved.comboConversion.addonGrosze, fb.comboConversion?.addonGrosze ?? 0),
+          ),
+          discountGrosze: Math.round(
+            clampNonNeg(saved.comboConversion.discountGrosze, fb.comboConversion?.discountGrosze ?? 0),
+          ),
+          addonCogsPct: clamp01(saved.comboConversion.addonCogsPct, fb.comboConversion?.addonCogsPct ?? 0),
+        }
+      : fb.comboConversion,
+    cheapestPizzaShift: saved.cheapestPizzaShift
+      ? {
+          enabled: typeof saved.cheapestPizzaShift.enabled === "boolean" ? saved.cheapestPizzaShift.enabled : true,
+          pp: clamp01(saved.cheapestPizzaShift.pp, fb.cheapestPizzaShift?.pp ?? 0),
+          ticketDeltaGrosze: Math.round(
+            clampNonNeg(saved.cheapestPizzaShift.ticketDeltaGrosze, fb.cheapestPizzaShift?.ticketDeltaGrosze ?? 0),
+          ),
+          cogsDeltaGrosze: Math.round(
+            clampNonNeg(saved.cheapestPizzaShift.cogsDeltaGrosze, fb.cheapestPizzaShift?.cogsDeltaGrosze ?? 0),
+          ),
+        }
+      : fb.cheapestPizzaShift,
+    deliveryShare: saved.deliveryShare
+      ? {
+          enabled: typeof saved.deliveryShare.enabled === "boolean" ? saved.deliveryShare.enabled : true,
+          pct: clamp01(saved.deliveryShare.pct, fb.deliveryShare?.pct ?? 0),
+          packagingCostGrosze: Math.round(
+            clampNonNeg(saved.deliveryShare.packagingCostGrosze, fb.deliveryShare?.packagingCostGrosze ?? 0),
+          ),
+          extraProcessorPct: clamp01(
+            saved.deliveryShare.extraProcessorPct,
+            fb.deliveryShare?.extraProcessorPct ?? 0,
+          ),
+          avgFeeGrosze: Math.round(
+            clampNonNeg(saved.deliveryShare.avgFeeGrosze, fb.deliveryShare?.avgFeeGrosze ?? 0),
+          ),
+        }
+      : fb.deliveryShare,
+  };
+}
+
+function hydrateWeather(
+  saved: SimulationWeather | undefined,
+  fallback: SimulationWeather | undefined,
+): SimulationWeather | undefined {
+  const fb = fallback ?? defaultSimulationWeather();
+  if (!saved) return fb;
+  const clampMult = (n: unknown, f: number): number => {
+    if (typeof n !== "number" || !Number.isFinite(n)) return f;
+    return Math.max(0, Math.min(5, n));
+  };
+  const clampDays = (n: unknown, f: number): number => {
+    if (typeof n !== "number" || !Number.isFinite(n)) return f;
+    return Math.max(0, Math.min(31, n));
+  };
+  return {
+    rainyDayMultiplier: clampMult(saved.rainyDayMultiplier, fb.rainyDayMultiplier),
+    rainyShare: clamp01(saved.rainyShare, fb.rainyShare),
+    heatwaveMultiplier: clampMult(saved.heatwaveMultiplier, fb.heatwaveMultiplier),
+    heatwaveShare: clamp01(saved.heatwaveShare, fb.heatwaveShare),
+    holidayClosedDaysPerMonth: clampDays(
+      saved.holidayClosedDaysPerMonth,
+      fb.holidayClosedDaysPerMonth,
+    ),
+    holidayPeakDaysPerMonth: clampDays(saved.holidayPeakDaysPerMonth, fb.holidayPeakDaysPerMonth),
+    holidayPeakMultiplier: clampMult(saved.holidayPeakMultiplier, fb.holidayPeakMultiplier),
+    schoolHolidayLunchMultiplier: clampMult(
+      saved.schoolHolidayLunchMultiplier,
+      fb.schoolHolidayLunchMultiplier,
+    ),
+    eventDaysPerMonth: clampDays(saved.eventDaysPerMonth, fb.eventDaysPerMonth),
+    eventDayMultiplier: clampMult(saved.eventDayMultiplier, fb.eventDayMultiplier),
+  };
+}
+
+function clampSimPct(n: unknown, fallback: number): number {
+  if (typeof n !== "number" || !Number.isFinite(n)) return fallback;
+  return Math.max(0, Math.min(1, n));
+}
+
+function cleanSimSeasonality(
+  s: SimulationSeasonality | undefined,
+  fallback: SimulationSeasonality,
+): SimulationSeasonality {
+  if (!s) return fallback;
+  const clamp = (n: unknown, f: number): number => {
+    if (typeof n !== "number" || !Number.isFinite(n)) return f;
+    return Math.max(0, Math.min(3, n));
+  };
+  return {
+    winter: clamp(s.winter, fallback.winter),
+    spring: clamp(s.spring, fallback.spring),
+    summer: clamp(s.summer, fallback.summer),
+    autumn: clamp(s.autumn, fallback.autumn),
+  };
+}
+
+export async function saveSimulationScenario(
+  scenario: SimulationScenario,
+): Promise<SimulationScenario> {
+  return withLock(SIMULATION_KEY, async () => {
+    const defaults = defaultSimulationScenario();
+    const clean: SimulationScenario = {
+      ordersPerDay: Math.max(0, Math.round(scenario.ordersPerDay)),
+      avgTicketGrosze: Math.max(0, Math.round(scenario.avgTicketGrosze)),
+      daysOpenPerMonth: Math.max(0, Math.min(31, Math.round(scenario.daysOpenPerMonth))),
+      cogsPct: Math.max(0, Math.min(1, scenario.cogsPct)),
+      labor: scenario.labor.map((l) => ({
+        id: l.id,
+        role: l.role,
+        headcount: Math.max(0, Math.round(l.headcount)),
+        hoursPerWeek: Math.max(0, Math.round(l.hoursPerWeek)),
+        hourlyRateGrosze: Math.max(0, Math.round(l.hourlyRateGrosze)),
+      })),
+      fixedCosts: Object.fromEntries(
+        Object.entries(scenario.fixedCosts ?? {}).map(([k, v]) => [
+          k,
+          Math.max(0, Math.round(v ?? 0)),
+        ]),
+      ) as SimulationScenario["fixedCosts"],
+      wageInflationPct: clampSimPct(scenario.wageInflationPct, defaults.wageInflationPct ?? 0),
+      ingredientInflationPct: clampSimPct(
+        scenario.ingredientInflationPct,
+        defaults.ingredientInflationPct ?? 0,
+      ),
+      paymentProcessorPct: clampSimPct(
+        scenario.paymentProcessorPct,
+        defaults.paymentProcessorPct ?? 0,
+      ),
+      setupCostGrosze:
+        typeof scenario.setupCostGrosze === "number" && Number.isFinite(scenario.setupCostGrosze)
+          ? Math.max(0, Math.round(scenario.setupCostGrosze))
+          : (defaults.setupCostGrosze ?? 0),
+      seasonality: cleanSimSeasonality(
+        scenario.seasonality,
+        defaults.seasonality ?? { winter: 1, spring: 1, summer: 1, autumn: 1 },
+      ),
+      menuScenario:
+        typeof scenario.menuScenario === "string" && scenario.menuScenario.length > 0
+          ? scenario.menuScenario
+          : undefined,
+      assumptions: hydrateAssumptions(scenario.assumptions, defaults.assumptions),
+      weather: hydrateWeather(scenario.weather, defaults.weather),
+      updatedAt: new Date().toISOString(),
+    };
+    await writeJSON(SIMULATION_KEY, clean);
+    return clean;
+  });
+}
+
+/** Derive a simulation scenario from the last 30 days of the real
+ *  business-costs ledger. One-way only (ledger → simulator). */
+export async function seedSimulationFromHistory(): Promise<SimulationScenario> {
+  const base = defaultSimulationScenario();
+  const costs = await readJSON<BusinessCost[]>(BUSINESS_COSTS_KEY, []);
+  const active = costs.filter((c) => c.status === "active");
+
+  // Seed one labor line per payroll ledger entry so the operator can
+  // simulate per-person changes (raises, hours cuts, hires) — aggregating
+  // by role would conflate "1 manager at 9 000 zł" with "3 line cooks
+  // at 3 000 zł each" into a single synthetic row.
+  const payrollLines: BusinessCost[] = [];
+  const fixed: Partial<Record<BusinessCostCategory, number>> = {};
+  for (const c of active) {
+    if (c.frequency === "one-off") continue;
+    if (c.category === "payroll") {
+      payrollLines.push(c);
+    } else {
+      const monthly = Math.round(c.amountGrosze * FREQUENCY_TO_MONTHS_INTERNAL[c.frequency]);
+      fixed[c.category] = (fixed[c.category] ?? 0) + monthly;
+    }
+  }
+
+  const labor: SimulationLaborLine[] =
+    payrollLines.length > 0
+      ? payrollLines.map((c, i) => {
+          const monthlyGrosze = Math.round(
+            c.amountGrosze * FREQUENCY_TO_MONTHS_INTERNAL[c.frequency],
+          );
+          // 40 h/week × 4.345 weeks/month = 173.8 h/month as the default
+          // shape for a single full-time hire. Operator can refine
+          // headcount/hours/rate per line afterwards.
+          const monthlyHours = 40 * 4.345;
+          const hourlyRateGrosze =
+            monthlyHours > 0 ? Math.round(monthlyGrosze / monthlyHours) : 0;
+          return {
+            id: `seed-${c.id ?? i}`,
+            role: c.payrollRole ?? "other",
+            headcount: 1,
+            hoursPerWeek: 40,
+            hourlyRateGrosze,
+          };
+        })
+      : base.labor;
+
+  return {
+    ...base,
+    labor,
+    fixedCosts: Object.keys(fixed).length > 0 ? fixed : base.fixedCosts,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+const FREQUENCY_TO_MONTHS_INTERNAL: Record<BusinessCost["frequency"], number> = {
+  "one-off": 0,
+  daily: 30.4375,
+  weekly: 4.345,
+  monthly: 1,
+  quarterly: 1 / 3,
+  yearly: 1 / 12,
+};
 
 // --- Generic kv cache helpers (audit §3 AI forecast cache) ----------------
 //

@@ -7,6 +7,7 @@ export { EmptyState } from "./EmptyState";
 export { Dialog, ConfirmDialog } from "./Dialog";
 export { Popover } from "./Popover";
 export { Tooltip } from "./Tooltip";
+export { InfoButton } from "./InfoButton";
 export { Tabs } from "./Tabs";
 export { DatePager, type DatePagerUnit } from "./DatePager";
 export { Table, type Column } from "./Table";
