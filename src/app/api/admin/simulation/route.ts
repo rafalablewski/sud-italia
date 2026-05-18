@@ -97,6 +97,13 @@ export const PUT = withAdmin(
       cogsPct: b.cogsPct,
       labor: b.labor as SimulationLaborLine[],
       fixedCosts: b.fixedCosts as SimulationScenario["fixedCosts"],
+      wageInflationPct: typeof b.wageInflationPct === "number" ? b.wageInflationPct : undefined,
+      ingredientInflationPct:
+        typeof b.ingredientInflationPct === "number" ? b.ingredientInflationPct : undefined,
+      paymentProcessorPct:
+        typeof b.paymentProcessorPct === "number" ? b.paymentProcessorPct : undefined,
+      setupCostGrosze: typeof b.setupCostGrosze === "number" ? b.setupCostGrosze : undefined,
+      seasonality: b.seasonality,
       updatedAt: new Date().toISOString(),
     };
     const saved = await saveSimulationScenario(scenario);

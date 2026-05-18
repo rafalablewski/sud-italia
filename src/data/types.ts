@@ -790,6 +790,17 @@ export interface SimulationLaborLine {
   hourlyRateGrosze: number;
 }
 
+export interface SimulationSeasonality {
+  /** Multiplier applied to ordersPerDay for Dec/Jan/Feb. */
+  winter: number;
+  /** Multiplier applied to ordersPerDay for Mar/Apr/May. */
+  spring: number;
+  /** Multiplier applied to ordersPerDay for Jun/Jul/Aug. */
+  summer: number;
+  /** Multiplier applied to ordersPerDay for Sep/Oct/Nov. */
+  autumn: number;
+}
+
 export interface SimulationScenario {
   /** Average orders served per operating day. */
   ordersPerDay: number;
@@ -802,6 +813,16 @@ export interface SimulationScenario {
   labor: SimulationLaborLine[];
   /** Fixed monthly costs in grosze, keyed by business-cost category. */
   fixedCosts: Partial<Record<BusinessCostCategory, number>>;
+  /** Annual wage inflation (0–1). Drives the 12-month projection. */
+  wageInflationPct?: number;
+  /** Annual ingredient + fixed-cost inflation (0–1). */
+  ingredientInflationPct?: number;
+  /** Card processor blended fee as fraction of revenue (e.g. 0.019 Stripe). */
+  paymentProcessorPct?: number;
+  /** Setup cost in grosze (truck buildout, deposits, fit-out) — payback calc. */
+  setupCostGrosze?: number;
+  /** Seasonal multipliers on ordersPerDay across the four quarters. */
+  seasonality?: SimulationSeasonality;
   updatedAt: string;
 }
 

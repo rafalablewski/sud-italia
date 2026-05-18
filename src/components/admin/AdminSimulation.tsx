@@ -4,12 +4,22 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Banknote,
   Calculator,
+  CalendarRange,
   ChefHat,
+  Clock,
   Database,
   FlaskConical,
+  Gauge,
+  Grid3X3,
+  HandCoins,
+  LineChart as LineChartIcon,
+  PiggyBank,
   Plus,
   RefreshCw,
   Save,
+  Scale,
+  Sliders,
+  Sparkles,
   Trash2,
   TrendingDown,
   TrendingUp,
@@ -21,6 +31,7 @@ import type {
   BusinessCostPayrollRole,
   SimulationLaborLine,
   SimulationScenario,
+  SimulationSeasonality,
 } from "@/data/types";
 import { useToast } from "./v2/ui/Toast";
 import {
@@ -33,7 +44,7 @@ import {
   Input,
   Select,
 } from "./v2/ui";
-import { KpiCard, PieChart } from "./v2/charts";
+import { Heatmap, KpiCard, LineChart, PieChart } from "./v2/charts";
 
 const PAYROLL_ROLE_LABEL: Record<BusinessCostPayrollRole, string> = {
   pizzaiolo: "Pizzaiolo",
@@ -66,16 +77,42 @@ const FIXED_COST_FIELDS: { key: BusinessCostCategory; label: string }[] = [
 
 const WEEKS_PER_MONTH = 4.345;
 
+const DEFAULT_SEASONALITY: SimulationSeasonality = {
+  winter: 0.7,
+  spring: 1.0,
+  summer: 1.3,
+  autumn: 1.0,
+};
+
+const MONTH_TO_SEASON: ("winter" | "spring" | "summer" | "autumn")[] = [
+  "winter", "winter", "spring", "spring", "spring", "summer",
+  "summer", "summer", "autumn", "autumn", "autumn", "winter",
+];
+
+const MONTH_LABELS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
 interface Computed {
   monthlyRevenue: number;
   monthlyCogs: number;
   laborMonthly: number;
   fixedTotal: number;
+  paymentFees: number;
   totalCost: number;
   netProfit: number;
   margin: number;
   breakEvenOrdersPerDay: number;
+  breakEvenOrdersPerMonth: number;
+  breakEvenRevenue: number;
   laborByRole: { role: BusinessCostPayrollRole; grosze: number }[];
+  laborHoursPerMonth: number;
+  laborPct: number;
+  primeCostPct: number;
+  revenuePerLaborHour: number;
+  profitPerOrder: number;
+  paybackMonths: number | null;
 }
 
 function computeScenario(s: SimulationScenario): Computed {
@@ -86,31 +123,200 @@ function computeScenario(s: SimulationScenario): Computed {
     grosze: Math.round(l.headcount * l.hoursPerWeek * WEEKS_PER_MONTH * l.hourlyRateGrosze),
   }));
   const laborMonthly = laborByRole.reduce((sum, r) => sum + r.grosze, 0);
+  const laborHoursPerMonth = s.labor.reduce(
+    (sum, l) => sum + l.headcount * l.hoursPerWeek * WEEKS_PER_MONTH,
+    0,
+  );
   const fixedTotal = Object.values(s.fixedCosts).reduce(
     (sum: number, v) => sum + (v ?? 0),
     0,
   );
-  const totalCost = monthlyCogs + laborMonthly + fixedTotal;
+  const paymentFees = Math.round(monthlyRevenue * (s.paymentProcessorPct ?? 0));
+  const totalCost = monthlyCogs + laborMonthly + fixedTotal + paymentFees;
   const netProfit = monthlyRevenue - totalCost;
   const margin = monthlyRevenue > 0 ? netProfit / monthlyRevenue : 0;
-  // Break-even: contribution per order = avgTicket × (1 − cogsPct). Need to
-  // cover (labor + fixed) each month. Divide by daysOpen for daily rate.
-  const contributionPerOrder = s.avgTicketGrosze * (1 - s.cogsPct);
+  // Break-even: contribution per order = avgTicket × (1 − cogsPct − paymentFee%).
+  const contributionRatio = 1 - s.cogsPct - (s.paymentProcessorPct ?? 0);
+  const contributionPerOrder = s.avgTicketGrosze * Math.max(0, contributionRatio);
+  const fixedAndLabor = laborMonthly + fixedTotal;
   const breakEvenOrdersPerMonth =
-    contributionPerOrder > 0 ? (laborMonthly + fixedTotal) / contributionPerOrder : 0;
+    contributionPerOrder > 0 ? fixedAndLabor / contributionPerOrder : 0;
   const breakEvenOrdersPerDay =
     s.daysOpenPerMonth > 0 ? breakEvenOrdersPerMonth / s.daysOpenPerMonth : 0;
+  const breakEvenRevenue = breakEvenOrdersPerMonth * s.avgTicketGrosze;
+  const laborPct = monthlyRevenue > 0 ? laborMonthly / monthlyRevenue : 0;
+  const primeCostPct =
+    monthlyRevenue > 0 ? (monthlyCogs + laborMonthly) / monthlyRevenue : 0;
+  const revenuePerLaborHour =
+    laborHoursPerMonth > 0 ? monthlyRevenue / laborHoursPerMonth : 0;
+  const monthlyOrders = s.ordersPerDay * s.daysOpenPerMonth;
+  const profitPerOrder = monthlyOrders > 0 ? netProfit / monthlyOrders : 0;
+  const paybackMonths =
+    s.setupCostGrosze && s.setupCostGrosze > 0 && netProfit > 0
+      ? s.setupCostGrosze / netProfit
+      : null;
   return {
     monthlyRevenue,
     monthlyCogs,
     laborMonthly,
     fixedTotal,
+    paymentFees,
     totalCost,
     netProfit,
     margin,
+    breakEvenOrdersPerMonth,
+    breakEvenRevenue,
+    laborHoursPerMonth,
+    laborPct,
+    primeCostPct,
+    revenuePerLaborHour,
+    profitPerOrder,
+    paybackMonths,
     breakEvenOrdersPerDay,
     laborByRole,
   };
+}
+
+/** Project the scenario across 12 months, applying seasonal volume
+ *  multipliers and monthly inflation drift on labor + COGS + fixed
+ *  costs. Returns one row per month. */
+function projectTwelveMonths(s: SimulationScenario, startMonth = 0) {
+  const seasonality = s.seasonality ?? DEFAULT_SEASONALITY;
+  const wageMonthly = (1 + (s.wageInflationPct ?? 0)) ** (1 / 12) - 1;
+  const cogsMonthly = (1 + (s.ingredientInflationPct ?? 0)) ** (1 / 12) - 1;
+  const baseLaborHours = s.labor.reduce(
+    (sum, l) => sum + l.headcount * l.hoursPerWeek * WEEKS_PER_MONTH,
+    0,
+  );
+  const baseLaborMonthly = s.labor.reduce(
+    (sum, l) =>
+      sum + l.headcount * l.hoursPerWeek * WEEKS_PER_MONTH * l.hourlyRateGrosze,
+    0,
+  );
+  const baseFixed = Object.values(s.fixedCosts).reduce(
+    (sum: number, v) => sum + (v ?? 0),
+    0,
+  );
+  const rows: {
+    month: string;
+    monthIndex: number;
+    revenue: number;
+    cogs: number;
+    labor: number;
+    fixed: number;
+    payment: number;
+    netProfit: number;
+  }[] = [];
+  for (let i = 0; i < 12; i++) {
+    const monthIndex = (startMonth + i) % 12;
+    const season = MONTH_TO_SEASON[monthIndex];
+    const seasonMult = seasonality[season];
+    const orders = s.ordersPerDay * seasonMult * s.daysOpenPerMonth;
+    const wageMult = (1 + wageMonthly) ** i;
+    const cogsMult = (1 + cogsMonthly) ** i;
+    const revenue = Math.round(orders * s.avgTicketGrosze);
+    const cogs = Math.round(revenue * s.cogsPct * cogsMult);
+    const labor = Math.round(baseLaborMonthly * wageMult);
+    const fixed = Math.round(baseFixed * cogsMult);
+    const payment = Math.round(revenue * (s.paymentProcessorPct ?? 0));
+    const netProfit = revenue - cogs - labor - fixed - payment;
+    rows.push({
+      month: MONTH_LABELS[monthIndex],
+      monthIndex,
+      revenue: Math.round(revenue / 100),
+      cogs: Math.round(cogs / 100),
+      labor: Math.round(labor / 100),
+      fixed: Math.round(fixed / 100),
+      payment: Math.round(payment / 100),
+      netProfit: Math.round(netProfit / 100),
+    });
+  }
+  // suppress unused-var lint — baseLaborHours kept for downstream tweaks
+  void baseLaborHours;
+  return rows;
+}
+
+/** Sample the net-profit surface for a 2D heatmap. Each axis spans
+ *  ±range × steps points around the current value, the centre row/col
+ *  IS the current scenario. */
+function buildMatrix(
+  s: SimulationScenario,
+  xKind: "orders" | "cogs",
+  yKind: "ticket",
+  steps = 5,
+  range = 0.3,
+): {
+  xLabels: string[];
+  yLabels: string[];
+  cells: { x: string; y: string; value: number }[];
+  centerX: string;
+  centerY: string;
+} {
+  const xValues: number[] = [];
+  const yValues: number[] = [];
+  for (let i = 0; i < steps; i++) {
+    const t = -range + (i * 2 * range) / (steps - 1);
+    xValues.push(t);
+    yValues.push(t);
+  }
+  const xLabels: string[] = [];
+  const yLabels: string[] = [];
+  const cells: { x: string; y: string; value: number }[] = [];
+  for (const xt of xValues) {
+    if (xKind === "orders") {
+      xLabels.push(`${Math.round(s.ordersPerDay * (1 + xt))} /d`);
+    } else {
+      // cogs axis — show absolute %
+      xLabels.push(`${Math.round((s.cogsPct + xt) * 100)}%`);
+    }
+  }
+  for (const yt of yValues) {
+    yLabels.push(`${Math.round((s.avgTicketGrosze * (1 + yt)) / 100)} zł`);
+  }
+  for (let yi = 0; yi < yValues.length; yi++) {
+    for (let xi = 0; xi < xValues.length; xi++) {
+      const flex: SimulationScenario = {
+        ...s,
+        ordersPerDay:
+          xKind === "orders"
+            ? Math.max(0, Math.round(s.ordersPerDay * (1 + xValues[xi])))
+            : s.ordersPerDay,
+        cogsPct:
+          xKind === "cogs"
+            ? Math.max(0, Math.min(1, s.cogsPct + xValues[xi]))
+            : s.cogsPct,
+        avgTicketGrosze: Math.max(
+          0,
+          Math.round(s.avgTicketGrosze * (1 + yValues[yi])),
+        ),
+      };
+      const c = computeScenario(flex);
+      cells.push({ x: xLabels[xi], y: yLabels[yi], value: c.netProfit });
+    }
+  }
+  const centerIdx = Math.floor(steps / 2);
+  return {
+    xLabels,
+    yLabels,
+    cells,
+    centerX: xLabels[centerIdx],
+    centerY: yLabels[centerIdx],
+  };
+}
+
+/** Three saved-scenario archetypes derived from the active one. */
+function deriveArchetypes(s: SimulationScenario) {
+  const conservative: SimulationScenario = {
+    ...s,
+    ordersPerDay: Math.max(0, Math.round(s.ordersPerDay * 0.85)),
+    cogsPct: Math.min(1, s.cogsPct + 0.02),
+  };
+  const optimistic: SimulationScenario = {
+    ...s,
+    ordersPerDay: Math.round(s.ordersPerDay * 1.15),
+    cogsPct: Math.max(0, s.cogsPct - 0.02),
+  };
+  return { conservative, realistic: s, optimistic };
 }
 
 export function AdminSimulation() {
@@ -241,6 +447,11 @@ export function AdminSimulation() {
         maintenance: 40_000,
         other: 30_000,
       },
+      wageInflationPct: 0.07,
+      ingredientInflationPct: 0.04,
+      paymentProcessorPct: 0.019,
+      setupCostGrosze: 25_000_000,
+      seasonality: { winter: 0.7, spring: 1.0, summer: 1.3, autumn: 1.0 },
       updatedAt: new Date().toISOString(),
     };
     setScenario(defaults);
@@ -293,12 +504,39 @@ export function AdminSimulation() {
     { name: "Ingredients (COGS)", value: computed.monthlyCogs / 100 },
     { name: "Labor", value: computed.laborMonthly / 100 },
     { name: "Fixed costs", value: computed.fixedTotal / 100 },
+    ...(computed.paymentFees > 0
+      ? [{ name: "Payment fees", value: computed.paymentFees / 100 }]
+      : []),
     ...(computed.netProfit > 0
       ? [{ name: "Net profit", value: computed.netProfit / 100 }]
       : []),
   ];
 
   const profitTone = computed.netProfit >= 0 ? "success" : "danger";
+
+  // Matrices, archetypes and 12-month projection — all recompute every
+  // render because the underlying math is cheap (≤ 100 cells × ~15 ns).
+  const ordersTicketMatrix = buildMatrix(scenario, "orders", "ticket", 5, 0.3);
+  const cogsTicketMatrix = buildMatrix(scenario, "cogs", "ticket", 5, 0.08);
+  const archetypes = deriveArchetypes(scenario);
+  const archetypeRows = [
+    { key: "conservative", label: "Conservative", scenario: archetypes.conservative, hint: "−15% orders · +2pp COGS" },
+    { key: "realistic", label: "Realistic (current)", scenario: archetypes.realistic, hint: "as entered" },
+    { key: "optimistic", label: "Optimistic", scenario: archetypes.optimistic, hint: "+15% orders · −2pp COGS" },
+  ];
+  const projection = projectTwelveMonths(scenario);
+  const projectionTotals = projection.reduce(
+    (acc, r) => ({
+      revenue: acc.revenue + r.revenue,
+      cogs: acc.cogs + r.cogs,
+      labor: acc.labor + r.labor,
+      fixed: acc.fixed + r.fixed,
+      payment: acc.payment + r.payment,
+      netProfit: acc.netProfit + r.netProfit,
+    }),
+    { revenue: 0, cogs: 0, labor: 0, fixed: 0, payment: 0, netProfit: 0 },
+  );
+  const seasonality = scenario.seasonality ?? DEFAULT_SEASONALITY;
 
   return (
     <div className="v2-page">
@@ -639,6 +877,404 @@ export function AdminSimulation() {
         </Card>
       </div>
 
+      <section className="v2-kpi-grid">
+        <KpiCard
+          label="Labor cost % revenue"
+          value={computed.laborPct * 100}
+          format={(n) => `${n.toFixed(1)}%`}
+          icon={ChefHat}
+          tone={computed.laborPct > 0.32 ? "danger" : computed.laborPct > 0.28 ? "warning" : "success"}
+          hint="Restaurant target ≤ 30%"
+        />
+        <KpiCard
+          label="Prime cost % revenue"
+          value={computed.primeCostPct * 100}
+          format={(n) => `${n.toFixed(1)}%`}
+          icon={Scale}
+          tone={computed.primeCostPct > 0.65 ? "danger" : computed.primeCostPct > 0.6 ? "warning" : "success"}
+          hint="COGS + labor — keep ≤ 60–65%"
+        />
+        <KpiCard
+          label="Revenue / labor hour"
+          value={computed.revenuePerLaborHour / 100}
+          format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
+          icon={Gauge}
+          tone="info"
+          hint={`${Math.round(computed.laborHoursPerMonth).toLocaleString("pl-PL")} labor h/mo`}
+        />
+        <KpiCard
+          label="Net profit / order"
+          value={computed.profitPerOrder / 100}
+          format={(n) => `${n.toFixed(2)} zł`}
+          icon={HandCoins}
+          tone={computed.profitPerOrder >= 0 ? "success" : "danger"}
+          hint={`${(scenario.ordersPerDay * scenario.daysOpenPerMonth).toLocaleString("pl-PL")} orders/mo`}
+        />
+        <KpiCard
+          label="Setup payback"
+          value={computed.paybackMonths ?? 0}
+          display={
+            computed.paybackMonths === null
+              ? "—"
+              : computed.paybackMonths > 120
+                ? "10y+"
+                : `${computed.paybackMonths.toFixed(1)} mo`
+          }
+          icon={PiggyBank}
+          tone={
+            computed.paybackMonths === null
+              ? "neutral"
+              : computed.paybackMonths > 36
+                ? "danger"
+                : computed.paybackMonths > 18
+                  ? "warning"
+                  : "success"
+          }
+          hint={`Setup ${formatPrice(scenario.setupCostGrosze ?? 0)}`}
+        />
+      </section>
+
+      <Card>
+        <CardHeader
+          title="Scenario comparison"
+          description="Conservative / Realistic / Optimistic — built from the current inputs by flexing volume ±15% and food cost ±2 pp."
+          actions={<Sparkles className="h-4 w-4 v2-muted" />}
+        />
+        <CardBody>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {archetypeRows.map(({ key, label, scenario: arch, hint }) => {
+              const c = computeScenario(arch);
+              const tone = c.netProfit >= 0 ? "success" : "danger";
+              return (
+                <Card key={key} bare>
+                  <CardHeader title={label} description={hint} />
+                  <CardBody>
+                    <div className="v2-stack-12">
+                      <div>
+                        <div className="v2-muted text-xs">Net profit</div>
+                        <div className={`v2-kpi-value tabular v2-kpi-tone-${tone}`}>
+                          {c.netProfit < 0 ? "−" : ""}
+                          {Math.abs(Math.round(c.netProfit / 100)).toLocaleString("pl-PL")} zł
+                        </div>
+                        <div className="v2-muted text-xs">{(c.margin * 100).toFixed(1)}% margin</div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <Stat label="Revenue" value={`${Math.round(c.monthlyRevenue / 100).toLocaleString("pl-PL")} zł`} />
+                        <Stat label="Total cost" value={`${Math.round(c.totalCost / 100).toLocaleString("pl-PL")} zł`} />
+                        <Stat label="Orders/mo" value={`${Math.round(arch.ordersPerDay * arch.daysOpenPerMonth).toLocaleString("pl-PL")}`} />
+                        <Stat label="Break-even" value={`${c.breakEvenOrdersPerDay.toFixed(1)} /day`} />
+                        <Stat label="COGS" value={`${Math.round(arch.cogsPct * 100)}%`} />
+                        <Stat label="Prime cost" value={`${(c.primeCostPct * 100).toFixed(1)}%`} />
+                      </div>
+                    </div>
+                  </CardBody>
+                </Card>
+              );
+            })}
+          </div>
+        </CardBody>
+      </Card>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4">
+        <Card>
+          <CardHeader
+            title="Net profit matrix — orders × ticket"
+            description={`Volume on X, ticket on Y, ±30% around the current point. Centre cell (${ordersTicketMatrix.centerX}, ${ordersTicketMatrix.centerY}) is your current scenario.`}
+            actions={<Grid3X3 className="h-4 w-4 v2-muted" />}
+          />
+          <CardBody>
+            <Heatmap
+              cells={ordersTicketMatrix.cells}
+              xLabels={ordersTicketMatrix.xLabels}
+              yLabels={ordersTicketMatrix.yLabels}
+              rowHeight={36}
+              format={(n) =>
+                `${n < 0 ? "−" : ""}${Math.abs(Math.round(n / 100)).toLocaleString("pl-PL")} zł`
+              }
+            />
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader
+            title="Net profit matrix — food cost × ticket"
+            description={`Menu engineering: trade off ingredient ratio against ticket. Centre cell (${cogsTicketMatrix.centerX}, ${cogsTicketMatrix.centerY}) is your current scenario.`}
+            actions={<Grid3X3 className="h-4 w-4 v2-muted" />}
+          />
+          <CardBody>
+            <Heatmap
+              cells={cogsTicketMatrix.cells}
+              xLabels={cogsTicketMatrix.xLabels}
+              yLabels={cogsTicketMatrix.yLabels}
+              rowHeight={36}
+              format={(n) =>
+                `${n < 0 ? "−" : ""}${Math.abs(Math.round(n / 100)).toLocaleString("pl-PL")} zł`
+              }
+            />
+          </CardBody>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader
+          title="Assumptions"
+          description="Drivers behind the 12-month projection, payback, and the matrices above. Persist with the scenario."
+          actions={<Sliders className="h-4 w-4 v2-muted" />}
+        />
+        <CardBody>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <Input
+              label="Wage inflation (annual)"
+              type="number"
+              step="0.5"
+              min="0"
+              max="100"
+              value={((scenario.wageInflationPct ?? 0) * 100).toFixed(1)}
+              onChange={(e) =>
+                update((s) => ({
+                  ...s,
+                  wageInflationPct: Math.max(0, Math.min(1, parseFloat(e.target.value || "0") / 100)),
+                }))
+              }
+              trailingAdornment={<span className="v2-muted">%</span>}
+              description="Applied monthly to labor in the projection."
+            />
+            <Input
+              label="Ingredient + fixed inflation (annual)"
+              type="number"
+              step="0.5"
+              min="0"
+              max="100"
+              value={((scenario.ingredientInflationPct ?? 0) * 100).toFixed(1)}
+              onChange={(e) =>
+                update((s) => ({
+                  ...s,
+                  ingredientInflationPct: Math.max(0, Math.min(1, parseFloat(e.target.value || "0") / 100)),
+                }))
+              }
+              trailingAdornment={<span className="v2-muted">%</span>}
+              description="Applied monthly to COGS + fixed costs."
+            />
+            <Input
+              label="Card processor fee"
+              type="number"
+              step="0.1"
+              min="0"
+              max="10"
+              value={((scenario.paymentProcessorPct ?? 0) * 100).toFixed(2)}
+              onChange={(e) =>
+                update((s) => ({
+                  ...s,
+                  paymentProcessorPct: Math.max(0, Math.min(0.1, parseFloat(e.target.value || "0") / 100)),
+                }))
+              }
+              trailingAdornment={<span className="v2-muted">%</span>}
+              description="Blended Stripe/terminal fee on revenue."
+            />
+            <Input
+              label="Setup cost"
+              type="number"
+              step="1000"
+              min="0"
+              value={((scenario.setupCostGrosze ?? 0) / 100).toFixed(0)}
+              onChange={(e) =>
+                update((s) => ({
+                  ...s,
+                  setupCostGrosze: Math.max(0, Math.round(parseFloat(e.target.value || "0") * 100)),
+                }))
+              }
+              trailingAdornment={<span className="v2-muted">zł</span>}
+              description="Truck buildout + permits + working capital. Drives payback months."
+            />
+            <Input
+              label="Winter volume multiplier"
+              type="number"
+              step="0.05"
+              min="0"
+              max="3"
+              value={seasonality.winter.toFixed(2)}
+              onChange={(e) =>
+                update((s) => ({
+                  ...s,
+                  seasonality: {
+                    ...(s.seasonality ?? DEFAULT_SEASONALITY),
+                    winter: Math.max(0, Math.min(3, parseFloat(e.target.value || "0"))),
+                  },
+                }))
+              }
+              description="Dec / Jan / Feb. Default 0.70 — slower months."
+            />
+            <Input
+              label="Summer volume multiplier"
+              type="number"
+              step="0.05"
+              min="0"
+              max="3"
+              value={seasonality.summer.toFixed(2)}
+              onChange={(e) =>
+                update((s) => ({
+                  ...s,
+                  seasonality: {
+                    ...(s.seasonality ?? DEFAULT_SEASONALITY),
+                    summer: Math.max(0, Math.min(3, parseFloat(e.target.value || "0"))),
+                  },
+                }))
+              }
+              description="Jun / Jul / Aug. Default 1.30 — peak truck season."
+            />
+            <Input
+              label="Spring volume multiplier"
+              type="number"
+              step="0.05"
+              min="0"
+              max="3"
+              value={seasonality.spring.toFixed(2)}
+              onChange={(e) =>
+                update((s) => ({
+                  ...s,
+                  seasonality: {
+                    ...(s.seasonality ?? DEFAULT_SEASONALITY),
+                    spring: Math.max(0, Math.min(3, parseFloat(e.target.value || "0"))),
+                  },
+                }))
+              }
+              description="Mar / Apr / May. Default 1.00."
+            />
+            <Input
+              label="Autumn volume multiplier"
+              type="number"
+              step="0.05"
+              min="0"
+              max="3"
+              value={seasonality.autumn.toFixed(2)}
+              onChange={(e) =>
+                update((s) => ({
+                  ...s,
+                  seasonality: {
+                    ...(s.seasonality ?? DEFAULT_SEASONALITY),
+                    autumn: Math.max(0, Math.min(3, parseFloat(e.target.value || "0"))),
+                  },
+                }))
+              }
+              description="Sep / Oct / Nov. Default 1.00."
+            />
+          </div>
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader
+          title="12-month projection"
+          description="Steady-state P&L rolled forward — applies the seasonal multipliers above to volume, and compounds wage + ingredient inflation month over month."
+          actions={<LineChartIcon className="h-4 w-4 v2-muted" />}
+        />
+        <CardBody>
+          <LineChart
+            data={projection}
+            xKey="month"
+            series={[
+              { key: "revenue", label: "Revenue" },
+              { key: "labor", label: "Labor" },
+              { key: "cogs", label: "COGS" },
+              { key: "fixed", label: "Fixed" },
+              { key: "netProfit", label: "Net profit" },
+            ]}
+            height={320}
+            yFormat={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
+            tooltipValue={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
+          />
+          <div className="v2-kpi-grid mt-3">
+            <KpiCard
+              label="12-mo revenue"
+              value={projectionTotals.revenue}
+              format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
+              icon={CalendarRange}
+              tone="brand"
+            />
+            <KpiCard
+              label="12-mo costs"
+              value={
+                projectionTotals.cogs +
+                projectionTotals.labor +
+                projectionTotals.fixed +
+                projectionTotals.payment
+              }
+              format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
+              icon={Banknote}
+              tone="warning"
+            />
+            <KpiCard
+              label="12-mo net profit"
+              value={projectionTotals.netProfit}
+              format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
+              icon={projectionTotals.netProfit >= 0 ? TrendingUp : TrendingDown}
+              tone={projectionTotals.netProfit >= 0 ? "success" : "danger"}
+              hint={`${
+                projectionTotals.revenue > 0
+                  ? ((projectionTotals.netProfit / projectionTotals.revenue) * 100).toFixed(1)
+                  : "0"
+              }% blended margin`}
+            />
+            <KpiCard
+              label="Best / worst month"
+              value={0}
+              display={
+                <span className="tabular">
+                  {Math.round(
+                    Math.max(...projection.map((r) => r.netProfit)),
+                  ).toLocaleString("pl-PL")}{" "}
+                  /{" "}
+                  {Math.round(
+                    Math.min(...projection.map((r) => r.netProfit)),
+                  ).toLocaleString("pl-PL")}{" "}
+                  zł
+                </span>
+              }
+              icon={Clock}
+              tone="info"
+              hint="Net profit swing across the year"
+            />
+          </div>
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader
+          title="Break-even at multiple horizons"
+          description="The minimum throughput needed to cover labor + fixed at the current ticket and COGS."
+          actions={<Calculator className="h-4 w-4 v2-muted" />}
+        />
+        <CardBody>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <KpiCard
+              label="Orders / hour"
+              value={computed.breakEvenOrdersPerDay / 10}
+              format={(n) => n.toFixed(2)}
+              tone="info"
+              hint="across the 10 h service window"
+            />
+            <KpiCard
+              label="Orders / day"
+              value={computed.breakEvenOrdersPerDay}
+              format={(n) => n.toFixed(1)}
+              tone="info"
+            />
+            <KpiCard
+              label="Orders / month"
+              value={computed.breakEvenOrdersPerMonth}
+              format={(n) => Math.ceil(n).toLocaleString("pl-PL")}
+              tone="info"
+            />
+            <KpiCard
+              label="Revenue / month"
+              value={computed.breakEvenRevenue / 100}
+              format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
+              tone="info"
+            />
+          </div>
+        </CardBody>
+      </Card>
+
       <Card>
         <CardHeader
           title="Sensitivity — net profit at −20% … +20% volume"
@@ -677,6 +1313,15 @@ export function AdminSimulation() {
         confirmLabel="Reset"
         destructive
       />
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="v2-muted text-xs">{label}</div>
+      <div className="tabular">{value}</div>
     </div>
   );
 }

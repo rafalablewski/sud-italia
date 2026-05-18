@@ -2,7 +2,7 @@ import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, BusinessCostPayrollRole, SimulationScenario, SimulationLaborLine } from "@/data/types";
+import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, BusinessCostPayrollRole, SimulationScenario, SimulationLaborLine, SimulationSeasonality } from "@/data/types";
 import { getActiveLocations, locations as allLocations } from "@/data/locations";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -7986,6 +7986,17 @@ export function defaultSimulationScenario(): SimulationScenario {
     cogsPct: 0.30,          // pizzeria benchmark 25–35% (Polish gastronomy)
     labor,
     fixedCosts,
+    // Forward-looking assumptions — operator can tune in the UI.
+    wageInflationPct: 0.07,        // ~7% Poland 2026 wage drift (min wage +3%, sector pressure higher)
+    ingredientInflationPct: 0.04,  // ~4% food CPI rolling
+    paymentProcessorPct: 0.019,    // Stripe 1.9% + 0.30 zł flat blended into a single ratio
+    setupCostGrosze: 25_000_000,   // 250 000 zł — truck buildout + permits + working capital
+    seasonality: {
+      winter: 0.70,
+      spring: 1.00,
+      summer: 1.30,
+      autumn: 1.00,
+    },
     updatedAt: new Date().toISOString(),
   };
 }
@@ -8003,7 +8014,46 @@ export async function getSimulationScenario(): Promise<SimulationScenario> {
     cogsPct: typeof saved.cogsPct === "number" ? saved.cogsPct : defaults.cogsPct,
     labor: saved.labor.length > 0 ? saved.labor : defaults.labor,
     fixedCosts: saved.fixedCosts ?? defaults.fixedCosts,
+    wageInflationPct:
+      typeof saved.wageInflationPct === "number"
+        ? saved.wageInflationPct
+        : defaults.wageInflationPct,
+    ingredientInflationPct:
+      typeof saved.ingredientInflationPct === "number"
+        ? saved.ingredientInflationPct
+        : defaults.ingredientInflationPct,
+    paymentProcessorPct:
+      typeof saved.paymentProcessorPct === "number"
+        ? saved.paymentProcessorPct
+        : defaults.paymentProcessorPct,
+    setupCostGrosze:
+      typeof saved.setupCostGrosze === "number"
+        ? saved.setupCostGrosze
+        : defaults.setupCostGrosze,
+    seasonality: saved.seasonality ?? defaults.seasonality,
     updatedAt: saved.updatedAt ?? defaults.updatedAt,
+  };
+}
+
+function clampPct(n: unknown, fallback: number): number {
+  if (typeof n !== "number" || !Number.isFinite(n)) return fallback;
+  return Math.max(0, Math.min(1, n));
+}
+
+function cleanSeasonality(
+  s: SimulationSeasonality | undefined,
+  fallback: SimulationSeasonality,
+): SimulationSeasonality {
+  if (!s) return fallback;
+  const clamp = (n: unknown, f: number): number => {
+    if (typeof n !== "number" || !Number.isFinite(n)) return f;
+    return Math.max(0, Math.min(3, n));
+  };
+  return {
+    winter: clamp(s.winter, fallback.winter),
+    spring: clamp(s.spring, fallback.spring),
+    summer: clamp(s.summer, fallback.summer),
+    autumn: clamp(s.autumn, fallback.autumn),
   };
 }
 
@@ -8011,6 +8061,7 @@ export async function saveSimulationScenario(
   scenario: SimulationScenario,
 ): Promise<SimulationScenario> {
   return withLock(SIMULATION_KEY, async () => {
+    const defaults = defaultSimulationScenario();
     const clean: SimulationScenario = {
       ordersPerDay: Math.max(0, Math.round(scenario.ordersPerDay)),
       avgTicketGrosze: Math.max(0, Math.round(scenario.avgTicketGrosze)),
@@ -8029,6 +8080,23 @@ export async function saveSimulationScenario(
           Math.max(0, Math.round(v ?? 0)),
         ]),
       ) as SimulationScenario["fixedCosts"],
+      wageInflationPct: clampPct(scenario.wageInflationPct, defaults.wageInflationPct ?? 0),
+      ingredientInflationPct: clampPct(
+        scenario.ingredientInflationPct,
+        defaults.ingredientInflationPct ?? 0,
+      ),
+      paymentProcessorPct: clampPct(
+        scenario.paymentProcessorPct,
+        defaults.paymentProcessorPct ?? 0,
+      ),
+      setupCostGrosze:
+        typeof scenario.setupCostGrosze === "number" && Number.isFinite(scenario.setupCostGrosze)
+          ? Math.max(0, Math.round(scenario.setupCostGrosze))
+          : (defaults.setupCostGrosze ?? 0),
+      seasonality: cleanSeasonality(
+        scenario.seasonality,
+        defaults.seasonality ?? { winter: 1, spring: 1, summer: 1, autumn: 1 },
+      ),
       updatedAt: new Date().toISOString(),
     };
     await writeJSON(SIMULATION_KEY, clean);
