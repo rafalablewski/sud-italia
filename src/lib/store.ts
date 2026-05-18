@@ -7924,42 +7924,66 @@ export async function deleteBusinessCost(id: string): Promise<boolean> {
 
 // --- Finance simulation (sandbox monthly P&L) ----------------------------
 //
-// Pure projection sandbox — never touches business-costs.json. Plausible
-// pizza-truck defaults so the page is usable on first open without
-// seeding anything from real data. Service window 12:00–22:00 (10 h) plus
-// ~1 h prep before and ~1 h close-down after = ~12 h staff day, 6 days
-// per week.
+// Pure projection sandbox — never touches business-costs.json. Defaults
+// are tuned to a Neapolitan pizza truck operating in Warsaw 2026, with
+// labor schedules anchored to a 12:00–22:00 service window plus ~1 h
+// prep and ~1 h close-down (≈ 11 h staff day, 6 days/week). Hourly
+// rates bake in the ~22% Polish employer narzut (ZUS social + Labour
+// Fund) so a "rate × hours" multiplication lands at FULL employer
+// cost — same convention the business-costs ledger uses.
+//
+// Sources (May 2026 research):
+//  • Płaca minimalna 2026: 4 806 zł brutto / 30,04 zł/h, min. zlecenie
+//    31,40 zł/h. Pracodawca's narzut adds ~20–22% on top of brutto.
+//  • Warsaw waiter / barista offers ran 31,5–33,5 zł brutto/h with
+//    experienced staff at 35–45 zł.
+//  • Pizzaiolo brutto in Warsaw: 22 zł entry, ~35 zł experienced,
+//    50 zł at premium Neapolitan houses.
+//  • Restaurant manager Warsaw avg 7 000–8 000 zł brutto/month
+//    (≈ 45 zł/h on a 50 h schedule).
+//  • Food-truck pitch fees Warsaw: 1 200–3 000 zł/mo depending on
+//    location, plus utilities, fuel, OC + truck insurance, accountant
+//    (~200–400 zł), POS subscription (~100–250 zł), licences,
+//    marketing. Total non-labour run rate clusters around 9–10 k zł
+//    for a permanent-pitch food-truck operation.
+//  • Average pizza ticket Warsaw ~27 zł; pizzeria avg bill 60–72 zł
+//    with drinks/sides; Neapolitan premium positioning + coffee/
+//    dessert/pasta attach → 65 zł/blended ticket.
 
 const SIMULATION_KEY = "simulation-scenarios.json";
 
 export function defaultSimulationScenario(): SimulationScenario {
+  // Hourly rates: brutto Warsaw 2026 × 1.22 employer narzut, rounded
+  // to the nearest 50 grosze. Operators who'd rather think in pure
+  // brutto can divide by 1.22.
   const labor: SimulationLaborLine[] = [
-    { id: "pizzaiolo",     role: "pizzaiolo",     headcount: 2, hoursPerWeek: 66, hourlyRateGrosze: 3500 },
-    { id: "chef",          role: "chef",          headcount: 1, hoursPerWeek: 66, hourlyRateGrosze: 3200 },
-    { id: "sous-chef",     role: "sous-chef",     headcount: 1, hoursPerWeek: 48, hourlyRateGrosze: 2600 },
-    { id: "barista",       role: "barista",       headcount: 1, hoursPerWeek: 60, hourlyRateGrosze: 2400 },
-    { id: "waiter",        role: "waiter",        headcount: 2, hoursPerWeek: 60, hourlyRateGrosze: 2400 },
-    { id: "kitchen-porter",role: "kitchen-porter",headcount: 1, hoursPerWeek: 36, hourlyRateGrosze: 2200 },
-    { id: "manager",       role: "manager",       headcount: 1, hoursPerWeek: 50, hourlyRateGrosze: 4500 },
+    { id: "pizzaiolo",     role: "pizzaiolo",     headcount: 2, hoursPerWeek: 66, hourlyRateGrosze: 4300 },
+    { id: "chef",          role: "chef",          headcount: 1, hoursPerWeek: 66, hourlyRateGrosze: 3700 },
+    { id: "sous-chef",     role: "sous-chef",     headcount: 1, hoursPerWeek: 48, hourlyRateGrosze: 3300 },
+    { id: "barista",       role: "barista",       headcount: 1, hoursPerWeek: 60, hourlyRateGrosze: 3900 },
+    { id: "waiter",        role: "waiter",        headcount: 2, hoursPerWeek: 60, hourlyRateGrosze: 4000 },
+    { id: "kitchen-porter",role: "kitchen-porter",headcount: 1, hoursPerWeek: 36, hourlyRateGrosze: 3000 },
+    { id: "manager",       role: "manager",       headcount: 1, hoursPerWeek: 50, hourlyRateGrosze: 5500 },
   ];
   const fixedCosts: SimulationScenario["fixedCosts"] = {
-    rent: 800_000,         // 8 000 zł
-    utilities: 220_000,    // 2 200
-    fuel: 150_000,         // 1 500
-    vehicle: 60_000,       // 600
-    insurance: 70_000,     // 700
-    licenses: 30_000,      // 300
-    marketing: 200_000,    // 2 000
-    software: 40_000,      // 400
-    professional: 80_000,  // 800
-    tax: 150_000,          // 1 500
-    other: 50_000,         // 500
+    rent: 250_000,         // 2 500 zł — Warsaw food-truck pitch (1 200–3 000 zł range)
+    utilities: 120_000,    // 1 200 zł — electric + water + gas (lower than full restaurant)
+    fuel: 80_000,          //   800 zł — vehicle + generator
+    vehicle: 70_000,       //   700 zł — maintenance + amortyzacja
+    insurance: 60_000,     //   600 zł — OC działalności + truck OC/AC blended (400–1 000)
+    licenses: 25_000,      //   250 zł — SANEPID + permits, annual fees / 12
+    marketing: 150_000,    // 1 500 zł — moderate organic + paid social
+    software: 25_000,      //   250 zł — GoPOS Pro (~100) + KDS + analytics
+    professional: 40_000,  //   400 zł — biuro rachunkowe ryczałt
+    tax: 180_000,          // 1 800 zł — ZUS właściciel + lokalne opłaty (excl. CIT)
+    maintenance: 40_000,   //   400 zł — equipment service
+    other: 30_000,         //   300 zł — buffer
   };
   return {
     ordersPerDay: 70,
-    avgTicketGrosze: 6200,  // 62 zł — pizza + coffee/dessert blended
+    avgTicketGrosze: 6500,  // 65 zł — Neapolitan pizza + coffee/dessert blend
     daysOpenPerMonth: 28,
-    cogsPct: 0.30,
+    cogsPct: 0.30,          // pizzeria benchmark 25–35% (Polish gastronomy)
     labor,
     fixedCosts,
     updatedAt: new Date().toISOString(),

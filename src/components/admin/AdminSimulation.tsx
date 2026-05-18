@@ -211,32 +211,35 @@ export function AdminSimulation() {
 
   const resetToDefaults = async () => {
     setResetConfirmOpen(false);
+    // Mirrors defaultSimulationScenario() in src/lib/store.ts — Warsaw
+    // 2026 brutto × 1.22 narzut, food-truck pitch fees, 30% COGS.
     const defaults: SimulationScenario = {
       ordersPerDay: 70,
-      avgTicketGrosze: 6200,
+      avgTicketGrosze: 6500,
       daysOpenPerMonth: 28,
       cogsPct: 0.3,
       labor: [
-        { id: "pizzaiolo", role: "pizzaiolo", headcount: 2, hoursPerWeek: 66, hourlyRateGrosze: 3500 },
-        { id: "chef", role: "chef", headcount: 1, hoursPerWeek: 66, hourlyRateGrosze: 3200 },
-        { id: "sous-chef", role: "sous-chef", headcount: 1, hoursPerWeek: 48, hourlyRateGrosze: 2600 },
-        { id: "barista", role: "barista", headcount: 1, hoursPerWeek: 60, hourlyRateGrosze: 2400 },
-        { id: "waiter", role: "waiter", headcount: 2, hoursPerWeek: 60, hourlyRateGrosze: 2400 },
-        { id: "kitchen-porter", role: "kitchen-porter", headcount: 1, hoursPerWeek: 36, hourlyRateGrosze: 2200 },
-        { id: "manager", role: "manager", headcount: 1, hoursPerWeek: 50, hourlyRateGrosze: 4500 },
+        { id: "pizzaiolo", role: "pizzaiolo", headcount: 2, hoursPerWeek: 66, hourlyRateGrosze: 4300 },
+        { id: "chef", role: "chef", headcount: 1, hoursPerWeek: 66, hourlyRateGrosze: 3700 },
+        { id: "sous-chef", role: "sous-chef", headcount: 1, hoursPerWeek: 48, hourlyRateGrosze: 3300 },
+        { id: "barista", role: "barista", headcount: 1, hoursPerWeek: 60, hourlyRateGrosze: 3900 },
+        { id: "waiter", role: "waiter", headcount: 2, hoursPerWeek: 60, hourlyRateGrosze: 4000 },
+        { id: "kitchen-porter", role: "kitchen-porter", headcount: 1, hoursPerWeek: 36, hourlyRateGrosze: 3000 },
+        { id: "manager", role: "manager", headcount: 1, hoursPerWeek: 50, hourlyRateGrosze: 5500 },
       ],
       fixedCosts: {
-        rent: 800_000,
-        utilities: 220_000,
-        fuel: 150_000,
-        vehicle: 60_000,
-        insurance: 70_000,
-        licenses: 30_000,
-        marketing: 200_000,
-        software: 40_000,
-        professional: 80_000,
-        tax: 150_000,
-        other: 50_000,
+        rent: 250_000,
+        utilities: 120_000,
+        fuel: 80_000,
+        vehicle: 70_000,
+        insurance: 60_000,
+        licenses: 25_000,
+        marketing: 150_000,
+        software: 25_000,
+        professional: 40_000,
+        tax: 180_000,
+        maintenance: 40_000,
+        other: 30_000,
       },
       updatedAt: new Date().toISOString(),
     };
@@ -310,8 +313,10 @@ export function AdminSimulation() {
           <p className="v2-page-subtitle">
             Sandbox monthly P&amp;L. Enter realistic orders, ticket size, labor mix and fixed costs;
             see revenue, cost-by-category, net profit, margin and break-even update live. Edits
-            never write to the business-costs ledger. Service window 12:00–22:00 means most line
-            cooks &amp; baristas show ~11 h/day across prep + service + close-down.
+            never write to the business-costs ledger. Defaults reflect a Neapolitan pizza truck in
+            Warsaw 2026 with a 12:00–22:00 service window plus prep + close-down (~11 h/day),
+            hourly rates already include the ~22% ZUS pracodawcy narzut, food-truck pitch fees,
+            and 30% blended COGS.
           </p>
         </div>
         <div className="v2-page-actions">
@@ -439,7 +444,7 @@ export function AdminSimulation() {
         <Card>
           <CardHeader
             title="Labor mix"
-            description="Per-role headcount × weekly hours × hourly rate."
+            description="Per-role headcount × weekly hours × hourly rate. Default rates are Warsaw 2026 brutto × 1.22 (full employer cost incl. ZUS narzut). Divide by 1.22 if you'd rather think in pure brutto."
             actions={
               <Button size="sm" variant="ghost" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={addLaborRow}>
                 Add row
@@ -667,8 +672,8 @@ export function AdminSimulation() {
         open={resetConfirmOpen}
         onClose={() => setResetConfirmOpen(false)}
         onConfirm={resetToDefaults}
-        title="Reset to plausible defaults?"
-        description="Resets every input back to the built-in pizza-truck defaults (70 orders/day, 62 zł ticket, 12-22 service)."
+        title="Reset to Warsaw 2026 defaults?"
+        description="Resets every input back to the built-in Warsaw 2026 pizza-truck defaults: 70 orders/day, 65 zł blended ticket, 12-22 service window, brutto × 1.22 employer rates and food-truck pitch fees. Your current scenario is overwritten."
         confirmLabel="Reset"
         destructive
       />
