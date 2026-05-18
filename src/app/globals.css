@@ -1881,7 +1881,8 @@ html { scroll-behavior: smooth; }
   min-height: 0;
   gap: 2px;
 }
-.v2-kpi-grid-sticky.is-stuck .v2-kpi-icon { display: none; }
+.v2-kpi-grid-sticky.is-stuck .v2-kpi-icon { width: 22px; height: 22px; }
+.v2-kpi-grid-sticky.is-stuck .v2-kpi-icon svg { width: 14px; height: 14px; }
 .v2-kpi-grid-sticky.is-stuck .v2-kpi-foot { display: none; }
 .v2-kpi-grid-sticky.is-stuck .v2-kpi-value { font-size: var(--text-lg); }
 .v2-kpi-grid-sticky.is-stuck .v2-kpi-label { font-size: var(--text-2xs); }
