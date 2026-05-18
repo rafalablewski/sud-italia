@@ -32,10 +32,13 @@ import type {
   BusinessCostCategory,
   BusinessCostPayrollRole,
   MenuCategory,
+  SimulationAssumptions,
+  SimulationAttachLever,
   SimulationLaborLine,
   SimulationMenuMixLine,
   SimulationScenario,
   SimulationSeasonality,
+  SimulationWeather,
 } from "@/data/types";
 import { getActiveLocations } from "@/data/locations";
 import { useToast } from "./v2/ui/Toast";
@@ -106,6 +109,32 @@ const DEFAULT_SEASONALITY: SimulationSeasonality = {
   spring: 1.0,
   summer: 1.3,
   autumn: 1.0,
+};
+
+const DEFAULT_ASSUMPTIONS: SimulationAssumptions = {
+  coffeeAttach: { attachPct: 0.25, avgPriceGrosze: 900, cogsPct: 0.12 },
+  dessertAttach: { attachPct: 0.12, avgPriceGrosze: 1600, cogsPct: 0.28 },
+  antipastiAttach: { attachPct: 0.08, avgPriceGrosze: 2400, cogsPct: 0.32 },
+  aperitivoAttach: { attachPct: 0.10, avgPriceGrosze: 2200, cogsPct: 0.22 },
+  premiumToppingsAttach: { attachPct: 0.15, avgPriceGrosze: 700, cogsPct: 0.30 },
+  pastaPrimoAttach: { attachPct: 0.18, avgPriceGrosze: 3200, cogsPct: 0.26 },
+  comboConversion: { pct: 0.20, addonGrosze: 2500, discountGrosze: 600, addonCogsPct: 0.25 },
+  sizeUpsell: { pct: 0.10, priceDeltaGrosze: 500, costDeltaGrosze: 40 },
+  cheapestPizzaShift: { pp: 0, ticketDeltaGrosze: 300, cogsDeltaGrosze: 100 },
+  deliveryShare: { pct: 0.25, packagingCostGrosze: 250, extraProcessorPct: 0, avgFeeGrosze: 800 },
+};
+
+const DEFAULT_WEATHER: SimulationWeather = {
+  rainyDayMultiplier: 0.75,
+  rainyShare: 0.30,
+  heatwaveMultiplier: 1.40,
+  heatwaveShare: 0.10,
+  holidayClosedDaysPerMonth: 1.0,
+  holidayPeakDaysPerMonth: 1.0,
+  holidayPeakMultiplier: 1.60,
+  schoolHolidayLunchMultiplier: 0.85,
+  eventDaysPerMonth: 1,
+  eventDayMultiplier: 1.50,
 };
 
 const MONTH_TO_SEASON: ("winter" | "spring" | "summer" | "autumn")[] = [
@@ -356,6 +385,101 @@ function deriveMixValues(
   return { avgTicketGrosze, cogsPct, matchedWeight: totalWeight };
 }
 
+/** Per-order ticket + cost adjustment from a single attach lever. */
+function attachDelta(
+  lever: SimulationAttachLever | undefined,
+): { ticket: number; cogs: number } {
+  if (!lever) return { ticket: 0, cogs: 0 };
+  const ticket = lever.attachPct * lever.avgPriceGrosze;
+  const cogs = lever.attachPct * lever.avgPriceGrosze * lever.cogsPct;
+  return { ticket, cogs };
+}
+
+/** Fold the behavior + weather levers into the scenario. Returns a new
+ *  scenario where ordersPerDay × avgTicket × cogsPct already absorb every
+ *  lever — so every downstream chart, KPI, heatmap and projection picks
+ *  them up without further changes. */
+function applyAssumptionsAndWeather(s: SimulationScenario): SimulationScenario {
+  const a = s.assumptions;
+  const w = s.weather;
+
+  let extraTicket = 0;
+  let extraCogs = 0;
+
+  if (a) {
+    for (const lever of [
+      a.coffeeAttach,
+      a.dessertAttach,
+      a.antipastiAttach,
+      a.aperitivoAttach,
+      a.premiumToppingsAttach,
+      a.pastaPrimoAttach,
+    ]) {
+      const d = attachDelta(lever);
+      extraTicket += d.ticket;
+      extraCogs += d.cogs;
+    }
+    if (a.comboConversion) {
+      const c = a.comboConversion;
+      extraTicket += c.pct * (c.addonGrosze - c.discountGrosze);
+      extraCogs += c.pct * c.addonGrosze * c.addonCogsPct;
+    }
+    if (a.sizeUpsell) {
+      extraTicket += a.sizeUpsell.pct * a.sizeUpsell.priceDeltaGrosze;
+      extraCogs += a.sizeUpsell.pct * a.sizeUpsell.costDeltaGrosze;
+    }
+    if (a.cheapestPizzaShift) {
+      extraTicket -= a.cheapestPizzaShift.pp * a.cheapestPizzaShift.ticketDeltaGrosze;
+      extraCogs -= a.cheapestPizzaShift.pp * a.cheapestPizzaShift.cogsDeltaGrosze;
+    }
+    if (a.deliveryShare) {
+      const dShare = a.deliveryShare;
+      extraTicket += dShare.pct * dShare.avgFeeGrosze;
+      const ticketBeforeDelivery = s.avgTicketGrosze + extraTicket - dShare.pct * dShare.avgFeeGrosze;
+      extraCogs +=
+        dShare.pct *
+        (dShare.packagingCostGrosze + ticketBeforeDelivery * dShare.extraProcessorPct);
+    }
+  }
+
+  const newTicket = Math.max(0, s.avgTicketGrosze + extraTicket);
+  const baselineCogsValue = s.avgTicketGrosze * s.cogsPct;
+  const totalCogsValue = Math.max(0, baselineCogsValue + extraCogs);
+  const newCogsPct = newTicket > 0 ? Math.min(1, totalCogsValue / newTicket) : s.cogsPct;
+
+  // Weather + calendar — modify effective ordersPerDay / daysOpen.
+  let volumeMult = 1;
+  let daysOpen = s.daysOpenPerMonth;
+  let ordersPerDay = s.ordersPerDay;
+  if (w) {
+    volumeMult *= w.rainyShare * w.rainyDayMultiplier + (1 - w.rainyShare);
+    volumeMult *= w.heatwaveShare * w.heatwaveMultiplier + (1 - w.heatwaveShare);
+    // School-holiday lunch dip — applies only to summer months. Annualised as 2/12.
+    const summerShare = 2 / 12;
+    volumeMult *= summerShare * w.schoolHolidayLunchMultiplier + (1 - summerShare);
+    // Holiday closures: reduce effective days open.
+    daysOpen = Math.max(0, s.daysOpenPerMonth - w.holidayClosedDaysPerMonth);
+    // Peak + event days: extra orders/month re-amortised across the (now-shorter) month.
+    ordersPerDay = s.ordersPerDay * volumeMult;
+    if (daysOpen > 0) {
+      const baseDaily = s.ordersPerDay; // pre-multiplier daily volume for bonus math
+      const peakBonus =
+        w.holidayPeakDaysPerMonth * (w.holidayPeakMultiplier - 1) * baseDaily;
+      const eventBonus =
+        w.eventDaysPerMonth * (w.eventDayMultiplier - 1) * baseDaily;
+      ordersPerDay += (peakBonus + eventBonus) / daysOpen;
+    }
+  }
+
+  return {
+    ...s,
+    ordersPerDay,
+    avgTicketGrosze: newTicket,
+    cogsPct: newCogsPct,
+    daysOpenPerMonth: daysOpen,
+  };
+}
+
 /** Three saved-scenario archetypes derived from the active one. */
 function deriveArchetypes(s: SimulationScenario) {
   const conservative: SimulationScenario = {
@@ -481,12 +605,15 @@ export function AdminSimulation() {
   );
   const effectiveScenario = useMemo<SimulationScenario | null>(() => {
     if (!scenario) return null;
-    if (!mixDerived) return scenario;
-    return {
-      ...scenario,
-      avgTicketGrosze: mixDerived.avgTicketGrosze,
-      cogsPct: mixDerived.cogsPct,
-    };
+    let s: SimulationScenario = scenario;
+    if (mixDerived) {
+      s = {
+        ...s,
+        avgTicketGrosze: mixDerived.avgTicketGrosze,
+        cogsPct: mixDerived.cogsPct,
+      };
+    }
+    return applyAssumptionsAndWeather(s);
   }, [scenario, mixDerived]);
   const computed = useMemo(
     () => (effectiveScenario ? computeScenario(effectiveScenario) : null),
@@ -553,6 +680,8 @@ export function AdminSimulation() {
       paymentProcessorPct: 0.019,
       setupCostGrosze: 25_000_000,
       seasonality: { winter: 0.7, spring: 1.0, summer: 1.3, autumn: 1.0 },
+      assumptions: DEFAULT_ASSUMPTIONS,
+      weather: DEFAULT_WEATHER,
       updatedAt: new Date().toISOString(),
     };
     setScenario(defaults);
@@ -1018,6 +1147,19 @@ export function AdminSimulation() {
           )}
         </CardBody>
       </Card>
+
+      <BehaviorAssumptionsCard
+        assumptions={scenario.assumptions ?? DEFAULT_ASSUMPTIONS}
+        baseTicketGrosze={mixDerived?.avgTicketGrosze ?? scenario.avgTicketGrosze}
+        onChange={(next) => update((s) => ({ ...s, assumptions: next }))}
+      />
+
+      <WeatherCalendarCard
+        weather={scenario.weather ?? DEFAULT_WEATHER}
+        baseOrdersPerDay={scenario.ordersPerDay}
+        baseDaysOpen={scenario.daysOpenPerMonth}
+        onChange={(next) => update((s) => ({ ...s, weather: next }))}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4">
         <Card>
@@ -1699,5 +1841,644 @@ function PnlRow({
         {amount < 0 ? `−${formatPrice(-amount)}` : formatPrice(amount)}
       </span>
     </li>
+  );
+}
+
+// --- Behavior assumption levers card -------------------------------------
+
+interface AttachRowProps {
+  label: string;
+  hint: string;
+  lever: SimulationAttachLever;
+  baseTicketGrosze: number;
+  onChange: (next: SimulationAttachLever) => void;
+}
+
+function AttachLeverRow({ label, hint, lever, baseTicketGrosze, onChange }: AttachRowProps) {
+  // Per-order projected ticket lift = attachPct × price; margin = (1 − cogsPct) × ticket lift.
+  const ticketLift = lever.attachPct * lever.avgPriceGrosze;
+  const cogsLift = ticketLift * lever.cogsPct;
+  const marginLift = ticketLift - cogsLift;
+  const pctOfBase = baseTicketGrosze > 0 ? (ticketLift / baseTicketGrosze) * 100 : 0;
+  return (
+    <div className="grid grid-cols-12 gap-2 items-end">
+      <div className="col-span-12 md:col-span-4">
+        <div className="text-sm font-medium">{label}</div>
+        <div className="v2-muted text-xs">{hint}</div>
+      </div>
+      <div className="col-span-4 md:col-span-2">
+        <Input
+          label="Attach %"
+          type="number"
+          step="1"
+          min="0"
+          max="100"
+          value={String(Math.round(lever.attachPct * 100))}
+          onChange={(e) =>
+            onChange({
+              ...lever,
+              attachPct: Math.max(0, Math.min(1, parseFloat(e.target.value || "0") / 100)),
+            })
+          }
+          trailingAdornment={<span className="v2-muted">%</span>}
+        />
+      </div>
+      <div className="col-span-4 md:col-span-2">
+        <Input
+          label="Avg price"
+          type="number"
+          step="0.5"
+          min="0"
+          value={(lever.avgPriceGrosze / 100).toFixed(2)}
+          onChange={(e) =>
+            onChange({
+              ...lever,
+              avgPriceGrosze: Math.max(0, Math.round(parseFloat(e.target.value || "0") * 100)),
+            })
+          }
+          trailingAdornment={<span className="v2-muted">zł</span>}
+        />
+      </div>
+      <div className="col-span-4 md:col-span-2">
+        <Input
+          label="COGS %"
+          type="number"
+          step="1"
+          min="0"
+          max="100"
+          value={String(Math.round(lever.cogsPct * 100))}
+          onChange={(e) =>
+            onChange({
+              ...lever,
+              cogsPct: Math.max(0, Math.min(1, parseFloat(e.target.value || "0") / 100)),
+            })
+          }
+          trailingAdornment={<span className="v2-muted">%</span>}
+        />
+      </div>
+      <div className="col-span-12 md:col-span-2 text-xs v2-muted text-right">
+        +{formatPrice(Math.round(ticketLift))} AOV
+        <br />
+        +{formatPrice(Math.round(marginLift))} margin
+        <br />
+        <span className="opacity-70">{pctOfBase.toFixed(1)}% of ticket</span>
+      </div>
+    </div>
+  );
+}
+
+interface BehaviorCardProps {
+  assumptions: SimulationAssumptions;
+  baseTicketGrosze: number;
+  onChange: (next: SimulationAssumptions) => void;
+}
+
+function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, onChange }: BehaviorCardProps) {
+  const a = assumptions;
+  const set = <K extends keyof SimulationAssumptions>(key: K, value: SimulationAssumptions[K]) =>
+    onChange({ ...a, [key]: value });
+
+  return (
+    <Card>
+      <CardHeader
+        title="Behavior assumptions"
+        description="Tune attach rates, combos and channel mix — every lever folds into effective ticket + COGS, then flows into every KPI, heatmap and projection below."
+        actions={<Sparkles className="h-4 w-4 v2-muted" />}
+      />
+      <CardBody>
+        <div className="v2-stack-12">
+          {a.coffeeAttach && (
+            <AttachLeverRow
+              label="Coffee attach"
+              hint="Espresso / cappuccino on the side."
+              lever={a.coffeeAttach}
+              baseTicketGrosze={baseTicketGrosze}
+              onChange={(v) => set("coffeeAttach", v)}
+            />
+          )}
+          {a.dessertAttach && (
+            <AttachLeverRow
+              label="Dessert attach"
+              hint="Tiramisu / cannoli / panna cotta."
+              lever={a.dessertAttach}
+              baseTicketGrosze={baseTicketGrosze}
+              onChange={(v) => set("dessertAttach", v)}
+            />
+          )}
+          {a.antipastiAttach && (
+            <AttachLeverRow
+              label="Antipasti / starter attach"
+              hint="Bruschetta, burrata, olives."
+              lever={a.antipastiAttach}
+              baseTicketGrosze={baseTicketGrosze}
+              onChange={(v) => set("antipastiAttach", v)}
+            />
+          )}
+          {a.aperitivoAttach && (
+            <AttachLeverRow
+              label="Aperitivo / wine attach"
+              hint="Aperol, wine glass — needs alcohol licence."
+              lever={a.aperitivoAttach}
+              baseTicketGrosze={baseTicketGrosze}
+              onChange={(v) => set("aperitivoAttach", v)}
+            />
+          )}
+          {a.premiumToppingsAttach && (
+            <AttachLeverRow
+              label="Premium toppings attach"
+              hint="Buffalo mozzarella, 'nduja, truffle oil."
+              lever={a.premiumToppingsAttach}
+              baseTicketGrosze={baseTicketGrosze}
+              onChange={(v) => set("premiumToppingsAttach", v)}
+            />
+          )}
+          {a.pastaPrimoAttach && (
+            <AttachLeverRow
+              label="Pasta primo attach"
+              hint="Pasta course alongside the pizza."
+              lever={a.pastaPrimoAttach}
+              baseTicketGrosze={baseTicketGrosze}
+              onChange={(v) => set("pastaPrimoAttach", v)}
+            />
+          )}
+
+          <div className="border-t border-[var(--border)] pt-3" />
+
+          {a.comboConversion && (
+            <div className="grid grid-cols-12 gap-2 items-end">
+              <div className="col-span-12 md:col-span-4">
+                <div className="text-sm font-medium">Combo conversion</div>
+                <div className="v2-muted text-xs">
+                  X% of mains sell as a Combo (drink + dessert at a bundle discount).
+                </div>
+              </div>
+              <div className="col-span-4 md:col-span-2">
+                <Input
+                  label="Convert %"
+                  type="number"
+                  step="1"
+                  min="0"
+                  max="100"
+                  value={String(Math.round(a.comboConversion.pct * 100))}
+                  onChange={(e) =>
+                    set("comboConversion", {
+                      ...a.comboConversion!,
+                      pct: Math.max(0, Math.min(1, parseFloat(e.target.value || "0") / 100)),
+                    })
+                  }
+                  trailingAdornment={<span className="v2-muted">%</span>}
+                />
+              </div>
+              <div className="col-span-4 md:col-span-2">
+                <Input
+                  label="Addon price"
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  value={(a.comboConversion.addonGrosze / 100).toFixed(2)}
+                  onChange={(e) =>
+                    set("comboConversion", {
+                      ...a.comboConversion!,
+                      addonGrosze: Math.max(0, Math.round(parseFloat(e.target.value || "0") * 100)),
+                    })
+                  }
+                  trailingAdornment={<span className="v2-muted">zł</span>}
+                />
+              </div>
+              <div className="col-span-4 md:col-span-2">
+                <Input
+                  label="Discount"
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  value={(a.comboConversion.discountGrosze / 100).toFixed(2)}
+                  onChange={(e) =>
+                    set("comboConversion", {
+                      ...a.comboConversion!,
+                      discountGrosze: Math.max(0, Math.round(parseFloat(e.target.value || "0") * 100)),
+                    })
+                  }
+                  trailingAdornment={<span className="v2-muted">zł</span>}
+                />
+              </div>
+              <div className="col-span-12 md:col-span-2">
+                <Input
+                  label="Addon COGS"
+                  type="number"
+                  step="1"
+                  min="0"
+                  max="100"
+                  value={String(Math.round(a.comboConversion.addonCogsPct * 100))}
+                  onChange={(e) =>
+                    set("comboConversion", {
+                      ...a.comboConversion!,
+                      addonCogsPct: Math.max(0, Math.min(1, parseFloat(e.target.value || "0") / 100)),
+                    })
+                  }
+                  trailingAdornment={<span className="v2-muted">%</span>}
+                />
+              </div>
+            </div>
+          )}
+
+          {a.sizeUpsell && (
+            <div className="grid grid-cols-12 gap-2 items-end">
+              <div className="col-span-12 md:col-span-4">
+                <div className="text-sm font-medium">Size / crust upsell</div>
+                <div className="v2-muted text-xs">
+                  Sourdough or 33 cm — pure margin add, marginal cost is tiny.
+                </div>
+              </div>
+              <div className="col-span-4 md:col-span-2">
+                <Input
+                  label="Upsell %"
+                  type="number"
+                  step="1"
+                  min="0"
+                  max="100"
+                  value={String(Math.round(a.sizeUpsell.pct * 100))}
+                  onChange={(e) =>
+                    set("sizeUpsell", {
+                      ...a.sizeUpsell!,
+                      pct: Math.max(0, Math.min(1, parseFloat(e.target.value || "0") / 100)),
+                    })
+                  }
+                  trailingAdornment={<span className="v2-muted">%</span>}
+                />
+              </div>
+              <div className="col-span-4 md:col-span-3">
+                <Input
+                  label="+ price"
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  value={(a.sizeUpsell.priceDeltaGrosze / 100).toFixed(2)}
+                  onChange={(e) =>
+                    set("sizeUpsell", {
+                      ...a.sizeUpsell!,
+                      priceDeltaGrosze: Math.max(0, Math.round(parseFloat(e.target.value || "0") * 100)),
+                    })
+                  }
+                  trailingAdornment={<span className="v2-muted">zł</span>}
+                />
+              </div>
+              <div className="col-span-4 md:col-span-3">
+                <Input
+                  label="+ cost"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  value={(a.sizeUpsell.costDeltaGrosze / 100).toFixed(2)}
+                  onChange={(e) =>
+                    set("sizeUpsell", {
+                      ...a.sizeUpsell!,
+                      costDeltaGrosze: Math.max(0, Math.round(parseFloat(e.target.value || "0") * 100)),
+                    })
+                  }
+                  trailingAdornment={<span className="v2-muted">zł</span>}
+                />
+              </div>
+            </div>
+          )}
+
+          {a.cheapestPizzaShift && (
+            <div className="grid grid-cols-12 gap-2 items-end">
+              <div className="col-span-12 md:col-span-4">
+                <div className="text-sm font-medium">Cheapest-pizza shift (recession stress)</div>
+                <div className="v2-muted text-xs">
+                  More Margherita / Marinara — lower AOV, lower COGS. Push pp up to stress-test.
+                </div>
+              </div>
+              <div className="col-span-4 md:col-span-2">
+                <Input
+                  label="Shift pp"
+                  type="number"
+                  step="1"
+                  min="0"
+                  max="100"
+                  value={String(Math.round(a.cheapestPizzaShift.pp * 100))}
+                  onChange={(e) =>
+                    set("cheapestPizzaShift", {
+                      ...a.cheapestPizzaShift!,
+                      pp: Math.max(0, Math.min(1, parseFloat(e.target.value || "0") / 100)),
+                    })
+                  }
+                  trailingAdornment={<span className="v2-muted">pp</span>}
+                />
+              </div>
+              <div className="col-span-4 md:col-span-3">
+                <Input
+                  label="Δ ticket / pp"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  value={(a.cheapestPizzaShift.ticketDeltaGrosze / 100).toFixed(2)}
+                  onChange={(e) =>
+                    set("cheapestPizzaShift", {
+                      ...a.cheapestPizzaShift!,
+                      ticketDeltaGrosze: Math.max(0, Math.round(parseFloat(e.target.value || "0") * 100)),
+                    })
+                  }
+                  trailingAdornment={<span className="v2-muted">zł</span>}
+                />
+              </div>
+              <div className="col-span-4 md:col-span-3">
+                <Input
+                  label="Δ COGS / pp"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  value={(a.cheapestPizzaShift.cogsDeltaGrosze / 100).toFixed(2)}
+                  onChange={(e) =>
+                    set("cheapestPizzaShift", {
+                      ...a.cheapestPizzaShift!,
+                      cogsDeltaGrosze: Math.max(0, Math.round(parseFloat(e.target.value || "0") * 100)),
+                    })
+                  }
+                  trailingAdornment={<span className="v2-muted">zł</span>}
+                />
+              </div>
+            </div>
+          )}
+
+          {a.deliveryShare && (
+            <div className="grid grid-cols-12 gap-2 items-end">
+              <div className="col-span-12 md:col-span-4">
+                <div className="text-sm font-medium">Delivery channel share</div>
+                <div className="v2-muted text-xs">
+                  Share of orders that go through delivery — extra packaging + processor, plus
+                  delivery fee revenue.
+                </div>
+              </div>
+              <div className="col-span-3 md:col-span-2">
+                <Input
+                  label="Share %"
+                  type="number"
+                  step="1"
+                  min="0"
+                  max="100"
+                  value={String(Math.round(a.deliveryShare.pct * 100))}
+                  onChange={(e) =>
+                    set("deliveryShare", {
+                      ...a.deliveryShare!,
+                      pct: Math.max(0, Math.min(1, parseFloat(e.target.value || "0") / 100)),
+                    })
+                  }
+                  trailingAdornment={<span className="v2-muted">%</span>}
+                />
+              </div>
+              <div className="col-span-3 md:col-span-2">
+                <Input
+                  label="Packaging"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  value={(a.deliveryShare.packagingCostGrosze / 100).toFixed(2)}
+                  onChange={(e) =>
+                    set("deliveryShare", {
+                      ...a.deliveryShare!,
+                      packagingCostGrosze: Math.max(
+                        0,
+                        Math.round(parseFloat(e.target.value || "0") * 100),
+                      ),
+                    })
+                  }
+                  trailingAdornment={<span className="v2-muted">zł</span>}
+                />
+              </div>
+              <div className="col-span-3 md:col-span-2">
+                <Input
+                  label="+ Processor"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="10"
+                  value={(a.deliveryShare.extraProcessorPct * 100).toFixed(2)}
+                  onChange={(e) =>
+                    set("deliveryShare", {
+                      ...a.deliveryShare!,
+                      extraProcessorPct: Math.max(
+                        0,
+                        Math.min(0.1, parseFloat(e.target.value || "0") / 100),
+                      ),
+                    })
+                  }
+                  trailingAdornment={<span className="v2-muted">%</span>}
+                />
+              </div>
+              <div className="col-span-3 md:col-span-2">
+                <Input
+                  label="Fee revenue"
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  value={(a.deliveryShare.avgFeeGrosze / 100).toFixed(2)}
+                  onChange={(e) =>
+                    set("deliveryShare", {
+                      ...a.deliveryShare!,
+                      avgFeeGrosze: Math.max(0, Math.round(parseFloat(e.target.value || "0") * 100)),
+                    })
+                  }
+                  trailingAdornment={<span className="v2-muted">zł</span>}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      </CardBody>
+    </Card>
+  );
+}
+
+// --- Weather & calendar card ---------------------------------------------
+
+interface WeatherCardProps {
+  weather: SimulationWeather;
+  baseOrdersPerDay: number;
+  baseDaysOpen: number;
+  onChange: (next: SimulationWeather) => void;
+}
+
+function WeatherCalendarCard({ weather, baseOrdersPerDay, baseDaysOpen, onChange }: WeatherCardProps) {
+  const w = weather;
+  const patch = (next: Partial<SimulationWeather>) => onChange({ ...w, ...next });
+
+  // Live preview of the composite volume multiplier (matches applyAssumptionsAndWeather).
+  const rainAdj = w.rainyShare * w.rainyDayMultiplier + (1 - w.rainyShare);
+  const hotAdj = w.heatwaveShare * w.heatwaveMultiplier + (1 - w.heatwaveShare);
+  const schoolAdj = (2 / 12) * w.schoolHolidayLunchMultiplier + 10 / 12;
+  const compositeVolume = rainAdj * hotAdj * schoolAdj;
+  const peakBonus = w.holidayPeakDaysPerMonth * (w.holidayPeakMultiplier - 1) * baseOrdersPerDay;
+  const eventBonus = w.eventDaysPerMonth * (w.eventDayMultiplier - 1) * baseOrdersPerDay;
+  const effectiveDaysOpen = Math.max(0, baseDaysOpen - w.holidayClosedDaysPerMonth);
+  const effectiveOrdersPerDay =
+    effectiveDaysOpen > 0
+      ? baseOrdersPerDay * compositeVolume + (peakBonus + eventBonus) / effectiveDaysOpen
+      : baseOrdersPerDay * compositeVolume;
+
+  return (
+    <Card>
+      <CardHeader
+        title="Weather & calendar"
+        description="Rain, heat, Polish holidays, school-holiday lunch dip and event days. Modifies effective volume + days open — propagates into every chart below."
+        actions={<CalendarRange className="h-4 w-4 v2-muted" />}
+      />
+      <CardBody>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <Input
+            label="Rainy-day multiplier"
+            type="number"
+            step="0.05"
+            min="0"
+            max="3"
+            value={w.rainyDayMultiplier.toFixed(2)}
+            onChange={(e) =>
+              patch({ rainyDayMultiplier: Math.max(0, Math.min(3, parseFloat(e.target.value || "0"))) })
+            }
+            description="Default 0.75 — 25% volume drop on rainy days."
+          />
+          <Input
+            label="Rainy-day share"
+            type="number"
+            step="1"
+            min="0"
+            max="100"
+            value={String(Math.round(w.rainyShare * 100))}
+            onChange={(e) =>
+              patch({ rainyShare: Math.max(0, Math.min(1, parseFloat(e.target.value || "0") / 100)) })
+            }
+            trailingAdornment={<span className="v2-muted">%</span>}
+            description="Share of days that are rainy (Warsaw avg ~30%)."
+          />
+          <Input
+            label="Heatwave multiplier"
+            type="number"
+            step="0.05"
+            min="0"
+            max="3"
+            value={w.heatwaveMultiplier.toFixed(2)}
+            onChange={(e) =>
+              patch({ heatwaveMultiplier: Math.max(0, Math.min(3, parseFloat(e.target.value || "0"))) })
+            }
+            description="Default 1.40 — patio evenings drive +40%."
+          />
+          <Input
+            label="Heatwave evening share"
+            type="number"
+            step="1"
+            min="0"
+            max="100"
+            value={String(Math.round(w.heatwaveShare * 100))}
+            onChange={(e) =>
+              patch({ heatwaveShare: Math.max(0, Math.min(1, parseFloat(e.target.value || "0") / 100)) })
+            }
+            trailingAdornment={<span className="v2-muted">%</span>}
+            description="Share of evenings hot enough to fire the bonus."
+          />
+          <Input
+            label="Holiday closed days / month"
+            type="number"
+            step="0.5"
+            min="0"
+            max="31"
+            value={w.holidayClosedDaysPerMonth.toFixed(1)}
+            onChange={(e) =>
+              patch({
+                holidayClosedDaysPerMonth: Math.max(
+                  0,
+                  Math.min(31, parseFloat(e.target.value || "0")),
+                ),
+              })
+            }
+            description="Easter Sunday, NYE, 25 Dec, 15 Aug, Boże Ciało (~12/yr ÷ 12)."
+          />
+          <Input
+            label="Peak days / month"
+            type="number"
+            step="0.5"
+            min="0"
+            max="31"
+            value={w.holidayPeakDaysPerMonth.toFixed(1)}
+            onChange={(e) =>
+              patch({
+                holidayPeakDaysPerMonth: Math.max(
+                  0,
+                  Math.min(31, parseFloat(e.target.value || "0")),
+                ),
+              })
+            }
+            description="NYE, Valentine's, Mother's Day."
+          />
+          <Input
+            label="Peak day multiplier"
+            type="number"
+            step="0.1"
+            min="0"
+            max="5"
+            value={w.holidayPeakMultiplier.toFixed(2)}
+            onChange={(e) =>
+              patch({ holidayPeakMultiplier: Math.max(0, Math.min(5, parseFloat(e.target.value || "0"))) })
+            }
+            description="Default 1.60 — peak days run hot."
+          />
+          <Input
+            label="School-holiday lunch dip"
+            type="number"
+            step="0.05"
+            min="0"
+            max="2"
+            value={w.schoolHolidayLunchMultiplier.toFixed(2)}
+            onChange={(e) =>
+              patch({
+                schoolHolidayLunchMultiplier: Math.max(
+                  0,
+                  Math.min(2, parseFloat(e.target.value || "0")),
+                ),
+              })
+            }
+            description="July + August offices empty (default 0.85)."
+          />
+          <Input
+            label="Event days / month"
+            type="number"
+            step="0.5"
+            min="0"
+            max="31"
+            value={w.eventDaysPerMonth.toFixed(1)}
+            onChange={(e) =>
+              patch({
+                eventDaysPerMonth: Math.max(0, Math.min(31, parseFloat(e.target.value || "0"))),
+              })
+            }
+            description="Street fairs, food-truck rallies, Nocny Market."
+          />
+          <Input
+            label="Event day multiplier"
+            type="number"
+            step="0.1"
+            min="0"
+            max="5"
+            value={w.eventDayMultiplier.toFixed(2)}
+            onChange={(e) =>
+              patch({ eventDayMultiplier: Math.max(0, Math.min(5, parseFloat(e.target.value || "0"))) })
+            }
+            description="Default 1.50 — busy event evenings."
+          />
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 pt-3 border-t border-[var(--border)]">
+          <Stat label="Effective orders / day" value={`${effectiveOrdersPerDay.toFixed(1)}`} />
+          <Stat label="Effective days open" value={`${effectiveDaysOpen.toFixed(1)} / mo`} />
+          <Stat
+            label="Composite volume"
+            value={`${((compositeVolume - 1) * 100 >= 0 ? "+" : "")}${((compositeVolume - 1) * 100).toFixed(1)}%`}
+          />
+          <Stat
+            label="Bonus orders / month"
+            value={`+${Math.round(peakBonus + eventBonus).toLocaleString("pl-PL")}`}
+          />
+        </div>
+      </CardBody>
+    </Card>
   );
 }

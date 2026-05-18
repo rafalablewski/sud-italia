@@ -2,7 +2,7 @@ import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, BusinessCostPayrollRole, SimulationScenario, SimulationLaborLine, SimulationMenuMixLine, SimulationSeasonality } from "@/data/types";
+import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, BusinessCostPayrollRole, SimulationScenario, SimulationLaborLine, SimulationMenuMixLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationWeather } from "@/data/types";
 import { getActiveLocations, locations as allLocations } from "@/data/locations";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -7978,7 +7978,60 @@ export function defaultSimulationScenario(): SimulationScenario {
       summer: 1.30,
       autumn: 1.00,
     },
+    assumptions: defaultSimulationAssumptions(),
+    weather: defaultSimulationWeather(),
     updatedAt: new Date().toISOString(),
+  };
+}
+
+/** Behavioral levers tuned to a Neapolitan pizza truck in Warsaw 2026. */
+export function defaultSimulationAssumptions(): SimulationAssumptions {
+  return {
+    coffeeAttach:           { attachPct: 0.25, avgPriceGrosze: 900,  cogsPct: 0.12 },
+    dessertAttach:          { attachPct: 0.12, avgPriceGrosze: 1600, cogsPct: 0.28 },
+    antipastiAttach:        { attachPct: 0.08, avgPriceGrosze: 2400, cogsPct: 0.32 },
+    aperitivoAttach:        { attachPct: 0.10, avgPriceGrosze: 2200, cogsPct: 0.22 },
+    premiumToppingsAttach:  { attachPct: 0.15, avgPriceGrosze: 700,  cogsPct: 0.30 },
+    pastaPrimoAttach:       { attachPct: 0.18, avgPriceGrosze: 3200, cogsPct: 0.26 },
+    comboConversion: {
+      pct: 0.20,
+      addonGrosze: 2500,
+      discountGrosze: 600,
+      addonCogsPct: 0.25,
+    },
+    sizeUpsell: {
+      pct: 0.10,
+      priceDeltaGrosze: 500,
+      costDeltaGrosze: 40,
+    },
+    // Cheapest-pizza shift is a stress lever — default off (0 pp).
+    cheapestPizzaShift: {
+      pp: 0,
+      ticketDeltaGrosze: 300,
+      cogsDeltaGrosze: 100,
+    },
+    deliveryShare: {
+      pct: 0.25,
+      packagingCostGrosze: 250,
+      extraProcessorPct: 0,
+      avgFeeGrosze: 800,
+    },
+  };
+}
+
+/** Weather + Polish calendar baseline for Warsaw 2026. */
+export function defaultSimulationWeather(): SimulationWeather {
+  return {
+    rainyDayMultiplier: 0.75,
+    rainyShare: 0.30,
+    heatwaveMultiplier: 1.40,
+    heatwaveShare: 0.10,
+    holidayClosedDaysPerMonth: 1.0,
+    holidayPeakDaysPerMonth: 1.0,
+    holidayPeakMultiplier: 1.60,
+    schoolHolidayLunchMultiplier: 0.85,
+    eventDaysPerMonth: 1,
+    eventDayMultiplier: 1.50,
   };
 }
 
@@ -8015,7 +8068,131 @@ export async function getSimulationScenario(): Promise<SimulationScenario> {
     menuMix: Array.isArray(saved.menuMix) ? saved.menuMix : undefined,
     menuMixLocation:
       typeof saved.menuMixLocation === "string" ? saved.menuMixLocation : undefined,
+    assumptions: hydrateAssumptions(saved.assumptions, defaults.assumptions),
+    weather: hydrateWeather(saved.weather, defaults.weather),
     updatedAt: saved.updatedAt ?? defaults.updatedAt,
+  };
+}
+
+function clamp01(n: unknown, fallback: number): number {
+  if (typeof n !== "number" || !Number.isFinite(n)) return fallback;
+  return Math.max(0, Math.min(1, n));
+}
+
+function clampNonNeg(n: unknown, fallback: number): number {
+  if (typeof n !== "number" || !Number.isFinite(n)) return fallback;
+  return Math.max(0, n);
+}
+
+function hydrateAttach(
+  saved: Partial<SimulationAttachLever> | undefined,
+  fallback: SimulationAttachLever | undefined,
+): SimulationAttachLever | undefined {
+  if (!fallback) return saved as SimulationAttachLever | undefined;
+  if (!saved) return fallback;
+  return {
+    attachPct: clamp01(saved.attachPct, fallback.attachPct),
+    avgPriceGrosze: Math.round(clampNonNeg(saved.avgPriceGrosze, fallback.avgPriceGrosze)),
+    cogsPct: clamp01(saved.cogsPct, fallback.cogsPct),
+  };
+}
+
+function hydrateAssumptions(
+  saved: SimulationAssumptions | undefined,
+  fallback: SimulationAssumptions | undefined,
+): SimulationAssumptions | undefined {
+  const fb = fallback ?? defaultSimulationAssumptions();
+  if (!saved) return fb;
+  return {
+    coffeeAttach: hydrateAttach(saved.coffeeAttach, fb.coffeeAttach),
+    dessertAttach: hydrateAttach(saved.dessertAttach, fb.dessertAttach),
+    antipastiAttach: hydrateAttach(saved.antipastiAttach, fb.antipastiAttach),
+    aperitivoAttach: hydrateAttach(saved.aperitivoAttach, fb.aperitivoAttach),
+    premiumToppingsAttach: hydrateAttach(saved.premiumToppingsAttach, fb.premiumToppingsAttach),
+    pastaPrimoAttach: hydrateAttach(saved.pastaPrimoAttach, fb.pastaPrimoAttach),
+    comboConversion: saved.comboConversion
+      ? {
+          pct: clamp01(saved.comboConversion.pct, fb.comboConversion?.pct ?? 0),
+          addonGrosze: Math.round(
+            clampNonNeg(saved.comboConversion.addonGrosze, fb.comboConversion?.addonGrosze ?? 0),
+          ),
+          discountGrosze: Math.round(
+            clampNonNeg(saved.comboConversion.discountGrosze, fb.comboConversion?.discountGrosze ?? 0),
+          ),
+          addonCogsPct: clamp01(saved.comboConversion.addonCogsPct, fb.comboConversion?.addonCogsPct ?? 0),
+        }
+      : fb.comboConversion,
+    sizeUpsell: saved.sizeUpsell
+      ? {
+          pct: clamp01(saved.sizeUpsell.pct, fb.sizeUpsell?.pct ?? 0),
+          priceDeltaGrosze: Math.round(
+            clampNonNeg(saved.sizeUpsell.priceDeltaGrosze, fb.sizeUpsell?.priceDeltaGrosze ?? 0),
+          ),
+          costDeltaGrosze: Math.round(
+            clampNonNeg(saved.sizeUpsell.costDeltaGrosze, fb.sizeUpsell?.costDeltaGrosze ?? 0),
+          ),
+        }
+      : fb.sizeUpsell,
+    cheapestPizzaShift: saved.cheapestPizzaShift
+      ? {
+          pp: clamp01(saved.cheapestPizzaShift.pp, fb.cheapestPizzaShift?.pp ?? 0),
+          ticketDeltaGrosze: Math.round(
+            clampNonNeg(saved.cheapestPizzaShift.ticketDeltaGrosze, fb.cheapestPizzaShift?.ticketDeltaGrosze ?? 0),
+          ),
+          cogsDeltaGrosze: Math.round(
+            clampNonNeg(saved.cheapestPizzaShift.cogsDeltaGrosze, fb.cheapestPizzaShift?.cogsDeltaGrosze ?? 0),
+          ),
+        }
+      : fb.cheapestPizzaShift,
+    deliveryShare: saved.deliveryShare
+      ? {
+          pct: clamp01(saved.deliveryShare.pct, fb.deliveryShare?.pct ?? 0),
+          packagingCostGrosze: Math.round(
+            clampNonNeg(saved.deliveryShare.packagingCostGrosze, fb.deliveryShare?.packagingCostGrosze ?? 0),
+          ),
+          extraProcessorPct: clamp01(
+            saved.deliveryShare.extraProcessorPct,
+            fb.deliveryShare?.extraProcessorPct ?? 0,
+          ),
+          avgFeeGrosze: Math.round(
+            clampNonNeg(saved.deliveryShare.avgFeeGrosze, fb.deliveryShare?.avgFeeGrosze ?? 0),
+          ),
+        }
+      : fb.deliveryShare,
+  };
+}
+
+function hydrateWeather(
+  saved: SimulationWeather | undefined,
+  fallback: SimulationWeather | undefined,
+): SimulationWeather | undefined {
+  const fb = fallback ?? defaultSimulationWeather();
+  if (!saved) return fb;
+  const clampMult = (n: unknown, f: number): number => {
+    if (typeof n !== "number" || !Number.isFinite(n)) return f;
+    return Math.max(0, Math.min(5, n));
+  };
+  const clampDays = (n: unknown, f: number): number => {
+    if (typeof n !== "number" || !Number.isFinite(n)) return f;
+    return Math.max(0, Math.min(31, n));
+  };
+  return {
+    rainyDayMultiplier: clampMult(saved.rainyDayMultiplier, fb.rainyDayMultiplier),
+    rainyShare: clamp01(saved.rainyShare, fb.rainyShare),
+    heatwaveMultiplier: clampMult(saved.heatwaveMultiplier, fb.heatwaveMultiplier),
+    heatwaveShare: clamp01(saved.heatwaveShare, fb.heatwaveShare),
+    holidayClosedDaysPerMonth: clampDays(
+      saved.holidayClosedDaysPerMonth,
+      fb.holidayClosedDaysPerMonth,
+    ),
+    holidayPeakDaysPerMonth: clampDays(saved.holidayPeakDaysPerMonth, fb.holidayPeakDaysPerMonth),
+    holidayPeakMultiplier: clampMult(saved.holidayPeakMultiplier, fb.holidayPeakMultiplier),
+    schoolHolidayLunchMultiplier: clampMult(
+      saved.schoolHolidayLunchMultiplier,
+      fb.schoolHolidayLunchMultiplier,
+    ),
+    eventDaysPerMonth: clampDays(saved.eventDaysPerMonth, fb.eventDaysPerMonth),
+    eventDayMultiplier: clampMult(saved.eventDayMultiplier, fb.eventDayMultiplier),
   };
 }
 
@@ -8096,6 +8273,8 @@ export async function saveSimulationScenario(
         typeof scenario.menuMixLocation === "string" && scenario.menuMixLocation.length > 0
           ? scenario.menuMixLocation
           : undefined,
+      assumptions: hydrateAssumptions(scenario.assumptions, defaults.assumptions),
+      weather: hydrateWeather(scenario.weather, defaults.weather),
       updatedAt: new Date().toISOString(),
     };
     await writeJSON(SIMULATION_KEY, clean);

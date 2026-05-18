@@ -107,6 +107,8 @@ export const PUT = withAdmin(
       menuMix: Array.isArray(b.menuMix) ? b.menuMix : undefined,
       menuMixLocation:
         typeof b.menuMixLocation === "string" ? b.menuMixLocation : undefined,
+      assumptions: b.assumptions,
+      weather: b.weather,
       updatedAt: new Date().toISOString(),
     };
     const saved = await saveSimulationScenario(scenario);

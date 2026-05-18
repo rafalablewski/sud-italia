@@ -807,6 +807,86 @@ export interface SimulationMenuMixLine {
   weight: number;
 }
 
+/** A "X% of orders attach an espresso (avg 9 zł, 12% COGS)" lever. */
+export interface SimulationAttachLever {
+  /** Share of orders that get this add-on (0–1). */
+  attachPct: number;
+  /** Average price added per attached order, in grosze. */
+  avgPriceGrosze: number;
+  /** COGS ratio for this add-on (0–1). */
+  cogsPct: number;
+}
+
+/** Behavioral assumption levers. Each lever folds into effective ticket
+ *  and COGS — operators tune attach rates instead of plain revenue. */
+export interface SimulationAssumptions {
+  coffeeAttach?: SimulationAttachLever;
+  dessertAttach?: SimulationAttachLever;
+  antipastiAttach?: SimulationAttachLever;
+  aperitivoAttach?: SimulationAttachLever;
+  premiumToppingsAttach?: SimulationAttachLever;
+  pastaPrimoAttach?: SimulationAttachLever;
+  /** Combo: X% of mains convert to a combo (main + drink + dessert) at a discount. */
+  comboConversion?: {
+    pct: number;
+    /** Typical combo addon price (drink + dessert), in grosze. */
+    addonGrosze: number;
+    /** Bundle discount per combo, in grosze. */
+    discountGrosze: number;
+    /** COGS ratio for the addon portion (0–1). */
+    addonCogsPct: number;
+  };
+  /** Size/crust upsell: X% of pizzas pay +N zł for sourdough / 33 cm. */
+  sizeUpsell?: {
+    pct: number;
+    priceDeltaGrosze: number;
+    costDeltaGrosze: number;
+  };
+  /** Cheapest-pizza recession shift, in percentage points. Positive = more
+   *  Margherita/Marinara share, lower AOV, lower COGS. */
+  cheapestPizzaShift?: {
+    pp: number;
+    /** Per-pp drop in AOV in grosze. */
+    ticketDeltaGrosze: number;
+    /** Per-pp drop in COGS in grosze. */
+    cogsDeltaGrosze: number;
+  };
+  /** Delivery channel share (0–1) with packaging + processor + fee deltas. */
+  deliveryShare?: {
+    pct: number;
+    /** Per-order extra packaging cost, in grosze. */
+    packagingCostGrosze: number;
+    /** Additional processor fee on the delivery share (e.g. 0.005 = +0.5pp). */
+    extraProcessorPct: number;
+    /** Average delivery fee revenue per order, in grosze. */
+    avgFeeGrosze: number;
+  };
+}
+
+/** Weather + calendar levers — modify effective ordersPerDay and daysOpen. */
+export interface SimulationWeather {
+  /** Multiplier on volume for rainy days (e.g. 0.75 = -25%). */
+  rainyDayMultiplier: number;
+  /** Share of days that are rainy in a typical month (0–1). */
+  rainyShare: number;
+  /** Multiplier on volume for hot patio evenings. */
+  heatwaveMultiplier: number;
+  /** Share of evenings hot enough to apply the heatwave bonus (0–1). */
+  heatwaveShare: number;
+  /** Closed days per month due to Polish holidays (Easter / NYE / 25 Dec / etc). */
+  holidayClosedDaysPerMonth: number;
+  /** Peak days per month (NYE, Valentine's, Mother's Day, etc). */
+  holidayPeakDaysPerMonth: number;
+  /** Multiplier on volume for peak days. */
+  holidayPeakMultiplier: number;
+  /** Lunch volume multiplier in July + August (offices empty). */
+  schoolHolidayLunchMultiplier: number;
+  /** Event days per month (street fairs, food-truck rallies). */
+  eventDaysPerMonth: number;
+  /** Volume multiplier on event days. */
+  eventDayMultiplier: number;
+}
+
 export interface SimulationScenario {
   /** Average orders served per operating day. */
   ordersPerDay: number;
@@ -836,6 +916,10 @@ export interface SimulationScenario {
   /** Location slug whose menu the mix was built from — pinned so the
    *  page can reload the same items consistently. */
   menuMixLocation?: string;
+  /** Behavioral attach / upsell levers — fold into effective ticket + COGS. */
+  assumptions?: SimulationAssumptions;
+  /** Weather + Polish-holiday calendar levers — modify effective volume. */
+  weather?: SimulationWeather;
   updatedAt: string;
 }
 
