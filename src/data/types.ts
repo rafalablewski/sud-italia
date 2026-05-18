@@ -803,7 +803,10 @@ export interface SimulationSeasonality {
 
 export interface SimulationMenuMixLine {
   menuItemId: string;
-  /** Share of orders this item represents (0–1). The mix sums to ~1. */
+  /** Share of orders this item represents (0–1). The mix sums to ~1.
+   *  Deprecated: kept for backward compatibility with saved scenarios.
+   *  The simulator no longer reads this — operators pick from a small
+   *  set of preset menu scenarios instead. */
   weight: number;
 }
 
@@ -909,13 +912,10 @@ export interface SimulationScenario {
   setupCostGrosze?: number;
   /** Seasonal multipliers on ordersPerDay across the four quarters. */
   seasonality?: SimulationSeasonality;
-  /** Optional menu mix. When non-empty, the page derives avgTicketGrosze
-   *  + cogsPct from the items' prices + recipe-derived costs and the
-   *  weights here — the simple inputs become display-only. */
-  menuMix?: SimulationMenuMixLine[];
-  /** Location slug whose menu the mix was built from — pinned so the
-   *  page can reload the same items consistently. */
-  menuMixLocation?: string;
+  /** Id of the active menu scenario preset (e.g. "balanced", "premium").
+   *  Picking a preset loads avgTicketGrosze + cogsPct + assumption levers
+   *  in one click. Operators can still tweak any value afterwards. */
+  menuScenario?: string;
   /** Behavioral attach / upsell levers — fold into effective ticket + COGS. */
   assumptions?: SimulationAssumptions;
   /** Weather + Polish-holiday calendar levers — modify effective volume. */

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Banknote,
@@ -16,7 +15,6 @@ import {
   LineChart as LineChartIcon,
   PiggyBank,
   Plus,
-  Pizza,
   RefreshCw,
   Save,
   Scale,
@@ -25,22 +23,20 @@ import {
   Trash2,
   TrendingDown,
   TrendingUp,
+  Utensils,
   Wallet,
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import type {
   BusinessCostCategory,
   BusinessCostPayrollRole,
-  MenuCategory,
   SimulationAssumptions,
   SimulationAttachLever,
   SimulationLaborLine,
-  SimulationMenuMixLine,
   SimulationScenario,
   SimulationSeasonality,
   SimulationWeather,
 } from "@/data/types";
-import { getActiveLocations } from "@/data/locations";
 import { useToast } from "./v2/ui/Toast";
 import {
   Badge,
@@ -67,25 +63,6 @@ const PAYROLL_ROLE_LABEL: Record<BusinessCostPayrollRole, string> = {
   cleaner: "Cleaner",
   other: "Other",
 };
-
-const MENU_CATEGORY_LABEL: Record<MenuCategory, string> = {
-  pizza: "Pizza",
-  pasta: "Pasta",
-  antipasti: "Antipasti",
-  panini: "Panini",
-  drinks: "Drinks",
-  desserts: "Desserts",
-};
-
-interface MenuSnapshotItem {
-  id: string;
-  name: string;
-  category: MenuCategory;
-  priceGrosze: number;
-  costGrosze: number;
-  recipeCostGrosze: number;
-  recentQty: number;
-}
 
 const FIXED_COST_FIELDS: { key: BusinessCostCategory; label: string }[] = [
   { key: "rent", label: "Rent & lease" },
@@ -358,33 +335,79 @@ function buildMatrix(
   };
 }
 
-/** Resolve the effective avgTicketGrosze + cogsPct from the menu mix
- *  (when non-empty + at least one weighted item resolves in the menu
- *  snapshot). Returns null when the mix is inactive or empty, in which
- *  case the scenario's own avgTicketGrosze + cogsPct stand. Weights
- *  are normalised so they sum to 1 — operator-typed values can total
- *  anything; UX shows the warning. */
-function deriveMixValues(
-  mix: SimulationMenuMixLine[] | undefined,
-  menu: MenuSnapshotItem[],
-): { avgTicketGrosze: number; cogsPct: number; matchedWeight: number } | null {
-  if (!mix || mix.length === 0 || menu.length === 0) return null;
-  const byId = new Map(menu.map((m) => [m.id, m]));
-  let weightedPrice = 0;
-  let weightedCost = 0;
-  let totalWeight = 0;
-  for (const line of mix) {
-    const item = byId.get(line.menuItemId);
-    if (!item || line.weight <= 0) continue;
-    weightedPrice += line.weight * item.priceGrosze;
-    weightedCost += line.weight * item.recipeCostGrosze;
-    totalWeight += line.weight;
-  }
-  if (totalWeight <= 0) return null;
-  const avgTicketGrosze = Math.round(weightedPrice / totalWeight);
-  const cogsPct = weightedPrice > 0 ? weightedCost / weightedPrice : 0;
-  return { avgTicketGrosze, cogsPct, matchedWeight: totalWeight };
+// --- Menu scenario presets -----------------------------------------------
+//
+// Five archetypal menu shapes a Neapolitan pizza truck can run. Picking
+// one loads the avg ticket + COGS + behavior levers in a single click;
+// the operator can still tweak any number afterwards.
+
+interface MenuScenarioPreset {
+  id: string;
+  name: string;
+  emoji: string;
+  description: string;
+  avgTicketGrosze: number;
+  cogsPct: number;
+  /** Override values for behavior levers when this preset is applied. */
+  attach: {
+    coffee: number;
+    dessert: number;
+    antipasti: number;
+    aperitivo: number;
+    premiumToppings: number;
+    pastaPrimo: number;
+  };
 }
+
+const MENU_SCENARIOS: MenuScenarioPreset[] = [
+  {
+    id: "takeaway",
+    name: "Takeaway classic",
+    emoji: "🍕",
+    description: "Quick pizza orders, minimal sides. Most customers grab + go. Low ticket but high volume.",
+    avgTicketGrosze: 4500,
+    cogsPct: 0.30,
+    attach: { coffee: 0.15, dessert: 0.05, antipasti: 0.03, aperitivo: 0, premiumToppings: 0.10, pastaPrimo: 0 },
+  },
+  {
+    id: "balanced",
+    name: "Balanced (default)",
+    emoji: "🍝",
+    description: "Pizza + pasta + drinks + dessert mix. The Warsaw 2026 baseline.",
+    avgTicketGrosze: 6500,
+    cogsPct: 0.30,
+    attach: { coffee: 0.25, dessert: 0.12, antipasti: 0.08, aperitivo: 0.10, premiumToppings: 0.15, pastaPrimo: 0.18 },
+  },
+  {
+    id: "premium",
+    name: "Premium / Specialty",
+    emoji: "✨",
+    description: "High-end pizzas, premium toppings, pasta primo, antipasti. Lower volume but better margin.",
+    avgTicketGrosze: 8800,
+    cogsPct: 0.32,
+    attach: { coffee: 0.30, dessert: 0.25, antipasti: 0.18, aperitivo: 0.20, premiumToppings: 0.35, pastaPrimo: 0.30 },
+  },
+  {
+    id: "family",
+    name: "Family / Group",
+    emoji: "👨‍👩‍👧",
+    description: "Multi-pizza orders for groups. High ticket, fewer orders.",
+    avgTicketGrosze: 15500,
+    cogsPct: 0.28,
+    attach: { coffee: 0.10, dessert: 0.25, antipasti: 0.20, aperitivo: 0.05, premiumToppings: 0.15, pastaPrimo: 0.15 },
+  },
+  {
+    id: "aperitivo",
+    name: "Aperitivo / Dinner",
+    emoji: "🍷",
+    description: "Drinks-led evening service. Best margin — requires alcohol licence.",
+    avgTicketGrosze: 8200,
+    cogsPct: 0.26,
+    attach: { coffee: 0.20, dessert: 0.20, antipasti: 0.25, aperitivo: 0.45, premiumToppings: 0.20, pastaPrimo: 0.20 },
+  },
+];
+
+const MENU_SCENARIO_BY_ID = new Map(MENU_SCENARIOS.map((s) => [s.id, s]));
 
 /** Per-order ticket + cost adjustment from a single attach lever. */
 function attachDelta(
@@ -495,8 +518,6 @@ function deriveArchetypes(s: SimulationScenario) {
   };
   return { conservative, realistic: s, optimistic };
 }
-
-const ACTIVE_LOCATIONS = getActiveLocations();
 
 // --- Amateur-friendly explanations ---------------------------------------
 //
@@ -617,26 +638,26 @@ const HELP = {
       </>
     ),
   },
-  menuMix: {
-    title: "Menu mix",
+  menuScenario: {
+    title: "Menu scenario",
     body: (
       <>
         <p>
-          Instead of guessing the average ticket and COGS as plain numbers, you
-          pick how often each menu item sells. The simulator reads the real menu
-          for the selected location, looks up each item&apos;s recipe-derived
-          food cost (rolled up from current ingredient prices), and computes the
-          weighted-average ticket and blended COGS from your weights.
+          Pick one of five archetypal menu shapes for a Neapolitan pizza
+          truck. Each preset loads an average ticket, COGS ratio and a
+          starting set of behavior levers (coffee attach, dessert attach,
+          aperitivo attach, etc) in one click.
         </p>
+        <ul style={{ margin: "8px 0", paddingLeft: 20, listStyle: "disc" }}>
+          <li><strong>Takeaway classic</strong> — quick pizza, minimal sides, ~45 zł</li>
+          <li><strong>Balanced</strong> — pizza + pasta + drinks + dessert, ~65 zł</li>
+          <li><strong>Premium</strong> — high-end pizzas + extras, ~88 zł</li>
+          <li><strong>Family / Group</strong> — multi-pizza orders, ~155 zł</li>
+          <li><strong>Aperitivo / Dinner</strong> — drinks-led evening, ~82 zł (needs alcohol licence)</li>
+        </ul>
         <p>
-          <strong>Auto-fill (30 d):</strong> pulls the last 30 days of actual
-          orders and sets weights proportionally. One-way — never writes back to
-          the order history.
-        </p>
-        <p>
-          <strong>Tip:</strong> raise Margherita weight = lower ticket + lower
-          COGS%. Raise Specialty weight = higher ticket + higher COGS%. Use this
-          to model menu engineering decisions.
+          After applying a preset you can still tweak any value — the preset
+          is a starting point, not a lock-in.
         </p>
       </>
     ),
@@ -1217,8 +1238,6 @@ export function AdminSimulation() {
   const [saving, setSaving] = useState(false);
   const [seedConfirmOpen, setSeedConfirmOpen] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
-  const [menuSnapshot, setMenuSnapshot] = useState<MenuSnapshotItem[]>([]);
-  const [menuLoading, setMenuLoading] = useState(false);
   const dirtyRef = useRef(false);
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -1239,28 +1258,6 @@ export function AdminSimulation() {
   useEffect(() => {
     fetchScenario();
   }, [fetchScenario]);
-
-  // Pull the menu snapshot whenever the scenario's menuMixLocation
-  // changes (defaults to the first active location). Idempotent — the
-  // server route filters by available items only.
-  const menuLocation =
-    scenario?.menuMixLocation ?? ACTIVE_LOCATIONS[0]?.slug ?? "warszawa";
-  useEffect(() => {
-    let cancelled = false;
-    setMenuLoading(true);
-    fetch(`/api/admin/simulation/menu?location=${encodeURIComponent(menuLocation)}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j) => {
-        if (!cancelled && j?.items) setMenuSnapshot(j.items as MenuSnapshotItem[]);
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!cancelled) setMenuLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [menuLocation]);
 
   const persist = useCallback(
     async (next: SimulationScenario, opts?: { quiet?: boolean }) => {
@@ -1308,36 +1305,17 @@ export function AdminSimulation() {
     [],
   );
 
-  // When menu mix is active, the avgTicketGrosze and cogsPct fields on
-  // the scenario are display-only — the real values come from the
-  // weighted mix. effectiveScenario is the one fed into every chart,
-  // matrix, projection and KPI on this page.
-  const mixDerived = useMemo(
-    () => deriveMixValues(scenario?.menuMix, menuSnapshot),
-    [scenario?.menuMix, menuSnapshot],
-  );
+  // effectiveScenario folds the assumption + weather levers into the
+  // scenario values, then feeds every chart, matrix, projection and KPI
+  // on this page from a single source of truth.
   const effectiveScenario = useMemo<SimulationScenario | null>(() => {
     if (!scenario) return null;
-    let s: SimulationScenario = scenario;
-    if (mixDerived) {
-      s = {
-        ...s,
-        avgTicketGrosze: mixDerived.avgTicketGrosze,
-        cogsPct: mixDerived.cogsPct,
-      };
-    }
-    return applyAssumptionsAndWeather(s);
-  }, [scenario, mixDerived]);
+    return applyAssumptionsAndWeather(scenario);
+  }, [scenario]);
   const computed = useMemo(
     () => (effectiveScenario ? computeScenario(effectiveScenario) : null),
     [effectiveScenario],
   );
-
-  const weightById = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const line of scenario?.menuMix ?? []) m.set(line.menuItemId, line.weight);
-    return m;
-  }, [scenario?.menuMix]);
 
   if (loading || !scenario || !computed) {
     return <div className="v2-page-loading">Loading simulation…</div>;
@@ -1393,6 +1371,7 @@ export function AdminSimulation() {
       paymentProcessorPct: 0.019,
       setupCostGrosze: 25_000_000,
       seasonality: { winter: 0.7, spring: 1.0, summer: 1.3, autumn: 1.0 },
+      menuScenario: "balanced",
       assumptions: DEFAULT_ASSUMPTIONS,
       weather: DEFAULT_WEATHER,
       updatedAt: new Date().toISOString(),
@@ -1429,45 +1408,41 @@ export function AdminSimulation() {
     }));
   };
 
-  const setMixWeight = (itemId: string, pct: number) => {
-    const w = Math.max(0, Math.min(1, pct / 100));
-    update((s) => {
-      const next = new Map<string, number>();
-      for (const line of s.menuMix ?? []) next.set(line.menuItemId, line.weight);
-      if (w > 0) next.set(itemId, w);
-      else next.delete(itemId);
-      return {
-        ...s,
-        menuMix: Array.from(next.entries()).map(([menuItemId, weight]) => ({
-          menuItemId,
-          weight,
-        })),
-      };
-    });
-  };
-
-  const autoFillMixFromHistory = () => {
-    const total = menuSnapshot.reduce((sum, m) => sum + m.recentQty, 0);
-    if (total === 0) {
-      toast.warning("No order history yet", "Last 30 days are empty for this location.");
-      return;
-    }
+  const applyMenuScenario = (preset: MenuScenarioPreset) => {
     update((s) => ({
       ...s,
-      menuMix: menuSnapshot
-        .filter((m) => m.recentQty > 0)
-        .map((m) => ({ menuItemId: m.id, weight: m.recentQty / total })),
+      menuScenario: preset.id,
+      avgTicketGrosze: preset.avgTicketGrosze,
+      cogsPct: preset.cogsPct,
+      assumptions: {
+        ...(s.assumptions ?? DEFAULT_ASSUMPTIONS),
+        coffeeAttach: {
+          ...(s.assumptions?.coffeeAttach ?? DEFAULT_ASSUMPTIONS.coffeeAttach!),
+          attachPct: preset.attach.coffee,
+        },
+        dessertAttach: {
+          ...(s.assumptions?.dessertAttach ?? DEFAULT_ASSUMPTIONS.dessertAttach!),
+          attachPct: preset.attach.dessert,
+        },
+        antipastiAttach: {
+          ...(s.assumptions?.antipastiAttach ?? DEFAULT_ASSUMPTIONS.antipastiAttach!),
+          attachPct: preset.attach.antipasti,
+        },
+        aperitivoAttach: {
+          ...(s.assumptions?.aperitivoAttach ?? DEFAULT_ASSUMPTIONS.aperitivoAttach!),
+          attachPct: preset.attach.aperitivo,
+        },
+        premiumToppingsAttach: {
+          ...(s.assumptions?.premiumToppingsAttach ?? DEFAULT_ASSUMPTIONS.premiumToppingsAttach!),
+          attachPct: preset.attach.premiumToppings,
+        },
+        pastaPrimoAttach: {
+          ...(s.assumptions?.pastaPrimoAttach ?? DEFAULT_ASSUMPTIONS.pastaPrimoAttach!),
+          attachPct: preset.attach.pastaPrimo,
+        },
+      },
     }));
-    toast.success("Filled from last 30 days");
-  };
-
-  const clearMix = () => {
-    update((s) => ({ ...s, menuMix: undefined }));
-    toast.success("Menu mix disabled", "Average ticket + COGS are now manual.");
-  };
-
-  const setMixLocation = (slug: string) => {
-    update((s) => ({ ...s, menuMixLocation: slug, menuMix: undefined }));
+    toast.success(`${preset.name} loaded`, `Avg ticket ${formatPrice(preset.avgTicketGrosze)}, COGS ${Math.round(preset.cogsPct * 100)}%`);
   };
 
   const updateFixed = (key: BusinessCostCategory, plnStr: string) => {
@@ -1621,30 +1596,18 @@ export function AdminSimulation() {
                 }
               />
               <Input
-                label={
-                  <LabelWithInfo
-                    text={mixDerived ? "Average ticket (derived from menu mix)" : "Average ticket"}
-                    help={HELP.avgTicket}
-                  />
-                }
+                label={<LabelWithInfo text="Average ticket" help={HELP.avgTicket} />}
                 type="number"
                 step="0.01"
                 min="0"
-                value={
-                  mixDerived
-                    ? (mixDerived.avgTicketGrosze / 100).toFixed(2)
-                    : (scenario.avgTicketGrosze / 100).toFixed(2)
-                }
-                onChange={(e) => {
-                  if (mixDerived) return;
+                value={(scenario.avgTicketGrosze / 100).toFixed(2)}
+                onChange={(e) =>
                   update((s) => ({
                     ...s,
                     avgTicketGrosze: Math.max(0, Math.round(parseFloat(e.target.value || "0") * 100)),
-                  }));
-                }}
-                readOnly={!!mixDerived}
+                  }))
+                }
                 trailingAdornment={<span className="v2-muted">zł</span>}
-                description={mixDerived ? "Computed from the Menu mix card below." : undefined}
               />
               <Input
                 label={<LabelWithInfo text="Days open per month" help={HELP.daysOpen} />}
@@ -1660,39 +1623,20 @@ export function AdminSimulation() {
                 }
               />
               <Input
-                label={
-                  <LabelWithInfo
-                    text={
-                      mixDerived
-                        ? "Ingredient cost ratio (derived from menu mix)"
-                        : "Ingredient cost ratio"
-                    }
-                    help={HELP.cogsPct}
-                  />
-                }
+                label={<LabelWithInfo text="Ingredient cost ratio" help={HELP.cogsPct} />}
                 type="number"
                 step="1"
                 min="0"
                 max="100"
-                value={
-                  mixDerived
-                    ? (mixDerived.cogsPct * 100).toFixed(1)
-                    : String(Math.round(scenario.cogsPct * 100))
-                }
-                onChange={(e) => {
-                  if (mixDerived) return;
+                value={String(Math.round(scenario.cogsPct * 100))}
+                onChange={(e) =>
                   update((s) => ({
                     ...s,
                     cogsPct: Math.max(0, Math.min(1, parseFloat(e.target.value || "0") / 100)),
-                  }));
-                }}
-                readOnly={!!mixDerived}
-                trailingAdornment={<span className="v2-muted">%</span>}
-                description={
-                  mixDerived
-                    ? "Weighted average of menu items' recipe-derived cost / price."
-                    : "Share of revenue eaten by food cost. 28–32% is typical for pizza + pasta + coffee."
+                  }))
                 }
+                trailingAdornment={<span className="v2-muted">%</span>}
+                description="Share of revenue eaten by food cost. 28–32% is typical for pizza + pasta + coffee."
               />
             </div>
           </CardBody>
@@ -1824,65 +1768,14 @@ export function AdminSimulation() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader
-          title="Menu mix"
-          description={
-            mixDerived
-              ? `Live: derived avg ticket ${formatPrice(mixDerived.avgTicketGrosze)}, COGS ${(mixDerived.cogsPct * 100).toFixed(1)}%. Total weight ${(mixDerived.matchedWeight * 100).toFixed(0)}%.`
-              : "Pick how often each menu item sells. Weights drive the average ticket and food cost ratio automatically. Empty = simple inputs above stand."
-          }
-          actions={
-            <div className="flex items-center gap-2">
-              <InfoButton title={HELP.menuMix.title} label="About menu mix">{HELP.menuMix.body}</InfoButton>
-              <Select
-                value={menuLocation}
-                onChange={(e) => setMixLocation(e.target.value)}
-                options={ACTIVE_LOCATIONS.map((l) => ({ value: l.slug, label: l.city }))}
-                aria-label="Menu location"
-              />
-              <Button
-                size="sm"
-                variant="secondary"
-                leadingIcon={<Sparkles className="h-3.5 w-3.5" />}
-                onClick={autoFillMixFromHistory}
-                disabled={menuLoading}
-              >
-                Auto-fill (30 d)
-              </Button>
-              {mixDerived && (
-                <Button size="sm" variant="ghost" onClick={clearMix}>
-                  Disable mix
-                </Button>
-              )}
-            </div>
-          }
-        />
-        <CardBody>
-          {menuLoading ? (
-            <div className="v2-page-loading">Loading menu…</div>
-          ) : menuSnapshot.length === 0 ? (
-            <div className="v2-muted text-sm">
-              No available menu items for this location. Check{" "}
-              <Link href="/admin/menu" className="underline">
-                /admin/menu
-              </Link>{" "}
-              and ensure items are marked available.
-            </div>
-          ) : (
-            <MenuMixGrid
-              items={menuSnapshot}
-              weightById={weightById}
-              onWeightChange={setMixWeight}
-              mixActive={!!mixDerived}
-            />
-          )}
-        </CardBody>
-      </Card>
+      <MenuScenarioPicker
+        activeId={scenario.menuScenario}
+        onPick={applyMenuScenario}
+      />
 
       <BehaviorAssumptionsCard
         assumptions={scenario.assumptions ?? DEFAULT_ASSUMPTIONS}
-        baseTicketGrosze={mixDerived?.avgTicketGrosze ?? scenario.avgTicketGrosze}
+        baseTicketGrosze={scenario.avgTicketGrosze}
         onChange={(next) => update((s) => ({ ...s, assumptions: next }))}
       />
 
@@ -2454,121 +2347,92 @@ export function AdminSimulation() {
   );
 }
 
-interface MenuMixGridProps {
-  items: MenuSnapshotItem[];
-  weightById: Map<string, number>;
-  onWeightChange: (itemId: string, pct: number) => void;
-  mixActive: boolean;
+interface MenuScenarioPickerProps {
+  activeId: string | undefined;
+  onPick: (preset: MenuScenarioPreset) => void;
 }
 
-function MenuMixGrid({ items, weightById, onWeightChange, mixActive }: MenuMixGridProps) {
-  const grouped = useMemo(() => {
-    const groups = new Map<MenuCategory, MenuSnapshotItem[]>();
-    for (const item of items) {
-      const list = groups.get(item.category) ?? [];
-      list.push(item);
-      groups.set(item.category, list);
-    }
-    return Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [items]);
-
-  const totalWeight = useMemo(() => {
-    let sum = 0;
-    for (const w of weightById.values()) sum += w;
-    return sum;
-  }, [weightById]);
-
+function MenuScenarioPicker({ activeId, onPick }: MenuScenarioPickerProps) {
+  const active = activeId ? MENU_SCENARIO_BY_ID.get(activeId) : undefined;
   return (
-    <div className="v2-stack-12">
-      <div className="flex items-center justify-between gap-3">
-        <Badge tone={mixActive ? "success" : "neutral"} variant="soft" dot>
-          {mixActive ? "Mix active" : "Mix off"}
-        </Badge>
-        <span className="text-sm v2-muted">
-          Total weight:{" "}
-          <strong
-            className={`tabular ${
-              Math.abs(totalWeight - 1) < 0.01
-                ? ""
-                : totalWeight > 1.01
-                  ? "text-amber-500"
-                  : totalWeight > 0
-                    ? "text-amber-500"
-                    : ""
-            }`}
-          >
-            {(totalWeight * 100).toFixed(0)}%
-          </strong>{" "}
-          (weights are auto-normalised to 100% in the math)
-        </span>
-      </div>
-      <div className="max-h-[480px] overflow-y-auto pr-1">
-        {grouped.map(([category, rows]) => (
-          <div key={category} className="mb-3">
-            <div className="v2-section-h flex items-center gap-2 mb-1">
-              <Pizza className="h-3.5 w-3.5 v2-muted" aria-hidden />
-              <span>{MENU_CATEGORY_LABEL[category]}</span>
-              <span className="v2-muted text-xs">({rows.length})</span>
-            </div>
-            <div className="grid grid-cols-12 gap-2 text-xs v2-muted px-2 py-1 border-b border-[var(--border)]">
-              <div className="col-span-5">Item</div>
-              <div className="col-span-2 text-right">Price</div>
-              <div className="col-span-2 text-right">Food cost</div>
-              <div className="col-span-1 text-right">Margin</div>
-              <div className="col-span-2 text-right">Weight</div>
-            </div>
-            {rows.map((row) => {
-              const w = weightById.get(row.id) ?? 0;
-              const margin =
-                row.priceGrosze > 0 ? 1 - row.recipeCostGrosze / row.priceGrosze : 0;
-              return (
-                <div
-                  key={row.id}
-                  className="grid grid-cols-12 gap-2 items-center px-2 py-1.5 border-b border-[var(--border)] text-sm"
-                >
-                  <div className="col-span-5">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span>{row.name}</span>
-                      {row.recentQty > 0 && (
-                        <Badge tone="info" variant="soft">
-                          {row.recentQty} ord/30d
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  <div className="col-span-2 text-right tabular">
-                    {formatPrice(row.priceGrosze)}
-                  </div>
-                  <div className="col-span-2 text-right tabular v2-muted">
-                    {formatPrice(row.recipeCostGrosze)}
-                  </div>
-                  <div
-                    className={`col-span-1 text-right tabular ${
-                      margin >= 0.6 ? "text-emerald-500" : margin >= 0.4 ? "" : "text-amber-500"
-                    }`}
-                  >
-                    {(margin * 100).toFixed(0)}%
-                  </div>
-                  <div className="col-span-2">
-                    <input
-                      type="number"
-                      step="1"
-                      min="0"
-                      max="100"
-                      value={Math.round(w * 100)}
-                      onChange={(e) => onWeightChange(row.id, parseFloat(e.target.value || "0"))}
-                      className="v2-input"
-                      style={{ textAlign: "right", paddingRight: 8 }}
-                      aria-label={`Weight for ${row.name}`}
-                    />
-                  </div>
+    <Card>
+      <CardHeader
+        title="Menu scenario"
+        description={
+          active
+            ? `Loaded preset: ${active.emoji} ${active.name}. Pick a different one to reload baseline values, or tweak the inputs above to customise.`
+            : "Pick one of five archetypal menu shapes to load avg ticket, COGS and behavior levers in a single click. You can still tweak any value afterwards."
+        }
+        actions={
+          <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+            <InfoButton title={HELP.menuScenario.title} label="About menu scenarios">{HELP.menuScenario.body}</InfoButton>
+            <Utensils className="h-4 w-4 v2-muted" />
+          </span>
+        }
+      />
+      <CardBody>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
+          {MENU_SCENARIOS.map((preset) => {
+            const isActive = preset.id === activeId;
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => onPick(preset)}
+                aria-pressed={isActive}
+                style={{
+                  textAlign: "left",
+                  padding: 14,
+                  borderRadius: 12,
+                  border: `1.5px solid ${isActive ? "var(--brand)" : "var(--border)"}`,
+                  background: isActive ? "var(--brand-soft, var(--surface-2))" : "var(--surface-2)",
+                  cursor: "pointer",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 6,
+                  fontFamily: "inherit",
+                  color: "inherit",
+                  transition: "border-color 0.15s, background 0.15s",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: 28, lineHeight: 1 }} aria-hidden>
+                    {preset.emoji}
+                  </span>
+                  {isActive && (
+                    <Badge tone="brand" variant="soft" dot>
+                      Active
+                    </Badge>
+                  )}
                 </div>
-              );
-            })}
-          </div>
-        ))}
-      </div>
-    </div>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>{preset.name}</div>
+                <div className="v2-muted" style={{ fontSize: 12, lineHeight: 1.4, minHeight: 50 }}>
+                  {preset.description}
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 12,
+                    fontSize: 12,
+                    paddingTop: 6,
+                    borderTop: "1px solid var(--border)",
+                  }}
+                >
+                  <span>
+                    <span className="v2-muted">Ticket</span>{" "}
+                    <strong className="tabular">{formatPrice(preset.avgTicketGrosze)}</strong>
+                  </span>
+                  <span>
+                    <span className="v2-muted">COGS</span>{" "}
+                    <strong className="tabular">{Math.round(preset.cogsPct * 100)}%</strong>
+                  </span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </CardBody>
+    </Card>
   );
 }
 
