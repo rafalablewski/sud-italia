@@ -43,14 +43,19 @@ export function MoreDrawer({ open, onClose, role }: Props) {
   }, [open]);
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/admin/settings")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j) => {
-        if (!cancelled && j) setSimulationEnabled(!!j.simulationEnabled);
-      })
-      .catch(() => {});
+    const loadSettings = () => {
+      fetch("/api/admin/settings")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => {
+          if (!cancelled && j) setSimulationEnabled(!!j.simulationEnabled);
+        })
+        .catch(() => {});
+    };
+    loadSettings();
+    window.addEventListener("sud-admin-settings-updated", loadSettings);
     return () => {
       cancelled = true;
+      window.removeEventListener("sud-admin-settings-updated", loadSettings);
     };
   }, []);
   const sections = useMemo(

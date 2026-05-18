@@ -44,16 +44,23 @@ export function Sidebar({ onCloseMobile, isMobile = false }: Props) {
       .catch(() => {
         /* non-fatal */
       });
-    fetch("/api/admin/settings")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j) => {
-        if (!cancelled && j) setSimulationEnabled(!!j.simulationEnabled);
-      })
-      .catch(() => {
-        /* non-fatal */
-      });
+    const loadSettings = () => {
+      fetch("/api/admin/settings")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => {
+          if (!cancelled && j) setSimulationEnabled(!!j.simulationEnabled);
+        })
+        .catch(() => {
+          /* non-fatal */
+        });
+    };
+    loadSettings();
+    // AdminSettings dispatches this when a toggle persists so the nav
+    // updates without a full page reload.
+    window.addEventListener("sud-admin-settings-updated", loadSettings);
     return () => {
       cancelled = true;
+      window.removeEventListener("sud-admin-settings-updated", loadSettings);
     };
   }, []);
 

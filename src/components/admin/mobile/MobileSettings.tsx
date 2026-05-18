@@ -80,6 +80,7 @@ export function MobileSettings() {
         return;
       }
       toast.success(next ? "Simulation enabled" : "Simulation disabled");
+      window.dispatchEvent(new Event("sud-admin-settings-updated"));
     } finally {
       setSimBusy(false);
     }

@@ -194,6 +194,7 @@ function AdminSettingsDesktop() {
       });
       if (res.ok) {
         toast.success(next ? "Simulation enabled" : "Simulation disabled");
+        window.dispatchEvent(new Event("sud-admin-settings-updated"));
         await Promise.all([fetchSettings(), fetchAudit()]);
       } else {
         setSimulationEnabled(!next); // revert
