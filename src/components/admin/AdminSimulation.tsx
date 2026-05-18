@@ -2147,6 +2147,7 @@ export function AdminSimulation() {
               xLabels={ordersTicketMatrix.xLabels}
               yLabels={ordersTicketMatrix.yLabels}
               rowHeight={36}
+              diverging
               format={(n) =>
                 `${n < 0 ? "−" : ""}${Math.abs(Math.round(n / 100)).toLocaleString("pl-PL")} zł`
               }
@@ -2171,6 +2172,7 @@ export function AdminSimulation() {
               xLabels={cogsTicketMatrix.xLabels}
               yLabels={cogsTicketMatrix.yLabels}
               rowHeight={36}
+              diverging
               format={(n) =>
                 `${n < 0 ? "−" : ""}${Math.abs(Math.round(n / 100)).toLocaleString("pl-PL")} zł`
               }
