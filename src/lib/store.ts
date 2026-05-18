@@ -8000,11 +8000,6 @@ export function defaultSimulationAssumptions(): SimulationAssumptions {
       discountGrosze: 600,
       addonCogsPct: 0.25,
     },
-    sizeUpsell: {
-      pct: 0.10,
-      priceDeltaGrosze: 500,
-      costDeltaGrosze: 40,
-    },
     // Cheapest-pizza shift is a stress lever — default off (0 pp).
     cheapestPizzaShift: {
       pp: 0,
@@ -8124,18 +8119,6 @@ function hydrateAssumptions(
           addonCogsPct: clamp01(saved.comboConversion.addonCogsPct, fb.comboConversion?.addonCogsPct ?? 0),
         }
       : fb.comboConversion,
-    sizeUpsell: saved.sizeUpsell
-      ? {
-          enabled: typeof saved.sizeUpsell.enabled === "boolean" ? saved.sizeUpsell.enabled : true,
-          pct: clamp01(saved.sizeUpsell.pct, fb.sizeUpsell?.pct ?? 0),
-          priceDeltaGrosze: Math.round(
-            clampNonNeg(saved.sizeUpsell.priceDeltaGrosze, fb.sizeUpsell?.priceDeltaGrosze ?? 0),
-          ),
-          costDeltaGrosze: Math.round(
-            clampNonNeg(saved.sizeUpsell.costDeltaGrosze, fb.sizeUpsell?.costDeltaGrosze ?? 0),
-          ),
-        }
-      : fb.sizeUpsell,
     cheapestPizzaShift: saved.cheapestPizzaShift
       ? {
           enabled: typeof saved.cheapestPizzaShift.enabled === "boolean" ? saved.cheapestPizzaShift.enabled : true,

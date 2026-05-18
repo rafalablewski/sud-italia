@@ -845,13 +845,6 @@ export interface SimulationAssumptions {
     /** COGS ratio for the addon portion (0–1). */
     addonCogsPct: number;
   };
-  /** Size/crust upsell: X% of pizzas pay +N zł for sourdough / 33 cm. */
-  sizeUpsell?: {
-    enabled?: boolean;
-    pct: number;
-    priceDeltaGrosze: number;
-    costDeltaGrosze: number;
-  };
   /** Cheapest-pizza recession shift, in percentage points. Positive = more
    *  Margherita/Marinara share, lower AOV, lower COGS. */
   cheapestPizzaShift?: {

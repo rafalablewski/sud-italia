@@ -97,7 +97,6 @@ const DEFAULT_ASSUMPTIONS: SimulationAssumptions = {
   premiumToppingsAttach: { attachPct: 0.15, avgPriceGrosze: 700, cogsPct: 0.30 },
   pastaPrimoAttach: { attachPct: 0.18, avgPriceGrosze: 3200, cogsPct: 0.26 },
   comboConversion: { pct: 0.20, addonGrosze: 2500, discountGrosze: 600, addonCogsPct: 0.25 },
-  sizeUpsell: { pct: 0.10, priceDeltaGrosze: 500, costDeltaGrosze: 40 },
   cheapestPizzaShift: { pp: 0, ticketDeltaGrosze: 300, cogsDeltaGrosze: 100 },
   deliveryShare: { pct: 0.25, packagingCostGrosze: 250, extraProcessorPct: 0, avgFeeGrosze: 800 },
 };
@@ -467,10 +466,6 @@ function applyAssumptionsAndWeather(s: SimulationScenario): SimulationScenario {
       extraTicket += c.pct * (c.addonGrosze - c.discountGrosze);
       extraCogs += c.pct * c.addonGrosze * c.addonCogsPct;
     }
-    if (a.sizeUpsell && !leverOff(a.sizeUpsell)) {
-      extraTicket += a.sizeUpsell.pct * a.sizeUpsell.priceDeltaGrosze;
-      extraCogs += a.sizeUpsell.pct * a.sizeUpsell.costDeltaGrosze;
-    }
     if (a.cheapestPizzaShift && !leverOff(a.cheapestPizzaShift)) {
       extraTicket -= a.cheapestPizzaShift.pp * a.cheapestPizzaShift.ticketDeltaGrosze;
       extraCogs -= a.cheapestPizzaShift.pp * a.cheapestPizzaShift.cogsDeltaGrosze;
@@ -834,22 +829,6 @@ const HELP = {
         <p>
           <strong>Math:</strong> for each converted order, ticket goes up by
           (addon price − discount); food cost goes up by (addon × addon COGS%).
-        </p>
-      </>
-    ),
-  },
-  sizeUpsell: {
-    title: "Size / crust upsell",
-    body: (
-      <>
-        <p>
-          Share of pizzas that pay +5 zł for sourdough or 33 cm. Marginal
-          ingredient cost is tiny (~40 grosze) — almost the entire +5 zł
-          drops to margin.
-        </p>
-        <p>
-          <strong>Best lever per minute of effort:</strong> staff just need to
-          ask &quot;sourdough or classic?&quot; at order. Easy to grow.
         </p>
       </>
     ),
@@ -2727,7 +2706,6 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, onChange }: Be
       premiumToppingsAttach: a.premiumToppingsAttach ? { ...a.premiumToppingsAttach, enabled } : a.premiumToppingsAttach,
       pastaPrimoAttach: a.pastaPrimoAttach ? { ...a.pastaPrimoAttach, enabled } : a.pastaPrimoAttach,
       comboConversion: a.comboConversion ? { ...a.comboConversion, enabled } : a.comboConversion,
-      sizeUpsell: a.sizeUpsell ? { ...a.sizeUpsell, enabled } : a.sizeUpsell,
       cheapestPizzaShift: a.cheapestPizzaShift ? { ...a.cheapestPizzaShift, enabled } : a.cheapestPizzaShift,
       deliveryShare: a.deliveryShare ? { ...a.deliveryShare, enabled } : a.deliveryShare,
     });
@@ -2896,74 +2874,6 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, onChange }: Be
                     })
                   }
                   trailingAdornment={<span className="v2-muted">%</span>}
-                />
-              </div>
-            </div>
-          )}
-
-          {a.sizeUpsell && (
-            <div className="grid grid-cols-12 gap-2 items-end" style={{ opacity: a.sizeUpsell.enabled === false ? 0.55 : 1 }}>
-              <div className="col-span-12 md:col-span-4">
-                <div className="text-sm font-medium" style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                  <LeverSwitch
-                    enabled={a.sizeUpsell.enabled !== false}
-                    onChange={(next) => set("sizeUpsell", { ...a.sizeUpsell!, enabled: next })}
-                    ariaLabel="Toggle size / crust upsell"
-                  />
-                  <span>Size / crust upsell</span>
-                  <InfoButton title={HELP.sizeUpsell.title} label="About size upsell" size="sm">{HELP.sizeUpsell.body}</InfoButton>
-                </div>
-                <div className="v2-muted text-xs">
-                  Sourdough or 33 cm — pure margin add, marginal cost is tiny.
-                </div>
-              </div>
-              <div className="col-span-4 md:col-span-2">
-                <Input
-                  label="Upsell %"
-                  type="number"
-                  step="1"
-                  min="0"
-                  max="100"
-                  value={String(Math.round(a.sizeUpsell.pct * 100))}
-                  onChange={(e) =>
-                    set("sizeUpsell", {
-                      ...a.sizeUpsell!,
-                      pct: Math.max(0, Math.min(1, parseFloat(e.target.value || "0") / 100)),
-                    })
-                  }
-                  trailingAdornment={<span className="v2-muted">%</span>}
-                />
-              </div>
-              <div className="col-span-4 md:col-span-3">
-                <Input
-                  label="+ price"
-                  type="number"
-                  step="0.5"
-                  min="0"
-                  value={(a.sizeUpsell.priceDeltaGrosze / 100).toFixed(2)}
-                  onChange={(e) =>
-                    set("sizeUpsell", {
-                      ...a.sizeUpsell!,
-                      priceDeltaGrosze: Math.max(0, Math.round(parseFloat(e.target.value || "0") * 100)),
-                    })
-                  }
-                  trailingAdornment={<span className="v2-muted">zł</span>}
-                />
-              </div>
-              <div className="col-span-4 md:col-span-3">
-                <Input
-                  label="+ cost"
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  value={(a.sizeUpsell.costDeltaGrosze / 100).toFixed(2)}
-                  onChange={(e) =>
-                    set("sizeUpsell", {
-                      ...a.sizeUpsell!,
-                      costDeltaGrosze: Math.max(0, Math.round(parseFloat(e.target.value || "0") * 100)),
-                    })
-                  }
-                  trailingAdornment={<span className="v2-muted">zł</span>}
                 />
               </div>
             </div>
