@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Banknote,
   Calculator,
@@ -49,6 +49,7 @@ import {
   CardBody,
   CardHeader,
   ConfirmDialog,
+  InfoButton,
   Input,
   Select,
 } from "./v2/ui";
@@ -497,6 +498,718 @@ function deriveArchetypes(s: SimulationScenario) {
 
 const ACTIVE_LOCATIONS = getActiveLocations();
 
+// --- Amateur-friendly explanations ---------------------------------------
+//
+// Every concept on this page has an InfoButton that opens a Dialog with
+// the matching entry below. Written for someone who's never run a P&L
+// before — short, concrete, with the formula and a worked example.
+
+const HELP = {
+  // Inputs
+  ordersPerDay: {
+    title: "Orders per day",
+    body: (
+      <>
+        <p>
+          The average number of orders the truck completes on a normal day. A typical
+          Neapolitan pizza truck does 50–100/day; busy summer evenings can push 120+.
+        </p>
+        <p>
+          <strong>Why it matters:</strong> revenue = orders × ticket × days open. Doubling
+          this number roughly doubles revenue but only adds variable food cost — labor
+          and rent are mostly fixed, so the extra orders are very profitable.
+        </p>
+      </>
+    ),
+  },
+  avgTicket: {
+    title: "Average ticket",
+    body: (
+      <>
+        <p>
+          The total each customer pays per order, all-in (pizza + sides + drink + tip
+          excluded). Polish pizzerias run 60–72 zł when the menu has drinks and desserts.
+        </p>
+        <p>
+          <strong>How to think about it:</strong> raise this by selling combos and
+          add-ons rather than cranking pizza prices — customers notice price hikes,
+          they don&apos;t notice that they added an espresso.
+        </p>
+        <p className="v2-muted text-sm">
+          When the Menu mix card has weights, this field becomes display-only — the
+          number is computed from how often each menu item sells.
+        </p>
+      </>
+    ),
+  },
+  daysOpen: {
+    title: "Days open per month",
+    body: (
+      <>
+        <p>
+          How many days each month the truck takes orders. 28 is typical (one day off
+          per week). Closing extra days lets staff rest but loses ~3.6% of monthly
+          revenue per day.
+        </p>
+        <p>
+          <strong>Trade-off:</strong> 7-day operation maximises revenue but burns out
+          staff. 6 days/week (~26 days/mo) is a sustainable sweet spot.
+        </p>
+      </>
+    ),
+  },
+  cogsPct: {
+    title: "Ingredient cost ratio (COGS %)",
+    body: (
+      <>
+        <p>
+          COGS = Cost Of Goods Sold. The share of revenue that gets eaten by
+          ingredients. <strong>Polish pizzeria benchmark is 25–35%</strong>; under 30%
+          is healthy, over 35% means recipes need re-engineering.
+        </p>
+        <p>
+          <strong>Formula:</strong> if a pizza sells for 30 zł and the dough +
+          tomato + mozzarella cost 9 zł, that&apos;s 30% COGS.
+        </p>
+        <p>
+          When the Menu mix card is active, this number is computed from each
+          item&apos;s actual recipe cost ÷ price, weighted by how often it sells.
+        </p>
+      </>
+    ),
+  },
+  laborMix: {
+    title: "Labor mix",
+    body: (
+      <>
+        <p>
+          Each row is one role on the team. Monthly cost = headcount × weekly hours
+          × 4.345 weeks × hourly rate.
+        </p>
+        <p>
+          <strong>Why 1.22× brutto:</strong> in Poland, the employer pays ZUS
+          (social insurance) and Labor Fund <em>on top</em> of the gross wage —
+          about 22% extra. So if a pizzaiolo&apos;s gross wage is 35 zł/h, the
+          truck&apos;s real cost is ~43 zł/h. We bake this into the default rates
+          so &quot;rate × hours&quot; lands at the full employer cost.
+        </p>
+        <p>
+          <strong>Target:</strong> total labor should be ≤ 30% of revenue. The
+          KPI strip lower down flags red/amber/green.
+        </p>
+      </>
+    ),
+  },
+  fixedCosts: {
+    title: "Fixed monthly costs",
+    body: (
+      <>
+        <p>
+          What you pay every month <em>regardless of how many orders you do</em>:
+          rent, insurance, accountant, software, ZUS for the owner, etc. Variable
+          costs (ingredients) live in COGS instead.
+        </p>
+        <p>
+          <strong>Why split them out:</strong> fixed costs set your break-even
+          point. If they go up by 1 000 zł/mo, you need more orders to cover them
+          before you make any profit.
+        </p>
+      </>
+    ),
+  },
+  menuMix: {
+    title: "Menu mix",
+    body: (
+      <>
+        <p>
+          Instead of guessing the average ticket and COGS as plain numbers, you
+          pick how often each menu item sells. The simulator reads the real menu
+          for the selected location, looks up each item&apos;s recipe-derived
+          food cost (rolled up from current ingredient prices), and computes the
+          weighted-average ticket and blended COGS from your weights.
+        </p>
+        <p>
+          <strong>Auto-fill (30 d):</strong> pulls the last 30 days of actual
+          orders and sets weights proportionally. One-way — never writes back to
+          the order history.
+        </p>
+        <p>
+          <strong>Tip:</strong> raise Margherita weight = lower ticket + lower
+          COGS%. Raise Specialty weight = higher ticket + higher COGS%. Use this
+          to model menu engineering decisions.
+        </p>
+      </>
+    ),
+  },
+
+  // Behavior assumptions
+  assumptionsOverview: {
+    title: "Behavior assumptions",
+    body: (
+      <>
+        <p>
+          Instead of typing one flat average ticket, you describe customer
+          behavior with levers like &quot;25% of orders add a coffee&quot; or
+          &quot;20% of mains convert to a combo&quot;. The simulator does the
+          math on top of the base ticket.
+        </p>
+        <p>
+          Every lever folds into the same effective ticket + COGS that the rest
+          of the page uses. Drag one slider and the headline KPIs, P&amp;L, pie
+          chart, heatmaps, projection and break-even all update live.
+        </p>
+        <p className="v2-muted text-sm">
+          Defaults are tuned to a Neapolitan truck in Warsaw 2026. Tune them to
+          match your real attach data once you have it.
+        </p>
+      </>
+    ),
+  },
+  coffeeAttach: {
+    title: "Coffee attach rate",
+    body: (
+      <>
+        <p>
+          Share of orders that add an espresso, cappuccino or similar.
+          25% means one in four customers takes coffee.
+        </p>
+        <p>
+          <strong>Why it&apos;s gold:</strong> coffee is ~88% margin (an espresso
+          uses about 1 zł of beans + milk for a 9 zł sell price). Every +10 pp
+          on attach lifts your average ticket by ~0.90 zł at almost no extra cost.
+        </p>
+        <p>
+          <strong>How to grow it:</strong> staff prompt at order
+          (&quot;espresso with that?&quot;), combo deals, post-meal dessert+coffee bundle.
+        </p>
+      </>
+    ),
+  },
+  dessertAttach: {
+    title: "Dessert attach rate",
+    body: (
+      <>
+        <p>
+          Share of orders that add tiramisu, cannoli or panna cotta. 10–15% is
+          typical; can push to 25% with strong dessert merchandising.
+        </p>
+        <p>
+          <strong>Why it matters:</strong> desserts are ~28% COGS — better than
+          pizza&apos;s 30%. So more dessert attach lifts AOV <em>and</em>
+          improves the blended margin %.
+        </p>
+      </>
+    ),
+  },
+  antipastiAttach: {
+    title: "Antipasti / starter attach",
+    body: (
+      <>
+        <p>
+          Share of dine-in tables that order a starter — bruschetta (~22 zł),
+          burrata (~28 zł), olives, mortadella plate. 5–10% baseline, much
+          higher in evening service.
+        </p>
+        <p>
+          <strong>Trade-off:</strong> bigger ticket but adds prep load on the
+          line — make sure the antipasti station can keep up before pushing
+          this lever.
+        </p>
+      </>
+    ),
+  },
+  aperitivoAttach: {
+    title: "Aperitivo / wine attach",
+    body: (
+      <>
+        <p>
+          Share of evening orders that include an Aperol Spritz, glass of wine,
+          beer or limoncello. Highest-margin attach we can model — drinks are
+          ~22% COGS at 22 zł a glass.
+        </p>
+        <p>
+          <strong>Requires an alcohol licence.</strong> Use this lever to model
+          &quot;what would happen if we got licensed?&quot; before paying the
+          ~5 000 zł/year fee.
+        </p>
+      </>
+    ),
+  },
+  premiumToppingsAttach: {
+    title: "Premium toppings attach",
+    body: (
+      <>
+        <p>
+          Share of pizzas that add buffalo mozzarella (+6 zł), &apos;nduja
+          (+7 zł), truffle oil (+9 zł) etc. Charge ~3 zł of marginal food
+          cost, capture the rest as margin.
+        </p>
+        <p>
+          <strong>Where the money is:</strong> ~50% incremental margin — among
+          the cheapest ways to lift AOV.
+        </p>
+      </>
+    ),
+  },
+  pastaPrimoAttach: {
+    title: "Pasta primo attach",
+    body: (
+      <>
+        <p>
+          Share of dine-in tables that order a pasta course alongside the pizza
+          (Italian-style: primo = pasta first, then pizza as secondo). Average
+          32 zł, ~26% COGS.
+        </p>
+        <p>
+          <strong>Big AOV bump.</strong> Best lever where seating allows — most
+          relevant for indoor locations, less so for a takeaway truck.
+        </p>
+      </>
+    ),
+  },
+  comboConversion: {
+    title: "Combo conversion",
+    body: (
+      <>
+        <p>
+          What % of mains convert to a Combo (pizza + drink + dessert at a
+          bundle discount of, say, 6 zł off vs à-la-carte).
+        </p>
+        <p>
+          <strong>Why combos win:</strong> the combo pulls a second/third item
+          that <em>wouldn&apos;t have attached on its own</em>. Even with the
+          discount, the total order is bigger and the kitchen amortises one
+          ticket across more units.
+        </p>
+        <p>
+          <strong>Math:</strong> for each converted order, ticket goes up by
+          (addon price − discount); food cost goes up by (addon × addon COGS%).
+        </p>
+      </>
+    ),
+  },
+  sizeUpsell: {
+    title: "Size / crust upsell",
+    body: (
+      <>
+        <p>
+          Share of pizzas that pay +5 zł for sourdough or 33 cm. Marginal
+          ingredient cost is tiny (~40 grosze) — almost the entire +5 zł
+          drops to margin.
+        </p>
+        <p>
+          <strong>Best lever per minute of effort:</strong> staff just need to
+          ask &quot;sourdough or classic?&quot; at order. Easy to grow.
+        </p>
+      </>
+    ),
+  },
+  cheapestPizzaShift: {
+    title: "Cheapest-pizza shift (recession stress)",
+    body: (
+      <>
+        <p>
+          A <em>downside</em> stress lever. Customers under price pressure shift
+          toward Margherita and Marinara (the cheapest pies). Set how many
+          percentage points of share move, and the simulator drops AOV and COGS
+          proportionally.
+        </p>
+        <p>
+          <strong>Use it to ask:</strong> &quot;If economy gets bad enough that
+          20% more orders are Margherita, do we still break even?&quot;
+        </p>
+        <p>
+          <strong>Default is 0 pp</strong> — turn it on only when you want to
+          model a stress scenario.
+        </p>
+      </>
+    ),
+  },
+  deliveryShare: {
+    title: "Delivery channel share",
+    body: (
+      <>
+        <p>
+          What % of orders go through delivery (vs takeaway / dine-in). Delivery
+          changes the order economics in four places:
+        </p>
+        <ul style={{ margin: "8px 0", paddingLeft: 20, listStyle: "disc" }}>
+          <li><strong>+ Packaging cost</strong> (boxes, bag, napkins) — ~2.50 zł/order</li>
+          <li><strong>+ Extra processor fee</strong> if you use a different processor for delivery</li>
+          <li><strong>+ Fee revenue</strong> if you charge a delivery fee (~8 zł)</li>
+          <li><strong>Different cohort</strong> — delivery customers usually have lower attach</li>
+        </ul>
+        <p>
+          Tune this to model channel-mix shifts: more delivery = more volume
+          but worse per-order margin.
+        </p>
+      </>
+    ),
+  },
+
+  // Weather + calendar
+  weatherOverview: {
+    title: "Weather & calendar",
+    body: (
+      <>
+        <p>
+          Real-world volume isn&apos;t flat. Rainy days kill outdoor truck
+          service; heatwaves drive patio crowds; Easter Sunday is closed; NYE
+          is a peak. This block lets you model all of that.
+        </p>
+        <p>
+          The levers compose into a single &quot;effective orders per day&quot;
+          and &quot;effective days open&quot; — which then feed the whole P&amp;L
+          downstream. Live preview at the bottom of the card shows you the
+          composite impact.
+        </p>
+      </>
+    ),
+  },
+  rainyDay: {
+    title: "Rainy-day elasticity",
+    body: (
+      <>
+        <p>
+          Two knobs work together:
+        </p>
+        <ul style={{ margin: "8px 0", paddingLeft: 20, listStyle: "disc" }}>
+          <li>
+            <strong>Multiplier</strong> — how much rain hurts volume. 0.75 = rainy
+            days run 25% below normal.
+          </li>
+          <li>
+            <strong>Rainy share</strong> — what % of days are rainy in a typical
+            month. Warsaw averages ~30%.
+          </li>
+        </ul>
+        <p>
+          <strong>Combined:</strong> 0.30 × 0.75 + 0.70 × 1.00 = 0.925, so the
+          average month runs at 92.5% of theoretical volume just from rain.
+        </p>
+      </>
+    ),
+  },
+  heatwave: {
+    title: "Heatwave bonus",
+    body: (
+      <>
+        <p>
+          Hot patio evenings (25 °C+) drive +40% volume — people want to be
+          outside, eat lighter, drink more. Set the multiplier and the share of
+          evenings hot enough to fire it (~10% in Warsaw, way higher in summer
+          months).
+        </p>
+        <p>
+          <strong>Combine with seasonal multipliers</strong> — the simulator
+          already has a quarterly summer bonus, this stacks on top for the hot
+          evening micro-effect.
+        </p>
+      </>
+    ),
+  },
+  holidayClosed: {
+    title: "Holiday closed days / month",
+    body: (
+      <>
+        <p>
+          Days each month you&apos;re forced closed by the calendar — Easter
+          Sunday, 15 August, 25 December, Boże Ciało (Corpus Christi),
+          1 November. About 12 closed days a year ÷ 12 ≈ 1 per month average.
+        </p>
+        <p>
+          <strong>Effect:</strong> reduces effective days open. If you&apos;re
+          normally 28 days/mo and lose 1 day, you lose ~3.6% of monthly revenue.
+        </p>
+      </>
+    ),
+  },
+  holidayPeak: {
+    title: "Peak days",
+    body: (
+      <>
+        <p>
+          Calendar days that run hot: NYE, Valentine&apos;s, Mother&apos;s Day,
+          Father&apos;s Day, Halloween, Black Friday. Set how many you have per
+          month and a peak multiplier (default 1.60 = +60%).
+        </p>
+        <p>
+          <strong>Why it matters:</strong> 5 peak days at 1.6× can add a whole
+          extra normal day&apos;s revenue to the month. Worth investing in
+          extra staffing on those nights.
+        </p>
+      </>
+    ),
+  },
+  schoolHoliday: {
+    title: "School-holiday lunch dip",
+    body: (
+      <>
+        <p>
+          July and August: schools closed, offices half-empty, lunch covers
+          drop. Default multiplier 0.85 means 15% lunch-volume haircut, but
+          only for those two months — the simulator averages 2/12 of the year
+          for the headline.
+        </p>
+        <p>
+          <strong>Counter-balance:</strong> tourists and outdoor festival
+          evenings often more than make up for the lunch drop — make sure the
+          summer seasonal multiplier (in Assumptions) reflects both effects.
+        </p>
+      </>
+    ),
+  },
+  eventDays: {
+    title: "Event days",
+    body: (
+      <>
+        <p>
+          Days when the truck pitch hosts a street fair, food-truck rally,
+          Nocny Market, concert, sports event etc. You set how many per month
+          and the multiplier (default 1.50 = +50%).
+        </p>
+        <p>
+          <strong>How to use:</strong> if you&apos;ve booked the truck for a
+          known festival weekend, bump event days to 2 and the multiplier to
+          2.0× to see if it&apos;s worth the operational hassle.
+        </p>
+      </>
+    ),
+  },
+
+  // Outputs
+  pnlBreakdown: {
+    title: "P&L breakdown",
+    body: (
+      <>
+        <p>
+          The classic top-down profit statement, one line per cost bucket:
+        </p>
+        <ol style={{ margin: "8px 0", paddingLeft: 20 }}>
+          <li><strong>Revenue</strong> — orders × ticket × days</li>
+          <li><strong>− Ingredients (COGS)</strong> — food cost</li>
+          <li><strong>= Gross profit</strong> — what&apos;s left after food</li>
+          <li><strong>− Labor</strong> — everyone on the team, drilled down by role</li>
+          <li><strong>− Fixed costs</strong> — rent, software, accountant, etc</li>
+          <li><strong>= Net profit / (loss)</strong> — the bottom line</li>
+        </ol>
+        <p>
+          The sentence below the table says how far above or below break-even
+          you&apos;re running — &quot;5.2 above&quot; means you&apos;re doing 5.2
+          more orders/day than the minimum needed to not lose money.
+        </p>
+      </>
+    ),
+  },
+  costShare: {
+    title: "Cost share pie",
+    body: (
+      <>
+        <p>
+          Where each złoty goes. A healthy Neapolitan truck looks roughly:
+        </p>
+        <ul style={{ margin: "8px 0", paddingLeft: 20, listStyle: "disc" }}>
+          <li>~30% ingredients</li>
+          <li>~28% labor</li>
+          <li>~8% fixed costs</li>
+          <li>~2% card fees</li>
+          <li>~30% net profit</li>
+        </ul>
+        <p>
+          If labor or COGS slice gets above ~32%, drill into the source
+          (recipe costs? schedule bloat?) before raising prices.
+        </p>
+      </>
+    ),
+  },
+  operationsKpis: {
+    title: "Operations KPIs",
+    body: (
+      <>
+        <p>The five numbers professional restaurateurs watch every week:</p>
+        <ul style={{ margin: "8px 0", paddingLeft: 20, listStyle: "disc" }}>
+          <li>
+            <strong>Labor % of revenue</strong> — target ≤ 30%. Over 35%? You&apos;re
+            overstaffed or under-pricing.
+          </li>
+          <li>
+            <strong>Prime cost %</strong> — COGS + labor as % of revenue. The
+            single most-watched number in the industry; ≤ 60–65% is healthy.
+          </li>
+          <li>
+            <strong>Revenue per labor hour</strong> — how productive each
+            staff-hour is. 90–140 zł/h is normal for Polish pizza service.
+          </li>
+          <li>
+            <strong>Net profit per order</strong> — what&apos;s left after every
+            cost. If this is &lt; 5 zł you have no buffer for refunds or waste.
+          </li>
+          <li>
+            <strong>Setup payback</strong> — how many months of profit it takes
+            to recoup the truck buildout cost. Investors look for &lt; 24 months.
+          </li>
+        </ul>
+      </>
+    ),
+  },
+  archetypes: {
+    title: "Conservative / Realistic / Optimistic",
+    body: (
+      <>
+        <p>
+          Three side-by-side runs built automatically from your current inputs:
+        </p>
+        <ul style={{ margin: "8px 0", paddingLeft: 20, listStyle: "disc" }}>
+          <li>
+            <strong>Conservative</strong> — −15% orders + 2 percentage points
+            worse COGS. &quot;What if everything goes a bit wrong?&quot;
+          </li>
+          <li>
+            <strong>Realistic</strong> — your current scenario as entered.
+          </li>
+          <li>
+            <strong>Optimistic</strong> — +15% orders + 2 pp better COGS.
+            &quot;What if we execute well?&quot;
+          </li>
+        </ul>
+        <p>
+          <strong>Use it like this:</strong> if Conservative is still
+          profitable, your business plan is sound. If Optimistic isn&apos;t
+          much better than Realistic, you&apos;re bumping a structural ceiling
+          — fix the model, not the marketing.
+        </p>
+      </>
+    ),
+  },
+  heatmapOrders: {
+    title: "Orders × Ticket heatmap",
+    body: (
+      <>
+        <p>
+          A 5×5 grid showing the net profit you&apos;d make at every
+          combination of orders/day (X axis, ±30%) and average ticket (Y axis,
+          ±30%). The centre cell is your current scenario.
+        </p>
+        <p>
+          <strong>How to read it:</strong> green cells are profitable, red are
+          losses. Move from the centre outward to ask
+          &quot;if I could grow orders 20% <em>or</em> raise ticket 10%, which
+          delivers more profit?&quot;.
+        </p>
+      </>
+    ),
+  },
+  heatmapCogs: {
+    title: "Food cost % × Ticket heatmap",
+    body: (
+      <>
+        <p>
+          The menu-engineering view. X axis = food cost ratio (±8 pp around
+          current); Y axis = average ticket (±30%).
+        </p>
+        <p>
+          <strong>Use it to answer:</strong> &quot;cut food cost 2 pp or raise
+          ticket 5 zł — which wins?&quot; Comparing two cells diagonally
+          across the centre tells you the trade-off immediately.
+        </p>
+      </>
+    ),
+  },
+  assumptionsCard: {
+    title: "Financial assumptions",
+    body: (
+      <>
+        <p>
+          The drivers behind the 12-month projection and payback calc:
+        </p>
+        <ul style={{ margin: "8px 0", paddingLeft: 20, listStyle: "disc" }}>
+          <li>
+            <strong>Wage inflation</strong> — annual % labor goes up. Poland
+            2026 ~7% (min-wage hike + sector pressure).
+          </li>
+          <li>
+            <strong>Ingredient inflation</strong> — annual % food costs grow.
+            ~4% food CPI.
+          </li>
+          <li>
+            <strong>Card processor fee</strong> — Stripe blended ~1.9% of revenue.
+          </li>
+          <li>
+            <strong>Setup cost</strong> — total cost to launch the truck
+            (vehicle + buildout + permits + working capital). Drives payback.
+          </li>
+          <li>
+            <strong>Seasonal multipliers</strong> — winter/spring/summer/autumn
+            volume swings. Pizza trucks peak in summer (1.3×) and dip hard in
+            winter (0.7×).
+          </li>
+        </ul>
+      </>
+    ),
+  },
+  projection: {
+    title: "12-month projection",
+    body: (
+      <>
+        <p>
+          The current scenario rolled forward 12 months. Each month applies the
+          relevant seasonal multiplier and compounds wage + ingredient inflation
+          to that point.
+        </p>
+        <p>
+          <strong>Watch for:</strong> the gap between Revenue and Net profit
+          widening — that&apos;s inflation eating margin. If the gap closes by
+          month 12, you need to plan price increases now.
+        </p>
+        <p>
+          The four KPIs below (12-mo revenue / costs / net profit / best vs
+          worst month) summarise the whole year.
+        </p>
+      </>
+    ),
+  },
+  breakEven: {
+    title: "Break-even at multiple horizons",
+    body: (
+      <>
+        <p>
+          The minimum throughput needed to cover labor + fixed costs (variable
+          food cost scales with volume so it cancels out). At break-even, net
+          profit = 0 — anything above is profit, anything below is loss.
+        </p>
+        <p>
+          Same number expressed at four scales — per hour, per day, per month,
+          and the equivalent monthly revenue — so you can match it to whatever
+          metric you watch during service.
+        </p>
+        <p>
+          <strong>Worked example:</strong> if break-even = 45 orders/day and
+          you&apos;re running 60, every order beyond 45 contributes
+          (ticket × (1 − COGS% − card fee %)) zł of pure profit.
+        </p>
+      </>
+    ),
+  },
+  sensitivity: {
+    title: "±20% volume sensitivity",
+    body: (
+      <>
+        <p>
+          Five &quot;what if&quot; runs that flex orders/day by −20%, −10%, 0,
+          +10%, +20%. Shows how net profit and margin respond.
+        </p>
+        <p>
+          <strong>Why it matters:</strong> profit is a thin slice of revenue, so
+          a small revenue swing causes a big profit swing. If a −10% volume
+          drop tips you into the red, you&apos;re running on too thin a margin
+          — raise prices, cut a fixed cost, or grow attach rates before
+          opening day 1.
+        </p>
+      </>
+    ),
+  },
+} as const;
+
 export function AdminSimulation() {
   const toast = useToast();
   const [scenario, setScenario] = useState<SimulationScenario | null>(null);
@@ -891,11 +1604,15 @@ export function AdminSimulation() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 lg:gap-4">
         <Card>
-          <CardHeader title="Revenue inputs" description="Volume and ticket assumptions." />
+          <CardHeader
+            title="Revenue inputs"
+            description="Volume and ticket assumptions."
+            actions={<InfoButton title="Revenue inputs" label="About revenue inputs"><p>The four numbers that drive the top of your P&amp;L. Each has its own info button next to the input — click those for a deeper dive into orders/day, ticket size, days open and COGS.</p></InfoButton>}
+          />
           <CardBody>
             <div className="v2-stack-12">
               <Input
-                label="Orders per day"
+                label={<LabelWithInfo text="Orders per day" help={HELP.ordersPerDay} />}
                 type="number"
                 min="0"
                 value={String(scenario.ordersPerDay)}
@@ -904,7 +1621,12 @@ export function AdminSimulation() {
                 }
               />
               <Input
-                label={mixDerived ? "Average ticket (derived from menu mix)" : "Average ticket"}
+                label={
+                  <LabelWithInfo
+                    text={mixDerived ? "Average ticket (derived from menu mix)" : "Average ticket"}
+                    help={HELP.avgTicket}
+                  />
+                }
                 type="number"
                 step="0.01"
                 min="0"
@@ -925,7 +1647,7 @@ export function AdminSimulation() {
                 description={mixDerived ? "Computed from the Menu mix card below." : undefined}
               />
               <Input
-                label="Days open per month"
+                label={<LabelWithInfo text="Days open per month" help={HELP.daysOpen} />}
                 type="number"
                 min="0"
                 max="31"
@@ -939,9 +1661,14 @@ export function AdminSimulation() {
               />
               <Input
                 label={
-                  mixDerived
-                    ? "Ingredient cost ratio (derived from menu mix)"
-                    : "Ingredient cost ratio"
+                  <LabelWithInfo
+                    text={
+                      mixDerived
+                        ? "Ingredient cost ratio (derived from menu mix)"
+                        : "Ingredient cost ratio"
+                    }
+                    help={HELP.cogsPct}
+                  />
                 }
                 type="number"
                 step="1"
@@ -976,9 +1703,12 @@ export function AdminSimulation() {
             title="Labor mix"
             description="Per-role headcount × weekly hours × hourly rate. Default rates are Warsaw 2026 brutto × 1.22 (full employer cost incl. ZUS narzut). Divide by 1.22 if you'd rather think in pure brutto."
             actions={
+              <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+                <InfoButton title={HELP.laborMix.title} label="About labor mix">{HELP.laborMix.body}</InfoButton>
               <Button size="sm" variant="ghost" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={addLaborRow}>
                 Add row
               </Button>
+              </span>
             }
           />
           <CardBody>
@@ -1073,6 +1803,7 @@ export function AdminSimulation() {
           <CardHeader
             title="Fixed monthly costs"
             description="What you pay every month regardless of orders."
+            actions={<InfoButton title={HELP.fixedCosts.title} label="About fixed costs">{HELP.fixedCosts.body}</InfoButton>}
           />
           <CardBody>
             <div className="grid grid-cols-2 gap-2">
@@ -1103,6 +1834,7 @@ export function AdminSimulation() {
           }
           actions={
             <div className="flex items-center gap-2">
+              <InfoButton title={HELP.menuMix.title} label="About menu mix">{HELP.menuMix.body}</InfoButton>
               <Select
                 value={menuLocation}
                 onChange={(e) => setMixLocation(e.target.value)}
@@ -1166,7 +1898,12 @@ export function AdminSimulation() {
           <CardHeader
             title="Profit & loss breakdown"
             description="Top-down monthly P&L using the inputs above."
-            actions={<FlaskConical className="h-4 w-4 v2-muted" />}
+            actions={
+              <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+                <InfoButton title={HELP.pnlBreakdown.title} label="About the P&L breakdown">{HELP.pnlBreakdown.body}</InfoButton>
+                <FlaskConical className="h-4 w-4 v2-muted" />
+              </span>
+            }
           />
           <CardBody>
             <ul className="v2-mov-list">
@@ -1225,7 +1962,12 @@ export function AdminSimulation() {
           <CardHeader
             title="Cost share"
             description="Where each złoty goes."
-            actions={<ChefHat className="h-4 w-4 v2-muted" />}
+            actions={
+              <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+                <InfoButton title={HELP.costShare.title} label="About the cost-share pie">{HELP.costShare.body}</InfoButton>
+                <ChefHat className="h-4 w-4 v2-muted" />
+              </span>
+            }
           />
           <CardBody>
             <PieChart
@@ -1237,6 +1979,10 @@ export function AdminSimulation() {
         </Card>
       </div>
 
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+        <h2 className="v2-section-h" style={{ margin: 0 }}>Operations KPIs</h2>
+        <InfoButton title={HELP.operationsKpis.title} label="About operations KPIs">{HELP.operationsKpis.body}</InfoButton>
+      </div>
       <section className="v2-kpi-grid">
         <KpiCard
           label="Labor cost % revenue"
@@ -1298,7 +2044,12 @@ export function AdminSimulation() {
         <CardHeader
           title="Scenario comparison"
           description="Conservative / Realistic / Optimistic — built from the current inputs by flexing volume ±15% and food cost ±2 pp."
-          actions={<Sparkles className="h-4 w-4 v2-muted" />}
+          actions={
+            <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+              <InfoButton title={HELP.archetypes.title} label="About scenario comparison">{HELP.archetypes.body}</InfoButton>
+              <Sparkles className="h-4 w-4 v2-muted" />
+            </span>
+          }
         />
         <CardBody>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -1340,7 +2091,12 @@ export function AdminSimulation() {
           <CardHeader
             title="Net profit matrix — orders × ticket"
             description={`Volume on X, ticket on Y, ±30% around the current point. Centre cell (${ordersTicketMatrix.centerX}, ${ordersTicketMatrix.centerY}) is your current scenario.`}
-            actions={<Grid3X3 className="h-4 w-4 v2-muted" />}
+            actions={
+              <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+                <InfoButton title={HELP.heatmapOrders.title} label="About the orders × ticket heatmap">{HELP.heatmapOrders.body}</InfoButton>
+                <Grid3X3 className="h-4 w-4 v2-muted" />
+              </span>
+            }
           />
           <CardBody>
             <Heatmap
@@ -1359,7 +2115,12 @@ export function AdminSimulation() {
           <CardHeader
             title="Net profit matrix — food cost × ticket"
             description={`Menu engineering: trade off ingredient ratio against ticket. Centre cell (${cogsTicketMatrix.centerX}, ${cogsTicketMatrix.centerY}) is your current scenario.`}
-            actions={<Grid3X3 className="h-4 w-4 v2-muted" />}
+            actions={
+              <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+                <InfoButton title={HELP.heatmapCogs.title} label="About the food cost × ticket heatmap">{HELP.heatmapCogs.body}</InfoButton>
+                <Grid3X3 className="h-4 w-4 v2-muted" />
+              </span>
+            }
           />
           <CardBody>
             <Heatmap
@@ -1379,7 +2140,12 @@ export function AdminSimulation() {
         <CardHeader
           title="Assumptions"
           description="Drivers behind the 12-month projection, payback, and the matrices above. Persist with the scenario."
-          actions={<Sliders className="h-4 w-4 v2-muted" />}
+          actions={
+            <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+              <InfoButton title={HELP.assumptionsCard.title} label="About financial assumptions">{HELP.assumptionsCard.body}</InfoButton>
+              <Sliders className="h-4 w-4 v2-muted" />
+            </span>
+          }
         />
         <CardBody>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -1526,7 +2292,12 @@ export function AdminSimulation() {
         <CardHeader
           title="12-month projection"
           description="Steady-state P&L rolled forward — applies the seasonal multipliers above to volume, and compounds wage + ingredient inflation month over month."
-          actions={<LineChartIcon className="h-4 w-4 v2-muted" />}
+          actions={
+            <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+              <InfoButton title={HELP.projection.title} label="About the 12-month projection">{HELP.projection.body}</InfoButton>
+              <LineChartIcon className="h-4 w-4 v2-muted" />
+            </span>
+          }
         />
         <CardBody>
           <LineChart
@@ -1602,7 +2373,12 @@ export function AdminSimulation() {
         <CardHeader
           title="Break-even at multiple horizons"
           description="The minimum throughput needed to cover labor + fixed at the current ticket and COGS."
-          actions={<Calculator className="h-4 w-4 v2-muted" />}
+          actions={
+            <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+              <InfoButton title={HELP.breakEven.title} label="About break-even">{HELP.breakEven.body}</InfoButton>
+              <Calculator className="h-4 w-4 v2-muted" />
+            </span>
+          }
         />
         <CardBody>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -1639,6 +2415,7 @@ export function AdminSimulation() {
         <CardHeader
           title="Sensitivity — net profit at −20% … +20% volume"
           description="What happens to the bottom line if orders/day moves around the current point."
+          actions={<InfoButton title={HELP.sensitivity.title} label="About sensitivity analysis">{HELP.sensitivity.body}</InfoButton>}
         />
         <CardBody>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -1795,6 +2572,23 @@ function MenuMixGrid({ items, weightById, onWeightChange, mixActive }: MenuMixGr
   );
 }
 
+function LabelWithInfo({
+  text,
+  help,
+}: {
+  text: string;
+  help: { title: string; body: ReactNode };
+}) {
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+      <span>{text}</span>
+      <InfoButton title={help.title} label={`About ${help.title.toLowerCase()}`} size="sm">
+        {help.body}
+      </InfoButton>
+    </span>
+  );
+}
+
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div>
@@ -1852,9 +2646,10 @@ interface AttachRowProps {
   lever: SimulationAttachLever;
   baseTicketGrosze: number;
   onChange: (next: SimulationAttachLever) => void;
+  help?: { title: string; body: ReactNode };
 }
 
-function AttachLeverRow({ label, hint, lever, baseTicketGrosze, onChange }: AttachRowProps) {
+function AttachLeverRow({ label, hint, lever, baseTicketGrosze, onChange, help }: AttachRowProps) {
   // Per-order projected ticket lift = attachPct × price; margin = (1 − cogsPct) × ticket lift.
   const ticketLift = lever.attachPct * lever.avgPriceGrosze;
   const cogsLift = ticketLift * lever.cogsPct;
@@ -1863,7 +2658,14 @@ function AttachLeverRow({ label, hint, lever, baseTicketGrosze, onChange }: Atta
   return (
     <div className="grid grid-cols-12 gap-2 items-end">
       <div className="col-span-12 md:col-span-4">
-        <div className="text-sm font-medium">{label}</div>
+        <div className="text-sm font-medium" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span>{label}</span>
+          {help && (
+            <InfoButton title={help.title} label={`About ${help.title.toLowerCase()}`} size="sm">
+              {help.body}
+            </InfoButton>
+          )}
+        </div>
         <div className="v2-muted text-xs">{hint}</div>
       </div>
       <div className="col-span-4 md:col-span-2">
@@ -1943,7 +2745,12 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, onChange }: Be
       <CardHeader
         title="Behavior assumptions"
         description="Tune attach rates, combos and channel mix — every lever folds into effective ticket + COGS, then flows into every KPI, heatmap and projection below."
-        actions={<Sparkles className="h-4 w-4 v2-muted" />}
+        actions={
+          <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+            <InfoButton title={HELP.assumptionsOverview.title} label="About behavior assumptions">{HELP.assumptionsOverview.body}</InfoButton>
+            <Sparkles className="h-4 w-4 v2-muted" />
+          </span>
+        }
       />
       <CardBody>
         <div className="v2-stack-12">
@@ -1954,6 +2761,7 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, onChange }: Be
               lever={a.coffeeAttach}
               baseTicketGrosze={baseTicketGrosze}
               onChange={(v) => set("coffeeAttach", v)}
+              help={HELP.coffeeAttach}
             />
           )}
           {a.dessertAttach && (
@@ -1963,6 +2771,7 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, onChange }: Be
               lever={a.dessertAttach}
               baseTicketGrosze={baseTicketGrosze}
               onChange={(v) => set("dessertAttach", v)}
+              help={HELP.dessertAttach}
             />
           )}
           {a.antipastiAttach && (
@@ -1972,6 +2781,7 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, onChange }: Be
               lever={a.antipastiAttach}
               baseTicketGrosze={baseTicketGrosze}
               onChange={(v) => set("antipastiAttach", v)}
+              help={HELP.antipastiAttach}
             />
           )}
           {a.aperitivoAttach && (
@@ -1981,6 +2791,7 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, onChange }: Be
               lever={a.aperitivoAttach}
               baseTicketGrosze={baseTicketGrosze}
               onChange={(v) => set("aperitivoAttach", v)}
+              help={HELP.aperitivoAttach}
             />
           )}
           {a.premiumToppingsAttach && (
@@ -1990,6 +2801,7 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, onChange }: Be
               lever={a.premiumToppingsAttach}
               baseTicketGrosze={baseTicketGrosze}
               onChange={(v) => set("premiumToppingsAttach", v)}
+              help={HELP.premiumToppingsAttach}
             />
           )}
           {a.pastaPrimoAttach && (
@@ -1999,6 +2811,7 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, onChange }: Be
               lever={a.pastaPrimoAttach}
               baseTicketGrosze={baseTicketGrosze}
               onChange={(v) => set("pastaPrimoAttach", v)}
+              help={HELP.pastaPrimoAttach}
             />
           )}
 
@@ -2007,7 +2820,10 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, onChange }: Be
           {a.comboConversion && (
             <div className="grid grid-cols-12 gap-2 items-end">
               <div className="col-span-12 md:col-span-4">
-                <div className="text-sm font-medium">Combo conversion</div>
+                <div className="text-sm font-medium" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span>Combo conversion</span>
+                  <InfoButton title={HELP.comboConversion.title} label="About combo conversion" size="sm">{HELP.comboConversion.body}</InfoButton>
+                </div>
                 <div className="v2-muted text-xs">
                   X% of mains sell as a Combo (drink + dessert at a bundle discount).
                 </div>
@@ -2084,7 +2900,10 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, onChange }: Be
           {a.sizeUpsell && (
             <div className="grid grid-cols-12 gap-2 items-end">
               <div className="col-span-12 md:col-span-4">
-                <div className="text-sm font-medium">Size / crust upsell</div>
+                <div className="text-sm font-medium" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span>Size / crust upsell</span>
+                  <InfoButton title={HELP.sizeUpsell.title} label="About size upsell" size="sm">{HELP.sizeUpsell.body}</InfoButton>
+                </div>
                 <div className="v2-muted text-xs">
                   Sourdough or 33 cm — pure margin add, marginal cost is tiny.
                 </div>
@@ -2144,7 +2963,10 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, onChange }: Be
           {a.cheapestPizzaShift && (
             <div className="grid grid-cols-12 gap-2 items-end">
               <div className="col-span-12 md:col-span-4">
-                <div className="text-sm font-medium">Cheapest-pizza shift (recession stress)</div>
+                <div className="text-sm font-medium" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span>Cheapest-pizza shift (recession stress)</span>
+                  <InfoButton title={HELP.cheapestPizzaShift.title} label="About cheapest-pizza shift" size="sm">{HELP.cheapestPizzaShift.body}</InfoButton>
+                </div>
                 <div className="v2-muted text-xs">
                   More Margherita / Marinara — lower AOV, lower COGS. Push pp up to stress-test.
                 </div>
@@ -2204,7 +3026,10 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, onChange }: Be
           {a.deliveryShare && (
             <div className="grid grid-cols-12 gap-2 items-end">
               <div className="col-span-12 md:col-span-4">
-                <div className="text-sm font-medium">Delivery channel share</div>
+                <div className="text-sm font-medium" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span>Delivery channel share</span>
+                  <InfoButton title={HELP.deliveryShare.title} label="About delivery share" size="sm">{HELP.deliveryShare.body}</InfoButton>
+                </div>
                 <div className="v2-muted text-xs">
                   Share of orders that go through delivery — extra packaging + processor, plus
                   delivery fee revenue.
@@ -2321,12 +3146,17 @@ function WeatherCalendarCard({ weather, baseOrdersPerDay, baseDaysOpen, onChange
       <CardHeader
         title="Weather & calendar"
         description="Rain, heat, Polish holidays, school-holiday lunch dip and event days. Modifies effective volume + days open — propagates into every chart below."
-        actions={<CalendarRange className="h-4 w-4 v2-muted" />}
+        actions={
+          <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+            <InfoButton title={HELP.weatherOverview.title} label="About weather & calendar">{HELP.weatherOverview.body}</InfoButton>
+            <CalendarRange className="h-4 w-4 v2-muted" />
+          </span>
+        }
       />
       <CardBody>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           <Input
-            label="Rainy-day multiplier"
+            label={<LabelWithInfo text="Rainy-day multiplier" help={HELP.rainyDay} />}
             type="number"
             step="0.05"
             min="0"
@@ -2351,7 +3181,7 @@ function WeatherCalendarCard({ weather, baseOrdersPerDay, baseDaysOpen, onChange
             description="Share of days that are rainy (Warsaw avg ~30%)."
           />
           <Input
-            label="Heatwave multiplier"
+            label={<LabelWithInfo text="Heatwave multiplier" help={HELP.heatwave} />}
             type="number"
             step="0.05"
             min="0"
@@ -2376,7 +3206,7 @@ function WeatherCalendarCard({ weather, baseOrdersPerDay, baseDaysOpen, onChange
             description="Share of evenings hot enough to fire the bonus."
           />
           <Input
-            label="Holiday closed days / month"
+            label={<LabelWithInfo text="Holiday closed days / month" help={HELP.holidayClosed} />}
             type="number"
             step="0.5"
             min="0"
@@ -2393,7 +3223,7 @@ function WeatherCalendarCard({ weather, baseOrdersPerDay, baseDaysOpen, onChange
             description="Easter Sunday, NYE, 25 Dec, 15 Aug, Boże Ciało (~12/yr ÷ 12)."
           />
           <Input
-            label="Peak days / month"
+            label={<LabelWithInfo text="Peak days / month" help={HELP.holidayPeak} />}
             type="number"
             step="0.5"
             min="0"
@@ -2422,7 +3252,7 @@ function WeatherCalendarCard({ weather, baseOrdersPerDay, baseDaysOpen, onChange
             description="Default 1.60 — peak days run hot."
           />
           <Input
-            label="School-holiday lunch dip"
+            label={<LabelWithInfo text="School-holiday lunch dip" help={HELP.schoolHoliday} />}
             type="number"
             step="0.05"
             min="0"
@@ -2439,7 +3269,7 @@ function WeatherCalendarCard({ weather, baseOrdersPerDay, baseDaysOpen, onChange
             description="July + August offices empty (default 0.85)."
           />
           <Input
-            label="Event days / month"
+            label={<LabelWithInfo text="Event days / month" help={HELP.eventDays} />}
             type="number"
             step="0.5"
             min="0"
