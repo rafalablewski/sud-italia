@@ -1887,6 +1887,33 @@ html { scroll-behavior: smooth; }
 .v2-kpi-grid-sticky.is-stuck .v2-kpi-value { font-size: var(--text-lg); }
 .v2-kpi-grid-sticky.is-stuck .v2-kpi-label { font-size: var(--text-2xs); }
 
+/* Mobile: the sticky KPI strip becomes a horizontal scroll-snap slider so
+   four cards no longer eat half the viewport. One card per page with a
+   peek of the next; native momentum + snap, scrollbar hidden. */
+.v2-m-shell .v2-kpi-grid-sticky {
+  display: flex;
+  grid-template-columns: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scroll-padding: 0 var(--page-pad);
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  gap: 10px;
+  -webkit-overflow-scrolling: touch;
+}
+.v2-m-shell .v2-kpi-grid-sticky::-webkit-scrollbar { display: none; }
+.v2-m-shell .v2-kpi-grid-sticky > .v2-kpi {
+  flex: 0 0 calc(100% - 40px);
+  scroll-snap-align: start;
+  min-width: 0;
+  transition: padding var(--duration-fast), min-height var(--duration-fast), gap var(--duration-fast), flex var(--duration-fast);
+}
+.v2-m-shell .v2-kpi-grid-sticky.is-stuck > .v2-kpi {
+  flex: 0 0 calc(50% - 5px);
+}
+
 /* 2:1 split (chart + sidebar list) */
 .v2-grid-2-1 {
   display: grid;
