@@ -1896,6 +1896,7 @@ html { scroll-behavior: smooth; }
   overflow-x: auto;
   overflow-y: hidden;
   scroll-snap-type: x mandatory;
+  scroll-padding: 0 var(--page-pad);
   overscroll-behavior-x: contain;
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -1907,6 +1908,7 @@ html { scroll-behavior: smooth; }
   flex: 0 0 calc(100% - 40px);
   scroll-snap-align: start;
   min-width: 0;
+  transition: padding var(--duration-fast), min-height var(--duration-fast), gap var(--duration-fast), flex var(--duration-fast);
 }
 .v2-m-shell .v2-kpi-grid-sticky.is-stuck > .v2-kpi {
   flex: 0 0 calc(50% - 5px);
