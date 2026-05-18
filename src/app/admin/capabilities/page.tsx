@@ -760,7 +760,7 @@ export default async function CapabilitiesPage() {
           status: "live",
           href: "/admin/simulation",
           summary:
-            "Sandbox monthly P&L: type orders/day, ticket size, labor mix and fixed costs → instant revenue, cost-by-category, net profit, margin and break-even, plus a −20% / +20% sensitivity row. Master toggle in Settings → General (off by default; nav link is hidden until enabled). Zero writes to the business-costs ledger — defaults reflect a 12-22 service window with pizza/pasta/coffee/dessert mix; optional 'Seed from last 30 days' button populates from the real ledger one-way.",
+            "Sandbox monthly P&L wired to real menu / recipe / ingredient data. Type orders/day, ticket size (or set a weighted menu mix derived from the current menu + recipe costs), labor mix and fixed costs → revenue, cost-by-category, net profit, margin, break-even (per hour / day / month / revenue), labor % and prime cost % vs benchmarks, payback months for the setup cost, two 2-D heatmaps (orders × ticket, food cost × ticket), Conservative / Realistic / Optimistic comparison, ±20% volume sensitivity, and a 12-month projection that compounds wage + ingredient inflation and applies four seasonal multipliers. Master toggle in Settings → General. Defaults are Warsaw 2026 (gross × 1.22 ZUS narzut, food-truck pitch fees). Zero writes to the business-costs ledger.",
         },
         {
           name: "Slots",

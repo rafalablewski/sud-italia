@@ -2,7 +2,7 @@ import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, BusinessCostPayrollRole, SimulationScenario, SimulationLaborLine, SimulationSeasonality } from "@/data/types";
+import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, BusinessCostPayrollRole, SimulationScenario, SimulationLaborLine, SimulationMenuMixLine, SimulationSeasonality } from "@/data/types";
 import { getActiveLocations, locations as allLocations } from "@/data/locations";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -8031,6 +8031,9 @@ export async function getSimulationScenario(): Promise<SimulationScenario> {
         ? saved.setupCostGrosze
         : defaults.setupCostGrosze,
     seasonality: saved.seasonality ?? defaults.seasonality,
+    menuMix: Array.isArray(saved.menuMix) ? saved.menuMix : undefined,
+    menuMixLocation:
+      typeof saved.menuMixLocation === "string" ? saved.menuMixLocation : undefined,
     updatedAt: saved.updatedAt ?? defaults.updatedAt,
   };
 }
@@ -8097,6 +8100,21 @@ export async function saveSimulationScenario(
         scenario.seasonality,
         defaults.seasonality ?? { winter: 1, spring: 1, summer: 1, autumn: 1 },
       ),
+      menuMix: Array.isArray(scenario.menuMix)
+        ? (scenario.menuMix
+            .filter(
+              (m): m is SimulationMenuMixLine =>
+                !!m && typeof m.menuItemId === "string" && typeof m.weight === "number",
+            )
+            .map((m) => ({
+              menuItemId: m.menuItemId,
+              weight: Math.max(0, Math.min(1, m.weight)),
+            })))
+        : undefined,
+      menuMixLocation:
+        typeof scenario.menuMixLocation === "string" && scenario.menuMixLocation.length > 0
+          ? scenario.menuMixLocation
+          : undefined,
       updatedAt: new Date().toISOString(),
     };
     await writeJSON(SIMULATION_KEY, clean);

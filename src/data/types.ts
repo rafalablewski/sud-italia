@@ -801,6 +801,12 @@ export interface SimulationSeasonality {
   autumn: number;
 }
 
+export interface SimulationMenuMixLine {
+  menuItemId: string;
+  /** Share of orders this item represents (0–1). The mix sums to ~1. */
+  weight: number;
+}
+
 export interface SimulationScenario {
   /** Average orders served per operating day. */
   ordersPerDay: number;
@@ -823,6 +829,13 @@ export interface SimulationScenario {
   setupCostGrosze?: number;
   /** Seasonal multipliers on ordersPerDay across the four quarters. */
   seasonality?: SimulationSeasonality;
+  /** Optional menu mix. When non-empty, the page derives avgTicketGrosze
+   *  + cogsPct from the items' prices + recipe-derived costs and the
+   *  weights here — the simple inputs become display-only. */
+  menuMix?: SimulationMenuMixLine[];
+  /** Location slug whose menu the mix was built from — pinned so the
+   *  page can reload the same items consistently. */
+  menuMixLocation?: string;
   updatedAt: string;
 }
 

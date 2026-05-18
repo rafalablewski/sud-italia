@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Banknote,
@@ -15,6 +16,7 @@ import {
   LineChart as LineChartIcon,
   PiggyBank,
   Plus,
+  Pizza,
   RefreshCw,
   Save,
   Scale,
@@ -29,10 +31,13 @@ import { formatPrice } from "@/lib/utils";
 import type {
   BusinessCostCategory,
   BusinessCostPayrollRole,
+  MenuCategory,
   SimulationLaborLine,
+  SimulationMenuMixLine,
   SimulationScenario,
   SimulationSeasonality,
 } from "@/data/types";
+import { getActiveLocations } from "@/data/locations";
 import { useToast } from "./v2/ui/Toast";
 import {
   Badge,
@@ -58,6 +63,25 @@ const PAYROLL_ROLE_LABEL: Record<BusinessCostPayrollRole, string> = {
   cleaner: "Cleaner",
   other: "Other",
 };
+
+const MENU_CATEGORY_LABEL: Record<MenuCategory, string> = {
+  pizza: "Pizza",
+  pasta: "Pasta",
+  antipasti: "Antipasti",
+  panini: "Panini",
+  drinks: "Drinks",
+  desserts: "Desserts",
+};
+
+interface MenuSnapshotItem {
+  id: string;
+  name: string;
+  category: MenuCategory;
+  priceGrosze: number;
+  costGrosze: number;
+  recipeCostGrosze: number;
+  recentQty: number;
+}
 
 const FIXED_COST_FIELDS: { key: BusinessCostCategory; label: string }[] = [
   { key: "rent", label: "Rent & lease" },
@@ -304,6 +328,34 @@ function buildMatrix(
   };
 }
 
+/** Resolve the effective avgTicketGrosze + cogsPct from the menu mix
+ *  (when non-empty + at least one weighted item resolves in the menu
+ *  snapshot). Returns null when the mix is inactive or empty, in which
+ *  case the scenario's own avgTicketGrosze + cogsPct stand. Weights
+ *  are normalised so they sum to 1 — operator-typed values can total
+ *  anything; UX shows the warning. */
+function deriveMixValues(
+  mix: SimulationMenuMixLine[] | undefined,
+  menu: MenuSnapshotItem[],
+): { avgTicketGrosze: number; cogsPct: number; matchedWeight: number } | null {
+  if (!mix || mix.length === 0 || menu.length === 0) return null;
+  const byId = new Map(menu.map((m) => [m.id, m]));
+  let weightedPrice = 0;
+  let weightedCost = 0;
+  let totalWeight = 0;
+  for (const line of mix) {
+    const item = byId.get(line.menuItemId);
+    if (!item || line.weight <= 0) continue;
+    weightedPrice += line.weight * item.priceGrosze;
+    weightedCost += line.weight * item.recipeCostGrosze;
+    totalWeight += line.weight;
+  }
+  if (totalWeight <= 0) return null;
+  const avgTicketGrosze = Math.round(weightedPrice / totalWeight);
+  const cogsPct = weightedPrice > 0 ? weightedCost / weightedPrice : 0;
+  return { avgTicketGrosze, cogsPct, matchedWeight: totalWeight };
+}
+
 /** Three saved-scenario archetypes derived from the active one. */
 function deriveArchetypes(s: SimulationScenario) {
   const conservative: SimulationScenario = {
@@ -319,6 +371,8 @@ function deriveArchetypes(s: SimulationScenario) {
   return { conservative, realistic: s, optimistic };
 }
 
+const ACTIVE_LOCATIONS = getActiveLocations();
+
 export function AdminSimulation() {
   const toast = useToast();
   const [scenario, setScenario] = useState<SimulationScenario | null>(null);
@@ -326,6 +380,8 @@ export function AdminSimulation() {
   const [saving, setSaving] = useState(false);
   const [seedConfirmOpen, setSeedConfirmOpen] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  const [menuSnapshot, setMenuSnapshot] = useState<MenuSnapshotItem[]>([]);
+  const [menuLoading, setMenuLoading] = useState(false);
   const dirtyRef = useRef(false);
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -346,6 +402,28 @@ export function AdminSimulation() {
   useEffect(() => {
     fetchScenario();
   }, [fetchScenario]);
+
+  // Pull the menu snapshot whenever the scenario's menuMixLocation
+  // changes (defaults to the first active location). Idempotent — the
+  // server route filters by available items only.
+  const menuLocation =
+    scenario?.menuMixLocation ?? ACTIVE_LOCATIONS[0]?.slug ?? "warszawa";
+  useEffect(() => {
+    let cancelled = false;
+    setMenuLoading(true);
+    fetch(`/api/admin/simulation/menu?location=${encodeURIComponent(menuLocation)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (!cancelled && j?.items) setMenuSnapshot(j.items as MenuSnapshotItem[]);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setMenuLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [menuLocation]);
 
   const persist = useCallback(
     async (next: SimulationScenario, opts?: { quiet?: boolean }) => {
@@ -393,10 +471,33 @@ export function AdminSimulation() {
     [],
   );
 
-  const computed = useMemo(
-    () => (scenario ? computeScenario(scenario) : null),
-    [scenario],
+  // When menu mix is active, the avgTicketGrosze and cogsPct fields on
+  // the scenario are display-only — the real values come from the
+  // weighted mix. effectiveScenario is the one fed into every chart,
+  // matrix, projection and KPI on this page.
+  const mixDerived = useMemo(
+    () => deriveMixValues(scenario?.menuMix, menuSnapshot),
+    [scenario?.menuMix, menuSnapshot],
   );
+  const effectiveScenario = useMemo<SimulationScenario | null>(() => {
+    if (!scenario) return null;
+    if (!mixDerived) return scenario;
+    return {
+      ...scenario,
+      avgTicketGrosze: mixDerived.avgTicketGrosze,
+      cogsPct: mixDerived.cogsPct,
+    };
+  }, [scenario, mixDerived]);
+  const computed = useMemo(
+    () => (effectiveScenario ? computeScenario(effectiveScenario) : null),
+    [effectiveScenario],
+  );
+
+  const weightById = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const line of scenario?.menuMix ?? []) m.set(line.menuItemId, line.weight);
+    return m;
+  }, [scenario?.menuMix]);
 
   if (loading || !scenario || !computed) {
     return <div className="v2-page-loading">Loading simulation…</div>;
@@ -486,6 +587,47 @@ export function AdminSimulation() {
     }));
   };
 
+  const setMixWeight = (itemId: string, pct: number) => {
+    const w = Math.max(0, Math.min(1, pct / 100));
+    update((s) => {
+      const next = new Map<string, number>();
+      for (const line of s.menuMix ?? []) next.set(line.menuItemId, line.weight);
+      if (w > 0) next.set(itemId, w);
+      else next.delete(itemId);
+      return {
+        ...s,
+        menuMix: Array.from(next.entries()).map(([menuItemId, weight]) => ({
+          menuItemId,
+          weight,
+        })),
+      };
+    });
+  };
+
+  const autoFillMixFromHistory = () => {
+    const total = menuSnapshot.reduce((sum, m) => sum + m.recentQty, 0);
+    if (total === 0) {
+      toast.warning("No order history yet", "Last 30 days are empty for this location.");
+      return;
+    }
+    update((s) => ({
+      ...s,
+      menuMix: menuSnapshot
+        .filter((m) => m.recentQty > 0)
+        .map((m) => ({ menuItemId: m.id, weight: m.recentQty / total })),
+    }));
+    toast.success("Filled from last 30 days");
+  };
+
+  const clearMix = () => {
+    update((s) => ({ ...s, menuMix: undefined }));
+    toast.success("Menu mix disabled", "Average ticket + COGS are now manual.");
+  };
+
+  const setMixLocation = (slug: string) => {
+    update((s) => ({ ...s, menuMixLocation: slug, menuMix: undefined }));
+  };
+
   const updateFixed = (key: BusinessCostCategory, plnStr: string) => {
     const pln = parseFloat(plnStr || "0");
     const grosze = Number.isFinite(pln) ? Math.max(0, Math.round(pln * 100)) : 0;
@@ -494,8 +636,8 @@ export function AdminSimulation() {
 
   const sensitivities = [-0.2, -0.1, 0, 0.1, 0.2].map((delta) => {
     const flexed: SimulationScenario = {
-      ...scenario,
-      ordersPerDay: Math.max(0, Math.round(scenario.ordersPerDay * (1 + delta))),
+      ...effectiveScenario!,
+      ordersPerDay: Math.max(0, Math.round(effectiveScenario!.ordersPerDay * (1 + delta))),
     };
     return { delta, computed: computeScenario(flexed) };
   });
@@ -516,15 +658,15 @@ export function AdminSimulation() {
 
   // Matrices, archetypes and 12-month projection — all recompute every
   // render because the underlying math is cheap (≤ 100 cells × ~15 ns).
-  const ordersTicketMatrix = buildMatrix(scenario, "orders", "ticket", 5, 0.3);
-  const cogsTicketMatrix = buildMatrix(scenario, "cogs", "ticket", 5, 0.08);
-  const archetypes = deriveArchetypes(scenario);
+  const ordersTicketMatrix = buildMatrix(effectiveScenario!, "orders", "ticket", 5, 0.3);
+  const cogsTicketMatrix = buildMatrix(effectiveScenario!, "cogs", "ticket", 5, 0.08);
+  const archetypes = deriveArchetypes(effectiveScenario!);
   const archetypeRows = [
     { key: "conservative", label: "Conservative", scenario: archetypes.conservative, hint: "−15% orders · +2pp COGS" },
     { key: "realistic", label: "Realistic (current)", scenario: archetypes.realistic, hint: "as entered" },
     { key: "optimistic", label: "Optimistic", scenario: archetypes.optimistic, hint: "+15% orders · −2pp COGS" },
   ];
-  const projection = projectTwelveMonths(scenario);
+  const projection = projectTwelveMonths(effectiveScenario!);
   const projectionTotals = projection.reduce(
     (acc, r) => ({
       revenue: acc.revenue + r.revenue,
@@ -633,18 +775,25 @@ export function AdminSimulation() {
                 }
               />
               <Input
-                label="Average ticket"
+                label={mixDerived ? "Average ticket (derived from menu mix)" : "Average ticket"}
                 type="number"
                 step="0.01"
                 min="0"
-                value={(scenario.avgTicketGrosze / 100).toFixed(2)}
-                onChange={(e) =>
+                value={
+                  mixDerived
+                    ? (mixDerived.avgTicketGrosze / 100).toFixed(2)
+                    : (scenario.avgTicketGrosze / 100).toFixed(2)
+                }
+                onChange={(e) => {
+                  if (mixDerived) return;
                   update((s) => ({
                     ...s,
                     avgTicketGrosze: Math.max(0, Math.round(parseFloat(e.target.value || "0") * 100)),
-                  }))
-                }
+                  }));
+                }}
+                readOnly={!!mixDerived}
                 trailingAdornment={<span className="v2-muted">zł</span>}
+                description={mixDerived ? "Computed from the Menu mix card below." : undefined}
               />
               <Input
                 label="Days open per month"
@@ -660,20 +809,34 @@ export function AdminSimulation() {
                 }
               />
               <Input
-                label="Ingredient cost ratio"
+                label={
+                  mixDerived
+                    ? "Ingredient cost ratio (derived from menu mix)"
+                    : "Ingredient cost ratio"
+                }
                 type="number"
                 step="1"
                 min="0"
                 max="100"
-                value={String(Math.round(scenario.cogsPct * 100))}
-                onChange={(e) =>
+                value={
+                  mixDerived
+                    ? (mixDerived.cogsPct * 100).toFixed(1)
+                    : String(Math.round(scenario.cogsPct * 100))
+                }
+                onChange={(e) => {
+                  if (mixDerived) return;
                   update((s) => ({
                     ...s,
                     cogsPct: Math.max(0, Math.min(1, parseFloat(e.target.value || "0") / 100)),
-                  }))
-                }
+                  }));
+                }}
+                readOnly={!!mixDerived}
                 trailingAdornment={<span className="v2-muted">%</span>}
-                description="Share of revenue eaten by food cost. 28–32% is typical for pizza + pasta + coffee."
+                description={
+                  mixDerived
+                    ? "Weighted average of menu items' recipe-derived cost / price."
+                    : "Share of revenue eaten by food cost. 28–32% is typical for pizza + pasta + coffee."
+                }
               />
             </div>
           </CardBody>
@@ -800,6 +963,61 @@ export function AdminSimulation() {
           </CardBody>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader
+          title="Menu mix"
+          description={
+            mixDerived
+              ? `Live: derived avg ticket ${formatPrice(mixDerived.avgTicketGrosze)}, COGS ${(mixDerived.cogsPct * 100).toFixed(1)}%. Total weight ${(mixDerived.matchedWeight * 100).toFixed(0)}%.`
+              : "Pick how often each menu item sells. Weights drive the average ticket and food cost ratio automatically. Empty = simple inputs above stand."
+          }
+          actions={
+            <div className="flex items-center gap-2">
+              <Select
+                value={menuLocation}
+                onChange={(e) => setMixLocation(e.target.value)}
+                options={ACTIVE_LOCATIONS.map((l) => ({ value: l.slug, label: l.city }))}
+                aria-label="Menu location"
+              />
+              <Button
+                size="sm"
+                variant="secondary"
+                leadingIcon={<Sparkles className="h-3.5 w-3.5" />}
+                onClick={autoFillMixFromHistory}
+                disabled={menuLoading}
+              >
+                Auto-fill (30 d)
+              </Button>
+              {mixDerived && (
+                <Button size="sm" variant="ghost" onClick={clearMix}>
+                  Disable mix
+                </Button>
+              )}
+            </div>
+          }
+        />
+        <CardBody>
+          {menuLoading ? (
+            <div className="v2-page-loading">Loading menu…</div>
+          ) : menuSnapshot.length === 0 ? (
+            <div className="v2-muted text-sm">
+              No available menu items for this location. Check{" "}
+              <Link href="/admin/menu" className="underline">
+                /admin/menu
+              </Link>{" "}
+              and ensure items are marked available.
+            </div>
+          ) : (
+            <MenuMixGrid
+              items={menuSnapshot}
+              weightById={weightById}
+              onWeightChange={setMixWeight}
+              mixActive={!!mixDerived}
+            />
+          )}
+        </CardBody>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4">
         <Card>
@@ -1313,6 +1531,124 @@ export function AdminSimulation() {
         confirmLabel="Reset"
         destructive
       />
+    </div>
+  );
+}
+
+interface MenuMixGridProps {
+  items: MenuSnapshotItem[];
+  weightById: Map<string, number>;
+  onWeightChange: (itemId: string, pct: number) => void;
+  mixActive: boolean;
+}
+
+function MenuMixGrid({ items, weightById, onWeightChange, mixActive }: MenuMixGridProps) {
+  const grouped = useMemo(() => {
+    const groups = new Map<MenuCategory, MenuSnapshotItem[]>();
+    for (const item of items) {
+      const list = groups.get(item.category) ?? [];
+      list.push(item);
+      groups.set(item.category, list);
+    }
+    return Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [items]);
+
+  const totalWeight = useMemo(() => {
+    let sum = 0;
+    for (const w of weightById.values()) sum += w;
+    return sum;
+  }, [weightById]);
+
+  return (
+    <div className="v2-stack-12">
+      <div className="flex items-center justify-between gap-3">
+        <Badge tone={mixActive ? "success" : "neutral"} variant="soft" dot>
+          {mixActive ? "Mix active" : "Mix off"}
+        </Badge>
+        <span className="text-sm v2-muted">
+          Total weight:{" "}
+          <strong
+            className={`tabular ${
+              Math.abs(totalWeight - 1) < 0.01
+                ? ""
+                : totalWeight > 1.01
+                  ? "text-amber-500"
+                  : totalWeight > 0
+                    ? "text-amber-500"
+                    : ""
+            }`}
+          >
+            {(totalWeight * 100).toFixed(0)}%
+          </strong>{" "}
+          (weights are auto-normalised to 100% in the math)
+        </span>
+      </div>
+      <div className="max-h-[480px] overflow-y-auto pr-1">
+        {grouped.map(([category, rows]) => (
+          <div key={category} className="mb-3">
+            <div className="v2-section-h flex items-center gap-2 mb-1">
+              <Pizza className="h-3.5 w-3.5 v2-muted" aria-hidden />
+              <span>{MENU_CATEGORY_LABEL[category]}</span>
+              <span className="v2-muted text-xs">({rows.length})</span>
+            </div>
+            <div className="grid grid-cols-12 gap-2 text-xs v2-muted px-2 py-1 border-b border-[var(--border)]">
+              <div className="col-span-5">Item</div>
+              <div className="col-span-2 text-right">Price</div>
+              <div className="col-span-2 text-right">Food cost</div>
+              <div className="col-span-1 text-right">Margin</div>
+              <div className="col-span-2 text-right">Weight</div>
+            </div>
+            {rows.map((row) => {
+              const w = weightById.get(row.id) ?? 0;
+              const margin =
+                row.priceGrosze > 0 ? 1 - row.recipeCostGrosze / row.priceGrosze : 0;
+              return (
+                <div
+                  key={row.id}
+                  className="grid grid-cols-12 gap-2 items-center px-2 py-1.5 border-b border-[var(--border)] text-sm"
+                >
+                  <div className="col-span-5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span>{row.name}</span>
+                      {row.recentQty > 0 && (
+                        <Badge tone="info" variant="soft">
+                          {row.recentQty} ord/30d
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div className="col-span-2 text-right tabular">
+                    {formatPrice(row.priceGrosze)}
+                  </div>
+                  <div className="col-span-2 text-right tabular v2-muted">
+                    {formatPrice(row.recipeCostGrosze)}
+                  </div>
+                  <div
+                    className={`col-span-1 text-right tabular ${
+                      margin >= 0.6 ? "text-emerald-500" : margin >= 0.4 ? "" : "text-amber-500"
+                    }`}
+                  >
+                    {(margin * 100).toFixed(0)}%
+                  </div>
+                  <div className="col-span-2">
+                    <input
+                      type="number"
+                      step="1"
+                      min="0"
+                      max="100"
+                      value={Math.round(w * 100)}
+                      onChange={(e) => onWeightChange(row.id, parseFloat(e.target.value || "0"))}
+                      className="v2-input"
+                      style={{ textAlign: "right", paddingRight: 8 }}
+                      aria-label={`Weight for ${row.name}`}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

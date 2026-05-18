@@ -104,6 +104,9 @@ export const PUT = withAdmin(
         typeof b.paymentProcessorPct === "number" ? b.paymentProcessorPct : undefined,
       setupCostGrosze: typeof b.setupCostGrosze === "number" ? b.setupCostGrosze : undefined,
       seasonality: b.seasonality,
+      menuMix: Array.isArray(b.menuMix) ? b.menuMix : undefined,
+      menuMixLocation:
+        typeof b.menuMixLocation === "string" ? b.menuMixLocation : undefined,
       updatedAt: new Date().toISOString(),
     };
     const saved = await saveSimulationScenario(scenario);
