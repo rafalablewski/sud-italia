@@ -1847,10 +1847,10 @@ html { scroll-behavior: smooth; }
   gap: 12px;
 }
 
-/* Sticky variant — pins under the topbar (53px desktop, 48px+safe-top mobile). */
+/* Sticky variant — pins under the topbar (55px desktop, 48px+safe-top mobile). */
 .v2-kpi-grid-sticky {
   position: sticky;
-  top: 53px;
+  top: 55px;
   z-index: 15;
   margin-left: calc(var(--page-pad) * -1);
   margin-right: calc(var(--page-pad) * -1);

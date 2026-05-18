@@ -1491,7 +1491,7 @@ export function AdminSimulation() {
       const el = kpiSectionRef.current;
       if (!el) return;
       const topbar = document.querySelector(".v2-topbar, .v2-m-topbar") as HTMLElement | null;
-      const offset = (topbar?.offsetHeight ?? 53) + 1;
+      const offset = (topbar?.offsetHeight ?? 55) + 1;
       const next = el.getBoundingClientRect().top <= offset;
       setKpiStuck((prev) => (prev === next ? prev : next));
     };
