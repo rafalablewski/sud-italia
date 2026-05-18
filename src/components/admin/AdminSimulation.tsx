@@ -346,6 +346,8 @@ interface MenuScenarioPreset {
   name: string;
   emoji: string;
   description: string;
+  ordersPerDay: number;
+  daysOpenPerMonth: number;
   avgTicketGrosze: number;
   cogsPct: number;
   /** Override values for behavior levers when this preset is applied. */
@@ -364,7 +366,9 @@ const MENU_SCENARIOS: MenuScenarioPreset[] = [
     id: "takeaway",
     name: "Takeaway classic",
     emoji: "🍕",
-    description: "Quick pizza orders, minimal sides. Most customers grab + go. Low ticket but high volume.",
+    description: "Quick pizza orders, minimal sides. High volume, low ticket — grab + go truck.",
+    ordersPerDay: 100,
+    daysOpenPerMonth: 28,
     avgTicketGrosze: 4500,
     cogsPct: 0.30,
     attach: { coffee: 0.15, dessert: 0.05, antipasti: 0.03, aperitivo: 0, premiumToppings: 0.10, pastaPrimo: 0 },
@@ -374,6 +378,8 @@ const MENU_SCENARIOS: MenuScenarioPreset[] = [
     name: "Balanced (default)",
     emoji: "🍝",
     description: "Pizza + pasta + drinks + dessert mix. The Warsaw 2026 baseline.",
+    ordersPerDay: 70,
+    daysOpenPerMonth: 28,
     avgTicketGrosze: 6500,
     cogsPct: 0.30,
     attach: { coffee: 0.25, dessert: 0.12, antipasti: 0.08, aperitivo: 0.10, premiumToppings: 0.15, pastaPrimo: 0.18 },
@@ -382,7 +388,9 @@ const MENU_SCENARIOS: MenuScenarioPreset[] = [
     id: "premium",
     name: "Premium / Specialty",
     emoji: "✨",
-    description: "High-end pizzas, premium toppings, pasta primo, antipasti. Lower volume but better margin.",
+    description: "High-end pizzas + premium toppings + pasta primo. Lower volume, higher ticket, better margin.",
+    ordersPerDay: 55,
+    daysOpenPerMonth: 26,
     avgTicketGrosze: 8800,
     cogsPct: 0.32,
     attach: { coffee: 0.30, dessert: 0.25, antipasti: 0.18, aperitivo: 0.20, premiumToppings: 0.35, pastaPrimo: 0.30 },
@@ -391,7 +399,9 @@ const MENU_SCENARIOS: MenuScenarioPreset[] = [
     id: "family",
     name: "Family / Group",
     emoji: "👨‍👩‍👧",
-    description: "Multi-pizza orders for groups. High ticket, fewer orders.",
+    description: "Multi-pizza orders for groups. Big tickets, fewer orders — weekend / event focus.",
+    ordersPerDay: 30,
+    daysOpenPerMonth: 26,
     avgTicketGrosze: 15500,
     cogsPct: 0.28,
     attach: { coffee: 0.10, dessert: 0.25, antipasti: 0.20, aperitivo: 0.05, premiumToppings: 0.15, pastaPrimo: 0.15 },
@@ -401,6 +411,8 @@ const MENU_SCENARIOS: MenuScenarioPreset[] = [
     name: "Aperitivo / Dinner",
     emoji: "🍷",
     description: "Drinks-led evening service. Best margin — requires alcohol licence.",
+    ordersPerDay: 45,
+    daysOpenPerMonth: 28,
     avgTicketGrosze: 8200,
     cogsPct: 0.26,
     attach: { coffee: 0.20, dessert: 0.20, antipasti: 0.25, aperitivo: 0.45, premiumToppings: 0.20, pastaPrimo: 0.20 },
@@ -644,16 +656,17 @@ const HELP = {
       <>
         <p>
           Pick one of five archetypal menu shapes for a Neapolitan pizza
-          truck. Each preset loads an average ticket, COGS ratio and a
-          starting set of behavior levers (coffee attach, dessert attach,
-          aperitivo attach, etc) in one click.
+          truck. Each preset overwrites the four Revenue inputs (orders/day,
+          avg ticket, days open, COGS) <em>and</em> the six attach-rate
+          levers (coffee, dessert, antipasti, aperitivo, premium toppings,
+          pasta primo) — one click loads a coherent business model.
         </p>
         <ul style={{ margin: "8px 0", paddingLeft: 20, listStyle: "disc" }}>
-          <li><strong>Takeaway classic</strong> — quick pizza, minimal sides, ~45 zł</li>
-          <li><strong>Balanced</strong> — pizza + pasta + drinks + dessert, ~65 zł</li>
-          <li><strong>Premium</strong> — high-end pizzas + extras, ~88 zł</li>
-          <li><strong>Family / Group</strong> — multi-pizza orders, ~155 zł</li>
-          <li><strong>Aperitivo / Dinner</strong> — drinks-led evening, ~82 zł (needs alcohol licence)</li>
+          <li><strong>Takeaway classic</strong> — 100 ord/d × 45 zł, low attach</li>
+          <li><strong>Balanced</strong> — 70 ord/d × 65 zł, mixed attach</li>
+          <li><strong>Premium</strong> — 55 ord/d × 88 zł, high attach</li>
+          <li><strong>Family / Group</strong> — 30 ord/d × 155 zł, weekend / events</li>
+          <li><strong>Aperitivo / Dinner</strong> — 45 ord/d × 82 zł, drinks-led (needs alcohol licence)</li>
         </ul>
         <p>
           After applying a preset you can still tweak any value — the preset
@@ -1412,6 +1425,8 @@ export function AdminSimulation() {
     update((s) => ({
       ...s,
       menuScenario: preset.id,
+      ordersPerDay: preset.ordersPerDay,
+      daysOpenPerMonth: preset.daysOpenPerMonth,
       avgTicketGrosze: preset.avgTicketGrosze,
       cogsPct: preset.cogsPct,
       assumptions: {
@@ -1442,7 +1457,10 @@ export function AdminSimulation() {
         },
       },
     }));
-    toast.success(`${preset.name} loaded`, `Avg ticket ${formatPrice(preset.avgTicketGrosze)}, COGS ${Math.round(preset.cogsPct * 100)}%`);
+    toast.success(
+      `${preset.name} loaded`,
+      `${preset.ordersPerDay} ord/day · ${formatPrice(preset.avgTicketGrosze)} ticket · ${Math.round(preset.cogsPct * 100)}% COGS`,
+    );
   };
 
   const updateFixed = (key: BusinessCostCategory, plnStr: string) => {
@@ -2411,16 +2429,25 @@ function MenuScenarioPicker({ activeId, onPick }: MenuScenarioPickerProps) {
                 </div>
                 <div
                   style={{
-                    display: "flex",
-                    gap: 12,
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "4px 12px",
                     fontSize: 12,
                     paddingTop: 6,
                     borderTop: "1px solid var(--border)",
                   }}
                 >
                   <span>
+                    <span className="v2-muted">Orders/day</span>{" "}
+                    <strong className="tabular">{preset.ordersPerDay}</strong>
+                  </span>
+                  <span>
                     <span className="v2-muted">Ticket</span>{" "}
                     <strong className="tabular">{formatPrice(preset.avgTicketGrosze)}</strong>
+                  </span>
+                  <span>
+                    <span className="v2-muted">Days/mo</span>{" "}
+                    <strong className="tabular">{preset.daysOpenPerMonth}</strong>
                   </span>
                   <span>
                     <span className="v2-muted">COGS</span>{" "}
