@@ -16,11 +16,13 @@ import {
   HandCoins,
   Lightbulb,
   LineChart as LineChartIcon,
+  Percent,
   PiggyBank,
   Plus,
   RefreshCw,
   Save,
   Scale,
+  Shield,
   Sliders,
   Sparkles,
   Trash2,
@@ -147,8 +149,11 @@ interface Computed {
   breakEvenRevenue: number;
   laborByRole: { role: BusinessCostPayrollRole; grosze: number }[];
   laborHoursPerMonth: number;
+  foodCostPct: number;
   laborPct: number;
   primeCostPct: number;
+  contributionMarginPct: number;
+  marginOfSafetyPct: number;
   revenuePerLaborHour: number;
   profitPerOrder: number;
   paybackMonths: number | null;
@@ -183,9 +188,13 @@ function computeScenario(s: SimulationScenario): Computed {
   const breakEvenOrdersPerDay =
     s.daysOpenPerMonth > 0 ? breakEvenOrdersPerMonth / s.daysOpenPerMonth : 0;
   const breakEvenRevenue = breakEvenOrdersPerMonth * s.avgTicketGrosze;
+  const foodCostPct = monthlyRevenue > 0 ? monthlyCogs / monthlyRevenue : 0;
   const laborPct = monthlyRevenue > 0 ? laborMonthly / monthlyRevenue : 0;
   const primeCostPct =
     monthlyRevenue > 0 ? (monthlyCogs + laborMonthly) / monthlyRevenue : 0;
+  const contributionMarginPct = Math.max(0, contributionRatio);
+  const marginOfSafetyPct =
+    monthlyRevenue > 0 ? (monthlyRevenue - breakEvenRevenue) / monthlyRevenue : 0;
   const revenuePerLaborHour =
     laborHoursPerMonth > 0 ? monthlyRevenue / laborHoursPerMonth : 0;
   const monthlyOrders = s.ordersPerDay * s.daysOpenPerMonth;
@@ -206,8 +215,11 @@ function computeScenario(s: SimulationScenario): Computed {
     breakEvenOrdersPerMonth,
     breakEvenRevenue,
     laborHoursPerMonth,
+    foodCostPct,
     laborPct,
     primeCostPct,
+    contributionMarginPct,
+    marginOfSafetyPct,
     revenuePerLaborHour,
     profitPerOrder,
     paybackMonths,
@@ -1102,8 +1114,13 @@ const HELP = {
     title: "Operations KPIs",
     body: (
       <>
-        <p>The five numbers professional restaurateurs watch every week:</p>
+        <p>The eight numbers professional restaurateurs watch every week:</p>
         <ul style={{ margin: "8px 0", paddingLeft: 20, listStyle: "disc" }}>
+          <li>
+            <strong>Food cost % of revenue</strong> — ingredient discipline.
+            Target ≤ 30%. Over 32% means recipes are leaking margin or prices
+            are too soft.
+          </li>
           <li>
             <strong>Labor % of revenue</strong> — target ≤ 30%. Over 35%? You&apos;re
             overstaffed or under-pricing.
@@ -1111,6 +1128,16 @@ const HELP = {
           <li>
             <strong>Prime cost %</strong> — COGS + labor as % of revenue. The
             single most-watched number in the industry; ≤ 60–65% is healthy.
+          </li>
+          <li>
+            <strong>Contribution margin</strong> — share of each PLN of revenue
+            left after variable costs (COGS + payment fees) to cover fixed
+            costs and profit. Below 55% and there&apos;s no room for rent shocks.
+          </li>
+          <li>
+            <strong>Margin of safety</strong> — how far revenue can fall before
+            you hit break-even. Below 10% and one bad week wipes you out;
+            above 25% is comfortable.
           </li>
           <li>
             <strong>Revenue per labor hour</strong> — how productive each
@@ -1977,6 +2004,14 @@ export function AdminSimulation() {
       </div>
       <section className="v2-kpi-grid">
         <KpiCard
+          label="Food cost % revenue"
+          value={computed.foodCostPct * 100}
+          format={(n) => `${n.toFixed(1)}%`}
+          icon={Utensils}
+          tone={computed.foodCostPct > 0.32 ? "danger" : computed.foodCostPct > 0.28 ? "warning" : "success"}
+          hint="Industry target ≤ 30%"
+        />
+        <KpiCard
           label="Labor cost % revenue"
           value={computed.laborPct * 100}
           format={(n) => `${n.toFixed(1)}%`}
@@ -1991,6 +2026,22 @@ export function AdminSimulation() {
           icon={Scale}
           tone={computed.primeCostPct > 0.65 ? "danger" : computed.primeCostPct > 0.6 ? "warning" : "success"}
           hint="COGS + labor — keep ≤ 60–65%"
+        />
+        <KpiCard
+          label="Contribution margin"
+          value={computed.contributionMarginPct * 100}
+          format={(n) => `${n.toFixed(1)}%`}
+          icon={Percent}
+          tone={computed.contributionMarginPct < 0.55 ? "danger" : computed.contributionMarginPct < 0.65 ? "warning" : "success"}
+          hint="Per PLN after COGS + fees"
+        />
+        <KpiCard
+          label="Margin of safety"
+          value={computed.marginOfSafetyPct * 100}
+          format={(n) => `${n.toFixed(1)}%`}
+          icon={Shield}
+          tone={computed.marginOfSafetyPct < 0.1 ? "danger" : computed.marginOfSafetyPct < 0.25 ? "warning" : "success"}
+          hint="Demand drop you can absorb"
         />
         <KpiCard
           label="Revenue / labor hour"
