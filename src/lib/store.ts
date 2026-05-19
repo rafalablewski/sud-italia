@@ -9005,6 +9005,7 @@ export async function computeMenuEngineering(
       const trueCm1 = pricePerUnit * (1 - effectiveLeakage) - costPerUnit;
       const nameLower = a.item.name.toLowerCase();
       const spoilageRisk = SPOILAGE_KEYWORDS.some((k) => nameLower.includes(k));
+      const role = a.item.menuRole;
       return {
         menuItemId: a.item.id,
         name: a.item.name,
@@ -9017,6 +9018,7 @@ export async function computeMenuEngineering(
         prepTimeMinutes: a.item.prepTimeMinutes ?? 0,
         trueCm1PerUnit: trueCm1,
         spoilageRisk,
+        menuRole: role === "hero" || role === "profit-driver" || role === "anchor" ? role : undefined,
       };
     });
 

@@ -1200,6 +1200,12 @@ export interface SimulationMenuEngineeringLine {
   cost: number;
   /** Quadrant label per Kasavana-Smith menu engineering. */
   quadrant: "star" | "plowhorse" | "puzzle" | "dog";
+  /** Operator-set role tag from the menu definition — hero (lead SKU),
+   *  profit-driver (high-margin lever), or anchor (premium decoy). The
+   *  matrix uses these to enrich the quadrant view; "anchor" items are
+   *  expected to live in the puzzle quadrant (high margin, low velocity)
+   *  by design and shouldn't be deleted. */
+  menuRole?: "hero" | "profit-driver" | "anchor";
   /** Item flags surfaced from the menu definition — used to build the
    *  margin-trap callout panel without invasive new menu schema. */
   deliveryOnly: boolean;

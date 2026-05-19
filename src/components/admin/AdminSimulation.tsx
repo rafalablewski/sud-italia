@@ -623,6 +623,102 @@ const PREP_SECONDS_PER_ATTACH: Record<string, number> = {
 };
 const PIZZA_PREP_SECONDS = 90; // base pizza assembly + bake
 
+interface ShiftPlanRow {
+  daypart: "prep" | "lunch" | "dinner" | "late-night" | "close";
+  label: string;
+  hours: string;
+  hoursPerDay: number;
+  /** Share of daily orders this daypart handles (0 for prep / close). */
+  orderShare: number;
+  /** Modelled headcount on shift (uniform-spread baseline; operator
+   *  reads this against reality and adjusts the per-role hours). */
+  headcountOnShift: number;
+  /** Daypart revenue, grosze. */
+  revenuePerDay: number;
+  /** Daypart labor cost, grosze, prorated from the labor mix. */
+  laborPerDay: number;
+  /** laborPerDay / revenuePerDay — coverage ratio. */
+  laborCoverageRatio: number;
+}
+
+/** Maps the uniform labor mix onto the four daypart windows (prep /
+ *  lunch / dinner / late-night / close) so the operator can see how
+ *  thin the coverage gets at rush. Doesn't change the labor calc —
+ *  this is the visibility layer the audit demanded. */
+function computeShiftPlan(
+  s: SimulationScenario,
+  dayparts: SimulationDaypartLine[] | null,
+): ShiftPlanRow[] {
+  const totalLaborPerWeek = s.labor.reduce(
+    (sum, l) => sum + l.headcount * l.hoursPerWeek * l.hourlyRateGrosze,
+    0,
+  );
+  const totalLaborPerDay = totalLaborPerWeek / 7;
+  const totalHeadcountAvg = s.labor.reduce((sum, l) => sum + l.headcount, 0);
+  const dailyRev = s.ordersPerDay * s.avgTicketGrosze;
+  // Daypart hours — institutional standard buckets.
+  const meta: { key: ShiftPlanRow["daypart"]; label: string; hours: string; hoursPerDay: number; share: number; concentrationFactor: number }[] = [
+    { key: "prep", label: "Prep", hours: "10:00 – 11:00", hoursPerDay: 1, share: 0, concentrationFactor: 0.4 },
+    { key: "lunch", label: "Lunch", hours: "11:00 – 15:00", hoursPerDay: 4, share: 0.30, concentrationFactor: 1.4 },
+    {
+      key: "dinner",
+      label: "Dinner",
+      hours: "17:00 – 22:00",
+      hoursPerDay: 5,
+      share: 0.50,
+      concentrationFactor: 1.6,
+    },
+    {
+      key: "late-night",
+      label: "Late-night",
+      hours: "22:00 – 02:00",
+      hoursPerDay: 2,
+      share: 0.18,
+      concentrationFactor: 0.7,
+    },
+    {
+      key: "close",
+      label: "Close",
+      hours: "02:00 – 03:00",
+      hoursPerDay: 1,
+      share: 0,
+      concentrationFactor: 0.3,
+    },
+  ];
+  // If we have real daypart data, override share with observed.
+  if (dayparts && dayparts.length > 0) {
+    const totalObserved = dayparts.reduce((sum, d) => sum + d.ordersCount, 0);
+    if (totalObserved > 0) {
+      const obsByKey = new Map(dayparts.map((d) => [d.key, d.sharePct]));
+      meta.find((m) => m.key === "lunch")!.share = obsByKey.get("lunch") ?? 0.30;
+      meta.find((m) => m.key === "dinner")!.share = obsByKey.get("dinner") ?? 0.50;
+      meta.find((m) => m.key === "late-night")!.share = obsByKey.get("late-night") ?? 0.18;
+    }
+  }
+  const totalServiceHours = meta.reduce((sum, m) => sum + m.hoursPerDay, 0);
+  return meta.map((m) => {
+    const revenuePerDay = dailyRev * m.share;
+    // Labor: hours-weighted slice of daily labor budget × concentration
+    // factor (lunch + dinner pull more headcount; prep + close stay
+    // light). Multiplied so the per-day total still sums to actual.
+    const baseShare = m.hoursPerDay / totalServiceHours;
+    const weightedShare = baseShare * m.concentrationFactor;
+    const laborPerDay = totalLaborPerDay * weightedShare;
+    const headcountOnShift = totalHeadcountAvg * m.concentrationFactor;
+    return {
+      daypart: m.key,
+      label: m.label,
+      hours: m.hours,
+      hoursPerDay: m.hoursPerDay,
+      orderShare: m.share,
+      headcountOnShift,
+      revenuePerDay,
+      laborPerDay,
+      laborCoverageRatio: revenuePerDay > 0 ? laborPerDay / revenuePerDay : 0,
+    };
+  });
+}
+
 interface PrepFlowResult {
   /** Average kitchen-seconds-per-order from the menu mix.
    *  pizza base + Σ attachPct × attachSeconds. */
@@ -2615,6 +2711,7 @@ export function AdminSimulation() {
   const attachEfficiency = computeAttachmentEfficiency(effectiveScenario!);
   const fleetEcon = computeFleetEconomics(scenario, scenario.setupCostGrosze ?? 0);
   const prepFlow = computePrepFlow(scenario);
+  const shiftPlan = computeShiftPlan(scenario, dayparts);
   const archetypes = deriveArchetypes(effectiveScenario!);
   const archetypeRows = [
     { key: "conservative", label: "Conservative", scenario: archetypes.conservative, hint: "−15% orders · +2pp COGS" },
@@ -3500,6 +3597,8 @@ export function AdminSimulation() {
       />
 
       <PrepFlowPanel result={prepFlow} actualsTicketSec={actuals?.medianTicketTimeSeconds ?? null} />
+
+      <ShiftPlanPanel rows={shiftPlan} />
 
       {menuEng && menuEng.length > 0 && <MenuEngineeringPanel rows={menuEng} />}
 
@@ -4416,6 +4515,38 @@ function LeverSwitch({
   );
 }
 
+/** Menu-role badge surfaced from the menu definition — hero / profit-
+ *  driver / anchor. The audit pointed out the simulator ignored these
+ *  tags entirely; this surfaces them in the engineering matrix so an
+ *  anchor in the puzzle quadrant (premium decoy by design) doesn't get
+ *  reflexively flagged for deletion. */
+function MenuRoleBadge({ role }: { role: "hero" | "profit-driver" | "anchor" }) {
+  const palette: Record<"hero" | "profit-driver" | "anchor", { bg: string; fg: string; label: string }> = {
+    hero: { bg: "rgba(245,158,11,0.12)", fg: "rgb(217,119,6)", label: "hero" },
+    "profit-driver": { bg: "rgba(34,197,94,0.12)", fg: "rgb(22,163,74)", label: "driver" },
+    anchor: { bg: "rgba(168,85,247,0.12)", fg: "rgb(126,34,206)", label: "anchor" },
+  };
+  const c = palette[role];
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "1px 6px",
+        borderRadius: 999,
+        background: c.bg,
+        color: c.fg,
+        fontSize: 9,
+        fontWeight: 700,
+        letterSpacing: 0.3,
+        textTransform: "uppercase",
+      }}
+    >
+      {c.label}
+    </span>
+  );
+}
+
 /** Small chip that tells the operator (and any investor reading over their
  *  shoulder) whether a number is grounded in real data or hand-typed. The
  *  three states cover the entire input surface of the simulator:
@@ -4454,6 +4585,88 @@ function SourceTag({
     >
       {c.label}
     </span>
+  );
+}
+
+/** Shift plan — distributes the uniform labor mix across prep / lunch /
+ *  dinner / late-night / close so the operator sees where the line gets
+ *  thin. Doesn't change the labor calculation (still rate × hours);
+ *  this is the visibility layer the audit demanded ("staffing-by-
+ *  daypart is operationally incoherent in a flat headcount × hours
+ *  model"). Daypart shares pull from real orders when available;
+ *  fall back to institutional QSR norms otherwise. */
+function ShiftPlanPanel({ rows }: { rows: ShiftPlanRow[] }) {
+  return (
+    <Card>
+      <CardHeader
+        title="Shift plan — labor by daypart"
+        description="The uniform labor mix in the inputs card is operationally a fiction — real shifts concentrate 2-4 people on lunch + dinner rush, then taper to 1-2 for prep + close. This view distributes total labor across dayparts using observed order share + standard concentration factors so the operator can read where coverage is thin."
+        actions={<ChefHat className="h-4 w-4 v2-muted" />}
+      />
+      <CardBody>
+        <table style={{ width: "100%", fontSize: 13 }}>
+          <thead>
+            <tr style={{ textAlign: "left", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>
+              <th style={{ padding: "6px 4px" }}>Daypart</th>
+              <th style={{ padding: "6px 4px", textAlign: "right" }}>Order share</th>
+              <th style={{ padding: "6px 4px", textAlign: "right" }}>Headcount</th>
+              <th style={{ padding: "6px 4px", textAlign: "right" }}>Revenue / day</th>
+              <th style={{ padding: "6px 4px", textAlign: "right" }}>Labor / day</th>
+              <th style={{ padding: "6px 4px", textAlign: "right" }}>Coverage</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => {
+              const danger = r.laborCoverageRatio > 0.35;
+              const warn = r.laborCoverageRatio > 0.28 && !danger;
+              const good = r.laborCoverageRatio > 0 && r.laborCoverageRatio < 0.20;
+              return (
+                <tr key={r.daypart} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
+                  <td style={{ padding: "6px 4px" }}>
+                    <div style={{ fontWeight: 500 }}>{r.label}</div>
+                    <div className="v2-muted text-xs">{r.hours}</div>
+                  </td>
+                  <td className="tabular" style={{ padding: "6px 4px", textAlign: "right" }}>
+                    {r.orderShare > 0 ? `${(r.orderShare * 100).toFixed(0)}%` : "—"}
+                  </td>
+                  <td className="tabular" style={{ padding: "6px 4px", textAlign: "right" }}>
+                    {r.headcountOnShift.toFixed(1)}
+                  </td>
+                  <td className="tabular" style={{ padding: "6px 4px", textAlign: "right" }}>
+                    {r.revenuePerDay > 0
+                      ? `${Math.round(r.revenuePerDay / 100).toLocaleString("pl-PL")} zł`
+                      : "—"}
+                  </td>
+                  <td className="tabular" style={{ padding: "6px 4px", textAlign: "right" }}>
+                    {Math.round(r.laborPerDay / 100).toLocaleString("pl-PL")} zł
+                  </td>
+                  <td
+                    className="tabular"
+                    style={{
+                      padding: "6px 4px",
+                      textAlign: "right",
+                      color: danger
+                        ? "rgb(220,38,38)"
+                        : warn
+                          ? "rgb(217,119,6)"
+                          : good
+                            ? "rgb(22,163,74)"
+                            : undefined,
+                      fontWeight: 500,
+                    }}
+                  >
+                    {r.revenuePerDay > 0 ? `${(r.laborCoverageRatio * 100).toFixed(0)}%` : "—"}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        <div className="v2-muted text-xs mt-2">
+          Coverage = labor cost ÷ revenue for that daypart. Green &lt; 20% (rush profitable) · amber 28-35% (tight) · red &gt; 35% (over-staffed for the volume). Prep + close are revenue-zero so coverage is undefined; the headcount column shows you're still paying somebody to be there.
+        </div>
+      </CardBody>
+    </Card>
   );
 }
 
@@ -6083,7 +6296,10 @@ function MenuEngineeringPanel({
                       className="flex items-baseline justify-between"
                       style={{ padding: "4px 0", borderTop: "1px solid rgba(0,0,0,0.06)" }}
                     >
-                      <span style={{ fontSize: 13 }}>{r.name}</span>
+                      <span style={{ fontSize: 13, display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        {r.name}
+                        {r.menuRole && <MenuRoleBadge role={r.menuRole} />}
+                      </span>
                       <span className="v2-muted text-xs tabular">
                         {r.unitsSold}× · {(r.gpPerUnit / 100).toFixed(2)} zł GP
                       </span>
