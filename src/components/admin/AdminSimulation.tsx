@@ -17,6 +17,7 @@ import {
   HandCoins,
   Lightbulb,
   LineChart as LineChartIcon,
+  Pencil,
   Percent,
   PiggyBank,
   Plus,
@@ -61,6 +62,7 @@ import {
   CardBody,
   CardHeader,
   ConfirmDialog,
+  Dialog,
   InfoButton,
   Input,
   Select,
@@ -4426,11 +4428,15 @@ interface MenuScenarioPickerProps {
 }
 
 function MenuScenarioPicker({ activeId, overrides, onApply, onSaveOverride, onResetOverride }: MenuScenarioPickerProps) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const editingPreset = editingId
+    ? resolveScenarioPreset(editingId, overrides)
+    : null;
   return (
     <Card>
       <CardHeader
         title="Menu scenarios"
-        description="Six editable scenarios — five archetypes (Takeaway / Balanced / Premium / Family / Aperitivo) plus a blank Custom slot. Each card holds its own orders/day, ticket, days open, COGS, and the six attach rates. Save persists your edits across reloads; Reset restores the baked-in defaults; Apply pushes the card's values into the active scenario."
+        description="Six archetypes — pick one to load orders/day, ticket, COGS and behavior levers in a single click, or click the pencil to edit a card's values. Save persists your edits across reloads; Reset restores the baked-in defaults."
         actions={
           <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
             <InfoButton title={HELP.menuScenario.title} label="About menu scenarios">{HELP.menuScenario.body}</InfoButton>
@@ -4439,230 +4445,292 @@ function MenuScenarioPicker({ activeId, overrides, onApply, onSaveOverride, onRe
         }
       />
       <CardBody>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-          {MENU_SCENARIOS_WITH_CUSTOM.map((preset) => (
-            <MenuScenarioCard
-              key={preset.id}
-              preset={preset}
-              override={overrides?.[preset.id]}
-              isActive={preset.id === activeId}
-              onApply={onApply}
-              onSave={onSaveOverride}
-              onReset={onResetOverride}
-            />
-          ))}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {MENU_SCENARIOS_WITH_CUSTOM.map((preset) => {
+            const resolved = resolveScenarioPreset(preset.id, overrides);
+            const isActive = preset.id === activeId;
+            const hasOverride = overrides?.[preset.id] !== undefined;
+            return (
+              <div
+                key={preset.id}
+                style={{
+                  position: "relative",
+                  textAlign: "left",
+                  padding: 14,
+                  borderRadius: 12,
+                  border: `1.5px solid ${isActive ? "var(--brand)" : "var(--border)"}`,
+                  background: isActive ? "var(--brand-soft, var(--surface-2))" : "var(--surface-2)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 6,
+                  fontFamily: "inherit",
+                  color: "inherit",
+                  transition: "border-color 0.15s, background 0.15s",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setEditingId(preset.id)}
+                  aria-label={`Edit ${preset.name}`}
+                  title="Edit values"
+                  style={{
+                    position: "absolute",
+                    top: 8,
+                    right: 8,
+                    width: 28,
+                    height: 28,
+                    borderRadius: 8,
+                    border: "1px solid color-mix(in oklab, var(--fg) 12%, transparent)",
+                    background: "color-mix(in oklab, var(--fg) 4%, transparent)",
+                    color: "color-mix(in oklab, var(--fg) 75%, transparent)",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                  }}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onApply(resolved)}
+                  aria-pressed={isActive}
+                  style={{
+                    textAlign: "left",
+                    background: "transparent",
+                    border: "none",
+                    padding: 0,
+                    cursor: "pointer",
+                    color: "inherit",
+                    fontFamily: "inherit",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 6,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingRight: 36 }}>
+                    <span style={{ fontSize: 28, lineHeight: 1 }} aria-hidden>
+                      {resolved.emoji}
+                    </span>
+                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                      {hasOverride && (
+                        <Badge tone="info" variant="soft">
+                          Customised
+                        </Badge>
+                      )}
+                      {isActive && (
+                        <Badge tone="brand" variant="soft" dot>
+                          Active
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 600 }}>{resolved.name}</div>
+                  <div className="v2-muted" style={{ fontSize: 12, lineHeight: 1.4, minHeight: 50 }}>
+                    {resolved.description}
+                  </div>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: "4px 12px",
+                      fontSize: 12,
+                      paddingTop: 6,
+                      borderTop: "1px solid var(--border)",
+                    }}
+                  >
+                    <span>
+                      <span className="v2-muted">Orders/day</span>{" "}
+                      <strong className="tabular">{resolved.ordersPerDay}</strong>
+                    </span>
+                    <span>
+                      <span className="v2-muted">Ticket</span>{" "}
+                      <strong className="tabular">{formatPrice(resolved.avgTicketGrosze)}</strong>
+                    </span>
+                    <span>
+                      <span className="v2-muted">Days/mo</span>{" "}
+                      <strong className="tabular">{resolved.daysOpenPerMonth}</strong>
+                    </span>
+                    <span>
+                      <span className="v2-muted">COGS</span>{" "}
+                      <strong className="tabular">{Math.round(resolved.cogsPct * 100)}%</strong>
+                    </span>
+                  </div>
+                </button>
+              </div>
+            );
+          })}
         </div>
       </CardBody>
+      {editingPreset && (
+        <MenuScenarioEditDialog
+          preset={editingPreset}
+          basePreset={MENU_SCENARIO_BY_ID.get(editingPreset.id) ?? CUSTOM_PRESET}
+          override={overrides?.[editingPreset.id]}
+          onClose={() => setEditingId(null)}
+          onSave={(override) => {
+            onSaveOverride(editingPreset.id, override);
+            setEditingId(null);
+          }}
+          onReset={() => {
+            onResetOverride(editingPreset.id);
+            setEditingId(null);
+          }}
+        />
+      )}
     </Card>
   );
 }
 
-interface MenuScenarioCardProps {
+interface MenuScenarioEditDialogProps {
   preset: MenuScenarioPreset;
+  basePreset: MenuScenarioPreset;
   override: SimulationMenuScenarioOverride | undefined;
-  isActive: boolean;
-  onApply: (preset: MenuScenarioPreset) => void;
-  onSave: (id: string, override: SimulationMenuScenarioOverride) => void;
-  onReset: (id: string) => void;
+  onClose: () => void;
+  onSave: (override: SimulationMenuScenarioOverride) => void;
+  onReset: () => void;
 }
 
-/** Single editable scenario card. Holds its own draft state so the
- *  operator can tweak inputs without immediately mutating the scenario;
- *  Save commits the draft as an override (persisted with the scenario);
- *  Reset clears the override and restores the baked-in defaults; Apply
- *  pushes the current values (override or default) into the live
- *  scenario as the active menu scenario. */
-function MenuScenarioCard({
+/** Edit popup for a menu scenario card. Holds local draft state so the
+ *  operator can tweak values without committing; Save persists the
+ *  override (so it survives reload); Reset restores the baked-in
+ *  defaults. The popup itself doesn't push to the live scenario — the
+ *  card's Apply path (click anywhere on the card) does that. */
+function MenuScenarioEditDialog({
   preset,
+  basePreset,
   override,
-  isActive,
-  onApply,
+  onClose,
   onSave,
   onReset,
-}: MenuScenarioCardProps) {
-  // Effective starting values: override-on-default.
-  const effective: SimulationMenuScenarioOverride = override ?? {
+}: MenuScenarioEditDialogProps) {
+  const startingDraft: SimulationMenuScenarioOverride = {
     ordersPerDay: preset.ordersPerDay,
     daysOpenPerMonth: preset.daysOpenPerMonth,
     avgTicketGrosze: preset.avgTicketGrosze,
     cogsPct: preset.cogsPct,
     attach: { ...preset.attach },
   };
-  const [draft, setDraft] = useState<SimulationMenuScenarioOverride>(effective);
-  // Keep the draft in sync when the underlying override changes (e.g.
-  // another tab edited it, or the scenario was just reset).
-  const effectiveKey = JSON.stringify(effective);
-  useEffect(() => {
-    setDraft(effective);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effectiveKey]);
-  const draftKey = JSON.stringify(draft);
-  const isDirty = draftKey !== effectiveKey;
+  const [draft, setDraft] = useState<SimulationMenuScenarioOverride>(startingDraft);
   const hasOverride = override !== undefined;
   const patchDraft = (patch: Partial<SimulationMenuScenarioOverride>) =>
     setDraft((d) => ({ ...d, ...patch }));
   const patchAttach = (patch: Partial<SimulationMenuScenarioOverride["attach"]>) =>
     setDraft((d) => ({ ...d, attach: { ...d.attach, ...patch } }));
   return (
-    <div
-      style={{
-        padding: 14,
-        borderRadius: 14,
-        border: `1.5px solid ${isActive ? "var(--brand)" : "var(--border)"}`,
-        background: isActive
-          ? "color-mix(in oklab, var(--brand) 8%, var(--surface-2))"
-          : "var(--surface-2)",
-        display: "flex",
-        flexDirection: "column",
-        gap: 10,
-      }}
+    <Dialog
+      open
+      onClose={onClose}
+      title={`Edit ${preset.name}`}
+      description={`Baked-in defaults: ${basePreset.ordersPerDay} orders/day · ${(basePreset.avgTicketGrosze / 100).toFixed(2)} zł ticket · ${basePreset.daysOpenPerMonth} days/mo · ${Math.round(basePreset.cogsPct * 100)}% COGS. Reset restores these.`}
+      size="lg"
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={onReset}
+            disabled={!hasOverride}
+            title={hasOverride ? "Restore baked-in defaults" : "No saved override to reset"}
+          >
+            Reset to default
+          </Button>
+          <Button variant="primary" onClick={() => onSave(draft)}>
+            <Save className="h-3.5 w-3.5" />
+            <span>Save</span>
+          </Button>
+        </>
+      }
     >
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: 28, lineHeight: 1 }} aria-hidden>
-            {preset.emoji}
-          </span>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: "var(--fg)" }}>{preset.name}</div>
-            <div className="v2-muted" style={{ fontSize: 11.5, lineHeight: 1.35, marginTop: 2 }}>
-              {preset.description}
-            </div>
+      <div className="v2-stack-12">
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--fg)", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.4 }}>
+            Revenue inputs
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Input
+              label="Orders / day"
+              type="number"
+              min="0"
+              value={String(draft.ordersPerDay)}
+              onChange={(e) => patchDraft({ ordersPerDay: Math.max(0, parseInt(e.target.value, 10) || 0) })}
+            />
+            <Input
+              label="Avg ticket"
+              type="number"
+              step="0.50"
+              min="0"
+              value={(draft.avgTicketGrosze / 100).toFixed(2)}
+              onChange={(e) =>
+                patchDraft({
+                  avgTicketGrosze: Math.max(0, Math.round((parseFloat(e.target.value) || 0) * 100)),
+                })
+              }
+              trailingAdornment={<span className="v2-muted">zł</span>}
+            />
+            <Input
+              label="Days / month"
+              type="number"
+              min="0"
+              max="31"
+              value={String(draft.daysOpenPerMonth)}
+              onChange={(e) =>
+                patchDraft({
+                  daysOpenPerMonth: Math.max(0, Math.min(31, parseInt(e.target.value, 10) || 0)),
+                })
+              }
+            />
+            <Input
+              label="COGS %"
+              type="number"
+              step="1"
+              min="0"
+              max="100"
+              value={String(Math.round(draft.cogsPct * 100))}
+              onChange={(e) =>
+                patchDraft({ cogsPct: Math.max(0, Math.min(1, (parseFloat(e.target.value) || 0) / 100)) })
+              }
+              trailingAdornment={<span className="v2-muted">%</span>}
+            />
           </div>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-end" }}>
-          {isActive && (
-            <Badge tone="brand" variant="soft" dot>
-              Active
-            </Badge>
-          )}
-          {hasOverride && (
-            <Badge tone="info" variant="soft">
-              Customised
-            </Badge>
-          )}
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--fg)", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.4 }}>
+            Attach rates
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {(
+              [
+                ["coffee", "Coffee"],
+                ["dessert", "Dessert"],
+                ["antipasti", "Antipasti"],
+                ["aperitivo", "Aperitivo"],
+                ["premiumToppings", "Prem. tops"],
+                ["pastaPrimo", "Pasta primo"],
+              ] as const
+            ).map(([key, label]) => (
+              <Input
+                key={key}
+                label={label}
+                type="number"
+                step="1"
+                min="0"
+                max="100"
+                value={String(Math.round(draft.attach[key] * 100))}
+                onChange={(e) =>
+                  patchAttach({
+                    [key]: Math.max(0, Math.min(1, (parseFloat(e.target.value) || 0) / 100)),
+                  })
+                }
+                trailingAdornment={<span className="v2-muted">%</span>}
+              />
+            ))}
+          </div>
         </div>
       </div>
-
-      <div className="grid grid-cols-2 gap-2">
-        <Input
-          label="Orders / day"
-          type="number"
-          min="0"
-          value={String(draft.ordersPerDay)}
-          onChange={(e) => patchDraft({ ordersPerDay: Math.max(0, parseInt(e.target.value, 10) || 0) })}
-        />
-        <Input
-          label="Avg ticket"
-          type="number"
-          step="0.50"
-          min="0"
-          value={(draft.avgTicketGrosze / 100).toFixed(2)}
-          onChange={(e) =>
-            patchDraft({
-              avgTicketGrosze: Math.max(0, Math.round((parseFloat(e.target.value) || 0) * 100)),
-            })
-          }
-          trailingAdornment={<span className="v2-muted">zł</span>}
-        />
-        <Input
-          label="Days / month"
-          type="number"
-          min="0"
-          max="31"
-          value={String(draft.daysOpenPerMonth)}
-          onChange={(e) =>
-            patchDraft({
-              daysOpenPerMonth: Math.max(0, Math.min(31, parseInt(e.target.value, 10) || 0)),
-            })
-          }
-        />
-        <Input
-          label="COGS"
-          type="number"
-          step="1"
-          min="0"
-          max="100"
-          value={String(Math.round(draft.cogsPct * 100))}
-          onChange={(e) =>
-            patchDraft({ cogsPct: Math.max(0, Math.min(1, (parseFloat(e.target.value) || 0) / 100)) })
-          }
-          trailingAdornment={<span className="v2-muted">%</span>}
-        />
-      </div>
-
-      <div className="grid grid-cols-3 gap-2">
-        {(
-          [
-            ["coffee", "Coffee"],
-            ["dessert", "Dessert"],
-            ["antipasti", "Antipasti"],
-            ["aperitivo", "Aperitivo"],
-            ["premiumToppings", "Prem. tops"],
-            ["pastaPrimo", "Pasta primo"],
-          ] as const
-        ).map(([key, label]) => (
-          <Input
-            key={key}
-            label={label}
-            type="number"
-            step="1"
-            min="0"
-            max="100"
-            value={String(Math.round(draft.attach[key] * 100))}
-            onChange={(e) =>
-              patchAttach({
-                [key]: Math.max(0, Math.min(1, (parseFloat(e.target.value) || 0) / 100)),
-              })
-            }
-            trailingAdornment={<span className="v2-muted">%</span>}
-          />
-        ))}
-      </div>
-
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 6,
-          paddingTop: 8,
-          borderTop: "1px solid color-mix(in oklab, var(--fg) 10%, transparent)",
-        }}
-      >
-        <Button
-          size="sm"
-          variant="primary"
-          onClick={() => {
-            // Apply the *current draft* (operator may have edited without saving yet).
-            onApply({
-              ...preset,
-              ordersPerDay: draft.ordersPerDay,
-              daysOpenPerMonth: draft.daysOpenPerMonth,
-              avgTicketGrosze: draft.avgTicketGrosze,
-              cogsPct: draft.cogsPct,
-              attach: draft.attach,
-            });
-          }}
-        >
-          Apply
-        </Button>
-        <Button
-          size="sm"
-          variant="secondary"
-          disabled={!isDirty}
-          onClick={() => onSave(preset.id, draft)}
-        >
-          {isDirty ? "Save edits" : "Saved"}
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          disabled={!hasOverride}
-          onClick={() => onReset(preset.id)}
-        >
-          Reset to default
-        </Button>
-      </div>
-    </div>
+    </Dialog>
   );
 }
 
@@ -7121,34 +7189,6 @@ function MenuEngineeringPanel({
         </div>
       </CardBody>
     </Card>
-  );
-}
-
-/** Helper: pick the right SourceTag for a numeric input by comparing the
- *  operator value to the matching actual. Within 5% ⇒ actuals; otherwise
- *  assumption. When no actuals are available the input is always assumption. */
-function sourceTagFor(
-  actualValue: number | undefined,
-  operatorValue: number,
-  actuals: SimulationActualsSnapshot | null | undefined,
-) {
-  if (!actuals || actualValue === undefined || actualValue === 0) {
-    return <SourceTag kind="assumption" hint="Operator-typed — no real-data backing." />;
-  }
-  const variance = Math.abs((operatorValue - actualValue) / actualValue);
-  if (variance <= 0.05) {
-    return (
-      <SourceTag
-        kind="actuals"
-        hint={`Within 5% of last-${actuals.windowDays}d actuals.`}
-      />
-    );
-  }
-  return (
-    <SourceTag
-      kind="assumption"
-      hint={`Drifted ${(variance * 100).toFixed(0)}% from last-${actuals.windowDays}d actuals.`}
-    />
   );
 }
 
