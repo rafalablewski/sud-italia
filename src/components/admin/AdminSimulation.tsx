@@ -610,6 +610,107 @@ function projectMonths(
   return rows;
 }
 
+/** Per-attach prep seconds — institutional QSR norms for a Neapolitan
+ *  truck. Operator-immutable for now; the model honours these to compute
+ *  modelled ticket time and queue blow-out. */
+const PREP_SECONDS_PER_ATTACH: Record<string, number> = {
+  coffee: 30,
+  dessert: 60,
+  antipasti: 90,
+  aperitivo: 30,
+  premiumToppings: 15,
+  pastaPrimo: 240,
+};
+const PIZZA_PREP_SECONDS = 90; // base pizza assembly + bake
+
+interface PrepFlowResult {
+  /** Average kitchen-seconds-per-order from the menu mix.
+   *  pizza base + Σ attachPct × attachSeconds. */
+  modeledTicketSeconds: number;
+  /** Peak-hour orders = ordersPerDay × peakHourSharePct. */
+  peakHourOrders: number;
+  /** Realistic oven throughput per hour. */
+  realisticOvenPerHour: number;
+  /** Excess orders that queue per peak hour (0 if capacity covers). */
+  queueExcessPerHour: number;
+  /** Minutes a customer at the back of the queue waits. */
+  estimatedWaitMinutes: number;
+  /** Conversion drop applied: 5% per minute past 5 min of wait, capped
+   *  at 60%. The audit's "5-minute wait at 1pm bleeds 30% conversion". */
+  conversionDropPct: number;
+  /** Monthly orders lost to peak-hour queue. */
+  monthlyOrdersLost: number;
+  /** Monthly contribution lost. */
+  monthlyContributionLostGrosze: number;
+}
+
+function computePrepFlow(s: SimulationScenario): PrepFlowResult {
+  const a = s.assumptions;
+  let modeledTicketSeconds = PIZZA_PREP_SECONDS;
+  if (a) {
+    const levers: Array<[string, typeof a.coffeeAttach]> = [
+      ["coffee", a.coffeeAttach],
+      ["dessert", a.dessertAttach],
+      ["antipasti", a.antipastiAttach],
+      ["aperitivo", a.aperitivoAttach],
+      ["premiumToppings", a.premiumToppingsAttach],
+      ["pastaPrimo", a.pastaPrimoAttach],
+    ];
+    for (const [key, lever] of levers) {
+      if (!lever || lever.enabled === false) continue;
+      modeledTicketSeconds += lever.attachPct * (PREP_SECONDS_PER_ATTACH[key] ?? 0);
+    }
+  }
+  // Oven curve realistic peak — same as OvenCurvePanel.
+  const cap = s.kitchenCapacity;
+  const realisticOvenPerHour =
+    cap && cap.ovenCycleSeconds && cap.ovenPizzasPerCycle && cap.ovenEfficiencyPct
+      ? (3600 / cap.ovenCycleSeconds) * cap.ovenPizzasPerCycle * cap.ovenEfficiencyPct
+      : cap?.pizzasPerHour ?? 0;
+  const peakHourSharePct = cap?.peakHourSharePct ?? 0.35;
+  const peakHourOrders = s.ordersPerDay * peakHourSharePct;
+  const queueExcessPerHour = Math.max(0, peakHourOrders - realisticOvenPerHour);
+  // Wait time: if you're in the queue, you wait for the people ahead to
+  // be served. Average wait ≈ (queueLength × prepSecondsPerOrder / 2) /
+  // throughput. Use modeledTicketSeconds as the per-order prep time.
+  const throughputPerSec = realisticOvenPerHour / 3600;
+  const estimatedWaitMinutes =
+    throughputPerSec > 0 && queueExcessPerHour > 0
+      ? (queueExcessPerHour * modeledTicketSeconds) / 60 / 2
+      : 0;
+  // Audit: 5-min wait → 30% conversion drop. We linearize at 5%/min
+  // past the 5-min mark, capped at 60%.
+  const excessMin = Math.max(0, estimatedWaitMinutes - 5);
+  const conversionDropPct = Math.min(0.6, excessMin * 0.05);
+  const monthlyOrdersLost = Math.round(
+    queueExcessPerHour > 0
+      ? s.ordersPerDay * conversionDropPct * s.daysOpenPerMonth
+      : 0,
+  );
+  const cm1PerOrder =
+    s.avgTicketGrosze *
+    Math.max(
+      0,
+      1 -
+        s.cogsPct -
+        (s.paymentProcessorPct ?? 0) -
+        (s.wastePct ?? 0) -
+        (s.refundPct ?? 0) -
+        (s.loyaltyBurnPct ?? 0),
+    );
+  const monthlyContributionLostGrosze = Math.round(monthlyOrdersLost * cm1PerOrder);
+  return {
+    modeledTicketSeconds,
+    peakHourOrders,
+    realisticOvenPerHour,
+    queueExcessPerHour,
+    estimatedWaitMinutes,
+    conversionDropPct,
+    monthlyOrdersLost,
+    monthlyContributionLostGrosze,
+  };
+}
+
 interface FleetEconomicsRow {
   unitIndex: number;
   /** Revenue this unit captures after DMA cannibalisation from every
@@ -2513,6 +2614,7 @@ export function AdminSimulation() {
   const channels = computeChannelEconomics(scenario);
   const attachEfficiency = computeAttachmentEfficiency(effectiveScenario!);
   const fleetEcon = computeFleetEconomics(scenario, scenario.setupCostGrosze ?? 0);
+  const prepFlow = computePrepFlow(scenario);
   const archetypes = deriveArchetypes(effectiveScenario!);
   const archetypeRows = [
     { key: "conservative", label: "Conservative", scenario: archetypes.conservative, hint: "−15% orders · +2pp COGS" },
@@ -3396,6 +3498,8 @@ export function AdminSimulation() {
           }))
         }
       />
+
+      <PrepFlowPanel result={prepFlow} actualsTicketSec={actuals?.medianTicketTimeSeconds ?? null} />
 
       {menuEng && menuEng.length > 0 && <MenuEngineeringPanel rows={menuEng} />}
 
@@ -4350,6 +4454,118 @@ function SourceTag({
     >
       {c.label}
     </span>
+  );
+}
+
+/** Prep flow & queue model — answers two of the audit's operational
+ *  questions in one card: "Where's the prep flow?" (pasta primo adds
+ *  240s to ticket time the model previously didn't price) and "Where's
+ *  the queue model?" (a 5-min wait at 1pm bleeds 30% conversion).
+ *  Computes modelled ticket time from menu mix, peak-hour queue from
+ *  oven curve, and the contribution loss from converted-away orders. */
+function PrepFlowPanel({
+  result,
+  actualsTicketSec,
+}: {
+  result: PrepFlowResult;
+  actualsTicketSec: number | null;
+}) {
+  const modeledMin = result.modeledTicketSeconds / 60;
+  const observedMin = actualsTicketSec === null ? null : actualsTicketSec / 60;
+  const queueBlowingOut = result.queueExcessPerHour > 0;
+  return (
+    <Card>
+      <CardHeader
+        title="Prep flow & queue model"
+        description="Modelled ticket time = pizza base + Σ attach × per-attach seconds (pasta 240s, antipasti 90s, coffee 30s). Peak-hour queue forms when ordersPerDay × peakShare exceeds the realistic oven peak. Each minute of wait past 5 minutes bleeds 5% conversion (capped at 60%)."
+        actions={<Clock className="h-4 w-4 v2-muted" />}
+      />
+      <CardBody>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <KpiCard
+            label="Modelled ticket time"
+            value={modeledMin}
+            format={(n) => `${n.toFixed(1)} min`}
+            icon={Clock}
+            tone={modeledMin <= 4 ? "success" : modeledMin <= 8 ? "info" : modeledMin <= 12 ? "warning" : "danger"}
+            hint="Pizza + weighted attach prep"
+          />
+          <KpiCard
+            label="Observed ticket time"
+            value={observedMin ?? 0}
+            display={observedMin === null ? "—" : `${observedMin.toFixed(1)} min`}
+            tone={
+              observedMin === null
+                ? "neutral"
+                : observedMin <= modeledMin * 1.2
+                  ? "success"
+                  : observedMin <= modeledMin * 1.5
+                    ? "warning"
+                    : "danger"
+            }
+            hint={
+              observedMin === null
+                ? "No order timestamps yet"
+                : `vs ${modeledMin.toFixed(1)} min modelled`
+            }
+          />
+          <KpiCard
+            label="Peak-hour queue"
+            value={result.queueExcessPerHour}
+            format={(n) => `${n.toFixed(1)} /hr`}
+            display={
+              queueBlowingOut
+                ? `+${result.queueExcessPerHour.toFixed(1)} /hr`
+                : "Clear"
+            }
+            tone={queueBlowingOut ? "danger" : "success"}
+            hint={`${result.peakHourOrders.toFixed(1)} orders vs ${result.realisticOvenPerHour.toFixed(1)} /hr capacity`}
+          />
+          <KpiCard
+            label="Wait time"
+            value={result.estimatedWaitMinutes}
+            format={(n) => `${n.toFixed(1)} min`}
+            tone={
+              result.estimatedWaitMinutes < 3
+                ? "success"
+                : result.estimatedWaitMinutes < 5
+                  ? "info"
+                  : result.estimatedWaitMinutes < 8
+                    ? "warning"
+                    : "danger"
+            }
+            hint="Modelled for back-of-queue customer at peak"
+          />
+        </div>
+        {queueBlowingOut && (
+          <div
+            style={{
+              marginTop: 12,
+              padding: 10,
+              borderRadius: 8,
+              background: "rgba(239,68,68,0.06)",
+              fontSize: 13,
+            }}
+          >
+            <div style={{ fontWeight: 600, color: "rgb(220,38,38)" }}>
+              Estimated peak-hour conversion drop: {(result.conversionDropPct * 100).toFixed(0)}%
+            </div>
+            <div className="v2-muted text-xs mt-1">
+              ~{result.monthlyOrdersLost.toLocaleString("pl-PL")} orders/month walked away from a queue too long to wait through
+              — that&apos;s ~
+              {Math.round(result.monthlyContributionLostGrosze / 100).toLocaleString("pl-PL")} zł of CM1 left on the
+              table. Open another unit, add a second oven, or push more orders into off-peak via dayparting / pre-orders.
+            </div>
+          </div>
+        )}
+        {!queueBlowingOut && (
+          <div className="v2-muted text-xs mt-3">
+            Peak hour fits under the oven ceiling. No queue conversion loss to model. If volume grows past
+            {" "}{result.realisticOvenPerHour.toFixed(0)} /hr, this panel goes red.
+          </div>
+        )}
+      </CardBody>
+    </Card>
   );
 }
 
