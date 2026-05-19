@@ -2304,6 +2304,7 @@ export function AdminSimulation() {
   // Channel economics uses the RAW scenario so the on-site card rate is the
   // operator's input, not the blended one applyAssumptions produced.
   const channels = computeChannelEconomics(scenario);
+  const attachEfficiency = computeAttachmentEfficiency(effectiveScenario!);
   const archetypes = deriveArchetypes(effectiveScenario!);
   const archetypeRows = [
     { key: "conservative", label: "Conservative", scenario: archetypes.conservative, hint: "−15% orders · +2pp COGS" },
@@ -2914,6 +2915,45 @@ export function AdminSimulation() {
             hint={`Peak ceiling ${Math.round(computed.capacityOrdersPerDay)} ord/day · running ${Math.round(scenario.ordersPerDay)}`}
           />
         )}
+        {hourly && hourly.some((h) => h.totalOrders > 0) && (() => {
+          const peak = Math.max(...hourly.map((h) => h.avgOrdersPerHour));
+          const peakHour = hourly.findIndex((h) => h.avgOrdersPerHour === peak);
+          const cap = scenario.kitchenCapacity?.pizzasPerHour ?? 0;
+          return (
+            <KpiCard
+              label="Peak orders / hour"
+              value={peak}
+              format={(n) => n.toFixed(1)}
+              icon={TrendingUp}
+              tone={
+                cap > 0 && peak > cap
+                  ? "danger"
+                  : cap > 0 && peak > cap * 0.85
+                    ? "warning"
+                    : "info"
+              }
+              hint={`${peakHour.toString().padStart(2, "0")}:00${cap > 0 ? ` · cap ${cap}/h` : ""}`}
+            />
+          );
+        })()}
+        {actuals?.medianTicketTimeSeconds !== null && actuals?.medianTicketTimeSeconds !== undefined && (
+          <KpiCard
+            label="Median ticket time"
+            value={actuals.medianTicketTimeSeconds / 60}
+            format={(n) => `${n.toFixed(1)} min`}
+            icon={Clock}
+            tone={
+              actuals.medianTicketTimeSeconds <= 600
+                ? "success"
+                : actuals.medianTicketTimeSeconds <= 900
+                  ? "info"
+                  : actuals.medianTicketTimeSeconds <= 1800
+                    ? "warning"
+                    : "danger"
+            }
+            hint="From createdAt → estimatedReadyAt"
+          />
+        )}
       </section>
 
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
@@ -3090,6 +3130,8 @@ export function AdminSimulation() {
       {sssg && (sssg.currentOrders > 0 || sssg.priorOrders > 0) && <SssgStrip sssg={sssg} />}
 
       <ChannelEconomicsPanel rows={channels} />
+
+      {attachEfficiency.length > 0 && <AttachmentEfficiencyPanel rows={attachEfficiency} />}
 
       {cohorts && cohorts.totalCustomers > 0 && (
         <CohortPanel cohorts={cohorts} marketingMonthlyGrosze={scenario.fixedCosts.marketing ?? 0} />
@@ -4188,6 +4230,126 @@ function DaypartPanel({ dayparts }: { dayparts: SimulationDaypartLine[] }) {
                 </td>
               </tr>
             ))}
+          </tbody>
+        </table>
+      </CardBody>
+    </Card>
+  );
+}
+
+interface AttachLeverEfficiency {
+  key: string;
+  label: string;
+  attachPct: number;
+  avgPriceGrosze: number;
+  cogsPct: number;
+  /** Per-attached-order incremental contribution after own COGS only —
+   *  what each attached unit actually adds to gross margin. */
+  incrementalCmPerUnitGrosze: number;
+  /** Monthly profit lift = attachPct × incrementalCm × ordersPerMonth. */
+  monthlyLiftGrosze: number;
+}
+
+/** Per-lever attachment efficiency — answers "is the espresso push actually
+ *  earning its slot?" by computing the incremental contribution per attached
+ *  item (avgPrice × (1 − itemCogsPct)) and the total monthly lift. */
+function computeAttachmentEfficiency(s: SimulationScenario): AttachLeverEfficiency[] {
+  const a = s.assumptions;
+  if (!a) return [];
+  const ordersPerMonth = s.ordersPerDay * s.daysOpenPerMonth;
+  const rows: AttachLeverEfficiency[] = [];
+  const levers: Array<[string, string, typeof a.coffeeAttach]> = [
+    ["coffee", "Coffee attach", a.coffeeAttach],
+    ["dessert", "Dessert attach", a.dessertAttach],
+    ["antipasti", "Antipasti attach", a.antipastiAttach],
+    ["aperitivo", "Aperitivo attach", a.aperitivoAttach],
+    ["premiumToppings", "Premium toppings", a.premiumToppingsAttach],
+    ["pastaPrimo", "Pasta primo", a.pastaPrimoAttach],
+  ];
+  for (const [key, label, lever] of levers) {
+    if (!lever || lever.enabled === false || lever.attachPct === 0) continue;
+    const incrementalCm = lever.avgPriceGrosze * (1 - lever.cogsPct);
+    rows.push({
+      key,
+      label,
+      attachPct: lever.attachPct,
+      avgPriceGrosze: lever.avgPriceGrosze,
+      cogsPct: lever.cogsPct,
+      incrementalCmPerUnitGrosze: incrementalCm,
+      monthlyLiftGrosze: lever.attachPct * incrementalCm * ordersPerMonth,
+    });
+  }
+  return rows.sort((a, b) => b.monthlyLiftGrosze - a.monthlyLiftGrosze);
+}
+
+/** Attachment efficiency panel — shows each enabled attach lever ranked by
+ *  monthly profit lift, with per-unit incremental margin. The operator can
+ *  see at a glance which levers earn their menu real-estate vs which are
+ *  drag (high attach but low margin per attached item). */
+function AttachmentEfficiencyPanel({ rows }: { rows: AttachLeverEfficiency[] }) {
+  if (rows.length === 0) return null;
+  const totalLift = rows.reduce((sum, r) => sum + r.monthlyLiftGrosze, 0);
+  return (
+    <Card>
+      <CardHeader
+        title="Attachment efficiency"
+        description="Per-attach-lever incremental contribution and monthly profit lift. Ranks the levers by absolute money — not just attach rate."
+        actions={<HandCoins className="h-4 w-4 v2-muted" />}
+      />
+      <CardBody>
+        <table style={{ width: "100%", fontSize: 13 }}>
+          <thead>
+            <tr style={{ textAlign: "left", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>
+              <th style={{ padding: "8px 4px" }}>Lever</th>
+              <th style={{ padding: "8px 4px", textAlign: "right" }}>Attach</th>
+              <th style={{ padding: "8px 4px", textAlign: "right" }}>Price</th>
+              <th style={{ padding: "8px 4px", textAlign: "right" }}>Item COGS</th>
+              <th style={{ padding: "8px 4px", textAlign: "right" }}>Inc. margin</th>
+              <th style={{ padding: "8px 4px", textAlign: "right" }}>Monthly lift</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.key} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
+                <td style={{ padding: "8px 4px", fontWeight: 500 }}>{r.label}</td>
+                <td className="tabular" style={{ padding: "8px 4px", textAlign: "right" }}>
+                  {(r.attachPct * 100).toFixed(0)}%
+                </td>
+                <td className="tabular" style={{ padding: "8px 4px", textAlign: "right" }}>
+                  {(r.avgPriceGrosze / 100).toFixed(2)} zł
+                </td>
+                <td className="tabular" style={{ padding: "8px 4px", textAlign: "right" }}>
+                  {(r.cogsPct * 100).toFixed(0)}%
+                </td>
+                <td
+                  className="tabular"
+                  style={{
+                    padding: "8px 4px",
+                    textAlign: "right",
+                    color: r.incrementalCmPerUnitGrosze >= 500 ? "rgb(22,163,74)" : "inherit",
+                    fontWeight: 500,
+                  }}
+                >
+                  {(r.incrementalCmPerUnitGrosze / 100).toFixed(2)} zł
+                </td>
+                <td
+                  className="tabular"
+                  style={{ padding: "8px 4px", textAlign: "right", fontWeight: 500 }}
+                >
+                  {Math.round(r.monthlyLiftGrosze / 100).toLocaleString("pl-PL")} zł
+                </td>
+              </tr>
+            ))}
+            <tr style={{ borderTop: "2px solid rgba(0,0,0,0.12)" }}>
+              <td style={{ padding: "8px 4px", fontWeight: 700 }}>Total lift</td>
+              <td colSpan={4}></td>
+              <td
+                className="tabular"
+                style={{ padding: "8px 4px", textAlign: "right", fontWeight: 700 }}
+              >
+                {Math.round(totalLift / 100).toLocaleString("pl-PL")} zł / mo
+              </td>
+            </tr>
           </tbody>
         </table>
       </CardBody>

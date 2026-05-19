@@ -1158,6 +1158,10 @@ export interface SimulationActualsSnapshot {
   deliverySharePct: number;
   /** Refund / cancellation rate as fraction of total orders (0-1). */
   refundPct: number;
+  /** Median ticket time in seconds — createdAt → estimatedReadyAt — across
+   *  orders that carry both timestamps. Null when no order in the window
+   *  has an estimatedReadyAt. */
+  medianTicketTimeSeconds: number | null;
   /** Earliest order createdAt in the window (ISO). */
   fromISO: string;
   /** Snapshot generation timestamp (ISO). */

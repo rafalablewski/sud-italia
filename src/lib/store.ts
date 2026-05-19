@@ -8522,6 +8522,27 @@ export async function computeSimulationActuals(
   const deliverySharePct = ordersCount > 0 ? deliveryCount / ordersCount : 0;
   const takeoutSharePct = ordersCount > 0 ? takeoutCount / ordersCount : 0;
   const refundPct = inWindow.length > 0 ? cancelledCount / inWindow.length : 0;
+  // Ticket time: createdAt → estimatedReadyAt for orders that carry both.
+  // Median is robust to the long tail of "ready Friday" pre-orders.
+  const ticketTimes: number[] = [];
+  for (const o of fulfilled) {
+    if (!o.estimatedReadyAt) continue;
+    const start = Date.parse(o.createdAt);
+    const end = Date.parse(o.estimatedReadyAt);
+    if (!Number.isFinite(start) || !Number.isFinite(end)) continue;
+    const seconds = (end - start) / 1000;
+    if (seconds <= 0 || seconds > 86400) continue;
+    ticketTimes.push(seconds);
+  }
+  let medianTicketTimeSeconds: number | null = null;
+  if (ticketTimes.length > 0) {
+    ticketTimes.sort((a, b) => a - b);
+    const mid = Math.floor(ticketTimes.length / 2);
+    medianTicketTimeSeconds =
+      ticketTimes.length % 2 === 0
+        ? (ticketTimes[mid - 1] + ticketTimes[mid]) / 2
+        : ticketTimes[mid];
+  }
   const earliest = fulfilled
     .map((o) => Date.parse(o.createdAt))
     .filter((t) => Number.isFinite(t))
@@ -8536,6 +8557,7 @@ export async function computeSimulationActuals(
     takeoutSharePct,
     deliverySharePct,
     refundPct,
+    medianTicketTimeSeconds,
     fromISO: new Date(earliest).toISOString(),
     generatedAt: new Date().toISOString(),
   };
