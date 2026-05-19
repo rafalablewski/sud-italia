@@ -2,7 +2,7 @@ import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationWeather, SimulationKitchenCapacity } from "@/data/types";
+import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot } from "@/data/types";
 import { getActiveLocations, locations as allLocations } from "@/data/locations";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -8380,11 +8380,90 @@ export async function seedSimulationFromHistory(): Promise<SimulationScenario> {
         })
       : base.labor;
 
-  return {
+  // Pull volume + ticket from the real orders ledger so the operator
+  // doesn't start staring at hardcoded defaults. The actuals snapshot
+  // also lands the channel mix (delivery share) which materially
+  // changes blended COGS via packaging.
+  const actuals = await computeSimulationActuals(90).catch(() => null);
+
+  const seeded: SimulationScenario = {
     ...base,
     labor,
     fixedCosts: Object.keys(fixed).length > 0 ? fixed : base.fixedCosts,
     updatedAt: new Date().toISOString(),
+  };
+
+  if (actuals && actuals.ordersCount >= 20) {
+    seeded.ordersPerDay = Math.max(1, Math.round(actuals.ordersPerDay));
+    seeded.avgTicketGrosze = Math.max(0, Math.round(actuals.avgTicketGrosze));
+    // Map delivery share from actuals onto the existing deliveryShare lever
+    // so downstream packaging + processor math picks it up.
+    if (seeded.assumptions?.deliveryShare && actuals.deliverySharePct > 0) {
+      seeded.assumptions = {
+        ...seeded.assumptions,
+        deliveryShare: {
+          ...seeded.assumptions.deliveryShare,
+          pct: clamp01(actuals.deliverySharePct, seeded.assumptions.deliveryShare.pct),
+        },
+      };
+    }
+    // Refund rate from actuals is more trustworthy than the 1.5% default.
+    if (actuals.refundPct > 0) {
+      seeded.refundPct = clamp01(actuals.refundPct, seeded.refundPct ?? 0.015);
+    }
+  }
+  return seeded;
+}
+
+/** Compute a rolling-window snapshot of actual orders. The simulator uses
+ *  this both as a one-click seed source and as a "stale" warning when the
+ *  operator's ordersPerDay / avgTicket drifts > 15% from real history. */
+export async function computeSimulationActuals(
+  windowDays = 90,
+): Promise<SimulationActualsSnapshot> {
+  const all = await getOrders();
+  const cutoffMs = Date.now() - windowDays * 24 * 60 * 60 * 1000;
+  const inWindow = all.filter((o) => {
+    const t = Date.parse(o.createdAt);
+    return Number.isFinite(t) && t >= cutoffMs;
+  });
+  const cancelledCount = inWindow.filter((o) => o.status === "cancelled").length;
+  const fulfilled = inWindow.filter((o) => o.status !== "cancelled");
+  const ordersCount = fulfilled.length;
+  const totalGrosze = fulfilled.reduce((sum, o) => sum + (o.totalAmount ?? 0), 0);
+  const avgTicketGrosze = ordersCount > 0 ? Math.round(totalGrosze / ordersCount) : 0;
+  const dayKeys = new Set(
+    fulfilled
+      .map((o) => {
+        const d = new Date(o.createdAt);
+        return Number.isFinite(d.valueOf())
+          ? `${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}`
+          : null;
+      })
+      .filter((k): k is string => k !== null),
+  );
+  const daysWithOrders = dayKeys.size;
+  const ordersPerDay = daysWithOrders > 0 ? ordersCount / daysWithOrders : 0;
+  const deliveryCount = fulfilled.filter((o) => o.fulfillmentType === "delivery").length;
+  const takeoutCount = fulfilled.filter((o) => o.fulfillmentType === "takeout").length;
+  const deliverySharePct = ordersCount > 0 ? deliveryCount / ordersCount : 0;
+  const takeoutSharePct = ordersCount > 0 ? takeoutCount / ordersCount : 0;
+  const refundPct = inWindow.length > 0 ? cancelledCount / inWindow.length : 0;
+  const earliest = fulfilled
+    .map((o) => Date.parse(o.createdAt))
+    .filter((t) => Number.isFinite(t))
+    .reduce((m, t) => Math.min(m, t), Date.now());
+  return {
+    windowDays,
+    ordersCount,
+    daysWithOrders,
+    ordersPerDay,
+    avgTicketGrosze,
+    takeoutSharePct,
+    deliverySharePct,
+    refundPct,
+    fromISO: new Date(earliest).toISOString(),
+    generatedAt: new Date().toISOString(),
   };
 }
 

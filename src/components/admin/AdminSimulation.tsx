@@ -36,6 +36,7 @@ import { formatPrice } from "@/lib/utils";
 import type {
   BusinessCostCategory,
   BusinessCostPayrollRole,
+  SimulationActualsSnapshot,
   SimulationAssumptions,
   SimulationAttachLever,
   SimulationIngredientLever,
@@ -1497,6 +1498,7 @@ export function AdminSimulation() {
   const [scenario, setScenario] = useState<SimulationScenario | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [actuals, setActuals] = useState<SimulationActualsSnapshot | null>(null);
   const [seedConfirmOpen, setSeedConfirmOpen] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const dirtyRef = useRef(false);
@@ -1518,6 +1520,25 @@ export function AdminSimulation() {
   useEffect(() => {
     fetchScenario();
   }, [fetchScenario]);
+
+  // Fetch real-order actuals once on mount. Cheap (in-memory aggregation
+  // of orders); we refetch only when the operator clicks the refresh
+  // chip in the actuals strip.
+  const fetchActuals = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/simulation/actuals?days=90");
+      if (res.ok) {
+        const data = (await res.json()) as SimulationActualsSnapshot;
+        setActuals(data);
+      }
+    } catch {
+      // Non-fatal — the simulator works without actuals; we just lose the
+      // ground-truth badge and the "Use actuals" button.
+    }
+  }, []);
+  useEffect(() => {
+    fetchActuals();
+  }, [fetchActuals]);
 
   const persist = useCallback(
     async (next: SimulationScenario, opts?: { quiet?: boolean }) => {
@@ -1893,6 +1914,32 @@ export function AdminSimulation() {
           hint={`@ ${formatPrice(scenario.avgTicketGrosze)} ticket`}
         />
       </section>
+
+      {actuals && actuals.ordersCount > 0 && (
+        <ActualsStrip
+          actuals={actuals}
+          scenario={scenario}
+          onApply={() => {
+            update((s) => ({
+              ...s,
+              ordersPerDay: Math.max(1, Math.round(actuals.ordersPerDay)),
+              avgTicketGrosze: Math.max(0, Math.round(actuals.avgTicketGrosze)),
+              refundPct: actuals.refundPct > 0 ? actuals.refundPct : s.refundPct,
+              assumptions: s.assumptions?.deliveryShare && actuals.deliverySharePct > 0
+                ? {
+                    ...s.assumptions,
+                    deliveryShare: {
+                      ...s.assumptions.deliveryShare,
+                      pct: Math.max(0, Math.min(1, actuals.deliverySharePct)),
+                    },
+                  }
+                : s.assumptions,
+            }));
+            toast.success("Scenario aligned to last-90-day actuals");
+          }}
+          onRefresh={fetchActuals}
+        />
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 lg:gap-4">
         <Card>
@@ -3112,6 +3159,78 @@ function Stat({ label, value }: { label: string; value: string }) {
       <div className="v2-muted text-xs">{label}</div>
       <div className="tabular">{value}</div>
     </div>
+  );
+}
+
+/** Compact strip showing what real orders actually look like over the last 90
+ *  days vs what the operator has typed into the scenario. Without this, the
+ *  whole simulator is fiction — see institutional-review §R1. */
+function ActualsStrip({
+  actuals,
+  scenario,
+  onApply,
+  onRefresh,
+}: {
+  actuals: SimulationActualsSnapshot;
+  scenario: SimulationScenario;
+  onApply: () => void;
+  onRefresh: () => void;
+}) {
+  const variance = (actual: number, planned: number) =>
+    planned > 0 ? (actual - planned) / planned : 0;
+  const ordersVar = variance(actuals.ordersPerDay, scenario.ordersPerDay);
+  const ticketVar = variance(actuals.avgTicketGrosze, scenario.avgTicketGrosze);
+  const stale =
+    Math.abs(ordersVar) > 0.15 || Math.abs(ticketVar) > 0.15;
+  const tone = stale ? "warning" : "info";
+  const variancePct = (v: number) =>
+    `${v >= 0 ? "+" : ""}${(v * 100).toFixed(0)}%`;
+  const generatedAt = new Date(actuals.generatedAt);
+  return (
+    <Card>
+      <CardBody>
+        <div className="flex flex-wrap items-center gap-3 justify-between">
+          <div className="flex flex-wrap items-center gap-3">
+            <Badge tone={tone}>
+              <Database className="h-3 w-3" />{" "}
+              <span>Real actuals · last {actuals.windowDays}d</span>
+            </Badge>
+            <Stat
+              label="Orders / day"
+              value={`${actuals.ordersPerDay.toFixed(1)} (${variancePct(ordersVar)})`}
+            />
+            <Stat
+              label="Avg ticket"
+              value={`${(actuals.avgTicketGrosze / 100).toFixed(2)} zł (${variancePct(ticketVar)})`}
+            />
+            <Stat label="Delivery %" value={`${(actuals.deliverySharePct * 100).toFixed(0)}%`} />
+            <Stat label="Cancel %" value={`${(actuals.refundPct * 100).toFixed(1)}%`} />
+            <Stat
+              label="Sample"
+              value={`${actuals.ordersCount} orders / ${actuals.daysWithOrders} days`}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            {stale && (
+              <span className="v2-muted text-xs">
+                Scenario drifted &gt; 15% from reality
+              </span>
+            )}
+            <button
+              type="button"
+              className="v2-btn v2-btn-secondary"
+              onClick={onRefresh}
+              title={`Generated ${generatedAt.toLocaleString("pl-PL")}`}
+            >
+              <RefreshCw className="h-3 w-3" /> Refresh
+            </button>
+            <button type="button" className="v2-btn v2-btn-primary" onClick={onApply}>
+              Apply actuals
+            </button>
+          </div>
+        </div>
+      </CardBody>
+    </Card>
   );
 }
 

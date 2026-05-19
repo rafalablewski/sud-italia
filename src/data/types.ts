@@ -998,6 +998,31 @@ export interface SimulationKitchenCapacity {
   peakHourSharePct: number;
 }
 
+/** Snapshot of real-order actuals over a rolling window, used to ground-truth
+ *  the simulator inputs (ordersPerDay, avgTicket, channel mix). Pulled from
+ *  the live orders table — never operator-entered. */
+export interface SimulationActualsSnapshot {
+  /** Trailing-window size in days. */
+  windowDays: number;
+  /** Number of fulfilled orders in the window (excludes cancelled). */
+  ordersCount: number;
+  /** Distinct days that had at least one order. */
+  daysWithOrders: number;
+  /** Mean orders per active day. */
+  ordersPerDay: number;
+  /** Mean order total in grosze. */
+  avgTicketGrosze: number;
+  /** Share of orders by fulfillment type. */
+  takeoutSharePct: number;
+  deliverySharePct: number;
+  /** Refund / cancellation rate as fraction of total orders (0-1). */
+  refundPct: number;
+  /** Earliest order createdAt in the window (ISO). */
+  fromISO: string;
+  /** Snapshot generation timestamp (ISO). */
+  generatedAt: string;
+}
+
 // --- Audit log ---
 
 export interface AuditLogEntry {
