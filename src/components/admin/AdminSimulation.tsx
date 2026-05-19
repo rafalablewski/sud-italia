@@ -2868,14 +2868,6 @@ export function AdminSimulation() {
           hint={`${Math.round(computed.laborHoursPerMonth).toLocaleString("pl-PL")} labor h/mo`}
         />
         <KpiCard
-          label="Net profit / order"
-          value={computed.profitPerOrder / 100}
-          format={(n) => `${n.toFixed(2)} zł`}
-          icon={HandCoins}
-          tone={computed.profitPerOrder >= 0 ? "success" : "danger"}
-          hint={`${(scenario.ordersPerDay * scenario.daysOpenPerMonth).toLocaleString("pl-PL")} orders/mo`}
-        />
-        <KpiCard
           label="Setup payback"
           value={computed.paybackMonths ?? 0}
           display={
@@ -3790,47 +3782,8 @@ export function AdminSimulation() {
         </CardBody>
       </Card>
 
-      <Card>
-        <CardHeader
-          title="Break-even at multiple horizons"
-          description="The minimum throughput needed to cover labor + fixed at the current ticket and COGS."
-          actions={
-            <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
-              <InfoButton title={HELP.breakEven.title} label="About break-even">{HELP.breakEven.body}</InfoButton>
-              <Calculator className="h-4 w-4 v2-muted" />
-            </span>
-          }
-        />
-        <CardBody>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <KpiCard
-              label="Orders / hour"
-              value={computed.breakEvenOrdersPerDay / 10}
-              format={(n) => n.toFixed(2)}
-              tone="info"
-              hint="across the 10 h service window"
-            />
-            <KpiCard
-              label="Orders / day"
-              value={computed.breakEvenOrdersPerDay}
-              format={(n) => n.toFixed(1)}
-              tone="info"
-            />
-            <KpiCard
-              label="Orders / month"
-              value={computed.breakEvenOrdersPerMonth}
-              format={(n) => Math.ceil(n).toLocaleString("pl-PL")}
-              tone="info"
-            />
-            <KpiCard
-              label="Revenue / month"
-              value={computed.breakEvenRevenue / 100}
-              format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
-              tone="info"
-            />
-          </div>
-        </CardBody>
-      </Card>
+      <BreakEvenChart computed={computed} currentOrdersPerDay={scenario.ordersPerDay} />
+
 
       <Card>
         <CardHeader
@@ -4232,6 +4185,122 @@ function DaypartPanel({ dayparts }: { dayparts: SimulationDaypartLine[] }) {
             ))}
           </tbody>
         </table>
+      </CardBody>
+    </Card>
+  );
+}
+
+/** Single break-even chart replacing the 4 horizon cards. Horizontal bar
+ *  shows the 0 → break-even → current → ceiling progression with the key
+ *  numbers inline. Vertical "current" marker tells the operator where they
+ *  stand at a glance — the original 4-card grid was clutter for one idea. */
+function BreakEvenChart({
+  computed,
+  currentOrdersPerDay,
+}: {
+  computed: Computed;
+  currentOrdersPerDay: number;
+}) {
+  const breakeven = computed.breakEvenOrdersPerDay;
+  const aboveBreakeven = currentOrdersPerDay - breakeven;
+  const ceiling = computed.capacityOrdersPerDay > 0
+    ? computed.capacityOrdersPerDay
+    : Math.max(currentOrdersPerDay, breakeven) * 1.5;
+  const scaleMax = Math.max(ceiling, currentOrdersPerDay, breakeven) * 1.05;
+  const safe = (v: number) => scaleMax > 0 ? Math.min(100, (v / scaleMax) * 100) : 0;
+  return (
+    <Card>
+      <CardHeader
+        title="Break-even"
+        description="The minimum throughput needed to cover labor + fixed at the current ticket and CM."
+        actions={
+          <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+            <InfoButton title={HELP.breakEven.title} label="About break-even">{HELP.breakEven.body}</InfoButton>
+            <Calculator className="h-4 w-4 v2-muted" />
+          </span>
+        }
+      />
+      <CardBody>
+        <div className="flex flex-wrap gap-6 mb-3">
+          <Stat label="Break-even orders / day" value={breakeven.toFixed(1)} />
+          <Stat label="Break-even orders / month" value={Math.ceil(computed.breakEvenOrdersPerMonth).toLocaleString("pl-PL")} />
+          <Stat label="Break-even revenue / month" value={`${Math.round(computed.breakEvenRevenue / 100).toLocaleString("pl-PL")} zł`} />
+          <Stat
+            label="Margin of safety"
+            value={`${(computed.marginOfSafetyPct * 100).toFixed(1)}%`}
+          />
+          <Stat
+            label="Current vs break-even"
+            value={
+              aboveBreakeven >= 0
+                ? `+${aboveBreakeven.toFixed(1)} above`
+                : `${aboveBreakeven.toFixed(1)} below`
+            }
+          />
+        </div>
+        <div style={{ position: "relative", height: 40, marginTop: 8 }}>
+          <div
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              top: 14,
+              height: 12,
+              background: "linear-gradient(to right, rgba(239,68,68,0.20), rgba(245,158,11,0.20), rgba(34,197,94,0.20))",
+              borderRadius: 999,
+            }}
+          />
+          {/* Break-even marker */}
+          <div
+            style={{
+              position: "absolute",
+              left: `${safe(breakeven)}%`,
+              top: 4,
+              bottom: 4,
+              width: 2,
+              background: "rgba(239,68,68,0.8)",
+              transform: "translateX(-50%)",
+            }}
+            title={`Break-even ${breakeven.toFixed(1)} / day`}
+          />
+          {/* Capacity ceiling marker (when set) */}
+          {computed.capacityOrdersPerDay > 0 && (
+            <div
+              style={{
+                position: "absolute",
+                left: `${safe(computed.capacityOrdersPerDay)}%`,
+                top: 4,
+                bottom: 4,
+                width: 2,
+                background: "rgba(0,0,0,0.4)",
+                transform: "translateX(-50%)",
+              }}
+              title={`Kitchen capacity ${computed.capacityOrdersPerDay.toFixed(0)} / day`}
+            />
+          )}
+          {/* Current marker (filled dot) */}
+          <div
+            style={{
+              position: "absolute",
+              left: `${safe(currentOrdersPerDay)}%`,
+              top: 8,
+              width: 24,
+              height: 24,
+              background: aboveBreakeven >= 0 ? "rgb(22,163,74)" : "rgb(220,38,38)",
+              borderRadius: "50%",
+              transform: "translateX(-50%)",
+              border: "3px solid white",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.2)",
+            }}
+            title={`Current ${currentOrdersPerDay.toFixed(0)} / day`}
+          />
+        </div>
+        <div className="flex justify-between v2-muted text-xs mt-1">
+          <span>0</span>
+          <span>break-even {breakeven.toFixed(0)}</span>
+          {computed.capacityOrdersPerDay > 0 && <span>capacity {computed.capacityOrdersPerDay.toFixed(0)}</span>}
+          <span>{Math.round(scaleMax)}</span>
+        </div>
       </CardBody>
     </Card>
   );
