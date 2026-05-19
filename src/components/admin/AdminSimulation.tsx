@@ -3619,8 +3619,14 @@ export function AdminSimulation() {
         subtitle="Cohort retention, LTV, CAC, new-vs-returning mix"
       />
 
-      {cohorts && cohorts.totalCustomers > 0 && (
+      {cohorts && cohorts.totalCustomers > 0 ? (
         <CohortPanel cohorts={cohorts} marketingMonthlyGrosze={scenario.fixedCosts.marketing ?? 0} />
+      ) : (
+        <EmptyModuleCard
+          title="Cohort retention populates from real orders"
+          description="Once 20+ paid orders carry a customer phone (the loyalty engine captures phone at checkout), this section will surface repeat rate, GP per customer, implied CAC, LTV/CAC ratio, customer payback, and the new-vs-returning revenue mix. Until then, the scenario's flat assumptions about retention and marketing drive the projection above."
+          cta={`Orders observed so far: ${cohorts?.totalCustomers ?? 0} distinct phones in the rolling 180-day window.`}
+        />
       )}
 
       <ModuleDivider
@@ -3629,13 +3635,19 @@ export function AdminSimulation() {
         subtitle="Daypart mix, hourly volume, oven physics, prep flow, queue conversion, shift coverage"
       />
 
-      {dayparts && dayparts.some((d) => d.ordersCount > 0) && (
+      {dayparts && dayparts.some((d) => d.ordersCount > 0) ? (
         <DaypartPanel dayparts={dayparts} />
+      ) : (
+        <EmptyModuleCard
+          title="Daypart breakdown waits on timestamped orders"
+          description="Splits real orders into Lunch (11-15) / Dinner (17-22) / Late-night (22-04) / Off-peak buckets, then computes per-daypart volume, AOV, and gross-profit rate. The 5/6/7 modules below (oven curve, prep flow, shift plan) all build on this signal."
+          cta="No fulfilled orders yet in the rolling 90-day window."
+        />
       )}
 
-      {hourly && hourly.some((h) => h.totalOrders > 0) && (
+      {hourly && hourly.some((h) => h.totalOrders > 0) ? (
         <HourlyThroughputPanel hourly={hourly} pizzasPerHourCap={cap} />
-      )}
+      ) : null}
 
       <OvenCurvePanel
         scenario={scenario}
@@ -3664,9 +3676,18 @@ export function AdminSimulation() {
         subtitle="Kasavana-Smith quadrants, margin traps, prep-heavy false-high-revenue items"
       />
 
-      {menuEng && menuEng.length > 0 && <MenuEngineeringPanel rows={menuEng} />}
-
-      {menuEng && menuEng.length > 0 && <MarginTrapsCallout rows={menuEng} />}
+      {menuEng && menuEng.length > 0 ? (
+        <>
+          <MenuEngineeringPanel rows={menuEng} />
+          <MarginTrapsCallout rows={menuEng} />
+        </>
+      ) : (
+        <EmptyModuleCard
+          title="Menu engineering populates from real order line items"
+          description="Once orders contain menu items the Kasavana-Smith matrix lights up — stars / plowhorses / puzzles / dogs computed from per-item velocity and gross profit, with hero / driver / anchor role badges from the menu definition. The margin-traps callout flags delivery-only marketplace casualties, spoilage-risk items, and prep-heavy false-high-revenue plates."
+          cta="No menu data yet — generate a few orders containing menu items to activate."
+        />
+      )}
 
       <ModuleDivider
         index={7}
@@ -4594,6 +4615,66 @@ function LeverSwitch({
       />
       {enabled ? "On" : "Off"}
     </button>
+  );
+}
+
+/** Empty-state card surfaced inside a module when the data it needs
+ *  hasn't accumulated yet. Without this, modules just disappear
+ *  silently — the user sees the divider with no content and assumes
+ *  the feature is broken. */
+function EmptyModuleCard({
+  title,
+  description,
+  cta,
+}: {
+  title: string;
+  description: string;
+  cta?: string;
+}) {
+  return (
+    <Card>
+      <CardBody>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "flex-start",
+            gap: 8,
+            padding: "16px 4px",
+          }}
+        >
+          <div style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+            <Database
+              className="h-4 w-4"
+              style={{ color: "color-mix(in oklab, var(--brand) 70%, var(--fg))" }}
+            />
+            <span style={{ fontWeight: 600, fontSize: 14, color: "var(--fg)" }}>
+              {title}
+            </span>
+          </div>
+          <div
+            style={{
+              fontSize: 13.5,
+              lineHeight: 1.5,
+              color: "color-mix(in oklab, var(--fg) 75%, transparent)",
+            }}
+          >
+            {description}
+          </div>
+          {cta && (
+            <div
+              style={{
+                fontSize: 12.5,
+                fontStyle: "italic",
+                color: "color-mix(in oklab, var(--fg) 60%, transparent)",
+              }}
+            >
+              {cta}
+            </div>
+          )}
+        </div>
+      </CardBody>
+    </Card>
   );
 }
 
