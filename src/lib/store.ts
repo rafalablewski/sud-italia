@@ -7973,7 +7973,11 @@ export function defaultSimulationScenario(): SimulationScenario {
     wageInflationPct: 0.07,
     ingredientInflationPct: 0.04,
     paymentProcessorPct: 0.019,
-    setupCostGrosze: 25_000_000,
+    // Honest all-in: Stefano Ferrara oven + truck buildout + refrigeration +
+    // generator + livery + SANEPID compliance + 3 mo working capital lands
+    // 350-400k PLN. The previous 250k floor was a buildout-only number that
+    // ignored opening cash and made payback look ~30% rosier than reality.
+    setupCostGrosze: 38_000_000,
     seasonality: {
       winter: 0.70,
       spring: 1.00,
