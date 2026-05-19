@@ -2790,6 +2790,9 @@ export function AdminSimulation() {
               {computed.paymentFees > 0 && (
                 <PnlRow label="Payment fees" amount={-computed.paymentFees} tone="warning" indent />
               )}
+              {computed.packagingCost > 0 && (
+                <PnlRow label="Packaging" amount={-computed.packagingCost} tone="warning" indent />
+              )}
               {computed.wasteCost > 0 && (
                 <PnlRow label="Waste & spoilage" amount={-computed.wasteCost} tone="warning" indent />
               )}
@@ -2798,6 +2801,9 @@ export function AdminSimulation() {
               )}
               {computed.loyaltyCost > 0 && (
                 <PnlRow label="Loyalty burn" amount={-computed.loyaltyCost} tone="warning" indent />
+              )}
+              {computed.marketingCac > 0 && (
+                <PnlRow label="Marketing (CAC)" amount={-computed.marketingCac} tone="warning" indent />
               )}
               <PnlRow
                 label="EBITDA"
@@ -3097,6 +3103,22 @@ export function AdminSimulation() {
           tone="info"
           hint={`Gross ${(scenario.avgTicketGrosze / 100).toFixed(2)} − loyalty drag`}
         />
+        <KpiCard
+          label="True CM1 / order"
+          value={computed.trueCm1PerOrderGrosze / 100}
+          format={(n) => `${n.toFixed(2)} zł`}
+          icon={HandCoins}
+          tone={
+            computed.trueCm1PerOrderGrosze >= 1500
+              ? "success"
+              : computed.trueCm1PerOrderGrosze >= 800
+                ? "info"
+                : computed.trueCm1PerOrderGrosze >= 0
+                  ? "warning"
+                  : "danger"
+          }
+          hint="Revenue − COGS − fees − waste − refund − loyalty − packaging − CAC"
+        />
       </section>
 
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
@@ -3177,6 +3199,8 @@ export function AdminSimulation() {
       </section>
 
       {sssg && (sssg.currentOrders > 0 || sssg.priorOrders > 0) && <SssgStrip sssg={sssg} />}
+
+      <UnitEconomicsPanel scenario={scenario} computed={computed} />
 
       <ChannelEconomicsPanel rows={channels} />
 
@@ -4514,6 +4538,164 @@ function AttachmentEfficiencyPanel({ rows }: { rows: AttachLeverEfficiency[] }) 
                 {Math.round(totalLift / 100).toLocaleString("pl-PL")} zł / mo
               </td>
             </tr>
+          </tbody>
+        </table>
+      </CardBody>
+    </Card>
+  );
+}
+
+/** Unit economics breakdown — the audit's exact table. Per-order build-up
+ *  showing every variable leakage explicitly, so the operator sees what
+ *  the true contribution per order is — not the upper-bound CM1 that
+ *  ignores packaging, refunds, loyalty, and marketing CAC. */
+function UnitEconomicsPanel({
+  scenario,
+  computed,
+}: {
+  scenario: SimulationScenario;
+  computed: Computed;
+}) {
+  const orders = scenario.ordersPerDay * scenario.daysOpenPerMonth;
+  if (orders <= 0) return null;
+  const revenuePerOrder = scenario.avgTicketGrosze;
+  const cogsPerOrder = revenuePerOrder * scenario.cogsPct;
+  const packagingPerOrder = scenario.packagingPerOrderGrosze ?? 0;
+  const wastePerOrder = revenuePerOrder * (scenario.wastePct ?? 0);
+  const refundPerOrder = revenuePerOrder * (scenario.refundPct ?? 0);
+  const loyaltyPerOrder = revenuePerOrder * (scenario.loyaltyBurnPct ?? 0);
+  const paymentPerOrder = revenuePerOrder * (scenario.paymentProcessorPct ?? 0);
+  const marketingPerOrder = orders > 0 ? computed.marketingCac / orders : 0;
+  const cm1PerOrder = computed.trueCm1PerOrderGrosze;
+  const laborPerOrder = computed.laborMonthly / orders;
+  const fixedPerOrder = (computed.fixedTotal + computed.depreciation + computed.interest) / orders;
+  const cm2PerOrder = cm1PerOrder - laborPerOrder - fixedPerOrder;
+  const Row = ({
+    label,
+    grosze,
+    bold,
+    tone,
+    note,
+  }: {
+    label: string;
+    grosze: number;
+    bold?: boolean;
+    tone?: "neutral" | "warning" | "success" | "danger" | "brand";
+    note?: string;
+  }) => {
+    const tonePalette: Record<NonNullable<typeof tone>, string> = {
+      neutral: "inherit",
+      warning: "rgb(217,119,6)",
+      success: "rgb(22,163,74)",
+      danger: "rgb(220,38,38)",
+      brand: "rgb(37,99,235)",
+    };
+    return (
+      <tr style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
+        <td style={{ padding: "8px 4px", fontWeight: bold ? 700 : 400, color: tone ? tonePalette[tone] : undefined }}>
+          {label}
+        </td>
+        <td
+          className="tabular"
+          style={{
+            padding: "8px 4px",
+            textAlign: "right",
+            fontWeight: bold ? 700 : 500,
+            color: tone ? tonePalette[tone] : undefined,
+          }}
+        >
+          {grosze >= 0 ? "+" : ""}
+          {(grosze / 100).toFixed(2)} zł
+        </td>
+        <td className="v2-muted text-xs" style={{ padding: "8px 4px", maxWidth: 360 }}>
+          {note ?? ""}
+        </td>
+      </tr>
+    );
+  };
+  return (
+    <Card>
+      <CardHeader
+        title="Unit economics breakdown (per order)"
+        description="The honest build-up. Every variable leakage between Revenue and True CM1 is broken out explicitly — no upper-bound contribution margin, no buried packaging, no marketing pretending it isn't acquisition cost."
+        actions={<Calculator className="h-4 w-4 v2-muted" />}
+      />
+      <CardBody>
+        <table style={{ width: "100%", fontSize: 13 }}>
+          <tbody>
+            <Row label="Revenue / order" grosze={revenuePerOrder} bold tone="brand" />
+            <Row
+              label="Less: COGS (food)"
+              grosze={-cogsPerOrder}
+              tone="warning"
+              note={`${(scenario.cogsPct * 100).toFixed(1)}% — flat or recipe-weighted via actuals`}
+            />
+            <Row
+              label="Less: Packaging"
+              grosze={-packagingPerOrder}
+              tone="warning"
+              note="Napkins / plates wash / boxes — every order"
+            />
+            <Row
+              label="Less: Waste & spoilage"
+              grosze={-wastePerOrder}
+              tone="warning"
+              note={`${((scenario.wastePct ?? 0) * 100).toFixed(1)}% of revenue`}
+            />
+            <Row
+              label="Less: Refund / comp / theft"
+              grosze={-refundPerOrder}
+              tone="warning"
+              note={`${((scenario.refundPct ?? 0) * 100).toFixed(1)}% of revenue`}
+            />
+            <Row
+              label="Less: Loyalty burn"
+              grosze={-loyaltyPerOrder}
+              tone="warning"
+              note={`${((scenario.loyaltyBurnPct ?? 0) * 100).toFixed(1)}% — points redeemed`}
+            />
+            <Row
+              label="Less: Payment fees (blended)"
+              grosze={-paymentPerOrder}
+              tone="warning"
+              note={`${((scenario.paymentProcessorPct ?? 0) * 100).toFixed(2)}% — cash + card + marketplaces blended`}
+            />
+            <Row
+              label="Less: Marketing CAC (amortised)"
+              grosze={-marketingPerOrder}
+              tone="warning"
+              note={
+                computed.marketingCac > 0
+                  ? `${Math.round(computed.marketingCac / 100).toLocaleString("pl-PL")} zł/mo ÷ ${Math.round(orders).toLocaleString("pl-PL")} orders`
+                  : "Marketing left in fixed costs"
+              }
+            />
+            <Row
+              label="= True CM1 / order"
+              grosze={cm1PerOrder}
+              bold
+              tone={cm1PerOrder >= 1000 ? "success" : cm1PerOrder >= 500 ? "warning" : "danger"}
+              note="What actually drops to gross profit per order"
+            />
+            <Row
+              label="Less: Labor amortised"
+              grosze={-laborPerOrder}
+              tone="warning"
+              note={`${Math.round(computed.laborMonthly / 100).toLocaleString("pl-PL")} zł/mo ÷ ${Math.round(orders).toLocaleString("pl-PL")} orders`}
+            />
+            <Row
+              label="Less: Fixed amortised (+ D&A + interest)"
+              grosze={-fixedPerOrder}
+              tone="warning"
+              note={`${Math.round((computed.fixedTotal + computed.depreciation + computed.interest) / 100).toLocaleString("pl-PL")} zł/mo ÷ orders`}
+            />
+            <Row
+              label="= True CM2 / order"
+              grosze={cm2PerOrder}
+              bold
+              tone={cm2PerOrder >= 500 ? "success" : cm2PerOrder >= 0 ? "warning" : "danger"}
+              note="Pre-tax contribution after everything except CIT"
+            />
           </tbody>
         </table>
       </CardBody>
