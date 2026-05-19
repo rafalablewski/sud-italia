@@ -39,6 +39,7 @@ import type {
   SimulationActualsSnapshot,
   SimulationAssumptions,
   SimulationAttachLever,
+  SimulationCohortSnapshot,
   SimulationIngredientLever,
   SimulationLaborLine,
   SimulationMenuEngineeringLine,
@@ -1781,6 +1782,7 @@ export function AdminSimulation() {
   const [saving, setSaving] = useState(false);
   const [actuals, setActuals] = useState<SimulationActualsSnapshot | null>(null);
   const [menuEng, setMenuEng] = useState<SimulationMenuEngineeringLine[] | null>(null);
+  const [cohorts, setCohorts] = useState<SimulationCohortSnapshot | null>(null);
   const [seedConfirmOpen, setSeedConfirmOpen] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const dirtyRef = useRef(false);
@@ -1836,6 +1838,21 @@ export function AdminSimulation() {
   useEffect(() => {
     fetchMenuEng();
   }, [fetchMenuEng]);
+
+  const fetchCohorts = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/simulation/cohorts?days=180");
+      if (res.ok) {
+        const data = (await res.json()) as SimulationCohortSnapshot;
+        setCohorts(data);
+      }
+    } catch {
+      // Non-fatal — the cohort panel is informational only.
+    }
+  }, []);
+  useEffect(() => {
+    fetchCohorts();
+  }, [fetchCohorts]);
 
   const persist = useCallback(
     async (next: SimulationScenario, opts?: { quiet?: boolean }) => {
@@ -2792,6 +2809,10 @@ export function AdminSimulation() {
         />
       </section>
 
+      {cohorts && cohorts.totalCustomers > 0 && (
+        <CohortPanel cohorts={cohorts} marketingMonthlyGrosze={scenario.fixedCosts.marketing ?? 0} />
+      )}
+
       {menuEng && menuEng.length > 0 && <MenuEngineeringPanel rows={menuEng} />}
 
       <TornadoPanel bars={tornado} />
@@ -3699,6 +3720,124 @@ function SourceTag({
     >
       {c.label}
     </span>
+  );
+}
+
+/** Cohort retention panel: surfaces the customer-economics layer the
+ *  institutional review flagged as the single most important gap. LTV /
+ *  CAC / payback computed from real orders + the operator's marketing
+ *  fixed cost; no LTV-of-fame-projection nonsense, just the math IC asks
+ *  for in the first 15 minutes of any restaurant deck. */
+function CohortPanel({
+  cohorts,
+  marketingMonthlyGrosze,
+}: {
+  cohorts: SimulationCohortSnapshot;
+  marketingMonthlyGrosze: number;
+}) {
+  // CAC = marketing fixed cost / new customers per month. When marketing
+  // is zero or acquisition velocity is zero the metric is meaningless.
+  const cacGrosze =
+    marketingMonthlyGrosze > 0 && cohorts.newCustomersPerMonth > 0
+      ? marketingMonthlyGrosze / cohorts.newCustomersPerMonth
+      : 0;
+  // Monthly GP contribution per customer = avg GP / observed months.
+  const monthsObserved = cohorts.windowDays / 30.4375;
+  const monthlyGpPerCustomer =
+    monthsObserved > 0 ? cohorts.avgGpPerCustomerGrosze / monthsObserved : 0;
+  const ltvCacRatio =
+    cacGrosze > 0 ? cohorts.avgGpPerCustomerGrosze / cacGrosze : 0;
+  const paybackMonths =
+    cacGrosze > 0 && monthlyGpPerCustomer > 0 ? cacGrosze / monthlyGpPerCustomer : null;
+  return (
+    <>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+        <h2 className="v2-section-h" style={{ margin: 0 }}>Customer economics</h2>
+        <SourceTag kind="actuals" hint={`Last ${cohorts.windowDays} days, grouped by phone`} />
+      </div>
+      <section className="v2-kpi-grid">
+        <KpiCard
+          label="Repeat rate"
+          value={cohorts.repeatRatePct * 100}
+          format={(n) => `${n.toFixed(1)}%`}
+          icon={Sparkles}
+          tone={
+            cohorts.repeatRatePct >= 0.30
+              ? "success"
+              : cohorts.repeatRatePct >= 0.15
+                ? "info"
+                : "warning"
+          }
+          hint={`${cohorts.repeatCustomers} / ${cohorts.totalCustomers} customers ordered ≥2×`}
+        />
+        <KpiCard
+          label="Orders / customer"
+          value={cohorts.avgOrdersPerCustomer}
+          format={(n) => n.toFixed(2)}
+          icon={HandCoins}
+          tone="info"
+          hint="Mean over the window"
+        />
+        <KpiCard
+          label="GP / customer"
+          value={cohorts.avgGpPerCustomerGrosze / 100}
+          format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
+          icon={Wallet}
+          tone={cohorts.avgGpPerCustomerGrosze > 5000 ? "success" : "info"}
+          hint={`Avg revenue ${Math.round(cohorts.avgRevenuePerCustomerGrosze / 100).toLocaleString("pl-PL")} zł`}
+        />
+        <KpiCard
+          label="CAC (implied)"
+          value={cacGrosze / 100}
+          display={
+            cacGrosze === 0
+              ? "—"
+              : `${Math.round(cacGrosze / 100).toLocaleString("pl-PL")} zł`
+          }
+          icon={Banknote}
+          tone={cacGrosze === 0 ? "neutral" : "warning"}
+          hint={`Marketing ${Math.round(marketingMonthlyGrosze / 100).toLocaleString("pl-PL")} zł/mo ÷ ${cohorts.newCustomersPerMonth.toFixed(0)} new/mo`}
+        />
+        <KpiCard
+          label="LTV / CAC"
+          value={ltvCacRatio}
+          display={ltvCacRatio === 0 ? "—" : `${ltvCacRatio.toFixed(1)}×`}
+          icon={TrendingUp}
+          tone={
+            ltvCacRatio === 0
+              ? "neutral"
+              : ltvCacRatio >= 3
+                ? "success"
+                : ltvCacRatio >= 1.5
+                  ? "warning"
+                  : "danger"
+          }
+          hint="Institutional gate: ≥3×"
+        />
+        <KpiCard
+          label="Customer payback"
+          value={paybackMonths ?? 0}
+          display={
+            paybackMonths === null
+              ? "—"
+              : paybackMonths > 24
+                ? `${paybackMonths.toFixed(0)} mo`
+                : `${paybackMonths.toFixed(1)} mo`
+          }
+          icon={PiggyBank}
+          tone={
+            paybackMonths === null
+              ? "neutral"
+              : paybackMonths > 12
+                ? "danger"
+                : paybackMonths > 6
+                  ? "warning"
+                  : "success"
+          }
+          hint="CAC ÷ monthly GP per customer"
+        />
+      </section>
+    </>
   );
 }
 

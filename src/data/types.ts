@@ -1015,6 +1015,30 @@ export interface SimulationKitchenCapacity {
   peakHourSharePct: number;
 }
 
+/** Cohort retention snapshot — computed over a rolling window of real orders,
+ *  grouped by customer phone. Drives the LTV/CAC card the institutional
+ *  review flagged as the single most important missing piece for any
+ *  franchise / scale conversation. */
+export interface SimulationCohortSnapshot {
+  windowDays: number;
+  /** Distinct customers (by phone) with ≥1 order in the window. */
+  totalCustomers: number;
+  /** Customers with ≥2 orders in the window. */
+  repeatCustomers: number;
+  /** repeatCustomers / totalCustomers (0–1). */
+  repeatRatePct: number;
+  /** Avg orders per customer over the window. */
+  avgOrdersPerCustomer: number;
+  /** Avg revenue per customer over the window, in grosze. */
+  avgRevenuePerCustomerGrosze: number;
+  /** Avg gross profit per customer over the window (using item-level costs
+   *  when available), in grosze. */
+  avgGpPerCustomerGrosze: number;
+  /** Estimated new customers per month (annualised from the window). */
+  newCustomersPerMonth: number;
+  generatedAt: string;
+}
+
 /** Per-item slice for the menu-engineering matrix (stars / plowhorses /
  *  puzzles / dogs). Velocity is units sold over the window; GP is gross
  *  profit per unit after modifier deltas. Quadrants are split at the

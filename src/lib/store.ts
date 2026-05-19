@@ -2,7 +2,7 @@ import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine } from "@/data/types";
+import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot } from "@/data/types";
 import { getActiveLocations, locations as allLocations } from "@/data/locations";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -8521,6 +8521,86 @@ export async function computeSimulationActuals(
     deliverySharePct,
     refundPct,
     fromISO: new Date(earliest).toISOString(),
+    generatedAt: new Date().toISOString(),
+  };
+}
+
+/** Cohort retention snapshot — groups orders by phone, computes repeat
+ *  rate, lifetime stats, and acquisition velocity over the window. The
+ *  loyalty engine on this codebase already collects phone at checkout
+ *  (CLAUDE.md rule #6 — zero-friction phone-based enrolment), so this
+ *  is a direct read off the real customer base. */
+export async function computeCohortSnapshot(
+  windowDays = 180,
+): Promise<SimulationCohortSnapshot> {
+  const all = await getOrders();
+  const cutoffMs = Date.now() - windowDays * 24 * 60 * 60 * 1000;
+  const fulfilled = all.filter((o) => {
+    if (o.status === "cancelled") return false;
+    if (!o.customerPhone) return false;
+    const t = Date.parse(o.createdAt);
+    return Number.isFinite(t) && t >= cutoffMs;
+  });
+
+  type CustomerAgg = { orders: number; revenue: number; gp: number };
+  const byPhone = new Map<string, CustomerAgg>();
+  for (const o of fulfilled) {
+    const phone = o.customerPhone.trim();
+    if (!phone) continue;
+    let orderGp = 0;
+    for (const line of o.items ?? []) {
+      const item = line.menuItem;
+      if (!item) continue;
+      const qty = Math.max(0, line.quantity ?? 1);
+      let price = item.price ?? 0;
+      let cost = item.cost ?? 0;
+      for (const sel of line.selectedModifiers ?? []) {
+        const group = item.modifierGroups?.find((g) => g.id === sel.groupId);
+        const opt = group?.options.find((o) => o.id === sel.optionId);
+        if (opt) {
+          price += Math.max(0, opt.priceDelta ?? 0);
+          cost += Math.max(0, opt.costDelta ?? 0);
+        }
+      }
+      orderGp += qty * (price - cost);
+    }
+    const agg = byPhone.get(phone) ?? { orders: 0, revenue: 0, gp: 0 };
+    agg.orders += 1;
+    agg.revenue += o.totalAmount ?? 0;
+    agg.gp += orderGp;
+    byPhone.set(phone, agg);
+  }
+
+  const totalCustomers = byPhone.size;
+  let repeatCustomers = 0;
+  let totalOrders = 0;
+  let totalRevenue = 0;
+  let totalGp = 0;
+  for (const agg of byPhone.values()) {
+    if (agg.orders >= 2) repeatCustomers += 1;
+    totalOrders += agg.orders;
+    totalRevenue += agg.revenue;
+    totalGp += agg.gp;
+  }
+  const repeatRatePct = totalCustomers > 0 ? repeatCustomers / totalCustomers : 0;
+  const avgOrdersPerCustomer = totalCustomers > 0 ? totalOrders / totalCustomers : 0;
+  const avgRevenuePerCustomerGrosze =
+    totalCustomers > 0 ? Math.round(totalRevenue / totalCustomers) : 0;
+  const avgGpPerCustomerGrosze =
+    totalCustomers > 0 ? Math.round(totalGp / totalCustomers) : 0;
+  // Annualised acquisition rate: customers / (windowDays/30.4) months.
+  const monthsInWindow = windowDays / 30.4375;
+  const newCustomersPerMonth = monthsInWindow > 0 ? totalCustomers / monthsInWindow : 0;
+
+  return {
+    windowDays,
+    totalCustomers,
+    repeatCustomers,
+    repeatRatePct,
+    avgOrdersPerCustomer,
+    avgRevenuePerCustomerGrosze,
+    avgGpPerCustomerGrosze,
+    newCustomersPerMonth,
     generatedAt: new Date().toISOString(),
   };
 }
