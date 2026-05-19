@@ -43,6 +43,7 @@ import type {
   SimulationDaypartLine,
   SimulationFleetModel,
   SimulationHourlyThroughputLine,
+  SimulationKitchenCapacity,
   SimulationIngredientLever,
   SimulationLaborLine,
   SimulationMenuEngineeringLine,
@@ -3379,6 +3380,23 @@ export function AdminSimulation() {
         <HourlyThroughputPanel hourly={hourly} pizzasPerHourCap={cap} />
       )}
 
+      <OvenCurvePanel
+        scenario={scenario}
+        hourly={hourly}
+        onUpdate={(mut) =>
+          update((s) => ({
+            ...s,
+            kitchenCapacity: {
+              pizzasPerHour: s.kitchenCapacity?.pizzasPerHour ?? 70,
+              openHoursPerDay: s.kitchenCapacity?.openHoursPerDay ?? 10,
+              peakHourSharePct: s.kitchenCapacity?.peakHourSharePct ?? 0.35,
+              ...s.kitchenCapacity,
+              ...mut,
+            },
+          }))
+        }
+      />
+
       {menuEng && menuEng.length > 0 && <MenuEngineeringPanel rows={menuEng} />}
 
       {menuEng && menuEng.length > 0 && <MarginTrapsCallout rows={menuEng} />}
@@ -4332,6 +4350,147 @@ function SourceTag({
     >
       {c.label}
     </span>
+  );
+}
+
+/** Oven curve — the "where is the line saturated?" panel. Models
+ *  Neapolitan oven physics (pizzas per cycle × cycle seconds), surfaces
+ *  theoretical vs realistic peak, and overlays the 80%-saturation
+ *  threshold against the actual peak hour from real orders. */
+function OvenCurvePanel({
+  scenario,
+  hourly,
+  onUpdate,
+}: {
+  scenario: SimulationScenario;
+  hourly: SimulationHourlyThroughputLine[] | null;
+  onUpdate: (mut: Partial<SimulationKitchenCapacity>) => void;
+}) {
+  const cap = scenario.kitchenCapacity;
+  if (!cap) return null;
+  const cycleSec = cap.ovenCycleSeconds ?? 90;
+  const perCycle = cap.ovenPizzasPerCycle ?? 8;
+  const efficiency = cap.ovenEfficiencyPct ?? 0.22;
+  const theoreticalPerHour = cycleSec > 0 ? (3600 / cycleSec) * perCycle : 0;
+  const realisticPerHour = theoreticalPerHour * efficiency;
+  const observedPeakPerHour = hourly && hourly.length > 0
+    ? Math.max(...hourly.map((h) => h.avgOrdersPerHour))
+    : 0;
+  const peakSaturation =
+    realisticPerHour > 0 ? observedPeakPerHour / realisticPerHour : 0;
+  return (
+    <Card>
+      <CardHeader
+        title="Oven curve & peak saturation"
+        description="Neapolitan oven physics: pizzas per bake × cycle seconds gives theoretical capacity; realistic peak applies an efficiency factor accounting for pulls, sweeps, dough rebuilds, customer-facing time. The number on the right is what real orders are actually doing at peak."
+        actions={<Flame className="h-4 w-4 v2-muted" />}
+      />
+      <CardBody>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+          <Input
+            label="Pizzas per bake cycle"
+            type="number"
+            min="1"
+            max="20"
+            step="1"
+            value={String(perCycle)}
+            onChange={(e) =>
+              onUpdate({ ovenPizzasPerCycle: Math.max(1, parseInt(e.target.value, 10) || 1) })
+            }
+            description="Stefano Ferrara 6-9; multi-deck 16+"
+          />
+          <Input
+            label="Cycle time"
+            type="number"
+            min="30"
+            max="600"
+            step="5"
+            value={String(cycleSec)}
+            onChange={(e) =>
+              onUpdate({ ovenCycleSeconds: Math.max(30, parseInt(e.target.value, 10) || 90) })
+            }
+            trailingAdornment={<span className="v2-muted">sec</span>}
+            description="Neapolitan dough ~90s"
+          />
+          <Input
+            label="Realistic efficiency"
+            type="number"
+            min="5"
+            max="100"
+            step="1"
+            value={(efficiency * 100).toFixed(0)}
+            onChange={(e) =>
+              onUpdate({ ovenEfficiencyPct: Math.max(0.05, Math.min(1, (parseFloat(e.target.value) || 25) / 100)) })
+            }
+            trailingAdornment={<span className="v2-muted">%</span>}
+            description="20-35% on a real truck"
+          />
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <KpiCard
+            label="Theoretical peak"
+            value={theoreticalPerHour}
+            format={(n) => `${Math.round(n)} /hr`}
+            tone="info"
+            hint={`${perCycle} pizzas × ${(3600 / cycleSec).toFixed(0)} cycles/hr`}
+          />
+          <KpiCard
+            label="Realistic peak"
+            value={realisticPerHour}
+            format={(n) => `${Math.round(n)} /hr`}
+            tone="info"
+            hint={`Theoretical × ${(efficiency * 100).toFixed(0)}% efficiency`}
+          />
+          <KpiCard
+            label="Observed peak hour"
+            value={observedPeakPerHour}
+            format={(n) => n.toFixed(1)}
+            display={observedPeakPerHour === 0 ? "—" : observedPeakPerHour.toFixed(1) + " /hr"}
+            tone={
+              observedPeakPerHour === 0
+                ? "neutral"
+                : peakSaturation > 1
+                  ? "danger"
+                  : peakSaturation > 0.85
+                    ? "warning"
+                    : peakSaturation > 0.6
+                      ? "info"
+                      : "success"
+            }
+            hint={observedPeakPerHour === 0 ? "No order data" : `${(peakSaturation * 100).toFixed(0)}% of realistic`}
+          />
+          <KpiCard
+            label="Saturation status"
+            value={peakSaturation * 100}
+            format={(n) => `${n.toFixed(0)}%`}
+            display={
+              observedPeakPerHour === 0
+                ? "—"
+                : peakSaturation > 1
+                  ? "Blown out"
+                  : peakSaturation > 0.85
+                    ? "At ceiling"
+                    : peakSaturation > 0.6
+                      ? "Heading there"
+                      : "Headroom"
+            }
+            tone={
+              observedPeakPerHour === 0
+                ? "neutral"
+                : peakSaturation > 1
+                  ? "danger"
+                  : peakSaturation > 0.85
+                    ? "warning"
+                    : "success"
+            }
+            hint="Threshold: 85% = next-truck signal"
+          />
+        </div>
+        <div className="v2-muted text-xs mt-3">
+          When observed peak crosses 85% of realistic — that&apos;s the institutional &quot;open another unit&quot; signal. A second oven or pizzaiolo lifts the ceiling proportionally; the fleet panel above models the economics of that decision.
+        </div>
+      </CardBody>
+    </Card>
   );
 }
 

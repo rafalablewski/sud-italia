@@ -8001,6 +8001,14 @@ export function defaultSimulationScenario(): SimulationScenario {
       pizzasPerHour: 70,
       openHoursPerDay: 10,
       peakHourSharePct: 0.35,
+      // Oven physics — Stefano Ferrara 8-pizza bake × 90s cycle gives
+      // 320 pizzas/hour theoretical. Realistic peak with pulls / sweeps /
+      // dough rebuilds / customer-facing time / drinks lands ~22% =
+      // ~70 pizzas/hour, which matches the pizzasPerHour above. Operator
+      // can tune any of the three to recompute the realistic number.
+      ovenPizzasPerCycle: 8,
+      ovenCycleSeconds: 90,
+      ovenEfficiencyPct: 0.22,
     },
     // Labor flex — at default 40% variable, doubling orders/day pulls in
     // 40% more labor cost (real-world: extra cook on a Saturday rush
@@ -8331,6 +8339,18 @@ function hydrateKitchenCapacity(
     pizzasPerHour: clampNonNeg(saved.pizzasPerHour, fb.pizzasPerHour),
     openHoursPerDay: clampNonNeg(saved.openHoursPerDay, fb.openHoursPerDay),
     peakHourSharePct: clamp01(saved.peakHourSharePct, fb.peakHourSharePct),
+    ovenPizzasPerCycle:
+      typeof saved.ovenPizzasPerCycle === "number" && saved.ovenPizzasPerCycle > 0
+        ? saved.ovenPizzasPerCycle
+        : fb.ovenPizzasPerCycle,
+    ovenCycleSeconds:
+      typeof saved.ovenCycleSeconds === "number" && saved.ovenCycleSeconds > 0
+        ? saved.ovenCycleSeconds
+        : fb.ovenCycleSeconds,
+    ovenEfficiencyPct:
+      typeof saved.ovenEfficiencyPct === "number"
+        ? clamp01(saved.ovenEfficiencyPct, fb.ovenEfficiencyPct ?? 0.22)
+        : fb.ovenEfficiencyPct,
   };
 }
 

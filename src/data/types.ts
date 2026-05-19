@@ -1083,6 +1083,14 @@ export interface SimulationKitchenCapacity {
    *  0.35 means 35% of the day's orders hit during the busiest hour-equivalents,
    *  which is the binding constraint — not the daily average. */
   peakHourSharePct: number;
+  /** Oven physics — pizzas per single bake cycle (Stefano Ferrara 6-9). */
+  ovenPizzasPerCycle?: number;
+  /** Oven cycle time in seconds (Neapolitan dough ~90s). */
+  ovenCycleSeconds?: number;
+  /** Realistic-to-theoretical efficiency (0-1). Pulls, sweeps, dough
+   *  rebuild, customer-facing time, drink pours, plate-up: real Neapolitan
+   *  truck peak sustains 20-35% of theoretical. Default 0.25. */
+  ovenEfficiencyPct?: number;
 }
 
 /** Same-store sales growth — trailing-period revenue vs prior trailing
