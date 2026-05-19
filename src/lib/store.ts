@@ -8009,6 +8009,12 @@ export function defaultSimulationScenario(): SimulationScenario {
     // ordersPerDay the labor mix was sized for (70).
     laborVariablePct: 0.40,
     laborAnchorOrdersPerDay: 70,
+    // 5-year straight-line on the 380k setup cost ⇒ 6,333 PLN / mo.
+    // The previous model implicitly buried D&A inside "vehicle" at
+    // 700 PLN / mo, an order-of-magnitude understatement that
+    // overstated EBITDA. Operator can override; 0 disables it.
+    depreciationMonthlyGrosze: 633_000,
+    interestMonthlyGrosze: 0,
     // Honest all-in: Stefano Ferrara oven + truck buildout + refrigeration +
     // generator + livery + SANEPID compliance + 3 mo working capital lands
     // 350-400k PLN. The previous 250k floor was a buildout-only number that
@@ -8127,6 +8133,8 @@ export async function getSimulationScenario(): Promise<SimulationScenario> {
     kitchenCapacity: hydrateKitchenCapacity(saved.kitchenCapacity, defaults.kitchenCapacity),
     laborVariablePct: typeof saved.laborVariablePct === "number" ? clamp01(saved.laborVariablePct, defaults.laborVariablePct ?? 0.4) : defaults.laborVariablePct,
     laborAnchorOrdersPerDay: typeof saved.laborAnchorOrdersPerDay === "number" && saved.laborAnchorOrdersPerDay > 0 ? saved.laborAnchorOrdersPerDay : defaults.laborAnchorOrdersPerDay,
+    depreciationMonthlyGrosze: typeof saved.depreciationMonthlyGrosze === "number" && saved.depreciationMonthlyGrosze >= 0 ? saved.depreciationMonthlyGrosze : defaults.depreciationMonthlyGrosze,
+    interestMonthlyGrosze: typeof saved.interestMonthlyGrosze === "number" && saved.interestMonthlyGrosze >= 0 ? saved.interestMonthlyGrosze : defaults.interestMonthlyGrosze,
     updatedAt: saved.updatedAt ?? defaults.updatedAt,
   };
 }
@@ -8356,6 +8364,14 @@ export async function saveSimulationScenario(
         typeof scenario.laborAnchorOrdersPerDay === "number" && scenario.laborAnchorOrdersPerDay > 0
           ? Math.round(scenario.laborAnchorOrdersPerDay)
           : (defaults.laborAnchorOrdersPerDay ?? 70),
+      depreciationMonthlyGrosze:
+        typeof scenario.depreciationMonthlyGrosze === "number" && scenario.depreciationMonthlyGrosze >= 0
+          ? Math.round(scenario.depreciationMonthlyGrosze)
+          : (defaults.depreciationMonthlyGrosze ?? 0),
+      interestMonthlyGrosze:
+        typeof scenario.interestMonthlyGrosze === "number" && scenario.interestMonthlyGrosze >= 0
+          ? Math.round(scenario.interestMonthlyGrosze)
+          : (defaults.interestMonthlyGrosze ?? 0),
       updatedAt: new Date().toISOString(),
     };
     await writeJSON(SIMULATION_KEY, clean);

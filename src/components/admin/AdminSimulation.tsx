@@ -209,6 +209,30 @@ interface Computed {
   citAmount: number;
   /** Profit before corporate income tax. */
   preTaxProfit: number;
+  /** Depreciation + amortisation (straight-line on setup cost). */
+  depreciation: number;
+  /** Interest expense (financing cost). */
+  interest: number;
+  /** EBITDA = revenue − all variable costs − labor − fixed (excl. D&A
+   *  and interest). The institutional headline; conflated with
+   *  "net profit" in the old model. */
+  ebitda: number;
+  /** EBIT = EBITDA − D&A. */
+  ebit: number;
+  /** EBITDAR = EBITDA + rent (rent-adjusted, the franchise-rollup standard). */
+  ebitdar: number;
+  /** Refund-adjusted net sales (top-line minus voids/comps/theft). */
+  netSales: number;
+  /** Occupancy ratio: rent / revenue. QSR target < 8%. */
+  occupancyRatio: number;
+  /** Annualised cash-on-cash return: 12 × netProfit / setupCost. The
+   *  only multi-unit metric LPs care about. null when no setup cost. */
+  cashOnCashAnnual: number | null;
+  /** Honest labor KPI: per-PLN-of-revenue contribution profit, divided
+   *  by labor hours. Target ≥ 150 zł/h for QSR. */
+  contributionPerLaborHour: number;
+  /** Promo-adjusted AOV: gross avgTicket minus implied loyalty discount. */
+  promoAdjustedAvgTicket: number;
   totalCost: number;
   /** Net profit AFTER tax — the bottom line the operator should plan on. */
   netProfit: number;
@@ -277,12 +301,31 @@ function computeScenario(s: SimulationScenario): Computed {
   const wasteCost = Math.round(monthlyRevenue * wastePct);
   const refundLoss = Math.round(monthlyRevenue * refundPct);
   const loyaltyCost = Math.round(monthlyRevenue * loyaltyBurnPct);
-  const totalCost = monthlyCogs + laborMonthly + fixedTotal + paymentFees + wasteCost + refundLoss + loyaltyCost;
-  const preTaxProfit = monthlyRevenue - totalCost;
+  const depreciation = s.depreciationMonthlyGrosze ?? 0;
+  const interest = s.interestMonthlyGrosze ?? 0;
+  // EBITDA = revenue − all variable costs − labor − fixed (excl D&A/interest).
+  // Then EBIT = EBITDA − D&A; pre-tax = EBIT − interest; net = pre-tax − CIT.
+  const variableCostBlock = monthlyCogs + paymentFees + wasteCost + refundLoss + loyaltyCost;
+  const ebitda = monthlyRevenue - variableCostBlock - laborMonthly - fixedTotal;
+  const ebit = ebitda - depreciation;
+  const preTaxProfit = ebit - interest;
+  const totalCost =
+    variableCostBlock + laborMonthly + fixedTotal + depreciation + interest;
   // CIT applies only on positive pre-tax profit. Polish small-CIT 9% / full 19%.
   const citAmount = preTaxProfit > 0 ? Math.round(preTaxProfit * citPct) : 0;
   const netProfit = preTaxProfit - citAmount;
   const margin = monthlyRevenue > 0 ? netProfit / monthlyRevenue : 0;
+  const rentMonthly = s.fixedCosts.rent ?? 0;
+  const ebitdar = ebitda + rentMonthly;
+  const occupancyRatio = monthlyRevenue > 0 ? rentMonthly / monthlyRevenue : 0;
+  const netSales = monthlyRevenue - refundLoss;
+  const cashOnCashAnnual =
+    s.setupCostGrosze && s.setupCostGrosze > 0 ? (netProfit * 12) / s.setupCostGrosze : null;
+  const contributionPerOrderHonest =
+    s.avgTicketGrosze * Math.max(0, 1 - s.cogsPct - (s.paymentProcessorPct ?? 0) - wastePct - refundPct - loyaltyBurnPct);
+  const monthlyContribution = contributionPerOrderHonest * s.ordersPerDay * s.daysOpenPerMonth;
+  const contributionPerLaborHour = laborHoursPerMonth > 0 ? monthlyContribution / laborHoursPerMonth : 0;
+  const promoAdjustedAvgTicket = s.avgTicketGrosze * (1 - loyaltyBurnPct);
   // Break-even uses honest contribution (all variable leakage), and the
   // fixed block must cover the CIT shadow at the equilibrium point —
   // since CIT is 0 at break-even (preTax=0) we use pre-tax contribution.
@@ -335,6 +378,16 @@ function computeScenario(s: SimulationScenario): Computed {
     loyaltyCost,
     citAmount,
     preTaxProfit,
+    depreciation,
+    interest,
+    ebitda,
+    ebit,
+    ebitdar,
+    netSales,
+    occupancyRatio,
+    cashOnCashAnnual,
+    contributionPerLaborHour,
+    promoAdjustedAvgTicket,
     totalCost,
     netProfit,
     margin,
@@ -446,7 +499,11 @@ function projectMonths(
     const waste = Math.round(revenue * (s.wastePct ?? 0));
     const refund = Math.round(revenue * (s.refundPct ?? 0));
     const loyalty = Math.round(revenue * (s.loyaltyBurnPct ?? 0));
-    const preTax = revenue - cogs - labor - fixed - payment - waste - refund - loyalty;
+    // D&A and interest stay flat — they don't compound with volume or
+    // wage CPI; they're functions of capital structure decided up front.
+    const depreciation = s.depreciationMonthlyGrosze ?? 0;
+    const interest = s.interestMonthlyGrosze ?? 0;
+    const preTax = revenue - cogs - labor - fixed - payment - waste - refund - loyalty - depreciation - interest;
     const cit = preTax > 0 ? Math.round(preTax * (s.citPct ?? 0)) : 0;
     const netProfit = preTax - cit;
     rows.push({
@@ -2610,6 +2667,22 @@ export function AdminSimulation() {
                 <PnlRow label="Loyalty burn" amount={-computed.loyaltyCost} tone="warning" indent />
               )}
               <PnlRow
+                label="EBITDA"
+                amount={computed.ebitda}
+                tone={computed.ebitda >= 0 ? "info" : "danger"}
+                bold
+                hint={`${monthlyRevenuePctOrDash(computed.ebitda, computed.monthlyRevenue)} margin`}
+              />
+              {computed.depreciation > 0 && (
+                <PnlRow label="Depreciation & amortisation" amount={-computed.depreciation} tone="warning" indent />
+              )}
+              {computed.depreciation > 0 && (
+                <PnlRow label="EBIT" amount={computed.ebit} tone={computed.ebit >= 0 ? "info" : "danger"} bold />
+              )}
+              {computed.interest > 0 && (
+                <PnlRow label="Interest" amount={-computed.interest} tone="warning" indent />
+              )}
+              <PnlRow
                 label="Pre-tax profit / (loss)"
                 amount={computed.preTaxProfit}
                 tone={computed.preTaxProfit >= 0 ? "info" : "danger"}
@@ -2766,6 +2839,100 @@ export function AdminSimulation() {
             hint={`Peak ceiling ${Math.round(computed.capacityOrdersPerDay)} ord/day · running ${Math.round(scenario.ordersPerDay)}`}
           />
         )}
+      </section>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+        <h2 className="v2-section-h" style={{ margin: 0 }}>Institutional financial KPIs</h2>
+        <span className="v2-muted text-xs">EBITDA / EBITDAR / cash-on-cash / occupancy — IC-grade headline metrics</span>
+      </div>
+      <section className="v2-kpi-grid">
+        <KpiCard
+          label="EBITDA"
+          value={computed.ebitda / 100}
+          format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
+          icon={Wallet}
+          tone={computed.ebitda >= 0 ? "success" : "danger"}
+          hint={`${monthlyRevenuePctOrDash(computed.ebitda, computed.monthlyRevenue)} EBITDA margin`}
+        />
+        <KpiCard
+          label="EBITDAR"
+          value={computed.ebitdar / 100}
+          format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
+          icon={Wallet}
+          tone={computed.ebitdar >= 0 ? "success" : "danger"}
+          hint="EBITDA + rent — the franchise-rollup standard"
+        />
+        <KpiCard
+          label="Cash-on-cash"
+          value={(computed.cashOnCashAnnual ?? 0) * 100}
+          format={(n) => `${n.toFixed(1)}%`}
+          display={
+            computed.cashOnCashAnnual === null
+              ? "—"
+              : `${(computed.cashOnCashAnnual * 100).toFixed(1)}%`
+          }
+          icon={TrendingUp}
+          tone={
+            computed.cashOnCashAnnual === null
+              ? "neutral"
+              : computed.cashOnCashAnnual >= 0.30
+                ? "success"
+                : computed.cashOnCashAnnual >= 0.15
+                  ? "info"
+                  : computed.cashOnCashAnnual >= 0
+                    ? "warning"
+                    : "danger"
+          }
+          hint="Annualised: 12 × net / setup"
+        />
+        <KpiCard
+          label="Occupancy ratio"
+          value={computed.occupancyRatio * 100}
+          format={(n) => `${n.toFixed(1)}%`}
+          icon={Calculator}
+          tone={
+            computed.occupancyRatio === 0
+              ? "neutral"
+              : computed.occupancyRatio < 0.08
+                ? "success"
+                : computed.occupancyRatio < 0.12
+                  ? "warning"
+                  : "danger"
+          }
+          hint="Rent / revenue · QSR target < 8%"
+        />
+        <KpiCard
+          label="Net sales"
+          value={computed.netSales / 100}
+          format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
+          icon={Banknote}
+          tone="info"
+          hint="Revenue net of refunds / comps / voids"
+        />
+        <KpiCard
+          label="Contribution / labor hr"
+          value={computed.contributionPerLaborHour / 100}
+          format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
+          icon={ChefHat}
+          tone={
+            computed.contributionPerLaborHour >= 15000
+              ? "success"
+              : computed.contributionPerLaborHour >= 10000
+                ? "info"
+                : computed.contributionPerLaborHour >= 5000
+                  ? "warning"
+                  : "danger"
+          }
+          hint="QSR target ≥ 150 zł/h — the labor KPI that matters"
+        />
+        <KpiCard
+          label="Promo-adjusted AOV"
+          value={computed.promoAdjustedAvgTicket / 100}
+          format={(n) => `${n.toFixed(2)} zł`}
+          icon={HandCoins}
+          tone="info"
+          hint={`Gross ${(scenario.avgTicketGrosze / 100).toFixed(2)} − loyalty drag`}
+        />
       </section>
 
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
@@ -3115,6 +3282,36 @@ export function AdminSimulation() {
               }
               trailingAdornment={<span className="v2-muted">zł</span>}
               description="Truck buildout + permits + working capital. Drives payback months."
+            />
+            <Input
+              label="Depreciation & amortisation"
+              type="number"
+              step="100"
+              min="0"
+              value={((scenario.depreciationMonthlyGrosze ?? 0) / 100).toFixed(0)}
+              onChange={(e) =>
+                update((s) => ({
+                  ...s,
+                  depreciationMonthlyGrosze: Math.max(0, Math.round((parseFloat(e.target.value) || 0) * 100)),
+                }))
+              }
+              trailingAdornment={<span className="v2-muted">zł/mo</span>}
+              description="Straight-line amortisation of setup cost over economic life. 5y truck = setup/60."
+            />
+            <Input
+              label="Interest expense"
+              type="number"
+              step="100"
+              min="0"
+              value={((scenario.interestMonthlyGrosze ?? 0) / 100).toFixed(0)}
+              onChange={(e) =>
+                update((s) => ({
+                  ...s,
+                  interestMonthlyGrosze: Math.max(0, Math.round((parseFloat(e.target.value) || 0) * 100)),
+                }))
+              }
+              trailingAdornment={<span className="v2-muted">zł/mo</span>}
+              description="Monthly financing cost. Leave at 0 for cash-purchased trucks."
             />
             <Input
               label="Waste & spoilage"
@@ -4252,6 +4449,11 @@ function Stat({ label, value }: { label: string; value: string }) {
       <div className="tabular">{value}</div>
     </div>
   );
+}
+
+function monthlyRevenuePctOrDash(num: number, revenue: number): string {
+  if (revenue <= 0) return "—";
+  return `${((num / revenue) * 100).toFixed(1)}%`;
 }
 
 /** Compact strip showing what real orders actually look like over the last 90

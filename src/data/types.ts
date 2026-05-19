@@ -1000,6 +1000,16 @@ export interface SimulationScenario {
    *  and dropping below it lets some labor fall away. Defaults to
    *  ordersPerDay at scenario-creation time. */
   laborAnchorOrdersPerDay?: number;
+  /** Monthly depreciation + amortisation in grosze — straight-line on
+   *  the setup cost (truck + oven + buildout) over its economic life.
+   *  Separated from "vehicle" fixed cost (which is pure maintenance) so
+   *  EBITDA can be computed honestly. Default = setupCost / 60 months
+   *  (5-year food-truck life). */
+  depreciationMonthlyGrosze?: number;
+  /** Monthly interest expense in grosze — non-zero only when the truck
+   *  was financed. Default 0. Separated so EBIT = EBITDA − D&A and
+   *  pre-tax profit = EBIT − interest, the standard institutional cut. */
+  interestMonthlyGrosze?: number;
   updatedAt: string;
 }
 

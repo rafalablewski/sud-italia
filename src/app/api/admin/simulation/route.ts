@@ -119,6 +119,8 @@ export const PUT = withAdmin(
       kitchenCapacity: b.kitchenCapacity,
       laborVariablePct: typeof b.laborVariablePct === "number" ? b.laborVariablePct : undefined,
       laborAnchorOrdersPerDay: typeof b.laborAnchorOrdersPerDay === "number" ? b.laborAnchorOrdersPerDay : undefined,
+      depreciationMonthlyGrosze: typeof b.depreciationMonthlyGrosze === "number" ? b.depreciationMonthlyGrosze : undefined,
+      interestMonthlyGrosze: typeof b.interestMonthlyGrosze === "number" ? b.interestMonthlyGrosze : undefined,
       updatedAt: new Date().toISOString(),
     };
     const saved = await saveSimulationScenario(scenario);
