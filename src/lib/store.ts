@@ -8149,12 +8149,55 @@ export function defaultSimulationWeather(): SimulationWeather {
   };
 }
 
+/** Schema migration markers for SimulationScenario.assumptions. Bump when
+ *  a behavioural default flips so existing saved scenarios get realigned
+ *  without operator action. */
+const ASSUMPTIONS_MIGRATION_VERSION = 2;
+
+/** Force every behavior-assumption lever to `enabled: false`. Used by the
+ *  migration-v2 path to reset scenarios saved before the all-off default
+ *  landed — without losing their calibrated attachPct / price / cogsPct
+ *  values. */
+function forceAllAssumptionsOff(a: SimulationAssumptions): SimulationAssumptions {
+  const off = <T extends { enabled?: boolean }>(lever: T | undefined): T | undefined =>
+    lever ? { ...lever, enabled: false } : lever;
+  return {
+    ...a,
+    coffeeAttach: off(a.coffeeAttach),
+    dessertAttach: off(a.dessertAttach),
+    antipastiAttach: off(a.antipastiAttach),
+    aperitivoAttach: off(a.aperitivoAttach),
+    premiumToppingsAttach: off(a.premiumToppingsAttach),
+    pastaPrimoAttach: off(a.pastaPrimoAttach),
+    comboConversion: off(a.comboConversion),
+    cheapestPizzaShift: off(a.cheapestPizzaShift),
+    deliveryShare: off(a.deliveryShare),
+    ingredients: a.ingredients
+      ? (Object.fromEntries(
+          Object.entries(a.ingredients).map(([k, v]) => [k, v ? { ...v, enabled: false } : v]),
+        ) as SimulationAssumptions["ingredients"])
+      : a.ingredients,
+  };
+}
+
 export async function getSimulationScenario(): Promise<SimulationScenario> {
   const saved = await readJSON<Partial<SimulationScenario> | null>(SIMULATION_KEY, null);
   if (!saved || !Array.isArray(saved.labor) || typeof saved.ordersPerDay !== "number") {
     return defaultSimulationScenario();
   }
   const defaults = defaultSimulationScenario();
+  const hydratedAssumptions = hydrateAssumptions(saved.assumptions, defaults.assumptions);
+  // v2 migration: force every lever off on first load post-deploy. Existing
+  // scenarios saved before this version have enabled: true baked into the
+  // DB (because the prior hydrator's fallback was true). Migration runs
+  // once per scenario — when the marker catches up to current, normal
+  // operator toggling resumes.
+  const savedVersion = typeof saved.assumptionsMigrationVersion === "number"
+    ? saved.assumptionsMigrationVersion
+    : 0;
+  const assumptions = savedVersion < ASSUMPTIONS_MIGRATION_VERSION && hydratedAssumptions
+    ? forceAllAssumptionsOff(hydratedAssumptions)
+    : hydratedAssumptions;
   return {
     ordersPerDay: saved.ordersPerDay ?? defaults.ordersPerDay,
     avgTicketGrosze: saved.avgTicketGrosze ?? defaults.avgTicketGrosze,
@@ -8182,7 +8225,8 @@ export async function getSimulationScenario(): Promise<SimulationScenario> {
     menuScenario:
       typeof saved.menuScenario === "string" ? saved.menuScenario : defaults.menuScenario,
     menuScenarioOverrides: hydrateMenuScenarioOverrides(saved.menuScenarioOverrides),
-    assumptions: hydrateAssumptions(saved.assumptions, defaults.assumptions),
+    assumptions,
+    assumptionsMigrationVersion: ASSUMPTIONS_MIGRATION_VERSION,
     weather: hydrateWeather(saved.weather, defaults.weather),
     wastePct: typeof saved.wastePct === "number" ? clamp01(saved.wastePct, defaults.wastePct ?? 0) : defaults.wastePct,
     refundPct: typeof saved.refundPct === "number" ? clamp01(saved.refundPct, defaults.refundPct ?? 0) : defaults.refundPct,
@@ -8550,6 +8594,11 @@ export async function saveSimulationScenario(
           : undefined,
       menuScenarioOverrides: hydrateMenuScenarioOverrides(scenario.menuScenarioOverrides),
       assumptions: hydrateAssumptions(scenario.assumptions, defaults.assumptions),
+      // Persist the migration marker so the v2 force-off only runs once
+      // per scenario. Operator toggles after that survive reload normally.
+      assumptionsMigrationVersion: typeof scenario.assumptionsMigrationVersion === "number" && scenario.assumptionsMigrationVersion >= ASSUMPTIONS_MIGRATION_VERSION
+        ? scenario.assumptionsMigrationVersion
+        : ASSUMPTIONS_MIGRATION_VERSION,
       weather: hydrateWeather(scenario.weather, defaults.weather),
       wastePct: clampSimPct(scenario.wastePct, defaults.wastePct ?? 0),
       refundPct: clampSimPct(scenario.refundPct, defaults.refundPct ?? 0),

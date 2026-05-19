@@ -109,26 +109,28 @@ const DEFAULT_SEASONALITY: SimulationSeasonality = {
 };
 
 const DEFAULT_ASSUMPTIONS: SimulationAssumptions = {
-  coffeeAttach: { attachPct: 0.25, avgPriceGrosze: 900, cogsPct: 0.12 },
-  dessertAttach: { attachPct: 0.12, avgPriceGrosze: 1600, cogsPct: 0.28 },
-  antipastiAttach: { attachPct: 0.08, avgPriceGrosze: 2400, cogsPct: 0.32 },
-  aperitivoAttach: { attachPct: 0.10, avgPriceGrosze: 2200, cogsPct: 0.22 },
-  premiumToppingsAttach: { attachPct: 0.15, avgPriceGrosze: 700, cogsPct: 0.30 },
-  pastaPrimoAttach: { attachPct: 0.18, avgPriceGrosze: 3200, cogsPct: 0.26 },
-  comboConversion: { pct: 0.20, addonGrosze: 2500, discountGrosze: 600, addonCogsPct: 0.25 },
-  cheapestPizzaShift: { pp: 0, ticketDeltaGrosze: 1000, cogsDeltaGrosze: 400 },
-  deliveryShare: { pct: 0.25, packagingCostGrosze: 250, extraProcessorPct: 0, avgFeeGrosze: 800 },
+  // Every lever ships disabled by default — see store.ts
+  // defaultSimulationAssumptions() for the canonical baseline.
+  coffeeAttach: { enabled: false, attachPct: 0.25, avgPriceGrosze: 900, cogsPct: 0.12 },
+  dessertAttach: { enabled: false, attachPct: 0.12, avgPriceGrosze: 1600, cogsPct: 0.28 },
+  antipastiAttach: { enabled: false, attachPct: 0.08, avgPriceGrosze: 2400, cogsPct: 0.32 },
+  aperitivoAttach: { enabled: false, attachPct: 0.10, avgPriceGrosze: 2200, cogsPct: 0.22 },
+  premiumToppingsAttach: { enabled: false, attachPct: 0.15, avgPriceGrosze: 700, cogsPct: 0.30 },
+  pastaPrimoAttach: { enabled: false, attachPct: 0.18, avgPriceGrosze: 3200, cogsPct: 0.26 },
+  comboConversion: { enabled: false, pct: 0.20, addonGrosze: 2500, discountGrosze: 600, addonCogsPct: 0.25 },
+  cheapestPizzaShift: { enabled: false, pp: 0, ticketDeltaGrosze: 1000, cogsDeltaGrosze: 400 },
+  deliveryShare: { enabled: false, pct: 0.25, packagingCostGrosze: 250, extraProcessorPct: 0, avgFeeGrosze: 800 },
   ingredients: {
-    mozzarella: { enabled: true, cogsShare: 0.28, costDeltaPct: 0 },
-    tomato: { enabled: true, cogsShare: 0.10, costDeltaPct: 0 },
-    flour: { enabled: true, cogsShare: 0.06, costDeltaPct: 0 },
-    doughWeight: { enabled: true, cogsShare: 0.06, costDeltaPct: 0 },
-    oliveOil: { enabled: true, cogsShare: 0.05, costDeltaPct: 0 },
-    curedMeats: { enabled: true, cogsShare: 0.07, costDeltaPct: 0 },
-    buffaloMozz: { enabled: true, cogsShare: 0.03, costDeltaPct: 0 },
-    eggs: { enabled: true, cogsShare: 0.02, costDeltaPct: 0 },
-    ovenFuel: { enabled: true, cogsShare: 0.04, costDeltaPct: 0 },
-    packaging: { enabled: true, cogsShare: 0.03, costDeltaPct: 0 },
+    mozzarella: { enabled: false, cogsShare: 0.28, costDeltaPct: 0 },
+    tomato: { enabled: false, cogsShare: 0.10, costDeltaPct: 0 },
+    flour: { enabled: false, cogsShare: 0.06, costDeltaPct: 0 },
+    doughWeight: { enabled: false, cogsShare: 0.06, costDeltaPct: 0 },
+    oliveOil: { enabled: false, cogsShare: 0.05, costDeltaPct: 0 },
+    curedMeats: { enabled: false, cogsShare: 0.07, costDeltaPct: 0 },
+    buffaloMozz: { enabled: false, cogsShare: 0.03, costDeltaPct: 0 },
+    eggs: { enabled: false, cogsShare: 0.02, costDeltaPct: 0 },
+    ovenFuel: { enabled: false, cogsShare: 0.04, costDeltaPct: 0 },
+    packaging: { enabled: false, cogsShare: 0.03, costDeltaPct: 0 },
   },
 };
 

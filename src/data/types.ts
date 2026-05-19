@@ -977,6 +977,11 @@ export interface SimulationScenario {
    *  Used by the MenuScenarioPicker to render editable cards that persist
    *  across reloads. The "custom" preset id is always operator-defined. */
   menuScenarioOverrides?: Record<string, SimulationMenuScenarioOverride>;
+  /** Internal: tracks one-time data migrations applied to this scenario.
+   *  When the loader sees a value lower than the current CURRENT_VERSION
+   *  it applies the missing migrations and bumps the marker. Operator
+   *  doesn't see this field. */
+  assumptionsMigrationVersion?: number;
   /** Behavioral attach / upsell levers — fold into effective ticket + COGS. */
   assumptions?: SimulationAssumptions;
   /** Weather + Polish-holiday calendar levers — modify effective volume. */

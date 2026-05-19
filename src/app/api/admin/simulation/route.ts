@@ -107,6 +107,7 @@ export const PUT = withAdmin(
       menuScenario: typeof b.menuScenario === "string" ? b.menuScenario : undefined,
       menuScenarioOverrides: b.menuScenarioOverrides,
       assumptions: b.assumptions,
+      assumptionsMigrationVersion: typeof b.assumptionsMigrationVersion === "number" ? b.assumptionsMigrationVersion : undefined,
       weather: b.weather,
       wastePct: typeof b.wastePct === "number" ? b.wastePct : undefined,
       refundPct: typeof b.refundPct === "number" ? b.refundPct : undefined,
