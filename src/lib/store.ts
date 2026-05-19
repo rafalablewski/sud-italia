@@ -8078,51 +8078,57 @@ export function defaultSimulationScenario(): SimulationScenario {
 
 /** Behavioral levers tuned to a Neapolitan pizza truck in Warsaw 2026. */
 export function defaultSimulationAssumptions(): SimulationAssumptions {
+  // Every lever ships DISABLED by default. The operator opts in
+  // explicitly per lever (or via a Menu scenario preset, which re-
+  // enables the relevant attach lever as it loads its preset values).
+  // Calibrated values (attachPct, prices, COGS%) stay populated so the
+  // levers spring to life with sensible defaults the moment they're
+  // toggled on — no hidden 0% trap.
   return {
-    coffeeAttach:           { attachPct: 0.25, avgPriceGrosze: 900,  cogsPct: 0.12 },
-    dessertAttach:          { attachPct: 0.12, avgPriceGrosze: 1600, cogsPct: 0.28 },
-    antipastiAttach:        { attachPct: 0.08, avgPriceGrosze: 2400, cogsPct: 0.32 },
-    aperitivoAttach:        { attachPct: 0.10, avgPriceGrosze: 2200, cogsPct: 0.22 },
-    premiumToppingsAttach:  { attachPct: 0.15, avgPriceGrosze: 700,  cogsPct: 0.30 },
-    pastaPrimoAttach:       { attachPct: 0.18, avgPriceGrosze: 3200, cogsPct: 0.26 },
+    coffeeAttach:           { enabled: false, attachPct: 0.25, avgPriceGrosze: 900,  cogsPct: 0.12 },
+    dessertAttach:          { enabled: false, attachPct: 0.12, avgPriceGrosze: 1600, cogsPct: 0.28 },
+    antipastiAttach:        { enabled: false, attachPct: 0.08, avgPriceGrosze: 2400, cogsPct: 0.32 },
+    aperitivoAttach:        { enabled: false, attachPct: 0.10, avgPriceGrosze: 2200, cogsPct: 0.22 },
+    premiumToppingsAttach:  { enabled: false, attachPct: 0.15, avgPriceGrosze: 700,  cogsPct: 0.30 },
+    pastaPrimoAttach:       { enabled: false, attachPct: 0.18, avgPriceGrosze: 3200, cogsPct: 0.26 },
     comboConversion: {
+      enabled: false,
       pct: 0.20,
       addonGrosze: 2500,
       discountGrosze: 600,
       addonCogsPct: 0.25,
     },
-    // Cheapest-pizza shift is a stress lever — default off (0 pp).
+    // Cheapest-pizza shift is a stress lever — also defaults off.
     // Per-1pp deltas calibrated so a 20pp shift toward Margherita drops
     // AOV by ~2 zł and COGS by ~0.80 zł (Margherita is ~10 zł cheaper
     // than the avg premium pie and ~4 zł cheaper to make).
     cheapestPizzaShift: {
+      enabled: false,
       pp: 0,
       ticketDeltaGrosze: 1000,
       cogsDeltaGrosze: 400,
     },
     deliveryShare: {
+      enabled: false,
       pct: 0.25,
       packagingCostGrosze: 250,
       extraProcessorPct: 0,
       avgFeeGrosze: 800,
     },
     // Ingredient stress-test levers — share of base-pizza COGS each line
-    // represents (calibrated to a Neapolitan recipe; sums to ~0.92). Cost-
-    // delta defaults to 0 so the levers ship "armed but neutral": the
-    // operator can flex any single ingredient up to stress-test the P&L.
-    // All levers default to `enabled: true` — hide-on-disable lives in
-    // the lever flag, not in the field's presence.
+    // represents (calibrated to a Neapolitan recipe; sums to ~0.92).
+    // All disabled by default; flip individually to stress-test.
     ingredients: {
-      mozzarella:   { enabled: true, cogsShare: 0.28, costDeltaPct: 0 },
-      tomato:       { enabled: true, cogsShare: 0.10, costDeltaPct: 0 },
-      flour:        { enabled: true, cogsShare: 0.06, costDeltaPct: 0 },
-      doughWeight:  { enabled: true, cogsShare: 0.06, costDeltaPct: 0 },
-      oliveOil:     { enabled: true, cogsShare: 0.05, costDeltaPct: 0 },
-      curedMeats:   { enabled: true, cogsShare: 0.07, costDeltaPct: 0 },
-      buffaloMozz:  { enabled: true, cogsShare: 0.03, costDeltaPct: 0 },
-      eggs:         { enabled: true, cogsShare: 0.02, costDeltaPct: 0 },
-      ovenFuel:     { enabled: true, cogsShare: 0.04, costDeltaPct: 0 },
-      packaging:    { enabled: true, cogsShare: 0.03, costDeltaPct: 0 },
+      mozzarella:   { enabled: false, cogsShare: 0.28, costDeltaPct: 0 },
+      tomato:       { enabled: false, cogsShare: 0.10, costDeltaPct: 0 },
+      flour:        { enabled: false, cogsShare: 0.06, costDeltaPct: 0 },
+      doughWeight:  { enabled: false, cogsShare: 0.06, costDeltaPct: 0 },
+      oliveOil:     { enabled: false, cogsShare: 0.05, costDeltaPct: 0 },
+      curedMeats:   { enabled: false, cogsShare: 0.07, costDeltaPct: 0 },
+      buffaloMozz:  { enabled: false, cogsShare: 0.03, costDeltaPct: 0 },
+      eggs:         { enabled: false, cogsShare: 0.02, costDeltaPct: 0 },
+      ovenFuel:     { enabled: false, cogsShare: 0.04, costDeltaPct: 0 },
+      packaging:    { enabled: false, cogsShare: 0.03, costDeltaPct: 0 },
     },
   };
 }
