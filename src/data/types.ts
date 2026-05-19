@@ -951,6 +951,21 @@ export interface SimulationScenario {
   assumptions?: SimulationAssumptions;
   /** Weather + Polish-holiday calendar levers — modify effective volume. */
   weather?: SimulationWeather;
+  /** Food waste / spoilage as fraction of revenue (0–1). QSR benchmark 1-3%
+   *  of revenue (= ~4-8% of COGS). Folded into total COGS; not visible as a
+   *  separate fixed-cost line because it scales with volume. */
+  wastePct?: number;
+  /** Refund / void / comp / theft as fraction of revenue (0–1). QSR
+   *  benchmark 1-2%. Reduces net sales before margin is computed. */
+  refundPct?: number;
+  /** Loyalty point burn as fraction of revenue (0–1). Real cost of points
+   *  the customer eventually redeems; the public loyalty engine in this
+   *  codebase issues 1 pt/PLN, so left unmodeled this is a silent margin
+   *  drag. Default 1.2% reflects ~50% redemption × ~5% effective value. */
+  loyaltyBurnPct?: number;
+  /** Corporate income tax rate (0–1). Polish small-CIT is 9%; full CIT is
+   *  19%. Applied to pre-tax net profit; if pre-tax is negative, no tax. */
+  citPct?: number;
   updatedAt: string;
 }
 

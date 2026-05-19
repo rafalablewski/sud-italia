@@ -107,6 +107,10 @@ export const PUT = withAdmin(
       menuScenario: typeof b.menuScenario === "string" ? b.menuScenario : undefined,
       assumptions: b.assumptions,
       weather: b.weather,
+      wastePct: typeof b.wastePct === "number" ? b.wastePct : undefined,
+      refundPct: typeof b.refundPct === "number" ? b.refundPct : undefined,
+      loyaltyBurnPct: typeof b.loyaltyBurnPct === "number" ? b.loyaltyBurnPct : undefined,
+      citPct: typeof b.citPct === "number" ? b.citPct : undefined,
       updatedAt: new Date().toISOString(),
     };
     const saved = await saveSimulationScenario(scenario);

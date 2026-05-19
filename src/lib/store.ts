@@ -7973,6 +7973,16 @@ export function defaultSimulationScenario(): SimulationScenario {
     wageInflationPct: 0.07,
     ingredientInflationPct: 0.04,
     paymentProcessorPct: 0.019,
+    // Operational leakage the previous model silently ignored. QSR norms:
+    // - waste 1-3% of revenue (spoilage, recipe over-portioning)
+    // - refunds/comps/theft 1-2% of revenue
+    // - loyalty point burn ~50% redemption × ~5% effective value
+    // CIT default to the 9% Polish small-CIT rate (truck Y1 profits fit
+    // the 2 M EUR turnover cap); 19% applies once you scale past that.
+    wastePct: 0.02,
+    refundPct: 0.015,
+    loyaltyBurnPct: 0.012,
+    citPct: 0.09,
     // Honest all-in: Stefano Ferrara oven + truck buildout + refrigeration +
     // generator + livery + SANEPID compliance + 3 mo working capital lands
     // 350-400k PLN. The previous 250k floor was a buildout-only number that
@@ -8079,6 +8089,10 @@ export async function getSimulationScenario(): Promise<SimulationScenario> {
       typeof saved.menuScenario === "string" ? saved.menuScenario : defaults.menuScenario,
     assumptions: hydrateAssumptions(saved.assumptions, defaults.assumptions),
     weather: hydrateWeather(saved.weather, defaults.weather),
+    wastePct: typeof saved.wastePct === "number" ? clamp01(saved.wastePct, defaults.wastePct ?? 0) : defaults.wastePct,
+    refundPct: typeof saved.refundPct === "number" ? clamp01(saved.refundPct, defaults.refundPct ?? 0) : defaults.refundPct,
+    loyaltyBurnPct: typeof saved.loyaltyBurnPct === "number" ? clamp01(saved.loyaltyBurnPct, defaults.loyaltyBurnPct ?? 0) : defaults.loyaltyBurnPct,
+    citPct: typeof saved.citPct === "number" ? clamp01(saved.citPct, defaults.citPct ?? 0) : defaults.citPct,
     updatedAt: saved.updatedAt ?? defaults.updatedAt,
   };
 }
@@ -8266,6 +8280,10 @@ export async function saveSimulationScenario(
           : undefined,
       assumptions: hydrateAssumptions(scenario.assumptions, defaults.assumptions),
       weather: hydrateWeather(scenario.weather, defaults.weather),
+      wastePct: clampSimPct(scenario.wastePct, defaults.wastePct ?? 0),
+      refundPct: clampSimPct(scenario.refundPct, defaults.refundPct ?? 0),
+      loyaltyBurnPct: clampSimPct(scenario.loyaltyBurnPct, defaults.loyaltyBurnPct ?? 0),
+      citPct: clampSimPct(scenario.citPct, defaults.citPct ?? 0),
       updatedAt: new Date().toISOString(),
     };
     await writeJSON(SIMULATION_KEY, clean);

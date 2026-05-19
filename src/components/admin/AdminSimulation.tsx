@@ -193,7 +193,18 @@ interface Computed {
   laborMonthly: number;
   fixedTotal: number;
   paymentFees: number;
+  /** Refund / void / comp / theft leakage — revenue × refundPct. */
+  refundLoss: number;
+  /** Spoilage / waste — revenue × wastePct. Tied to volume, not a fixed line. */
+  wasteCost: number;
+  /** Loyalty point burn — revenue × loyaltyBurnPct. */
+  loyaltyCost: number;
+  /** CIT on pre-tax profit (0 if pre-tax is negative). */
+  citAmount: number;
+  /** Profit before corporate income tax. */
+  preTaxProfit: number;
   totalCost: number;
+  /** Net profit AFTER tax — the bottom line the operator should plan on. */
   netProfit: number;
   margin: number;
   breakEvenOrdersPerDay: number;
@@ -204,7 +215,14 @@ interface Computed {
   foodCostPct: number;
   laborPct: number;
   primeCostPct: number;
+  /** Upper-bound contribution margin (revenue × (1 − cogs − processor)) —
+   *  legacy KPI; kept for back-compat. See trueContributionMarginPct for the
+   *  honest version that nets out waste, refunds, and loyalty burn. */
   contributionMarginPct: number;
+  /** Honest contribution margin: 1 − cogs − processor − refund − waste − loyalty.
+   *  The per-PLN cash that actually drops to gross profit after every variable
+   *  leakage. This is the KPI a CFO or PE analyst would read first. */
+  trueContributionMarginPct: number;
   marginOfSafetyPct: number;
   revenuePerLaborHour: number;
   profitPerOrder: number;
@@ -228,12 +246,27 @@ function computeScenario(s: SimulationScenario): Computed {
     0,
   );
   const paymentFees = Math.round(monthlyRevenue * (s.paymentProcessorPct ?? 0));
-  const totalCost = monthlyCogs + laborMonthly + fixedTotal + paymentFees;
-  const netProfit = monthlyRevenue - totalCost;
+  // Operational leakage — all scale with revenue, not a fixed line.
+  const wastePct = s.wastePct ?? 0;
+  const refundPct = s.refundPct ?? 0;
+  const loyaltyBurnPct = s.loyaltyBurnPct ?? 0;
+  const citPct = s.citPct ?? 0;
+  const wasteCost = Math.round(monthlyRevenue * wastePct);
+  const refundLoss = Math.round(monthlyRevenue * refundPct);
+  const loyaltyCost = Math.round(monthlyRevenue * loyaltyBurnPct);
+  const totalCost = monthlyCogs + laborMonthly + fixedTotal + paymentFees + wasteCost + refundLoss + loyaltyCost;
+  const preTaxProfit = monthlyRevenue - totalCost;
+  // CIT applies only on positive pre-tax profit. Polish small-CIT 9% / full 19%.
+  const citAmount = preTaxProfit > 0 ? Math.round(preTaxProfit * citPct) : 0;
+  const netProfit = preTaxProfit - citAmount;
   const margin = monthlyRevenue > 0 ? netProfit / monthlyRevenue : 0;
-  // Break-even: contribution per order = avgTicket × (1 − cogsPct − paymentFee%).
+  // Break-even uses honest contribution (all variable leakage), and the
+  // fixed block must cover the CIT shadow at the equilibrium point —
+  // since CIT is 0 at break-even (preTax=0) we use pre-tax contribution.
   const contributionRatio = 1 - s.cogsPct - (s.paymentProcessorPct ?? 0);
-  const contributionPerOrder = s.avgTicketGrosze * Math.max(0, contributionRatio);
+  const trueContributionRatio =
+    1 - s.cogsPct - (s.paymentProcessorPct ?? 0) - wastePct - refundPct - loyaltyBurnPct;
+  const contributionPerOrder = s.avgTicketGrosze * Math.max(0, trueContributionRatio);
   const fixedAndLabor = laborMonthly + fixedTotal;
   const breakEvenOrdersPerMonth =
     contributionPerOrder > 0 ? fixedAndLabor / contributionPerOrder : 0;
@@ -245,6 +278,7 @@ function computeScenario(s: SimulationScenario): Computed {
   const primeCostPct =
     monthlyRevenue > 0 ? (monthlyCogs + laborMonthly) / monthlyRevenue : 0;
   const contributionMarginPct = Math.max(0, contributionRatio);
+  const trueContributionMarginPct = Math.max(0, trueContributionRatio);
   const marginOfSafetyPct =
     monthlyRevenue > 0 ? (monthlyRevenue - breakEvenRevenue) / monthlyRevenue : 0;
   const revenuePerLaborHour =
@@ -261,6 +295,11 @@ function computeScenario(s: SimulationScenario): Computed {
     laborMonthly,
     fixedTotal,
     paymentFees,
+    refundLoss,
+    wasteCost,
+    loyaltyCost,
+    citAmount,
+    preTaxProfit,
     totalCost,
     netProfit,
     margin,
@@ -271,6 +310,7 @@ function computeScenario(s: SimulationScenario): Computed {
     laborPct,
     primeCostPct,
     contributionMarginPct,
+    trueContributionMarginPct,
     marginOfSafetyPct,
     revenuePerLaborHour,
     profitPerOrder,
@@ -334,7 +374,12 @@ function projectTwelveMonths(s: SimulationScenario, startMonth = 0) {
     const labor = Math.round(baseLaborMonthly * wageMult * laborFlex);
     const fixed = Math.round(baseFixed * wageMult);
     const payment = Math.round(revenue * (s.paymentProcessorPct ?? 0));
-    const netProfit = revenue - cogs - labor - fixed - payment;
+    const waste = Math.round(revenue * (s.wastePct ?? 0));
+    const refund = Math.round(revenue * (s.refundPct ?? 0));
+    const loyalty = Math.round(revenue * (s.loyaltyBurnPct ?? 0));
+    const preTax = revenue - cogs - labor - fixed - payment - waste - refund - loyalty;
+    const cit = preTax > 0 ? Math.round(preTax * (s.citPct ?? 0)) : 0;
+    const netProfit = preTax - cit;
     rows.push({
       month: MONTH_LABELS[monthIndex],
       monthIndex,
