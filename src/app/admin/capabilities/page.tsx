@@ -760,7 +760,7 @@ export default async function CapabilitiesPage() {
           status: "live",
           href: "/admin/simulation",
           summary:
-            "Sandbox monthly P&L bound to real-order actuals (orders/day, AOV, weighted COGS, delivery share, refund rate — all pulled from /api/admin/orders over a 90-day rolling window and applied with one click). Pick a menu scenario (Takeaway / Balanced / Premium / Family / Aperitivo) to load levers in one click; tune orders/day, labor mix, fixed costs, waste / refund / loyalty / CIT, kitchen capacity (peak-hour throughput ceiling), and labor-volume flex from there. Channel-split payment fees handle cash / on-site card / Glovo / Wolt separately so delivery economics aren't a mirage. 9 behavior levers, 5 weather/calendar levers, per-month seasonality overrides. Honest KPIs (true contribution margin after every variable leakage, kitchen-capacity utilisation), two 2-D heatmaps, scenario comparison, ±20% sensitivity, 12-month operational projection, and a 24-month investor view with 4-month opening ramp surfacing NPV @ 10/15/20%, IRR, and cumulative-cash break-even. Every concept has an info button. Master toggle in Settings → General. Defaults are Warsaw 2026 (gross × 1.22 ZUS narzut). Zero writes to the business-costs ledger.",
+            "Sandbox monthly P&L bound to real-order actuals (orders/day, AOV, weighted COGS, delivery share, refund rate, median ticket time — all pulled from /api/admin/orders over a 90-day rolling window and applied with one click). Tune revenue inputs, labor mix (with volume-flex), fixed costs, waste / refund / loyalty / CIT / D&A / interest, kitchen capacity (peak-hour throughput ceiling), and channel-split payment fees (cash / on-site card / Glovo / Wolt). 9 behavior levers, 5 weather/calendar levers, per-month seasonality overrides. Institutional-grade KPI suite: EBITDA, EBITDAR, cash-on-cash return, occupancy ratio, refund-adjusted net sales, contribution per labor hour (QSR target ≥150 zł/h), promo-adjusted AOV, peak orders/hour, median ticket time, true contribution margin, kitchen-capacity utilisation. Two 2-D heatmaps, scenario comparison, ±20% sensitivity, sensitivity tornado across all key drivers, 12-month operational projection, and a 24-month investor view with 4-month opening ramp surfacing NPV @ 10/15/20%, IRR, and cumulative-cash break-even. Break-even chart shows the current operating point vs ceiling at a glance. Master toggle in Settings → General. Defaults are Warsaw 2026 (gross × 1.22 ZUS narzut, 5-year truck depreciation). Zero writes to the business-costs ledger.",
         },
         {
           name: "Simulation actuals (real-order ground truth)",
@@ -774,7 +774,21 @@ export default async function CapabilitiesPage() {
           status: "live",
           href: "/admin/simulation",
           summary:
-            "GET /api/admin/simulation/cohorts?days=180 groups real orders by phone (using the loyalty engine's checkout capture per CLAUDE.md rule #6) and returns repeat rate, orders per customer, GP per customer (item + modifier level), and acquisition velocity. The Simulation tab renders a 6-KPI strip with CAC (implied = marketing fixed cost ÷ new customers per month), LTV/CAC ratio against the institutional 3× gate, and customer payback period. The single most important investor-facing surface for any franchise / scale conversation.",
+            "GET /api/admin/simulation/cohorts?days=180 groups real orders by phone (using the loyalty engine's checkout capture per CLAUDE.md rule #6) and returns repeat rate, orders per customer, GP per customer (item + modifier level), acquisition velocity, and the new-vs-returning revenue mix. The Simulation tab renders an 8-KPI strip with CAC (implied = marketing fixed cost ÷ new customers per month), LTV/CAC ratio against the institutional 3× gate, customer payback period, and the share of revenue from net-new vs prior-window customers (returning > new is the institutional green light).",
+        },
+        {
+          name: "Simulation comp-sales (SSSG)",
+          status: "live",
+          href: "/admin/simulation",
+          summary:
+            "GET /api/admin/simulation/sssg?days=30 compares trailing-window revenue to the prior trailing window of the same length and decomposes the move into revenue / order / ticket / customer growth so the operator sees what drove the change. The most-watched chain metric in restaurants.",
+        },
+        {
+          name: "Simulation institutional KPIs (EBITDA / CCC / channel CM1)",
+          status: "live",
+          href: "/admin/simulation",
+          summary:
+            "EBITDA / EBITDAR / cash-on-cash / occupancy ratio / contribution-per-labor-hour / promo-adjusted AOV / refund-adjusted net sales — all computed client-side from the scenario + actuals. Plus per-channel CM1 panel showing cash / on-site card / Glovo / Wolt contribution per order side-by-side (red < 20%, value-destructive). And attachment-efficiency panel ranking each enabled attach lever by absolute monthly profit lift, not just attach rate. The IC-grade surface that turns the simulator from operator calculator into FP&A dashboard.",
         },
         {
           name: "Simulation menu engineering matrix",
