@@ -1308,8 +1308,10 @@ const HELP = {
           </li>
           <li>
             <strong>Contribution margin</strong> — share of each PLN of revenue
-            left after variable costs (COGS + payment fees) to cover fixed
-            costs and profit. Below 55% and there&apos;s no room for rent shocks.
+            left after ALL variable costs (COGS, payment fees, waste, refunds,
+            loyalty burn) to cover fixed costs and profit. This is the honest
+            cash-drop ratio per order. Below 50% and there&apos;s no room for
+            rent shocks; below 40% the unit is structurally unprofitable.
           </li>
           <li>
             <strong>Margin of safety</strong> — how far revenue can fall before
@@ -2245,11 +2247,11 @@ export function AdminSimulation() {
         />
         <KpiCard
           label="Contribution margin"
-          value={computed.contributionMarginPct * 100}
+          value={computed.trueContributionMarginPct * 100}
           format={(n) => `${n.toFixed(1)}%`}
           icon={Percent}
-          tone={computed.contributionMarginPct < 0.55 ? "danger" : computed.contributionMarginPct < 0.65 ? "warning" : "success"}
-          hint="Per PLN after COGS + fees"
+          tone={computed.trueContributionMarginPct < 0.50 ? "danger" : computed.trueContributionMarginPct < 0.60 ? "warning" : "success"}
+          hint={`After COGS, fees, waste, refunds, loyalty (was ${(computed.contributionMarginPct * 100).toFixed(1)}% upper-bound)`}
         />
         <KpiCard
           label="Margin of safety"
