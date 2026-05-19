@@ -760,7 +760,14 @@ export default async function CapabilitiesPage() {
           status: "live",
           href: "/admin/simulation",
           summary:
-            "Sandbox monthly P&L. Pick a menu scenario (Takeaway / Balanced / Premium / Family / Aperitivo) to load avg ticket + COGS + behavior levers in one click; tune orders/day, labor mix and fixed costs from there. Includes 9 behavior levers (coffee/dessert/antipasti/aperitivo/premium-toppings/pasta-primo attach, combo conversion, recession stress, delivery share), 5 weather/calendar levers (rain, heat, holidays, school dip, event days), live KPIs (labor % / prime cost % / revenue per labor hour / profit per order / setup payback), two 2-D heatmaps (orders × ticket, food cost × ticket), Conservative / Realistic / Optimistic comparison, ±20% sensitivity, and a 12-month projection compounding wage + ingredient inflation through four seasonal multipliers. Every concept has an info button with an amateur-friendly explanation. Master toggle in Settings → General. Defaults are Warsaw 2026 (gross × 1.22 ZUS narzut, food-truck pitch fees). Zero writes to the business-costs ledger.",
+            "Sandbox monthly P&L bound to real-order actuals (orders/day, AOV, weighted COGS, delivery share, refund rate — all pulled from /api/admin/orders over a 90-day rolling window and applied with one click). Pick a menu scenario (Takeaway / Balanced / Premium / Family / Aperitivo) to load levers in one click; tune orders/day, labor mix, fixed costs, waste / refund / loyalty / CIT, kitchen capacity (peak-hour throughput ceiling), and labor-volume flex from there. Channel-split payment fees handle cash / on-site card / Glovo / Wolt separately so delivery economics aren't a mirage. 9 behavior levers, 5 weather/calendar levers, per-month seasonality overrides. Honest KPIs (true contribution margin after every variable leakage, kitchen-capacity utilisation), two 2-D heatmaps, scenario comparison, ±20% sensitivity, 12-month operational projection, and a 24-month investor view with 4-month opening ramp surfacing NPV @ 10/15/20%, IRR, and cumulative-cash break-even. Every concept has an info button. Master toggle in Settings → General. Defaults are Warsaw 2026 (gross × 1.22 ZUS narzut). Zero writes to the business-costs ledger.",
+        },
+        {
+          name: "Simulation actuals (real-order ground truth)",
+          status: "live",
+          href: "/admin/simulation",
+          summary:
+            "GET /api/admin/simulation/actuals?days=90 returns a rolling-window snapshot from the live orders table: orders/day, avg ticket, menu-mix-weighted COGS (Σqty×cost ÷ Σqty×price across every line item, modifiers honoured), delivery vs takeout share, refund/cancellation rate. The Simulation tab renders this as a strip above the inputs with variance vs the operator's typed values; flagged as warning when scenario drifts > 15% from reality. One-click 'Apply actuals' button writes the snapshot back to the scenario. seedSimulationFromHistory also pulls it, so /api/admin/simulation?seed=1 starts from reality instead of defaults.",
         },
         {
           name: "Simulation AI enhancements",
