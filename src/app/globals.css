@@ -1130,7 +1130,7 @@ html { scroll-behavior: smooth; }
 .v2-btn:disabled, .v2-btn.is-loading { cursor: not-allowed; opacity: 0.6; }
 .v2-btn:not(:disabled):not(.is-loading):active { transform: translateY(0.5px); }
 .v2-btn-block { width: 100%; }
-.v2-btn-label { display: inline-block; }
+.v2-btn-label { display: inline-flex; align-items: center; gap: 6px; }
 .v2-btn-spinner { width: 14px; height: 14px; animation: v2-spin 600ms linear infinite; }
 
 .v2-btn-sm { padding: 4px 10px; font-size: var(--text-xs); min-height: 26px; }
