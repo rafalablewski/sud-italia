@@ -1003,21 +1003,38 @@ async function mirrorOrderDeleteToKvStore(id: string): Promise<void> {
   }
 }
 
-export async function getOrders(locationSlug?: string): Promise<Order[]> {
+export async function getOrders(
+  locationSlug?: string,
+  /** Optional cutoff — only return orders with createdAt >= this ISO string.
+   *  Pushes the filter to the database (uses orders_created_at_idx in PG)
+   *  instead of fetching everything and slicing in memory; matters once the
+   *  table grows past a few thousand rows. */
+  since?: string,
+): Promise<Order[]> {
   const db = getDb();
   if (db) {
     try {
       await ensureOrdersTable();
-      const rows = locationSlug
-        ? await db
-            .select()
-            .from(ordersTable)
-            .where(eq(ordersTable.locationSlug, locationSlug))
-            .orderBy(desc(ordersTable.createdAt))
-        : await db
-            .select()
-            .from(ordersTable)
-            .orderBy(desc(ordersTable.createdAt));
+      // Compose the where clause from the optional location + since
+      // filters. drizzle's and() collapses to a single SQL AND that the
+      // orders_created_at_idx + orders_location_slug_idx can satisfy.
+      const conditions: ReturnType<typeof eq>[] = [];
+      if (locationSlug) conditions.push(eq(ordersTable.locationSlug, locationSlug));
+      // Postgres `createdAt` is a timestamp column — pass a Date object.
+      if (since) {
+        const sinceDate = new Date(since);
+        if (Number.isFinite(sinceDate.valueOf())) {
+          conditions.push(gte(ordersTable.createdAt, sinceDate));
+        }
+      }
+      const whereClause = conditions.length === 0
+        ? undefined
+        : conditions.length === 1
+          ? conditions[0]
+          : and(...conditions);
+      const rows = whereClause
+        ? await db.select().from(ordersTable).where(whereClause).orderBy(desc(ordersTable.createdAt))
+        : await db.select().from(ordersTable).orderBy(desc(ordersTable.createdAt));
       if (rows.length > 0) return rows.map(rowToOrder);
     } catch (err) {
       logger.warn(
@@ -1028,9 +1045,18 @@ export async function getOrders(locationSlug?: string): Promise<Order[]> {
     }
   }
   const orders = await readJSON<Order[]>("orders.json", []);
-  const filtered = locationSlug
+  let filtered = locationSlug
     ? orders.filter((o) => o.locationSlug === locationSlug)
     : orders;
+  if (since) {
+    const sinceMs = Date.parse(since);
+    if (Number.isFinite(sinceMs)) {
+      filtered = filtered.filter((o) => {
+        const t = Date.parse(o.createdAt);
+        return Number.isFinite(t) && t >= sinceMs;
+      });
+    }
+  }
   if (filtered.length > 0) {
     bumpLazyBackfillHit("orders");
     void Promise.all(filtered.map((o) => dualWriteOrder(o)));
@@ -8729,15 +8755,36 @@ export async function seedSimulationFromHistory(): Promise<SimulationScenario> {
 /** Compute a rolling-window snapshot of actual orders. The simulator uses
  *  this both as a one-click seed source and as a "stale" warning when the
  *  operator's ordersPerDay / avgTicket drifts > 15% from real history. */
+/** Per-item modifier lookup index — keyed by item.id, value is a
+ *  Map<groupId, Map<optionId, ModifierOption>>. Built once and shared
+ *  across every line of every order in a compute pass, so a 90-day
+ *  window with millions of modifier lookups is O(1) per resolve
+ *  instead of O(groups × options) via find(). */
+type ModifierOptionLookup = Map<string, Map<string, NonNullable<NonNullable<MenuItem["modifierGroups"]>[number]>["options"][number]>>;
+type ModifierIndexCache = Map<string, ModifierOptionLookup>;
+
+function getModifierIndex(item: MenuItem, cache: ModifierIndexCache): ModifierOptionLookup {
+  let idx = cache.get(item.id);
+  if (idx) return idx;
+  idx = new Map();
+  for (const g of item.modifierGroups ?? []) {
+    const optMap = new Map<string, (typeof g.options)[number]>();
+    for (const o of g.options) optMap.set(o.id, o);
+    idx.set(g.id, optMap);
+  }
+  cache.set(item.id, idx);
+  return idx;
+}
+
 export async function computeSimulationActuals(
   windowDays = 90,
 ): Promise<SimulationActualsSnapshot> {
-  const all = await getOrders();
   const cutoffMs = Date.now() - windowDays * 24 * 60 * 60 * 1000;
-  const inWindow = all.filter((o) => {
-    const t = Date.parse(o.createdAt);
-    return Number.isFinite(t) && t >= cutoffMs;
-  });
+  const sinceISO = new Date(cutoffMs).toISOString();
+  // Push the date filter into the DB query — uses orders_created_at_idx
+  // so a 90d window over millions of rows is a fast index seek, not a
+  // full-table scan + in-memory slice.
+  const inWindow = await getOrders(undefined, sinceISO);
   const cancelledCount = inWindow.filter((o) => o.status === "cancelled").length;
   const fulfilled = inWindow.filter((o) => o.status !== "cancelled");
   const ordersCount = fulfilled.length;
@@ -8749,6 +8796,7 @@ export async function computeSimulationActuals(
   // flat cogsPct guess.
   let menuCostTotal = 0;
   let menuRevenueTotal = 0;
+  const modIndex: ModifierIndexCache = new Map();
   for (const o of fulfilled) {
     for (const line of o.items ?? []) {
       const item = line.menuItem;
@@ -8756,9 +8804,9 @@ export async function computeSimulationActuals(
       const qty = Math.max(0, line.quantity ?? 1);
       let lineCost = item.cost ?? 0;
       let linePrice = item.price ?? 0;
+      const lookup = getModifierIndex(item, modIndex);
       for (const sel of line.selectedModifiers ?? []) {
-        const group = item.modifierGroups?.find((g) => g.id === sel.groupId);
-        const opt = group?.options.find((o) => o.id === sel.optionId);
+        const opt = lookup.get(sel.groupId)?.get(sel.optionId);
         if (opt) {
           linePrice += Math.max(0, opt.priceDelta ?? 0);
           lineCost += Math.max(0, opt.costDelta ?? 0);
@@ -8834,11 +8882,14 @@ export async function computeSimulationActuals(
 export async function computeSssg(
   windowDays = 30,
 ): Promise<SimulationSssgSnapshot> {
-  const all = await getOrders();
   const now = Date.now();
   const oneWindow = windowDays * 24 * 60 * 60 * 1000;
   const currentStart = now - oneWindow;
   const priorStart = now - 2 * oneWindow;
+  // Need both windows — fetch the full 2× span once and partition in
+  // memory rather than two round trips. Still DB-filtered to the prior
+  // window's start, so we avoid scanning the whole orders table.
+  const all = await getOrders(undefined, new Date(priorStart).toISOString());
   let currentRev = 0, priorRev = 0;
   let currentOrders = 0, priorOrders = 0;
   const currentPhones = new Set<string>();
@@ -8885,8 +8936,8 @@ export async function computeHourlyThroughput(
   windowDays = 30,
   pizzasPerHourCap = 0,
 ): Promise<SimulationHourlyThroughputLine[]> {
-  const all = await getOrders();
   const cutoffMs = Date.now() - windowDays * 24 * 60 * 60 * 1000;
+  const all = await getOrders(undefined, new Date(cutoffMs).toISOString());
   const fulfilled = all.filter((o) => {
     if (o.status === "cancelled") return false;
     const t = Date.parse(o.createdAt);
@@ -8920,8 +8971,8 @@ export async function computeHourlyThroughput(
 export async function computeDayparts(
   windowDays = 90,
 ): Promise<SimulationDaypartLine[]> {
-  const all = await getOrders();
   const cutoffMs = Date.now() - windowDays * 24 * 60 * 60 * 1000;
+  const all = await getOrders(undefined, new Date(cutoffMs).toISOString());
   const fulfilled = all.filter((o) => {
     if (o.status === "cancelled") return false;
     const t = Date.parse(o.createdAt);
@@ -8942,6 +8993,7 @@ export async function computeDayparts(
   };
 
   type Agg = { orders: number; revenue: number; gp: number };
+  const modIndex: ModifierIndexCache = new Map();
   const agg: Record<SimulationDaypartLine["key"], Agg> = {
     lunch: { orders: 0, revenue: 0, gp: 0 },
     dinner: { orders: 0, revenue: 0, gp: 0 },
@@ -8960,9 +9012,9 @@ export async function computeDayparts(
       const qty = Math.max(0, line.quantity ?? 1);
       let price = item.price ?? 0;
       let cost = item.cost ?? 0;
+      const lookup = getModifierIndex(item, modIndex);
       for (const sel of line.selectedModifiers ?? []) {
-        const group = item.modifierGroups?.find((g) => g.id === sel.groupId);
-        const opt = group?.options.find((o) => o.id === sel.optionId);
+        const opt = lookup.get(sel.groupId)?.get(sel.optionId);
         if (opt) {
           price += Math.max(0, opt.priceDelta ?? 0);
           cost += Math.max(0, opt.costDelta ?? 0);
@@ -9008,8 +9060,14 @@ export async function computeDayparts(
 export async function computeCohortSnapshot(
   windowDays = 180,
 ): Promise<SimulationCohortSnapshot> {
-  const all = await getOrders();
   const cutoffMs = Date.now() - windowDays * 24 * 60 * 60 * 1000;
+  // We need orders from BEFORE the window to identify "returning"
+  // customers (anyone who ordered earlier and again inside the window).
+  // Cap the lookback at 2× the window — anyone whose only prior order
+  // was 360+ days ago for a 180-day window is "new" for practical
+  // purposes; institutional cohort retention rarely looks further back.
+  const lookbackMs = cutoffMs - windowDays * 24 * 60 * 60 * 1000;
+  const all = await getOrders(undefined, new Date(lookbackMs).toISOString());
   // Pre-pass: which customers had ≥1 order BEFORE the window? They're
   // "returning" inside the window; everyone else is "new".
   const preWindowCustomers = new Set<string>();
@@ -9029,6 +9087,7 @@ export async function computeCohortSnapshot(
 
   type CustomerAgg = { orders: number; revenue: number; gp: number };
   const byPhone = new Map<string, CustomerAgg>();
+  const modIndex: ModifierIndexCache = new Map();
   for (const o of fulfilled) {
     const phone = o.customerPhone.trim();
     if (!phone) continue;
@@ -9039,9 +9098,9 @@ export async function computeCohortSnapshot(
       const qty = Math.max(0, line.quantity ?? 1);
       let price = item.price ?? 0;
       let cost = item.cost ?? 0;
+      const lookup = getModifierIndex(item, modIndex);
       for (const sel of line.selectedModifiers ?? []) {
-        const group = item.modifierGroups?.find((g) => g.id === sel.groupId);
-        const opt = group?.options.find((o) => o.id === sel.optionId);
+        const opt = lookup.get(sel.groupId)?.get(sel.optionId);
         if (opt) {
           price += Math.max(0, opt.priceDelta ?? 0);
           cost += Math.max(0, opt.costDelta ?? 0);
@@ -9110,8 +9169,8 @@ export async function computeMenuEngineering(
   windowDays = 90,
   scenarioOverride?: { paymentProcessorPct?: number; wastePct?: number; refundPct?: number; loyaltyBurnPct?: number },
 ): Promise<SimulationMenuEngineeringLine[]> {
-  const all = await getOrders();
   const cutoffMs = Date.now() - windowDays * 24 * 60 * 60 * 1000;
+  const all = await getOrders(undefined, new Date(cutoffMs).toISOString());
   const fulfilled = all.filter((o) => {
     if (o.status === "cancelled") return false;
     const t = Date.parse(o.createdAt);
@@ -9127,6 +9186,7 @@ export async function computeMenuEngineering(
 
   type Agg = { item: MenuItem; units: number; revenue: number; cost: number };
   const byItem = new Map<string, Agg>();
+  const modIndex: ModifierIndexCache = new Map();
   for (const o of fulfilled) {
     for (const line of o.items ?? []) {
       const item = line.menuItem;
@@ -9134,9 +9194,9 @@ export async function computeMenuEngineering(
       const qty = Math.max(0, line.quantity ?? 1);
       let linePrice = item.price ?? 0;
       let lineCost = item.cost ?? 0;
+      const lookup = getModifierIndex(item, modIndex);
       for (const sel of line.selectedModifiers ?? []) {
-        const group = item.modifierGroups?.find((g) => g.id === sel.groupId);
-        const opt = group?.options.find((o) => o.id === sel.optionId);
+        const opt = lookup.get(sel.groupId)?.get(sel.optionId);
         if (opt) {
           linePrice += Math.max(0, opt.priceDelta ?? 0);
           lineCost += Math.max(0, opt.costDelta ?? 0);

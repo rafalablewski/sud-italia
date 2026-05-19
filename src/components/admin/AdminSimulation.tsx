@@ -3539,6 +3539,7 @@ export function AdminSimulation() {
         index={1}
         title="Top-line growth"
         subtitle="Comp sales and the year-on-year story IC reads first"
+        anchorId="top-line-growth"
       />
 
       <SssgStrip
@@ -3554,6 +3555,7 @@ export function AdminSimulation() {
         index={2}
         title="Scale story (multi-unit / franchise)"
         subtitle="HQ absorption, supply consolidation, royalty, DMA cannibalisation, build-out learning"
+        anchorId="fleet"
       />
 
       <FleetPanel
@@ -3571,6 +3573,7 @@ export function AdminSimulation() {
         index={3}
         title="Unit economics & channel mix"
         subtitle="What each order actually contributes after every variable leakage"
+        anchorId="unit-economics"
       />
 
       <UnitEconomicsPanel scenario={scenario} computed={computed} actuals={actuals} />
@@ -3583,6 +3586,7 @@ export function AdminSimulation() {
         index={4}
         title="Customer economics"
         subtitle="Cohort retention, LTV, CAC, new-vs-returning mix"
+        anchorId="customer-economics"
       />
 
       {cohorts && cohorts.totalCustomers > 0 ? (
@@ -3599,6 +3603,7 @@ export function AdminSimulation() {
         index={5}
         title="Operational throughput"
         subtitle="Daypart mix, hourly volume, oven physics, prep flow, queue conversion, shift coverage"
+        anchorId="operations"
       />
 
       {dayparts && dayparts.some((d) => d.ordersCount > 0) ? (
@@ -3640,6 +3645,7 @@ export function AdminSimulation() {
         index={6}
         title="Menu strategy"
         subtitle="Kasavana-Smith quadrants, margin traps, prep-heavy false-high-revenue items"
+        anchorId="menu-strategy"
       />
 
       {(() => {
@@ -3658,6 +3664,7 @@ export function AdminSimulation() {
         index={7}
         title="Sensitivity & scenario analysis"
         subtitle="Tornado, conservative / realistic / optimistic, heatmaps, ±20% volume flex"
+        anchorId="sensitivity"
       />
 
       <TornadoPanel bars={tornado} />
@@ -3765,6 +3772,7 @@ export function AdminSimulation() {
         index={8}
         title="Forward-looking projection"
         subtitle="12-month operational forecast, financial assumptions, break-even at the current operating point"
+        anchorId="projection"
       />
 
       <Card>
@@ -4391,6 +4399,7 @@ export function AdminSimulation() {
         index={9}
         title="AI commentary"
         subtitle="Claude-generated 4-6 specific enhancements grounded in the current scenario numbers"
+        anchorId="ai"
       />
 
       <AiEnhancementsCard scenario={effectiveScenario!} computed={computed} />
@@ -4930,13 +4939,19 @@ function ModuleDivider({
   index,
   title,
   subtitle,
+  anchorId,
 }: {
   index: number;
   title: string;
   subtitle?: string;
+  /** Optional fragment id — when set, the divider becomes a #-link target
+   *  so capability entries / direct URLs can jump straight to the module
+   *  (e.g. /admin/simulation#fleet-model). The scroll offset accounts for
+   *  the sticky topbar via scroll-margin-top on .v2-module-divider. */
+  anchorId?: string;
 }) {
   return (
-    <div className="v2-module-divider">
+    <div className="v2-module-divider" id={anchorId}>
       <span className="v2-module-badge">{String(index).padStart(2, "0")}</span>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div className="v2-module-title">{title}</div>

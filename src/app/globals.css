@@ -4083,6 +4083,8 @@ html { scroll-behavior: smooth; }
   margin-bottom: 8px;
   padding: 18px 0 14px;
   border-top: 1px solid color-mix(in oklab, var(--fg) 14%, transparent);
+  /* Leave space for the sticky admin topbar when jumped to via #anchor. */
+  scroll-margin-top: 80px;
 }
 .v2-module-badge {
   display: inline-flex;
