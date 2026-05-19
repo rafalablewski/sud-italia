@@ -770,6 +770,34 @@ export default async function CapabilitiesPage() {
             "GET /api/admin/simulation/actuals?days=90 returns a rolling-window snapshot from the live orders table: orders/day, avg ticket, menu-mix-weighted COGS (Σqty×cost ÷ Σqty×price across every line item, modifiers honoured), delivery vs takeout share, refund/cancellation rate. The Simulation tab renders this as a strip above the inputs with variance vs the operator's typed values; flagged as warning when scenario drifts > 15% from reality. One-click 'Apply actuals' button writes the snapshot back to the scenario. seedSimulationFromHistory also pulls it, so /api/admin/simulation?seed=1 starts from reality instead of defaults.",
         },
         {
+          name: "Simulation customer economics (cohort / LTV / CAC)",
+          status: "live",
+          href: "/admin/simulation",
+          summary:
+            "GET /api/admin/simulation/cohorts?days=180 groups real orders by phone (using the loyalty engine's checkout capture per CLAUDE.md rule #6) and returns repeat rate, orders per customer, GP per customer (item + modifier level), and acquisition velocity. The Simulation tab renders a 6-KPI strip with CAC (implied = marketing fixed cost ÷ new customers per month), LTV/CAC ratio against the institutional 3× gate, and customer payback period. The single most important investor-facing surface for any franchise / scale conversation.",
+        },
+        {
+          name: "Simulation menu engineering matrix",
+          status: "live",
+          href: "/admin/simulation",
+          summary:
+            "GET /api/admin/simulation/menu-engineering?days=90 computes per-item unitsSold + GP/unit (modifier deltas folded in) across real orders and groups items into the Kasavana-Smith quadrants (star / plowhorse / puzzle / dog), splitting at the median velocity and median GP. The Simulation tab renders a 2×2 grid with per-quadrant verdict ('Reprice up or re-engineer', 'Delete unless strategic') and the top 6 items per quadrant.",
+        },
+        {
+          name: "Simulation sensitivity tornado",
+          status: "live",
+          href: "/admin/simulation",
+          summary:
+            "Computed client-side on every render. Flexes each key driver independently around the current scenario (orders ±10%, ticket ±10%, food cost ±5pp, labor ±10%, fixed ±10%, payment fee ±0.5pp, waste/refund ±1pp, CIT 9%↔19%, Glovo commission ±3pp), measures the net-profit swing, and sorts bars descending. Renders as horizontal bars centred on the current value with red downside / green upside. The IC-grade 'where would I look first?' answer.",
+        },
+        {
+          name: "Simulation daypart + hourly throughput",
+          status: "live",
+          href: "/admin/simulation",
+          summary:
+            "GET /api/admin/simulation/dayparts?days=90 (lunch 11-15, dinner 17-22, late-night 22-04, off-peak) and /api/admin/simulation/hourly?days=30 (24 rows). The Simulation tab renders a daypart table with GP-rate colour coding plus a 24-bar throughput chart overlaid with the kitchenCapacity ceiling (red over capacity, amber within 15%). Together they expose menu-mix and peak-hour blow-out risk the daily-aggregated view hides.",
+        },
+        {
           name: "Simulation AI enhancements",
           status: has("ANTHROPIC_API_KEY") ? "live" : "needs-config",
           href: "/admin/simulation",
