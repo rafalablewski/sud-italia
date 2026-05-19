@@ -3576,7 +3576,19 @@ export function AdminSimulation() {
         />
       </section>
 
+      <ModuleDivider
+        index={1}
+        title="Top-line growth"
+        subtitle="Comp sales and the year-on-year story IC reads first"
+      />
+
       {sssg && (sssg.currentOrders > 0 || sssg.priorOrders > 0) && <SssgStrip sssg={sssg} />}
+
+      <ModuleDivider
+        index={2}
+        title="Scale story (multi-unit / franchise)"
+        subtitle="HQ absorption, supply consolidation, royalty, DMA cannibalisation, build-out learning"
+      />
 
       <FleetPanel
         scenario={scenario}
@@ -3589,15 +3601,33 @@ export function AdminSimulation() {
         }
       />
 
+      <ModuleDivider
+        index={3}
+        title="Unit economics & channel mix"
+        subtitle="What each order actually contributes after every variable leakage"
+      />
+
       <UnitEconomicsPanel scenario={scenario} computed={computed} />
 
       <ChannelEconomicsPanel rows={channels} />
 
       {attachEfficiency.length > 0 && <AttachmentEfficiencyPanel rows={attachEfficiency} />}
 
+      <ModuleDivider
+        index={4}
+        title="Customer economics"
+        subtitle="Cohort retention, LTV, CAC, new-vs-returning mix"
+      />
+
       {cohorts && cohorts.totalCustomers > 0 && (
         <CohortPanel cohorts={cohorts} marketingMonthlyGrosze={scenario.fixedCosts.marketing ?? 0} />
       )}
+
+      <ModuleDivider
+        index={5}
+        title="Operational throughput"
+        subtitle="Daypart mix, hourly volume, oven physics, prep flow, queue conversion, shift coverage"
+      />
 
       {dayparts && dayparts.some((d) => d.ordersCount > 0) && (
         <DaypartPanel dayparts={dayparts} />
@@ -3628,9 +3658,21 @@ export function AdminSimulation() {
 
       <ShiftPlanPanel rows={shiftPlan} />
 
+      <ModuleDivider
+        index={6}
+        title="Menu strategy"
+        subtitle="Kasavana-Smith quadrants, margin traps, prep-heavy false-high-revenue items"
+      />
+
       {menuEng && menuEng.length > 0 && <MenuEngineeringPanel rows={menuEng} />}
 
       {menuEng && menuEng.length > 0 && <MarginTrapsCallout rows={menuEng} />}
+
+      <ModuleDivider
+        index={7}
+        title="Sensitivity & scenario analysis"
+        subtitle="Tornado, conservative / realistic / optimistic, heatmaps, ±20% volume flex"
+      />
 
       <TornadoPanel bars={tornado} />
 
@@ -3732,6 +3774,12 @@ export function AdminSimulation() {
           </CardBody>
         </Card>
       </div>
+
+      <ModuleDivider
+        index={8}
+        title="Forward-looking projection"
+        subtitle="12-month operational forecast, financial assumptions, break-even at the current operating point"
+      />
 
       <Card>
         <CardHeader
@@ -4353,6 +4401,12 @@ export function AdminSimulation() {
         </CardBody>
       </Card>
 
+      <ModuleDivider
+        index={9}
+        title="AI commentary"
+        subtitle="Claude-generated 4-6 specific enhancements grounded in the current scenario numbers"
+      />
+
       <AiEnhancementsCard scenario={effectiveScenario!} computed={computed} />
 
       <ConfirmDialog
@@ -4540,6 +4594,71 @@ function LeverSwitch({
       />
       {enabled ? "On" : "Off"}
     </button>
+  );
+}
+
+/** Section divider that splits the long Simulation page into named
+ *  modules — gives the page institutional rhythm and lets the operator
+ *  jump mentally between modules ("scale story", "operational health",
+ *  "menu strategy"). Visual: small leading number badge + uppercase
+ *  module label + short subtitle, separated by a hairline rule. */
+function ModuleDivider({
+  index,
+  title,
+  subtitle,
+}: {
+  index: number;
+  title: string;
+  subtitle?: string;
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        marginTop: 28,
+        marginBottom: 4,
+        padding: "12px 0 8px",
+        borderTop: "1px solid rgba(0,0,0,0.10)",
+      }}
+    >
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: 28,
+          height: 28,
+          borderRadius: 999,
+          background: "rgba(37,99,235,0.10)",
+          color: "rgb(37,99,235)",
+          fontSize: 12,
+          fontWeight: 700,
+          letterSpacing: 0.3,
+        }}
+      >
+        {String(index).padStart(2, "0")}
+      </span>
+      <div>
+        <div
+          style={{
+            fontSize: 13,
+            fontWeight: 700,
+            letterSpacing: 0.4,
+            textTransform: "uppercase",
+            color: "rgba(0,0,0,0.78)",
+          }}
+        >
+          {title}
+        </div>
+        {subtitle && (
+          <div className="v2-muted text-xs" style={{ marginTop: 2 }}>
+            {subtitle}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
