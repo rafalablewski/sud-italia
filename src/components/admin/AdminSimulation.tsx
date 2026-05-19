@@ -194,6 +194,19 @@ const MONTH_LABELS = [
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
+interface ChannelEconomicsRow {
+  key: "cash" | "onSiteCard" | "glovo" | "wolt";
+  label: string;
+  sharePct: number;
+  feePct: number;
+  /** CM1 = avgTicket × (1 − cogs − fee − waste − refund − loyalty), grosze. */
+  cm1PerOrderGrosze: number;
+  /** CM1 as % of avgTicket. */
+  cm1PctOfTicket: number;
+  /** Monthly contribution from this channel, grosze. */
+  monthlyContributionGrosze: number;
+}
+
 interface Computed {
   monthlyRevenue: number;
   monthlyCogs: number;
@@ -519,6 +532,48 @@ function projectMonths(
     });
   }
   return rows;
+}
+
+/** Per-channel CM1 — contribution margin per order broken down by cash /
+ *  on-site card / Glovo / Wolt. Each channel pays a different fee, so the
+ *  unblended view is what tells the operator whether delivery is actually
+ *  profitable. Takes the RAW scenario (pre-applyAssumptions) so the
+ *  on-site card rate isn't the blended one. */
+function computeChannelEconomics(s: SimulationScenario): ChannelEconomicsRow[] {
+  const cashShare = s.cashSharePct ?? 0;
+  const glovoShare = s.glovoSharePct ?? 0;
+  const woltShare = s.woltSharePct ?? 0;
+  const onSiteShare = Math.max(0, 1 - cashShare - glovoShare - woltShare);
+  const onSiteRate = s.paymentProcessorPct ?? 0;
+  const glovoFee = s.glovoFeePct ?? 0;
+  const woltFee = s.woltFeePct ?? 0;
+  const variableExFee =
+    s.cogsPct + (s.wastePct ?? 0) + (s.refundPct ?? 0) + (s.loyaltyBurnPct ?? 0);
+  const ordersPerMonth = s.ordersPerDay * s.daysOpenPerMonth;
+  const buildRow = (
+    key: ChannelEconomicsRow["key"],
+    label: string,
+    share: number,
+    feePct: number,
+  ): ChannelEconomicsRow => {
+    const cm1Pct = Math.max(0, 1 - variableExFee - feePct);
+    const cm1PerOrder = s.avgTicketGrosze * cm1Pct;
+    return {
+      key,
+      label,
+      sharePct: share,
+      feePct,
+      cm1PerOrderGrosze: cm1PerOrder,
+      cm1PctOfTicket: cm1Pct,
+      monthlyContributionGrosze: cm1PerOrder * share * ordersPerMonth,
+    };
+  };
+  return [
+    buildRow("cash", "Cash", cashShare, 0),
+    buildRow("onSiteCard", "On-site card", onSiteShare, onSiteRate),
+    buildRow("glovo", "Glovo", glovoShare, glovoFee),
+    buildRow("wolt", "Wolt", woltShare, woltFee),
+  ];
 }
 
 /** Returns metrics for an investor pitch / IC: NPV at three discount rates,
@@ -2246,6 +2301,9 @@ export function AdminSimulation() {
     scenario.setupCostGrosze ?? 0,
   );
   const tornado = computeTornado(effectiveScenario!);
+  // Channel economics uses the RAW scenario so the on-site card rate is the
+  // operator's input, not the blended one applyAssumptions produced.
+  const channels = computeChannelEconomics(scenario);
   const archetypes = deriveArchetypes(effectiveScenario!);
   const archetypeRows = [
     { key: "conservative", label: "Conservative", scenario: archetypes.conservative, hint: "−15% orders · +2pp COGS" },
@@ -3030,6 +3088,8 @@ export function AdminSimulation() {
       </section>
 
       {sssg && (sssg.currentOrders > 0 || sssg.priorOrders > 0) && <SssgStrip sssg={sssg} />}
+
+      <ChannelEconomicsPanel rows={channels} />
 
       {cohorts && cohorts.totalCustomers > 0 && (
         <CohortPanel cohorts={cohorts} marketingMonthlyGrosze={scenario.fixedCosts.marketing ?? 0} />
@@ -4130,6 +4190,81 @@ function DaypartPanel({ dayparts }: { dayparts: SimulationDaypartLine[] }) {
             ))}
           </tbody>
         </table>
+      </CardBody>
+    </Card>
+  );
+}
+
+/** Per-channel CM1 — the "is delivery actually profitable?" answer. Shows
+ *  every channel's fee, contribution margin per order, and monthly
+ *  contribution side-by-side. Glovo / Wolt rows go red the moment the
+ *  commission eats more than the food cost — the moment marketplace
+ *  orders become value-destructive. */
+function ChannelEconomicsPanel({ rows }: { rows: ChannelEconomicsRow[] }) {
+  const active = rows.filter((r) => r.sharePct > 0);
+  if (active.length === 0) return null;
+  return (
+    <Card>
+      <CardHeader
+        title="Per-channel CM1"
+        description="Contribution margin per order by channel. Cash, on-site card, Glovo and Wolt pay wildly different fees — the blended P&L hides which channels actually carry the business."
+        actions={
+          <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+            <Calculator className="h-4 w-4 v2-muted" />
+          </span>
+        }
+      />
+      <CardBody>
+        <table style={{ width: "100%", fontSize: 13 }}>
+          <thead>
+            <tr style={{ textAlign: "left", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>
+              <th style={{ padding: "8px 4px" }}>Channel</th>
+              <th style={{ padding: "8px 4px", textAlign: "right" }}>Share</th>
+              <th style={{ padding: "8px 4px", textAlign: "right" }}>Fee</th>
+              <th style={{ padding: "8px 4px", textAlign: "right" }}>CM1 / order</th>
+              <th style={{ padding: "8px 4px", textAlign: "right" }}>CM1 %</th>
+              <th style={{ padding: "8px 4px", textAlign: "right" }}>Monthly</th>
+            </tr>
+          </thead>
+          <tbody>
+            {active.map((r) => {
+              const dangerCm = r.cm1PctOfTicket < 0.20;
+              const warnCm = r.cm1PctOfTicket < 0.40;
+              return (
+                <tr key={r.key} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
+                  <td style={{ padding: "8px 4px", fontWeight: 500 }}>{r.label}</td>
+                  <td className="tabular" style={{ padding: "8px 4px", textAlign: "right" }}>
+                    {(r.sharePct * 100).toFixed(0)}%
+                  </td>
+                  <td className="tabular" style={{ padding: "8px 4px", textAlign: "right" }}>
+                    {(r.feePct * 100).toFixed(1)}%
+                  </td>
+                  <td className="tabular" style={{ padding: "8px 4px", textAlign: "right" }}>
+                    {(r.cm1PerOrderGrosze / 100).toFixed(2)} zł
+                  </td>
+                  <td
+                    className="tabular"
+                    style={{
+                      padding: "8px 4px",
+                      textAlign: "right",
+                      color: dangerCm ? "rgb(220,38,38)" : warnCm ? "rgb(217,119,6)" : "rgb(22,163,74)",
+                      fontWeight: 500,
+                    }}
+                  >
+                    {(r.cm1PctOfTicket * 100).toFixed(1)}%
+                  </td>
+                  <td className="tabular" style={{ padding: "8px 4px", textAlign: "right" }}>
+                    {Math.round(r.monthlyContributionGrosze / 100).toLocaleString("pl-PL")} zł
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        <div className="v2-muted text-xs mt-2">
+          CM1 = ticket × (1 − food cost − fee − waste − refund − loyalty).
+          Red &lt; 20% (value-destructive) · amber &lt; 40% · green ≥ 40%.
+        </div>
       </CardBody>
     </Card>
   );
