@@ -2,7 +2,7 @@ import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot } from "@/data/types";
+import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel } from "@/data/types";
 import { getActiveLocations, locations as allLocations } from "@/data/locations";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -8027,6 +8027,24 @@ export function defaultSimulationScenario(): SimulationScenario {
     // skews to slow-prep items (pasta = ~1.4-1.6×). Derates the
     // kitchen capacity ceiling proportionally.
     prepComplexityMultiplier: 1.0,
+    // Fleet model defaults — single-unit mode until operator activates.
+    // Numbers reflect institutional QSR-rollup norms when the operator
+    // bumps unitCount: 6% royalty + 2% marketing fund, 10% supply
+    // discount at 5 units, 4% commissary saving at 4 units, 15% DMA
+    // cannibalisation, 5% build-out learning per unit to a 55% floor.
+    fleet: {
+      unitCount: 1,
+      hqOverheadMonthlyGrosze: 0,
+      supplyDiscountAtUnits: 5,
+      supplyDiscountPct: 0.10,
+      commissaryEnabledAtUnits: 4,
+      commissarySavingsPct: 0.04,
+      royaltyPct: 0.06,
+      marketingFundPct: 0.02,
+      dmaOverlapPct: 0.15,
+      buildoutLearningPct: 0.05,
+      buildoutFloorPct: 0.55,
+    },
     // Honest all-in: Stefano Ferrara oven + truck buildout + refrigeration +
     // generator + livery + SANEPID compliance + 3 mo working capital lands
     // 350-400k PLN. The previous 250k floor was a buildout-only number that
@@ -8150,6 +8168,7 @@ export async function getSimulationScenario(): Promise<SimulationScenario> {
     packagingPerOrderGrosze: typeof saved.packagingPerOrderGrosze === "number" && saved.packagingPerOrderGrosze >= 0 ? saved.packagingPerOrderGrosze : defaults.packagingPerOrderGrosze,
     marketingAsCac: typeof saved.marketingAsCac === "boolean" ? saved.marketingAsCac : defaults.marketingAsCac,
     prepComplexityMultiplier: typeof saved.prepComplexityMultiplier === "number" && saved.prepComplexityMultiplier > 0 ? Math.min(3, saved.prepComplexityMultiplier) : defaults.prepComplexityMultiplier,
+    fleet: hydrateFleet(saved.fleet, defaults.fleet),
     updatedAt: saved.updatedAt ?? defaults.updatedAt,
   };
 }
@@ -8266,6 +8285,39 @@ function hydrateWeather(
     ),
     eventDaysPerMonth: clampDays(saved.eventDaysPerMonth, fb.eventDaysPerMonth),
     eventDayMultiplier: clampMult(saved.eventDayMultiplier, fb.eventDayMultiplier),
+  };
+}
+
+function hydrateFleet(
+  saved: SimulationFleetModel | undefined,
+  fallback: SimulationFleetModel | undefined,
+): SimulationFleetModel | undefined {
+  const fb = fallback ?? {
+    unitCount: 1,
+    hqOverheadMonthlyGrosze: 0,
+    supplyDiscountAtUnits: 5,
+    supplyDiscountPct: 0.10,
+    commissaryEnabledAtUnits: 4,
+    commissarySavingsPct: 0.04,
+    royaltyPct: 0.06,
+    marketingFundPct: 0.02,
+    dmaOverlapPct: 0.15,
+    buildoutLearningPct: 0.05,
+    buildoutFloorPct: 0.55,
+  };
+  if (!saved) return fb;
+  return {
+    unitCount: typeof saved.unitCount === "number" && saved.unitCount > 0 ? Math.round(saved.unitCount) : fb.unitCount,
+    hqOverheadMonthlyGrosze: clampNonNeg(saved.hqOverheadMonthlyGrosze, fb.hqOverheadMonthlyGrosze),
+    supplyDiscountAtUnits: typeof saved.supplyDiscountAtUnits === "number" && saved.supplyDiscountAtUnits > 0 ? Math.round(saved.supplyDiscountAtUnits) : fb.supplyDiscountAtUnits,
+    supplyDiscountPct: clamp01(saved.supplyDiscountPct, fb.supplyDiscountPct),
+    commissaryEnabledAtUnits: typeof saved.commissaryEnabledAtUnits === "number" && saved.commissaryEnabledAtUnits > 0 ? Math.round(saved.commissaryEnabledAtUnits) : fb.commissaryEnabledAtUnits,
+    commissarySavingsPct: clamp01(saved.commissarySavingsPct, fb.commissarySavingsPct),
+    royaltyPct: clamp01(saved.royaltyPct, fb.royaltyPct),
+    marketingFundPct: clamp01(saved.marketingFundPct, fb.marketingFundPct),
+    dmaOverlapPct: clamp01(saved.dmaOverlapPct, fb.dmaOverlapPct),
+    buildoutLearningPct: clamp01(saved.buildoutLearningPct, fb.buildoutLearningPct),
+    buildoutFloorPct: clamp01(saved.buildoutFloorPct, fb.buildoutFloorPct),
   };
 }
 
@@ -8399,6 +8451,7 @@ export async function saveSimulationScenario(
         typeof scenario.prepComplexityMultiplier === "number" && scenario.prepComplexityMultiplier > 0
           ? Math.max(0.5, Math.min(3, scenario.prepComplexityMultiplier))
           : (defaults.prepComplexityMultiplier ?? 1),
+      fleet: hydrateFleet(scenario.fleet, defaults.fleet),
       updatedAt: new Date().toISOString(),
     };
     await writeJSON(SIMULATION_KEY, clean);

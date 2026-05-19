@@ -124,6 +124,7 @@ export const PUT = withAdmin(
       packagingPerOrderGrosze: typeof b.packagingPerOrderGrosze === "number" ? b.packagingPerOrderGrosze : undefined,
       marketingAsCac: typeof b.marketingAsCac === "boolean" ? b.marketingAsCac : undefined,
       prepComplexityMultiplier: typeof b.prepComplexityMultiplier === "number" ? b.prepComplexityMultiplier : undefined,
+      fleet: b.fleet,
       updatedAt: new Date().toISOString(),
     };
     const saved = await saveSimulationScenario(scenario);

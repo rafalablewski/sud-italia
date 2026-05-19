@@ -1027,7 +1027,50 @@ export interface SimulationScenario {
    *  of pizza, separate station), antipasti plating, etc. Pasta-heavy
    *  menus typically 1.3-1.6. Audit §6: false-high-revenue items. */
   prepComplexityMultiplier?: number;
+  /** Multi-unit fleet model (audit §8). When unitCount > 1, the fleet
+   *  panel computes per-unit averages, HQ overhead absorption, supply
+   *  discount, commissary savings, franchise royalty + marketing fund,
+   *  DMA cannibalisation, and build-out cost regression. */
+  fleet?: SimulationFleetModel;
   updatedAt: string;
+}
+
+export interface SimulationFleetModel {
+  /** How many trucks the operator is modeling at steady state. 1 = the
+   *  default single-unit simulator, ≥2 activates the fleet panel. */
+  unitCount: number;
+  /** Monthly HQ overhead in grosze (regional manager, accountant on
+   *  retainer, ops director). At unitCount = 1 the entire amount lands
+   *  on the single truck; absorption curve makes it ratio drops as N
+   *  grows. Default 0 — operator opts in when modeling >1 unit. */
+  hqOverheadMonthlyGrosze: number;
+  /** Supply discount on COGS once the fleet hits the trigger unit count.
+   *  Real-world: at 4-5 units mozzarella distributors stop quoting list
+   *  price and start quoting -8 to -12%. Applied as a flat COGS multi-
+   *  plier reduction once unitCount >= supplyDiscountAtUnits. */
+  supplyDiscountAtUnits: number;
+  supplyDiscountPct: number;
+  /** Commissary (centralised dough + sauce production) becomes cost-
+   *  positive at ~4 units. When enabled, reduces COGS by ~3-6pp net of
+   *  the central facility's run-rate cost (operator can edit). */
+  commissaryEnabledAtUnits: number;
+  commissarySavingsPct: number;
+  /** Franchise economics: % of revenue paid as royalty (5-6% institutional
+   *  norm) and marketing fund (2-3%). Applied per-unit. Set to 0 for
+   *  fully owned fleet. */
+  royaltyPct: number;
+  marketingFundPct: number;
+  /** DMA cannibalisation: each additional unit in the same trade area
+   *  takes this share from the prior truck's revenue. 0 means new units
+   *  open new markets cleanly; 0.15 = realistic urban Kraków cluster. */
+  dmaOverlapPct: number;
+  /** Build-out learning curve. Each new unit costs `(1 - learningPct)^
+   *  (n-1)` × the original setup, capped at the floor. 0.05 default
+   *  (Y10 truck ~60% of Y1 cost). */
+  buildoutLearningPct: number;
+  /** Floor for the build-out learning curve as a fraction of original
+   *  setup. 0.55 default — past 50% you're not actually learning faster. */
+  buildoutFloorPct: number;
 }
 
 export interface SimulationKitchenCapacity {

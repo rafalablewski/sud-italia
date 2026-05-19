@@ -41,6 +41,7 @@ import type {
   SimulationAttachLever,
   SimulationCohortSnapshot,
   SimulationDaypartLine,
+  SimulationFleetModel,
   SimulationHourlyThroughputLine,
   SimulationIngredientLever,
   SimulationLaborLine,
@@ -193,6 +194,20 @@ const MONTH_LABELS = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
+
+const DEFAULT_FLEET: SimulationFleetModel = {
+  unitCount: 1,
+  hqOverheadMonthlyGrosze: 0,
+  supplyDiscountAtUnits: 5,
+  supplyDiscountPct: 0.10,
+  commissaryEnabledAtUnits: 4,
+  commissarySavingsPct: 0.04,
+  royaltyPct: 0.06,
+  marketingFundPct: 0.02,
+  dmaOverlapPct: 0.15,
+  buildoutLearningPct: 0.05,
+  buildoutFloorPct: 0.55,
+};
 
 interface ChannelEconomicsRow {
   key: "cash" | "onSiteCard" | "glovo" | "wolt";
@@ -592,6 +607,137 @@ function projectMonths(
     });
   }
   return rows;
+}
+
+interface FleetEconomicsRow {
+  unitIndex: number;
+  /** Revenue this unit captures after DMA cannibalisation from every
+   *  prior unit in the cluster (the n-th truck inherits cumulative
+   *  overlap drag). */
+  revenue: number;
+  cogs: number;
+  labor: number;
+  fixedExHq: number;
+  royalty: number;
+  marketingFund: number;
+  ebitda: number;
+  /** Setup cost on the build-out learning curve. */
+  setupCost: number;
+}
+
+interface FleetEconomics {
+  unitCount: number;
+  units: FleetEconomicsRow[];
+  totalRevenue: number;
+  totalEbitda: number;
+  totalSetupCost: number;
+  /** Combined HQ overhead applied once to the whole fleet. */
+  hqOverhead: number;
+  /** Aggregated supply / commissary savings vs single-unit baseline. */
+  supplyDiscountActive: boolean;
+  commissaryActive: boolean;
+  /** Per-unit averages — what each truck contributes after every fleet
+   *  adjustment. */
+  avgRevenuePerUnit: number;
+  avgEbitdaPerUnit: number;
+  /** HQ overhead as % of fleet revenue (drops with unit count). */
+  hqOverheadAbsorption: number;
+}
+
+/** Multi-unit fleet model — applies HQ overhead absorption, supply
+ *  discount, commissary savings, royalty + marketing fund, DMA
+ *  cannibalisation, and the build-out learning curve over N units.
+ *  Takes the RAW single-unit scenario as the baseline. */
+function computeFleetEconomics(
+  s: SimulationScenario,
+  baseSetupCost: number,
+): FleetEconomics | null {
+  const f = s.fleet;
+  if (!f || f.unitCount <= 1) return null;
+  const units: FleetEconomicsRow[] = [];
+  // Effective COGS rate with supply discount and commissary kicking in.
+  let effectiveCogsPct = s.cogsPct;
+  const supplyDiscountActive = f.unitCount >= f.supplyDiscountAtUnits && f.supplyDiscountPct > 0;
+  const commissaryActive = f.unitCount >= f.commissaryEnabledAtUnits && f.commissarySavingsPct > 0;
+  if (supplyDiscountActive) effectiveCogsPct *= 1 - f.supplyDiscountPct;
+  if (commissaryActive) effectiveCogsPct *= 1 - f.commissarySavingsPct;
+  effectiveCogsPct = Math.max(0, effectiveCogsPct);
+
+  // Single-unit P&L (pre-fleet) — used as baseline for per-unit revenue/
+  // labor/fixed before DMA + fleet-specific adjustments.
+  const baseRevenue = s.ordersPerDay * s.avgTicketGrosze * s.daysOpenPerMonth;
+  const baseLabor = s.labor.reduce(
+    (sum, l) => sum + l.headcount * l.hoursPerWeek * WEEKS_PER_MONTH * l.hourlyRateGrosze,
+    0,
+  );
+  // Fixed excluding HQ (which lives at fleet level) and excluding
+  // marketing if it's been reclassified as CAC.
+  const useMarketingAsCac = s.marketingAsCac !== false;
+  const baseFixedExHq = Object.entries(s.fixedCosts).reduce(
+    (sum: number, [k, v]) => {
+      if (useMarketingAsCac && k === "marketing") return sum;
+      return sum + (v ?? 0);
+    },
+    0,
+  );
+
+  for (let i = 0; i < f.unitCount; i++) {
+    // DMA cannibalisation — each new unit loses `dmaOverlapPct` per
+    // prior unit. Modeled multiplicatively so a 15% overlap × 4 prior
+    // units = (1 − 0.15)^4 ≈ 52% retained. Reality is steeper at low
+    // numbers and tapers, but a 0.85^n approximation captures the
+    // direction well enough for an IC sketch.
+    const cannibalRetained = (1 - f.dmaOverlapPct) ** i;
+    const unitRevenue = baseRevenue * cannibalRetained;
+    const cogs = unitRevenue * effectiveCogsPct;
+    const labor = baseLabor;
+    const royalty = unitRevenue * f.royaltyPct;
+    const marketingFund = unitRevenue * f.marketingFundPct;
+    const variableLeakage =
+      unitRevenue *
+      ((s.paymentProcessorPct ?? 0) +
+        (s.wastePct ?? 0) +
+        (s.refundPct ?? 0) +
+        (s.loyaltyBurnPct ?? 0));
+    const packaging = (s.packagingPerOrderGrosze ?? 0) * s.ordersPerDay * s.daysOpenPerMonth * cannibalRetained;
+    const marketingCac = useMarketingAsCac ? (s.fixedCosts.marketing ?? 0) : 0;
+    const ebitda =
+      unitRevenue - cogs - labor - baseFixedExHq - royalty - marketingFund - variableLeakage - packaging - marketingCac;
+    // Build-out learning curve: each new unit's setup = base × (1 − learning)^(i)
+    // floored at buildoutFloorPct of original.
+    const learning = (1 - f.buildoutLearningPct) ** i;
+    const learnedSetup = Math.max(baseSetupCost * f.buildoutFloorPct, baseSetupCost * learning);
+    units.push({
+      unitIndex: i + 1,
+      revenue: unitRevenue,
+      cogs,
+      labor,
+      fixedExHq: baseFixedExHq,
+      royalty,
+      marketingFund,
+      ebitda,
+      setupCost: learnedSetup,
+    });
+  }
+
+  const totalRevenue = units.reduce((sum, u) => sum + u.revenue, 0);
+  const totalEbitdaPreHq = units.reduce((sum, u) => sum + u.ebitda, 0);
+  const totalSetupCost = units.reduce((sum, u) => sum + u.setupCost, 0);
+  const hqOverhead = f.hqOverheadMonthlyGrosze;
+  const totalEbitda = totalEbitdaPreHq - hqOverhead;
+  return {
+    unitCount: f.unitCount,
+    units,
+    totalRevenue,
+    totalEbitda,
+    totalSetupCost,
+    hqOverhead,
+    supplyDiscountActive,
+    commissaryActive,
+    avgRevenuePerUnit: f.unitCount > 0 ? totalRevenue / f.unitCount : 0,
+    avgEbitdaPerUnit: f.unitCount > 0 ? totalEbitda / f.unitCount : 0,
+    hqOverheadAbsorption: totalRevenue > 0 ? hqOverhead / totalRevenue : 0,
+  };
 }
 
 /** Per-channel CM1 — contribution margin per order broken down by cash /
@@ -2365,6 +2511,7 @@ export function AdminSimulation() {
   // operator's input, not the blended one applyAssumptions produced.
   const channels = computeChannelEconomics(scenario);
   const attachEfficiency = computeAttachmentEfficiency(effectiveScenario!);
+  const fleetEcon = computeFleetEconomics(scenario, scenario.setupCostGrosze ?? 0);
   const archetypes = deriveArchetypes(effectiveScenario!);
   const archetypeRows = [
     { key: "conservative", label: "Conservative", scenario: archetypes.conservative, hint: "−15% orders · +2pp COGS" },
@@ -3202,6 +3349,17 @@ export function AdminSimulation() {
       </section>
 
       {sssg && (sssg.currentOrders > 0 || sssg.priorOrders > 0) && <SssgStrip sssg={sssg} />}
+
+      <FleetPanel
+        scenario={scenario}
+        fleet={fleetEcon}
+        onUpdate={(mut) =>
+          update((s) => ({
+            ...s,
+            fleet: { ...(s.fleet ?? DEFAULT_FLEET), ...mut },
+          }))
+        }
+      />
 
       <UnitEconomicsPanel scenario={scenario} computed={computed} />
 
@@ -4793,6 +4951,302 @@ function ChannelEconomicsPanel({ rows }: { rows: ChannelEconomicsRow[] }) {
           CM1 = ticket × (1 − food cost − fee − waste − refund − loyalty).
           Red &lt; 20% (value-destructive) · amber &lt; 40% · green ≥ 40%.
         </div>
+      </CardBody>
+    </Card>
+  );
+}
+
+/** Multi-unit fleet model — the franchise / scale conversation. Lets the
+ *  operator dial in unit count + HQ overhead + royalty/marketing fund +
+ *  supply / commissary triggers + DMA cannibalisation and see the
+ *  aggregate fleet P&L. The model the audit said was missing entirely. */
+function FleetPanel({
+  scenario,
+  fleet,
+  onUpdate,
+}: {
+  scenario: SimulationScenario;
+  fleet: FleetEconomics | null;
+  onUpdate: (mut: Partial<SimulationFleetModel>) => void;
+}) {
+  const f = scenario.fleet ?? DEFAULT_FLEET;
+  const inputClass = "v2-input tabular";
+  const inputStyle: React.CSSProperties = { width: "100%", padding: "6px 8px", fontSize: 13, textAlign: "right" };
+  const numericPct = (v: number, decimals = 1) => `${(v * 100).toFixed(decimals)}%`;
+  return (
+    <Card>
+      <CardHeader
+        title="Fleet model (multi-unit)"
+        description="Set unitCount > 1 to activate the scale story — HQ overhead absorption, supply discount, commissary, royalty + marketing fund, DMA cannibalisation, and the build-out learning curve. Computes per-unit averages and fleet totals so the franchise conversation has a defensible model behind it."
+        actions={
+          <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+            <Grid3X3 className="h-4 w-4 v2-muted" />
+            <span className="v2-muted text-xs">{f.unitCount} unit{f.unitCount === 1 ? "" : "s"}</span>
+          </span>
+        }
+      />
+      <CardBody>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+          <Input
+            label="Unit count"
+            type="number"
+            min="1"
+            max="200"
+            step="1"
+            value={String(f.unitCount)}
+            onChange={(e) =>
+              onUpdate({ unitCount: Math.max(1, Math.min(200, parseInt(e.target.value, 10) || 1)) })
+            }
+            description="≥ 2 activates fleet panel"
+          />
+          <Input
+            label="HQ overhead"
+            type="number"
+            min="0"
+            step="500"
+            value={(f.hqOverheadMonthlyGrosze / 100).toFixed(0)}
+            onChange={(e) =>
+              onUpdate({
+                hqOverheadMonthlyGrosze: Math.max(0, Math.round((parseFloat(e.target.value) || 0) * 100)),
+              })
+            }
+            trailingAdornment={<span className="v2-muted">zł/mo</span>}
+            description="Regional manager, ops, finance"
+          />
+          <Input
+            label="Royalty %"
+            type="number"
+            min="0"
+            max="20"
+            step="0.5"
+            value={(f.royaltyPct * 100).toFixed(1)}
+            onChange={(e) =>
+              onUpdate({ royaltyPct: Math.max(0, Math.min(0.2, (parseFloat(e.target.value) || 0) / 100)) })
+            }
+            trailingAdornment={<span className="v2-muted">%</span>}
+            description="Franchise norm 5-6%"
+          />
+          <Input
+            label="Marketing fund %"
+            type="number"
+            min="0"
+            max="10"
+            step="0.5"
+            value={(f.marketingFundPct * 100).toFixed(1)}
+            onChange={(e) =>
+              onUpdate({ marketingFundPct: Math.max(0, Math.min(0.1, (parseFloat(e.target.value) || 0) / 100)) })
+            }
+            trailingAdornment={<span className="v2-muted">%</span>}
+            description="Norm 2-3%"
+          />
+          <Input
+            label="Supply discount at"
+            type="number"
+            min="1"
+            max="200"
+            step="1"
+            value={String(f.supplyDiscountAtUnits)}
+            onChange={(e) =>
+              onUpdate({ supplyDiscountAtUnits: Math.max(1, parseInt(e.target.value, 10) || 1) })
+            }
+            description="Units before COGS discount kicks in"
+          />
+          <Input
+            label="Supply discount"
+            type="number"
+            min="0"
+            max="40"
+            step="1"
+            value={(f.supplyDiscountPct * 100).toFixed(0)}
+            onChange={(e) =>
+              onUpdate({ supplyDiscountPct: Math.max(0, Math.min(0.4, (parseFloat(e.target.value) || 0) / 100)) })
+            }
+            trailingAdornment={<span className="v2-muted">%</span>}
+            description="-8 to -12% typical"
+          />
+          <Input
+            label="Commissary at"
+            type="number"
+            min="1"
+            max="200"
+            step="1"
+            value={String(f.commissaryEnabledAtUnits)}
+            onChange={(e) =>
+              onUpdate({ commissaryEnabledAtUnits: Math.max(1, parseInt(e.target.value, 10) || 1) })
+            }
+            description="Units before central dough/sauce"
+          />
+          <Input
+            label="Commissary saving"
+            type="number"
+            min="0"
+            max="20"
+            step="0.5"
+            value={(f.commissarySavingsPct * 100).toFixed(1)}
+            onChange={(e) =>
+              onUpdate({ commissarySavingsPct: Math.max(0, Math.min(0.2, (parseFloat(e.target.value) || 0) / 100)) })
+            }
+            trailingAdornment={<span className="v2-muted">%</span>}
+            description="Net of commissary run-rate cost"
+          />
+          <Input
+            label="DMA cannibalisation"
+            type="number"
+            min="0"
+            max="50"
+            step="1"
+            value={(f.dmaOverlapPct * 100).toFixed(0)}
+            onChange={(e) =>
+              onUpdate({ dmaOverlapPct: Math.max(0, Math.min(0.5, (parseFloat(e.target.value) || 0) / 100)) })
+            }
+            trailingAdornment={<span className="v2-muted">%</span>}
+            description="Revenue loss per overlapping prior unit"
+          />
+          <Input
+            label="Build-out learning"
+            type="number"
+            min="0"
+            max="20"
+            step="1"
+            value={(f.buildoutLearningPct * 100).toFixed(0)}
+            onChange={(e) =>
+              onUpdate({ buildoutLearningPct: Math.max(0, Math.min(0.2, (parseFloat(e.target.value) || 0) / 100)) })
+            }
+            trailingAdornment={<span className="v2-muted">%</span>}
+            description="Setup cost decline per added unit"
+          />
+          <Input
+            label="Build-out floor"
+            type="number"
+            min="20"
+            max="100"
+            step="5"
+            value={(f.buildoutFloorPct * 100).toFixed(0)}
+            onChange={(e) =>
+              onUpdate({ buildoutFloorPct: Math.max(0.2, Math.min(1, (parseFloat(e.target.value) || 0) / 100)) })
+            }
+            trailingAdornment={<span className="v2-muted">%</span>}
+            description="Minimum cost as % of unit 1"
+          />
+        </div>
+        {fleet && fleet.unitCount > 1 && (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              <KpiCard
+                label="Fleet revenue / mo"
+                value={fleet.totalRevenue / 100}
+                format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
+                tone="info"
+                hint={`${fleet.unitCount} units · avg ${Math.round(fleet.avgRevenuePerUnit / 100).toLocaleString("pl-PL")} zł / unit`}
+              />
+              <KpiCard
+                label="Fleet EBITDA / mo"
+                value={fleet.totalEbitda / 100}
+                format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
+                tone={fleet.totalEbitda >= 0 ? "success" : "danger"}
+                hint={`After ${Math.round(fleet.hqOverhead / 100).toLocaleString("pl-PL")} zł HQ overhead`}
+              />
+              <KpiCard
+                label="EBITDA / unit"
+                value={fleet.avgEbitdaPerUnit / 100}
+                format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
+                tone={fleet.avgEbitdaPerUnit >= 0 ? "success" : "danger"}
+                hint="Average over the fleet"
+              />
+              <KpiCard
+                label="HQ overhead absorption"
+                value={fleet.hqOverheadAbsorption * 100}
+                format={(n) => `${n.toFixed(1)}%`}
+                tone={fleet.hqOverheadAbsorption < 0.05 ? "success" : fleet.hqOverheadAbsorption < 0.10 ? "info" : "warning"}
+                hint="HQ / fleet revenue"
+              />
+              <KpiCard
+                label="Fleet build-out"
+                value={fleet.totalSetupCost / 100}
+                format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
+                tone="neutral"
+                hint={`Last unit ${Math.round(fleet.units[fleet.units.length - 1].setupCost / 100).toLocaleString("pl-PL")} zł`}
+              />
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {fleet.supplyDiscountActive && (
+                <span className="v2-pill" style={{ background: "rgba(34,197,94,0.10)", color: "rgb(22,163,74)" }}>
+                  Supply discount −{numericPct(f.supplyDiscountPct, 0)} active
+                </span>
+              )}
+              {fleet.commissaryActive && (
+                <span className="v2-pill" style={{ background: "rgba(34,197,94,0.10)", color: "rgb(22,163,74)" }}>
+                  Commissary saving −{numericPct(f.commissarySavingsPct, 1)} active
+                </span>
+              )}
+              {f.royaltyPct > 0 && (
+                <span className="v2-pill" style={{ background: "rgba(59,130,246,0.10)", color: "rgb(37,99,235)" }}>
+                  Royalty {numericPct(f.royaltyPct, 1)}
+                </span>
+              )}
+              {f.marketingFundPct > 0 && (
+                <span className="v2-pill" style={{ background: "rgba(59,130,246,0.10)", color: "rgb(37,99,235)" }}>
+                  Marketing fund {numericPct(f.marketingFundPct, 1)}
+                </span>
+              )}
+              {f.dmaOverlapPct > 0 && (
+                <span className="v2-pill" style={{ background: "rgba(239,68,68,0.10)", color: "rgb(220,38,38)" }}>
+                  DMA drag {numericPct(f.dmaOverlapPct, 0)} / unit
+                </span>
+              )}
+            </div>
+            <table className="mt-4" style={{ width: "100%", fontSize: 13 }}>
+              <thead>
+                <tr style={{ textAlign: "left", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>
+                  <th style={{ padding: "6px 4px" }}>Unit</th>
+                  <th style={{ padding: "6px 4px", textAlign: "right" }}>Revenue</th>
+                  <th style={{ padding: "6px 4px", textAlign: "right" }}>COGS</th>
+                  <th style={{ padding: "6px 4px", textAlign: "right" }}>Labor</th>
+                  <th style={{ padding: "6px 4px", textAlign: "right" }}>Royalty</th>
+                  <th style={{ padding: "6px 4px", textAlign: "right" }}>Mkt fund</th>
+                  <th style={{ padding: "6px 4px", textAlign: "right" }}>EBITDA</th>
+                  <th style={{ padding: "6px 4px", textAlign: "right" }}>Setup</th>
+                </tr>
+              </thead>
+              <tbody>
+                {fleet.units.map((u) => (
+                  <tr key={u.unitIndex} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
+                    <td style={{ padding: "6px 4px", fontWeight: 500 }}>#{u.unitIndex}</td>
+                    <td className="tabular" style={{ padding: "6px 4px", textAlign: "right" }}>
+                      {Math.round(u.revenue / 100).toLocaleString("pl-PL")} zł
+                    </td>
+                    <td className="tabular" style={{ padding: "6px 4px", textAlign: "right" }}>
+                      {Math.round(u.cogs / 100).toLocaleString("pl-PL")} zł
+                    </td>
+                    <td className="tabular" style={{ padding: "6px 4px", textAlign: "right" }}>
+                      {Math.round(u.labor / 100).toLocaleString("pl-PL")} zł
+                    </td>
+                    <td className="tabular" style={{ padding: "6px 4px", textAlign: "right" }}>
+                      {Math.round(u.royalty / 100).toLocaleString("pl-PL")} zł
+                    </td>
+                    <td className="tabular" style={{ padding: "6px 4px", textAlign: "right" }}>
+                      {Math.round(u.marketingFund / 100).toLocaleString("pl-PL")} zł
+                    </td>
+                    <td
+                      className="tabular"
+                      style={{ padding: "6px 4px", textAlign: "right", color: u.ebitda >= 0 ? "rgb(22,163,74)" : "rgb(220,38,38)", fontWeight: 500 }}
+                    >
+                      {Math.round(u.ebitda / 100).toLocaleString("pl-PL")} zł
+                    </td>
+                    <td className="tabular" style={{ padding: "6px 4px", textAlign: "right" }}>
+                      {Math.round(u.setupCost / 100).toLocaleString("pl-PL")} zł
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        )}
+        {(!fleet || fleet.unitCount <= 1) && (
+          <div className="v2-muted text-sm mt-2">
+            Set Unit count ≥ 2 to model the fleet. Defaults reflect Polish QSR rollup norms (6% royalty, 2% marketing fund, −10% supply at 5 units, commissary at 4 units, 15% DMA cannibalisation, 5% build-out learning per unit to a 55% floor).
+          </div>
+        )}
       </CardBody>
     </Card>
   );
