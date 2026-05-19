@@ -1727,8 +1727,20 @@ export function AdminSimulation() {
     ...(computed.paymentFees > 0
       ? [{ name: "Payment fees", value: computed.paymentFees / 100 }]
       : []),
+    ...(computed.wasteCost > 0
+      ? [{ name: "Waste & spoilage", value: computed.wasteCost / 100 }]
+      : []),
+    ...(computed.refundLoss > 0
+      ? [{ name: "Refunds & comps", value: computed.refundLoss / 100 }]
+      : []),
+    ...(computed.loyaltyCost > 0
+      ? [{ name: "Loyalty burn", value: computed.loyaltyCost / 100 }]
+      : []),
+    ...(computed.citAmount > 0
+      ? [{ name: "Corporate income tax", value: computed.citAmount / 100 }]
+      : []),
     ...(computed.netProfit > 0
-      ? [{ name: "Net profit", value: computed.netProfit / 100 }]
+      ? [{ name: "Net profit (after tax)", value: computed.netProfit / 100 }]
       : []),
   ];
 
@@ -2095,8 +2107,34 @@ export function AdminSimulation() {
                   small
                 />
               ))}
+              {computed.paymentFees > 0 && (
+                <PnlRow label="Payment fees" amount={-computed.paymentFees} tone="warning" indent />
+              )}
+              {computed.wasteCost > 0 && (
+                <PnlRow label="Waste & spoilage" amount={-computed.wasteCost} tone="warning" indent />
+              )}
+              {computed.refundLoss > 0 && (
+                <PnlRow label="Refunds & comps" amount={-computed.refundLoss} tone="warning" indent />
+              )}
+              {computed.loyaltyCost > 0 && (
+                <PnlRow label="Loyalty burn" amount={-computed.loyaltyCost} tone="warning" indent />
+              )}
               <PnlRow
-                label="Net profit / (loss)"
+                label="Pre-tax profit / (loss)"
+                amount={computed.preTaxProfit}
+                tone={computed.preTaxProfit >= 0 ? "info" : "danger"}
+                bold
+              />
+              {computed.citAmount > 0 && (
+                <PnlRow
+                  label={`Corporate income tax (${Math.round((scenario.citPct ?? 0) * 100)}%)`}
+                  amount={-computed.citAmount}
+                  tone="warning"
+                  indent
+                />
+              )}
+              <PnlRow
+                label="Net profit / (loss) after tax"
                 amount={computed.netProfit}
                 tone={profitTone}
                 bold
@@ -2397,6 +2435,70 @@ export function AdminSimulation() {
               description="Truck buildout + permits + working capital. Drives payback months."
             />
             <Input
+              label="Waste & spoilage"
+              type="number"
+              step="0.1"
+              min="0"
+              max="10"
+              value={((scenario.wastePct ?? 0) * 100).toFixed(1)}
+              onChange={(e) =>
+                update((s) => ({
+                  ...s,
+                  wastePct: Math.max(0, Math.min(0.1, (parseFloat(e.target.value) || 0) / 100)),
+                }))
+              }
+              trailingAdornment={<span className="v2-muted">%</span>}
+              description="Spoilage + over-portioning as % of revenue. QSR norm 1-3%."
+            />
+            <Input
+              label="Refunds / comps / theft"
+              type="number"
+              step="0.1"
+              min="0"
+              max="10"
+              value={((scenario.refundPct ?? 0) * 100).toFixed(1)}
+              onChange={(e) =>
+                update((s) => ({
+                  ...s,
+                  refundPct: Math.max(0, Math.min(0.1, (parseFloat(e.target.value) || 0) / 100)),
+                }))
+              }
+              trailingAdornment={<span className="v2-muted">%</span>}
+              description="Voids, refunds, staff meals. QSR norm 1-2%."
+            />
+            <Input
+              label="Loyalty point burn"
+              type="number"
+              step="0.1"
+              min="0"
+              max="10"
+              value={((scenario.loyaltyBurnPct ?? 0) * 100).toFixed(1)}
+              onChange={(e) =>
+                update((s) => ({
+                  ...s,
+                  loyaltyBurnPct: Math.max(0, Math.min(0.1, (parseFloat(e.target.value) || 0) / 100)),
+                }))
+              }
+              trailingAdornment={<span className="v2-muted">%</span>}
+              description="Points redeemed × effective value. 1 pt/PLN × 50% redeem × 5% = ~1.2%."
+            />
+            <Input
+              label="Corporate income tax"
+              type="number"
+              step="1"
+              min="0"
+              max="30"
+              value={((scenario.citPct ?? 0) * 100).toFixed(0)}
+              onChange={(e) =>
+                update((s) => ({
+                  ...s,
+                  citPct: Math.max(0, Math.min(0.3, (parseFloat(e.target.value) || 0) / 100)),
+                }))
+              }
+              trailingAdornment={<span className="v2-muted">%</span>}
+              description="9% Polish small-CIT (≤2 M EUR turnover) or 19% standard."
+            />
+            <Input
               label="Winter volume multiplier"
               type="number"
               step="0.05"
@@ -2412,7 +2514,7 @@ export function AdminSimulation() {
                   },
                 }))
               }
-              description="Dec / Jan / Feb. Default 0.70 — slower months."
+              description="Dec / Jan / Feb. Default 0.50 — Polish outdoor truck winter is brutal."
             />
             <Input
               label="Summer volume multiplier"
