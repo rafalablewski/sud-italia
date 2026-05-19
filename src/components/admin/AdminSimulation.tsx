@@ -3363,6 +3363,21 @@ export function AdminSimulation() {
 
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
         <h2 className="v2-section-h" style={{ margin: 0 }}>Institutional financial KPIs</h2>
+        <InfoButton title="Institutional KPIs" label="About the institutional KPI strip">
+          <p>
+            The metrics an investment committee reads first.
+          </p>
+          <ul>
+            <li><strong>EBITDA</strong> = revenue − all variable costs − labor − fixed (excluding D&amp;A and interest). The headline cash-generation number that institutional underwriters quote.</li>
+            <li><strong>EBITDAR</strong> = EBITDA + rent. Rent-adjusted so chains with different real-estate strategies are comparable; the franchise-rollup standard.</li>
+            <li><strong>Cash-on-cash</strong> = annualised net profit ÷ setup cost. The only multi-unit return metric LPs care about. ≥ 30% = success, ≥ 15% = acceptable, &lt; 0 = capital destruction.</li>
+            <li><strong>Occupancy ratio</strong> = rent ÷ revenue. QSR target &lt; 8%, &gt; 12% = real-estate overspend.</li>
+            <li><strong>Net sales</strong> = revenue − refunds. The honest top-line after voids / comps.</li>
+            <li><strong>Contribution / labor hour</strong> = monthly contribution ÷ labor hours. The labor KPI that actually drives staffing decisions. QSR target ≥ 150 zł/hr.</li>
+            <li><strong>Promo-adjusted AOV</strong> = avg ticket × (1 − loyalty burn). The honest ticket after the loyalty engine&apos;s effective discount.</li>
+            <li><strong>True CM1 / order</strong> = revenue − every variable leakage. The audit&apos;s headline per-order number; full breakdown in the panel below.</li>
+          </ul>
+        </InfoButton>
         <span className="v2-muted text-xs">EBITDA / EBITDAR / cash-on-cash / occupancy — IC-grade headline metrics</span>
       </div>
       <section className="v2-kpi-grid">
@@ -3473,6 +3488,19 @@ export function AdminSimulation() {
 
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
         <h2 className="v2-section-h" style={{ margin: 0 }}>Investor returns</h2>
+        <InfoButton title="Investor returns" label="About the investor-return metrics">
+          <p>
+            The 24-month investment-grade view. Replaces the 1970s
+            <code> setupCost ÷ monthlyProfit</code> payback rule of thumb (which the
+            audit called "grade-school arithmetic") with a properly discounted,
+            ramped, risk-adjusted return profile.
+          </p>
+          <ul>
+            <li><strong>Cash break-even</strong> — first month where cumulative net profit clears the setup cost. With a 4-month opening ramp (50/75/100% volume) so Y1 isn&apos;t booked as steady-state. Institutional success: ≤ 24 mo.</li>
+            <li><strong>NPV @ 10/15/20%</strong> — net present value at three discount rates (cost of capital). Positive = beats the rate; negative = destroys value at that hurdle. 20% is the PE-style hurdle.</li>
+            <li><strong>IRR (24 mo)</strong> — annualised internal rate of return solved via Newton-Raphson on the monthly cash-flow series. ≥ 30% = strong, ≥ 15% = acceptable, &lt; 0 = capital destruction.</li>
+          </ul>
+        </InfoButton>
         <span className="v2-muted text-xs">
           24-month projection with a 4-month opening ramp · setup{" "}
           {formatPrice(scenario.setupCostGrosze ?? 0)}
@@ -4601,7 +4629,29 @@ function ShiftPlanPanel({ rows }: { rows: ShiftPlanRow[] }) {
       <CardHeader
         title="Shift plan — labor by daypart"
         description="The uniform labor mix in the inputs card is operationally a fiction — real shifts concentrate 2-4 people on lunch + dinner rush, then taper to 1-2 for prep + close. This view distributes total labor across dayparts using observed order share + standard concentration factors so the operator can read where coverage is thin."
-        actions={<ChefHat className="h-4 w-4 v2-muted" />}
+        actions={
+          <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+            <InfoButton title="Shift plan" label="About the shift plan view">
+              <p>
+                The labor-mix card sums headcount × hours × rate uniformly across the day.
+                Real schedules look nothing like that: lunch and dinner pull 2-4 people on
+                the line, prep + close run with 1-2.
+              </p>
+              <p>
+                This panel <strong>doesn&apos;t change</strong> the labor calculation — it
+                redistributes the same total across the dayparts using:
+              </p>
+              <ul>
+                <li><strong>Observed order share</strong> per daypart from real orders (or institutional QSR norms when no data yet).</li>
+                <li><strong>Concentration factors</strong>: lunch 1.4×, dinner 1.6×, late-night 0.7×, prep 0.4×, close 0.3× — so the total labor cost still sums correctly, but the relative weight follows real staffing intent.</li>
+              </ul>
+              <p>
+                <strong>Coverage ratio</strong> = labor / revenue per daypart. Green &lt; 20% (rush is profitable), amber 28-35% (tight margin), red &gt; 35% (over-staffed for the volume). Prep + close are revenue-zero so coverage is undefined — but the headcount column tells you you&apos;re still paying somebody to be there.
+              </p>
+            </InfoButton>
+            <ChefHat className="h-4 w-4 v2-muted" />
+          </span>
+        }
       />
       <CardBody>
         <table style={{ width: "100%", fontSize: 13 }}>
@@ -4691,7 +4741,33 @@ function PrepFlowPanel({
       <CardHeader
         title="Prep flow & queue model"
         description="Modelled ticket time = pizza base + Σ attach × per-attach seconds (pasta 240s, antipasti 90s, coffee 30s). Peak-hour queue forms when ordersPerDay × peakShare exceeds the realistic oven peak. Each minute of wait past 5 minutes bleeds 5% conversion (capped at 60%)."
-        actions={<Clock className="h-4 w-4 v2-muted" />}
+        actions={
+          <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+            <InfoButton title="Prep flow & queue" label="About prep flow and the queue model">
+              <p>
+                Two operator-eye questions in one panel.
+              </p>
+              <p>
+                <strong>Prep flow.</strong> Pizza takes 90s. Every attach lever adds its
+                own kitchen-seconds-per-attached-unit on top: pasta primo 240s (separate
+                station, water at boil, sauté pan per order), antipasti 90s (plate-up,
+                burrata mise-en-place), dessert 60s, coffee 30s, premium toppings 15s,
+                aperitivo 30s. Modelled time = pizza + Σ attach × seconds. Compare to
+                observed median ticket time from real orders.
+              </p>
+              <p>
+                <strong>Queue model.</strong> Peak-hour orders = orders/day × peak share.
+                When that exceeds the realistic oven /hour, a queue forms. Wait minutes ≈
+                <code>(excess × prepSec) / 60 / 2</code> (average back-of-queue customer).
+                Each minute past 5 min bleeds 5% conversion, capped at 60%. Monthly
+                orders lost × CM1 = contribution left on the table.
+              </p>
+              <p>Three remediations: open a unit (fleet panel), add a second oven /
+              pizzaiolo (kitchen capacity), or push orders off-peak (dayparting).</p>
+            </InfoButton>
+            <Clock className="h-4 w-4 v2-muted" />
+          </span>
+        }
       />
       <CardBody>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -4812,7 +4888,29 @@ function OvenCurvePanel({
       <CardHeader
         title="Oven curve & peak saturation"
         description="Neapolitan oven physics: pizzas per bake × cycle seconds gives theoretical capacity; realistic peak applies an efficiency factor accounting for pulls, sweeps, dough rebuilds, customer-facing time. The number on the right is what real orders are actually doing at peak."
-        actions={<Flame className="h-4 w-4 v2-muted" />}
+        actions={
+          <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+            <InfoButton title="Oven curve" label="About the oven curve">
+              <p>
+                <strong>Theoretical peak = pizzas-per-cycle × (3600 / cycle-seconds)</strong>.
+                A Stefano Ferrara at 8 pizzas × 90s = 320/hr in a vacuum.
+              </p>
+              <p>
+                <strong>Realistic peak = theoretical × efficiency</strong>.
+                Real Neapolitan trucks sustain 20-35% of theoretical because pulls, sweeps,
+                dough rebuilds, customer-facing time, plate-up, and drinks all eat oven-
+                adjacent time. 22% is the default.
+              </p>
+              <p>
+                <strong>Observed peak hour</strong> comes from real orders — max
+                avg-orders-per-hour over the last 30 days. When observed crosses 85%
+                of realistic, you&apos;ve hit the institutional &quot;open another unit&quot;
+                threshold. The fleet panel above models the economics of that decision.
+              </p>
+            </InfoButton>
+            <Flame className="h-4 w-4 v2-muted" />
+          </span>
+        }
       />
       <CardBody>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
@@ -4941,7 +5039,31 @@ function HourlyThroughputPanel({
       <CardHeader
         title="Hourly throughput vs capacity"
         description={`Average orders per hour over the last 30 days${pizzasPerHourCap > 0 ? `, with the kitchen-capacity ceiling (${pizzasPerHourCap.toFixed(0)} pizzas/hour) overlaid` : ""}.`}
-        actions={<SourceTag kind="actuals" hint="Computed from real order timestamps." />}
+        actions={
+          <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+            <InfoButton title="Hourly throughput" label="About hourly throughput">
+              <p>
+                24 bars — one per hour of day — showing average orders per hour
+                aggregated from the last 30 days of real orders. The dashed line is the
+                kitchen-capacity ceiling from the scenario inputs.
+              </p>
+              <p>Bar colour:</p>
+              <ul>
+                <li><strong>Red</strong> — hour exceeds capacity. Customers walked.</li>
+                <li><strong>Amber</strong> — within 15% of the ceiling. One bad-luck Saturday and you blow out.</li>
+                <li><strong>Blue</strong> — comfortable headroom.</li>
+              </ul>
+              <p>
+                This is the operational pair to the oven curve panel below: if the
+                observed peak bar lines up with realistic oven capacity, you&apos;re at
+                the &quot;open another unit&quot; signal. If the peak is far below capacity,
+                you have headroom to push more volume into the existing window
+                (marketing, hours extension, second daypart).
+              </p>
+            </InfoButton>
+            <SourceTag kind="actuals" hint="Computed from real order timestamps." />
+          </span>
+        }
       />
       <CardBody>
         <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 180, position: "relative" }}>
@@ -5013,7 +5135,32 @@ function DaypartPanel({ dayparts }: { dayparts: SimulationDaypartLine[] }) {
       <CardHeader
         title="Daypart breakdown"
         description="Per-daypart volume, AOV, and gross-profit rate. Late-night skews to higher-GM slices; dinner to full plates."
-        actions={<SourceTag kind="actuals" hint="Computed from real order timestamps." />}
+        actions={
+          <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+            <InfoButton title="Daypart breakdown" label="About the daypart view">
+              <p>
+                The daily average hides menu-mix shifts. Late-night skews to slices at
+                76% GM. Dinner skews to full plates at 58-65%. Lunch is the panini-AOV
+                sweet spot. The 4-bucket split lets the operator see <em>which daypart
+                is actually carrying the margin</em>.
+              </p>
+              <p>Buckets:</p>
+              <ul>
+                <li><strong>Lunch</strong> 11:00 – 15:00</li>
+                <li><strong>Dinner</strong> 17:00 – 22:00</li>
+                <li><strong>Late-night</strong> 22:00 – 04:00</li>
+                <li><strong>Off-peak</strong> — every other hour</li>
+              </ul>
+              <p>
+                GP rate column is colour-coded: green ≥ 70%, amber 55-70%, red &lt; 55%.
+                If lunch is red and dinner green, you have a lunch-menu problem; if
+                late-night is the only green column, your slice strategy is doing more
+                work than your dinner plates.
+              </p>
+            </InfoButton>
+            <SourceTag kind="actuals" hint="Computed from real order timestamps." />
+          </span>
+        }
       />
       <CardBody>
         <table style={{ width: "100%", fontSize: 13 }}>
@@ -5248,7 +5395,33 @@ function AttachmentEfficiencyPanel({ rows }: { rows: AttachLeverEfficiency[] }) 
       <CardHeader
         title="Attachment efficiency"
         description="Per-attach-lever incremental contribution and monthly profit lift. Ranks the levers by absolute money — not just attach rate."
-        actions={<HandCoins className="h-4 w-4 v2-muted" />}
+        actions={
+          <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+            <InfoButton title="Attachment efficiency" label="About attachment efficiency">
+              <p>
+                Attach rate is half the story. A 30% espresso attach at 88% margin earns
+                more than a 50% pasta attach at 26% margin — the lever you push depends on
+                the <em>money</em>, not the percentage.
+              </p>
+              <p>
+                <strong>Incremental margin / unit = avgPrice × (1 − itemCOGS%)</strong>.
+                The food cost of the attached item only; the rest of variable leakage
+                (waste, refund, loyalty, fees) is already netted in the main P&amp;L.
+              </p>
+              <p>
+                <strong>Monthly lift = attachPct × incremental margin × orders/month.</strong>
+                Sorted descending so the lever with the biggest absolute money is at the
+                top of the table — that&apos;s where to push.
+              </p>
+              <p>
+                Espresso is almost always the #1 puzzle in a Neapolitan menu: low friction,
+                85-88% margin, near-zero kitchen time. A 25→45pp espresso push adds
+                ~3,900 zł/mo of pure CM at default volumes with no capex.
+              </p>
+            </InfoButton>
+            <HandCoins className="h-4 w-4 v2-muted" />
+          </span>
+        }
       />
       <CardBody>
         <table style={{ width: "100%", fontSize: 13 }}>
@@ -5636,6 +5809,32 @@ function ChannelEconomicsPanel({ rows }: { rows: ChannelEconomicsRow[] }) {
         description="Contribution margin per order by channel. Cash, on-site card, Glovo and Wolt pay wildly different fees — the blended P&L hides which channels actually carry the business."
         actions={
           <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+            <InfoButton title="Per-channel CM1" label="About per-channel CM1">
+              <p>
+                The blended P&amp;L lumps every channel together. This panel does the
+                opposite — splits revenue across the four channels and shows what each
+                actually contributes after its own fee.
+              </p>
+              <p>
+                <strong>CM1 = ticket × (1 − food cost − fee − waste − refund − loyalty).</strong>
+                The variable leakage rates (waste, refund, loyalty) are the same across
+                channels — they reflect operation reality, not channel selection. The fee
+                column is where channels diverge: cash 0%, on-site card 1-2%, Glovo 27%,
+                Wolt 28%.
+              </p>
+              <p>
+                <strong>Red &lt; 20%</strong> means each order is value-destructive — the
+                channel is eating the profit it&apos;s supposed to generate. <strong>Amber
+                20-40%</strong> is acceptable but tight. <strong>Green ≥ 40%</strong> is
+                where the channel actually carries the business. Glovo / Wolt rows
+                typically land in red the moment commission + food cost exceeds 80% of
+                ticket — see the margin-traps callout below.
+              </p>
+              <p className="v2-muted text-xs">
+                Operator note: cash share + on-site share + Glovo share + Wolt share
+                should sum to 1. Adjust shares in the assumptions card.
+              </p>
+            </InfoButton>
             <Calculator className="h-4 w-4 v2-muted" />
           </span>
         }
@@ -5718,6 +5917,20 @@ function FleetPanel({
         description="Set unitCount > 1 to activate the scale story — HQ overhead absorption, supply discount, commissary, royalty + marketing fund, DMA cannibalisation, and the build-out learning curve. Computes per-unit averages and fleet totals so the franchise conversation has a defensible model behind it."
         actions={
           <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+            <InfoButton title="Fleet model" label="About the fleet model">
+              <p>
+                <strong>Per-unit P&amp;L × N</strong>, then the scale mechanics layer on:
+              </p>
+              <ul>
+                <li><strong>HQ overhead absorption</strong> — regional manager / ops / finance shared across N units; its share of revenue should drop below 5% past 10 units.</li>
+                <li><strong>Supply discount</strong> — wholesale mozzarella, flour, EVOO suppliers stop quoting list at 4-5 units; −8 to −12% on COGS is the realistic band.</li>
+                <li><strong>Commissary</strong> — centralised dough + sauce production becomes cost-positive once you have 4+ units to feed; nets ~3-6 pp of COGS once the central facility&apos;s run-rate cost is subtracted.</li>
+                <li><strong>Royalty + marketing fund</strong> — institutional franchise norm 5-6% + 2-3% of unit revenue. Both deducted from unit-level EBITDA.</li>
+                <li><strong>DMA cannibalisation</strong> — each new unit in the same trade area takes this share from prior trucks; modeled as <code>(1 − pct)^(n−1)</code> retained.</li>
+                <li><strong>Build-out learning curve</strong> — each new unit costs <code>(1 − learning)^(n−1)</code> × the original setup, floored at the minimum.</li>
+              </ul>
+              <p>The per-unit table below shows what each truck contributes after all of the above; the strip above shows fleet totals.</p>
+            </InfoButton>
             <Grid3X3 className="h-4 w-4 v2-muted" />
             <span className="v2-muted text-xs">{f.unitCount} unit{f.unitCount === 1 ? "" : "s"}</span>
           </span>
@@ -6000,10 +6213,33 @@ function SssgStrip({ sssg }: { sssg: SimulationSssgSnapshot }) {
     v >= 0.05 ? "success" : v >= 0 ? "info" : v >= -0.05 ? "warning" : "danger";
   return (
     <>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
         <h2 className="v2-section-h" style={{ margin: 0 }}>
           Same-store sales growth
         </h2>
+        <InfoButton title="SSSG" label="About same-store sales growth">
+          <p>
+            <strong>SSSG (comp sales)</strong> is the most-watched chain metric in
+            restaurants. Compares the trailing window&apos;s revenue to the prior trailing
+            window of the same length — so seasonality cancels and you see the underlying
+            growth signal.
+          </p>
+          <p>
+            Decomposed into four moves so the operator sees <em>what drove the change</em>:
+          </p>
+          <ul>
+            <li><strong>Revenue growth</strong> — the headline.</li>
+            <li><strong>Order growth</strong> — volume-led growth.</li>
+            <li><strong>Ticket growth</strong> — price / mix-led growth.</li>
+            <li><strong>Customer growth</strong> — acquisition-led growth.</li>
+          </ul>
+          <p>
+            Revenue up + orders flat + ticket up = you raised prices and customers
+            absorbed it. Revenue up + ticket flat + orders up = volume genuinely
+            grew. Revenue up + customers flat + ticket up = same people spending more
+            (loyalty / attach lifting). Different stories, different next moves.
+          </p>
+        </InfoButton>
         <span className="v2-muted text-xs">
           Last {sssg.windowDays}d vs prior {sssg.windowDays}d
         </span>
@@ -6079,8 +6315,24 @@ function CohortPanel({
     cacGrosze > 0 && monthlyGpPerCustomer > 0 ? cacGrosze / monthlyGpPerCustomer : null;
   return (
     <>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
         <h2 className="v2-section-h" style={{ margin: 0 }}>Customer economics</h2>
+        <InfoButton title="Customer economics" label="About LTV / CAC">
+          <p>
+            The customer-level questions IC reads in the first 15 minutes of any
+            restaurant deck. Computed from real orders grouped by phone (the loyalty
+            engine captures phone at checkout).
+          </p>
+          <ul>
+            <li><strong>Repeat rate</strong> — % of customers with ≥ 2 orders in the window. Healthy: 30%+. Below 15%, your funnel is a one-night stand.</li>
+            <li><strong>Orders / customer</strong> — mean lifetime orders observed in the window.</li>
+            <li><strong>GP / customer</strong> — gross profit per customer, item-level (modifiers included).</li>
+            <li><strong>CAC (implied)</strong> = marketing fixed cost ÷ new customers / month. Real institutional CAC; uses the operator&apos;s marketing budget as the numerator.</li>
+            <li><strong>LTV / CAC</strong> — institutional gate is ≥ 3×. Below 1.5× you&apos;re losing money on every new customer at the current marketing spend.</li>
+            <li><strong>Customer payback</strong> — months for cumulative GP per customer to cover CAC. ≤ 6 mo = strong, ≤ 12 mo = acceptable.</li>
+            <li><strong>New vs returning revenue mix</strong> — % from net-new customers vs prior-window customers. Returning &gt; new = sustainable repeat business. New &gt; returning = leaky bucket.</li>
+          </ul>
+        </InfoButton>
         <SourceTag kind="actuals" hint={`Last ${cohorts.windowDays} days, grouped by phone`} />
       </div>
       <section className="v2-kpi-grid">
@@ -6222,6 +6474,32 @@ function TornadoPanel({ bars }: { bars: TornadoBar[] }) {
         description="Net-profit swing when each variable is flexed independently around the current scenario. The most fragile inputs are at the top — that's where to apply attention first."
         actions={
           <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+            <InfoButton title="Sensitivity tornado" label="About the tornado chart">
+              <p>
+                One-at-a-time sensitivity: each key driver is flexed independently
+                around the current scenario, net profit recomputed, the deltas plotted as
+                horizontal bars. Bars are sorted by absolute swing — the variable at the
+                top is the most fragile input.
+              </p>
+              <p>
+                Flex ranges are calibrated per variable type:
+              </p>
+              <ul>
+                <li>Volume / labor cost / fixed cost: ±10%</li>
+                <li>Food cost %: ±5 pp</li>
+                <li>Payment fee %: ±0.5 pp</li>
+                <li>Waste / refund %: ±1 pp</li>
+                <li>CIT rate: 9% ↔ 19% (Polish small-CIT vs full)</li>
+                <li>Glovo commission: ±3 pp</li>
+              </ul>
+              <p>
+                Red bar to the left = downside loss (when the variable moves against you).
+                Green bar to the right = upside gain. The central axis is the current
+                scenario&apos;s net profit. Where the bars are widest, that&apos;s where
+                small input changes move the bottom line most — that&apos;s where the
+                operator&apos;s attention belongs.
+              </p>
+            </InfoButton>
             <FlaskConical className="h-4 w-4 v2-muted" />
           </span>
         }
@@ -6290,7 +6568,29 @@ function MarginTrapsCallout({ rows }: { rows: SimulationMenuEngineeringLine[] })
       <CardHeader
         title="Margin traps & false high-revenue items"
         description="Items where the gross-margin look-through breaks down. Delivery-only items lose 22-30% to marketplace commission. Spoilage-risk items can swing into loss on a single discarded portion. Prep-heavy items eat throughput the labor model doesn't price."
-        actions={<AlertTriangle className="h-4 w-4 v2-muted" />}
+        actions={
+          <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+            <InfoButton title="Margin traps" label="About margin traps">
+              <p>
+                Gross margin is a deceiver. A 70% GM item that&apos;s only sold via Glovo
+                lands near-zero CM once the 27% marketplace fee is netted. The menu-
+                engineering matrix wouldn&apos;t flag it because its GP per unit looks
+                fine — this panel does.
+              </p>
+              <p>Three trap heuristics:</p>
+              <ul>
+                <li><strong>Margin trap</strong> — GM ≥ 50% but TrueCM1 (after channel fees + waste + refund + loyalty, with delivery-only items at a 27% commission proxy) falls below half the per-item GP. Classic look-good-die-quiet items.</li>
+                <li><strong>Spoilage risk</strong> — name match on known short-shelf-life ingredients (burrata, truffle, tartufata, frozen tiramisù). A single discarded portion can swing the per-day P&amp;L on these.</li>
+                <li><strong>Prep-heavy</strong> — prep time ≥ 1.5× median. Kitchen throughput cost is real but unpriced — pasta + tagliatelle need a separate station the labor model doesn&apos;t budget.</li>
+              </ul>
+              <p>
+                Recommended action: reprice up, swap to a faster recipe, lock to dine-in
+                only (skips the marketplace fee), or delete from the menu.
+              </p>
+            </InfoButton>
+            <AlertTriangle className="h-4 w-4 v2-muted" />
+          </span>
+        }
       />
       <CardBody>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -6413,7 +6713,33 @@ function MenuEngineeringPanel({
       <CardHeader
         title="Menu engineering"
         description="Per-item gross profit × velocity over the last 90 days, grouped by the Kasavana-Smith quadrants. Quadrant cuts: median GP/unit and median units sold."
-        actions={<SourceTag kind="actuals" hint="Computed from real order line items." />}
+        actions={
+          <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+            <InfoButton title="Menu engineering" label="About the Kasavana-Smith matrix">
+              <p>
+                The standard QSR menu-engineering tool. Every item that sold ≥ 1 unit in
+                the window is plotted on two axes: velocity (units sold) and per-unit
+                gross profit. Splits at the median of each:
+              </p>
+              <ul>
+                <li><strong>Stars</strong> — high volume × high margin. Protect them. Promote them. Anchor the menu.</li>
+                <li><strong>Puzzles</strong> — low volume × high margin. Push attach / upsell — they need marketing more than re-engineering.</li>
+                <li><strong>Plowhorses</strong> — high volume × low margin. Reprice up or re-engineer the recipe; you&apos;re selling lots of low-CM units.</li>
+                <li><strong>Dogs</strong> — low volume × low margin. Delete unless strategic; they cost menu real-estate.</li>
+              </ul>
+              <p>
+                Per-item operator tags from the menu definition show as coloured badges:
+                <span style={{ background: "rgba(245,158,11,0.15)", color: "rgb(217,119,6)", padding: "0 4px", borderRadius: 4, fontSize: 10, fontWeight: 700, marginLeft: 4 }}>HERO</span>
+                {" "}lead SKU,
+                <span style={{ background: "rgba(34,197,94,0.15)", color: "rgb(22,163,74)", padding: "0 4px", borderRadius: 4, fontSize: 10, fontWeight: 700, marginLeft: 4 }}>DRIVER</span>
+                {" "}high-margin lever,
+                <span style={{ background: "rgba(168,85,247,0.15)", color: "rgb(126,34,206)", padding: "0 4px", borderRadius: 4, fontSize: 10, fontWeight: 700, marginLeft: 4 }}>ANCHOR</span>
+                {" "}premium decoy. An anchor sitting in the puzzle quadrant is there <em>by design</em> — don&apos;t reflexively delete.
+              </p>
+            </InfoButton>
+            <SourceTag kind="actuals" hint="Computed from real order line items." />
+          </span>
+        }
       />
       <CardBody>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -6551,6 +6877,26 @@ function ActualsStrip({
               <Database className="h-3 w-3" />{" "}
               <span>Real actuals · last {actuals.windowDays}d</span>
             </Badge>
+            <InfoButton title="Real actuals" label="About the real-actuals strip" size="sm">
+              <p>
+                Pulls the operator&apos;s real order history from
+                <code> /api/admin/orders</code> over a 90-day rolling window and computes:
+                orders/day, avg ticket, menu-mix-weighted COGS, delivery share, refund
+                (cancellation) rate, median ticket time.
+              </p>
+              <p>
+                Variance vs the operator&apos;s typed scenario inputs is shown next to
+                each metric. If any variance crosses 15%, the strip flips from info-blue
+                to amber-warning and the &quot;Apply actuals&quot; button is the one-click
+                way to align the scenario to reality.
+              </p>
+              <p>
+                Source-of-truth note: this is the only strip on the page whose numbers come
+                100% from the production database — every other panel reads operator-typed
+                scenario inputs (with the &quot;actuals&quot; badges marking inputs that
+                match real-order observations within 5%).
+              </p>
+            </InfoButton>
             <Stat
               label="Orders / day"
               value={`${actuals.ordersPerDay.toFixed(1)} (${variancePct(ordersVar)})`}
