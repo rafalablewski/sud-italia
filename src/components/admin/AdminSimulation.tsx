@@ -347,6 +347,20 @@ function computeScenario(s: SimulationScenario): Computed {
  *  volume via LABOR_SEASONAL_FLEX. Fixed costs inflate at wage CPI
  *  (closer proxy than food CPI for rent/SaaS/accountant). */
 function projectTwelveMonths(s: SimulationScenario, startMonth = 0) {
+  return projectMonths(s, 12, startMonth, 0);
+}
+
+/** Generalised monthly projection. `monthsCount` is the horizon (12 for the
+ *  steady-state chart, 24 for the investor payback view). `rampMonths`
+ *  applies a linear volume ramp in months [0..rampMonths) so a fresh truck
+ *  doesn't hit 100% volume in month 1 — institutional reality is 50-70-85-100%
+ *  over the first ~4 months. Set to 0 for the operational chart. */
+function projectMonths(
+  s: SimulationScenario,
+  monthsCount: number,
+  startMonth = 0,
+  rampMonths = 0,
+) {
   const seasonality = s.seasonality ?? DEFAULT_SEASONALITY;
   const w = s.weather;
   const wageMonthly = (1 + (s.wageInflationPct ?? 0)) ** (1 / 12) - 1;
@@ -370,16 +384,22 @@ function projectTwelveMonths(s: SimulationScenario, startMonth = 0) {
     payment: number;
     netProfit: number;
   }[] = [];
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < monthsCount; i++) {
     const monthIndex = (startMonth + i) % 12;
     const season = MONTH_TO_SEASON[monthIndex];
     const seasonMult = seasonality[season];
     const weatherMult = monthVolumeMult(monthIndex, w);
     const closedDays = w?.holidayClosedDaysPerMonth ?? 0;
     const daysOpen = Math.max(0, s.daysOpenPerMonth - closedDays);
-    let monthDailyOrders = s.ordersPerDay * seasonMult * weatherMult;
+    // Linear volume ramp for the opening months (Y1 reality — the truck
+    // doesn't go from zero to 100% on day one; brand awareness, word of
+    // mouth, and operational competence all need time).
+    const rampFactor = rampMonths > 0 && i < rampMonths
+      ? (i + 1) / rampMonths
+      : 1;
+    let monthDailyOrders = s.ordersPerDay * seasonMult * weatherMult * rampFactor;
     if (w && daysOpen > 0) {
-      const baseDaily = s.ordersPerDay;
+      const baseDaily = s.ordersPerDay * rampFactor;
       const peakBonus = w.holidayPeakDaysPerMonth * (w.holidayPeakMultiplier - 1) * baseDaily;
       const eventBonus = w.eventDaysPerMonth * (w.eventDayMultiplier - 1) * baseDaily;
       monthDailyOrders += (peakBonus + eventBonus) / daysOpen;
@@ -412,6 +432,90 @@ function projectTwelveMonths(s: SimulationScenario, startMonth = 0) {
     });
   }
   return rows;
+}
+
+/** Returns metrics for an investor pitch / IC: NPV at three discount rates,
+ *  IRR, and the month at which cumulative cash flows recover the setup cost.
+ *  Operates on a monthly netProfit series (in grosze) plus the initial
+ *  setup outlay. NPV uses annual discount rates compounded monthly. */
+interface InvestmentReturns {
+  /** First month index (1-based) where cumulative net profit >= setup cost.
+   *  null if never recovered within the horizon. */
+  cumulativeCashBreakEvenMonth: number | null;
+  /** NPV in grosze at the three benchmark discount rates. Positive ⇒
+   *  the investment beats the discount rate; negative ⇒ destroys value. */
+  npv10: number;
+  npv15: number;
+  npv20: number;
+  /** IRR as an annualised fraction. null when the cash-flow series has no
+   *  real-valued IRR (e.g. always negative, always positive, or the
+   *  solver fails to converge). */
+  irrAnnual: number | null;
+  /** Total horizon used (months). */
+  horizonMonths: number;
+}
+
+function npvAtRate(monthlyNets: number[], setupCost: number, annualRate: number): number {
+  // Equivalent monthly rate compounded so (1+rMonthly)^12 = 1+annualRate.
+  const r = (1 + annualRate) ** (1 / 12) - 1;
+  let pv = -setupCost;
+  for (let i = 0; i < monthlyNets.length; i++) {
+    pv += monthlyNets[i] / (1 + r) ** (i + 1);
+  }
+  return pv;
+}
+
+/** IRR via Newton-Raphson on the monthly discount rate. Converts to an
+ *  annualised rate for display. Bails out when slope is too flat (which
+ *  happens for never-recover or always-recovered series). */
+function irrAnnual(monthlyNets: number[], setupCost: number): number | null {
+  const cashFlows = [-setupCost, ...monthlyNets];
+  // Need at least one sign change for an IRR to exist.
+  let hasPos = false, hasNeg = false;
+  for (const v of cashFlows) {
+    if (v > 0) hasPos = true;
+    if (v < 0) hasNeg = true;
+  }
+  if (!hasPos || !hasNeg) return null;
+  let r = 0.01; // start at 1%/month (~12.7%/yr)
+  for (let iter = 0; iter < 100; iter++) {
+    let f = 0, df = 0;
+    for (let t = 0; t < cashFlows.length; t++) {
+      const denom = (1 + r) ** t;
+      f += cashFlows[t] / denom;
+      if (t > 0) df += (-t * cashFlows[t]) / ((1 + r) ** (t + 1));
+    }
+    if (!Number.isFinite(f) || !Number.isFinite(df) || Math.abs(df) < 1e-12) return null;
+    const step = f / df;
+    r -= step;
+    if (r <= -0.999) r = -0.99; // keep above the singularity
+    if (Math.abs(step) < 1e-7) {
+      return (1 + r) ** 12 - 1;
+    }
+  }
+  return null;
+}
+
+function computeReturns(
+  monthlyNetGrosze: number[],
+  setupCostGrosze: number,
+): InvestmentReturns {
+  let cumulative = 0;
+  let breakEvenMonth: number | null = null;
+  for (let i = 0; i < monthlyNetGrosze.length; i++) {
+    cumulative += monthlyNetGrosze[i];
+    if (breakEvenMonth === null && cumulative >= setupCostGrosze) {
+      breakEvenMonth = i + 1;
+    }
+  }
+  return {
+    cumulativeCashBreakEvenMonth: breakEvenMonth,
+    npv10: npvAtRate(monthlyNetGrosze, setupCostGrosze, 0.10),
+    npv15: npvAtRate(monthlyNetGrosze, setupCostGrosze, 0.15),
+    npv20: npvAtRate(monthlyNetGrosze, setupCostGrosze, 0.20),
+    irrAnnual: irrAnnual(monthlyNetGrosze, setupCostGrosze),
+    horizonMonths: monthlyNetGrosze.length,
+  };
 }
 
 /** Sample the net-profit surface for a 2D heatmap. Each axis spans
@@ -1812,6 +1916,15 @@ export function AdminSimulation() {
   // render because the underlying math is cheap (≤ 100 cells × ~15 ns).
   const ordersTicketMatrix = buildMatrix(effectiveScenario!, "orders", "ticket", 5, 0.3);
   const cogsTicketMatrix = buildMatrix(effectiveScenario!, "cogs", "ticket", 5, 0.08);
+  // 24-month investor-view projection with a 4-month opening ramp.
+  // Used for NPV / IRR / cumulative-cash break-even — not the steady-
+  // state 12-month operational chart.
+  const investorProjection = projectMonths(leverScenario!, 24, 0, 4);
+  const monthlyNetGrosze = investorProjection.map((r) => r.netProfit * 100);
+  const investorReturns = computeReturns(
+    monthlyNetGrosze,
+    scenario.setupCostGrosze ?? 0,
+  );
   const archetypes = deriveArchetypes(effectiveScenario!);
   const archetypeRows = [
     { key: "conservative", label: "Conservative", scenario: archetypes.conservative, hint: "−15% orders · +2pp COGS" },
@@ -2364,6 +2477,83 @@ export function AdminSimulation() {
             hint={`Peak ceiling ${Math.round(computed.capacityOrdersPerDay)} ord/day · running ${Math.round(scenario.ordersPerDay)}`}
           />
         )}
+      </section>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+        <h2 className="v2-section-h" style={{ margin: 0 }}>Investor returns</h2>
+        <span className="v2-muted text-xs">
+          24-month projection with a 4-month opening ramp · setup{" "}
+          {formatPrice(scenario.setupCostGrosze ?? 0)}
+        </span>
+      </div>
+      <section className="v2-kpi-grid">
+        <KpiCard
+          label="Cash break-even"
+          value={investorReturns.cumulativeCashBreakEvenMonth ?? 0}
+          display={
+            investorReturns.cumulativeCashBreakEvenMonth === null
+              ? `> ${investorReturns.horizonMonths} mo`
+              : `${investorReturns.cumulativeCashBreakEvenMonth} mo`
+          }
+          icon={PiggyBank}
+          tone={
+            investorReturns.cumulativeCashBreakEvenMonth === null
+              ? "danger"
+              : investorReturns.cumulativeCashBreakEvenMonth > 24
+                ? "warning"
+                : investorReturns.cumulativeCashBreakEvenMonth > 18
+                  ? "info"
+                  : "success"
+          }
+          hint="First month cumulative profit clears setup cost"
+        />
+        <KpiCard
+          label="NPV @ 10%"
+          value={investorReturns.npv10 / 100}
+          format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
+          icon={Wallet}
+          tone={investorReturns.npv10 > 0 ? "success" : "danger"}
+          hint="Discount rate: 10% / yr"
+        />
+        <KpiCard
+          label="NPV @ 15%"
+          value={investorReturns.npv15 / 100}
+          format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
+          icon={Wallet}
+          tone={investorReturns.npv15 > 0 ? "success" : "warning"}
+          hint="Discount rate: 15% / yr"
+        />
+        <KpiCard
+          label="NPV @ 20%"
+          value={investorReturns.npv20 / 100}
+          format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
+          icon={Wallet}
+          tone={investorReturns.npv20 > 0 ? "success" : "danger"}
+          hint="Hurdle rate for PE-style capital"
+        />
+        <KpiCard
+          label="IRR (24 mo)"
+          value={(investorReturns.irrAnnual ?? 0) * 100}
+          format={(n) => `${n.toFixed(1)}%`}
+          display={
+            investorReturns.irrAnnual === null
+              ? "—"
+              : `${(investorReturns.irrAnnual * 100).toFixed(1)}%`
+          }
+          icon={TrendingUp}
+          tone={
+            investorReturns.irrAnnual === null
+              ? "neutral"
+              : investorReturns.irrAnnual >= 0.30
+                ? "success"
+                : investorReturns.irrAnnual >= 0.15
+                  ? "info"
+                  : investorReturns.irrAnnual >= 0
+                    ? "warning"
+                    : "danger"
+          }
+          hint="Annualised internal rate of return"
+        />
       </section>
 
       <Card>
