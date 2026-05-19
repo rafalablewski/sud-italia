@@ -5311,6 +5311,53 @@ function AttachmentEfficiencyPanel({ rows }: { rows: AttachLeverEfficiency[] }) 
   );
 }
 
+/** One row of the unit-economics breakdown table. Hoisted out of
+ *  UnitEconomicsPanel so React doesn't recreate the component on
+ *  every render (react-hooks/static-components). */
+function UnitEconRow({
+  label,
+  grosze,
+  bold,
+  tone,
+  note,
+}: {
+  label: string;
+  grosze: number;
+  bold?: boolean;
+  tone?: "neutral" | "warning" | "success" | "danger" | "brand";
+  note?: string;
+}) {
+  const tonePalette: Record<NonNullable<typeof tone>, string> = {
+    neutral: "inherit",
+    warning: "rgb(217,119,6)",
+    success: "rgb(22,163,74)",
+    danger: "rgb(220,38,38)",
+    brand: "rgb(37,99,235)",
+  };
+  return (
+    <tr style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
+      <td style={{ padding: "8px 4px", fontWeight: bold ? 700 : 400, color: tone ? tonePalette[tone] : undefined }}>
+        {label}
+      </td>
+      <td
+        className="tabular"
+        style={{
+          padding: "8px 4px",
+          textAlign: "right",
+          fontWeight: bold ? 700 : 500,
+          color: tone ? tonePalette[tone] : undefined,
+        }}
+      >
+        {grosze >= 0 ? "+" : ""}
+        {(grosze / 100).toFixed(2)} zł
+      </td>
+      <td className="v2-muted text-xs" style={{ padding: "8px 4px", maxWidth: 360 }}>
+        {note ?? ""}
+      </td>
+    </tr>
+  );
+}
+
 /** Unit economics breakdown — the audit's exact table. Per-order build-up
  *  showing every variable leakage explicitly, so the operator sees what
  *  the true contribution per order is — not the upper-bound CM1 that
@@ -5336,49 +5383,6 @@ function UnitEconomicsPanel({
   const laborPerOrder = computed.laborMonthly / orders;
   const fixedPerOrder = (computed.fixedTotal + computed.depreciation + computed.interest) / orders;
   const cm2PerOrder = cm1PerOrder - laborPerOrder - fixedPerOrder;
-  const Row = ({
-    label,
-    grosze,
-    bold,
-    tone,
-    note,
-  }: {
-    label: string;
-    grosze: number;
-    bold?: boolean;
-    tone?: "neutral" | "warning" | "success" | "danger" | "brand";
-    note?: string;
-  }) => {
-    const tonePalette: Record<NonNullable<typeof tone>, string> = {
-      neutral: "inherit",
-      warning: "rgb(217,119,6)",
-      success: "rgb(22,163,74)",
-      danger: "rgb(220,38,38)",
-      brand: "rgb(37,99,235)",
-    };
-    return (
-      <tr style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
-        <td style={{ padding: "8px 4px", fontWeight: bold ? 700 : 400, color: tone ? tonePalette[tone] : undefined }}>
-          {label}
-        </td>
-        <td
-          className="tabular"
-          style={{
-            padding: "8px 4px",
-            textAlign: "right",
-            fontWeight: bold ? 700 : 500,
-            color: tone ? tonePalette[tone] : undefined,
-          }}
-        >
-          {grosze >= 0 ? "+" : ""}
-          {(grosze / 100).toFixed(2)} zł
-        </td>
-        <td className="v2-muted text-xs" style={{ padding: "8px 4px", maxWidth: 360 }}>
-          {note ?? ""}
-        </td>
-      </tr>
-    );
-  };
   return (
     <Card>
       <CardHeader
@@ -5389,44 +5393,44 @@ function UnitEconomicsPanel({
       <CardBody>
         <table style={{ width: "100%", fontSize: 13 }}>
           <tbody>
-            <Row label="Revenue / order" grosze={revenuePerOrder} bold tone="brand" />
-            <Row
+            <UnitEconRow label="Revenue / order" grosze={revenuePerOrder} bold tone="brand" />
+            <UnitEconRow
               label="Less: COGS (food)"
               grosze={-cogsPerOrder}
               tone="warning"
               note={`${(scenario.cogsPct * 100).toFixed(1)}% — flat or recipe-weighted via actuals`}
             />
-            <Row
+            <UnitEconRow
               label="Less: Packaging"
               grosze={-packagingPerOrder}
               tone="warning"
               note="Napkins / plates wash / boxes — every order"
             />
-            <Row
+            <UnitEconRow
               label="Less: Waste & spoilage"
               grosze={-wastePerOrder}
               tone="warning"
               note={`${((scenario.wastePct ?? 0) * 100).toFixed(1)}% of revenue`}
             />
-            <Row
+            <UnitEconRow
               label="Less: Refund / comp / theft"
               grosze={-refundPerOrder}
               tone="warning"
               note={`${((scenario.refundPct ?? 0) * 100).toFixed(1)}% of revenue`}
             />
-            <Row
+            <UnitEconRow
               label="Less: Loyalty burn"
               grosze={-loyaltyPerOrder}
               tone="warning"
               note={`${((scenario.loyaltyBurnPct ?? 0) * 100).toFixed(1)}% — points redeemed`}
             />
-            <Row
+            <UnitEconRow
               label="Less: Payment fees (blended)"
               grosze={-paymentPerOrder}
               tone="warning"
               note={`${((scenario.paymentProcessorPct ?? 0) * 100).toFixed(2)}% — cash + card + marketplaces blended`}
             />
-            <Row
+            <UnitEconRow
               label="Less: Marketing CAC (amortised)"
               grosze={-marketingPerOrder}
               tone="warning"
@@ -5436,26 +5440,26 @@ function UnitEconomicsPanel({
                   : "Marketing left in fixed costs"
               }
             />
-            <Row
+            <UnitEconRow
               label="= True CM1 / order"
               grosze={cm1PerOrder}
               bold
               tone={cm1PerOrder >= 1000 ? "success" : cm1PerOrder >= 500 ? "warning" : "danger"}
               note="What actually drops to gross profit per order"
             />
-            <Row
+            <UnitEconRow
               label="Less: Labor amortised"
               grosze={-laborPerOrder}
               tone="warning"
               note={`${Math.round(computed.laborMonthly / 100).toLocaleString("pl-PL")} zł/mo ÷ ${Math.round(orders).toLocaleString("pl-PL")} orders`}
             />
-            <Row
+            <UnitEconRow
               label="Less: Fixed amortised (+ D&A + interest)"
               grosze={-fixedPerOrder}
               tone="warning"
               note={`${Math.round((computed.fixedTotal + computed.depreciation + computed.interest) / 100).toLocaleString("pl-PL")} zł/mo ÷ orders`}
             />
-            <Row
+            <UnitEconRow
               label="= True CM2 / order"
               grosze={cm2PerOrder}
               bold
@@ -5558,8 +5562,6 @@ function FleetPanel({
   onUpdate: (mut: Partial<SimulationFleetModel>) => void;
 }) {
   const f = scenario.fleet ?? DEFAULT_FLEET;
-  const inputClass = "v2-input tabular";
-  const inputStyle: React.CSSProperties = { width: "100%", padding: "6px 8px", fontSize: 13, textAlign: "right" };
   const numericPct = (v: number, decimals = 1) => `${(v * 100).toFixed(decimals)}%`;
   return (
     <Card>
