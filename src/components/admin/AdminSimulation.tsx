@@ -2092,7 +2092,12 @@ export function AdminSimulation() {
           <CardBody>
             <div className="v2-stack-12">
               <Input
-                label={<LabelWithInfo text="Orders per day" help={HELP.ordersPerDay} />}
+                label={
+                  <span className="flex items-center gap-2">
+                    <LabelWithInfo text="Orders per day" help={HELP.ordersPerDay} />
+                    {sourceTagFor(actuals?.ordersPerDay, scenario.ordersPerDay, actuals)}
+                  </span>
+                }
                 type="number"
                 min="0"
                 value={String(scenario.ordersPerDay)}
@@ -2101,7 +2106,12 @@ export function AdminSimulation() {
                 }
               />
               <Input
-                label={<LabelWithInfo text="Average ticket" help={HELP.avgTicket} />}
+                label={
+                  <span className="flex items-center gap-2">
+                    <LabelWithInfo text="Average ticket" help={HELP.avgTicket} />
+                    {sourceTagFor(actuals?.avgTicketGrosze, scenario.avgTicketGrosze, actuals)}
+                  </span>
+                }
                 type="number"
                 step="0.01"
                 min="0"
@@ -2115,7 +2125,12 @@ export function AdminSimulation() {
                 trailingAdornment={<span className="v2-muted">zł</span>}
               />
               <Input
-                label={<LabelWithInfo text="Days open per month" help={HELP.daysOpen} />}
+                label={
+                  <span className="flex items-center gap-2">
+                    <LabelWithInfo text="Days open per month" help={HELP.daysOpen} />
+                    <SourceTag kind="assumption" hint="No real-data source — operator-typed." />
+                  </span>
+                }
                 type="number"
                 min="0"
                 max="31"
@@ -2128,7 +2143,16 @@ export function AdminSimulation() {
                 }
               />
               <Input
-                label={<LabelWithInfo text="Ingredient cost ratio" help={HELP.cogsPct} />}
+                label={
+                  <span className="flex items-center gap-2">
+                    <LabelWithInfo text="Ingredient cost ratio" help={HELP.cogsPct} />
+                    {sourceTagFor(
+                      actuals && actuals.weightedCogsPct > 0 ? actuals.weightedCogsPct : undefined,
+                      scenario.cogsPct,
+                      actuals,
+                    )}
+                  </span>
+                }
                 type="number"
                 step="1"
                 min="0"
@@ -2149,7 +2173,22 @@ export function AdminSimulation() {
 
         <Card>
           <CardHeader
-            title="Labor mix"
+            title={
+              <span className="flex items-center gap-2">
+                Labor mix
+                {scenario.labor.some((l) => l.id.startsWith("seed-")) ? (
+                  <SourceTag
+                    kind="ledger"
+                    hint="At least one row was seeded from the BusinessCost payroll ledger."
+                  />
+                ) : (
+                  <SourceTag
+                    kind="assumption"
+                    hint="No payroll lines in the ledger — using defaults. Seed from ledger via the 'Seed from history' button."
+                  />
+                )}
+              </span>
+            }
             description="Per-role headcount × weekly hours × hourly rate. Default rates are Warsaw 2026 brutto × 1.22 (full employer cost incl. ZUS narzut). Divide by 1.22 if you'd rather think in pure brutto."
             actions={
               <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
@@ -3445,6 +3484,75 @@ function LeverSwitch({
       />
       {enabled ? "On" : "Off"}
     </button>
+  );
+}
+
+/** Small chip that tells the operator (and any investor reading over their
+ *  shoulder) whether a number is grounded in real data or hand-typed. The
+ *  three states cover the entire input surface of the simulator:
+ *    actuals    → matches /api/admin/orders within tolerance
+ *    ledger     → came from the BusinessCost ledger via seed
+ *    assumption → operator-typed, no real-data backing */
+function SourceTag({
+  kind,
+  hint,
+}: {
+  kind: "actuals" | "ledger" | "assumption";
+  hint?: string;
+}) {
+  const palette: Record<typeof kind, { bg: string; fg: string; label: string }> = {
+    actuals: { bg: "rgba(34,197,94,0.12)", fg: "rgb(22,163,74)", label: "actuals" },
+    ledger: { bg: "rgba(59,130,246,0.12)", fg: "rgb(37,99,235)", label: "ledger" },
+    assumption: { bg: "rgba(245,158,11,0.12)", fg: "rgb(217,119,6)", label: "assumption" },
+  };
+  const c = palette[kind];
+  return (
+    <span
+      title={hint}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 3,
+        padding: "1px 6px",
+        borderRadius: 999,
+        background: c.bg,
+        color: c.fg,
+        fontSize: 10,
+        fontWeight: 600,
+        letterSpacing: 0.2,
+        textTransform: "uppercase",
+      }}
+    >
+      {c.label}
+    </span>
+  );
+}
+
+/** Helper: pick the right SourceTag for a numeric input by comparing the
+ *  operator value to the matching actual. Within 5% ⇒ actuals; otherwise
+ *  assumption. When no actuals are available the input is always assumption. */
+function sourceTagFor(
+  actualValue: number | undefined,
+  operatorValue: number,
+  actuals: SimulationActualsSnapshot | null | undefined,
+) {
+  if (!actuals || actualValue === undefined || actualValue === 0) {
+    return <SourceTag kind="assumption" hint="Operator-typed — no real-data backing." />;
+  }
+  const variance = Math.abs((operatorValue - actualValue) / actualValue);
+  if (variance <= 0.05) {
+    return (
+      <SourceTag
+        kind="actuals"
+        hint={`Within 5% of last-${actuals.windowDays}d actuals.`}
+      />
+    );
+  }
+  return (
+    <SourceTag
+      kind="assumption"
+      hint={`Drifted ${(variance * 100).toFixed(0)}% from last-${actuals.windowDays}d actuals.`}
+    />
   );
 }
 
