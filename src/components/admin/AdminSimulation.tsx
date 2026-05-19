@@ -3607,7 +3607,7 @@ export function AdminSimulation() {
         subtitle="What each order actually contributes after every variable leakage"
       />
 
-      <UnitEconomicsPanel scenario={scenario} computed={computed} />
+      <UnitEconomicsPanel scenario={scenario} computed={computed} actuals={actuals} />
 
       <ChannelEconomicsPanel rows={channels} />
 
@@ -5577,6 +5577,7 @@ function UnitEconRow({
   isTotal,
   tone,
   note,
+  source,
   revenuePerOrder,
   scaleMax,
 }: {
@@ -5586,93 +5587,45 @@ function UnitEconRow({
   isTotal?: boolean;
   tone?: "neutral" | "warning" | "success" | "danger" | "brand";
   note?: string;
+  /** Source tag: "actuals" if value comes from real-order data, "assumption"
+   *  if operator-typed. Drives the inline chip — lets the IC reader see at
+   *  a glance which lines are grounded and which are narrative. */
+  source?: "actuals" | "assumption";
   revenuePerOrder: number;
   scaleMax: number;
 }) {
-  const tonePalette: Record<NonNullable<typeof tone>, { fg: string; bar: string }> = {
-    neutral: { fg: "inherit", bar: "rgba(0,0,0,0.15)" },
-    warning: { fg: "rgb(217,119,6)", bar: "rgba(245,158,11,0.45)" },
-    success: { fg: "rgb(22,163,74)", bar: "rgba(34,197,94,0.45)" },
-    danger: { fg: "rgb(220,38,38)", bar: "rgba(239,68,68,0.45)" },
-    brand: { fg: "rgb(37,99,235)", bar: "rgba(59,130,246,0.45)" },
-  };
-  const c = tone ? tonePalette[tone] : tonePalette.neutral;
   const pctOfRevenue = revenuePerOrder > 0 ? Math.abs(grosze) / revenuePerOrder : 0;
   const barPct = scaleMax > 0 ? (Math.abs(grosze) / scaleMax) * 100 : 0;
   const isCost = grosze < 0;
+  const toneClass = tone ? `v2-ue-tone-${tone}` : "";
   return (
-    <tr
-      style={{
-        borderTop: isTotal ? "2px solid rgba(0,0,0,0.12)" : "1px solid rgba(0,0,0,0.04)",
-        background: isTotal ? "rgba(0,0,0,0.02)" : undefined,
-      }}
-    >
-      <td
-        style={{
-          padding: "10px 8px",
-          fontWeight: bold ? 700 : 400,
-          color: c.fg,
-          width: "32%",
-        }}
-      >
-        {label}
+    <tr className={`v2-ue-row ${toneClass} ${isTotal ? "v2-ue-row-total" : ""} ${bold ? "v2-ue-row-bold" : ""}`}>
+      <td className="v2-ue-cell v2-ue-label">
+        <div className="flex items-center gap-2" style={{ flexWrap: "wrap" }}>
+          <span>{label}</span>
+          {source && <SourceTag kind={source} />}
+        </div>
       </td>
-      <td style={{ padding: "10px 4px", width: "30%", position: "relative" }}>
-        <div
-          style={{
-            position: "relative",
-            height: 6,
-            background: "rgba(0,0,0,0.04)",
-            borderRadius: 999,
-            overflow: "hidden",
-          }}
-        >
+      <td className="v2-ue-cell v2-ue-magnitude">
+        <div className="v2-ue-bar-track">
           <div
+            className="v2-ue-bar-fill"
             style={{
-              position: "absolute",
-              left: isCost ? "auto" : 0,
-              right: isCost ? 0 : "auto",
-              top: 0,
-              bottom: 0,
+              [isCost ? "right" : "left"]: 0,
+              [isCost ? "left" : "right"]: "auto",
               width: `${Math.min(100, barPct)}%`,
-              background: c.bar,
-              borderRadius: 999,
             }}
           />
         </div>
       </td>
-      <td
-        className="tabular"
-        style={{
-          padding: "10px 8px",
-          textAlign: "right",
-          fontWeight: bold ? 700 : 500,
-          color: c.fg,
-          width: "16%",
-          fontSize: bold ? 15 : 13,
-        }}
-      >
+      <td className="v2-ue-cell v2-ue-value tabular">
         {grosze >= 0 ? "+" : ""}
         {(grosze / 100).toFixed(2)} zł
       </td>
-      <td
-        className="tabular"
-        style={{
-          padding: "10px 4px",
-          textAlign: "right",
-          color: "rgba(0,0,0,0.55)",
-          width: "8%",
-          fontSize: 12,
-        }}
-      >
+      <td className="v2-ue-cell v2-ue-pct tabular">
         {pctOfRevenue > 0 ? `${(pctOfRevenue * 100).toFixed(1)}%` : "—"}
       </td>
-      <td
-        className="v2-muted text-xs"
-        style={{ padding: "10px 8px", maxWidth: 360, fontStyle: "italic" }}
-      >
-        {note ?? ""}
-      </td>
+      <td className="v2-ue-cell v2-ue-note">{note ?? ""}</td>
     </tr>
   );
 }
@@ -5686,9 +5639,11 @@ function UnitEconRow({
 function UnitEconomicsPanel({
   scenario,
   computed,
+  actuals,
 }: {
   scenario: SimulationScenario;
   computed: Computed;
+  actuals: SimulationActualsSnapshot | null;
 }) {
   const orders = scenario.ordersPerDay * scenario.daysOpenPerMonth;
   if (orders <= 0) return null;
@@ -5708,19 +5663,107 @@ function UnitEconomicsPanel({
   const scaleMax = revenuePerOrder;
   const cm1Pct = revenuePerOrder > 0 ? cm1PerOrder / revenuePerOrder : 0;
   const cm2Pct = revenuePerOrder > 0 ? cm2PerOrder / revenuePerOrder : 0;
+  // Source detection — "actuals" if the operator input matches real-order
+  // data within 5%; "assumption" otherwise (or when no actuals available).
+  // Drives the inline SourceTag chips so the operator (and IC reader) sees
+  // which lines are grounded vs operator narrative.
+  const inferSource = (operator: number, actual: number | undefined): "actuals" | "assumption" => {
+    if (!actuals || actual === undefined || actual === 0) return "assumption";
+    const variance = Math.abs((operator - actual) / actual);
+    return variance <= 0.05 ? "actuals" : "assumption";
+  };
+  const revenueSource = inferSource(revenuePerOrder, actuals?.avgTicketGrosze);
+  const cogsSource = actuals && actuals.weightedCogsPct > 0
+    ? (Math.abs((scenario.cogsPct - actuals.weightedCogsPct) / actuals.weightedCogsPct) <= 0.05 ? "actuals" : "assumption")
+    : "assumption";
   // Pre-CM1 cost lines — hide any that are zero so the table stays tight.
-  const variableLines: Array<{ key: string; label: string; grosze: number; note: string; tone: "warning" }> = [
-    { key: "cogs", label: "Less: COGS (food)", grosze: -cogsPerOrder, tone: "warning", note: `${(scenario.cogsPct * 100).toFixed(1)}% — flat or recipe-weighted via actuals` },
-    { key: "packaging", label: "Less: Packaging", grosze: -packagingPerOrder, tone: "warning", note: "Napkins / plates wash / boxes — every order" },
-    { key: "waste", label: "Less: Waste & spoilage", grosze: -wastePerOrder, tone: "warning", note: `${((scenario.wastePct ?? 0) * 100).toFixed(1)}% of revenue` },
-    { key: "refund", label: "Less: Refund / comp / theft", grosze: -refundPerOrder, tone: "warning", note: `${((scenario.refundPct ?? 0) * 100).toFixed(1)}% of revenue` },
-    { key: "loyalty", label: "Less: Loyalty burn", grosze: -loyaltyPerOrder, tone: "warning", note: `${((scenario.loyaltyBurnPct ?? 0) * 100).toFixed(1)}% — points redeemed` },
-    { key: "payment", label: "Less: Payment fees (blended)", grosze: -paymentPerOrder, tone: "warning", note: `${((scenario.paymentProcessorPct ?? 0) * 100).toFixed(2)}% — cash + card + marketplaces blended` },
-    { key: "cac", label: "Less: Marketing CAC (amortised)", grosze: -marketingPerOrder, tone: "warning", note: computed.marketingCac > 0 ? `${Math.round(computed.marketingCac / 100).toLocaleString("pl-PL")} zł/mo ÷ ${Math.round(orders).toLocaleString("pl-PL")} orders` : "Marketing left in fixed costs" },
+  // Notes are dynamic: they show the exact operator input + the per-order
+  // arithmetic (e.g. "2.0% × 45.00 zł = 0.90 zł"), so the table is no
+  // longer a static label sheet — every cell is data-derived and updates
+  // live with scenario state.
+  const variableLines: Array<{ key: string; label: string; grosze: number; note: string; tone: "warning"; source: "actuals" | "assumption" }> = [
+    {
+      key: "cogs",
+      label: "Less: COGS (food)",
+      grosze: -cogsPerOrder,
+      tone: "warning",
+      source: cogsSource,
+      note: actuals && actuals.weightedCogsPct > 0
+        ? `${(scenario.cogsPct * 100).toFixed(1)}% × ticket — recipe-weighted from ${actuals.ordersCount} real orders`
+        : `${(scenario.cogsPct * 100).toFixed(1)}% × ${(revenuePerOrder / 100).toFixed(2)} zł ticket = ${(cogsPerOrder / 100).toFixed(2)} zł`,
+    },
+    {
+      key: "packaging",
+      label: "Less: Packaging",
+      grosze: -packagingPerOrder,
+      tone: "warning",
+      source: "assumption",
+      note: `${(packagingPerOrder / 100).toFixed(2)} zł / order — napkins, plates wash, boxes`,
+    },
+    {
+      key: "waste",
+      label: "Less: Waste & spoilage",
+      grosze: -wastePerOrder,
+      tone: "warning",
+      source: "assumption",
+      note: `${((scenario.wastePct ?? 0) * 100).toFixed(1)}% × ticket = ${(wastePerOrder / 100).toFixed(2)} zł`,
+    },
+    {
+      key: "refund",
+      label: "Less: Refund / comp / theft",
+      grosze: -refundPerOrder,
+      tone: "warning",
+      source: actuals && actuals.refundPct > 0
+        ? (Math.abs(((scenario.refundPct ?? 0) - actuals.refundPct) / actuals.refundPct) <= 0.05 ? "actuals" : "assumption")
+        : "assumption",
+      note: actuals && actuals.refundPct > 0
+        ? `${((scenario.refundPct ?? 0) * 100).toFixed(2)}% × ticket — last-90d cancel rate ${(actuals.refundPct * 100).toFixed(2)}%`
+        : `${((scenario.refundPct ?? 0) * 100).toFixed(2)}% × ticket = ${(refundPerOrder / 100).toFixed(2)} zł`,
+    },
+    {
+      key: "loyalty",
+      label: "Less: Loyalty burn",
+      grosze: -loyaltyPerOrder,
+      tone: "warning",
+      source: "assumption",
+      note: `${((scenario.loyaltyBurnPct ?? 0) * 100).toFixed(2)}% × ticket — points redeemed at face value`,
+    },
+    {
+      key: "payment",
+      label: "Less: Payment fees (blended)",
+      grosze: -paymentPerOrder,
+      tone: "warning",
+      source: "assumption",
+      note: `${((scenario.paymentProcessorPct ?? 0) * 100).toFixed(2)}% blended — cash ${((scenario.cashSharePct ?? 0) * 100).toFixed(0)}% · Glovo ${((scenario.glovoSharePct ?? 0) * 100).toFixed(0)}% · Wolt ${((scenario.woltSharePct ?? 0) * 100).toFixed(0)}%`,
+    },
+    {
+      key: "cac",
+      label: "Less: Marketing CAC (amortised)",
+      grosze: -marketingPerOrder,
+      tone: "warning",
+      source: "assumption",
+      note: computed.marketingCac > 0
+        ? `${Math.round(computed.marketingCac / 100).toLocaleString("pl-PL")} zł/mo ÷ ${Math.round(orders).toLocaleString("pl-PL")} orders = ${(marketingPerOrder / 100).toFixed(2)} zł`
+        : "Marketing kept in fixed costs (toggle to amortise as CAC)",
+    },
   ];
-  const fixedLines: Array<{ key: string; label: string; grosze: number; note: string; tone: "warning" }> = [
-    { key: "labor", label: "Less: Labor amortised", grosze: -laborPerOrder, tone: "warning", note: `${Math.round(computed.laborMonthly / 100).toLocaleString("pl-PL")} zł/mo ÷ ${Math.round(orders).toLocaleString("pl-PL")} orders` },
-    { key: "fixed", label: "Less: Fixed amortised (+ D&A + interest)", grosze: -fixedPerOrder, tone: "warning", note: `${Math.round((computed.fixedTotal + computed.depreciation + computed.interest) / 100).toLocaleString("pl-PL")} zł/mo ÷ orders` },
+  const fixedLines: Array<{ key: string; label: string; grosze: number; note: string; tone: "warning"; source: "actuals" | "assumption" }> = [
+    {
+      key: "labor",
+      label: "Less: Labor amortised",
+      grosze: -laborPerOrder,
+      tone: "warning",
+      source: "assumption",
+      note: `${Math.round(computed.laborMonthly / 100).toLocaleString("pl-PL")} zł/mo ÷ ${Math.round(orders).toLocaleString("pl-PL")} orders = ${(laborPerOrder / 100).toFixed(2)} zł`,
+    },
+    {
+      key: "fixed",
+      label: "Less: Fixed amortised (+ D&A + interest)",
+      grosze: -fixedPerOrder,
+      tone: "warning",
+      source: "assumption",
+      note: `${Math.round((computed.fixedTotal + computed.depreciation + computed.interest) / 100).toLocaleString("pl-PL")} zł/mo ÷ ${Math.round(orders).toLocaleString("pl-PL")} orders = ${(fixedPerOrder / 100).toFixed(2)} zł`,
+    },
   ];
   const isNonzero = (g: number) => Math.abs(g) >= 1;
   const cm1Tone: "success" | "warning" | "danger" =
@@ -5800,14 +5843,14 @@ function UnitEconomicsPanel({
           />
         </div>
         <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse" }}>
+          <table className="v2-ue-table">
             <thead>
-              <tr style={{ textAlign: "left", color: "rgba(0,0,0,0.55)", fontSize: 11, textTransform: "uppercase", letterSpacing: 0.4 }}>
-                <th style={{ padding: "0 8px 8px" }}>Line</th>
-                <th style={{ padding: "0 4px 8px" }}>Magnitude</th>
-                <th style={{ padding: "0 8px 8px", textAlign: "right" }}>zł / order</th>
-                <th style={{ padding: "0 4px 8px", textAlign: "right" }}>% rev</th>
-                <th style={{ padding: "0 8px 8px" }}>Notes</th>
+              <tr>
+                <th>Line</th>
+                <th>Magnitude</th>
+                <th className="v2-ue-th-right">zł / order</th>
+                <th className="v2-ue-th-right">% rev</th>
+                <th>Notes</th>
               </tr>
             </thead>
             <tbody>
@@ -5816,9 +5859,14 @@ function UnitEconomicsPanel({
                 grosze={revenuePerOrder}
                 bold
                 tone="brand"
+                source={revenueSource}
                 revenuePerOrder={revenuePerOrder}
                 scaleMax={scaleMax}
-                note="Gross ticket — the start of the build-up"
+                note={
+                  actuals && actuals.avgTicketGrosze > 0
+                    ? `Gross ticket · last-90d real avg ${(actuals.avgTicketGrosze / 100).toFixed(2)} zł`
+                    : "Gross ticket — operator-typed, no order history yet"
+                }
               />
               {variableLines
                 .filter((l) => isNonzero(l.grosze))
@@ -5829,6 +5877,7 @@ function UnitEconomicsPanel({
                     grosze={l.grosze}
                     tone={l.tone}
                     note={l.note}
+                    source={l.source}
                     revenuePerOrder={revenuePerOrder}
                     scaleMax={scaleMax}
                   />
@@ -5852,6 +5901,7 @@ function UnitEconomicsPanel({
                     grosze={l.grosze}
                     tone={l.tone}
                     note={l.note}
+                    source={l.source}
                     revenuePerOrder={revenuePerOrder}
                     scaleMax={scaleMax}
                   />
