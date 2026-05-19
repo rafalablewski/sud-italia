@@ -414,10 +414,13 @@ function computeScenario(s: SimulationScenario): Computed {
   // That must be ≤ pizzasPerHour ⇒ ordersPerDay ≤ pizzasPerHour / p.
   // The same formula falls out whether you express it daily or per-hour,
   // because the peak hour is what saturates the oven and the pizzaiolo.
+  // Prep-complexity multiplier (≥ 1) DERATES capacity for menus with
+  // slow-prep items (pasta = ~1.4× pizza prep time). Audit §6.
   const cap = s.kitchenCapacity;
+  const prepMult = Math.max(0.5, s.prepComplexityMultiplier ?? 1);
   const capacityOrdersPerDay =
     cap && cap.pizzasPerHour > 0 && cap.peakHourSharePct > 0
-      ? cap.pizzasPerHour / cap.peakHourSharePct
+      ? cap.pizzasPerHour / cap.peakHourSharePct / prepMult
       : 0;
   const capacityUtilization =
     capacityOrdersPerDay > 0 ? s.ordersPerDay / capacityOrdersPerDay : 0;
@@ -3717,6 +3720,21 @@ export function AdminSimulation() {
               }
               trailingAdornment={<span className="v2-muted">%</span>}
               description="Share of daily orders in the peak hour — this is the binding constraint, not the average."
+            />
+            <Input
+              label="Prep-complexity multiplier"
+              type="number"
+              step="0.05"
+              min="0.5"
+              max="3"
+              value={(scenario.prepComplexityMultiplier ?? 1).toFixed(2)}
+              onChange={(e) =>
+                update((s) => ({
+                  ...s,
+                  prepComplexityMultiplier: Math.max(0.5, Math.min(3, parseFloat(e.target.value) || 1)),
+                }))
+              }
+              description="Derates kitchen capacity for slow-prep menus. 1.0 = pizza-only · 1.4-1.6 = pasta-heavy. See Margin traps for prep-heavy items."
             />
             <Input
               label="Summer volume multiplier"

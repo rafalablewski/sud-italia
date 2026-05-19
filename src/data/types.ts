@@ -1021,6 +1021,12 @@ export interface SimulationScenario {
    *  the P&L and instead amortised per order as a customer-acquisition
    *  cost line. Defaults to true. Makes the CM1 honest. */
   marketingAsCac?: boolean;
+  /** Menu prep-complexity multiplier (≥ 1, default 1.0). Derates
+   *  kitchen capacity when the menu skews to slow-prep items the
+   *  pizza-throughput model doesn't price: pasta (2× the kitchen time
+   *  of pizza, separate station), antipasti plating, etc. Pasta-heavy
+   *  menus typically 1.3-1.6. Audit §6: false-high-revenue items. */
+  prepComplexityMultiplier?: number;
   updatedAt: string;
 }
 

@@ -8023,6 +8023,10 @@ export function defaultSimulationScenario(): SimulationScenario {
     // Amortising it per-order makes CM1 honest — the institutional
     // CM1 nets out everything that's not a long-lived asset cost.
     marketingAsCac: true,
+    // Default 1.0 = pizza-only throughput. Bump above 1 when menu
+    // skews to slow-prep items (pasta = ~1.4-1.6×). Derates the
+    // kitchen capacity ceiling proportionally.
+    prepComplexityMultiplier: 1.0,
     // Honest all-in: Stefano Ferrara oven + truck buildout + refrigeration +
     // generator + livery + SANEPID compliance + 3 mo working capital lands
     // 350-400k PLN. The previous 250k floor was a buildout-only number that
@@ -8145,6 +8149,7 @@ export async function getSimulationScenario(): Promise<SimulationScenario> {
     interestMonthlyGrosze: typeof saved.interestMonthlyGrosze === "number" && saved.interestMonthlyGrosze >= 0 ? saved.interestMonthlyGrosze : defaults.interestMonthlyGrosze,
     packagingPerOrderGrosze: typeof saved.packagingPerOrderGrosze === "number" && saved.packagingPerOrderGrosze >= 0 ? saved.packagingPerOrderGrosze : defaults.packagingPerOrderGrosze,
     marketingAsCac: typeof saved.marketingAsCac === "boolean" ? saved.marketingAsCac : defaults.marketingAsCac,
+    prepComplexityMultiplier: typeof saved.prepComplexityMultiplier === "number" && saved.prepComplexityMultiplier > 0 ? Math.min(3, saved.prepComplexityMultiplier) : defaults.prepComplexityMultiplier,
     updatedAt: saved.updatedAt ?? defaults.updatedAt,
   };
 }
@@ -8390,6 +8395,10 @@ export async function saveSimulationScenario(
         typeof scenario.marketingAsCac === "boolean"
           ? scenario.marketingAsCac
           : (defaults.marketingAsCac ?? true),
+      prepComplexityMultiplier:
+        typeof scenario.prepComplexityMultiplier === "number" && scenario.prepComplexityMultiplier > 0
+          ? Math.max(0.5, Math.min(3, scenario.prepComplexityMultiplier))
+          : (defaults.prepComplexityMultiplier ?? 1),
       updatedAt: new Date().toISOString(),
     };
     await writeJSON(SIMULATION_KEY, clean);
