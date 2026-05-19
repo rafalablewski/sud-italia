@@ -8870,10 +8870,12 @@ export async function computeDayparts(
 
   // Local-time hour — we use UTC because the codebase doesn't track
   // location timezones explicitly and Polish locations are UTC+1/+2.
-  // For our use-case the bucket edges (11/15/17/22) are wide enough
-  // that a 1h DST shift doesn't move orders between buckets.
+  // Service window matches the operator's 12-22 truck schedule with
+  // a 1h prep + 1h cleandown bracket. Bucket edges are wide enough
+  // that a 1h DST shift doesn't move orders between rushes.
   const bucketFor = (hour: number): SimulationDaypartLine["key"] => {
-    if (hour >= 11 && hour < 15) return "lunch";
+    if (hour >= 12 && hour < 15) return "lunch";
+    if (hour >= 15 && hour < 17) return "off-peak";
     if (hour >= 17 && hour < 22) return "dinner";
     if (hour >= 22 || hour < 4) return "late-night";
     return "off-peak";
@@ -8916,10 +8918,10 @@ export async function computeDayparts(
 
   const totalOrders = fulfilled.length;
   const meta: Record<SimulationDaypartLine["key"], { label: string; hours: string }> = {
-    lunch: { label: "Lunch", hours: "11:00 – 15:00" },
+    lunch: { label: "Lunch", hours: "12:00 – 15:00" },
+    "off-peak": { label: "Mid-afternoon", hours: "15:00 – 17:00" },
     dinner: { label: "Dinner", hours: "17:00 – 22:00" },
-    "late-night": { label: "Late-night", hours: "22:00 – 04:00" },
-    "off-peak": { label: "Off-peak", hours: "other hours" },
+    "late-night": { label: "Late-night (closed)", hours: "22:00 – 04:00" },
   };
 
   return (Object.keys(agg) as Array<SimulationDaypartLine["key"]>).map((k) => {

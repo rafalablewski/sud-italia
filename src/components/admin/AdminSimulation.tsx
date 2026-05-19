@@ -627,11 +627,11 @@ const PREP_SECONDS_PER_ATTACH: Record<string, number> = {
 const PIZZA_PREP_SECONDS = 90; // base pizza assembly + bake
 
 interface ShiftPlanRow {
-  daypart: "prep" | "lunch" | "dinner" | "late-night" | "close";
+  daypart: "prep" | "lunch" | "off-peak" | "dinner" | "cleandown";
   label: string;
   hours: string;
   hoursPerDay: number;
-  /** Share of daily orders this daypart handles (0 for prep / close). */
+  /** Share of daily orders this daypart handles (0 for prep / cleandown). */
   orderShare: number;
   /** Modelled headcount on shift (uniform-spread baseline; operator
    *  reads this against reality and adjusts the per-role hours). */
@@ -644,10 +644,11 @@ interface ShiftPlanRow {
   laborCoverageRatio: number;
 }
 
-/** Maps the uniform labor mix onto the four daypart windows (prep /
- *  lunch / dinner / late-night / close) so the operator can see how
- *  thin the coverage gets at rush. Doesn't change the labor calc —
- *  this is the visibility layer the audit demanded. */
+/** Maps the uniform labor mix onto the truck's actual service windows
+ *  (prep 11-12, lunch 12-15, off-peak 15-17, dinner 17-22, cleandown
+ *  22-23) so the operator can see how thin the coverage gets at rush.
+ *  Doesn't change the labor calc — this is the visibility layer the
+ *  audit demanded. */
 function computeShiftPlan(
   s: SimulationScenario,
   dayparts: SimulationDaypartLine[] | null,
@@ -659,43 +660,30 @@ function computeShiftPlan(
   const totalLaborPerDay = totalLaborPerWeek / 7;
   const totalHeadcountAvg = s.labor.reduce((sum, l) => sum + l.headcount, 0);
   const dailyRev = s.ordersPerDay * s.avgTicketGrosze;
-  // Daypart hours — institutional standard buckets.
+  // Truck service window is 12:00 – 22:00. Prep is the hour before;
+  // cleandown is the hour after. Lunch + dinner are the two rushes
+  // with a quiet mid-afternoon between them.
   const meta: { key: ShiftPlanRow["daypart"]; label: string; hours: string; hoursPerDay: number; share: number; concentrationFactor: number }[] = [
-    { key: "prep", label: "Prep", hours: "10:00 – 11:00", hoursPerDay: 1, share: 0, concentrationFactor: 0.4 },
-    { key: "lunch", label: "Lunch", hours: "11:00 – 15:00", hoursPerDay: 4, share: 0.30, concentrationFactor: 1.4 },
-    {
-      key: "dinner",
-      label: "Dinner",
-      hours: "17:00 – 22:00",
-      hoursPerDay: 5,
-      share: 0.50,
-      concentrationFactor: 1.6,
-    },
-    {
-      key: "late-night",
-      label: "Late-night",
-      hours: "22:00 – 02:00",
-      hoursPerDay: 2,
-      share: 0.18,
-      concentrationFactor: 0.7,
-    },
-    {
-      key: "close",
-      label: "Close",
-      hours: "02:00 – 03:00",
-      hoursPerDay: 1,
-      share: 0,
-      concentrationFactor: 0.3,
-    },
+    { key: "prep", label: "Prep", hours: "11:00 – 12:00", hoursPerDay: 1, share: 0, concentrationFactor: 0.4 },
+    { key: "lunch", label: "Lunch", hours: "12:00 – 15:00", hoursPerDay: 3, share: 0.35, concentrationFactor: 1.4 },
+    { key: "off-peak", label: "Mid-afternoon", hours: "15:00 – 17:00", hoursPerDay: 2, share: 0.10, concentrationFactor: 0.7 },
+    { key: "dinner", label: "Dinner", hours: "17:00 – 22:00", hoursPerDay: 5, share: 0.55, concentrationFactor: 1.6 },
+    { key: "cleandown", label: "Cleandown", hours: "22:00 – 23:00", hoursPerDay: 1, share: 0, concentrationFactor: 0.3 },
   ];
   // If we have real daypart data, override share with observed.
   if (dayparts && dayparts.length > 0) {
     const totalObserved = dayparts.reduce((sum, d) => sum + d.ordersCount, 0);
     if (totalObserved > 0) {
       const obsByKey = new Map(dayparts.map((d) => [d.key, d.sharePct]));
-      meta.find((m) => m.key === "lunch")!.share = obsByKey.get("lunch") ?? 0.30;
-      meta.find((m) => m.key === "dinner")!.share = obsByKey.get("dinner") ?? 0.50;
-      meta.find((m) => m.key === "late-night")!.share = obsByKey.get("late-night") ?? 0.18;
+      const lunchRow = meta.find((m) => m.key === "lunch");
+      const dinnerRow = meta.find((m) => m.key === "dinner");
+      const offPeakRow = meta.find((m) => m.key === "off-peak");
+      if (lunchRow) lunchRow.share = obsByKey.get("lunch") ?? lunchRow.share;
+      if (dinnerRow) dinnerRow.share = obsByKey.get("dinner") ?? dinnerRow.share;
+      // Real off-peak observation lives in the "off-peak" bucket on
+      // the daypart panel (15-17 falls outside the lunch / dinner /
+      // late-night windows used there).
+      if (offPeakRow) offPeakRow.share = obsByKey.get("off-peak") ?? offPeakRow.share;
     }
   }
   const totalServiceHours = meta.reduce((sum, m) => sum + m.hoursPerDay, 0);
