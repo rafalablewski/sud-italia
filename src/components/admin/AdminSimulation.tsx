@@ -247,6 +247,18 @@ interface Computed {
   contributionPerLaborHour: number;
   /** Promo-adjusted AOV: gross avgTicket minus implied loyalty discount. */
   promoAdjustedAvgTicket: number;
+  /** Packaging cost — per-order × monthly orders. Hits every order
+   *  (dine-in still uses napkins / plates wash, takeout = 100%). */
+  packagingCost: number;
+  /** Marketing fixed cost reclassified as CAC and amortised per order
+   *  (only when marketingAsCac is true). When on, marketing is pulled
+   *  out of fixed costs and into a variable acquisition line — the
+   *  institutional CM1 treatment. */
+  marketingCac: number;
+  /** Per-order TRUE CM1: revenue − COGS − fees − waste − refund −
+   *  loyalty − packaging − CAC. The honest unit economics number the
+   *  audit demanded. */
+  trueCm1PerOrderGrosze: number;
   totalCost: number;
   /** Net profit AFTER tax — the bottom line the operator should plan on. */
   netProfit: number;
@@ -302,8 +314,18 @@ function computeScenario(s: SimulationScenario): Computed {
     (sum, l) => sum + l.headcount * l.hoursPerWeek * WEEKS_PER_MONTH,
     0,
   );
-  const fixedTotal = Object.values(s.fixedCosts).reduce(
-    (sum: number, v) => sum + (v ?? 0),
+  // Marketing reclassified as CAC: pulled out of fixed costs and into
+  // a per-order acquisition line. This is the institutional CM1
+  // treatment — marketing is a function of customer acquisition, not
+  // a sunk monthly fee. Operator can toggle marketingAsCac to opt out.
+  const marketingFixed = s.fixedCosts.marketing ?? 0;
+  const useMarketingAsCac = s.marketingAsCac !== false;
+  const marketingCac = useMarketingAsCac ? marketingFixed : 0;
+  const fixedTotal = Object.entries(s.fixedCosts).reduce(
+    (sum: number, [k, v]) => {
+      if (useMarketingAsCac && k === "marketing") return sum;
+      return sum + (v ?? 0);
+    },
     0,
   );
   const paymentFees = Math.round(monthlyRevenue * (s.paymentProcessorPct ?? 0));
@@ -312,14 +334,20 @@ function computeScenario(s: SimulationScenario): Computed {
   const refundPct = s.refundPct ?? 0;
   const loyaltyBurnPct = s.loyaltyBurnPct ?? 0;
   const citPct = s.citPct ?? 0;
+  const monthlyOrdersForUnitEcon = s.ordersPerDay * s.daysOpenPerMonth;
   const wasteCost = Math.round(monthlyRevenue * wastePct);
   const refundLoss = Math.round(monthlyRevenue * refundPct);
   const loyaltyCost = Math.round(monthlyRevenue * loyaltyBurnPct);
+  // Packaging hits every order — even dine-in (napkins, plates wash).
+  // Audit §6: previously buried inside delivery-share only.
+  const packagingPerOrder = s.packagingPerOrderGrosze ?? 0;
+  const packagingCost = Math.round(packagingPerOrder * monthlyOrdersForUnitEcon);
   const depreciation = s.depreciationMonthlyGrosze ?? 0;
   const interest = s.interestMonthlyGrosze ?? 0;
   // EBITDA = revenue − all variable costs − labor − fixed (excl D&A/interest).
   // Then EBIT = EBITDA − D&A; pre-tax = EBIT − interest; net = pre-tax − CIT.
-  const variableCostBlock = monthlyCogs + paymentFees + wasteCost + refundLoss + loyaltyCost;
+  const variableCostBlock =
+    monthlyCogs + paymentFees + wasteCost + refundLoss + loyaltyCost + packagingCost + marketingCac;
   const ebitda = monthlyRevenue - variableCostBlock - laborMonthly - fixedTotal;
   const ebit = ebitda - depreciation;
   const preTaxProfit = ebit - interest;
@@ -333,6 +361,18 @@ function computeScenario(s: SimulationScenario): Computed {
   const ebitdar = ebitda + rentMonthly;
   const occupancyRatio = monthlyRevenue > 0 ? rentMonthly / monthlyRevenue : 0;
   const netSales = monthlyRevenue - refundLoss;
+  // True CM1 per order: revenue − every variable leakage − packaging − CAC.
+  // The audit's headline number — what an institutional underwriter sees.
+  const marketingPerOrder =
+    monthlyOrdersForUnitEcon > 0 ? marketingCac / monthlyOrdersForUnitEcon : 0;
+  const trueCm1PerOrderGrosze =
+    s.avgTicketGrosze *
+      Math.max(
+        0,
+        1 - s.cogsPct - (s.paymentProcessorPct ?? 0) - wastePct - refundPct - loyaltyBurnPct,
+      ) -
+    packagingPerOrder -
+    marketingPerOrder;
   const cashOnCashAnnual =
     s.setupCostGrosze && s.setupCostGrosze > 0 ? (netProfit * 12) / s.setupCostGrosze : null;
   const contributionPerOrderHonest =
@@ -402,6 +442,9 @@ function computeScenario(s: SimulationScenario): Computed {
     cashOnCashAnnual,
     contributionPerLaborHour,
     promoAdjustedAvgTicket,
+    packagingCost,
+    marketingCac,
+    trueCm1PerOrderGrosze,
     totalCost,
     netProfit,
     margin,
@@ -454,10 +497,18 @@ function projectMonths(
       sum + l.headcount * l.hoursPerWeek * WEEKS_PER_MONTH * l.hourlyRateGrosze,
     0,
   );
-  const baseFixed = Object.values(s.fixedCosts).reduce(
-    (sum: number, v) => sum + (v ?? 0),
+  // Same marketing-as-CAC reclassification as in computeScenario so
+  // the projection lines up with the headline view.
+  const projUseCac = s.marketingAsCac !== false;
+  const projMarketing = s.fixedCosts.marketing ?? 0;
+  const baseFixed = Object.entries(s.fixedCosts).reduce(
+    (sum: number, [k, v]) => {
+      if (projUseCac && k === "marketing") return sum;
+      return sum + (v ?? 0);
+    },
     0,
   );
+  const projPackagingPerOrder = s.packagingPerOrderGrosze ?? 0;
   const rows: {
     month: string;
     monthIndex: number;
@@ -513,11 +564,17 @@ function projectMonths(
     const waste = Math.round(revenue * (s.wastePct ?? 0));
     const refund = Math.round(revenue * (s.refundPct ?? 0));
     const loyalty = Math.round(revenue * (s.loyaltyBurnPct ?? 0));
+    const packaging = Math.round(orders * projPackagingPerOrder);
+    // Marketing CAC tracks volume (more orders = more acquisition spend
+    // implied, but the FIXED budget doesn't change — so we keep it
+    // constant whether marketingAsCac is on or off; on=variable bucket,
+    // off=fixed bucket. Net effect on pre-tax is identical.
+    const marketingCacRow = projUseCac ? projMarketing : 0;
     // D&A and interest stay flat — they don't compound with volume or
     // wage CPI; they're functions of capital structure decided up front.
     const depreciation = s.depreciationMonthlyGrosze ?? 0;
     const interest = s.interestMonthlyGrosze ?? 0;
-    const preTax = revenue - cogs - labor - fixed - payment - waste - refund - loyalty - depreciation - interest;
+    const preTax = revenue - cogs - labor - fixed - payment - waste - refund - loyalty - packaging - marketingCacRow - depreciation - interest;
     const cit = preTax > 0 ? Math.round(preTax * (s.citPct ?? 0)) : 0;
     const netProfit = preTax - cit;
     rows.push({
@@ -3426,6 +3483,44 @@ export function AdminSimulation() {
               trailingAdornment={<span className="v2-muted">zł/mo</span>}
               description="Monthly financing cost. Leave at 0 for cash-purchased trucks."
             />
+            <Input
+              label="Packaging per order"
+              type="number"
+              step="0.10"
+              min="0"
+              value={((scenario.packagingPerOrderGrosze ?? 0) / 100).toFixed(2)}
+              onChange={(e) =>
+                update((s) => ({
+                  ...s,
+                  packagingPerOrderGrosze: Math.max(0, Math.round((parseFloat(e.target.value) || 0) * 100)),
+                }))
+              }
+              trailingAdornment={<span className="v2-muted">zł</span>}
+              description="Hits every order — napkins, plates wash, takeaway boxes. Delivery-share packaging is additional."
+            />
+            <div className="flex items-center gap-2" style={{ padding: "8px 0" }}>
+              <input
+                id="sim-mkt-as-cac"
+                type="checkbox"
+                checked={scenario.marketingAsCac !== false}
+                onChange={(e) =>
+                  update((s) => ({ ...s, marketingAsCac: e.target.checked }))
+                }
+              />
+              <label htmlFor="sim-mkt-as-cac" className="text-sm">
+                Treat marketing as CAC (per-order amortised)
+              </label>
+              <InfoButton title="Marketing as CAC" label="About marketing-as-CAC">
+                <p>
+                  Institutional CM1 treats marketing as a customer-acquisition
+                  cost — variable, per-order — rather than a sunk monthly fee.
+                  When ON, the marketing fixed-cost line is pulled out of fixed
+                  costs and shown as a separate "Marketing CAC" row in the P&amp;L,
+                  netting out the True CM1 per order. Total pre-tax profit is
+                  identical either way; the difference is honest unit economics.
+                </p>
+              </InfoButton>
+            </div>
             <Input
               label="Waste & spoilage"
               type="number"

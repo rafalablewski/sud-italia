@@ -8015,6 +8015,14 @@ export function defaultSimulationScenario(): SimulationScenario {
     // overstated EBITDA. Operator can override; 0 disables it.
     depreciationMonthlyGrosze: 633_000,
     interestMonthlyGrosze: 0,
+    // Every order incurs real packaging — even dine-in (napkins,
+    // plates wash). Audit §6: previously buried inside delivery-share
+    // only, overstating dine-in CM1 by ~1.20 zł per order.
+    packagingPerOrderGrosze: 120,
+    // Marketing fixed cost behaves like CAC: it acquires orders.
+    // Amortising it per-order makes CM1 honest — the institutional
+    // CM1 nets out everything that's not a long-lived asset cost.
+    marketingAsCac: true,
     // Honest all-in: Stefano Ferrara oven + truck buildout + refrigeration +
     // generator + livery + SANEPID compliance + 3 mo working capital lands
     // 350-400k PLN. The previous 250k floor was a buildout-only number that
@@ -8135,6 +8143,8 @@ export async function getSimulationScenario(): Promise<SimulationScenario> {
     laborAnchorOrdersPerDay: typeof saved.laborAnchorOrdersPerDay === "number" && saved.laborAnchorOrdersPerDay > 0 ? saved.laborAnchorOrdersPerDay : defaults.laborAnchorOrdersPerDay,
     depreciationMonthlyGrosze: typeof saved.depreciationMonthlyGrosze === "number" && saved.depreciationMonthlyGrosze >= 0 ? saved.depreciationMonthlyGrosze : defaults.depreciationMonthlyGrosze,
     interestMonthlyGrosze: typeof saved.interestMonthlyGrosze === "number" && saved.interestMonthlyGrosze >= 0 ? saved.interestMonthlyGrosze : defaults.interestMonthlyGrosze,
+    packagingPerOrderGrosze: typeof saved.packagingPerOrderGrosze === "number" && saved.packagingPerOrderGrosze >= 0 ? saved.packagingPerOrderGrosze : defaults.packagingPerOrderGrosze,
+    marketingAsCac: typeof saved.marketingAsCac === "boolean" ? saved.marketingAsCac : defaults.marketingAsCac,
     updatedAt: saved.updatedAt ?? defaults.updatedAt,
   };
 }
@@ -8372,6 +8382,14 @@ export async function saveSimulationScenario(
         typeof scenario.interestMonthlyGrosze === "number" && scenario.interestMonthlyGrosze >= 0
           ? Math.round(scenario.interestMonthlyGrosze)
           : (defaults.interestMonthlyGrosze ?? 0),
+      packagingPerOrderGrosze:
+        typeof scenario.packagingPerOrderGrosze === "number" && scenario.packagingPerOrderGrosze >= 0
+          ? Math.round(scenario.packagingPerOrderGrosze)
+          : (defaults.packagingPerOrderGrosze ?? 0),
+      marketingAsCac:
+        typeof scenario.marketingAsCac === "boolean"
+          ? scenario.marketingAsCac
+          : (defaults.marketingAsCac ?? true),
       updatedAt: new Date().toISOString(),
     };
     await writeJSON(SIMULATION_KEY, clean);

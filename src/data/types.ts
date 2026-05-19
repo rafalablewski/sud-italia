@@ -1010,6 +1010,17 @@ export interface SimulationScenario {
    *  was financed. Default 0. Separated so EBIT = EBITDA − D&A and
    *  pre-tax profit = EBIT − interest, the standard institutional cut. */
   interestMonthlyGrosze?: number;
+  /** Per-order packaging cost in grosze that applies to EVERY order —
+   *  napkins, plates wash for dine-in; boxes + bags for takeout / delivery.
+   *  Previously only modeled as a delivery-share extra; the audit pointed
+   *  out dine-in still incurs real packaging (~1 zł/order). Default 120
+   *  grosze (1.20 zł). The delivery-share lever's packagingCostGrosze
+   *  stays as the additional delivery premium on top. */
+  packagingPerOrderGrosze?: number;
+  /** When true, marketing fixed cost is excluded from "fixed costs" in
+   *  the P&L and instead amortised per order as a customer-acquisition
+   *  cost line. Defaults to true. Makes the CM1 honest. */
+  marketingAsCac?: boolean;
   updatedAt: string;
 }
 

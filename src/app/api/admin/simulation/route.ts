@@ -121,6 +121,8 @@ export const PUT = withAdmin(
       laborAnchorOrdersPerDay: typeof b.laborAnchorOrdersPerDay === "number" ? b.laborAnchorOrdersPerDay : undefined,
       depreciationMonthlyGrosze: typeof b.depreciationMonthlyGrosze === "number" ? b.depreciationMonthlyGrosze : undefined,
       interestMonthlyGrosze: typeof b.interestMonthlyGrosze === "number" ? b.interestMonthlyGrosze : undefined,
+      packagingPerOrderGrosze: typeof b.packagingPerOrderGrosze === "number" ? b.packagingPerOrderGrosze : undefined,
+      marketingAsCac: typeof b.marketingAsCac === "boolean" ? b.marketingAsCac : undefined,
       updatedAt: new Date().toISOString(),
     };
     const saved = await saveSimulationScenario(scenario);
