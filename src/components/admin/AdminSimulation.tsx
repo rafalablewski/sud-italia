@@ -4567,13 +4567,48 @@ function MenuScenarioPicker({ activeId, overrides, onApply, onSaveOverride, onRe
           preset={editingPreset}
           basePreset={MENU_SCENARIO_BY_ID.get(editingPreset.id) ?? CUSTOM_PRESET}
           override={overrides?.[editingPreset.id]}
+          isActive={editingPreset.id === activeId}
           onClose={() => setEditingId(null)}
+          onPreview={(override) => {
+            // Real-time preview: every keystroke pushes the draft into
+            // the live scenario. This is the "real-time results" the
+            // operator expects — KPIs / heatmaps / projections all
+            // recompute on each edit through the existing useMemo
+            // dependency chain.
+            const base = MENU_SCENARIO_BY_ID.get(editingPreset.id) ?? CUSTOM_PRESET;
+            onApply({
+              ...base,
+              ordersPerDay: override.ordersPerDay,
+              daysOpenPerMonth: override.daysOpenPerMonth,
+              avgTicketGrosze: override.avgTicketGrosze,
+              cogsPct: override.cogsPct,
+              attach: override.attach,
+            });
+          }}
           onSave={(override) => {
+            // Persist + activate. Save means "I'm done editing — keep
+            // these as the card's defaults AND make them the active
+            // scenario."
+            const base = MENU_SCENARIO_BY_ID.get(editingPreset.id) ?? CUSTOM_PRESET;
             onSaveOverride(editingPreset.id, override);
+            onApply({
+              ...base,
+              ordersPerDay: override.ordersPerDay,
+              daysOpenPerMonth: override.daysOpenPerMonth,
+              avgTicketGrosze: override.avgTicketGrosze,
+              cogsPct: override.cogsPct,
+              attach: override.attach,
+            });
             setEditingId(null);
           }}
           onReset={() => {
+            const base = MENU_SCENARIO_BY_ID.get(editingPreset.id) ?? CUSTOM_PRESET;
             onResetOverride(editingPreset.id);
+            // If this card is the active scenario, also reapply the
+            // baked-in defaults so the live KPIs jump back to baseline.
+            if (editingPreset.id === activeId) {
+              onApply(base);
+            }
             setEditingId(null);
           }}
         />
@@ -4586,20 +4621,26 @@ interface MenuScenarioEditDialogProps {
   preset: MenuScenarioPreset;
   basePreset: MenuScenarioPreset;
   override: SimulationMenuScenarioOverride | undefined;
+  isActive: boolean;
+  /** Fires on every input change — pushes the current draft into the
+   *  live scenario so KPIs / heatmaps / projections preview the impact
+   *  immediately. Doesn't persist the override (Save does that). */
+  onPreview: (override: SimulationMenuScenarioOverride) => void;
   onClose: () => void;
   onSave: (override: SimulationMenuScenarioOverride) => void;
   onReset: () => void;
 }
 
-/** Edit popup for a menu scenario card. Holds local draft state so the
- *  operator can tweak values without committing; Save persists the
- *  override (so it survives reload); Reset restores the baked-in
- *  defaults. The popup itself doesn't push to the live scenario — the
- *  card's Apply path (click anywhere on the card) does that. */
+/** Edit popup for a menu scenario card. Pushes a real-time preview into
+ *  the live scenario on every keystroke so the operator sees the
+ *  numbers move as they edit. Save persists the override (survives
+ *  reload); Reset restores baked-in defaults. */
 function MenuScenarioEditDialog({
   preset,
   basePreset,
   override,
+  isActive,
+  onPreview,
   onClose,
   onSave,
   onReset,
@@ -4611,22 +4652,41 @@ function MenuScenarioEditDialog({
     cogsPct: preset.cogsPct,
     attach: { ...preset.attach },
   };
+  // Capture the scenario state at open-time so Cancel can roll back
+  // any real-time previews the operator triggered while editing.
+  const initialRef = useRef<SimulationMenuScenarioOverride>(startingDraft);
   const [draft, setDraft] = useState<SimulationMenuScenarioOverride>(startingDraft);
   const hasOverride = override !== undefined;
   const patchDraft = (patch: Partial<SimulationMenuScenarioOverride>) =>
-    setDraft((d) => ({ ...d, ...patch }));
+    setDraft((d) => {
+      const next = { ...d, ...patch };
+      // Real-time preview only when this is the active scenario;
+      // editing an inactive card shouldn't move the live KPIs (would
+      // be confusing — operator is just configuring a saved preset).
+      if (isActive) onPreview(next);
+      return next;
+    });
   const patchAttach = (patch: Partial<SimulationMenuScenarioOverride["attach"]>) =>
-    setDraft((d) => ({ ...d, attach: { ...d.attach, ...patch } }));
+    setDraft((d) => {
+      const next = { ...d, attach: { ...d.attach, ...patch } };
+      if (isActive) onPreview(next);
+      return next;
+    });
+  const handleCancel = () => {
+    // Roll back any real-time preview to where we started.
+    if (isActive) onPreview(initialRef.current);
+    onClose();
+  };
   return (
     <Dialog
       open
-      onClose={onClose}
+      onClose={handleCancel}
       title={`Edit ${preset.name}`}
       description={`Baked-in defaults: ${basePreset.ordersPerDay} orders/day · ${(basePreset.avgTicketGrosze / 100).toFixed(2)} zł ticket · ${basePreset.daysOpenPerMonth} days/mo · ${Math.round(basePreset.cogsPct * 100)}% COGS. Reset restores these.`}
       size="lg"
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={handleCancel}>
             Cancel
           </Button>
           <Button
