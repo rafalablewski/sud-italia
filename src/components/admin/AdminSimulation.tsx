@@ -544,6 +544,157 @@ function computeReturns(
   };
 }
 
+/** Single tornado bar — variable name + downside / upside profit deltas. */
+interface TornadoBar {
+  key: string;
+  label: string;
+  unit: string;
+  /** Net profit delta in grosze at the -10% scenario (typically negative
+   *  for cost-up moves; sign matches a real loss). */
+  downGrosze: number;
+  /** Net profit delta in grosze at the +10% scenario. */
+  upGrosze: number;
+  /** Absolute total swing — used to sort the bars descending. */
+  totalSwing: number;
+}
+
+/** One-at-a-time sensitivity for the tornado chart. Each variable is flexed
+ *  ±10% (or ±10pp for percentage variables) around the current scenario, the
+ *  net profit re-computed, and the deltas vs baseline returned. The chart
+ *  is sorted by absolute swing so the most fragile inputs surface at the top. */
+function computeTornado(s: SimulationScenario): TornadoBar[] {
+  const baseline = computeScenario(s).netProfit;
+  const flex = 0.10;
+  const flexPP = 0.05;
+
+  // Helper: produce a scenario clone with one numeric field shifted.
+  const withField = (mut: (next: SimulationScenario) => void): SimulationScenario => {
+    const clone: SimulationScenario = JSON.parse(JSON.stringify(s));
+    mut(clone);
+    return clone;
+  };
+
+  const bars: TornadoBar[] = [];
+  const push = (
+    key: string,
+    label: string,
+    unit: string,
+    minusScen: SimulationScenario,
+    plusScen: SimulationScenario,
+  ) => {
+    const minus = computeScenario(minusScen).netProfit;
+    const plus = computeScenario(plusScen).netProfit;
+    const down = minus - baseline;
+    const up = plus - baseline;
+    bars.push({
+      key,
+      label,
+      unit,
+      downGrosze: down,
+      upGrosze: up,
+      totalSwing: Math.abs(down) + Math.abs(up),
+    });
+  };
+
+  push(
+    "ordersPerDay",
+    "Orders / day",
+    "±10%",
+    withField((c) => { c.ordersPerDay = Math.max(0, s.ordersPerDay * (1 - flex)); }),
+    withField((c) => { c.ordersPerDay = s.ordersPerDay * (1 + flex); }),
+  );
+  push(
+    "avgTicket",
+    "Avg ticket",
+    "±10%",
+    withField((c) => { c.avgTicketGrosze = Math.max(0, s.avgTicketGrosze * (1 - flex)); }),
+    withField((c) => { c.avgTicketGrosze = s.avgTicketGrosze * (1 + flex); }),
+  );
+  push(
+    "cogsPct",
+    "Food cost %",
+    "±5pp",
+    withField((c) => { c.cogsPct = Math.max(0, s.cogsPct - flexPP); }),
+    withField((c) => { c.cogsPct = Math.min(1, s.cogsPct + flexPP); }),
+  );
+  push(
+    "labor",
+    "Labor cost",
+    "±10%",
+    withField((c) => {
+      c.labor = s.labor.map((l) => ({ ...l, hourlyRateGrosze: l.hourlyRateGrosze * (1 - flex) }));
+    }),
+    withField((c) => {
+      c.labor = s.labor.map((l) => ({ ...l, hourlyRateGrosze: l.hourlyRateGrosze * (1 + flex) }));
+    }),
+  );
+  const fixedTotal = Object.values(s.fixedCosts).reduce((sum, v) => sum + (v ?? 0), 0);
+  if (fixedTotal > 0) {
+    push(
+      "fixed",
+      "Fixed costs",
+      "±10%",
+      withField((c) => {
+        c.fixedCosts = Object.fromEntries(
+          Object.entries(s.fixedCosts).map(([k, v]) => [k, Math.round((v ?? 0) * (1 - flex))]),
+        ) as SimulationScenario["fixedCosts"];
+      }),
+      withField((c) => {
+        c.fixedCosts = Object.fromEntries(
+          Object.entries(s.fixedCosts).map(([k, v]) => [k, Math.round((v ?? 0) * (1 + flex))]),
+        ) as SimulationScenario["fixedCosts"];
+      }),
+    );
+  }
+  if ((s.paymentProcessorPct ?? 0) > 0) {
+    push(
+      "processor",
+      "Payment fee %",
+      "±0.5pp",
+      withField((c) => { c.paymentProcessorPct = Math.max(0, (s.paymentProcessorPct ?? 0) - 0.005); }),
+      withField((c) => { c.paymentProcessorPct = Math.min(1, (s.paymentProcessorPct ?? 0) + 0.005); }),
+    );
+  }
+  if ((s.wastePct ?? 0) > 0 || s.wastePct === undefined) {
+    push(
+      "waste",
+      "Waste %",
+      "±1pp",
+      withField((c) => { c.wastePct = Math.max(0, (s.wastePct ?? 0.02) - 0.01); }),
+      withField((c) => { c.wastePct = Math.min(1, (s.wastePct ?? 0.02) + 0.01); }),
+    );
+  }
+  if ((s.refundPct ?? 0) > 0 || s.refundPct === undefined) {
+    push(
+      "refund",
+      "Refund %",
+      "±1pp",
+      withField((c) => { c.refundPct = Math.max(0, (s.refundPct ?? 0.015) - 0.01); }),
+      withField((c) => { c.refundPct = Math.min(1, (s.refundPct ?? 0.015) + 0.01); }),
+    );
+  }
+  if ((s.citPct ?? 0) > 0) {
+    push(
+      "cit",
+      "CIT rate",
+      "9% ↔ 19%",
+      withField((c) => { c.citPct = 0.09; }),
+      withField((c) => { c.citPct = 0.19; }),
+    );
+  }
+  if ((s.glovoFeePct ?? 0) > 0 && (s.glovoSharePct ?? 0) > 0) {
+    push(
+      "glovoFee",
+      "Glovo commission",
+      "±3pp",
+      withField((c) => { c.glovoFeePct = Math.max(0, (s.glovoFeePct ?? 0) - 0.03); }),
+      withField((c) => { c.glovoFeePct = Math.min(1, (s.glovoFeePct ?? 0) + 0.03); }),
+    );
+  }
+
+  return bars.sort((a, b) => b.totalSwing - a.totalSwing);
+}
+
 /** Sample the net-profit surface for a 2D heatmap. Each axis spans
  *  ±range × steps points around the current value, the centre row/col
  *  IS the current scenario. */
@@ -1967,6 +2118,7 @@ export function AdminSimulation() {
     monthlyNetGrosze,
     scenario.setupCostGrosze ?? 0,
   );
+  const tornado = computeTornado(effectiveScenario!);
   const archetypes = deriveArchetypes(effectiveScenario!);
   const archetypeRows = [
     { key: "conservative", label: "Conservative", scenario: archetypes.conservative, hint: "−15% orders · +2pp COGS" },
@@ -2641,6 +2793,9 @@ export function AdminSimulation() {
       </section>
 
       {menuEng && menuEng.length > 0 && <MenuEngineeringPanel rows={menuEng} />}
+
+      <TornadoPanel bars={tornado} />
+
 
       <Card>
         <CardHeader
@@ -3544,6 +3699,80 @@ function SourceTag({
     >
       {c.label}
     </span>
+  );
+}
+
+/** Tornado chart: every key driver flexed ±10% (or ±a sensible pp swing for
+ *  percentage drivers), bars sorted by absolute net-profit swing. The most
+ *  fragile variable surfaces at the top — the IC-grade "where would I look
+ *  first?" answer the institutional review flagged as missing. */
+function TornadoPanel({ bars }: { bars: TornadoBar[] }) {
+  if (bars.length === 0) return null;
+  const maxSwing = Math.max(...bars.map((b) => Math.max(Math.abs(b.downGrosze), Math.abs(b.upGrosze))));
+  if (maxSwing === 0) return null;
+  const formatZl = (g: number) => {
+    const zl = g / 100;
+    const sign = zl >= 0 ? "+" : "−";
+    return `${sign}${Math.abs(Math.round(zl)).toLocaleString("pl-PL")} zł`;
+  };
+  return (
+    <Card>
+      <CardHeader
+        title="Sensitivity tornado"
+        description="Net-profit swing when each variable is flexed independently around the current scenario. The most fragile inputs are at the top — that's where to apply attention first."
+        actions={
+          <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+            <FlaskConical className="h-4 w-4 v2-muted" />
+          </span>
+        }
+      />
+      <CardBody>
+        <div className="v2-stack-12">
+          {bars.map((b) => {
+            const downWidth = Math.abs(b.downGrosze) / maxSwing * 50;
+            const upWidth = Math.abs(b.upGrosze) / maxSwing * 50;
+            return (
+              <div key={b.key} className="flex items-center gap-3">
+                <div style={{ width: 160, fontSize: 13 }}>
+                  <div style={{ fontWeight: 500 }}>{b.label}</div>
+                  <div className="v2-muted text-xs">{b.unit}</div>
+                </div>
+                <div className="tabular text-xs v2-muted" style={{ width: 80, textAlign: "right" }}>
+                  {formatZl(b.downGrosze)}
+                </div>
+                <div style={{ flex: 1, display: "flex", alignItems: "center", position: "relative", height: 18 }}>
+                  <div style={{ position: "absolute", left: 0, right: 0, top: "50%", height: 1, background: "rgba(0,0,0,0.1)" }} />
+                  <div
+                    style={{
+                      position: "absolute",
+                      right: "50%",
+                      height: 14,
+                      width: `${downWidth}%`,
+                      background: b.downGrosze < 0 ? "rgba(239,68,68,0.8)" : "rgba(34,197,94,0.8)",
+                      borderRadius: "3px 0 0 3px",
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: "50%",
+                      height: 14,
+                      width: `${upWidth}%`,
+                      background: b.upGrosze >= 0 ? "rgba(34,197,94,0.8)" : "rgba(239,68,68,0.8)",
+                      borderRadius: "0 3px 3px 0",
+                    }}
+                  />
+                  <div style={{ position: "absolute", left: "50%", top: 0, bottom: 0, width: 2, background: "rgba(0,0,0,0.25)" }} />
+                </div>
+                <div className="tabular text-xs v2-muted" style={{ width: 80 }}>
+                  {formatZl(b.upGrosze)}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </CardBody>
+    </Card>
   );
 }
 
