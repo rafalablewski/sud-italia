@@ -34,6 +34,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
+import { krakowMenu } from "@/data/menus/krakow";
 import type {
   BusinessCostCategory,
   BusinessCostPayrollRole,
@@ -3538,7 +3539,14 @@ export function AdminSimulation() {
         subtitle="Comp sales and the year-on-year story IC reads first"
       />
 
-      {sssg && (sssg.currentOrders > 0 || sssg.priorOrders > 0) && <SssgStrip sssg={sssg} />}
+      <SssgStrip
+        sssg={
+          sssg && (sssg.currentOrders > 0 || sssg.priorOrders > 0)
+            ? sssg
+            : computeSimulatedSssg(scenario)
+        }
+        simulated={!sssg || (sssg.currentOrders === 0 && sssg.priorOrders === 0)}
+      />
 
       <ModuleDivider
         index={2}
@@ -3632,18 +3640,17 @@ export function AdminSimulation() {
         subtitle="Kasavana-Smith quadrants, margin traps, prep-heavy false-high-revenue items"
       />
 
-      {menuEng && menuEng.length > 0 ? (
-        <>
-          <MenuEngineeringPanel rows={menuEng} />
-          <MarginTrapsCallout rows={menuEng} />
-        </>
-      ) : (
-        <EmptyModuleCard
-          title="Menu engineering populates from real order line items"
-          description="Once orders contain menu items the Kasavana-Smith matrix lights up — stars / plowhorses / puzzles / dogs computed from per-item velocity and gross profit, with hero / driver / anchor role badges from the menu definition. The margin-traps callout flags delivery-only marketplace casualties, spoilage-risk items, and prep-heavy false-high-revenue plates."
-          cta="No menu data yet — generate a few orders containing menu items to activate."
-        />
-      )}
+      {(() => {
+        const hasReal = menuEng && menuEng.length > 0;
+        const rows = hasReal ? menuEng : computeSimulatedMenuEngineering(scenario);
+        if (rows.length === 0) return null;
+        return (
+          <>
+            <MenuEngineeringPanel rows={rows} simulated={!hasReal} />
+            <MarginTrapsCallout rows={rows} simulated={!hasReal} />
+          </>
+        );
+      })()}
 
       <ModuleDivider
         index={7}
@@ -5721,11 +5728,53 @@ function BreakEvenChart({
             title={`Current ${currentOrdersPerDay.toFixed(0)} / day`}
           />
         </div>
-        <div className="flex justify-between v2-muted text-xs mt-1">
-          <span>0</span>
-          <span>break-even {breakeven.toFixed(0)}</span>
-          {computed.capacityOrdersPerDay > 0 && <span>capacity {computed.capacityOrdersPerDay.toFixed(0)}</span>}
-          <span>{Math.round(scaleMax)}</span>
+        <div style={{ position: "relative", height: 22, marginTop: 6 }}>
+          {/* 0 — anchored to the far-left edge */}
+          <span
+            className="v2-muted text-xs"
+            style={{ position: "absolute", left: 0, top: 0, transform: "translateX(0%)" }}
+          >
+            0
+          </span>
+          {/* Break-even label — anchored under the red marker */}
+          <span
+            className="text-xs"
+            style={{
+              position: "absolute",
+              left: `${safe(breakeven)}%`,
+              top: 0,
+              transform: "translateX(-50%)",
+              color: "rgb(239,68,68)",
+              fontWeight: 600,
+              whiteSpace: "nowrap",
+            }}
+          >
+            break-even {breakeven.toFixed(0)}
+          </span>
+          {/* Capacity label — anchored under the dark marker */}
+          {computed.capacityOrdersPerDay > 0 && (
+            <span
+              className="text-xs"
+              style={{
+                position: "absolute",
+                left: `${safe(computed.capacityOrdersPerDay)}%`,
+                top: 0,
+                transform: "translateX(-50%)",
+                color: "color-mix(in oklab, var(--fg) 70%, transparent)",
+                fontWeight: 600,
+                whiteSpace: "nowrap",
+              }}
+            >
+              capacity {computed.capacityOrdersPerDay.toFixed(0)}
+            </span>
+          )}
+          {/* Scale max — anchored to the far-right edge */}
+          <span
+            className="v2-muted text-xs"
+            style={{ position: "absolute", right: 0, top: 0, transform: "translateX(0%)" }}
+          >
+            {Math.round(scaleMax)}
+          </span>
         </div>
       </CardBody>
     </Card>
@@ -6650,7 +6699,7 @@ function FleetPanel({
 /** Same-store sales growth — comp-sales the way every restaurant chain in
  *  the world reports it. Decomposes revenue growth into volume / ticket /
  *  customer-acquisition so the operator sees what drove the move. */
-function SssgStrip({ sssg }: { sssg: SimulationSssgSnapshot }) {
+function SssgStrip({ sssg, simulated }: { sssg: SimulationSssgSnapshot; simulated?: boolean }) {
   const fmtPct = (v: number) =>
     `${v >= 0 ? "+" : ""}${(v * 100).toFixed(1)}%`;
   const toneFor = (v: number): "success" | "warning" | "danger" | "info" =>
@@ -6687,7 +6736,10 @@ function SssgStrip({ sssg }: { sssg: SimulationSssgSnapshot }) {
         <span className="v2-muted text-xs">
           Last {sssg.windowDays}d vs prior {sssg.windowDays}d
         </span>
-        <SourceTag kind="actuals" hint="From real orders." />
+        <SourceTag
+          kind={simulated ? "assumption" : "actuals"}
+          hint={simulated ? "Simulated from scenario — populates from real orders once they exist." : "From real orders."}
+        />
       </div>
       <section className="v2-kpi-grid">
         <KpiCard
@@ -6998,12 +7050,208 @@ function TornadoPanel({ bars }: { bars: TornadoBar[] }) {
   );
 }
 
+/** Spoilage-keyword set — used by both the server-side computation in
+ *  store.ts and the client-side synthesis fallback below. Keep in sync. */
+const SPOILAGE_KEYWORDS_CLIENT = ["burrata", "truffle", "tartufata", "frozen", "tiramisù", "tiramisu"];
+
+/** Synthesize a menu-engineering breakdown from the active scenario's
+ *  attach rates + the static menu definition. Used when there's no real
+ *  order history yet so the matrix isn't empty in simulation mode —
+ *  every preset still produces a believable mix of stars / plowhorses /
+ *  puzzles / dogs. Once real orders flow in (≥1 order), the server
+ *  endpoint takes over. */
+function computeSimulatedMenuEngineering(
+  s: SimulationScenario,
+): SimulationMenuEngineeringLine[] {
+  const monthlyOrders = s.ordersPerDay * s.daysOpenPerMonth;
+  if (monthlyOrders <= 0) return [];
+
+  const a = s.assumptions;
+  const attach = {
+    coffee: a?.coffeeAttach?.enabled !== false ? a?.coffeeAttach?.attachPct ?? 0 : 0,
+    dessert: a?.dessertAttach?.enabled !== false ? a?.dessertAttach?.attachPct ?? 0 : 0,
+    antipasti: a?.antipastiAttach?.enabled !== false ? a?.antipastiAttach?.attachPct ?? 0 : 0,
+    aperitivo: a?.aperitivoAttach?.enabled !== false ? a?.aperitivoAttach?.attachPct ?? 0 : 0,
+    pasta: a?.pastaPrimoAttach?.enabled !== false ? a?.pastaPrimoAttach?.attachPct ?? 0 : 0,
+  };
+  const deliveryShare = a?.deliveryShare?.enabled !== false ? a?.deliveryShare?.pct ?? 0 : 0;
+
+  // Per-category total units sold across the month — derived from
+  // scenario's attach assumptions. Pizza is 1× per order baseline.
+  const unitsByCategory: Record<string, number> = {
+    pizza: monthlyOrders,
+    drinks: monthlyOrders * attach.coffee + monthlyOrders * 0.15, // espresso attach + other drinks
+    desserts: monthlyOrders * attach.dessert,
+    antipasti: monthlyOrders * (attach.antipasti + attach.aperitivo * 0.3),
+    pasta: monthlyOrders * attach.pasta,
+    panini: monthlyOrders * 0.04, // light tail
+  };
+
+  // Group menu items by category, separating delivery-only.
+  const available = krakowMenu.filter((item) => item.available);
+  const dineInItems = available.filter((item) => !item.deliveryOnly);
+  const deliveryItems = available.filter((item) => item.deliveryOnly);
+
+  const byCategory: Record<string, typeof dineInItems> = {};
+  for (const item of dineInItems) {
+    const cat = item.category;
+    if (!byCategory[cat]) byCategory[cat] = [];
+    byCategory[cat].push(item);
+  }
+
+  // Weight per menuRole — hero items sell ~2× a no-role item; anchors
+  // sell ~0.3× (they're decoys / aspirational); profit-drivers sell
+  // 1.5×. Falls back to 1.0 for items without a role tag.
+  const weightFor = (item: (typeof dineInItems)[number]): number => {
+    switch (item.menuRole) {
+      case "hero":
+        return 2.0;
+      case "profit-driver":
+        return 1.5;
+      case "anchor":
+        return 0.3;
+      default:
+        return 1.0;
+    }
+  };
+
+  // Build line items by distributing each category's total units across
+  // the available items weighted by menuRole.
+  type Row = {
+    item: (typeof dineInItems)[number];
+    units: number;
+    isDelivery: boolean;
+  };
+  const synthesized: Row[] = [];
+  for (const [category, items] of Object.entries(byCategory)) {
+    const totalUnits = unitsByCategory[category] ?? 0;
+    if (totalUnits <= 0 || items.length === 0) continue;
+    const weights = items.map(weightFor);
+    const sumW = weights.reduce((sum, w) => sum + w, 0);
+    items.forEach((item, idx) => {
+      const units = Math.round((weights[idx] / sumW) * totalUnits);
+      if (units > 0) synthesized.push({ item, units, isDelivery: false });
+    });
+  }
+
+  // Delivery-only items: ~15% of delivery orders carry a pantry item.
+  if (deliveryShare > 0 && deliveryItems.length > 0) {
+    const deliveryUnits = monthlyOrders * deliveryShare * 0.15;
+    const weights = deliveryItems.map(weightFor);
+    const sumW = weights.reduce((sum, w) => sum + w, 0);
+    deliveryItems.forEach((item, idx) => {
+      const units = Math.round((weights[idx] / sumW) * deliveryUnits);
+      if (units > 0) synthesized.push({ item, units, isDelivery: true });
+    });
+  }
+
+  if (synthesized.length === 0) return [];
+
+  // Build the engineering rows — same shape as the server-side
+  // computeMenuEngineering function so the panels are blind to source.
+  const wastePct = s.wastePct ?? 0;
+  const refundPct = s.refundPct ?? 0;
+  const loyaltyPct = s.loyaltyBurnPct ?? 0;
+  const feePct = s.paymentProcessorPct ?? 0;
+  const leakageRate = feePct + wastePct + refundPct + loyaltyPct;
+
+  const rows = synthesized.map(({ item, units, isDelivery }) => {
+    const pricePerUnit = item.price;
+    const costPerUnit = item.cost ?? 0;
+    const gpPerUnit = pricePerUnit - costPerUnit;
+    const effectiveLeakage = isDelivery
+      ? 0.27 + wastePct + refundPct + loyaltyPct
+      : leakageRate;
+    const trueCm1 = pricePerUnit * (1 - effectiveLeakage) - costPerUnit;
+    const nameLower = item.name.toLowerCase();
+    const spoilageRisk = SPOILAGE_KEYWORDS_CLIENT.some((k) => nameLower.includes(k));
+    const role = item.menuRole;
+    return {
+      menuItemId: item.id,
+      name: item.name,
+      category: item.category ?? "other",
+      unitsSold: units,
+      gpPerUnit,
+      revenue: units * pricePerUnit,
+      cost: units * costPerUnit,
+      deliveryOnly: isDelivery,
+      prepTimeMinutes: item.prepTimeMinutes ?? 0,
+      trueCm1PerUnit: trueCm1,
+      spoilageRisk,
+      menuRole: role === "hero" || role === "profit-driver" || role === "anchor" ? role : undefined,
+    };
+  });
+
+  // Same median-based quadrant cut + flag detection as the server path.
+  const median = (xs: number[]): number => {
+    const sorted = [...xs].sort((x, y) => x - y);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+  };
+  const medianUnits = median(rows.map((r) => r.unitsSold));
+  const medianGp = median(rows.map((r) => r.gpPerUnit));
+  const medianPrep = median(rows.map((r) => r.prepTimeMinutes).filter((p) => p > 0));
+
+  return rows.map((r): SimulationMenuEngineeringLine => {
+    const highVol = r.unitsSold >= medianUnits;
+    const highGp = r.gpPerUnit >= medianGp;
+    const quadrant: SimulationMenuEngineeringLine["quadrant"] =
+      highVol && highGp ? "star" : highVol ? "plowhorse" : highGp ? "puzzle" : "dog";
+    const gmRatio = r.revenue > 0 ? r.gpPerUnit / (r.revenue / Math.max(1, r.unitsSold)) : 0;
+    const marginTrap = gmRatio >= 0.5 && r.trueCm1PerUnit < r.gpPerUnit * 0.5;
+    const prepHeavy = medianPrep > 0 && r.prepTimeMinutes >= medianPrep * 1.5;
+    return { ...r, quadrant, marginTrap, prepHeavy };
+  });
+}
+
+/** Synthesize an SSSG snapshot from the active scenario when there's no
+ *  real order history. Treats the current scenario's monthly revenue as
+ *  "current period" and applies a seasonality-driven multiplier for the
+ *  prior period so the panel surfaces a plausible comp signal in
+ *  simulation mode. Real-orders path takes over once the actuals exist. */
+function computeSimulatedSssg(s: SimulationScenario): SimulationSssgSnapshot {
+  const monthlyRevenue = s.ordersPerDay * s.avgTicketGrosze * s.daysOpenPerMonth;
+  const monthlyOrders = s.ordersPerDay * s.daysOpenPerMonth;
+  // Prior-period multiplier — use seasonality.spring as a proxy for the
+  // shoulder-season baseline (most likely the immediate prior month
+  // relative to a typical Warsaw Q3 snapshot).
+  const season = s.seasonality;
+  const seasonAvg = season
+    ? (season.spring + season.summer + season.autumn + season.winter) / 4
+    : 1;
+  // Bias prior period to baseline (so growth is +X% over baseline).
+  const priorFactor = seasonAvg > 0 ? 1 / seasonAvg : 1;
+  const priorRevenue = monthlyRevenue * priorFactor;
+  const priorOrders = monthlyOrders * priorFactor;
+  // Use a small split (~70/30) for ticket vs volume growth contribution
+  // — keeps the decomposition realistic in simulation mode.
+  const priorTicket = priorOrders > 0 ? priorRevenue / priorOrders : 0;
+  const currentTicket = monthlyOrders > 0 ? monthlyRevenue / monthlyOrders : 0;
+  const pct = (a: number, b: number): number => (b > 0 ? (a - b) / b : a > 0 ? 1 : 0);
+  return {
+    windowDays: 30,
+    currentRevenueGrosze: monthlyRevenue,
+    priorRevenueGrosze: priorRevenue,
+    revenueGrowthPct: pct(monthlyRevenue, priorRevenue),
+    orderGrowthPct: pct(monthlyOrders, priorOrders),
+    ticketGrowthPct: pct(currentTicket, priorTicket),
+    // No customer data in simulation mode — use the order count as a
+    // proxy so the column doesn't look broken.
+    customerGrowthPct: pct(monthlyOrders, priorOrders),
+    currentOrders: Math.round(monthlyOrders),
+    priorOrders: Math.round(priorOrders),
+    currentCustomers: Math.round(monthlyOrders * 0.5), // ~half repeat
+    priorCustomers: Math.round(priorOrders * 0.5),
+    generatedAt: new Date().toISOString(),
+  };
+}
+
 /** Margin traps callout — items the menu-engineering matrix would put in
  *  good quadrants on GP alone but where TrueCM1 (after channel fees,
  *  waste, refund, loyalty) tells a different story. Surfaces the audit's
  *  exact warning list: delivery-only marketplace casualties, spoilage-
  *  risk items, prep-heavy false-high-revenue items. */
-function MarginTrapsCallout({ rows }: { rows: SimulationMenuEngineeringLine[] }) {
+function MarginTrapsCallout({ rows, simulated }: { rows: SimulationMenuEngineeringLine[]; simulated?: boolean }) {
   const traps = rows.filter((r) => r.marginTrap || r.spoilageRisk || (r.deliveryOnly && r.trueCm1PerUnit < 500));
   const prepHeavy = rows.filter((r) => r.prepHeavy);
   if (traps.length === 0 && prepHeavy.length === 0) return null;
@@ -7032,6 +7280,7 @@ function MarginTrapsCallout({ rows }: { rows: SimulationMenuEngineeringLine[] })
                 only (skips the marketplace fee), or delete from the menu.
               </p>
             </InfoButton>
+            {simulated && <SourceTag kind="assumption" hint="Simulated from scenario — once real orders flow in, trap detection runs on actuals." />}
             <AlertTriangle className="h-4 w-4 v2-muted" />
           </span>
         }
@@ -7110,8 +7359,10 @@ function MarginTrapsCallout({ rows }: { rows: SimulationMenuEngineeringLine[] })
  *  and median per-unit GP across the menu — the standard QSR cut. */
 function MenuEngineeringPanel({
   rows,
+  simulated,
 }: {
   rows: SimulationMenuEngineeringLine[];
+  simulated?: boolean;
 }) {
   const byQuadrant: Record<SimulationMenuEngineeringLine["quadrant"], SimulationMenuEngineeringLine[]> = {
     star: [],
@@ -7181,7 +7432,12 @@ function MenuEngineeringPanel({
                 {" "}premium decoy. An anchor sitting in the puzzle quadrant is there <em>by design</em> — don&apos;t reflexively delete.
               </p>
             </InfoButton>
-            <SourceTag kind="actuals" hint="Computed from real order line items." />
+            <SourceTag
+              kind={simulated ? "assumption" : "actuals"}
+              hint={simulated
+                ? "Simulated from scenario attach rates + the static menu definition. Populates from real orders once they exist."
+                : "Computed from real order line items."}
+            />
           </span>
         }
       />
