@@ -2844,11 +2844,11 @@ export function AdminSimulation() {
         />
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 lg:gap-4">
-        <Card>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 lg:gap-4">
+        <Card className="lg:col-span-5">
           <CardHeader
             title="Revenue inputs"
-            description="Volume and ticket assumptions."
+            description="Volume and ticket assumptions. Four numbers drive the top of the P&L; each has its own InfoButton."
             actions={<InfoButton title="Revenue inputs" label="About revenue inputs"><p>The four numbers that drive the top of your P&amp;L. Each has its own info button next to the input — click those for a deeper dive into orders/day, ticket size, days open and COGS.</p></InfoButton>}
           />
           <CardBody>
@@ -2933,123 +2933,7 @@ export function AdminSimulation() {
           </CardBody>
         </Card>
 
-        <Card>
-          <CardHeader
-            title={
-              <span className="flex items-center gap-2">
-                Labor mix
-                {scenario.labor.some((l) => l.id.startsWith("seed-")) ? (
-                  <SourceTag
-                    kind="ledger"
-                    hint="At least one row was seeded from the BusinessCost payroll ledger."
-                  />
-                ) : (
-                  <SourceTag
-                    kind="assumption"
-                    hint="No payroll lines in the ledger — using defaults. Seed from ledger via the 'Seed from history' button."
-                  />
-                )}
-              </span>
-            }
-            description="Per-role headcount × weekly hours × hourly rate. Default rates are Warsaw 2026 brutto × 1.22 (full employer cost incl. ZUS narzut). Divide by 1.22 if you'd rather think in pure brutto."
-            actions={
-              <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
-                <InfoButton title={HELP.laborMix.title} label="About labor mix">{HELP.laborMix.body}</InfoButton>
-              <Button size="sm" variant="ghost" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={addLaborRow}>
-                Add row
-              </Button>
-              </span>
-            }
-          />
-          <CardBody>
-            <div className="v2-stack-12">
-              {scenario.labor.map((line) => {
-                const monthly = Math.round(
-                  line.headcount * line.hoursPerWeek * WEEKS_PER_MONTH * line.hourlyRateGrosze,
-                );
-                return (
-                  <div key={line.id} className="grid grid-cols-12 gap-2 items-end">
-                    <div className="col-span-12 md:col-span-4">
-                      <Select
-                        label="Role"
-                        value={line.role}
-                        onChange={(e) =>
-                          updateLabor(line.id, { role: e.target.value as BusinessCostPayrollRole })
-                        }
-                        options={(Object.keys(PAYROLL_ROLE_LABEL) as BusinessCostPayrollRole[]).map(
-                          (k) => ({ value: k, label: PAYROLL_ROLE_LABEL[k] }),
-                        )}
-                      />
-                    </div>
-                    <div className="col-span-3 md:col-span-2">
-                      <Input
-                        label="Count"
-                        type="number"
-                        min="0"
-                        value={String(line.headcount)}
-                        onChange={(e) =>
-                          updateLabor(line.id, {
-                            headcount: Math.max(0, (parseInt(e.target.value, 10) || 0)),
-                          })
-                        }
-                      />
-                    </div>
-                    <div className="col-span-4 md:col-span-2">
-                      <Input
-                        label="h / wk"
-                        type="number"
-                        min="0"
-                        value={String(line.hoursPerWeek)}
-                        onChange={(e) =>
-                          updateLabor(line.id, {
-                            hoursPerWeek: Math.max(0, (parseInt(e.target.value, 10) || 0)),
-                          })
-                        }
-                      />
-                    </div>
-                    <div className="col-span-4 md:col-span-3">
-                      <Input
-                        label="zł / h"
-                        type="number"
-                        step="0.5"
-                        min="0"
-                        value={(line.hourlyRateGrosze / 100).toFixed(2)}
-                        onChange={(e) =>
-                          updateLabor(line.id, {
-                            hourlyRateGrosze: Math.max(
-                              0,
-                              Math.round((parseFloat(e.target.value) || 0) * 100),
-                            ),
-                          })
-                        }
-                      />
-                    </div>
-                    <div className="col-span-1 flex justify-end">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => removeLaborRow(line.id)}
-                        aria-label={`Remove ${PAYROLL_ROLE_LABEL[line.role]} row`}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                    <div className="col-span-12 text-xs v2-muted -mt-1">
-                      Monthly cost on this line: <strong>{formatPrice(monthly)}</strong>
-                    </div>
-                  </div>
-                );
-              })}
-              {scenario.labor.length === 0 && (
-                <div className="v2-muted text-sm">
-                  No labor rows. Add at least one to capture payroll.
-                </div>
-              )}
-            </div>
-          </CardBody>
-        </Card>
-
-        <Card>
+        <Card className="lg:col-span-7">
           <CardHeader
             title="Fixed monthly costs"
             description="What you pay every month regardless of orders."
@@ -3073,6 +2957,122 @@ export function AdminSimulation() {
           </CardBody>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader
+          title={
+            <span className="flex items-center gap-2">
+              Labor mix
+              {scenario.labor.some((l) => l.id.startsWith("seed-")) ? (
+                <SourceTag
+                  kind="ledger"
+                  hint="At least one row was seeded from the BusinessCost payroll ledger."
+                />
+              ) : (
+                <SourceTag
+                  kind="assumption"
+                  hint="No payroll lines in the ledger — using defaults. Seed from ledger via the 'Seed from history' button."
+                />
+              )}
+            </span>
+          }
+          description="Per-role headcount × weekly hours × hourly rate. Default rates are Warsaw 2026 brutto × 1.22 (full employer cost incl. ZUS narzut). Divide by 1.22 if you'd rather think in pure brutto."
+          actions={
+            <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+              <InfoButton title={HELP.laborMix.title} label="About labor mix">{HELP.laborMix.body}</InfoButton>
+              <Button size="sm" variant="ghost" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={addLaborRow}>
+                Add row
+              </Button>
+            </span>
+          }
+        />
+        <CardBody>
+          <div className="v2-stack-12">
+            {scenario.labor.map((line) => {
+              const monthly = Math.round(
+                line.headcount * line.hoursPerWeek * WEEKS_PER_MONTH * line.hourlyRateGrosze,
+              );
+              return (
+                <div key={line.id} className="grid grid-cols-12 gap-2 items-end">
+                  <div className="col-span-12 md:col-span-4">
+                    <Select
+                      label="Role"
+                      value={line.role}
+                      onChange={(e) =>
+                        updateLabor(line.id, { role: e.target.value as BusinessCostPayrollRole })
+                      }
+                      options={(Object.keys(PAYROLL_ROLE_LABEL) as BusinessCostPayrollRole[]).map(
+                        (k) => ({ value: k, label: PAYROLL_ROLE_LABEL[k] }),
+                      )}
+                    />
+                  </div>
+                  <div className="col-span-3 md:col-span-2">
+                    <Input
+                      label="Count"
+                      type="number"
+                      min="0"
+                      value={String(line.headcount)}
+                      onChange={(e) =>
+                        updateLabor(line.id, {
+                          headcount: Math.max(0, (parseInt(e.target.value, 10) || 0)),
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="col-span-4 md:col-span-2">
+                    <Input
+                      label="h / wk"
+                      type="number"
+                      min="0"
+                      value={String(line.hoursPerWeek)}
+                      onChange={(e) =>
+                        updateLabor(line.id, {
+                          hoursPerWeek: Math.max(0, (parseInt(e.target.value, 10) || 0)),
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="col-span-4 md:col-span-3">
+                    <Input
+                      label="zł / h"
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      value={(line.hourlyRateGrosze / 100).toFixed(2)}
+                      onChange={(e) =>
+                        updateLabor(line.id, {
+                          hourlyRateGrosze: Math.max(
+                            0,
+                            Math.round((parseFloat(e.target.value) || 0) * 100),
+                          ),
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="col-span-1 flex justify-end">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => removeLaborRow(line.id)}
+                      aria-label={`Remove ${PAYROLL_ROLE_LABEL[line.role]} row`}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                  <div className="col-span-12 text-xs v2-muted -mt-1">
+                    Monthly cost on this line: <strong>{formatPrice(monthly)}</strong>
+                  </div>
+                </div>
+              );
+            })}
+            {scenario.labor.length === 0 && (
+              <div className="v2-muted text-sm">
+                No labor rows. Add at least one to capture payroll.
+              </div>
+            )}
+          </div>
+        </CardBody>
+      </Card>
 
       <MenuScenarioPicker
         activeId={scenario.menuScenario}
