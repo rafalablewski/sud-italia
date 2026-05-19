@@ -807,6 +807,24 @@ export interface SimulationSeasonality {
   monthlyOverrides?: (number | undefined)[];
 }
 
+/** Per-preset override values the operator has saved. Same shape as the
+ *  baked-in MenuScenarioPreset minus its identity fields (id / name /
+ *  emoji / description) — the editable surface for a single scenario. */
+export interface SimulationMenuScenarioOverride {
+  ordersPerDay: number;
+  daysOpenPerMonth: number;
+  avgTicketGrosze: number;
+  cogsPct: number;
+  attach: {
+    coffee: number;
+    dessert: number;
+    antipasti: number;
+    aperitivo: number;
+    premiumToppings: number;
+    pastaPrimo: number;
+  };
+}
+
 export interface SimulationMenuMixLine {
   menuItemId: string;
   /** Share of orders this item represents (0–1). The mix sums to ~1.
@@ -953,6 +971,12 @@ export interface SimulationScenario {
    *  Picking a preset loads avgTicketGrosze + cogsPct + assumption levers
    *  in one click. Operators can still tweak any value afterwards. */
   menuScenario?: string;
+  /** Per-preset operator overrides — when the operator edits a scenario
+   *  card and clicks Save, the customised values land here keyed by preset
+   *  id. Reset-to-default deletes the key, restoring the baked-in preset.
+   *  Used by the MenuScenarioPicker to render editable cards that persist
+   *  across reloads. The "custom" preset id is always operator-defined. */
+  menuScenarioOverrides?: Record<string, SimulationMenuScenarioOverride>;
   /** Behavioral attach / upsell levers — fold into effective ticket + COGS. */
   assumptions?: SimulationAssumptions;
   /** Weather + Polish-holiday calendar levers — modify effective volume. */

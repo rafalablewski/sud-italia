@@ -47,6 +47,7 @@ import type {
   SimulationIngredientLever,
   SimulationLaborLine,
   SimulationMenuEngineeringLine,
+  SimulationMenuScenarioOverride,
   SimulationScenario,
   SimulationSeasonality,
   SimulationSssgSnapshot,
@@ -1367,7 +1368,45 @@ const MENU_SCENARIOS: MenuScenarioPreset[] = [
   },
 ];
 
-const MENU_SCENARIO_BY_ID = new Map(MENU_SCENARIOS.map((s) => [s.id, s]));
+/** Empty starter for the operator-defined "Custom" preset — the slot
+ *  where they build a scenario from scratch without overwriting any of
+ *  the baked-in archetypes. Visible on the picker as the 6th card. */
+const CUSTOM_PRESET: MenuScenarioPreset = {
+  id: "custom",
+  name: "Custom",
+  emoji: "✏️",
+  description: "Build your own scenario from scratch — all fields editable, persists across reloads via Save.",
+  ordersPerDay: 60,
+  daysOpenPerMonth: 28,
+  avgTicketGrosze: 6000,
+  cogsPct: 0.30,
+  attach: { coffee: 0.20, dessert: 0.10, antipasti: 0.05, aperitivo: 0, premiumToppings: 0.10, pastaPrimo: 0.10 },
+};
+
+const MENU_SCENARIOS_WITH_CUSTOM: MenuScenarioPreset[] = [...MENU_SCENARIOS, CUSTOM_PRESET];
+
+const MENU_SCENARIO_BY_ID = new Map(MENU_SCENARIOS_WITH_CUSTOM.map((s) => [s.id, s]));
+
+/** Resolve the effective preset values for a given id by overlaying the
+ *  operator's saved overrides (if any) on top of the baked-in preset.
+ *  When the operator clicks Save on a card, their edits land in
+ *  scenario.menuScenarioOverrides[id]; Reset deletes that key. */
+function resolveScenarioPreset(
+  id: string,
+  overrides: Record<string, SimulationMenuScenarioOverride> | undefined,
+): MenuScenarioPreset {
+  const base = MENU_SCENARIO_BY_ID.get(id) ?? CUSTOM_PRESET;
+  const ovr = overrides?.[id];
+  if (!ovr) return base;
+  return {
+    ...base,
+    ordersPerDay: ovr.ordersPerDay,
+    daysOpenPerMonth: ovr.daysOpenPerMonth,
+    avgTicketGrosze: ovr.avgTicketGrosze,
+    cogsPct: ovr.cogsPct,
+    attach: { ...base.attach, ...ovr.attach },
+  };
+}
 
 /** True when a lever has the `enabled` flag explicitly off. Unset = on. */
 function leverOff(lever: { enabled?: boolean } | undefined): boolean {
@@ -2844,119 +2883,29 @@ export function AdminSimulation() {
         />
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 lg:gap-4">
-        <Card className="lg:col-span-5">
-          <CardHeader
-            title="Revenue inputs"
-            description="Volume and ticket assumptions. Four numbers drive the top of the P&L; each has its own InfoButton."
-            actions={<InfoButton title="Revenue inputs" label="About revenue inputs"><p>The four numbers that drive the top of your P&amp;L. Each has its own info button next to the input — click those for a deeper dive into orders/day, ticket size, days open and COGS.</p></InfoButton>}
-          />
-          <CardBody>
-            <div className="v2-stack-12">
+      <Card>
+        <CardHeader
+          title="Fixed monthly costs"
+          description="What you pay every month regardless of orders. Revenue inputs (orders/day, ticket, days open, COGS) now live inside the editable Menu scenario cards below — pick or build a scenario there and click Apply."
+          actions={<InfoButton title={HELP.fixedCosts.title} label="About fixed costs">{HELP.fixedCosts.body}</InfoButton>}
+        />
+        <CardBody>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2">
+            {FIXED_COST_FIELDS.map((f) => (
               <Input
-                label={
-                  <span className="flex items-center gap-2">
-                    <LabelWithInfo text="Orders per day" help={HELP.ordersPerDay} />
-                    {sourceTagFor(actuals?.ordersPerDay, scenario.ordersPerDay, actuals)}
-                  </span>
-                }
-                type="number"
-                min="0"
-                value={String(scenario.ordersPerDay)}
-                onChange={(e) =>
-                  update((s) => ({ ...s, ordersPerDay: Math.max(0, (parseInt(e.target.value, 10) || 0)) }))
-                }
-              />
-              <Input
-                label={
-                  <span className="flex items-center gap-2">
-                    <LabelWithInfo text="Average ticket" help={HELP.avgTicket} />
-                    {sourceTagFor(actuals?.avgTicketGrosze, scenario.avgTicketGrosze, actuals)}
-                  </span>
-                }
+                key={f.key}
+                label={f.label}
                 type="number"
                 step="0.01"
                 min="0"
-                value={(scenario.avgTicketGrosze / 100).toFixed(2)}
-                onChange={(e) =>
-                  update((s) => ({
-                    ...s,
-                    avgTicketGrosze: Math.max(0, Math.round((parseFloat(e.target.value) || 0) * 100)),
-                  }))
-                }
+                value={((scenario.fixedCosts[f.key] ?? 0) / 100).toFixed(2)}
+                onChange={(e) => updateFixed(f.key, e.target.value)}
                 trailingAdornment={<span className="v2-muted">zł</span>}
               />
-              <Input
-                label={
-                  <span className="flex items-center gap-2">
-                    <LabelWithInfo text="Days open per month" help={HELP.daysOpen} />
-                    <SourceTag kind="assumption" hint="No real-data source — operator-typed." />
-                  </span>
-                }
-                type="number"
-                min="0"
-                max="31"
-                value={String(scenario.daysOpenPerMonth)}
-                onChange={(e) =>
-                  update((s) => ({
-                    ...s,
-                    daysOpenPerMonth: Math.max(0, Math.min(31, (parseInt(e.target.value, 10) || 0))),
-                  }))
-                }
-              />
-              <Input
-                label={
-                  <span className="flex items-center gap-2">
-                    <LabelWithInfo text="Ingredient cost ratio" help={HELP.cogsPct} />
-                    {sourceTagFor(
-                      actuals && actuals.weightedCogsPct > 0 ? actuals.weightedCogsPct : undefined,
-                      scenario.cogsPct,
-                      actuals,
-                    )}
-                  </span>
-                }
-                type="number"
-                step="1"
-                min="0"
-                max="100"
-                value={String(Math.round(scenario.cogsPct * 100))}
-                onChange={(e) =>
-                  update((s) => ({
-                    ...s,
-                    cogsPct: Math.max(0, Math.min(1, (parseFloat(e.target.value) || 0) / 100)),
-                  }))
-                }
-                trailingAdornment={<span className="v2-muted">%</span>}
-                description="Share of revenue eaten by food cost. 28–32% is typical for pizza + pasta + coffee."
-              />
-            </div>
-          </CardBody>
-        </Card>
-
-        <Card className="lg:col-span-7">
-          <CardHeader
-            title="Fixed monthly costs"
-            description="What you pay every month regardless of orders."
-            actions={<InfoButton title={HELP.fixedCosts.title} label="About fixed costs">{HELP.fixedCosts.body}</InfoButton>}
-          />
-          <CardBody>
-            <div className="grid grid-cols-2 gap-2">
-              {FIXED_COST_FIELDS.map((f) => (
-                <Input
-                  key={f.key}
-                  label={f.label}
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={((scenario.fixedCosts[f.key] ?? 0) / 100).toFixed(2)}
-                  onChange={(e) => updateFixed(f.key, e.target.value)}
-                  trailingAdornment={<span className="v2-muted">zł</span>}
-                />
-              ))}
-            </div>
-          </CardBody>
-        </Card>
-      </div>
+            ))}
+          </div>
+        </CardBody>
+      </Card>
 
       <Card>
         <CardHeader
@@ -3076,7 +3025,24 @@ export function AdminSimulation() {
 
       <MenuScenarioPicker
         activeId={scenario.menuScenario}
-        onPick={applyMenuScenario}
+        overrides={scenario.menuScenarioOverrides}
+        onApply={applyMenuScenario}
+        onSaveOverride={(id, override) =>
+          update((s) => ({
+            ...s,
+            menuScenarioOverrides: { ...(s.menuScenarioOverrides ?? {}), [id]: override },
+          }))
+        }
+        onResetOverride={(id) =>
+          update((s) => {
+            const next = { ...(s.menuScenarioOverrides ?? {}) };
+            delete next[id];
+            return {
+              ...s,
+              menuScenarioOverrides: Object.keys(next).length > 0 ? next : undefined,
+            };
+          })
+        }
       />
 
       <BehaviorAssumptionsCard
@@ -4453,20 +4419,18 @@ export function AdminSimulation() {
 
 interface MenuScenarioPickerProps {
   activeId: string | undefined;
-  onPick: (preset: MenuScenarioPreset) => void;
+  overrides: Record<string, SimulationMenuScenarioOverride> | undefined;
+  onApply: (preset: MenuScenarioPreset) => void;
+  onSaveOverride: (id: string, override: SimulationMenuScenarioOverride) => void;
+  onResetOverride: (id: string) => void;
 }
 
-function MenuScenarioPicker({ activeId, onPick }: MenuScenarioPickerProps) {
-  const active = activeId ? MENU_SCENARIO_BY_ID.get(activeId) : undefined;
+function MenuScenarioPicker({ activeId, overrides, onApply, onSaveOverride, onResetOverride }: MenuScenarioPickerProps) {
   return (
     <Card>
       <CardHeader
-        title="Menu scenario"
-        description={
-          active
-            ? `Loaded preset: ${active.emoji} ${active.name}. Pick a different one to reload baseline values, or tweak the inputs above to customise.`
-            : "Pick one of five archetypal menu shapes to load avg ticket, COGS and behavior levers in a single click. You can still tweak any value afterwards."
-        }
+        title="Menu scenarios"
+        description="Six editable scenarios — five archetypes (Takeaway / Balanced / Premium / Family / Aperitivo) plus a blank Custom slot. Each card holds its own orders/day, ticket, days open, COGS, and the six attach rates. Save persists your edits across reloads; Reset restores the baked-in defaults; Apply pushes the card's values into the active scenario."
         actions={
           <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
             <InfoButton title={HELP.menuScenario.title} label="About menu scenarios">{HELP.menuScenario.body}</InfoButton>
@@ -4475,77 +4439,230 @@ function MenuScenarioPicker({ activeId, onPick }: MenuScenarioPickerProps) {
         }
       />
       <CardBody>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
-          {MENU_SCENARIOS.map((preset) => {
-            const isActive = preset.id === activeId;
-            return (
-              <button
-                key={preset.id}
-                type="button"
-                onClick={() => onPick(preset)}
-                aria-pressed={isActive}
-                style={{
-                  textAlign: "left",
-                  padding: 14,
-                  borderRadius: 12,
-                  border: `1.5px solid ${isActive ? "var(--brand)" : "var(--border)"}`,
-                  background: isActive ? "var(--brand-soft, var(--surface-2))" : "var(--surface-2)",
-                  cursor: "pointer",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 6,
-                  fontFamily: "inherit",
-                  color: "inherit",
-                  transition: "border-color 0.15s, background 0.15s",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <span style={{ fontSize: 28, lineHeight: 1 }} aria-hidden>
-                    {preset.emoji}
-                  </span>
-                  {isActive && (
-                    <Badge tone="brand" variant="soft" dot>
-                      Active
-                    </Badge>
-                  )}
-                </div>
-                <div style={{ fontSize: 14, fontWeight: 600 }}>{preset.name}</div>
-                <div className="v2-muted" style={{ fontSize: 12, lineHeight: 1.4, minHeight: 50 }}>
-                  {preset.description}
-                </div>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: "4px 12px",
-                    fontSize: 12,
-                    paddingTop: 6,
-                    borderTop: "1px solid var(--border)",
-                  }}
-                >
-                  <span>
-                    <span className="v2-muted">Orders/day</span>{" "}
-                    <strong className="tabular">{preset.ordersPerDay}</strong>
-                  </span>
-                  <span>
-                    <span className="v2-muted">Ticket</span>{" "}
-                    <strong className="tabular">{formatPrice(preset.avgTicketGrosze)}</strong>
-                  </span>
-                  <span>
-                    <span className="v2-muted">Days/mo</span>{" "}
-                    <strong className="tabular">{preset.daysOpenPerMonth}</strong>
-                  </span>
-                  <span>
-                    <span className="v2-muted">COGS</span>{" "}
-                    <strong className="tabular">{Math.round(preset.cogsPct * 100)}%</strong>
-                  </span>
-                </div>
-              </button>
-            );
-          })}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          {MENU_SCENARIOS_WITH_CUSTOM.map((preset) => (
+            <MenuScenarioCard
+              key={preset.id}
+              preset={preset}
+              override={overrides?.[preset.id]}
+              isActive={preset.id === activeId}
+              onApply={onApply}
+              onSave={onSaveOverride}
+              onReset={onResetOverride}
+            />
+          ))}
         </div>
       </CardBody>
     </Card>
+  );
+}
+
+interface MenuScenarioCardProps {
+  preset: MenuScenarioPreset;
+  override: SimulationMenuScenarioOverride | undefined;
+  isActive: boolean;
+  onApply: (preset: MenuScenarioPreset) => void;
+  onSave: (id: string, override: SimulationMenuScenarioOverride) => void;
+  onReset: (id: string) => void;
+}
+
+/** Single editable scenario card. Holds its own draft state so the
+ *  operator can tweak inputs without immediately mutating the scenario;
+ *  Save commits the draft as an override (persisted with the scenario);
+ *  Reset clears the override and restores the baked-in defaults; Apply
+ *  pushes the current values (override or default) into the live
+ *  scenario as the active menu scenario. */
+function MenuScenarioCard({
+  preset,
+  override,
+  isActive,
+  onApply,
+  onSave,
+  onReset,
+}: MenuScenarioCardProps) {
+  // Effective starting values: override-on-default.
+  const effective: SimulationMenuScenarioOverride = override ?? {
+    ordersPerDay: preset.ordersPerDay,
+    daysOpenPerMonth: preset.daysOpenPerMonth,
+    avgTicketGrosze: preset.avgTicketGrosze,
+    cogsPct: preset.cogsPct,
+    attach: { ...preset.attach },
+  };
+  const [draft, setDraft] = useState<SimulationMenuScenarioOverride>(effective);
+  // Keep the draft in sync when the underlying override changes (e.g.
+  // another tab edited it, or the scenario was just reset).
+  const effectiveKey = JSON.stringify(effective);
+  useEffect(() => {
+    setDraft(effective);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveKey]);
+  const draftKey = JSON.stringify(draft);
+  const isDirty = draftKey !== effectiveKey;
+  const hasOverride = override !== undefined;
+  const patchDraft = (patch: Partial<SimulationMenuScenarioOverride>) =>
+    setDraft((d) => ({ ...d, ...patch }));
+  const patchAttach = (patch: Partial<SimulationMenuScenarioOverride["attach"]>) =>
+    setDraft((d) => ({ ...d, attach: { ...d.attach, ...patch } }));
+  return (
+    <div
+      style={{
+        padding: 14,
+        borderRadius: 14,
+        border: `1.5px solid ${isActive ? "var(--brand)" : "var(--border)"}`,
+        background: isActive
+          ? "color-mix(in oklab, var(--brand) 8%, var(--surface-2))"
+          : "var(--surface-2)",
+        display: "flex",
+        flexDirection: "column",
+        gap: 10,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 28, lineHeight: 1 }} aria-hidden>
+            {preset.emoji}
+          </span>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: "var(--fg)" }}>{preset.name}</div>
+            <div className="v2-muted" style={{ fontSize: 11.5, lineHeight: 1.35, marginTop: 2 }}>
+              {preset.description}
+            </div>
+          </div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-end" }}>
+          {isActive && (
+            <Badge tone="brand" variant="soft" dot>
+              Active
+            </Badge>
+          )}
+          {hasOverride && (
+            <Badge tone="info" variant="soft">
+              Customised
+            </Badge>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <Input
+          label="Orders / day"
+          type="number"
+          min="0"
+          value={String(draft.ordersPerDay)}
+          onChange={(e) => patchDraft({ ordersPerDay: Math.max(0, parseInt(e.target.value, 10) || 0) })}
+        />
+        <Input
+          label="Avg ticket"
+          type="number"
+          step="0.50"
+          min="0"
+          value={(draft.avgTicketGrosze / 100).toFixed(2)}
+          onChange={(e) =>
+            patchDraft({
+              avgTicketGrosze: Math.max(0, Math.round((parseFloat(e.target.value) || 0) * 100)),
+            })
+          }
+          trailingAdornment={<span className="v2-muted">zł</span>}
+        />
+        <Input
+          label="Days / month"
+          type="number"
+          min="0"
+          max="31"
+          value={String(draft.daysOpenPerMonth)}
+          onChange={(e) =>
+            patchDraft({
+              daysOpenPerMonth: Math.max(0, Math.min(31, parseInt(e.target.value, 10) || 0)),
+            })
+          }
+        />
+        <Input
+          label="COGS"
+          type="number"
+          step="1"
+          min="0"
+          max="100"
+          value={String(Math.round(draft.cogsPct * 100))}
+          onChange={(e) =>
+            patchDraft({ cogsPct: Math.max(0, Math.min(1, (parseFloat(e.target.value) || 0) / 100)) })
+          }
+          trailingAdornment={<span className="v2-muted">%</span>}
+        />
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        {(
+          [
+            ["coffee", "Coffee"],
+            ["dessert", "Dessert"],
+            ["antipasti", "Antipasti"],
+            ["aperitivo", "Aperitivo"],
+            ["premiumToppings", "Prem. tops"],
+            ["pastaPrimo", "Pasta primo"],
+          ] as const
+        ).map(([key, label]) => (
+          <Input
+            key={key}
+            label={label}
+            type="number"
+            step="1"
+            min="0"
+            max="100"
+            value={String(Math.round(draft.attach[key] * 100))}
+            onChange={(e) =>
+              patchAttach({
+                [key]: Math.max(0, Math.min(1, (parseFloat(e.target.value) || 0) / 100)),
+              })
+            }
+            trailingAdornment={<span className="v2-muted">%</span>}
+          />
+        ))}
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 6,
+          paddingTop: 8,
+          borderTop: "1px solid color-mix(in oklab, var(--fg) 10%, transparent)",
+        }}
+      >
+        <Button
+          size="sm"
+          variant="primary"
+          onClick={() => {
+            // Apply the *current draft* (operator may have edited without saving yet).
+            onApply({
+              ...preset,
+              ordersPerDay: draft.ordersPerDay,
+              daysOpenPerMonth: draft.daysOpenPerMonth,
+              avgTicketGrosze: draft.avgTicketGrosze,
+              cogsPct: draft.cogsPct,
+              attach: draft.attach,
+            });
+          }}
+        >
+          Apply
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={!isDirty}
+          onClick={() => onSave(preset.id, draft)}
+        >
+          {isDirty ? "Save edits" : "Saved"}
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={!hasOverride}
+          onClick={() => onReset(preset.id)}
+        >
+          Reset to default
+        </Button>
+      </div>
+    </div>
   );
 }
 

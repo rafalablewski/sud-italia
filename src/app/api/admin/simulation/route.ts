@@ -105,6 +105,7 @@ export const PUT = withAdmin(
       setupCostGrosze: typeof b.setupCostGrosze === "number" ? b.setupCostGrosze : undefined,
       seasonality: b.seasonality,
       menuScenario: typeof b.menuScenario === "string" ? b.menuScenario : undefined,
+      menuScenarioOverrides: b.menuScenarioOverrides,
       assumptions: b.assumptions,
       weather: b.weather,
       wastePct: typeof b.wastePct === "number" ? b.wastePct : undefined,

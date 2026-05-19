@@ -2,7 +2,7 @@ import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel } from "@/data/types";
+import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel, SimulationMenuScenarioOverride } from "@/data/types";
 import { getActiveLocations, locations as allLocations } from "@/data/locations";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -8175,6 +8175,7 @@ export async function getSimulationScenario(): Promise<SimulationScenario> {
     seasonality: saved.seasonality ?? defaults.seasonality,
     menuScenario:
       typeof saved.menuScenario === "string" ? saved.menuScenario : defaults.menuScenario,
+    menuScenarioOverrides: hydrateMenuScenarioOverrides(saved.menuScenarioOverrides),
     assumptions: hydrateAssumptions(saved.assumptions, defaults.assumptions),
     weather: hydrateWeather(saved.weather, defaults.weather),
     wastePct: typeof saved.wastePct === "number" ? clamp01(saved.wastePct, defaults.wastePct ?? 0) : defaults.wastePct,
@@ -8207,6 +8208,41 @@ function clamp01(n: unknown, fallback: number): number {
 function clampNonNeg(n: unknown, fallback: number): number {
   if (typeof n !== "number" || !Number.isFinite(n)) return fallback;
   return Math.max(0, n);
+}
+
+function hydrateMenuScenarioOverrides(
+  saved: Record<string, SimulationMenuScenarioOverride> | undefined,
+): Record<string, SimulationMenuScenarioOverride> | undefined {
+  if (!saved || typeof saved !== "object") return undefined;
+  const out: Record<string, SimulationMenuScenarioOverride> = {};
+  for (const [id, override] of Object.entries(saved)) {
+    if (!override || typeof override !== "object") continue;
+    const attach = (override as SimulationMenuScenarioOverride).attach ?? {
+      coffee: 0,
+      dessert: 0,
+      antipasti: 0,
+      aperitivo: 0,
+      premiumToppings: 0,
+      pastaPrimo: 0,
+    };
+    out[id] = {
+      ordersPerDay: clampNonNeg(override.ordersPerDay, 0),
+      daysOpenPerMonth: typeof override.daysOpenPerMonth === "number"
+        ? Math.max(0, Math.min(31, Math.round(override.daysOpenPerMonth)))
+        : 0,
+      avgTicketGrosze: clampNonNeg(override.avgTicketGrosze, 0),
+      cogsPct: clamp01(override.cogsPct, 0),
+      attach: {
+        coffee: clamp01(attach.coffee, 0),
+        dessert: clamp01(attach.dessert, 0),
+        antipasti: clamp01(attach.antipasti, 0),
+        aperitivo: clamp01(attach.aperitivo, 0),
+        premiumToppings: clamp01(attach.premiumToppings, 0),
+        pastaPrimo: clamp01(attach.pastaPrimo, 0),
+      },
+    };
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
 }
 
 function hydrateIngredient(
@@ -8501,6 +8537,7 @@ export async function saveSimulationScenario(
         typeof scenario.menuScenario === "string" && scenario.menuScenario.length > 0
           ? scenario.menuScenario
           : undefined,
+      menuScenarioOverrides: hydrateMenuScenarioOverrides(scenario.menuScenarioOverrides),
       assumptions: hydrateAssumptions(scenario.assumptions, defaults.assumptions),
       weather: hydrateWeather(scenario.weather, defaults.weather),
       wastePct: clampSimPct(scenario.wastePct, defaults.wastePct ?? 0),
