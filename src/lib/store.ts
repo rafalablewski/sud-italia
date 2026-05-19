@@ -7979,10 +7979,15 @@ export function defaultSimulationScenario(): SimulationScenario {
     // ignored opening cash and made payback look ~30% rosier than reality.
     setupCostGrosze: 38_000_000,
     seasonality: {
-      winter: 0.70,
+      // Outdoor-truck winter in Warsaw is brutal — January can collapse to
+      // 0.30-0.40 of summer volume (snow, -10°C evenings, customers won't
+      // queue). The previous 0.70 floor was a brick-and-mortar number and
+      // hid winter cash risk. Spring/autumn are honest shoulders; summer
+      // 1.30 is conservative vs heat-wave 1.40 peaks already in weather.
+      winter: 0.50,
       spring: 1.00,
       summer: 1.30,
-      autumn: 1.00,
+      autumn: 0.95,
     },
     menuScenario: "balanced",
     assumptions: defaultSimulationAssumptions(),
