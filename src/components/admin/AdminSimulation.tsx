@@ -3220,6 +3220,8 @@ export function AdminSimulation() {
 
       {menuEng && menuEng.length > 0 && <MenuEngineeringPanel rows={menuEng} />}
 
+      {menuEng && menuEng.length > 0 && <MarginTrapsCallout rows={menuEng} />}
+
       <TornadoPanel bars={tornado} />
 
 
@@ -5058,6 +5060,91 @@ function TornadoPanel({ bars }: { bars: TornadoBar[] }) {
               </div>
             );
           })}
+        </div>
+      </CardBody>
+    </Card>
+  );
+}
+
+/** Margin traps callout — items the menu-engineering matrix would put in
+ *  good quadrants on GP alone but where TrueCM1 (after channel fees,
+ *  waste, refund, loyalty) tells a different story. Surfaces the audit's
+ *  exact warning list: delivery-only marketplace casualties, spoilage-
+ *  risk items, prep-heavy false-high-revenue items. */
+function MarginTrapsCallout({ rows }: { rows: SimulationMenuEngineeringLine[] }) {
+  const traps = rows.filter((r) => r.marginTrap || r.spoilageRisk || (r.deliveryOnly && r.trueCm1PerUnit < 500));
+  const prepHeavy = rows.filter((r) => r.prepHeavy);
+  if (traps.length === 0 && prepHeavy.length === 0) return null;
+  return (
+    <Card>
+      <CardHeader
+        title="Margin traps & false high-revenue items"
+        description="Items where the gross-margin look-through breaks down. Delivery-only items lose 22-30% to marketplace commission. Spoilage-risk items can swing into loss on a single discarded portion. Prep-heavy items eat throughput the labor model doesn't price."
+        actions={<AlertTriangle className="h-4 w-4 v2-muted" />}
+      />
+      <CardBody>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {traps.length > 0 && (
+            <div style={{ background: "rgba(239,68,68,0.06)", borderRadius: 10, padding: 12 }}>
+              <div style={{ fontWeight: 600, marginBottom: 4 }}>Margin traps</div>
+              <div className="v2-muted text-xs mb-2" style={{ fontStyle: "italic" }}>
+                High GM, low TrueCM1 after fees / spoilage / marketplace commission.
+              </div>
+              <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                {traps.slice(0, 10).map((r) => {
+                  const reasons: string[] = [];
+                  if (r.deliveryOnly) reasons.push("delivery-only");
+                  if (r.spoilageRisk) reasons.push("spoilage risk");
+                  if (r.marginTrap) reasons.push("fees eat margin");
+                  const gmPct = r.unitsSold > 0 ? ((r.revenue - r.cost) / r.revenue) * 100 : 0;
+                  return (
+                    <li
+                      key={r.menuItemId}
+                      style={{
+                        padding: "6px 0",
+                        borderTop: "1px solid rgba(0,0,0,0.06)",
+                      }}
+                    >
+                      <div className="flex justify-between items-baseline">
+                        <span style={{ fontSize: 13, fontWeight: 500 }}>{r.name}</span>
+                        <span className="v2-muted text-xs tabular">
+                          GM {gmPct.toFixed(0)}% · CM1 {(r.trueCm1PerUnit / 100).toFixed(2)} zł
+                        </span>
+                      </div>
+                      <div className="v2-muted text-xs" style={{ fontStyle: "italic" }}>
+                        {reasons.join(" · ")}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+          {prepHeavy.length > 0 && (
+            <div style={{ background: "rgba(245,158,11,0.06)", borderRadius: 10, padding: 12 }}>
+              <div style={{ fontWeight: 600, marginBottom: 4 }}>Prep-heavy items</div>
+              <div className="v2-muted text-xs mb-2" style={{ fontStyle: "italic" }}>
+                {`Prep time ≥ 1.5× median. Kitchen throughput cost is real but unpriced — pasta + tagliatelle need a separate station that the labor model doesn't budget.`}
+              </div>
+              <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                {prepHeavy.slice(0, 10).map((r) => (
+                  <li
+                    key={r.menuItemId}
+                    className="flex justify-between items-baseline"
+                    style={{
+                      padding: "6px 0",
+                      borderTop: "1px solid rgba(0,0,0,0.06)",
+                    }}
+                  >
+                    <span style={{ fontSize: 13, fontWeight: 500 }}>{r.name}</span>
+                    <span className="v2-muted text-xs tabular">
+                      {r.prepTimeMinutes} min · {r.unitsSold}× sold
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       </CardBody>
     </Card>

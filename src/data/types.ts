@@ -1143,6 +1143,25 @@ export interface SimulationMenuEngineeringLine {
   cost: number;
   /** Quadrant label per Kasavana-Smith menu engineering. */
   quadrant: "star" | "plowhorse" | "puzzle" | "dog";
+  /** Item flags surfaced from the menu definition — used to build the
+   *  margin-trap callout panel without invasive new menu schema. */
+  deliveryOnly: boolean;
+  prepTimeMinutes: number;
+  /** True CM1 per unit AFTER the scenario's blended payment fee +
+   *  waste + refund + loyalty. The audit's per-product number. */
+  trueCm1PerUnit: number;
+  /** Heuristic: high GM but TrueCM1 destroyed by fees (delivery-only
+   *  marketplace commission, etc.). When true, item is flagged in
+   *  the "Margin traps" callout. */
+  marginTrap: boolean;
+  /** Heuristic: high prep time vs the median — operationally expensive
+   *  items that look profitable on paper but eat kitchen throughput. */
+  prepHeavy: boolean;
+  /** Heuristic: known spoilage-risk ingredient (burrata, truffle,
+   *  uncooked dairy / fresh seafood). Flagged on name match for
+   *  Polish-market burrata + truffle defaults; safe to ignore for
+   *  scenarios where shelf life is operationally managed. */
+  spoilageRisk: boolean;
 }
 
 /** Snapshot of real-order actuals over a rolling window, used to ground-truth

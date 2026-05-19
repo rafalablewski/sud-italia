@@ -8854,9 +8854,13 @@ export async function computeCohortSnapshot(
 /** Kasavana-Smith menu engineering. Groups every sold item by quadrant
  *  (star / plowhorse / puzzle / dog) over a rolling-window of orders.
  *  Quadrants split at the median velocity and median per-unit gross
- *  profit across the line items that sold ≥ 1 unit. */
+ *  profit across the line items that sold ≥ 1 unit. Now also enriches
+ *  each row with TrueCM1 (after the scenario's blended payment fee +
+ *  waste + refund + loyalty), deliveryOnly / prepHeavy / spoilageRisk
+ *  flags for the margin-trap callout. */
 export async function computeMenuEngineering(
   windowDays = 90,
+  scenarioOverride?: { paymentProcessorPct?: number; wastePct?: number; refundPct?: number; loyaltyBurnPct?: number },
 ): Promise<SimulationMenuEngineeringLine[]> {
   const all = await getOrders();
   const cutoffMs = Date.now() - windowDays * 24 * 60 * 60 * 1000;
@@ -8865,6 +8869,13 @@ export async function computeMenuEngineering(
     const t = Date.parse(o.createdAt);
     return Number.isFinite(t) && t >= cutoffMs;
   });
+
+  const scenarioForCm = scenarioOverride ?? (await getSimulationScenario());
+  const feePct = scenarioForCm.paymentProcessorPct ?? 0;
+  const wastePct = scenarioForCm.wastePct ?? 0;
+  const refundPct = scenarioForCm.refundPct ?? 0;
+  const loyaltyPct = scenarioForCm.loyaltyBurnPct ?? 0;
+  const leakageRate = feePct + wastePct + refundPct + loyaltyPct;
 
   type Agg = { item: MenuItem; units: number; revenue: number; cost: number };
   const byItem = new Map<string, Agg>();
@@ -8891,17 +8902,41 @@ export async function computeMenuEngineering(
     }
   }
 
+  // Spoilage-risk heuristics — short shelf life and high spoilage cost
+  // per unit. Match by name fragment (case-insensitive) since the menu
+  // doesn't carry a shelfLife field.
+  const SPOILAGE_KEYWORDS = ["burrata", "truffle", "tartufata", "frozen", "tiramisù", "tiramisu"];
+
   const rows = Array.from(byItem.values())
     .filter((a) => a.units > 0)
-    .map((a) => ({
-      menuItemId: a.item.id,
-      name: a.item.name,
-      category: a.item.category ?? "other",
-      unitsSold: a.units,
-      gpPerUnit: a.units > 0 ? (a.revenue - a.cost) / a.units : 0,
-      revenue: a.revenue,
-      cost: a.cost,
-    }));
+    .map((a) => {
+      const pricePerUnit = a.units > 0 ? a.revenue / a.units : 0;
+      const costPerUnit = a.units > 0 ? a.cost / a.units : 0;
+      const gpPerUnit = pricePerUnit - costPerUnit;
+      // True CM1 = price × (1 − leakage) − cost.
+      // For delivery-only items, swap the scenario's blended feePct for
+      // a realistic marketplace commission (Glovo 27% / Wolt 28% avg ≈ 27%).
+      const isDelivery = a.item.deliveryOnly === true;
+      const effectiveLeakage = isDelivery
+        ? 0.27 + wastePct + refundPct + loyaltyPct
+        : leakageRate;
+      const trueCm1 = pricePerUnit * (1 - effectiveLeakage) - costPerUnit;
+      const nameLower = a.item.name.toLowerCase();
+      const spoilageRisk = SPOILAGE_KEYWORDS.some((k) => nameLower.includes(k));
+      return {
+        menuItemId: a.item.id,
+        name: a.item.name,
+        category: a.item.category ?? "other",
+        unitsSold: a.units,
+        gpPerUnit,
+        revenue: a.revenue,
+        cost: a.cost,
+        deliveryOnly: isDelivery,
+        prepTimeMinutes: a.item.prepTimeMinutes ?? 0,
+        trueCm1PerUnit: trueCm1,
+        spoilageRisk,
+      };
+    });
 
   if (rows.length === 0) return [];
 
@@ -8914,6 +8949,7 @@ export async function computeMenuEngineering(
   };
   const medianUnits = median(rows.map((r) => r.unitsSold));
   const medianGp = median(rows.map((r) => r.gpPerUnit));
+  const medianPrep = median(rows.map((r) => r.prepTimeMinutes).filter((p) => p > 0));
 
   return rows.map((r): SimulationMenuEngineeringLine => {
     const highVol = r.unitsSold >= medianUnits;
@@ -8926,7 +8962,13 @@ export async function computeMenuEngineering(
           : !highVol && highGp
             ? "puzzle"
             : "dog";
-    return { ...r, quadrant };
+    // Margin trap: looks high-margin (GM ≥ 50%) but TrueCM1 falls below
+    // half the per-item GP — usually delivery-only items chewed up by
+    // marketplace commission, or items where waste/refund stacks high.
+    const gmRatio = r.revenue > 0 ? r.gpPerUnit / (r.revenue / Math.max(1, r.unitsSold)) : 0;
+    const marginTrap = gmRatio >= 0.50 && r.trueCm1PerUnit < r.gpPerUnit * 0.50;
+    const prepHeavy = medianPrep > 0 && r.prepTimeMinutes >= medianPrep * 1.5;
+    return { ...r, quadrant, marginTrap, prepHeavy };
   });
 }
 
