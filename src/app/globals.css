@@ -4075,6 +4075,44 @@ html { scroll-behavior: smooth; }
 
 .v2-section-h { margin: 0; font-size: var(--text-md); font-weight: 600; color: var(--fg); flex: 1; }
 
+.v2-module-divider {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 32px;
+  margin-bottom: 8px;
+  padding: 18px 0 14px;
+  border-top: 1px solid color-mix(in oklab, var(--fg) 14%, transparent);
+}
+.v2-module-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--brand) 16%, transparent);
+  color: color-mix(in oklab, var(--brand) 92%, var(--fg));
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  border: 1px solid color-mix(in oklab, var(--brand) 28%, transparent);
+  flex-shrink: 0;
+}
+.v2-module-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  color: var(--fg);
+}
+.v2-module-subtitle {
+  margin-top: 4px;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: color-mix(in oklab, var(--fg) 78%, transparent);
+}
+
 .v2-rewards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
 .v2-reward-actions {
   display: flex;

@@ -4601,7 +4601,8 @@ function LeverSwitch({
  *  modules — gives the page institutional rhythm and lets the operator
  *  jump mentally between modules ("scale story", "operational health",
  *  "menu strategy"). Visual: small leading number badge + uppercase
- *  module label + short subtitle, separated by a hairline rule. */
+ *  module label + short subtitle, separated by a hairline rule.
+ *  Uses CSS vars so it adapts to light / dark theme automatically. */
 function ModuleDivider({
   index,
   title,
@@ -4612,51 +4613,11 @@ function ModuleDivider({
   subtitle?: string;
 }) {
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 12,
-        marginTop: 28,
-        marginBottom: 4,
-        padding: "12px 0 8px",
-        borderTop: "1px solid rgba(0,0,0,0.10)",
-      }}
-    >
-      <span
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: 28,
-          height: 28,
-          borderRadius: 999,
-          background: "rgba(37,99,235,0.10)",
-          color: "rgb(37,99,235)",
-          fontSize: 12,
-          fontWeight: 700,
-          letterSpacing: 0.3,
-        }}
-      >
-        {String(index).padStart(2, "0")}
-      </span>
-      <div>
-        <div
-          style={{
-            fontSize: 13,
-            fontWeight: 700,
-            letterSpacing: 0.4,
-            textTransform: "uppercase",
-            color: "rgba(0,0,0,0.78)",
-          }}
-        >
-          {title}
-        </div>
-        {subtitle && (
-          <div className="v2-muted text-xs" style={{ marginTop: 2 }}>
-            {subtitle}
-          </div>
-        )}
+    <div className="v2-module-divider">
+      <span className="v2-module-badge">{String(index).padStart(2, "0")}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="v2-module-title">{title}</div>
+        {subtitle && <div className="v2-module-subtitle">{subtitle}</div>}
       </div>
     </div>
   );
