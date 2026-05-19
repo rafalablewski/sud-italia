@@ -2,7 +2,7 @@ import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot } from "@/data/types";
+import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine } from "@/data/types";
 import { getActiveLocations, locations as allLocations } from "@/data/locations";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -8523,6 +8523,85 @@ export async function computeSimulationActuals(
     fromISO: new Date(earliest).toISOString(),
     generatedAt: new Date().toISOString(),
   };
+}
+
+/** Kasavana-Smith menu engineering. Groups every sold item by quadrant
+ *  (star / plowhorse / puzzle / dog) over a rolling-window of orders.
+ *  Quadrants split at the median velocity and median per-unit gross
+ *  profit across the line items that sold ≥ 1 unit. */
+export async function computeMenuEngineering(
+  windowDays = 90,
+): Promise<SimulationMenuEngineeringLine[]> {
+  const all = await getOrders();
+  const cutoffMs = Date.now() - windowDays * 24 * 60 * 60 * 1000;
+  const fulfilled = all.filter((o) => {
+    if (o.status === "cancelled") return false;
+    const t = Date.parse(o.createdAt);
+    return Number.isFinite(t) && t >= cutoffMs;
+  });
+
+  type Agg = { item: MenuItem; units: number; revenue: number; cost: number };
+  const byItem = new Map<string, Agg>();
+  for (const o of fulfilled) {
+    for (const line of o.items ?? []) {
+      const item = line.menuItem;
+      if (!item) continue;
+      const qty = Math.max(0, line.quantity ?? 1);
+      let linePrice = item.price ?? 0;
+      let lineCost = item.cost ?? 0;
+      for (const sel of line.selectedModifiers ?? []) {
+        const group = item.modifierGroups?.find((g) => g.id === sel.groupId);
+        const opt = group?.options.find((o) => o.id === sel.optionId);
+        if (opt) {
+          linePrice += Math.max(0, opt.priceDelta ?? 0);
+          lineCost += Math.max(0, opt.costDelta ?? 0);
+        }
+      }
+      const agg = byItem.get(item.id) ?? { item, units: 0, revenue: 0, cost: 0 };
+      agg.units += qty;
+      agg.revenue += qty * linePrice;
+      agg.cost += qty * lineCost;
+      byItem.set(item.id, agg);
+    }
+  }
+
+  const rows = Array.from(byItem.values())
+    .filter((a) => a.units > 0)
+    .map((a) => ({
+      menuItemId: a.item.id,
+      name: a.item.name,
+      category: a.item.category ?? "other",
+      unitsSold: a.units,
+      gpPerUnit: a.units > 0 ? (a.revenue - a.cost) / a.units : 0,
+      revenue: a.revenue,
+      cost: a.cost,
+    }));
+
+  if (rows.length === 0) return [];
+
+  const median = (xs: number[]): number => {
+    const sorted = [...xs].sort((x, y) => x - y);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 === 0
+      ? (sorted[mid - 1] + sorted[mid]) / 2
+      : sorted[mid];
+  };
+  const medianUnits = median(rows.map((r) => r.unitsSold));
+  const medianGp = median(rows.map((r) => r.gpPerUnit));
+
+  return rows.map((r): SimulationMenuEngineeringLine => {
+    const highVol = r.unitsSold >= medianUnits;
+    const highGp = r.gpPerUnit >= medianGp;
+    const quadrant: SimulationMenuEngineeringLine["quadrant"] =
+      highVol && highGp
+        ? "star"
+        : highVol && !highGp
+          ? "plowhorse"
+          : !highVol && highGp
+            ? "puzzle"
+            : "dog";
+    return { ...r, quadrant };
+  });
 }
 
 const FREQUENCY_TO_MONTHS_INTERNAL: Record<BusinessCost["frequency"], number> = {

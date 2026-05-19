@@ -1015,6 +1015,25 @@ export interface SimulationKitchenCapacity {
   peakHourSharePct: number;
 }
 
+/** Per-item slice for the menu-engineering matrix (stars / plowhorses /
+ *  puzzles / dogs). Velocity is units sold over the window; GP is gross
+ *  profit per unit after modifier deltas. Quadrants are split at the
+ *  median velocity and median GP across the menu. */
+export interface SimulationMenuEngineeringLine {
+  menuItemId: string;
+  name: string;
+  category: string;
+  /** Units sold in the window (quantity-weighted). */
+  unitsSold: number;
+  /** Gross profit per unit in grosze (price + Σ priceDelta − cost − Σ costDelta). */
+  gpPerUnit: number;
+  /** Total revenue and cost contribution from this item in the window. */
+  revenue: number;
+  cost: number;
+  /** Quadrant label per Kasavana-Smith menu engineering. */
+  quadrant: "star" | "plowhorse" | "puzzle" | "dog";
+}
+
 /** Snapshot of real-order actuals over a rolling window, used to ground-truth
  *  the simulator inputs (ordersPerDay, avgTicket, channel mix). Pulled from
  *  the live orders table — never operator-entered. */

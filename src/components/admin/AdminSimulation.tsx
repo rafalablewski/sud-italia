@@ -41,6 +41,7 @@ import type {
   SimulationAttachLever,
   SimulationIngredientLever,
   SimulationLaborLine,
+  SimulationMenuEngineeringLine,
   SimulationScenario,
   SimulationSeasonality,
   SimulationWeather,
@@ -1628,6 +1629,7 @@ export function AdminSimulation() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [actuals, setActuals] = useState<SimulationActualsSnapshot | null>(null);
+  const [menuEng, setMenuEng] = useState<SimulationMenuEngineeringLine[] | null>(null);
   const [seedConfirmOpen, setSeedConfirmOpen] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const dirtyRef = useRef(false);
@@ -1668,6 +1670,21 @@ export function AdminSimulation() {
   useEffect(() => {
     fetchActuals();
   }, [fetchActuals]);
+
+  const fetchMenuEng = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/simulation/menu-engineering?days=90");
+      if (res.ok) {
+        const data = (await res.json()) as { items: SimulationMenuEngineeringLine[] };
+        setMenuEng(data.items ?? []);
+      }
+    } catch {
+      // Non-fatal — the matrix is informational only.
+    }
+  }, []);
+  useEffect(() => {
+    fetchMenuEng();
+  }, [fetchMenuEng]);
 
   const persist = useCallback(
     async (next: SimulationScenario, opts?: { quiet?: boolean }) => {
@@ -2623,6 +2640,8 @@ export function AdminSimulation() {
         />
       </section>
 
+      {menuEng && menuEng.length > 0 && <MenuEngineeringPanel rows={menuEng} />}
+
       <Card>
         <CardHeader
           title="Scenario comparison"
@@ -3525,6 +3544,112 @@ function SourceTag({
     >
       {c.label}
     </span>
+  );
+}
+
+/** Kasavana-Smith menu engineering matrix (stars / plowhorses / puzzles /
+ *  dogs) rendered as a 2×2 grid. Quadrants split at the median velocity
+ *  and median per-unit GP across the menu — the standard QSR cut. */
+function MenuEngineeringPanel({
+  rows,
+}: {
+  rows: SimulationMenuEngineeringLine[];
+}) {
+  const byQuadrant: Record<SimulationMenuEngineeringLine["quadrant"], SimulationMenuEngineeringLine[]> = {
+    star: [],
+    plowhorse: [],
+    puzzle: [],
+    dog: [],
+  };
+  for (const r of rows) byQuadrant[r.quadrant].push(r);
+  for (const k of Object.keys(byQuadrant) as Array<keyof typeof byQuadrant>) {
+    byQuadrant[k].sort((a, b) => b.revenue - a.revenue);
+  }
+  const quadConfig: Record<
+    SimulationMenuEngineeringLine["quadrant"],
+    { label: string; sub: string; tone: string; verdict: string }
+  > = {
+    star: {
+      label: "Stars",
+      sub: "High volume · high margin",
+      tone: "rgba(34,197,94,0.10)",
+      verdict: "Protect. Promote. Anchor the menu.",
+    },
+    puzzle: {
+      label: "Puzzles",
+      sub: "Low volume · high margin",
+      tone: "rgba(59,130,246,0.10)",
+      verdict: "Push attach / upsell — these need marketing.",
+    },
+    plowhorse: {
+      label: "Plowhorses",
+      sub: "High volume · low margin",
+      tone: "rgba(245,158,11,0.10)",
+      verdict: "Reprice up or re-engineer the recipe.",
+    },
+    dog: {
+      label: "Dogs",
+      sub: "Low volume · low margin",
+      tone: "rgba(239,68,68,0.10)",
+      verdict: "Delete unless strategic — they cost menu real-estate.",
+    },
+  };
+  return (
+    <Card>
+      <CardHeader
+        title="Menu engineering"
+        description="Per-item gross profit × velocity over the last 90 days, grouped by the Kasavana-Smith quadrants. Quadrant cuts: median GP/unit and median units sold."
+        actions={<SourceTag kind="actuals" hint="Computed from real order line items." />}
+      />
+      <CardBody>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {(["star", "puzzle", "plowhorse", "dog"] as const).map((q) => {
+            const cfg = quadConfig[q];
+            const items = byQuadrant[q];
+            return (
+              <div
+                key={q}
+                style={{
+                  background: cfg.tone,
+                  borderRadius: 10,
+                  padding: 12,
+                }}
+              >
+                <div className="flex items-baseline justify-between mb-1">
+                  <div>
+                    <div style={{ fontWeight: 600 }}>{cfg.label}</div>
+                    <div className="v2-muted text-xs">{cfg.sub}</div>
+                  </div>
+                  <div className="v2-muted text-xs">{items.length} items</div>
+                </div>
+                <div className="v2-muted text-xs mb-2" style={{ fontStyle: "italic" }}>
+                  {cfg.verdict}
+                </div>
+                <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                  {items.slice(0, 6).map((r) => (
+                    <li
+                      key={r.menuItemId}
+                      className="flex items-baseline justify-between"
+                      style={{ padding: "4px 0", borderTop: "1px solid rgba(0,0,0,0.06)" }}
+                    >
+                      <span style={{ fontSize: 13 }}>{r.name}</span>
+                      <span className="v2-muted text-xs tabular">
+                        {r.unitsSold}× · {(r.gpPerUnit / 100).toFixed(2)} zł GP
+                      </span>
+                    </li>
+                  ))}
+                  {items.length > 6 && (
+                    <li className="v2-muted text-xs mt-1">
+                      + {items.length - 6} more
+                    </li>
+                  )}
+                </ul>
+              </div>
+            );
+          })}
+        </div>
+      </CardBody>
+    </Card>
   );
 }
 
