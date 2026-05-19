@@ -966,6 +966,19 @@ export interface SimulationScenario {
   /** Corporate income tax rate (0–1). Polish small-CIT is 9%; full CIT is
    *  19%. Applied to pre-tax net profit; if pre-tax is negative, no tax. */
   citPct?: number;
+  /** Channel mix: share of revenue paid in cash (no processor fee).
+   *  Polish food-truck norm ~15-25%. Higher share is more cash-handling
+   *  cost (counted in fixed `other`) but lower processor blend. */
+  cashSharePct?: number;
+  /** Channel mix: share of revenue routed through Glovo. Glovo takes
+   *  22-30% commission — wildly different from on-site card 1-2%. */
+  glovoSharePct?: number;
+  /** Glovo commission rate (0–1). Negotiated; typical 25-30%. */
+  glovoFeePct?: number;
+  /** Channel mix: share of revenue routed through Wolt. */
+  woltSharePct?: number;
+  /** Wolt commission rate (0–1). Typical 22-30%. */
+  woltFeePct?: number;
   updatedAt: string;
 }
 

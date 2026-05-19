@@ -7983,6 +7983,15 @@ export function defaultSimulationScenario(): SimulationScenario {
     refundPct: 0.015,
     loyaltyBurnPct: 0.012,
     citPct: 0.09,
+    // Channel mix — defaults to 100% on-site (cash + card) with the
+    // marketplaces off. Turning Glovo/Wolt on materially compresses
+    // margin because the marketplace fee replaces (not adds to) the
+    // on-site processor rate on that share of revenue.
+    cashSharePct: 0.20,
+    glovoSharePct: 0.00,
+    glovoFeePct: 0.27,
+    woltSharePct: 0.00,
+    woltFeePct: 0.28,
     // Honest all-in: Stefano Ferrara oven + truck buildout + refrigeration +
     // generator + livery + SANEPID compliance + 3 mo working capital lands
     // 350-400k PLN. The previous 250k floor was a buildout-only number that
@@ -8093,6 +8102,11 @@ export async function getSimulationScenario(): Promise<SimulationScenario> {
     refundPct: typeof saved.refundPct === "number" ? clamp01(saved.refundPct, defaults.refundPct ?? 0) : defaults.refundPct,
     loyaltyBurnPct: typeof saved.loyaltyBurnPct === "number" ? clamp01(saved.loyaltyBurnPct, defaults.loyaltyBurnPct ?? 0) : defaults.loyaltyBurnPct,
     citPct: typeof saved.citPct === "number" ? clamp01(saved.citPct, defaults.citPct ?? 0) : defaults.citPct,
+    cashSharePct: typeof saved.cashSharePct === "number" ? clamp01(saved.cashSharePct, defaults.cashSharePct ?? 0) : defaults.cashSharePct,
+    glovoSharePct: typeof saved.glovoSharePct === "number" ? clamp01(saved.glovoSharePct, defaults.glovoSharePct ?? 0) : defaults.glovoSharePct,
+    glovoFeePct: typeof saved.glovoFeePct === "number" ? clamp01(saved.glovoFeePct, defaults.glovoFeePct ?? 0) : defaults.glovoFeePct,
+    woltSharePct: typeof saved.woltSharePct === "number" ? clamp01(saved.woltSharePct, defaults.woltSharePct ?? 0) : defaults.woltSharePct,
+    woltFeePct: typeof saved.woltFeePct === "number" ? clamp01(saved.woltFeePct, defaults.woltFeePct ?? 0) : defaults.woltFeePct,
     updatedAt: saved.updatedAt ?? defaults.updatedAt,
   };
 }
@@ -8284,6 +8298,11 @@ export async function saveSimulationScenario(
       refundPct: clampSimPct(scenario.refundPct, defaults.refundPct ?? 0),
       loyaltyBurnPct: clampSimPct(scenario.loyaltyBurnPct, defaults.loyaltyBurnPct ?? 0),
       citPct: clampSimPct(scenario.citPct, defaults.citPct ?? 0),
+      cashSharePct: clampSimPct(scenario.cashSharePct, defaults.cashSharePct ?? 0),
+      glovoSharePct: clampSimPct(scenario.glovoSharePct, defaults.glovoSharePct ?? 0),
+      glovoFeePct: clampSimPct(scenario.glovoFeePct, defaults.glovoFeePct ?? 0),
+      woltSharePct: clampSimPct(scenario.woltSharePct, defaults.woltSharePct ?? 0),
+      woltFeePct: clampSimPct(scenario.woltFeePct, defaults.woltFeePct ?? 0),
       updatedAt: new Date().toISOString(),
     };
     await writeJSON(SIMULATION_KEY, clean);

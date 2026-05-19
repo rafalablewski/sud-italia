@@ -111,6 +111,11 @@ export const PUT = withAdmin(
       refundPct: typeof b.refundPct === "number" ? b.refundPct : undefined,
       loyaltyBurnPct: typeof b.loyaltyBurnPct === "number" ? b.loyaltyBurnPct : undefined,
       citPct: typeof b.citPct === "number" ? b.citPct : undefined,
+      cashSharePct: typeof b.cashSharePct === "number" ? b.cashSharePct : undefined,
+      glovoSharePct: typeof b.glovoSharePct === "number" ? b.glovoSharePct : undefined,
+      glovoFeePct: typeof b.glovoFeePct === "number" ? b.glovoFeePct : undefined,
+      woltSharePct: typeof b.woltSharePct === "number" ? b.woltSharePct : undefined,
+      woltFeePct: typeof b.woltFeePct === "number" ? b.woltFeePct : undefined,
       updatedAt: new Date().toISOString(),
     };
     const saved = await saveSimulationScenario(scenario);

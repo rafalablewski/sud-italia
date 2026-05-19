@@ -653,11 +653,31 @@ function applyAssumptions(s: SimulationScenario): SimulationScenario {
   const totalCogsValue = Math.max(0, baselineCogsValue + extraCogs);
   const newCogsPct = newTicket > 0 ? Math.min(1, totalCogsValue / newTicket) : s.cogsPct;
 
+  // Channel-blended payment rate. `paymentProcessorPct` on input is the
+  // on-site card rate (Stripe/terminal ~1-2%); the blended rate folds
+  // in cash (0%) and marketplace commissions (Glovo/Wolt 22-30%) so the
+  // downstream `revenue × paymentProcessorPct` line is honest. The
+  // legacy delivery-share lever's extraProcessorPct still piles onto the
+  // on-site rate (a card-fee surcharge on the truck's own delivery
+  // orders, not a marketplace commission).
+  const cashShare = s.cashSharePct ?? 0;
+  const glovoShare = s.glovoSharePct ?? 0;
+  const woltShare = s.woltSharePct ?? 0;
+  const glovoFee = s.glovoFeePct ?? 0;
+  const woltFee = s.woltFeePct ?? 0;
+  const onSiteCardShare = Math.max(0, 1 - cashShare - glovoShare - woltShare);
+  const onSiteCardRate = (s.paymentProcessorPct ?? 0) + extraProcessorPct;
+  const blendedProcessorPct =
+    cashShare * 0 +
+    onSiteCardShare * onSiteCardRate +
+    glovoShare * glovoFee +
+    woltShare * woltFee;
+
   return {
     ...s,
     avgTicketGrosze: newTicket,
     cogsPct: newCogsPct,
-    paymentProcessorPct: Math.max(0, Math.min(1, (s.paymentProcessorPct ?? 0) + extraProcessorPct)),
+    paymentProcessorPct: Math.max(0, Math.min(1, blendedProcessorPct)),
   };
 }
 
@@ -2404,7 +2424,7 @@ export function AdminSimulation() {
               description="Applied monthly to COGS + fixed costs."
             />
             <Input
-              label="Card processor fee"
+              label="On-site card fee"
               type="number"
               step="0.1"
               min="0"
@@ -2417,7 +2437,87 @@ export function AdminSimulation() {
                 }))
               }
               trailingAdornment={<span className="v2-muted">%</span>}
-              description="Blended Stripe/terminal fee on revenue."
+              description="Stripe / terminal blended rate. Applied only to the on-site card share of revenue."
+            />
+            <Input
+              label="Cash share"
+              type="number"
+              step="1"
+              min="0"
+              max="100"
+              value={((scenario.cashSharePct ?? 0) * 100).toFixed(0)}
+              onChange={(e) =>
+                update((s) => ({
+                  ...s,
+                  cashSharePct: Math.max(0, Math.min(1, (parseFloat(e.target.value) || 0) / 100)),
+                }))
+              }
+              trailingAdornment={<span className="v2-muted">%</span>}
+              description="Share paid in cash (0% processor fee). Polish food-truck norm 15-25%."
+            />
+            <Input
+              label="Glovo share"
+              type="number"
+              step="1"
+              min="0"
+              max="100"
+              value={((scenario.glovoSharePct ?? 0) * 100).toFixed(0)}
+              onChange={(e) =>
+                update((s) => ({
+                  ...s,
+                  glovoSharePct: Math.max(0, Math.min(1, (parseFloat(e.target.value) || 0) / 100)),
+                }))
+              }
+              trailingAdornment={<span className="v2-muted">%</span>}
+              description="Share routed through Glovo. Marketplace commission replaces the on-site card fee on this share."
+            />
+            <Input
+              label="Glovo commission"
+              type="number"
+              step="0.5"
+              min="0"
+              max="50"
+              value={((scenario.glovoFeePct ?? 0) * 100).toFixed(1)}
+              onChange={(e) =>
+                update((s) => ({
+                  ...s,
+                  glovoFeePct: Math.max(0, Math.min(0.5, (parseFloat(e.target.value) || 0) / 100)),
+                }))
+              }
+              trailingAdornment={<span className="v2-muted">%</span>}
+              description="Glovo's take rate. Typical 25-30%; negotiable past volume thresholds."
+            />
+            <Input
+              label="Wolt share"
+              type="number"
+              step="1"
+              min="0"
+              max="100"
+              value={((scenario.woltSharePct ?? 0) * 100).toFixed(0)}
+              onChange={(e) =>
+                update((s) => ({
+                  ...s,
+                  woltSharePct: Math.max(0, Math.min(1, (parseFloat(e.target.value) || 0) / 100)),
+                }))
+              }
+              trailingAdornment={<span className="v2-muted">%</span>}
+              description="Share routed through Wolt."
+            />
+            <Input
+              label="Wolt commission"
+              type="number"
+              step="0.5"
+              min="0"
+              max="50"
+              value={((scenario.woltFeePct ?? 0) * 100).toFixed(1)}
+              onChange={(e) =>
+                update((s) => ({
+                  ...s,
+                  woltFeePct: Math.max(0, Math.min(0.5, (parseFloat(e.target.value) || 0) / 100)),
+                }))
+              }
+              trailingAdornment={<span className="v2-muted">%</span>}
+              description="Wolt's take rate. Typical 22-30%."
             />
             <Input
               label="Setup cost"
