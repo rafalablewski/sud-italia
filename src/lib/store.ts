@@ -2,7 +2,7 @@ import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot } from "@/data/types";
+import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine } from "@/data/types";
 import { getActiveLocations, locations as allLocations } from "@/data/locations";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -8523,6 +8523,92 @@ export async function computeSimulationActuals(
     fromISO: new Date(earliest).toISOString(),
     generatedAt: new Date().toISOString(),
   };
+}
+
+/** Daypart split — buckets fulfilled orders by createdAt local-time hour
+ *  and computes per-bucket volume, avg ticket, and gross profit. Surfaces
+ *  the lunch / dinner / late-night economics separately because the
+ *  daily average hides menu-mix shifts (late-night = slice-heavy at 76%
+ *  GM, dinner = full plates, lunch = mid-AOV panini). */
+export async function computeDayparts(
+  windowDays = 90,
+): Promise<SimulationDaypartLine[]> {
+  const all = await getOrders();
+  const cutoffMs = Date.now() - windowDays * 24 * 60 * 60 * 1000;
+  const fulfilled = all.filter((o) => {
+    if (o.status === "cancelled") return false;
+    const t = Date.parse(o.createdAt);
+    return Number.isFinite(t) && t >= cutoffMs;
+  });
+
+  // Local-time hour — we use UTC because the codebase doesn't track
+  // location timezones explicitly and Polish locations are UTC+1/+2.
+  // For our use-case the bucket edges (11/15/17/22) are wide enough
+  // that a 1h DST shift doesn't move orders between buckets.
+  const bucketFor = (hour: number): SimulationDaypartLine["key"] => {
+    if (hour >= 11 && hour < 15) return "lunch";
+    if (hour >= 17 && hour < 22) return "dinner";
+    if (hour >= 22 || hour < 4) return "late-night";
+    return "off-peak";
+  };
+
+  type Agg = { orders: number; revenue: number; gp: number };
+  const agg: Record<SimulationDaypartLine["key"], Agg> = {
+    lunch: { orders: 0, revenue: 0, gp: 0 },
+    dinner: { orders: 0, revenue: 0, gp: 0 },
+    "late-night": { orders: 0, revenue: 0, gp: 0 },
+    "off-peak": { orders: 0, revenue: 0, gp: 0 },
+  };
+
+  for (const o of fulfilled) {
+    const d = new Date(o.createdAt);
+    if (!Number.isFinite(d.valueOf())) continue;
+    const bucket = bucketFor(d.getUTCHours());
+    let orderGp = 0;
+    for (const line of o.items ?? []) {
+      const item = line.menuItem;
+      if (!item) continue;
+      const qty = Math.max(0, line.quantity ?? 1);
+      let price = item.price ?? 0;
+      let cost = item.cost ?? 0;
+      for (const sel of line.selectedModifiers ?? []) {
+        const group = item.modifierGroups?.find((g) => g.id === sel.groupId);
+        const opt = group?.options.find((o) => o.id === sel.optionId);
+        if (opt) {
+          price += Math.max(0, opt.priceDelta ?? 0);
+          cost += Math.max(0, opt.costDelta ?? 0);
+        }
+      }
+      orderGp += qty * (price - cost);
+    }
+    const a = agg[bucket];
+    a.orders += 1;
+    a.revenue += o.totalAmount ?? 0;
+    a.gp += orderGp;
+  }
+
+  const totalOrders = fulfilled.length;
+  const meta: Record<SimulationDaypartLine["key"], { label: string; hours: string }> = {
+    lunch: { label: "Lunch", hours: "11:00 – 15:00" },
+    dinner: { label: "Dinner", hours: "17:00 – 22:00" },
+    "late-night": { label: "Late-night", hours: "22:00 – 04:00" },
+    "off-peak": { label: "Off-peak", hours: "other hours" },
+  };
+
+  return (Object.keys(agg) as Array<SimulationDaypartLine["key"]>).map((k) => {
+    const a = agg[k];
+    return {
+      key: k,
+      label: meta[k].label,
+      hours: meta[k].hours,
+      ordersCount: a.orders,
+      sharePct: totalOrders > 0 ? a.orders / totalOrders : 0,
+      avgTicketGrosze: a.orders > 0 ? Math.round(a.revenue / a.orders) : 0,
+      revenueGrosze: a.revenue,
+      gpGrosze: a.gp,
+      gpRatePct: a.revenue > 0 ? a.gp / a.revenue : 0,
+    };
+  });
 }
 
 /** Cohort retention snapshot — groups orders by phone, computes repeat

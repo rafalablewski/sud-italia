@@ -1015,6 +1015,24 @@ export interface SimulationKitchenCapacity {
   peakHourSharePct: number;
 }
 
+/** Per-daypart slice of real-order activity. Surfaces lunch / dinner /
+ *  late-night economics separately because the average hides the truth:
+ *  late-night is mostly slices at 76% GM, dinner is full plates at 65%,
+ *  lunch is the panini-AOV sweet spot. */
+export interface SimulationDaypartLine {
+  key: "lunch" | "dinner" | "late-night" | "off-peak";
+  label: string;
+  hours: string;
+  ordersCount: number;
+  /** Share of total orders in the window. */
+  sharePct: number;
+  avgTicketGrosze: number;
+  revenueGrosze: number;
+  gpGrosze: number;
+  /** GP / revenue — daypart's contribution margin upper bound. */
+  gpRatePct: number;
+}
+
 /** Cohort retention snapshot — computed over a rolling window of real orders,
  *  grouped by customer phone. Drives the LTV/CAC card the institutional
  *  review flagged as the single most important missing piece for any

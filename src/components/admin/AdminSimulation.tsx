@@ -40,6 +40,7 @@ import type {
   SimulationAssumptions,
   SimulationAttachLever,
   SimulationCohortSnapshot,
+  SimulationDaypartLine,
   SimulationIngredientLever,
   SimulationLaborLine,
   SimulationMenuEngineeringLine,
@@ -1783,6 +1784,7 @@ export function AdminSimulation() {
   const [actuals, setActuals] = useState<SimulationActualsSnapshot | null>(null);
   const [menuEng, setMenuEng] = useState<SimulationMenuEngineeringLine[] | null>(null);
   const [cohorts, setCohorts] = useState<SimulationCohortSnapshot | null>(null);
+  const [dayparts, setDayparts] = useState<SimulationDaypartLine[] | null>(null);
   const [seedConfirmOpen, setSeedConfirmOpen] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const dirtyRef = useRef(false);
@@ -1853,6 +1855,21 @@ export function AdminSimulation() {
   useEffect(() => {
     fetchCohorts();
   }, [fetchCohorts]);
+
+  const fetchDayparts = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/simulation/dayparts?days=90");
+      if (res.ok) {
+        const data = (await res.json()) as { dayparts: SimulationDaypartLine[] };
+        setDayparts(data.dayparts ?? []);
+      }
+    } catch {
+      // Non-fatal.
+    }
+  }, []);
+  useEffect(() => {
+    fetchDayparts();
+  }, [fetchDayparts]);
 
   const persist = useCallback(
     async (next: SimulationScenario, opts?: { quiet?: boolean }) => {
@@ -2813,6 +2830,10 @@ export function AdminSimulation() {
         <CohortPanel cohorts={cohorts} marketingMonthlyGrosze={scenario.fixedCosts.marketing ?? 0} />
       )}
 
+      {dayparts && dayparts.some((d) => d.ordersCount > 0) && (
+        <DaypartPanel dayparts={dayparts} />
+      )}
+
       {menuEng && menuEng.length > 0 && <MenuEngineeringPanel rows={menuEng} />}
 
       <TornadoPanel bars={tornado} />
@@ -3720,6 +3741,77 @@ function SourceTag({
     >
       {c.label}
     </span>
+  );
+}
+
+/** Daypart breakdown — lunch / dinner / late-night / off-peak rows pulled
+ *  from real orders' createdAt hour. Surfaces the per-daypart economics
+ *  the operator can't see in the daily-aggregated view. */
+function DaypartPanel({ dayparts }: { dayparts: SimulationDaypartLine[] }) {
+  return (
+    <Card>
+      <CardHeader
+        title="Daypart breakdown"
+        description="Per-daypart volume, AOV, and gross-profit rate. Late-night skews to higher-GM slices; dinner to full plates."
+        actions={<SourceTag kind="actuals" hint="Computed from real order timestamps." />}
+      />
+      <CardBody>
+        <table style={{ width: "100%", fontSize: 13 }}>
+          <thead>
+            <tr style={{ textAlign: "left", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>
+              <th style={{ padding: "8px 4px" }}>Daypart</th>
+              <th style={{ padding: "8px 4px", textAlign: "right" }}>Orders</th>
+              <th style={{ padding: "8px 4px", textAlign: "right" }}>Share</th>
+              <th style={{ padding: "8px 4px", textAlign: "right" }}>Avg ticket</th>
+              <th style={{ padding: "8px 4px", textAlign: "right" }}>Revenue</th>
+              <th style={{ padding: "8px 4px", textAlign: "right" }}>GP rate</th>
+            </tr>
+          </thead>
+          <tbody>
+            {dayparts.map((d) => (
+              <tr key={d.key} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
+                <td style={{ padding: "8px 4px" }}>
+                  <div style={{ fontWeight: 500 }}>{d.label}</div>
+                  <div className="v2-muted text-xs">{d.hours}</div>
+                </td>
+                <td className="tabular" style={{ padding: "8px 4px", textAlign: "right" }}>
+                  {d.ordersCount}
+                </td>
+                <td className="tabular" style={{ padding: "8px 4px", textAlign: "right" }}>
+                  {(d.sharePct * 100).toFixed(0)}%
+                </td>
+                <td className="tabular" style={{ padding: "8px 4px", textAlign: "right" }}>
+                  {d.ordersCount > 0 ? `${(d.avgTicketGrosze / 100).toFixed(2)} zł` : "—"}
+                </td>
+                <td className="tabular" style={{ padding: "8px 4px", textAlign: "right" }}>
+                  {d.revenueGrosze > 0
+                    ? `${Math.round(d.revenueGrosze / 100).toLocaleString("pl-PL")} zł`
+                    : "—"}
+                </td>
+                <td
+                  className="tabular"
+                  style={{
+                    padding: "8px 4px",
+                    textAlign: "right",
+                    color:
+                      d.gpRatePct >= 0.70
+                        ? "rgb(22,163,74)"
+                        : d.gpRatePct >= 0.55
+                          ? "rgb(217,119,6)"
+                          : d.ordersCount > 0
+                            ? "rgb(220,38,38)"
+                            : undefined,
+                    fontWeight: 500,
+                  }}
+                >
+                  {d.ordersCount > 0 ? `${(d.gpRatePct * 100).toFixed(1)}%` : "—"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </CardBody>
+    </Card>
   );
 }
 
