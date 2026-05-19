@@ -2037,6 +2037,9 @@ export function AdminSimulation() {
               ...s,
               ordersPerDay: Math.max(1, Math.round(actuals.ordersPerDay)),
               avgTicketGrosze: Math.max(0, Math.round(actuals.avgTicketGrosze)),
+              cogsPct: actuals.weightedCogsPct > 0
+                ? Math.max(0, Math.min(1, actuals.weightedCogsPct))
+                : s.cogsPct,
               refundPct: actuals.refundPct > 0 ? actuals.refundPct : s.refundPct,
               assumptions: s.assumptions?.deliveryShare && actuals.deliverySharePct > 0
                 ? {
@@ -3370,8 +3373,14 @@ function ActualsStrip({
     planned > 0 ? (actual - planned) / planned : 0;
   const ordersVar = variance(actuals.ordersPerDay, scenario.ordersPerDay);
   const ticketVar = variance(actuals.avgTicketGrosze, scenario.avgTicketGrosze);
+  const cogsVar =
+    actuals.weightedCogsPct > 0
+      ? variance(actuals.weightedCogsPct, scenario.cogsPct)
+      : 0;
   const stale =
-    Math.abs(ordersVar) > 0.15 || Math.abs(ticketVar) > 0.15;
+    Math.abs(ordersVar) > 0.15 ||
+    Math.abs(ticketVar) > 0.15 ||
+    Math.abs(cogsVar) > 0.15;
   const tone = stale ? "warning" : "info";
   const variancePct = (v: number) =>
     `${v >= 0 ? "+" : ""}${(v * 100).toFixed(0)}%`;
@@ -3393,6 +3402,12 @@ function ActualsStrip({
               label="Avg ticket"
               value={`${(actuals.avgTicketGrosze / 100).toFixed(2)} zł (${variancePct(ticketVar)})`}
             />
+            {actuals.weightedCogsPct > 0 && (
+              <Stat
+                label="Weighted COGS"
+                value={`${(actuals.weightedCogsPct * 100).toFixed(1)}% (${variancePct(cogsVar)})`}
+              />
+            )}
             <Stat label="Delivery %" value={`${(actuals.deliverySharePct * 100).toFixed(0)}%`} />
             <Stat label="Cancel %" value={`${(actuals.refundPct * 100).toFixed(1)}%`} />
             <Stat

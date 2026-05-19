@@ -8396,6 +8396,9 @@ export async function seedSimulationFromHistory(): Promise<SimulationScenario> {
   if (actuals && actuals.ordersCount >= 20) {
     seeded.ordersPerDay = Math.max(1, Math.round(actuals.ordersPerDay));
     seeded.avgTicketGrosze = Math.max(0, Math.round(actuals.avgTicketGrosze));
+    if (actuals.weightedCogsPct > 0) {
+      seeded.cogsPct = clamp01(actuals.weightedCogsPct, seeded.cogsPct);
+    }
     // Map delivery share from actuals onto the existing deliveryShare lever
     // so downstream packaging + processor math picks it up.
     if (seeded.assumptions?.deliveryShare && actuals.deliverySharePct > 0) {
@@ -8432,6 +8435,32 @@ export async function computeSimulationActuals(
   const ordersCount = fulfilled.length;
   const totalGrosze = fulfilled.reduce((sum, o) => sum + (o.totalAmount ?? 0), 0);
   const avgTicketGrosze = ordersCount > 0 ? Math.round(totalGrosze / ordersCount) : 0;
+  // Weighted COGS: sum(qty × (item.cost + Σ option.costDelta)) /
+  // sum(qty × (item.price + Σ option.priceDelta)) across every line item
+  // in every fulfilled order. The honest replacement for the operator's
+  // flat cogsPct guess.
+  let menuCostTotal = 0;
+  let menuRevenueTotal = 0;
+  for (const o of fulfilled) {
+    for (const line of o.items ?? []) {
+      const item = line.menuItem;
+      if (!item) continue;
+      const qty = Math.max(0, line.quantity ?? 1);
+      let lineCost = item.cost ?? 0;
+      let linePrice = item.price ?? 0;
+      for (const sel of line.selectedModifiers ?? []) {
+        const group = item.modifierGroups?.find((g) => g.id === sel.groupId);
+        const opt = group?.options.find((o) => o.id === sel.optionId);
+        if (opt) {
+          linePrice += Math.max(0, opt.priceDelta ?? 0);
+          lineCost += Math.max(0, opt.costDelta ?? 0);
+        }
+      }
+      menuCostTotal += qty * lineCost;
+      menuRevenueTotal += qty * linePrice;
+    }
+  }
+  const weightedCogsPct = menuRevenueTotal > 0 ? menuCostTotal / menuRevenueTotal : 0;
   const dayKeys = new Set(
     fulfilled
       .map((o) => {
@@ -8459,6 +8488,7 @@ export async function computeSimulationActuals(
     daysWithOrders,
     ordersPerDay,
     avgTicketGrosze,
+    weightedCogsPct,
     takeoutSharePct,
     deliverySharePct,
     refundPct,

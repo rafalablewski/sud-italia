@@ -1012,6 +1012,11 @@ export interface SimulationActualsSnapshot {
   ordersPerDay: number;
   /** Mean order total in grosze. */
   avgTicketGrosze: number;
+  /** Weighted food-cost ratio computed from the actual menu mix (Σqty×cost
+   *  ÷ Σqty×price across every line item). Honest replacement for the
+   *  operator-typed flat cogsPct. Falls back to 0 when no item carries
+   *  cost data. */
+  weightedCogsPct: number;
   /** Share of orders by fulfillment type. */
   takeoutSharePct: number;
   deliverySharePct: number;
