@@ -8264,7 +8264,7 @@ function hydrateIngredient(
     return Math.max(-1, Math.min(5, n));
   };
   return {
-    enabled: typeof saved.enabled === "boolean" ? saved.enabled : true,
+    enabled: typeof saved.enabled === "boolean" ? saved.enabled : (fb.enabled ?? false),
     cogsShare: clamp01(saved.cogsShare, fb.cogsShare),
     costDeltaPct: clampDelta(saved.costDeltaPct, fb.costDeltaPct),
   };
@@ -8302,7 +8302,12 @@ function hydrateAttach(
   if (!fallback) return saved as SimulationAttachLever | undefined;
   if (!saved) return fallback;
   return {
-    enabled: typeof saved.enabled === "boolean" ? saved.enabled : true,
+    // When the saved scenario doesn't carry an explicit `enabled` flag,
+    // fall through to the new default's value (false). Previously this
+    // fell back to `true`, which meant old scenarios saved before the
+    // all-off default landed kept their levers enabled on reload —
+    // exactly the bug the user reported on the top 6 attach levers.
+    enabled: typeof saved.enabled === "boolean" ? saved.enabled : (fallback.enabled ?? false),
     attachPct: clamp01(saved.attachPct, fallback.attachPct),
     avgPriceGrosze: Math.round(clampNonNeg(saved.avgPriceGrosze, fallback.avgPriceGrosze)),
     cogsPct: clamp01(saved.cogsPct, fallback.cogsPct),
@@ -8324,7 +8329,7 @@ function hydrateAssumptions(
     pastaPrimoAttach: hydrateAttach(saved.pastaPrimoAttach, fb.pastaPrimoAttach),
     comboConversion: saved.comboConversion
       ? {
-          enabled: typeof saved.comboConversion.enabled === "boolean" ? saved.comboConversion.enabled : true,
+          enabled: typeof saved.comboConversion.enabled === "boolean" ? saved.comboConversion.enabled : (fb.comboConversion?.enabled ?? false),
           pct: clamp01(saved.comboConversion.pct, fb.comboConversion?.pct ?? 0),
           addonGrosze: Math.round(
             clampNonNeg(saved.comboConversion.addonGrosze, fb.comboConversion?.addonGrosze ?? 0),
@@ -8337,7 +8342,7 @@ function hydrateAssumptions(
       : fb.comboConversion,
     cheapestPizzaShift: saved.cheapestPizzaShift
       ? {
-          enabled: typeof saved.cheapestPizzaShift.enabled === "boolean" ? saved.cheapestPizzaShift.enabled : true,
+          enabled: typeof saved.cheapestPizzaShift.enabled === "boolean" ? saved.cheapestPizzaShift.enabled : (fb.cheapestPizzaShift?.enabled ?? false),
           pp: clamp01(saved.cheapestPizzaShift.pp, fb.cheapestPizzaShift?.pp ?? 0),
           ticketDeltaGrosze: Math.round(
             clampNonNeg(saved.cheapestPizzaShift.ticketDeltaGrosze, fb.cheapestPizzaShift?.ticketDeltaGrosze ?? 0),
@@ -8349,7 +8354,7 @@ function hydrateAssumptions(
       : fb.cheapestPizzaShift,
     deliveryShare: saved.deliveryShare
       ? {
-          enabled: typeof saved.deliveryShare.enabled === "boolean" ? saved.deliveryShare.enabled : true,
+          enabled: typeof saved.deliveryShare.enabled === "boolean" ? saved.deliveryShare.enabled : (fb.deliveryShare?.enabled ?? false),
           pct: clamp01(saved.deliveryShare.pct, fb.deliveryShare?.pct ?? 0),
           packagingCostGrosze: Math.round(
             clampNonNeg(saved.deliveryShare.packagingCostGrosze, fb.deliveryShare?.packagingCostGrosze ?? 0),
