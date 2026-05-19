@@ -400,7 +400,11 @@ function projectMonths(
   for (let i = 0; i < monthsCount; i++) {
     const monthIndex = (startMonth + i) % 12;
     const season = MONTH_TO_SEASON[monthIndex];
-    const seasonMult = seasonality[season];
+    // Per-month override beats the quarterly multiplier when set —
+    // matters for outdoor trucks where Jan/Feb/Dec behave nothing like
+    // each other (cliff vs cliff vs Christmas-market boost).
+    const override = seasonality.monthlyOverrides?.[monthIndex];
+    const seasonMult = typeof override === "number" ? override : seasonality[season];
     const weatherMult = monthVolumeMult(monthIndex, w);
     const closedDays = w?.holidayClosedDaysPerMonth ?? 0;
     const daysOpen = Math.max(0, s.daysOpenPerMonth - closedDays);
@@ -3057,8 +3061,54 @@ export function AdminSimulation() {
                   },
                 }))
               }
-              description="Sep / Oct / Nov. Default 1.00."
+              description="Sep / Oct / Nov. Default 0.95."
             />
+          </div>
+          <div className="mt-4">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="v2-section-h text-sm">Per-month overrides</span>
+              <span className="v2-muted text-xs">
+                Override the quarterly multiplier for individual months. Blank = use quarter.
+              </span>
+            </div>
+            <div className="grid grid-cols-6 md:grid-cols-12 gap-1">
+              {MONTH_LABELS.map((label, idx) => {
+                const ovr = seasonality.monthlyOverrides?.[idx];
+                return (
+                  <div key={label} className="flex flex-col items-center">
+                    <span className="v2-muted text-xs">{label}</span>
+                    <input
+                      className="v2-input tabular"
+                      style={{ width: "100%", padding: "4px 6px", fontSize: 13, textAlign: "center" }}
+                      type="number"
+                      step="0.05"
+                      min="0"
+                      max="3"
+                      placeholder={seasonality[MONTH_TO_SEASON[idx]].toFixed(2)}
+                      value={typeof ovr === "number" ? ovr.toFixed(2) : ""}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        const num = v === "" ? undefined : Math.max(0, Math.min(3, parseFloat(v) || 0));
+                        update((s) => {
+                          const arr = Array.from(
+                            { length: 12 },
+                            (_, i) => s.seasonality?.monthlyOverrides?.[i],
+                          );
+                          arr[idx] = num;
+                          return {
+                            ...s,
+                            seasonality: {
+                              ...(s.seasonality ?? DEFAULT_SEASONALITY),
+                              monthlyOverrides: arr.every((x) => x === undefined) ? undefined : arr,
+                            },
+                          };
+                        });
+                      }}
+                    />
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </CardBody>
       </Card>

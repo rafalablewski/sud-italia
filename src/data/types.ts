@@ -799,6 +799,12 @@ export interface SimulationSeasonality {
   summer: number;
   /** Multiplier applied to ordersPerDay for Sep/Oct/Nov. */
   autumn: number;
+  /** Optional per-month overrides (length 12, Jan=0..Dec=11). When set,
+   *  the per-month value REPLACES the quarterly value for that month —
+   *  letting operators decouple Jan from Feb from Dec, which matters for
+   *  an outdoor truck where January is the cliff and December gets the
+   *  Christmas market boost. Undefined entries fall back to the quarter. */
+  monthlyOverrides?: (number | undefined)[];
 }
 
 export interface SimulationMenuMixLine {

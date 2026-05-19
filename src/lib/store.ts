@@ -8273,11 +8273,25 @@ function cleanSimSeasonality(
     if (typeof n !== "number" || !Number.isFinite(n)) return f;
     return Math.max(0, Math.min(3, n));
   };
+  const clampMaybe = (n: unknown): number | undefined => {
+    if (typeof n !== "number" || !Number.isFinite(n)) return undefined;
+    return Math.max(0, Math.min(3, n));
+  };
+  let monthlyOverrides: (number | undefined)[] | undefined;
+  if (Array.isArray(s.monthlyOverrides)) {
+    monthlyOverrides = Array.from({ length: 12 }, (_, i) =>
+      clampMaybe(s.monthlyOverrides?.[i]),
+    );
+    // Drop the array entirely if every slot is undefined — saves space
+    // and keeps the saved JSON tidy for operators not using the feature.
+    if (monthlyOverrides.every((v) => v === undefined)) monthlyOverrides = undefined;
+  }
   return {
     winter: clamp(s.winter, fallback.winter),
     spring: clamp(s.spring, fallback.spring),
     summer: clamp(s.summer, fallback.summer),
     autumn: clamp(s.autumn, fallback.autumn),
+    monthlyOverrides,
   };
 }
 
