@@ -979,7 +979,23 @@ export interface SimulationScenario {
   woltSharePct?: number;
   /** Wolt commission rate (0–1). Typical 22-30%. */
   woltFeePct?: number;
+  /** Kitchen throughput ceiling — one pizzaiolo + one Stefano Ferrara oven
+   *  realistically produces 60-80 pizzas/hour at sustained pace. Multiplied
+   *  by openHoursPerDay and a peak-load realism factor gives max orders/day. */
+  kitchenCapacity?: SimulationKitchenCapacity;
   updatedAt: string;
+}
+
+export interface SimulationKitchenCapacity {
+  /** Pizzas the line can sustain per hour (single pizzaiolo + one oven).
+   *  60-80 is realistic for a Neapolitan truck; 90+ requires two ovens. */
+  pizzasPerHour: number;
+  /** Hours the kitchen is producing per service day (excl. prep + close). */
+  openHoursPerDay: number;
+  /** Share of daily orders concentrated in peak hours (lunch + dinner rush).
+   *  0.35 means 35% of the day's orders hit during the busiest hour-equivalents,
+   *  which is the binding constraint — not the daily average. */
+  peakHourSharePct: number;
 }
 
 // --- Audit log ---

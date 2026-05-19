@@ -2,7 +2,7 @@ import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationWeather } from "@/data/types";
+import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationWeather, SimulationKitchenCapacity } from "@/data/types";
 import { getActiveLocations, locations as allLocations } from "@/data/locations";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -7992,6 +7992,16 @@ export function defaultSimulationScenario(): SimulationScenario {
     glovoFeePct: 0.27,
     woltSharePct: 0.00,
     woltFeePct: 0.28,
+    // One pizzaiolo + one Ferrara oven sustains ~70 pizzas/hour. Over
+    // 10 service hours that's 700 theoretical, but ~35% of orders hit
+    // in the peak hour-equivalents, so the binding ceiling is
+    // 70 / 0.35 ≈ 200 orders/day before the line breaks. A second
+    // pizzaiolo + second oven roughly doubles it.
+    kitchenCapacity: {
+      pizzasPerHour: 70,
+      openHoursPerDay: 10,
+      peakHourSharePct: 0.35,
+    },
     // Honest all-in: Stefano Ferrara oven + truck buildout + refrigeration +
     // generator + livery + SANEPID compliance + 3 mo working capital lands
     // 350-400k PLN. The previous 250k floor was a buildout-only number that
@@ -8107,6 +8117,7 @@ export async function getSimulationScenario(): Promise<SimulationScenario> {
     glovoFeePct: typeof saved.glovoFeePct === "number" ? clamp01(saved.glovoFeePct, defaults.glovoFeePct ?? 0) : defaults.glovoFeePct,
     woltSharePct: typeof saved.woltSharePct === "number" ? clamp01(saved.woltSharePct, defaults.woltSharePct ?? 0) : defaults.woltSharePct,
     woltFeePct: typeof saved.woltFeePct === "number" ? clamp01(saved.woltFeePct, defaults.woltFeePct ?? 0) : defaults.woltFeePct,
+    kitchenCapacity: hydrateKitchenCapacity(saved.kitchenCapacity, defaults.kitchenCapacity),
     updatedAt: saved.updatedAt ?? defaults.updatedAt,
   };
 }
@@ -8226,6 +8237,19 @@ function hydrateWeather(
   };
 }
 
+function hydrateKitchenCapacity(
+  saved: SimulationKitchenCapacity | undefined,
+  fallback: SimulationKitchenCapacity | undefined,
+): SimulationKitchenCapacity | undefined {
+  const fb = fallback ?? { pizzasPerHour: 70, openHoursPerDay: 10, peakHourSharePct: 0.35 };
+  if (!saved) return fb;
+  return {
+    pizzasPerHour: clampNonNeg(saved.pizzasPerHour, fb.pizzasPerHour),
+    openHoursPerDay: clampNonNeg(saved.openHoursPerDay, fb.openHoursPerDay),
+    peakHourSharePct: clamp01(saved.peakHourSharePct, fb.peakHourSharePct),
+  };
+}
+
 function clampSimPct(n: unknown, fallback: number): number {
   if (typeof n !== "number" || !Number.isFinite(n)) return fallback;
   return Math.max(0, Math.min(1, n));
@@ -8303,6 +8327,7 @@ export async function saveSimulationScenario(
       glovoFeePct: clampSimPct(scenario.glovoFeePct, defaults.glovoFeePct ?? 0),
       woltSharePct: clampSimPct(scenario.woltSharePct, defaults.woltSharePct ?? 0),
       woltFeePct: clampSimPct(scenario.woltFeePct, defaults.woltFeePct ?? 0),
+      kitchenCapacity: hydrateKitchenCapacity(scenario.kitchenCapacity, defaults.kitchenCapacity),
       updatedAt: new Date().toISOString(),
     };
     await writeJSON(SIMULATION_KEY, clean);

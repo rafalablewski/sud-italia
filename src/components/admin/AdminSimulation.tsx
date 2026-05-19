@@ -10,6 +10,7 @@ import {
   ChefHat,
   Clock,
   Database,
+  Flame,
   FlaskConical,
   Gauge,
   Grid3X3,
@@ -206,6 +207,10 @@ interface Computed {
   totalCost: number;
   /** Net profit AFTER tax — the bottom line the operator should plan on. */
   netProfit: number;
+  /** Theoretical max orders/day the kitchen can sustain (peak-hour limited). */
+  capacityOrdersPerDay: number;
+  /** Fraction of capacity the current ordersPerDay consumes (0–1+). */
+  capacityUtilization: number;
   margin: number;
   breakEvenOrdersPerDay: number;
   breakEvenOrdersPerMonth: number;
@@ -289,6 +294,18 @@ function computeScenario(s: SimulationScenario): Computed {
     s.setupCostGrosze && s.setupCostGrosze > 0 && netProfit > 0
       ? s.setupCostGrosze / netProfit
       : null;
+  // Kitchen capacity. Peak-hour load is the binding constraint: at peak
+  // share `p` of a day's orders, peak-hour throughput = ordersPerDay × p.
+  // That must be ≤ pizzasPerHour ⇒ ordersPerDay ≤ pizzasPerHour / p.
+  // The same formula falls out whether you express it daily or per-hour,
+  // because the peak hour is what saturates the oven and the pizzaiolo.
+  const cap = s.kitchenCapacity;
+  const capacityOrdersPerDay =
+    cap && cap.pizzasPerHour > 0 && cap.peakHourSharePct > 0
+      ? cap.pizzasPerHour / cap.peakHourSharePct
+      : 0;
+  const capacityUtilization =
+    capacityOrdersPerDay > 0 ? s.ordersPerDay / capacityOrdersPerDay : 0;
   return {
     monthlyRevenue,
     monthlyCogs,
@@ -317,6 +334,8 @@ function computeScenario(s: SimulationScenario): Computed {
     paybackMonths,
     breakEvenOrdersPerDay,
     laborByRole,
+    capacityOrdersPerDay,
+    capacityUtilization,
   };
 }
 
@@ -2278,6 +2297,24 @@ export function AdminSimulation() {
           }
           hint={`Setup ${formatPrice(scenario.setupCostGrosze ?? 0)}`}
         />
+        {computed.capacityOrdersPerDay > 0 && (
+          <KpiCard
+            label="Kitchen capacity"
+            value={computed.capacityUtilization * 100}
+            format={(n) => `${n.toFixed(0)}%`}
+            icon={Flame}
+            tone={
+              computed.capacityUtilization > 1
+                ? "danger"
+                : computed.capacityUtilization > 0.85
+                  ? "warning"
+                  : computed.capacityUtilization > 0.6
+                    ? "info"
+                    : "success"
+            }
+            hint={`Peak ceiling ${Math.round(computed.capacityOrdersPerDay)} ord/day · running ${Math.round(scenario.ordersPerDay)}`}
+          />
+        )}
       </section>
 
       <Card>
@@ -2615,6 +2652,64 @@ export function AdminSimulation() {
                 }))
               }
               description="Dec / Jan / Feb. Default 0.50 — Polish outdoor truck winter is brutal."
+            />
+            <Input
+              label="Kitchen — pizzas/hour"
+              type="number"
+              step="5"
+              min="0"
+              max="300"
+              value={(scenario.kitchenCapacity?.pizzasPerHour ?? 0).toFixed(0)}
+              onChange={(e) =>
+                update((s) => ({
+                  ...s,
+                  kitchenCapacity: {
+                    pizzasPerHour: Math.max(0, Math.min(300, parseFloat(e.target.value) || 0)),
+                    openHoursPerDay: s.kitchenCapacity?.openHoursPerDay ?? 10,
+                    peakHourSharePct: s.kitchenCapacity?.peakHourSharePct ?? 0.35,
+                  },
+                }))
+              }
+              description="Sustained output of one pizzaiolo + one Ferrara oven. 60-80 realistic; 90+ needs a second line."
+            />
+            <Input
+              label="Kitchen — service hours/day"
+              type="number"
+              step="0.5"
+              min="0"
+              max="24"
+              value={(scenario.kitchenCapacity?.openHoursPerDay ?? 0).toFixed(1)}
+              onChange={(e) =>
+                update((s) => ({
+                  ...s,
+                  kitchenCapacity: {
+                    pizzasPerHour: s.kitchenCapacity?.pizzasPerHour ?? 70,
+                    openHoursPerDay: Math.max(0, Math.min(24, parseFloat(e.target.value) || 0)),
+                    peakHourSharePct: s.kitchenCapacity?.peakHourSharePct ?? 0.35,
+                  },
+                }))
+              }
+              description="Hours the line is producing — excludes prep + close-down."
+            />
+            <Input
+              label="Kitchen — peak-hour share"
+              type="number"
+              step="1"
+              min="0"
+              max="100"
+              value={((scenario.kitchenCapacity?.peakHourSharePct ?? 0) * 100).toFixed(0)}
+              onChange={(e) =>
+                update((s) => ({
+                  ...s,
+                  kitchenCapacity: {
+                    pizzasPerHour: s.kitchenCapacity?.pizzasPerHour ?? 70,
+                    openHoursPerDay: s.kitchenCapacity?.openHoursPerDay ?? 10,
+                    peakHourSharePct: Math.max(0, Math.min(1, (parseFloat(e.target.value) || 0) / 100)),
+                  },
+                }))
+              }
+              trailingAdornment={<span className="v2-muted">%</span>}
+              description="Share of daily orders in the peak hour — this is the binding constraint, not the average."
             />
             <Input
               label="Summer volume multiplier"

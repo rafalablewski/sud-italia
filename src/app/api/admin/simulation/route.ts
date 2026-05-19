@@ -116,6 +116,7 @@ export const PUT = withAdmin(
       glovoFeePct: typeof b.glovoFeePct === "number" ? b.glovoFeePct : undefined,
       woltSharePct: typeof b.woltSharePct === "number" ? b.woltSharePct : undefined,
       woltFeePct: typeof b.woltFeePct === "number" ? b.woltFeePct : undefined,
+      kitchenCapacity: b.kitchenCapacity,
       updatedAt: new Date().toISOString(),
     };
     const saved = await saveSimulationScenario(scenario);
