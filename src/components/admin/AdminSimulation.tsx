@@ -238,9 +238,22 @@ interface Computed {
 function computeScenario(s: SimulationScenario): Computed {
   const monthlyRevenue = s.ordersPerDay * s.avgTicketGrosze * s.daysOpenPerMonth;
   const monthlyCogs = Math.round(monthlyRevenue * s.cogsPct);
+  // Labor volume flex — past the operational defect where labor was
+  // entirely decoupled from ordersPerDay. The labor mix is sized for
+  // `laborAnchorOrdersPerDay`; the variable share scales linearly with
+  // the divergence. flex = 1 + variablePct × (current/anchor − 1).
+  const laborAnchor = s.laborAnchorOrdersPerDay ?? s.ordersPerDay;
+  const laborVariableShare = s.laborVariablePct ?? 0;
+  const volumeRatio = laborAnchor > 0 ? s.ordersPerDay / laborAnchor : 1;
+  const laborVolumeFlex = Math.max(
+    0,
+    1 + laborVariableShare * (volumeRatio - 1),
+  );
   const laborByRole: { role: BusinessCostPayrollRole; grosze: number }[] = s.labor.map((l) => ({
     role: l.role,
-    grosze: Math.round(l.headcount * l.hoursPerWeek * WEEKS_PER_MONTH * l.hourlyRateGrosze),
+    grosze: Math.round(
+      l.headcount * l.hoursPerWeek * WEEKS_PER_MONTH * l.hourlyRateGrosze * laborVolumeFlex,
+    ),
   }));
   const laborMonthly = laborByRole.reduce((sum, r) => sum + r.grosze, 0);
   const laborHoursPerMonth = s.labor.reduce(
@@ -407,8 +420,16 @@ function projectMonths(
     const orders = monthDailyOrders * daysOpen;
     const wageMult = (1 + wageMonthly) ** i;
     const cogsMult = (1 + cogsMonthly) ** i;
-    // Labor partially flexes with seasonal volume — fixed share stays put.
-    const laborFlex = 1 + LABOR_SEASONAL_FLEX * (seasonMult - 1);
+    // Labor flex = base headline volume flex (driven by current ordersPerDay
+    // vs anchor) × seasonal flex (driven by this month's seasonal volume).
+    // Both use the same laborVariablePct so behaviour matches across the
+    // headline view and the 12-month projection.
+    const variablePct = s.laborVariablePct ?? LABOR_SEASONAL_FLEX;
+    const anchor = s.laborAnchorOrdersPerDay ?? s.ordersPerDay;
+    const volumeFlex =
+      anchor > 0 ? Math.max(0, 1 + variablePct * (s.ordersPerDay / anchor - 1)) : 1;
+    const seasonalFlex = 1 + variablePct * (seasonMult * rampFactor - 1);
+    const laborFlex = volumeFlex * Math.max(0, seasonalFlex);
     const revenue = Math.round(orders * s.avgTicketGrosze);
     const cogs = Math.round(revenue * s.cogsPct * cogsMult);
     const labor = Math.round(baseLaborMonthly * wageMult * laborFlex);
@@ -2932,6 +2953,37 @@ export function AdminSimulation() {
                 }))
               }
               description="Hours the line is producing — excludes prep + close-down."
+            />
+            <Input
+              label="Labor flex with volume"
+              type="number"
+              step="5"
+              min="0"
+              max="100"
+              value={((scenario.laborVariablePct ?? 0) * 100).toFixed(0)}
+              onChange={(e) =>
+                update((s) => ({
+                  ...s,
+                  laborVariablePct: Math.max(0, Math.min(1, (parseFloat(e.target.value) || 0) / 100)),
+                }))
+              }
+              trailingAdornment={<span className="v2-muted">%</span>}
+              description="Share of labor that scales with order volume. 0% = fully fixed crew, 100% = fully variable. 40% is QSR norm."
+            />
+            <Input
+              label="Labor anchor (orders/day)"
+              type="number"
+              step="5"
+              min="1"
+              max="500"
+              value={(scenario.laborAnchorOrdersPerDay ?? scenario.ordersPerDay).toFixed(0)}
+              onChange={(e) =>
+                update((s) => ({
+                  ...s,
+                  laborAnchorOrdersPerDay: Math.max(1, Math.round(parseFloat(e.target.value) || 1)),
+                }))
+              }
+              description="The orders/day the current labor mix is sized for. Push volume past it and variable labor pulls in proportionally."
             />
             <Input
               label="Kitchen — peak-hour share"

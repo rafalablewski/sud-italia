@@ -117,6 +117,8 @@ export const PUT = withAdmin(
       woltSharePct: typeof b.woltSharePct === "number" ? b.woltSharePct : undefined,
       woltFeePct: typeof b.woltFeePct === "number" ? b.woltFeePct : undefined,
       kitchenCapacity: b.kitchenCapacity,
+      laborVariablePct: typeof b.laborVariablePct === "number" ? b.laborVariablePct : undefined,
+      laborAnchorOrdersPerDay: typeof b.laborAnchorOrdersPerDay === "number" ? b.laborAnchorOrdersPerDay : undefined,
       updatedAt: new Date().toISOString(),
     };
     const saved = await saveSimulationScenario(scenario);

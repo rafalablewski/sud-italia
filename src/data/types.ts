@@ -983,6 +983,17 @@ export interface SimulationScenario {
    *  realistically produces 60-80 pizzas/hour at sustained pace. Multiplied
    *  by openHoursPerDay and a peak-load realism factor gives max orders/day. */
   kitchenCapacity?: SimulationKitchenCapacity;
+  /** Variable share of labor that flexes with order volume (0–1). Default
+   *  0.40 — about 40% of labor (extra cook on a busy night, more dish-pit
+   *  hours) tracks volume; 60% is fixed crew. Set to 0 for fully fixed
+   *  staffing (truck won't add headcount), 1 for fully variable. */
+  laborVariablePct?: number;
+  /** Reference daily-orders baseline that the current labor mix is sized
+   *  for. The flex curve only kicks in when ordersPerDay diverges from
+   *  this anchor — so adding orders past it pulls in more labor cost,
+   *  and dropping below it lets some labor fall away. Defaults to
+   *  ordersPerDay at scenario-creation time. */
+  laborAnchorOrdersPerDay?: number;
   updatedAt: string;
 }
 

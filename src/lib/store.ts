@@ -8002,6 +8002,13 @@ export function defaultSimulationScenario(): SimulationScenario {
       openHoursPerDay: 10,
       peakHourSharePct: 0.35,
     },
+    // Labor flex — at default 40% variable, doubling orders/day pulls in
+    // 40% more labor cost (real-world: extra cook on a Saturday rush
+    // does happen). At 0 the truck is fully fixed-staffed; at 1 a 2×
+    // volume move would double the wage bill. Anchor defaults to the
+    // ordersPerDay the labor mix was sized for (70).
+    laborVariablePct: 0.40,
+    laborAnchorOrdersPerDay: 70,
     // Honest all-in: Stefano Ferrara oven + truck buildout + refrigeration +
     // generator + livery + SANEPID compliance + 3 mo working capital lands
     // 350-400k PLN. The previous 250k floor was a buildout-only number that
@@ -8118,6 +8125,8 @@ export async function getSimulationScenario(): Promise<SimulationScenario> {
     woltSharePct: typeof saved.woltSharePct === "number" ? clamp01(saved.woltSharePct, defaults.woltSharePct ?? 0) : defaults.woltSharePct,
     woltFeePct: typeof saved.woltFeePct === "number" ? clamp01(saved.woltFeePct, defaults.woltFeePct ?? 0) : defaults.woltFeePct,
     kitchenCapacity: hydrateKitchenCapacity(saved.kitchenCapacity, defaults.kitchenCapacity),
+    laborVariablePct: typeof saved.laborVariablePct === "number" ? clamp01(saved.laborVariablePct, defaults.laborVariablePct ?? 0.4) : defaults.laborVariablePct,
+    laborAnchorOrdersPerDay: typeof saved.laborAnchorOrdersPerDay === "number" && saved.laborAnchorOrdersPerDay > 0 ? saved.laborAnchorOrdersPerDay : defaults.laborAnchorOrdersPerDay,
     updatedAt: saved.updatedAt ?? defaults.updatedAt,
   };
 }
@@ -8328,6 +8337,11 @@ export async function saveSimulationScenario(
       woltSharePct: clampSimPct(scenario.woltSharePct, defaults.woltSharePct ?? 0),
       woltFeePct: clampSimPct(scenario.woltFeePct, defaults.woltFeePct ?? 0),
       kitchenCapacity: hydrateKitchenCapacity(scenario.kitchenCapacity, defaults.kitchenCapacity),
+      laborVariablePct: clampSimPct(scenario.laborVariablePct, defaults.laborVariablePct ?? 0.4),
+      laborAnchorOrdersPerDay:
+        typeof scenario.laborAnchorOrdersPerDay === "number" && scenario.laborAnchorOrdersPerDay > 0
+          ? Math.round(scenario.laborAnchorOrdersPerDay)
+          : (defaults.laborAnchorOrdersPerDay ?? 70),
       updatedAt: new Date().toISOString(),
     };
     await writeJSON(SIMULATION_KEY, clean);
