@@ -2,7 +2,7 @@ import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel } from "@/data/types";
+import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel } from "@/data/types";
 import { getActiveLocations, locations as allLocations } from "@/data/locations";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -8106,6 +8106,24 @@ export function defaultSimulationAssumptions(): SimulationAssumptions {
       extraProcessorPct: 0,
       avgFeeGrosze: 800,
     },
+    // Ingredient stress-test levers — share of base-pizza COGS each line
+    // represents (calibrated to a Neapolitan recipe; sums to ~0.92). Cost-
+    // delta defaults to 0 so the levers ship "armed but neutral": the
+    // operator can flex any single ingredient up to stress-test the P&L.
+    // All levers default to `enabled: true` — hide-on-disable lives in
+    // the lever flag, not in the field's presence.
+    ingredients: {
+      mozzarella:   { enabled: true, cogsShare: 0.28, costDeltaPct: 0 },
+      tomato:       { enabled: true, cogsShare: 0.10, costDeltaPct: 0 },
+      flour:        { enabled: true, cogsShare: 0.06, costDeltaPct: 0 },
+      doughWeight:  { enabled: true, cogsShare: 0.06, costDeltaPct: 0 },
+      oliveOil:     { enabled: true, cogsShare: 0.05, costDeltaPct: 0 },
+      curedMeats:   { enabled: true, cogsShare: 0.07, costDeltaPct: 0 },
+      buffaloMozz:  { enabled: true, cogsShare: 0.03, costDeltaPct: 0 },
+      eggs:         { enabled: true, cogsShare: 0.02, costDeltaPct: 0 },
+      ovenFuel:     { enabled: true, cogsShare: 0.04, costDeltaPct: 0 },
+      packaging:    { enabled: true, cogsShare: 0.03, costDeltaPct: 0 },
+    },
   };
 }
 
@@ -8191,6 +8209,50 @@ function clampNonNeg(n: unknown, fallback: number): number {
   return Math.max(0, n);
 }
 
+function hydrateIngredient(
+  saved: Partial<SimulationIngredientLever> | undefined,
+  fallback: SimulationIngredientLever | undefined,
+): SimulationIngredientLever | undefined {
+  if (!fallback && !saved) return undefined;
+  const fb = fallback ?? { cogsShare: 0, costDeltaPct: 0 };
+  if (!saved) return fb;
+  // costDeltaPct can be negative (cost decrease) up to -1, positive up to +5.
+  const clampDelta = (n: unknown, f: number): number => {
+    if (typeof n !== "number" || !Number.isFinite(n)) return f;
+    return Math.max(-1, Math.min(5, n));
+  };
+  return {
+    enabled: typeof saved.enabled === "boolean" ? saved.enabled : true,
+    cogsShare: clamp01(saved.cogsShare, fb.cogsShare),
+    costDeltaPct: clampDelta(saved.costDeltaPct, fb.costDeltaPct),
+  };
+}
+
+function hydrateIngredientsBlock(
+  saved: SimulationAssumptions["ingredients"],
+  fallback: SimulationAssumptions["ingredients"],
+): SimulationAssumptions["ingredients"] {
+  if (!saved && !fallback) return undefined;
+  const keys: (keyof NonNullable<SimulationAssumptions["ingredients"]>)[] = [
+    "mozzarella",
+    "tomato",
+    "flour",
+    "doughWeight",
+    "oliveOil",
+    "curedMeats",
+    "buffaloMozz",
+    "eggs",
+    "ovenFuel",
+    "packaging",
+  ];
+  const out: NonNullable<SimulationAssumptions["ingredients"]> = {};
+  for (const k of keys) {
+    const hydrated = hydrateIngredient(saved?.[k], fallback?.[k]);
+    if (hydrated) out[k] = hydrated;
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
 function hydrateAttach(
   saved: Partial<SimulationAttachLever> | undefined,
   fallback: SimulationAttachLever | undefined,
@@ -8259,6 +8321,11 @@ function hydrateAssumptions(
           ),
         }
       : fb.deliveryShare,
+    // Hydrate every ingredient stress-test lever, preserving operator
+    // toggles (enabled / disabled). Previously dropped on every save →
+    // toggling ingredient levers off appeared to work in-memory but
+    // didn't survive the next page load.
+    ingredients: hydrateIngredientsBlock(saved.ingredients, fb.ingredients),
   };
 }
 
