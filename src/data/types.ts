@@ -1025,6 +1025,34 @@ export interface SimulationKitchenCapacity {
   peakHourSharePct: number;
 }
 
+/** Same-store sales growth — trailing-period revenue vs prior trailing
+ *  period of the same length. The most-watched chain metric on the planet
+ *  ("comp sales"); presented as a percent change with order-count and
+ *  ticket-size components broken out so the operator can see whether the
+ *  growth was volume or price-led. */
+export interface SimulationSssgSnapshot {
+  /** Length of each comparison window in days (e.g. 30 = MoM). */
+  windowDays: number;
+  /** Most-recent window revenue, in grosze. */
+  currentRevenueGrosze: number;
+  /** Prior window revenue (next windowDays back). */
+  priorRevenueGrosze: number;
+  /** (current − prior) / prior. */
+  revenueGrowthPct: number;
+  /** Order-count growth — how much was volume-led. */
+  orderGrowthPct: number;
+  /** Avg-ticket growth — how much was price/mix-led. */
+  ticketGrowthPct: number;
+  /** Distinct customer growth — how much was acquisition-led. */
+  customerGrowthPct: number;
+  /** Counts for context. */
+  currentOrders: number;
+  priorOrders: number;
+  currentCustomers: number;
+  priorCustomers: number;
+  generatedAt: string;
+}
+
 /** Per-hour throughput slice — average orders served per service hour
  *  over the window, plus kitchen-capacity utilisation if the operator
  *  has wired the kitchenCapacity inputs. Drives the hourly throughput
@@ -1079,6 +1107,11 @@ export interface SimulationCohortSnapshot {
   avgGpPerCustomerGrosze: number;
   /** Estimated new customers per month (annualised from the window). */
   newCustomersPerMonth: number;
+  /** Revenue from customers whose FIRST order is in the window (new) vs
+   *  customers who had orders before the window started (returning).
+   *  Surfaces the new-vs-returning mix the audit flagged as missing. */
+  newCustomerRevenueGrosze: number;
+  returningCustomerRevenueGrosze: number;
   generatedAt: string;
 }
 

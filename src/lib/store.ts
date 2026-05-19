@@ -2,7 +2,7 @@ import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine } from "@/data/types";
+import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot } from "@/data/types";
 import { getActiveLocations, locations as allLocations } from "@/data/locations";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -8541,6 +8541,56 @@ export async function computeSimulationActuals(
   };
 }
 
+/** Same-store sales growth — trailing window vs prior trailing window
+ *  of the same length. Decomposes the growth into volume (orders),
+ *  price/mix (avg ticket), and acquisition (distinct customers) so the
+ *  operator knows what drove the move. */
+export async function computeSssg(
+  windowDays = 30,
+): Promise<SimulationSssgSnapshot> {
+  const all = await getOrders();
+  const now = Date.now();
+  const oneWindow = windowDays * 24 * 60 * 60 * 1000;
+  const currentStart = now - oneWindow;
+  const priorStart = now - 2 * oneWindow;
+  let currentRev = 0, priorRev = 0;
+  let currentOrders = 0, priorOrders = 0;
+  const currentPhones = new Set<string>();
+  const priorPhones = new Set<string>();
+  for (const o of all) {
+    if (o.status === "cancelled") continue;
+    const t = Date.parse(o.createdAt);
+    if (!Number.isFinite(t)) continue;
+    if (t >= currentStart && t < now) {
+      currentRev += o.totalAmount ?? 0;
+      currentOrders += 1;
+      if (o.customerPhone) currentPhones.add(o.customerPhone.trim());
+    } else if (t >= priorStart && t < currentStart) {
+      priorRev += o.totalAmount ?? 0;
+      priorOrders += 1;
+      if (o.customerPhone) priorPhones.add(o.customerPhone.trim());
+    }
+  }
+  const pct = (a: number, b: number): number =>
+    b > 0 ? (a - b) / b : a > 0 ? 1 : 0;
+  const currentTicket = currentOrders > 0 ? currentRev / currentOrders : 0;
+  const priorTicket = priorOrders > 0 ? priorRev / priorOrders : 0;
+  return {
+    windowDays,
+    currentRevenueGrosze: currentRev,
+    priorRevenueGrosze: priorRev,
+    revenueGrowthPct: pct(currentRev, priorRev),
+    orderGrowthPct: pct(currentOrders, priorOrders),
+    ticketGrowthPct: pct(currentTicket, priorTicket),
+    customerGrowthPct: pct(currentPhones.size, priorPhones.size),
+    currentOrders,
+    priorOrders,
+    currentCustomers: currentPhones.size,
+    priorCustomers: priorPhones.size,
+    generatedAt: new Date().toISOString(),
+  };
+}
+
 /** Hourly throughput — per-hour orders / day from real data, optionally
  *  shown against the kitchenCapacity ceiling so rush-hour blow-out is
  *  visible. Returns 24 rows always (hour 0..23) — even unused hours so
@@ -8672,6 +8722,16 @@ export async function computeCohortSnapshot(
 ): Promise<SimulationCohortSnapshot> {
   const all = await getOrders();
   const cutoffMs = Date.now() - windowDays * 24 * 60 * 60 * 1000;
+  // Pre-pass: which customers had ≥1 order BEFORE the window? They're
+  // "returning" inside the window; everyone else is "new".
+  const preWindowCustomers = new Set<string>();
+  for (const o of all) {
+    if (o.status === "cancelled") continue;
+    if (!o.customerPhone) continue;
+    const t = Date.parse(o.createdAt);
+    if (!Number.isFinite(t) || t >= cutoffMs) continue;
+    preWindowCustomers.add(o.customerPhone.trim());
+  }
   const fulfilled = all.filter((o) => {
     if (o.status === "cancelled") return false;
     if (!o.customerPhone) return false;
@@ -8713,11 +8773,18 @@ export async function computeCohortSnapshot(
   let totalOrders = 0;
   let totalRevenue = 0;
   let totalGp = 0;
-  for (const agg of byPhone.values()) {
+  let newCustomerRevenueGrosze = 0;
+  let returningCustomerRevenueGrosze = 0;
+  for (const [phone, agg] of byPhone.entries()) {
     if (agg.orders >= 2) repeatCustomers += 1;
     totalOrders += agg.orders;
     totalRevenue += agg.revenue;
     totalGp += agg.gp;
+    if (preWindowCustomers.has(phone)) {
+      returningCustomerRevenueGrosze += agg.revenue;
+    } else {
+      newCustomerRevenueGrosze += agg.revenue;
+    }
   }
   const repeatRatePct = totalCustomers > 0 ? repeatCustomers / totalCustomers : 0;
   const avgOrdersPerCustomer = totalCustomers > 0 ? totalOrders / totalCustomers : 0;
@@ -8738,6 +8805,8 @@ export async function computeCohortSnapshot(
     avgRevenuePerCustomerGrosze,
     avgGpPerCustomerGrosze,
     newCustomersPerMonth,
+    newCustomerRevenueGrosze,
+    returningCustomerRevenueGrosze,
     generatedAt: new Date().toISOString(),
   };
 }

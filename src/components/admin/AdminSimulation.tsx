@@ -47,6 +47,7 @@ import type {
   SimulationMenuEngineeringLine,
   SimulationScenario,
   SimulationSeasonality,
+  SimulationSssgSnapshot,
   SimulationWeather,
 } from "@/data/types";
 import { useToast } from "./v2/ui/Toast";
@@ -1844,6 +1845,7 @@ export function AdminSimulation() {
   const [cohorts, setCohorts] = useState<SimulationCohortSnapshot | null>(null);
   const [dayparts, setDayparts] = useState<SimulationDaypartLine[] | null>(null);
   const [hourly, setHourly] = useState<SimulationHourlyThroughputLine[] | null>(null);
+  const [sssg, setSssg] = useState<SimulationSssgSnapshot | null>(null);
   const [seedConfirmOpen, setSeedConfirmOpen] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const dirtyRef = useRef(false);
@@ -1946,6 +1948,21 @@ export function AdminSimulation() {
   useEffect(() => {
     fetchHourly();
   }, [fetchHourly]);
+
+  const fetchSssg = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/simulation/sssg?days=30");
+      if (res.ok) {
+        const data = (await res.json()) as SimulationSssgSnapshot;
+        setSssg(data);
+      }
+    } catch {
+      // Non-fatal.
+    }
+  }, []);
+  useEffect(() => {
+    fetchSssg();
+  }, [fetchSssg]);
 
   const persist = useCallback(
     async (next: SimulationScenario, opts?: { quiet?: boolean }) => {
@@ -3011,6 +3028,8 @@ export function AdminSimulation() {
           hint="Annualised internal rate of return"
         />
       </section>
+
+      {sssg && (sssg.currentOrders > 0 || sssg.priorOrders > 0) && <SssgStrip sssg={sssg} />}
 
       {cohorts && cohorts.totalCustomers > 0 && (
         <CohortPanel cohorts={cohorts} marketingMonthlyGrosze={scenario.fixedCosts.marketing ?? 0} />
@@ -4116,6 +4135,67 @@ function DaypartPanel({ dayparts }: { dayparts: SimulationDaypartLine[] }) {
   );
 }
 
+/** Same-store sales growth — comp-sales the way every restaurant chain in
+ *  the world reports it. Decomposes revenue growth into volume / ticket /
+ *  customer-acquisition so the operator sees what drove the move. */
+function SssgStrip({ sssg }: { sssg: SimulationSssgSnapshot }) {
+  const fmtPct = (v: number) =>
+    `${v >= 0 ? "+" : ""}${(v * 100).toFixed(1)}%`;
+  const toneFor = (v: number): "success" | "warning" | "danger" | "info" =>
+    v >= 0.05 ? "success" : v >= 0 ? "info" : v >= -0.05 ? "warning" : "danger";
+  return (
+    <>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+        <h2 className="v2-section-h" style={{ margin: 0 }}>
+          Same-store sales growth
+        </h2>
+        <span className="v2-muted text-xs">
+          Last {sssg.windowDays}d vs prior {sssg.windowDays}d
+        </span>
+        <SourceTag kind="actuals" hint="From real orders." />
+      </div>
+      <section className="v2-kpi-grid">
+        <KpiCard
+          label="Revenue growth"
+          value={sssg.revenueGrowthPct * 100}
+          format={(n) => `${n >= 0 ? "+" : ""}${n.toFixed(1)}%`}
+          display={fmtPct(sssg.revenueGrowthPct)}
+          icon={TrendingUp}
+          tone={toneFor(sssg.revenueGrowthPct)}
+          hint={`${Math.round(sssg.currentRevenueGrosze / 100).toLocaleString("pl-PL")} zł vs ${Math.round(sssg.priorRevenueGrosze / 100).toLocaleString("pl-PL")} zł`}
+        />
+        <KpiCard
+          label="Order growth"
+          value={sssg.orderGrowthPct * 100}
+          format={(n) => `${n >= 0 ? "+" : ""}${n.toFixed(1)}%`}
+          display={fmtPct(sssg.orderGrowthPct)}
+          icon={Gauge}
+          tone={toneFor(sssg.orderGrowthPct)}
+          hint={`${sssg.currentOrders} vs ${sssg.priorOrders}`}
+        />
+        <KpiCard
+          label="Ticket growth"
+          value={sssg.ticketGrowthPct * 100}
+          format={(n) => `${n >= 0 ? "+" : ""}${n.toFixed(1)}%`}
+          display={fmtPct(sssg.ticketGrowthPct)}
+          icon={HandCoins}
+          tone={toneFor(sssg.ticketGrowthPct)}
+          hint="Avg ticket move"
+        />
+        <KpiCard
+          label="Customer growth"
+          value={sssg.customerGrowthPct * 100}
+          format={(n) => `${n >= 0 ? "+" : ""}${n.toFixed(1)}%`}
+          display={fmtPct(sssg.customerGrowthPct)}
+          icon={Sparkles}
+          tone={toneFor(sssg.customerGrowthPct)}
+          hint={`${sssg.currentCustomers} vs ${sssg.priorCustomers} distinct`}
+        />
+      </section>
+    </>
+  );
+}
+
 /** Cohort retention panel: surfaces the customer-economics layer the
  *  institutional review flagged as the single most important gap. LTV /
  *  CAC / payback computed from real orders + the operator's marketing
@@ -4229,6 +4309,39 @@ function CohortPanel({
           }
           hint="CAC ÷ monthly GP per customer"
         />
+        {(cohorts.newCustomerRevenueGrosze + cohorts.returningCustomerRevenueGrosze) > 0 && (
+          <>
+            <KpiCard
+              label="New customer revenue"
+              value={
+                ((cohorts.newCustomerRevenueGrosze) /
+                  Math.max(1, cohorts.newCustomerRevenueGrosze + cohorts.returningCustomerRevenueGrosze)) *
+                100
+              }
+              format={(n) => `${n.toFixed(0)}%`}
+              icon={Plus}
+              tone="info"
+              hint={`${Math.round(cohorts.newCustomerRevenueGrosze / 100).toLocaleString("pl-PL")} zł from net-new customers`}
+            />
+            <KpiCard
+              label="Returning revenue"
+              value={
+                ((cohorts.returningCustomerRevenueGrosze) /
+                  Math.max(1, cohorts.newCustomerRevenueGrosze + cohorts.returningCustomerRevenueGrosze)) *
+                100
+              }
+              format={(n) => `${n.toFixed(0)}%`}
+              icon={RefreshCw}
+              tone={
+                cohorts.returningCustomerRevenueGrosze >
+                cohorts.newCustomerRevenueGrosze
+                  ? "success"
+                  : "warning"
+              }
+              hint={`${Math.round(cohorts.returningCustomerRevenueGrosze / 100).toLocaleString("pl-PL")} zł from prior-window customers`}
+            />
+          </>
+        )}
       </section>
     </>
   );
