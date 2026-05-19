@@ -1015,6 +1015,21 @@ export interface SimulationKitchenCapacity {
   peakHourSharePct: number;
 }
 
+/** Per-hour throughput slice — average orders served per service hour
+ *  over the window, plus kitchen-capacity utilisation if the operator
+ *  has wired the kitchenCapacity inputs. Drives the hourly throughput
+ *  chart that surfaces rush-hour risk the daily-aggregated view hides. */
+export interface SimulationHourlyThroughputLine {
+  /** Hour of day, 0-23 (local UTC). */
+  hour: number;
+  /** Total orders served at this hour over the window. */
+  totalOrders: number;
+  /** Average orders per active day at this hour. */
+  avgOrdersPerHour: number;
+  /** Capacity utilisation if pizzasPerHour is set (0-1+). */
+  capacityUtilization: number;
+}
+
 /** Per-daypart slice of real-order activity. Surfaces lunch / dinner /
  *  late-night economics separately because the average hides the truth:
  *  late-night is mostly slices at 76% GM, dinner is full plates at 65%,

@@ -41,6 +41,7 @@ import type {
   SimulationAttachLever,
   SimulationCohortSnapshot,
   SimulationDaypartLine,
+  SimulationHourlyThroughputLine,
   SimulationIngredientLever,
   SimulationLaborLine,
   SimulationMenuEngineeringLine,
@@ -1785,6 +1786,7 @@ export function AdminSimulation() {
   const [menuEng, setMenuEng] = useState<SimulationMenuEngineeringLine[] | null>(null);
   const [cohorts, setCohorts] = useState<SimulationCohortSnapshot | null>(null);
   const [dayparts, setDayparts] = useState<SimulationDaypartLine[] | null>(null);
+  const [hourly, setHourly] = useState<SimulationHourlyThroughputLine[] | null>(null);
   const [seedConfirmOpen, setSeedConfirmOpen] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const dirtyRef = useRef(false);
@@ -1870,6 +1872,23 @@ export function AdminSimulation() {
   useEffect(() => {
     fetchDayparts();
   }, [fetchDayparts]);
+
+  const cap = scenario?.kitchenCapacity?.pizzasPerHour ?? 0;
+  const fetchHourly = useCallback(async () => {
+    try {
+      const url = `/api/admin/simulation/hourly?days=30${cap > 0 ? `&pizzasPerHour=${cap}` : ""}`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = (await res.json()) as { hourly: SimulationHourlyThroughputLine[] };
+        setHourly(data.hourly ?? []);
+      }
+    } catch {
+      // Non-fatal.
+    }
+  }, [cap]);
+  useEffect(() => {
+    fetchHourly();
+  }, [fetchHourly]);
 
   const persist = useCallback(
     async (next: SimulationScenario, opts?: { quiet?: boolean }) => {
@@ -2834,6 +2853,10 @@ export function AdminSimulation() {
         <DaypartPanel dayparts={dayparts} />
       )}
 
+      {hourly && hourly.some((h) => h.totalOrders > 0) && (
+        <HourlyThroughputPanel hourly={hourly} pizzasPerHourCap={cap} />
+      )}
+
       {menuEng && menuEng.length > 0 && <MenuEngineeringPanel rows={menuEng} />}
 
       <TornadoPanel bars={tornado} />
@@ -3741,6 +3764,87 @@ function SourceTag({
     >
       {c.label}
     </span>
+  );
+}
+
+/** Hourly throughput — bar chart of avg orders per hour over the last 30
+ *  days, optionally overlaid with the kitchen-capacity ceiling. Surfaces
+ *  the peak-hour blow-out the daily-aggregated view hides. */
+function HourlyThroughputPanel({
+  hourly,
+  pizzasPerHourCap,
+}: {
+  hourly: SimulationHourlyThroughputLine[];
+  pizzasPerHourCap: number;
+}) {
+  const peak = Math.max(...hourly.map((h) => h.avgOrdersPerHour), pizzasPerHourCap);
+  if (peak === 0) return null;
+  const yMax = Math.max(peak, pizzasPerHourCap) * 1.1;
+  return (
+    <Card>
+      <CardHeader
+        title="Hourly throughput vs capacity"
+        description={`Average orders per hour over the last 30 days${pizzasPerHourCap > 0 ? `, with the kitchen-capacity ceiling (${pizzasPerHourCap.toFixed(0)} pizzas/hour) overlaid` : ""}.`}
+        actions={<SourceTag kind="actuals" hint="Computed from real order timestamps." />}
+      />
+      <CardBody>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 180, position: "relative" }}>
+          {pizzasPerHourCap > 0 && (
+            <div
+              style={{
+                position: "absolute",
+                left: 0,
+                right: 0,
+                bottom: `${(pizzasPerHourCap / yMax) * 100}%`,
+                borderTop: "2px dashed rgba(239,68,68,0.6)",
+                pointerEvents: "none",
+              }}
+              title={`Kitchen capacity ${pizzasPerHourCap}/hr`}
+            />
+          )}
+          {hourly.map((h) => {
+            const heightPct = yMax > 0 ? (h.avgOrdersPerHour / yMax) * 100 : 0;
+            const over = pizzasPerHourCap > 0 && h.avgOrdersPerHour > pizzasPerHourCap;
+            const near = pizzasPerHourCap > 0 && h.avgOrdersPerHour > pizzasPerHourCap * 0.85;
+            const bg = over
+              ? "rgba(239,68,68,0.7)"
+              : near
+                ? "rgba(245,158,11,0.7)"
+                : h.avgOrdersPerHour > 0
+                  ? "rgba(59,130,246,0.7)"
+                  : "rgba(0,0,0,0.05)";
+            return (
+              <div
+                key={h.hour}
+                style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}
+                title={`${h.hour.toString().padStart(2, "0")}:00 — avg ${h.avgOrdersPerHour.toFixed(1)} orders/hr${pizzasPerHourCap > 0 ? ` (${(h.capacityUtilization * 100).toFixed(0)}% of cap)` : ""}`}
+              >
+                <div
+                  style={{
+                    width: "100%",
+                    height: `${heightPct}%`,
+                    background: bg,
+                    borderRadius: "3px 3px 0 0",
+                    minHeight: h.avgOrdersPerHour > 0 ? 2 : 0,
+                  }}
+                />
+                <div
+                  className="v2-muted"
+                  style={{ fontSize: 9, fontVariantNumeric: "tabular-nums" }}
+                >
+                  {h.hour % 3 === 0 ? h.hour.toString().padStart(2, "0") : ""}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {pizzasPerHourCap > 0 && (
+          <div className="v2-muted text-xs mt-2">
+            Red bars exceed kitchen capacity · amber within 15% · dashed line = ceiling.
+          </div>
+        )}
+      </CardBody>
+    </Card>
   );
 }
 

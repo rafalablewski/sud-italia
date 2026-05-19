@@ -2,7 +2,7 @@ import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine } from "@/data/types";
+import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine } from "@/data/types";
 import { getActiveLocations, locations as allLocations } from "@/data/locations";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -8523,6 +8523,41 @@ export async function computeSimulationActuals(
     fromISO: new Date(earliest).toISOString(),
     generatedAt: new Date().toISOString(),
   };
+}
+
+/** Hourly throughput — per-hour orders / day from real data, optionally
+ *  shown against the kitchenCapacity ceiling so rush-hour blow-out is
+ *  visible. Returns 24 rows always (hour 0..23) — even unused hours so
+ *  the chart x-axis stays consistent. */
+export async function computeHourlyThroughput(
+  windowDays = 30,
+  pizzasPerHourCap = 0,
+): Promise<SimulationHourlyThroughputLine[]> {
+  const all = await getOrders();
+  const cutoffMs = Date.now() - windowDays * 24 * 60 * 60 * 1000;
+  const fulfilled = all.filter((o) => {
+    if (o.status === "cancelled") return false;
+    const t = Date.parse(o.createdAt);
+    return Number.isFinite(t) && t >= cutoffMs;
+  });
+  const dayKeys = new Set<string>();
+  const byHour: number[] = new Array(24).fill(0);
+  for (const o of fulfilled) {
+    const d = new Date(o.createdAt);
+    if (!Number.isFinite(d.valueOf())) continue;
+    byHour[d.getUTCHours()] += 1;
+    dayKeys.add(`${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}`);
+  }
+  const activeDays = Math.max(1, dayKeys.size);
+  return byHour.map((count, hour) => {
+    const avg = count / activeDays;
+    return {
+      hour,
+      totalOrders: count,
+      avgOrdersPerHour: avg,
+      capacityUtilization: pizzasPerHourCap > 0 ? avg / pizzasPerHourCap : 0,
+    };
+  });
 }
 
 /** Daypart split — buckets fulfilled orders by createdAt local-time hour
