@@ -8,13 +8,28 @@ import type {
 interface SuggestionSnapshot {
   scenario: SimulationScenario;
   /** Pre-computed monthly figures from the page so Claude works with
-   *  the same numbers the operator is staring at. All grosze. */
+   *  the same numbers the operator is staring at. All grosze unless noted. */
   computed: {
     monthlyRevenue: number;
     monthlyCogs: number;
     laborMonthly: number;
     fixedTotal: number;
     paymentFees: number;
+    /** Optional: post-unit-econ-batch fields. */
+    packagingCost?: number;
+    marketingCac?: number;
+    wasteCost?: number;
+    refundLoss?: number;
+    loyaltyCost?: number;
+    depreciation?: number;
+    interest?: number;
+    ebitda?: number;
+    ebitdar?: number;
+    cashOnCashAnnual?: number | null;
+    occupancyRatio?: number;
+    contributionPerLaborHour?: number;
+    trueCm1PerOrderGrosze?: number;
+    capacityUtilization?: number;
     totalCost: number;
     netProfit: number;
     margin: number;
@@ -127,6 +142,17 @@ export const POST = withAdmin(
       "- Behavior levers that are explicitly disabled (enabled=false) are NOT in the math — suggest " +
       "  turning them ON if the lever would help.\n" +
       "- Don't suggest size/crust upsell — Neapolitan trucks don't do that.\n" +
+      "- DO suggest pushing espresso attach when coffeeAttach.attachPct < 0.40: espresso " +
+      "  is 85-88% gross margin (1.40 zł cost on a 9.90 zł sale) and a near-zero-friction " +
+      "  pizza-attach SKU. Each pp of attach lifts AOV by ~0.10 zł and CM by ~0.085 zł — " +
+      "  on default 70 orders/day × 28 days, a 25→45pp push is ~3,900 zł/mo of pure CM " +
+      "  with no capex. Always quantify the lift in zł/mo when proposing.\n" +
+      "- Flag delivery-only items as margin traps when marketplace share is > 0: a 32 zł " +
+      "  Peroni 4-pack with 15 zł cost lands near-zero CM after a 27% Glovo commission. " +
+      "  The model now ships a per-channel CM1 panel and a margin-traps callout — refer " +
+      "  to those when relevant.\n" +
+      "- Flag the marketing CAC when marketingAsCac is on and CAC > 5 zł/order: that's a " +
+      "  Y1 acquisition cost that institutional underwriters score against LTV/CAC.\n" +
       "- Don't repeat the same lever in two suggestions.\n" +
       "- Calibrate severity: 'high' = >2 pp margin swing or break-even-risk; 'medium' = clear win " +
       "  but smaller; 'low' = nice-to-have / nuance.\n" +

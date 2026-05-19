@@ -2,7 +2,7 @@ import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationWeather } from "@/data/types";
+import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel, SimulationMenuScenarioOverride } from "@/data/types";
 import { getActiveLocations, locations as allLocations } from "@/data/locations";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -1003,21 +1003,38 @@ async function mirrorOrderDeleteToKvStore(id: string): Promise<void> {
   }
 }
 
-export async function getOrders(locationSlug?: string): Promise<Order[]> {
+export async function getOrders(
+  locationSlug?: string,
+  /** Optional cutoff — only return orders with createdAt >= this ISO string.
+   *  Pushes the filter to the database (uses orders_created_at_idx in PG)
+   *  instead of fetching everything and slicing in memory; matters once the
+   *  table grows past a few thousand rows. */
+  since?: string,
+): Promise<Order[]> {
   const db = getDb();
   if (db) {
     try {
       await ensureOrdersTable();
-      const rows = locationSlug
-        ? await db
-            .select()
-            .from(ordersTable)
-            .where(eq(ordersTable.locationSlug, locationSlug))
-            .orderBy(desc(ordersTable.createdAt))
-        : await db
-            .select()
-            .from(ordersTable)
-            .orderBy(desc(ordersTable.createdAt));
+      // Compose the where clause from the optional location + since
+      // filters. drizzle's and() collapses to a single SQL AND that the
+      // orders_created_at_idx + orders_location_slug_idx can satisfy.
+      const conditions: ReturnType<typeof eq>[] = [];
+      if (locationSlug) conditions.push(eq(ordersTable.locationSlug, locationSlug));
+      // Postgres `createdAt` is a timestamp column — pass a Date object.
+      if (since) {
+        const sinceDate = new Date(since);
+        if (Number.isFinite(sinceDate.valueOf())) {
+          conditions.push(gte(ordersTable.createdAt, sinceDate));
+        }
+      }
+      const whereClause = conditions.length === 0
+        ? undefined
+        : conditions.length === 1
+          ? conditions[0]
+          : and(...conditions);
+      const rows = whereClause
+        ? await db.select().from(ordersTable).where(whereClause).orderBy(desc(ordersTable.createdAt))
+        : await db.select().from(ordersTable).orderBy(desc(ordersTable.createdAt));
       if (rows.length > 0) return rows.map(rowToOrder);
     } catch (err) {
       logger.warn(
@@ -1028,9 +1045,18 @@ export async function getOrders(locationSlug?: string): Promise<Order[]> {
     }
   }
   const orders = await readJSON<Order[]>("orders.json", []);
-  const filtered = locationSlug
+  let filtered = locationSlug
     ? orders.filter((o) => o.locationSlug === locationSlug)
     : orders;
+  if (since) {
+    const sinceMs = Date.parse(since);
+    if (Number.isFinite(sinceMs)) {
+      filtered = filtered.filter((o) => {
+        const t = Date.parse(o.createdAt);
+        return Number.isFinite(t) && t >= sinceMs;
+      });
+    }
+  }
   if (filtered.length > 0) {
     bumpLazyBackfillHit("orders");
     void Promise.all(filtered.map((o) => dualWriteOrder(o)));
@@ -7973,12 +7999,101 @@ export function defaultSimulationScenario(): SimulationScenario {
     wageInflationPct: 0.07,
     ingredientInflationPct: 0.04,
     paymentProcessorPct: 0.019,
-    setupCostGrosze: 25_000_000,
+    // Operational leakage the previous model silently ignored. QSR norms:
+    // - waste 1-3% of revenue (spoilage, recipe over-portioning)
+    // - refunds/comps/theft 1-2% of revenue
+    // - loyalty point burn ~50% redemption × ~5% effective value
+    // CIT default to the 9% Polish small-CIT rate (truck Y1 profits fit
+    // the 2 M EUR turnover cap); 19% applies once you scale past that.
+    wastePct: 0.02,
+    refundPct: 0.015,
+    loyaltyBurnPct: 0.012,
+    citPct: 0.09,
+    // Channel mix — defaults to 100% on-site (cash + card) with the
+    // marketplaces off. Turning Glovo/Wolt on materially compresses
+    // margin because the marketplace fee replaces (not adds to) the
+    // on-site processor rate on that share of revenue.
+    cashSharePct: 0.20,
+    glovoSharePct: 0.00,
+    glovoFeePct: 0.27,
+    woltSharePct: 0.00,
+    woltFeePct: 0.28,
+    // One pizzaiolo + one Ferrara oven sustains ~70 pizzas/hour. Over
+    // 10 service hours that's 700 theoretical, but ~35% of orders hit
+    // in the peak hour-equivalents, so the binding ceiling is
+    // 70 / 0.35 ≈ 200 orders/day before the line breaks. A second
+    // pizzaiolo + second oven roughly doubles it.
+    kitchenCapacity: {
+      pizzasPerHour: 70,
+      openHoursPerDay: 10,
+      peakHourSharePct: 0.35,
+      // Oven physics — Stefano Ferrara 8-pizza bake × 90s cycle gives
+      // 320 pizzas/hour theoretical. Realistic peak with pulls / sweeps /
+      // dough rebuilds / customer-facing time / drinks lands ~22% =
+      // ~70 pizzas/hour, which matches the pizzasPerHour above. Operator
+      // can tune any of the three to recompute the realistic number.
+      ovenPizzasPerCycle: 8,
+      ovenCycleSeconds: 90,
+      ovenEfficiencyPct: 0.22,
+    },
+    // Labor flex — at default 40% variable, doubling orders/day pulls in
+    // 40% more labor cost (real-world: extra cook on a Saturday rush
+    // does happen). At 0 the truck is fully fixed-staffed; at 1 a 2×
+    // volume move would double the wage bill. Anchor defaults to the
+    // ordersPerDay the labor mix was sized for (70).
+    laborVariablePct: 0.40,
+    laborAnchorOrdersPerDay: 70,
+    // 5-year straight-line on the 380k setup cost ⇒ 6,333 PLN / mo.
+    // The previous model implicitly buried D&A inside "vehicle" at
+    // 700 PLN / mo, an order-of-magnitude understatement that
+    // overstated EBITDA. Operator can override; 0 disables it.
+    depreciationMonthlyGrosze: 633_000,
+    interestMonthlyGrosze: 0,
+    // Every order incurs real packaging — even dine-in (napkins,
+    // plates wash). Audit §6: previously buried inside delivery-share
+    // only, overstating dine-in CM1 by ~1.20 zł per order.
+    packagingPerOrderGrosze: 120,
+    // Marketing fixed cost behaves like CAC: it acquires orders.
+    // Amortising it per-order makes CM1 honest — the institutional
+    // CM1 nets out everything that's not a long-lived asset cost.
+    marketingAsCac: true,
+    // Default 1.0 = pizza-only throughput. Bump above 1 when menu
+    // skews to slow-prep items (pasta = ~1.4-1.6×). Derates the
+    // kitchen capacity ceiling proportionally.
+    prepComplexityMultiplier: 1.0,
+    // Fleet model defaults — single-unit mode until operator activates.
+    // Numbers reflect institutional QSR-rollup norms when the operator
+    // bumps unitCount: 6% royalty + 2% marketing fund, 10% supply
+    // discount at 5 units, 4% commissary saving at 4 units, 15% DMA
+    // cannibalisation, 5% build-out learning per unit to a 55% floor.
+    fleet: {
+      unitCount: 1,
+      hqOverheadMonthlyGrosze: 0,
+      supplyDiscountAtUnits: 5,
+      supplyDiscountPct: 0.10,
+      commissaryEnabledAtUnits: 4,
+      commissarySavingsPct: 0.04,
+      royaltyPct: 0.06,
+      marketingFundPct: 0.02,
+      dmaOverlapPct: 0.15,
+      buildoutLearningPct: 0.05,
+      buildoutFloorPct: 0.55,
+    },
+    // Honest all-in: Stefano Ferrara oven + truck buildout + refrigeration +
+    // generator + livery + SANEPID compliance + 3 mo working capital lands
+    // 350-400k PLN. The previous 250k floor was a buildout-only number that
+    // ignored opening cash and made payback look ~30% rosier than reality.
+    setupCostGrosze: 38_000_000,
     seasonality: {
-      winter: 0.70,
+      // Outdoor-truck winter in Warsaw is brutal — January can collapse to
+      // 0.30-0.40 of summer volume (snow, -10°C evenings, customers won't
+      // queue). The previous 0.70 floor was a brick-and-mortar number and
+      // hid winter cash risk. Spring/autumn are honest shoulders; summer
+      // 1.30 is conservative vs heat-wave 1.40 peaks already in weather.
+      winter: 0.50,
       spring: 1.00,
       summer: 1.30,
-      autumn: 1.00,
+      autumn: 0.95,
     },
     menuScenario: "balanced",
     assumptions: defaultSimulationAssumptions(),
@@ -7989,33 +8104,57 @@ export function defaultSimulationScenario(): SimulationScenario {
 
 /** Behavioral levers tuned to a Neapolitan pizza truck in Warsaw 2026. */
 export function defaultSimulationAssumptions(): SimulationAssumptions {
+  // Every lever ships DISABLED by default. The operator opts in
+  // explicitly per lever (or via a Menu scenario preset, which re-
+  // enables the relevant attach lever as it loads its preset values).
+  // Calibrated values (attachPct, prices, COGS%) stay populated so the
+  // levers spring to life with sensible defaults the moment they're
+  // toggled on — no hidden 0% trap.
   return {
-    coffeeAttach:           { attachPct: 0.25, avgPriceGrosze: 900,  cogsPct: 0.12 },
-    dessertAttach:          { attachPct: 0.12, avgPriceGrosze: 1600, cogsPct: 0.28 },
-    antipastiAttach:        { attachPct: 0.08, avgPriceGrosze: 2400, cogsPct: 0.32 },
-    aperitivoAttach:        { attachPct: 0.10, avgPriceGrosze: 2200, cogsPct: 0.22 },
-    premiumToppingsAttach:  { attachPct: 0.15, avgPriceGrosze: 700,  cogsPct: 0.30 },
-    pastaPrimoAttach:       { attachPct: 0.18, avgPriceGrosze: 3200, cogsPct: 0.26 },
+    coffeeAttach:           { enabled: false, attachPct: 0.25, avgPriceGrosze: 900,  cogsPct: 0.12 },
+    dessertAttach:          { enabled: false, attachPct: 0.12, avgPriceGrosze: 1600, cogsPct: 0.28 },
+    antipastiAttach:        { enabled: false, attachPct: 0.08, avgPriceGrosze: 2400, cogsPct: 0.32 },
+    aperitivoAttach:        { enabled: false, attachPct: 0.10, avgPriceGrosze: 2200, cogsPct: 0.22 },
+    premiumToppingsAttach:  { enabled: false, attachPct: 0.15, avgPriceGrosze: 700,  cogsPct: 0.30 },
+    pastaPrimoAttach:       { enabled: false, attachPct: 0.18, avgPriceGrosze: 3200, cogsPct: 0.26 },
     comboConversion: {
+      enabled: false,
       pct: 0.20,
       addonGrosze: 2500,
       discountGrosze: 600,
       addonCogsPct: 0.25,
     },
-    // Cheapest-pizza shift is a stress lever — default off (0 pp).
+    // Cheapest-pizza shift is a stress lever — also defaults off.
     // Per-1pp deltas calibrated so a 20pp shift toward Margherita drops
     // AOV by ~2 zł and COGS by ~0.80 zł (Margherita is ~10 zł cheaper
     // than the avg premium pie and ~4 zł cheaper to make).
     cheapestPizzaShift: {
+      enabled: false,
       pp: 0,
       ticketDeltaGrosze: 1000,
       cogsDeltaGrosze: 400,
     },
     deliveryShare: {
+      enabled: false,
       pct: 0.25,
       packagingCostGrosze: 250,
       extraProcessorPct: 0,
       avgFeeGrosze: 800,
+    },
+    // Ingredient stress-test levers — share of base-pizza COGS each line
+    // represents (calibrated to a Neapolitan recipe; sums to ~0.92).
+    // All disabled by default; flip individually to stress-test.
+    ingredients: {
+      mozzarella:   { enabled: false, cogsShare: 0.28, costDeltaPct: 0 },
+      tomato:       { enabled: false, cogsShare: 0.10, costDeltaPct: 0 },
+      flour:        { enabled: false, cogsShare: 0.06, costDeltaPct: 0 },
+      doughWeight:  { enabled: false, cogsShare: 0.06, costDeltaPct: 0 },
+      oliveOil:     { enabled: false, cogsShare: 0.05, costDeltaPct: 0 },
+      curedMeats:   { enabled: false, cogsShare: 0.07, costDeltaPct: 0 },
+      buffaloMozz:  { enabled: false, cogsShare: 0.03, costDeltaPct: 0 },
+      eggs:         { enabled: false, cogsShare: 0.02, costDeltaPct: 0 },
+      ovenFuel:     { enabled: false, cogsShare: 0.04, costDeltaPct: 0 },
+      packaging:    { enabled: false, cogsShare: 0.03, costDeltaPct: 0 },
     },
   };
 }
@@ -8036,12 +8175,55 @@ export function defaultSimulationWeather(): SimulationWeather {
   };
 }
 
+/** Schema migration markers for SimulationScenario.assumptions. Bump when
+ *  a behavioural default flips so existing saved scenarios get realigned
+ *  without operator action. */
+const ASSUMPTIONS_MIGRATION_VERSION = 2;
+
+/** Force every behavior-assumption lever to `enabled: false`. Used by the
+ *  migration-v2 path to reset scenarios saved before the all-off default
+ *  landed — without losing their calibrated attachPct / price / cogsPct
+ *  values. */
+function forceAllAssumptionsOff(a: SimulationAssumptions): SimulationAssumptions {
+  const off = <T extends { enabled?: boolean }>(lever: T | undefined): T | undefined =>
+    lever ? { ...lever, enabled: false } : lever;
+  return {
+    ...a,
+    coffeeAttach: off(a.coffeeAttach),
+    dessertAttach: off(a.dessertAttach),
+    antipastiAttach: off(a.antipastiAttach),
+    aperitivoAttach: off(a.aperitivoAttach),
+    premiumToppingsAttach: off(a.premiumToppingsAttach),
+    pastaPrimoAttach: off(a.pastaPrimoAttach),
+    comboConversion: off(a.comboConversion),
+    cheapestPizzaShift: off(a.cheapestPizzaShift),
+    deliveryShare: off(a.deliveryShare),
+    ingredients: a.ingredients
+      ? (Object.fromEntries(
+          Object.entries(a.ingredients).map(([k, v]) => [k, v ? { ...v, enabled: false } : v]),
+        ) as SimulationAssumptions["ingredients"])
+      : a.ingredients,
+  };
+}
+
 export async function getSimulationScenario(): Promise<SimulationScenario> {
   const saved = await readJSON<Partial<SimulationScenario> | null>(SIMULATION_KEY, null);
   if (!saved || !Array.isArray(saved.labor) || typeof saved.ordersPerDay !== "number") {
     return defaultSimulationScenario();
   }
   const defaults = defaultSimulationScenario();
+  const hydratedAssumptions = hydrateAssumptions(saved.assumptions, defaults.assumptions);
+  // v2 migration: force every lever off on first load post-deploy. Existing
+  // scenarios saved before this version have enabled: true baked into the
+  // DB (because the prior hydrator's fallback was true). Migration runs
+  // once per scenario — when the marker catches up to current, normal
+  // operator toggling resumes.
+  const savedVersion = typeof saved.assumptionsMigrationVersion === "number"
+    ? saved.assumptionsMigrationVersion
+    : 0;
+  const assumptions = savedVersion < ASSUMPTIONS_MIGRATION_VERSION && hydratedAssumptions
+    ? forceAllAssumptionsOff(hydratedAssumptions)
+    : hydratedAssumptions;
   return {
     ordersPerDay: saved.ordersPerDay ?? defaults.ordersPerDay,
     avgTicketGrosze: saved.avgTicketGrosze ?? defaults.avgTicketGrosze,
@@ -8068,8 +8250,28 @@ export async function getSimulationScenario(): Promise<SimulationScenario> {
     seasonality: saved.seasonality ?? defaults.seasonality,
     menuScenario:
       typeof saved.menuScenario === "string" ? saved.menuScenario : defaults.menuScenario,
-    assumptions: hydrateAssumptions(saved.assumptions, defaults.assumptions),
+    menuScenarioOverrides: hydrateMenuScenarioOverrides(saved.menuScenarioOverrides),
+    assumptions,
+    assumptionsMigrationVersion: ASSUMPTIONS_MIGRATION_VERSION,
     weather: hydrateWeather(saved.weather, defaults.weather),
+    wastePct: typeof saved.wastePct === "number" ? clamp01(saved.wastePct, defaults.wastePct ?? 0) : defaults.wastePct,
+    refundPct: typeof saved.refundPct === "number" ? clamp01(saved.refundPct, defaults.refundPct ?? 0) : defaults.refundPct,
+    loyaltyBurnPct: typeof saved.loyaltyBurnPct === "number" ? clamp01(saved.loyaltyBurnPct, defaults.loyaltyBurnPct ?? 0) : defaults.loyaltyBurnPct,
+    citPct: typeof saved.citPct === "number" ? clamp01(saved.citPct, defaults.citPct ?? 0) : defaults.citPct,
+    cashSharePct: typeof saved.cashSharePct === "number" ? clamp01(saved.cashSharePct, defaults.cashSharePct ?? 0) : defaults.cashSharePct,
+    glovoSharePct: typeof saved.glovoSharePct === "number" ? clamp01(saved.glovoSharePct, defaults.glovoSharePct ?? 0) : defaults.glovoSharePct,
+    glovoFeePct: typeof saved.glovoFeePct === "number" ? clamp01(saved.glovoFeePct, defaults.glovoFeePct ?? 0) : defaults.glovoFeePct,
+    woltSharePct: typeof saved.woltSharePct === "number" ? clamp01(saved.woltSharePct, defaults.woltSharePct ?? 0) : defaults.woltSharePct,
+    woltFeePct: typeof saved.woltFeePct === "number" ? clamp01(saved.woltFeePct, defaults.woltFeePct ?? 0) : defaults.woltFeePct,
+    kitchenCapacity: hydrateKitchenCapacity(saved.kitchenCapacity, defaults.kitchenCapacity),
+    laborVariablePct: typeof saved.laborVariablePct === "number" ? clamp01(saved.laborVariablePct, defaults.laborVariablePct ?? 0.4) : defaults.laborVariablePct,
+    laborAnchorOrdersPerDay: typeof saved.laborAnchorOrdersPerDay === "number" && saved.laborAnchorOrdersPerDay > 0 ? saved.laborAnchorOrdersPerDay : defaults.laborAnchorOrdersPerDay,
+    depreciationMonthlyGrosze: typeof saved.depreciationMonthlyGrosze === "number" && saved.depreciationMonthlyGrosze >= 0 ? saved.depreciationMonthlyGrosze : defaults.depreciationMonthlyGrosze,
+    interestMonthlyGrosze: typeof saved.interestMonthlyGrosze === "number" && saved.interestMonthlyGrosze >= 0 ? saved.interestMonthlyGrosze : defaults.interestMonthlyGrosze,
+    packagingPerOrderGrosze: typeof saved.packagingPerOrderGrosze === "number" && saved.packagingPerOrderGrosze >= 0 ? saved.packagingPerOrderGrosze : defaults.packagingPerOrderGrosze,
+    marketingAsCac: typeof saved.marketingAsCac === "boolean" ? saved.marketingAsCac : defaults.marketingAsCac,
+    prepComplexityMultiplier: typeof saved.prepComplexityMultiplier === "number" && saved.prepComplexityMultiplier > 0 ? Math.min(3, saved.prepComplexityMultiplier) : defaults.prepComplexityMultiplier,
+    fleet: hydrateFleet(saved.fleet, defaults.fleet),
     updatedAt: saved.updatedAt ?? defaults.updatedAt,
   };
 }
@@ -8084,6 +8286,85 @@ function clampNonNeg(n: unknown, fallback: number): number {
   return Math.max(0, n);
 }
 
+function hydrateMenuScenarioOverrides(
+  saved: Record<string, SimulationMenuScenarioOverride> | undefined,
+): Record<string, SimulationMenuScenarioOverride> | undefined {
+  if (!saved || typeof saved !== "object") return undefined;
+  const out: Record<string, SimulationMenuScenarioOverride> = {};
+  for (const [id, override] of Object.entries(saved)) {
+    if (!override || typeof override !== "object") continue;
+    const attach = (override as SimulationMenuScenarioOverride).attach ?? {
+      coffee: 0,
+      dessert: 0,
+      antipasti: 0,
+      aperitivo: 0,
+      premiumToppings: 0,
+      pastaPrimo: 0,
+    };
+    out[id] = {
+      ordersPerDay: clampNonNeg(override.ordersPerDay, 0),
+      daysOpenPerMonth: typeof override.daysOpenPerMonth === "number"
+        ? Math.max(0, Math.min(31, Math.round(override.daysOpenPerMonth)))
+        : 0,
+      avgTicketGrosze: clampNonNeg(override.avgTicketGrosze, 0),
+      cogsPct: clamp01(override.cogsPct, 0),
+      attach: {
+        coffee: clamp01(attach.coffee, 0),
+        dessert: clamp01(attach.dessert, 0),
+        antipasti: clamp01(attach.antipasti, 0),
+        aperitivo: clamp01(attach.aperitivo, 0),
+        premiumToppings: clamp01(attach.premiumToppings, 0),
+        pastaPrimo: clamp01(attach.pastaPrimo, 0),
+      },
+    };
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
+function hydrateIngredient(
+  saved: Partial<SimulationIngredientLever> | undefined,
+  fallback: SimulationIngredientLever | undefined,
+): SimulationIngredientLever | undefined {
+  if (!fallback && !saved) return undefined;
+  const fb = fallback ?? { cogsShare: 0, costDeltaPct: 0 };
+  if (!saved) return fb;
+  // costDeltaPct can be negative (cost decrease) up to -1, positive up to +5.
+  const clampDelta = (n: unknown, f: number): number => {
+    if (typeof n !== "number" || !Number.isFinite(n)) return f;
+    return Math.max(-1, Math.min(5, n));
+  };
+  return {
+    enabled: typeof saved.enabled === "boolean" ? saved.enabled : (fb.enabled ?? false),
+    cogsShare: clamp01(saved.cogsShare, fb.cogsShare),
+    costDeltaPct: clampDelta(saved.costDeltaPct, fb.costDeltaPct),
+  };
+}
+
+function hydrateIngredientsBlock(
+  saved: SimulationAssumptions["ingredients"],
+  fallback: SimulationAssumptions["ingredients"],
+): SimulationAssumptions["ingredients"] {
+  if (!saved && !fallback) return undefined;
+  const keys: (keyof NonNullable<SimulationAssumptions["ingredients"]>)[] = [
+    "mozzarella",
+    "tomato",
+    "flour",
+    "doughWeight",
+    "oliveOil",
+    "curedMeats",
+    "buffaloMozz",
+    "eggs",
+    "ovenFuel",
+    "packaging",
+  ];
+  const out: NonNullable<SimulationAssumptions["ingredients"]> = {};
+  for (const k of keys) {
+    const hydrated = hydrateIngredient(saved?.[k], fallback?.[k]);
+    if (hydrated) out[k] = hydrated;
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
 function hydrateAttach(
   saved: Partial<SimulationAttachLever> | undefined,
   fallback: SimulationAttachLever | undefined,
@@ -8091,7 +8372,12 @@ function hydrateAttach(
   if (!fallback) return saved as SimulationAttachLever | undefined;
   if (!saved) return fallback;
   return {
-    enabled: typeof saved.enabled === "boolean" ? saved.enabled : true,
+    // When the saved scenario doesn't carry an explicit `enabled` flag,
+    // fall through to the new default's value (false). Previously this
+    // fell back to `true`, which meant old scenarios saved before the
+    // all-off default landed kept their levers enabled on reload —
+    // exactly the bug the user reported on the top 6 attach levers.
+    enabled: typeof saved.enabled === "boolean" ? saved.enabled : (fallback.enabled ?? false),
     attachPct: clamp01(saved.attachPct, fallback.attachPct),
     avgPriceGrosze: Math.round(clampNonNeg(saved.avgPriceGrosze, fallback.avgPriceGrosze)),
     cogsPct: clamp01(saved.cogsPct, fallback.cogsPct),
@@ -8113,7 +8399,7 @@ function hydrateAssumptions(
     pastaPrimoAttach: hydrateAttach(saved.pastaPrimoAttach, fb.pastaPrimoAttach),
     comboConversion: saved.comboConversion
       ? {
-          enabled: typeof saved.comboConversion.enabled === "boolean" ? saved.comboConversion.enabled : true,
+          enabled: typeof saved.comboConversion.enabled === "boolean" ? saved.comboConversion.enabled : (fb.comboConversion?.enabled ?? false),
           pct: clamp01(saved.comboConversion.pct, fb.comboConversion?.pct ?? 0),
           addonGrosze: Math.round(
             clampNonNeg(saved.comboConversion.addonGrosze, fb.comboConversion?.addonGrosze ?? 0),
@@ -8126,7 +8412,7 @@ function hydrateAssumptions(
       : fb.comboConversion,
     cheapestPizzaShift: saved.cheapestPizzaShift
       ? {
-          enabled: typeof saved.cheapestPizzaShift.enabled === "boolean" ? saved.cheapestPizzaShift.enabled : true,
+          enabled: typeof saved.cheapestPizzaShift.enabled === "boolean" ? saved.cheapestPizzaShift.enabled : (fb.cheapestPizzaShift?.enabled ?? false),
           pp: clamp01(saved.cheapestPizzaShift.pp, fb.cheapestPizzaShift?.pp ?? 0),
           ticketDeltaGrosze: Math.round(
             clampNonNeg(saved.cheapestPizzaShift.ticketDeltaGrosze, fb.cheapestPizzaShift?.ticketDeltaGrosze ?? 0),
@@ -8138,7 +8424,7 @@ function hydrateAssumptions(
       : fb.cheapestPizzaShift,
     deliveryShare: saved.deliveryShare
       ? {
-          enabled: typeof saved.deliveryShare.enabled === "boolean" ? saved.deliveryShare.enabled : true,
+          enabled: typeof saved.deliveryShare.enabled === "boolean" ? saved.deliveryShare.enabled : (fb.deliveryShare?.enabled ?? false),
           pct: clamp01(saved.deliveryShare.pct, fb.deliveryShare?.pct ?? 0),
           packagingCostGrosze: Math.round(
             clampNonNeg(saved.deliveryShare.packagingCostGrosze, fb.deliveryShare?.packagingCostGrosze ?? 0),
@@ -8152,6 +8438,11 @@ function hydrateAssumptions(
           ),
         }
       : fb.deliveryShare,
+    // Hydrate every ingredient stress-test lever, preserving operator
+    // toggles (enabled / disabled). Previously dropped on every save →
+    // toggling ingredient levers off appeared to work in-memory but
+    // didn't survive the next page load.
+    ingredients: hydrateIngredientsBlock(saved.ingredients, fb.ingredients),
   };
 }
 
@@ -8189,6 +8480,64 @@ function hydrateWeather(
   };
 }
 
+function hydrateFleet(
+  saved: SimulationFleetModel | undefined,
+  fallback: SimulationFleetModel | undefined,
+): SimulationFleetModel | undefined {
+  const fb = fallback ?? {
+    unitCount: 1,
+    hqOverheadMonthlyGrosze: 0,
+    supplyDiscountAtUnits: 5,
+    supplyDiscountPct: 0.10,
+    commissaryEnabledAtUnits: 4,
+    commissarySavingsPct: 0.04,
+    royaltyPct: 0.06,
+    marketingFundPct: 0.02,
+    dmaOverlapPct: 0.15,
+    buildoutLearningPct: 0.05,
+    buildoutFloorPct: 0.55,
+  };
+  if (!saved) return fb;
+  return {
+    unitCount: typeof saved.unitCount === "number" && saved.unitCount > 0 ? Math.round(saved.unitCount) : fb.unitCount,
+    hqOverheadMonthlyGrosze: clampNonNeg(saved.hqOverheadMonthlyGrosze, fb.hqOverheadMonthlyGrosze),
+    supplyDiscountAtUnits: typeof saved.supplyDiscountAtUnits === "number" && saved.supplyDiscountAtUnits > 0 ? Math.round(saved.supplyDiscountAtUnits) : fb.supplyDiscountAtUnits,
+    supplyDiscountPct: clamp01(saved.supplyDiscountPct, fb.supplyDiscountPct),
+    commissaryEnabledAtUnits: typeof saved.commissaryEnabledAtUnits === "number" && saved.commissaryEnabledAtUnits > 0 ? Math.round(saved.commissaryEnabledAtUnits) : fb.commissaryEnabledAtUnits,
+    commissarySavingsPct: clamp01(saved.commissarySavingsPct, fb.commissarySavingsPct),
+    royaltyPct: clamp01(saved.royaltyPct, fb.royaltyPct),
+    marketingFundPct: clamp01(saved.marketingFundPct, fb.marketingFundPct),
+    dmaOverlapPct: clamp01(saved.dmaOverlapPct, fb.dmaOverlapPct),
+    buildoutLearningPct: clamp01(saved.buildoutLearningPct, fb.buildoutLearningPct),
+    buildoutFloorPct: clamp01(saved.buildoutFloorPct, fb.buildoutFloorPct),
+  };
+}
+
+function hydrateKitchenCapacity(
+  saved: SimulationKitchenCapacity | undefined,
+  fallback: SimulationKitchenCapacity | undefined,
+): SimulationKitchenCapacity | undefined {
+  const fb = fallback ?? { pizzasPerHour: 70, openHoursPerDay: 10, peakHourSharePct: 0.35 };
+  if (!saved) return fb;
+  return {
+    pizzasPerHour: clampNonNeg(saved.pizzasPerHour, fb.pizzasPerHour),
+    openHoursPerDay: clampNonNeg(saved.openHoursPerDay, fb.openHoursPerDay),
+    peakHourSharePct: clamp01(saved.peakHourSharePct, fb.peakHourSharePct),
+    ovenPizzasPerCycle:
+      typeof saved.ovenPizzasPerCycle === "number" && saved.ovenPizzasPerCycle > 0
+        ? saved.ovenPizzasPerCycle
+        : fb.ovenPizzasPerCycle,
+    ovenCycleSeconds:
+      typeof saved.ovenCycleSeconds === "number" && saved.ovenCycleSeconds > 0
+        ? saved.ovenCycleSeconds
+        : fb.ovenCycleSeconds,
+    ovenEfficiencyPct:
+      typeof saved.ovenEfficiencyPct === "number"
+        ? clamp01(saved.ovenEfficiencyPct, fb.ovenEfficiencyPct ?? 0.22)
+        : fb.ovenEfficiencyPct,
+  };
+}
+
 function clampSimPct(n: unknown, fallback: number): number {
   if (typeof n !== "number" || !Number.isFinite(n)) return fallback;
   return Math.max(0, Math.min(1, n));
@@ -8203,11 +8552,25 @@ function cleanSimSeasonality(
     if (typeof n !== "number" || !Number.isFinite(n)) return f;
     return Math.max(0, Math.min(3, n));
   };
+  const clampMaybe = (n: unknown): number | undefined => {
+    if (typeof n !== "number" || !Number.isFinite(n)) return undefined;
+    return Math.max(0, Math.min(3, n));
+  };
+  let monthlyOverrides: (number | undefined)[] | undefined;
+  if (Array.isArray(s.monthlyOverrides)) {
+    monthlyOverrides = Array.from({ length: 12 }, (_, i) =>
+      clampMaybe(s.monthlyOverrides?.[i]),
+    );
+    // Drop the array entirely if every slot is undefined — saves space
+    // and keeps the saved JSON tidy for operators not using the feature.
+    if (monthlyOverrides.every((v) => v === undefined)) monthlyOverrides = undefined;
+  }
   return {
     winter: clamp(s.winter, fallback.winter),
     spring: clamp(s.spring, fallback.spring),
     summer: clamp(s.summer, fallback.summer),
     autumn: clamp(s.autumn, fallback.autumn),
+    monthlyOverrides,
   };
 }
 
@@ -8255,8 +8618,50 @@ export async function saveSimulationScenario(
         typeof scenario.menuScenario === "string" && scenario.menuScenario.length > 0
           ? scenario.menuScenario
           : undefined,
+      menuScenarioOverrides: hydrateMenuScenarioOverrides(scenario.menuScenarioOverrides),
       assumptions: hydrateAssumptions(scenario.assumptions, defaults.assumptions),
+      // Persist the migration marker so the v2 force-off only runs once
+      // per scenario. Operator toggles after that survive reload normally.
+      assumptionsMigrationVersion: typeof scenario.assumptionsMigrationVersion === "number" && scenario.assumptionsMigrationVersion >= ASSUMPTIONS_MIGRATION_VERSION
+        ? scenario.assumptionsMigrationVersion
+        : ASSUMPTIONS_MIGRATION_VERSION,
       weather: hydrateWeather(scenario.weather, defaults.weather),
+      wastePct: clampSimPct(scenario.wastePct, defaults.wastePct ?? 0),
+      refundPct: clampSimPct(scenario.refundPct, defaults.refundPct ?? 0),
+      loyaltyBurnPct: clampSimPct(scenario.loyaltyBurnPct, defaults.loyaltyBurnPct ?? 0),
+      citPct: clampSimPct(scenario.citPct, defaults.citPct ?? 0),
+      cashSharePct: clampSimPct(scenario.cashSharePct, defaults.cashSharePct ?? 0),
+      glovoSharePct: clampSimPct(scenario.glovoSharePct, defaults.glovoSharePct ?? 0),
+      glovoFeePct: clampSimPct(scenario.glovoFeePct, defaults.glovoFeePct ?? 0),
+      woltSharePct: clampSimPct(scenario.woltSharePct, defaults.woltSharePct ?? 0),
+      woltFeePct: clampSimPct(scenario.woltFeePct, defaults.woltFeePct ?? 0),
+      kitchenCapacity: hydrateKitchenCapacity(scenario.kitchenCapacity, defaults.kitchenCapacity),
+      laborVariablePct: clampSimPct(scenario.laborVariablePct, defaults.laborVariablePct ?? 0.4),
+      laborAnchorOrdersPerDay:
+        typeof scenario.laborAnchorOrdersPerDay === "number" && scenario.laborAnchorOrdersPerDay > 0
+          ? Math.round(scenario.laborAnchorOrdersPerDay)
+          : (defaults.laborAnchorOrdersPerDay ?? 70),
+      depreciationMonthlyGrosze:
+        typeof scenario.depreciationMonthlyGrosze === "number" && scenario.depreciationMonthlyGrosze >= 0
+          ? Math.round(scenario.depreciationMonthlyGrosze)
+          : (defaults.depreciationMonthlyGrosze ?? 0),
+      interestMonthlyGrosze:
+        typeof scenario.interestMonthlyGrosze === "number" && scenario.interestMonthlyGrosze >= 0
+          ? Math.round(scenario.interestMonthlyGrosze)
+          : (defaults.interestMonthlyGrosze ?? 0),
+      packagingPerOrderGrosze:
+        typeof scenario.packagingPerOrderGrosze === "number" && scenario.packagingPerOrderGrosze >= 0
+          ? Math.round(scenario.packagingPerOrderGrosze)
+          : (defaults.packagingPerOrderGrosze ?? 0),
+      marketingAsCac:
+        typeof scenario.marketingAsCac === "boolean"
+          ? scenario.marketingAsCac
+          : (defaults.marketingAsCac ?? true),
+      prepComplexityMultiplier:
+        typeof scenario.prepComplexityMultiplier === "number" && scenario.prepComplexityMultiplier > 0
+          ? Math.max(0.5, Math.min(3, scenario.prepComplexityMultiplier))
+          : (defaults.prepComplexityMultiplier ?? 1),
+      fleet: hydrateFleet(scenario.fleet, defaults.fleet),
       updatedAt: new Date().toISOString(),
     };
     await writeJSON(SIMULATION_KEY, clean);
@@ -8309,12 +8714,572 @@ export async function seedSimulationFromHistory(): Promise<SimulationScenario> {
         })
       : base.labor;
 
-  return {
+  // Pull volume + ticket from the real orders ledger so the operator
+  // doesn't start staring at hardcoded defaults. The actuals snapshot
+  // also lands the channel mix (delivery share) which materially
+  // changes blended COGS via packaging.
+  const actuals = await computeSimulationActuals(90).catch(() => null);
+
+  const seeded: SimulationScenario = {
     ...base,
     labor,
     fixedCosts: Object.keys(fixed).length > 0 ? fixed : base.fixedCosts,
     updatedAt: new Date().toISOString(),
   };
+
+  if (actuals && actuals.ordersCount >= 20) {
+    seeded.ordersPerDay = Math.max(1, Math.round(actuals.ordersPerDay));
+    seeded.avgTicketGrosze = Math.max(0, Math.round(actuals.avgTicketGrosze));
+    if (actuals.weightedCogsPct > 0) {
+      seeded.cogsPct = clamp01(actuals.weightedCogsPct, seeded.cogsPct);
+    }
+    // Map delivery share from actuals onto the existing deliveryShare lever
+    // so downstream packaging + processor math picks it up.
+    if (seeded.assumptions?.deliveryShare && actuals.deliverySharePct > 0) {
+      seeded.assumptions = {
+        ...seeded.assumptions,
+        deliveryShare: {
+          ...seeded.assumptions.deliveryShare,
+          pct: clamp01(actuals.deliverySharePct, seeded.assumptions.deliveryShare.pct),
+        },
+      };
+    }
+    // Refund rate from actuals is more trustworthy than the 1.5% default.
+    if (actuals.refundPct > 0) {
+      seeded.refundPct = clamp01(actuals.refundPct, seeded.refundPct ?? 0.015);
+    }
+  }
+  return seeded;
+}
+
+/** Compute a rolling-window snapshot of actual orders. The simulator uses
+ *  this both as a one-click seed source and as a "stale" warning when the
+ *  operator's ordersPerDay / avgTicket drifts > 15% from real history. */
+/** Per-item modifier lookup index — keyed by item.id, value is a
+ *  Map<groupId, Map<optionId, ModifierOption>>. Built once and shared
+ *  across every line of every order in a compute pass, so a 90-day
+ *  window with millions of modifier lookups is O(1) per resolve
+ *  instead of O(groups × options) via find(). */
+type ModifierOptionLookup = Map<string, Map<string, NonNullable<NonNullable<MenuItem["modifierGroups"]>[number]>["options"][number]>>;
+type ModifierIndexCache = Map<string, ModifierOptionLookup>;
+
+function getModifierIndex(item: MenuItem, cache: ModifierIndexCache): ModifierOptionLookup {
+  let idx = cache.get(item.id);
+  if (idx) return idx;
+  idx = new Map();
+  for (const g of item.modifierGroups ?? []) {
+    const optMap = new Map<string, (typeof g.options)[number]>();
+    for (const o of g.options) optMap.set(o.id, o);
+    idx.set(g.id, optMap);
+  }
+  cache.set(item.id, idx);
+  return idx;
+}
+
+export async function computeSimulationActuals(
+  windowDays = 90,
+): Promise<SimulationActualsSnapshot> {
+  const cutoffMs = Date.now() - windowDays * 24 * 60 * 60 * 1000;
+  const sinceISO = new Date(cutoffMs).toISOString();
+  // Push the date filter into the DB query — uses orders_created_at_idx
+  // so a 90d window over millions of rows is a fast index seek, not a
+  // full-table scan + in-memory slice.
+  const inWindow = await getOrders(undefined, sinceISO);
+  const cancelledCount = inWindow.filter((o) => o.status === "cancelled").length;
+  const fulfilled = inWindow.filter((o) => o.status !== "cancelled");
+  const ordersCount = fulfilled.length;
+  const totalGrosze = fulfilled.reduce((sum, o) => sum + (o.totalAmount ?? 0), 0);
+  const avgTicketGrosze = ordersCount > 0 ? Math.round(totalGrosze / ordersCount) : 0;
+  // Weighted COGS: sum(qty × (item.cost + Σ option.costDelta)) /
+  // sum(qty × (item.price + Σ option.priceDelta)) across every line item
+  // in every fulfilled order. The honest replacement for the operator's
+  // flat cogsPct guess.
+  let menuCostTotal = 0;
+  let menuRevenueTotal = 0;
+  const modIndex: ModifierIndexCache = new Map();
+  for (const o of fulfilled) {
+    for (const line of o.items ?? []) {
+      const item = line.menuItem;
+      if (!item) continue;
+      const qty = Math.max(0, line.quantity ?? 1);
+      let lineCost = item.cost ?? 0;
+      let linePrice = item.price ?? 0;
+      const lookup = getModifierIndex(item, modIndex);
+      for (const sel of line.selectedModifiers ?? []) {
+        const opt = lookup.get(sel.groupId)?.get(sel.optionId);
+        if (opt) {
+          linePrice += Math.max(0, opt.priceDelta ?? 0);
+          lineCost += Math.max(0, opt.costDelta ?? 0);
+        }
+      }
+      menuCostTotal += qty * lineCost;
+      menuRevenueTotal += qty * linePrice;
+    }
+  }
+  const weightedCogsPct = menuRevenueTotal > 0 ? menuCostTotal / menuRevenueTotal : 0;
+  const dayKeys = new Set(
+    fulfilled
+      .map((o) => {
+        const d = new Date(o.createdAt);
+        return Number.isFinite(d.valueOf())
+          ? `${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}`
+          : null;
+      })
+      .filter((k): k is string => k !== null),
+  );
+  const daysWithOrders = dayKeys.size;
+  const ordersPerDay = daysWithOrders > 0 ? ordersCount / daysWithOrders : 0;
+  const deliveryCount = fulfilled.filter((o) => o.fulfillmentType === "delivery").length;
+  const takeoutCount = fulfilled.filter((o) => o.fulfillmentType === "takeout").length;
+  const deliverySharePct = ordersCount > 0 ? deliveryCount / ordersCount : 0;
+  const takeoutSharePct = ordersCount > 0 ? takeoutCount / ordersCount : 0;
+  const refundPct = inWindow.length > 0 ? cancelledCount / inWindow.length : 0;
+  // Ticket time: createdAt → estimatedReadyAt for orders that carry both.
+  // Median is robust to the long tail of "ready Friday" pre-orders.
+  const ticketTimes: number[] = [];
+  for (const o of fulfilled) {
+    if (!o.estimatedReadyAt) continue;
+    const start = Date.parse(o.createdAt);
+    const end = Date.parse(o.estimatedReadyAt);
+    if (!Number.isFinite(start) || !Number.isFinite(end)) continue;
+    const seconds = (end - start) / 1000;
+    if (seconds <= 0 || seconds > 86400) continue;
+    ticketTimes.push(seconds);
+  }
+  let medianTicketTimeSeconds: number | null = null;
+  if (ticketTimes.length > 0) {
+    ticketTimes.sort((a, b) => a - b);
+    const mid = Math.floor(ticketTimes.length / 2);
+    medianTicketTimeSeconds =
+      ticketTimes.length % 2 === 0
+        ? (ticketTimes[mid - 1] + ticketTimes[mid]) / 2
+        : ticketTimes[mid];
+  }
+  const earliest = fulfilled
+    .map((o) => Date.parse(o.createdAt))
+    .filter((t) => Number.isFinite(t))
+    .reduce((m, t) => Math.min(m, t), Date.now());
+  return {
+    windowDays,
+    ordersCount,
+    daysWithOrders,
+    ordersPerDay,
+    avgTicketGrosze,
+    weightedCogsPct,
+    takeoutSharePct,
+    deliverySharePct,
+    refundPct,
+    medianTicketTimeSeconds,
+    fromISO: new Date(earliest).toISOString(),
+    generatedAt: new Date().toISOString(),
+  };
+}
+
+/** Same-store sales growth — trailing window vs prior trailing window
+ *  of the same length. Decomposes the growth into volume (orders),
+ *  price/mix (avg ticket), and acquisition (distinct customers) so the
+ *  operator knows what drove the move. */
+export async function computeSssg(
+  windowDays = 30,
+): Promise<SimulationSssgSnapshot> {
+  const now = Date.now();
+  const oneWindow = windowDays * 24 * 60 * 60 * 1000;
+  const currentStart = now - oneWindow;
+  const priorStart = now - 2 * oneWindow;
+  // Need both windows — fetch the full 2× span once and partition in
+  // memory rather than two round trips. Still DB-filtered to the prior
+  // window's start, so we avoid scanning the whole orders table.
+  const all = await getOrders(undefined, new Date(priorStart).toISOString());
+  let currentRev = 0, priorRev = 0;
+  let currentOrders = 0, priorOrders = 0;
+  const currentPhones = new Set<string>();
+  const priorPhones = new Set<string>();
+  for (const o of all) {
+    if (o.status === "cancelled") continue;
+    const t = Date.parse(o.createdAt);
+    if (!Number.isFinite(t)) continue;
+    if (t >= currentStart && t < now) {
+      currentRev += o.totalAmount ?? 0;
+      currentOrders += 1;
+      if (o.customerPhone) currentPhones.add(o.customerPhone.trim());
+    } else if (t >= priorStart && t < currentStart) {
+      priorRev += o.totalAmount ?? 0;
+      priorOrders += 1;
+      if (o.customerPhone) priorPhones.add(o.customerPhone.trim());
+    }
+  }
+  const pct = (a: number, b: number): number =>
+    b > 0 ? (a - b) / b : a > 0 ? 1 : 0;
+  const currentTicket = currentOrders > 0 ? currentRev / currentOrders : 0;
+  const priorTicket = priorOrders > 0 ? priorRev / priorOrders : 0;
+  return {
+    windowDays,
+    currentRevenueGrosze: currentRev,
+    priorRevenueGrosze: priorRev,
+    revenueGrowthPct: pct(currentRev, priorRev),
+    orderGrowthPct: pct(currentOrders, priorOrders),
+    ticketGrowthPct: pct(currentTicket, priorTicket),
+    customerGrowthPct: pct(currentPhones.size, priorPhones.size),
+    currentOrders,
+    priorOrders,
+    currentCustomers: currentPhones.size,
+    priorCustomers: priorPhones.size,
+    generatedAt: new Date().toISOString(),
+  };
+}
+
+/** Hourly throughput — per-hour orders / day from real data, optionally
+ *  shown against the kitchenCapacity ceiling so rush-hour blow-out is
+ *  visible. Returns 24 rows always (hour 0..23) — even unused hours so
+ *  the chart x-axis stays consistent. */
+export async function computeHourlyThroughput(
+  windowDays = 30,
+  pizzasPerHourCap = 0,
+): Promise<SimulationHourlyThroughputLine[]> {
+  const cutoffMs = Date.now() - windowDays * 24 * 60 * 60 * 1000;
+  const all = await getOrders(undefined, new Date(cutoffMs).toISOString());
+  const fulfilled = all.filter((o) => {
+    if (o.status === "cancelled") return false;
+    const t = Date.parse(o.createdAt);
+    return Number.isFinite(t) && t >= cutoffMs;
+  });
+  const dayKeys = new Set<string>();
+  const byHour: number[] = new Array(24).fill(0);
+  for (const o of fulfilled) {
+    const d = new Date(o.createdAt);
+    if (!Number.isFinite(d.valueOf())) continue;
+    byHour[d.getUTCHours()] += 1;
+    dayKeys.add(`${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}`);
+  }
+  const activeDays = Math.max(1, dayKeys.size);
+  return byHour.map((count, hour) => {
+    const avg = count / activeDays;
+    return {
+      hour,
+      totalOrders: count,
+      avgOrdersPerHour: avg,
+      capacityUtilization: pizzasPerHourCap > 0 ? avg / pizzasPerHourCap : 0,
+    };
+  });
+}
+
+/** Daypart split — buckets fulfilled orders by createdAt local-time hour
+ *  and computes per-bucket volume, avg ticket, and gross profit. Surfaces
+ *  the lunch / dinner / late-night economics separately because the
+ *  daily average hides menu-mix shifts (late-night = slice-heavy at 76%
+ *  GM, dinner = full plates, lunch = mid-AOV panini). */
+export async function computeDayparts(
+  windowDays = 90,
+): Promise<SimulationDaypartLine[]> {
+  const cutoffMs = Date.now() - windowDays * 24 * 60 * 60 * 1000;
+  const all = await getOrders(undefined, new Date(cutoffMs).toISOString());
+  const fulfilled = all.filter((o) => {
+    if (o.status === "cancelled") return false;
+    const t = Date.parse(o.createdAt);
+    return Number.isFinite(t) && t >= cutoffMs;
+  });
+
+  // Local-time hour — we use UTC because the codebase doesn't track
+  // location timezones explicitly and Polish locations are UTC+1/+2.
+  // Service window matches the operator's 12-22 truck schedule with
+  // a 1h prep + 1h cleandown bracket. Bucket edges are wide enough
+  // that a 1h DST shift doesn't move orders between rushes.
+  const bucketFor = (hour: number): SimulationDaypartLine["key"] => {
+    if (hour >= 12 && hour < 15) return "lunch";
+    if (hour >= 15 && hour < 17) return "off-peak";
+    if (hour >= 17 && hour < 22) return "dinner";
+    if (hour >= 22 || hour < 4) return "late-night";
+    return "off-peak";
+  };
+
+  type Agg = { orders: number; revenue: number; gp: number };
+  const modIndex: ModifierIndexCache = new Map();
+  const agg: Record<SimulationDaypartLine["key"], Agg> = {
+    lunch: { orders: 0, revenue: 0, gp: 0 },
+    dinner: { orders: 0, revenue: 0, gp: 0 },
+    "late-night": { orders: 0, revenue: 0, gp: 0 },
+    "off-peak": { orders: 0, revenue: 0, gp: 0 },
+  };
+
+  for (const o of fulfilled) {
+    const d = new Date(o.createdAt);
+    if (!Number.isFinite(d.valueOf())) continue;
+    const bucket = bucketFor(d.getUTCHours());
+    let orderGp = 0;
+    for (const line of o.items ?? []) {
+      const item = line.menuItem;
+      if (!item) continue;
+      const qty = Math.max(0, line.quantity ?? 1);
+      let price = item.price ?? 0;
+      let cost = item.cost ?? 0;
+      const lookup = getModifierIndex(item, modIndex);
+      for (const sel of line.selectedModifiers ?? []) {
+        const opt = lookup.get(sel.groupId)?.get(sel.optionId);
+        if (opt) {
+          price += Math.max(0, opt.priceDelta ?? 0);
+          cost += Math.max(0, opt.costDelta ?? 0);
+        }
+      }
+      orderGp += qty * (price - cost);
+    }
+    const a = agg[bucket];
+    a.orders += 1;
+    a.revenue += o.totalAmount ?? 0;
+    a.gp += orderGp;
+  }
+
+  const totalOrders = fulfilled.length;
+  const meta: Record<SimulationDaypartLine["key"], { label: string; hours: string }> = {
+    lunch: { label: "Lunch", hours: "12:00 – 15:00" },
+    "off-peak": { label: "Mid-afternoon", hours: "15:00 – 17:00" },
+    dinner: { label: "Dinner", hours: "17:00 – 22:00" },
+    "late-night": { label: "Late-night (closed)", hours: "22:00 – 04:00" },
+  };
+
+  return (Object.keys(agg) as Array<SimulationDaypartLine["key"]>).map((k) => {
+    const a = agg[k];
+    return {
+      key: k,
+      label: meta[k].label,
+      hours: meta[k].hours,
+      ordersCount: a.orders,
+      sharePct: totalOrders > 0 ? a.orders / totalOrders : 0,
+      avgTicketGrosze: a.orders > 0 ? Math.round(a.revenue / a.orders) : 0,
+      revenueGrosze: a.revenue,
+      gpGrosze: a.gp,
+      gpRatePct: a.revenue > 0 ? a.gp / a.revenue : 0,
+    };
+  });
+}
+
+/** Cohort retention snapshot — groups orders by phone, computes repeat
+ *  rate, lifetime stats, and acquisition velocity over the window. The
+ *  loyalty engine on this codebase already collects phone at checkout
+ *  (CLAUDE.md rule #6 — zero-friction phone-based enrolment), so this
+ *  is a direct read off the real customer base. */
+export async function computeCohortSnapshot(
+  windowDays = 180,
+): Promise<SimulationCohortSnapshot> {
+  const cutoffMs = Date.now() - windowDays * 24 * 60 * 60 * 1000;
+  // We need orders from BEFORE the window to identify "returning"
+  // customers (anyone who ordered earlier and again inside the window).
+  // Cap the lookback at 2× the window — anyone whose only prior order
+  // was 360+ days ago for a 180-day window is "new" for practical
+  // purposes; institutional cohort retention rarely looks further back.
+  const lookbackMs = cutoffMs - windowDays * 24 * 60 * 60 * 1000;
+  const all = await getOrders(undefined, new Date(lookbackMs).toISOString());
+  // Pre-pass: which customers had ≥1 order BEFORE the window? They're
+  // "returning" inside the window; everyone else is "new".
+  const preWindowCustomers = new Set<string>();
+  for (const o of all) {
+    if (o.status === "cancelled") continue;
+    if (!o.customerPhone) continue;
+    const t = Date.parse(o.createdAt);
+    if (!Number.isFinite(t) || t >= cutoffMs) continue;
+    preWindowCustomers.add(o.customerPhone.trim());
+  }
+  const fulfilled = all.filter((o) => {
+    if (o.status === "cancelled") return false;
+    if (!o.customerPhone) return false;
+    const t = Date.parse(o.createdAt);
+    return Number.isFinite(t) && t >= cutoffMs;
+  });
+
+  type CustomerAgg = { orders: number; revenue: number; gp: number };
+  const byPhone = new Map<string, CustomerAgg>();
+  const modIndex: ModifierIndexCache = new Map();
+  for (const o of fulfilled) {
+    const phone = o.customerPhone.trim();
+    if (!phone) continue;
+    let orderGp = 0;
+    for (const line of o.items ?? []) {
+      const item = line.menuItem;
+      if (!item) continue;
+      const qty = Math.max(0, line.quantity ?? 1);
+      let price = item.price ?? 0;
+      let cost = item.cost ?? 0;
+      const lookup = getModifierIndex(item, modIndex);
+      for (const sel of line.selectedModifiers ?? []) {
+        const opt = lookup.get(sel.groupId)?.get(sel.optionId);
+        if (opt) {
+          price += Math.max(0, opt.priceDelta ?? 0);
+          cost += Math.max(0, opt.costDelta ?? 0);
+        }
+      }
+      orderGp += qty * (price - cost);
+    }
+    const agg = byPhone.get(phone) ?? { orders: 0, revenue: 0, gp: 0 };
+    agg.orders += 1;
+    agg.revenue += o.totalAmount ?? 0;
+    agg.gp += orderGp;
+    byPhone.set(phone, agg);
+  }
+
+  const totalCustomers = byPhone.size;
+  let repeatCustomers = 0;
+  let totalOrders = 0;
+  let totalRevenue = 0;
+  let totalGp = 0;
+  let newCustomerRevenueGrosze = 0;
+  let returningCustomerRevenueGrosze = 0;
+  for (const [phone, agg] of byPhone.entries()) {
+    if (agg.orders >= 2) repeatCustomers += 1;
+    totalOrders += agg.orders;
+    totalRevenue += agg.revenue;
+    totalGp += agg.gp;
+    if (preWindowCustomers.has(phone)) {
+      returningCustomerRevenueGrosze += agg.revenue;
+    } else {
+      newCustomerRevenueGrosze += agg.revenue;
+    }
+  }
+  const repeatRatePct = totalCustomers > 0 ? repeatCustomers / totalCustomers : 0;
+  const avgOrdersPerCustomer = totalCustomers > 0 ? totalOrders / totalCustomers : 0;
+  const avgRevenuePerCustomerGrosze =
+    totalCustomers > 0 ? Math.round(totalRevenue / totalCustomers) : 0;
+  const avgGpPerCustomerGrosze =
+    totalCustomers > 0 ? Math.round(totalGp / totalCustomers) : 0;
+  // Annualised acquisition rate: customers / (windowDays/30.4) months.
+  const monthsInWindow = windowDays / 30.4375;
+  const newCustomersPerMonth = monthsInWindow > 0 ? totalCustomers / monthsInWindow : 0;
+
+  return {
+    windowDays,
+    totalCustomers,
+    repeatCustomers,
+    repeatRatePct,
+    avgOrdersPerCustomer,
+    avgRevenuePerCustomerGrosze,
+    avgGpPerCustomerGrosze,
+    newCustomersPerMonth,
+    newCustomerRevenueGrosze,
+    returningCustomerRevenueGrosze,
+    generatedAt: new Date().toISOString(),
+  };
+}
+
+/** Kasavana-Smith menu engineering. Groups every sold item by quadrant
+ *  (star / plowhorse / puzzle / dog) over a rolling-window of orders.
+ *  Quadrants split at the median velocity and median per-unit gross
+ *  profit across the line items that sold ≥ 1 unit. Now also enriches
+ *  each row with TrueCM1 (after the scenario's blended payment fee +
+ *  waste + refund + loyalty), deliveryOnly / prepHeavy / spoilageRisk
+ *  flags for the margin-trap callout. */
+export async function computeMenuEngineering(
+  windowDays = 90,
+  scenarioOverride?: { paymentProcessorPct?: number; wastePct?: number; refundPct?: number; loyaltyBurnPct?: number },
+): Promise<SimulationMenuEngineeringLine[]> {
+  const cutoffMs = Date.now() - windowDays * 24 * 60 * 60 * 1000;
+  const all = await getOrders(undefined, new Date(cutoffMs).toISOString());
+  const fulfilled = all.filter((o) => {
+    if (o.status === "cancelled") return false;
+    const t = Date.parse(o.createdAt);
+    return Number.isFinite(t) && t >= cutoffMs;
+  });
+
+  const scenarioForCm = scenarioOverride ?? (await getSimulationScenario());
+  const feePct = scenarioForCm.paymentProcessorPct ?? 0;
+  const wastePct = scenarioForCm.wastePct ?? 0;
+  const refundPct = scenarioForCm.refundPct ?? 0;
+  const loyaltyPct = scenarioForCm.loyaltyBurnPct ?? 0;
+  const leakageRate = feePct + wastePct + refundPct + loyaltyPct;
+
+  type Agg = { item: MenuItem; units: number; revenue: number; cost: number };
+  const byItem = new Map<string, Agg>();
+  const modIndex: ModifierIndexCache = new Map();
+  for (const o of fulfilled) {
+    for (const line of o.items ?? []) {
+      const item = line.menuItem;
+      if (!item) continue;
+      const qty = Math.max(0, line.quantity ?? 1);
+      let linePrice = item.price ?? 0;
+      let lineCost = item.cost ?? 0;
+      const lookup = getModifierIndex(item, modIndex);
+      for (const sel of line.selectedModifiers ?? []) {
+        const opt = lookup.get(sel.groupId)?.get(sel.optionId);
+        if (opt) {
+          linePrice += Math.max(0, opt.priceDelta ?? 0);
+          lineCost += Math.max(0, opt.costDelta ?? 0);
+        }
+      }
+      const agg = byItem.get(item.id) ?? { item, units: 0, revenue: 0, cost: 0 };
+      agg.units += qty;
+      agg.revenue += qty * linePrice;
+      agg.cost += qty * lineCost;
+      byItem.set(item.id, agg);
+    }
+  }
+
+  // Spoilage-risk heuristics — short shelf life and high spoilage cost
+  // per unit. Match by name fragment (case-insensitive) since the menu
+  // doesn't carry a shelfLife field.
+  const SPOILAGE_KEYWORDS = ["burrata", "truffle", "tartufata", "frozen", "tiramisù", "tiramisu"];
+
+  const rows = Array.from(byItem.values())
+    .filter((a) => a.units > 0)
+    .map((a) => {
+      const pricePerUnit = a.units > 0 ? a.revenue / a.units : 0;
+      const costPerUnit = a.units > 0 ? a.cost / a.units : 0;
+      const gpPerUnit = pricePerUnit - costPerUnit;
+      // True CM1 = price × (1 − leakage) − cost.
+      // For delivery-only items, swap the scenario's blended feePct for
+      // a realistic marketplace commission (Glovo 27% / Wolt 28% avg ≈ 27%).
+      const isDelivery = a.item.deliveryOnly === true;
+      const effectiveLeakage = isDelivery
+        ? 0.27 + wastePct + refundPct + loyaltyPct
+        : leakageRate;
+      const trueCm1 = pricePerUnit * (1 - effectiveLeakage) - costPerUnit;
+      const nameLower = a.item.name.toLowerCase();
+      const spoilageRisk = SPOILAGE_KEYWORDS.some((k) => nameLower.includes(k));
+      const role = a.item.menuRole;
+      return {
+        menuItemId: a.item.id,
+        name: a.item.name,
+        category: a.item.category ?? "other",
+        unitsSold: a.units,
+        gpPerUnit,
+        revenue: a.revenue,
+        cost: a.cost,
+        deliveryOnly: isDelivery,
+        prepTimeMinutes: a.item.prepTimeMinutes ?? 0,
+        trueCm1PerUnit: trueCm1,
+        spoilageRisk,
+        menuRole: role === "hero" || role === "profit-driver" || role === "anchor" ? role : undefined,
+      };
+    });
+
+  if (rows.length === 0) return [];
+
+  const median = (xs: number[]): number => {
+    const sorted = [...xs].sort((x, y) => x - y);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 === 0
+      ? (sorted[mid - 1] + sorted[mid]) / 2
+      : sorted[mid];
+  };
+  const medianUnits = median(rows.map((r) => r.unitsSold));
+  const medianGp = median(rows.map((r) => r.gpPerUnit));
+  const medianPrep = median(rows.map((r) => r.prepTimeMinutes).filter((p) => p > 0));
+
+  return rows.map((r): SimulationMenuEngineeringLine => {
+    const highVol = r.unitsSold >= medianUnits;
+    const highGp = r.gpPerUnit >= medianGp;
+    const quadrant: SimulationMenuEngineeringLine["quadrant"] =
+      highVol && highGp
+        ? "star"
+        : highVol && !highGp
+          ? "plowhorse"
+          : !highVol && highGp
+            ? "puzzle"
+            : "dog";
+    // Margin trap: looks high-margin (GM ≥ 50%) but TrueCM1 falls below
+    // half the per-item GP — usually delivery-only items chewed up by
+    // marketplace commission, or items where waste/refund stacks high.
+    const gmRatio = r.revenue > 0 ? r.gpPerUnit / (r.revenue / Math.max(1, r.unitsSold)) : 0;
+    const marginTrap = gmRatio >= 0.50 && r.trueCm1PerUnit < r.gpPerUnit * 0.50;
+    const prepHeavy = medianPrep > 0 && r.prepTimeMinutes >= medianPrep * 1.5;
+    return { ...r, quadrant, marginTrap, prepHeavy };
+  });
 }
 
 const FREQUENCY_TO_MONTHS_INTERNAL: Record<BusinessCost["frequency"], number> = {

@@ -1130,7 +1130,7 @@ html { scroll-behavior: smooth; }
 .v2-btn:disabled, .v2-btn.is-loading { cursor: not-allowed; opacity: 0.6; }
 .v2-btn:not(:disabled):not(.is-loading):active { transform: translateY(0.5px); }
 .v2-btn-block { width: 100%; }
-.v2-btn-label { display: inline-block; }
+.v2-btn-label { display: inline-flex; align-items: center; gap: 6px; }
 .v2-btn-spinner { width: 14px; height: 14px; animation: v2-spin 600ms linear infinite; }
 
 .v2-btn-sm { padding: 4px 10px; font-size: var(--text-xs); min-height: 26px; }
@@ -4074,6 +4074,136 @@ html { scroll-behavior: smooth; }
    ============================ */
 
 .v2-section-h { margin: 0; font-size: var(--text-md); font-weight: 600; color: var(--fg); flex: 1; }
+
+.v2-module-divider {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 32px;
+  margin-bottom: 8px;
+  padding: 18px 0 14px;
+  border-top: 1px solid color-mix(in oklab, var(--fg) 14%, transparent);
+  /* Leave space for the sticky admin topbar when jumped to via #anchor. */
+  scroll-margin-top: 80px;
+}
+.v2-module-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--brand) 16%, transparent);
+  color: color-mix(in oklab, var(--brand) 92%, var(--fg));
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  border: 1px solid color-mix(in oklab, var(--brand) 28%, transparent);
+  flex-shrink: 0;
+}
+.v2-module-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  color: var(--fg);
+}
+.v2-module-subtitle {
+  margin-top: 4px;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: color-mix(in oklab, var(--fg) 78%, transparent);
+}
+
+/* Unit Economics breakdown table — theme-aware, high-contrast on dark glass */
+.v2-ue-table {
+  width: 100%;
+  font-size: 13.5px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.v2-ue-table thead th {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: color-mix(in oklab, var(--fg) 60%, transparent);
+  text-align: left;
+  padding: 0 12px 10px;
+  font-weight: 600;
+  border-bottom: 1px solid color-mix(in oklab, var(--fg) 12%, transparent);
+}
+.v2-ue-table thead th.v2-ue-th-right { text-align: right; }
+.v2-ue-row {
+  border-top: 1px solid color-mix(in oklab, var(--fg) 6%, transparent);
+}
+.v2-ue-row-total {
+  border-top: 2px solid color-mix(in oklab, var(--fg) 22%, transparent) !important;
+  background: color-mix(in oklab, var(--fg) 4%, transparent);
+}
+.v2-ue-cell {
+  padding: 12px;
+  vertical-align: middle;
+}
+.v2-ue-label {
+  width: 30%;
+  color: var(--fg);
+  font-weight: 500;
+}
+.v2-ue-row-bold .v2-ue-label,
+.v2-ue-row-bold .v2-ue-value {
+  font-weight: 700;
+}
+.v2-ue-row-total .v2-ue-label,
+.v2-ue-row-total .v2-ue-value {
+  font-size: 15px;
+}
+.v2-ue-magnitude { width: 28%; }
+.v2-ue-bar-track {
+  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--fg) 8%, transparent);
+  overflow: hidden;
+}
+.v2-ue-bar-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--fg) 35%, transparent);
+}
+.v2-ue-value {
+  width: 18%;
+  text-align: right;
+  color: var(--fg);
+  font-weight: 600;
+}
+.v2-ue-pct {
+  width: 8%;
+  text-align: right;
+  font-size: 12px;
+  color: color-mix(in oklab, var(--fg) 65%, transparent);
+}
+.v2-ue-note {
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: color-mix(in oklab, var(--fg) 70%, transparent);
+  max-width: 380px;
+}
+
+/* Tone variants — apply colour to label, value, and bar at once. */
+.v2-ue-tone-brand .v2-ue-label,
+.v2-ue-tone-brand .v2-ue-value { color: color-mix(in oklab, var(--brand) 90%, var(--fg)); }
+.v2-ue-tone-brand .v2-ue-bar-fill { background: color-mix(in oklab, var(--brand) 70%, transparent); }
+.v2-ue-tone-warning .v2-ue-label,
+.v2-ue-tone-warning .v2-ue-value { color: #f59e0b; }
+.v2-ue-tone-warning .v2-ue-bar-fill { background: color-mix(in oklab, #f59e0b 60%, transparent); }
+.v2-ue-tone-success .v2-ue-label,
+.v2-ue-tone-success .v2-ue-value { color: #34d399; }
+.v2-ue-tone-success .v2-ue-bar-fill { background: color-mix(in oklab, #34d399 60%, transparent); }
+.v2-ue-tone-danger .v2-ue-label,
+.v2-ue-tone-danger .v2-ue-value { color: #f87171; }
+.v2-ue-tone-danger .v2-ue-bar-fill { background: color-mix(in oklab, #f87171 60%, transparent); }
 
 .v2-rewards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
 .v2-reward-actions {

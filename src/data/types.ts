@@ -799,6 +799,30 @@ export interface SimulationSeasonality {
   summer: number;
   /** Multiplier applied to ordersPerDay for Sep/Oct/Nov. */
   autumn: number;
+  /** Optional per-month overrides (length 12, Jan=0..Dec=11). When set,
+   *  the per-month value REPLACES the quarterly value for that month —
+   *  letting operators decouple Jan from Feb from Dec, which matters for
+   *  an outdoor truck where January is the cliff and December gets the
+   *  Christmas market boost. Undefined entries fall back to the quarter. */
+  monthlyOverrides?: (number | undefined)[];
+}
+
+/** Per-preset override values the operator has saved. Same shape as the
+ *  baked-in MenuScenarioPreset minus its identity fields (id / name /
+ *  emoji / description) — the editable surface for a single scenario. */
+export interface SimulationMenuScenarioOverride {
+  ordersPerDay: number;
+  daysOpenPerMonth: number;
+  avgTicketGrosze: number;
+  cogsPct: number;
+  attach: {
+    coffee: number;
+    dessert: number;
+    antipasti: number;
+    aperitivo: number;
+    premiumToppings: number;
+    pastaPrimo: number;
+  };
 }
 
 export interface SimulationMenuMixLine {
@@ -947,11 +971,323 @@ export interface SimulationScenario {
    *  Picking a preset loads avgTicketGrosze + cogsPct + assumption levers
    *  in one click. Operators can still tweak any value afterwards. */
   menuScenario?: string;
+  /** Per-preset operator overrides — when the operator edits a scenario
+   *  card and clicks Save, the customised values land here keyed by preset
+   *  id. Reset-to-default deletes the key, restoring the baked-in preset.
+   *  Used by the MenuScenarioPicker to render editable cards that persist
+   *  across reloads. The "custom" preset id is always operator-defined. */
+  menuScenarioOverrides?: Record<string, SimulationMenuScenarioOverride>;
+  /** Internal: tracks one-time data migrations applied to this scenario.
+   *  When the loader sees a value lower than the current CURRENT_VERSION
+   *  it applies the missing migrations and bumps the marker. Operator
+   *  doesn't see this field. */
+  assumptionsMigrationVersion?: number;
   /** Behavioral attach / upsell levers — fold into effective ticket + COGS. */
   assumptions?: SimulationAssumptions;
   /** Weather + Polish-holiday calendar levers — modify effective volume. */
   weather?: SimulationWeather;
+  /** Food waste / spoilage as fraction of revenue (0–1). QSR benchmark 1-3%
+   *  of revenue (= ~4-8% of COGS). Folded into total COGS; not visible as a
+   *  separate fixed-cost line because it scales with volume. */
+  wastePct?: number;
+  /** Refund / void / comp / theft as fraction of revenue (0–1). QSR
+   *  benchmark 1-2%. Reduces net sales before margin is computed. */
+  refundPct?: number;
+  /** Loyalty point burn as fraction of revenue (0–1). Real cost of points
+   *  the customer eventually redeems; the public loyalty engine in this
+   *  codebase issues 1 pt/PLN, so left unmodeled this is a silent margin
+   *  drag. Default 1.2% reflects ~50% redemption × ~5% effective value. */
+  loyaltyBurnPct?: number;
+  /** Corporate income tax rate (0–1). Polish small-CIT is 9%; full CIT is
+   *  19%. Applied to pre-tax net profit; if pre-tax is negative, no tax. */
+  citPct?: number;
+  /** Channel mix: share of revenue paid in cash (no processor fee).
+   *  Polish food-truck norm ~15-25%. Higher share is more cash-handling
+   *  cost (counted in fixed `other`) but lower processor blend. */
+  cashSharePct?: number;
+  /** Channel mix: share of revenue routed through Glovo. Glovo takes
+   *  22-30% commission — wildly different from on-site card 1-2%. */
+  glovoSharePct?: number;
+  /** Glovo commission rate (0–1). Negotiated; typical 25-30%. */
+  glovoFeePct?: number;
+  /** Channel mix: share of revenue routed through Wolt. */
+  woltSharePct?: number;
+  /** Wolt commission rate (0–1). Typical 22-30%. */
+  woltFeePct?: number;
+  /** Kitchen throughput ceiling — one pizzaiolo + one Stefano Ferrara oven
+   *  realistically produces 60-80 pizzas/hour at sustained pace. Multiplied
+   *  by openHoursPerDay and a peak-load realism factor gives max orders/day. */
+  kitchenCapacity?: SimulationKitchenCapacity;
+  /** Variable share of labor that flexes with order volume (0–1). Default
+   *  0.40 — about 40% of labor (extra cook on a busy night, more dish-pit
+   *  hours) tracks volume; 60% is fixed crew. Set to 0 for fully fixed
+   *  staffing (truck won't add headcount), 1 for fully variable. */
+  laborVariablePct?: number;
+  /** Reference daily-orders baseline that the current labor mix is sized
+   *  for. The flex curve only kicks in when ordersPerDay diverges from
+   *  this anchor — so adding orders past it pulls in more labor cost,
+   *  and dropping below it lets some labor fall away. Defaults to
+   *  ordersPerDay at scenario-creation time. */
+  laborAnchorOrdersPerDay?: number;
+  /** Monthly depreciation + amortisation in grosze — straight-line on
+   *  the setup cost (truck + oven + buildout) over its economic life.
+   *  Separated from "vehicle" fixed cost (which is pure maintenance) so
+   *  EBITDA can be computed honestly. Default = setupCost / 60 months
+   *  (5-year food-truck life). */
+  depreciationMonthlyGrosze?: number;
+  /** Monthly interest expense in grosze — non-zero only when the truck
+   *  was financed. Default 0. Separated so EBIT = EBITDA − D&A and
+   *  pre-tax profit = EBIT − interest, the standard institutional cut. */
+  interestMonthlyGrosze?: number;
+  /** Per-order packaging cost in grosze that applies to EVERY order —
+   *  napkins, plates wash for dine-in; boxes + bags for takeout / delivery.
+   *  Previously only modeled as a delivery-share extra; the audit pointed
+   *  out dine-in still incurs real packaging (~1 zł/order). Default 120
+   *  grosze (1.20 zł). The delivery-share lever's packagingCostGrosze
+   *  stays as the additional delivery premium on top. */
+  packagingPerOrderGrosze?: number;
+  /** When true, marketing fixed cost is excluded from "fixed costs" in
+   *  the P&L and instead amortised per order as a customer-acquisition
+   *  cost line. Defaults to true. Makes the CM1 honest. */
+  marketingAsCac?: boolean;
+  /** Menu prep-complexity multiplier (≥ 1, default 1.0). Derates
+   *  kitchen capacity when the menu skews to slow-prep items the
+   *  pizza-throughput model doesn't price: pasta (2× the kitchen time
+   *  of pizza, separate station), antipasti plating, etc. Pasta-heavy
+   *  menus typically 1.3-1.6. Audit §6: false-high-revenue items. */
+  prepComplexityMultiplier?: number;
+  /** Multi-unit fleet model (audit §8). When unitCount > 1, the fleet
+   *  panel computes per-unit averages, HQ overhead absorption, supply
+   *  discount, commissary savings, franchise royalty + marketing fund,
+   *  DMA cannibalisation, and build-out cost regression. */
+  fleet?: SimulationFleetModel;
   updatedAt: string;
+}
+
+export interface SimulationFleetModel {
+  /** How many trucks the operator is modeling at steady state. 1 = the
+   *  default single-unit simulator, ≥2 activates the fleet panel. */
+  unitCount: number;
+  /** Monthly HQ overhead in grosze (regional manager, accountant on
+   *  retainer, ops director). At unitCount = 1 the entire amount lands
+   *  on the single truck; absorption curve makes it ratio drops as N
+   *  grows. Default 0 — operator opts in when modeling >1 unit. */
+  hqOverheadMonthlyGrosze: number;
+  /** Supply discount on COGS once the fleet hits the trigger unit count.
+   *  Real-world: at 4-5 units mozzarella distributors stop quoting list
+   *  price and start quoting -8 to -12%. Applied as a flat COGS multi-
+   *  plier reduction once unitCount >= supplyDiscountAtUnits. */
+  supplyDiscountAtUnits: number;
+  supplyDiscountPct: number;
+  /** Commissary (centralised dough + sauce production) becomes cost-
+   *  positive at ~4 units. When enabled, reduces COGS by ~3-6pp net of
+   *  the central facility's run-rate cost (operator can edit). */
+  commissaryEnabledAtUnits: number;
+  commissarySavingsPct: number;
+  /** Franchise economics: % of revenue paid as royalty (5-6% institutional
+   *  norm) and marketing fund (2-3%). Applied per-unit. Set to 0 for
+   *  fully owned fleet. */
+  royaltyPct: number;
+  marketingFundPct: number;
+  /** DMA cannibalisation: each additional unit in the same trade area
+   *  takes this share from the prior truck's revenue. 0 means new units
+   *  open new markets cleanly; 0.15 = realistic urban Kraków cluster. */
+  dmaOverlapPct: number;
+  /** Build-out learning curve. Each new unit costs `(1 - learningPct)^
+   *  (n-1)` × the original setup, capped at the floor. 0.05 default
+   *  (Y10 truck ~60% of Y1 cost). */
+  buildoutLearningPct: number;
+  /** Floor for the build-out learning curve as a fraction of original
+   *  setup. 0.55 default — past 50% you're not actually learning faster. */
+  buildoutFloorPct: number;
+}
+
+export interface SimulationKitchenCapacity {
+  /** Pizzas the line can sustain per hour (single pizzaiolo + one oven).
+   *  60-80 is realistic for a Neapolitan truck; 90+ requires two ovens. */
+  pizzasPerHour: number;
+  /** Hours the kitchen is producing per service day (excl. prep + close). */
+  openHoursPerDay: number;
+  /** Share of daily orders concentrated in peak hours (lunch + dinner rush).
+   *  0.35 means 35% of the day's orders hit during the busiest hour-equivalents,
+   *  which is the binding constraint — not the daily average. */
+  peakHourSharePct: number;
+  /** Oven physics — pizzas per single bake cycle (Stefano Ferrara 6-9). */
+  ovenPizzasPerCycle?: number;
+  /** Oven cycle time in seconds (Neapolitan dough ~90s). */
+  ovenCycleSeconds?: number;
+  /** Realistic-to-theoretical efficiency (0-1). Pulls, sweeps, dough
+   *  rebuild, customer-facing time, drink pours, plate-up: real Neapolitan
+   *  truck peak sustains 20-35% of theoretical. Default 0.25. */
+  ovenEfficiencyPct?: number;
+}
+
+/** Same-store sales growth — trailing-period revenue vs prior trailing
+ *  period of the same length. The most-watched chain metric on the planet
+ *  ("comp sales"); presented as a percent change with order-count and
+ *  ticket-size components broken out so the operator can see whether the
+ *  growth was volume or price-led. */
+export interface SimulationSssgSnapshot {
+  /** Length of each comparison window in days (e.g. 30 = MoM). */
+  windowDays: number;
+  /** Most-recent window revenue, in grosze. */
+  currentRevenueGrosze: number;
+  /** Prior window revenue (next windowDays back). */
+  priorRevenueGrosze: number;
+  /** (current − prior) / prior. */
+  revenueGrowthPct: number;
+  /** Order-count growth — how much was volume-led. */
+  orderGrowthPct: number;
+  /** Avg-ticket growth — how much was price/mix-led. */
+  ticketGrowthPct: number;
+  /** Distinct customer growth — how much was acquisition-led. */
+  customerGrowthPct: number;
+  /** Counts for context. */
+  currentOrders: number;
+  priorOrders: number;
+  currentCustomers: number;
+  priorCustomers: number;
+  generatedAt: string;
+}
+
+/** Per-hour throughput slice — average orders served per service hour
+ *  over the window, plus kitchen-capacity utilisation if the operator
+ *  has wired the kitchenCapacity inputs. Drives the hourly throughput
+ *  chart that surfaces rush-hour risk the daily-aggregated view hides. */
+export interface SimulationHourlyThroughputLine {
+  /** Hour of day, 0-23 (local UTC). */
+  hour: number;
+  /** Total orders served at this hour over the window. */
+  totalOrders: number;
+  /** Average orders per active day at this hour. */
+  avgOrdersPerHour: number;
+  /** Capacity utilisation if pizzasPerHour is set (0-1+). */
+  capacityUtilization: number;
+}
+
+/** Per-daypart slice of real-order activity. Surfaces lunch / dinner /
+ *  late-night economics separately because the average hides the truth:
+ *  late-night is mostly slices at 76% GM, dinner is full plates at 65%,
+ *  lunch is the panini-AOV sweet spot. */
+export interface SimulationDaypartLine {
+  key: "lunch" | "dinner" | "late-night" | "off-peak";
+  label: string;
+  hours: string;
+  ordersCount: number;
+  /** Share of total orders in the window. */
+  sharePct: number;
+  avgTicketGrosze: number;
+  revenueGrosze: number;
+  gpGrosze: number;
+  /** GP / revenue — daypart's contribution margin upper bound. */
+  gpRatePct: number;
+}
+
+/** Cohort retention snapshot — computed over a rolling window of real orders,
+ *  grouped by customer phone. Drives the LTV/CAC card the institutional
+ *  review flagged as the single most important missing piece for any
+ *  franchise / scale conversation. */
+export interface SimulationCohortSnapshot {
+  windowDays: number;
+  /** Distinct customers (by phone) with ≥1 order in the window. */
+  totalCustomers: number;
+  /** Customers with ≥2 orders in the window. */
+  repeatCustomers: number;
+  /** repeatCustomers / totalCustomers (0–1). */
+  repeatRatePct: number;
+  /** Avg orders per customer over the window. */
+  avgOrdersPerCustomer: number;
+  /** Avg revenue per customer over the window, in grosze. */
+  avgRevenuePerCustomerGrosze: number;
+  /** Avg gross profit per customer over the window (using item-level costs
+   *  when available), in grosze. */
+  avgGpPerCustomerGrosze: number;
+  /** Estimated new customers per month (annualised from the window). */
+  newCustomersPerMonth: number;
+  /** Revenue from customers whose FIRST order is in the window (new) vs
+   *  customers who had orders before the window started (returning).
+   *  Surfaces the new-vs-returning mix the audit flagged as missing. */
+  newCustomerRevenueGrosze: number;
+  returningCustomerRevenueGrosze: number;
+  generatedAt: string;
+}
+
+/** Per-item slice for the menu-engineering matrix (stars / plowhorses /
+ *  puzzles / dogs). Velocity is units sold over the window; GP is gross
+ *  profit per unit after modifier deltas. Quadrants are split at the
+ *  median velocity and median GP across the menu. */
+export interface SimulationMenuEngineeringLine {
+  menuItemId: string;
+  name: string;
+  category: string;
+  /** Units sold in the window (quantity-weighted). */
+  unitsSold: number;
+  /** Gross profit per unit in grosze (price + Σ priceDelta − cost − Σ costDelta). */
+  gpPerUnit: number;
+  /** Total revenue and cost contribution from this item in the window. */
+  revenue: number;
+  cost: number;
+  /** Quadrant label per Kasavana-Smith menu engineering. */
+  quadrant: "star" | "plowhorse" | "puzzle" | "dog";
+  /** Operator-set role tag from the menu definition — hero (lead SKU),
+   *  profit-driver (high-margin lever), or anchor (premium decoy). The
+   *  matrix uses these to enrich the quadrant view; "anchor" items are
+   *  expected to live in the puzzle quadrant (high margin, low velocity)
+   *  by design and shouldn't be deleted. */
+  menuRole?: "hero" | "profit-driver" | "anchor";
+  /** Item flags surfaced from the menu definition — used to build the
+   *  margin-trap callout panel without invasive new menu schema. */
+  deliveryOnly: boolean;
+  prepTimeMinutes: number;
+  /** True CM1 per unit AFTER the scenario's blended payment fee +
+   *  waste + refund + loyalty. The audit's per-product number. */
+  trueCm1PerUnit: number;
+  /** Heuristic: high GM but TrueCM1 destroyed by fees (delivery-only
+   *  marketplace commission, etc.). When true, item is flagged in
+   *  the "Margin traps" callout. */
+  marginTrap: boolean;
+  /** Heuristic: high prep time vs the median — operationally expensive
+   *  items that look profitable on paper but eat kitchen throughput. */
+  prepHeavy: boolean;
+  /** Heuristic: known spoilage-risk ingredient (burrata, truffle,
+   *  uncooked dairy / fresh seafood). Flagged on name match for
+   *  Polish-market burrata + truffle defaults; safe to ignore for
+   *  scenarios where shelf life is operationally managed. */
+  spoilageRisk: boolean;
+}
+
+/** Snapshot of real-order actuals over a rolling window, used to ground-truth
+ *  the simulator inputs (ordersPerDay, avgTicket, channel mix). Pulled from
+ *  the live orders table — never operator-entered. */
+export interface SimulationActualsSnapshot {
+  /** Trailing-window size in days. */
+  windowDays: number;
+  /** Number of fulfilled orders in the window (excludes cancelled). */
+  ordersCount: number;
+  /** Distinct days that had at least one order. */
+  daysWithOrders: number;
+  /** Mean orders per active day. */
+  ordersPerDay: number;
+  /** Mean order total in grosze. */
+  avgTicketGrosze: number;
+  /** Weighted food-cost ratio computed from the actual menu mix (Σqty×cost
+   *  ÷ Σqty×price across every line item). Honest replacement for the
+   *  operator-typed flat cogsPct. Falls back to 0 when no item carries
+   *  cost data. */
+  weightedCogsPct: number;
+  /** Share of orders by fulfillment type. */
+  takeoutSharePct: number;
+  deliverySharePct: number;
+  /** Refund / cancellation rate as fraction of total orders (0-1). */
+  refundPct: number;
+  /** Median ticket time in seconds — createdAt → estimatedReadyAt — across
+   *  orders that carry both timestamps. Null when no order in the window
+   *  has an estimatedReadyAt. */
+  medianTicketTimeSeconds: number | null;
+  /** Earliest order createdAt in the window (ISO). */
+  fromISO: string;
+  /** Snapshot generation timestamp (ISO). */
+  generatedAt: string;
 }
 
 // --- Audit log ---
