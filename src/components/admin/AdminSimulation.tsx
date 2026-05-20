@@ -8296,6 +8296,21 @@ const HELP = {
             you account for prep, plate-up and customer-facing time.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Useful only for ceiling check:</strong> if your observed peak hits 50% of theoretical, the oven is fine. Bottleneck is elsewhere.</li>
+            <li><strong>Don&apos;t plan staffing against it:</strong> always use realistic peak. Theoretical is marketing.</li>
+            <li><strong>Test new oven purchases vs theoretical:</strong> two ovens at half the theoretical each &gt; one at double theoretical because parallel beats serial.</li>
+            <li><strong>Vendor demos ARE the theoretical:</strong> they show the absolute best case. Discount by 70% for reality.</li>
+            <li><strong>Theoretical &gt; demand = capacity wins:</strong> when demand &lt; theoretical, you have room to grow before capex.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> theoretical peak = pizzasPerBake × (3600 / cycleTime). No efficiency or labor de-rating.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Realistic ratio:</strong> 20-35% of theoretical sustained in real operation. The gap is labor, prep, plate-up, customer interaction.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> oven-vendor specifications, real-world pizzeria throughput audits.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> burst capacity (an oven can hit theoretical for 10-15 min before recovery drag). Useful for short peaks; not sustainable.</p>
+        </Methodology>
       </>
     ),
   },
@@ -8315,6 +8330,21 @@ const HELP = {
             no matter what the spec sheet promised.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Plan against this, not theoretical:</strong> realistic peak is the binding constraint for capacity planning.</li>
+            <li><strong>Validate with stopwatch:</strong> run a Friday-night audit. If your modelled realistic peak is 70/hr but observed is 50/hr, recalibrate ovenEfficiency.</li>
+            <li><strong>Track team-level improvements:</strong> training + better mise-en-place lifts realistic peak by 5-10 pizzas/hr. Cheaper than buying a second oven.</li>
+            <li><strong>Compare against demand:</strong> if realistic peak &gt; peak demand by 30%+, you have growth headroom.</li>
+            <li><strong>Investment threshold:</strong> if observed peak consistently &gt;= realistic peak for 30+ days, expansion conversation begins.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> realistic peak = theoretical_peak × ovenEfficiency ÷ prepComplexity.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy range:</strong> 50-90 pizzas/hr realistic for single pizzaiolo + Neapolitan oven; 110-160 with multi-station + runner; 200+ for QSR conveyor setup.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> pizzeria operations research, time-and-motion studies.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> hour-of-shift fatigue. Realistic peak drops 10-15% by hour 5+ of a shift. Schedule peak hours early in shifts.</p>
+        </Methodology>
       </>
     ),
   },
@@ -8333,6 +8363,21 @@ const HELP = {
             60% and growth is a marketing problem, not a kitchen problem.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Watch the trend:</strong> rising = healthy growth; flat = market saturation; falling = problem (competitor? quality?).</li>
+            <li><strong>Compare across days of week:</strong> Friday vs Tuesday peaks tell you which days drive your business.</li>
+            <li><strong>Day-part breakdown:</strong> lunch peak vs dinner peak — invest in the bigger one.</li>
+            <li><strong>Track per-channel:</strong> on-site, Glovo, Wolt peaks may differ. Each has its own capacity story.</li>
+            <li><strong>If observed = realistic, expand:</strong> the kitchen is the bottleneck. Either second oven, second unit, or peak-shifting (reservations).</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> observed peak = max(orders in any single 60-min window) across the analysis window (default 30 days).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ratio:</strong> observed ÷ realistic 60-85% = sustainable; 85-100% = at-capacity (frequent walkouts); &gt; 100% = expansion required.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> POS hourly-event analytics, NRA hourly-mix benchmarks.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> seasonal peak shifts (summer peaks higher than winter for outdoor trucks). Average masks this; check seasonal extremes too.</p>
+        </Methodology>
       </>
     ),
   },
@@ -8357,6 +8402,21 @@ const HELP = {
             are where most chains start planning capex.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Headroom (&lt; 60%):</strong> spend on marketing/awareness. Capacity isn&apos;t the issue.</li>
+            <li><strong>Heading there (60-85%):</strong> begin capex planning — second oven, peak-hour staffing, reservation system.</li>
+            <li><strong>At ceiling (85-100%):</strong> active expansion required. One bad Saturday wipes you out from over-promising.</li>
+            <li><strong>Blown out (&gt; 100%):</strong> you&apos;re losing customers daily. Emergency: limit menu at peak, push reservations, or close the order book hours early.</li>
+            <li><strong>Re-check after expansion:</strong> opening unit 2 might drop unit 1 from &quot;blown out&quot; back to &quot;heading there&quot;. Quantify.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> saturation ratio = observed peak hour ÷ realistic peak. Four-bucket categorisation at 60% / 85% / 100% thresholds.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Why the thresholds:</strong> 60% = utilisation enough to keep team sharp but not stressed. 85% = sustainable at peak but with no buffer. 100% = boundary; above = active customer loss.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> QSR operations literature (Domino&apos;s, McDonald&apos;s case studies on capacity utilisation), queueing theory.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> intraday saturation variance (you might be 60% average but 110% in the 15-min mega-peak). Use observed peak hour as the bound, not the average.</p>
+        </Methodology>
       </>
     ),
   },
