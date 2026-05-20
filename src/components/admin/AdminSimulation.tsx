@@ -3734,19 +3734,25 @@ const HELP = {
     body: (
       <>
         <p>
-          What % of mains convert to a Combo (pizza + drink + dessert at a
-          bundle discount of, say, 6 zł off vs à-la-carte).
+          % of mains that convert to a Combo (pizza + drink + dessert
+          at a bundle discount, e.g. 6 zł off vs à-la-carte).
         </p>
-        <p>
-          <strong>Why combos win:</strong> the combo pulls a second/third item
-          that <em>wouldn&apos;t have attached on its own</em>. Even with the
-          discount, the total order is bigger and the kitchen amortises one
-          ticket across more units.
-        </p>
-        <p>
-          <strong>Math:</strong> for each converted order, ticket goes up by
-          (addon price − discount); food cost goes up by (addon × addon COGS%).
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Why combos win:</strong> the combo pulls a second /
+            third item that <em>wouldn&apos;t have attached on its own</em>.
+            Even after the discount, the total order is bigger and the
+            kitchen amortises one ticket across more units — the
+            classic McDonald&apos;s Extra-Value-Meal economics.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Math:</strong> per converted order, ticket = addon
+            price − discount; COGS = addon price × addon COGS%. The
+            cannibalisation question (would the customer have bought
+            the items à-la-carte anyway?) caps the real incremental
+            lift at ~75-85% of the modelled number for casual-Italian.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             A combo is a &quot;yes ladder&quot; — say yes once and you&apos;ve bought
@@ -3840,19 +3846,23 @@ const HELP = {
     body: (
       <>
         <p>
-          A <em>downside</em> stress lever. Customers under price pressure shift
-          toward Margherita and Marinara (the cheapest pies). Set how many
-          percentage points of share move, and the simulator drops AOV and COGS
-          proportionally.
+          A <em>downside</em> stress lever. Customers under price
+          pressure shift toward Margherita and Marinara (the cheapest
+          pies); the simulator drops AOV and COGS proportionally to the
+          pp share that moves.
         </p>
-        <p>
-          <strong>Use it to ask:</strong> &quot;If economy gets bad enough that
-          20% more orders are Margherita, do we still break even?&quot;
-        </p>
-        <p>
-          <strong>Default is 0 pp</strong> — turn it on only when you want to
-          model a stress scenario.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            <strong>Use it to ask:</strong> &quot;If the economy gets
+            bad enough that 20% more orders are Margherita, do we still
+            break even?&quot; Polish 2022-2023 inflation shifted ~15 pp
+            toward cheaper SKUs across casual dining. Default is 0 pp —
+            turn on only to model a stress scenario. The model treats
+            the shift as pure ticket loss; in practice some downshift
+            customers up-attach on coffee (the &quot;treat&quot;
+            behavior), partially offsetting the AOV drop.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             When wallets tighten, customers downgrade to the cheapest pie on the menu.
@@ -3934,19 +3944,27 @@ const HELP = {
     body: (
       <>
         <p>
-          What % of orders go through delivery (vs takeaway / dine-in). Delivery
-          changes the order economics in four places:
+          % of orders that go through delivery (vs takeaway / dine-in).
         </p>
-        <ul style={{ margin: "8px 0", paddingLeft: 20, listStyle: "disc" }}>
-          <li><strong>+ Packaging cost</strong> (boxes, bag, napkins) — ~2.50 zł/order</li>
-          <li><strong>+ Extra processor fee</strong> if you use a different processor for delivery</li>
-          <li><strong>+ Fee revenue</strong> if you charge a delivery fee (~8 zł)</li>
-          <li><strong>Different cohort</strong> — delivery customers usually have lower attach</li>
-        </ul>
-        <p>
-          Tune this to model channel-mix shifts: more delivery = more volume
-          but worse per-order margin.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: "0 0 6px" }}>
+            Delivery flips the order economics in four places:
+          </p>
+          <ul style={{ margin: "0 0 6px", paddingLeft: 18 }}>
+            <li><strong>+ Packaging cost</strong> (box, bag, napkins) — ~2.50 zł/order</li>
+            <li><strong>+ Extra processor fee</strong> if a separate PSP handles delivery</li>
+            <li><strong>+ Delivery-fee revenue</strong> (if you charge one, ~8 zł)</li>
+            <li><strong>Different attach cohort</strong> — delivery customers attach 30-50% less</li>
+          </ul>
+          <p style={{ margin: 0 }}>
+            More delivery = more volume but worse per-order margin. The
+            simulator treats the channel mix as substitution (delivery
+            replaces dine-in 1:1); in reality 30-50% of platform orders
+            are incremental demand (customers who wouldn&apos;t have
+            walked in). Validate with the per-channel contribution
+            panel before re-allocating marketing spend.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Every Glovo order looks the same on screen but earns ~30% less profit — the
@@ -4029,30 +4047,36 @@ const HELP = {
     body: (
       <>
         <p>
-          Ten recipe + supplier &quot;what ifs&quot; that flex the base-pizza
-          COGS. Each lever has two numbers:
+          Ten recipe + supplier &quot;what ifs&quot; that flex the
+          base-pizza COGS. Each lever has a share-of-COGS weight and
+          a cost-change delta.
         </p>
-        <ul style={{ margin: "8px 0", paddingLeft: 20, listStyle: "disc" }}>
-          <li>
-            <strong>Share of COGS</strong> — what fraction of base-pizza
-            food cost this ingredient represents. Calibrate to your actual
-            recipe (mozz is ~28%, tomato ~10%, flour ~6%, etc).
-          </li>
-          <li>
-            <strong>Cost change</strong> — the &quot;what if&quot; itself.
-            +20% = supplier raised price 20% or recipe uses 20% more. −10% =
-            cheaper supplier or trimmed portion.
-          </li>
-        </ul>
-        <p>
-          Impact = share × delta, applied to base-pizza COGS only. So a 25%
-          cheese line getting 10% more expensive lifts total COGS by 2.5 pp.
-          Attach items (coffee, dessert, etc) keep their own COGS.
-        </p>
-        <p className="v2-muted text-sm">
-          Toggle a single lever off to compare with vs without, or use the
-          {" "}<em>All off</em> button up top to clear every stress test.
-        </p>
+        <InstitutionalAnalysis>
+          <ul style={{ margin: "0 0 6px", paddingLeft: 18 }}>
+            <li>
+              <strong>Share of COGS</strong> — fraction of base-pizza
+              food cost this ingredient represents. Calibrate to your
+              actual recipe (mozz ~28%, tomato ~10%, flour ~6%, etc).
+            </li>
+            <li>
+              <strong>Cost change</strong> — +20% = supplier raised
+              prices 20% or recipe uses 20% more. −10% = cheaper
+              supplier or trimmed portion.
+            </li>
+          </ul>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Impact = share × delta</strong>, applied to base-
+            pizza COGS only. A 25% cheese line at +10% lifts total
+            base-pizza COGS by 2.5 pp. Attach items (coffee, dessert
+            etc) keep their own COGS — the stress is recipe-localised,
+            not menu-wide.
+          </p>
+          <p className="v2-muted text-sm" style={{ margin: 0 }}>
+            Toggle individual levers to isolate an ingredient&apos;s
+            elasticity; use <em>All off</em> in the card header to
+            clear every stress test.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Cheese is the single biggest line in your food cost — usually
