@@ -8873,9 +8873,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Monthly contribution ÷ labor hours. The labor KPI that actually
-          drives staffing decisions. QSR target ≥ 150 zł/hr.
+          Monthly contribution ÷ labor hours. The labor KPI that
+          actually drives staffing decisions. QSR target ≥ 150 zł/hr.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Healthy ranges (PL pizza): &lt; 100 weak; 100-150 OK;
+            150-200 good; &gt; 200 excellent. Better than rev/labor-hr
+            because it weights by margin — pushing more high-CM items
+            (espresso, drinks) lifts this metric while pushing low-CM
+            items (Margherita) doesn&apos;t. Use for shift-level
+            scheduling decisions: if Monday lunch hits 80 zł/hr while
+            Friday dinner hits 220 zł/hr, the Monday slot is the
+            staffing-cut candidate.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>How much profit (not revenue) each labor hour creates.</strong>
@@ -8907,9 +8919,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Avg ticket × (1 − loyalty burn). The honest ticket after loyalty
-          discounts.
+          Avg ticket × (1 − loyalty burn). The honest ticket after
+          loyalty discounts.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Typical gross-to-net gap: 1-3% (healthy loyalty), 3-5%
+            (aggressive promotion), 5%+ (over-discounting). For
+            forecasting + investor reports, use this metric; promo
+            discounts hide in gross AOV otherwise. Per-channel: Glovo
+            customers redeem less than walk-up regulars, so the gap
+            varies by channel mix. Loyalty burn isn&apos;t inherently
+            bad — the question is whether the resulting repeat rate
+            justifies it (Reichheld&apos;s Loyalty Effect framework).
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>Your ticket size after loyalty discounts come out.</strong>
@@ -8941,9 +8965,22 @@ const HELP = {
     body: (
       <>
         <p>
-          Per-order contribution after every variable leakage (COGS, fees,
-          waste, refund, loyalty, packaging, CAC). Audit-grade unit economics.
+          Per-order contribution after every variable leakage (COGS,
+          payment fees, waste, refunds, loyalty, packaging, marketing
+          CAC). Audit-grade unit economics.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Healthy: &gt; 30 zł/order excellent; 25-30 healthy; 20-25
+            pressured; &lt; 20 structural problem. The unit-economics
+            framework from venture finance (a16z, Bain) — beats both
+            gross margin (ignores variable leakage) and net margin
+            (mixes in labor + rent). Most-honest metric for investor
+            pitches; the diagnostic for whether the truck has a viable
+            unit before scaling. If CM1 &gt; CAC, you break even on
+            first order; if not, repeat rate has to cover the gap.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>Of every customer&apos;s 65 zł, how many you actually
@@ -8977,9 +9014,22 @@ const HELP = {
     body: (
       <>
         <p>
-          First month where cumulative net profit clears the setup cost (with a
-          4-month opening ramp). Institutional success: ≤ 24 months.
+          First month where cumulative net profit clears setup cost
+          (after a 4-month opening ramp). Institutional success ≤ 24
+          months.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            More honest than naïve payback because it includes the
+            ramp curve (m1=20% / m2=40% / m3=60% / m4=80% / m5+=100%
+            of steady-state) and counts cumulative cash, not just
+            run-rate. Institutional thresholds: &lt; 18 mo excellent;
+            18-24 strong; 24-30 acceptable; 30-36 marginal; &gt; 36
+            reconsider. Use this number for investor decks alongside
+            IRR — investors look at both: NPV captures value, cash
+            break-even captures speed.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>When you&apos;ve earned back every złoty you spent
