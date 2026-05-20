@@ -2635,8 +2635,16 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
 interface AttachLeverHelpProps {
   kind: AttachLeverKind;
   lever: SimulationAttachLever;
+  /** EFFECTIVE annualised volume (typed × applyAnnualWeather: rainy days,
+   *  heatwave evenings, holiday closures, peak/event multipliers). What
+   *  the actual P&L runs on. */
   ordersPerDay: number;
   daysOpenPerMonth: number;
+  /** Raw operator-typed values for the same fields. Shown next to the
+   *  effective values in the Methodology block so the operator sees the
+   *  weather adjustment factor explicitly, not as silent magic. */
+  typedOrdersPerDay: number;
+  typedDaysOpenPerMonth: number;
   /** Variable-leakage rates from the scenario — applied to incremental
    *  attach revenue to compute the EFFECTIVE net margin (matches actual
    *  P&L delta), not just the gross sell − COGS. */
@@ -2652,6 +2660,8 @@ function AttachLeverHelp({
   lever,
   ordersPerDay,
   daysOpenPerMonth,
+  typedOrdersPerDay,
+  typedDaysOpenPerMonth,
   paymentProcessorPct,
   wastePct,
   refundPct,
@@ -2783,6 +2793,23 @@ function AttachLeverHelp({
           {(citPct * 100).toFixed(0)}% on the pre-tax incremental margin. Fixed
           costs (labor, rent) are unchanged by the lever and don&apos;t enter
           the marginal calculation.
+        </p>
+        <p style={{ margin: "0 0 4px", fontSize: 12.5, opacity: 0.85 }}>
+          <strong>Volume:</strong> formulas use the EFFECTIVE annualised volume
+          (your typed values × weather/holiday adjustments) so monthly numbers
+          reconcile to the actual P&amp;L line. You typed{" "}
+          <strong>{Math.round(typedOrdersPerDay)} orders/day × {Math.round(typedDaysOpenPerMonth)} days</strong>
+          {" "}= {Math.round(typedOrdersPerDay * typedDaysOpenPerMonth).toLocaleString("pl-PL")} orders/month;
+          {" "}after rainy days, heatwave bonuses, holiday closures and peak/event
+          multipliers the effective volume is{" "}
+          <strong>{Math.round(ordersPerDay)} orders/day × {Math.round(daysOpenPerMonth)} days</strong>
+          {" "}= {Math.round(ordersPerDay * daysOpenPerMonth).toLocaleString("pl-PL")} orders/month
+          {typedOrdersPerDay > 0 && Math.abs(ordersPerDay * daysOpenPerMonth - typedOrdersPerDay * typedDaysOpenPerMonth) > 0.5 && (
+            <>
+              {" "}({((ordersPerDay * daysOpenPerMonth) / (typedOrdersPerDay * typedDaysOpenPerMonth)).toFixed(2)}× the
+              typed total). Change the Weather card to flex this.
+            </>
+          )}.
         </p>
         <p style={{ margin: "0 0 4px" }}>
           <strong>
@@ -9887,8 +9914,10 @@ export function AdminSimulation() {
         assumptions={scenario.assumptions ?? DEFAULT_ASSUMPTIONS}
         baseTicketGrosze={scenario.avgTicketGrosze}
         baseCogsPct={scenario.cogsPct}
-        ordersPerDay={scenario.ordersPerDay}
-        daysOpenPerMonth={scenario.daysOpenPerMonth}
+        ordersPerDay={effectiveScenario?.ordersPerDay ?? scenario.ordersPerDay}
+        daysOpenPerMonth={effectiveScenario?.daysOpenPerMonth ?? scenario.daysOpenPerMonth}
+        typedOrdersPerDay={scenario.ordersPerDay}
+        typedDaysOpenPerMonth={scenario.daysOpenPerMonth}
         paymentProcessorPct={effectiveScenario?.paymentProcessorPct ?? scenario.paymentProcessorPct ?? 0}
         wastePct={scenario.wastePct ?? 0}
         refundPct={scenario.refundPct ?? 0}
@@ -14793,9 +14822,14 @@ interface AttachRowProps {
    *  six standard attach levers (coffee, dessert, antipasti, aperitivo,
    *  premium toppings, pasta primo). */
   helpKind?: AttachLeverKind;
-  /** Scenario context for the dynamic help body. */
+  /** EFFECTIVE annualised volume after weather + holiday adjustments. */
   ordersPerDay?: number;
   daysOpenPerMonth?: number;
+  /** Raw typed values — surfaced in the Methodology block so the operator
+   *  sees the weather drag explicitly instead of being confused why the
+   *  narrative shows different numbers from the Scenario card. */
+  typedOrdersPerDay?: number;
+  typedDaysOpenPerMonth?: number;
   /** Variable-leakage rates the P&L applies on incremental attach revenue —
    *  threaded through so the headroom matches the actual net P&L delta. */
   paymentProcessorPct?: number;
@@ -14815,6 +14849,8 @@ function AttachLeverRow({
   helpKind,
   ordersPerDay,
   daysOpenPerMonth,
+  typedOrdersPerDay,
+  typedDaysOpenPerMonth,
   paymentProcessorPct,
   wastePct,
   refundPct,
@@ -14848,6 +14884,8 @@ function AttachLeverRow({
                 lever={lever}
                 ordersPerDay={ordersPerDay ?? 0}
                 daysOpenPerMonth={daysOpenPerMonth ?? 0}
+                typedOrdersPerDay={typedOrdersPerDay ?? ordersPerDay ?? 0}
+                typedDaysOpenPerMonth={typedDaysOpenPerMonth ?? daysOpenPerMonth ?? 0}
                 paymentProcessorPct={paymentProcessorPct ?? 0}
                 wastePct={wastePct ?? 0}
                 refundPct={refundPct ?? 0}
@@ -15015,11 +15053,16 @@ interface BehaviorCardProps {
   assumptions: SimulationAssumptions;
   baseTicketGrosze: number;
   baseCogsPct: number;
-  /** Scenario context — flows into the AttachLeverRow info popups so the
-   *  "In plain terms" examples and monthly-margin numbers stay consistent
-   *  with the rest of the simulation. */
+  /** EFFECTIVE annualised volume after weather + holiday-closure adjustments
+   *  (i.e. typed × applyAnnualWeather). Used for all monetary math so the
+   *  headroom matches the actual P&L delta. */
   ordersPerDay: number;
   daysOpenPerMonth: number;
+  /** Raw values the operator typed in the Scenario card — shown alongside
+   *  the effective values in the Methodology block so the operator sees
+   *  the weather adjustment explicitly. */
+  typedOrdersPerDay: number;
+  typedDaysOpenPerMonth: number;
   /** Variable-leakage rates the P&L applies on incremental attach revenue.
    *  Without these the headroom number would overstate the actual net P&L
    *  delta — see AttachLeverHelp methodology for the full decomposition. */
@@ -15037,6 +15080,8 @@ function BehaviorAssumptionsCard({
   baseCogsPct,
   ordersPerDay,
   daysOpenPerMonth,
+  typedOrdersPerDay,
+  typedDaysOpenPerMonth,
   paymentProcessorPct,
   wastePct,
   refundPct,
@@ -15105,6 +15150,8 @@ function BehaviorAssumptionsCard({
               helpKind="coffee"
               ordersPerDay={ordersPerDay}
               daysOpenPerMonth={daysOpenPerMonth}
+              typedOrdersPerDay={typedOrdersPerDay}
+              typedDaysOpenPerMonth={typedDaysOpenPerMonth}
               paymentProcessorPct={paymentProcessorPct}
               wastePct={wastePct}
               refundPct={refundPct}
@@ -15122,6 +15169,8 @@ function BehaviorAssumptionsCard({
               helpKind="dessert"
               ordersPerDay={ordersPerDay}
               daysOpenPerMonth={daysOpenPerMonth}
+              typedOrdersPerDay={typedOrdersPerDay}
+              typedDaysOpenPerMonth={typedDaysOpenPerMonth}
               paymentProcessorPct={paymentProcessorPct}
               wastePct={wastePct}
               refundPct={refundPct}
@@ -15139,6 +15188,8 @@ function BehaviorAssumptionsCard({
               helpKind="antipasti"
               ordersPerDay={ordersPerDay}
               daysOpenPerMonth={daysOpenPerMonth}
+              typedOrdersPerDay={typedOrdersPerDay}
+              typedDaysOpenPerMonth={typedDaysOpenPerMonth}
               paymentProcessorPct={paymentProcessorPct}
               wastePct={wastePct}
               refundPct={refundPct}
@@ -15156,6 +15207,8 @@ function BehaviorAssumptionsCard({
               helpKind="aperitivo"
               ordersPerDay={ordersPerDay}
               daysOpenPerMonth={daysOpenPerMonth}
+              typedOrdersPerDay={typedOrdersPerDay}
+              typedDaysOpenPerMonth={typedDaysOpenPerMonth}
               paymentProcessorPct={paymentProcessorPct}
               wastePct={wastePct}
               refundPct={refundPct}
@@ -15173,6 +15226,8 @@ function BehaviorAssumptionsCard({
               helpKind="premiumToppings"
               ordersPerDay={ordersPerDay}
               daysOpenPerMonth={daysOpenPerMonth}
+              typedOrdersPerDay={typedOrdersPerDay}
+              typedDaysOpenPerMonth={typedDaysOpenPerMonth}
               paymentProcessorPct={paymentProcessorPct}
               wastePct={wastePct}
               refundPct={refundPct}
@@ -15190,6 +15245,8 @@ function BehaviorAssumptionsCard({
               helpKind="pastaPrimo"
               ordersPerDay={ordersPerDay}
               daysOpenPerMonth={daysOpenPerMonth}
+              typedOrdersPerDay={typedOrdersPerDay}
+              typedDaysOpenPerMonth={typedDaysOpenPerMonth}
               paymentProcessorPct={paymentProcessorPct}
               wastePct={wastePct}
               refundPct={refundPct}
