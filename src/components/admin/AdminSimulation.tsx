@@ -9632,8 +9632,20 @@ const HELP = {
     body: (
       <>
         <p>
-          Pizzas-per-cycle × cycles per hour. Vendor-spec capacity in a vacuum.
+          Pizzas-per-bake × cycles/hour. Vendor-spec maximum in a
+          vacuum.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Useful only as a ceiling-check, not a staffing target.
+            Real-world realistic capacity sustains 20-35% of theoretical
+            because the pizzaiolo also takes orders, builds pizzas,
+            wipes the peel, rebuilds dough balls, plates and hands
+            across. A Ferrara rated &quot;320 pizzas/hr&quot; sustains
+            ~70/hr in real ops. Vendor demos = theoretical (best case);
+            apply ovenEfficiency multiplier for honest planning.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>What the oven brochure says it can do.</strong> Ignore it —
@@ -9665,9 +9677,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Theoretical × efficiency factor (default 22%). Sustainable peak in
-          real service.
+          Theoretical × efficiency ÷ prepComplexity. The sustainable
+          peak in real service.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            This is the binding constraint for capacity planning — what
+            the oven + line + cook combined actually deliver. Healthy
+            range: 50-90 pizzas/hr single pizzaiolo + Neapolitan oven;
+            110-160 multi-station with runner; 200+ QSR conveyor.
+            Improving by 5pp (training, mise-en-place, runner support)
+            usually beats capex. Validate with stopwatch on a Friday
+            rush — if observed runs &lt; modelled realistic, recalibrate
+            ovenEfficiency down.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>What the oven actually delivers</strong> at a sustained
@@ -9699,8 +9723,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Max avg-orders-per-hour over the last 30 days of real orders.
+          Max orders observed in any 60-minute window over the last 30
+          days of real POS data.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Healthy ratio: observed ÷ realisticPeak between 60-85% =
+            sustainable; 85-100% = at-capacity with frequent walkouts;
+            &gt; 100% = expansion needed. Watch trend over time —
+            rising = healthy growth; flat = market saturation; falling
+            = problem (competitor, quality drift, channel-mix issues).
+            Seasonal extremes matter more than annual average: summer
+            peak hour might be 30% higher than winter — check both
+            against capacity to avoid mid-year service collapse.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>Your busiest hour, from real data.</strong> Compare to
@@ -9733,10 +9770,22 @@ const HELP = {
       <>
         <p>
           Four-bucket categorisation of observed peak ÷ realistic peak:
-          <strong> Headroom</strong> (&lt; 60%), <strong>Heading there</strong>
-          (60–85%), <strong>At ceiling</strong> (85–100%),
-          <strong> Blown out</strong> (&gt; 100%).
+          Headroom (&lt; 60%), Heading there (60-85%), At ceiling
+          (85-100%), Blown out (&gt; 100%).
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Boundary rationale: 60% = utilisation enough to keep team
+            sharp but not stressed; 85% = sustainable at peak with no
+            buffer; 100% = boundary above which customers actively walk
+            away (Erlang queue saturation). Most QSR chains plan
+            capex against the 85% threshold to maintain service
+            quality at the peak. Decision frames: Headroom = push
+            marketing; Heading there = begin capex planning; At
+            ceiling = active expansion required; Blown out = emergency
+            (limit menu, close early, push reservations).
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             A one-glance read on whether you&apos;re slammed.
