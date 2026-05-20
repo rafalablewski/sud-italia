@@ -7917,9 +7917,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Volume multiplier on booked event days (food-truck rally, festival,
-          sport game, concert). Default 1.50.
+          Volume multiplier on booked event days (food-truck rally,
+          festival, sports event, concert). Default 1.50.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Range by event type: small street fair 1.3-1.5×; food-
+            truck rally 1.6-2.0×; major festival 2.0-3.0×; concert /
+            sports with captive audience 2.5-4.0×. Net economic value
+            = (event revenue × event margin) − vendor fee − transport
+            cost − event-day overtime − spoilage. Some festivals charge
+            5-10k zł vendor fees; net only worth it if multiplier ≥
+            1.6× on top of typical fixed-cost recoupment for the day.
+            Repeat events compound through brand recognition.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Food-truck rally? Concert near the pitch? Two event days/month at
@@ -7958,8 +7970,21 @@ const HELP = {
       <>
         <p>
           Total revenue per month = orders/day × avg ticket × days open.
-          Headline top-line — everything below is some flavour of cost or margin.
+          Headline top-line — everything below is some flavour of cost
+          or margin.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Net of attach-driven AOV lifts, weather/event multipliers
+            and channel-mix adjustments. Healthy PL casual-Italian
+            truck: 100-180k zł/month single unit; premium central
+            locations 200-300k+; chain per-unit (post-cannibalisation)
+            120-180k. Watch the €2M annual threshold per entity — under
+            stays at 9% small-CIT, over jumps to 19%. Revenue growth
+            should beat inflation (~4% PL) to be real growth; flat
+            nominal = real decline.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             The biggest number you&apos;ll see — total cash flowing in before
@@ -7991,9 +8016,22 @@ const HELP = {
     body: (
       <>
         <p>
-          COGS + labor + fixed + variable leakage (waste, refund, fees,
-          loyalty). Everything that doesn&apos;t end up as net profit.
+          COGS + labor + fixed + variable leakage (waste, refunds,
+          fees, loyalty) + D&amp;A + interest. Everything that
+          doesn&apos;t end up as net profit.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Healthy split (PL casual-Italian): COGS 28-32%, labor
+            25-30%, fixed 6-10%, leakage 4-6%, D&amp;A + interest
+            3-5%. Total: 70-80% of revenue. Net profit pre-tax:
+            20-30% range; sustainable steady-state typically 15-22%
+            after CIT. Cost % matters more than cost zł for trend
+            analysis — growing revenue while holding cost % flat is
+            the cleanest path; growing cost % faster than revenue is
+            the warning signal.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Every złoty in the truck that doesn&apos;t end up in your pocket.
@@ -8026,9 +8064,23 @@ const HELP = {
     body: (
       <>
         <p>
-          Bottom-line monthly profit after all variable + labor + fixed costs,
-          before tax. Drives owner take-home, cash-on-cash and payback.
+          Bottom-line monthly profit after all variable + labor + fixed
+          costs + D&amp;A + interest, AFTER CIT. Drives owner take-home,
+          cash-on-cash, payback.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Healthy margin ranges: 8-12% net = average; 12-18% =
+            good; 18-25% = excellent; 25%+ = exceptional or
+            cost line missing. NRA pizza-segment benchmark sits at
+            8-15%. Watch trajectory more than level — eroding 1pp/qtr
+            means inflation winning the race. Pay yourself first (auto-
+            transfer 30% of net to a separate account on month-end),
+            keep 3× monthly fixed costs in reserve, re-invest 20% in
+            growth. Pre-tax / post-tax distinction matters: sole
+            proprietorship (JDG) faces progressive PIT (12-32%) on top.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             The only number that ends up in your bank. Everything above it is
