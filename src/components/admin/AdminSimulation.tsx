@@ -9825,6 +9825,8 @@ export function AdminSimulation() {
         onChange={(next) => update((s) => ({ ...s, assumptions: next }))}
       />
 
+      {attachEfficiency.length > 0 && <AttachmentEfficiencyPanel rows={attachEfficiency} />}
+
       <WeatherCalendarCard
         weather={scenario.weather ?? DEFAULT_WEATHER}
         baseOrdersPerDay={scenario.ordersPerDay}
@@ -10381,8 +10383,6 @@ export function AdminSimulation() {
       <UnitEconomicsPanel scenario={scenario} computed={computed} actuals={actuals} />
 
       <ChannelEconomicsPanel rows={channels} />
-
-      {attachEfficiency.length > 0 && <AttachmentEfficiencyPanel rows={attachEfficiency} />}
 
       <ModuleDivider
         index={4}
