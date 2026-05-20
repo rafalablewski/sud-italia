@@ -8112,9 +8112,20 @@ const HELP = {
     body: (
       <>
         <p>
-          Orders/day required to cover all labor + fixed + variable costs.
-          Below = loss, above = profit. Headline buffer metric.
+          Orders/day required to cover labor + fixed + variable costs.
+          Below = loss; above = profit. Headline buffer metric.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Healthy range 35-50 orders/day for PL pizza truck. Below 30
+            indicates unusually low fixed costs (suburban pitch); above
+            55 indicates structural fragility. The margin-of-safety
+            (actual − break-even) ÷ actual is the institutional
+            cushion metric: ≥ 25% comfortable; 15-25% adequate; 10-15%
+            fragile; &lt; 10% one bad week from red. Below 10% MoS the
+            unit is not investment-grade.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             The <strong>minimum you have to sell</strong> to not lose money. If
@@ -8148,9 +8159,21 @@ const HELP = {
     body: (
       <>
         <p>
-          COGS as % of revenue. QSR target ≤ 30%. Sensitive to menu mix,
-          portion control, supplier prices.
+          COGS as % of revenue. QSR target ≤ 30%. Sensitive to menu
+          mix, portion control, supplier prices.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Industry targets: ≤ 28% world-class chains; 30% healthy
+            independent; 32%+ requires intervention. PL pizza-segment
+            benchmark 28-32%. The single highest-leverage P&amp;L line
+            for margin work — each 1pp reduction flows directly to
+            gross margin (then through variable leakage and CIT). Track
+            per-item COGS% via the menu-engineering matrix; some items
+            run 20%, others 40% — push the low-COGS items in menu
+            placement.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             For every 100 zł you sell, this is how much was food cost. Industry
@@ -8182,9 +8205,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Total labor (incl. ZUS narzut) as % of revenue. QSR target ≤ 30%; hard
-          cap at 35%.
+          Total labor (incl. 1.22× brutto ZUS narzut) as % of revenue.
+          QSR target ≤ 30%; hard cap 35%.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Tiers: ≤ 25% world-class chains; 28-30% healthy
+            independent; 35%+ requires action. PL casual-Italian
+            benchmark 27-32%. Diagnose direction before cutting heads:
+            high labor % can mean over-staffing (cut schedule) OR
+            under-pricing (raise prices) OR low productivity (training).
+            Productivity (revenue per labor hour) is often the
+            cheapest lever — a 10% productivity lift cancels typical
+            wage inflation.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             For every 100 zł you sell, this is how much went to
@@ -8217,9 +8252,22 @@ const HELP = {
     body: (
       <>
         <p>
-          Food + labor combined as % of revenue. The single most-watched number
-          in restaurant ops; ≤ 60–65% is healthy.
+          Food + labor combined as % of revenue. The single most-watched
+          number in restaurant ops; ≤ 60-65% is healthy.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Industry tiers: ≤ 55% world-class QSR chains; 60% healthy
+            independent; 65% acceptable; &gt; 70% restructure or close.
+            Tracks the &quot;Schmidgall benchmark&quot; universally
+            referenced in hospitality managerial accounting. Combines
+            the two largest cost lines into a single discipline metric
+            — beats tracking food and labor separately because trade-offs
+            (lower COGS via from-scratch prep adds labor) reveal in the
+            combined number. Watch seasonally — winter prime can be
+            68% while summer is 55% on the same operation.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>The one number to memorize.</strong> Under 60% you breathe,
