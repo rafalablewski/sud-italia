@@ -6736,9 +6736,22 @@ const HELP = {
     body: (
       <>
         <p>
-          Share of labor that scales with order volume vs fully-fixed crew. 0%
-          = always-on team, 100% = fully variable. 40% QSR norm.
+          Share of labor that scales with order volume vs fully-fixed
+          crew. 0% = always-on; 100% = fully variable. QSR norm 40%.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Trade-off between cost discipline and staff retention. Low
+            flex (0-20%) = stable team, brutal margins on slow days.
+            High flex (60%+) = elastic labor, faster bad-day savings,
+            but turnover climbs (part-timers churn 3-5× full-time).
+            Industry ranges: 20-30% world-class chains (Domino&apos;s,
+            Telepizza); 40-50% independent casual-Italian; 70%+ heavy
+            part-time fast-casual. Drives how fast variable_labor =
+            base × flex × (orders − anchor)/anchor scales above the
+            anchor point.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             How &quot;elastic&quot; is your roster? <strong>0% flex</strong>
@@ -6773,9 +6786,22 @@ const HELP = {
     body: (
       <>
         <p>
-          The orders/day for which the current labor mix is sized. Volume past
-          this anchor pulls in additional variable labor proportionally.
+          The orders/day for which the current labor mix is sized.
+          Volume past the anchor pulls in additional variable labor
+          proportionally.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Set to the realistic typical-day demand your roster is
+            built around (averaged over 30 days). Anchor too low →
+            model over-states labor scaling on growth; too high →
+            understates labor for projected volume. Re-anchor
+            quarterly as volume trend shifts. Labor below the anchor
+            stays constant (you can&apos;t unhire fixed staff on a
+            slow day — that&apos;s what the laborFlex lever handles);
+            above the anchor, marginal labor scales linearly.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Tell the model what volume your current roster is designed for. If
@@ -6810,9 +6836,22 @@ const HELP = {
     body: (
       <>
         <p>
-          % of daily orders concentrated in the peak hour. This is the binding
-          constraint, not the daily average. Default 18% on dinner-led truck.
+          % of daily orders concentrated in the peak hour. The binding
+          capacity constraint — not the daily average. Default 18% for
+          dinner-led truck.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            80 orders/day spread over 10 hours is 8/hr, easy. The same
+            80 with 22% pile into one hour = 17.6/hr — and if the
+            kitchen caps at 14/hr you turn away ~4 customers in that
+            window. Same daily total, totally different capacity story.
+            Ranges: 12-15% spread-load lunch + dinner; 18-22% dinner-led
+            casual; 25-32% special-event / weekend-only; aperitivo bars
+            can hit 30%+ in the 18-20h window. This single % often
+            decides whether you need a second oven.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             80 orders/day spread over 10 hours is 8/hour — easy. But if
@@ -6847,9 +6886,21 @@ const HELP = {
       <>
         <p>
           Derates kitchen capacity for slow-prep menus. 1.0 = pizza-only;
-          1.4–1.6 = pasta-heavy. Captures station bottlenecks the headline
-          pizzas/hour misses.
+          1.4-1.6 = pasta-heavy. Captures station bottlenecks the
+          headline pizzas/hour misses.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Calibration: pizza-only 1.00, pizza + drinks 1.05, +
+            dessert/antipasti 1.15, + pasta primo 1.40, full-menu
+            Italian 1.55+. Effective pizzas/hr = pizzasPerHour ÷
+            prepComplexity. Pushing pasta or antipasti attach without
+            adjusting this multiplier makes the modelled capacity lie
+            — the marginal prep load on a separate station compounds
+            the pizza line, and total throughput drops more than the
+            additive estimate suggests.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             A 70-pizza/hr kitchen drops to <strong>~45 effective orders/hr</strong>
