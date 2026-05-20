@@ -10009,9 +10009,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Sum of per-unit EBITDA across the fleet. The investor question for
-          franchise rollups.
+          Σ per-unit EBITDA across the fleet minus HQ overhead. The
+          institutional metric for franchise rollups.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Healthy: 15-22% margin chain-grade; 22-28% investor-grade;
+            28-35% world-class; &gt; 35% suspicious (check
+            normalisations). Multiples: 4-7× EBITDA in PL casual-Italian
+            sale. So fleet EBITDA 2.4M zł → 10-17M zł valuation —
+            material. Driver of self-fundable growth: at 20%+ EBITDA
+            margin the fleet can open new units from operations without
+            external capital. Reinvest 30-40%, debt-paydown 40-50%,
+            distribution 20-30% is a balanced post-EBITDA split.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>Total EBITDA across the fleet.</strong> <strong>20%+ of
@@ -10043,9 +10055,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Average per-unit EBITDA (fleet EBITDA ÷ units). Tracks unit-level
-          health as the chain scales.
+          Mean per-unit EBITDA (fleet EBITDA ÷ unit count). Tracks
+          unit-level health as the chain scales.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Healthy: 25-40k zł/month/unit at scale (PL casual-Italian);
+            world-class chains 45-60k/unit. Rising EBITDA/unit as units
+            grow = scale economics compounding (supplier discounts, HQ
+            absorption); flat = scale isn&apos;t happening; declining =
+            cannibalisation eating per-unit revenue. Use median or P25
+            per-unit EBITDA alongside the mean — outlier units can mask
+            distribution weakness. Below 25k/unit = restructure or
+            close.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>Average EBITDA per truck.</strong> If unit #1 does 50k
@@ -10078,8 +10102,20 @@ const HELP = {
     body: (
       <>
         <p>
-          HQ overhead ÷ fleet revenue. Should fall below 5% past 10 units.
+          HQ overhead ÷ fleet revenue. Should fall below 5% past 10
+          units.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Healthy trajectory: 10% at 2 units → 7% at 5 → 5% at 10
+            → 3% at 20+. Rising absorption % means HQ is growing faster
+            than fleet — either accelerate openings or freeze HQ hires.
+            Top-heavy chains (mature corporate office, small unit count)
+            face structural unit-level margin pressure that compounds.
+            HQ capability quality vs spend isn&apos;t visible in this
+            metric; a 5% HQ can be wasteful or world-class.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>What share of revenue goes to regional management.</strong>
@@ -10111,9 +10147,22 @@ const HELP = {
     body: (
       <>
         <p>
-          Total capital outlay across all units. Aggregate setup cost driving
-          fleet payback.
+          Σ per-unit setup cost across all units (post-learning curve).
+          Aggregate capital deployed drives fleet payback + cash-on-cash.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Realistic range: 2 units ~520-580k zł (no learning yet);
+            5 units ~1.1-1.3M; 10 units ~1.9-2.3M; 20 units ~3.5-4.2M
+            with mature learning curve. The denominator of cash-on-cash
+            and fleet-IRR — every 100k off fleet buildout lifts both
+            metrics materially. Capital-allocation strategy at scale:
+            equity for units 1-2 (high uncertainty), debt for units 3+
+            (proven economics); franchise to lower fleet buildout
+            entirely (franchisees fund their own units, fleet revenue
+            grows without HQ capex).
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>Total money sunk into all the trucks combined.</strong>
