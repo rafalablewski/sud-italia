@@ -5417,6 +5417,22 @@ const HELP = {
             day 1.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Target a +20% buffer:</strong> if you can&apos;t survive a −10% volume hit, your plan is too fragile to launch.</li>
+            <li><strong>Use −20% as your &quot;worst case&quot;:</strong> stress-test working capital against the red end of the curve.</li>
+            <li><strong>Re-run after every fixed-cost change:</strong> rent hikes and software subscriptions silently raise your sensitivity.</li>
+            <li><strong>Match marketing spend to the upside:</strong> if +10% volume nets ~6k zł more profit, you can spend up to ~3k on customer acquisition and still win.</li>
+            <li><strong>Watch the convexity:</strong> +20% lift is rarely 2× the +10% lift (capacity caps in). Validate with your kitchen throughput.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> derived. The card runs the full P&amp;L 5 times with orders/day flexed by −20%, −10%, 0, +10%, +20%.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> for each variant: revenue × multiplier, COGS scales linearly, labor + fixed held constant, recompute net.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Why ±20%:</strong> empirically a year-1 forecast misses by ±20-30%. Captures &quot;normal-execution variance&quot; without modelling extreme stress (use Cheapest-Pizza Shift for that).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> restaurant forecasting accuracy studies, OECD sectoral volatility data.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> capacity caps (you can&apos;t serve +20% if the oven is already saturated). Cross-check with the kitchen-saturation KPI.</p>
+        </Methodology>
       </>
     ),
   },
@@ -5442,6 +5458,22 @@ const HELP = {
             see the squeeze coming before payroll Friday hits.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Update yearly (Oct/Nov):</strong> the Polish min-wage for next year is announced in September. Refresh this field before the Q4 review.</li>
+            <li><strong>Match menu prices to wage inflation:</strong> if labor is 30% of revenue and wages rise 7%, menu prices need ~2.1% lift just to hold margin flat.</li>
+            <li><strong>Productivity beats price hikes:</strong> a 5% lift in revenue/labor-hour offsets the entire wage inflation. Invest in oven speed, layout, training.</li>
+            <li><strong>Lock multi-year contracts where possible:</strong> 12-month contracts with key staff give cost certainty (and reduce poach risk).</li>
+            <li><strong>Reduce labor-intensive SKUs:</strong> if a hand-stretched pizza takes 4 min vs 2 min for a pre-portioned one, wage inflation compounds the gap. Re-engineer for speed.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> single annual % (default 7% for PL 2026).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> labor_m = base_labor × (1 + wageInflation)^(m/12). Compounded monthly across the 12-month projection.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>PL 2026 calibration:</strong> ~7% reflects: min-wage jump (4666 zł → ~5000 zł brutto), sector premium (gastro pays above min), inflation-linked salaries for skilled roles (pizzaiolo, chef).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> GUS wage-growth data 2020-2025, MRiPS min-wage announcements, ZUS-published sectoral averages.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> structural hikes (a new ZUS rate, mandatory bonus). The model assumes smooth annual growth; for shock years use ingredient lever to stress-test.</p>
+        </Methodology>
       </>
     ),
   },
@@ -5464,6 +5496,22 @@ const HELP = {
             by ~2pp/year quietly.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Annual menu re-pricing in January:</strong> match average COGS inflation. Customers expect small annual bumps; they revolt against years of catch-up hikes.</li>
+            <li><strong>Re-cost recipes quarterly:</strong> not every ingredient inflates at the same rate. The Recipes admin spots the worst drifters.</li>
+            <li><strong>Hedge the cheese line:</strong> annual contracts with key suppliers lock the rate against sudden spikes.</li>
+            <li><strong>Diversify suppliers:</strong> two suppliers per major ingredient = leverage in negotiation + insurance against single-supplier shocks.</li>
+            <li><strong>Watch the GUS food CPI monthly:</strong> if it&apos;s &gt;6% your assumption is too low — bump this field and rerun the projection.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> single annual % applied to both COGS and fixed-cost lines (rent escalators are typically CPI-indexed in PL leases).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> cogs_m = base_cogs × (1 + foodInflation)^(m/12). Compounded monthly.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>PL 2026 calibration:</strong> ~4% blended. Food CPI ~5%, utilities ~6%, rent escalators ~2-3% (CPI-capped). Weighted average across cost structure.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> GUS food-CPI series 2020-2025, URE (energy regulator) tariff history, commercial-lease standard escalator clauses.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> commodity shocks (Ukraine war flour spike 2022 was +30% in 6 months). For shock scenarios, use the Ingredient Stress card on top of this baseline.</p>
+        </Methodology>
       </>
     ),
   },
@@ -5485,6 +5533,22 @@ const HELP = {
             <strong> ~600 zł/month back</strong> for one phone call.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Negotiate at volume tiers:</strong> Stripe/Adyen/PayU all drop rates above 50k zł/month and again at 100k. Always ask for the next tier.</li>
+            <li><strong>Same-day settlement isn&apos;t free:</strong> default T+1 saves ~0.1-0.2 pp vs same-day. If cash flow allows, take the slower payout.</li>
+            <li><strong>Avoid premium-card surcharges:</strong> Amex / corporate cards cost 2.5-3.5%. If they&apos;re &gt;5% of your volume, decline them or surcharge legally (PL allows).</li>
+            <li><strong>BLIK is cheaper than card:</strong> typical 0.8-1.2% vs 1.9% for cards. Push BLIK in-store with on-screen prompts.</li>
+            <li><strong>Annual PSP review:</strong> ask 2-3 PSPs for quotes every year. Switch every 2-3 years to keep rates honest.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> blended on-site card fee %. Applied to on-site revenue only (delivery aggregators take a different commission via the deliveryShare lever).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> monthly fee = revenue × cardShare × onSiteCardFee. cardShare = 1 − cashShare.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>PL 2026 norms:</strong> Stripe blended ~1.9%, Adyen ~1.7%, PayU ~1.6%, BLIK ~1.0%, local terminals ~1.4-2.1% depending on tier.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Stripe, PayU, Adyen published rate cards 2024-2025; PaySign Polish payments report.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> per-transaction fixed fees (0.10-0.20 zł per tx). At low ticket sizes these matter; at 65 zł average, the % rate dominates.</p>
+        </Methodology>
       </>
     ),
   },
