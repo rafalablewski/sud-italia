@@ -7882,6 +7882,21 @@ const HELP = {
             it is the minimum bar for not feeling foolish.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>NPV &gt; 0 at 10% = minimum bar:</strong> if you can&apos;t beat a 10% bond return, the truck doesn&apos;t justify your time.</li>
+            <li><strong>Use 10% for personal-investment decisions:</strong> matches typical PL deposit + equity blended alternative.</li>
+            <li><strong>Compare across scenarios:</strong> Conservative NPV vs Optimistic NPV shows the upside if execution is strong.</li>
+            <li><strong>Watch the assumption set:</strong> NPV is sensitive to 24-month projections; small input changes swing it materially.</li>
+            <li><strong>Higher discount rates penalise long-horizon profits:</strong> if NPV @ 10 is high but NPV @ 20 is low, you have late-arriving cash. Investors discount more.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> NPV = Σ (monthly_cashflow_m ÷ (1 + 10%/12)^m) for m=1..24 minus setup cost.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Why 10%:</strong> approximates Polish risk-free + small premium. Roughly the long-run equity-market return for a passive investor.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> standard corporate finance (Brealey/Myers/Allen), CFA Institute investment-decision frameworks.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> terminal value beyond month 24. If the truck keeps running profitably for years 3+, the NPV understates true value. Add a terminal-value adjustment for long-term investments.</p>
+        </Methodology>
       </>
     ),
   },
@@ -7900,6 +7915,21 @@ const HELP = {
             startup.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>15% is the &quot;real business&quot; bar:</strong> serious investors expect returns clearing 15% to allocate capital.</li>
+            <li><strong>If NPV @ 15 = 0 but NPV @ 10 &gt; 0, you&apos;re lifestyle:</strong> good for you, not for institutional money.</li>
+            <li><strong>Plot all three (10/15/20) together:</strong> the curve&apos;s slope shows how concentrated the returns are. Steeper = more dependent on long-horizon cash.</li>
+            <li><strong>Run sensitivity around 15%:</strong> if a 1pp drop in discount rate flips NPV positive, the project is marginal — be cautious.</li>
+            <li><strong>Use for &quot;invest in growth?&quot; decisions:</strong> if you have spare cash, NPV @ 15 of opening unit #2 vs investing in stocks tells you which is better.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> identical to NPV @ 10 but with 15% annual discount.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Why 15%:</strong> &quot;decent venture&quot; benchmark. Approximates VC/seed-investor expected return for moderate-risk SME investments.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> corporate finance literature, VC return benchmarks.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> tax-adjusted vs pre-tax discount rate. Investors typically use after-tax hurdles; the model uses pre-tax cash flows so the comparison isn&apos;t perfectly apples-to-apples.</p>
+        </Methodology>
       </>
     ),
   },
@@ -7918,6 +7948,21 @@ const HELP = {
             when you go raising for unit #6.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>NPV @ 20 ≥ 0 = institutional-grade:</strong> PE firms target 18-22% IRR. Clearing this means you&apos;ll attract their capital.</li>
+            <li><strong>If you&apos;re scaling 5+ units, this is the bar:</strong> rollup acquirers (Polish: Castle, AdVent, Innova) screen against ~20% IRR equivalent.</li>
+            <li><strong>Hard to clear without supply discounts:</strong> usually requires unit 4+ economics (HQ overhead + supply discount kicking in).</li>
+            <li><strong>Build the deck around it:</strong> &quot;positive NPV @ 20%&quot; is the line that closes meetings.</li>
+            <li><strong>Compare across pitches:</strong> if location A clears NPV @ 20 and location B doesn&apos;t, you have your priority.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> NPV with 20% annual discount.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Why 20%:</strong> PE-style hurdle. Reflects illiquidity premium + minority-stake risk + sector risk for restaurant investments.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> private-equity return frameworks, S&amp;P/Cambridge PE-fund-of-funds benchmarks.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> deal-specific structural premiums (control premium, synergy expectations, exit-multiple compression). Real PE returns adjust for these on top of the base hurdle.</p>
+        </Methodology>
       </>
     ),
   },
@@ -7937,6 +7982,21 @@ const HELP = {
             stocks instead and saved yourself the 14-hour Sundays.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Target 25-35% for retail success:</strong> beats most asset classes. Anything 40%+ is exceptional and probably temporary.</li>
+            <li><strong>Compare against your opportunity cost:</strong> what else could the cash do? Index fund (~8%), property (~6-10%), private equity (~12-18%).</li>
+            <li><strong>IRR includes time-value:</strong> better than CoC because it accounts for when the cash arrives.</li>
+            <li><strong>Sensitivity-test the 30% claim:</strong> what if revenue drops 15%? What if COGS rises 3pp? If IRR stays above 20% under stress, robust business.</li>
+            <li><strong>Long-horizon IRR drops:</strong> 24-month IRR is typically higher than 5-year because terminal value pulls down. Use the appropriate horizon for the comparison.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> IRR = the discount rate r where Σ (monthly_cashflow_m ÷ (1 + r/12)^m) = setup cost. Solved numerically (no closed form).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> &gt; 30% chef&apos;s-kiss; 20-30% solid; 15-20% acceptable; &lt; 15% reconsider; &lt; 0 capital destruction.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> standard corporate finance, CFA Level 1-2 capital-budgeting materials.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> reinvestment-rate assumption (IRR implicitly assumes interim cash flows reinvest at IRR rate — often unrealistic). Modified IRR (MIRR) is more honest for multi-period decisions.</p>
+        </Methodology>
       </>
     ),
   },
