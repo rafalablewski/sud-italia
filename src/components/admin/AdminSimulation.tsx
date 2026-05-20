@@ -6934,8 +6934,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Jun / Jul / Aug volume multiplier. Default 1.30 — peak truck season.
+          Jun/Jul/Aug volume multiplier. Default 1.30 — peak truck
+          season.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Range 1.15-1.45 outdoor truck; 0.95-1.10 indoor mall (less
+            seasonal); 1.20-1.30 tourist-area indoor; 1.50+
+            resort/beach. This is the season that funds winter survival
+            — the best:worst-month ratio implied by summer × 1.3 /
+            winter × 0.5 ≈ 2.6× is typical and demands a reserve sized
+            against the trough month. Heatwave bonus stacks on top for
+            the hot-evening micro-effect; school-holiday lunch dip
+            partly offsets weekday lunch revenue.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Summer is when trucks make money. A baseline truck doing
@@ -6970,8 +6983,20 @@ const HELP = {
     body: (
       <>
         <p>
-          Mar / Apr / May multiplier. Default 1.00 (baseline season).
+          Mar/Apr/May multiplier. Default 1.00 (baseline season).
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Spring is the calibration anchor — multipliers for summer
+            / autumn / winter all flex relative to this 1.00 reference.
+            If you&apos;re forecasting from a spring data sample, this
+            keeps the projection honest. Typical range 0.95-1.10;
+            late spring (May) often runs higher than March as patio
+            reopens. Easter weekend is volatile (peak day if open,
+            zero if closed) — handle via the peak/closure levers, not
+            by inflating the quarterly multiplier.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Spring is your &quot;normal&quot;. Use it as the calibration anchor
@@ -7005,8 +7030,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Sep / Oct / Nov multiplier. Default 0.95 — slight cooling vs spring.
+          Sep/Oct/Nov multiplier. Default 0.95 — slight cooling vs
+          spring.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Range 0.85-1.05. Early autumn (Sep) often runs at 1.05
+            (back-to-school + back-to-office return); November
+            typically 0.85 (daylight collapses, patio dies). Halloween
+            is the peak day in autumn — handle via the peak-days lever.
+            All Saints&apos; (1 Nov) typically forces closure — count
+            in holidayClosed. The quarterly multiplier averages across
+            all three months including the dip, so don&apos;t double-
+            count Halloween or 1 Nov.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             September starts hot then cools fast. <strong>5% lower volume</strong>
@@ -7039,9 +7077,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Number of pizzas one oven cycle accommodates. Stefano Ferrara 6–9;
-          multi-deck/conveyor 16+. Drives theoretical hourly capacity.
+          Pizzas one oven cycle holds. Stefano Ferrara 6-9; multi-deck
+          / conveyor 16+. Drives theoretical hourly capacity.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Oven types: wood-fired Neapolitan (Ferrara) 6-9 pies;
+            gas/electric deck 4-8; multi-deck Lincoln 12-16; conveyor
+            Middleby 16-20. Theoretical capacity = pizzasPerBake ×
+            cycles/hr × ovenEfficiency. Batching is the biggest team-
+            level lever: a pizzaiolo loading 4-6 pies per bake vs 1-2
+            doubles realistic throughput on the same oven. Second-oven
+            CAPEX usually loses to a second truck at chain scale (same
+            capex, doubles geographic reach).
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             One bake = how many pies side-by-side. A Ferrara holds
