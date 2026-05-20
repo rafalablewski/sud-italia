@@ -8684,9 +8684,21 @@ const HELP = {
     body: (
       <>
         <p>
-          EBITDA + Rent. Rent-adjusted so chains with different real-estate
-          strategies are comparable. The franchise-rollup standard.
+          EBITDA + Rent. Real-estate-adjusted so chains with different
+          property strategies are comparable. Franchise-rollup standard.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Removes the real-estate decision from the operating-
+            performance measure — useful when comparing your truck to
+            one that owns its location, or when packaging multiple
+            units with different rent profiles for sale. Used in S&amp;P
+            / Fitch credit analysis frameworks. Watch the EBITDA-vs-
+            EBITDAR spread: wide spread means rent is heavy in your
+            cost stack (renegotiate or relocate); narrow spread means
+            rent is well-controlled.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>EBITDA but ignoring rent.</strong> Useful when comparing
@@ -8718,10 +8730,23 @@ const HELP = {
     body: (
       <>
         <p>
-          Annualised net profit ÷ setup cost. The most-asked multi-unit return
-          metric. ≥ 30% = success, ≥ 15% = acceptable, &lt; 0 = capital
-          destruction.
+          Annualised net profit ÷ setup cost. The most-asked multi-unit
+          return metric. ≥ 30% = success, ≥ 15% = acceptable, &lt; 0 =
+          capital destruction.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Compares directly against alternative-use returns: S&amp;P
+            500 historical ~8%, PL deposit ~5%, REITs ~6-10%, private
+            equity ~12-18%. Below the alternative, the capital is
+            destroying value. Steady-state metric — assumes ramp is
+            complete. Leverage caveat: a smaller cash investment
+            (debt-funded) lifts CoC mathematically but interest expense
+            erodes the numerator. Use alongside IRR and NPV (Investor
+            Returns strip) for the honest investment view; CoC alone
+            hides leverage risk.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>Of every złoty you spent setting up, how many come back per
@@ -8754,8 +8779,22 @@ const HELP = {
     body: (
       <>
         <p>
-          Rent ÷ revenue. QSR target &lt; 8%; past 12% = real-estate overspend.
+          (Rent + property tax + insurance) ÷ revenue. QSR target
+          &lt; 8%; past 12% = real-estate overspend.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Healthy ranges: ≤ 8% excellent (lock long lease); 8-10%
+            healthy; 10-12% pressured (renegotiate); &gt; 12% restructure
+            (relocate, sublet, or scale revenue). Polish commercial-real-
+            estate market (Cushman Wakefield, JLL data) shows
+            casual-Italian premium pitches at Hala Koszyki / Hala
+            Gwardii running 11-14% occupancy — premium locations carry
+            heavy rent but compensate with footfall. The 12% &quot;cliff&quot;
+            isn&apos;t universal; combine with revenue-per-square-meter
+            to assess location quality.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>What fraction of revenue goes to the landlord.</strong>
@@ -8788,8 +8827,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Revenue − refunds − comps. The honest top-line after voids/comps.
+          Revenue − refunds − comps − discounts − loyalty redemptions.
+          The honest top-line for accounting and VAT/CIT filing.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Healthy gross-to-net gap: &lt; 3% (typical refunds + small
+            loyalty); 3-5% acceptable; 5-8% indicates control problems;
+            &gt; 8% structural issues. CIT/VAT are calculated on net,
+            not gross — make sure the accountant uses net. The investor
+            top-line standard is also net sales — gross is misleading
+            (Hooters / Fridays-style chains have padded reporting at
+            gross). Polish UoR (Ustawa o Rachunkowości) requires net
+            reporting for gastronomic GAAP.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>Revenue minus the orders you refunded or comped.</strong>
