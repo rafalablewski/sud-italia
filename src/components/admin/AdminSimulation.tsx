@@ -1867,7 +1867,7 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
         <li>
           <strong>Auto-suggest in the cart</strong> for online &amp; delivery orders
           (already wired via <code>getCartSuggestions()</code> in
-          <code> src/lib/upsell.ts</code>) — make sure coffee fires for pizza/pasta carts.
+          <code>src/lib/upsell.ts</code>) — make sure coffee fires for pizza/pasta carts.
         </li>
         <li>
           <strong>Sensory cues:</strong> visible espresso machine at the counter, the
@@ -2643,11 +2643,12 @@ function AttachLeverHelp({ kind, lever, ordersPerDay, daysOpenPerMonth }: Attach
   const deltaPp = Math.max(0, targetPct - currentPct);
 
   const extraUnitsPerDay = ordersPerDay * deltaPp;
-  const monthlyMarginZl = Math.max(0, extraUnitsPerDay * marginZl * daysOpenPerMonth);
-  const currentMonthlyMarginZl = Math.max(
-    0,
-    ordersPerDay * currentPct * marginZl * daysOpenPerMonth,
-  );
+  // Don't clamp to 0 — when sell < cost the projected impact is genuinely
+  // negative and the operator should see the loss, not a hidden floor.
+  // The negative-margin story branch handles narrative voice; these values
+  // also surface in the Methodology block so honest numbers matter.
+  const monthlyMarginZl = extraUnitsPerDay * marginZl * daysOpenPerMonth;
+  const currentMonthlyMarginZl = ordersPerDay * currentPct * marginZl * daysOpenPerMonth;
 
   const values: NarrativeValues = {
     sellZl,
@@ -2764,6 +2765,67 @@ const HELP = {
             month</strong> from selling 20 more pizzas a day.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Daypart smarter, not longer:</strong> 80% of orders cluster in
+              ~4 hours. Map your hourly heatmap and staff peaks heavily, off-peak
+              minimally — same revenue, lower labor%.
+            </li>
+            <li>
+              <strong>Local marketing:</strong> Instagram geo-targeted posts within
+              2 km of the truck convert ~3× a wide-net ad. Cost per new order
+              typically 8–15 zł.
+            </li>
+            <li>
+              <strong>Speed up checkout:</strong> every 30 s shaved off ticket time
+              lets you take one more order in the peak hour — that&apos;s ~4 extra
+              orders/day if you trim consistently.
+            </li>
+            <li>
+              <strong>Pre-order &amp; slot booking:</strong> push customers to
+              reserve a 15-min pickup window. Smooths the queue, lets the kitchen
+              batch better, recovers 10–20% of lost-to-queue orders.
+            </li>
+            <li>
+              <strong>Loyalty drives frequency:</strong> a working punch card
+              (4 pizzas → free) lifts return rate by 15–25% on the existing base —
+              cheaper than acquiring new customers.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> this field is the operator&apos;s typed
+            forecast for daily order volume. When live order data exists, the
+            Actuals strip above pre-fills this from a rolling 90-day window
+            (<code>/api/admin/simulation/actuals</code>) so the scenario
+            stays anchored in reality.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Where it flows:</strong> orders/day × avg ticket × days
+            open = monthly revenue (top of P&amp;L). Orders/day × hourly
+            distribution (peak share + service hours) sets the kitchen-saturation
+            KPI. Every attach lever uses orders/day to compute extra units.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Realistic range:</strong> 30–120 orders/day for a single
+            Neapolitan truck. Below 30 you&apos;re structurally unprofitable on
+            Warsaw/Kraków rents; above 120 you need a second oven or you&apos;ll
+            blow ticket times past 25 min.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> Polish food-truck association benchmarks
+            2024, GUS gastronomic-sector reports, and the truck&apos;s own
+            6-month actuals when present.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> day-of-week variance (Saturday is
+            ~2× a Tuesday). The Weather card handles seasonal volume; the
+            Heatmap card handles intraday — but neither replaces operator
+            judgement on event-day spikes.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -2793,6 +2855,66 @@ const HELP = {
             hours.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Bundle, don&apos;t hike:</strong> a 65 zł combo (pizza + drink
+              + dessert) beats raising pizza prices by 5 zł — same revenue lift,
+              no customer complaints.
+            </li>
+            <li>
+              <strong>Menu engineering:</strong> place the highest-margin pizza
+              second-from-top on the menu (the &quot;decoy effect&quot; anchor).
+              Lifts attach to that item by 15–25%.
+            </li>
+            <li>
+              <strong>Default upsells in the POS:</strong> one-tap &quot;add
+              espresso (9 zł)&quot; on the checkout screen lifts ticket more
+              cheaply than any menu change.
+            </li>
+            <li>
+              <strong>Premium toppings, not premium pies:</strong> let the
+              customer build up — a +9 zł truffle upgrade feels cheaper than a
+              60 zł pizza, even if the resulting ticket is the same.
+            </li>
+            <li>
+              <strong>Watch the &quot;cheapest pizza&quot; share:</strong> if
+              &gt;25% of orders pick the cheapest item, your menu pricing is too
+              wide — compress the range and the ticket lifts on its own.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> typed by the operator as a blended average,
+            OR computed live from the Menu mix card (Σ qty × price ÷ Σ qty
+            across the current menu weights). When menu mix is on, this field
+            becomes display-only and shows the menu-derived value.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Where it flows:</strong> avg ticket × orders/day × days
+            open = monthly revenue. Also drives contribution margin (ticket −
+            ticket × COGS%) and revenue-per-labor-hour. Combo deals, attach
+            levers and discount engines all stack on top of this base.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Realistic range:</strong> 45–85 zł for a Polish pizzeria.
+            Pizza-only menus 45–55 zł; with drinks 60–68 zł; full dinner
+            (pasta + drinks + dessert) 70–85 zł. Above 90 zł is upscale
+            Italian, not casual.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> Polish hospitality association 2024,
+            Glovo/Wolt published GMV-per-order data, plus the truck&apos;s
+            actuals when available.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> party-size variance (a 4-person
+            order isn&apos;t 4 × the individual ticket). The model assumes
+            one order = one customer; if your basket is multi-person heavy,
+            scale ticket up accordingly.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -2818,6 +2940,66 @@ const HELP = {
             best pizzaiolo from quitting; burnout costs more than two slow days.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Close the worst day, not Sunday:</strong> Sunday usually
+              over-indexes for pizza demand. Pick the lowest-volume day from
+              your heatmap (often Monday/Tuesday) — same staff rest, less lost
+              revenue.
+            </li>
+            <li>
+              <strong>Reduced hours, not closed days:</strong> 18:00–22:00 only
+              on a slow day keeps the lights on for the dinner peak while
+              saving ~6 hours of labor.
+            </li>
+            <li>
+              <strong>Roll staff days off:</strong> stagger across the team
+              instead of closing — one cook off Monday, another Tuesday — so
+              the truck stays open at lower headcount.
+            </li>
+            <li>
+              <strong>Use closed days for prep:</strong> dough batches,
+              tomato-sauce reductions, cleaning. Pre-prep saves ~15% prep
+              labor on open days.
+            </li>
+            <li>
+              <strong>Plan around fixed costs:</strong> rent is monthly, not
+              daily — closing a day saves you ~1.5–2 hours of labor + 50 zł of
+              utilities, nothing on rent. Calculate before deciding.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> operator-typed integer (1–31). Defaults to
+            28 (6-day work week with 1 rest day average).
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Where it flows:</strong> multiplies into monthly revenue,
+            monthly variable costs and the daily fixed-cost amortisation
+            (rent ÷ days-open inflates per-day burden if you close more).
+            Also gates the heatmap aggregation and the throughput KPIs.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Realistic range:</strong> 22–30 days. Under 22 means
+            you&apos;re effectively part-time (struggles to cover rent); 30
+            means 7-day operation which is sustainable for ~3 months before
+            burnout. 26–28 is the typical sweet spot.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> Polish labour code (mandatory rest
+            periods), Italian-style trattoria operating patterns,
+            owner-operator surveys.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> public holidays (the Holiday
+            Calendar card handles those separately as event-day deltas
+            rather than closures). Also doesn&apos;t model day-of-week
+            revenue mix — closing Saturday is much costlier than closing
+            Monday, but the field treats every day as equal weight.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -2847,6 +3029,67 @@ const HELP = {
             same pizza, smarter buying.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Negotiate with the cheese supplier first:</strong>
+              mozzarella + fior di latte is 35–45% of pizza COGS. A 5%
+              discount there beats squeezing 5% out of basil.
+            </li>
+            <li>
+              <strong>Track end-of-shift waste daily:</strong> if &gt;3% of
+              dough goes in the bin, your hourly forecast is off. Tighten the
+              hourly dough-batch plan.
+            </li>
+            <li>
+              <strong>Recipe-cost every menu item monthly:</strong> ingredient
+              prices drift (especially flour, oil, tomatoes). Re-cost in the
+              Recipes admin page every 30 days; bump prices on the worst
+              drifters.
+            </li>
+            <li>
+              <strong>Standardise portion weights:</strong> the difference
+              between a generous and stingy cook is 2–4 pp of COGS. Train +
+              weigh + spot-check.
+            </li>
+            <li>
+              <strong>Bulk-buy long-shelf items:</strong> flour, tomato passata,
+              oil — order quarterly with a freight-saving partner. Saves 8–12%
+              on those line items.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> typed as a blended %, OR computed from the
+            Menu mix card as Σ (qty × recipe cost) ÷ Σ (qty × price), weighted
+            by menu mix. When live actuals exist, the Actuals strip pulls the
+            menu-mix-weighted figure from the last 90 days of orders.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Where it flows:</strong> monthly variable food cost =
+            revenue × COGS%. Inverts into gross margin (1 − COGS%) on the
+            P&amp;L. Feeds the contribution-margin and prime-cost KPIs.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Realistic range:</strong> 22–35%. Under 25% is rare in
+            Poland for casual-Italian (means cheap ingredients or super-tight
+            ops); 28–32% is healthy; over 35% means recipes need
+            re-engineering (better suppliers, smaller portions, or higher
+            prices).
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> Polish restaurant association
+            benchmarks, OECD food-cost data, Italian-pizzeria
+            owner-operator reports. Margins tighten in inflationary periods
+            (2022–2024 flour spike pushed industry avg from 28% → 33%).
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> waste %, employee-meal cost,
+            comps and refunds — all of these are separate fields lower in
+            the page. Don&apos;t double-count by stuffing them into COGS%.
+          </p>
+        </Methodology>
       </>
     ),
   },
