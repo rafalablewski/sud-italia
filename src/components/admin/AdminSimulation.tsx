@@ -5717,6 +5717,22 @@ const HELP = {
             you save fees; lift Glovo&apos;s share and you grow volume.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Negotiate on volume:</strong> Wolt tiers at ~30 / 100 / 300 orders/week. Each unlocks 1-2 pp lower rate.</li>
+            <li><strong>Wolt is more flexible on promo:</strong> they often co-fund discounts to grow your share; Glovo less so. Pitch this when account-managing.</li>
+            <li><strong>Watch effective rate:</strong> Wolt occasionally adds delivery-fee subsidies that the merchant funds — read the fine print quarterly.</li>
+            <li><strong>Bundle as exclusive:</strong> if you commit to Wolt-only delivery, you can sometimes negotiate 20% or below.</li>
+            <li><strong>Test menu pricing:</strong> Wolt customers tolerate slightly higher prices than Glovo (different demographic). Test a 5% lift on Wolt items.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> Wolt commission % (default 25% blended).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> monthly Wolt fee = orders × ticket × woltShare × woltCommission.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>PL 2026 norms:</strong> baseline 28-30%; volume tiers drop to 22-25% above ~300 orders/week. Some categories (alcohol via licensed merchants) see different rates.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Wolt merchant rate cards 2024, food-delivery industry analyses.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> Wolt+ subscription discounts (customers in the Wolt+ program order more frequently — incremental demand effect not captured).</p>
+        </Methodology>
       </>
     ),
   },
@@ -5740,6 +5756,22 @@ const HELP = {
             payback by ~3 months.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Buy used, finish new:</strong> a 5-year-old food truck refurbished saves ~80,000 zł vs new. Resale value barely differs.</li>
+            <li><strong>Lease the oven if cash-tight:</strong> a Ferrara/Marra Forni lease at 1,500 zł/month over 5 years protects working capital but adds ~12% finance cost vs cash.</li>
+            <li><strong>Permits + buildout = 30% of total:</strong> budget 90-110k for the regulatory + interior. Surprises here kill payback.</li>
+            <li><strong>Keep 60k working capital:</strong> first 6 months you might be break-even at best. Don&apos;t starve the launch.</li>
+            <li><strong>Negotiate landlord buildout contribution:</strong> for fixed pitches in malls/halls, landlords often cover 30-50k of buildout in exchange for longer lease.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> single sum capturing vehicle + oven + buildout + permits + working capital.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Where it flows:</strong> setup payback (months) = setup ÷ monthly net profit. Also feeds cash-on-cash return and investor-facing payback KPI.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>PL 2026 ranges:</strong> used truck 60-90k, new buildout 100-150k, oven 35-55k (wood/gas/electric), permits 10-20k, working capital 50-80k. Total: 280-350k for a Neapolitan-style operation.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish food-truck broker pricing, Ferrara/Marra Forni dealer quotes, owner-operator buildout post-mortems.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> contingency (most launches overrun by 10-15%). Add a 30k buffer to your real budget.</p>
+        </Methodology>
       </>
     ),
   },
@@ -5762,6 +5794,22 @@ const HELP = {
             storing up for replacement in year 5. Ignore it at your peril.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Save D&amp;A to a separate account:</strong> auto-transfer the monthly D&amp;A figure to a savings account. Year 5 oven replacement = pre-funded.</li>
+            <li><strong>Vehicle depreciates faster than kitchen:</strong> consider 4 years for the truck, 8-10 for the oven. The blended rate is a simplification.</li>
+            <li><strong>D&amp;A vs CAPEX timing:</strong> the cash hits at purchase, the P&amp;L spreads it. Don&apos;t confuse the two when budgeting cash.</li>
+            <li><strong>Tax-efficient choice:</strong> Polish CIT allows accelerated depreciation for some equipment. Ask your accountant — could shift 10-15k of profit out of year 1.</li>
+            <li><strong>EBITDA excludes D&amp;A:</strong> when banks evaluate you, they look at EBITDA. Knowing the D&amp;A line helps you walk between EBITDA and bank-relevant numbers.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> monthly D&amp;A in zł. Default = setupCost ÷ 60 (5-year straight-line).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> monthly D&amp;A = capex ÷ useful_life_in_months. Subtracted from EBITDA to derive net profit.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Useful-life norms (PL gastro):</strong> truck 4-5 yr, kitchen equipment 8-10 yr, fit-out 5-7 yr, IT/POS 3 yr. Blended: 5 yr average.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish UoR depreciation tables, gastronomic accounting practices, KPMG fixed-asset benchmarks.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> mid-life repairs (the oven might need a 15k refurb at year 3). Add as a one-off fixed cost or extend the depreciation tail to cover renewal.</p>
+        </Methodology>
       </>
     ),
   },
@@ -5782,6 +5830,22 @@ const HELP = {
             principal. Worth modelling vs draining your savings.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>BGK / PARP grants first:</strong> Polish public funding programs cover ~15-30% of buildout for new SMEs. Apply before signing a loan.</li>
+            <li><strong>Equipment leasing &gt; bank loan:</strong> ovens, fridges, POS — leasing is usually 1-2 pp cheaper than a comparable bank loan and tax-deductible monthly.</li>
+            <li><strong>Refinance after year 1:</strong> once you have 12 months of operating data, banks offer better rates than at launch. Aim for a 2-3 pp drop.</li>
+            <li><strong>Interest is tax-deductible:</strong> in PL CIT, interest expense reduces taxable income. Effective cost ≈ rate × (1 − CIT rate).</li>
+            <li><strong>Cash-vs-finance trade:</strong> if your cash earns 5% in a deposit and the loan costs 10%, financing burns 5 pp of net wealth. But it preserves working capital flexibility.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> monthly interest expense in zł. Zero for cash-purchased trucks.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> monthly interest ≈ loan_balance × annual_rate ÷ 12. Subtracted from EBITDA → net profit.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>PL 2026 norms:</strong> commercial bank loans for SMEs 8-12% APR, equipment leasing 7-10%, ZUS-backed startup loans 5-8%. Polish public programmes (PARP, BGK) often run 4-6%.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish bank SME-loan rate cards 2024, BGK published programmes, NBP base-rate trajectory.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> principal repayment (cash impact). Interest only affects P&amp;L; principal hits cash flow separately — track in the Cash Flow card if you have one.</p>
+        </Methodology>
       </>
     ),
   },
