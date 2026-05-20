@@ -8711,6 +8711,21 @@ const HELP = {
             light — drop everything and figure out why.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Decompose growth weekly:</strong> orders growth + ticket growth = revenue growth. Know which lever is moving.</li>
+            <li><strong>Beat inflation:</strong> nominal +4% growth in PL = real 0% (inflation matches). Aim for +8-10% nominal to grow in real terms.</li>
+            <li><strong>SSSG (Same-Store Sales Growth) is THE chain metric:</strong> excludes new units. Pure organic growth of existing operations.</li>
+            <li><strong>Negative growth = root-cause analysis:</strong> competitor opened? Quality drift? Bad reviews? Investigate within 30 days.</li>
+            <li><strong>Compare to peers, not just yourself:</strong> if industry is +12% and you&apos;re +6%, you&apos;re losing share even while growing nominally.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> revenue growth = (current period revenue − prior period revenue) ÷ prior period revenue. Same-store basis (exclude new units).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Industry benchmark (PL gastronomic 2024):</strong> +6-9% nominal annual growth = healthy; +12% = strong; +15%+ = exceptional or capacity-constrained.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> GUS quarterly gastronomic-sector data, Polish hospitality association SSSG benchmarks.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> weather-adjusted growth. A rainy year hurts year-over-year unfairly. Compare to weather-adjusted baselines for honest measurement.</p>
+        </Methodology>
       </>
     ),
   },
@@ -8729,6 +8744,21 @@ const HELP = {
             actually winning new people, not just charging existing ones more.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Volume growth is the truth-teller:</strong> if orders are flat but revenue grew, you&apos;ve only raised prices. That tops out.</li>
+            <li><strong>Trace order growth to marketing channels:</strong> which channel acquired the new orders? Double down on what works.</li>
+            <li><strong>Compare to capacity:</strong> if orders growing but capacity flat, you&apos;re approaching saturation. Plan capex.</li>
+            <li><strong>Negative order growth + positive ticket growth:</strong> customers paying more individually but FEWER customers — defensive sign.</li>
+            <li><strong>Watch retention vs acquisition split:</strong> growth from new customers vs returning. Different cost / different signal.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> order growth = (current period orders − prior period orders) ÷ prior period orders. Same-store basis.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> +3-7% volume growth annual (real growth above inflation); &lt; +2% concerning; &gt; +12% likely capacity-pressed.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> GUS sectoral order-count data, NRA volume-growth benchmarks.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> seasonality. Compare year-over-year same-month, not month-over-month, for apples-to-apples.</p>
+        </Methodology>
       </>
     ),
   },
@@ -8747,6 +8777,21 @@ const HELP = {
             (one day a customer says &quot;65 zł for a pizza? no thanks&quot;).
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Mix-driven ticket growth = healthy:</strong> attach more dessert/coffee = bigger ticket, customer doesn&apos;t notice. Best lever.</li>
+            <li><strong>Price-driven ticket growth = compounds risk:</strong> annual menu hike of 5% matches inflation. Above that, customers feel it.</li>
+            <li><strong>Decompose by SKU:</strong> the daily special is 10% higher YoY? Re-cost recipe. Premium pizza category 25% higher? Customers shifting to luxury items? Both?</li>
+            <li><strong>Compare to capacity ROI:</strong> +5 zł avg ticket on 2,400 orders = ~12k zł/month. Worth a marketing investment of up to ~6k zł to lift attach.</li>
+            <li><strong>Watch for downshift in ticket growth:</strong> consumer recession signal. Combine with cheapest-pizza shift to plan defensive.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> ticket growth = (current avg ticket − prior avg ticket) ÷ prior avg ticket. Same-store basis; pure mix/price effect.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> +3-6% annual ticket growth = healthy (matches inflation + small mix lift); +8%+ = aggressive pricing or large mix shift.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> GUS price-index data, restaurant-industry mix-shift analysis.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> price elasticity. A 10% price hike doesn&apos;t lift ticket 10% — usually ~7% (some customers downshift). Adjust expectations.</p>
+        </Methodology>
       </>
     ),
   },
