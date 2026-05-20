@@ -7328,9 +7328,22 @@ const HELP = {
     body: (
       <>
         <p>
-          Franchise royalty taken from unit revenue. Industry norm 5–6%.
-          Deducted from unit-level EBITDA.
+          Franchise royalty taken from unit revenue. Industry norm
+          5-6%. Deducted from unit-level EBITDA.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            QSR pizza benchmarks: Domino&apos;s 5.5%, Papa John&apos;s
+            5%, Telepizza 5.5%, independent concepts 5-7%. Validate the
+            franchisee P&amp;L can still net 8-12% AFTER royalty + 2.5%
+            marketing fund + 7.5%-ish combined platform fees — otherwise
+            no rational operator buys. Royalty + marketing &lt; 10% is
+            the practical sustainability gate. Tiered royalty (4% Y1 →
+            5% Y2 → 6% steady-state) eases ramp. The brand is the
+            product — royalty income vanishes if franchisees don&apos;t
+            replicate quality from the documented playbook.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             If you franchise the concept, you keep <strong>5–6% of every
@@ -7365,9 +7378,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Mandatory franchisee contribution to a shared marketing pool.
-          Industry norm 2–3%.
+          Mandatory franchisee contribution to a shared brand-marketing
+          pool. Industry norm 2-3%.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Pooled spend across the fleet creates national-scale
+            advertising leverage no individual unit could afford. Mix
+            typically 70% national brand campaigns / 30% local-area
+            allocation. Trust depends on visible deployment — quarterly
+            spend reports to franchisees prevent the perception of HQ
+            siphoning the fund into operating costs. Polish pizzeria
+            chains (Pizza Hut, Telepizza) typically run 2.5-3.5%; the
+            higher rate funds heavy digital + sponsorship spend.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Franchisees pay another <strong>2–3%</strong> into a national
@@ -7401,9 +7426,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Number of units before wholesale suppliers offer COGS discounts.
-          Typical threshold 4–5 units in PL food-service supply chains.
+          Unit-count threshold at which wholesale suppliers offer COGS
+          discounts. Typical 4-5 units in PL food-service distribution.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Tier pattern with PL distributors (Makro, Eurocash,
+            regional cheese specialists): 1-3 units = list price; 4-7
+            units = 5-8% off list; 8-15 units = 10-12% off + payment
+            terms; 15+ units = bespoke contracts, possibly &gt;15% off.
+            Centralising orders through one buyer is the practical
+            unlock — per-truck ordering doesn&apos;t aggregate volume.
+            Concentration risk: single-supplier dependency means a
+            disruption hits the whole fleet.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             A mozzarella supplier won&apos;t budge off list price for one
@@ -7437,9 +7474,21 @@ const HELP = {
     body: (
       <>
         <p>
-          COGS reduction once the supply-discount threshold is reached. −8 to
-          −12% typical.
+          COGS reduction once the supplyDiscountAt threshold is reached.
+          Typical 8-12%.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Realistic tier sizes: 6-9% at first tier (4-7 units);
+            10-13% mid-tier (8-15 units); 15-20% at scale (15+, bespoke
+            contracts). Cheese carries the highest discount headroom
+            (~35-45% of pizza COGS, deep supplier pools); specialty
+            ingredients (truffle, premium cured meats) the least.
+            Reinvest 25-30% of the saving into recipe quality vs flat-
+            pass-through — customer-perceived upgrades drive repeat
+            rate, which compounds faster than the raw margin gain.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             When supply discount activates at <strong>10%</strong>, your 30%
