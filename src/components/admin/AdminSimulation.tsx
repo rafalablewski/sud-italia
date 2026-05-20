@@ -4262,15 +4262,18 @@ const HELP = {
     body: (
       <>
         <p>
-          Modelled orders lost to peak-hour queue overflow. Customers who walk
-          when wait &gt; 5 min.
+          Excess orders <em>per hour</em> at peak — arrivals beyond what the
+          oven can produce. These are customers who walk because the queue is
+          too long.
         </p>
         <PlainTalk>
           <p style={{ margin: 0 }}>
-            <strong>Orders walking away at peak hour.</strong> Even 5 lost
-            orders/day × ~30 zł margin = <strong>~4,500 zł/month gone</strong>.
-            Either a second oven, a stricter booking system, or pushing some
-            orders off-peak fixes it.
+            <strong>Orders walking away at peak hour.</strong> Even
+            <strong> 3 lost orders/hour × 3 peak hours/day × ~30 zł margin
+            × 30 days = ~8,100 zł/month gone</strong>. Either a second oven,
+            a stricter booking system, or pushing some orders off-peak fixes
+            it. The tile shows /hr — multiply by your peak-hour count to size
+            the monthly bleed.
           </p>
         </PlainTalk>
       </>
@@ -4358,15 +4361,20 @@ const HELP = {
     body: (
       <>
         <p>
-          Categorisation of observed ÷ realistic peak: clear / amber / red.
+          Four-bucket categorisation of observed peak ÷ realistic peak:
+          <strong> Headroom</strong> (&lt; 60%), <strong>Heading there</strong>
+          (60–85%), <strong>At ceiling</strong> (85–100%),
+          <strong> Blown out</strong> (&gt; 100%).
         </p>
         <PlainTalk>
           <p style={{ margin: 0 }}>
-            A <strong>traffic-light read</strong> on whether you&apos;re
-            slammed. <strong>Red</strong> = customers walking;
-            <strong> amber</strong> = one big Saturday from blowing out;
-            <strong> green</strong> = you have headroom to grow. Glance at it
-            weekly.
+            A one-glance read on whether you&apos;re slammed.
+            <strong> Headroom</strong> = demand is the bottleneck, push
+            marketing; <strong>Heading there</strong> = start prepping a
+            second oven or second unit; <strong>At ceiling</strong> = one big
+            Saturday from blowing out; <strong>Blown out</strong> = you&apos;re
+            actively turning customers away. The boundaries (60 / 85 / 100%)
+            are where most chains start planning capex.
           </p>
         </PlainTalk>
       </>
