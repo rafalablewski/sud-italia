@@ -10382,9 +10382,22 @@ const HELP = {
     body: (
       <>
         <p>
-          % of customers with ≥ 2 orders in the window. Healthy 30%+; below 15%
-          = one-night-stand funnel.
+          % of customers with ≥ 2 orders in the analysis window
+          (phone-deduplicated). Healthy 30%+; below 15% = one-time
+          funnel.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Tiers: 30%+ healthy (90-day); 40%+ strong; 50%+ excellent.
+            Below 15% indicates a product problem — fix the food,
+            wait, temperature, service before any marketing spend.
+            Reichheld&apos;s &quot;Loyalty Effect&quot;: a 5pp lift in
+            repeat rate typically lifts unit-economic profit by 25-50%
+            because returning customers cost &lt; 10% of acquisition
+            cost. Compare across channels (delivery typically halves
+            direct-channel repeat rate).
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>What % of customers come back.</strong> 30%+ means people
@@ -10416,8 +10429,20 @@ const HELP = {
     body: (
       <>
         <p>
-          Mean lifetime orders observed in the window.
+          Mean orders per unique customer in the window (total orders ÷
+          unique phone-dedup customers).
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Healthy 90-day window: 1.0-1.5 transient; 1.5-2.5 average;
+            2.5-4 healthy regulars; 4+ cult following. Drives LTV
+            directly (orders × ticket × CM = lifetime value).
+            Distribution matters more than mean — &quot;3.0 avg&quot;
+            could be 20% at 8 orders and 80% at 0.75 orders.
+            Cohort decay/growth is a leading indicator of brand
+            health.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>How many times the average customer orders.</strong> 1.0 =
@@ -10449,8 +10474,20 @@ const HELP = {
     body: (
       <>
         <p>
-          Gross profit per unique customer in the window.
+          Gross profit per unique customer in the analysis window —
+          the cash-yield-per-customer metric.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Healthy (90-day window): 80-150 zł GP/customer for healthy
+            casual-Italian. Drives the 3× LTV/CAC investor gate —
+            spend up to 1/3 of GP/customer on acquiring them.
+            Cohort-tracked: month-1 cohort GP vs month-12 cohort GP
+            shows whether retention is compounding. Per-channel
+            divergence: walk-up GP ~2× Glovo GP (no commission
+            erosion).
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>Total profit you make per customer over the window.</strong>
@@ -10483,9 +10520,22 @@ const HELP = {
     body: (
       <>
         <p>
-          Marketing fixed cost ÷ new customers per month. Real
+          Marketing fixed cost ÷ net-new customers per month. The real
           customer-acquisition cost.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Healthy PL casual-Italian: 8-15 zł CAC with mostly-organic
+            / referral mix; 15-30 zł with paid-social channels;
+            30-50 zł heavy paid acquisition. Channel mix: Instagram
+            geo-targeted CAC ~10-25 zł, Google ~15-35 zł, referral
+            ~3-8 zł (lowest). Net-new attribution caveat: don&apos;t
+            count organic walk-up traffic in the denominator, or CAC
+            looks artificially low. Multi-touch attribution (one
+            customer sees 3 ads + a friend&apos;s post + Glovo
+            placement) makes single-touch CAC measurements imperfect.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>What each new customer cost you in marketing.</strong>
