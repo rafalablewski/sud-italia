@@ -8018,6 +8018,21 @@ const HELP = {
             ~260k). The shape matters more than the headline.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Watch the €2M turnover line:</strong> ~8.5M zł. Crossing it bumps CIT from 9% → 19%. Plan revenue around the threshold.</li>
+            <li><strong>Use as your annual budget:</strong> the projection becomes the year&apos;s revenue target by month.</li>
+            <li><strong>Re-run quarterly:</strong> as actuals come in, recalibrate. A January way under projection signals a real-world deviation.</li>
+            <li><strong>Compare to last year:</strong> growing 10% on revenue is investor-grade; flat is OK; declining requires intervention.</li>
+            <li><strong>Watch the inflation contribution:</strong> 5% revenue growth from price hikes alone is &quot;treading water&quot; — real growth is volume growth.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> 12-month revenue = Σ over m=1..12 of (base_orders × seasonal_multiplier(m) × ticket × days × (1 + ingredient_inflation)^(m/12)).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Seasonal split (PL pizza truck):</strong> winter Q1 ~17%, spring Q2 ~25%, summer Q3 ~33%, autumn Q4 ~25%. Note: NOT a flat 1/12 per month.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish gastronomic seasonality data, GUS sectoral monthly revenues.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> year-over-year growth from marketing investment or new menu launches. Treats the 12 months as steady-state projection from current inputs.</p>
+        </Methodology>
       </>
     ),
   },
@@ -8037,6 +8052,21 @@ const HELP = {
             <strong> ~60,000 zł of margin erosion</strong> per year.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Plan price hikes against this projection:</strong> if 12-mo costs are projected to grow 6%, plan a January menu price refresh of ~4% to offset.</li>
+            <li><strong>Track cost trend monthly:</strong> if actuals diverge from projection by &gt;5% for 2 consecutive months, recalibrate.</li>
+            <li><strong>Decompose by category:</strong> the projection rolls up COGS/labor/fixed. Look at each separately if a line is bloating.</li>
+            <li><strong>Inflation is the silent killer:</strong> 4-5% annual cost growth needs matching price growth. Don&apos;t let it compound year-over-year unchecked.</li>
+            <li><strong>Use for hiring decisions:</strong> new hire at 6,000 zł/month adds ~72k to the projection. Can you absorb it?</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> 12-mo costs = Σ m=1..12 of (labor × (1+wage_infl)^(m/12) + COGS × (1+food_infl)^(m/12) + fixed × (1+CPI)^(m/12)).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Composition:</strong> typically 40% labor, 40% COGS, 15% fixed, 5% variable leakage. Inflation impacts vary per line.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> GUS inflation data, ZUS rate-card history, owner-operator cost-tracking surveys.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> step-function cost changes (rent renewal, mandatory ZUS jump). The model treats inflation as smooth; reality has cliffs.</p>
+        </Methodology>
       </>
     ),
   },
@@ -8056,6 +8086,21 @@ const HELP = {
             wouldn&apos;t earn more as a salaried pizzaiolo.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Compare to your alternative employment:</strong> a salaried head chef earns 90-130k zł/year in PL. If your truck nets below that, the math + risk doesn&apos;t justify.</li>
+            <li><strong>Plan tax payments quarterly:</strong> 9% CIT × ~240k = ~22k zł/year. Set aside monthly.</li>
+            <li><strong>Reinvestment plan:</strong> 30% personal take-home, 30% reserve, 20% growth, 20% buffer. Adjust to your goals.</li>
+            <li><strong>Year-over-year growth target:</strong> 10-15% net growth annual is healthy. Below 5% you&apos;re losing to inflation in real terms.</li>
+            <li><strong>Use for valuation:</strong> if you sell at 5× annual net profit, your truck&apos;s value is ~5× 12-mo net.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> 12-mo net profit = 12-mo revenue − 12-mo costs (both inflation-adjusted, seasonality-applied). Before CIT.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges (PL casual-Italian):</strong> 120-200k zł/year for single truck, 600k-1.5M for 5-7 unit chain, 3M+ for 20+ unit chain.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> PHG gastronomic benchmarks, restaurant-industry valuation reports.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> founder salary as a cost. The model treats unpaid owner labor as zero; mentally subtract ~80-120k zł/year if you&apos;re working full-time, to value your time honestly.</p>
+        </Methodology>
       </>
     ),
   },
@@ -8075,6 +8120,21 @@ const HELP = {
             spend it the day it lands or January will be financially terrifying.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Reserve = 1.5× worst month:</strong> minimum cash buffer. Below that and a bad February closes you.</li>
+            <li><strong>Auto-transfer summer surplus:</strong> after each high-month, move 30-40% to a separate reserve. Otherwise you spend it.</li>
+            <li><strong>Best:worst ratio &gt; 3× is hot:</strong> indicates heavy seasonality. Plan staffing, cash, marketing accordingly.</li>
+            <li><strong>If &gt; 5× ratio, consider indoor pivot:</strong> winter pop-up, catering, etc. Counter-seasonal revenue smooths the curve.</li>
+            <li><strong>Use best-month for capex timing:</strong> buy equipment in your highest-cash month. Don&apos;t wait for a slow month and starve cash.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> best-vs-worst = max(monthly net profit) − min(monthly net profit) across the 12-month projection.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy swings (PL outdoor truck):</strong> typical 3-5× best:worst ratio. Lower (1.5-2×) means well-diversified channels; higher (5-8×) means heavy seasonality risk.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish gastronomic seasonality data, restaurant cash-flow management literature.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> intra-month cash-flow variance (timing of supplier payments, payroll cycles). Even within a &quot;best&quot; month, there can be cash-low days. Plan against a 7-day working capital minimum.</p>
+        </Methodology>
       </>
     ),
   },
