@@ -4933,19 +4933,28 @@ const HELP = {
     body: (
       <>
         <p>
-          Where each złoty goes. A healthy Neapolitan truck looks roughly:
+          Where each złoty goes. The fastest weekly diagnostic in the
+          business.
         </p>
-        <ul style={{ margin: "8px 0", paddingLeft: 20, listStyle: "disc" }}>
-          <li>~30% ingredients</li>
-          <li>~28% labor</li>
-          <li>~8% fixed costs</li>
-          <li>~2% card fees</li>
-          <li>~30% net profit</li>
-        </ul>
-        <p>
-          If labor or COGS slice gets above ~32%, drill into the source
-          (recipe costs? schedule bloat?) before raising prices.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: "0 0 6px" }}>
+            Healthy Polish casual-Italian truck composition:
+          </p>
+          <ul style={{ margin: "0 0 6px", paddingLeft: 18 }}>
+            <li>~30% ingredients (COGS)</li>
+            <li>~28% labor (incl. 22% ZUS gross-up)</li>
+            <li>~8% fixed costs (rent, accountant, software)</li>
+            <li>~2% card fees + 4-5% variable leakage</li>
+            <li>~28% net profit (pre-CIT)</li>
+          </ul>
+          <p style={{ margin: 0 }}>
+            Any slice bloating past ~32% is the first place to drill.
+            COGS → recipe costs or portion drift. Labor → schedule bloat
+            or under-pricing. Fixed → rent escalator or unbounded
+            software subscriptions. Don&apos;t raise prices to fix a
+            cost problem — diagnose the slice first.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             If any slice of the pie balloons past <strong>32%</strong>, you have your
@@ -5021,46 +5030,47 @@ const HELP = {
     title: "Operations KPIs",
     body: (
       <>
-        <p>The eight numbers professional restaurateurs watch every week:</p>
-        <ul style={{ margin: "8px 0", paddingLeft: 20, listStyle: "disc" }}>
-          <li>
-            <strong>Food cost % of revenue</strong> — ingredient discipline.
-            Target ≤ 30%. Over 32% means recipes are leaking margin or prices
-            are too soft.
-          </li>
-          <li>
-            <strong>Labor % of revenue</strong> — target ≤ 30%. Over 35%? You&apos;re
-            overstaffed or under-pricing.
-          </li>
-          <li>
-            <strong>Prime cost %</strong> — COGS + labor as % of revenue. The
-            single most-watched number in the industry; ≤ 60–65% is healthy.
-          </li>
-          <li>
-            <strong>Contribution margin</strong> — share of each PLN of revenue
-            left after ALL variable costs (COGS, payment fees, waste, refunds,
-            loyalty burn) to cover fixed costs and profit. This is the honest
-            cash-drop ratio per order. Below 50% and there&apos;s no room for
-            rent shocks; below 40% the unit is structurally unprofitable.
-          </li>
-          <li>
-            <strong>Margin of safety</strong> — how far revenue can fall before
-            you hit break-even. Below 10% and one bad week wipes you out;
-            above 25% is comfortable.
-          </li>
-          <li>
-            <strong>Revenue per labor hour</strong> — how productive each
-            staff-hour is. 90–140 zł/h is normal for Polish pizza service.
-          </li>
-          <li>
-            <strong>Net profit per order</strong> — what&apos;s left after every
-            cost. If this is &lt; 5 zł you have no buffer for refunds or waste.
-          </li>
-          <li>
-            <strong>Setup payback</strong> — how many months of profit it takes
-            to recoup the truck buildout cost. Investors look for &lt; 24 months.
-          </li>
-        </ul>
+        <p>
+          The eight numbers professional restaurateurs watch every week
+          — the institutional ops dashboard.
+        </p>
+        <InstitutionalAnalysis>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Food cost % revenue</strong> — ingredient discipline.
+              Target ≤ 30%; &gt; 32% = recipe leakage or under-pricing.
+            </li>
+            <li>
+              <strong>Labor % revenue</strong> — target ≤ 30%; &gt; 35% =
+              over-staffed or under-priced.
+            </li>
+            <li>
+              <strong>Prime cost %</strong> — COGS + labor. The single
+              most-watched number in the industry. ≤ 60-65% healthy.
+            </li>
+            <li>
+              <strong>Contribution margin</strong> — revenue after ALL
+              variable costs (COGS, fees, waste, refunds, loyalty).
+              &lt; 40% = structurally unprofitable; ≥ 50% healthy.
+            </li>
+            <li>
+              <strong>Margin of safety</strong> — revenue cushion above
+              break-even. &lt; 10% one bad week wipes you; ≥ 25% comfortable.
+            </li>
+            <li>
+              <strong>Revenue per labor hour</strong> — staff productivity.
+              90-140 zł/h PL casual-Italian norm.
+            </li>
+            <li>
+              <strong>Net profit per order</strong> — bottom-line buffer
+              per ticket. &lt; 5 zł = no margin for refunds or waste.
+            </li>
+            <li>
+              <strong>Setup payback</strong> — months of profit to recoup
+              buildout. Investor-grade: &lt; 24 months.
+            </li>
+          </ul>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             These eight numbers are what a pro restaurateur stares at on Monday
@@ -5148,26 +5158,30 @@ const HELP = {
     body: (
       <>
         <p>
-          Three side-by-side runs built automatically from your current inputs:
+          Three side-by-side P&amp;L runs built automatically from your
+          current inputs ± a deterministic stress factor.
         </p>
-        <ul style={{ margin: "8px 0", paddingLeft: 20, listStyle: "disc" }}>
-          <li>
-            <strong>Conservative</strong> — −15% orders + 2 percentage points
-            worse COGS. &quot;What if everything goes a bit wrong?&quot;
-          </li>
-          <li>
-            <strong>Realistic</strong> — your current scenario as entered.
-          </li>
-          <li>
-            <strong>Optimistic</strong> — +15% orders + 2 pp better COGS.
-            &quot;What if we execute well?&quot;
-          </li>
-        </ul>
-        <p>
-          <strong>Use it like this:</strong> if Conservative is still
-          profitable, your business plan is sound. If Optimistic isn&apos;t
-          much better than Realistic, you&apos;re bumping a structural ceiling
-          — fix the model, not the marketing.
+        <InstitutionalAnalysis>
+          <ul style={{ margin: "0 0 6px", paddingLeft: 18 }}>
+            <li>
+              <strong>Conservative</strong> — −15% orders + 2pp worse
+              COGS. &quot;What if everything goes a bit wrong?&quot;
+            </li>
+            <li>
+              <strong>Realistic</strong> — current scenario as entered.
+            </li>
+            <li>
+              <strong>Optimistic</strong> — +15% orders + 2pp better
+              COGS. &quot;What if we execute well?&quot;
+            </li>
+          </ul>
+          <p style={{ margin: 0 }}>
+            <strong>Decision frame:</strong> Conservative-still-profitable
+            is the institutional gate for raising capital — investors
+            won&apos;t back a plan that only works in best case.
+            Optimistic-not-much-better-than-Realistic signals a
+            structural ceiling (small oven, limited seating, capped
+            attach headroom) — fix the model, not the marketing.
         </p>
         <PlainTalk>
           <p style={{ margin: 0 }}>
@@ -5247,16 +5261,24 @@ const HELP = {
     body: (
       <>
         <p>
-          A 5×5 grid showing the net profit you&apos;d make at every
-          combination of orders/day (X axis, ±30%) and average ticket (Y axis,
-          ±30%). The centre cell is your current scenario.
+          5×5 grid of net profit at every combination of orders/day
+          (X axis, ±30%) and avg ticket (Y axis, ±30%). Centre cell =
+          current scenario.
         </p>
-        <p>
-          <strong>How to read it:</strong> green cells are profitable, red are
-          losses. Move from the centre outward to ask
-          &quot;if I could grow orders 20% <em>or</em> raise ticket 10%, which
-          delivers more profit?&quot;.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            <strong>How to read:</strong> green = profitable, red =
+            loss. Move from centre outward to answer &quot;volume vs
+            price — which lever has higher NPV?&quot;. Counter-intuitively
+            for most casual-Italian operations, ticket-led growth
+            dominates volume-led growth on a per-pp basis: +5% ticket
+            adds revenue with zero additional COGS or labor scaling,
+            while +5% volume scales variable food and packaging and
+            often pushes labor into a new staffing tier. The diagonal
+            cells are unrealistic (raising ticket usually loses
+            volume) — use the Sensitivity card for linked effects.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Each square is &quot;what would I earn if I sold this many pizzas at this
