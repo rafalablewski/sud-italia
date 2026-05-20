@@ -180,6 +180,7 @@ const INGREDIENT_LEVERS: { key: IngredientKey; label: string; hint: string }[] =
 const LABOR_SEASONAL_FLEX = 0.4;
 
 const DEFAULT_WEATHER: SimulationWeather = {
+  enabled: true,
   rainyDayMultiplier: 0.75,
   rainyShare: 0.30,
   heatwaveMultiplier: 1.40,
@@ -1423,7 +1424,7 @@ function attachDelta(
  *  dip fires only in Jul–Aug. Used by both the headline annual-average
  *  view and the per-month 12-month projection. */
 function monthVolumeMult(monthIndex: number, w: SimulationWeather | undefined): number {
-  if (!w) return 1;
+  if (!w || w.enabled === false) return 1;
   let m = w.rainyShare * w.rainyDayMultiplier + (1 - w.rainyShare);
   // Heatwaves are a summer phenomenon — Jun (5), Jul (6), Aug (7).
   if (monthIndex >= 5 && monthIndex <= 7) {
@@ -1439,7 +1440,7 @@ function monthVolumeMult(monthIndex: number, w: SimulationWeather | undefined): 
 /** Average volume multiplier across all 12 months — the right composite
  *  for the headline "single typical month" view. */
 function averageAnnualVolumeMult(w: SimulationWeather | undefined): number {
-  if (!w) return 1;
+  if (!w || w.enabled === false) return 1;
   let sum = 0;
   for (let i = 0; i < 12; i++) sum += monthVolumeMult(i, w);
   return sum / 12;
@@ -1539,6 +1540,9 @@ function applyAssumptions(s: SimulationScenario): SimulationScenario {
 function applyAnnualWeather(s: SimulationScenario): SimulationScenario {
   const w = s.weather;
   if (!w) return s;
+  // Master toggle off — pass the scenario through unchanged. headline P&L
+  // then runs on raw operator-typed ordersPerDay × daysOpenPerMonth.
+  if (w.enabled === false) return s;
   const avgMult = averageAnnualVolumeMult(w);
   const daysOpen = Math.max(0, s.daysOpenPerMonth - w.holidayClosedDaysPerMonth);
   let ordersPerDay = s.ordersPerDay * avgMult;
@@ -15583,16 +15587,21 @@ interface WeatherCardProps {
 
 function WeatherCalendarCard({ weather, baseOrdersPerDay, baseDaysOpen, onChange }: WeatherCardProps) {
   const w = weather;
+  const enabled = w.enabled !== false;
   const patch = (next: Partial<SimulationWeather>) => onChange({ ...w, ...next });
 
-  // Live preview of the composite volume multiplier (matches applyAssumptionsAndWeather).
-  const rainAdj = w.rainyShare * w.rainyDayMultiplier + (1 - w.rainyShare);
-  const hotAdj = w.heatwaveShare * w.heatwaveMultiplier + (1 - w.heatwaveShare);
-  const schoolAdj = (2 / 12) * w.schoolHolidayLunchMultiplier + 10 / 12;
+  // Live preview of the composite volume multiplier (matches applyAnnualWeather).
+  // When the card is toggled OFF these all collapse to 1.0 / no-op so the
+  // displayed "effective" row equals the baseline.
+  const rainAdj = enabled ? w.rainyShare * w.rainyDayMultiplier + (1 - w.rainyShare) : 1;
+  const hotAdj = enabled ? w.heatwaveShare * w.heatwaveMultiplier + (1 - w.heatwaveShare) : 1;
+  const schoolAdj = enabled ? (2 / 12) * w.schoolHolidayLunchMultiplier + 10 / 12 : 1;
   const compositeVolume = rainAdj * hotAdj * schoolAdj;
-  const peakBonus = w.holidayPeakDaysPerMonth * (w.holidayPeakMultiplier - 1) * baseOrdersPerDay;
-  const eventBonus = w.eventDaysPerMonth * (w.eventDayMultiplier - 1) * baseOrdersPerDay;
-  const effectiveDaysOpen = Math.max(0, baseDaysOpen - w.holidayClosedDaysPerMonth);
+  const peakBonus = enabled ? w.holidayPeakDaysPerMonth * (w.holidayPeakMultiplier - 1) * baseOrdersPerDay : 0;
+  const eventBonus = enabled ? w.eventDaysPerMonth * (w.eventDayMultiplier - 1) * baseOrdersPerDay : 0;
+  const effectiveDaysOpen = enabled
+    ? Math.max(0, baseDaysOpen - w.holidayClosedDaysPerMonth)
+    : baseDaysOpen;
   const effectiveOrdersPerDay =
     effectiveDaysOpen > 0
       ? baseOrdersPerDay * compositeVolume + (peakBonus + eventBonus) / effectiveDaysOpen
@@ -15605,13 +15614,22 @@ function WeatherCalendarCard({ weather, baseOrdersPerDay, baseDaysOpen, onChange
         description="Rain, heat, Polish holidays, school-holiday lunch dip and event days. Modifies effective volume + days open — propagates into every chart below."
         actions={
           <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+            <LeverSwitch
+              enabled={enabled}
+              onChange={(next) => patch({ enabled: next })}
+              ariaLabel="Toggle weather & calendar adjustments"
+            />
             <InfoButton title={HELP.weatherOverview.title} label="About weather & calendar">{HELP.weatherOverview.body}</InfoButton>
             <CalendarRange className="h-4 w-4 v2-muted" />
           </span>
         }
       />
       <CardBody>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"
+          style={{ opacity: enabled ? 1 : 0.55, pointerEvents: enabled ? "auto" : "none" }}
+          aria-disabled={!enabled}
+        >
           <Input
             label={<LabelWithInfo text="Rainy-day multiplier" help={HELP.rainyDay} />}
             type="number"

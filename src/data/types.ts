@@ -923,6 +923,10 @@ export interface SimulationAssumptions {
 
 /** Weather + calendar levers — modify effective ordersPerDay and daysOpen. */
 export interface SimulationWeather {
+  /** Master toggle. When false, applyAnnualWeather() skips all
+   *  adjustments and the headline P&L runs on raw operator-typed
+   *  ordersPerDay × daysOpenPerMonth. Defaults to true (enabled). */
+  enabled?: boolean;
   /** Multiplier on volume for rainy days (e.g. 0.75 = -25%). */
   rainyDayMultiplier: number;
   /** Share of days that are rainy in a typical month (0–1). */
