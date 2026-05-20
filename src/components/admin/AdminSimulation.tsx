@@ -5951,9 +5951,23 @@ const HELP = {
     body: (
       <>
         <p>
-          % of revenue settled in cash. Zero processor fee, but reconciliation
-          and shrinkage risk are higher. Polish food-truck norm 15–25%.
+          % of revenue settled in cash. Zero processor fee, but
+          reconciliation and shrinkage risk are higher. PL food-truck
+          norm 15-25%.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Net economic benefit depends on shrinkage discipline.
+            Saving ~1.9% in card fees on cash revenue is real, but 3-5%
+            cash shrinkage (till skim, miscounts, &quot;borrowed
+            change&quot;) inverts the trade. Daily till reconciliation,
+            CCTV at the till, and limited cash floats are the
+            institutional controls; without them the cashless tax is
+            actually cheaper. BLIK (instant transfer at ~1.0% fee) is
+            the cleanest way to lower card-fee burden without cash-
+            handling overhead.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Cash orders carry <strong>zero card fee</strong>. If 20% of your
@@ -5988,10 +6002,22 @@ const HELP = {
     body: (
       <>
         <p>
-          % of orders routed through Glovo. Glovo&apos;s commission replaces the
-          on-site card fee on this share. Channel mix flows through Per-channel
-          CM1 below.
+          % of orders routed through Glovo. Glovo commission replaces the
+          on-site card fee on this share; flows through Per-channel CM1.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Glovo carries the ~28% blended commission tax — every order
+            here loses ~26 pp of CM1 vs equivalent walk-up. Cap at
+            ~30-35% of total share to retain channel control; past that
+            you&apos;re running their business with your kitchen. Note
+            the incremental-demand caveat: the model treats Glovo orders
+            as substitutes for on-site, but 30-50% are typically
+            incremental (orders that wouldn&apos;t exist without the
+            platform). Check the Channel Economics card for the
+            per-channel breakdown before re-allocating share.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Every <strong>10pp shift toward Glovo</strong> on a 2,400-orders/month
@@ -6025,9 +6051,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Glovo&apos;s marketplace take rate. Typical 25–30%; negotiable past
-          ~200-300 orders/week thresholds.
+          Glovo&apos;s marketplace take rate on platform revenue.
+          Typical 25-30%; negotiable past ~200-300 orders/week.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Tier structure: 30% baseline → 27% at ~50 orders/week → 24%
+            at ~200/wk → 22% at ~500/wk. Watch effective rate, not list
+            rate — Glovo adds advertising fees, co-marketing funds and
+            promo-period uplifts that can lift the headline rate by
+            2-4 pp. Quarterly renegotiation cycle: account managers
+            respond to data (90-day growth, exclusivity offers).
+            Surcharging Glovo prices ~10-15% above on-site is legal in
+            PL and standard practice for high-commission tiers.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Glovo keeps <strong>~27 zł of every 100 zł</strong> of order
@@ -6062,9 +6100,22 @@ const HELP = {
     body: (
       <>
         <p>
-          % of orders routed via Wolt. Like Glovo but smaller fleet in Poland;
+          % of orders routed via Wolt. Smaller PL footprint than Glovo
+          (25-30% of food-delivery market vs Glovo&apos;s 55-60%);
           commission tier slightly lower.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Wolt&apos;s app design emphasises sides + drinks more than
+            Glovo, leading to ~5-10 pp higher attach rates on platform
+            orders. Service area is smaller (mostly central Warsaw,
+            Kraków, Gdańsk) — verify coverage before listing. Listing
+            on both Glovo + Wolt provides redundancy against single-
+            platform outages and lets you negotiate exclusivity-vs-
+            non-exclusivity rates. The Wolt+ subscription program drives
+            incremental order frequency among power users.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Wolt is usually the smaller platform in PL but adds a useful
