@@ -5570,6 +5570,22 @@ const HELP = {
             tightly or the cashless tax is cheaper.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Daily cash reconciliation:</strong> count cash at end-of-shift against POS cash sales. &gt;1% drift demands investigation.</li>
+            <li><strong>CCTV at the till:</strong> not for punishment, for protection — staff are less tempted, and you have evidence if reconciliation fails.</li>
+            <li><strong>Limit cash floats:</strong> 200-300 zł till float; bank deposit nightly. Less cash on premises = less shrinkage.</li>
+            <li><strong>Push BLIK over cash:</strong> instant settlement, lower fees than card, no shrinkage. Promote with on-screen QR.</li>
+            <li><strong>Track cash share vs neighborhood:</strong> tourist areas trend 40%+ cash, office areas under 10%. Set your expectation by location.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> share of on-site revenue paid in cash (0-100%). Default 15% for Warsaw urban; higher in tourist areas.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> cardShare = 1 − cashShare. Card fee applies only to cardShare × on-site revenue.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>PL 2026 norms:</strong> 10-15% in central Warsaw/Kraków, 20-35% in tourist districts (Stare Miasto, Kazimierz), 5-10% in office-heavy pitches.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> NBP cash-usage reports, Polish retail-payments studies, owner-operator till data.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> cash shrinkage / theft. Add 2-5% to your cash-channel COGS effectively, or use the dedicated Waste% field to capture it.</p>
+        </Methodology>
       </>
     ),
   },
@@ -5591,6 +5607,22 @@ const HELP = {
             you&apos;re effectively running their business with your kitchen.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Cap Glovo at 30-35%:</strong> beyond that, the platform owns your demand and can squeeze commission. Build direct channels.</li>
+            <li><strong>Don&apos;t list low-margin SKUs:</strong> Margherita on Glovo at 25% commission earns nothing. Restrict the menu to mains 50+ zł.</li>
+            <li><strong>Surcharge Glovo orders:</strong> PL allows menu-price differentiation between channels. Many ops add 10-15% to Glovo prices to net the commission.</li>
+            <li><strong>Run direct delivery within 2 km:</strong> own driver + 5-8 zł fee retains all the margin Glovo would take.</li>
+            <li><strong>In-app loyalty pulls customers off Glovo:</strong> 5% off via your own app costs you 5%; saves you 25% Glovo commission. Net +20pp margin per converted order.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> share of orders via Glovo (0-100%). Excluded from on-site card-fee math; uses its own commission rate.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> Glovo channel revenue = orders × ticket × glovoShare. Glovo channel fee = revenue × glovoCommission. Margin gap vs on-site ≈ (glovoCommission − onSiteCardFee).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>PL 2026 norms:</strong> Glovo commission 25-30% depending on tier; some merchants negotiate to 22% at 300+ orders/week.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Glovo merchant agreements, food-delivery industry reports (KPMG, Roland Berger).</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> incremental demand (some Glovo orders wouldn&apos;t exist without the platform). The model treats Glovo orders as substitutes for on-site; check your real data — incremental share might be 30-50%.</p>
+        </Methodology>
       </>
     ),
   },
@@ -5612,6 +5644,22 @@ const HELP = {
             you cross their threshold.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Hit a volume tier:</strong> Glovo tiers at ~50 / 200 / 500 orders/week. Each unlocks a 1-3 pp discount.</li>
+            <li><strong>Negotiate quarterly:</strong> account managers respond to data. Show your 30-day growth, ask for the next tier rate.</li>
+            <li><strong>Bundle Glovo + Wolt in negotiation:</strong> &quot;I&apos;ll commit to exclusivity for a year at 22%&quot; sometimes works.</li>
+            <li><strong>Promo periods are negotiable:</strong> Glovo runs co-marketing campaigns where they discount their take in exchange for menu placement. Always ask.</li>
+            <li><strong>Watch effective rate, not list rate:</strong> Glovo charges advertising fees, marketing co-fund, etc. Calculate fee ÷ revenue monthly.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> Glovo commission % (default 27% blended). Applied to Glovo channel revenue only.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> monthly Glovo fee = orders × ticket × glovoShare × glovoCommission.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Tiers (PL 2024-2025):</strong> 30% baseline → 27% at ~50 orders/week → 24% at ~200/wk → 22% at ~500/wk. Plus optional advertising co-fund.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Glovo merchant rate cards 2024, public reseller agreements, food-delivery industry analysis.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> advertising spend on the platform (some merchants pay 5-10% extra for featured placement). Add as a marketing fixed cost.</p>
+        </Methodology>
       </>
     ),
   },
@@ -5633,6 +5681,22 @@ const HELP = {
             will), Wolt covers the gap.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>List on both Glovo + Wolt:</strong> redundancy beats lock-in. If one platform&apos;s app crashes (it will), the other covers the gap.</li>
+            <li><strong>Wolt customers tend to attach better:</strong> the app design emphasises sides + drinks more than Glovo. Push higher-margin SKUs first on Wolt.</li>
+            <li><strong>Wolt&apos;s service area is smaller:</strong> if your pitch isn&apos;t central Warsaw / Kraków / Gdańsk, Wolt might not even cover you. Verify before listing.</li>
+            <li><strong>Use Wolt for evening / dinner crowd:</strong> empirically Wolt indexes higher for dinner orders, Glovo for lunch.</li>
+            <li><strong>Cross-promote:</strong> mention Wolt-only deals on Glovo-customer receipts (drives the lower-fee channel).</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> share of orders via Wolt (0-100%). Treated identically to Glovo but with its own commission tier.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> Wolt channel revenue = orders × ticket × woltShare. Wolt channel fee = revenue × woltCommission.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>PL 2026 norms:</strong> Wolt is smaller in PL (~25-30% of food-delivery market vs Glovo&apos;s 55-60%). Commission typically 22-30%, slightly cheaper than Glovo on average.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Wolt merchant agreements, food-delivery market-share reports (UCE, OECD).</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> overlap between Glovo + Wolt customers (some customers use both — the model assumes channel exclusivity which understates platform reach).</p>
+        </Methodology>
       </>
     ),
   },
