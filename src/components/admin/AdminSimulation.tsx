@@ -2387,7 +2387,17 @@ function AttachLeverHelp({ kind, lever, ordersPerDay, daysOpenPerMonth }: Attach
   const marginZl = sellZl - cogsZl;
 
   const currentPct = Math.max(0, Math.min(1, lever.attachPct));
-  const targetPct = Math.min(1, currentPct + profile.defaultBumpPp);
+  // Cap the +bump target at the lever's realistic attach ceiling (not 100%).
+  // This captures diminishing returns: at 25% coffee attach with a ceiling of
+  // 55%, the +15 pp bump fits whole (target → 40%). At 50% attach the same
+  // bump runs into the ceiling, so target clamps to 55% and the effective
+  // bump shrinks to 5 pp — accurately reflecting how much real upside is
+  // left. When currentPct ≥ ceiling, deltaPp falls to 0 and the story
+  // switches to its "already at cap" narrative.
+  const targetPct = Math.max(
+    currentPct,
+    Math.min(profile.attachCeiling, currentPct + profile.defaultBumpPp),
+  );
   const deltaPp = Math.max(0, targetPct - currentPct);
 
   const extraUnitsPerDay = ordersPerDay * deltaPp;
@@ -2414,6 +2424,14 @@ function AttachLeverHelp({ kind, lever, ordersPerDay, daysOpenPerMonth }: Attach
   const showLowNote = sellZl > 0 && sellZl < profile.priceFloor;
   const showHighNote = sellZl > profile.priceCeiling;
   const showAttachNote = currentPct > profile.attachCeiling;
+  // When the +bump would push past the realistic attach ceiling, the target
+  // is clamped — surface a short hint so a shrinking bump number reads as
+  // "ceiling, not bug". Skipped when currentPct ≥ ceiling (handled by the
+  // at-cap story branch and the orange ceiling note instead).
+  const showCapHint =
+    deltaPp > 0 &&
+    currentPct < profile.attachCeiling &&
+    currentPct + profile.defaultBumpPp > profile.attachCeiling;
   const noteStyle = {
     margin: "8px 0 0",
     padding: "6px 8px",
@@ -2427,6 +2445,20 @@ function AttachLeverHelp({ kind, lever, ordersPerDay, daysOpenPerMonth }: Attach
       {profile.intro}
       <PlainTalk>
         {profile.story(values)}
+        {showCapHint && (
+          <p
+            style={{
+              margin: "8px 0 0",
+              fontSize: 12.5,
+              fontStyle: "italic",
+              opacity: 0.8,
+            }}
+          >
+            The bump stops at {Math.round(profile.attachCeiling * 100)}% — that&apos;s
+            the realistic ceiling for this lever. Past that, you&apos;re not pushing
+            attach, you&apos;re inventing demand.
+          </p>
+        )}
         {showLowNote && <p style={noteStyle}>{profile.lowNote(sellZl)}</p>}
         {showHighNote && <p style={noteStyle}>{profile.highNote(sellZl)}</p>}
         {showAttachNote && (
