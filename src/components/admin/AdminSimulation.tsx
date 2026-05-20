@@ -1607,9 +1607,12 @@ function PlainTalk({ children }: { children: ReactNode }) {
           letterSpacing: 0.6,
           color: "rgb(194, 65, 12)",
           marginBottom: 6,
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
         }}
       >
-        In plain terms
+        <Sparkles style={{ width: 12, height: 12 }} aria-hidden /> In plain terms
       </div>
       {children}
     </div>
@@ -1682,6 +1685,43 @@ function Methodology({ children }: { children: ReactNode }) {
   );
 }
 
+/** Slate/navy callout for the deeper CFA-3 / institutional analysis tier.
+ *  Sits between the 1-2 sentence brief description and the storytelling
+ *  PlainTalk callout. Carries the rigorous "why it matters, how to think
+ *  about it" content — benchmarks, formulas, structural commentary. */
+function InstitutionalAnalysis({ children }: { children: ReactNode }) {
+  return (
+    <div
+      style={{
+        marginTop: 10,
+        padding: "10px 12px",
+        background: "rgba(71, 85, 105, 0.06)",
+        borderLeft: "3px solid rgb(71, 85, 105)",
+        borderRadius: 6,
+        fontSize: 13.5,
+        lineHeight: 1.55,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 700,
+          textTransform: "uppercase",
+          letterSpacing: 0.6,
+          color: "rgb(30, 41, 59)",
+          marginBottom: 6,
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+        }}
+      >
+        <Scale style={{ width: 12, height: 12 }} aria-hidden /> Institutional analysis
+      </div>
+      {children}
+    </div>
+  );
+}
+
 // --- Dynamic attach-lever help -------------------------------------------
 //
 // Each attach lever's InfoButton popup keeps the storytelling voice of the
@@ -1731,7 +1771,13 @@ interface NarrativeValues {
 
 interface AttachHelpProfile {
   title: string;
-  intro: ReactNode;
+  /** 1-2 sentence brief — what the lever IS at a glance. Renders as
+   *  plain prose at the top of the popup. */
+  briefDescription: ReactNode;
+  /** Deeper CFA-3 / institutional commentary — why the lever matters,
+   *  margin economics, trade-offs, benchmarks. Renders inside the
+   *  slate-tinted InstitutionalAnalysis callout. */
+  institutionalAnalysis: ReactNode;
   /** Storytelling body of the IN PLAIN TERMS callout. Live values are
    *  woven into the narrative voice, not formatted as a math recap.
    *  Each story handles three branches internally: normal,
@@ -1791,18 +1837,23 @@ function fmtUnits(n: number): string {
 const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
   coffee: {
     title: "Coffee attach rate",
-    intro: (
-      <>
-        <p>
-          Share of orders that add an espresso, cappuccino or similar.
-          25% means one in four customers takes coffee.
-        </p>
-        <p>
-          <strong>Why it&apos;s gold:</strong> coffee is ~88% margin (an espresso uses
-          about 1 zł of beans + milk for a 9 zł sell price). Every +10 pp on attach
-          lifts your average ticket by ~0.90 zł at almost no extra cost.
-        </p>
-      </>
+    briefDescription: (
+      <p>
+        Share of orders that add an espresso, cappuccino or similar.
+        25% means one in four customers takes coffee.
+      </p>
+    ),
+    institutionalAnalysis: (
+      <p style={{ margin: 0 }}>
+        <strong>Why it&apos;s gold:</strong> coffee is ~88% gross margin (an
+        espresso uses about 1 zł of beans + milk for a 9 zł sell price).
+        Every +10 pp on attach lifts your average ticket by ~0.90 zł at
+        almost no extra COGS — only the variable-leakage stack (payment
+        fees, waste, refunds, loyalty burn) and CIT pare it back. Among
+        all attach levers this is the highest contribution-per-złoty-of-
+        revenue because the marginal kitchen / labour cost is near zero
+        (espresso is parallel-station work, not on the pizza line).
+      </p>
     ),
     story: (v) => {
       if (v.marginZl <= 0) {
@@ -1942,18 +1993,23 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
   },
   dessert: {
     title: "Dessert attach rate",
-    intro: (
-      <>
-        <p>
-          Share of orders that add tiramisu, cannoli or panna cotta. 10–15% is
-          typical; can push to 25% with strong dessert merchandising.
-        </p>
-        <p>
-          <strong>Why it matters:</strong> desserts are ~28% COGS — better than
-          pizza&apos;s 30%. So more dessert attach lifts AOV <em>and</em> improves
-          the blended margin %.
-        </p>
-      </>
+    briefDescription: (
+      <p>
+        Share of orders that add tiramisu, cannoli or panna cotta.
+        10–15% is typical; aggressive merchandising can push to 25%.
+      </p>
+    ),
+    institutionalAnalysis: (
+      <p style={{ margin: 0 }}>
+        <strong>Why it matters:</strong> desserts run ~28% COGS — better
+        than pizza&apos;s 30% — so more dessert attach lifts AOV{" "}
+        <em>and</em> improves the blended gross-margin %. Two-axis benefit:
+        AOV up, COGS% down. Best when paired with a coffee attach push
+        (dessert + espresso bundle eliminates the second decision cycle
+        and stacks two high-margin items on one ticket). Casual-Italian
+        benchmark sits at 12-18% steady-state; dinner-led concepts can
+        sustain 25-30%.
+      </p>
     ),
     story: (v) => {
       if (v.marginZl <= 0) {
@@ -2081,18 +2137,23 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
   },
   antipasti: {
     title: "Antipasti / starter attach",
-    intro: (
-      <>
-        <p>
-          Share of dine-in tables that order a starter — bruschetta (~22 zł),
-          burrata (~28 zł), olives, mortadella plate. 5–10% baseline, much
-          higher in evening service.
-        </p>
-        <p>
-          <strong>Trade-off:</strong> bigger ticket but adds prep load on the line —
-          make sure the antipasti station can keep up before pushing this lever.
-        </p>
-      </>
+    briefDescription: (
+      <p>
+        Share of dine-in tables that order a starter — bruschetta
+        (~22 zł), burrata (~28 zł), olives, mortadella plate. 5–10%
+        baseline, much higher in evening service.
+      </p>
+    ),
+    institutionalAnalysis: (
+      <p style={{ margin: 0 }}>
+        <strong>Trade-off — ticket lift vs station load.</strong> Antipasti
+        carry ~32% COGS (higher than coffee but lower than pasta primo)
+        and order timing matters: served while pizza bakes, the starter
+        doesn&apos;t cannibalise the main attach. But the antipasti station
+        must absorb the marginal prep load — if it slows pizza out, the
+        complaint cost exceeds the starter margin. Lever is dine-in only;
+        for takeaway-heavy concepts the lever effectively doesn&apos;t apply.
+      </p>
     ),
     story: (v) => {
       if (v.marginZl <= 0) {
@@ -2219,19 +2280,23 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
   },
   aperitivo: {
     title: "Aperitivo / wine attach",
-    intro: (
-      <>
-        <p>
-          Share of evening orders that include an Aperol Spritz, glass of wine,
-          beer or limoncello. Highest-margin attach we can model — drinks are
-          ~22% COGS at 22 zł a glass.
-        </p>
-        <p>
-          <strong>Requires an alcohol licence.</strong> Use this lever to model
-          &quot;what would happen if we got licensed?&quot; before paying the
-          ~5 000 zł/year fee.
-        </p>
-      </>
+    briefDescription: (
+      <p>
+        Share of evening orders that include an Aperol Spritz, glass of
+        wine, beer or limoncello. The highest-margin attach we can model.
+      </p>
+    ),
+    institutionalAnalysis: (
+      <p style={{ margin: 0 }}>
+        <strong>Highest-margin lever, lowest barrier to AOV lift.</strong>{" "}
+        Drinks run ~22% COGS at 22 zł a glass — a 78% gross margin
+        structure that pre-leakage is only beaten by espresso. Requires an
+        alcohol licence (~5,000 zł/year), which adds a fixed-cost line but
+        is recovered in ~6-8 weeks of attach revenue at typical PL casual-
+        Italian dinner volumes. Use this lever to model the &quot;what
+        would happen if we got licensed?&quot; question before signing.
+        Evenings-only effect; lunch attach is near zero.
+      </p>
     ),
     story: (v) => {
       if (v.marginZl <= 0) {
@@ -2359,18 +2424,24 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
   },
   premiumToppings: {
     title: "Premium toppings attach",
-    intro: (
-      <>
-        <p>
-          Share of pizzas that add buffalo mozzarella (+6 zł), &apos;nduja (+7 zł),
-          truffle oil (+9 zł) etc. Charge ~3 zł of marginal food cost, capture
-          the rest as margin.
-        </p>
-        <p>
-          <strong>Where the money is:</strong> ~50% incremental margin — among the
-          cheapest ways to lift AOV.
-        </p>
-      </>
+    briefDescription: (
+      <p>
+        Share of pizzas that add buffalo mozzarella (+6 zł), &apos;nduja
+        (+7 zł), truffle oil (+9 zł), etc. ~3 zł marginal food cost,
+        the rest is margin.
+      </p>
+    ),
+    institutionalAnalysis: (
+      <p style={{ margin: 0 }}>
+        <strong>~50% incremental gross margin — cheapest AOV lever.</strong>{" "}
+        No kitchen-time penalty (the topping goes on the same pizza,
+        same oven cycle, same labour minute), no incremental packaging,
+        no second checkout decision. The only ceiling is menu cognitive
+        load — past ~4-5 premium options the operator gets diminishing
+        returns because customers default to plain. Pair with menu
+        engineering (place the highest-margin premium combo second-from-
+        top per Kasavana / Smith to anchor decisions).
+      </p>
     ),
     story: (v) => {
       if (v.marginZl <= 0) {
@@ -2499,18 +2570,25 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
   },
   pastaPrimo: {
     title: "Pasta primo attach",
-    intro: (
-      <>
-        <p>
-          Share of dine-in tables that order a pasta course alongside the pizza
-          (Italian-style: primo = pasta first, then pizza as secondo). Average
-          32 zł, ~26% COGS.
-        </p>
-        <p>
-          <strong>Big AOV bump.</strong> Best lever where seating allows — most
-          relevant for indoor locations, less so for a takeaway truck.
-        </p>
-      </>
+    briefDescription: (
+      <p>
+        Share of dine-in tables that order a pasta course alongside the
+        pizza (Italian-style: primo = pasta first, then pizza as secondo).
+        Avg 32 zł, ~26% COGS.
+      </p>
+    ),
+    institutionalAnalysis: (
+      <p style={{ margin: 0 }}>
+        <strong>Biggest single-lever AOV bump — but only where seating
+        allows.</strong> A 32 zł incremental ticket through a separate
+        course adds materially more than coffee or dessert in absolute
+        zł, but it requires a pasta station (separate pan + burner +
+        cook minute per order) so the marginal labour cost is non-zero.
+        Best for indoor dinner-led concepts; for a takeaway truck without
+        seating, model attach &lt; 5% — the lever effectively doesn&apos;t
+        apply. Compounds with antipasti and aperitivo for a full
+        trattoria-style ticket structure.
+      </p>
     ),
     story: (v) => {
       if (v.marginZl <= 0) {
@@ -2740,7 +2818,8 @@ function AttachLeverHelp({
 
   return (
     <>
-      {profile.intro}
+      {profile.briefDescription}
+      <InstitutionalAnalysis>{profile.institutionalAnalysis}</InstitutionalAnalysis>
       <PlainTalk>
         {profile.story(values)}
         {showLowNote && <p style={noteStyle}>{profile.lowNote(sellZl)}</p>}
