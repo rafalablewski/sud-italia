@@ -8105,11 +8105,11 @@ export function defaultSimulationScenario(): SimulationScenario {
 /** Behavioral levers tuned to a Neapolitan pizza truck in Warsaw 2026. */
 export function defaultSimulationAssumptions(): SimulationAssumptions {
   // Every lever ships DISABLED by default. The operator opts in
-  // explicitly per lever (or via a Menu scenario preset, which re-
-  // enables the relevant attach lever as it loads its preset values).
-  // Calibrated values (attachPct, prices, COGS%) stay populated so the
-  // levers spring to life with sensible defaults the moment they're
-  // toggled on — no hidden 0% trap.
+  // explicitly per lever — including after loading a Menu Scenario
+  // preset, which now only sets the lever VALUES (attachPct, ticket,
+  // COGS) and leaves enabled state unchanged. Calibrated values stay
+  // populated so each lever springs to life with sensible numbers the
+  // moment it's toggled on — no hidden 0% trap.
   return {
     coffeeAttach:           { enabled: false, attachPct: 0.25, avgPriceGrosze: 900,  cogsPct: 0.12 },
     dessertAttach:          { enabled: false, attachPct: 0.12, avgPriceGrosze: 1600, cogsPct: 0.28 },

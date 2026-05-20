@@ -9519,36 +9519,37 @@ export function AdminSimulation() {
       daysOpenPerMonth: preset.daysOpenPerMonth,
       avgTicketGrosze: preset.avgTicketGrosze,
       cogsPct: preset.cogsPct,
+      // Preset sets the attach % VALUES but does NOT auto-enable the levers.
+      // Every behavior assumption ships disabled by default; the operator
+      // opts in explicitly by toggling each lever. Otherwise loading a
+      // preset silently flips on six attach levers + their effect on the
+      // P&L, which surprised operators who expected the preset to just
+      // re-shape the base ticket / volume / COGS. Enabled state is
+      // preserved if a lever was already on.
       assumptions: {
         ...(s.assumptions ?? DEFAULT_ASSUMPTIONS),
         coffeeAttach: {
           ...(s.assumptions?.coffeeAttach ?? DEFAULT_ASSUMPTIONS.coffeeAttach!),
-          enabled: true,
           attachPct: preset.attach.coffee,
         },
         dessertAttach: {
           ...(s.assumptions?.dessertAttach ?? DEFAULT_ASSUMPTIONS.dessertAttach!),
-          enabled: true,
           attachPct: preset.attach.dessert,
         },
         antipastiAttach: {
           ...(s.assumptions?.antipastiAttach ?? DEFAULT_ASSUMPTIONS.antipastiAttach!),
-          enabled: true,
           attachPct: preset.attach.antipasti,
         },
         aperitivoAttach: {
           ...(s.assumptions?.aperitivoAttach ?? DEFAULT_ASSUMPTIONS.aperitivoAttach!),
-          enabled: true,
           attachPct: preset.attach.aperitivo,
         },
         premiumToppingsAttach: {
           ...(s.assumptions?.premiumToppingsAttach ?? DEFAULT_ASSUMPTIONS.premiumToppingsAttach!),
-          enabled: true,
           attachPct: preset.attach.premiumToppings,
         },
         pastaPrimoAttach: {
           ...(s.assumptions?.pastaPrimoAttach ?? DEFAULT_ASSUMPTIONS.pastaPrimoAttach!),
-          enabled: true,
           attachPct: preset.attach.pastaPrimo,
         },
       },
