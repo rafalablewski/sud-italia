@@ -8156,6 +8156,21 @@ const HELP = {
             efficient than you give them credit for.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Use modelled vs observed gap as the diagnostic:</strong> if observed is much higher, find the bottleneck (prep, peel, plate-up).</li>
+            <li><strong>Calibrate per-SKU prep time:</strong> Margherita 90s, Quattro Stagioni 150s, pasta 240s. Wrong per-SKU times = wrong overall model.</li>
+            <li><strong>Re-run after menu changes:</strong> adding pasta primo lifts modelled time by 60-90s. Make sure observed catches up.</li>
+            <li><strong>If observed &lt; modelled, the team is heroes:</strong> figure out why (better mise-en-place? smaller portions?) and document.</li>
+            <li><strong>If modelled is &gt; 12 min, your menu is too complex:</strong> simplify before launching, not after.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> modelled ticket time = base oven cycle + Σ per-attach prep seconds × attach%. Each lever adds prep time proportional to its attach rate.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Default prep additions (seconds):</strong> dessert +20s, antipasti +60s, aperitivo +30s, premium toppings +15s, pasta primo +90s. Coffee +0s (parallel station).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> kitchen-throughput studies, pizzeria operations time-and-motion data.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> queue effects, batch optimisation (multiple orders prepped together can be faster than serial). The model assumes serial flow; well-run kitchens are partially parallel.</p>
+        </Methodology>
       </>
     ),
   },
@@ -8174,6 +8189,21 @@ const HELP = {
             truth — the model lies, this doesn&apos;t.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Measure weekly:</strong> not just at peak. Off-peak should be ~5-6 min; if it&apos;s 8+ already, you have a process issue.</li>
+            <li><strong>Display the running median on KDS:</strong> creates team awareness + healthy competition.</li>
+            <li><strong>Cross-reference with bad reviews:</strong> Google reviews mentioning &quot;slow&quot; vs your observed median — direct correlation above 12 min.</li>
+            <li><strong>Per-station timing:</strong> the slowest station (pasta? assembly?) sets the overall pace. Fix the slowest.</li>
+            <li><strong>Track P95, not just P50:</strong> a few 20-minute outliers ruin individual experiences. Reduce variance, not just the median.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> observed ticket time = P50 (median) of order-placement to order-ready timestamps from KDS event log.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> ≤ 6 min QSR-class; 6-8 min comfortable; 8-12 min slipping; &gt; 12 min losing customers.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> KDS log data, customer-satisfaction surveys cross-referenced with wait time.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> delivery customer perception (Glovo customers tolerate longer because they aren&apos;t watching the kitchen clock). Track on-site separately.</p>
+        </Methodology>
       </>
     ),
   },
@@ -8196,6 +8226,21 @@ const HELP = {
             the monthly bleed.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Visible queue = lost queue:</strong> if customers can see &gt; 8 people waiting, ~25% walk. Hide the line or break it up visually.</li>
+            <li><strong>Reservation system for the peak hour:</strong> 18:45 / 19:15 / 19:45 slots. Smooths arrivals.</li>
+            <li><strong>SMS &quot;ready&quot; notifications:</strong> let customers wait at the pub next door, come back when buzzed. Adds 20-30% effective capacity.</li>
+            <li><strong>Off-peak incentive:</strong> 10% off orders before 18:00 or after 21:00 shifts ~15% of demand.</li>
+            <li><strong>Quantify the loss:</strong> use queue × wait-time abandonment rate × ticket value to size the monthly cost of inaction.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> peak-hour queue = max(0, peak_hour_orders − realistic_oven_capacity). Customers arriving above capacity who walk.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy range:</strong> 0 lost orders/hr at peak = perfect calibration. 1-3/hr = manageable. &gt; 5/hr = expansion required.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> queueing-theory literature (Erlang, Maister&apos;s laws of service), QSR throughput studies.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> partial-balking (customers who see the queue and leave without trying). Real lost orders may be 1.5-2× the modelled overflow.</p>
+        </Methodology>
       </>
     ),
   },
@@ -8216,6 +8261,21 @@ const HELP = {
             week.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Target ≤ 3 min wait off-peak, ≤ 6 min peak:</strong> sets customer expectation, sustainable service quality.</li>
+            <li><strong>Set expectation up front:</strong> &quot;your order in ~7 minutes&quot; — when set, customers tolerate 50% longer than ambient wait without complaint (Maister&apos;s law).</li>
+            <li><strong>Give them something to do:</strong> menu QR codes, small bites samples, table-side coloring sheets. Perceived wait drops by 30-40%.</li>
+            <li><strong>Queue Manager (one staff role) at peak:</strong> takes orders early, answers questions, manages perceived wait. Pays back in saved walkouts.</li>
+            <li><strong>Wait time &gt; ticket time:</strong> wait time is queue + ticket time. Reduce queue first; ticket time is harder.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> wait time = queue_length × per-order ticket time. Queue derived from arrival rate vs serving rate.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Conversion sensitivity:</strong> 0-5 min wait: 95% complete; 5-10 min: 70%; 10-15 min: 40%; &gt; 15 min: ~20%. Polish QSR research.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> queueing theory, customer-experience research (Maister, Berry), QSR walkout-rate studies.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> day-part tolerance (lunch crowd has lower tolerance than dinner; tourists higher than locals). Calibrate per channel/daypart.</p>
+        </Methodology>
       </>
     ),
   },
