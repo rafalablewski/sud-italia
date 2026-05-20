@@ -6162,6 +6162,22 @@ const HELP = {
             <strong> 40%</strong> is the sweet spot for most trucks.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Fixed core + flexible edges:</strong> 2-3 fixed pizzaiolos, 1-2 cooks; flex part-timers for peaks. Keeps quality + flex.</li>
+            <li><strong>Use student-friendly hours:</strong> students want 18-22h shifts on weekdays — perfect for the dinner peak.</li>
+            <li><strong>Call-off rules in writing:</strong> &quot;you may be called off with 4h notice during defined slow windows&quot;. Sets expectations early.</li>
+            <li><strong>Pay slightly above market for flex:</strong> a part-timer paid 38 zł/h vs market 35 zł/h reduces turnover, which matters more than the 8% premium.</li>
+            <li><strong>Cross-train fixed staff:</strong> they cover absence + flex roles without scheduling chaos.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> labor flex % (0-100). Default 40% (QSR norm — mix of fixed core + variable part-timers).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> variable_labor = labor × laborFlex × max(0, (orders/day − laborAnchor) ÷ laborAnchor). Adds proportionally above anchor; doesn&apos;t subtract below.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Industry ranges:</strong> 20-30% world-class chains (Domino&apos;s, Telepizza); 40-50% independent casual-Italian; 70%+ fast-casual w/ heavy part-time.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> NRA labor benchmarks, Polish fast-casual chain published reports, gig-economy gastronomic studies.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> minimum staffing constraints (you can&apos;t run a kitchen with 1 person no matter how slow). Real labor has a floor; the model treats variability as continuous.</p>
+        </Methodology>
       </>
     ),
   },
@@ -6183,6 +6199,22 @@ const HELP = {
             fixed crew.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Set anchor to your typical orders/day:</strong> avg over 30 days. Not your good days, not your bad days.</li>
+            <li><strong>Re-anchor quarterly:</strong> if volume grows steadily, your &quot;normal&quot; shifts up. Keep the anchor honest.</li>
+            <li><strong>Anchor too low = overstated labor scaling:</strong> the model will project huge labor inflation as orders grow. Recalibrate.</li>
+            <li><strong>Anchor too high = understated labor for growth:</strong> the model assumes you have spare capacity that doesn&apos;t exist. Budget more.</li>
+            <li><strong>Tie to schedule:</strong> if your roster is sized for 80, set anchor=80. Match the model to your real ops.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> the orders/day for which the current labor mix is sized. Default = base orders/day.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> anchor is the reference point against which variable labor scales (see laborFlex methodology).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Best practice:</strong> set to the order volume your current schedule is built around. Don&apos;t use scenario projections; use historical actuals.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> labor scheduling literature, restaurant ops case studies.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> seasonal anchor shift (summer roster vs winter roster). The model uses one anchor across the year — use the seasonality card for volume swings.</p>
+        </Methodology>
       </>
     ),
   },
@@ -6203,6 +6235,22 @@ const HELP = {
             This single percentage often decides whether you need a second oven.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Measure your peak hour from POS:</strong> not your perception. Friday 19h vs 20h vs Saturday 20h — find the worst hour, design capacity for it.</li>
+            <li><strong>Flatten the peak with pre-orders:</strong> push customers to book 18:30 or 21:00 slots with a small incentive (free coffee).</li>
+            <li><strong>Pre-bake low-attach items:</strong> Margherita / Marinara can pre-bake 5min early, finish in oven on order. Lifts capacity at peak.</li>
+            <li><strong>Limited menu at peak:</strong> 3-4 SKUs only during 19-21h. Slashes per-pizza time, lifts throughput.</li>
+            <li><strong>Capacity = peak × hour, not avg × day:</strong> when scaling, the peak hour is the binding constraint. Plan investments against it.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> % of daily orders concentrated in the single busiest hour. Default 18%.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> peak_hour_orders = orders/day × peakHourShare. Saturation = peak_hour_orders ÷ pizzasPerHour. If saturation &gt;1.0, demand exceeds capacity = lost orders.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Realistic ranges:</strong> 12-15% spread-load lunch-and-dinner; 18-22% dinner-led casual; 25-32% special-event / weekend-only; bar / aperitivo can hit 30%+ in the 18-20h window.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish POS data composites, NRA hourly-mix studies, restaurant capacity-planning literature (Kasavana).</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> within-hour volatility (most peak hours have a 15-min mega-peak). The model assumes flat distribution within the hour, which under-states real saturation.</p>
+        </Methodology>
       </>
     ),
   },
@@ -6224,6 +6272,22 @@ const HELP = {
             &quot;capacity&quot; looks bigger than it actually is.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Calibrate from your menu mix:</strong> if 30% of orders are pasta primo, your multiplier is ~1.25. If 50%, ~1.5. Mix-weight your way to the right number.</li>
+            <li><strong>Separate stations help:</strong> a dedicated pasta cook + pan + burner reduces the effective complexity drag — invest if pasta attach exceeds 20%.</li>
+            <li><strong>Simplify the slow items:</strong> if antipasti needs assembly + plating, pre-portion to slash 60s/order at the line.</li>
+            <li><strong>Audit your slowest SKU monthly:</strong> use POS prep-time stamps. Cut or simplify the 90%+ time outliers.</li>
+            <li><strong>Mix-aware roster:</strong> peak with high pasta attach needs more line cooks, not more pizzaiolos. Match labor to the actual mix.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> effective-capacity multiplier (1.0 = pizza-only). Default 1.0; raise to 1.4-1.6 for pasta-heavy menus.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> effective pizzas/hour = pizzasPerHour ÷ prepComplexity. So a 70/hr line × 1.4 complexity = 50 effective orders/hr.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Typical calibration:</strong> pizza-only 1.00, pizza+drinks 1.05, +dessert/antipasti 1.15, +pasta primo 1.40, full-menu Italian 1.55+.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> kitchen-throughput studies, Italian-restaurant ops literature (Pomodoro Foundation training materials).</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> per-station bottlenecks (the pasta station might saturate before the pizza station). The model derates everything uniformly; real ops can have one station idle while another&apos;s slammed.</p>
+        </Methodology>
       </>
     ),
   },
