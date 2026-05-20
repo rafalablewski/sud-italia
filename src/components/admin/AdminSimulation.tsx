@@ -6451,6 +6451,22 @@ const HELP = {
             Friday rush.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Stopwatch the actual time:</strong> measure 10 pizzas at peak. The real number is usually 15-30% longer than the recipe says.</li>
+            <li><strong>Hotter oven = faster cycle:</strong> wood-fired Neapolitan at 480°C bakes in 60-75s; gas at 420°C is 90-110s.</li>
+            <li><strong>Watch the dough hydration:</strong> wetter dough cooks faster but is harder to shape. 60-65% hydration is the Neapolitan sweet spot.</li>
+            <li><strong>Recalibrate seasonally:</strong> winter cold-start ovens take longer to recover between bakes. Adjust cycle time in Dec-Feb.</li>
+            <li><strong>If &gt;120s, audit the bake:</strong> peel technique, oven door discipline, dough drag — all add seconds.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> bake cycle in seconds. Default 90s (Neapolitan).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> theoretical pizzas/hour = pizzasPerBake × (3600 ÷ cycleTime) × ovenEfficiency.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Typical cycles:</strong> Neapolitan wood-fired 60-90s @ 450-480°C; gas deck 90-120s @ 350-420°C; conveyor 4-6 min @ 280-310°C (low-temp, high-throughput).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> AVPN standards, oven-manufacturer specs (Ferrara, Marra, Forno Bravo), pizzeria operations literature.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> oven recovery time after high-volume bakes (wood-fired ovens cool between rushes). Real cycle time creeps up in sustained peaks.</p>
+        </Methodology>
       </>
     ),
   },
@@ -6473,6 +6489,22 @@ const HELP = {
             limp along at 18%.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Add a runner to free the pizzaiolo:</strong> a runner does pre-build, plate-up, counter handoff. Lifts efficiency 4-8 pp.</li>
+            <li><strong>Dedicated cashier at peak:</strong> separating order-taking from production lifts 2-4 pp.</li>
+            <li><strong>Mise-en-place discipline:</strong> pre-portioned cheese, sliced toppings, ready dough — all save seconds per build.</li>
+            <li><strong>Measure your real efficiency monthly:</strong> tickets baked ÷ theoretical. Watch the trend; if it&apos;s slipping, retrain.</li>
+            <li><strong>Veterans hit 28-32%, newbies 15-20%:</strong> training is the highest-ROI investment in throughput.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> % of theoretical bake capacity actually achieved. Default 22%.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> realistic pizzas/hour = pizzasPerBake × (3600 ÷ cycleTime) × ovenEfficiency. Captures the gap between &quot;what the oven could do&quot; and &quot;what the pizzaiolo+oven combined actually do&quot;.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Realistic ranges:</strong> 15-20% first-week crews, 20-25% trained crew with single pizzaiolo, 28-35% multi-station with runner, 35-40% world-class chains with optimised mise-en-place.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> pizzeria operations time-and-motion studies, AVPN training data, owner-operator throughput audits.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> efficiency degradation late in shift (12+ hour shifts drop efficiency 5-10 pp by hour 10). Match shift-end with low-volume hours.</p>
+        </Methodology>
       </>
     ),
   },
@@ -6494,6 +6526,22 @@ const HELP = {
             include franchise overhead you don&apos;t actually have.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Unit 2 is the hardest:</strong> you carry HQ overhead for two units but supply discounts haven&apos;t kicked in yet. Plan for 6-12 months of margin pressure.</li>
+            <li><strong>Don&apos;t open Unit 2 within 1 km of Unit 1:</strong> cannibalisation is real. Use the cannibalisation lever to model the overlap.</li>
+            <li><strong>Standardise before scaling:</strong> if your recipes/SOPs aren&apos;t documented, Unit 2 will not look like Unit 1. Customers notice.</li>
+            <li><strong>Choose franchise vs corporate per unit:</strong> franchise = lower capex + royalty income; corporate = full margin + full risk. Plan the mix.</li>
+            <li><strong>5 units is the magic number:</strong> below 5, HQ overhead drags. Above 5, scale economics start working.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> total operating trucks. Single unit = 1; chain mode activates at 2+.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Where it flows:</strong> activates the fleet panel showing HQ overhead allocation, supply discounts (kicks in at supplyDiscountAt), commissary savings (kicks in at commissaryAt), cannibalisation drag, royalty income (if franchised).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Critical-mass thresholds (PL casual-Italian):</strong> Unit 2-3 are hardest (cost layered without scale). Unit 4-5 unlocks supplier discounts. Unit 6-10 unlocks commissary economics. Above 10 = real chain.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> franchise economics literature (Justis &amp; Judd, Khan), PL chain post-mortems (Pizza Hut PL, Da Grasso, Telepizza).</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> location-specific revenue variance (Unit 5 in Gdańsk might do 70% of Unit 1 in Warsaw). Set unit count for the fleet structure; manually adjust per-unit revenue in real plans.</p>
+        </Methodology>
       </>
     ),
   },
@@ -6516,6 +6564,22 @@ const HELP = {
             than the 5th.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Owner-operator the first 3:</strong> defer HQ overhead until unit 4-5. Owner doubles as regional manager.</li>
+            <li><strong>Outsource finance early:</strong> a fractional CFO at 4,000 zł/month beats hiring full-time at 15k until you&apos;re at 5+ units.</li>
+            <li><strong>Centralise the back-office:</strong> POS, marketing, accounting — one team across all units. Don&apos;t duplicate per-truck.</li>
+            <li><strong>Target HQ &lt; 5% of fleet revenue:</strong> above 5% is dragging unit-level profitability. Restructure or absorb at higher volume.</li>
+            <li><strong>Track HQ absorption monthly:</strong> as units grow, the % should fall. If it&apos;s rising, HQ growth is outpacing unit growth.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> monthly HQ overhead in zł (shared cost across all units).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> per-unit HQ overhead = hqOverhead ÷ unitCount. Deducted from each unit&apos;s EBITDA in the fleet panel.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>HQ overhead components:</strong> regional manager (~12-18k/mo), ops/finance/marketing leads (~10-15k each), shared software (~5-8k), accountant (~3-6k). Total typically 25-50k for a 5-10 unit chain.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish gastronomic chain financials, franchise system economics literature.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> step-function HQ hires. Going from 5 → 10 units doesn&apos;t double HQ — but going 10 → 20 might. Real HQ cost has staircase shape; the model treats it as linear allocation.</p>
+        </Methodology>
       </>
     ),
   },
