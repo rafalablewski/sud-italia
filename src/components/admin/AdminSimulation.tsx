@@ -1574,8 +1574,39 @@ function deriveArchetypes(s: SimulationScenario) {
 // --- Amateur-friendly explanations ---------------------------------------
 //
 // Every concept on this page has an InfoButton that opens a Dialog with
-// the matching entry below. Written for someone who's never run a P&L
-// before — short, concrete, with the formula and a worked example.
+// the matching entry below. Each entry pairs an institutional/CFA-level
+// explanation with a "plain terms" callout showing real-life examples and
+// how the lever moves the actual zł numbers.
+
+function PlainTalk({ children }: { children: ReactNode }) {
+  return (
+    <div
+      style={{
+        marginTop: 12,
+        padding: "10px 12px",
+        background: "rgba(234, 88, 12, 0.06)",
+        borderLeft: "3px solid rgb(234, 88, 12)",
+        borderRadius: 6,
+        fontSize: 13.5,
+        lineHeight: 1.55,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 700,
+          textTransform: "uppercase",
+          letterSpacing: 0.6,
+          color: "rgb(194, 65, 12)",
+          marginBottom: 6,
+        }}
+      >
+        In plain terms
+      </div>
+      {children}
+    </div>
+  );
+}
 
 const HELP = {
   // Inputs
@@ -1592,6 +1623,16 @@ const HELP = {
           this number roughly doubles revenue but only adds variable food cost — labor
           and rent are mostly fixed, so the extra orders are very profitable.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            The more pizzas you sell each day, the more money you keep. Growing from
+            <strong> 60 → 80 orders/day</strong> at 65 zł each is an extra
+            <strong> 1,300 zł/day in revenue</strong>. Because rent, electricity and most
+            of the team are the same whether you do 60 or 80, nearly the whole extra
+            ~900 zł/day drops to profit — about <strong>~25,000 zł more profit per
+            month</strong> from selling 20 more pizzas a day.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1612,6 +1653,15 @@ const HELP = {
           When the Menu mix card has weights, this field becomes display-only — the
           number is computed from how often each menu item sells.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Every extra złoty on the average bill is a złoty you earn without serving a
+            single extra person. Convince every customer to spend just <strong>5 zł
+            more</strong> (one espresso + a small tiramisu) on 80 orders/day and you&apos;ve
+            added <strong>~11,000 zł/month</strong> — same kitchen, same staff, same
+            hours.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1628,6 +1678,15 @@ const HELP = {
           <strong>Trade-off:</strong> 7-day operation maximises revenue but burns out
           staff. 6 days/week (~26 days/mo) is a sustainable sweet spot.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Each closed day is a day with zero revenue but rent still due. Going from
+            <strong> 28 → 26 days/month</strong> (closing two extra days for staff rest)
+            on a 200,000 zł/month truck costs ~14,000 zł in revenue — about
+            <strong> ~8,000 zł of lost profit</strong>. Often worth it if it stops your
+            best pizzaiolo from quitting; burnout costs more than two slow days.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1648,6 +1707,15 @@ const HELP = {
           When the Menu mix card is active, this number is computed from each
           item&apos;s actual recipe cost ÷ price, weighted by how often it sells.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            For every 100 zł a customer pays, ~30 zł is the ingredients you burned.
+            Shave just <strong>2 percentage points</strong> (better mozzarella supplier,
+            tighter end-of-shift waste) and you keep an extra 2 zł per 100 zł sold. On a
+            200,000 zł/month truck that&apos;s <strong>~4,000 zł more profit</strong> —
+            same pizza, smarter buying.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1670,6 +1738,15 @@ const HELP = {
           <strong>Target:</strong> total labor should be ≤ 30% of revenue. The
           KPI strip lower down flags red/amber/green.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Every hour someone is on the clock costs you money — even if no customer
+            walks in. If you&apos;ve got 2 staff during the dead 14:00–16:00 slot when
+            1 could handle it, you&apos;re paying <strong>~50 zł for nothing</strong>.
+            Cutting 4 wasted hours a week saves <strong>~800 zł/month</strong>, straight
+            to the bottom line.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1687,6 +1764,15 @@ const HELP = {
           point. If they go up by 1 000 zł/mo, you need more orders to cover them
           before you make any profit.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Fixed costs are the bills that arrive whether you sell 5 pizzas or 5,000.
+            If your rent jumps from <strong>8,000 → 10,000 zł/month</strong>, you need
+            to sell ~67 more pizzas every month (at ~30 zł of margin each) just to stay
+            even. That&apos;s why moving to a cheaper pitch — even one with 10% less
+            foot traffic — can be a winning trade.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1712,6 +1798,16 @@ const HELP = {
           After applying a preset you can still tweak any value — the preset
           is a starting point, not a lock-in.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Each preset is a different business model in disguise.
+            <strong> Takeaway Classic</strong> sells lots of cheap pizzas to lunch
+            crowds; <strong>Aperitivo Dinner</strong> sells fewer, bigger tickets with
+            wine in the evening. The same truck can earn
+            <strong> 60,000 vs 110,000 zł/month</strong> depending which menu shape
+            you build the team and pricing around.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1745,6 +1841,16 @@ const HELP = {
           Defaults are tuned to a Neapolitan truck in Warsaw 2026. Tune them to
           match your real attach data once you have it.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Instead of guessing one &quot;average&quot; bill, you describe how
+            customers actually behave: <em>&quot;one in four buys coffee&quot;</em>,
+            <em>&quot;one in ten buys dessert&quot;</em>. Move any slider 5 percentage
+            points and watch the bottom line shift by <strong>hundreds of zł per
+            month</strong> — you&apos;ll see immediately which lever is worth your
+            staff&apos;s attention next week.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1765,6 +1871,16 @@ const HELP = {
           <strong>How to grow it:</strong> staff prompt at order
           (&quot;espresso with that?&quot;), combo deals, post-meal dessert+coffee bundle.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Coffee is the easiest extra złoty in the business — beans cost ~1 zł, you
+            sell the cup for 9 zł. Push attach from <strong>20% → 35%</strong> on 80
+            orders/day and you&apos;ve added ~12 extra coffees daily × ~8 zł margin =
+            <strong> ~2,900 zł/month</strong> of nearly-pure profit. No new SKU, no
+            extra labor — just one more sentence at the till
+            (&quot;espresso with that?&quot;).
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1781,6 +1897,15 @@ const HELP = {
           pizza&apos;s 30%. So more dessert attach lifts AOV <em>and</em>
           improves the blended margin %.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Tiramisu travels well, photographs better than the pizza, and earns better
+            margin than the main dish. Lifting dessert attach from <strong>10% →
+            18%</strong> on 80 orders/day = ~6 more desserts daily × ~13 zł margin =
+            <strong> ~3,100 zł/month</strong> — pure cream on top of revenue you&apos;d
+            already booked.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1798,6 +1923,15 @@ const HELP = {
           line — make sure the antipasti station can keep up before pushing
           this lever.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            A burrata starter at 28 zł can earn ~20 zł of margin while customers wait
+            for the pizza anyway. Get just <strong>8% of dine-in tables</strong> to add
+            one and on 80 orders/day you&apos;ve added <strong>~13,000 zł of
+            revenue/month</strong>. Watch the prep station though — if it slows the
+            pizza out, you&apos;ve traded a starter for a complaint.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1815,6 +1949,15 @@ const HELP = {
           &quot;what would happen if we got licensed?&quot; before paying the
           ~5 000 zł/year fee.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            An Aperol Spritz costs you ~5 zł to make and sells for 22 zł — that&apos;s
+            <strong> 17 zł of margin per glass</strong>. Lift aperitivo attach to
+            <strong> 30% of evening orders</strong> and you&apos;ll add ~5,000–9,000
+            zł/month, easily covering the ~5,000 zł/year alcohol licence in the first
+            month. Drinks are how Italian dinner spots keep the lights on.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1831,6 +1974,15 @@ const HELP = {
           <strong>Where the money is:</strong> ~50% incremental margin — among
           the cheapest ways to lift AOV.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            A drizzle of truffle oil costs ~2 zł but customers pay 9 zł for it. If
+            <strong> 1 in 5 pizzas</strong> gets a premium topping on 80 orders/day,
+            you&apos;ve stacked ~7 zł of margin × 480 pizzas/month =
+            <strong> ~3,400 zł/month extra</strong>. Same dough, same oven — just better
+            ingredients on top, easier to merchandise than raising base prices.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1847,6 +1999,16 @@ const HELP = {
           <strong>Big AOV bump.</strong> Best lever where seating allows — most
           relevant for indoor locations, less so for a takeaway truck.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            A primo pasta course is a second item from the same table — same staff,
+            same plate-pickup trip. At <strong>12% attach</strong> on 50 dine-in
+            orders/day you get ~6 pastas/day × 24 zł margin =
+            <strong> ~4,300 zł/month</strong>. Only works where customers actually sit
+            — but if you add seating, it&apos;s the single biggest dine-in lever you
+            have.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1868,6 +2030,16 @@ const HELP = {
           <strong>Math:</strong> for each converted order, ticket goes up by
           (addon price − discount); food cost goes up by (addon × addon COGS%).
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            A combo is a &quot;yes ladder&quot; — say yes once and you&apos;ve bought
+            pizza + drink + dessert without re-deciding each item. If
+            <strong> 30% of customers</strong> take the 65 zł combo instead of just a
+            45 zł pizza, that&apos;s 20 zł × ~24 orders/day =
+            <strong> ~14,000 zł/month</strong> extra revenue, almost all margin
+            because the second and third items wouldn&apos;t have attached on their own.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1889,6 +2061,16 @@ const HELP = {
           <strong>Default is 0 pp</strong> — turn it on only when you want to
           model a stress scenario.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            When wallets tighten, customers downgrade to the cheapest pie on the menu.
+            If <strong>20% trade down</strong> from a 55 zł pizza to a 38 zł Margherita
+            on 80 orders/day, that&apos;s 17 zł × 16 customers/day =
+            <strong> ~270 zł/day, ~8,000 zł/month evaporated</strong>. Counter it with
+            a 42 zł &quot;value champion&quot; you actually profit on, so the downshift
+            lands somewhere safe instead of on your cheapest item.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1910,6 +2092,16 @@ const HELP = {
           Tune this to model channel-mix shifts: more delivery = more volume
           but worse per-order margin.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Every Glovo order looks the same on screen but earns ~30% less profit — the
+            platform takes ~28% commission and you pay for the box. Shift
+            <strong> 10% of orders</strong> from delivery back to walk-up (loyalty
+            perks, in-store discount) and on 2,400 orders/month that&apos;s 240 orders
+            × ~12 zł extra margin each = <strong>~2,900 zł/month</strong> straight to
+            the bottom line — same pizzas, smarter channel mix.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1944,6 +2136,16 @@ const HELP = {
           Toggle a single lever off to compare with vs without, or use the
           {" "}<em>All off</em> button up top to clear every stress test.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Cheese is the single biggest line in your food cost — usually
+            <strong> ~28% of all ingredients</strong>. If your mozzarella supplier raises
+            prices 10%, it doesn&apos;t sound like much, but it lifts your total food
+            cost by ~2.8 percentage points. On a 200,000 zł/month truck that&apos;s
+            <strong> ~5,600 zł of profit gone</strong> unless you switch suppliers or
+            trim portions. Use these levers to plan for that before it happens.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1962,6 +2164,15 @@ const HELP = {
           downstream. Live preview at the bottom of the card shows you the
           composite impact.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Weather isn&apos;t a feel-good factor — it directly changes your day. A
+            rainy Tuesday in October can do <strong>35 orders</strong> when a sunny one
+            does <strong>65</strong>. Over a month that&apos;s ~12,000 zł of revenue
+            the calendar dictates, not your effort. Plan for it (rain awnings, delivery
+            push, indoor seating) and you can claw most of it back.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1986,6 +2197,16 @@ const HELP = {
           <strong>Combined:</strong> 0.30 × 0.75 + 0.70 × 1.00 = 0.925, so the
           average month runs at 92.5% of theoretical volume just from rain.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            When it pours, walk-up customers vanish — a <strong>0.55 multiplier</strong>
+            means you do 45% less business on rainy days. On Warsaw&apos;s ~30% rainy
+            days, that&apos;s a ~14% haircut on the whole month&apos;s revenue. Add a
+            rain awning, push a &quot;rainy-day delivery&quot; promo and you might lift
+            the multiplier to <strong>0.75</strong> — recovering
+            <strong> ~9,000 zł/month</strong>.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -2004,6 +2225,16 @@ const HELP = {
           already has a quarterly summer bonus, this stacks on top for the hot
           evening micro-effect.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            When it hits 28°C+, people stay out longer, order spritzes, and bring
+            friends. A normal Tuesday doing <strong>50 orders becomes 70</strong>.
+            Across summer that&apos;s ~2,000 extra orders ≈
+            <strong> ~140,000 zł of revenue</strong> — easily worth buying more patio
+            chairs, chilling extra wine and rostering one more staff member for hot
+            evenings.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -2020,6 +2251,15 @@ const HELP = {
           <strong>Effect:</strong> reduces effective days open. If you&apos;re
           normally 28 days/mo and lose 1 day, you lose ~3.6% of monthly revenue.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Every closed day is a hole in the month — 28 normal days vs 27 means
+            <strong> 3.6% of monthly revenue gone</strong>. Losing 2 closed days (Easter
+            + 15 August) on a 200,000 zł truck costs ~14,000 zł. If you can&apos;t open
+            (staff legally off, suppliers closed), plan a tourist-area pop-up the day
+            before to capture some of that demand early.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -2037,6 +2277,15 @@ const HELP = {
           extra normal day&apos;s revenue to the month. Worth investing in
           extra staffing on those nights.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Valentine&apos;s Day on a Friday can do <strong>2–3× a normal Friday</strong>
+            — couples book early, share a bottle, dessert is non-negotiable. Five peak
+            days at 1.6× across the year are worth an extra full week of revenue.
+            Don&apos;t be cute about staffing them: over-staff and the upside is huge,
+            under-staff and you blow the line and lose 30+ angry customers in one night.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -2055,6 +2304,15 @@ const HELP = {
           evenings often more than make up for the lunch drop — make sure the
           summer seasonal multiplier (in Assumptions) reflects both effects.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            When schools close in July–August, the office lunch crowd vanishes — your
+            12:00–14:00 covers can drop <strong>30%</strong> even though evenings stay
+            strong. Don&apos;t fight it with discounts; cut lunch staffing by one head
+            instead, save <strong>~2,500 zł/month in labor</strong>, and pour the
+            energy into evening service when the tourists arrive.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -2072,6 +2330,15 @@ const HELP = {
           known festival weekend, bump event days to 2 and the multiplier to
           2.0× to see if it&apos;s worth the operational hassle.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            A food-truck rally weekend can do <strong>1.5–3× a normal day</strong> with
+            the same staff and the same pizzas. Two event days per month at 2.0× nets
+            you <strong>~25,000 zł of extra revenue</strong>. Pay attention to where
+            the events are — chasing them is a real strategy, not a side hustle, and
+            some trucks earn 30% of their annual revenue from 20 weekends.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -2097,6 +2364,16 @@ const HELP = {
           you&apos;re running — &quot;5.2 above&quot; means you&apos;re doing 5.2
           more orders/day than the minimum needed to not lose money.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Think of the P&amp;L as a stack of glasses: revenue pours in at the top,
+            each cost is a glass that catches some, and net profit is what reaches the
+            bottom one. If the top glass holds <strong>200,000 zł</strong> and the
+            bottom one holds <strong>20,000 zł</strong>, then every złoty of waste,
+            theft or schedule bloat steals from that last 10%. Watch what spills along
+            the way — that&apos;s where the money lives.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -2118,6 +2395,16 @@ const HELP = {
           If labor or COGS slice gets above ~32%, drill into the source
           (recipe costs? schedule bloat?) before raising prices.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            If any slice of the pie balloons past <strong>32%</strong>, you have your
+            culprit. <strong>Labor too big?</strong> You&apos;re overstaffed for the
+            volume. <strong>Food too big?</strong> Recipes leak or portions are sloppy.
+            The pie is the fastest &quot;where did the money go?&quot; diagnostic in the
+            business — glance at it weekly and you&apos;ll catch problems before they
+            cost a month of profit.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -2165,6 +2452,16 @@ const HELP = {
             to recoup the truck buildout cost. Investors look for &lt; 24 months.
           </li>
         </ul>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            These eight numbers are what a pro restaurateur stares at on Monday
+            mornings. <strong>Prime cost</strong> is the one to know: food + labor as %
+            of revenue. Under 60% you breathe; at 65% you&apos;re working for the staff;
+            at 70% you close. Each <strong>1 percentage point</strong> you cut at
+            typical volumes is <strong>~2,000 zł more profit/month</strong> — same
+            sales, same menu, just tighter ops.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -2194,6 +2491,16 @@ const HELP = {
           much better than Realistic, you&apos;re bumping a structural ceiling
           — fix the model, not the marketing.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Three runs side by side: <em>&quot;a bit worse&quot;</em>, <em>&quot;as
+            expected&quot;</em>, <em>&quot;a bit better&quot;</em>. If your
+            <strong> Conservative</strong> case still makes money, your plan is robust
+            and you can sleep. If <strong>Optimistic</strong> isn&apos;t much better
+            than Realistic, you&apos;re hitting a ceiling (small oven, limited seating)
+            — growth requires capex, not more elbow grease.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -2212,6 +2519,15 @@ const HELP = {
           &quot;if I could grow orders 20% <em>or</em> raise ticket 10%, which
           delivers more profit?&quot;.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Each square is &quot;what would I earn if I sold this many pizzas at this
+            price?&quot;. Fastest read: pick the centre cell (today), then look which
+            direction goes greenest. Sometimes it&apos;s <strong>selling more</strong>
+            (extending hours, marketing); often it&apos;s <strong>charging more</strong>
+            (a 2 zł price bump usually beats chasing 20% more volume).
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -2228,6 +2544,16 @@ const HELP = {
           ticket 5 zł — which wins?&quot; Comparing two cells diagonally
           across the centre tells you the trade-off immediately.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Should you negotiate cheaper mozzarella or just raise the Margherita by 3
+            zł? This grid answers in seconds. Pick the two cells you&apos;re choosing
+            between — the colour difference is the profit difference, usually
+            <strong> a couple of thousand zł/month</strong> per swap. The lazy answer
+            (raise prices) often wins; the hard answer (renegotiate cheese) compounds
+            for years.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -2260,6 +2586,15 @@ const HELP = {
             winter (0.7×).
           </li>
         </ul>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Inflation isn&apos;t a rumour — Poland is running ~7% wage hikes and ~4%
+            food cost hikes every year. If you don&apos;t raise menu prices by ~5% every
+            January, your margin shrinks by <strong>~2 percentage points/year</strong>.
+            On a 200,000 zł/month truck that&apos;s <strong>~48,000 zł of profit gone in
+            12 months</strong> — the projection chart below shows that drift live.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -2281,6 +2616,15 @@ const HELP = {
           The four KPIs below (12-mo revenue / costs / net profit / best vs
           worst month) summarise the whole year.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Twelve months in one chart. Watch the gap between the revenue line and the
+            profit line — <strong>if it widens, inflation is eating you alive</strong>.
+            If the gap narrows by December, you&apos;re running out of margin and need
+            to raise prices or trim costs before year-end. Most operators discover this
+            in January when the accountant calls; you&apos;ll see it in May.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -2303,6 +2647,16 @@ const HELP = {
           you&apos;re running 60, every order beyond 45 contributes
           (ticket × (1 − COGS% − card fee %)) zł of pure profit.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Below this number you bleed; above it, you print. If break-even is
+            <strong> 45 orders/day</strong> and you sell <strong>60</strong>, the last
+            15 pizzas drop ~22 zł each straight into the bank — that&apos;s
+            <strong> ~330 zł/day, ~9,000 zł/month</strong> of &quot;free money&quot;,
+            because the first 45 already paid the rent. Every order past break-even is
+            wildly profitable; every order under it deepens the hole.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -2321,6 +2675,2090 @@ const HELP = {
           — raise prices, cut a fixed cost, or grow attach rates before
           opening day 1.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Profit is a thin slice of revenue — usually <strong>10–15%</strong>. So a
+            <strong> 10% revenue dip wipes out 60–70% of profit</strong>, not 10%.
+            If your −10% column tips into the red, you&apos;re running too close to the
+            line: one bad week (food poisoning rumour, road closure, heat dome) closes
+            the truck. Grow attach, raise prices, or cut a fixed cost before opening
+            day 1.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+
+  // Financial assumptions
+  wageInflation: {
+    title: "Wage inflation (annual)",
+    body: (
+      <>
+        <p>
+          Annual % growth in labor cost, compounded monthly in the 12-month
+          projection. Reflects statutory minimum-wage hikes, sector wage
+          pressure and inflation-linked contract adjustments. Polish 2026
+          baseline: ~7%.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Wages in Poland are rising <strong>~7% a year</strong>. If your
+            labor bill is <strong>60,000 zł/month today</strong>, it&apos;ll be
+            <strong> ~64,200 zł</strong> next year — that&apos;s
+            <strong> ~4,200 zł more in costs every month</strong> for the same
+            crew doing the same work. The projection bakes this in so you can
+            see the squeeze coming before payroll Friday hits.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  ingredientInflation: {
+    title: "Ingredient + fixed inflation (annual)",
+    body: (
+      <>
+        <p>
+          Annual growth rate applied monthly to COGS and fixed cost lines.
+          Captures food-CPI, supplier list-price moves, utility tariff hikes,
+          rent escalators. Poland 2026 ~4%.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Cheese, flour and electricity all creep up <strong>~4% a year</strong>.
+            If COGS is <strong>60,000 zł/month</strong>, next year it&apos;s
+            <strong> ~62,400 zł</strong> — same recipes,
+            <strong> 2,400 zł more out the door each month</strong>. Either
+            raise menu prices ~5% every January or accept your margin shrinks
+            by ~2pp/year quietly.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  onSiteCardFee: {
+    title: "On-site card fee",
+    body: (
+      <>
+        <p>
+          Blended Stripe / terminal processor rate. Applied only to revenue
+          paid on-site via card — not delivery aggregators, not cash. Polish
+          2026 norm 1.4–2.1% depending on volume tier.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Every time a customer taps a card, the bank takes <strong>~1.9%</strong>.
+            On <strong>120,000 zł/month</strong> of card sales that&apos;s
+            <strong> ~2,300 zł silently gone</strong>. Negotiating with a
+            smaller PSP can drop the rate to ~1.4% — that&apos;s
+            <strong> ~600 zł/month back</strong> for one phone call.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  cashShare: {
+    title: "Cash share",
+    body: (
+      <>
+        <p>
+          % of revenue settled in cash. Zero processor fee, but reconciliation
+          and shrinkage risk are higher. Polish food-truck norm 15–25%.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Cash orders carry <strong>zero card fee</strong>. If 20% of your
+            <strong> 200,000 zł/month</strong> is cash, that&apos;s ~760 zł in
+            fees you don&apos;t pay. But cash also gets miscounted, &quot;borrowed&quot;,
+            or skipped at the till — a <strong>5% cash shrinkage</strong> on
+            that volume costs <strong>~2,000 zł/month</strong>. Track it
+            tightly or the cashless tax is cheaper.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  glovoShare: {
+    title: "Glovo share",
+    body: (
+      <>
+        <p>
+          % of orders routed through Glovo. Glovo&apos;s commission replaces the
+          on-site card fee on this share. Channel mix flows through Per-channel
+          CM1 below.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Every <strong>10pp shift toward Glovo</strong> on a 2,400-orders/month
+            truck = 240 orders × ~17 zł margin gap =
+            <strong> ~4,000 zł/month of contribution gone</strong>. Visibility
+            and volume are real, but past <strong>40% Glovo share</strong>
+            you&apos;re effectively running their business with your kitchen.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  glovoCommission: {
+    title: "Glovo commission",
+    body: (
+      <>
+        <p>
+          Glovo&apos;s marketplace take rate. Typical 25–30%; negotiable past
+          ~200-300 orders/week thresholds.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Glovo keeps <strong>~27 zł of every 100 zł</strong> of order
+            revenue. On 800 Glovo orders/month at 60 zł average that&apos;s
+            <strong> ~13,000 zł going to the platform</strong>. Renegotiate from
+            27% → 22% on volume and that&apos;s
+            <strong> ~2,400 zł/month back</strong> — worth the cold call once
+            you cross their threshold.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  woltShare: {
+    title: "Wolt share",
+    body: (
+      <>
+        <p>
+          % of orders routed via Wolt. Like Glovo but smaller fleet in Poland;
+          commission tier slightly lower.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Wolt is usually the smaller platform in PL but adds a useful
+            redundancy lever. If <strong>10% of orders</strong> flow through
+            Wolt at 25% commission, that&apos;s another
+            <strong> ~5,000 zł/month in platform fees</strong> on a 200,000 zł
+            truck. Some operators run both — when Glovo&apos;s app crashes (it
+            will), Wolt covers the gap.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  woltCommission: {
+    title: "Wolt commission",
+    body: (
+      <>
+        <p>
+          Wolt&apos;s take rate. Typical 22–30%; slightly cheaper than Glovo on
+          average.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Wolt typically takes <strong>~25 zł of every 100 zł</strong> —
+            slightly cheaper than Glovo, so if you&apos;re picking just one
+            platform Wolt wins on margin. But Glovo has <strong>3–4× the
+            customer base</strong> in big PL cities. Lift Wolt&apos;s share and
+            you save fees; lift Glovo&apos;s share and you grow volume.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  setupCost: {
+    title: "Setup cost",
+    body: (
+      <>
+        <p>
+          Total capital outlay to launch the unit — vehicle, kitchen buildout,
+          oven, permits, working capital. Drives payback months and
+          cash-on-cash return.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            This is the <strong>one big cheque at the start</strong>. A used
+            truck + Ferrara oven + permits in Warsaw 2026 runs
+            <strong> ~280,000–350,000 zł</strong>. Spend 300,000 zł and net
+            15,000 zł/month, and you&apos;re &quot;even&quot; at month
+            <strong> 20</strong> — paying down the cheque before any actual
+            profit accrues. Every 50,000 zł you trim off setup shortens that
+            payback by ~3 months.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  depreciation: {
+    title: "Depreciation & amortisation",
+    body: (
+      <>
+        <p>
+          Non-cash expense spreading setup cost across the asset&apos;s economic
+          life. 5-year truck = setup/60 per month. Required for EBITDA →
+          net-profit walk.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            D&amp;A is the accountant&apos;s way of saying &quot;your truck loses
+            value every month even if nothing breaks&quot;. A
+            <strong> 300,000 zł truck</strong> depreciated over 5 years =
+            <strong> 5,000 zł/month</strong> off net profit. It doesn&apos;t
+            leave your bank account today — it&apos;s the bill you&apos;re
+            storing up for replacement in year 5. Ignore it at your peril.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  interestExpense: {
+    title: "Interest expense",
+    body: (
+      <>
+        <p>
+          Monthly debt-service cost (leasing, bank loan, asset finance). Zero
+          for cash-purchased trucks.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            If you financed the truck instead of paying cash, the bank takes a
+            slice every month. A <strong>150,000 zł loan at 10%</strong> is
+            <strong> ~1,250 zł/month in interest alone</strong> — ~15,000 zł of
+            net profit gone in year 1 before you pay back a złoty of the
+            principal. Worth modelling vs draining your savings.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  packagingPerOrder: {
+    title: "Packaging per order",
+    body: (
+      <>
+        <p>
+          Per-order variable cost of takeaway boxes, napkins, plate wash, paper
+          bags. Hits every order. Delivery-channel packaging (branded box +
+          sleeve) usually layered on top.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Box ~2.50 zł, napkins ~0.30 zł, bag ~0.40 zł — about
+            <strong> 3 zł per order in packaging</strong>. On 2,400 orders/month
+            that&apos;s <strong>~7,200 zł in throwaway materials</strong>.
+            Switching to plain kraft boxes (no print) can save 0.80 zł/order =
+            <strong> ~1,900 zł/month</strong> — invisible to customers on a
+            50-100 zł ticket.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  wastePct: {
+    title: "Waste & spoilage",
+    body: (
+      <>
+        <p>
+          Spoilage + over-portioning + end-of-shift discards as % of revenue.
+          QSR norm 1–3%. Tracked as variable leakage in True CM1.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Dough goes off, mozzarella balls get nicked, the last 4 portions of
+            sauce go in the bin at 22:00. A <strong>2% waste rate</strong> on
+            200,000 zł/month is <strong>4,000 zł literally thrown away</strong>
+            every month. Most truck operators don&apos;t measure it — until they
+            do, and discover it&apos;s 4-5%, not 2%.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  refundsPct: {
+    title: "Refunds / comps / theft",
+    body: (
+      <>
+        <p>
+          Voided orders, comp meals, staff free meals, till shortages as % of
+          revenue. QSR norm 1–2%.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            A burnt pizza you refunded, the staff meal that&apos;s &quot;free&quot;,
+            the angry customer comped. They add up to <strong>~2% on 200,000
+            zł = 4,000 zł/month</strong> of revenue you booked but never kept.
+            Tighten void approvals (manager only) and the number usually drops
+            by half — easiest 2,000 zł/month you&apos;ll ever find.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  loyaltyBurn: {
+    title: "Loyalty point burn",
+    body: (
+      <>
+        <p>
+          Effective discount rate = points earned × redemption rate × point
+          value. Default: 1 pt/PLN × 50% redeem × 5% value = ~1.2%.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Loyalty isn&apos;t free — every 100 zł a regular spends earns them
+            a future ~1.20 zł discount on average. On 200,000 zł monthly
+            revenue that&apos;s <strong>~2,400 zł/month given back</strong> via
+            redemptions. If repeat rate climbs 10pp because of it, the trade
+            more than pays — but you need to actually measure both sides, not
+            just the burn.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  citRate: {
+    title: "Corporate income tax",
+    body: (
+      <>
+        <p>
+          Effective CIT rate. Polish small-CIT 9% applies up to €2M turnover;
+          standard 19% above. Drives net-of-tax profit and IRR.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            After everything else, the tax-man takes a cut. <strong>9% small-CIT</strong>
+            on 180,000 zł/year of pre-tax profit = ~<strong>16,200 zł</strong>
+            to the tax office. Cross the <strong>€2M turnover line</strong>
+            and the rate jumps to 19% — the same profit suddenly costs
+            <strong> ~34,200 zł in tax</strong>. That&apos;s why some operators
+            stay deliberately under the threshold.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  winterMultiplier: {
+    title: "Winter volume multiplier",
+    body: (
+      <>
+        <p>
+          Dec / Jan / Feb volume multiplier applied to base orders/day. Default
+          0.50 — Polish outdoor pizza-truck winter is brutal.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Winter halves your business. A truck doing <strong>80 orders/day</strong>
+            in summer might do <strong>40</strong> in January — and your rent
+            stays the same. That&apos;s
+            <strong> ~50,000 zł of lost monthly revenue</strong> for three
+            months running. Plan the cash crunch in December or move to an
+            indoor pop-up for Q1.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  pizzasPerHour: {
+    title: "Kitchen — pizzas/hour cap",
+    body: (
+      <>
+        <p>
+          Sustained throughput of one pizzaiolo + one Neapolitan oven. 60–80
+          pizzas/hr realistic; 90+ needs a second line.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Your oven physically can&apos;t go faster than this. If your peak
+            hour wants <strong>90 pizzas</strong> and your cap is <strong>70</strong>,
+            <strong> 20 customers walk</strong> — that&apos;s ~1,200 zł of
+            revenue refused per peak hour. A second oven + pizzaiolo doubles
+            the ceiling but costs ~8,000 zł/month — only worth it if you&apos;re
+            consistently saturating the current ceiling.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  serviceHoursPerDay: {
+    title: "Kitchen — service hours/day",
+    body: (
+      <>
+        <p>
+          Hours the line is producing — excludes prep + close-down. Drives
+          capacity-orders-per-day calc.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Your kitchen is &quot;open&quot; 12 hours but really only producing
+            for ~8. Adding <strong>1 extra service hour</strong> (lunch
+            <em> and</em> dinner instead of just dinner) on a 70-pizza/hr line =
+            ~70 extra orders/day capacity, ~30 extra orders actually filled,
+            <strong> ~1,500 zł/day of upside</strong>. The catch: labor scales
+            with it.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  laborFlex: {
+    title: "Labor flex with volume",
+    body: (
+      <>
+        <p>
+          Share of labor that scales with order volume vs fully-fixed crew. 0%
+          = always-on team, 100% = fully variable. 40% QSR norm.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            How &quot;elastic&quot; is your roster? <strong>0% flex</strong>
+            means you pay the same labor whether you do 30 or 100 orders — bad
+            day = brutal margin. <strong>80% flex</strong> (part-timers on call)
+            means you can send people home in a slow lunch, saving
+            <strong> ~2,000 zł/month</strong> — but staff turnover climbs.
+            <strong> 40%</strong> is the sweet spot for most trucks.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  laborAnchor: {
+    title: "Labor anchor (orders/day)",
+    body: (
+      <>
+        <p>
+          The orders/day for which the current labor mix is sized. Volume past
+          this anchor pulls in additional variable labor proportionally.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Tell the model what volume your current roster is designed for. If
+            you set anchor=80 and actually do 110 orders/day, the model adds
+            extra variable labor (more part-timers, overtime) to handle it —
+            typically <strong>~1,500 zł/month extra</strong> at moderate flex.
+            If you do 50, labor stays the same — you can&apos;t unhire your
+            fixed crew.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  peakHourShare: {
+    title: "Kitchen — peak-hour share",
+    body: (
+      <>
+        <p>
+          % of daily orders concentrated in the peak hour. This is the binding
+          constraint, not the daily average. Default 18% on dinner-led truck.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            80 orders/day spread over 10 hours is 8/hour — easy. But if
+            <strong> 20% pile into one hour</strong> (Friday 19:00–20:00) that&apos;s
+            <strong> 16/hour</strong> — and if your oven only does 14, you
+            turn away 2. Same daily total, totally different capacity story.
+            This single percentage often decides whether you need a second oven.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  prepComplexity: {
+    title: "Prep-complexity multiplier",
+    body: (
+      <>
+        <p>
+          Derates kitchen capacity for slow-prep menus. 1.0 = pizza-only;
+          1.4–1.6 = pasta-heavy. Captures station bottlenecks the headline
+          pizzas/hour misses.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            A 70-pizza/hr kitchen drops to <strong>~45 effective orders/hr</strong>
+            when half the orders are pasta primo (90s extra per dish, separate
+            station). The model bakes this in. Push pasta attach high without
+            raising this multiplier and the simulator will lie to you — your
+            &quot;capacity&quot; looks bigger than it actually is.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  summerMultiplier: {
+    title: "Summer volume multiplier",
+    body: (
+      <>
+        <p>
+          Jun / Jul / Aug volume multiplier. Default 1.30 — peak truck season.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Summer is when trucks make money. A baseline truck doing
+            <strong> 80 orders/day</strong> does <strong>~104</strong> in July
+            — that&apos;s <strong>~50,000 zł of extra monthly revenue</strong>
+            for three months. This is the season that funds winter survival —
+            under-roster and you blow customers off; over-roster and you eat
+            the margin.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  springMultiplier: {
+    title: "Spring volume multiplier",
+    body: (
+      <>
+        <p>
+          Mar / Apr / May multiplier. Default 1.00 (baseline season).
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Spring is your &quot;normal&quot;. Use it as the calibration anchor
+            — if you&apos;re forecasting from spring data, this sets the 1.00
+            reference that summer and winter multipliers flex around. April/May
+            warming usually adds a few percent through patio reopening, but
+            don&apos;t over-promise.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  autumnMultiplier: {
+    title: "Autumn volume multiplier",
+    body: (
+      <>
+        <p>
+          Sep / Oct / Nov multiplier. Default 0.95 — slight cooling vs spring.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            September starts hot then cools fast. <strong>5% lower volume</strong>
+            than spring means <strong>~10,000 zł less revenue/month</strong>
+            by November. Plan a marketing push for early October (back-to-uni
+            crowd) to compensate before the dark days hit.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  pizzasPerBake: {
+    title: "Pizzas per bake cycle",
+    body: (
+      <>
+        <p>
+          Number of pizzas one oven cycle accommodates. Stefano Ferrara 6–9;
+          multi-deck/conveyor 16+. Drives theoretical hourly capacity.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            One bake = how many pies side-by-side. A Ferrara holds
+            <strong> 8 pizzas</strong>; a multi-deck conveyor holds
+            <strong> 16+</strong>. If you&apos;re saturating the oven, going
+            8 → 16 doubles theoretical capacity — but multi-decks cost
+            <strong> ~80,000 zł</strong> and eat space. Usually a second truck
+            is cheaper than a bigger oven.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  cycleTime: {
+    title: "Cycle time",
+    body: (
+      <>
+        <p>
+          Bake cycle in seconds. Neapolitan dough cooks ~90s at 450°C. Drives
+          theoretical pizzas/hour.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Neapolitan = <strong>90 seconds at 450°C</strong>. Slower ovens
+            (steel deck at 350°C) take 4-5 minutes — that&apos;s 3-4× slower and
+            crushes capacity. If you&apos;ve calibrated for 90s but the oven
+            actually runs 120s, the model overstates capacity by
+            <strong> 33%</strong>. Chase the real number with a stopwatch on a
+            Friday rush.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  ovenEfficiency: {
+    title: "Realistic oven efficiency",
+    body: (
+      <>
+        <p>
+          % of theoretical bake capacity actually achieved. 20–35% on a real
+          truck — pulls, sweeps, dough rebuilds, customer-facing time, plate-up
+          all eat oven-adjacent time.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            The brochure says <strong>320 pizzas/hr</strong>; reality is
+            <strong> ~70</strong>. Why? The pizzaiolo also takes orders, builds
+            pizzas, wipes the peel, rebuilds dough balls, plates, hands across
+            the counter, answers &quot;is this gluten-free?&quot;.
+            <strong> 22% is default</strong>; veterans hit 30%; first-week crews
+            limp along at 18%.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  unitCount: {
+    title: "Unit count",
+    body: (
+      <>
+        <p>
+          Number of operating trucks. Setting ≥ 2 activates the fleet model
+          (HQ overhead, supply discount, commissary, cannibalisation, royalty).
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            One truck = one P&amp;L. Five trucks = a chain with totally
+            different economics — you suddenly have <strong>regional
+            managers, supply contracts, central dough kitchens</strong>. The
+            fleet panel shows the math. Don&apos;t set ≥ 2 unless you&apos;re
+            seriously modelling growth — otherwise the numbers above will
+            include franchise overhead you don&apos;t actually have.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  hqOverhead: {
+    title: "HQ overhead",
+    body: (
+      <>
+        <p>
+          Monthly cost of shared regional management, ops, finance. Spread
+          across all units. Should fall below 5% of fleet revenue past 10
+          units.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            A regional manager costs <strong>~15,000 zł/month</strong>. One
+            truck doing 200,000 zł can&apos;t afford that (~7.5% of revenue —
+            kills the margin). Five trucks doing 1M zł can (1.5%). HQ is
+            <em> only</em> worth absorbing when you have units to spread it
+            across — it&apos;s why the 2nd and 3rd truck always feel harder
+            than the 5th.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  royaltyPct: {
+    title: "Royalty %",
+    body: (
+      <>
+        <p>
+          Franchise royalty taken from unit revenue. Industry norm 5–6%.
+          Deducted from unit-level EBITDA.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            If you franchise the concept, you keep <strong>5–6% of every
+            franchisee&apos;s revenue</strong>. On a 200,000 zł/month franchisee
+            that&apos;s <strong>~11,000 zł/month per truck</strong> flowing
+            back. Multiply by 20 trucks and you&apos;ve built a real business —
+            but only if each franchisee still profits <em>after</em> the
+            royalty.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  marketingFund: {
+    title: "Marketing fund %",
+    body: (
+      <>
+        <p>
+          Mandatory franchisee contribution to a shared marketing pool.
+          Industry norm 2–3%.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Franchisees pay another <strong>2–3%</strong> into a national
+            marketing pool (TV, Instagram, brand campaigns). On 200,000 zł
+            revenue that&apos;s <strong>~5,000 zł/month</strong> per truck.
+            Pooled across 20 trucks = 100,000 zł/month of marketing firepower —
+            but the franchisee sees it as another fee on top of the royalty.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  supplyDiscountAt: {
+    title: "Supply discount at",
+    body: (
+      <>
+        <p>
+          Number of units before wholesale suppliers offer COGS discounts.
+          Typical threshold 4–5 units in PL food-service supply chains.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            A mozzarella supplier won&apos;t budge off list price for one
+            truck. At <strong>4–5 trucks</strong> you&apos;re suddenly worth
+            their sales-rep&apos;s time — they&apos;ll quote 8–12% off. That&apos;s
+            why the 2nd and 3rd unit are often hardest (no scale yet) but the
+            5th feels easy (supply margin kicks in).
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  supplyDiscountPct: {
+    title: "Supply discount %",
+    body: (
+      <>
+        <p>
+          COGS reduction once the supply-discount threshold is reached. −8 to
+          −12% typical.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            When supply discount activates at <strong>10%</strong>, your 30%
+            food cost drops to <strong>27%</strong>. On 1M zł of fleet revenue
+            that&apos;s <strong>~30,000 zł/month back</strong> across the
+            fleet — almost pays a regional manager by itself. Cheese is the
+            biggest line, so push hardest on the dairy supplier first.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  commissaryAt: {
+    title: "Commissary at",
+    body: (
+      <>
+        <p>
+          Units before centralised dough/sauce production becomes cost-positive.
+          Typically 4+ units.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            A central kitchen making all the dough + sauce only makes sense
+            with <strong>4+ trucks</strong> to feed — below that, the
+            commissary fixed cost eats more than it saves. At 6–8 trucks the
+            economics flip: same quality, same recipe everywhere,
+            <strong> 3–6 pp of COGS</strong> clawed back fleet-wide.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  commissarySaving: {
+    title: "Commissary saving",
+    body: (
+      <>
+        <p>
+          COGS reduction from centralised production, net of commissary
+          run-rate cost (rent, equipment, labor). ~3–6 pp typical.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            A commissary saves <strong>~4 pp of COGS</strong> (bulk purchasing,
+            less waste, consistent recipe) — but subtract the central kitchen&apos;s
+            own running cost. On a fleet doing 1.5M zł/month that&apos;s
+            <strong> ~60,000 zł gross saving, ~30,000 zł net</strong> after the
+            facility&apos;s own bills.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  dmaCannibalisation: {
+    title: "DMA cannibalisation",
+    body: (
+      <>
+        <p>
+          Revenue % a new unit takes from prior units in the same trade area.
+          Modelled as (1 − pct)^(n−1) retained.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Open truck #2 across town and the existing one doesn&apos;t keep
+            all its customers — maybe <strong>15% peel off</strong> to the new
+            pitch. That&apos;s a real revenue hit you have to model honestly,
+            otherwise multi-unit ROI looks artificially great. The cure is
+            opening in a different city, not next door.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  buildoutLearning: {
+    title: "Build-out learning curve",
+    body: (
+      <>
+        <p>
+          Setup-cost reduction per added unit, applied as (1 − learning)^(n−1).
+          Reflects supplier rolodex, permit familiarity, build-team efficiency.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Your first truck cost <strong>300,000 zł</strong> because you made
+            every rookie mistake (wrong oven, missing permits, paid retail).
+            The fifth one costs maybe <strong>210,000 zł</strong> — same spec,
+            known vendors, no surprises. <strong>30% off setup</strong> at
+            scale, which compounds with the supply discount.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  buildoutFloor: {
+    title: "Build-out floor",
+    body: (
+      <>
+        <p>
+          Minimum unit setup cost as % of unit 1. Caps the learning-curve
+          benefit so the model doesn&apos;t simulate &quot;20th truck costs
+          nothing&quot;.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Even the 50th truck still costs <em>something</em> — oven,
+            vehicle and permits have a hard floor. The model caps the learning
+            curve at <strong>~60–70% of unit 1</strong>, so build-out savings
+            taper instead of going to zero. Keep this honest or the fleet
+            payback math turns into fantasy.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  rainyShare: {
+    title: "Rainy-day share",
+    body: (
+      <>
+        <p>
+          Fraction of days in a typical month with significant rain. Warsaw
+          average ~30% (autumn/winter higher, summer lower).
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Warsaw has rain on roughly <strong>1 day in 3</strong>. At a 0.55
+            rainy-day multiplier on an 80-order baseline, each rainy day costs
+            ~50 zł × ~44 lost orders = ~2,200 zł in revenue. Across the
+            <strong> ~9 rainy days/month</strong> that&apos;s
+            <strong> ~20,000 zł the weather extracts</strong> from a normal
+            truck. Knowing this matters before you sign a no-shelter pitch
+            lease.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  heatwaveShare: {
+    title: "Heatwave evening share",
+    body: (
+      <>
+        <p>
+          Share of evenings hot enough (typically 25°C+ at 19:00) to fire the
+          heatwave volume bonus. Warsaw annual avg ~10%; ~30% in Jun–Aug.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            A real heatwave evening only happens <strong>~1 in 10
+            nights</strong> averaged annually (closer to 3 in 10 in summer).
+            When it fires, dinner does <strong>+40%</strong> — ~30 extra
+            orders × ~30 zł margin =
+            <strong> ~900 zł of one-night bonus</strong>. Put staff on call for
+            hot-Friday forecasts and you&apos;ll capture it routinely.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  peakDayMultiplier: {
+    title: "Peak day multiplier",
+    body: (
+      <>
+        <p>
+          Volume multiplier applied to designated peak calendar days
+          (Valentine&apos;s, NYE, Black Friday, Mother&apos;s Day). Default
+          1.60.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>5 peak days/year at 1.60×</strong> is the difference
+            between &quot;Valentine&apos;s was nice&quot; and &quot;Valentine&apos;s
+            paid the rent&quot;. If a normal day does 80 × 65 = 5,200 zł, a
+            peak day does <strong>~8,300 zł</strong> — five such days are
+            <strong> ~15,000 zł of bonus revenue</strong>. Over-staff: huge
+            upside. Under-staff: you blow the line in front of 30 dates.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  eventDayMultiplier: {
+    title: "Event day multiplier",
+    body: (
+      <>
+        <p>
+          Volume multiplier on booked event days (food-truck rally, festival,
+          sport game, concert). Default 1.50.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Food-truck rally? Concert near the pitch? Two event days/month at
+            <strong> 1.50×</strong> adds <strong>~10,000 zł of monthly
+            revenue</strong> without changing anything except the calendar.
+            Some trucks build their entire annual P&amp;L around
+            <strong> 20–30 event weekends</strong> — the only question is how
+            aggressively you chase them.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+
+  // Headline KPIs
+  monthlyRevenue: {
+    title: "Monthly revenue",
+    body: (
+      <>
+        <p>
+          Total revenue per month = orders/day × avg ticket × days open.
+          Headline top-line — everything below is some flavour of cost or margin.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            The biggest number you&apos;ll see — total cash flowing in before
+            any costs come out. <strong>80 orders/day × 65 zł × 28 days = ~146,000
+            zł/month</strong> of gross revenue. Doubling this is hard; doubling
+            your <em>profit</em> from this is much easier through margin work.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  totalCost: {
+    title: "Total cost",
+    body: (
+      <>
+        <p>
+          COGS + labor + fixed + variable leakage (waste, refund, fees,
+          loyalty). Everything that doesn&apos;t end up as net profit.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Every złoty in the truck that doesn&apos;t end up in your pocket.
+            On 200,000 zł revenue, total cost usually sits at
+            <strong> 160,000–180,000 zł</strong> — so net profit is the last
+            10–20%. Tighten any single line by 1pp =
+            <strong> ~2,000 zł/month more profit</strong>.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  netProfit: {
+    title: "Net profit",
+    body: (
+      <>
+        <p>
+          Bottom-line monthly profit after all variable + labor + fixed costs,
+          before tax. Drives owner take-home, cash-on-cash and payback.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            The only number that ends up in your bank. Everything above it is
+            just bookkeeping. A healthy truck nets <strong>15–25% of
+            revenue</strong> — under 10% and you&apos;re working too hard for
+            too little. Track this monthly; the rest is diagnostics.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  breakEvenKpi: {
+    title: "Break-even (orders/day)",
+    body: (
+      <>
+        <p>
+          Orders/day required to cover all labor + fixed + variable costs.
+          Below = loss, above = profit. Headline buffer metric.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            The <strong>minimum you have to sell</strong> to not lose money. If
+            it&apos;s 45 orders/day and you&apos;re doing 60, you have a 33%
+            safety cushion. If you&apos;re doing 50, one slow week sinks the
+            month. The cushion <em>is</em> the business.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+
+  // Operations KPIs (individual tiles)
+  foodCostPct: {
+    title: "Food cost % revenue",
+    body: (
+      <>
+        <p>
+          COGS as % of revenue. QSR target ≤ 30%. Sensitive to menu mix,
+          portion control, supplier prices.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            For every 100 zł you sell, this is how much was food cost. Industry
+            target: <strong>≤ 30%</strong>. At 35% you&apos;re either
+            over-portioning or your supplier is squeezing you — a 5pp drop =
+            <strong> ~10,000 zł/month back</strong> on a 200,000 zł revenue.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  laborCostPct: {
+    title: "Labor cost % revenue",
+    body: (
+      <>
+        <p>
+          Total labor (incl. ZUS narzut) as % of revenue. QSR target ≤ 30%; hard
+          cap at 35%.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            For every 100 zł you sell, this is how much went to
+            <strong> wages + ZUS</strong>. Target ≤ 30%. Past 35% you&apos;re
+            either overstaffed for the volume or under-pricing the menu — the
+            math doesn&apos;t lie, and the staff Christmas bonus depends on this
+            number.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  primeCostPct: {
+    title: "Prime cost % revenue",
+    body: (
+      <>
+        <p>
+          Food + labor combined as % of revenue. The single most-watched number
+          in restaurant ops; ≤ 60–65% is healthy.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>The one number to memorize.</strong> Under 60% you breathe,
+            at 65% you&apos;re working for the staff, past 70% you close. Each
+            <strong> 1pp drop = ~2,000 zł/month</strong> back at typical volumes.
+            Old restaurateurs scribble this number on their fridge mirror.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  contributionMargin: {
+    title: "Contribution margin",
+    body: (
+      <>
+        <p>
+          Share of revenue left after every variable cost (COGS, packaging,
+          waste, refunds, loyalty burn, payment fees, marketing CAC). Honest
+          cash-drop per złoty of sales.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            For every 100 zł sold, this is <strong>how much survives</strong>
+            after all variable costs. <strong>50%+ is healthy</strong>; below
+            40% the truck is structurally unprofitable — every order is
+            value-destructive even before labor and rent. Fix recipes or
+            re-price before opening day 1.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  marginOfSafety: {
+    title: "Margin of safety",
+    body: (
+      <>
+        <p>
+          (Actual revenue − break-even revenue) ÷ actual revenue. The buffer
+          before going underwater.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>How much revenue can drop before you go red.</strong> Below
+            10% one bad week wipes you out; above 25% is comfortable. If
+            it&apos;s 8% and a competitor opens nearby, start defensive moves
+            <em> now</em> — don&apos;t wait for the first red month.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  revenuePerLaborHour: {
+    title: "Revenue / labor hour",
+    body: (
+      <>
+        <p>
+          Monthly revenue ÷ total labor hours. Productivity benchmark for
+          staffing decisions. PL pizza norm 90–140 zł/h.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            How much each hour of staff time generates. If it&apos;s
+            <strong> 90 zł/h</strong> and they cost ~35 zł/h all-in,
+            you&apos;re golden. If it&apos;s <strong>60 zł/h</strong>,
+            you&apos;re overstaffed for the order volume — trim one head and
+            watch this jump.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  setupPaybackKpi: {
+    title: "Setup payback",
+    body: (
+      <>
+        <p>
+          Naïve months of net profit needed to recoup setup cost. Setup ÷
+          monthly profit. Investor-grade view in the Investor returns strip below.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>How many months until the truck pays itself off</strong>.
+            18 months = solid, 24+ = bank loan territory, past 36 = think hard
+            about whether this is the right business model. The fancier IRR/NPV
+            numbers below are more honest, but this is the one the cousin who
+            lent you 50,000 zł will ask about.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+
+  // Capacity strip
+  kitchenCapacityKpi: {
+    title: "Kitchen capacity",
+    body: (
+      <>
+        <p>
+          Theoretical orders/day the kitchen can produce at peak. Sets the
+          ceiling on volume growth without capex.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>The most orders/day this kitchen can physically do.</strong>
+            If you&apos;re consistently bumping into it, you&apos;ve outgrown
+            the truck — time for a second one. If you&apos;re at 60% of it, you
+            have headroom and the bottleneck is demand, not supply.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  peakOrdersPerHour: {
+    title: "Peak orders / hour",
+    body: (
+      <>
+        <p>
+          Observed busiest hour from real orders. Compared against realistic
+          oven capacity to flag saturation.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>Your busiest hour of the day.</strong> If your kitchen does
+            70 pizzas/hr and your peak hour wants 80, you&apos;re refusing
+            customers in plain sight — typically <strong>~500–1,000 zł of
+            revenue walked</strong> per peak shift.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  medianTicketTimeKpi: {
+    title: "Median ticket time",
+    body: (
+      <>
+        <p>
+          Median order-to-ready time. Past 8 min, customer satisfaction
+          craters; past 12 min, refund rate spikes.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>How long the average pizza takes</strong> from order to
+            pickup. Under 8 minutes = customers happy. Past 12 minutes =
+            <strong> 5–10% of customers leave a bad review</strong>. The clock
+            starts when they order, not when you start cooking — train staff
+            accordingly.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+
+  // Institutional KPIs (individual)
+  ebitdaKpi: {
+    title: "EBITDA",
+    body: (
+      <>
+        <p>
+          <strong>Earnings Before Interest, Tax, Depreciation, Amortisation.</strong>
+          The headline cash-generation number. Strips out financing and accounting
+          decisions so the underlying operating profit is comparable across deals.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>Profit before paperwork.</strong> Strips out bank interest,
+            tax and accounting depreciation so you see the truck&apos;s
+            <em> operating</em> power. <strong>20%+ EBITDA margin</strong> is
+            what attracts investors; under 10% and you can&apos;t refinance,
+            expand, or sell. Every 1pp uplift on 200,000 zł = +2,000 zł of
+            attractiveness.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  ebitdarKpi: {
+    title: "EBITDAR",
+    body: (
+      <>
+        <p>
+          EBITDA + Rent. Rent-adjusted so chains with different real-estate
+          strategies are comparable. The franchise-rollup standard.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>EBITDA but ignoring rent.</strong> Useful when comparing
+            your truck to one that owns its location. If a competitor brags
+            about 30% EBITDA and you do 25%, look at rent — maybe they own the
+            land and you don&apos;t. EBITDAR puts you on equal footing.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  cashOnCash: {
+    title: "Cash-on-cash",
+    body: (
+      <>
+        <p>
+          Annualised net profit ÷ setup cost. The most-asked multi-unit return
+          metric. ≥ 30% = success, ≥ 15% = acceptable, &lt; 0 = capital
+          destruction.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>Of every złoty you spent setting up, how many come back per
+            year?</strong> <strong>30%+ = an investor&apos;s dream</strong>
+            (better than almost any stock or bond). Under 15% and a serious
+            investor will ask why you didn&apos;t just buy index funds and
+            spend the year skiing.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  occupancyRatio: {
+    title: "Occupancy ratio",
+    body: (
+      <>
+        <p>
+          Rent ÷ revenue. QSR target &lt; 8%; past 12% = real-estate overspend.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>What fraction of revenue goes to the landlord.</strong>
+            Past <strong>12%</strong> you&apos;re paying too much for the pitch
+            — the location had better be incredible. Under <strong>8%</strong>
+            you have a steal; protect that lease at all costs and lock in a
+            long renewal.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  netSalesKpi: {
+    title: "Net sales",
+    body: (
+      <>
+        <p>
+          Revenue − refunds − comps. The honest top-line after voids/comps.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>Revenue minus the orders you refunded or comped.</strong>
+            If gross revenue is 200,000 zł but net sales is 195,000 zł,
+            you&apos;re refunding ~2.5% of orders — typical. Past 5%, your food
+            quality or service has a real problem.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  contributionPerLaborHr: {
+    title: "Contribution / labor hr",
+    body: (
+      <>
+        <p>
+          Monthly contribution ÷ labor hours. The labor KPI that actually
+          drives staffing decisions. QSR target ≥ 150 zł/hr.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>How much profit (not revenue) each labor hour creates.</strong>
+            If it&apos;s 80 zł/h, your roster is killing you. If it&apos;s
+            <strong> 200 zł/h</strong>, you have a tight, productive team —
+            protect them with raises before competitors poach.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  promoAdjustedAov: {
+    title: "Promo-adjusted AOV",
+    body: (
+      <>
+        <p>
+          Avg ticket × (1 − loyalty burn). The honest ticket after loyalty
+          discounts.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>Your ticket size after loyalty discounts come out.</strong>
+            If gross AOV is 65 zł but promo-adjusted is 64 zł, loyalty is
+            costing you ~1.5%. Some loss is fine if repeat rate climbs — but
+            measure both sides, not just the burn.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  trueCm1PerOrderKpi: {
+    title: "True CM1 / order",
+    body: (
+      <>
+        <p>
+          Per-order contribution after every variable leakage (COGS, fees,
+          waste, refund, loyalty, packaging, CAC). Audit-grade unit economics.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>Of every customer&apos;s 65 zł, how many you actually
+            keep</strong> before labor + rent. If it&apos;s <strong>25 zł+</strong>
+            you have a real business; below 15 zł you&apos;re a charity in
+            disguise. This number doesn&apos;t lie the way gross-margin does.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+
+  // Investor returns (individual)
+  cashBreakEvenKpi: {
+    title: "Cash break-even",
+    body: (
+      <>
+        <p>
+          First month where cumulative net profit clears the setup cost (with a
+          4-month opening ramp). Institutional success: ≤ 24 months.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>When you&apos;ve earned back every złoty you spent
+            opening.</strong> 18–22 months = good; past 24 the truck is
+            borderline; past 36 you should have skipped it. Investors look at
+            this number <em>first</em>, before they read anything else in the
+            deck.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  npv10: {
+    title: "NPV @ 10%",
+    body: (
+      <>
+        <p>
+          Net present value of 24-month cash flows at 10% annual discount rate.
+          Positive = beats the rate. 10% ≈ safe-asset benchmark.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>&quot;Is this truck worth more than a 10% bond?&quot;</strong>
+            If positive, yes. If negative, you&apos;d literally have made more
+            sitting on the cash. 10% is the boring-but-safe benchmark; clearing
+            it is the minimum bar for not feeling foolish.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  npv15: {
+    title: "NPV @ 15%",
+    body: (
+      <>
+        <p>
+          NPV at 15% discount rate. The &quot;decent venture&quot; hurdle.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>Same question, harder hurdle.</strong> 15% is the &quot;decent
+            venture&quot; bar. If positive, the truck beats a venture-grade
+            alternative — i.e. better than putting the money into a friend&apos;s
+            startup.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  npv20: {
+    title: "NPV @ 20%",
+    body: (
+      <>
+        <p>
+          NPV at 20%. PE-style hurdle.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>The Private Equity bar.</strong> If positive, even
+            hedge-fund money would want a slice. If negative, the math is fine
+            for you personally but won&apos;t attract institutional capital
+            when you go raising for unit #6.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  irr24: {
+    title: "IRR (24 mo)",
+    body: (
+      <>
+        <p>
+          Annualised internal rate of return on 24-month cash-flow series.
+          ≥ 30% strong, ≥ 15% acceptable, &lt; 0 capital destruction.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>The effective &quot;interest rate&quot; your money earns by
+            being in this truck.</strong> <strong>30%+ = chef&apos;s kiss</strong>;
+            15–30% = a real business; under 15% and you should have bought
+            stocks instead and saved yourself the 14-hour Sundays.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+
+  // 12-month projection strip
+  twelveMoRevenue: {
+    title: "12-mo revenue",
+    body: (
+      <>
+        <p>
+          Forward 12-month revenue projection with seasonality + price
+          inflation baked in.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>The year ahead, top-line.</strong> A 200,000 zł/month truck
+            typically projects <strong>~2.4M zł/year</strong> — but
+            seasonality means it&apos;s not 200k × 12 (winter ~100k, summer
+            ~260k). The shape matters more than the headline.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  twelveMoCosts: {
+    title: "12-mo costs",
+    body: (
+      <>
+        <p>
+          Forward 12-month total cost compounding wage + ingredient inflation
+          monthly.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>Total costs over the year ahead, with inflation baked in.</strong>
+            If costs were 150,000/mo today they&apos;ll average ~155,000 across
+            the year — that 5,000 zł/month creep adds up to
+            <strong> ~60,000 zł of margin erosion</strong> per year.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  twelveMoNetProfit: {
+    title: "12-mo net profit",
+    body: (
+      <>
+        <p>
+          Forward 12-month net profit. Drives setup-payback math.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>Total take-home for the year ahead.</strong> Divide by 12
+            for the monthly average. If this is 240,000 zł you&apos;re earning
+            ~20,000 zł/month — solid Polish small-business income before
+            personal tax. Below 100,000 zł/year, ask yourself whether you
+            wouldn&apos;t earn more as a salaried pizzaiolo.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  bestWorstMonth: {
+    title: "Best / worst month",
+    body: (
+      <>
+        <p>
+          Highest vs lowest month-net-profit in the projection. Measures
+          seasonal swing risk.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>Your best month vs your worst.</strong> A 4× swing (e.g.,
+            40,000 vs 10,000) is normal for trucks. The point: you have to
+            <strong> bank the summer cash to cover the winter</strong>. Don&apos;t
+            spend it the day it lands or January will be financially terrifying.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+
+  // Prep flow / queue KPIs
+  modelledTicketTime: {
+    title: "Modelled ticket time",
+    body: (
+      <>
+        <p>
+          Predicted order-to-ready time from menu mix + per-attach prep
+          seconds.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>What the spreadsheet says your ticket time should be.</strong>
+            Compare to observed — if observed is 50% slower, your team has
+            process problems; if observed is faster, your kitchen is more
+            efficient than you give them credit for.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  observedTicketTime: {
+    title: "Observed ticket time",
+    body: (
+      <>
+        <p>
+          Real measured order-to-ready time from actual orders (median).
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>The actual stopwatch time from real orders.</strong> Past
+            <strong> 8 minutes</strong> customers start grumbling; past
+            <strong> 12</strong> they leave bad Google reviews. Tracks ground
+            truth — the model lies, this doesn&apos;t.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  peakHourQueue: {
+    title: "Peak-hour queue",
+    body: (
+      <>
+        <p>
+          Excess orders <em>per hour</em> at peak — arrivals beyond what the
+          oven can produce. These are customers who walk because the queue is
+          too long.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>Orders walking away at peak hour.</strong> Even
+            <strong> 3 lost orders/hour × 3 peak hours/day × ~30 zł margin
+            × 30 days = ~8,100 zł/month gone</strong>. Either a second oven,
+            a stricter booking system, or pushing some orders off-peak fixes
+            it. The tile shows /hr — multiply by your peak-hour count to size
+            the monthly bleed.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  waitTime: {
+    title: "Wait time",
+    body: (
+      <>
+        <p>
+          Average back-of-queue wait time at peak hour. Past 5 minutes drives
+          5% conversion loss per extra minute, capped at 60%.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>How long the average customer waits at peak.</strong> Past
+            <strong> 5 minutes</strong>, every extra minute drops conversion by
+            5%. At 10 minutes you&apos;ve lost half your peak-hour upside — at
+            that point a queue manager + better signage pays for itself in a
+            week.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+
+  // Oven curve KPIs
+  theoreticalPeak: {
+    title: "Theoretical peak",
+    body: (
+      <>
+        <p>
+          Pizzas-per-cycle × cycles per hour. Vendor-spec capacity in a vacuum.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>What the oven brochure says it can do.</strong> Ignore it —
+            reality is 20–35% of this. A Ferrara that &quot;does 320/hr&quot;
+            actually sustains <strong>~70/hr</strong> in a real truck once
+            you account for prep, plate-up and customer-facing time.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  realisticPeak: {
+    title: "Realistic peak",
+    body: (
+      <>
+        <p>
+          Theoretical × efficiency factor (default 22%). Sustainable peak in
+          real service.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>What the oven actually delivers</strong> at a sustained
+            peak. <strong>This is the real number</strong> to plan capacity
+            around. If your peak hour wants more than this, customers walk —
+            no matter what the spec sheet promised.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  observedPeakHour: {
+    title: "Observed peak hour",
+    body: (
+      <>
+        <p>
+          Max avg-orders-per-hour over the last 30 days of real orders.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>Your busiest hour, from real data.</strong> Compare to
+            realistic peak: at <strong>85%+ of realistic capacity</strong>,
+            you&apos;re at the &quot;open another unit&quot; threshold. Below
+            60% and growth is a marketing problem, not a kitchen problem.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  saturationStatus: {
+    title: "Saturation status",
+    body: (
+      <>
+        <p>
+          Four-bucket categorisation of observed peak ÷ realistic peak:
+          <strong> Headroom</strong> (&lt; 60%), <strong>Heading there</strong>
+          (60–85%), <strong>At ceiling</strong> (85–100%),
+          <strong> Blown out</strong> (&gt; 100%).
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            A one-glance read on whether you&apos;re slammed.
+            <strong> Headroom</strong> = demand is the bottleneck, push
+            marketing; <strong>Heading there</strong> = start prepping a
+            second oven or second unit; <strong>At ceiling</strong> = one big
+            Saturday from blowing out; <strong>Blown out</strong> = you&apos;re
+            actively turning customers away. The boundaries (60 / 85 / 100%)
+            are where most chains start planning capex.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+
+  // Unit economics tile labels
+  revenuePerOrderKpi: {
+    title: "Revenue / order",
+    body: (
+      <>
+        <p>
+          Average ticket size. Persists from real orders; matches scenario AOV.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>What the average customer pays per order.</strong> Polish
+            pizza truck baseline 60–72 zł. Raising this by <strong>5 zł</strong>
+            is usually easier (one combo nudge) than getting 5 more customers
+            per day (full marketing campaign).
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  trueCm2PerOrder: {
+    title: "True CM2 / order",
+    body: (
+      <>
+        <p>
+          CM1 minus per-order share of labor and fixed costs. Net unit-economic
+          profit per ticket.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>What&apos;s left per order after labor and rent.</strong>
+            If CM1 is 25 zł and CM2 is 6 zł, labor + rent ate 19 zł of every
+            order. A truck running <strong>negative CM2</strong> is losing
+            money on every customer who walks through — and no amount of
+            marketing will fix that.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  monthlyOrdersKpi: {
+    title: "Monthly orders",
+    body: (
+      <>
+        <p>
+          Total orders booked in the month. Drives all variable cost lines.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>Total orders in the month.</strong> 80/day × 28 days =
+            <strong> ~2,240 orders</strong>. The unit-economics breakdown shows
+            the per-order math; this puts it in context — every per-order
+            improvement scales by this number.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+
+  // Fleet tile labels
+  fleetRevenue: {
+    title: "Fleet revenue / mo",
+    body: (
+      <>
+        <p>
+          Sum of per-unit revenue across all units. Headline chain metric.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>Total revenue across all your trucks combined.</strong> At
+            <strong> 5 trucks doing 200,000 zł each</strong> = 1M zł/month —
+            chain territory, where suppliers take you seriously. Below 5 trucks
+            you&apos;re effectively just one operator with backup units.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  fleetEbitda: {
+    title: "Fleet EBITDA / mo",
+    body: (
+      <>
+        <p>
+          Sum of per-unit EBITDA across the fleet. The investor question for
+          franchise rollups.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>Total EBITDA across the fleet.</strong> <strong>20%+ of
+            fleet revenue</strong> is what makes a chain investable. Below 15%
+            you can&apos;t fund growth from operations; you need debt or
+            equity — and the bank wants to see this number first.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  ebitdaPerUnit: {
+    title: "EBITDA / unit",
+    body: (
+      <>
+        <p>
+          Average per-unit EBITDA (fleet EBITDA ÷ units). Tracks unit-level
+          health as the chain scales.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>Average EBITDA per truck.</strong> If unit #1 does 50k
+            EBITDA and unit #5 does 35k (cannibalisation), the average is 42k.
+            Watch this trend as you add units — if it stops growing,
+            <strong> scale economics aren&apos;t compounding</strong> and the
+            next truck is harder to justify.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  hqOverheadAbsorption: {
+    title: "HQ overhead absorption",
+    body: (
+      <>
+        <p>
+          HQ overhead ÷ fleet revenue. Should fall below 5% past 10 units.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>What share of revenue goes to regional management.</strong>
+            At 10% you&apos;re top-heavy (small chain, big bureaucracy). Past
+            10 trucks you should be <strong>under 5%</strong> — otherwise
+            you&apos;re building a corporate office, not a restaurant business.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  fleetBuildout: {
+    title: "Fleet build-out",
+    body: (
+      <>
+        <p>
+          Total capital outlay across all units. Aggregate setup cost driving
+          fleet payback.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>Total money sunk into all the trucks combined.</strong>
+            <strong> 5 trucks at 250k each</strong> (with the learning curve)
+            ≈ 1.25M zł of capital deployed. Cash-on-cash divided by this is the
+            only return number that matters at scale.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+
+  // SSSG strip
+  revenueGrowth: {
+    title: "Revenue growth",
+    body: (
+      <>
+        <p>
+          % growth in revenue vs prior trailing window. SSSG headline.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>How much more (or less) you sold vs the same period
+            before.</strong> +5% is healthy; +15% is hot; flat means
+            you&apos;re keeping up with inflation; negative is a warning
+            light — drop everything and figure out why.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  orderGrowth: {
+    title: "Order growth",
+    body: (
+      <>
+        <p>
+          % growth in order count. Volume-led growth signal.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>How many more (or fewer) orders you booked.</strong>
+            Volume-led growth (more customers) is <em>healthier</em> than
+            ticket-led growth (price hikes) — measures whether the brand is
+            actually winning new people, not just charging existing ones more.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  ticketGrowth: {
+    title: "Ticket growth",
+    body: (
+      <>
+        <p>
+          % growth in avg ticket. Price/mix-led signal.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>How much bigger the average bill got.</strong> Price hikes
+            show up here — fine in moderation, dangerous if it&apos;s the only
+            growth source. Price-only growth always tops out, usually painfully
+            (one day a customer says &quot;65 zł for a pizza? no thanks&quot;).
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  customerGrowth: {
+    title: "Customer growth",
+    body: (
+      <>
+        <p>
+          % growth in unique-customer count. Acquisition-led signal.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>How many more new people walked through the door.</strong>
+            Sustainable growth needs <em>both</em> positive customer growth +
+            positive repeat rate — without both, the bucket leaks no matter how
+            fast you pour in marketing spend.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+
+  // Customer economics
+  repeatRate: {
+    title: "Repeat rate",
+    body: (
+      <>
+        <p>
+          % of customers with ≥ 2 orders in the window. Healthy 30%+; below 15%
+          = one-night-stand funnel.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>What % of customers come back.</strong> 30%+ means people
+            love your pizza; below <strong>15%</strong> they tried it once and
+            aren&apos;t returning — fix the <em>product</em>, not the
+            marketing. No amount of Instagram spend rescues bad cheese.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  ordersPerCustomer: {
+    title: "Orders / customer",
+    body: (
+      <>
+        <p>
+          Mean lifetime orders observed in the window.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>How many times the average customer orders.</strong> 1.0 =
+            nobody comes back; 3.0 = real regulars; <strong>5.0+</strong> = you
+            have a cult following (and probably should open a second truck
+            within walking distance to monetise the foot traffic).
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  gpPerCustomer: {
+    title: "GP / customer",
+    body: (
+      <>
+        <p>
+          Gross profit per unique customer in the window.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>Total profit you make per customer over the window.</strong>
+            Multiplied by repeat rate, this is your effective LTV — and what
+            you can afford to spend on acquisition. If GP/customer is 60 zł,
+            you can spend up to <strong>~20 zł in marketing</strong> to acquire
+            one (3× LTV/CAC rule).
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  cacImplied: {
+    title: "CAC (implied)",
+    body: (
+      <>
+        <p>
+          Marketing fixed cost ÷ new customers per month. Real
+          customer-acquisition cost.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>What each new customer cost you in marketing.</strong>
+            Spend 5,000 zł, get 400 new customers, CAC = 12.50 zł. If
+            <strong> LTV &lt; 3× this</strong>, your marketing is bleeding
+            money — every Instagram ad makes you poorer. Pause it and fix
+            retention first.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  ltvCac: {
+    title: "LTV / CAC",
+    body: (
+      <>
+        <p>
+          Customer lifetime value ÷ CAC. Institutional gate ≥ 3×. Below 1.5×
+          is unprofitable acquisition.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>The most important number in marketing.</strong> 3×+ = scale
+            your ads; 1.5–3× = workable but tight; <strong>below 1.5×</strong>
+            = stop spending and fix retention first. Every champion brand sits
+            above 5×; that&apos;s where you want to be before the second truck.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  customerPaybackKpi: {
+    title: "Customer payback",
+    body: (
+      <>
+        <p>
+          Months for cumulative GP per customer to cover CAC. ≤ 6 mo strong,
+          ≤ 12 mo acceptable.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>How many months until a new customer pays back what you
+            spent acquiring them.</strong> Under 6 months = ad spend is rocket
+            fuel; past 12 months = ad spend is anchor. The shorter this is,
+            the faster you can compound — payback &lt; 3 months is where the
+            growth-hack stories happen.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  newCustomerRevenue: {
+    title: "New customer revenue",
+    body: (
+      <>
+        <p>
+          % of period revenue from net-new customers.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>% of revenue from people who walked through the door for
+            the first time.</strong> If it&apos;s 70%+ you have a leaky bucket
+            (no retention); if it&apos;s 20% you have a loyal base + a slow
+            acquisition engine. Healthy mature trucks sit around <strong>30–40%
+            new</strong>.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  returningRevenue: {
+    title: "Returning revenue",
+    body: (
+      <>
+        <p>
+          % of period revenue from prior-window customers.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>% of revenue from people who came back.</strong> The mirror
+            of new-customer revenue. <strong>Returning &gt; new = sustainable
+            repeat business</strong>. New &gt; returning = leaky bucket — fix
+            retention before scaling ads, or you&apos;re running on a treadmill.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -2814,7 +5252,7 @@ export function AdminSimulation() {
         className={`v2-kpi-grid v2-kpi-grid-sticky${kpiStuck ? " is-stuck" : ""}`}
       >
         <KpiCard
-          label="Monthly revenue"
+          label={<LabelWithInfo text="Monthly revenue" help={HELP.monthlyRevenue} />}
           value={computed.monthlyRevenue / 100}
           format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
           icon={Wallet}
@@ -2822,7 +5260,7 @@ export function AdminSimulation() {
           hint={`${scenario.ordersPerDay} orders/day × ${scenario.daysOpenPerMonth} days`}
         />
         <KpiCard
-          label="Total cost"
+          label={<LabelWithInfo text="Total cost" help={HELP.totalCost} />}
           value={computed.totalCost / 100}
           format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
           icon={Banknote}
@@ -2830,7 +5268,7 @@ export function AdminSimulation() {
           hint={`COGS + labor + fixed`}
         />
         <KpiCard
-          label="Net profit"
+          label={<LabelWithInfo text="Net profit" help={HELP.netProfit} />}
           value={computed.netProfit / 100}
           format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
           icon={computed.netProfit >= 0 ? TrendingUp : TrendingDown}
@@ -2838,7 +5276,7 @@ export function AdminSimulation() {
           hint={`${(computed.margin * 100).toFixed(1)}% margin`}
         />
         <KpiCard
-          label="Break-even"
+          label={<LabelWithInfo text="Break-even" help={HELP.breakEvenKpi} />}
           value={computed.breakEvenOrdersPerDay}
           format={(n) => `${n.toFixed(1)} orders/day`}
           icon={Calculator}
@@ -3192,7 +5630,7 @@ export function AdminSimulation() {
       </div>
       <section className="v2-kpi-grid">
         <KpiCard
-          label="Food cost % revenue"
+          label={<LabelWithInfo text="Food cost % revenue" help={HELP.foodCostPct} />}
           value={computed.foodCostPct * 100}
           format={(n) => `${n.toFixed(1)}%`}
           icon={Utensils}
@@ -3200,7 +5638,7 @@ export function AdminSimulation() {
           hint="Industry target ≤ 30%"
         />
         <KpiCard
-          label="Labor cost % revenue"
+          label={<LabelWithInfo text="Labor cost % revenue" help={HELP.laborCostPct} />}
           value={computed.laborPct * 100}
           format={(n) => `${n.toFixed(1)}%`}
           icon={ChefHat}
@@ -3208,7 +5646,7 @@ export function AdminSimulation() {
           hint="Restaurant target ≤ 30%"
         />
         <KpiCard
-          label="Prime cost % revenue"
+          label={<LabelWithInfo text="Prime cost % revenue" help={HELP.primeCostPct} />}
           value={computed.primeCostPct * 100}
           format={(n) => `${n.toFixed(1)}%`}
           icon={Scale}
@@ -3216,7 +5654,7 @@ export function AdminSimulation() {
           hint="COGS + labor — keep ≤ 60–65%"
         />
         <KpiCard
-          label="Contribution margin"
+          label={<LabelWithInfo text="Contribution margin" help={HELP.contributionMargin} />}
           value={computed.trueContributionMarginPct * 100}
           format={(n) => `${n.toFixed(1)}%`}
           icon={Percent}
@@ -3224,7 +5662,7 @@ export function AdminSimulation() {
           hint={`After COGS, fees, waste, refunds, loyalty (was ${(computed.contributionMarginPct * 100).toFixed(1)}% upper-bound)`}
         />
         <KpiCard
-          label="Margin of safety"
+          label={<LabelWithInfo text="Margin of safety" help={HELP.marginOfSafety} />}
           value={computed.marginOfSafetyPct * 100}
           format={(n) => `${n.toFixed(1)}%`}
           icon={Shield}
@@ -3232,7 +5670,7 @@ export function AdminSimulation() {
           hint="Demand drop you can absorb"
         />
         <KpiCard
-          label="Revenue / labor hour"
+          label={<LabelWithInfo text="Revenue / labor hour" help={HELP.revenuePerLaborHour} />}
           value={computed.revenuePerLaborHour / 100}
           format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
           icon={Gauge}
@@ -3240,7 +5678,7 @@ export function AdminSimulation() {
           hint={`${Math.round(computed.laborHoursPerMonth).toLocaleString("pl-PL")} labor h/mo`}
         />
         <KpiCard
-          label="Setup payback"
+          label={<LabelWithInfo text="Setup payback" help={HELP.setupPaybackKpi} />}
           value={computed.paybackMonths ?? 0}
           display={
             computed.paybackMonths === null
@@ -3263,7 +5701,7 @@ export function AdminSimulation() {
         />
         {computed.capacityOrdersPerDay > 0 && (
           <KpiCard
-            label="Kitchen capacity"
+            label={<LabelWithInfo text="Kitchen capacity" help={HELP.kitchenCapacityKpi} />}
             value={computed.capacityUtilization * 100}
             format={(n) => `${n.toFixed(0)}%`}
             icon={Flame}
@@ -3285,7 +5723,7 @@ export function AdminSimulation() {
           const cap = scenario.kitchenCapacity?.pizzasPerHour ?? 0;
           return (
             <KpiCard
-              label="Peak orders / hour"
+              label={<LabelWithInfo text="Peak orders / hour" help={HELP.peakOrdersPerHour} />}
               value={peak}
               format={(n) => n.toFixed(1)}
               icon={TrendingUp}
@@ -3302,7 +5740,7 @@ export function AdminSimulation() {
         })()}
         {actuals?.medianTicketTimeSeconds !== null && actuals?.medianTicketTimeSeconds !== undefined && (
           <KpiCard
-            label="Median ticket time"
+            label={<LabelWithInfo text="Median ticket time" help={HELP.medianTicketTimeKpi} />}
             value={actuals.medianTicketTimeSeconds / 60}
             format={(n) => `${n.toFixed(1)} min`}
             icon={Clock}
@@ -3336,12 +5774,23 @@ export function AdminSimulation() {
             <li><strong>Promo-adjusted AOV</strong> = avg ticket × (1 − loyalty burn). The honest ticket after the loyalty engine&apos;s effective discount.</li>
             <li><strong>True CM1 / order</strong> = revenue − every variable leakage. The audit&apos;s headline per-order number; full breakdown in the panel below.</li>
           </ul>
+          <PlainTalk>
+            <p style={{ margin: 0 }}>
+              These are the numbers an investor reads before deciding whether to write
+              you a cheque. The one to memorise: <strong>cash-on-cash</strong>. If you
+              spent <strong>300,000 zł</strong> setting up the truck and it generates
+              <strong> 90,000 zł of profit/year</strong>, that&apos;s
+              <strong> 30% cash-on-cash</strong> — better than almost any stock or
+              bond. Below 15% an investor will ask why you didn&apos;t just buy index
+              funds.
+            </p>
+          </PlainTalk>
         </InfoButton>
         <span className="v2-muted text-xs">EBITDA / EBITDAR / cash-on-cash / occupancy — IC-grade headline metrics</span>
       </div>
       <section className="v2-kpi-grid">
         <KpiCard
-          label="EBITDA"
+          label={<LabelWithInfo text="EBITDA" help={HELP.ebitdaKpi} />}
           value={computed.ebitda / 100}
           format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
           icon={Wallet}
@@ -3349,7 +5798,7 @@ export function AdminSimulation() {
           hint={`${monthlyRevenuePctOrDash(computed.ebitda, computed.monthlyRevenue)} EBITDA margin`}
         />
         <KpiCard
-          label="EBITDAR"
+          label={<LabelWithInfo text="EBITDAR" help={HELP.ebitdarKpi} />}
           value={computed.ebitdar / 100}
           format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
           icon={Wallet}
@@ -3357,7 +5806,7 @@ export function AdminSimulation() {
           hint="EBITDA + rent — the franchise-rollup standard"
         />
         <KpiCard
-          label="Cash-on-cash"
+          label={<LabelWithInfo text="Cash-on-cash" help={HELP.cashOnCash} />}
           value={(computed.cashOnCashAnnual ?? 0) * 100}
           format={(n) => `${n.toFixed(1)}%`}
           display={
@@ -3380,7 +5829,7 @@ export function AdminSimulation() {
           hint="Annualised: 12 × net / setup"
         />
         <KpiCard
-          label="Occupancy ratio"
+          label={<LabelWithInfo text="Occupancy ratio" help={HELP.occupancyRatio} />}
           value={computed.occupancyRatio * 100}
           format={(n) => `${n.toFixed(1)}%`}
           icon={Calculator}
@@ -3396,7 +5845,7 @@ export function AdminSimulation() {
           hint="Rent / revenue · QSR target < 8%"
         />
         <KpiCard
-          label="Net sales"
+          label={<LabelWithInfo text="Net sales" help={HELP.netSalesKpi} />}
           value={computed.netSales / 100}
           format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
           icon={Banknote}
@@ -3404,7 +5853,7 @@ export function AdminSimulation() {
           hint="Revenue net of refunds / comps / voids"
         />
         <KpiCard
-          label="Contribution / labor hr"
+          label={<LabelWithInfo text="Contribution / labor hr" help={HELP.contributionPerLaborHr} />}
           value={computed.contributionPerLaborHour / 100}
           format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
           icon={ChefHat}
@@ -3420,7 +5869,7 @@ export function AdminSimulation() {
           hint="QSR target ≥ 150 zł/h — the labor KPI that matters"
         />
         <KpiCard
-          label="Promo-adjusted AOV"
+          label={<LabelWithInfo text="Promo-adjusted AOV" help={HELP.promoAdjustedAov} />}
           value={computed.promoAdjustedAvgTicket / 100}
           format={(n) => `${n.toFixed(2)} zł`}
           icon={HandCoins}
@@ -3428,7 +5877,7 @@ export function AdminSimulation() {
           hint={`Gross ${(scenario.avgTicketGrosze / 100).toFixed(2)} − loyalty drag`}
         />
         <KpiCard
-          label="True CM1 / order"
+          label={<LabelWithInfo text="True CM1 / order" help={HELP.trueCm1PerOrderKpi} />}
           value={computed.trueCm1PerOrderGrosze / 100}
           format={(n) => `${n.toFixed(2)} zł`}
           icon={HandCoins}
@@ -3459,6 +5908,17 @@ export function AdminSimulation() {
             <li><strong>NPV @ 10/15/20%</strong> — net present value at three discount rates (cost of capital). Positive = beats the rate; negative = destroys value at that hurdle. 20% is the PE-style hurdle.</li>
             <li><strong>IRR (24 mo)</strong> — annualised internal rate of return solved via Newton-Raphson on the monthly cash-flow series. ≥ 30% = strong, ≥ 15% = acceptable, &lt; 0 = capital destruction.</li>
           </ul>
+          <PlainTalk>
+            <p style={{ margin: 0 }}>
+              The honest version of &quot;when do I get my money back?&quot;. If you
+              spent <strong>300,000 zł</strong> on truck + buildout and the first 4
+              months only do 50–100% of normal volume (training, slow word-of-mouth),
+              you don&apos;t actually clear setup until month <strong>18–22</strong>,
+              not month 12 like the simple math suggests. Investors care: a 20-month
+              payback beats a 30-month one by ~<strong>40% in IRR terms</strong>, and
+              that&apos;s the difference between funded and ignored.
+            </p>
+          </PlainTalk>
         </InfoButton>
         <span className="v2-muted text-xs">
           24-month projection with a 4-month opening ramp · setup{" "}
@@ -3467,7 +5927,7 @@ export function AdminSimulation() {
       </div>
       <section className="v2-kpi-grid">
         <KpiCard
-          label="Cash break-even"
+          label={<LabelWithInfo text="Cash break-even" help={HELP.cashBreakEvenKpi} />}
           value={investorReturns.cumulativeCashBreakEvenMonth ?? 0}
           display={
             investorReturns.cumulativeCashBreakEvenMonth === null
@@ -3487,7 +5947,7 @@ export function AdminSimulation() {
           hint="First month cumulative profit clears setup cost"
         />
         <KpiCard
-          label="NPV @ 10%"
+          label={<LabelWithInfo text="NPV @ 10%" help={HELP.npv10} />}
           value={investorReturns.npv10 / 100}
           format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
           icon={Wallet}
@@ -3495,7 +5955,7 @@ export function AdminSimulation() {
           hint="Discount rate: 10% / yr"
         />
         <KpiCard
-          label="NPV @ 15%"
+          label={<LabelWithInfo text="NPV @ 15%" help={HELP.npv15} />}
           value={investorReturns.npv15 / 100}
           format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
           icon={Wallet}
@@ -3503,7 +5963,7 @@ export function AdminSimulation() {
           hint="Discount rate: 15% / yr"
         />
         <KpiCard
-          label="NPV @ 20%"
+          label={<LabelWithInfo text="NPV @ 20%" help={HELP.npv20} />}
           value={investorReturns.npv20 / 100}
           format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
           icon={Wallet}
@@ -3511,7 +5971,7 @@ export function AdminSimulation() {
           hint="Hurdle rate for PE-style capital"
         />
         <KpiCard
-          label="IRR (24 mo)"
+          label={<LabelWithInfo text="IRR (24 mo)" help={HELP.irr24} />}
           value={(investorReturns.irrAnnual ?? 0) * 100}
           format={(n) => `${n.toFixed(1)}%`}
           display={
@@ -3789,7 +6249,7 @@ export function AdminSimulation() {
         <CardBody>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             <Input
-              label="Wage inflation (annual)"
+              label={<LabelWithInfo text="Wage inflation (annual)" help={HELP.wageInflation} />}
               type="number"
               step="0.5"
               min="0"
@@ -3805,7 +6265,7 @@ export function AdminSimulation() {
               description="Applied monthly to labor in the projection."
             />
             <Input
-              label="Ingredient + fixed inflation (annual)"
+              label={<LabelWithInfo text="Ingredient + fixed inflation (annual)" help={HELP.ingredientInflation} />}
               type="number"
               step="0.5"
               min="0"
@@ -3821,7 +6281,7 @@ export function AdminSimulation() {
               description="Applied monthly to COGS + fixed costs."
             />
             <Input
-              label="On-site card fee"
+              label={<LabelWithInfo text="On-site card fee" help={HELP.onSiteCardFee} />}
               type="number"
               step="0.1"
               min="0"
@@ -3837,7 +6297,7 @@ export function AdminSimulation() {
               description="Stripe / terminal blended rate. Applied only to the on-site card share of revenue."
             />
             <Input
-              label="Cash share"
+              label={<LabelWithInfo text="Cash share" help={HELP.cashShare} />}
               type="number"
               step="1"
               min="0"
@@ -3853,7 +6313,7 @@ export function AdminSimulation() {
               description="Share paid in cash (0% processor fee). Polish food-truck norm 15-25%."
             />
             <Input
-              label="Glovo share"
+              label={<LabelWithInfo text="Glovo share" help={HELP.glovoShare} />}
               type="number"
               step="1"
               min="0"
@@ -3869,7 +6329,7 @@ export function AdminSimulation() {
               description="Share routed through Glovo. Marketplace commission replaces the on-site card fee on this share."
             />
             <Input
-              label="Glovo commission"
+              label={<LabelWithInfo text="Glovo commission" help={HELP.glovoCommission} />}
               type="number"
               step="0.5"
               min="0"
@@ -3885,7 +6345,7 @@ export function AdminSimulation() {
               description="Glovo's take rate. Typical 25-30%; negotiable past volume thresholds."
             />
             <Input
-              label="Wolt share"
+              label={<LabelWithInfo text="Wolt share" help={HELP.woltShare} />}
               type="number"
               step="1"
               min="0"
@@ -3901,7 +6361,7 @@ export function AdminSimulation() {
               description="Share routed through Wolt."
             />
             <Input
-              label="Wolt commission"
+              label={<LabelWithInfo text="Wolt commission" help={HELP.woltCommission} />}
               type="number"
               step="0.5"
               min="0"
@@ -3917,7 +6377,7 @@ export function AdminSimulation() {
               description="Wolt's take rate. Typical 22-30%."
             />
             <Input
-              label="Setup cost"
+              label={<LabelWithInfo text="Setup cost" help={HELP.setupCost} />}
               type="number"
               step="1000"
               min="0"
@@ -3932,7 +6392,7 @@ export function AdminSimulation() {
               description="Truck buildout + permits + working capital. Drives payback months."
             />
             <Input
-              label="Depreciation & amortisation"
+              label={<LabelWithInfo text="Depreciation & amortisation" help={HELP.depreciation} />}
               type="number"
               step="100"
               min="0"
@@ -3947,7 +6407,7 @@ export function AdminSimulation() {
               description="Straight-line amortisation of setup cost over economic life. 5y truck = setup/60."
             />
             <Input
-              label="Interest expense"
+              label={<LabelWithInfo text="Interest expense" help={HELP.interestExpense} />}
               type="number"
               step="100"
               min="0"
@@ -3962,7 +6422,7 @@ export function AdminSimulation() {
               description="Monthly financing cost. Leave at 0 for cash-purchased trucks."
             />
             <Input
-              label="Packaging per order"
+              label={<LabelWithInfo text="Packaging per order" help={HELP.packagingPerOrder} />}
               type="number"
               step="0.10"
               min="0"
@@ -3997,10 +6457,23 @@ export function AdminSimulation() {
                   netting out the True CM1 per order. Total pre-tax profit is
                   identical either way; the difference is honest unit economics.
                 </p>
+                <PlainTalk>
+                  <p style={{ margin: 0 }}>
+                    Are Instagram ads &quot;rent&quot; (you pay it regardless) or
+                    &quot;customer cost&quot; (you only pay because of the customers
+                    you got)? Flipping this changes the answer. If you spend
+                    <strong> 3,000 zł/month</strong> on marketing and get
+                    <strong> 2,400 orders/month</strong>, that&apos;s
+                    <strong> 1.25 zł of CAC per order</strong> — invisible in the
+                    fixed-cost view, but big enough to flip Glovo orders from
+                    &quot;profitable&quot; to &quot;losing&quot; once you do the math
+                    honestly.
+                  </p>
+                </PlainTalk>
               </InfoButton>
             </div>
             <Input
-              label="Waste & spoilage"
+              label={<LabelWithInfo text="Waste & spoilage" help={HELP.wastePct} />}
               type="number"
               step="0.1"
               min="0"
@@ -4016,7 +6489,7 @@ export function AdminSimulation() {
               description="Spoilage + over-portioning as % of revenue. QSR norm 1-3%."
             />
             <Input
-              label="Refunds / comps / theft"
+              label={<LabelWithInfo text="Refunds / comps / theft" help={HELP.refundsPct} />}
               type="number"
               step="0.1"
               min="0"
@@ -4032,7 +6505,7 @@ export function AdminSimulation() {
               description="Voids, refunds, staff meals. QSR norm 1-2%."
             />
             <Input
-              label="Loyalty point burn"
+              label={<LabelWithInfo text="Loyalty point burn" help={HELP.loyaltyBurn} />}
               type="number"
               step="0.1"
               min="0"
@@ -4048,7 +6521,7 @@ export function AdminSimulation() {
               description="Points redeemed × effective value. 1 pt/PLN × 50% redeem × 5% = ~1.2%."
             />
             <Input
-              label="Corporate income tax"
+              label={<LabelWithInfo text="Corporate income tax" help={HELP.citRate} />}
               type="number"
               step="1"
               min="0"
@@ -4064,7 +6537,7 @@ export function AdminSimulation() {
               description="9% Polish small-CIT (≤2 M EUR turnover) or 19% standard."
             />
             <Input
-              label="Winter volume multiplier"
+              label={<LabelWithInfo text="Winter volume multiplier" help={HELP.winterMultiplier} />}
               type="number"
               step="0.05"
               min="0"
@@ -4082,7 +6555,7 @@ export function AdminSimulation() {
               description="Dec / Jan / Feb. Default 0.50 — Polish outdoor truck winter is brutal."
             />
             <Input
-              label="Kitchen — pizzas/hour"
+              label={<LabelWithInfo text="Kitchen — pizzas/hour" help={HELP.pizzasPerHour} />}
               type="number"
               step="5"
               min="0"
@@ -4101,7 +6574,7 @@ export function AdminSimulation() {
               description="Sustained output of one pizzaiolo + one Ferrara oven. 60-80 realistic; 90+ needs a second line."
             />
             <Input
-              label="Kitchen — service hours/day"
+              label={<LabelWithInfo text="Kitchen — service hours/day" help={HELP.serviceHoursPerDay} />}
               type="number"
               step="0.5"
               min="0"
@@ -4120,7 +6593,7 @@ export function AdminSimulation() {
               description="Hours the line is producing — excludes prep + close-down."
             />
             <Input
-              label="Labor flex with volume"
+              label={<LabelWithInfo text="Labor flex with volume" help={HELP.laborFlex} />}
               type="number"
               step="5"
               min="0"
@@ -4136,7 +6609,7 @@ export function AdminSimulation() {
               description="Share of labor that scales with order volume. 0% = fully fixed crew, 100% = fully variable. 40% is QSR norm."
             />
             <Input
-              label="Labor anchor (orders/day)"
+              label={<LabelWithInfo text="Labor anchor (orders/day)" help={HELP.laborAnchor} />}
               type="number"
               step="5"
               min="1"
@@ -4151,7 +6624,7 @@ export function AdminSimulation() {
               description="The orders/day the current labor mix is sized for. Push volume past it and variable labor pulls in proportionally."
             />
             <Input
-              label="Kitchen — peak-hour share"
+              label={<LabelWithInfo text="Kitchen — peak-hour share" help={HELP.peakHourShare} />}
               type="number"
               step="1"
               min="0"
@@ -4171,7 +6644,7 @@ export function AdminSimulation() {
               description="Share of daily orders in the peak hour — this is the binding constraint, not the average."
             />
             <Input
-              label="Prep-complexity multiplier"
+              label={<LabelWithInfo text="Prep-complexity multiplier" help={HELP.prepComplexity} />}
               type="number"
               step="0.05"
               min="0.5"
@@ -4186,7 +6659,7 @@ export function AdminSimulation() {
               description="Derates kitchen capacity for slow-prep menus. 1.0 = pizza-only · 1.4-1.6 = pasta-heavy. See Margin traps for prep-heavy items."
             />
             <Input
-              label="Summer volume multiplier"
+              label={<LabelWithInfo text="Summer volume multiplier" help={HELP.summerMultiplier} />}
               type="number"
               step="0.05"
               min="0"
@@ -4204,7 +6677,7 @@ export function AdminSimulation() {
               description="Jun / Jul / Aug. Default 1.30 — peak truck season."
             />
             <Input
-              label="Spring volume multiplier"
+              label={<LabelWithInfo text="Spring volume multiplier" help={HELP.springMultiplier} />}
               type="number"
               step="0.05"
               min="0"
@@ -4222,7 +6695,7 @@ export function AdminSimulation() {
               description="Mar / Apr / May. Default 1.00."
             />
             <Input
-              label="Autumn volume multiplier"
+              label={<LabelWithInfo text="Autumn volume multiplier" help={HELP.autumnMultiplier} />}
               type="number"
               step="0.05"
               min="0"
@@ -4317,14 +6790,14 @@ export function AdminSimulation() {
           />
           <div className="v2-kpi-grid mt-3">
             <KpiCard
-              label="12-mo revenue"
+              label={<LabelWithInfo text="12-mo revenue" help={HELP.twelveMoRevenue} />}
               value={projectionTotals.revenue}
               format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
               icon={CalendarRange}
               tone="brand"
             />
             <KpiCard
-              label="12-mo costs"
+              label={<LabelWithInfo text="12-mo costs" help={HELP.twelveMoCosts} />}
               value={
                 projectionTotals.cogs +
                 projectionTotals.labor +
@@ -4336,7 +6809,7 @@ export function AdminSimulation() {
               tone="warning"
             />
             <KpiCard
-              label="12-mo net profit"
+              label={<LabelWithInfo text="12-mo net profit" help={HELP.twelveMoNetProfit} />}
               value={projectionTotals.netProfit}
               format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
               icon={projectionTotals.netProfit >= 0 ? TrendingUp : TrendingDown}
@@ -4348,7 +6821,7 @@ export function AdminSimulation() {
               }% blended margin`}
             />
             <KpiCard
-              label="Best / worst month"
+              label={<LabelWithInfo text="Best / worst month" help={HELP.bestWorstMonth} />}
               value={0}
               display={
                 <span className="tabular">
@@ -5066,6 +7539,18 @@ function ShiftPlanPanel({ rows }: { rows: ShiftPlanRow[] }) {
               <p>
                 <strong>Coverage ratio</strong> = labor / revenue per daypart. Green &lt; 20% (rush is profitable), amber 28-35% (tight margin), red &gt; 35% (over-staffed for the volume). Prep + close are revenue-zero so coverage is undefined — but the headcount column tells you you&apos;re still paying somebody to be there.
               </p>
+              <PlainTalk>
+                <p style={{ margin: 0 }}>
+                  The flat labor number lies. If you&apos;ve got <strong>2 people at
+                  14:00</strong> when one would do, and <strong>2 people at 19:00</strong>
+                  when you need four, you&apos;re losing on both ends — the empty
+                  lunch costs ~50 zł/hour and the dinner rush leaves angry customers
+                  walking off (~500 zł of orders refused). Reshuffle headcount to peak
+                  dayparts and you can drop total hours by <strong>10–15%</strong> while
+                  actually serving more pizzas — typically <strong>~3,000 zł/month
+                  saved</strong>.
+                </p>
+              </PlainTalk>
             </InfoButton>
             <ChefHat className="h-4 w-4 v2-muted" />
           </span>
@@ -5182,6 +7667,17 @@ function PrepFlowPanel({
               </p>
               <p>Three remediations: open a unit (fleet panel), add a second oven /
               pizzaiolo (kitchen capacity), or push orders off-peak (dayparting).</p>
+              <PlainTalk>
+                <p style={{ margin: 0 }}>
+                  Customers walk when the line is too long. If your peak hour wants
+                  <strong> 40 pizzas</strong> but the oven only does 30, the 10 that
+                  show up later wait 7+ minutes — and <strong>2 of them just leave</strong>.
+                  Across a month that&apos;s ~60 lost orders ≈
+                  <strong> ~4,000 zł of contribution gone</strong>. Adding a second
+                  pizzaiolo for the dinner rush (~600 zł/month extra labor) more than
+                  pays for itself.
+                </p>
+              </PlainTalk>
             </InfoButton>
             <Clock className="h-4 w-4 v2-muted" />
           </span>
@@ -5190,7 +7686,7 @@ function PrepFlowPanel({
       <CardBody>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <KpiCard
-            label="Modelled ticket time"
+            label={<LabelWithInfo text="Modelled ticket time" help={HELP.modelledTicketTime} />}
             value={modeledMin}
             format={(n) => `${n.toFixed(1)} min`}
             icon={Clock}
@@ -5198,7 +7694,7 @@ function PrepFlowPanel({
             hint="Pizza + weighted attach prep"
           />
           <KpiCard
-            label="Observed ticket time"
+            label={<LabelWithInfo text="Observed ticket time" help={HELP.observedTicketTime} />}
             value={observedMin ?? 0}
             display={observedMin === null ? "—" : `${observedMin.toFixed(1)} min`}
             tone={
@@ -5217,7 +7713,7 @@ function PrepFlowPanel({
             }
           />
           <KpiCard
-            label="Peak-hour queue"
+            label={<LabelWithInfo text="Peak-hour queue" help={HELP.peakHourQueue} />}
             value={result.queueExcessPerHour}
             format={(n) => `${n.toFixed(1)} /hr`}
             display={
@@ -5229,7 +7725,7 @@ function PrepFlowPanel({
             hint={`${result.peakHourOrders.toFixed(1)} orders vs ${result.realisticOvenPerHour.toFixed(1)} /hr capacity`}
           />
           <KpiCard
-            label="Wait time"
+            label={<LabelWithInfo text="Wait time" help={HELP.waitTime} />}
             value={result.estimatedWaitMinutes}
             format={(n) => `${n.toFixed(1)} min`}
             tone={
@@ -5325,6 +7821,17 @@ function OvenCurvePanel({
                 of realistic, you&apos;ve hit the institutional &quot;open another unit&quot;
                 threshold. The fleet panel above models the economics of that decision.
               </p>
+              <PlainTalk>
+                <p style={{ margin: 0 }}>
+                  The brochure says the oven does <strong>320 pizzas/hour</strong>.
+                  In real life you&apos;ll see <strong>70</strong>. Every pull, sweep,
+                  dough rebuild and &quot;sorry, can I see the menu?&quot; eats oven
+                  time. When your busiest hour hits <strong>85% of realistic capacity</strong>
+                  (~60 pizzas/hr in this example), you&apos;re leaving money on the
+                  table at peak — that&apos;s the signal to open truck #2 or add a
+                  second oven, not push harder on marketing.
+                </p>
+              </PlainTalk>
             </InfoButton>
             <Flame className="h-4 w-4 v2-muted" />
           </span>
@@ -5333,7 +7840,7 @@ function OvenCurvePanel({
       <CardBody>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
           <Input
-            label="Pizzas per bake cycle"
+            label={<LabelWithInfo text="Pizzas per bake cycle" help={HELP.pizzasPerBake} />}
             type="number"
             min="1"
             max="20"
@@ -5345,7 +7852,7 @@ function OvenCurvePanel({
             description="Stefano Ferrara 6-9; multi-deck 16+"
           />
           <Input
-            label="Cycle time"
+            label={<LabelWithInfo text="Cycle time" help={HELP.cycleTime} />}
             type="number"
             min="30"
             max="600"
@@ -5358,7 +7865,7 @@ function OvenCurvePanel({
             description="Neapolitan dough ~90s"
           />
           <Input
-            label="Realistic efficiency"
+            label={<LabelWithInfo text="Realistic efficiency" help={HELP.ovenEfficiency} />}
             type="number"
             min="5"
             max="100"
@@ -5373,21 +7880,21 @@ function OvenCurvePanel({
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <KpiCard
-            label="Theoretical peak"
+            label={<LabelWithInfo text="Theoretical peak" help={HELP.theoreticalPeak} />}
             value={theoreticalPerHour}
             format={(n) => `${Math.round(n)} /hr`}
             tone="info"
             hint={`${perCycle} pizzas × ${(3600 / cycleSec).toFixed(0)} cycles/hr`}
           />
           <KpiCard
-            label="Realistic peak"
+            label={<LabelWithInfo text="Realistic peak" help={HELP.realisticPeak} />}
             value={realisticPerHour}
             format={(n) => `${Math.round(n)} /hr`}
             tone="info"
             hint={`Theoretical × ${(efficiency * 100).toFixed(0)}% efficiency`}
           />
           <KpiCard
-            label="Observed peak hour"
+            label={<LabelWithInfo text="Observed peak hour" help={HELP.observedPeakHour} />}
             value={observedPeakPerHour}
             format={(n) => n.toFixed(1)}
             display={observedPeakPerHour === 0 ? "—" : observedPeakPerHour.toFixed(1) + " /hr"}
@@ -5405,7 +7912,7 @@ function OvenCurvePanel({
             hint={observedPeakPerHour === 0 ? "No order data" : `${(peakSaturation * 100).toFixed(0)}% of realistic`}
           />
           <KpiCard
-            label="Saturation status"
+            label={<LabelWithInfo text="Saturation status" help={HELP.saturationStatus} />}
             value={peakSaturation * 100}
             format={(n) => `${n.toFixed(0)}%`}
             display={
@@ -5478,6 +7985,18 @@ function HourlyThroughputPanel({
                 you have headroom to push more volume into the existing window
                 (marketing, hours extension, second daypart).
               </p>
+              <PlainTalk>
+                <p style={{ margin: 0 }}>
+                  Look at the bar pattern, not just the height. A truck with
+                  <strong> 4 blue bars and 1 red bar</strong> is leaving money on the
+                  table — you have a 4-hour empty window that could host a lunch
+                  promotion or pre-rush coffee menu. A truck with
+                  <strong> 18 blue bars and 6 red bars</strong> is fine; one with
+                  <strong> 8 red bars in a row</strong> needs a second oven yesterday.
+                  Each red hour is 5–15 walked-away customers ≈ 300–900 zł of revenue
+                  refused that day.
+                </p>
+              </PlainTalk>
             </InfoButton>
             <SourceTag kind="actuals" hint="Computed from real order timestamps." />
           </span>
@@ -5575,6 +8094,17 @@ function DaypartPanel({ dayparts }: { dayparts: SimulationDaypartLine[] }) {
                 late-night is the only green column, your slice strategy is doing more
                 work than your dinner plates.
               </p>
+              <PlainTalk>
+                <p style={{ margin: 0 }}>
+                  Treat each daypart like a separate business. A red <strong>lunch
+                  column</strong> with green dinner means your lunch menu is wrong (too
+                  cheap, too few sides) — fix it with a 35 zł panini combo and the
+                  daypart can go from <strong>−500 zł/month to +3,000 zł/month</strong>.
+                  A red <strong>late-night column</strong> usually means staff cost
+                  doesn&apos;t match the few orders — cut hours by 1 and save
+                  ~1,200 zł/month.
+                </p>
+              </PlainTalk>
             </InfoButton>
             <SourceTag kind="actuals" hint="Computed from real order timestamps." />
           </span>
@@ -5878,6 +8408,17 @@ function AttachmentEfficiencyPanel({ rows }: { rows: AttachLeverEfficiency[] }) 
                 85-88% margin, near-zero kitchen time. A 25→45pp espresso push adds
                 ~3,900 zł/mo of pure CM at default volumes with no capex.
               </p>
+              <PlainTalk>
+                <p style={{ margin: 0 }}>
+                  Don&apos;t train your staff to push the lever with the biggest
+                  percentage — train them on the lever with the biggest złoty. A
+                  <strong> 50% pasta attach sounds amazing</strong>, but each pasta only
+                  earns 8 zł of margin (high food cost). A <strong>30% espresso
+                  attach</strong> sounds small, but each cup earns 8 zł of margin too —
+                  and is 10× easier to suggest. Sort the table, talk about the top row
+                  at every staff meeting.
+                </p>
+              </PlainTalk>
             </InfoButton>
             <HandCoins className="h-4 w-4 v2-muted" />
           </span>
@@ -6182,6 +8723,17 @@ function UnitEconomicsPanel({
                 visually without scaling. The bar lengths reflect absolute zł impact; the %
                 column reflects share of ticket.
               </p>
+              <PlainTalk>
+                <p style={{ margin: 0 }}>
+                  This is the &quot;follow the złoty&quot; chart. A customer hands you
+                  <strong> 65 zł</strong>. By the time it&apos;s in your bank account
+                  after food, packaging, the Glovo cut, a tiny waste allowance, payment
+                  fees and loyalty burn, you&apos;re holding <strong>~28 zł</strong>
+                  (CM1). After labor and rent that drops to <strong>~6 zł</strong>
+                  (CM2). Knowing exactly which line ate the rest is how you find the
+                  biggest fixable leak — usually packaging, fees or waste.
+                </p>
+              </PlainTalk>
             </InfoButton>
             <Calculator className="h-4 w-4 v2-muted" />
           </span>
@@ -6190,7 +8742,7 @@ function UnitEconomicsPanel({
       <CardBody>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
           <KpiCard
-            label="Revenue / order"
+            label={<LabelWithInfo text="Revenue / order" help={HELP.revenuePerOrderKpi} />}
             value={revenuePerOrder / 100}
             format={(n) => `${n.toFixed(2)} zł`}
             icon={HandCoins}
@@ -6198,7 +8750,7 @@ function UnitEconomicsPanel({
             hint="Gross ticket size"
           />
           <KpiCard
-            label="True CM1 / order"
+            label={<LabelWithInfo text="True CM1 / order" help={HELP.trueCm1PerOrderKpi} />}
             value={cm1PerOrder / 100}
             format={(n) => `${n.toFixed(2)} zł`}
             icon={Wallet}
@@ -6206,7 +8758,7 @@ function UnitEconomicsPanel({
             hint={`${(cm1Pct * 100).toFixed(1)}% of revenue`}
           />
           <KpiCard
-            label="True CM2 / order"
+            label={<LabelWithInfo text="True CM2 / order" help={HELP.trueCm2PerOrder} />}
             value={cm2PerOrder / 100}
             format={(n) => `${n.toFixed(2)} zł`}
             icon={PiggyBank}
@@ -6214,7 +8766,7 @@ function UnitEconomicsPanel({
             hint={`${(cm2Pct * 100).toFixed(1)}% of revenue · post-labor & fixed`}
           />
           <KpiCard
-            label="Monthly orders"
+            label={<LabelWithInfo text="Monthly orders" help={HELP.monthlyOrdersKpi} />}
             value={orders}
             format={(n) => Math.round(n).toLocaleString("pl-PL")}
             icon={Gauge}
@@ -6344,6 +8896,17 @@ function ChannelEconomicsPanel({ rows }: { rows: ChannelEconomicsRow[] }) {
                 Operator note: cash share + on-site share + Glovo share + Wolt share
                 should sum to 1. Adjust shares in the assumptions card.
               </p>
+              <PlainTalk>
+                <p style={{ margin: 0 }}>
+                  Same pizza, four different prices once fees are netted. A
+                  <strong> 65 zł pizza</strong> earns you ~28 zł of CM1 on cash, ~26 zł
+                  on a card terminal, but only <strong>~10 zł on Glovo</strong> after
+                  the 27% cut. If 40% of your volume is Glovo, that&apos;s
+                  <strong> ~13,000 zł/month of contribution</strong> the platform is
+                  eating. Doesn&apos;t mean quit Glovo — it means push a 10% discount
+                  for ordering direct via your own site and shift even 5pp of volume.
+                </p>
+              </PlainTalk>
             </InfoButton>
             <Calculator className="h-4 w-4 v2-muted" />
           </span>
@@ -6440,6 +9003,17 @@ function FleetPanel({
                 <li><strong>Build-out learning curve</strong> — each new unit costs <code>(1 − learning)^(n−1)</code> × the original setup, floored at the minimum.</li>
               </ul>
               <p>The per-unit table below shows what each truck contributes after all of the above; the strip above shows fleet totals.</p>
+              <PlainTalk>
+                <p style={{ margin: 0 }}>
+                  Going from 1 truck to 5 isn&apos;t just 5× the spreadsheet. Suppliers
+                  give you <strong>~10% off cheese</strong> when you buy in bulk, but
+                  you now pay <strong>~15,000 zł/month for a regional manager</strong>
+                  that 1 truck couldn&apos;t afford. The model shows whether the math
+                  actually works: typically truck #1 earns 25% margin, truck #4 earns
+                  ~32% margin (supply leverage), but truck #6 might only earn 28% if
+                  it cannibalises truck #3&apos;s catchment.
+                </p>
+              </PlainTalk>
             </InfoButton>
             <Grid3X3 className="h-4 w-4 v2-muted" />
             <span className="v2-muted text-xs">{f.unitCount} unit{f.unitCount === 1 ? "" : "s"}</span>
@@ -6449,7 +9023,7 @@ function FleetPanel({
       <CardBody>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
           <Input
-            label="Unit count"
+            label={<LabelWithInfo text="Unit count" help={HELP.unitCount} />}
             type="number"
             min="1"
             max="200"
@@ -6461,7 +9035,7 @@ function FleetPanel({
             description="≥ 2 activates fleet panel"
           />
           <Input
-            label="HQ overhead"
+            label={<LabelWithInfo text="HQ overhead" help={HELP.hqOverhead} />}
             type="number"
             min="0"
             step="500"
@@ -6475,7 +9049,7 @@ function FleetPanel({
             description="Regional manager, ops, finance"
           />
           <Input
-            label="Royalty %"
+            label={<LabelWithInfo text="Royalty %" help={HELP.royaltyPct} />}
             type="number"
             min="0"
             max="20"
@@ -6488,7 +9062,7 @@ function FleetPanel({
             description="Franchise norm 5-6%"
           />
           <Input
-            label="Marketing fund %"
+            label={<LabelWithInfo text="Marketing fund %" help={HELP.marketingFund} />}
             type="number"
             min="0"
             max="10"
@@ -6501,7 +9075,7 @@ function FleetPanel({
             description="Norm 2-3%"
           />
           <Input
-            label="Supply discount at"
+            label={<LabelWithInfo text="Supply discount at" help={HELP.supplyDiscountAt} />}
             type="number"
             min="1"
             max="200"
@@ -6513,7 +9087,7 @@ function FleetPanel({
             description="Units before COGS discount kicks in"
           />
           <Input
-            label="Supply discount"
+            label={<LabelWithInfo text="Supply discount" help={HELP.supplyDiscountPct} />}
             type="number"
             min="0"
             max="40"
@@ -6526,7 +9100,7 @@ function FleetPanel({
             description="-8 to -12% typical"
           />
           <Input
-            label="Commissary at"
+            label={<LabelWithInfo text="Commissary at" help={HELP.commissaryAt} />}
             type="number"
             min="1"
             max="200"
@@ -6538,7 +9112,7 @@ function FleetPanel({
             description="Units before central dough/sauce"
           />
           <Input
-            label="Commissary saving"
+            label={<LabelWithInfo text="Commissary saving" help={HELP.commissarySaving} />}
             type="number"
             min="0"
             max="20"
@@ -6551,7 +9125,7 @@ function FleetPanel({
             description="Net of commissary run-rate cost"
           />
           <Input
-            label="DMA cannibalisation"
+            label={<LabelWithInfo text="DMA cannibalisation" help={HELP.dmaCannibalisation} />}
             type="number"
             min="0"
             max="50"
@@ -6564,7 +9138,7 @@ function FleetPanel({
             description="Revenue loss per overlapping prior unit"
           />
           <Input
-            label="Build-out learning"
+            label={<LabelWithInfo text="Build-out learning" help={HELP.buildoutLearning} />}
             type="number"
             min="0"
             max="20"
@@ -6577,7 +9151,7 @@ function FleetPanel({
             description="Setup cost decline per added unit"
           />
           <Input
-            label="Build-out floor"
+            label={<LabelWithInfo text="Build-out floor" help={HELP.buildoutFloor} />}
             type="number"
             min="20"
             max="100"
@@ -6594,35 +9168,35 @@ function FleetPanel({
           <>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               <KpiCard
-                label="Fleet revenue / mo"
+                label={<LabelWithInfo text="Fleet revenue / mo" help={HELP.fleetRevenue} />}
                 value={fleet.totalRevenue / 100}
                 format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
                 tone="info"
                 hint={`${fleet.unitCount} units · avg ${Math.round(fleet.avgRevenuePerUnit / 100).toLocaleString("pl-PL")} zł / unit`}
               />
               <KpiCard
-                label="Fleet EBITDA / mo"
+                label={<LabelWithInfo text="Fleet EBITDA / mo" help={HELP.fleetEbitda} />}
                 value={fleet.totalEbitda / 100}
                 format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
                 tone={fleet.totalEbitda >= 0 ? "success" : "danger"}
                 hint={`After ${Math.round(fleet.hqOverhead / 100).toLocaleString("pl-PL")} zł HQ overhead`}
               />
               <KpiCard
-                label="EBITDA / unit"
+                label={<LabelWithInfo text="EBITDA / unit" help={HELP.ebitdaPerUnit} />}
                 value={fleet.avgEbitdaPerUnit / 100}
                 format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
                 tone={fleet.avgEbitdaPerUnit >= 0 ? "success" : "danger"}
                 hint="Average over the fleet"
               />
               <KpiCard
-                label="HQ overhead absorption"
+                label={<LabelWithInfo text="HQ overhead absorption" help={HELP.hqOverheadAbsorption} />}
                 value={fleet.hqOverheadAbsorption * 100}
                 format={(n) => `${n.toFixed(1)}%`}
                 tone={fleet.hqOverheadAbsorption < 0.05 ? "success" : fleet.hqOverheadAbsorption < 0.10 ? "info" : "warning"}
                 hint="HQ / fleet revenue"
               />
               <KpiCard
-                label="Fleet build-out"
+                label={<LabelWithInfo text="Fleet build-out" help={HELP.fleetBuildout} />}
                 value={fleet.totalSetupCost / 100}
                 format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
                 tone="neutral"
@@ -6749,6 +9323,16 @@ function SssgStrip({ sssg, simulated }: { sssg: SimulationSssgSnapshot; simulate
             grew. Revenue up + customers flat + ticket up = same people spending more
             (loyalty / attach lifting). Different stories, different next moves.
           </p>
+          <PlainTalk>
+            <p style={{ margin: 0 }}>
+              Two restaurants both report <strong>&quot;+12% growth&quot;</strong>. One
+              raised prices 10% and lost a few customers; the other actually doubled
+              new-customer count but ticket fell. They&apos;ll look identical on the
+              top line and behave totally differently in 6 months — the price-raiser is
+              fragile (one competitor opens nearby and you&apos;re done), the volume-grower
+              is durable. This decomposition tells you which one you are.
+            </p>
+          </PlainTalk>
         </InfoButton>
         <span className="v2-muted text-xs">
           Last {sssg.windowDays}d vs prior {sssg.windowDays}d
@@ -6760,7 +9344,7 @@ function SssgStrip({ sssg, simulated }: { sssg: SimulationSssgSnapshot; simulate
       </div>
       <section className="v2-kpi-grid">
         <KpiCard
-          label="Revenue growth"
+          label={<LabelWithInfo text="Revenue growth" help={HELP.revenueGrowth} />}
           value={sssg.revenueGrowthPct * 100}
           format={(n) => `${n >= 0 ? "+" : ""}${n.toFixed(1)}%`}
           display={fmtPct(sssg.revenueGrowthPct)}
@@ -6769,7 +9353,7 @@ function SssgStrip({ sssg, simulated }: { sssg: SimulationSssgSnapshot; simulate
           hint={`${Math.round(sssg.currentRevenueGrosze / 100).toLocaleString("pl-PL")} zł vs ${Math.round(sssg.priorRevenueGrosze / 100).toLocaleString("pl-PL")} zł`}
         />
         <KpiCard
-          label="Order growth"
+          label={<LabelWithInfo text="Order growth" help={HELP.orderGrowth} />}
           value={sssg.orderGrowthPct * 100}
           format={(n) => `${n >= 0 ? "+" : ""}${n.toFixed(1)}%`}
           display={fmtPct(sssg.orderGrowthPct)}
@@ -6778,7 +9362,7 @@ function SssgStrip({ sssg, simulated }: { sssg: SimulationSssgSnapshot; simulate
           hint={`${sssg.currentOrders} vs ${sssg.priorOrders}`}
         />
         <KpiCard
-          label="Ticket growth"
+          label={<LabelWithInfo text="Ticket growth" help={HELP.ticketGrowth} />}
           value={sssg.ticketGrowthPct * 100}
           format={(n) => `${n >= 0 ? "+" : ""}${n.toFixed(1)}%`}
           display={fmtPct(sssg.ticketGrowthPct)}
@@ -6787,7 +9371,7 @@ function SssgStrip({ sssg, simulated }: { sssg: SimulationSssgSnapshot; simulate
           hint="Avg ticket move"
         />
         <KpiCard
-          label="Customer growth"
+          label={<LabelWithInfo text="Customer growth" help={HELP.customerGrowth} />}
           value={sssg.customerGrowthPct * 100}
           format={(n) => `${n >= 0 ? "+" : ""}${n.toFixed(1)}%`}
           display={fmtPct(sssg.customerGrowthPct)}
@@ -6845,12 +9429,23 @@ function CohortPanel({
             <li><strong>Customer payback</strong> — months for cumulative GP per customer to cover CAC. ≤ 6 mo = strong, ≤ 12 mo = acceptable.</li>
             <li><strong>New vs returning revenue mix</strong> — % from net-new customers vs prior-window customers. Returning &gt; new = sustainable repeat business. New &gt; returning = leaky bucket.</li>
           </ul>
+          <PlainTalk>
+            <p style={{ margin: 0 }}>
+              Acquiring a new customer is expensive; getting one to come back is almost
+              free. If your CAC is <strong>15 zł</strong> and the average customer
+              brings <strong>~45 zł of profit over a year</strong>, that&apos;s a
+              <strong> 3× LTV/CAC</strong> — healthy. If repeat rate falls from 35% to
+              20% (bad experience, competitor opened, menu got stale), LTV drops to
+              <strong> ~25 zł</strong> and suddenly every Instagram ad is losing
+              money. Watch repeat rate weekly; it&apos;s the earliest warning sign.
+            </p>
+          </PlainTalk>
         </InfoButton>
         <SourceTag kind="actuals" hint={`Last ${cohorts.windowDays} days, grouped by phone`} />
       </div>
       <section className="v2-kpi-grid">
         <KpiCard
-          label="Repeat rate"
+          label={<LabelWithInfo text="Repeat rate" help={HELP.repeatRate} />}
           value={cohorts.repeatRatePct * 100}
           format={(n) => `${n.toFixed(1)}%`}
           icon={Sparkles}
@@ -6864,7 +9459,7 @@ function CohortPanel({
           hint={`${cohorts.repeatCustomers} / ${cohorts.totalCustomers} customers ordered ≥2×`}
         />
         <KpiCard
-          label="Orders / customer"
+          label={<LabelWithInfo text="Orders / customer" help={HELP.ordersPerCustomer} />}
           value={cohorts.avgOrdersPerCustomer}
           format={(n) => n.toFixed(2)}
           icon={HandCoins}
@@ -6872,7 +9467,7 @@ function CohortPanel({
           hint="Mean over the window"
         />
         <KpiCard
-          label="GP / customer"
+          label={<LabelWithInfo text="GP / customer" help={HELP.gpPerCustomer} />}
           value={cohorts.avgGpPerCustomerGrosze / 100}
           format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
           icon={Wallet}
@@ -6880,7 +9475,7 @@ function CohortPanel({
           hint={`Avg revenue ${Math.round(cohorts.avgRevenuePerCustomerGrosze / 100).toLocaleString("pl-PL")} zł`}
         />
         <KpiCard
-          label="CAC (implied)"
+          label={<LabelWithInfo text="CAC (implied)" help={HELP.cacImplied} />}
           value={cacGrosze / 100}
           display={
             cacGrosze === 0
@@ -6892,7 +9487,7 @@ function CohortPanel({
           hint={`Marketing ${Math.round(marketingMonthlyGrosze / 100).toLocaleString("pl-PL")} zł/mo ÷ ${cohorts.newCustomersPerMonth.toFixed(0)} new/mo`}
         />
         <KpiCard
-          label="LTV / CAC"
+          label={<LabelWithInfo text="LTV / CAC" help={HELP.ltvCac} />}
           value={ltvCacRatio}
           display={ltvCacRatio === 0 ? "—" : `${ltvCacRatio.toFixed(1)}×`}
           icon={TrendingUp}
@@ -6908,7 +9503,7 @@ function CohortPanel({
           hint="Institutional gate: ≥3×"
         />
         <KpiCard
-          label="Customer payback"
+          label={<LabelWithInfo text="Customer payback" help={HELP.customerPaybackKpi} />}
           value={paybackMonths ?? 0}
           display={
             paybackMonths === null
@@ -6932,7 +9527,7 @@ function CohortPanel({
         {(cohorts.newCustomerRevenueGrosze + cohorts.returningCustomerRevenueGrosze) > 0 && (
           <>
             <KpiCard
-              label="New customer revenue"
+              label={<LabelWithInfo text="New customer revenue" help={HELP.newCustomerRevenue} />}
               value={
                 ((cohorts.newCustomerRevenueGrosze) /
                   Math.max(1, cohorts.newCustomerRevenueGrosze + cohorts.returningCustomerRevenueGrosze)) *
@@ -6944,7 +9539,7 @@ function CohortPanel({
               hint={`${Math.round(cohorts.newCustomerRevenueGrosze / 100).toLocaleString("pl-PL")} zł from net-new customers`}
             />
             <KpiCard
-              label="Returning revenue"
+              label={<LabelWithInfo text="Returning revenue" help={HELP.returningRevenue} />}
               value={
                 ((cohorts.returningCustomerRevenueGrosze) /
                   Math.max(1, cohorts.newCustomerRevenueGrosze + cohorts.returningCustomerRevenueGrosze)) *
@@ -7012,6 +9607,18 @@ function TornadoPanel({ bars }: { bars: TornadoBar[] }) {
                 small input changes move the bottom line most — that&apos;s where the
                 operator&apos;s attention belongs.
               </p>
+              <PlainTalk>
+                <p style={{ margin: 0 }}>
+                  Look at the top bar — that&apos;s what to worry about. If
+                  <strong> volume sensitivity</strong> is biggest, your business is
+                  fragile to a slow week (build attach to grow profit per existing
+                  customer). If <strong>food cost</strong> is biggest, one cheese price
+                  hike could wipe out a month of profit (lock in supplier contracts).
+                  Most trucks find volume + food cost are top — that combo says
+                  &quot;defend revenue and renegotiate cheese&quot; is the priority
+                  list, in that order.
+                </p>
+              </PlainTalk>
             </InfoButton>
             <FlaskConical className="h-4 w-4 v2-muted" />
           </span>
@@ -7296,6 +9903,17 @@ function MarginTrapsCallout({ rows, simulated }: { rows: SimulationMenuEngineeri
                 Recommended action: reprice up, swap to a faster recipe, lock to dine-in
                 only (skips the marketplace fee), or delete from the menu.
               </p>
+              <PlainTalk>
+                <p style={{ margin: 0 }}>
+                  The classic case: <strong>burrata pizza at 52 zł</strong>, looks like
+                  a 65% GM star. Reality check: burrata spoils in 48h (waste eats 8%),
+                  90% of orders come via Glovo (27% fee), and one bad shift dumps a
+                  whole portion (4 zł each). <strong>True margin: ~12%</strong>, not
+                  65%. Either reprice to 62 zł, switch to a longer-life cheese, or
+                  pull it from delivery. A single trap item in your top-3 sellers can
+                  silently cost <strong>~3,000 zł/month</strong>.
+                </p>
+              </PlainTalk>
             </InfoButton>
             {simulated && <SourceTag kind="assumption" hint="Simulated from scenario — once real orders flow in, trap detection runs on actuals." />}
             <AlertTriangle className="h-4 w-4 v2-muted" />
@@ -7448,6 +10066,19 @@ function MenuEngineeringPanel({
                 <span style={{ background: "rgba(168,85,247,0.15)", color: "rgb(126,34,206)", padding: "0 4px", borderRadius: 4, fontSize: 10, fontWeight: 700, marginLeft: 4 }}>ANCHOR</span>
                 {" "}premium decoy. An anchor sitting in the puzzle quadrant is there <em>by design</em> — don&apos;t reflexively delete.
               </p>
+              <PlainTalk>
+                <p style={{ margin: 0 }}>
+                  Think of every menu item as living in one of four houses:
+                  <strong> Stars</strong> (your bestsellers, keep them on page 1),
+                  <strong> Puzzles</strong> (great margin but nobody orders them — fix
+                  the photo, mention them at the till), <strong>Plowhorses</strong>
+                  (everyone orders them but margin is thin — raise the price 2 zł,
+                  customers won&apos;t notice) and <strong>Dogs</strong> (nobody buys
+                  them, they earn nothing — delete and free up menu space). Cleaning
+                  the dogs and raising plowhorse prices can lift profit
+                  <strong> ~5,000 zł/month</strong> in one menu update.
+                </p>
+              </PlainTalk>
             </InfoButton>
             <SourceTag
               kind={simulated ? "assumption" : "actuals"}
@@ -7585,6 +10216,17 @@ function ActualsStrip({
                 scenario inputs (with the &quot;actuals&quot; badges marking inputs that
                 match real-order observations within 5%).
               </p>
+              <PlainTalk>
+                <p style={{ margin: 0 }}>
+                  This is the reality check. Your scenario says <strong>80 orders/day,
+                  65 zł ticket</strong>. Real data says <strong>62 orders/day, 71 zł
+                  ticket</strong>. That 22% volume miss means every forecast above
+                  this strip is too optimistic by ~<strong>22,000 zł/month of
+                  revenue</strong>. Click &quot;Apply actuals&quot; to snap the model
+                  to truth — then plan against the real numbers, not the wished-for
+                  ones.
+                </p>
+              </PlainTalk>
             </InfoButton>
             <Stat
               label="Orders / day"
@@ -8314,7 +10956,7 @@ function WeatherCalendarCard({ weather, baseOrdersPerDay, baseDaysOpen, onChange
             description="Default 0.75 — 25% volume drop on rainy days."
           />
           <Input
-            label="Rainy-day share"
+            label={<LabelWithInfo text="Rainy-day share" help={HELP.rainyShare} />}
             type="number"
             step="1"
             min="0"
@@ -8339,7 +10981,7 @@ function WeatherCalendarCard({ weather, baseOrdersPerDay, baseDaysOpen, onChange
             description="Default 1.40 — patio evenings drive +40%."
           />
           <Input
-            label="Heatwave evening share"
+            label={<LabelWithInfo text="Heatwave evening share" help={HELP.heatwaveShare} />}
             type="number"
             step="1"
             min="0"
@@ -8386,7 +11028,7 @@ function WeatherCalendarCard({ weather, baseOrdersPerDay, baseDaysOpen, onChange
             description="NYE, Valentine's, Mother's Day."
           />
           <Input
-            label="Peak day multiplier"
+            label={<LabelWithInfo text="Peak day multiplier" help={HELP.peakDayMultiplier} />}
             type="number"
             step="0.1"
             min="0"
@@ -8429,7 +11071,7 @@ function WeatherCalendarCard({ weather, baseOrdersPerDay, baseDaysOpen, onChange
             description="Street fairs, food-truck rallies, Nocny Market."
           />
           <Input
-            label="Event day multiplier"
+            label={<LabelWithInfo text="Event day multiplier" help={HELP.eventDayMultiplier} />}
             type="number"
             step="0.1"
             min="0"
