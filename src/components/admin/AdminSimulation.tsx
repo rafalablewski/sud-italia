@@ -7743,6 +7743,21 @@ const HELP = {
             protect them with raises before competitors poach.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Target ≥ 150 zł/labor hour:</strong> world-class QSR territory. Below 100 = under-staffed or under-priced.</li>
+            <li><strong>Better than rev/labor-hr for staffing:</strong> rev counts revenue from low-margin items equally. This counts the profit-weighted output.</li>
+            <li><strong>Use it for shift-level decisions:</strong> compare lunch shift contribution/hr vs dinner. Cut the underperforming shift.</li>
+            <li><strong>Promotion vs raise:</strong> if a top performer&apos;s shift hits 250+ zł/hr, give them a promotion path before they leave.</li>
+            <li><strong>Compare against benchmarks:</strong> top quartile PL casual-Italian ≥ 180 zł/hr. If you&apos;re there, you&apos;re running tight.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> contribution per labor hour = monthly contribution (revenue − all variable costs) ÷ total monthly labor hours.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges (PL pizza):</strong> &lt; 100 weak; 100-150 OK; 150-200 good; &gt; 200 excellent.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> NRA labor-productivity studies, hospitality-school KPI literature.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> prep hours that don&apos;t directly create contribution but are necessary. Track productive vs prep hours separately if labor mix is unusual.</p>
+        </Methodology>
       </>
     ),
   },
@@ -7762,6 +7777,21 @@ const HELP = {
             measure both sides, not just the burn.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Promo-adjusted AOV is the honest ticket:</strong> for forecasting + investor reports.</li>
+            <li><strong>Watch the gross-to-net gap:</strong> &gt; 2pp gap = loyalty program is expensive (good if it&apos;s driving repeat).</li>
+            <li><strong>Channel-specific:</strong> Glovo customers redeem less than walk-up regulars. Track per-channel.</li>
+            <li><strong>Use for pricing:</strong> if you target 65 zł net AOV, list prices at 67 zł knowing ~3% comes off via promo.</li>
+            <li><strong>Burn isn&apos;t inherently bad:</strong> the question is whether the resulting repeat rate justifies it. Measure both.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> promo-adjusted AOV = avg ticket × (1 − loyalty burn − promo discount rate − coupon usage).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Typical gap:</strong> 1-3% for healthy loyalty program; 3-5% for aggressive promotion; 5%+ may be over-discounting.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> loyalty-economics literature (Bond Brand Loyalty studies, Sailthru data).</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> incremental sales (some redemptions wouldn&apos;t have happened without the loyalty trigger). The model treats burn as pure cost; real incremental analysis usually shows loyalty is net positive at moderate burn.</p>
+        </Methodology>
       </>
     ),
   },
@@ -7781,6 +7811,21 @@ const HELP = {
             disguise. This number doesn&apos;t lie the way gross-margin does.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Target ≥ 25 zł/order at AOV ~65 zł:</strong> ~40% true CM1. Below 20 zł indicates structural issues.</li>
+            <li><strong>Per-channel CM1:</strong> Glovo CM1 often 12-18 zł; on-site CM1 25-32 zł. The channel mix determines the blended number.</li>
+            <li><strong>Use for menu engineering:</strong> some items have negative CM1 after all variable costs. Cut or re-price them.</li>
+            <li><strong>Compare against marketing CAC:</strong> if a new customer costs 15 zł to acquire and CM1 is 20 zł, you break even on first order. Need repeat rate to make money.</li>
+            <li><strong>Most-honest metric for investor pitches:</strong> beats both gross margin (ignores variable leakage) and net margin (mixes in labor + rent).</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> True CM1 per order = avg ticket × (1 − COGS% − payment fee % − packaging/order − waste% − refunds% − loyalty burn% − marketing CAC/order).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> &gt; 30 zł/order excellent; 25-30 healthy; 20-25 pressured; &lt; 20 structural problem.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> &quot;Unit economics&quot; venture-finance literature, restaurant-investment due-diligence frameworks.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> attached customer lifetime value (LTV). CM1 is order-level; LTV captures cumulative orders over a customer&apos;s relationship. Use both in growth decisions.</p>
+        </Methodology>
       </>
     ),
   },
@@ -7803,6 +7848,21 @@ const HELP = {
             deck.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>More honest than naïve payback:</strong> includes 4-month ramp + cumulative cash. Use this number for real decisions.</li>
+            <li><strong>&lt; 24 months = institutional grade:</strong> PE/VC investors expect this. Above 30 months, you&apos;re a lifestyle business in their eyes.</li>
+            <li><strong>Improve via setup reduction, not just margin:</strong> 30k off setup shortens payback ~2 months. Pre-negotiate hard.</li>
+            <li><strong>Ramp assumption matters:</strong> 4-month ramp is generous; reality can be 6-8. Stress-test if your launch playbook isn&apos;t proven.</li>
+            <li><strong>Show cash break-even alongside NPV in pitches:</strong> investors look at both. NPV captures value, cash break-even captures speed.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> first month where cumulative net profit (with 4-month ramp: m1=20%, m2=40%, m3=60%, m4=80% of steady-state, m5+=100%) exceeds setup cost.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Institutional thresholds:</strong> &lt; 18 months excellent; 18-24 strong; 24-30 acceptable; 30-36 marginal; &gt; 36 reconsider.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> private-equity restaurant-investment frameworks (Roark Capital, L Catterton case studies), restaurant venture-economics literature.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> seasonal opening (launching in November vs May has very different ramp curves). The model uses smooth 4-month linear ramp; reality is choppier.</p>
+        </Methodology>
       </>
     ),
   },
