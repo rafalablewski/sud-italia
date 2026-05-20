@@ -4640,6 +4640,64 @@ const HELP = {
             cost a month of profit.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Screenshot the pie weekly:</strong> save it Monday
+              morning. Compare week-over-week. Visible drift on any slice
+              is your early-warning signal.
+            </li>
+            <li>
+              <strong>If COGS bloats:</strong> first check the Recipes admin
+              for price drift. Then weigh actual portions. Then audit
+              waste.
+            </li>
+            <li>
+              <strong>If labor bloats:</strong> overlay the hourly heatmap
+              with your schedule. Cut the over-staffed hour — almost
+              always 14:00-16:00 or after 21:00.
+            </li>
+            <li>
+              <strong>If fixed costs bloat:</strong> something one-off
+              (insurance renewal, software upgrade) or something is
+              compounding (rent escalator, new ZUS rate). Audit line by
+              line.
+            </li>
+            <li>
+              <strong>Net profit slice &lt; 8%?</strong> Don&apos;t panic-cut
+              — diagnose which slice expanded. Pricing problems and cost
+              problems have different fixes.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> the same monthly P&amp;L lines feed
+            this. Each slice = (line item ÷ revenue) × 100%. The chart
+            renders top-5 categories plus a &quot;misc&quot; rollup.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Healthy Polish casual-Italian shares:</strong>
+          </p>
+          <ul style={{ margin: "0 0 4px", paddingLeft: 18 }}>
+            <li>Ingredients (COGS) ~28-32%</li>
+            <li>Labor ~25-30%</li>
+            <li>Fixed costs ~6-10%</li>
+            <li>Card fees + packaging ~3-5%</li>
+            <li>Net profit ~25-32%</li>
+          </ul>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> NRA (National Restaurant Association)
+            benchmarks, Polish PHG hospitality reports, owner-operator
+            P&amp;L composites.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> CIT (separate field), founder
+            opportunity cost (the unpaid hours of the owner). If you do
+            30 hours/week unpaid, mentally subtract ~5,000 zł/month from
+            net to value your time honestly.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -4697,6 +4755,75 @@ const HELP = {
             sales, same menu, just tighter ops.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Set thresholds for alerts:</strong> red flag when
+              prime cost &gt; 65%, food &gt; 32%, labor &gt; 32%. Build
+              alert automations on the Reports admin so you find out
+              within 24h, not at month-end.
+            </li>
+            <li>
+              <strong>Weekly KPI review:</strong> 30 min every Monday with
+              the head chef + manager. Five-minute version of each KPI,
+              plus &quot;what we&apos;ll do this week&quot;. Catches
+              drift before it&apos;s structural.
+            </li>
+            <li>
+              <strong>Revenue per labor hour is the productivity dial:</strong>
+              below 90 zł/h, you&apos;re either overstaffed or under-pricing.
+              Drill into shift schedules first.
+            </li>
+            <li>
+              <strong>Setup-payback &lt; 24 months is investor-grade:</strong>
+              if you&apos;re raising money, this is the single number
+              investors will judge you on. Get it under 18 months for
+              competitive deals.
+            </li>
+            <li>
+              <strong>Compare to industry KPIs publicly:</strong> NRA, BCG
+              and PHG publish quarterly benchmarks. If you&apos;re top
+              quartile on prime cost, talk to suppliers and franchisees —
+              you&apos;re doing something replicable.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> all KPIs derive from the P&amp;L lines
+            + scenario inputs. The KPI strip is read-only and updates live
+            as you tune anything above.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formulas:</strong>
+          </p>
+          <ul style={{ margin: "0 0 4px", paddingLeft: 18 }}>
+            <li>Food cost % = COGS ÷ revenue</li>
+            <li>Labor % = total labor ÷ revenue</li>
+            <li>Prime cost % = (COGS + labor) ÷ revenue</li>
+            <li>Contribution margin = (revenue − all variable costs) ÷ revenue</li>
+            <li>Margin of safety = (revenue − break-even revenue) ÷ revenue</li>
+            <li>Revenue/labor hr = revenue ÷ total labor hours</li>
+            <li>Net profit/order = net profit ÷ monthly orders</li>
+            <li>Setup payback = setup cost ÷ monthly profit (months)</li>
+          </ul>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Industry targets (Polish casual-Italian):</strong> food
+            ≤30%, labor ≤30%, prime ≤60%, contribution ≥50%, MoS ≥20%,
+            rev/labor 90-140 zł/h, payback &lt;24 mo.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> NRA Restaurant Industry Operations
+            Report, BCG hospitality benchmarks, PHG Polish gastronomic
+            association annual surveys.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> seasonal variance — KPIs at
+            average annual volumes can hide that winter prime cost is
+            68% and summer is 55%. Check the Heatmap card to spot
+            seasonality issues.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -4736,6 +4863,66 @@ const HELP = {
             — growth requires capex, not more elbow grease.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Conservative must be profitable:</strong> if the
+              −15% scenario shows a loss, your plan is fragile. Either
+              reduce fixed costs or raise prices BEFORE launching.
+            </li>
+            <li>
+              <strong>Optimistic vs Realistic spread:</strong> if
+              Optimistic is &lt;30% better than Realistic, you have a
+              capacity ceiling. Investigate: oven capacity, seating,
+              labor structure.
+            </li>
+            <li>
+              <strong>Show investors the Conservative case:</strong>
+              never present only Optimistic. The Conservative-still-profitable
+              proof is what makes deals close.
+            </li>
+            <li>
+              <strong>Use it for hiring decisions:</strong> if Conservative
+              covers a new hire&apos;s 6-month cost, the hire is safe. If
+              it doesn&apos;t, wait until Realistic improves.
+            </li>
+            <li>
+              <strong>Re-run quarterly:</strong> assumptions drift.
+              What was Optimistic last quarter might be Realistic now;
+              what was Realistic might be Conservative. Refresh.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> the current scenario as Realistic; two
+            programmatic variants (Conservative = base − 15% orders + 2pp
+            COGS; Optimistic = base + 15% orders − 2pp COGS).
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formula:</strong> identical P&amp;L stack applied
+            independently to each variant&apos;s adjusted inputs. Shows
+            three full P&amp;Ls side-by-side.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Why ±15%:</strong> empirically, a year-1 forecast for
+            a new pizzeria misses by ±15-25%. ±15% captures &quot;normal
+            execution variance&quot;; severe stress (recession, location
+            failure) needs the separate Cheapest-Pizza Shift lever.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> startup forecasting literature
+            (Saras Sarasvathy on effectuation, Steve Blank on
+            customer-development), restaurant-industry post-mortem
+            reviews on forecast accuracy.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> simultaneous swings (Conservative
+            on revenue AND a rent shock AND a key staff departure). For
+            true worst-case planning, manually compose scenarios using
+            the Stress card.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -4763,6 +4950,65 @@ const HELP = {
             (a 2 zł price bump usually beats chasing 20% more volume).
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Read the diagonals:</strong> the upper-right corner
+              (more orders AND higher ticket) is the dream — but rarely
+              achievable simultaneously. Pick one axis to push.
+            </li>
+            <li>
+              <strong>Ticket usually wins over volume:</strong> a 5 zł
+              ticket bump on the same orders adds revenue with zero
+              additional COGS or labor. Pushing volume adds labor and
+              wear-and-tear.
+            </li>
+            <li>
+              <strong>Test before you commit:</strong> if the heatmap says
+              +10% ticket is huge, A/B-test a 5 zł price bump on one menu
+              category for 2 weeks. Watch attach %, not just revenue.
+            </li>
+            <li>
+              <strong>Red cells are warnings, not predictions:</strong>
+              they show &quot;here&apos;s what would happen IF&quot;.
+              They&apos;re directional, not forecasts.
+            </li>
+            <li>
+              <strong>Use diagonally for marketing math:</strong> if you
+              push volume +15% AND tickets bump −2 zł (because new
+              customers convert at lower attach), the heatmap shows you
+              if the net is positive.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> 5×5 grid with current orders/day and
+            avg ticket at the centre. Each cell is a ±15% or ±30% delta
+            in either axis.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formula:</strong> per cell, recompute the full P&amp;L
+            with the grid&apos;s orders/day and ticket substituted, all
+            other inputs held constant. Cell value = net profit (zł/month).
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Color scale:</strong> green = above centre, red =
+            below. Intensity scales with delta-from-centre, not absolute
+            zł — designed to surface the steepest local gradients.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> standard restaurant menu-engineering
+            (Kasavana &amp; Smith), revenue management analytics (cited
+            in hospitality-school curricula).
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> the demand curve (raising
+            ticket usually loses orders). Each cell is independent — in
+            reality, +10% ticket might cost you 5% volume. Use the
+            Sensitivity card if you want to model linked effects.
+          </p>
+        </Methodology>
       </>
     ),
   },
