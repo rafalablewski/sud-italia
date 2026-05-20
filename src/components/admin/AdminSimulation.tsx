@@ -3121,6 +3121,71 @@ const HELP = {
             to the bottom line.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Build the schedule from the hourly heatmap:</strong> staff
+              up only when the demand curve says you need it. Don&apos;t default
+              to 2 cooks if 1 + a runner handles 80% of the day.
+            </li>
+            <li>
+              <strong>Cross-train, don&apos;t hire:</strong> a pizzaiolo who can
+              also run the till saves a half-shift of cashier labor without
+              losing throughput.
+            </li>
+            <li>
+              <strong>Use short shifts for peaks:</strong> a 17:00–21:00
+              part-timer at the dinner rush is half the cost of a full-day
+              hire and matches when you actually need help.
+            </li>
+            <li>
+              <strong>Tip-pool with capped service charge:</strong> ZUS-friendly
+              way to lift effective pay without raising brutto — staff
+              retention without inflating your labor % on paper.
+            </li>
+            <li>
+              <strong>Watch labor % weekly:</strong> if it&apos;s &gt;33% for two
+              weeks running, either revenue dropped or you over-staffed —
+              re-cut the schedule before it becomes structural.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> per-role table with headcount, weekly
+            hours and hourly rate. Owner-typed; can be auto-seeded from the
+            Staff admin page (which holds real contracts) if the truck has
+            data there.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formula:</strong> monthly cost per row = headcount ×
+            weekly hours × 4.345 weeks × hourly rate (brutto inclusive of
+            ~22% ZUS / Labour Fund). Sum across roles = total labor; total
+            labor ÷ revenue = labor %.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Why ×1.22 brutto:</strong> Polish employers pay ZUS
+            (~19.5%) + Labour Fund (~2.5%) on top of gross wages, so the
+            real cost is ~22% above the brutto rate. The default hourly
+            rates already bake this in — &quot;rate × hours&quot; lands at
+            full employer cost.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Realistic range:</strong> total labor 25–32% of revenue
+            for casual-Italian in Poland. Under 25% is rare (suggests
+            under-staffing or off-the-books pay); over 33% means revenue
+            problem OR over-staffing — fix one or the other.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> Polish hospitality association labor
+            benchmarks, ZUS rates 2024, JOPI gastronomic-employer surveys.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> overtime premiums (50% / 100%
+            uplifts), holiday pay, sick-leave coverage, recruiting costs.
+            Add a 5–8% buffer on total labor to absorb these in real ops.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -3147,6 +3212,66 @@ const HELP = {
             foot traffic — can be a winning trade.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Renegotiate rent annually:</strong> landlords expect
+              year-end reviews. A 5% rent reduction or rent-free month is
+              worth ~5,000–10,000 zł/year for a typical pitch. Always ask.
+            </li>
+            <li>
+              <strong>Audit subscriptions quarterly:</strong> POS software,
+              accountant, design tools, music licensing — small line items
+              accumulate. Cancel anything used &lt;2× / month.
+            </li>
+            <li>
+              <strong>Shop insurance every 2 years:</strong> commercial
+              policies drift up if you stay with the same broker.
+              10–20% savings on re-quote is common.
+            </li>
+            <li>
+              <strong>Self-do bookkeeping with software:</strong> Wfirma,
+              iFirma, inFakt around 60–100 zł/month vs ~600–1,000 zł/month
+              for an accountant. Use the accountant only for year-end.
+            </li>
+            <li>
+              <strong>Electricity tariff matters:</strong> dynamic-pricing
+              tariffs cut cost ~15–25% for evening-peak businesses. Worth
+              the switch if you have a smart meter.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> per-line table of monthly bills (rent,
+            insurance, utilities, accountant, software, owner ZUS, etc.).
+            Operator-typed; can be auto-seeded from Business Costs admin if
+            the truck logs them there.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Where it flows:</strong> sum = monthly fixed cost. Plugs
+            straight into the P&amp;L as a constant; sets break-even via
+            fixed ÷ contribution-margin. Higher fixed = more orders needed
+            before profit starts.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Realistic range:</strong> 12–25k zł/month for a
+            Warsaw/Kraków pizza truck. Premium pitches (Hala Koszyki,
+            Hala Gwardii) push 30k+ but compensate with footfall.
+            Suburban pitches sit at 8–14k.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> Warsaw/Kraków commercial-real-estate
+            reports 2024 (Cushman Wakefield, JLL), ZUS owner rates,
+            insurance-broker quotes for gastronomic units.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> equipment depreciation
+            (separate card), interest expense (separate card), one-off
+            repairs. The model assumes steady-state fixed costs; add a
+            5–8% buffer for unexpected repairs.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -3182,6 +3307,72 @@ const HELP = {
             you build the team and pricing around.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Pick the preset closest to YOUR pitch reality:</strong>
+              office-park lunch? Takeaway Classic. Tourist street? Premium.
+              Residential evenings? Aperitivo Dinner. Wrong preset = wrong
+              staffing &amp; supplier orders.
+            </li>
+            <li>
+              <strong>Use presets to A/B-test direction:</strong> load
+              Balanced, then Premium — see how your P&amp;L changes if you
+              pivot toward higher tickets &amp; lower volume.
+            </li>
+            <li>
+              <strong>Combine with menu-mix overrides:</strong> a preset
+              loads averages — refine on the Menu mix card afterwards with
+              your actual top-10 items.
+            </li>
+            <li>
+              <strong>Aperitivo needs the licence:</strong> don&apos;t pick
+              it unless you actually have (or plan) the ~5,000 zł/year
+              alcohol permit. Otherwise model with Aperitivo OFF.
+            </li>
+            <li>
+              <strong>Family/Group is high-variance:</strong> 30 orders/day
+              × 155 zł means few big tickets. One bad weekend wipes the
+              week — only use if you have event bookings or weekend
+              destination traffic.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> a dropdown of 5 archetypes. Picking one
+            overwrites the four Revenue inputs (orders/day, avg ticket, days,
+            COGS%) AND the six attach-rate levers in one go.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Where it flows:</strong> the preset is a starting point,
+            not a lock-in. After applying, every downstream KPI, P&amp;L row
+            and heatmap recomputes from the new inputs. Tweaking individual
+            fields afterward refines but doesn&apos;t auto-revert to the
+            preset.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Preset profiles (Warsaw 2026 calibration):</strong>
+          </p>
+          <ul style={{ margin: "0 0 4px", paddingLeft: 18 }}>
+            <li>Takeaway Classic — 100 ord/d × 45 zł × 28%, low attach</li>
+            <li>Balanced — 70 ord/d × 65 zł × 30%, mixed attach</li>
+            <li>Premium — 55 ord/d × 88 zł × 32%, high attach</li>
+            <li>Family/Group — 30 ord/d × 155 zł × 30%, weekend-led</li>
+            <li>Aperitivo Dinner — 45 ord/d × 82 zł × 28%, drinks-led</li>
+          </ul>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> Warsaw/Kraków pizza-truck operator
+            interviews 2024, Polish gastronomic-sector benchmarks, Italian
+            quick-service vs full-service split data.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> hybrid models (a truck that does
+            Takeaway at lunch + Aperitivo at dinner is a real archetype
+            but isn&apos;t a single preset). Run the simulation twice with
+            different presets and weight the results manually.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -3225,6 +3416,72 @@ const HELP = {
             staff&apos;s attention next week.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Calibrate one lever at a time:</strong> tune the default
+              attach % on coffee to your actual rate before touching the
+              others. Wrong baselines compound across all 6 levers.
+            </li>
+            <li>
+              <strong>Use &quot;All off&quot; to find your base ticket:</strong>
+              the card header has a toggle to disable every lever. The
+              resulting AOV is your raw pizza-only ticket — useful for
+              comparing levers against a clean baseline.
+            </li>
+            <li>
+              <strong>Rank levers by &quot;baked-in + headroom&quot;:</strong>
+              click each one&apos;s (i) — the IN PLAIN TERMS shows current
+              monthly + remaining upside. Push the lever with the biggest
+              headroom first.
+            </li>
+            <li>
+              <strong>Match attach to channel mix:</strong> delivery
+              customers attach less than dine-in. If your channel split
+              shifts toward delivery, scale all attach assumptions down 20-30%.
+            </li>
+            <li>
+              <strong>Verify with weekly POS data:</strong> the Actuals
+              card pulls real attach from the last 90 days. Match
+              assumptions to actuals within ±5 pp or your forecast is
+              fiction.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> 6 attach levers (coffee, dessert,
+            antipasti, aperitivo, premium toppings, pasta primo) + combo
+            conversion + cheapest-pizza shift + delivery share + ingredient
+            levers. Each has its own (i) with full per-lever methodology.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>How it folds in:</strong> each lever computes a
+            per-order ticket lift and COGS lift via{" "}
+            <code>attachDelta()</code>. All deltas sum into{" "}
+            <code>extraTicket</code> and <code>extraCogs</code>, which
+            replace the typed avg ticket and COGS% downstream. Every
+            KPI, P&amp;L row, heatmap and projection re-renders from the
+            adjusted base.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Toggling:</strong> the green &quot;On&quot; pill on each
+            lever excludes it from the math without losing the typed
+            values. Use this to isolate a single hypothesis or build a
+            &quot;before vs after&quot; comparison.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> Polish casual-Italian benchmark data,
+            Italian gastronomic surveys, restaurant-economics literature
+            (Norman, Walker), POS attach-rate studies from Glovo/Wolt.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> attach correlations (customers
+            who buy coffee are more likely to buy dessert too). The model
+            treats each lever independently — in reality, lifting one
+            often lifts the others 1–3 pp as a side-effect.
+          </p>
+        </Methodology>
       </>
     ),
   },
