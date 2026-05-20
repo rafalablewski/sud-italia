@@ -7463,6 +7463,21 @@ const HELP = {
             have headroom and the bottleneck is demand, not supply.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Stay at 70-85% of capacity:</strong> below 70% you have wasted overhead; above 85% you blow ticket times under peak.</li>
+            <li><strong>Capacity expansion checklist:</strong> second oven first, second truck second, bigger oven last (expensive, locks you in).</li>
+            <li><strong>Bottleneck is rarely the oven:</strong> usually the pizzaiolo shape-rate or the prep station. Identify before investing.</li>
+            <li><strong>Capacity = peak × service hours, not daily avg:</strong> a 70 pizza/hr oven for 8 hours = 560 pizza/day theoretical, ~150 realistic with the efficiency factor.</li>
+            <li><strong>Demand vs capacity:</strong> if demand exceeds capacity, marketing is wasted. Spend on operations.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> kitchen capacity (orders/day) = pizzasPerHour × serviceHoursPerDay × ovenEfficiency ÷ prepComplexity.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Typical PL pizza truck capacity:</strong> 100-180 orders/day at 70 pizzas/hr × 8 hours × 22% efficiency = ~123 orders/day. Multi-oven setups: 200-300.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> pizzeria operations literature, oven-manufacturer specs.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> within-day capacity bursts. A kitchen can hit 90 pizzas in the peak hour but average 30/hour across the day. Real saturation is hourly, not daily.</p>
+        </Methodology>
       </>
     ),
   },
@@ -7482,6 +7497,22 @@ const HELP = {
             revenue walked</strong> per peak shift.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Smooth the peak:</strong> push pre-orders for 18:30 or 21:00 to drain the 19:30 spike. Free coffee bait works.</li>
+            <li><strong>Limit menu at peak:</strong> simplified 4-SKU peak menu = +20% throughput.</li>
+            <li><strong>Add a peak-hour staff:</strong> one part-timer 18:30-21:00 only. Captures the peak without paying full-day labor.</li>
+            <li><strong>Watch the peak hour move:</strong> Friday peak might be 20h, Saturday 21h. Calibrate per day.</li>
+            <li><strong>If peak hour &gt; capacity, expand:</strong> bigger oven, second oven, or limit orders to manage queue. Hidden walked customers cost more than visible ones.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> from real POS data — the busiest single hour across the analysis window.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> peak orders/hour = max(orders in any 60-min window) across the observation period. Compared against pizzasPerHour × ovenEfficiency for saturation flag.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy peak share:</strong> 12-22% of daily orders concentrated in the peak hour. Higher = more sensitive to capacity.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> POS hourly-distribution analytics, NRA hourly-mix studies.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> within-hour micro-peaks (the 15-min mega-peak inside the busiest hour). Real saturation is often worse than the hourly stat shows.</p>
+        </Methodology>
       </>
     ),
   },
@@ -7502,6 +7533,21 @@ const HELP = {
             accordingly.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Target ≤ 8 min median:</strong> the breakpoint where customers&apos; subjective experience flips from &quot;fast&quot; to &quot;long&quot;.</li>
+            <li><strong>Worse at peak:</strong> median is &lt; 8 min off-peak but &gt; 12 at the rush. Calibrate staffing to peak.</li>
+            <li><strong>Display order-ready times:</strong> a screen showing estimated ready times sets expectations + reduces complaints.</li>
+            <li><strong>Pre-bake at peak:</strong> Margherita / Marinara 5 min early, finish on order. Cuts perceived wait.</li>
+            <li><strong>Refunds correlate inversely:</strong> if median ticket time &gt; 12 min, refunds tend to jump 2-4 pp. Fix the time, refunds drop.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> median ticket time = P50 of order-to-ready elapsed time, derived from KDS event log. Median (not mean) because slow outliers shouldn&apos;t dominate.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> ≤ 6 min QSR ideal; 6-8 min comfortable; 8-12 min slipping; &gt; 12 min losing customers.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> QSR customer-satisfaction studies, restaurant ops literature on perceived-wait psychology (Maister&apos;s laws of service).</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> dine-in vs takeaway vs delivery distinction. Delivery tolerates longer (15-20 min OK); dine-in cratering at 12. Calibrate per channel.</p>
+        </Methodology>
       </>
     ),
   },
@@ -7526,6 +7572,21 @@ const HELP = {
             attractiveness.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Investor minimum 15-20% EBITDA margin:</strong> below that, valuation drops fast. Many PE deals require ≥ 18%.</li>
+            <li><strong>EBITDA grows by raising prices OR cutting variable costs:</strong> capex and depreciation don&apos;t affect it. Focus there for valuation.</li>
+            <li><strong>Multiple of EBITDA = your sale price:</strong> Polish casual-Italian sells at 4-6× EBITDA. Lifting 1pp margin lifts valuation 4-6× more.</li>
+            <li><strong>Track EBITDA trend yearly:</strong> investors look at trajectory, not just level. A flat 22% beats a declining 25%.</li>
+            <li><strong>Don&apos;t game it:</strong> reclassifying real costs to depreciation inflates EBITDA but auditors catch it. Honest numbers.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> EBITDA = net profit + interest + tax + depreciation + amortisation. Standard adjusted EBITDA excludes one-off items.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges (PL casual-Italian):</strong> 12-18% standard; 18-25% strong; &gt; 25% exceptional (often a chain with scale economics).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> standard finance (Brealey, Myers, Allen), restaurant-industry valuation literature, Polish M&amp;A multiples data.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> &quot;normalisations&quot; that investors apply (founder salary normalisation, one-off legal costs, etc.). These can swing EBITDA 10-20% in either direction during diligence.</p>
+        </Methodology>
       </>
     ),
   },
