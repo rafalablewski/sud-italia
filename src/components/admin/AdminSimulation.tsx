@@ -7719,9 +7719,21 @@ const HELP = {
       <>
         <p>
           Minimum unit setup cost as % of unit 1. Caps the learning-curve
-          benefit so the model doesn&apos;t simulate &quot;20th truck costs
-          nothing&quot;.
+          benefit so the model doesn&apos;t simulate &quot;20th truck
+          costs nothing&quot;.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Realistic floor 55-70% of unit 1 — reflects unavoidable
+            hard costs that don&apos;t shrink with experience: vehicle
+            (~40-50k), oven (~35-55k), permits (~10-15k), startup ZUS.
+            Even a perfect playbook can&apos;t buy a working pizza
+            truck for &lt; 55% of the first one. Floor inflation-
+            adjusts annually as minimum hard-cost lines drift up; if
+            building in 2026+ track regulation tightening for the
+            permit line.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Even the 50th truck still costs <em>something</em> — oven,
@@ -7755,9 +7767,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Fraction of days in a typical month with significant rain. Warsaw
-          average ~30% (autumn/winter higher, summer lower).
+          Fraction of days in a typical month with meaningful rain.
+          Warsaw average ~30% per IMGW (autumn/winter higher, summer
+          lower).
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            IMGW regional annual averages: Warsaw 30%, Kraków 28%,
+            Gdańsk 35%, Wrocław 30%, Poznań 28%, Lublin 26%, Zakopane
+            40%. PL rainy-day share has crept up 3-5% over the past
+            decade (climate trend). For indoor mall pitches the
+            economic sensitivity drops sharply (rain doesn&apos;t
+            affect access) — set rainyShare 10-15% there even when
+            literal weather is 30%.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Warsaw has rain on roughly <strong>1 day in 3</strong>. At a 0.55
@@ -7793,9 +7817,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Share of evenings hot enough (typically 25°C+ at 19:00) to fire the
-          heatwave volume bonus. Warsaw annual avg ~10%; ~30% in Jun–Aug.
+          Share of evenings hot enough (typically 25°C+ at 19h) to fire
+          the heatwave volume bonus. Warsaw annual avg ~10%; ~30% in
+          Jun-Aug.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            IMGW regional averages (annual %): Warsaw 10%, Kraków 12%,
+            Wrocław 14%, Poznań 11%, Gdańsk 7% (coastal cooler),
+            Lublin 12%. Climate trend: PL heatwave share has risen
+            2-4 pp/decade. Above 32°C the effect inverts (cooks
+            struggle, customers stay in AC) — the model assumes
+            moderate 25-32°C heat; for southern Europe or unusual
+            extremes, override the multiplier.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             A real heatwave evening only happens <strong>~1 in 10
@@ -7830,10 +7866,23 @@ const HELP = {
     body: (
       <>
         <p>
-          Volume multiplier applied to designated peak calendar days
-          (Valentine&apos;s, NYE, Black Friday, Mother&apos;s Day). Default
-          1.60.
+          Volume multiplier on designated peak calendar days
+          (Valentine&apos;s, NYE, Black Friday, Mother&apos;s Day).
+          Default 1.60.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Per-event ranges: Valentine&apos;s on Friday 2.0-2.5×; NYE
+            1.5-2.0× (early dinner only); Mother&apos;s/Father&apos;s
+            Day 1.6-1.8×; Halloween/BF 1.2-1.4×. Stacks with
+            day-of-week multipliers — Valentine&apos;s on a Friday
+            compounds. Capacity caveat: if the kitchen-saturation KPI
+            caps at 1.4× normal, the modelled 1.6× multiplier
+            over-states upside; real lift gets clipped at the saturation
+            ceiling. Plan reservations + simplified menu to extract
+            the upside without blowing service.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>5 peak days/year at 1.60×</strong> is the difference
