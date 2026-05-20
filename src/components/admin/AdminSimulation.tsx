@@ -6308,6 +6308,22 @@ const HELP = {
             the margin.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Save summer surplus for winter:</strong> auto-transfer 30% of summer net profit to a winter reserve. Otherwise you&apos;ll spend it.</li>
+            <li><strong>Pre-hire summer staff in April:</strong> students/part-timers book early. Wait until June and the talent pool is empty.</li>
+            <li><strong>Patio expansion in May:</strong> rent extra outdoor furniture, get permits done early. Day-1 of warm weather = max revenue.</li>
+            <li><strong>Aperitivo / spritz push:</strong> summer evenings reward drink attach. Train + stock + promote.</li>
+            <li><strong>Don&apos;t over-extend:</strong> summer multiplier 1.30 doesn&apos;t mean you can do 1.30× capacity. Match labor + supplies; don&apos;t blow out service times.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> summer (Jun-Aug) volume multiplier. Default 1.30.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> summer_orders/day = base × summerMultiplier × heatwaveMultiplier × ... composed with other weather levers.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Range:</strong> 1.15-1.45 outdoor truck; 0.95-1.10 indoor mall (less seasonal); 1.20-1.30 tourist-area indoor. Resort/beach 1.50+.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish gastronomic seasonality studies, GUS hospitality reports, owner-operator monthly variance data.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> capacity-limited demand (your 1.30× theoretical might be capped by oven throughput). Check kitchen saturation against the summer peak.</p>
+        </Methodology>
       </>
     ),
   },
@@ -6327,6 +6343,22 @@ const HELP = {
             don&apos;t over-promise.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>April patio launch:</strong> set up outdoor seating for the first warm weekend. Visibility = early-season buzz.</li>
+            <li><strong>Easter is volatile:</strong> can be peak (family lunches) or zero (closure). Plan both scenarios.</li>
+            <li><strong>Use spring to test menu changes:</strong> low-stakes season to A/B new items before summer rush.</li>
+            <li><strong>Refresh marketing for the new season:</strong> &quot;spring menu&quot; framing converts even if the items are the same.</li>
+            <li><strong>Calibrate the model:</strong> spring is your baseline. Match it to your last-year actuals so the other seasons are correctly flexed.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> spring (Mar-May) volume multiplier. Default 1.00 (baseline).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> spring_orders/day = base × springMultiplier × {"(other weather adjustments)"}.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Range:</strong> 0.95-1.10 typical. Late spring (May) often runs higher than early (March) — the multiplier averages across the quarter.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> seasonality studies, owner-operator monthly variance.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> Easter weekend swing (can be 2× or 0.3× depending on whether you open). Add as event-day if planning to open; as holiday-closure if not.</p>
+        </Methodology>
       </>
     ),
   },
@@ -6345,6 +6377,22 @@ const HELP = {
             crowd) to compensate before the dark days hit.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>September back-to-school push:</strong> office lunch crowd returns. Marketing aimed at &quot;September resets&quot; outperforms June ads.</li>
+            <li><strong>Autumn menu launch in early Oct:</strong> truffle, pumpkin, root-veg toppings. Higher-margin SKUs justify the seasonal effort.</li>
+            <li><strong>Plan for Halloween:</strong> the peak day in autumn. Pre-promo, themed items, evening hours extended.</li>
+            <li><strong>Watch the daylight drop:</strong> November evenings get dark at 16h. Patio dining dies; pivot to indoor / delivery emphasis.</li>
+            <li><strong>Build the winter reserve:</strong> autumn is your last cash-positive season before winter. Save aggressively in October-November.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> autumn (Sep-Nov) volume multiplier. Default 0.95.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> autumn_orders/day = base × autumnMultiplier × ... composed with other weather levers.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Range:</strong> 0.85-1.05. Early autumn (Sep) often runs at 1.05; November typically 0.85. Multiplier averages across the quarter.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish gastronomic seasonality, owner-operator monthly variance, IMGW daylight-hour data.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> All Saints&apos; Day (1 Nov) revenue impact. Most pizzerias close — use the holidayClosed field separately.</p>
+        </Methodology>
       </>
     ),
   },
@@ -6366,6 +6414,22 @@ const HELP = {
             is cheaper than a bigger oven.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Train the pizzaiolo to batch:</strong> 4-6 pies per bake vs 1-2 is the single biggest throughput lever. Cheap, fast, big impact.</li>
+            <li><strong>Match orders to bakes:</strong> hold a tablet showing &quot;next 6 orders&quot; — the pizzaiolo prepares the batch together.</li>
+            <li><strong>Pre-rotate dough during slow:</strong> portioned discs ready to stretch save 30-45s per pizza when the rush hits.</li>
+            <li><strong>Oven layout matters:</strong> a deeper oven holds more but is harder to peel. Train on peel technique to max the capacity.</li>
+            <li><strong>Second oven vs second truck:</strong> a second oven helps within one location; a second truck doubles your geographic reach. Different problems, different solutions.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> number of pizzas per single bake cycle. Default 8 (Stefano Ferrara). Multi-deck/conveyor 16+.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> theoretical pizzas/hour = pizzasPerBake × (3600 ÷ cycleTime) × ovenEfficiency.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Oven types &amp; capacity:</strong> Stefano Ferrara 8 pies, Marra Forni 6-9, Forno Bravo 4-6, multi-deck Lincoln 12-16, conveyor Middleby 16-20.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> oven manufacturer specs, AVPN production guides, Pizza University throughput data.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> uneven oven heat distribution (front vs back, hot spots). Real bakes need rotation; the model treats every slot as identical.</p>
+        </Methodology>
       </>
     ),
   },
