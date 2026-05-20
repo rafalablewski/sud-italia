@@ -9609,11 +9609,26 @@ export function AdminSimulation() {
     scenario.setupCostGrosze ?? 0,
   );
   const tornado = computeTornado(effectiveScenario!);
-  // Channel economics uses the RAW scenario so the on-site card rate is the
-  // operator's input, not the blended one applyAssumptions produced.
-  const channels = computeChannelEconomics(scenario);
+  // Channel economics + fleet economics use the RAW scenario's rates
+  // (cogsPct, on-site paymentProcessorPct) so per-channel / per-unit rows
+  // show the operator's typed values rather than the cross-channel
+  // blended rate applyAssumptions produced. But the VOLUME (ordersPerDay
+  // × daysOpenPerMonth) must come from effectiveScenario so monthly
+  // amounts reconcile to the headline P&L — using typed volume here
+  // over-states by ~8% for typical Warsaw seasonality (rainy days,
+  // holiday closures, peak/event bonuses).
+  const effectiveVolume = effectiveScenario
+    ? {
+        ordersPerDay: effectiveScenario.ordersPerDay,
+        daysOpenPerMonth: effectiveScenario.daysOpenPerMonth,
+      }
+    : { ordersPerDay: scenario.ordersPerDay, daysOpenPerMonth: scenario.daysOpenPerMonth };
+  const channels = computeChannelEconomics({ ...scenario, ...effectiveVolume });
   const attachEfficiency = computeAttachmentEfficiency(effectiveScenario!);
-  const fleetEcon = computeFleetEconomics(scenario, scenario.setupCostGrosze ?? 0);
+  const fleetEcon = computeFleetEconomics(
+    { ...scenario, ...effectiveVolume },
+    scenario.setupCostGrosze ?? 0,
+  );
   const prepFlow = computePrepFlow(scenario);
   const shiftPlan = computeShiftPlan(scenario, dayparts);
   const archetypes = deriveArchetypes(effectiveScenario!);
@@ -10451,7 +10466,7 @@ export function AdminSimulation() {
         sssg={
           sssg && (sssg.currentOrders > 0 || sssg.priorOrders > 0)
             ? sssg
-            : computeSimulatedSssg(scenario)
+            : computeSimulatedSssg(effectiveScenario ?? scenario)
         }
         simulated={!sssg || (sssg.currentOrders === 0 && sssg.priorOrders === 0)}
       />
@@ -10481,7 +10496,11 @@ export function AdminSimulation() {
         anchorId="unit-economics"
       />
 
-      <UnitEconomicsPanel scenario={scenario} computed={computed} actuals={actuals} />
+      <UnitEconomicsPanel
+        scenario={effectiveScenario ?? scenario}
+        computed={computed}
+        actuals={actuals}
+      />
 
       <ChannelEconomicsPanel rows={channels} />
 
@@ -10553,7 +10572,7 @@ export function AdminSimulation() {
 
       {(() => {
         const hasReal = menuEng && menuEng.length > 0;
-        const rows = hasReal ? menuEng : computeSimulatedMenuEngineering(scenario);
+        const rows = hasReal ? menuEng : computeSimulatedMenuEngineering(effectiveScenario ?? scenario);
         if (rows.length === 0) return null;
         return (
           <>
@@ -14178,7 +14197,12 @@ const SPOILAGE_KEYWORDS_CLIENT = ["burrata", "truffle", "tartufata", "frozen", "
  *  order history yet so the matrix isn't empty in simulation mode —
  *  every preset still produces a believable mix of stars / plowhorses /
  *  puzzles / dogs. Once real orders flow in (≥1 order), the server
- *  endpoint takes over. */
+ *  endpoint takes over.
+ *
+ *  IMPORTANT: callers must pass `effectiveScenario` (post-applyAnnualWeather),
+ *  not the raw operator-typed scenario. Volume math must match the headline
+ *  P&L which runs on effective annualised volume — using typed values
+ *  over-states monthly numbers by ~8% for typical Warsaw seasonality. */
 function computeSimulatedMenuEngineering(
   s: SimulationScenario,
 ): SimulationMenuEngineeringLine[] {
@@ -14327,7 +14351,12 @@ function computeSimulatedMenuEngineering(
  *  real order history. Treats the current scenario's monthly revenue as
  *  "current period" and applies a seasonality-driven multiplier for the
  *  prior period so the panel surfaces a plausible comp signal in
- *  simulation mode. Real-orders path takes over once the actuals exist. */
+ *  simulation mode. Real-orders path takes over once the actuals exist.
+ *
+ *  IMPORTANT: callers must pass `effectiveScenario` (post-applyAnnualWeather),
+ *  not the raw operator-typed scenario. Volume math must match the headline
+ *  P&L which runs on effective annualised volume — using typed values
+ *  over-states monthly numbers by ~8% for typical Warsaw seasonality. */
 function computeSimulatedSssg(s: SimulationScenario): SimulationSssgSnapshot {
   const monthlyRevenue = s.ordersPerDay * s.avgTicketGrosze * s.daysOpenPerMonth;
   const monthlyOrders = s.ordersPerDay * s.daysOpenPerMonth;
