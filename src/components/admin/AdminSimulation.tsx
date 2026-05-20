@@ -8437,6 +8437,21 @@ const HELP = {
             per day (full marketing campaign).
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Push attach over price:</strong> raising avg ticket via coffee/dessert attach is invisible to customers; raising menu prices is visible.</li>
+            <li><strong>Track per-channel:</strong> on-site, Glovo, Wolt typically vary by 5-15 zł. Different optimisation per channel.</li>
+            <li><strong>Combo conversion is the lever:</strong> 30% of customers taking a 65 zł combo vs 45 zł pizza raises blended AOV ~6 zł.</li>
+            <li><strong>Monthly trend matters:</strong> if AOV is declining, customers are downshifting. Counter with value items or attach push.</li>
+            <li><strong>Compare to peers:</strong> casual-Italian PL benchmark 60-72 zł. Below 50 = aggressive value positioning; above 80 = upscale.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> revenue per order = monthly revenue ÷ monthly orders. Net of refunds/comps.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges (PL casual-Italian):</strong> Pizza-only menu 45-55 zł; with drinks 60-68 zł; full dinner 70-85 zł; upscale Italian 90+ zł.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Glovo/Wolt published GMV-per-order, PHG benchmarks.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> party size (a 4-person order isn&apos;t 4× individual). The model treats one order = one customer.</p>
+        </Methodology>
       </>
     ),
   },
@@ -8457,6 +8472,21 @@ const HELP = {
             marketing will fix that.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Negative CM2 = stop right now:</strong> every order loses money. Pause growth, fix the unit, then resume.</li>
+            <li><strong>Healthy CM2:</strong> 5-10 zł/order for a well-run truck. Below 3 zł = fragile.</li>
+            <li><strong>Levers for CM2:</strong> raise prices, reduce labor-per-order (productivity), trim fixed costs. Variable cost lifts CM1 not CM2.</li>
+            <li><strong>Use it in unit-2 decisions:</strong> if Unit 1 CM2 is 8 zł, Unit 2 expected CM2 should be similar before opening. If projected lower, ask why.</li>
+            <li><strong>Investor metric:</strong> alongside CM1, CM2 shows whether the unit is structurally profitable. The gap = how fixed-cost-heavy you are.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> True CM2 per order = True CM1 − (labor + fixed costs) ÷ monthly orders.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> &gt; 10 zł/order excellent; 5-10 healthy; 2-5 marginal; &lt; 2 fragile; &lt; 0 structurally broken.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> unit economics frameworks (a16z, Bain), restaurant due-diligence literature.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> CM2 variance by daypart. Off-peak CM2 might be negative; peak CM2 strongly positive. Blended hides the truth — check both.</p>
+        </Methodology>
       </>
     ),
   },
@@ -8475,6 +8505,21 @@ const HELP = {
             improvement scales by this number.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Multiplier on every per-order improvement:</strong> a 1 zł lift in CM2 × 2,240 orders = 2,240 zł/month. Multipliers matter.</li>
+            <li><strong>Customer count vs order count:</strong> if avg party size is 2.5, 2,240 orders = ~900 unique transactions. Track both.</li>
+            <li><strong>Compare to capacity:</strong> kitchen capacity 4,000/month means you have ~45% headroom for growth.</li>
+            <li><strong>Channel mix matters:</strong> 1,500 on-site + 700 delivery has different operations than 2,000 on-site + 240 delivery. Same number, very different ops.</li>
+            <li><strong>Year-over-year growth target:</strong> 8-15% order growth annual is healthy. Lower = stagnating; much higher = check capacity.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> monthly orders = orders/day × days/month × weather/event multipliers. Net of refunds (counted as anti-orders, reducing the total).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges (PL pizza truck):</strong> 1,400-2,800 orders/month for a single unit. Below 1,400 = sub-scale; above 2,800 = capacity-pressed.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish food-truck association benchmarks, POS-data composites.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> order-vs-customer distinction. If avg party = 1.2, orders ≈ customers; if 3.0+, very different. Track party size separately.</p>
+        </Methodology>
       </>
     ),
   },
@@ -8495,6 +8540,21 @@ const HELP = {
             you&apos;re effectively just one operator with backup units.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>5 units = real chain:</strong> below 5, you&apos;re scaling; at 5, you have leverage; above 5, you have a system.</li>
+            <li><strong>Watch per-unit dilution:</strong> if fleet revenue grows 30% but unit-1 dropped, you have cannibalisation. Diagnose with per-unit data.</li>
+            <li><strong>1M zł/mo unlocks tier-3 supply discounts:</strong> negotiate the next supplier tier when crossing.</li>
+            <li><strong>Watch the €2M annual threshold per entity:</strong> staying under keeps 9% CIT. Cross it and you jump to 19%.</li>
+            <li><strong>Compare YoY growth:</strong> fleet revenue should grow faster than per-unit. If they grow together, you&apos;re not scaling.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> fleet revenue = Σ per-unit revenue. Adjusted for cannibalisation between same-DMA units.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges by fleet size:</strong> 2 units 250-400k zł/mo; 5 units 700k-1.2M; 10 units 1.4-2.4M; 20 units 2.8-5M.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish franchise-system financials, chain-economics literature.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> per-unit variance. Fleet revenue averages mask outlier units. A struggling unit can be hidden in a successful fleet.</p>
+        </Methodology>
       </>
     ),
   },
