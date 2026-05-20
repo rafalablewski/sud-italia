@@ -9440,9 +9440,22 @@ const HELP = {
     body: (
       <>
         <p>
-          Predicted order-to-ready time from menu mix + per-attach prep
-          seconds.
+          Predicted order-to-ready time from menu mix + per-attach
+          prep seconds.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Base oven cycle + Σ (per-attach prep × attach %). Default
+            adds per attach: dessert +20s, antipasti +60s, aperitivo
+            +30s, premium toppings +15s, pasta primo +90s. Compare to
+            observed: observed &gt; 1.5× modelled = team process gap
+            (mise-en-place, peel technique, station hand-offs);
+            observed &lt; modelled = kitchen is more efficient than the
+            menu predicts (often the case with veteran teams). The
+            model assumes serial flow; batch-discipline crews beat the
+            model by parallelising.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>What the spreadsheet says your ticket time should be.</strong>
@@ -9474,8 +9487,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Real measured order-to-ready time from actual orders (median).
+          Real measured order-to-ready time from POS / KDS data
+          (median, P50).
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Ground truth — the model lies, this doesn&apos;t. Tiers:
+            ≤ 6 min QSR ideal; 6-8 min comfortable; 8-12 min slipping;
+            &gt; 12 min losing customers. Track P95 alongside P50 — a
+            few 20-min outliers ruin individual experiences. Per-channel
+            divergence: delivery customers tolerate 15-20 min (not
+            watching the kitchen clock); dine-in cratering at 12 min.
+            Calibrate each channel separately if delivery share is
+            material.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>The actual stopwatch time from real orders.</strong> Past
@@ -9507,10 +9533,23 @@ const HELP = {
     body: (
       <>
         <p>
-          Excess orders <em>per hour</em> at peak — arrivals beyond what the
-          oven can produce. These are customers who walk because the queue is
-          too long.
+          Excess orders <em>per hour</em> at peak — arrivals beyond
+          what the oven can produce. These are customers who walk
+          because the queue is too long.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            max(0, peak_hour_orders − realistic_oven_capacity). Even
+            3 lost orders/hr × 3 peak hours × 30 zł margin × 30 days =
+            ~8,100 zł/month gone — invisibly. Erlang queueing theory
+            shows that arrival-rate concentration drives walkaway
+            non-linearly; smoothing arrivals (reservations + SMS
+            ready-alerts) often beats raw capacity expansion. Partial-
+            balking (customers seeing the queue and leaving without
+            trying) means real lost orders typically run 1.5-2× the
+            modelled overflow.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>Orders walking away at peak hour.</strong> Even
@@ -9544,9 +9583,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Average back-of-queue wait time at peak hour. Past 5 minutes drives
-          5% conversion loss per extra minute, capped at 60%.
+          Average back-of-queue wait at peak hour. Past 5 min, each
+          extra minute drops conversion by ~5% (capped at 60%).
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Conversion-vs-wait curve (Polish QSR research): 0-5 min
+            wait 95% complete; 5-10 min 70%; 10-15 min 40%; &gt; 15
+            min ~20%. Maister&apos;s law: customers tolerate 50% longer
+            wait when expectation is set up front. Perceived-wait
+            interventions (visible build, sample bites, QR menu) reduce
+            real abandonment by 30-40% without reducing actual wait —
+            cheaper than capacity expansion. Daypart variance applies:
+            lunch crowd has lowest tolerance, tourists highest.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>How long the average customer waits at peak.</strong> Past
