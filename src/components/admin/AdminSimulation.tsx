@@ -2928,14 +2928,22 @@ const HELP = {
     body: (
       <>
         <p>
-          The average number of orders the truck completes on a normal day. A typical
-          Neapolitan pizza truck does 50–100/day; busy summer evenings can push 120+.
+          Average orders the truck completes on a normal day. A typical
+          Neapolitan pizza truck does 50–100/day; summer evenings can
+          push 120+.
         </p>
-        <p>
-          <strong>Why it matters:</strong> revenue = orders × ticket × days open. Doubling
-          this number roughly doubles revenue but only adds variable food cost — labor
-          and rent are mostly fixed, so the extra orders are very profitable.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            <strong>Why it matters:</strong> revenue = orders × ticket ×
+            days open. Doubling this number roughly doubles revenue but
+            only adds variable food cost — labor and rent are mostly
+            fixed, so the extra orders are very profitable. The most
+            operational-leverage of all top-line inputs: capacity is
+            constrained by oven throughput × service hours, but until
+            you saturate that ceiling, every additional order/day drops
+            ~70-80% of its revenue to the bottom line.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             The more pizzas you sell each day, the more money you keep. Growing from
@@ -3015,18 +3023,26 @@ const HELP = {
     body: (
       <>
         <p>
-          The total each customer pays per order, all-in (pizza + sides + drink + tip
-          excluded). Polish pizzerias run 60–72 zł when the menu has drinks and desserts.
+          Total each customer pays per order, all-in (pizza + sides +
+          drinks, tip excluded). Polish pizzerias run 60–72 zł when the
+          menu has drinks and desserts.
         </p>
-        <p>
-          <strong>How to think about it:</strong> raise this by selling combos and
-          add-ons rather than cranking pizza prices — customers notice price hikes,
-          they don&apos;t notice that they added an espresso.
-        </p>
-        <p className="v2-muted text-sm">
-          When the Menu mix card has weights, this field becomes display-only — the
-          number is computed from how often each menu item sells.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>How to think about it:</strong> raise this by selling
+            combos and add-ons rather than cranking pizza prices —
+            customers notice price hikes, they don&apos;t notice that
+            they added an espresso. Attach-driven AOV growth is the
+            highest-NPV path: zero acquisition cost, near-zero kitchen
+            time penalty (for coffee/dessert), and the marginal item
+            inherits the same fixed-cost coverage as the base pizza.
+          </p>
+          <p className="v2-muted text-sm" style={{ margin: 0 }}>
+            When the Menu mix card has weights, this field becomes
+            display-only — the number is computed from each item&apos;s
+            recipe price × menu mix.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Every extra złoty on the average bill is a złoty you earn without serving a
@@ -3104,14 +3120,22 @@ const HELP = {
     body: (
       <>
         <p>
-          How many days each month the truck takes orders. 28 is typical (one day off
-          per week). Closing extra days lets staff rest but loses ~3.6% of monthly
-          revenue per day.
+          How many days each month the truck takes orders. 28 is typical
+          (one day off per week). Each closed day loses ~3.6% of monthly
+          revenue but holds fixed costs flat.
         </p>
-        <p>
-          <strong>Trade-off:</strong> 7-day operation maximises revenue but burns out
-          staff. 6 days/week (~26 days/mo) is a sustainable sweet spot.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            <strong>Trade-off: revenue vs sustainability.</strong> 7-day
+            operation maximises top-line but burns out staff (and
+            triggers Kodeks Pracy rest-period overtime premiums); 6
+            days/week (~26 days/mo) is the sustainable sweet spot.
+            Critical input for fixed-cost amortisation: rent + accountant
+            + insurance are monthly, so per-day burden = fixed ÷ days
+            open. Cutting days open without cutting fixed inflates the
+            break-even daily volume.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Each closed day is a day with zero revenue but rent still due. Going from
@@ -3189,18 +3213,26 @@ const HELP = {
     body: (
       <>
         <p>
-          COGS = Cost Of Goods Sold. The share of revenue that gets eaten by
-          ingredients. <strong>Polish pizzeria benchmark is 25–35%</strong>; under 30%
-          is healthy, over 35% means recipes need re-engineering.
+          COGS = Cost Of Goods Sold. The share of revenue eaten by
+          ingredients. Polish pizzeria benchmark: 25–35%.
         </p>
-        <p>
-          <strong>Formula:</strong> if a pizza sells for 30 zł and the dough +
-          tomato + mozzarella cost 9 zł, that&apos;s 30% COGS.
-        </p>
-        <p>
-          When the Menu mix card is active, this number is computed from each
-          item&apos;s actual recipe cost ÷ price, weighted by how often it sells.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Formula:</strong> recipe cost ÷ price, weighted by
+            menu mix. Under 30% is healthy; 30-32% is the operating norm;
+            over 35% indicates recipe leakage (over-portioning, supplier
+            drift, or under-priced menu). Each 1pp of COGS reduction
+            flows directly to gross margin (then through the variable-
+            leakage stack and CIT to net). On a 200k zł/mo truck, 1pp
+            COGS ≈ 2,000 zł/mo pre-tax — the single highest-leverage
+            line on the P&amp;L because it scales with revenue.
+          </p>
+          <p style={{ margin: 0 }}>
+            When the Menu mix card has weights, this field is
+            display-only — driven by Σ (item cost × qty) ÷ Σ (item price
+            × qty).
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             For every 100 zł a customer pays, ~30 zł is the ingredients you burned.
