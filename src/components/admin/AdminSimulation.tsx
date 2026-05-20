@@ -7522,9 +7522,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Units before centralised dough/sauce production becomes cost-positive.
-          Typically 4+ units.
+          Unit count at which centralised dough/sauce production becomes
+          cost-positive. Typically 4+ units in PL casual-Italian.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Break-even math: ~15-25k zł/month commissary fixed cost
+            (rent + 1 chef + utilities + transport). To net-positive at
+            4 trucks each truck must save ~5-7k zł/month from central
+            production (i.e. 3-4 pp of COGS). Beyond cost: quality
+            consistency improves dramatically (uniform dough across the
+            fleet) — this benefit doesn&apos;t show in the model but
+            shows in customer perception and repeat rate. Capex 250-
+            500k for the central kitchen; HACCP certification mandatory.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             A central kitchen making all the dough + sauce only makes sense
@@ -7558,9 +7570,22 @@ const HELP = {
     body: (
       <>
         <p>
-          COGS reduction from centralised production, net of commissary
-          run-rate cost (rent, equipment, labor). ~3–6 pp typical.
+          NET COGS reduction from centralised production, after deducting
+          commissary run-rate cost (rent, equipment, labor). Typical
+          3-6 pp.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Decomposition: gross saving ~6-8 pp (bulk purchasing + waste
+            reduction + consistency); minus operating cost ~2-4 pp;
+            net ~3-5 pp at fleet maturity. Captures supplier rebates
+            centrally (vs distributed per-unit), reduces per-truck
+            waste through precise central forecasting, and enforces
+            recipe standardisation. Stacks with supplyDiscount —
+            commissary + supplier discount at scale can drop blended
+            COGS by 8-12 pp combined.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             A commissary saves <strong>~4 pp of COGS</strong> (bulk purchasing,
@@ -7594,9 +7619,24 @@ const HELP = {
     body: (
       <>
         <p>
-          Revenue % a new unit takes from prior units in the same trade area.
-          Modelled as (1 − pct)^(n−1) retained.
+          Revenue % a new unit takes from prior units in the same trade
+          area. Modelled as (1 − pct)^(n−1) retained per overlapping
+          unit.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Realistic ranges by distance: same neighbourhood (&lt; 1 km)
+            25-40% cannibalisation; same city different district (3-5
+            km) 8-15%; different city 0-3% (residual brand effect
+            only). The geometric retention formula reflects diminishing
+            marginal cannibalisation as the cluster grows. Some chains
+            deliberately cluster (Starbucks, Domino&apos;s) for brand-
+            density flywheel — at high density the new unit might add
+            incremental demand exceeding the cannibalisation hit. The
+            model is conservative — investor due diligence will assume
+            it&apos;s real.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Open truck #2 across town and the existing one doesn&apos;t keep
@@ -7630,9 +7670,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Setup-cost reduction per added unit, applied as (1 − learning)^(n−1).
-          Reflects supplier rolodex, permit familiarity, build-team efficiency.
+          Setup-cost reduction per added unit, applied as
+          (1 − learning)^(n−1). Reflects supplier rolodex, permit
+          familiarity, build-team efficiency.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Wright&apos;s learning-curve theory adapted to gastronomic
+            buildout. Realistic range 5-12% per unit; chains tend toward
+            8%; fast-growing concepts with tight playbooks 10-12%. The
+            biggest enabler is a single buildout team across units
+            (vs different contractors per opening). Floored at
+            buildoutFloor% so the model doesn&apos;t simulate
+            &quot;20th unit costs nothing&quot;.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Your first truck cost <strong>300,000 zł</strong> because you made
