@@ -3517,6 +3517,81 @@ const HELP = {
             because the second and third items wouldn&apos;t have attached on their own.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Position combos as the default choice:</strong> menu
+              top-left with a hero photo. Don&apos;t let customers find them —
+              push them. Conversion lifts 2-3× when prominent.
+            </li>
+            <li>
+              <strong>The 6 zł discount is the lure, not the goal:</strong>
+              you&apos;re trading a 6 zł discount for an ~18 zł extra ticket.
+              Don&apos;t bigger the discount to drive conversion — bigger the
+              perceived value (better dessert, branded glass).
+            </li>
+            <li>
+              <strong>Lunch combo + dinner combo:</strong> daypart-specific
+              bundles convert better than a single all-day combo. Lunch = pizza
+              + drink (faster); dinner = pizza + dessert + coffee (slower,
+              higher ticket).
+            </li>
+            <li>
+              <strong>Tap-to-add on the POS:</strong> when the cashier opens a
+              pizza item, the POS should pop &quot;Make it a combo? +20 zł.&quot;
+              One tap. Built-in &gt; cashier discretion.
+            </li>
+            <li>
+              <strong>Track combo % weekly:</strong> if it drops below 15%
+              your placement is wrong or your value isn&apos;t obvious. If it&apos;s
+              above 40% you might be cannibalising à-la-carte attach (people
+              who&apos;d have bought ALL the items at full price).
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> conversion % (share of main orders that
+            take the combo), addon price (the cost of the bundled
+            drink+dessert as displayed), discount (how much the combo undercuts
+            à-la-carte) and addon COGS%.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formula:</strong> for each converted order:
+            <br />
+            ticket lift = (addon price − discount)
+            <br />
+            COGS lift = addon price × addon COGS%
+            <br />
+            Per-order margin lift = ticket lift − COGS lift. Multiplied by
+            (conversion% × orders/day × days) for monthly impact.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Why combos earn even at a discount:</strong> the addon
+            items wouldn&apos;t have attached à-la-carte. So the 6 zł
+            discount is real, but the alternative is selling 0 extras, not
+            selling them at full price. Math beats intuition here.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Realistic range:</strong> 15–35% conversion is healthy
+            for a Polish casual-Italian. Above 40% suggests you&apos;re
+            cannibalising à-la-carte; below 10% suggests the combo is
+            invisible or over-priced.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> QSR International combo-attach
+            benchmarks, Polish casual-dining studies, McDonald&apos;s
+            Extra-Value-Meal economics (published case studies).
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> the cannibalisation rate
+            (some combo buyers would have bought all items at full
+            price anyway). The model treats every combo conversion as
+            net-new attach — in reality 15–25% would have attached
+            anyway. Discount your monthly lift by that share for a
+            conservative estimate.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -3548,6 +3623,69 @@ const HELP = {
             lands somewhere safe instead of on your cheapest item.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Design a profitable &quot;value champion&quot;:</strong>
+              one 42–45 zł pizza with strong margin (high-margin toppings
+              + smaller portion). Position it as &quot;our daily special&quot;
+              so the downshift lands there instead of on a Margherita.
+            </li>
+            <li>
+              <strong>Smaller portions, not lower prices:</strong> launch a
+              30 cm &quot;personal&quot; version at 60% of the full price.
+              Captures budget customers without devaluing the menu.
+            </li>
+            <li>
+              <strong>Combo the cheapest pizza:</strong> Margherita + drink
+              for 48 zł lifts the ticket back up and keeps the cost-conscious
+              customer happy. They feel they got a deal; you got the drink margin.
+            </li>
+            <li>
+              <strong>Watch leading indicators:</strong> when search trends
+              for &quot;cheap pizza Warsaw&quot; rise, you have ~6 weeks
+              before the shift hits your menu. Pre-launch the value champion
+              before you need it.
+            </li>
+            <li>
+              <strong>Don&apos;t panic-discount:</strong> a 10% discount on
+              all pizzas during a downturn cuts revenue by ~10% but only
+              shifts demand 3-5%. Targeted value items beat blanket
+              discounts every time.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> shift in percentage points of orders
+            moving toward the cheapest pies, ticket delta (per-order
+            revenue drop), COGS delta (per-order food-cost change). Default
+            0 pp — only turn on when modelling a downside scenario.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formula:</strong> effective AOV reduction = shift × ticket
+            delta. Effective COGS reduction = shift × COGS delta. Both
+            applied proportionally to all orders.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Realistic stress:</strong> 10–20 pp shift in a mild
+            recession; 25–35 pp in a severe one. Polish 2022–2023 inflation
+            shifted ~15 pp toward cheaper SKUs across casual-dining. Use
+            this lever to ask &quot;what&apos;s our worst case?&quot;.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> GUS consumer-confidence index,
+            Polish gastronomic sector inflation reports 2022–2024,
+            EU-wide downshift studies in QSR.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> the cross-price elasticity
+            between menu items (some customers downshift on price but
+            up-attach on coffee — &quot;treat&quot; behaviour). The
+            simulation treats the price-shift as pure ticket loss
+            without compensating attach changes.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -3579,6 +3717,68 @@ const HELP = {
             the bottom line — same pizzas, smarter channel mix.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Run direct delivery (your own driver):</strong> 5–8 zł
+              delivery fee at full margin beats 28% Glovo commission. Works
+              for ~3 km radius if you have an e-bike + driver.
+            </li>
+            <li>
+              <strong>Don&apos;t list cheap pizzas on Glovo/Wolt:</strong>
+              the platform commission eats half the margin on a Margherita.
+              List only mains 50+ zł where the margin survives.
+            </li>
+            <li>
+              <strong>In-app loyalty pulls them off platforms:</strong>
+              &quot;5% off when you order through our app&quot; — your app
+              costs 0% commission. The discount is cheaper than the platform fee.
+            </li>
+            <li>
+              <strong>Optimise packaging cost:</strong> 2.50 zł per order ×
+              2,400 orders = 6,000 zł/month. Negotiate bulk on boxes or
+              switch to a cheaper kraft alternative.
+            </li>
+            <li>
+              <strong>Track per-channel attach:</strong> delivery customers
+              attach 30-50% less on coffee + dessert. Push delivery-specific
+              attach via &quot;add a dessert for 9 zł&quot; toggles on the
+              cart screen.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> share of orders via delivery (%),
+            packaging cost per order (zł), processor fee % for delivery
+            (different from in-store if you use a separate one), avg
+            marketplace commission % (~28% blended for Glovo+Wolt).
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formula:</strong> per-delivery-order: ticket × (1 −
+            commission%) − packaging cost. Versus in-store: ticket × (1 −
+            in-store processor fee). Difference × delivery share × orders/day
+            × days = monthly delivery profit drag.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Realistic range:</strong> 15–45% delivery share for a
+            Polish pizzeria with platform presence. Pure-takeaway trucks
+            often 0–10%; mall food-courts can hit 50%+. Match your real
+            channel mix or you&apos;ll mis-forecast margin.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> Glovo and Wolt commission schedules
+            (PL 2024), KPMG delivery-economics reports, Polish casual-Italian
+            channel-mix surveys.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> platform-driven demand
+            (delivery might be 30% of revenue but 60% incremental — without
+            Glovo those orders might not exist at all). Test by toggling
+            the lever off and comparing total order volume against your
+            actuals.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -3623,6 +3823,70 @@ const HELP = {
             trim portions. Use these levers to plan for that before it happens.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Hedge the cheese line:</strong> annual contracts with
+              two suppliers (50/50 split) buffer you against single-supplier
+              shocks. Costs ~1% on average price; saves 8–12% in a spike year.
+            </li>
+            <li>
+              <strong>Test cheaper alternatives blind:</strong> fior di latte
+              vs buffalo, generic mozzarella vs branded — most customers
+              can&apos;t tell. A blind taste test of 20 friends costs you
+              ~100 zł of pizza and might save you 5,000 zł/year on cheese.
+            </li>
+            <li>
+              <strong>Pre-buy in the dip:</strong> tomato prices peak summer,
+              dip November–February. Buy 6 months of passata in Dec at the
+              low — locks in cost, saves freezer space if you portion right.
+            </li>
+            <li>
+              <strong>Recipe-redesign before price hikes hit:</strong> if a
+              stress lever shows +10% cheese ruins your P&amp;L, develop a
+              lighter-cheese recipe NOW (50 g less per pie) and have it
+              ready to launch as &quot;our new lighter Margherita&quot;.
+            </li>
+            <li>
+              <strong>Use the stress test for supplier negotiation:</strong>
+              show the supplier the +10% scenario and what it costs you.
+              Hard data wins discounts that vibes can&apos;t.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> per-ingredient pair of (share of base-pizza
+            COGS, cost-change %). 10 levers cover: cheese, tomato, flour, oil,
+            yeast, dough additives, premium toppings, paper goods, packaging,
+            misc. Each is independently toggleable.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formula:</strong> per-lever COGS impact = lever.share × lever.delta.
+            Applied to base-pizza COGS only — attach items (coffee, drinks,
+            etc.) keep their own COGS unaffected. All enabled levers sum.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Default shares (calibrate to your recipes):</strong>
+          </p>
+          <ul style={{ margin: "0 0 4px", paddingLeft: 18 }}>
+            <li>Cheese 28%, tomato 10%, flour 6%, oil 3%</li>
+            <li>Yeast 1%, dough additives 2%, premium toppings 15%</li>
+            <li>Paper goods 4%, packaging 6%, misc 25%</li>
+          </ul>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> Italian pizzeria recipe-cost data,
+            Polish supplier price-index history 2020–2024, Eurostat
+            food-price indices for stress-test ranges.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> substitution elasticity (if cheese
+            spikes, you don&apos;t just pay more — you might switch type or
+            cut portion). The model assumes recipe stays fixed at the new
+            price. Use the lever to ask &quot;what if I do nothing?&quot;,
+            then plan a counter-move.
+          </p>
+        </Methodology>
       </>
     ),
   },
