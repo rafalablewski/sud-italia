@@ -8574,6 +8574,21 @@ const HELP = {
             equity — and the bank wants to see this number first.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Fleet EBITDA &gt; 20% = self-fundable growth:</strong> can open new units from operations.</li>
+            <li><strong>Watch the EBITDA margin trend:</strong> as you scale, HQ overhead can drag margin. If it&apos;s falling, HQ is bloating.</li>
+            <li><strong>Valuation multiple: 4-7× EBITDA in PL casual-Italian:</strong> a 2.4M zł fleet EBITDA = 10-17M sale price. Material.</li>
+            <li><strong>Reinvestment vs distribution:</strong> 30-40% reinvest, 40-50% pay down debt, 20-30% to owners is a balanced split.</li>
+            <li><strong>Don&apos;t confuse EBITDA with cash:</strong> tax, working-capital changes, capex eat real cash. EBITDA is a proxy, not the bank account.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> fleet EBITDA = Σ (per-unit revenue − per-unit operating costs) − HQ overhead. Before D&amp;A, interest, tax.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> 15-22% chain-grade; 22-28% investor-grade; 28-35% world-class chains; &gt; 35% suspicious (check normalisations).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> NRA chain-economics benchmarks, Polish franchise-system financials, M&amp;A multiples data.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> normalisations applied by investors in due diligence (founder salary normalisation, one-off costs). Real reported EBITDA can swing 10-20% from these adjustments.</p>
+        </Methodology>
       </>
     ),
   },
@@ -8594,6 +8609,21 @@ const HELP = {
             next truck is harder to justify.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Rising EBITDA/unit = scale working:</strong> as you add units, supplier discounts &amp; HQ absorption compound. If flat, something&apos;s off.</li>
+            <li><strong>Decompose new-unit performance:</strong> if Unit 5 underperforms Unit 1, identify why (worse location? leadership gap? cannibalisation?).</li>
+            <li><strong>Set per-unit EBITDA floors:</strong> &quot;no unit allowed to ship at &lt; 30k zł EBITDA&quot; — clear bar for closure or restructuring.</li>
+            <li><strong>Compare to industry chain benchmarks:</strong> Polish QSR chains avg ~35-50k EBITDA per casual-Italian unit. Above 50k is genuinely strong.</li>
+            <li><strong>Year-over-year per-unit:</strong> should grow 5-10% as systems mature. Flat year-over-year = process stagnation.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> EBITDA per unit = fleet EBITDA ÷ unit count. Average; doesn&apos;t show distribution.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges (PL casual-Italian):</strong> 25-40k zł/month/unit at scale. World-class chains 45-60k/unit.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> NRA chain-economics, Polish franchise-system per-unit financials.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> outlier impact. One mega-unit can pull the average up while others struggle. Also use median or P25 per-unit EBITDA to spot weakness.</p>
+        </Methodology>
       </>
     ),
   },
@@ -8612,6 +8642,21 @@ const HELP = {
             you&apos;re building a corporate office, not a restaurant business.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Target trajectory:</strong> 10% at 2 units → 7% at 5 → 5% at 10 → 3% at 20. Linear scale wins.</li>
+            <li><strong>Don&apos;t hire HQ ahead of need:</strong> a 3-unit chain doesn&apos;t need a full operations director. Outsource fractional.</li>
+            <li><strong>Audit HQ value-add quarterly:</strong> each HQ hire should justify their cost via per-unit performance lift. Cut roles that don&apos;t.</li>
+            <li><strong>Centralise the highest-leverage functions first:</strong> finance, marketing, supply. Operations last (each unit needs local ops leadership).</li>
+            <li><strong>Watch the absorption trend:</strong> rising = HQ growing faster than fleet. Either accelerate openings or freeze HQ hires.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> HQ overhead absorption = HQ overhead ÷ fleet revenue × 100%.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy trajectory:</strong> &lt; 3% at 20+ units (mature chain); 3-5% at 10-19 units; 5-8% at 5-9 units; 8-12% at 2-4 units.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> franchise economics literature, Polish chain financials (Pizza Hut PL, Da Grasso, Telepizza).</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> capability vs spend. A 5% HQ can be wasteful or world-class — the model only sees the cost ratio, not the output quality.</p>
+        </Methodology>
       </>
     ),
   },
@@ -8631,6 +8676,21 @@ const HELP = {
             only return number that matters at scale.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Watch the learning-curve compounding:</strong> if you save 8%/unit, by unit 6 your buildout is ~50% of unit 1. That&apos;s the chain economics moment.</li>
+            <li><strong>Mix debt and equity strategically:</strong> equity for unit 1-2 (high uncertainty), debt for unit 3+ (proven). Cuts dilution.</li>
+            <li><strong>Use franchise to lower fleet buildout:</strong> franchisees fund their own units. Fleet revenue grows; capital outlay stays flat.</li>
+            <li><strong>Plan capex calendar:</strong> 2 units in spring, 1 in autumn. Don&apos;t bunch openings — split-cash risk.</li>
+            <li><strong>Compare fleet buildout to fleet EBITDA:</strong> if it&apos;s 3-5× annual EBITDA, you&apos;re leveraged on growth. 2-3× is healthier.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> fleet buildout = Σ per-unit setup cost. Per-unit setup = unit_1 setup × (1 − learning)^(n−1), floored at buildoutFloor%.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Realistic range:</strong> 2 units ~520-580k zł (no learning yet); 5 units ~1.1-1.3M; 10 units ~1.9-2.3M; 20 units ~3.5-4.2M with mature learning curve.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish chain expansion case studies, franchise rollout literature.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> commissary buildout. If you add a central kitchen, add 250-500k to fleet buildout.</p>
+        </Methodology>
       </>
     ),
   },
