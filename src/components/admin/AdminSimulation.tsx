@@ -4543,15 +4543,23 @@ const HELP = {
     body: (
       <>
         <p>
-          Calendar days that run hot: NYE, Valentine&apos;s, Mother&apos;s Day,
-          Father&apos;s Day, Halloween, Black Friday. Set how many you have per
-          month and a peak multiplier (default 1.60 = +60%).
+          Calendar days that run hot: NYE, Valentine&apos;s, Mother&apos;s
+          Day, Father&apos;s Day, Halloween, Black Friday. Configure
+          count per month + a peak multiplier (default 1.60 = +60%).
         </p>
-        <p>
-          <strong>Why it matters:</strong> 5 peak days at 1.6× can add a whole
-          extra normal day&apos;s revenue to the month. Worth investing in
-          extra staffing on those nights.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            <strong>Asymmetric upside, asymmetric staffing risk.</strong>{" "}
+            5 peak days/yr at 1.6× ≈ one extra normal day&apos;s revenue
+            per year added to the average. Worth investing in extra
+            staffing on those nights: under-staffing the peak costs more
+            (blown service to 30+ couples on Valentine&apos;s) than the
+            extra labor ever does. Capacity ceiling caveat: if your
+            kitchen saturation maxes at 1.4× normal, the modelled 1.6×
+            multiplier over-states upside — cross-check against the
+            kitchen saturation KPI before staffing.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Valentine&apos;s Day on a Friday can do <strong>2–3× a normal Friday</strong>
@@ -4634,16 +4642,21 @@ const HELP = {
     body: (
       <>
         <p>
-          July and August: schools closed, offices half-empty, lunch covers
-          drop. Default multiplier 0.85 means 15% lunch-volume haircut, but
-          only for those two months — the simulator averages 2/12 of the year
-          for the headline.
+          Jul-Aug: schools closed, offices half-empty, lunch covers drop.
+          Default multiplier 0.85 = 15% lunch haircut for those two months
+          (the simulator averages 2/12 of the year for the headline).
         </p>
-        <p>
-          <strong>Counter-balance:</strong> tourists and outdoor festival
-          evenings often more than make up for the lunch drop — make sure the
-          summer seasonal multiplier (in Assumptions) reflects both effects.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            <strong>Counter-balance:</strong> tourists and outdoor
+            festival evenings often more than offset the lunch drop —
+            make sure the summer seasonal multiplier reflects both
+            effects so you don&apos;t double-count. Pitch-type modifies
+            the multiplier: office-heavy pitch (Mokotów / Wola) 0.70
+            (deep dip); tourist-heavy (Old Town / Kazimierz) 0.95+
+            (might invert); residential 0.85 (medium).
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             When schools close in July–August, the office lunch crowd vanishes — your
@@ -4722,15 +4735,23 @@ const HELP = {
     body: (
       <>
         <p>
-          Days when the truck pitch hosts a street fair, food-truck rally,
-          Nocny Market, concert, sports event etc. You set how many per month
-          and the multiplier (default 1.50 = +50%).
+          Days when the pitch hosts a street fair, food-truck rally,
+          Nocny Market, concert, sports event. Configure count per month
+          + multiplier (default 1.50 = +50%).
         </p>
-        <p>
-          <strong>How to use:</strong> if you&apos;ve booked the truck for a
-          known festival weekend, bump event days to 2 and the multiplier to
-          2.0× to see if it&apos;s worth the operational hassle.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            <strong>Booked upside vs operational drag.</strong> Unlike
+            peak days (which arrive on the calendar), event days are
+            elective — you choose which festivals to vendor. Small
+            street fair 1.3-1.5×; food-truck rally 1.6-2.0×; major
+            festival 2.0-3.0×; concert / sports with captive audience
+            2.5-4.0×. Subtract vendor fees (3-10k zł/event), permits,
+            and event-day overtime before celebrating — some festivals
+            net less than a normal Saturday once the fee + transport +
+            spoilage risk is in.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             A food-truck rally weekend can do <strong>1.5–3× a normal day</strong> with
@@ -4811,21 +4832,28 @@ const HELP = {
     body: (
       <>
         <p>
-          The classic top-down profit statement, one line per cost bucket:
+          The classic top-down profit statement: revenue down through
+          ingredients, labor and fixed to net profit.
         </p>
-        <ol style={{ margin: "8px 0", paddingLeft: 20 }}>
-          <li><strong>Revenue</strong> — orders × ticket × days</li>
-          <li><strong>− Ingredients (COGS)</strong> — food cost</li>
-          <li><strong>= Gross profit</strong> — what&apos;s left after food</li>
-          <li><strong>− Labor</strong> — everyone on the team, drilled down by role</li>
-          <li><strong>− Fixed costs</strong> — rent, software, accountant, etc</li>
-          <li><strong>= Net profit / (loss)</strong> — the bottom line</li>
-        </ol>
-        <p>
-          The sentence below the table says how far above or below break-even
-          you&apos;re running — &quot;5.2 above&quot; means you&apos;re doing 5.2
-          more orders/day than the minimum needed to not lose money.
-        </p>
+        <InstitutionalAnalysis>
+          <ol style={{ margin: "0 0 6px", paddingLeft: 18 }}>
+            <li><strong>Revenue</strong> — orders × ticket × days × weather/event multipliers</li>
+            <li><strong>− Ingredients (COGS)</strong> — food cost net of attach + ingredient stresses</li>
+            <li><strong>= Gross profit</strong></li>
+            <li><strong>− Labor</strong> — drilled down by role, 1.22× brutto ZUS gross-up</li>
+            <li><strong>− Fixed costs</strong> — rent, software, accountant, owner ZUS</li>
+            <li><strong>− Variable leakage</strong> — payment fees, waste, refunds, loyalty burn</li>
+            <li><strong>= Pre-tax profit → CIT → Net profit / (loss)</strong></li>
+          </ol>
+          <p style={{ margin: 0 }}>
+            The sentence below the table reports the margin-of-safety
+            in orders/day — &quot;5.2 above&quot; = 5.2 more orders/day
+            than the minimum to break even. Below 10% MoS, one bad
+            week wipes you; 20%+ is comfortable. Each P&amp;L line
+            should be benchmarked vs PHG/NRA targets; the
+            operationsKpis strip flags red/amber/green automatically.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Think of the P&amp;L as a stack of glasses: revenue pours in at the top,
