@@ -7606,6 +7606,21 @@ const HELP = {
             land and you don&apos;t. EBITDAR puts you on equal footing.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Use EBITDAR for franchise rollups:</strong> when buying multiple units with different rent profiles, EBITDAR is the apples-to-apples metric.</li>
+            <li><strong>Compare against industry EBITDAR benchmarks:</strong> NRA / PHG publish ranges. Falling below means your operations OR your rent is uncompetitive.</li>
+            <li><strong>Sale-leaseback consideration:</strong> if you own the land, EBITDAR shows what a buyer would pay assuming they pay rent. Used in real-estate-and-operating-business separations.</li>
+            <li><strong>Watch the EBITDA-vs-EBITDAR spread:</strong> wide spread = high rent burden. Renegotiate or relocate.</li>
+            <li><strong>Doesn&apos;t replace EBITDA for tax/financing:</strong> banks still look at EBITDA. EBITDAR is for valuation comparisons.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> EBITDAR = EBITDA + rent expense. Removes the real-estate decision from the operating-performance measure.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Industry standard:</strong> franchise rollups, hotel comparisons, restaurant chain valuations. PL casual-Italian benchmark EBITDAR margin: 22-32%.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> S&amp;P / Fitch credit-analysis frameworks, hospitality-finance textbooks (Vannoy).</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> other location-related costs (utilities, common-area maintenance). Pure rent only.</p>
+        </Methodology>
       </>
     ),
   },
@@ -7627,6 +7642,21 @@ const HELP = {
             spend the year skiing.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Target ≥ 30% for retail investors:</strong> S&amp;P returns ~8% historical; if you&apos;re below 20%, the comparison gets uncomfortable.</li>
+            <li><strong>Compare against alternative use of cash:</strong> a 50k zł deposit at 5% = 2,500 zł/year. If your truck CoC is below 5%, you&apos;re destroying value.</li>
+            <li><strong>Trim setup to lift CoC:</strong> denominator effect. 20k zł off setup lifts CoC ~3pp at typical margins.</li>
+            <li><strong>Lever up cautiously:</strong> a smaller cash investment (debt-funded) lifts CoC mathematically — but interest expense erodes the numerator.</li>
+            <li><strong>Use in fleet expansion decisions:</strong> if unit 5 CoC &lt; unit 1 CoC, you&apos;re hitting diminishing returns on rollout.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> cash-on-cash = (annual net profit) ÷ (setup cost / cash invested). Steady-state metric — assumes you&apos;ve passed the ramp.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> ≥ 30% investor-grade; 20-30% solid; 15-20% acceptable; &lt; 15% reconsider deployment of capital; &lt; 0 destroying value.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> standard finance (Damodaran), restaurant-investment literature, PL venture-economics reports.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> debt structure. A levered truck (less cash, more loan) has higher CoC mathematically but more risk. CoC alone hides leverage.</p>
+        </Methodology>
       </>
     ),
   },
@@ -7646,6 +7676,21 @@ const HELP = {
             long renewal.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Lock long-term leases when occupancy &lt; 8%:</strong> if you have a steal of a pitch, sign 5+ years. Protect the asset.</li>
+            <li><strong>Renegotiate at &gt; 10% occupancy:</strong> rent should track revenue. If revenue dropped 15% and rent didn&apos;t, present data and ask for relief.</li>
+            <li><strong>Move &gt; 12% — seriously:</strong> a different pitch with 8% occupancy adds 4pp net margin. Often more than any operational lever.</li>
+            <li><strong>Watch the renewal clauses:</strong> CPI-linked escalators bump rent. Negotiate caps (e.g. max 5%/year).</li>
+            <li><strong>Pop-up &gt; long-term in untested pitches:</strong> 6-month pop-ups test demand before signing 5-year leases.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> occupancy ratio = rent + property tax + insurance ÷ revenue. All real-estate-related costs.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> ≤ 8% excellent; 8-10% healthy; 10-12% pressured; &gt; 12% restructure (renegotiate, relocate, or scale revenue).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> NRA real-estate benchmarks, Cushman Wakefield / JLL Polish commercial-rent reports, PHG occupancy data.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> location-quality premium. Sometimes 12% occupancy in a great pitch beats 7% in a bad one. Use occupancy ratio AND revenue per sqm together.</p>
+        </Methodology>
       </>
     ),
   },
@@ -7664,6 +7709,21 @@ const HELP = {
             quality or service has a real problem.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Track gross-to-net spread weekly:</strong> if it widens, find the cause (recipe issue, training problem, void abuse) within 7 days.</li>
+            <li><strong>Manager-only voids:</strong> the biggest source of leakage. Tighten the POS.</li>
+            <li><strong>Comp budget per shift:</strong> manager can comp 1 ticket; anything more needs ownership approval.</li>
+            <li><strong>Use net sales for tax filing:</strong> CIT/VAT calculated on net (refunded sales aren&apos;t taxable). Make sure your accountant uses net, not gross.</li>
+            <li><strong>Investor reporting uses net:</strong> gross numbers are misleading. Net sales is the honest top-line.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> net sales = gross revenue − refunds − comps − discounts − loyalty redemptions. The clean top-line for accounting.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy gross-to-net:</strong> &lt; 3% gap (typical refunds + small loyalty); 3-5% acceptable; 5-8% indicates control problems; &gt; 8% structural issues.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> standard restaurant accounting (Schmidgall), Polish UoR reporting requirements.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> VAT (Polish 8% gastronomic VAT) — the model shows net of VAT throughout, but if you enter gross figures, expect a discrepancy at the bottom.</p>
+        </Methodology>
       </>
     ),
   },
