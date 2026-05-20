@@ -1608,6 +1608,606 @@ function PlainTalk({ children }: { children: ReactNode }) {
   );
 }
 
+function Tips({ children }: { children: ReactNode }) {
+  return (
+    <div
+      style={{
+        marginTop: 10,
+        padding: "10px 12px",
+        background: "rgba(22, 163, 74, 0.07)",
+        borderLeft: "3px solid rgb(22, 163, 74)",
+        borderRadius: 6,
+        fontSize: 13.5,
+        lineHeight: 1.55,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 700,
+          textTransform: "uppercase",
+          letterSpacing: 0.6,
+          color: "rgb(21, 128, 61)",
+          marginBottom: 6,
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+        }}
+      >
+        <Lightbulb style={{ width: 12, height: 12 }} aria-hidden /> Tips — how to push this lever
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// --- Dynamic attach-lever help -------------------------------------------
+//
+// Each attach lever's InfoButton popup uses the live values the operator
+// typed in. The "In plain terms" callout recomputes the example numbers
+// (margin per cup, monthly impact) from `lever.avgPriceGrosze`,
+// `lever.cogsPct`, `lever.attachPct` and the scenario's
+// `ordersPerDay × daysOpenPerMonth`. If the price is implausibly low or
+// high for the category, an extreme-value note appears inside the same
+// callout. Below it, the Tips block has concrete actions for the floor.
+
+type AttachLeverKind =
+  | "coffee"
+  | "dessert"
+  | "antipasti"
+  | "aperitivo"
+  | "premiumToppings"
+  | "pastaPrimo";
+
+interface AttachHelpProfile {
+  title: string;
+  intro: ReactNode;
+  unitLabel: string;
+  unitLabelPlural: string;
+  // Realistic market range for the SELL price in zł. Outside this range,
+  // an extreme-value note explains why the simulation becomes unrealistic.
+  priceFloor: number;
+  priceCeiling: number;
+  lowNote: (price: number) => ReactNode;
+  highNote: (price: number) => ReactNode;
+  // Realistic ceiling for attach % — above this, the simulation is in
+  // fantasy territory (no one converts 90% of customers to dessert).
+  attachCeiling: number;
+  attachCeilingNote: (pct: number) => ReactNode;
+  // Bump applied to current attach% to show the "what if we pushed it"
+  // case. Capped at 100%.
+  defaultBumpPp: number;
+  tips: ReactNode;
+}
+
+const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
+  coffee: {
+    title: "Coffee attach rate",
+    intro: (
+      <>
+        <p>
+          Share of orders that add an espresso, cappuccino or similar.
+          25% means one in four customers takes coffee.
+        </p>
+        <p>
+          <strong>Why it&apos;s gold:</strong> coffee is ~88% margin (an espresso uses
+          about 1 zł of beans + milk for a 9 zł sell price). Every +10 pp on attach
+          lifts your average ticket by ~0.90 zł at almost no extra cost.
+        </p>
+      </>
+    ),
+    unitLabel: "coffee",
+    unitLabelPlural: "coffees",
+    priceFloor: 3,
+    priceCeiling: 14,
+    lowNote: (price) => (
+      <>
+        <strong>Heads up:</strong> at {price.toFixed(2)} zł a cup you&apos;re barely
+        covering beans (~1 zł) + milk (~0.50 zł) + cup &amp; lid (~0.40 zł) + the
+        barista&apos;s 30 seconds. Below ~3 zł the lever stops being &quot;easy
+        money&quot; — it&apos;s a loss-leader at best.
+      </>
+    ),
+    highNote: (price) => (
+      <>
+        <strong>Reality check:</strong> {price.toFixed(2)} zł for an espresso is well
+        above the Polish market (Costa, Starbucks, Green Caffè Nero cap at ~13–14 zł
+        for specialty drinks; standalone espresso usually sits at 8–12 zł).
+        The simulation will over-state your monthly upside — real attach will
+        collapse at this price point.
+      </>
+    ),
+    attachCeiling: 0.55,
+    attachCeilingNote: (pct) => (
+      <>
+        <strong>Reality check:</strong> {(pct * 100).toFixed(0)}% attach is above
+        what even Italian dinner spots achieve (best-in-class ~40–50%). Numbers
+        below are theoretical — don&apos;t plan staffing on this attach rate.
+      </>
+    ),
+    defaultBumpPp: 0.15,
+    tips: (
+      <ul style={{ margin: 0, paddingLeft: 18 }}>
+        <li>
+          <strong>Scripted prompt at the till:</strong> &quot;espresso with that?&quot;
+          adds 5–10 pp to attach in week one. Train, role-play, monitor.
+        </li>
+        <li>
+          <strong>One-tap dessert + coffee bundle</strong> on the POS — combos sell
+          twice as fast as à-la-carte upsells because there&apos;s no second decision.
+        </li>
+        <li>
+          <strong>Auto-suggest in the cart</strong> for online &amp; delivery orders
+          (already wired via <code>getCartSuggestions()</code> in
+          <code> src/lib/upsell.ts</code>) — make sure coffee fires for pizza/pasta carts.
+        </li>
+        <li>
+          <strong>Sensory cues:</strong> visible espresso machine at the counter, the
+          smell of fresh grind, a chalk &quot;espresso 9 zł&quot; sign. Decision happens
+          before the customer even orders.
+        </li>
+        <li>
+          <strong>Pair with loyalty:</strong> &quot;3 coffees = free panna cotta&quot;
+          punch card. The marginal cup costs you 1 zł; the panna cotta costs you ~4 zł
+          — you net 3× ~8 zł margin for a 4 zł giveaway.
+        </li>
+      </ul>
+    ),
+  },
+  dessert: {
+    title: "Dessert attach rate",
+    intro: (
+      <>
+        <p>
+          Share of orders that add tiramisu, cannoli or panna cotta. 10–15% is
+          typical; can push to 25% with strong dessert merchandising.
+        </p>
+        <p>
+          <strong>Why it matters:</strong> desserts are ~28% COGS — better than
+          pizza&apos;s 30%. So more dessert attach lifts AOV <em>and</em> improves
+          the blended margin %.
+        </p>
+      </>
+    ),
+    unitLabel: "dessert",
+    unitLabelPlural: "desserts",
+    priceFloor: 6,
+    priceCeiling: 30,
+    lowNote: (price) => (
+      <>
+        <strong>Heads up:</strong> at {price.toFixed(2)} zł you&apos;re below cost
+        for any decent tiramisu portion (mascarpone alone runs ~4 zł). Either the
+        portion is too small to actually merchandise, or your COGS% is understated.
+      </>
+    ),
+    highNote: (price) => (
+      <>
+        <strong>Reality check:</strong> {price.toFixed(2)} zł for one dessert is at
+        fine-dining levels. Casual-Italian benchmark is 14–22 zł; above ~25 zł
+        attach rate drops sharply because customers split or skip.
+      </>
+    ),
+    attachCeiling: 0.4,
+    attachCeilingNote: (pct) => (
+      <>
+        <strong>Reality check:</strong> {(pct * 100).toFixed(0)}% dessert attach
+        exceeds even strong dinner-only restaurants. Best-in-class with active
+        merchandising tops out around 25–30%.
+      </>
+    ),
+    defaultBumpPp: 0.08,
+    tips: (
+      <ul style={{ margin: 0, paddingLeft: 18 }}>
+        <li>
+          <strong>Time the prompt:</strong> server suggests dessert when clearing
+          mains, not at first order. Hits ~3× the conversion of menu-only.
+        </li>
+        <li>
+          <strong>Photo merchandising:</strong> a single hero shot of the tiramisu on
+          the menu/order screen lifts attach more than adding three new SKUs.
+        </li>
+        <li>
+          <strong>Small-portion option</strong> (mini cannoli, half tiramisu) at
+          8–10 zł captures the &quot;too full but tempted&quot; crowd.
+        </li>
+        <li>
+          <strong>Dessert + espresso combo</strong> bundles two attach levers into
+          one yes — the highest-margin pairing in the entire menu.
+        </li>
+        <li>
+          <strong>Showcase at the counter:</strong> a chilled dessert display you
+          walk past on the way out converts impulse takeaway orders too.
+        </li>
+      </ul>
+    ),
+  },
+  antipasti: {
+    title: "Antipasti / starter attach",
+    intro: (
+      <>
+        <p>
+          Share of dine-in tables that order a starter — bruschetta (~22 zł),
+          burrata (~28 zł), olives, mortadella plate. 5–10% baseline, much
+          higher in evening service.
+        </p>
+        <p>
+          <strong>Trade-off:</strong> bigger ticket but adds prep load on the line —
+          make sure the antipasti station can keep up before pushing this lever.
+        </p>
+      </>
+    ),
+    unitLabel: "starter",
+    unitLabelPlural: "starters",
+    priceFloor: 10,
+    priceCeiling: 60,
+    lowNote: (price) => (
+      <>
+        <strong>Heads up:</strong> at {price.toFixed(2)} zł the starter is a snack,
+        not an antipasto. Below ~10 zł the COGS% assumption usually breaks (good
+        burrata, prosciutto and bread aren&apos;t cheap).
+      </>
+    ),
+    highNote: (price) => (
+      <>
+        <strong>Reality check:</strong> {price.toFixed(2)} zł is platter / shared-board
+        territory, not a typical first-course. Re-think this lever as a
+        &quot;shared antipasti board&quot; SKU and lower the attach assumption
+        accordingly (one board per table of 4, not per customer).
+      </>
+    ),
+    attachCeiling: 0.35,
+    attachCeilingNote: (pct) => (
+      <>
+        <strong>Reality check:</strong> {(pct * 100).toFixed(0)}% starter attach is
+        only realistic in evening service with full table-service. Lunch &amp;
+        takeaway will be far lower; blend the two before trusting this number.
+      </>
+    ),
+    defaultBumpPp: 0.06,
+    tips: (
+      <ul style={{ margin: 0, paddingLeft: 18 }}>
+        <li>
+          <strong>Bring free bread + olives</strong> to seated tables — primes the
+          appetite, and the server&apos;s &quot;something to start while the oven
+          fires up?&quot; lands much better.
+        </li>
+        <li>
+          <strong>Station capacity first:</strong> a starter order that delays the
+          pizza is a net negative. Pre-plate burrata + bruschetta during the rush.
+        </li>
+        <li>
+          <strong>Wait-time framing:</strong> &quot;our pizzas take 8 minutes — a
+          burrata is 60 seconds&quot; converts the dead-time objection.
+        </li>
+        <li>
+          <strong>Table-share boards:</strong> 38–48 zł shared antipasti per table
+          beats per-person starters on both attach and ticket.
+        </li>
+      </ul>
+    ),
+  },
+  aperitivo: {
+    title: "Aperitivo / wine attach",
+    intro: (
+      <>
+        <p>
+          Share of evening orders that include an Aperol Spritz, glass of wine,
+          beer or limoncello. Highest-margin attach we can model — drinks are
+          ~22% COGS at 22 zł a glass.
+        </p>
+        <p>
+          <strong>Requires an alcohol licence.</strong> Use this lever to model
+          &quot;what would happen if we got licensed?&quot; before paying the
+          ~5 000 zł/year fee.
+        </p>
+      </>
+    ),
+    unitLabel: "drink",
+    unitLabelPlural: "drinks",
+    priceFloor: 8,
+    priceCeiling: 35,
+    lowNote: (price) => (
+      <>
+        <strong>Heads up:</strong> at {price.toFixed(2)} zł you&apos;re below Aperol
+        Spritz / house-wine market floor in Poland (16–22 zł). Either the COGS%
+        assumption is wrong, or you&apos;re selling beer-not-cocktails — model
+        them separately.
+      </>
+    ),
+    highNote: (price) => (
+      <>
+        <strong>Reality check:</strong> {price.toFixed(2)} zł is fine-dining
+        cocktail / premium-wine territory. Casual-Italian benchmark for one glass
+        is 18–26 zł — above this attach rate halves at minimum.
+      </>
+    ),
+    attachCeiling: 0.5,
+    attachCeilingNote: (pct) => (
+      <>
+        <strong>Reality check:</strong> {(pct * 100).toFixed(0)}% drink attach across
+        ALL orders is bar territory. Even the best Italian dinner spots only hit
+        50%+ on evening-only orders. Apply this lever to evenings only when
+        planning.
+      </>
+    ),
+    defaultBumpPp: 0.1,
+    tips: (
+      <ul style={{ margin: 0, paddingLeft: 18 }}>
+        <li>
+          <strong>Aperitivo hour (5–7 PM):</strong> drink + small antipasto for
+          24 zł lures the 6 PM crowd before they commit to another spot.
+        </li>
+        <li>
+          <strong>Drink-with-food default:</strong> &quot;wine pairing for this
+          pizza?&quot; built into the POS recommendation engine.
+        </li>
+        <li>
+          <strong>House-wine pour:</strong> 14 zł by the glass, ~3 zł COGS, no
+          decision fatigue from a long list — fastest path to attach lift.
+        </li>
+        <li>
+          <strong>Licence math:</strong> at +10 pp attach × 80 orders/day × 17 zł
+          margin × 28 days = ~3,800 zł/month — covers the ~5,000 zł/year licence
+          in the first 6 weeks.
+        </li>
+      </ul>
+    ),
+  },
+  premiumToppings: {
+    title: "Premium toppings attach",
+    intro: (
+      <>
+        <p>
+          Share of pizzas that add buffalo mozzarella (+6 zł), &apos;nduja (+7 zł),
+          truffle oil (+9 zł) etc. Charge ~3 zł of marginal food cost, capture
+          the rest as margin.
+        </p>
+        <p>
+          <strong>Where the money is:</strong> ~50% incremental margin — among the
+          cheapest ways to lift AOV.
+        </p>
+      </>
+    ),
+    unitLabel: "topping add-on",
+    unitLabelPlural: "topping add-ons",
+    priceFloor: 2,
+    priceCeiling: 18,
+    lowNote: (price) => (
+      <>
+        <strong>Heads up:</strong> at {price.toFixed(2)} zł per upgrade the topping
+        margin barely justifies the menu real-estate. Bundle several upgrades
+        into one premium SKU instead.
+      </>
+    ),
+    highNote: (price) => (
+      <>
+        <strong>Reality check:</strong> {price.toFixed(2)} zł for ONE topping
+        upgrade is steep. Truffle is the only ingredient that sustains 9–12 zł in
+        the Polish market — above that attach drops to single digits.
+      </>
+    ),
+    attachCeiling: 0.45,
+    attachCeilingNote: (pct) => (
+      <>
+        <strong>Reality check:</strong> {(pct * 100).toFixed(0)}% of pizzas getting
+        a premium topping is achievable only with aggressive merchandising
+        (chef&apos;s recommendation, photo callout, default-add). Plan for
+        15–25%, treat 30%+ as upside.
+      </>
+    ),
+    defaultBumpPp: 0.1,
+    tips: (
+      <ul style={{ margin: 0, paddingLeft: 18 }}>
+        <li>
+          <strong>One signature upgrade:</strong> a single &quot;chef&apos;s pick&quot;
+          topping merchandised at the top of every pizza converts 2× a long
+          menu of choices.
+        </li>
+        <li>
+          <strong>Photo merchandising:</strong> show the bubble of buffalo mozzarella
+          or the truffle shaving — visual upgrades sell themselves.
+        </li>
+        <li>
+          <strong>Default-toggle on premium pizzas:</strong> &apos;nduja pre-checked
+          on the Diavola, customer opts OUT instead of opting IN. Lift is 3–5×.
+        </li>
+        <li>
+          <strong>Seasonal rotation:</strong> truffle in autumn, fresh basil in
+          summer — limited-time framing beats permanent menu items on attach.
+        </li>
+      </ul>
+    ),
+  },
+  pastaPrimo: {
+    title: "Pasta primo attach",
+    intro: (
+      <>
+        <p>
+          Share of dine-in tables that order a pasta course alongside the pizza
+          (Italian-style: primo = pasta first, then pizza as secondo). Average
+          32 zł, ~26% COGS.
+        </p>
+        <p>
+          <strong>Big AOV bump.</strong> Best lever where seating allows — most
+          relevant for indoor locations, less so for a takeaway truck.
+        </p>
+      </>
+    ),
+    unitLabel: "pasta",
+    unitLabelPlural: "pastas",
+    priceFloor: 15,
+    priceCeiling: 60,
+    lowNote: (price) => (
+      <>
+        <strong>Heads up:</strong> at {price.toFixed(2)} zł you&apos;re below the
+        minimum viable pasta plate price in Poland (carbonara starts around 24 zł
+        for a portion that&apos;s actually a primo). COGS will eat the margin.
+      </>
+    ),
+    highNote: (price) => (
+      <>
+        <strong>Reality check:</strong> {price.toFixed(2)} zł for a pasta course is
+        upscale-Italian territory. Casual benchmark is 28–38 zł — above ~45 zł
+        attach drops because customers default to just ordering pizza.
+      </>
+    ),
+    attachCeiling: 0.35,
+    attachCeilingNote: (pct) => (
+      <>
+        <strong>Reality check:</strong> {(pct * 100).toFixed(0)}% of dine-in tables
+        ordering a full pasta course is restaurant-only territory. For a truck or
+        takeaway-heavy location, model this lever at &lt;5% or disable it.
+      </>
+    ),
+    defaultBumpPp: 0.08,
+    tips: (
+      <ul style={{ margin: 0, paddingLeft: 18 }}>
+        <li>
+          <strong>Half-portion primo:</strong> 16–18 zł lets the table share one
+          pasta &quot;to start&quot; before the pizza arrives — converts the
+          &quot;not that hungry&quot; objection.
+        </li>
+        <li>
+          <strong>Daily pasta special:</strong> one rotating dish (chalkboard, not
+          menu) beats the static list — Italians do this for a reason.
+        </li>
+        <li>
+          <strong>Share-plate framing:</strong> &quot;our pastas are designed to
+          share — one between two before the pizza?&quot; lifts attach without
+          stretching the kitchen.
+        </li>
+        <li>
+          <strong>Kitchen capacity first:</strong> pasta needs a separate pan +
+          burner per order. Don&apos;t push this lever past your pasta-station
+          throughput or you&apos;ll blow up pizza times.
+        </li>
+      </ul>
+    ),
+  },
+};
+
+interface AttachLeverHelpProps {
+  kind: AttachLeverKind;
+  lever: SimulationAttachLever;
+  ordersPerDay: number;
+  daysOpenPerMonth: number;
+}
+
+function AttachLeverHelp({ kind, lever, ordersPerDay, daysOpenPerMonth }: AttachLeverHelpProps) {
+  const profile = ATTACH_HELP[kind];
+  const sellZl = lever.avgPriceGrosze / 100;
+  const cogsZl = sellZl * lever.cogsPct;
+  const marginZl = sellZl - cogsZl;
+  const marginPctOfSell = sellZl > 0 ? ((marginZl / sellZl) * 100) : 0;
+
+  const currentPct = Math.max(0, Math.min(1, lever.attachPct));
+  const targetPct = Math.min(1, currentPct + profile.defaultBumpPp);
+  const deltaPp = Math.max(0, targetPct - currentPct);
+
+  const extraUnitsPerDay = ordersPerDay * deltaPp;
+  const monthlyMarginGrosze = Math.max(
+    0,
+    Math.round(extraUnitsPerDay * marginZl * daysOpenPerMonth * 100),
+  );
+
+  // At current attach (not the +bump target) — useful when current is already strong.
+  const currentMarginPerDayGrosze = Math.round(ordersPerDay * currentPct * marginZl * 100);
+  const currentMonthlyMarginGrosze = Math.round(currentMarginPerDayGrosze * daysOpenPerMonth);
+
+  const showLowNote = sellZl > 0 && sellZl < profile.priceFloor;
+  const showHighNote = sellZl > profile.priceCeiling;
+  const showAttachNote = currentPct > profile.attachCeiling;
+  const negativeMargin = marginZl < 0;
+
+  return (
+    <>
+      {profile.intro}
+      <PlainTalk>
+        <p style={{ margin: 0 }}>
+          At <strong>{sellZl.toFixed(2)} zł</strong> sell &times;{" "}
+          <strong>{(lever.cogsPct * 100).toFixed(0)}%</strong> COGS ={" "}
+          <strong>{marginZl.toFixed(2)} zł</strong> margin per {profile.unitLabel}{" "}
+          ({marginPctOfSell.toFixed(0)}% of sell).{" "}
+          {deltaPp > 0 ? (
+            <>
+              Push attach from <strong>{(currentPct * 100).toFixed(0)}% →{" "}
+              {(targetPct * 100).toFixed(0)}%</strong> on{" "}
+              <strong>{Math.round(ordersPerDay)} orders/day</strong> ={" "}
+              <strong>~{extraUnitsPerDay.toFixed(1)} extra {profile.unitLabelPlural}/day</strong>{" "}
+              &times; {marginZl.toFixed(2)} zł ={" "}
+              <strong>~{formatPrice(monthlyMarginGrosze)}/month</strong> at{" "}
+              {Math.round(daysOpenPerMonth)} open days.
+            </>
+          ) : (
+            <>
+              You&apos;re already at <strong>{(currentPct * 100).toFixed(0)}%</strong> attach —
+              that&apos;s ~{(ordersPerDay * currentPct).toFixed(1)} {profile.unitLabelPlural}/day,
+              about <strong>~{formatPrice(currentMonthlyMarginGrosze)}/month</strong> of margin
+              already baked in. Holding this is the win; pushing further likely needs
+              new merchandising, not just prompts.
+            </>
+          )}
+        </p>
+        {negativeMargin && (
+          <p
+            style={{
+              margin: "8px 0 0",
+              padding: "6px 8px",
+              background: "rgba(220, 38, 38, 0.1)",
+              borderRadius: 4,
+              color: "rgb(153, 27, 27)",
+            }}
+          >
+            <strong>Negative margin:</strong> at this sell price &amp; COGS% you&apos;re
+            losing {Math.abs(marginZl).toFixed(2)} zł per {profile.unitLabel} — turning
+            this attach lever on hurts the P&amp;L. Fix price or COGS first.
+          </p>
+        )}
+        {!negativeMargin && showLowNote && (
+          <p
+            style={{
+              margin: "8px 0 0",
+              padding: "6px 8px",
+              background: "rgba(234, 88, 12, 0.12)",
+              borderRadius: 4,
+              color: "rgb(154, 52, 18)",
+            }}
+          >
+            {profile.lowNote(sellZl)}
+          </p>
+        )}
+        {!negativeMargin && showHighNote && (
+          <p
+            style={{
+              margin: "8px 0 0",
+              padding: "6px 8px",
+              background: "rgba(234, 88, 12, 0.12)",
+              borderRadius: 4,
+              color: "rgb(154, 52, 18)",
+            }}
+          >
+            {profile.highNote(sellZl)}
+          </p>
+        )}
+        {showAttachNote && (
+          <p
+            style={{
+              margin: "8px 0 0",
+              padding: "6px 8px",
+              background: "rgba(234, 88, 12, 0.12)",
+              borderRadius: 4,
+              color: "rgb(154, 52, 18)",
+            }}
+          >
+            {profile.attachCeilingNote(currentPct)}
+          </p>
+        )}
+      </PlainTalk>
+      <Tips>{profile.tips}</Tips>
+    </>
+  );
+}
+
 const HELP = {
   // Inputs
   ordersPerDay: {
@@ -1854,164 +2454,10 @@ const HELP = {
       </>
     ),
   },
-  coffeeAttach: {
-    title: "Coffee attach rate",
-    body: (
-      <>
-        <p>
-          Share of orders that add an espresso, cappuccino or similar.
-          25% means one in four customers takes coffee.
-        </p>
-        <p>
-          <strong>Why it&apos;s gold:</strong> coffee is ~88% margin (an espresso
-          uses about 1 zł of beans + milk for a 9 zł sell price). Every +10 pp
-          on attach lifts your average ticket by ~0.90 zł at almost no extra cost.
-        </p>
-        <p>
-          <strong>How to grow it:</strong> staff prompt at order
-          (&quot;espresso with that?&quot;), combo deals, post-meal dessert+coffee bundle.
-        </p>
-        <PlainTalk>
-          <p style={{ margin: 0 }}>
-            Coffee is the easiest extra złoty in the business — beans cost ~1 zł, you
-            sell the cup for 9 zł. Push attach from <strong>20% → 35%</strong> on 80
-            orders/day and you&apos;ve added ~12 extra coffees daily × ~8 zł margin =
-            <strong> ~2,900 zł/month</strong> of nearly-pure profit. No new SKU, no
-            extra labor — just one more sentence at the till
-            (&quot;espresso with that?&quot;).
-          </p>
-        </PlainTalk>
-      </>
-    ),
-  },
-  dessertAttach: {
-    title: "Dessert attach rate",
-    body: (
-      <>
-        <p>
-          Share of orders that add tiramisu, cannoli or panna cotta. 10–15% is
-          typical; can push to 25% with strong dessert merchandising.
-        </p>
-        <p>
-          <strong>Why it matters:</strong> desserts are ~28% COGS — better than
-          pizza&apos;s 30%. So more dessert attach lifts AOV <em>and</em>
-          improves the blended margin %.
-        </p>
-        <PlainTalk>
-          <p style={{ margin: 0 }}>
-            Tiramisu travels well, photographs better than the pizza, and earns better
-            margin than the main dish. Lifting dessert attach from <strong>10% →
-            18%</strong> on 80 orders/day = ~6 more desserts daily × ~13 zł margin =
-            <strong> ~3,100 zł/month</strong> — pure cream on top of revenue you&apos;d
-            already booked.
-          </p>
-        </PlainTalk>
-      </>
-    ),
-  },
-  antipastiAttach: {
-    title: "Antipasti / starter attach",
-    body: (
-      <>
-        <p>
-          Share of dine-in tables that order a starter — bruschetta (~22 zł),
-          burrata (~28 zł), olives, mortadella plate. 5–10% baseline, much
-          higher in evening service.
-        </p>
-        <p>
-          <strong>Trade-off:</strong> bigger ticket but adds prep load on the
-          line — make sure the antipasti station can keep up before pushing
-          this lever.
-        </p>
-        <PlainTalk>
-          <p style={{ margin: 0 }}>
-            A burrata starter at 28 zł can earn ~20 zł of margin while customers wait
-            for the pizza anyway. Get just <strong>8% of dine-in tables</strong> to add
-            one and on 80 orders/day you&apos;ve added <strong>~13,000 zł of
-            revenue/month</strong>. Watch the prep station though — if it slows the
-            pizza out, you&apos;ve traded a starter for a complaint.
-          </p>
-        </PlainTalk>
-      </>
-    ),
-  },
-  aperitivoAttach: {
-    title: "Aperitivo / wine attach",
-    body: (
-      <>
-        <p>
-          Share of evening orders that include an Aperol Spritz, glass of wine,
-          beer or limoncello. Highest-margin attach we can model — drinks are
-          ~22% COGS at 22 zł a glass.
-        </p>
-        <p>
-          <strong>Requires an alcohol licence.</strong> Use this lever to model
-          &quot;what would happen if we got licensed?&quot; before paying the
-          ~5 000 zł/year fee.
-        </p>
-        <PlainTalk>
-          <p style={{ margin: 0 }}>
-            An Aperol Spritz costs you ~5 zł to make and sells for 22 zł — that&apos;s
-            <strong> 17 zł of margin per glass</strong>. Lift aperitivo attach to
-            <strong> 30% of evening orders</strong> and you&apos;ll add ~5,000–9,000
-            zł/month, easily covering the ~5,000 zł/year alcohol licence in the first
-            month. Drinks are how Italian dinner spots keep the lights on.
-          </p>
-        </PlainTalk>
-      </>
-    ),
-  },
-  premiumToppingsAttach: {
-    title: "Premium toppings attach",
-    body: (
-      <>
-        <p>
-          Share of pizzas that add buffalo mozzarella (+6 zł), &apos;nduja
-          (+7 zł), truffle oil (+9 zł) etc. Charge ~3 zł of marginal food
-          cost, capture the rest as margin.
-        </p>
-        <p>
-          <strong>Where the money is:</strong> ~50% incremental margin — among
-          the cheapest ways to lift AOV.
-        </p>
-        <PlainTalk>
-          <p style={{ margin: 0 }}>
-            A drizzle of truffle oil costs ~2 zł but customers pay 9 zł for it. If
-            <strong> 1 in 5 pizzas</strong> gets a premium topping on 80 orders/day,
-            you&apos;ve stacked ~7 zł of margin × 480 pizzas/month =
-            <strong> ~3,400 zł/month extra</strong>. Same dough, same oven — just better
-            ingredients on top, easier to merchandise than raising base prices.
-          </p>
-        </PlainTalk>
-      </>
-    ),
-  },
-  pastaPrimoAttach: {
-    title: "Pasta primo attach",
-    body: (
-      <>
-        <p>
-          Share of dine-in tables that order a pasta course alongside the pizza
-          (Italian-style: primo = pasta first, then pizza as secondo). Average
-          32 zł, ~26% COGS.
-        </p>
-        <p>
-          <strong>Big AOV bump.</strong> Best lever where seating allows — most
-          relevant for indoor locations, less so for a takeaway truck.
-        </p>
-        <PlainTalk>
-          <p style={{ margin: 0 }}>
-            A primo pasta course is a second item from the same table — same staff,
-            same plate-pickup trip. At <strong>12% attach</strong> on 50 dine-in
-            orders/day you get ~6 pastas/day × 24 zł margin =
-            <strong> ~4,300 zł/month</strong>. Only works where customers actually sit
-            — but if you add seating, it&apos;s the single biggest dine-in lever you
-            have.
-          </p>
-        </PlainTalk>
-      </>
-    ),
-  },
+  // NOTE: coffee/dessert/antipasti/aperitivo/premiumToppings/pastaPrimo
+  // attach-lever help lives in ATTACH_HELP — that variant renders a live
+  // body computed from the lever's current price/COGS/attach values so the
+  // "In plain terms" numbers and extreme-value notes stay in sync.
   comboConversion: {
     title: "Combo conversion",
     body: (
@@ -5480,6 +5926,8 @@ export function AdminSimulation() {
         assumptions={scenario.assumptions ?? DEFAULT_ASSUMPTIONS}
         baseTicketGrosze={scenario.avgTicketGrosze}
         baseCogsPct={scenario.cogsPct}
+        ordersPerDay={scenario.ordersPerDay}
+        daysOpenPerMonth={scenario.daysOpenPerMonth}
         onChange={(next) => update((s) => ({ ...s, assumptions: next }))}
       />
 
@@ -10322,9 +10770,27 @@ interface AttachRowProps {
   baseTicketGrosze: number;
   onChange: (next: SimulationAttachLever) => void;
   help?: { title: string; body: ReactNode };
+  /** When set, the help popup renders the live-computed AttachLeverHelp body
+   *  using the lever's current price / COGS / attach values. Used by the
+   *  six standard attach levers (coffee, dessert, antipasti, aperitivo,
+   *  premium toppings, pasta primo). */
+  helpKind?: AttachLeverKind;
+  /** Scenario context for the dynamic help body. */
+  ordersPerDay?: number;
+  daysOpenPerMonth?: number;
 }
 
-function AttachLeverRow({ label, hint, lever, baseTicketGrosze, onChange, help }: AttachRowProps) {
+function AttachLeverRow({
+  label,
+  hint,
+  lever,
+  baseTicketGrosze,
+  onChange,
+  help,
+  helpKind,
+  ordersPerDay,
+  daysOpenPerMonth,
+}: AttachRowProps) {
   const enabled = lever.enabled !== false;
   // Per-order projected ticket lift = attachPct × price; margin = (1 − cogsPct) × ticket lift.
   const ticketLift = lever.attachPct * lever.avgPriceGrosze;
@@ -10341,10 +10807,25 @@ function AttachLeverRow({ label, hint, lever, baseTicketGrosze, onChange, help }
             ariaLabel={`Toggle ${label}`}
           />
           <span>{label}</span>
-          {help && (
-            <InfoButton title={help.title} label={`About ${help.title.toLowerCase()}`} size="sm">
-              {help.body}
+          {helpKind ? (
+            <InfoButton
+              title={ATTACH_HELP[helpKind].title}
+              label={`About ${ATTACH_HELP[helpKind].title.toLowerCase()}`}
+              size="sm"
+            >
+              <AttachLeverHelp
+                kind={helpKind}
+                lever={lever}
+                ordersPerDay={ordersPerDay ?? 0}
+                daysOpenPerMonth={daysOpenPerMonth ?? 0}
+              />
             </InfoButton>
+          ) : (
+            help && (
+              <InfoButton title={help.title} label={`About ${help.title.toLowerCase()}`} size="sm">
+                {help.body}
+              </InfoButton>
+            )
           )}
         </div>
         <div className="v2-muted text-xs">{hint}</div>
@@ -10499,10 +10980,22 @@ interface BehaviorCardProps {
   assumptions: SimulationAssumptions;
   baseTicketGrosze: number;
   baseCogsPct: number;
+  /** Scenario context — flows into the AttachLeverRow info popups so the
+   *  "In plain terms" examples and monthly-margin numbers stay consistent
+   *  with the rest of the simulation. */
+  ordersPerDay: number;
+  daysOpenPerMonth: number;
   onChange: (next: SimulationAssumptions) => void;
 }
 
-function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, baseCogsPct, onChange }: BehaviorCardProps) {
+function BehaviorAssumptionsCard({
+  assumptions,
+  baseTicketGrosze,
+  baseCogsPct,
+  ordersPerDay,
+  daysOpenPerMonth,
+  onChange,
+}: BehaviorCardProps) {
   const a = assumptions;
   const baseCogsValueGrosze = baseTicketGrosze * baseCogsPct;
   const set = <K extends keyof SimulationAssumptions>(key: K, value: SimulationAssumptions[K]) =>
@@ -10561,7 +11054,9 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, baseCogsPct, o
               lever={a.coffeeAttach}
               baseTicketGrosze={baseTicketGrosze}
               onChange={(v) => set("coffeeAttach", v)}
-              help={HELP.coffeeAttach}
+              helpKind="coffee"
+              ordersPerDay={ordersPerDay}
+              daysOpenPerMonth={daysOpenPerMonth}
             />
           )}
           {a.dessertAttach && (
@@ -10571,7 +11066,9 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, baseCogsPct, o
               lever={a.dessertAttach}
               baseTicketGrosze={baseTicketGrosze}
               onChange={(v) => set("dessertAttach", v)}
-              help={HELP.dessertAttach}
+              helpKind="dessert"
+              ordersPerDay={ordersPerDay}
+              daysOpenPerMonth={daysOpenPerMonth}
             />
           )}
           {a.antipastiAttach && (
@@ -10581,7 +11078,9 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, baseCogsPct, o
               lever={a.antipastiAttach}
               baseTicketGrosze={baseTicketGrosze}
               onChange={(v) => set("antipastiAttach", v)}
-              help={HELP.antipastiAttach}
+              helpKind="antipasti"
+              ordersPerDay={ordersPerDay}
+              daysOpenPerMonth={daysOpenPerMonth}
             />
           )}
           {a.aperitivoAttach && (
@@ -10591,7 +11090,9 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, baseCogsPct, o
               lever={a.aperitivoAttach}
               baseTicketGrosze={baseTicketGrosze}
               onChange={(v) => set("aperitivoAttach", v)}
-              help={HELP.aperitivoAttach}
+              helpKind="aperitivo"
+              ordersPerDay={ordersPerDay}
+              daysOpenPerMonth={daysOpenPerMonth}
             />
           )}
           {a.premiumToppingsAttach && (
@@ -10601,7 +11102,9 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, baseCogsPct, o
               lever={a.premiumToppingsAttach}
               baseTicketGrosze={baseTicketGrosze}
               onChange={(v) => set("premiumToppingsAttach", v)}
-              help={HELP.premiumToppingsAttach}
+              helpKind="premiumToppings"
+              ordersPerDay={ordersPerDay}
+              daysOpenPerMonth={daysOpenPerMonth}
             />
           )}
           {a.pastaPrimoAttach && (
@@ -10611,7 +11114,9 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, baseCogsPct, o
               lever={a.pastaPrimoAttach}
               baseTicketGrosze={baseTicketGrosze}
               onChange={(v) => set("pastaPrimoAttach", v)}
-              help={HELP.pastaPrimoAttach}
+              helpKind="pastaPrimo"
+              ordersPerDay={ordersPerDay}
+              daysOpenPerMonth={daysOpenPerMonth}
             />
           )}
 
