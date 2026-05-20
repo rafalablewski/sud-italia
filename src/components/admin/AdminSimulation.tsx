@@ -10196,8 +10196,21 @@ const HELP = {
     body: (
       <>
         <p>
-          % growth in revenue vs prior trailing window. SSSG headline.
+          % growth in revenue vs prior trailing window. SSSG headline
+          — same-store sales growth, the universal chain-tracking metric.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Industry benchmark (PL gastronomic 2024): +6-9% nominal
+            annual growth healthy; +12% strong; +15%+ exceptional or
+            capacity-constrained. Beat inflation (~4% PL) to be real
+            growth; nominal +4% = real 0%. Decompose: revenue growth =
+            order growth + ticket growth. Volume-led growth (more
+            orders) is healthier than ticket-led (price hikes); the
+            latter eventually tops out. SSSG excludes new units —
+            pure organic same-store performance.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>How much more (or less) you sold vs the same period
@@ -10229,8 +10242,21 @@ const HELP = {
     body: (
       <>
         <p>
-          % growth in order count. Volume-led growth signal.
+          % growth in order count vs prior window. Same-store basis.
+          The volume-led growth signal.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The most-truthful growth metric: volume can&apos;t be
+            faked by price hikes. Healthy: +3-7% annual = real growth
+            above inflation; &lt; +2% concerning; &gt; +12% likely
+            capacity-pressed (cross-check kitchen saturation). Negative
+            order growth + positive ticket growth = defensive sign
+            (customers paying more individually but fewer customers
+            overall). Trace acquisition channel to double down on what
+            works.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>How many more (or fewer) orders you booked.</strong>
@@ -10262,8 +10288,21 @@ const HELP = {
     body: (
       <>
         <p>
-          % growth in avg ticket. Price/mix-led signal.
+          % growth in avg ticket vs prior window. Same-store basis.
+          The price / mix-led growth signal.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Healthy: +3-6% annual matches inflation + mix lift; +8%+
+            indicates aggressive pricing or large mix shift. Decompose:
+            mix-driven (attach lifts) is healthy and invisible to
+            customers; price-driven hits customer-elasticity ceilings.
+            Price elasticity caveat: 10% price hike doesn&apos;t
+            translate to 10% ticket — typically ~7% (some customers
+            downshift). Use the cheapestPizzaShift stress lever to
+            model downside.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>How much bigger the average bill got.</strong> Price hikes
@@ -10295,8 +10334,21 @@ const HELP = {
     body: (
       <>
         <p>
-          % growth in unique-customer count. Acquisition-led signal.
+          % growth in unique-customer count vs prior window
+          (phone-deduplicated). The acquisition signal.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Healthy: 5-10% annual net-new customer growth; &gt; 15% =
+            high; &lt; 0 = customer-base decay. Sustainable growth
+            requires both positive customer growth AND positive repeat
+            rate; without both, the funnel leaks no matter how high
+            acquisition spend goes. Track quarterly trend — shifts in
+            new-vs-returning signal market saturation, brand fatigue,
+            or competitor entry. Anonymous walk-up cash customers may
+            be undercounted without phone capture at checkout.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>How many more new people walked through the door.</strong>
