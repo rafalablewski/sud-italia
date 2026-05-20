@@ -8948,6 +8948,21 @@ const HELP = {
             retention first.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Channel mix CAC matters:</strong> Instagram CAC ~10-25 zł, Google ~15-35 zł, referral ~3-8 zł. Push the cheapest channel.</li>
+            <li><strong>Loyalty referrals are gold:</strong> &quot;tell a friend, both get 10 zł off&quot; — CAC drops to ~5-8 zł for referred customers.</li>
+            <li><strong>Track by acquisition cohort:</strong> January cohort CAC vs March cohort. Test creative + targeting changes.</li>
+            <li><strong>Compare CAC to first-order CM1:</strong> if CAC = 25 zł and first-order CM1 = 25 zł, you break even on first visit. Profit comes from repeat.</li>
+            <li><strong>Don&apos;t include organic in CAC denominator:</strong> only count attributed-marketing customers. Organic shouldn&apos;t flatter your numbers.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> CAC = marketing fixed cost ÷ net-new customers/month. Net-new = customers in current window with zero orders in prior window.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges (PL casual-Italian):</strong> 8-15 zł CAC with mostly-organic / referral mix; 15-30 zł with paid-social channels; 30-50 zł heavy paid acquisition.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> marketing-economics literature, restaurant-acquisition cost studies.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> attribution (one customer sees 3 ads + a friend&apos;s post + a Glovo placement). The model assumes single-touch attribution; reality is multi-touch.</p>
+        </Methodology>
       </>
     ),
   },
@@ -8967,6 +8982,21 @@ const HELP = {
             above 5×; that&apos;s where you want to be before the second truck.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>3× is the institutional gate:</strong> below this, investors won&apos;t back marketing scale-up. It&apos;s the universal SaaS/QSR benchmark.</li>
+            <li><strong>Improve the numerator (LTV):</strong> attach lift + repeat rate increase + ticket growth all raise LTV. Easier than cutting CAC.</li>
+            <li><strong>Improve the denominator (CAC):</strong> referral programs + organic content. Paid acquisition has rising CAC; organic compounds.</li>
+            <li><strong>Watch the trend, not just level:</strong> if LTV/CAC dropped 0.5× in 6 months, you&apos;re scaling marketing faster than you should.</li>
+            <li><strong>Below 1.0× = stop:</strong> you&apos;re paying customers to come. Pause acquisition, fix the funnel, restart.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> LTV/CAC ratio = customer lifetime value ÷ customer acquisition cost. LTV = orders/customer × avg ticket × CM (over LTV window — typically 12-24 months).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> ≥ 3× institutional-grade; 2-3× workable; 1.5-2× tight; &lt; 1.5× pause marketing; &lt; 1 destroy value.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> SaaS/marketplace economics literature (David Skok), restaurant unit-economics frameworks.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> LTV time-horizon. Some champions cite LTV/CAC at 5+ years; restaurant churn is faster. Use 12-24 month window for honest casual-Italian math.</p>
+        </Methodology>
       </>
     ),
   },
@@ -8987,6 +9017,21 @@ const HELP = {
             growth-hack stories happen.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Payback &lt; 6 months = scale acquisition aggressively:</strong> your money compounds twice within the year.</li>
+            <li><strong>6-12 months payback = balanced spend:</strong> match acquisition with cash flow; don&apos;t lever.</li>
+            <li><strong>&gt; 12 months payback = constrain spend:</strong> the cash gap is too long; only spend what you can carry for &gt; 12 months.</li>
+            <li><strong>Cohort payback varies:</strong> first-month customers might break even immediately; long-tail cohorts months 6-12. Mix matters.</li>
+            <li><strong>Lift first-order CM1 to shorten payback:</strong> attach + ticket on the first visit makes the math work faster.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> customer payback = months for cumulative GP per customer to cover CAC. Numerically solved as the first month where Σ(month_m GP) ≥ CAC.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> ≤ 3 mo = rocket fuel; 3-6 mo = strong; 6-12 mo = acceptable; 12-18 mo = constrained; &gt; 18 mo = stop.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> SaaS/marketplace payback frameworks, restaurant-cohort literature.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> customer survival (churn). The model assumes a typical customer continues earning GP; reality has cohort decay. Use a 24-month projected GP curve for accurate payback.</p>
+        </Methodology>
       </>
     ),
   },
@@ -9006,6 +9051,21 @@ const HELP = {
             new</strong>.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>30-40% new for mature operation:</strong> sustainable acquisition + healthy retention.</li>
+            <li><strong>&gt; 60% new = leaky bucket:</strong> you&apos;re replacing churn with acquisition. Fix retention before scaling further.</li>
+            <li><strong>&lt; 20% new = saturating:</strong> dependent on existing base. Open new acquisition channels.</li>
+            <li><strong>Track quarterly:</strong> shifts in new vs returning signal market saturation, brand fatigue, or competitor entry.</li>
+            <li><strong>Newer cohorts cost more to acquire:</strong> if new-customer share rises while CAC rises, you&apos;re scaling but bleeding. Investigate the funnel.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> new customer revenue share = revenue from customers with zero orders in prior window ÷ total revenue this window. Phone-based.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> 30-40% new = balanced; 50-60% = acquisition-led growth; &gt; 60% = leaky; &lt; 20% = saturated.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> loyalty-economics literature, restaurant-customer-cohort studies.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> seasonal new-customer surges (tourists, festival visitors). These look like new acquisition but aren&apos;t retainable. Track tourist share separately if material.</p>
+        </Methodology>
       </>
     ),
   },
@@ -9024,6 +9084,21 @@ const HELP = {
             retention before scaling ads, or you&apos;re running on a treadmill.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Returning &gt; 50% = sustainable:</strong> the institutional sign of a real brand vs a one-night-stand funnel.</li>
+            <li><strong>Loyalty program lifts this directly:</strong> punch cards, app discounts, SMS reminders. Each compounds returning share.</li>
+            <li><strong>Watch the customer LTV embedded here:</strong> returning customers cost less to retain than acquiring new ones. Each pp shift toward returning improves CAC efficiency.</li>
+            <li><strong>If returning declining: check product quality:</strong> price, taste, service. Don&apos;t solve it with marketing.</li>
+            <li><strong>Frequency boost = returning lift:</strong> SMS &quot;haven&apos;t seen you in 30 days&quot; recovers ~10-15% of lapsed regulars.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> returning revenue share = revenue from customers with ≥ 1 order in prior window ÷ total revenue this window. Phone-based dedup.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> 50-60% returning = sustainable; 60-70% = strong loyalty; &gt; 70% = saturated or low-acquisition.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Reichheld &quot;The Loyalty Effect&quot;, QSR returning-customer literature.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> partially-anonymous customers (no phone captured = can&apos;t deduplicate). Walk-up cash customers may be miscounted as new each visit.</p>
+        </Methodology>
       </>
     ),
   },
