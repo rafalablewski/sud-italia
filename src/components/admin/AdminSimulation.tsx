@@ -6601,6 +6601,22 @@ const HELP = {
             royalty.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Validate the franchisee P&amp;L first:</strong> if a franchisee can&apos;t net 8-12% AFTER paying you 5-6%, the franchise won&apos;t sell.</li>
+            <li><strong>Tiered royalty by performance:</strong> 4% for first year, 5% second, 6% steady-state. Eases the early ramp.</li>
+            <li><strong>Royalty + marketing combined &lt; 10%:</strong> above that, franchisees struggle. Industry sweet spot is 5% royalty + 2.5% marketing = 7.5% total.</li>
+            <li><strong>Royalty income is real ops cash:</strong> use it to fund HQ, not as personal income. Otherwise scaling stalls.</li>
+            <li><strong>Document the playbook before franchising:</strong> if a franchisee can&apos;t replicate from your manual, royalties collapse with quality.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> royalty % of franchisee revenue (default 5%).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> royalty income = franchisee revenue × royaltyPct, summed across all franchised units. Deducted from franchisee unit-level EBITDA.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Industry norms:</strong> QSR pizza chains 4-6% (Domino&apos;s 5.5%, Papa John&apos;s 5%, Telepizza 5.5%). Independent concepts: 5-7%.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> franchise disclosure documents (FDDs), Polish Franchise Association data.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> franchise fee (upfront, typically 30-80k zł). Treated separately in the buildoutLearning lever.</p>
+        </Methodology>
       </>
     ),
   },
@@ -6621,6 +6637,22 @@ const HELP = {
             but the franchisee sees it as another fee on top of the royalty.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Spend the marketing fund visibly:</strong> franchisees lose patience if they pay 2.5% and don&apos;t see ad spend. Quarterly reports keep faith.</li>
+            <li><strong>Mix local + national spend:</strong> 70% national brand campaigns, 30% allocated to franchisee local-area marketing. Both matter.</li>
+            <li><strong>Earmark for digital, not legacy:</strong> Instagram/TikTok beats TV for casual-Italian audiences. Adjust the mix yearly.</li>
+            <li><strong>Audit annually:</strong> some chains divert marketing-fund cash into HQ ops, which is contractually questionable. Stay clean.</li>
+            <li><strong>Co-fund peak campaigns:</strong> Valentine&apos;s Day, summer aperitivo. Aligned spend across the fleet beats fragmented effort.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> mandatory marketing-fund contribution % of franchisee revenue (default 2.5%).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> marketing fund inflow = franchisee revenue × marketingFundPct. Pooled at HQ, spent on shared advertising/brand campaigns.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Industry norms:</strong> 2-3% for casual-Italian chains; sometimes 4% for heavy-marketing concepts (Pizza Hut historically 4%).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> franchise disclosure documents, Polish Franchise Association data.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> local-area marketing requirement (franchisees may also be required to spend 2-3% locally above the pooled fund). Add as separate variable cost if franchisees do this.</p>
+        </Methodology>
       </>
     ),
   },
@@ -6641,6 +6673,22 @@ const HELP = {
             5th feels easy (supply margin kicks in).
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Negotiate when you cross 4 units:</strong> volume thresholds matter. Ask all key suppliers for the next-tier price.</li>
+            <li><strong>Centralise ordering:</strong> one buyer for all units beats per-truck ordering. Volume leverage + admin saving.</li>
+            <li><strong>Annual supplier reviews:</strong> renegotiate or switch yearly. Suppliers expect it; loyalty without leverage costs you.</li>
+            <li><strong>Long-term contracts at thresholds:</strong> a 12-month commitment at 4+ units unlocks deeper discounts than month-to-month.</li>
+            <li><strong>Push cheese hardest:</strong> ~35% of pizza COGS. A 10% discount on mozzarella = 3.5 pp COGS reduction across the fleet.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> minimum unit count to qualify for supply discount (default 4).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> if unitCount &gt;= supplyDiscountAt, apply supplyDiscountPct to base COGS. Below threshold, no discount.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Polish supplier-tier patterns:</strong> 1-3 units = list price; 4-7 units = 5-8% off list; 8-15 units = 10-12% off + payment terms; 15+ units = bespoke contracts, possibly &gt;15% off.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish food-service distribution reports (Makro, Eurocash), chain-supply negotiations literature.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> single-supplier risk (concentrating all volume on one cheese supplier means a 100% disruption if they fail). Discount comes with concentration risk.</p>
+        </Methodology>
       </>
     ),
   },
@@ -6661,6 +6709,22 @@ const HELP = {
             biggest line, so push hardest on the dairy supplier first.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Don&apos;t pocket the saving — reinvest some:</strong> if COGS drops 3pp, reinvest 1pp into recipe quality. Customers reward perceptible upgrades.</li>
+            <li><strong>Pass-through pricing for franchisees:</strong> centralised supply at HQ discount, sold to franchisees at slight markup. Earns HQ + saves franchisees.</li>
+            <li><strong>Hedge cheese specifically:</strong> annual contracts at the discounted rate insulate against spike years.</li>
+            <li><strong>Audit per-supplier:</strong> not all discount equally. Cheese and flour are easier; specialty (truffle, prosciutto) usually doesn&apos;t budge.</li>
+            <li><strong>Quarterly review:</strong> as you grow, push for the next tier. Loyalty doesn&apos;t get rewarded — leverage does.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> COGS reduction % when fleet qualifies for supply discount (default 10%).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> if unitCount &gt;= supplyDiscountAt: effective COGS = baseCOGS × (1 − supplyDiscountPct). Otherwise no change.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Realistic discount sizes:</strong> 6-9% at first tier (4-7 units), 10-13% mid-tier (8-15 units), 15-20% at scale (15+ units, bespoke contracts). Cheese: highest discount headroom. Specialty ingredients: lowest.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish food-service supply margin data, chain procurement case studies, Makro/Eurocash wholesale-tier pricing.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> discount distribution across ingredient lines. The model applies uniform reduction; in reality cheese might be −12% while flour is only −3%. Calibrate to your supplier mix.</p>
+        </Methodology>
       </>
     ),
   },
