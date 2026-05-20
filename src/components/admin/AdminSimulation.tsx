@@ -6539,9 +6539,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Effective CIT rate. Polish small-CIT 9% applies up to €2M turnover;
-          standard 19% above. Drives net-of-tax profit and IRR.
+          Effective CIT rate. Polish small-CIT 9% applies up to €2M
+          turnover; standard 19% above. Drives net-of-tax profit and IRR.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The €2M (~8.5M zł) threshold is a sharp cliff: crossing it
+            bumps CIT 10pp on the entire base, not just the marginal
+            złoty. Multi-entity structures (each sp. z o.o. under €2M)
+            are a common PL chain pattern. Estonian-CIT
+            (na zasadach estońskich) defers tax until dividend
+            distribution — useful for reinvesting growth. R&amp;D tax
+            relief allows up to 200% deductibility on qualified spend
+            (recipe development, POS software).
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             After everything else, the tax-man takes a cut. <strong>9% small-CIT</strong>
@@ -6576,9 +6588,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Dec / Jan / Feb volume multiplier applied to base orders/day. Default
-          0.50 — Polish outdoor pizza-truck winter is brutal.
+          Dec/Jan/Feb volume multiplier applied to base orders/day.
+          Default 0.50 — Polish outdoor pizza-truck winter is brutal.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Range 0.40-0.65 outdoor PL truck depending on shelter and
+            channel mix; indoor mall pitch ~0.85-0.95 (almost no dip);
+            pure delivery 0.80 (delivery surges in cold weather). The
+            single biggest seasonal stress on cash flow — Q1 typically
+            uses 17% of annual revenue against 25% of annual fixed
+            costs. Operators with marginal fundamentals (MoS &lt; 15%)
+            should treat winter survival as a separate planning
+            problem, not assume it averages out.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Winter halves your business. A truck doing <strong>80 orders/day</strong>
@@ -6613,9 +6637,22 @@ const HELP = {
     body: (
       <>
         <p>
-          Sustained throughput of one pizzaiolo + one Neapolitan oven. 60–80
-          pizzas/hr realistic; 90+ needs a second line.
+          Sustained throughput of one pizzaiolo + one Neapolitan oven.
+          60-80 pizzas/hr realistic; 90+ needs a second line.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Bottleneck is usually the pizzaiolo&apos;s shape-rate, not
+            the oven (Neapolitan ovens can bake 8-16 simultaneously
+            but the line can&apos;t feed them that fast). Conveyor /
+            multi-deck setups push 120+/hr. Capacity sets the upside
+            ceiling on the orders/day input — past this × service hours
+            × efficiency, additional marketing spend has zero return.
+            Decision threshold for capex: peak-hour saturation &gt; 90%
+            for 3+ days/week consistently triggers second-oven payback
+            in 6-9 months at typical margins.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Your oven physically can&apos;t go faster than this. If your peak
@@ -6650,9 +6687,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Hours the line is producing — excludes prep + close-down. Drives
-          capacity-orders-per-day calc.
+          Productive hours — excludes prep + close-down. Drives daily
+          capacity (= pizzas/hr × service hours × efficiency).
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Typical splits: lunch-only 4 hr, dinner-only 5 hr, lunch +
+            dinner 9 hr, all-day 11 hr, aperitivo extensions to 14 hr.
+            Adding service hours scales labor linearly but only captures
+            demand if there&apos;s unmet demand in that hour — extending
+            into off-peak periods often adds &lt; 30% utilisation, so
+            the marginal cost (one staff-hour ≈ 45 zł brutto) needs &gt;
+            5 incremental orders at typical margin to break even on the
+            extension.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Your kitchen is &quot;open&quot; 12 hours but really only producing
