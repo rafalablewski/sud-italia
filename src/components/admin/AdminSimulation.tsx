@@ -10568,9 +10568,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Customer lifetime value ÷ CAC. Institutional gate ≥ 3×. Below 1.5×
-          is unprofitable acquisition.
+          Customer lifetime value ÷ acquisition cost. Institutional
+          gate ≥ 3×; below 1.5× = unprofitable acquisition.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Healthy: ≥ 3× institutional-grade; 2-3× workable; 1.5-2×
+            tight; &lt; 1.5× pause marketing; &lt; 1× destroying value.
+            The universal SaaS / marketplace economics gate (David
+            Skok framework). Improve via numerator (lift attach + repeat
+            rate + ticket = lift LTV) over denominator (cut CAC) —
+            referral programs + organic content compound; paid
+            acquisition has rising CAC. Below 1.0× you&apos;re paying
+            customers to come; pause and fix before scaling.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>The most important number in marketing.</strong> 3×+ = scale
@@ -10602,9 +10614,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Months for cumulative GP per customer to cover CAC. ≤ 6 mo strong,
-          ≤ 12 mo acceptable.
+          Months for cumulative GP per customer to cover the CAC.
+          ≤ 6 mo strong; ≤ 12 mo acceptable.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Healthy ranges: ≤ 3 mo rocket fuel; 3-6 mo strong; 6-12
+            acceptable; 12-18 constrained; &gt; 18 stop. The pace
+            metric: shorter payback = faster compounding of marketing
+            spend into customer LTV. Cohort variance is real — first-
+            month customers might break even immediately while long-
+            tail cohorts months 6-12. Lift first-order CM1 (attach +
+            ticket on initial visit) to shorten payback faster than
+            CAC reduction alone.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>How many months until a new customer pays back what you
@@ -10637,8 +10661,21 @@ const HELP = {
     body: (
       <>
         <p>
-          % of period revenue from net-new customers.
+          % of period revenue from net-new customers (zero orders in
+          prior window).
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Healthy: 30-40% new = balanced acquisition + retention;
+            50-60% = acquisition-led growth; &gt; 60% = leaky bucket
+            (fix retention before scaling marketing); &lt; 20% =
+            saturating customer base (open new acquisition channels).
+            CAC trajectory often rises as new-customer share rises —
+            harder to reach incremental cohorts. Seasonal tourist
+            surges look like new acquisition but aren&apos;t
+            retainable; track tourist share separately if material.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>% of revenue from people who walked through the door for
@@ -10671,8 +10708,21 @@ const HELP = {
     body: (
       <>
         <p>
-          % of period revenue from prior-window customers.
+          % of period revenue from prior-window customers
+          (phone-deduplicated against the previous analysis window).
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Healthy: 50-60% returning = sustainable repeat business;
+            60-70% = strong loyalty + retention; &gt; 70% = saturated
+            or low-acquisition (paradoxically can mean stagnation).
+            New &gt; returning = leaky bucket; fix retention before
+            scaling ads or you&apos;re running on a treadmill.
+            Returning customers cost less than 10% of acquisition
+            cost (Reichheld) — each pp shift toward returning
+            improves blended CAC efficiency.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>% of revenue from people who came back.</strong> The mirror
