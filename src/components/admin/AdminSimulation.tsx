@@ -7126,9 +7126,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Bake cycle in seconds. Neapolitan dough cooks ~90s at 450°C. Drives
-          theoretical pizzas/hour.
+          Bake cycle in seconds. Neapolitan dough cooks ~90s at 450°C.
+          Drives theoretical pizzas/hour.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Range by oven type: Neapolitan wood-fired 60-90s at
+            450-480°C (AVPN spec); gas deck 90-120s at 350-420°C;
+            conveyor 4-6 min at 280-310°C (low-temp, high-throughput).
+            Real-world cycle drifts 15-30% above spec at peak — oven
+            recovery between bakes, door-open heat loss, dough drag.
+            Hydration matters: 60-65% (Neapolitan sweet spot) cooks
+            faster than drier doughs. Stopwatch the real number at the
+            Friday rush; calibrate against that, not the manual.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Neapolitan = <strong>90 seconds at 450°C</strong>. Slower ovens
@@ -7163,10 +7175,23 @@ const HELP = {
     body: (
       <>
         <p>
-          % of theoretical bake capacity actually achieved. 20–35% on a real
-          truck — pulls, sweeps, dough rebuilds, customer-facing time, plate-up
-          all eat oven-adjacent time.
+          % of theoretical bake capacity actually achieved. 20-35% on a
+          real truck — pulls, sweeps, dough rebuilds, customer-facing
+          time, plate-up all eat oven-adjacent time.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Tiers: 15-20% first-week crews; 20-25% trained crew with
+            single pizzaiolo; 28-35% multi-station with runner; 35-40%
+            world-class chains with optimised mise-en-place. The gap
+            between theoretical (oven brochure) and realistic
+            (Friday-night stopwatch) is structural — a Ferrara rated at
+            320 pizzas/hr sustains ~70/hr in real ops because the
+            pizzaiolo can&apos;t feed the oven that fast. Improving
+            efficiency by 5pp (training, mise-en-place, runner support)
+            beats almost any capex play.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             The brochure says <strong>320 pizzas/hr</strong>; reality is
@@ -7201,9 +7226,23 @@ const HELP = {
     body: (
       <>
         <p>
-          Number of operating trucks. Setting ≥ 2 activates the fleet model
-          (HQ overhead, supply discount, commissary, cannibalisation, royalty).
+          Number of operating trucks. Setting ≥ 2 activates the fleet
+          model (HQ overhead, supply discount, commissary,
+          cannibalisation, royalty).
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Critical-mass thresholds (PL casual-Italian chains): Units
+            2-3 are hardest — cost layered without scale economics
+            kicking in yet. Unit 4-5 unlocks supplier discounts (~10%
+            COGS reduction). Unit 6-8 unlocks commissary economics
+            (~3-5 pp COGS net of facility cost). 10+ = real chain
+            with full HQ absorption. Per-unit revenue typically dilutes
+            with cannibalisation (~15% within same DMA &lt; 3 km
+            radius). Don&apos;t enable the fleet model unless you&apos;re
+            seriously modelling multi-unit growth.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             One truck = one P&amp;L. Five trucks = a chain with totally
@@ -7238,10 +7277,23 @@ const HELP = {
     body: (
       <>
         <p>
-          Monthly cost of shared regional management, ops, finance. Spread
-          across all units. Should fall below 5% of fleet revenue past 10
-          units.
+          Monthly cost of shared regional management, ops, finance,
+          marketing. Spread across all units. Target &lt; 5% of fleet
+          revenue past 10 units.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Per-unit absorption = hqOverhead ÷ unitCount. Healthy
+            trajectory: 10% at 2 units → 7% at 5 → 5% at 10 → 3% at 20+.
+            Don&apos;t hire HQ ahead of need — owner-operator the first
+            3 trucks, fractional CFO instead of full-time finance, and
+            centralise the highest-leverage functions first (finance,
+            marketing, supply). Each HQ hire should be ROI-justified
+            via per-unit performance lift; if rising HQ % isn&apos;t
+            tracked against falling per-unit cost, the structure is
+            bloating.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             A regional manager costs <strong>~15,000 zł/month</strong>. One
