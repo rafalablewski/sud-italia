@@ -9062,9 +9062,23 @@ const HELP = {
     body: (
       <>
         <p>
-          Net present value of 24-month cash flows at 10% annual discount rate.
-          Positive = beats the rate. 10% ≈ safe-asset benchmark.
+          Net present value of 24-month cash flows at 10% annual
+          discount. Positive = beats the rate. 10% ≈ safe-asset
+          benchmark.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Approximates Polish risk-free + small premium — roughly
+            the long-run equity-market return for a passive investor.
+            Minimum bar for capital deployment: if NPV @ 10% &lt; 0,
+            you&apos;d have made more sitting on the cash. Sensitivity
+            to monthly cash-flow timing matters because of discounting
+            — early ramp helps NPV more than equivalent late-period
+            cash. Doesn&apos;t capture terminal value beyond month 24;
+            for going-concern operations the &quot;real&quot; NPV is
+            higher than the 24-month truncated view suggests.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>&quot;Is this truck worth more than a 10% bond?&quot;</strong>
@@ -9096,8 +9110,22 @@ const HELP = {
     body: (
       <>
         <p>
-          NPV at 15% discount rate. The &quot;decent venture&quot; hurdle.
+          NPV at 15% annual discount. The &quot;decent venture&quot;
+          hurdle.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Approximates VC / seed-investor expected return for
+            moderate-risk SME investments. Positive at this rate signals
+            the truck beats venture-grade alternatives — better than
+            putting the money into a friend&apos;s startup. Sensitivity
+            check: NPV @ 15% close to zero means the project is
+            marginal — small variance in assumptions flips the
+            verdict. Investors look at the slope across NPV @ 10/15/20
+            to assess robustness: steeper drop = more dependent on
+            long-horizon cash, more risk.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>Same question, harder hurdle.</strong> 15% is the &quot;decent
@@ -9129,8 +9157,20 @@ const HELP = {
     body: (
       <>
         <p>
-          NPV at 20%. PE-style hurdle.
+          NPV at 20% annual discount. The PE-style hurdle.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Reflects illiquidity premium + minority-stake risk + sector
+            risk for restaurant investments. Positive at this rate
+            attracts institutional / rollup capital (PL examples: Castle,
+            AdVent, Innova screen against ~20% IRR). Real PE deals
+            adjust for control premium, synergy expectations, exit-
+            multiple compression on top of the base hurdle. The
+            sale-grade benchmark — if you&apos;re building toward a
+            future exit, this is the metric to optimise.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>The Private Equity bar.</strong> If positive, even
@@ -9162,9 +9202,23 @@ const HELP = {
     body: (
       <>
         <p>
-          Annualised internal rate of return on 24-month cash-flow series.
-          ≥ 30% strong, ≥ 15% acceptable, &lt; 0 capital destruction.
+          Annualised internal rate of return on the 24-month cash-flow
+          series. ≥ 30% strong; ≥ 15% acceptable; &lt; 0 capital
+          destruction.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Solved numerically as the discount rate where the cumulative
+            PV of monthly cash flows equals zero. Healthy: &gt; 30%
+            exceptional; 20-30% solid; 15-20% acceptable; &lt; 15%
+            reconsider; &lt; 0 destroys value. IRR implicitly assumes
+            reinvestment-at-IRR — often unrealistic for multi-period
+            decisions; MIRR (Modified IRR) is more honest for true
+            capital-allocation reasoning. 24-month IRR is typically
+            higher than 5-year IRR because terminal-value drag isn&apos;t
+            modeled here.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>The effective &quot;interest rate&quot; your money earns by
