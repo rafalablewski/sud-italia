@@ -5182,7 +5182,8 @@ const HELP = {
             Optimistic-not-much-better-than-Realistic signals a
             structural ceiling (small oven, limited seating, capped
             attach headroom) — fix the model, not the marketing.
-        </p>
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Three runs side by side: <em>&quot;a bit worse&quot;</em>, <em>&quot;as
