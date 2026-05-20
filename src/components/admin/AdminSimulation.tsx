@@ -8489,9 +8489,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Theoretical orders/day the kitchen can produce at peak. Sets the
-          ceiling on volume growth without capex.
+          Realistic orders/day the kitchen can produce at peak. Sets
+          the volume ceiling before capex.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            = pizzasPerHour × serviceHoursPerDay × ovenEfficiency ÷
+            prepComplexity. Typical PL single truck 100-180 orders/day;
+            multi-oven 200-300. Sustainable utilisation 70-85%; below
+            70% over-staffed overhead; above 85% blows ticket times at
+            peak. Demand-side or supply-side bottleneck? If observed
+            orders &lt; 60% of capacity, marketing has headroom; if
+            ≥ 90%, marketing spend goes to capacity-driven walkouts —
+            invest in operations first.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>The most orders/day this kitchen can physically do.</strong>
@@ -8523,9 +8535,22 @@ const HELP = {
     body: (
       <>
         <p>
-          Observed busiest hour from real orders. Compared against realistic
-          oven capacity to flag saturation.
+          Observed busiest hour from real POS orders. Compared against
+          realistic oven capacity to flag saturation.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Healthy peak share 12-22% of daily orders concentrated in
+            the single busiest hour. Higher concentration = more
+            sensitive to capacity constraint. Within-hour micro-peaks
+            (the 15-min mega-peak inside the busiest hour) typically
+            inflate real saturation by 20-30% above the hourly stat —
+            customers don&apos;t arrive at evenly-spaced 5-min
+            intervals. Compare to realistic peak capacity for the
+            saturation status flag (Headroom / Heading there / At
+            ceiling / Blown out).
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>Your busiest hour of the day.</strong> If your kitchen does
@@ -8558,9 +8583,22 @@ const HELP = {
     body: (
       <>
         <p>
-          Median order-to-ready time. Past 8 min, customer satisfaction
+          P50 order-to-ready time. Past 8 min, customer satisfaction
           craters; past 12 min, refund rate spikes.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Healthy: ≤ 6 min QSR ideal; 6-8 min comfortable; 8-12 min
+            slipping; &gt; 12 min losing customers. Maister&apos;s laws
+            of service apply: customers tolerate 50% longer waits when
+            expectation is set up front (&quot;~7 minutes&quot;). Above
+            12 min median, refund/comp rate empirically jumps 2-4 pp.
+            Track P95 not just P50 — a few 20-min outliers ruin
+            individual experiences and the bad reviews that follow.
+            Delivery customers tolerate longer (15-20 min) because they
+            aren&apos;t watching the kitchen clock — track separately.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>How long the average pizza takes</strong> from order to
@@ -8595,10 +8633,24 @@ const HELP = {
     body: (
       <>
         <p>
-          <strong>Earnings Before Interest, Tax, Depreciation, Amortisation.</strong>
-          The headline cash-generation number. Strips out financing and accounting
-          decisions so the underlying operating profit is comparable across deals.
+          Earnings Before Interest, Tax, Depreciation, Amortisation —
+          the headline cash-generation number used in M&amp;A and credit
+          analysis.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Strips out financing decisions (interest), tax structures
+            (CIT), and accounting choices (D&amp;A schedule) so
+            underlying operating performance is comparable across deals
+            of different capital structure. Healthy PL casual-Italian:
+            12-18% margin standard; 18-25% strong; &gt; 25% exceptional.
+            Sale multiples: 4-7× EBITDA. The metric that drives
+            valuation — lifting 1 pp margin lifts sale price by 4-7×
+            that amount. Audit / due-diligence normalisations
+            (founder salary, one-off costs) can swing the reported
+            number 10-20%.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>Profit before paperwork.</strong> Strips out bank interest,
