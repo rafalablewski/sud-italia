@@ -1641,6 +1641,39 @@ function Tips({ children }: { children: ReactNode }) {
   );
 }
 
+function Methodology({ children }: { children: ReactNode }) {
+  return (
+    <div
+      style={{
+        marginTop: 10,
+        padding: "10px 12px",
+        background: "rgba(59, 130, 246, 0.06)",
+        borderLeft: "3px solid rgb(59, 130, 246)",
+        borderRadius: 6,
+        fontSize: 13,
+        lineHeight: 1.55,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 700,
+          textTransform: "uppercase",
+          letterSpacing: 0.6,
+          color: "rgb(30, 64, 175)",
+          marginBottom: 6,
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+        }}
+      >
+        <Calculator style={{ width: 12, height: 12 }} aria-hidden /> Methodology — how this is determined
+      </div>
+      {children}
+    </div>
+  );
+}
+
 // --- Dynamic attach-lever help -------------------------------------------
 //
 // Each attach lever's InfoButton popup keeps the storytelling voice of the
@@ -1694,6 +1727,17 @@ interface AttachHelpProfile {
   attachCeiling: number;
   attachCeilingNote: (pct: number) => ReactNode;
   tips: ReactNode;
+  /** Per-lever methodology context. Rendered inside the Methodology block
+   *  beneath shared formulas, so the operator can see WHY the realistic
+   *  ceiling and price-range thresholds are set where they are, what
+   *  drives the COGS for this category, and what the simulation does NOT
+   *  account for. */
+  methodology: {
+    ceilingRationale: ReactNode;
+    priceRationale: ReactNode;
+    cogsRationale: ReactNode;
+    notModelled: ReactNode;
+  };
 }
 
 // Storytelling number formatters — keep the narrative readable.
@@ -1837,6 +1881,43 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
         </li>
       </ul>
     ),
+    methodology: {
+      ceilingRationale: (
+        <>
+          Polish casual-dining benchmark. Italian-style dinner spots can push
+          60–65% in evening service, but for a pizza truck / pizzeria with
+          mixed lunch + dinner + takeaway, 50–55% is the upper bound where
+          roughly every other customer takes a coffee. Above 55% the
+          simulation is modelling fantasy demand.
+        </>
+      ),
+      priceRationale: (
+        <>
+          Standalone espresso prices in PL: Costa / Starbucks 10–14 zł for
+          specialty drinks, Green Caffè Nero 8–12 zł, Italian-style cafés
+          7–11 zł. Below 3 zł doesn&apos;t cover ~1 zł beans + 0.40 zł cup &amp;
+          lid + 0.50 zł milk + barista&apos;s 30 seconds — the lever flips
+          negative.
+        </>
+      ),
+      cogsRationale: (
+        <>
+          Espresso COGS at 9 zł sell: ~1 zł beans + 0.40 zł cup &amp; lid ≈
+          1.40 zł / 9 zł = ~15%. Cappuccino / latte adds ~0.50 zł of milk →
+          ~20%. The 12% default is the espresso-heavy blend; raise it
+          toward 18–22% if your mix skews milk-based.
+        </>
+      ),
+      notModelled: (
+        <>
+          Barista time and queue impact at peak. A coffee-heavy rush can slow
+          pizza service if you don&apos;t have a dedicated machine. The
+          simulation also doesn&apos;t deduct espresso-machine depreciation
+          (~150 zł/month for a prosumer setup) — fold that into fixed costs
+          if you&apos;re comparing &quot;coffee on vs. off&quot;.
+        </>
+      ),
+    },
   },
   dessert: {
     title: "Dessert attach rate",
@@ -1942,6 +2023,40 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
         </li>
       </ul>
     ),
+    methodology: {
+      ceilingRationale: (
+        <>
+          Casual-Italian benchmark. Dinner-focused restaurants in Warsaw /
+          Kraków hit 35–40% on full table service; lunch and takeaway
+          typically sit at 10–15%. Above 40% is dessert-bar or fine-dining
+          territory — not realistic for a pizzeria mix.
+        </>
+      ),
+      priceRationale: (
+        <>
+          Polish casual-Italian range: tiramisu 14–20 zł, cannoli 12–16 zł,
+          panna cotta 14–18 zł, affogato 12–16 zł. Above 30 zł moves to
+          fine-dining where attach drops sharply; below 6 zł means the
+          portion isn&apos;t a real dessert (probably a free amuse-bouche).
+        </>
+      ),
+      cogsRationale: (
+        <>
+          Tiramisu at 16 zł sell: ~4 zł mascarpone + 1 zł ladyfingers + 0.50 zł
+          coffee &amp; cocoa = ~5.50 zł / 16 zł = ~34%. Cannoli and panna
+          cotta land at 22–28%. The 28% default sits in the middle of the
+          range — adjust toward 32% for cream-heavy menus.
+        </>
+      ),
+      notModelled: (
+        <>
+          Travel / takeaway damage to delicate desserts (tiramisu survives,
+          panna cotta doesn&apos;t). If delivery share is &gt;30% in the channel
+          mix, dial attach down or restrict the dessert menu to
+          travel-friendly items in the recipe data.
+        </>
+      ),
+    },
   },
   antipasti: {
     title: "Antipasti / starter attach",
@@ -2045,6 +2160,41 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
         </li>
       </ul>
     ),
+    methodology: {
+      ceilingRationale: (
+        <>
+          Evening dine-in only. Best-in-class Italian dinner spots in
+          Warsaw / Kraków with full table service hit 30–35% on the
+          evening; mixed-service averages 8–15%. For a pizza truck or
+          takeaway-heavy location, model attach ≤5% — the lever barely
+          applies.
+        </>
+      ),
+      priceRationale: (
+        <>
+          Polish casual-Italian benchmarks: bruschetta 18–26 zł, burrata
+          24–32 zł, mortadella plate 28–38 zł, olive plate 14–18 zł. Above
+          60 zł the item is a shared antipasti board, not a per-cover
+          starter — recompute attach as &quot;per table&quot; instead.
+        </>
+      ),
+      cogsRationale: (
+        <>
+          Burrata at 28 zł sell: ~9 zł cheese + 1.50 zł bread &amp; oil = ~10.50
+          zł / 28 zł = ~38%. Bruschetta lands at 18–22% (cheap bread base);
+          prosciutto plates 35–42%. The 32% default is the burrata-heavy
+          blend.
+        </>
+      ),
+      notModelled: (
+        <>
+          Antipasti-station capacity. A heavy starter rush during prime
+          time can delay pizza output — the simulation doesn&apos;t deduct
+          for that. Test attach increases against your kitchen throughput
+          KPI before pushing in production.
+        </>
+      ),
+    },
   },
   aperitivo: {
     title: "Aperitivo / wine attach",
@@ -2150,6 +2300,41 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
         </li>
       </ul>
     ),
+    methodology: {
+      ceilingRationale: (
+        <>
+          Evening-only attach (5–11 PM). Dinner-led Italian / aperitivo bars
+          in PL hit 40–50% on evening orders; mixed-service all-day spots
+          average 10–20%. Above 50% across ALL orders is bar territory —
+          requires a real cocktail program, not just bottles on a shelf.
+        </>
+      ),
+      priceRationale: (
+        <>
+          Polish casual-Italian glass-pour range: Aperol Spritz 18–26 zł,
+          house wine 14–22 zł, Italian beer 12–18 zł, limoncello shot
+          12–16 zł. Below 8 zł you&apos;re modelling cheap beer only — split
+          this lever in two. Above 35 zł is cocktail-bar / fine-dining.
+        </>
+      ),
+      cogsRationale: (
+        <>
+          Aperol Spritz at 22 zł sell: ~3 zł Aperol + ~2 zł prosecco + ~0.50
+          zł soda + ice + garnish ≈ 5.50 zł / 22 zł = ~25%. House wine
+          25–30%, Italian beer 30–35%. The 22% default sits at the
+          spritz-led-with-some-wine blend.
+        </>
+      ),
+      notModelled: (
+        <>
+          The ~5,000 zł/year alcohol licence fee itself — fold it into the
+          fixed-costs card if you&apos;re comparing &quot;licensed vs
+          unlicensed.&quot; Also doesn&apos;t model glass-pour wastage (open
+          bottles spoil after 2–3 days), which adds 3–5 pp of effective
+          COGS for a wine-heavy program.
+        </>
+      ),
+    },
   },
   premiumToppings: {
     title: "Premium toppings attach",
@@ -2255,6 +2440,41 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
         </li>
       </ul>
     ),
+    methodology: {
+      ceilingRationale: (
+        <>
+          Best-in-class with aggressive merchandising (default-add,
+          photo callout, chef&apos;s-pick framing). Polish casual-Italian
+          average sits at 15–25%; above 45% only with auto-add programs
+          that opt the customer in rather than out.
+        </>
+      ),
+      priceRationale: (
+        <>
+          Polish casual-Italian add-on range: buffalo mozzarella +6–8 zł,
+          &apos;nduja +5–7 zł, truffle oil +8–12 zł, prosciutto crudo
+          +7–9 zł, anchovies +3–5 zł. Below 2 zł isn&apos;t worth menu
+          real-estate; above 18 zł is luxury-only territory (real truffle).
+        </>
+      ),
+      cogsRationale: (
+        <>
+          Truffle oil drizzle at 7 zł sell: ~2 zł oil = ~30%. Buffalo
+          mozzarella +7 zł sell: ~2.50 zł cheese / 7 zł = ~36%. Premium
+          toppings run 25–35% COGS because the ingredient cost is
+          concentrated — real buffalo, real truffle, cured meats.
+        </>
+      ),
+      notModelled: (
+        <>
+          Menu cognitive load. Every additional premium topping competes
+          with the previous ones for customer attention — past 4–5
+          choices, attach drops because customers default to plain. The
+          simulation treats all premium toppings as one undifferentiated
+          attach.
+        </>
+      ),
+    },
   },
   pastaPrimo: {
     title: "Pasta primo attach",
@@ -2360,6 +2580,42 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
         </li>
       </ul>
     ),
+    methodology: {
+      ceilingRationale: (
+        <>
+          Full-Italian-restaurant pattern. Italian dinner-only spots
+          (Trastevere-style) in Poland hit 30–35% pasta attach with
+          dedicated pasta stations; casual pizzerias with a token pasta
+          menu sit at 5–15%. For a takeaway truck without seating, model
+          attach ≤2% — the lever effectively doesn&apos;t apply.
+        </>
+      ),
+      priceRationale: (
+        <>
+          Polish casual-Italian range: carbonara / cacio e pepe 28–38 zł,
+          ragù / amatriciana 32–42 zł, daily specials 38–48 zł, filled
+          pastas (ravioli, tortellini) 36–46 zł. Below 15 zł is a snack
+          portion, not a primo; above 60 zł is fine-dining.
+        </>
+      ),
+      cogsRationale: (
+        <>
+          Carbonara at 32 zł sell: ~2 zł pasta + ~6 zł guanciale + ~2.50 zł
+          pecorino + 0.50 zł eggs = ~11 zł / 32 zł = ~34%. Cacio e pepe
+          runs 18–22%; filled pastas 28–35%. The 26% default sits at a
+          ragù-led blend; raise toward 30% for cured-meat-heavy menus.
+        </>
+      ),
+      notModelled: (
+        <>
+          Pasta-station throughput. Every order needs its own pan +
+          burner — at &gt;6 orders / hour a single induction station
+          chokes. The simulation also doesn&apos;t account for the
+          extra prep labor (dough vs. sauce reduction is a different
+          skill), so heavy attach can require a second hire.
+        </>
+      ),
+    },
   },
 };
 
@@ -2430,6 +2686,55 @@ function AttachLeverHelp({ kind, lever, ordersPerDay, daysOpenPerMonth }: Attach
         )}
       </PlainTalk>
       <Tips>{profile.tips}</Tips>
+      <Methodology>
+        <p style={{ margin: "0 0 6px" }}>
+          <strong>Inputs (live):</strong> the three fields on this row — attach %,
+          avg price, COGS % — plus orders/day and open days/month from the
+          scenario card above. All five flow into the formulas in real-time as
+          you edit them; nothing is hardcoded.
+        </p>
+        <p style={{ margin: "0 0 6px" }}>
+          <strong>Formulas (with your current values plugged in):</strong>
+        </p>
+        <ul style={{ margin: "0 0 6px", paddingLeft: 18 }}>
+          <li>
+            margin per unit = sell − (sell × COGS%) = {fmtZl(sellZl)} − (
+            {fmtZl(sellZl)} × {(lever.cogsPct * 100).toFixed(0)}%) ={" "}
+            <strong>{fmtZl(marginZl)} zł</strong>
+          </li>
+          <li>
+            baked-in monthly = currentPct × orders/day × margin × open days ={" "}
+            {(currentPct * 100).toFixed(0)}% × {Math.round(ordersPerDay)} ×{" "}
+            {fmtZl(marginZl)} × {Math.round(daysOpenPerMonth)} ={" "}
+            <strong>~{fmtZlRounded(currentMonthlyMarginZl)} zł</strong>
+          </li>
+          <li>
+            headroom monthly = (ceiling − currentPct) × orders/day × margin ×
+            open days = ({Math.round(profile.attachCeiling * 100)}% −{" "}
+            {(currentPct * 100).toFixed(0)}%) × {Math.round(ordersPerDay)} ×{" "}
+            {fmtZl(marginZl)} × {Math.round(daysOpenPerMonth)} ={" "}
+            <strong>~{fmtZlRounded(monthlyMarginZl)} zł</strong>
+          </li>
+        </ul>
+        <p style={{ margin: "0 0 4px" }}>
+          <strong>
+            Realistic attach ceiling ({Math.round(profile.attachCeiling * 100)}%):
+          </strong>{" "}
+          {profile.methodology.ceilingRationale}
+        </p>
+        <p style={{ margin: "0 0 4px" }}>
+          <strong>
+            Realistic sell-price range ({profile.priceFloor}–{profile.priceCeiling} zł):
+          </strong>{" "}
+          {profile.methodology.priceRationale}
+        </p>
+        <p style={{ margin: "0 0 4px" }}>
+          <strong>COGS context:</strong> {profile.methodology.cogsRationale}
+        </p>
+        <p style={{ margin: 0 }}>
+          <strong>Not modelled:</strong> {profile.methodology.notModelled}
+        </p>
+      </Methodology>
     </>
   );
 }
