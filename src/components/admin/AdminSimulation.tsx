@@ -4159,16 +4159,24 @@ const HELP = {
     body: (
       <>
         <p>
-          Real-world volume isn&apos;t flat. Rainy days kill outdoor truck
-          service; heatwaves drive patio crowds; Easter Sunday is closed; NYE
-          is a peak. This block lets you model all of that.
+          Real-world volume isn&apos;t flat. Rainy days kill outdoor
+          truck service; heatwaves drive patio crowds; Easter is closed;
+          NYE is a peak. This block models all of it.
         </p>
-        <p>
-          The levers compose into a single &quot;effective orders per day&quot;
-          and &quot;effective days open&quot; — which then feed the whole P&amp;L
-          downstream. Live preview at the bottom of the card shows you the
-          composite impact.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The levers compose into a single &quot;effective orders per
+            day&quot; × &quot;effective days open&quot; pair that feeds
+            the whole P&amp;L downstream. Annualised composite typically
+            comes out to ~0.92× typed volume for Warsaw seasonality
+            (rainy 30% × 0.75 + sunny 70% × 1.0, minus 1 holiday
+            closure/mo, plus modest peak/event bonuses). The live
+            preview at the card&apos;s bottom shows the composite
+            impact. Master toggle in the header switches the whole
+            adjustment on/off — useful for &quot;what does the P&amp;L
+            look like ignoring seasonality?&quot; comparisons.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Weather isn&apos;t a feel-good factor — it directly changes your day. A
@@ -4248,22 +4256,22 @@ const HELP = {
     body: (
       <>
         <p>
-          Two knobs work together:
+          Two knobs: rainy-day multiplier (how much rain hurts volume,
+          default 0.75 = −25%) and rainy share (% of days in a typical
+          month with meaningful rain, Warsaw ~30%).
         </p>
-        <ul style={{ margin: "8px 0", paddingLeft: 20, listStyle: "disc" }}>
-          <li>
-            <strong>Multiplier</strong> — how much rain hurts volume. 0.75 = rainy
-            days run 25% below normal.
-          </li>
-          <li>
-            <strong>Rainy share</strong> — what % of days are rainy in a typical
-            month. Warsaw averages ~30%.
-          </li>
-        </ul>
-        <p>
-          <strong>Combined:</strong> 0.30 × 0.75 + 0.70 × 1.00 = 0.925, so the
-          average month runs at 92.5% of theoretical volume just from rain.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            <strong>Combined effective multiplier</strong> = rainyShare
+            × rainyMultiplier + (1 − rainyShare) × 1.0. So 0.30 × 0.75
+            + 0.70 × 1.00 = 0.925 — the average month runs at 92.5%
+            of theoretical volume just from rain. Multiplier 0.55-0.85
+            depending on shelter (exposed truck dips deepest; covered
+            indoor pitch barely 0.85). Rainy share 25-35% in PL
+            (highest April-July and October-December per IMGW
+            10-year averages).
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             When it pours, walk-up customers vanish — a <strong>0.55 multiplier</strong>
@@ -4342,16 +4350,23 @@ const HELP = {
     body: (
       <>
         <p>
-          Hot patio evenings (25 °C+) drive +40% volume — people want to be
-          outside, eat lighter, drink more. Set the multiplier and the share of
-          evenings hot enough to fire it (~10% in Warsaw, way higher in summer
-          months).
+          Hot patio evenings (25 °C+) drive +40% volume — people stay out
+          longer, eat lighter, drink more. Tune the multiplier and the
+          share of evenings hot enough to fire it (~10% Warsaw annual,
+          ~30% Jun-Aug).
         </p>
-        <p>
-          <strong>Combine with seasonal multipliers</strong> — the simulator
-          already has a quarterly summer bonus, this stacks on top for the hot
-          evening micro-effect.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            <strong>Stacks on top of the quarterly summer multiplier</strong>
+            — the heatwave bonus models the hot-evening micro-effect,
+            while the summer seasonality covers the broad Jun-Aug
+            uplift. Multiplier 1.20-1.60 depending on outdoor seating
+            capacity: truck with no patio ~1.10 (delivery uptick only);
+            8-seat patio 1.30; 20+ seat patio 1.50+. Climate-change
+            creep: PL heatwave share has crept up 2-4 pp/decade per
+            IMGW data — future-proof by building outdoor capacity now.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             When it hits 28°C+, people stay out longer, order spritzes, and bring
@@ -4431,14 +4446,23 @@ const HELP = {
     body: (
       <>
         <p>
-          Days each month you&apos;re forced closed by the calendar — Easter
-          Sunday, 15 August, 25 December, Boże Ciało (Corpus Christi),
-          1 November. About 12 closed days a year ÷ 12 ≈ 1 per month average.
+          Days each month you&apos;re forced closed by the calendar —
+          Easter Sunday, 15 August, 25 December, Boże Ciało (Corpus
+          Christi), 1 November. About 12 closed days/yr ÷ 12 ≈ 1/month.
         </p>
-        <p>
-          <strong>Effect:</strong> reduces effective days open. If you&apos;re
-          normally 28 days/mo and lose 1 day, you lose ~3.6% of monthly revenue.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            <strong>Effect:</strong> reduces effective days open. At 28
+            typical days, losing 1 day = ~3.6% of monthly revenue. The
+            net hit is higher than the gross share suggests because
+            fixed costs (rent, accountant) don&apos;t scale down with
+            the closure — per-open-day fixed burden grows. Some PL
+            gastronomic units DO trade on standard holidays (no legal
+            prohibition for restaurants); the question is whether the
+            premium volume justifies the staff overtime and supplier
+            availability.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Every closed day is a hole in the month — 28 normal days vs 27 means
