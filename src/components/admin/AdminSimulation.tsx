@@ -1697,7 +1697,20 @@ type AttachLeverKind =
 interface NarrativeValues {
   sellZl: number;
   cogsZl: number;
+  /** Gross margin per unit = sell − COGS. Used for the "~7.92 zł margin"
+   *  flavor line in the narrative — easy to reason about visually. */
   marginZl: number;
+  /** Pre-CIT margin per unit after variable leakage (payment fees, waste,
+   *  refunds, loyalty burn). What hits EBITDA. */
+  preCitMarginZl: number;
+  /** Net margin per unit after variable leakage AND CIT. What actually
+   *  lands on the bottom line of the P&L. Drives the monthly figures so
+   *  they match the actual net-profit delta. */
+  netMarginZl: number;
+  /** Sum of variable-leakage rates applied on incremental revenue. */
+  leakagePct: number;
+  /** CIT rate (0.09 small-CIT or 0.19 standard PL). */
+  citPct: number;
   currentPct: number;
   targetPct: number;
   deltaPp: number;
@@ -2624,13 +2637,40 @@ interface AttachLeverHelpProps {
   lever: SimulationAttachLever;
   ordersPerDay: number;
   daysOpenPerMonth: number;
+  /** Variable-leakage rates from the scenario — applied to incremental
+   *  attach revenue to compute the EFFECTIVE net margin (matches actual
+   *  P&L delta), not just the gross sell − COGS. */
+  paymentProcessorPct: number;
+  wastePct: number;
+  refundPct: number;
+  loyaltyBurnPct: number;
+  citPct: number;
 }
 
-function AttachLeverHelp({ kind, lever, ordersPerDay, daysOpenPerMonth }: AttachLeverHelpProps) {
+function AttachLeverHelp({
+  kind,
+  lever,
+  ordersPerDay,
+  daysOpenPerMonth,
+  paymentProcessorPct,
+  wastePct,
+  refundPct,
+  loyaltyBurnPct,
+  citPct,
+}: AttachLeverHelpProps) {
   const profile = ATTACH_HELP[kind];
   const sellZl = lever.avgPriceGrosze / 100;
   const cogsZl = sellZl * lever.cogsPct;
   const marginZl = sellZl - cogsZl;
+  // Effective net margin per attached unit — what actually lands on the
+  // bottom line after the P&L applies the same variable-leakage rates to
+  // incremental attach revenue that it applies to all other revenue, then
+  // small/full CIT. Matches the actual delta in monthly net profit when
+  // the lever's attach % moves.
+  const leakagePct = paymentProcessorPct + wastePct + refundPct + loyaltyBurnPct;
+  const effectiveRatio = Math.max(0, 1 - lever.cogsPct - leakagePct);
+  const preCitMarginZl = sellZl * effectiveRatio;
+  const netMarginZl = preCitMarginZl * (1 - citPct);
 
   const currentPct = Math.max(0, Math.min(1, lever.attachPct));
   // Target is always the lever's realistic attach ceiling, so the +bump
@@ -2643,17 +2683,22 @@ function AttachLeverHelp({ kind, lever, ordersPerDay, daysOpenPerMonth }: Attach
   const deltaPp = Math.max(0, targetPct - currentPct);
 
   const extraUnitsPerDay = ordersPerDay * deltaPp;
-  // Don't clamp to 0 — when sell < cost the projected impact is genuinely
-  // negative and the operator should see the loss, not a hidden floor.
-  // The negative-margin story branch handles narrative voice; these values
-  // also surface in the Methodology block so honest numbers matter.
-  const monthlyMarginZl = extraUnitsPerDay * marginZl * daysOpenPerMonth;
-  const currentMonthlyMarginZl = ordersPerDay * currentPct * marginZl * daysOpenPerMonth;
+  // Monthly figures use the EFFECTIVE NET margin per unit (after variable
+  // leakage + CIT) so the headroom matches the actual P&L delta — not the
+  // headline gross margin which would over-state by ~15-25%. Negative
+  // values flow through unclamped: when sell < cost the projected impact
+  // is genuinely negative and the operator should see the loss.
+  const monthlyMarginZl = extraUnitsPerDay * netMarginZl * daysOpenPerMonth;
+  const currentMonthlyMarginZl = ordersPerDay * currentPct * netMarginZl * daysOpenPerMonth;
 
   const values: NarrativeValues = {
     sellZl,
     cogsZl,
     marginZl,
+    netMarginZl,
+    preCitMarginZl,
+    leakagePct,
+    citPct,
     currentPct,
     targetPct,
     deltaPp,
@@ -2699,24 +2744,46 @@ function AttachLeverHelp({ kind, lever, ordersPerDay, daysOpenPerMonth }: Attach
         </p>
         <ul style={{ margin: "0 0 6px", paddingLeft: 18 }}>
           <li>
-            margin per unit = sell − (sell × COGS%) = {fmtZl(sellZl)} − (
+            gross margin per unit = sell − (sell × COGS%) = {fmtZl(sellZl)} − (
             {fmtZl(sellZl)} × {(lever.cogsPct * 100).toFixed(0)}%) ={" "}
             <strong>{fmtZl(marginZl)} zł</strong>
           </li>
           <li>
-            baked-in monthly = currentPct × orders/day × margin × open days ={" "}
-            {(currentPct * 100).toFixed(0)}% × {Math.round(ordersPerDay)} ×{" "}
-            {fmtZl(marginZl)} × {Math.round(daysOpenPerMonth)} ={" "}
+            <strong>net margin per unit</strong> = sell × (1 − COGS% −
+            payment-fee − waste − refunds − loyalty) × (1 − CIT) ={" "}
+            {fmtZl(sellZl)} × (1 −{" "}
+            {(lever.cogsPct * 100).toFixed(0)}% −{" "}
+            {(leakagePct * 100).toFixed(1)}%) × (1 −{" "}
+            {(citPct * 100).toFixed(0)}%) ={" "}
+            <strong>{fmtZl(netMarginZl)} zł</strong>{" "}
+            <span className="v2-muted">
+              (matches actual P&amp;L delta)
+            </span>
+          </li>
+          <li>
+            baked-in monthly = currentPct × orders/day × net margin × open days
+            = {(currentPct * 100).toFixed(0)}% × {Math.round(ordersPerDay)} ×{" "}
+            {fmtZl(netMarginZl)} × {Math.round(daysOpenPerMonth)} ={" "}
             <strong>~{fmtZlRounded(currentMonthlyMarginZl)} zł</strong>
           </li>
           <li>
-            headroom monthly = (ceiling − currentPct) × orders/day × margin ×
-            open days = ({Math.round(profile.attachCeiling * 100)}% −{" "}
+            headroom monthly = (ceiling − currentPct) × orders/day × net margin
+            × open days = ({Math.round(profile.attachCeiling * 100)}% −{" "}
             {(currentPct * 100).toFixed(0)}%) × {Math.round(ordersPerDay)} ×{" "}
-            {fmtZl(marginZl)} × {Math.round(daysOpenPerMonth)} ={" "}
+            {fmtZl(netMarginZl)} × {Math.round(daysOpenPerMonth)} ={" "}
             <strong>~{fmtZlRounded(monthlyMarginZl)} zł</strong>
           </li>
         </ul>
+        <p style={{ margin: "0 0 4px", fontSize: 12.5, opacity: 0.85 }}>
+          <strong>Variable leakage on incremental revenue ({(leakagePct * 100).toFixed(1)}%):</strong>{" "}
+          payment processor {(paymentProcessorPct * 100).toFixed(1)}% (blended
+          on-site card + cash 0% + Glovo/Wolt commission) + waste{" "}
+          {(wastePct * 100).toFixed(1)}% + refunds {(refundPct * 100).toFixed(1)}%
+          + loyalty burn {(loyaltyBurnPct * 100).toFixed(1)}%. Then CIT{" "}
+          {(citPct * 100).toFixed(0)}% on the pre-tax incremental margin. Fixed
+          costs (labor, rent) are unchanged by the lever and don&apos;t enter
+          the marginal calculation.
+        </p>
         <p style={{ margin: "0 0 4px" }}>
           <strong>
             Realistic attach ceiling ({Math.round(profile.attachCeiling * 100)}%):
@@ -9822,6 +9889,11 @@ export function AdminSimulation() {
         baseCogsPct={scenario.cogsPct}
         ordersPerDay={scenario.ordersPerDay}
         daysOpenPerMonth={scenario.daysOpenPerMonth}
+        paymentProcessorPct={effectiveScenario?.paymentProcessorPct ?? scenario.paymentProcessorPct ?? 0}
+        wastePct={scenario.wastePct ?? 0}
+        refundPct={scenario.refundPct ?? 0}
+        loyaltyBurnPct={scenario.loyaltyBurnPct ?? 0}
+        citPct={scenario.citPct ?? 0}
         onChange={(next) => update((s) => ({ ...s, assumptions: next }))}
       />
 
@@ -14672,6 +14744,13 @@ interface AttachRowProps {
   /** Scenario context for the dynamic help body. */
   ordersPerDay?: number;
   daysOpenPerMonth?: number;
+  /** Variable-leakage rates the P&L applies on incremental attach revenue —
+   *  threaded through so the headroom matches the actual net P&L delta. */
+  paymentProcessorPct?: number;
+  wastePct?: number;
+  refundPct?: number;
+  loyaltyBurnPct?: number;
+  citPct?: number;
 }
 
 function AttachLeverRow({
@@ -14684,6 +14763,11 @@ function AttachLeverRow({
   helpKind,
   ordersPerDay,
   daysOpenPerMonth,
+  paymentProcessorPct,
+  wastePct,
+  refundPct,
+  loyaltyBurnPct,
+  citPct,
 }: AttachRowProps) {
   const enabled = lever.enabled !== false;
   // Per-order projected ticket lift = attachPct × price; margin = (1 − cogsPct) × ticket lift.
@@ -14712,6 +14796,11 @@ function AttachLeverRow({
                 lever={lever}
                 ordersPerDay={ordersPerDay ?? 0}
                 daysOpenPerMonth={daysOpenPerMonth ?? 0}
+                paymentProcessorPct={paymentProcessorPct ?? 0}
+                wastePct={wastePct ?? 0}
+                refundPct={refundPct ?? 0}
+                loyaltyBurnPct={loyaltyBurnPct ?? 0}
+                citPct={citPct ?? 0}
               />
             </InfoButton>
           ) : (
@@ -14879,6 +14968,14 @@ interface BehaviorCardProps {
    *  with the rest of the simulation. */
   ordersPerDay: number;
   daysOpenPerMonth: number;
+  /** Variable-leakage rates the P&L applies on incremental attach revenue.
+   *  Without these the headroom number would overstate the actual net P&L
+   *  delta — see AttachLeverHelp methodology for the full decomposition. */
+  paymentProcessorPct: number;
+  wastePct: number;
+  refundPct: number;
+  loyaltyBurnPct: number;
+  citPct: number;
   onChange: (next: SimulationAssumptions) => void;
 }
 
@@ -14888,6 +14985,11 @@ function BehaviorAssumptionsCard({
   baseCogsPct,
   ordersPerDay,
   daysOpenPerMonth,
+  paymentProcessorPct,
+  wastePct,
+  refundPct,
+  loyaltyBurnPct,
+  citPct,
   onChange,
 }: BehaviorCardProps) {
   const a = assumptions;
@@ -14951,6 +15053,11 @@ function BehaviorAssumptionsCard({
               helpKind="coffee"
               ordersPerDay={ordersPerDay}
               daysOpenPerMonth={daysOpenPerMonth}
+              paymentProcessorPct={paymentProcessorPct}
+              wastePct={wastePct}
+              refundPct={refundPct}
+              loyaltyBurnPct={loyaltyBurnPct}
+              citPct={citPct}
             />
           )}
           {a.dessertAttach && (
@@ -14963,6 +15070,11 @@ function BehaviorAssumptionsCard({
               helpKind="dessert"
               ordersPerDay={ordersPerDay}
               daysOpenPerMonth={daysOpenPerMonth}
+              paymentProcessorPct={paymentProcessorPct}
+              wastePct={wastePct}
+              refundPct={refundPct}
+              loyaltyBurnPct={loyaltyBurnPct}
+              citPct={citPct}
             />
           )}
           {a.antipastiAttach && (
@@ -14975,6 +15087,11 @@ function BehaviorAssumptionsCard({
               helpKind="antipasti"
               ordersPerDay={ordersPerDay}
               daysOpenPerMonth={daysOpenPerMonth}
+              paymentProcessorPct={paymentProcessorPct}
+              wastePct={wastePct}
+              refundPct={refundPct}
+              loyaltyBurnPct={loyaltyBurnPct}
+              citPct={citPct}
             />
           )}
           {a.aperitivoAttach && (
@@ -14987,6 +15104,11 @@ function BehaviorAssumptionsCard({
               helpKind="aperitivo"
               ordersPerDay={ordersPerDay}
               daysOpenPerMonth={daysOpenPerMonth}
+              paymentProcessorPct={paymentProcessorPct}
+              wastePct={wastePct}
+              refundPct={refundPct}
+              loyaltyBurnPct={loyaltyBurnPct}
+              citPct={citPct}
             />
           )}
           {a.premiumToppingsAttach && (
@@ -14999,6 +15121,11 @@ function BehaviorAssumptionsCard({
               helpKind="premiumToppings"
               ordersPerDay={ordersPerDay}
               daysOpenPerMonth={daysOpenPerMonth}
+              paymentProcessorPct={paymentProcessorPct}
+              wastePct={wastePct}
+              refundPct={refundPct}
+              loyaltyBurnPct={loyaltyBurnPct}
+              citPct={citPct}
             />
           )}
           {a.pastaPrimoAttach && (
@@ -15011,6 +15138,11 @@ function BehaviorAssumptionsCard({
               helpKind="pastaPrimo"
               ordersPerDay={ordersPerDay}
               daysOpenPerMonth={daysOpenPerMonth}
+              paymentProcessorPct={paymentProcessorPct}
+              wastePct={wastePct}
+              refundPct={refundPct}
+              loyaltyBurnPct={loyaltyBurnPct}
+              citPct={citPct}
             />
           )}
 
