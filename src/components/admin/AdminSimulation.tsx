@@ -6345,10 +6345,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Per-order variable cost of takeaway boxes, napkins, plate wash, paper
-          bags. Hits every order. Delivery-channel packaging (branded box +
-          sleeve) usually layered on top.
+          Per-order variable cost of boxes, napkins, plate wash, paper
+          bags. Hits every order. Delivery-channel branded box + sleeve
+          usually layered on top.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            PL 2026 ranges: 30cm pizza box plain 1.80-2.20 zł, branded
+            2.50-3.50 zł, kraft bag 0.30-0.50 zł, napkin 0.05-0.10 zł,
+            cutlery 0.40-0.80 zł. Bulk-buying quarterly cuts unit price
+            8-15%. Watch out for incoming EU single-use plastic levy
+            (SUP directive expansion 2026-2027) — likely adds 0.20-0.50
+            zł/order. Don&apos;t double-count: packaging is per-order
+            VARIABLE, separate from COGS (food only) and fixed costs.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Box ~2.50 zł, napkins ~0.30 zł, bag ~0.40 zł — about
@@ -6383,9 +6394,22 @@ const HELP = {
     body: (
       <>
         <p>
-          Spoilage + over-portioning + end-of-shift discards as % of revenue.
-          QSR norm 1–3%. Tracked as variable leakage in True CM1.
+          Spoilage + over-portioning + end-of-shift discards as % of
+          revenue. QSR norm 1-3%. Tracked as variable leakage in True
+          CM1.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Industry tiers (NRA): 1.0-1.5% world-class chains
+            (McDonald&apos;s, Domino&apos;s); 2-3% healthy independent;
+            4-5% under-measured; 6%+ undisciplined. Most independent
+            operators don&apos;t measure until forced to — daily logs
+            are 5 min/shift and routinely uncover 2-3 pp of hidden
+            leakage. EU food-waste reduction targets (forthcoming SUP-
+            adjacent regulation) will likely mandate measurement +
+            reporting from 2027 — build the log now.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Dough goes off, mozzarella balls get nicked, the last 4 portions of
@@ -6419,9 +6443,20 @@ const HELP = {
     body: (
       <>
         <p>
-          Voided orders, comp meals, staff free meals, till shortages as % of
-          revenue. QSR norm 1–2%.
+          Voided orders + comp meals + staff free meals + till shortages
+          as % of revenue. QSR norm 1-2%.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Industry tiers: 0.5-1% world-class (tight POS controls,
+            manager-only voids); 1-2% healthy independent; 3%+ requires
+            investigation (often hides cash skim or process drift). The
+            single biggest control: manager-only void authority +
+            written limit on free-staff-meals. Track per-staff void
+            rate — outliers ≥ 5× team average indicate honesty problem,
+            not quality problem.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             A burnt pizza you refunded, the staff meal that&apos;s &quot;free&quot;,
@@ -6455,9 +6490,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Effective discount rate = points earned × redemption rate × point
-          value. Default: 1 pt/PLN × 50% redeem × 5% value = ~1.2%.
+          Effective discount rate = earn × redemption × point value.
+          Default 1 pt/PLN × 50% redeem × 5% value = ~1.2%.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Loyalty cost is real only if it drives incremental
+            frequency. Healthy programmes sit at 40-60% redemption — at
+            80%+ you&apos;re bleeding margin; at &lt; 30% the programme
+            isn&apos;t engaging. Measure repeat-rate lift, not just
+            burn — without the lift, the programme is a pure discount
+            (Reichheld). Tier high-spend customers (3% earn for 200+
+            zł/month vs 1% baseline) to focus the burn on the Pareto
+            top.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Loyalty isn&apos;t free — every 100 zł a regular spends earns them
