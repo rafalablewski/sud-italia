@@ -8299,10 +8299,22 @@ const HELP = {
     body: (
       <>
         <p>
-          Share of revenue left after every variable cost (COGS, packaging,
-          waste, refunds, loyalty burn, payment fees, marketing CAC). Honest
-          cash-drop per złoty of sales.
+          Share of revenue left after every variable cost — COGS,
+          packaging, waste, refunds, loyalty burn, payment fees,
+          marketing CAC. The honest cash-drop per złoty of sales.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Healthy ranges: 50-55% world-class; 45-50% healthy; 40-45%
+            pressured; &lt; 40% structurally unprofitable. PL casual-
+            Italian benchmark 47-52%. The metric that drives every
+            growth-vs-marketing decision: a 5,000 zł marketing campaign
+            needs to generate ~10k incremental revenue at 50% CM to
+            justify. Track per-channel (delivery CM ~35% vs on-site
+            ~55%) because channel-mix shifts change the blended CM
+            materially.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             For every 100 zł sold, this is <strong>how much survives</strong>
@@ -8335,9 +8347,20 @@ const HELP = {
     body: (
       <>
         <p>
-          (Actual revenue − break-even revenue) ÷ actual revenue. The buffer
-          before going underwater.
+          (Actual revenue − break-even revenue) ÷ actual revenue. The
+          buffer before going underwater.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Healthy ranges: ≥ 25% comfortable; 15-25% adequate; 10-15%
+            fragile; &lt; 10% one bad week from red. From
+            Schmidgall&apos;s CVP framework, this is the equity-investor
+            gating metric — Series A capital won&apos;t back a plan
+            with steady-state MoS under 20%. Watch seasonally; winter
+            MoS might be 5% while annual average is 22% — investor
+            scrutiny will probe the worst quarter, not the average.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>How much revenue can drop before you go red.</strong> Below
@@ -8369,9 +8392,20 @@ const HELP = {
     body: (
       <>
         <p>
-          Monthly revenue ÷ total labor hours. Productivity benchmark for
-          staffing decisions. PL pizza norm 90–140 zł/h.
+          Monthly revenue ÷ total labor hours. Productivity benchmark
+          for staffing decisions. PL pizza norm 90-140 zł/h.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Healthy ranges (PL pizza): 70-90 zł/h needs work; 90-120
+            zł/h healthy; 120-160 zł/h good; 160+ zł/h excellent
+            (often QSR chains with optimised mise-en-place). At 35 zł/h
+            blended brutto cost, 90 zł/h revenue yields ~25% labor of
+            revenue — the operating threshold. Diagnose by shift: lunch
+            70 zł/h vs dinner 130 zł/h means the lunch shift is the
+            underperformer, not the team.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             How much each hour of staff time generates. If it&apos;s
@@ -8404,9 +8438,22 @@ const HELP = {
     body: (
       <>
         <p>
-          Naïve months of net profit needed to recoup setup cost. Setup ÷
-          monthly profit. Investor-grade view in the Investor returns strip below.
+          Naïve months of net profit needed to recoup setup cost.
+          Setup ÷ monthly profit. See Investor Returns for IRR-based
+          honest view.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Healthy: ≤ 18 mo excellent; 18-24 solid; 24-36 acceptable;
+            &gt; 36 marginal; &gt; 48 reconsider. &quot;Naïve&quot;
+            because it ignores ramp (year-1 won&apos;t hit projected
+            profit), time-value (1 zł in month 1 ≠ 1 zł in month 24)
+            and risk. PE/VC use IRR with discount rates 10-20% — use
+            the Investor Returns strip for institutional-grade
+            comparison. Useful only for quick mental anchoring; not
+            for capital-allocation decisions.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>How many months until the truck pays itself off</strong>.
