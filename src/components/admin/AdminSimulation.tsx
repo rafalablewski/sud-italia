@@ -9255,6 +9255,18 @@ const HELP = {
           Forward 12-month revenue projection with seasonality + price
           inflation baked in.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Σ over m=1..12 of (base × seasonal_multiplier(m) × ticket ×
+            days × inflation^(m/12)). The annual top-line that
+            determines CIT bracket (€2M ≈ 8.5M zł threshold for 9% vs
+            19%) and informs revenue growth targets. Seasonal split (PL
+            pizza truck): Q1 ~17%, Q2 ~25%, Q3 ~33%, Q4 ~25%. Not a
+            flat 1/12 per month — winter cash crunch funds working-
+            capital reserve sizing. Year-over-year growth target:
+            8-12% nominal (above 4% PL inflation = real growth).
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>The year ahead, top-line.</strong> A 200,000 zł/month truck
@@ -9286,9 +9298,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Forward 12-month total cost compounding wage + ingredient inflation
-          monthly.
+          Forward 12-month total cost projection, compounding wage and
+          ingredient inflation monthly.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Σ m=1..12 of (labor × (1+wage_infl)^(m/12) + COGS ×
+            (1+food_infl)^(m/12) × seasonal_multiplier + fixed ×
+            (1+CPI)^(m/12)). Typical composition: 40% labor, 40% COGS,
+            15% fixed, 5% variable leakage. Step-function changes
+            (rent renewal, mandatory ZUS jump) don&apos;t fit the
+            smooth-inflation model — add as a separate fixed line if
+            material. Cost trajectory monitoring: if 12-mo cost growth
+            outpaces 12-mo revenue growth, margin erodes year-over-year.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>Total costs over the year ahead, with inflation baked in.</strong>
@@ -9320,8 +9344,22 @@ const HELP = {
     body: (
       <>
         <p>
-          Forward 12-month net profit. Drives setup-payback math.
+          Forward 12-month cumulative net profit (= 12-mo revenue − 12-mo
+          costs, post-CIT). Drives setup-payback math.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Healthy ranges: 120-200k zł/year single PL casual-Italian
+            truck; 600k-1.5M for 5-7 unit chain; 3M+ for 20+ unit
+            chain. Compares directly to alternative-employment income:
+            a salaried head chef earns ~90-130k zł/yr in PL — if your
+            truck nets below that, the risk-adjusted return is
+            negative. Year-over-year growth target 10-15% real
+            (above inflation) to be considered growing. Valuation
+            anchor for sale: ~4-7× annual net (or EBITDA, depending on
+            buyer&apos;s framework).
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>Total take-home for the year ahead.</strong> Divide by 12
@@ -9354,9 +9392,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Highest vs lowest month-net-profit in the projection. Measures
-          seasonal swing risk.
+          Highest vs lowest month-net-profit in the 12-month projection.
+          Measures seasonal swing risk.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The spread (best − worst) sizes the working-capital reserve
+            requirement: enough cash to bridge the trough month while
+            still covering fixed-cost monthly bills. Healthy: 3-5× ratio
+            for PL outdoor truck; lower 1.5-2× = well-diversified
+            channels (delivery counter-seasonal); higher 5-8× = heavy
+            seasonality risk requiring careful Q4 reserve build-up.
+            Investors look at the worst month, not the average — the
+            average can hide a winter cash crunch that closes the truck.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>Your best month vs your worst.</strong> A 4× swing (e.g.,
