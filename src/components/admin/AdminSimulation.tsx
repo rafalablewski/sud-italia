@@ -7322,6 +7322,21 @@ const HELP = {
             re-price before opening day 1.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Track per-item contribution:</strong> some pizzas contribute 60%, others 35%. Push the high-CM items in menu placement &amp; marketing.</li>
+            <li><strong>Cut low-CM items:</strong> if an item runs &lt; 40% CM after all variable costs, it&apos;s subsidising — restrict or remove.</li>
+            <li><strong>Channel matters:</strong> on-site CM might be 55%, Glovo CM might be 35%. Track separately when making channel decisions.</li>
+            <li><strong>Inflation compresses CM:</strong> recompute monthly. If CM drops 2pp over 6 months, re-price or re-engineer.</li>
+            <li><strong>Use CM for &quot;is this worth it?&quot; decisions:</strong> a 5,000 zł marketing campaign needs to generate ~10k incremental revenue at 50% CM to justify.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> contribution margin % = 1 − (COGS + packaging + waste + refunds + loyalty burn + payment fees) ÷ revenue.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> 50-55% world-class; 45-50% healthy; 40-45% pressured; &lt; 40% structurally unprofitable. PL casual-Italian benchmark: 47-52%.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> restaurant managerial-accounting literature (Schmidgall), NRA industry-economics data.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> CAC (customer acquisition cost) as a variable. The model treats marketing as fixed; if you scale CAC with volume, CM contracts.</p>
+        </Methodology>
       </>
     ),
   },
@@ -7341,6 +7356,21 @@ const HELP = {
             <em> now</em> — don&apos;t wait for the first red month.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Target ≥ 20%:</strong> survives most one-off shocks (rainy 2 weeks, slow January). Below 15% you&apos;re running on luck.</li>
+            <li><strong>Track quarterly:</strong> seasonality + inflation can erode MoS quietly. Reset the target each quarter.</li>
+            <li><strong>Build MoS through cost cuts first:</strong> reducing fixed costs shrinks break-even; growing revenue grows MoS. Both matter.</li>
+            <li><strong>Use it for hiring decisions:</strong> if a new hire raises break-even by 3 orders/day, you need MoS ≥ 10% AFTER the hire to be safe.</li>
+            <li><strong>Investor expectation:</strong> Series A investors want 20%+ MoS in steady state. Founders pitching at 8% MoS struggle.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> margin of safety = (actual revenue − break-even revenue) ÷ actual revenue.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> ≥ 25% comfortable; 15-25% adequate; 10-15% fragile; &lt; 10% one bad week from red.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Schmidgall &quot;Hospitality Industry Managerial Accounting&quot;, CVP (cost-volume-profit) literature.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> MoS at the worst weather/season point (winter MoS might be 5% while annual is 22%). The model uses average; check seasonal lows.</p>
+        </Methodology>
       </>
     ),
   },
@@ -7361,6 +7391,21 @@ const HELP = {
             watch this jump.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Target ≥ 100 zł/labor hour:</strong> below 90 you&apos;re overstaffed or under-priced. Diagnose which.</li>
+            <li><strong>Compare by shift:</strong> lunch shift might be 70 zł/h, dinner 130. Cut underperforming shifts.</li>
+            <li><strong>Trim shift-edges first:</strong> 30 min of pre/post-service is often the lowest productivity. Cut those before reducing peak hours.</li>
+            <li><strong>Productivity training pays:</strong> a faster pizzaiolo lifts this number more than hiring. Invest in skill.</li>
+            <li><strong>Compare against PL benchmarks:</strong> casual-Italian PL norm 90-140 zł/h. World-class 150+. Top quartile = real ops discipline.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> revenue per labor hour = monthly revenue ÷ total monthly labor hours (all roles, all shifts).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges (PL pizza):</strong> 70-90 zł/h needs work; 90-120 zł/h healthy; 120-160 zł/h good; 160+ zł/h excellent (often QSR chains with optimised mise-en-place).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> NRA labor-productivity benchmarks, PHG Polish gastronomic-employer surveys.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> non-productive hours (prep, cleaning, training). These count in the denominator but don&apos;t produce revenue. The model dilutes the metric; track productive-hour-only separately if needed.</p>
+        </Methodology>
       </>
     ),
   },
@@ -7381,6 +7426,22 @@ const HELP = {
             lent you 50,000 zł will ask about.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Target &lt; 24 months:</strong> investor-grade. Above 30 you struggle to attract capital; above 48 you&apos;re a hobby business by their standards.</li>
+            <li><strong>Trim setup to shorten payback:</strong> every 30k zł off setup = ~2 months shorter payback at typical margins.</li>
+            <li><strong>Don&apos;t over-prioritise vs IRR:</strong> a 14-month payback with 5% growth is worse than 22-month with 20% growth. Use IRR for honest comparison.</li>
+            <li><strong>Payback ignores time-value:</strong> good for quick mental math, terrible for capital allocation. Use the investor-grade returns strip for real decisions.</li>
+            <li><strong>Watch how the &quot;real&quot; investor metrics differ:</strong> NPV/IRR account for ramp, risk, discount rate. The Investor Returns card shows the gap.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> naïve payback = setup cost ÷ monthly net profit. Treats every month identically (no ramp, no discount).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> ≤ 18 months excellent; 18-24 solid; 24-36 acceptable; &gt; 36 marginal; &gt; 48 reconsider.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Why it&apos;s naïve:</strong> ignores year-1 ramp (your first 6 months won&apos;t hit projected profit), ignores discount rate (1 zł today &gt; 1 zł in 24 months), ignores risk. Use the Investor-Returns card for honest IRR/NPV.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> classical finance textbooks, restaurant-industry payback benchmarks.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> ramp curve. Real businesses ramp over 6-12 months. Adjust payback to start counting from month 7 for realistic expectations.</p>
+        </Methodology>
       </>
     ),
   },
