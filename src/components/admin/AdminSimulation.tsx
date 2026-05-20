@@ -12748,20 +12748,37 @@ interface AttachLeverEfficiency {
   attachPct: number;
   avgPriceGrosze: number;
   cogsPct: number;
-  /** Per-attached-order incremental contribution after own COGS only —
-   *  what each attached unit actually adds to gross margin. */
-  incrementalCmPerUnitGrosze: number;
-  /** Monthly profit lift = attachPct × incrementalCm × ordersPerMonth. */
+  /** Per-attached-unit gross margin (sell − COGS only). Easy mental
+   *  anchor; over-states the actual P&L impact by ~15-25%. */
+  grossMarginPerUnitGrosze: number;
+  /** Per-attached-unit NET margin after variable leakage (payment fees,
+   *  waste, refunds, loyalty burn) AND CIT. Drives monthlyLift so the
+   *  panel reconciles to the actual P&L delta. */
+  netMarginPerUnitGrosze: number;
+  /** Monthly profit lift = attachPct × netMargin × ordersPerMonth.
+   *  Matches the actual P&L delta when this lever's attach % moves. */
   monthlyLiftGrosze: number;
 }
 
 /** Per-lever attachment efficiency — answers "is the espresso push actually
- *  earning its slot?" by computing the incremental contribution per attached
- *  item (avgPrice × (1 − itemCogsPct)) and the total monthly lift. */
+ *  earning its slot?" by computing the EFFECTIVE NET contribution per
+ *  attached item (sell × (1 − itemCOGS − blendedPaymentFee − waste − refunds
+ *  − loyaltyBurn) × (1 − CIT)) and the total monthly lift. Match the actual
+ *  P&L delta rather than the misleadingly higher gross-margin number — see
+ *  the AttachLeverHelp methodology block for the same decomposition. */
 function computeAttachmentEfficiency(s: SimulationScenario): AttachLeverEfficiency[] {
   const a = s.assumptions;
   if (!a) return [];
   const ordersPerMonth = s.ordersPerDay * s.daysOpenPerMonth;
+  // Scenario-level variable leakage applied to incremental attach revenue.
+  // paymentProcessorPct is already the blended on-site/card/cash/Glovo/Wolt
+  // rate when effectiveScenario was passed in (applyAssumptions blends it).
+  const leakagePct =
+    (s.paymentProcessorPct ?? 0) +
+    (s.wastePct ?? 0) +
+    (s.refundPct ?? 0) +
+    (s.loyaltyBurnPct ?? 0);
+  const citPct = s.citPct ?? 0;
   const rows: AttachLeverEfficiency[] = [];
   const levers: Array<[string, string, typeof a.coffeeAttach]> = [
     ["coffee", "Coffee attach", a.coffeeAttach],
@@ -12773,15 +12790,18 @@ function computeAttachmentEfficiency(s: SimulationScenario): AttachLeverEfficien
   ];
   for (const [key, label, lever] of levers) {
     if (!lever || lever.enabled === false || lever.attachPct === 0) continue;
-    const incrementalCm = lever.avgPriceGrosze * (1 - lever.cogsPct);
+    const grossMargin = lever.avgPriceGrosze * (1 - lever.cogsPct);
+    const effRatio = Math.max(0, 1 - lever.cogsPct - leakagePct);
+    const netMargin = lever.avgPriceGrosze * effRatio * (1 - citPct);
     rows.push({
       key,
       label,
       attachPct: lever.attachPct,
       avgPriceGrosze: lever.avgPriceGrosze,
       cogsPct: lever.cogsPct,
-      incrementalCmPerUnitGrosze: incrementalCm,
-      monthlyLiftGrosze: lever.attachPct * incrementalCm * ordersPerMonth,
+      grossMarginPerUnitGrosze: grossMargin,
+      netMarginPerUnitGrosze: netMargin,
+      monthlyLiftGrosze: lever.attachPct * netMargin * ordersPerMonth,
     });
   }
   return rows.sort((a, b) => b.monthlyLiftGrosze - a.monthlyLiftGrosze);
@@ -12798,39 +12818,45 @@ function AttachmentEfficiencyPanel({ rows }: { rows: AttachLeverEfficiency[] }) 
     <Card>
       <CardHeader
         title="Attachment efficiency"
-        description="Per-attach-lever incremental contribution and monthly profit lift. Ranks the levers by absolute money — not just attach rate."
+        description="Per-attach-lever NET contribution and monthly profit lift. Reconciles to the actual P&L delta — not just gross sell − COGS."
         actions={
           <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
             <InfoButton title="Attachment efficiency" label="About attachment efficiency">
               <p>
-                Attach rate is half the story. A 30% espresso attach at 88% margin earns
-                more than a 50% pasta attach at 26% margin — the lever you push depends on
-                the <em>money</em>, not the percentage.
+                Attach rate is half the story. A 30% espresso attach at high net margin
+                earns more than a 50% pasta attach at lower net margin — the lever you
+                push depends on the <em>money</em>, not the percentage.
               </p>
               <p>
-                <strong>Incremental margin / unit = avgPrice × (1 − itemCOGS%)</strong>.
-                The food cost of the attached item only; the rest of variable leakage
-                (waste, refund, loyalty, fees) is already netted in the main P&amp;L.
+                <strong>Net margin / unit</strong> = sell × (1 − itemCOGS% −
+                blendedPaymentFee − waste − refunds − loyaltyBurn) × (1 − CIT).{" "}
+                This is the actual złoty each attached unit puts on the bottom line —
+                not the gross sell − COGS, which over-states by 15-25% because the
+                P&amp;L also applies all the variable-leakage rates and CIT to
+                incremental attach revenue.
               </p>
               <p>
-                <strong>Monthly lift = attachPct × incremental margin × orders/month.</strong>
-                Sorted descending so the lever with the biggest absolute money is at the
-                top of the table — that&apos;s where to push.
+                <strong>Monthly lift = attachPct × net margin × orders/month.</strong>
+                Reconciles directly to the actual monthly net-profit delta when the
+                lever&apos;s attach % moves. Sorted descending — top row is where to
+                push first.
               </p>
               <p>
-                Espresso is almost always the #1 puzzle in a Neapolitan menu: low friction,
-                85-88% margin, near-zero kitchen time. A 25→45pp espresso push adds
-                ~3,900 zł/mo of pure CM at default volumes with no capex.
+                The &quot;Gross&quot; column shows sell − COGS for context — useful for
+                staff coaching (&quot;each cup earns ~7.92 zł in raw margin&quot;) but
+                don&apos;t use it for forecasting; the &quot;Net&quot; column is what
+                actually lands.
               </p>
               <PlainTalk>
                 <p style={{ margin: 0 }}>
                   Don&apos;t train your staff to push the lever with the biggest
                   percentage — train them on the lever with the biggest złoty. A
                   <strong> 50% pasta attach sounds amazing</strong>, but each pasta only
-                  earns 8 zł of margin (high food cost). A <strong>30% espresso
-                  attach</strong> sounds small, but each cup earns 8 zł of margin too —
-                  and is 10× easier to suggest. Sort the table, talk about the top row
-                  at every staff meeting.
+                  earns ~6 zł of NET margin after everything (high food cost, payment
+                  fees, tax). A <strong>30% espresso attach</strong> sounds small, but
+                  each cup nets ~6 zł too — and is 10× easier to suggest. Sort by the{" "}
+                  <em>Monthly lift</em> column, talk about the top row at every staff
+                  meeting.
                 </p>
               </PlainTalk>
             </InfoButton>
@@ -12846,8 +12872,24 @@ function AttachmentEfficiencyPanel({ rows }: { rows: AttachLeverEfficiency[] }) 
               <th style={{ padding: "8px 4px", textAlign: "right" }}>Attach</th>
               <th style={{ padding: "8px 4px", textAlign: "right" }}>Price</th>
               <th style={{ padding: "8px 4px", textAlign: "right" }}>Item COGS</th>
-              <th style={{ padding: "8px 4px", textAlign: "right" }}>Inc. margin</th>
-              <th style={{ padding: "8px 4px", textAlign: "right" }}>Monthly lift</th>
+              <th
+                style={{ padding: "8px 4px", textAlign: "right" }}
+                title="Sell − COGS only. Easy mental anchor; over-states actual P&L impact."
+              >
+                Gross / unit
+              </th>
+              <th
+                style={{ padding: "8px 4px", textAlign: "right" }}
+                title="Sell × (1 − COGS − payment − waste − refunds − loyalty) × (1 − CIT). What actually lands on the bottom line."
+              >
+                Net / unit
+              </th>
+              <th
+                style={{ padding: "8px 4px", textAlign: "right" }}
+                title="attachPct × Net / unit × orders/month — matches actual P&L delta."
+              >
+                Monthly lift
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -12868,11 +12910,21 @@ function AttachmentEfficiencyPanel({ rows }: { rows: AttachLeverEfficiency[] }) 
                   style={{
                     padding: "8px 4px",
                     textAlign: "right",
-                    color: r.incrementalCmPerUnitGrosze >= 500 ? "rgb(22,163,74)" : "inherit",
+                    opacity: 0.75,
+                  }}
+                >
+                  {(r.grossMarginPerUnitGrosze / 100).toFixed(2)} zł
+                </td>
+                <td
+                  className="tabular"
+                  style={{
+                    padding: "8px 4px",
+                    textAlign: "right",
+                    color: r.netMarginPerUnitGrosze >= 500 ? "rgb(22,163,74)" : "inherit",
                     fontWeight: 500,
                   }}
                 >
-                  {(r.incrementalCmPerUnitGrosze / 100).toFixed(2)} zł
+                  {(r.netMarginPerUnitGrosze / 100).toFixed(2)} zł
                 </td>
                 <td
                   className="tabular"
@@ -12884,7 +12936,7 @@ function AttachmentEfficiencyPanel({ rows }: { rows: AttachLeverEfficiency[] }) 
             ))}
             <tr style={{ borderTop: "2px solid rgba(0,0,0,0.12)" }}>
               <td style={{ padding: "8px 4px", fontWeight: 700 }}>Total lift</td>
-              <td colSpan={4}></td>
+              <td colSpan={5}></td>
               <td
                 className="tabular"
                 style={{ padding: "8px 4px", textAlign: "right", fontWeight: 700 }}
