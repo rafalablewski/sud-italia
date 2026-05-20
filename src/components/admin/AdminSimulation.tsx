@@ -8810,6 +8810,21 @@ const HELP = {
             fast you pour in marketing spend.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Customer growth + repeat rate = total growth:</strong> new customers acquire, repeat customers compound. Track both.</li>
+            <li><strong>Negative customer growth + positive revenue:</strong> existing customers paying more. Defensive — will collapse.</li>
+            <li><strong>Trace channels:</strong> which marketing brought the new customers? Spend more there.</li>
+            <li><strong>3-month rolling, not single month:</strong> single-month noise hides the trend.</li>
+            <li><strong>Compare to local population:</strong> in a 50k-resident neighbourhood, growing customers 50%/year forever is impossible. Plan saturation.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> customer growth = (current period unique customers − prior period unique customers) ÷ prior period unique customers. Phone-based deduplication.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> 5-10% annual net-new customer growth; &gt; 15% = high; &lt; 0 = customer-base decay.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish loyalty-program data, restaurant-customer-acquisition literature.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> phone-anonymous customers. Without phone-capture at checkout, the model can&apos;t deduplicate. Walk-up cash customers may be undercounted.</p>
+        </Methodology>
       </>
     ),
   },
@@ -8831,6 +8846,21 @@ const HELP = {
             marketing. No amount of Instagram spend rescues bad cheese.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Low repeat = product problem:</strong> the food, the wait, the temperature, the service. Fix this first; marketing only multiplies what&apos;s there.</li>
+            <li><strong>Loyalty program targets repeat:</strong> &quot;4th pizza free&quot; gives a reason to return. Burn vs repeat-lift = the trade.</li>
+            <li><strong>Texting recent customers:</strong> &quot;haven&apos;t seen you in 30 days, here&apos;s 5 zł off&quot; — converts ~12-18% of lapsed regulars.</li>
+            <li><strong>Track within-90-day repeat:</strong> the meaningful metric (yearly is too long). 30%+ within 90 days = solid.</li>
+            <li><strong>Compare across channels:</strong> direct customers repeat 2× more than Glovo customers. Channel mix affects this number directly.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> repeat rate = (customers with ≥ 2 orders in window) ÷ (total unique customers in window). Phone-based dedup.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> 30%+ healthy (90-day); 40%+ strong; 50%+ excellent. Below 15% = one-time funnel; below 10% = product failure.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> loyalty-economics literature (Reichheld &quot;The Loyalty Effect&quot;), QSR repeat-rate benchmarks.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> seasonal-only customers (tourists, holiday-event-only). These look like non-repeaters but are repeat-by-season. Track separately if relevant.</p>
+        </Methodology>
       </>
     ),
   },
@@ -8849,6 +8879,21 @@ const HELP = {
             within walking distance to monetise the foot traffic).
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Drives LTV directly:</strong> orders/customer × avg ticket × CM = customer lifetime value. More orders = more value.</li>
+            <li><strong>Frequency-based loyalty:</strong> punch cards (4 pizzas → free dessert) directly lift this number.</li>
+            <li><strong>SMS/email pings increase frequency:</strong> &quot;been a while, weekend special&quot; converts ~10% of lapsed regulars to repeat.</li>
+            <li><strong>Watch the trend, not absolute:</strong> 2.3 → 2.7 over 6 months is healthy; flat at 1.5 forever is a fix-the-product signal.</li>
+            <li><strong>Compare across cohorts:</strong> month-1 acquisition cohort might have 1.2 orders/customer; year-1 cohort might have 4.5. Cohort decay/growth is informative.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> orders per customer = total orders in window ÷ unique customers in window. Phone-based dedup.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges (90-day window):</strong> 1.0-1.5 transient; 1.5-2.5 average; 2.5-4 healthy regulars; 4+ cult following.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> loyalty-program data, restaurant-customer-frequency literature.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> frequency segmentation. A &quot;3.0 avg&quot; could be 20% of customers at 8 orders and 80% at 0.75 orders. Median tells a different story than mean.</p>
+        </Methodology>
       </>
     ),
   },
@@ -8868,6 +8913,21 @@ const HELP = {
             one (3× LTV/CAC rule).
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>3× LTV-to-CAC is the bar:</strong> spend up to 1/3 of GP/customer on acquiring them. Above that, payback gets too long.</li>
+            <li><strong>Use GP, not revenue:</strong> revenue per customer overstates what you can afford. GP after variable costs is the cash you actually have.</li>
+            <li><strong>Track cohort GP:</strong> month-1 cohort GP, month-12 cohort GP. Compounding cohorts = healthy growth.</li>
+            <li><strong>Segment by channel:</strong> walk-up customer GP ≈ 2× Glovo customer GP (no commission). Allocate marketing accordingly.</li>
+            <li><strong>Run unit economics test:</strong> at GP/customer = 60 zł × 90-day window, if marketing CAC = 30 zł, you have 100% payback in 90 days. Investor-grade.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> GP per customer = (revenue − COGS) ÷ unique customers, both computed over the analysis window.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges (90-day window, PL casual-Italian):</strong> 80-150 zł GP/customer for healthy operation; &lt; 60 zł indicates either low frequency or low ticket.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> SaaS/restaurant unit-economics literature (David Skok on cohort LTV).</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> customer LTV beyond the window. A 90-day GP underestimates a 24-month LTV. For investor-grade LTV, project the GP curve forward.</p>
+        </Methodology>
       </>
     ),
   },
