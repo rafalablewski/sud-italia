@@ -3914,6 +3914,68 @@ const HELP = {
             push, indoor seating) and you can claw most of it back.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Build a rainy-day playbook:</strong> auto-trigger Glovo
+              promo + Instagram &quot;stay dry, we deliver&quot; story when
+              forecast shows rain. Recovers 8–15% of lost walk-up.
+            </li>
+            <li>
+              <strong>Hot-day prep checklist:</strong> chill extra spritz
+              ingredients, stage outdoor furniture, schedule the extra staff
+              member when forecast hits 25°C+. Don&apos;t miss the upside.
+            </li>
+            <li>
+              <strong>Track weather vs orders weekly:</strong> overlay your
+              POS daily orders with weather data — calibrate your multipliers
+              every quarter from real data, not defaults.
+            </li>
+            <li>
+              <strong>Pre-plan the holidays 90 days out:</strong> NYE menu,
+              Valentine&apos;s booking system, Easter closure communications.
+              Last-minute scrambles cost upside.
+            </li>
+            <li>
+              <strong>Don&apos;t over-correct on bad weeks:</strong> one rainy
+              week isn&apos;t a trend. Calibrate against monthly weather
+              averages, not isolated events.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> 7 sub-levers — rainy-day multiplier &amp;
+            share, heatwave bonus &amp; share, holiday closures, peak days &amp;
+            multiplier, school-holiday lunch dip, event days. Each has its
+            own (i) with full per-lever methodology.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>How it composes:</strong> the levers blend into an
+            &quot;effective orders/day × effective days/month&quot; pair via
+            a weighted average:
+            <br />
+            effective = base × (share×multiplier + (1−share)×1.0) for each
+            lever, then composed across all levers.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Default calibration:</strong> Warsaw 2024 IMGW
+            meteorological averages — ~30% rainy days, ~10% heatwave evenings
+            in summer, ~12 fixed holiday closures/year (Easter, Christmas,
+            Boże Ciało, 15 Aug, 1 Nov, 11 Nov, 1 May, 3 May).
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> IMGW (Polish meteorological service)
+            climate averages, GUS holiday-calendar data, owner-operator
+            surveys on weather-revenue correlation.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> weather extremes (snow days,
+            heatwaves &gt;35°C that hurt rather than help). The model
+            assumes mild Polish weather distribution; for
+            mountain/coastal locations, override the defaults.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -3948,6 +4010,66 @@ const HELP = {
             <strong> ~9,000 zł/month</strong>.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Awning + heat lamps:</strong> a 4 m retractable awning
+              + 2 patio heaters cost ~3,000 zł one-time. Pays back in
+              ~2 months of recovered rainy-day revenue.
+            </li>
+            <li>
+              <strong>Weather-triggered ad spend:</strong> set up automation
+              that boosts Instagram Story budget when rain forecast hits
+              80%+. Capture delivery demand the day it shifts.
+            </li>
+            <li>
+              <strong>Indoor pickup zone:</strong> a dry covered area where
+              walk-up customers can wait. Cuts the &quot;I&apos;m getting
+              soaked, I&apos;ll skip it&quot; abandonment.
+            </li>
+            <li>
+              <strong>Rainy-day combo:</strong> &quot;wet outside? warm
+              pizza + hot espresso for 49 zł&quot; — promo only fires when
+              weather API says &gt;5mm/h. Targeted offers convert better
+              than blanket discounts.
+            </li>
+            <li>
+              <strong>Verify with your POS data:</strong> the default 0.75
+              multiplier is a starting point. Overlay 90 days of rainy vs
+              dry day POS volume to calibrate to your specific pitch.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> rainy-day multiplier (volume on rainy
+            vs dry days), rainy share (% of days in a typical month with
+            meaningful rain). Two separate sliders.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formula:</strong> effective multiplier = rainyShare ×
+            rainyMultiplier + (1 − rainyShare) × 1.0. Applied to base
+            orders/day. So 30% rainy × 0.75 + 70% × 1.0 = 0.925 → average
+            month runs at 92.5% of theoretical volume just from rain.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Realistic range:</strong> multiplier 0.55–0.85 depending
+            on shelter — exposed truck pitch dips deeper (0.55); covered
+            indoor pitch barely 0.85. Rainy share 25–35% in PL (highest
+            April-July and October-December).
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> IMGW Warsaw climate averages 2014-2024,
+            owner-operator weather-correlation surveys.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> drizzle vs downpour distinction
+            (a light shower might lift delivery 20%; a thunderstorm kills
+            both walk-up AND delivery). The model treats &quot;rainy&quot;
+            as a single category — calibrate the multiplier to your
+            blended rain experience.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -3976,6 +4098,67 @@ const HELP = {
             evenings.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Pre-stock for the heatwave:</strong> Aperol, prosecco,
+              spritz glasses, ice — check inventory weekly Jun-Aug. Running
+              out of Aperol at 30°C is leaving 1,000+ zł on the patio.
+            </li>
+            <li>
+              <strong>Outdoor seating multiplier:</strong> add cheap café
+              tables when forecast shows 25°C+. Each extra 4-seater fills
+              twice per evening = 8 covers × 75 zł ≈ 600 zł / table /
+              evening.
+            </li>
+            <li>
+              <strong>Cold-drink prep:</strong> chill the prosecco bottles
+              in advance — warm spritz is a complaint. Buy a dedicated
+              under-counter fridge if you don&apos;t have one.
+            </li>
+            <li>
+              <strong>Heatwave staffing:</strong> add a runner +1 server
+              for hot evenings. Faster service = more covers; slow service
+              in heat = walkouts.
+            </li>
+            <li>
+              <strong>Promote cooler dishes:</strong> push lighter pizzas
+              (Margherita, prosciutto + arugula) over heavy meat ones in
+              heat. Quicker to make, more appealing to hot customers.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> heatwave multiplier (volume on 25°C+
+            evenings), heatwave share (% of evenings hot enough to trigger).
+            Two separate sliders.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formula:</strong> effective multiplier = heatwaveShare ×
+            heatwaveMultiplier + (1 − heatwaveShare) × 1.0. Applied to base
+            orders/day during the relevant season — stacks ON TOP of the
+            quarterly summer seasonality multiplier (separate field).
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Realistic range:</strong> multiplier 1.20–1.60 depending
+            on outdoor seating capacity. Truck with no patio: 1.10
+            (delivery uptick only); 8-seat patio: 1.30; 20+ seat patio: 1.50+.
+            Share 8–15% across the year (mostly Jun-Aug evenings).
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> IMGW Warsaw 2014-2024 max-temperature
+            distribution, hospitality-sector weather-revenue correlation
+            studies.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> extreme heat (35°C+ hurts
+            instead of helping — cooks struggle, customers stay indoors with
+            AC). The model assumes a moderate heatwave (25-32°C). For PL
+            this is fine; for southern Europe, override the multiplier
+            curve.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -4001,6 +4184,69 @@ const HELP = {
             before to capture some of that demand early.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Push the day-before promo:</strong> &quot;closed tomorrow
+              for Easter — stock up tonight&quot;. Lifts the previous evening
+              by 15-25% as customers pre-buy.
+            </li>
+            <li>
+              <strong>Check if you legally CAN open:</strong> some PL holidays
+              (Easter Sunday, 1 May, 11 Nov) have trading restrictions for
+              certain business types. Confirm with your accountant — if
+              you can open, your competition probably won&apos;t.
+            </li>
+            <li>
+              <strong>Holiday-special menu the day before:</strong> Christmas
+              Eve carp-free pizza? Easter brunch combo? Frame it as a
+              destination so people come on the DAY BEFORE the closure.
+            </li>
+            <li>
+              <strong>Reduce closures by rotating staff:</strong> if you
+              MUST close because of staff legal rest, see if a rotating
+              schedule keeps the truck open across all 12 closures with
+              the same team headcount.
+            </li>
+            <li>
+              <strong>Use the closure for big-prep:</strong> deep-clean,
+              equipment service, dough trial-batches. Otherwise lost
+              revenue is also lost prep time.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> number of forced-closure days per month
+            (slider). Default 1 (~12/year ÷ 12).
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formula:</strong> effective days/month = base days
+            × ((daysOpen − holidayClosed) ÷ daysOpen). E.g. 28 base − 1
+            holiday = 27 effective → 96.4% of monthly volume.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Polish fixed-closure calendar:</strong>
+          </p>
+          <ul style={{ margin: "0 0 4px", paddingLeft: 18 }}>
+            <li>1 Jan (New Year), 6 Jan (Epiphany)</li>
+            <li>Easter Sunday + Monday (movable)</li>
+            <li>1 May, 3 May (Constitution Day)</li>
+            <li>Boże Ciało / Corpus Christi (movable, 60 days after Easter)</li>
+            <li>15 Aug (Assumption), 1 Nov (All Saints), 11 Nov (Independence)</li>
+            <li>25 Dec, 26 Dec (Christmas)</li>
+          </ul>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> Polish labour code (Kodeks Pracy)
+            holiday calendar, GUS official non-working-days list.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> distinction between &quot;closed
+            by law&quot; vs &quot;closed by choice&quot; (some pizzerias
+            DO open on Easter or 15 Aug). If you plan to operate on
+            standard holidays, set this to 0 and let revenue flow.
+          </p>
+        </Methodology>
       </>
     ),
   },
