@@ -5868,6 +5868,22 @@ const HELP = {
             50-100 zł ticket.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Bulk-buy quarterly:</strong> 3-month orders cut unit price by 8-15%. Calculate the storage cost vs the discount.</li>
+            <li><strong>Differentiate dine-in vs takeaway:</strong> dine-in needs no box, just a plate. Push dine-in if your pitch allows — eliminates ~2.50 zł/order.</li>
+            <li><strong>Audit napkin / cutlery consumption:</strong> staff often default to &quot;extra of everything&quot;. Train + measure.</li>
+            <li><strong>Negotiate with two suppliers:</strong> swap annually, quote shopping = 5-12% saving.</li>
+            <li><strong>Premium branded for delivery only:</strong> a 0.80 zł cheaper kraft for in-store + branded for delivery = no perceived downgrade but lower blended cost.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> per-order packaging cost in zł. Default 3.00 zł blended (mix of dine-in + takeaway + delivery).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> monthly packaging cost = orders × ticket_factor (1 for takeaway, 0 for dine-in) × cost_per_order. Treated as variable cost.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>PL 2026 cost ranges:</strong> 30cm pizza box plain 1.80-2.20 zł, branded 2.50-3.50 zł, kraft bag 0.30-0.50 zł, napkin 0.05-0.10 zł. Cutlery another 0.40-0.80 zł if included.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish packaging-supplier price lists 2024-2025, gastronomic-procurement benchmarks.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> single-use plastic levy (likely PL 2026-2027 will introduce CRP-style packaging fees). Add 0.20-0.50 zł/order buffer if launching in this window.</p>
+        </Methodology>
       </>
     ),
   },
@@ -5888,6 +5904,22 @@ const HELP = {
             do, and discover it&apos;s 4-5%, not 2%.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Daily waste log:</strong> 2-min end-of-shift form. What got binned, why. Quantifying it is half the fix.</li>
+            <li><strong>Smaller, more frequent dough batches:</strong> 4× 4-hour batches beat 1× 16-hour batch on freshness AND waste.</li>
+            <li><strong>End-of-day half-price program:</strong> 21:30 onwards 50% off — converts waste into goodwill + small revenue.</li>
+            <li><strong>FIFO discipline:</strong> oldest stock first. Train + spot-check. A wrong rotation costs you the difference between 1% and 4% waste.</li>
+            <li><strong>Pre-prep vs cook-to-order:</strong> too much pre-prep raises waste; too little raises ticket time. Balance based on hourly forecast.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> waste % of revenue. Default 2% (QSR healthy).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> monthly waste cost = revenue × wastePct. Counted as variable cost in the True CM1 calculation.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Industry norms (QSR):</strong> 1.0-1.5% world-class (McDonald&apos;s, Domino&apos;s); 2-3% healthy independent; 4-5% under-measured; 6%+ undisciplined.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> NRA Industry Operations Report, MAPA-Polska gastronomic waste study, owner-operator daily-log compositions.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> EU food-waste regulations (the SUP directive + future EU food-waste reduction targets could mandate measurement &amp; reporting). Build the daily log now to be ready.</p>
+        </Methodology>
       </>
     ),
   },
@@ -5908,6 +5940,22 @@ const HELP = {
             by half — easiest 2,000 zł/month you&apos;ll ever find.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Manager-only voids:</strong> the single biggest lever. Voids without manager auth often hide cash-skim or favouritism.</li>
+            <li><strong>Standardise staff meals:</strong> one set meal/day per staff member, billed at cost not retail. Stops &quot;casual freebies&quot;.</li>
+            <li><strong>Cap comps per shift:</strong> manager can comp 1 ticket/shift on their own; anything more needs ownership approval.</li>
+            <li><strong>Burnt-pizza incidence is recipe drift:</strong> if you&apos;re comping 4+ pizzas/week for cooking errors, retrain the line. Don&apos;t accept it as cost-of-doing-business.</li>
+            <li><strong>Track per-staff comp rate:</strong> if one staff member comps 5× the team average, you have an honesty problem, not a quality problem.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> refunds + comps + staff meals + till shortages as % of revenue. Default 1.5%.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> monthly leakage = revenue × refundsPct. Treated as revenue-side reduction (not cost) in True CM1.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>QSR norms:</strong> 0.5-1% world-class (tight ops); 1-2% healthy independent; 3%+ requires investigation.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> NRA, restaurant-loss-prevention literature (e.g. Henson on internal-loss controls), POS audit-trail data.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> the customer-relationship value of generous comps. A 50 zł comp that earns a 2,000 zł lifetime customer is net positive — but the model doesn&apos;t see that. Track customer LTV separately.</p>
+        </Methodology>
       </>
     ),
   },
@@ -5929,6 +5977,22 @@ const HELP = {
             just the burn.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Measure repeat-rate lift:</strong> the only metric that justifies loyalty cost. If repeat rate didn&apos;t move, the program is just a discount.</li>
+            <li><strong>Tier the program:</strong> 1% earn for casual, 3% for VIPs (200+ zł/month spend). Pareto distribution applies — your top 20% justify the burn.</li>
+            <li><strong>Use redemption pressure:</strong> &quot;you have 25 zł of credit expiring Sunday&quot; lifts re-visit frequency more than &quot;you have 25 zł of credit&quot;.</li>
+            <li><strong>Bundle loyalty redemptions with attach:</strong> &quot;free coffee with your 4th pizza&quot; — high-margin redemption that boosts attach.</li>
+            <li><strong>Watch the burn-to-earn ratio:</strong> healthy programs sit at 40-60% redemption. Above 80% you&apos;re bleeding; below 30% the program isn&apos;t engaging.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> effective discount rate as % of revenue. Default 1.2% (1 pt/PLN × 50% redeem × 5% point value).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> monthly loyalty cost = revenue × loyaltyBurn. Treated as revenue-side reduction in True CM1.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Default decomposition:</strong> 1 point earned per zł (100% earn rate) × 50% redeemed within 90 days (half forfeit) × 5 zł value per 100 points (typical PL casual-Italian scale) = 0.5 × 0.05 = 2.5% earned, ~1.2% effective burn.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> loyalty-program benchmarks (Sailthru, Bond), Polish e-commerce loyalty studies (PMR).</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> point breakage (forfeited points). Unredeemed points cost nothing but the model treats earned points as fully redeemed at the burn rate. For accuracy, run a quarterly breakage audit and refine the rate.</p>
+        </Methodology>
       </>
     ),
   },
