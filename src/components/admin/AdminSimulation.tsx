@@ -5754,16 +5754,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Five &quot;what if&quot; runs that flex orders/day by −20%, −10%, 0,
-          +10%, +20%. Shows how net profit and margin respond.
+          Five &quot;what if&quot; runs that flex orders/day by −20%,
+          −10%, 0, +10%, +20% and report the net profit / margin
+          response.
         </p>
-        <p>
-          <strong>Why it matters:</strong> profit is a thin slice of revenue, so
-          a small revenue swing causes a big profit swing. If a −10% volume
-          drop tips you into the red, you&apos;re running on too thin a margin
-          — raise prices, cut a fixed cost, or grow attach rates before
-          opening day 1.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            <strong>Why it matters:</strong> profit is a thin slice of
+            revenue (typical 10-15%), so volume swings amplify into
+            profit swings — a 10% revenue drop wipes 60-70% of profit,
+            not 10%. If a −10% volume drop tips you into the red,
+            you&apos;re running too thin — raise prices, cut a fixed
+            cost, or grow attach rates before opening. Below 20% margin
+            of safety is institutionally unsuited for capex.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Profit is a thin slice of revenue — usually <strong>10–15%</strong>. So a
@@ -5800,11 +5805,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Annual % growth in labor cost, compounded monthly in the 12-month
-          projection. Reflects statutory minimum-wage hikes, sector wage
-          pressure and inflation-linked contract adjustments. Polish 2026
-          baseline: ~7%.
+          Annual % growth in labor cost, compounded monthly in the
+          12-month projection. PL 2026 baseline: ~7%.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Reflects statutory minimum-wage hikes (MRiPS announces Sep
+            for next year), sector wage pressure, and inflation-linked
+            contract adjustments. The 7% PL benchmark = min-wage jump
+            (4666 zł → ~5000 zł brutto) + sector premium + skill
+            inflation for pizzaiolo / chef roles. Treat as floor: a
+            shock year (mandatory bonus, ZUS rate change) can spike to
+            10-12%. Productivity (revenue per labor hour) is the
+            offset — 5% productivity lift cancels typical wage inflation.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Wages in Poland are rising <strong>~7% a year</strong>. If your
@@ -5839,10 +5854,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Annual growth rate applied monthly to COGS and fixed cost lines.
-          Captures food-CPI, supplier list-price moves, utility tariff hikes,
-          rent escalators. Poland 2026 ~4%.
+          Annual growth rate applied monthly to COGS and fixed-cost
+          lines. PL 2026 ~4%.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Captures food-CPI (~5% per GUS), supplier list-price moves,
+            utility tariff hikes (~6% URE), rent escalators (CPI-capped
+            ~2-3%). 4% is the blended weighted average. Doesn&apos;t
+            model commodity shocks — the Ukraine flour spike 2022 was
+            +30% in 6 months for some operators. Use the Ingredient
+            Stress card to layer specific commodity shocks on top of
+            this baseline. Below 3%, you&apos;re modelling deflation
+            (rare in PL casual-dining 2024+).
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Cheese, flour and electricity all creep up <strong>~4% a year</strong>.
@@ -5877,10 +5903,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Blended Stripe / terminal processor rate. Applied only to revenue
-          paid on-site via card — not delivery aggregators, not cash. Polish
-          2026 norm 1.4–2.1% depending on volume tier.
+          Blended Stripe / terminal processor rate, applied to on-site
+          card revenue only — not delivery aggregators, not cash. PL
+          2026 norm 1.4-2.1% depending on volume tier.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Single biggest negotiable variable cost line outside COGS.
+            Tier breakpoints around 50k / 100k / 200k zł/month card
+            revenue typically unlock 0.2-0.4 pp savings. The Channel
+            Economics card blends this with cashShare 0%, glovoFee
+            ~27%, woltFee ~25% for the cross-channel weighted average
+            that flows into the P&amp;L. BLIK is cheaper than card
+            (~1.0%); promote in-store to lower the blended rate.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Every time a customer taps a card, the bank takes <strong>~1.9%</strong>.
