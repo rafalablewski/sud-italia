@@ -5035,6 +5035,64 @@ const HELP = {
             for years.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Cost cuts compound, prices don&apos;t:</strong> a 2pp
+              COGS cut today saves the same amount every year forward.
+              A 5 zł price hike works once, then customers adjust.
+            </li>
+            <li>
+              <strong>Use it before menu re-pricing:</strong> what looks
+              like a tiny 2 zł bump might add 4-6k zł/month — the heatmap
+              quantifies the upside before you commit.
+            </li>
+            <li>
+              <strong>Combine with the Recipes admin:</strong> the heatmap
+              says &quot;cut 2 pp COGS = +4k zł/month&quot;. The Recipes
+              admin shows which ingredient is the soft target. Pair them.
+            </li>
+            <li>
+              <strong>Watch the diagonal:</strong> cutting COGS AND
+              raising ticket together compounds — but it&apos;s also the
+              hardest combo to execute (customers notice both moves).
+            </li>
+            <li>
+              <strong>Beware the worst-cell:</strong> bottom-left (high
+              COGS, low ticket) is what an inflation spike + downturn
+              looks like. Stress-test against it; if you survive there,
+              you&apos;re fine.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> 5×5 grid with current COGS% and avg
+            ticket at the centre. X axis = COGS% ±8 pp; Y axis = ticket
+            ±30%.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formula:</strong> per cell, recompute net profit with
+            the grid&apos;s COGS% + ticket substituted, all other inputs
+            held constant.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Why ±8 pp on COGS:</strong> empirical range of
+            achievable supplier/recipe optimisation. Beyond ±8 pp,
+            you&apos;re typically reformulating the menu, not optimising.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> menu-engineering literature
+            (Kasavana &amp; Smith), restaurant cost-optimisation case
+            studies.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> ingredient substitution
+            elasticity (cutting COGS by switching to cheaper cheese
+            might cost you 3% of customers). Each cell is independent;
+            real cost cuts have customer-perception consequences.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -5076,6 +5134,69 @@ const HELP = {
             12 months</strong> — the projection chart below shows that drift live.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Plan an annual price review:</strong> January 15th
+              every year. Match menu prices to last-year inflation. Customers
+              accept small annual bumps; they revolt against big catch-up
+              hikes.
+            </li>
+            <li>
+              <strong>Index your prices to suppliers:</strong> if a key
+              ingredient is up 10%, raise the relevant menu items 5-8%
+              within 30 days. Don&apos;t absorb the full shock.
+            </li>
+            <li>
+              <strong>Watch the min-wage announcement:</strong> Polish
+              min-wage is published Sep for next year. Re-run the
+              simulation with new labor rates before approving budgets.
+            </li>
+            <li>
+              <strong>Lock seasonal staffing 90 days out:</strong>
+              summer hires negotiated in March cost 10-15% less than
+              June panic-hires.
+            </li>
+            <li>
+              <strong>Set up an inflation-tracker dashboard:</strong>
+              monthly GUS food-CPI overlay on your COGS%. Variance &gt; 1
+              pp triggers a recipe-cost review.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> wage inflation %, ingredient inflation
+            %, processor fee %, setup cost, 4 seasonal multipliers
+            (winter/spring/summer/autumn).
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formula (per month m, m=0..11):</strong>
+            <br />
+            labor_m = base_labor × (1 + wageInflation)^(m/12)
+            <br />
+            cogs_m = base_revenue × cogsPct × (1 + foodInflation)^(m/12) × seasonalMultiplier(m)
+            <br />
+            revenue_m = base_revenue × seasonalMultiplier(m)
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Polish 2026 calibration:</strong> wage 7% (min-wage
+            jump + sector pressure), food 4% (GUS CPI), processor 1.9%
+            (Stripe blended), seasonal {"["}winter 0.85, spring 1.05,
+            summer 1.15, autumn 0.95{"]"}.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> GUS inflation reports, Polish
+            min-wage announcements, Stripe published rates, Italian-style
+            gastronomic seasonality studies.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> shock events (war-driven flour
+            spike, sudden VAT change). Use it for steady-state planning;
+            for shocks, manually adjust ingredient lever +20% and stress
+            test.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -5106,6 +5227,66 @@ const HELP = {
             in January when the accountant calls; you&apos;ll see it in May.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Check the chart monthly:</strong> if month N&apos;s
+              actuals diverge &gt;10% from the projection, recalibrate
+              your inputs. The projection is only useful if it stays
+              honest.
+            </li>
+            <li>
+              <strong>Plan price hikes for the dip:</strong> if you see
+              winter Q1 dipping near break-even, raise prices in
+              November/December so the new price is established before
+              the dip bites.
+            </li>
+            <li>
+              <strong>Cash-flow plan from the chart:</strong> the
+              best-vs-worst month delta is your buffer requirement. If
+              December nets 30k and February nets 8k, you need ~22k of
+              working capital to bridge.
+            </li>
+            <li>
+              <strong>Plan capex around the peaks:</strong> buy the new
+              oven in May with summer cash on the way, not in February.
+            </li>
+            <li>
+              <strong>Investor presentations need this view:</strong>
+              monthly seasonality is more honest than annual averages.
+              Always show the chart, not just the total.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> all scenario fields + the financial
+            assumptions (inflation, seasonality). The chart is read-only
+            and updates live.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formula:</strong> per month, apply the seasonal
+            multiplier to base orders/day and compound the wage +
+            ingredient inflation to that month&apos;s point. Recompute
+            the full P&amp;L for each month.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Read-out KPIs:</strong> 12-mo revenue, 12-mo costs,
+            12-mo net profit, best month, worst month. The best-vs-worst
+            spread is your working-capital requirement.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> Polish gastronomic seasonality
+            data, restaurant-industry cash-flow patterns, NRA Industry
+            Operations Report.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> opening / closing months
+            (ramp + wind-down). Projection assumes steady-state ops
+            across all 12 months. For year-1 projections, manually
+            ramp the first 3-6 months.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -5138,6 +5319,76 @@ const HELP = {
             wildly profitable; every order under it deepens the hole.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Know your break-even per hour:</strong> if break-even
+              is 45 orders/day across a 10-hour service window, the
+              break-even hour is 4.5 orders. Use this for live KDS
+              dashboards.
+            </li>
+            <li>
+              <strong>Track hourly above/below break-even:</strong> red
+              hours (below break-even) might need consolidation. Blue
+              hours (way above) need more capacity to capture upside.
+            </li>
+            <li>
+              <strong>Don&apos;t cut to break-even:</strong> running RIGHT
+              at break-even leaves no buffer for shocks. Build a 20%
+              margin-of-safety floor below current revenue.
+            </li>
+            <li>
+              <strong>Use it to plan investments:</strong> if a new
+              oven costs 15k and you currently sell 5 more pizzas/day
+              than break-even, it&apos;ll pay back in ~6 months at 22 zł
+              of profit each.
+            </li>
+            <li>
+              <strong>Break-even falls if you cut fixed costs:</strong>
+              every 1,000 zł off fixed costs is ~1.5 fewer orders/day
+              needed to break even. Sometimes lower break-even matters
+              more than higher revenue.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> derived — fixed costs, labor, ticket,
+            COGS%, days/month all feed here. The break-even card is
+            read-only.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formula:</strong>
+            <br />
+            contribution margin per order = ticket × (1 − COGS% −
+            processor fee %)
+            <br />
+            break-even orders/month = (labor + fixed) ÷ contribution
+            margin per order
+            <br />
+            break-even orders/day = break-even orders/month ÷ days/month
+            <br />
+            break-even orders/hour = break-even orders/day ÷ service hours
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Realistic range:</strong> 30-55 orders/day break-even
+            for a Polish pizza truck depending on fixed costs and prime
+            cost. Below 30 you have unusually low fixed costs (suburban
+            pitch); above 55 you&apos;re structurally fragile.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> standard break-even analysis
+            (Garrison &amp; Noreen, &quot;Managerial Accounting&quot;),
+            restaurant unit-economics textbooks.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> step-function labor (going
+            from 1 cook to 2 isn&apos;t a smooth scaling). Real labor
+            jumps in discrete chunks; the model treats it as continuous.
+            For accurate near-break-even planning, lock in your hire
+            decisions and recompute.
+          </p>
+        </Methodology>
       </>
     ),
   },
