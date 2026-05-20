@@ -6745,6 +6745,22 @@ const HELP = {
             <strong> 3–6 pp of COGS</strong> clawed back fleet-wide.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Start with just dough:</strong> central dough production is the highest-leverage commissary win. Add sauce and pre-portioned cheese later.</li>
+            <li><strong>Locate centrally:</strong> a commissary in the middle of your delivery radius cuts logistics. 30-min max to any truck.</li>
+            <li><strong>Hire a head commissary chef:</strong> separates dough discipline from per-unit chaos. Worth the 8-10k zł/month.</li>
+            <li><strong>Cold-chain logistics matter:</strong> dough needs &lt;6°C transport. Refrigerated van or daily delivery rounds — budget the operating cost.</li>
+            <li><strong>HACCP from day 1:</strong> central production multiplies food-safety risk. Get certified before launching.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> minimum unit count before commissary becomes net-positive (default 4).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> if unitCount &gt;= commissaryAt: apply commissarySaving as a COGS reduction. Otherwise commissary cost outweighs benefit.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Commissary break-even math:</strong> ~15-25k zł/month commissary fixed cost (rent + 1 chef + utilities). To net-positive at 4 trucks: each truck must save ~5-7k zł/month from central production (i.e. 3-4 pp COGS).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> commissary case studies (Polish chains: Pizzeria 105, Da Grasso), QSR supply-chain literature.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> quality-consistency benefit (commissary recipes are uniform; per-unit production drifts). The model captures the COGS saving but not the customer-perception lift.</p>
+        </Methodology>
       </>
     ),
   },
@@ -6765,6 +6781,22 @@ const HELP = {
             facility&apos;s own bills.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Use the saving to subsidise quality:</strong> if you save 4 pp COGS, reinvest 1 pp into better cheese / flour. Customers notice — the model doesn&apos;t see the upside but it shows in repeat rate.</li>
+            <li><strong>Capture supplier rebates centrally:</strong> commissary buys volume; HQ keeps end-of-year rebates. Adds another 1-2 pp on top of the headline saving.</li>
+            <li><strong>Reduce waste through forecasting:</strong> central production lets you forecast precisely. Per-truck production over-builds &quot;just in case&quot;.</li>
+            <li><strong>Standardise the recipe books:</strong> commissary forces this; do it before launching the central kitchen.</li>
+            <li><strong>Don&apos;t over-promise:</strong> commissary saving NET of fixed cost. Gross 4 pp can be net 2 pp at a small fleet — model both honestly.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> NET commissary saving as a COGS % reduction (default 4 pp, after subtracting commissary&apos;s own operating cost).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> effective COGS = baseCOGS − commissarySaving (in pp), applied only when unitCount &gt;= commissaryAt.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Decomposition:</strong> gross saving ~6-8 pp (bulk + waste + consistency); operating cost ~2-4 pp; net ~3-5 pp at fleet maturity.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> commissary economics literature, Polish chain post-mortems, QSR commissary studies.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> commissary CAPEX (a central kitchen costs 250-500k to build out). Add as a separate fleet-level setup cost in the multi-unit scenario.</p>
+        </Methodology>
       </>
     ),
   },
@@ -6785,6 +6817,22 @@ const HELP = {
             opening in a different city, not next door.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Choose new units &gt; 3 km from existing:</strong> below 3 km, cannibalisation typically 15-25%; above 5 km, &lt;10%.</li>
+            <li><strong>Different daypart focus:</strong> if Unit 1 is lunch-led, position Unit 2 as evening-led. Reduces overlap.</li>
+            <li><strong>Different demographic:</strong> office vs residential vs tourist. Same brand, different customer base.</li>
+            <li><strong>Measure post-opening:</strong> Unit 1 revenue 30 days before vs after Unit 2 opens. The drop = your real cannibalisation.</li>
+            <li><strong>Use it to model honestly to investors:</strong> presenting Unit 2 economics without cannibalisation gets you torn apart in due diligence.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> % of new-unit revenue cannibalised from prior units in same trade area (default 15%).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> effective per-unit revenue = baseRevenue × (1 − dmaCannibalisation)^(n−1) where n = number of overlapping units. The geometric formula reflects diminishing per-unit revenue as units cluster.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Realistic ranges:</strong> Same neighbourhood (&lt; 1 km): 25-40% cannibalisation. Same city, different district (3-5 km): 8-15%. Different city: 0-3% (residual brand effect only).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> trade-area analysis literature (Applebaum, Reilly), QSR cannibalisation case studies (Domino&apos;s, Starbucks density studies).</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> brand-density benefits (high-density clusters can have a marketing flywheel effect). Some chains deliberately cluster to dominate a district.</p>
+        </Methodology>
       </>
     ),
   },
@@ -6805,6 +6853,22 @@ const HELP = {
             scale, which compounds with the supply discount.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Document every cost in unit 1:</strong> the buildout log becomes the playbook for unit 2-3.</li>
+            <li><strong>Single buildout team:</strong> hire one contractor + repeat. They learn your spec, save 10-15% on labor and time.</li>
+            <li><strong>Standardise the kit:</strong> same oven, same fridge, same POS across all units. Bulk-buy savings + zero training overhead.</li>
+            <li><strong>Pre-negotiate volume contracts:</strong> if you commit to 4 ovens / 4 fridges over 2 years, manufacturers offer 10-15% off list.</li>
+            <li><strong>Test the playbook on unit 2:</strong> the second unit is where you find the gaps. Better to discover with #2 than #5.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> learning-curve reduction % per added unit. Default 8% (each unit ~8% cheaper than the previous).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> setup_cost(n) = setup_cost(1) × (1 − buildoutLearning)^(n−1), floored at buildoutFloor% of unit 1.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Realistic ranges:</strong> 5-12% per unit; chains tend toward the lower end (8%); fast-growing concepts hit 10-12% as the playbook tightens.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Wright&apos;s learning-curve theory, manufacturing &amp; construction learning-rate literature, QSR rollout case studies.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> learning loss with team turnover. If the build team changes between units 3 and 4, learning resets. Stable teams compound; rotating teams don&apos;t.</p>
+        </Methodology>
       </>
     ),
   },
