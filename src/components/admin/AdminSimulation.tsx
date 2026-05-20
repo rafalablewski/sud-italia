@@ -7181,6 +7181,21 @@ const HELP = {
             month. The cushion <em>is</em> the business.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Compute break-even daily, not monthly:</strong> a 45 orders/day number is more actionable than &quot;1,260 orders/month&quot;. Use it as the live target.</li>
+            <li><strong>Visualise on the KDS:</strong> a counter showing orders-to-break-even gives the team a live target.</li>
+            <li><strong>Lower break-even = more flexibility:</strong> every 1 order/day off break-even gives you ~1.5% safety margin. Cut fixed costs to shrink the floor.</li>
+            <li><strong>Reset on rent changes:</strong> a 1,000 zł/month rent hike adds ~1.5 orders/day to break-even. Negotiate hard.</li>
+            <li><strong>Compare across months:</strong> break-even shouldn&apos;t move much. If it&apos;s creeping up, costs are inflating faster than tickets.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> break-even orders/day = (fixed + labor) ÷ (avg ticket × contribution margin × days). Contribution margin = 1 − COGS% − payment-fee% − variable-leakage%.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy range:</strong> 35-50 orders/day break-even for a Polish pizza truck. Below 30 indicates super-low fixed costs (suburban pitch); above 55 = structural fragility.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> standard break-even theory, restaurant unit-economics literature.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> demand variability (some days hit break-even, others don&apos;t). Average break-even hides daily volatility; use the sensitivity card to stress-test.</p>
+        </Methodology>
       </>
     ),
   },
@@ -7202,6 +7217,21 @@ const HELP = {
             <strong> ~10,000 zł/month back</strong> on a 200,000 zł revenue.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Cheese is the leverage point:</strong> 35-45% of pizza COGS. Cut 5% on the cheese = ~1.5pp on total food cost.</li>
+            <li><strong>Re-cost every recipe quarterly:</strong> ingredient prices drift. Bumps to menu prices follow recipe-cost increases.</li>
+            <li><strong>Standardise portions:</strong> +5g cheese per pizza × 2,400 pizzas = 12kg/month wastage. Train + weigh + spot-check.</li>
+            <li><strong>Audit waste daily:</strong> if dough waste &gt;3%, your hourly forecast is off. Tighten the batch plan.</li>
+            <li><strong>Track per-menu-item COGS%:</strong> some items run 40%, others 20%. Push the low-COGS items in marketing &amp; menu placement.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> food cost % = COGS ÷ revenue. COGS = Σ (recipe cost × menu mix × volume) + variable food costs (waste, employee meals).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Industry targets:</strong> ≤ 28% world-class chains, 30% healthy independent, 32%+ requires intervention. Polish pizza-segment benchmark: 28-32%.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> NRA Industry Operations Report, PHG Polish gastronomic benchmarks, Italian pizzeria economics studies.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> per-channel COGS variance (delivery COGS includes packaging differently). Track separately if delivery share is &gt;30%.</p>
+        </Methodology>
       </>
     ),
   },
@@ -7222,6 +7252,21 @@ const HELP = {
             number.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Adjust schedule, not headcount:</strong> over-staffing 2 hours/day × 5 days × 4 weeks = 40h/month per role. Trim shift edges first.</li>
+            <li><strong>Cross-train for fewer roles:</strong> a pizzaiolo who can run the till saves a half-shift cashier. Pay slightly more, save more.</li>
+            <li><strong>Watch labor:revenue every week:</strong> if it&apos;s drifting up, demand might be softening or schedule is rigid. Catch within 14 days.</li>
+            <li><strong>Productivity beats headcount cuts:</strong> 10% more revenue/labor-hour is better than 10% fewer hours. Train + tool.</li>
+            <li><strong>Owner labor = real labor:</strong> if you work 40h/week unpaid, the model under-states labor. Add a notional owner-wage line.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> labor % = total brutto labor (incl. ~22% ZUS narzut) ÷ revenue.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Industry targets:</strong> ≤ 25% world-class chains, 28-30% healthy independent, 35%+ requires action. PL casual-Italian benchmark: 27-32%.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> NRA labor benchmarks, ZUS rates 2024, PHG annual gastronomic-employer surveys.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> tips received by staff (don&apos;t flow through P&amp;L but lift effective pay). Useful when retaining staff but not in margin math.</p>
+        </Methodology>
       </>
     ),
   },
@@ -7241,6 +7286,21 @@ const HELP = {
             Old restaurateurs scribble this number on their fridge mirror.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Make the team see it:</strong> a single dashboard number visible to the whole kitchen. Alignment around one KPI moves it.</li>
+            <li><strong>Trade-off: lower one, accept higher other:</strong> sometimes lower food cost requires more labor (made from scratch). The combined number is what counts.</li>
+            <li><strong>Re-engineer when prime &gt; 65%:</strong> it&apos;s not a wage cut or supplier squeeze — it&apos;s a menu/operations redesign issue.</li>
+            <li><strong>Beware the false comfort of prime &lt; 55%:</strong> often means you&apos;re paying too little (high turnover) or under-portioning (customer complaints).</li>
+            <li><strong>Set a 60% target line on the dashboard:</strong> visual reminder; everyone knows when they&apos;re above or below.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> prime cost % = (food + labor) ÷ revenue. The most-tracked operational KPI in restaurant management.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Industry targets:</strong> ≤ 55% world-class QSR chains; 60% healthy independent; 65% acceptable; &gt; 70% restructure or close.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> NRA Restaurant Industry Operations Report, Schmidgall &quot;Hospitality Industry Managerial Accounting&quot;, the universal-benchmark of restaurant ops literature.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> seasonal variance — winter prime might be 68% while summer is 55%. Annual averages can hide trouble; check monthly.</p>
+        </Methodology>
       </>
     ),
   },
