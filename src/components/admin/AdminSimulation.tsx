@@ -5356,14 +5356,21 @@ const HELP = {
     body: (
       <>
         <p>
-          The menu-engineering view. X axis = food cost ratio (±8 pp around
-          current); Y axis = average ticket (±30%).
+          The menu-engineering view. X axis = food cost ratio (±8 pp);
+          Y axis = avg ticket (±30%).
         </p>
-        <p>
-          <strong>Use it to answer:</strong> &quot;cut food cost 2 pp or raise
-          ticket 5 zł — which wins?&quot; Comparing two cells diagonally
-          across the centre tells you the trade-off immediately.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            <strong>Use it to answer:</strong> &quot;cut food cost 2 pp
+            or raise ticket 5 zł — which wins?&quot; Diagonal comparison
+            across centre quantifies the trade-off. Cost cuts compound
+            year-over-year (a permanent 2 pp COGS reduction is worth
+            the same every future month), while price hikes work once
+            and then require another cycle. Use Kasavana &amp; Smith
+            menu-engineering: place high-CM items second-from-top to
+            anchor decisions before reaching for the COGS lever.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Should you negotiate cheaper mozzarella or just raise the Margherita by 3
@@ -5440,30 +5447,34 @@ const HELP = {
     body: (
       <>
         <p>
-          The drivers behind the 12-month projection and payback calc:
+          The drivers behind the 12-month projection and payback calc.
         </p>
-        <ul style={{ margin: "8px 0", paddingLeft: 20, listStyle: "disc" }}>
-          <li>
-            <strong>Wage inflation</strong> — annual % labor goes up. Poland
-            2026 ~7% (min-wage hike + sector pressure).
-          </li>
-          <li>
-            <strong>Ingredient inflation</strong> — annual % food costs grow.
-            ~4% food CPI.
-          </li>
-          <li>
-            <strong>Card processor fee</strong> — Stripe blended ~1.9% of revenue.
-          </li>
-          <li>
-            <strong>Setup cost</strong> — total cost to launch the truck
-            (vehicle + buildout + permits + working capital). Drives payback.
-          </li>
-          <li>
-            <strong>Seasonal multipliers</strong> — winter/spring/summer/autumn
-            volume swings. Pizza trucks peak in summer (1.3×) and dip hard in
-            winter (0.7×).
-          </li>
-        </ul>
+        <InstitutionalAnalysis>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Wage inflation</strong> — annual % labor cost
+              growth. PL 2026 ~7% (min-wage hike + sector pressure).
+            </li>
+            <li>
+              <strong>Ingredient inflation</strong> — ~4% food CPI
+              (GUS); applies to COGS + fixed CPI-indexed lines.
+            </li>
+            <li>
+              <strong>Card processor fee</strong> — Stripe blended
+              ~1.9% of card revenue; lower with negotiated tiers.
+            </li>
+            <li>
+              <strong>Setup cost</strong> — vehicle + buildout +
+              permits + working capital. Drives setup payback + CoC.
+            </li>
+            <li>
+              <strong>Seasonal multipliers</strong> — winter / spring
+              / summer / autumn volume swings. PL pizza trucks peak in
+              summer (~1.3×) and dip hard in winter (~0.7×) for outdoor
+              pitches.
+            </li>
+          </ul>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Inflation isn&apos;t a rumour — Poland is running ~7% wage hikes and ~4%
@@ -5544,19 +5555,21 @@ const HELP = {
     body: (
       <>
         <p>
-          The current scenario rolled forward 12 months. Each month applies the
-          relevant seasonal multiplier and compounds wage + ingredient inflation
-          to that point.
+          Current scenario rolled forward 12 months — each month applies
+          the seasonal multiplier and compounds wage + ingredient
+          inflation to that point.
         </p>
-        <p>
-          <strong>Watch for:</strong> the gap between Revenue and Net profit
-          widening — that&apos;s inflation eating margin. If the gap closes by
-          month 12, you need to plan price increases now.
-        </p>
-        <p>
-          The four KPIs below (12-mo revenue / costs / net profit / best vs
-          worst month) summarise the whole year.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            <strong>Watch for:</strong> the gap between Revenue and Net
+            profit widening = inflation eating margin. If the gap closes
+            by month 12, plan price increases now. The four KPIs (12-mo
+            revenue / costs / net profit / best vs worst month) summarise
+            the year. Use the best-vs-worst spread to size working
+            capital — your reserve should cover the gap between peak
+            cash month and trough cash month.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Twelve months in one chart. Watch the gap between the revenue line and the
@@ -5634,20 +5647,25 @@ const HELP = {
     body: (
       <>
         <p>
-          The minimum throughput needed to cover labor + fixed costs (variable
-          food cost scales with volume so it cancels out). At break-even, net
-          profit = 0 — anything above is profit, anything below is loss.
+          The minimum throughput needed to cover labor + fixed costs.
+          At break-even, net = 0 — anything above is profit, below is
+          loss.
         </p>
-        <p>
-          Same number expressed at four scales — per hour, per day, per month,
-          and the equivalent monthly revenue — so you can match it to whatever
-          metric you watch during service.
-        </p>
-        <p>
-          <strong>Worked example:</strong> if break-even = 45 orders/day and
-          you&apos;re running 60, every order beyond 45 contributes
-          (ticket × (1 − COGS% − card fee %)) zł of pure profit.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: "0 0 6px" }}>
+            Expressed at four scales (hour, day, month, equivalent
+            monthly revenue) so you can match it to whatever metric the
+            team watches live during service.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Worked example:</strong> break-even 45 orders/day,
+            running 60 → every order past 45 drops (ticket × (1 − COGS%
+            − card fee % − waste − refunds − loyalty)) zł of pre-tax
+            contribution. The margin-of-safety (60 − 45) ÷ 60 = 25% is
+            the cushion. Below 10% MoS, one bad week wipes you out; ≥
+            20% is comfortable for institutional review.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Below this number you bleed; above it, you print. If break-even is
