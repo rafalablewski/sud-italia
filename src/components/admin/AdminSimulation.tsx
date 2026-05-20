@@ -1643,13 +1643,15 @@ function Tips({ children }: { children: ReactNode }) {
 
 // --- Dynamic attach-lever help -------------------------------------------
 //
-// Each attach lever's InfoButton popup uses the live values the operator
-// typed in. The "In plain terms" callout recomputes the example numbers
-// (margin per cup, monthly impact) from `lever.avgPriceGrosze`,
-// `lever.cogsPct`, `lever.attachPct` and the scenario's
-// `ordersPerDay × daysOpenPerMonth`. If the price is implausibly low or
-// high for the category, an extreme-value note appears inside the same
-// callout. Below it, the Tips block has concrete actions for the floor.
+// Each attach lever's InfoButton popup keeps the storytelling voice of the
+// original "In plain terms" copy ("Coffee is the easiest extra złoty in
+// the business — beans cost ~1 zł, you sell the cup for 9 zł…") but weaves
+// the live values from `lever.avgPriceGrosze`, `lever.cogsPct`,
+// `lever.attachPct` and the scenario's `ordersPerDay × daysOpenPerMonth`
+// directly into the narrative. The story stays narrative no matter what
+// the operator types — extreme-value notes appear separately when the
+// price or attach% falls outside a realistic range, and the story has a
+// distinct negative-margin variant when sell < cost.
 
 type AttachLeverKind =
   | "coffee"
@@ -1659,11 +1661,28 @@ type AttachLeverKind =
   | "premiumToppings"
   | "pastaPrimo";
 
+interface NarrativeValues {
+  sellZl: number;
+  cogsZl: number;
+  marginZl: number;
+  currentPct: number;
+  targetPct: number;
+  deltaPp: number;
+  ordersPerDay: number;
+  daysOpenPerMonth: number;
+  extraUnitsPerDay: number;
+  monthlyMarginZl: number;
+  currentMonthlyMarginZl: number;
+}
+
 interface AttachHelpProfile {
   title: string;
   intro: ReactNode;
-  unitLabel: string;
-  unitLabelPlural: string;
+  /** Storytelling body of the IN PLAIN TERMS callout. Live values are
+   *  woven into the narrative voice, not formatted as a math recap.
+   *  Each story handles three branches internally: normal,
+   *  already-at-cap (deltaPp ≤ 0), and negative-margin (sell < cost). */
+  story: (v: NarrativeValues) => ReactNode;
   // Realistic market range for the SELL price in zł. Outside this range,
   // an extreme-value note explains why the simulation becomes unrealistic.
   priceFloor: number;
@@ -1678,6 +1697,33 @@ interface AttachHelpProfile {
   // case. Capped at 100%.
   defaultBumpPp: number;
   tips: ReactNode;
+}
+
+// Storytelling number formatters — keep the narrative readable.
+//   fmtZl(9)     → "9"        (drops trailing zeros for round numbers)
+//   fmtZl(9.50)  → "9.50"
+//   fmtZl(0.24)  → "0.24"
+//   fmtZlRounded(2916)   → "2 900"   (rounded to nearest 100)
+//   fmtZlRounded(13250)  → "13 000"  (rounded to nearest 1000 for big numbers)
+function fmtZl(zl: number): string {
+  if (Math.abs(zl - Math.round(zl)) < 0.005) return String(Math.round(zl));
+  return zl.toFixed(2);
+}
+
+function fmtZlRounded(zl: number): string {
+  const abs = Math.abs(zl);
+  let rounded: number;
+  if (abs >= 10000) rounded = Math.round(zl / 1000) * 1000;
+  else if (abs >= 1000) rounded = Math.round(zl / 100) * 100;
+  else if (abs >= 100) rounded = Math.round(zl / 10) * 10;
+  else rounded = Math.round(zl);
+  return rounded.toLocaleString("pl-PL");
+}
+
+function fmtUnits(n: number): string {
+  if (n <= 0) return "0";
+  if (n < 1) return n.toFixed(1);
+  return String(Math.round(n));
 }
 
 const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
@@ -1696,8 +1742,49 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
         </p>
       </>
     ),
-    unitLabel: "coffee",
-    unitLabelPlural: "coffees",
+    story: (v) => {
+      if (v.marginZl <= 0) {
+        return (
+          <p style={{ margin: 0 }}>
+            Coffee is usually the easiest extra złoty in the business — but right now
+            your sell price ({fmtZl(v.sellZl)} zł) doesn&apos;t cover the
+            {" "}{fmtZl(v.cogsZl)} zł of beans + milk you&apos;re using, so every cup{" "}
+            <strong>loses</strong> ~{fmtZl(-v.marginZl)} zł. Pushing attach here just
+            multiplies the loss. Fix the price or the COGS first — then attach
+            becomes the lever it&apos;s meant to be.
+          </p>
+        );
+      }
+      if (v.deltaPp <= 0) {
+        return (
+          <p style={{ margin: 0 }}>
+            You&apos;re already at <strong>{Math.round(v.currentPct * 100)}%</strong>{" "}
+            coffee attach — basically everyone walks out with a cup. That&apos;s
+            ~{Math.round(v.ordersPerDay * v.currentPct)} coffees a day at
+            {" "}~{fmtZl(v.marginZl)} zł margin each, about{" "}
+            <strong>~{fmtZlRounded(v.currentMonthlyMarginZl)} zł/month</strong> of
+            nearly-pure profit already baked in. Holding this is the win — pushing
+            further means changing the product, not the pitch.
+          </p>
+        );
+      }
+      return (
+        <p style={{ margin: 0 }}>
+          Coffee is the easiest extra złoty in the business — beans cost
+          {" "}~{fmtZl(v.cogsZl)} zł, you sell the cup for {fmtZl(v.sellZl)} zł.
+          Push attach from{" "}
+          <strong>
+            {Math.round(v.currentPct * 100)}% → {Math.round(v.targetPct * 100)}%
+          </strong>{" "}
+          on {Math.round(v.ordersPerDay)} orders/day and you&apos;ve added
+          {" "}~{fmtUnits(v.extraUnitsPerDay)} extra coffees daily × ~{fmtZl(v.marginZl)} zł
+          margin ={" "}
+          <strong>~{fmtZlRounded(v.monthlyMarginZl)} zł/month</strong> of
+          nearly-pure profit. No new SKU, no extra labor — just one more sentence
+          at the till (&quot;espresso with that?&quot;).
+        </p>
+      );
+    },
     priceFloor: 3,
     priceCeiling: 14,
     lowNote: (price) => (
@@ -1769,8 +1856,45 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
         </p>
       </>
     ),
-    unitLabel: "dessert",
-    unitLabelPlural: "desserts",
+    story: (v) => {
+      if (v.marginZl <= 0) {
+        return (
+          <p style={{ margin: 0 }}>
+            Dessert is normally pure cream on top — but at {fmtZl(v.sellZl)} zł a
+            portion with this COGS%, every tiramisu that leaves the kitchen is
+            actually <strong>losing</strong> you ~{fmtZl(-v.marginZl)} zł. Raise the
+            price or shrink the portion before pushing attach.
+          </p>
+        );
+      }
+      if (v.deltaPp <= 0) {
+        return (
+          <p style={{ margin: 0 }}>
+            At <strong>{Math.round(v.currentPct * 100)}%</strong> dessert attach almost
+            every table is finishing with tiramisu —
+            {" "}~{Math.round(v.ordersPerDay * v.currentPct)} desserts a day at
+            {" "}~{fmtZl(v.marginZl)} zł margin each, about{" "}
+            <strong>~{fmtZlRounded(v.currentMonthlyMarginZl)} zł/month</strong> of
+            cream already booked. Pushing further needs a new dessert SKU, not a
+            better prompt.
+          </p>
+        );
+      }
+      return (
+        <p style={{ margin: 0 }}>
+          Tiramisu travels well, photographs better than the pizza, and earns better
+          margin than the main dish. At {fmtZl(v.sellZl)} zł a portion that&apos;s
+          {" "}~{fmtZl(v.marginZl)} zł of margin per dessert. Lifting attach from{" "}
+          <strong>
+            {Math.round(v.currentPct * 100)}% → {Math.round(v.targetPct * 100)}%
+          </strong>{" "}
+          on {Math.round(v.ordersPerDay)} orders/day =
+          {" "}~{fmtUnits(v.extraUnitsPerDay)} more desserts daily × ~{fmtZl(v.marginZl)} zł
+          margin = <strong>~{fmtZlRounded(v.monthlyMarginZl)} zł/month</strong> — pure
+          cream on top of revenue you&apos;d already booked.
+        </p>
+      );
+    },
     priceFloor: 6,
     priceCeiling: 30,
     lowNote: (price) => (
@@ -1836,8 +1960,45 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
         </p>
       </>
     ),
-    unitLabel: "starter",
-    unitLabelPlural: "starters",
+    story: (v) => {
+      if (v.marginZl <= 0) {
+        return (
+          <p style={{ margin: 0 }}>
+            A starter is normally a margin booster while customers wait — but at
+            {" "}{fmtZl(v.sellZl)} zł with this COGS%, every plate <strong>loses</strong>
+            {" "}~{fmtZl(-v.marginZl)} zł. Fix the recipe or the price first; then
+            the attach lever earns its keep.
+          </p>
+        );
+      }
+      if (v.deltaPp <= 0) {
+        return (
+          <p style={{ margin: 0 }}>
+            <strong>{Math.round(v.currentPct * 100)}%</strong> of tables already
+            taking a starter is evening-restaurant territory — that&apos;s
+            {" "}~{Math.round(v.ordersPerDay * v.currentPct)} starters a day at
+            {" "}~{fmtZl(v.marginZl)} zł margin, around{" "}
+            <strong>~{fmtZlRounded(v.currentMonthlyMarginZl)} zł/month</strong>
+            {" "}already booked. The next pp comes from the prep station, not from
+            the script — make sure the line can hold up.
+          </p>
+        );
+      }
+      return (
+        <p style={{ margin: 0 }}>
+          A burrata starter at {fmtZl(v.sellZl)} zł can earn ~{fmtZl(v.marginZl)} zł
+          of margin while customers wait for the pizza anyway. Push attach from{" "}
+          <strong>
+            {Math.round(v.currentPct * 100)}% → {Math.round(v.targetPct * 100)}%
+          </strong>{" "}
+          on {Math.round(v.ordersPerDay)} orders/day and you&apos;ve added
+          {" "}~{fmtUnits(v.extraUnitsPerDay)} more starters daily, about{" "}
+          <strong>~{fmtZlRounded(v.monthlyMarginZl)} zł/month</strong> in margin.
+          Watch the prep station though — if it slows the pizza out, you&apos;ve
+          traded a starter for a complaint.
+        </p>
+      );
+    },
     priceFloor: 10,
     priceCeiling: 60,
     lowNote: (price) => (
@@ -1902,8 +2063,47 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
         </p>
       </>
     ),
-    unitLabel: "drink",
-    unitLabelPlural: "drinks",
+    story: (v) => {
+      if (v.marginZl <= 0) {
+        return (
+          <p style={{ margin: 0 }}>
+            Drinks are normally the highest-margin attach in the building — but at
+            {" "}{fmtZl(v.sellZl)} zł a glass with this COGS%, you&apos;re{" "}
+            <strong>losing</strong> ~{fmtZl(-v.marginZl)} zł per pour. Re-check the
+            recipe and the by-the-glass cost before pushing this lever.
+          </p>
+        );
+      }
+      if (v.deltaPp <= 0) {
+        return (
+          <p style={{ margin: 0 }}>
+            <strong>{Math.round(v.currentPct * 100)}%</strong> drink attach across all
+            orders is bar territory —
+            {" "}~{Math.round(v.ordersPerDay * v.currentPct)} pours a day at
+            {" "}~{fmtZl(v.marginZl)} zł margin ={" "}
+            <strong>~{fmtZlRounded(v.currentMonthlyMarginZl)} zł/month</strong> already
+            covering the lights and then some. The next pp comes from a real cocktail
+            program, not from scripted prompts.
+          </p>
+        );
+      }
+      return (
+        <p style={{ margin: 0 }}>
+          An Aperol Spritz costs you ~{fmtZl(v.cogsZl)} zł to make and sells for
+          {" "}{fmtZl(v.sellZl)} zł — that&apos;s{" "}
+          <strong>{fmtZl(v.marginZl)} zł of margin per glass</strong>. Lift attach
+          from{" "}
+          <strong>
+            {Math.round(v.currentPct * 100)}% → {Math.round(v.targetPct * 100)}%
+          </strong>{" "}
+          on {Math.round(v.ordersPerDay)} orders/day and you&apos;ll add
+          {" "}~{fmtUnits(v.extraUnitsPerDay)} extra drinks daily, about{" "}
+          <strong>~{fmtZlRounded(v.monthlyMarginZl)} zł/month</strong> — easily
+          covering the ~5,000 zł/year alcohol licence in the first month or two.
+          Drinks are how Italian dinner spots keep the lights on.
+        </p>
+      );
+    },
     priceFloor: 8,
     priceCeiling: 35,
     lowNote: (price) => (
@@ -1968,8 +2168,47 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
         </p>
       </>
     ),
-    unitLabel: "topping add-on",
-    unitLabelPlural: "topping add-ons",
+    story: (v) => {
+      if (v.marginZl <= 0) {
+        return (
+          <p style={{ margin: 0 }}>
+            Premium toppings are normally ~50% incremental margin — but at
+            {" "}{fmtZl(v.sellZl)} zł per add-on with this COGS%, you&apos;re actually
+            {" "}<strong>losing</strong> ~{fmtZl(-v.marginZl)} zł each time someone
+            says yes. Re-price the upgrade or rework the recipe before pushing
+            attach.
+          </p>
+        );
+      }
+      if (v.deltaPp <= 0) {
+        return (
+          <p style={{ margin: 0 }}>
+            <strong>{Math.round(v.currentPct * 100)}%</strong> of pizzas already going
+            out with a premium topping is aggressive merchandising —
+            {" "}~{Math.round(v.ordersPerDay * v.currentPct)} upgraded pizzas a day at
+            {" "}~{fmtZl(v.marginZl)} zł margin ={" "}
+            <strong>~{fmtZlRounded(v.currentMonthlyMarginZl)} zł/month</strong> already
+            in the books. Pushing higher needs a new flagship topping, not more
+            prompts.
+          </p>
+        );
+      }
+      return (
+        <p style={{ margin: 0 }}>
+          A drizzle of truffle oil costs ~{fmtZl(v.cogsZl)} zł but customers pay
+          {" "}{fmtZl(v.sellZl)} zł for it — ~{fmtZl(v.marginZl)} zł of margin per
+          pizza. If attach goes from{" "}
+          <strong>
+            {Math.round(v.currentPct * 100)}% → {Math.round(v.targetPct * 100)}%
+          </strong>{" "}
+          on {Math.round(v.ordersPerDay)} orders/day, that&apos;s
+          {" "}~{fmtUnits(v.extraUnitsPerDay)} more premium pizzas daily and{" "}
+          <strong>~{fmtZlRounded(v.monthlyMarginZl)} zł/month extra</strong>. Same
+          dough, same oven — just better ingredients on top, easier to merchandise
+          than raising base prices.
+        </p>
+      );
+    },
     priceFloor: 2,
     priceCeiling: 18,
     lowNote: (price) => (
@@ -2033,8 +2272,46 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
         </p>
       </>
     ),
-    unitLabel: "pasta",
-    unitLabelPlural: "pastas",
+    story: (v) => {
+      if (v.marginZl <= 0) {
+        return (
+          <p style={{ margin: 0 }}>
+            A primo course is supposed to be a free ticket bump from the same table
+            — but at {fmtZl(v.sellZl)} zł with this COGS%, each pasta{" "}
+            <strong>loses</strong> ~{fmtZl(-v.marginZl)} zł. Re-look at portion size
+            and price before pushing attach.
+          </p>
+        );
+      }
+      if (v.deltaPp <= 0) {
+        return (
+          <p style={{ margin: 0 }}>
+            <strong>{Math.round(v.currentPct * 100)}%</strong> of dine-in tables
+            ordering a pasta course is full-Italian-restaurant territory —
+            {" "}~{Math.round(v.ordersPerDay * v.currentPct)} pastas a day at
+            {" "}~{fmtZl(v.marginZl)} zł margin ={" "}
+            <strong>~{fmtZlRounded(v.currentMonthlyMarginZl)} zł/month</strong> already
+            in the books. The next pp comes from seating + pasta-station throughput,
+            not from a better suggestion.
+          </p>
+        );
+      }
+      return (
+        <p style={{ margin: 0 }}>
+          A primo pasta course is a second item from the same table — same staff,
+          same plate-pickup trip. At {fmtZl(v.sellZl)} zł a plate that&apos;s
+          {" "}~{fmtZl(v.marginZl)} zł of margin per pasta. Push attach from{" "}
+          <strong>
+            {Math.round(v.currentPct * 100)}% → {Math.round(v.targetPct * 100)}%
+          </strong>{" "}
+          on {Math.round(v.ordersPerDay)} dine-in orders/day =
+          {" "}~{fmtUnits(v.extraUnitsPerDay)} pastas/day, about{" "}
+          <strong>~{fmtZlRounded(v.monthlyMarginZl)} zł/month</strong>. Only works
+          where customers actually sit — but if you have seating, it&apos;s the
+          single biggest dine-in lever you have.
+        </p>
+      );
+    },
     priceFloor: 15,
     priceCeiling: 60,
     lowNote: (price) => (
@@ -2098,109 +2375,52 @@ function AttachLeverHelp({ kind, lever, ordersPerDay, daysOpenPerMonth }: Attach
   const sellZl = lever.avgPriceGrosze / 100;
   const cogsZl = sellZl * lever.cogsPct;
   const marginZl = sellZl - cogsZl;
-  const marginPctOfSell = sellZl > 0 ? ((marginZl / sellZl) * 100) : 0;
 
   const currentPct = Math.max(0, Math.min(1, lever.attachPct));
   const targetPct = Math.min(1, currentPct + profile.defaultBumpPp);
   const deltaPp = Math.max(0, targetPct - currentPct);
 
   const extraUnitsPerDay = ordersPerDay * deltaPp;
-  const monthlyMarginGrosze = Math.max(
+  const monthlyMarginZl = Math.max(0, extraUnitsPerDay * marginZl * daysOpenPerMonth);
+  const currentMonthlyMarginZl = Math.max(
     0,
-    Math.round(extraUnitsPerDay * marginZl * daysOpenPerMonth * 100),
+    ordersPerDay * currentPct * marginZl * daysOpenPerMonth,
   );
 
-  // At current attach (not the +bump target) — useful when current is already strong.
-  const currentMarginPerDayGrosze = Math.round(ordersPerDay * currentPct * marginZl * 100);
-  const currentMonthlyMarginGrosze = Math.round(currentMarginPerDayGrosze * daysOpenPerMonth);
+  const values: NarrativeValues = {
+    sellZl,
+    cogsZl,
+    marginZl,
+    currentPct,
+    targetPct,
+    deltaPp,
+    ordersPerDay,
+    daysOpenPerMonth,
+    extraUnitsPerDay,
+    monthlyMarginZl,
+    currentMonthlyMarginZl,
+  };
 
   const showLowNote = sellZl > 0 && sellZl < profile.priceFloor;
   const showHighNote = sellZl > profile.priceCeiling;
   const showAttachNote = currentPct > profile.attachCeiling;
-  const negativeMargin = marginZl < 0;
+  const noteStyle = {
+    margin: "8px 0 0",
+    padding: "6px 8px",
+    background: "rgba(234, 88, 12, 0.12)",
+    borderRadius: 4,
+    color: "rgb(154, 52, 18)",
+  } as const;
 
   return (
     <>
       {profile.intro}
       <PlainTalk>
-        <p style={{ margin: 0 }}>
-          At <strong>{sellZl.toFixed(2)} zł</strong> sell &times;{" "}
-          <strong>{(lever.cogsPct * 100).toFixed(0)}%</strong> COGS ={" "}
-          <strong>{marginZl.toFixed(2)} zł</strong> margin per {profile.unitLabel}{" "}
-          ({marginPctOfSell.toFixed(0)}% of sell).{" "}
-          {deltaPp > 0 ? (
-            <>
-              Push attach from <strong>{(currentPct * 100).toFixed(0)}% →{" "}
-              {(targetPct * 100).toFixed(0)}%</strong> on{" "}
-              <strong>{Math.round(ordersPerDay)} orders/day</strong> ={" "}
-              <strong>~{extraUnitsPerDay.toFixed(1)} extra {profile.unitLabelPlural}/day</strong>{" "}
-              &times; {marginZl.toFixed(2)} zł ={" "}
-              <strong>~{formatPrice(monthlyMarginGrosze)}/month</strong> at{" "}
-              {Math.round(daysOpenPerMonth)} open days.
-            </>
-          ) : (
-            <>
-              You&apos;re already at <strong>{(currentPct * 100).toFixed(0)}%</strong> attach —
-              that&apos;s ~{(ordersPerDay * currentPct).toFixed(1)} {profile.unitLabelPlural}/day,
-              about <strong>~{formatPrice(currentMonthlyMarginGrosze)}/month</strong> of margin
-              already baked in. Holding this is the win; pushing further likely needs
-              new merchandising, not just prompts.
-            </>
-          )}
-        </p>
-        {negativeMargin && (
-          <p
-            style={{
-              margin: "8px 0 0",
-              padding: "6px 8px",
-              background: "rgba(220, 38, 38, 0.1)",
-              borderRadius: 4,
-              color: "rgb(153, 27, 27)",
-            }}
-          >
-            <strong>Negative margin:</strong> at this sell price &amp; COGS% you&apos;re
-            losing {Math.abs(marginZl).toFixed(2)} zł per {profile.unitLabel} — turning
-            this attach lever on hurts the P&amp;L. Fix price or COGS first.
-          </p>
-        )}
-        {!negativeMargin && showLowNote && (
-          <p
-            style={{
-              margin: "8px 0 0",
-              padding: "6px 8px",
-              background: "rgba(234, 88, 12, 0.12)",
-              borderRadius: 4,
-              color: "rgb(154, 52, 18)",
-            }}
-          >
-            {profile.lowNote(sellZl)}
-          </p>
-        )}
-        {!negativeMargin && showHighNote && (
-          <p
-            style={{
-              margin: "8px 0 0",
-              padding: "6px 8px",
-              background: "rgba(234, 88, 12, 0.12)",
-              borderRadius: 4,
-              color: "rgb(154, 52, 18)",
-            }}
-          >
-            {profile.highNote(sellZl)}
-          </p>
-        )}
+        {profile.story(values)}
+        {showLowNote && <p style={noteStyle}>{profile.lowNote(sellZl)}</p>}
+        {showHighNote && <p style={noteStyle}>{profile.highNote(sellZl)}</p>}
         {showAttachNote && (
-          <p
-            style={{
-              margin: "8px 0 0",
-              padding: "6px 8px",
-              background: "rgba(234, 88, 12, 0.12)",
-              borderRadius: 4,
-              color: "rgb(154, 52, 18)",
-            }}
-          >
-            {profile.attachCeilingNote(currentPct)}
-          </p>
+          <p style={noteStyle}>{profile.attachCeilingNote(currentPct)}</p>
         )}
       </PlainTalk>
       <Tips>{profile.tips}</Tips>
