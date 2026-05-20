@@ -9822,8 +9822,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Average ticket size. Persists from real orders; matches scenario AOV.
+          Average ticket size. From real POS orders; matches scenario
+          AOV.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Healthy PL casual-Italian ranges: pizza-only 45-55 zł; with
+            drinks 60-68 zł; full dinner 70-85 zł; upscale Italian 90+
+            zł. Compared to attach-driven AOV: pushing attach is the
+            preferred lever because customers don&apos;t perceive add-
+            ons as price hikes. Track per-channel — on-site, Glovo,
+            Wolt typically vary by 5-15 zł. Year-over-year growth target
+            5-8% nominal (matches inflation + small mix lift); above
+            10% is aggressive pricing or large mix shift.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>What the average customer pays per order.</strong> Polish
@@ -9855,9 +9868,21 @@ const HELP = {
     body: (
       <>
         <p>
-          CM1 minus per-order share of labor and fixed costs. Net unit-economic
-          profit per ticket.
+          True CM1 minus per-order share of labor and fixed costs. Net
+          unit-economic profit per ticket.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Healthy: &gt; 10 zł/order excellent; 5-10 zł healthy; 2-5
+            marginal; &lt; 2 fragile; negative = structurally broken
+            (every order loses money). The gating metric for unit
+            economics — alongside CM1 shows whether the unit is
+            structurally profitable and how fixed-cost-heavy the
+            structure is. By-daypart variance: off-peak CM2 might be
+            negative while peak CM2 is strongly positive — blended
+            hides the truth.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>What&apos;s left per order after labor and rent.</strong>
@@ -9890,8 +9915,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Total orders booked in the month. Drives all variable cost lines.
+          Total orders booked in the month. Drives all variable cost
+          lines.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Healthy PL pizza truck: 1,400-2,800 orders/month single unit.
+            Below 1,400 = sub-scale; above 2,800 = capacity-pressed
+            (cross-check against kitchen capacity KPI). Customer count
+            distinct from order count when party size &gt; 1 — at 2.5
+            avg party, 2,240 orders = ~900 unique transactions. Track
+            both metrics; YoY growth target 8-12% on orders (real
+            growth) — order-count growth is the volume-truth-teller
+            (vs ticket-driven revenue growth).
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>Total orders in the month.</strong> 80/day × 28 days =
@@ -9925,8 +9963,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Sum of per-unit revenue across all units. Headline chain metric.
+          Σ per-unit revenue across all units, after cannibalisation
+          adjustments. Headline chain metric.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Scale economics kick in at specific thresholds: 5 units
+            ≈ 700k-1.2M zł/mo unlocks tier-3 supplier discounts and
+            commissary economics. Watch the €2M (~8.5M zł) annual
+            threshold per legal entity — under = 9% small-CIT, over =
+            19%. Compare YoY fleet revenue growth vs per-unit revenue
+            growth: if total grows but per-unit stays flat,
+            cannibalisation is in play; if both grow, true scaling is
+            working.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>Total revenue across all your trucks combined.</strong> At
