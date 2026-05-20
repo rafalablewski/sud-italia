@@ -6014,6 +6014,22 @@ const HELP = {
             stay deliberately under the threshold.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Stay under €2M turnover if borderline:</strong> the jump from 9% → 19% is a 10pp tax hike. A 1.95M zł truck might net more than a 2.1M zł truck.</li>
+            <li><strong>Multi-entity structure for chains:</strong> 2 trucks × separate sp. z o.o. each under €2M = both at 9%. Common PL structure for multi-unit operators.</li>
+            <li><strong>Capex timing:</strong> a large equipment purchase in Q4 reduces this year&apos;s taxable profit — possibly worth bringing forward a planned year-1 buy.</li>
+            <li><strong>R&amp;D tax relief:</strong> recipe development + POS software counts in PL. Talk to a tax advisor — up to 200% deductibility on qualified R&amp;D.</li>
+            <li><strong>Estonian CIT (taxation when profits distributed):</strong> available for some PL companies; defers CIT until dividends paid out. Useful for reinvesting growth.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> effective CIT rate %. Default 9% (PL small-CIT).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> after-tax profit = pre-tax profit × (1 − CIT rate). Applied at the bottom of the P&amp;L.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>PL 2026 rates:</strong> 9% small-CIT for revenues ≤ €2M; 19% standard above. Estonian CIT (CIT na zasadach estońskich) defers tax until dividend distribution.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish tax code (Ustawa o CIT), Ministry of Finance interpretive notes, gastronomic tax-advisor guides (Crido, KPMG PL).</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> VAT (revenue gross-up vs net). The model treats revenue as net of VAT — if you enter gross figures, the tax math will overstate. Also doesn&apos;t model PIT for sole-proprietor operations (JDG), which has different rate structure.</p>
+        </Methodology>
       </>
     ),
   },
@@ -6035,6 +6051,22 @@ const HELP = {
             indoor pop-up for Q1.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Build a winter menu:</strong> hot soups, baked pasta, mulled wine. Higher-margin warming items that justify the visit.</li>
+            <li><strong>Indoor pop-up partnership:</strong> December-February rent a corner in a mall food court. Saves the rent stack.</li>
+            <li><strong>Push delivery harder Dec-Feb:</strong> bad weather = high delivery demand. Marketing spend pivots to delivery.</li>
+            <li><strong>Reduce staff hours, not headcount:</strong> shorten service to 16-21h Dec-Feb. Keeps the team but cuts labor.</li>
+            <li><strong>Cash plan from Q3:</strong> save 3 months of fixed costs by September. Winter eats reserves; running out triggers panic decisions.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> winter multiplier (default 0.50). Applied to base orders/day for Dec/Jan/Feb.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> winter_orders/day = base_orders/day × winterMultiplier. Applied in the monthly projection for the 3 winter months.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Range:</strong> 0.40-0.65 for outdoor PL truck. Indoor mall pitch: 0.85-0.95 (almost no dip). Pure delivery operation: 0.80 (delivery surges in cold weather).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish gastronomic seasonality reports, IMGW Warsaw winter-day data, owner-operator winter-revenue surveys.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> regional variation (Gdańsk vs Kraków vs Zakopane winter is very different). Override the multiplier for non-Warsaw locations.</p>
+        </Methodology>
       </>
     ),
   },
@@ -6056,6 +6088,22 @@ const HELP = {
             consistently saturating the current ceiling.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Pre-launch a pizzaiolo on the line for the peak hour only:</strong> 1-hour shift extension lifts capacity 50% at the rush, not 100%.</li>
+            <li><strong>Pre-shape dough during slow hours:</strong> instead of full stretch-to-order, pre-portion + cold-prove during 14-17h. Cuts per-pizza time ~30s.</li>
+            <li><strong>Batch the orders:</strong> 4-6 pizzas per oven cycle vs 1-2 lifts throughput dramatically. Train the line on batch discipline.</li>
+            <li><strong>Watch for saturation:</strong> if your hourly heatmap shows red cells (saturated), every additional marketing zł is wasted. Capacity = constraint.</li>
+            <li><strong>Second oven decision threshold:</strong> if peak hour saturation &gt; 90% on 3+ days/week consistently, the second oven pays back in 6-9 months.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> sustained pizzas/hour the line can produce. Default 70 (one pizzaiolo + one Neapolitan oven).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> daily kitchen capacity = pizzasPerHour × serviceHoursPerDay × oven_efficiency. Saturation = peak_hour_orders ÷ pizzasPerHour.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Realistic range:</strong> Neapolitan wood-fired oven 60-90/hr per pizzaiolo. Gas/electric deck 80-110. Conveyor 120+. The bottleneck is usually the pizzaiolo&apos;s shaping speed, not the oven.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Pizzeria operations literature (Bianco, Forni Ferrara dealer guides), AVPN (Associazione Verace Pizza Napoletana) production studies.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> menu mix complexity (a topping-heavy pizza takes ~25% longer than Margherita). The model assumes uniform pizza time; high-attach evenings might effectively run 10-15% slower.</p>
+        </Methodology>
       </>
     ),
   },
@@ -6077,6 +6125,22 @@ const HELP = {
             with it.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Add the highest-margin hour first:</strong> dinner peak (18-21) beats opening earlier on margin. Test late-evening (21-23) for premium aperitivo crowd before extending lunch.</li>
+            <li><strong>Add lunch with a simplified menu:</strong> 4 fast pizzas at 35-45 zł, no antipasti, fewer SKUs. Different ops profile from dinner.</li>
+            <li><strong>Calculate marginal labor cost:</strong> each extra service hour = ~1 staff-hour × ~45 zł brutto. Break-even at ~5 extra orders × ~12 zł margin.</li>
+            <li><strong>Watch the demand curve:</strong> if the new hour fills less than 40% of capacity, you&apos;re paying for empty time. Cut it back.</li>
+            <li><strong>Use the heatmap to validate:</strong> the hourly chart shows where adding an hour would actually capture demand vs add cost.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> service hours per day (default 8 — typical lunch + dinner split).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> daily capacity = pizzasPerHour × serviceHoursPerDay × ovenEfficiency. Excludes prep + setup + close-down hours.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Typical splits:</strong> lunch-only 4 hr, dinner-only 5 hr, lunch+dinner 9 hr, all-day 11 hr. Aperitivo bars sometimes extend to 12-14 hr.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish gastronomic operating-hours surveys, NRA service-window studies, owner-operator schedule analytics.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> prep + close-down labor (typically 1.5-2 hr/day each). The labor card should account for those hours even though they don&apos;t produce orders.</p>
+        </Methodology>
       </>
     ),
   },
