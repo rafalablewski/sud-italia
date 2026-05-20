@@ -6150,9 +6150,19 @@ const HELP = {
     body: (
       <>
         <p>
-          Wolt&apos;s take rate. Typical 22–30%; slightly cheaper than Glovo on
-          average.
+          Wolt&apos;s take rate on platform revenue. Typical 22-30%;
+          slightly cheaper than Glovo on average.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Tier structure: 28-30% baseline → 22-25% above ~300
+            orders/week. Wolt is more flexible on promo co-funding than
+            Glovo (offers shared discount campaigns). Watch effective
+            rate: Wolt occasionally adds merchant-funded delivery-fee
+            subsidies on top of headline commission. Bundle as
+            exclusive to negotiate 20% or below in some categories.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Wolt typically takes <strong>~25 zł of every 100 zł</strong> —
@@ -6186,10 +6196,23 @@ const HELP = {
     body: (
       <>
         <p>
-          Total capital outlay to launch the unit — vehicle, kitchen buildout,
-          oven, permits, working capital. Drives payback months and
-          cash-on-cash return.
+          Total capital outlay to launch the unit — vehicle + kitchen
+          buildout + oven + permits + working capital. Drives setup
+          payback and cash-on-cash return.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            PL 2026 ranges: used truck 60-90k, new buildout 100-150k,
+            oven 35-55k (wood/gas/electric), permits 10-20k, working
+            capital 50-80k. Total: 280-350k for a Neapolitan-style
+            operation. Setup denominator drives every investor metric
+            — every 30k zł trimmed off shortens payback ~2 months at
+            typical margins and lifts cash-on-cash ~2 pp. Lease vs
+            buy: leasing the oven preserves working capital but adds
+            ~12% finance cost vs cash. BGK / PARP grants for new SMEs
+            often cover 15-30% of buildout.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             This is the <strong>one big cheque at the start</strong>. A used
@@ -6225,10 +6248,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Non-cash expense spreading setup cost across the asset&apos;s economic
-          life. 5-year truck = setup/60 per month. Required for EBITDA →
-          net-profit walk.
+          Non-cash expense spreading setup cost across the asset&apos;s
+          economic life. 5-year truck = setup ÷ 60 per month. Required
+          for the EBITDA → net-profit walk.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Useful-life norms (PL gastro per UoR): truck 4-5 yr, kitchen
+            8-10 yr, fit-out 5-7 yr, IT/POS 3 yr. Blended ~5 yr typical.
+            Doesn&apos;t hit cash today but accrues toward replacement
+            capex — savvy operators auto-transfer the monthly D&amp;A
+            line to a reserve account so year-5 refurb is pre-funded.
+            Accelerated depreciation (Polish tax law) can shift 10-15k
+            of taxable profit out of year 1 — ask the accountant.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             D&amp;A is the accountant&apos;s way of saying &quot;your truck loses
@@ -6263,9 +6297,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Monthly debt-service cost (leasing, bank loan, asset finance). Zero
-          for cash-purchased trucks.
+          Monthly debt-service cost (leasing, bank loan, asset finance).
+          Zero for cash-purchased trucks.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            PL 2026 SME loan rates 8-12% APR commercial bank; 7-10%
+            equipment leasing; 5-8% ZUS-backed startup loans; 4-6%
+            PARP/BGK public programmes. Tax-deductible expense — effective
+            cost = nominal × (1 − CIT). The cash-vs-finance trade-off:
+            financing preserves working capital flexibility but the
+            spread between loan rate and cash-on-cash return is the
+            real economic cost; if cash earns 5% in deposit while loan
+            costs 10%, you&apos;re effectively paying 5pp/yr for liquidity.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             If you financed the truck instead of paying cash, the bank takes a
