@@ -7035,11 +7035,28 @@ const HELP = {
             Food-truck rally? Concert near the pitch? Two event days/month at
             <strong> 1.50×</strong> adds <strong>~10,000 zł of monthly
             revenue</strong> without changing anything except the calendar.
+            Different from peak days: events you can BOOK, peaks you just GET.
             Some trucks build their entire annual P&amp;L around
             <strong> 20–30 event weekends</strong> — the only question is how
             aggressively you chase them.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Build a dedicated event team:</strong> 1 truck + 1 dedicated trailer for events. Don&apos;t cannibalise your pitch for festival weekends.</li>
+            <li><strong>Pre-cost the event:</strong> vendor fee + transport + extra labor + spoilage risk. Net only worth it if multiplier &gt;= 1.6×.</li>
+            <li><strong>Book 6-12 months ahead:</strong> top festivals (Nocny Market, Krakow Live, OFF) book vendors way out. Late booking = worse slots.</li>
+            <li><strong>Repeat events build loyalty:</strong> being &quot;the pizza truck&quot; at a recurring market 8 weekends/year compounds with brand recognition.</li>
+            <li><strong>Track event ROI:</strong> tag event-day POS data. If your effective multiplier is &lt;1.4× on a given event, drop it next year.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> volume multiplier for booked event days (default 1.50).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> event_day_orders = base_orders × eventDayMultiplier. Stacks with weekend/peak multipliers if event happens on a peak day.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Realistic ranges:</strong> small street fair 1.3-1.5×, food-truck rally 1.6-2.0×, major festival 2.0-3.0×, concert / sports event with captive audience 2.5-4.0×. Calibrate per event type.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish food-truck event-revenue surveys, festival vendor-revenue reports, owner-operator event ROI analysis.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> vendor fees (often 3-10k zł per event). Subtract from event revenue to get true ROI. Some events have hidden costs (mandatory marketing fee, exclusivity contracts).</p>
+        </Methodology>
       </>
     ),
   },
@@ -7061,6 +7078,21 @@ const HELP = {
             your <em>profit</em> from this is much easier through margin work.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Don&apos;t fixate on revenue alone:</strong> a 200k truck at 10% margin nets 20k; a 150k truck at 18% margin nets 27k. Profit, not revenue, is the goal.</li>
+            <li><strong>Grow revenue 3 ways:</strong> more orders (marketing), higher ticket (attach), more days (extend hours). Pick the cheapest lever.</li>
+            <li><strong>Watch for revenue ceiling:</strong> if marketing isn&apos;t lifting orders, capacity might be the cap. Check kitchen saturation.</li>
+            <li><strong>Net revenue vs gross:</strong> Glovo/Wolt show gross order value; the cash you bank is after commission. Use net for comparisons.</li>
+            <li><strong>Track revenue trend, not single month:</strong> compare 90-day rolling vs prior period. Single-month noise hides the trajectory.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> monthly revenue = orders/day × avg ticket × days/month × weather&amp;event multipliers. Net of attach lever ticket lifts.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy Polish casual-Italian truck revenue:</strong> 100-180k zł/month single truck; 200-300k+ for premium central locations.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish gastronomic-sector revenue benchmarks, food-truck association data.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> revenue from non-pizza streams (catering, special events, branded merchandise). Add as separate line if material.</p>
+        </Methodology>
       </>
     ),
   },
@@ -7081,6 +7113,21 @@ const HELP = {
             <strong> ~2,000 zł/month more profit</strong>.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Diagnose the biggest line first:</strong> COGS at 35%? Audit recipes. Labor at 35%? Audit schedule. Don&apos;t scatter effort.</li>
+            <li><strong>Watch the variable leakage:</strong> waste + refunds + loyalty often add to 4-6% combined. Each pp tightened = 1pp net margin.</li>
+            <li><strong>Compare to prior month, not budget:</strong> budgets get out of date. Last 30 days vs prior 30 days is the live diagnostic.</li>
+            <li><strong>Fixed costs &lt; 10% of revenue ideal:</strong> above that, you&apos;re too rent-heavy. Renegotiate or relocate.</li>
+            <li><strong>Cost % matters more than cost zł:</strong> growing revenue while holding cost % flat is the cleanest path.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> total cost = COGS + labor + fixed + variable leakage (waste + refunds + card fees + loyalty burn). Sum of all P&amp;L cost lines.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy split (Polish casual-Italian):</strong> COGS 28-32%, labor 25-30%, fixed 6-10%, leakage 4-6%. Total: 65-78% of revenue. Net profit: 22-35% (rare for &gt;30 to be sustainable).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> NRA Industry Operations Report, PHG benchmark data.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> founder opportunity cost (your unpaid hours). Add ~5-10k zł/month mentally to value your own time honestly.</p>
+        </Methodology>
       </>
     ),
   },
@@ -7100,6 +7147,21 @@ const HELP = {
             too little. Track this monthly; the rest is diagnostics.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Pay yourself first:</strong> set up auto-transfer of 30% of net profit to a separate account on month-end. Otherwise it gets spent.</li>
+            <li><strong>Build a 3-month reserve:</strong> winter cash crunch ruins businesses that don&apos;t save during peak. Aim for 3× monthly fixed costs in reserve.</li>
+            <li><strong>Re-invest 20% in growth:</strong> equipment upgrades, marketing, training. Compounds the next year.</li>
+            <li><strong>Watch CIT exposure:</strong> 9% small-CIT below €2M; 19% above. Net is BEFORE tax — actual take-home is net × (1 − CIT%).</li>
+            <li><strong>Track net profit margin trend:</strong> if it&apos;s eroding 1pp/quarter, you&apos;re losing the inflation race. Re-price or cut costs.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> net profit = revenue − COGS − labor − fixed − variable leakage − D&amp;A − interest. Before CIT.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy margin ranges:</strong> 8-12% net = average; 12-18% = good; 18-25% = excellent; 25%+ = exceptional (or you&apos;re missing a cost).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> NRA pizza-segment benchmarks (typically 8-15% net), Polish PHG data, Bain restaurant-economics reports.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> personal income tax (PIT) for sole proprietors. The model shows pre-tax net; sole proprietors face progressive PIT (12-32%) on top.</p>
+        </Methodology>
       </>
     ),
   },
