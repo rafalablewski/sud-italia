@@ -180,7 +180,11 @@ const INGREDIENT_LEVERS: { key: IngredientKey; label: string; hint: string }[] =
 const LABOR_SEASONAL_FLEX = 0.4;
 
 const DEFAULT_WEATHER: SimulationWeather = {
-  enabled: true,
+  // Ships disabled — matches the "off by default, operator opts in
+  // explicitly" contract used for every Behaviour Assumption lever.
+  // Calibrated values stay populated so the card springs to life with
+  // sensible numbers the moment it's toggled on.
+  enabled: false,
   rainyDayMultiplier: 0.75,
   rainyShare: 0.30,
   heatwaveMultiplier: 1.40,

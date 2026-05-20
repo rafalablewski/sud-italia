@@ -8161,7 +8161,10 @@ export function defaultSimulationAssumptions(): SimulationAssumptions {
 
 /** Weather + Polish calendar baseline for Warsaw 2026. */
 export function defaultSimulationWeather(): SimulationWeather {
+  // Ships disabled — matches the "off by default, operator opts in
+  // explicitly" contract used for every Behaviour Assumption lever.
   return {
+    enabled: false,
     rainyDayMultiplier: 0.75,
     rainyShare: 0.30,
     heatwaveMultiplier: 1.40,
@@ -8178,7 +8181,7 @@ export function defaultSimulationWeather(): SimulationWeather {
 /** Schema migration markers for SimulationScenario.assumptions. Bump when
  *  a behavioural default flips so existing saved scenarios get realigned
  *  without operator action. */
-const ASSUMPTIONS_MIGRATION_VERSION = 2;
+const ASSUMPTIONS_MIGRATION_VERSION = 3;
 
 /** Force every behavior-assumption lever to `enabled: false`. Used by the
  *  migration-v2 path to reset scenarios saved before the all-off default
@@ -8213,17 +8216,25 @@ export async function getSimulationScenario(): Promise<SimulationScenario> {
   }
   const defaults = defaultSimulationScenario();
   const hydratedAssumptions = hydrateAssumptions(saved.assumptions, defaults.assumptions);
-  // v2 migration: force every lever off on first load post-deploy. Existing
-  // scenarios saved before this version have enabled: true baked into the
-  // DB (because the prior hydrator's fallback was true). Migration runs
-  // once per scenario — when the marker catches up to current, normal
-  // operator toggling resumes.
+  const hydratedWeather = hydrateWeather(saved.weather, defaults.weather);
+  // Migration: force every behavior assumption + weather lever off on first
+  // load after the migration version bumps. Existing scenarios saved before
+  // each bump may have enabled: true baked in (from the prior hydrator's
+  // fallback, or from auto-enabling preset code). Migration runs once per
+  // scenario — when the marker catches up to current, normal operator
+  // toggling resumes.
+  //   v2: force the 10 assumptions levers off
+  //   v3: also force weather off (matches the new "off by default" contract)
   const savedVersion = typeof saved.assumptionsMigrationVersion === "number"
     ? saved.assumptionsMigrationVersion
     : 0;
-  const assumptions = savedVersion < ASSUMPTIONS_MIGRATION_VERSION && hydratedAssumptions
+  const migrationNeeded = savedVersion < ASSUMPTIONS_MIGRATION_VERSION;
+  const assumptions = migrationNeeded && hydratedAssumptions
     ? forceAllAssumptionsOff(hydratedAssumptions)
     : hydratedAssumptions;
+  const weather = migrationNeeded && hydratedWeather
+    ? { ...hydratedWeather, enabled: false }
+    : hydratedWeather;
   return {
     ordersPerDay: saved.ordersPerDay ?? defaults.ordersPerDay,
     avgTicketGrosze: saved.avgTicketGrosze ?? defaults.avgTicketGrosze,
@@ -8253,7 +8264,7 @@ export async function getSimulationScenario(): Promise<SimulationScenario> {
     menuScenarioOverrides: hydrateMenuScenarioOverrides(saved.menuScenarioOverrides),
     assumptions,
     assumptionsMigrationVersion: ASSUMPTIONS_MIGRATION_VERSION,
-    weather: hydrateWeather(saved.weather, defaults.weather),
+    weather,
     wastePct: typeof saved.wastePct === "number" ? clamp01(saved.wastePct, defaults.wastePct ?? 0) : defaults.wastePct,
     refundPct: typeof saved.refundPct === "number" ? clamp01(saved.refundPct, defaults.refundPct ?? 0) : defaults.refundPct,
     loyaltyBurnPct: typeof saved.loyaltyBurnPct === "number" ? clamp01(saved.loyaltyBurnPct, defaults.loyaltyBurnPct ?? 0) : defaults.loyaltyBurnPct,
