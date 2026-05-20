@@ -2098,9 +2098,8 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
           <strong>{Math.round(v.targetPct * 100)}%</strong> on{" "}
           {Math.round(v.ordersPerDay)} orders/day and you&apos;d add
           {" "}~{fmtUnits(v.extraUnitsPerDay)} more drinks daily —{" "}
-          <strong>+~{fmtZlRounded(v.monthlyMarginZl)} zł/month</strong> on top,
-          easily covering the ~5,000 zł/year alcohol licence in the first month or
-          two. Drinks are how Italian dinner spots keep the lights on.
+          <strong>+~{fmtZlRounded(v.monthlyMarginZl)} zł/month</strong> on top.
+          Drinks are how Italian dinner spots keep the lights on.
         </p>
       );
     },
