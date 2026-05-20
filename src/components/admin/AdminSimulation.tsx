@@ -2688,6 +2688,925 @@ const HELP = {
       </>
     ),
   },
+
+  // Financial assumptions
+  wageInflation: {
+    title: "Wage inflation (annual)",
+    body: (
+      <>
+        <p>
+          Annual % growth in labor cost, compounded monthly in the 12-month
+          projection. Reflects statutory minimum-wage hikes, sector wage
+          pressure and inflation-linked contract adjustments. Polish 2026
+          baseline: ~7%.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Wages in Poland are rising <strong>~7% a year</strong>. If your
+            labor bill is <strong>60,000 zł/month today</strong>, it&apos;ll be
+            <strong> ~64,200 zł</strong> next year — that&apos;s
+            <strong> ~4,200 zł more in costs every month</strong> for the same
+            crew doing the same work. The projection bakes this in so you can
+            see the squeeze coming before payroll Friday hits.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  ingredientInflation: {
+    title: "Ingredient + fixed inflation (annual)",
+    body: (
+      <>
+        <p>
+          Annual growth rate applied monthly to COGS and fixed cost lines.
+          Captures food-CPI, supplier list-price moves, utility tariff hikes,
+          rent escalators. Poland 2026 ~4%.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Cheese, flour and electricity all creep up <strong>~4% a year</strong>.
+            If COGS is <strong>60,000 zł/month</strong>, next year it&apos;s
+            <strong> ~62,400 zł</strong> — same recipes,
+            <strong> 2,400 zł more out the door each month</strong>. Either
+            raise menu prices ~5% every January or accept your margin shrinks
+            by ~2pp/year quietly.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  onSiteCardFee: {
+    title: "On-site card fee",
+    body: (
+      <>
+        <p>
+          Blended Stripe / terminal processor rate. Applied only to revenue
+          paid on-site via card — not delivery aggregators, not cash. Polish
+          2026 norm 1.4–2.1% depending on volume tier.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Every time a customer taps a card, the bank takes <strong>~1.9%</strong>.
+            On <strong>120,000 zł/month</strong> of card sales that&apos;s
+            <strong> ~2,300 zł silently gone</strong>. Negotiating with a
+            smaller PSP can drop the rate to ~1.4% — that&apos;s
+            <strong> ~600 zł/month back</strong> for one phone call.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  cashShare: {
+    title: "Cash share",
+    body: (
+      <>
+        <p>
+          % of revenue settled in cash. Zero processor fee, but reconciliation
+          and shrinkage risk are higher. Polish food-truck norm 15–25%.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Cash orders carry <strong>zero card fee</strong>. If 20% of your
+            <strong> 200,000 zł/month</strong> is cash, that&apos;s ~760 zł in
+            fees you don&apos;t pay. But cash also gets miscounted, &quot;borrowed&quot;,
+            or skipped at the till — a <strong>5% cash shrinkage</strong> on
+            that volume costs <strong>~2,000 zł/month</strong>. Track it
+            tightly or the cashless tax is cheaper.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  glovoShare: {
+    title: "Glovo share",
+    body: (
+      <>
+        <p>
+          % of orders routed through Glovo. Glovo&apos;s commission replaces the
+          on-site card fee on this share. Channel mix flows through Per-channel
+          CM1 below.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Every <strong>10pp shift toward Glovo</strong> on a 2,400-orders/month
+            truck = 240 orders × ~17 zł margin gap =
+            <strong> ~4,000 zł/month of contribution gone</strong>. Visibility
+            and volume are real, but past <strong>40% Glovo share</strong>
+            you&apos;re effectively running their business with your kitchen.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  glovoCommission: {
+    title: "Glovo commission",
+    body: (
+      <>
+        <p>
+          Glovo&apos;s marketplace take rate. Typical 25–30%; negotiable past
+          ~200-300 orders/week thresholds.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Glovo keeps <strong>~27 zł of every 100 zł</strong> of order
+            revenue. On 800 Glovo orders/month at 60 zł average that&apos;s
+            <strong> ~13,000 zł going to the platform</strong>. Renegotiate from
+            27% → 22% on volume and that&apos;s
+            <strong> ~2,400 zł/month back</strong> — worth the cold call once
+            you cross their threshold.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  woltShare: {
+    title: "Wolt share",
+    body: (
+      <>
+        <p>
+          % of orders routed via Wolt. Like Glovo but smaller fleet in Poland;
+          commission tier slightly lower.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Wolt is usually the smaller platform in PL but adds a useful
+            redundancy lever. If <strong>10% of orders</strong> flow through
+            Wolt at 25% commission, that&apos;s another
+            <strong> ~5,000 zł/month in platform fees</strong> on a 200,000 zł
+            truck. Some operators run both — when Glovo&apos;s app crashes (it
+            will), Wolt covers the gap.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  woltCommission: {
+    title: "Wolt commission",
+    body: (
+      <>
+        <p>
+          Wolt&apos;s take rate. Typical 22–30%; slightly cheaper than Glovo on
+          average.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Wolt typically takes <strong>~25 zł of every 100 zł</strong> —
+            slightly cheaper than Glovo, so if you&apos;re picking just one
+            platform Wolt wins on margin. But Glovo has <strong>3–4× the
+            customer base</strong> in big PL cities. Lift Wolt&apos;s share and
+            you save fees; lift Glovo&apos;s share and you grow volume.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  setupCost: {
+    title: "Setup cost",
+    body: (
+      <>
+        <p>
+          Total capital outlay to launch the unit — vehicle, kitchen buildout,
+          oven, permits, working capital. Drives payback months and
+          cash-on-cash return.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            This is the <strong>one big cheque at the start</strong>. A used
+            truck + Ferrara oven + permits in Warsaw 2026 runs
+            <strong> ~280,000–350,000 zł</strong>. Spend 300,000 zł and net
+            15,000 zł/month, and you&apos;re &quot;even&quot; at month
+            <strong> 20</strong> — paying down the cheque before any actual
+            profit accrues. Every 50,000 zł you trim off setup shortens that
+            payback by ~3 months.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  depreciation: {
+    title: "Depreciation & amortisation",
+    body: (
+      <>
+        <p>
+          Non-cash expense spreading setup cost across the asset&apos;s economic
+          life. 5-year truck = setup/60 per month. Required for EBITDA →
+          net-profit walk.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            D&amp;A is the accountant&apos;s way of saying &quot;your truck loses
+            value every month even if nothing breaks&quot;. A
+            <strong> 300,000 zł truck</strong> depreciated over 5 years =
+            <strong> 5,000 zł/month</strong> off net profit. It doesn&apos;t
+            leave your bank account today — it&apos;s the bill you&apos;re
+            storing up for replacement in year 5. Ignore it at your peril.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  interestExpense: {
+    title: "Interest expense",
+    body: (
+      <>
+        <p>
+          Monthly debt-service cost (leasing, bank loan, asset finance). Zero
+          for cash-purchased trucks.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            If you financed the truck instead of paying cash, the bank takes a
+            slice every month. A <strong>150,000 zł loan at 10%</strong> is
+            <strong> ~1,250 zł/month in interest alone</strong> — ~15,000 zł of
+            net profit gone in year 1 before you pay back a złoty of the
+            principal. Worth modelling vs draining your savings.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  packagingPerOrder: {
+    title: "Packaging per order",
+    body: (
+      <>
+        <p>
+          Per-order variable cost of takeaway boxes, napkins, plate wash, paper
+          bags. Hits every order. Delivery-channel packaging (branded box +
+          sleeve) usually layered on top.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Box ~2.50 zł, napkins ~0.30 zł, bag ~0.40 zł — about
+            <strong> 3 zł per order in packaging</strong>. On 2,400 orders/month
+            that&apos;s <strong>~7,200 zł in throwaway materials</strong>.
+            Switching to plain kraft boxes (no print) can save 0.80 zł/order =
+            <strong> ~1,900 zł/month</strong> — invisible to customers on a
+            50-100 zł ticket.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  wastePct: {
+    title: "Waste & spoilage",
+    body: (
+      <>
+        <p>
+          Spoilage + over-portioning + end-of-shift discards as % of revenue.
+          QSR norm 1–3%. Tracked as variable leakage in True CM1.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Dough goes off, mozzarella balls get nicked, the last 4 portions of
+            sauce go in the bin at 22:00. A <strong>2% waste rate</strong> on
+            200,000 zł/month is <strong>4,000 zł literally thrown away</strong>
+            every month. Most truck operators don&apos;t measure it — until they
+            do, and discover it&apos;s 4-5%, not 2%.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  refundsPct: {
+    title: "Refunds / comps / theft",
+    body: (
+      <>
+        <p>
+          Voided orders, comp meals, staff free meals, till shortages as % of
+          revenue. QSR norm 1–2%.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            A burnt pizza you refunded, the staff meal that&apos;s &quot;free&quot;,
+            the angry customer comped. They add up to <strong>~2% on 200,000
+            zł = 4,000 zł/month</strong> of revenue you booked but never kept.
+            Tighten void approvals (manager only) and the number usually drops
+            by half — easiest 2,000 zł/month you&apos;ll ever find.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  loyaltyBurn: {
+    title: "Loyalty point burn",
+    body: (
+      <>
+        <p>
+          Effective discount rate = points earned × redemption rate × point
+          value. Default: 1 pt/PLN × 50% redeem × 5% value = ~1.2%.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Loyalty isn&apos;t free — every 100 zł a regular spends earns them
+            a future ~1.20 zł discount on average. On 200,000 zł monthly
+            revenue that&apos;s <strong>~2,400 zł/month given back</strong> via
+            redemptions. If repeat rate climbs 10pp because of it, the trade
+            more than pays — but you need to actually measure both sides, not
+            just the burn.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  citRate: {
+    title: "Corporate income tax",
+    body: (
+      <>
+        <p>
+          Effective CIT rate. Polish small-CIT 9% applies up to €2M turnover;
+          standard 19% above. Drives net-of-tax profit and IRR.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            After everything else, the tax-man takes a cut. <strong>9% small-CIT</strong>
+            on 180,000 zł/year of pre-tax profit = ~<strong>16,200 zł</strong>
+            to the tax office. Cross the <strong>€2M turnover line</strong>
+            and the rate jumps to 19% — the same profit suddenly costs
+            <strong> ~34,200 zł in tax</strong>. That&apos;s why some operators
+            stay deliberately under the threshold.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  winterMultiplier: {
+    title: "Winter volume multiplier",
+    body: (
+      <>
+        <p>
+          Dec / Jan / Feb volume multiplier applied to base orders/day. Default
+          0.50 — Polish outdoor pizza-truck winter is brutal.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Winter halves your business. A truck doing <strong>80 orders/day</strong>
+            in summer might do <strong>40</strong> in January — and your rent
+            stays the same. That&apos;s
+            <strong> ~50,000 zł of lost monthly revenue</strong> for three
+            months running. Plan the cash crunch in December or move to an
+            indoor pop-up for Q1.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  pizzasPerHour: {
+    title: "Kitchen — pizzas/hour cap",
+    body: (
+      <>
+        <p>
+          Sustained throughput of one pizzaiolo + one Neapolitan oven. 60–80
+          pizzas/hr realistic; 90+ needs a second line.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Your oven physically can&apos;t go faster than this. If your peak
+            hour wants <strong>90 pizzas</strong> and your cap is <strong>70</strong>,
+            <strong> 20 customers walk</strong> — that&apos;s ~1,200 zł of
+            revenue refused per peak hour. A second oven + pizzaiolo doubles
+            the ceiling but costs ~8,000 zł/month — only worth it if you&apos;re
+            consistently saturating the current ceiling.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  serviceHoursPerDay: {
+    title: "Kitchen — service hours/day",
+    body: (
+      <>
+        <p>
+          Hours the line is producing — excludes prep + close-down. Drives
+          capacity-orders-per-day calc.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Your kitchen is &quot;open&quot; 12 hours but really only producing
+            for ~8. Adding <strong>1 extra service hour</strong> (lunch
+            <em> and</em> dinner instead of just dinner) on a 70-pizza/hr line =
+            ~70 extra orders/day capacity, ~30 extra orders actually filled,
+            <strong> ~1,500 zł/day of upside</strong>. The catch: labor scales
+            with it.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  laborFlex: {
+    title: "Labor flex with volume",
+    body: (
+      <>
+        <p>
+          Share of labor that scales with order volume vs fully-fixed crew. 0%
+          = always-on team, 100% = fully variable. 40% QSR norm.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            How &quot;elastic&quot; is your roster? <strong>0% flex</strong>
+            means you pay the same labor whether you do 30 or 100 orders — bad
+            day = brutal margin. <strong>80% flex</strong> (part-timers on call)
+            means you can send people home in a slow lunch, saving
+            <strong> ~2,000 zł/month</strong> — but staff turnover climbs.
+            <strong> 40%</strong> is the sweet spot for most trucks.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  laborAnchor: {
+    title: "Labor anchor (orders/day)",
+    body: (
+      <>
+        <p>
+          The orders/day for which the current labor mix is sized. Volume past
+          this anchor pulls in additional variable labor proportionally.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Tell the model what volume your current roster is designed for. If
+            you set anchor=80 and actually do 110 orders/day, the model adds
+            extra variable labor (more part-timers, overtime) to handle it —
+            typically <strong>~1,500 zł/month extra</strong> at moderate flex.
+            If you do 50, labor stays the same — you can&apos;t unhire your
+            fixed crew.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  peakHourShare: {
+    title: "Kitchen — peak-hour share",
+    body: (
+      <>
+        <p>
+          % of daily orders concentrated in the peak hour. This is the binding
+          constraint, not the daily average. Default 18% on dinner-led truck.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            80 orders/day spread over 10 hours is 8/hour — easy. But if
+            <strong> 20% pile into one hour</strong> (Friday 19:00–20:00) that&apos;s
+            <strong> 16/hour</strong> — and if your oven only does 14, you
+            turn away 2. Same daily total, totally different capacity story.
+            This single percentage often decides whether you need a second oven.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  prepComplexity: {
+    title: "Prep-complexity multiplier",
+    body: (
+      <>
+        <p>
+          Derates kitchen capacity for slow-prep menus. 1.0 = pizza-only;
+          1.4–1.6 = pasta-heavy. Captures station bottlenecks the headline
+          pizzas/hour misses.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            A 70-pizza/hr kitchen drops to <strong>~45 effective orders/hr</strong>
+            when half the orders are pasta primo (90s extra per dish, separate
+            station). The model bakes this in. Push pasta attach high without
+            raising this multiplier and the simulator will lie to you — your
+            &quot;capacity&quot; looks bigger than it actually is.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  summerMultiplier: {
+    title: "Summer volume multiplier",
+    body: (
+      <>
+        <p>
+          Jun / Jul / Aug volume multiplier. Default 1.30 — peak truck season.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Summer is when trucks make money. A baseline truck doing
+            <strong> 80 orders/day</strong> does <strong>~104</strong> in July
+            — that&apos;s <strong>~50,000 zł of extra monthly revenue</strong>
+            for three months. This is the season that funds winter survival —
+            under-roster and you blow customers off; over-roster and you eat
+            the margin.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  springMultiplier: {
+    title: "Spring volume multiplier",
+    body: (
+      <>
+        <p>
+          Mar / Apr / May multiplier. Default 1.00 (baseline season).
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Spring is your &quot;normal&quot;. Use it as the calibration anchor
+            — if you&apos;re forecasting from spring data, this sets the 1.00
+            reference that summer and winter multipliers flex around. April/May
+            warming usually adds a few percent through patio reopening, but
+            don&apos;t over-promise.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  autumnMultiplier: {
+    title: "Autumn volume multiplier",
+    body: (
+      <>
+        <p>
+          Sep / Oct / Nov multiplier. Default 0.95 — slight cooling vs spring.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            September starts hot then cools fast. <strong>5% lower volume</strong>
+            than spring means <strong>~10,000 zł less revenue/month</strong>
+            by November. Plan a marketing push for early October (back-to-uni
+            crowd) to compensate before the dark days hit.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  pizzasPerBake: {
+    title: "Pizzas per bake cycle",
+    body: (
+      <>
+        <p>
+          Number of pizzas one oven cycle accommodates. Stefano Ferrara 6–9;
+          multi-deck/conveyor 16+. Drives theoretical hourly capacity.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            One bake = how many pies side-by-side. A Ferrara holds
+            <strong> 8 pizzas</strong>; a multi-deck conveyor holds
+            <strong> 16+</strong>. If you&apos;re saturating the oven, going
+            8 → 16 doubles theoretical capacity — but multi-decks cost
+            <strong> ~80,000 zł</strong> and eat space. Usually a second truck
+            is cheaper than a bigger oven.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  cycleTime: {
+    title: "Cycle time",
+    body: (
+      <>
+        <p>
+          Bake cycle in seconds. Neapolitan dough cooks ~90s at 450°C. Drives
+          theoretical pizzas/hour.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Neapolitan = <strong>90 seconds at 450°C</strong>. Slower ovens
+            (steel deck at 350°C) take 4-5 minutes — that&apos;s 3-4× slower and
+            crushes capacity. If you&apos;ve calibrated for 90s but the oven
+            actually runs 120s, the model overstates capacity by
+            <strong> 33%</strong>. Chase the real number with a stopwatch on a
+            Friday rush.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  ovenEfficiency: {
+    title: "Realistic oven efficiency",
+    body: (
+      <>
+        <p>
+          % of theoretical bake capacity actually achieved. 20–35% on a real
+          truck — pulls, sweeps, dough rebuilds, customer-facing time, plate-up
+          all eat oven-adjacent time.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            The brochure says <strong>320 pizzas/hr</strong>; reality is
+            <strong> ~70</strong>. Why? The pizzaiolo also takes orders, builds
+            pizzas, wipes the peel, rebuilds dough balls, plates, hands across
+            the counter, answers &quot;is this gluten-free?&quot;.
+            <strong> 22% is default</strong>; veterans hit 30%; first-week crews
+            limp along at 18%.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  unitCount: {
+    title: "Unit count",
+    body: (
+      <>
+        <p>
+          Number of operating trucks. Setting ≥ 2 activates the fleet model
+          (HQ overhead, supply discount, commissary, cannibalisation, royalty).
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            One truck = one P&amp;L. Five trucks = a chain with totally
+            different economics — you suddenly have <strong>regional
+            managers, supply contracts, central dough kitchens</strong>. The
+            fleet panel shows the math. Don&apos;t set ≥ 2 unless you&apos;re
+            seriously modelling growth — otherwise the numbers above will
+            include franchise overhead you don&apos;t actually have.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  hqOverhead: {
+    title: "HQ overhead",
+    body: (
+      <>
+        <p>
+          Monthly cost of shared regional management, ops, finance. Spread
+          across all units. Should fall below 5% of fleet revenue past 10
+          units.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            A regional manager costs <strong>~15,000 zł/month</strong>. One
+            truck doing 200,000 zł can&apos;t afford that (~7.5% of revenue —
+            kills the margin). Five trucks doing 1M zł can (1.5%). HQ is
+            <em> only</em> worth absorbing when you have units to spread it
+            across — it&apos;s why the 2nd and 3rd truck always feel harder
+            than the 5th.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  royaltyPct: {
+    title: "Royalty %",
+    body: (
+      <>
+        <p>
+          Franchise royalty taken from unit revenue. Industry norm 5–6%.
+          Deducted from unit-level EBITDA.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            If you franchise the concept, you keep <strong>5–6% of every
+            franchisee&apos;s revenue</strong>. On a 200,000 zł/month franchisee
+            that&apos;s <strong>~11,000 zł/month per truck</strong> flowing
+            back. Multiply by 20 trucks and you&apos;ve built a real business —
+            but only if each franchisee still profits <em>after</em> the
+            royalty.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  marketingFund: {
+    title: "Marketing fund %",
+    body: (
+      <>
+        <p>
+          Mandatory franchisee contribution to a shared marketing pool.
+          Industry norm 2–3%.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Franchisees pay another <strong>2–3%</strong> into a national
+            marketing pool (TV, Instagram, brand campaigns). On 200,000 zł
+            revenue that&apos;s <strong>~5,000 zł/month</strong> per truck.
+            Pooled across 20 trucks = 100,000 zł/month of marketing firepower —
+            but the franchisee sees it as another fee on top of the royalty.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  supplyDiscountAt: {
+    title: "Supply discount at",
+    body: (
+      <>
+        <p>
+          Number of units before wholesale suppliers offer COGS discounts.
+          Typical threshold 4–5 units in PL food-service supply chains.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            A mozzarella supplier won&apos;t budge off list price for one
+            truck. At <strong>4–5 trucks</strong> you&apos;re suddenly worth
+            their sales-rep&apos;s time — they&apos;ll quote 8–12% off. That&apos;s
+            why the 2nd and 3rd unit are often hardest (no scale yet) but the
+            5th feels easy (supply margin kicks in).
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  supplyDiscountPct: {
+    title: "Supply discount %",
+    body: (
+      <>
+        <p>
+          COGS reduction once the supply-discount threshold is reached. −8 to
+          −12% typical.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            When supply discount activates at <strong>10%</strong>, your 30%
+            food cost drops to <strong>27%</strong>. On 1M zł of fleet revenue
+            that&apos;s <strong>~30,000 zł/month back</strong> across the
+            fleet — almost pays a regional manager by itself. Cheese is the
+            biggest line, so push hardest on the dairy supplier first.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  commissaryAt: {
+    title: "Commissary at",
+    body: (
+      <>
+        <p>
+          Units before centralised dough/sauce production becomes cost-positive.
+          Typically 4+ units.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            A central kitchen making all the dough + sauce only makes sense
+            with <strong>4+ trucks</strong> to feed — below that, the
+            commissary fixed cost eats more than it saves. At 6–8 trucks the
+            economics flip: same quality, same recipe everywhere,
+            <strong> 3–6 pp of COGS</strong> clawed back fleet-wide.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  commissarySaving: {
+    title: "Commissary saving",
+    body: (
+      <>
+        <p>
+          COGS reduction from centralised production, net of commissary
+          run-rate cost (rent, equipment, labor). ~3–6 pp typical.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            A commissary saves <strong>~4 pp of COGS</strong> (bulk purchasing,
+            less waste, consistent recipe) — but subtract the central kitchen&apos;s
+            own running cost. On a fleet doing 1.5M zł/month that&apos;s
+            <strong> ~60,000 zł gross saving, ~30,000 zł net</strong> after the
+            facility&apos;s own bills.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  dmaCannibalisation: {
+    title: "DMA cannibalisation",
+    body: (
+      <>
+        <p>
+          Revenue % a new unit takes from prior units in the same trade area.
+          Modelled as (1 − pct)^(n−1) retained.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Open truck #2 across town and the existing one doesn&apos;t keep
+            all its customers — maybe <strong>15% peel off</strong> to the new
+            pitch. That&apos;s a real revenue hit you have to model honestly,
+            otherwise multi-unit ROI looks artificially great. The cure is
+            opening in a different city, not next door.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  buildoutLearning: {
+    title: "Build-out learning curve",
+    body: (
+      <>
+        <p>
+          Setup-cost reduction per added unit, applied as (1 − learning)^(n−1).
+          Reflects supplier rolodex, permit familiarity, build-team efficiency.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Your first truck cost <strong>300,000 zł</strong> because you made
+            every rookie mistake (wrong oven, missing permits, paid retail).
+            The fifth one costs maybe <strong>210,000 zł</strong> — same spec,
+            known vendors, no surprises. <strong>30% off setup</strong> at
+            scale, which compounds with the supply discount.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  buildoutFloor: {
+    title: "Build-out floor",
+    body: (
+      <>
+        <p>
+          Minimum unit setup cost as % of unit 1. Caps the learning-curve
+          benefit so the model doesn&apos;t simulate &quot;20th truck costs
+          nothing&quot;.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Even the 50th truck still costs <em>something</em> — oven,
+            vehicle and permits have a hard floor. The model caps the learning
+            curve at <strong>~60–70% of unit 1</strong>, so build-out savings
+            taper instead of going to zero. Keep this honest or the fleet
+            payback math turns into fantasy.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  rainyShare: {
+    title: "Rainy-day share",
+    body: (
+      <>
+        <p>
+          Fraction of days in a typical month with significant rain. Warsaw
+          average ~30% (autumn/winter higher, summer lower).
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Warsaw has rain on roughly <strong>1 day in 3</strong>. At a 0.55
+            rainy-day multiplier on an 80-order baseline, each rainy day costs
+            ~50 zł × ~44 lost orders = ~2,200 zł in revenue. Across the
+            <strong> ~9 rainy days/month</strong> that&apos;s
+            <strong> ~20,000 zł the weather extracts</strong> from a normal
+            truck. Knowing this matters before you sign a no-shelter pitch
+            lease.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  heatwaveShare: {
+    title: "Heatwave evening share",
+    body: (
+      <>
+        <p>
+          Share of evenings hot enough (typically 25°C+ at 19:00) to fire the
+          heatwave volume bonus. Warsaw annual avg ~10%; ~30% in Jun–Aug.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            A real heatwave evening only happens <strong>~1 in 10
+            nights</strong> averaged annually (closer to 3 in 10 in summer).
+            When it fires, dinner does <strong>+40%</strong> — ~30 extra
+            orders × ~30 zł margin =
+            <strong> ~900 zł of one-night bonus</strong>. Put staff on call for
+            hot-Friday forecasts and you&apos;ll capture it routinely.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  peakDayMultiplier: {
+    title: "Peak day multiplier",
+    body: (
+      <>
+        <p>
+          Volume multiplier applied to designated peak calendar days
+          (Valentine&apos;s, NYE, Black Friday, Mother&apos;s Day). Default
+          1.60.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            <strong>5 peak days/year at 1.60×</strong> is the difference
+            between &quot;Valentine&apos;s was nice&quot; and &quot;Valentine&apos;s
+            paid the rent&quot;. If a normal day does 80 × 65 = 5,200 zł, a
+            peak day does <strong>~8,300 zł</strong> — five such days are
+            <strong> ~15,000 zł of bonus revenue</strong>. Over-staff: huge
+            upside. Under-staff: you blow the line in front of 30 dates.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
+  eventDayMultiplier: {
+    title: "Event day multiplier",
+    body: (
+      <>
+        <p>
+          Volume multiplier on booked event days (food-truck rally, festival,
+          sport game, concert). Default 1.50.
+        </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Food-truck rally? Concert near the pitch? Two event days/month at
+            <strong> 1.50×</strong> adds <strong>~10,000 zł of monthly
+            revenue</strong> without changing anything except the calendar.
+            Some trucks build their entire annual P&amp;L around
+            <strong> 20–30 event weekends</strong> — the only question is how
+            aggressively you chase them.
+          </p>
+        </PlainTalk>
+      </>
+    ),
+  },
 } as const;
 
 export function AdminSimulation() {
@@ -4175,7 +5094,7 @@ export function AdminSimulation() {
         <CardBody>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             <Input
-              label="Wage inflation (annual)"
+              label={<LabelWithInfo text="Wage inflation (annual)" help={HELP.wageInflation} />}
               type="number"
               step="0.5"
               min="0"
@@ -4191,7 +5110,7 @@ export function AdminSimulation() {
               description="Applied monthly to labor in the projection."
             />
             <Input
-              label="Ingredient + fixed inflation (annual)"
+              label={<LabelWithInfo text="Ingredient + fixed inflation (annual)" help={HELP.ingredientInflation} />}
               type="number"
               step="0.5"
               min="0"
@@ -4207,7 +5126,7 @@ export function AdminSimulation() {
               description="Applied monthly to COGS + fixed costs."
             />
             <Input
-              label="On-site card fee"
+              label={<LabelWithInfo text="On-site card fee" help={HELP.onSiteCardFee} />}
               type="number"
               step="0.1"
               min="0"
@@ -4223,7 +5142,7 @@ export function AdminSimulation() {
               description="Stripe / terminal blended rate. Applied only to the on-site card share of revenue."
             />
             <Input
-              label="Cash share"
+              label={<LabelWithInfo text="Cash share" help={HELP.cashShare} />}
               type="number"
               step="1"
               min="0"
@@ -4239,7 +5158,7 @@ export function AdminSimulation() {
               description="Share paid in cash (0% processor fee). Polish food-truck norm 15-25%."
             />
             <Input
-              label="Glovo share"
+              label={<LabelWithInfo text="Glovo share" help={HELP.glovoShare} />}
               type="number"
               step="1"
               min="0"
@@ -4255,7 +5174,7 @@ export function AdminSimulation() {
               description="Share routed through Glovo. Marketplace commission replaces the on-site card fee on this share."
             />
             <Input
-              label="Glovo commission"
+              label={<LabelWithInfo text="Glovo commission" help={HELP.glovoCommission} />}
               type="number"
               step="0.5"
               min="0"
@@ -4271,7 +5190,7 @@ export function AdminSimulation() {
               description="Glovo's take rate. Typical 25-30%; negotiable past volume thresholds."
             />
             <Input
-              label="Wolt share"
+              label={<LabelWithInfo text="Wolt share" help={HELP.woltShare} />}
               type="number"
               step="1"
               min="0"
@@ -4287,7 +5206,7 @@ export function AdminSimulation() {
               description="Share routed through Wolt."
             />
             <Input
-              label="Wolt commission"
+              label={<LabelWithInfo text="Wolt commission" help={HELP.woltCommission} />}
               type="number"
               step="0.5"
               min="0"
@@ -4303,7 +5222,7 @@ export function AdminSimulation() {
               description="Wolt's take rate. Typical 22-30%."
             />
             <Input
-              label="Setup cost"
+              label={<LabelWithInfo text="Setup cost" help={HELP.setupCost} />}
               type="number"
               step="1000"
               min="0"
@@ -4318,7 +5237,7 @@ export function AdminSimulation() {
               description="Truck buildout + permits + working capital. Drives payback months."
             />
             <Input
-              label="Depreciation & amortisation"
+              label={<LabelWithInfo text="Depreciation & amortisation" help={HELP.depreciation} />}
               type="number"
               step="100"
               min="0"
@@ -4333,7 +5252,7 @@ export function AdminSimulation() {
               description="Straight-line amortisation of setup cost over economic life. 5y truck = setup/60."
             />
             <Input
-              label="Interest expense"
+              label={<LabelWithInfo text="Interest expense" help={HELP.interestExpense} />}
               type="number"
               step="100"
               min="0"
@@ -4348,7 +5267,7 @@ export function AdminSimulation() {
               description="Monthly financing cost. Leave at 0 for cash-purchased trucks."
             />
             <Input
-              label="Packaging per order"
+              label={<LabelWithInfo text="Packaging per order" help={HELP.packagingPerOrder} />}
               type="number"
               step="0.10"
               min="0"
@@ -4399,7 +5318,7 @@ export function AdminSimulation() {
               </InfoButton>
             </div>
             <Input
-              label="Waste & spoilage"
+              label={<LabelWithInfo text="Waste & spoilage" help={HELP.wastePct} />}
               type="number"
               step="0.1"
               min="0"
@@ -4415,7 +5334,7 @@ export function AdminSimulation() {
               description="Spoilage + over-portioning as % of revenue. QSR norm 1-3%."
             />
             <Input
-              label="Refunds / comps / theft"
+              label={<LabelWithInfo text="Refunds / comps / theft" help={HELP.refundsPct} />}
               type="number"
               step="0.1"
               min="0"
@@ -4431,7 +5350,7 @@ export function AdminSimulation() {
               description="Voids, refunds, staff meals. QSR norm 1-2%."
             />
             <Input
-              label="Loyalty point burn"
+              label={<LabelWithInfo text="Loyalty point burn" help={HELP.loyaltyBurn} />}
               type="number"
               step="0.1"
               min="0"
@@ -4447,7 +5366,7 @@ export function AdminSimulation() {
               description="Points redeemed × effective value. 1 pt/PLN × 50% redeem × 5% = ~1.2%."
             />
             <Input
-              label="Corporate income tax"
+              label={<LabelWithInfo text="Corporate income tax" help={HELP.citRate} />}
               type="number"
               step="1"
               min="0"
@@ -4463,7 +5382,7 @@ export function AdminSimulation() {
               description="9% Polish small-CIT (≤2 M EUR turnover) or 19% standard."
             />
             <Input
-              label="Winter volume multiplier"
+              label={<LabelWithInfo text="Winter volume multiplier" help={HELP.winterMultiplier} />}
               type="number"
               step="0.05"
               min="0"
@@ -4481,7 +5400,7 @@ export function AdminSimulation() {
               description="Dec / Jan / Feb. Default 0.50 — Polish outdoor truck winter is brutal."
             />
             <Input
-              label="Kitchen — pizzas/hour"
+              label={<LabelWithInfo text="Kitchen — pizzas/hour" help={HELP.pizzasPerHour} />}
               type="number"
               step="5"
               min="0"
@@ -4500,7 +5419,7 @@ export function AdminSimulation() {
               description="Sustained output of one pizzaiolo + one Ferrara oven. 60-80 realistic; 90+ needs a second line."
             />
             <Input
-              label="Kitchen — service hours/day"
+              label={<LabelWithInfo text="Kitchen — service hours/day" help={HELP.serviceHoursPerDay} />}
               type="number"
               step="0.5"
               min="0"
@@ -4519,7 +5438,7 @@ export function AdminSimulation() {
               description="Hours the line is producing — excludes prep + close-down."
             />
             <Input
-              label="Labor flex with volume"
+              label={<LabelWithInfo text="Labor flex with volume" help={HELP.laborFlex} />}
               type="number"
               step="5"
               min="0"
@@ -4535,7 +5454,7 @@ export function AdminSimulation() {
               description="Share of labor that scales with order volume. 0% = fully fixed crew, 100% = fully variable. 40% is QSR norm."
             />
             <Input
-              label="Labor anchor (orders/day)"
+              label={<LabelWithInfo text="Labor anchor (orders/day)" help={HELP.laborAnchor} />}
               type="number"
               step="5"
               min="1"
@@ -4550,7 +5469,7 @@ export function AdminSimulation() {
               description="The orders/day the current labor mix is sized for. Push volume past it and variable labor pulls in proportionally."
             />
             <Input
-              label="Kitchen — peak-hour share"
+              label={<LabelWithInfo text="Kitchen — peak-hour share" help={HELP.peakHourShare} />}
               type="number"
               step="1"
               min="0"
@@ -4570,7 +5489,7 @@ export function AdminSimulation() {
               description="Share of daily orders in the peak hour — this is the binding constraint, not the average."
             />
             <Input
-              label="Prep-complexity multiplier"
+              label={<LabelWithInfo text="Prep-complexity multiplier" help={HELP.prepComplexity} />}
               type="number"
               step="0.05"
               min="0.5"
@@ -4585,7 +5504,7 @@ export function AdminSimulation() {
               description="Derates kitchen capacity for slow-prep menus. 1.0 = pizza-only · 1.4-1.6 = pasta-heavy. See Margin traps for prep-heavy items."
             />
             <Input
-              label="Summer volume multiplier"
+              label={<LabelWithInfo text="Summer volume multiplier" help={HELP.summerMultiplier} />}
               type="number"
               step="0.05"
               min="0"
@@ -4603,7 +5522,7 @@ export function AdminSimulation() {
               description="Jun / Jul / Aug. Default 1.30 — peak truck season."
             />
             <Input
-              label="Spring volume multiplier"
+              label={<LabelWithInfo text="Spring volume multiplier" help={HELP.springMultiplier} />}
               type="number"
               step="0.05"
               min="0"
@@ -4621,7 +5540,7 @@ export function AdminSimulation() {
               description="Mar / Apr / May. Default 1.00."
             />
             <Input
-              label="Autumn volume multiplier"
+              label={<LabelWithInfo text="Autumn volume multiplier" help={HELP.autumnMultiplier} />}
               type="number"
               step="0.05"
               min="0"
@@ -5766,7 +6685,7 @@ function OvenCurvePanel({
       <CardBody>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
           <Input
-            label="Pizzas per bake cycle"
+            label={<LabelWithInfo text="Pizzas per bake cycle" help={HELP.pizzasPerBake} />}
             type="number"
             min="1"
             max="20"
@@ -5778,7 +6697,7 @@ function OvenCurvePanel({
             description="Stefano Ferrara 6-9; multi-deck 16+"
           />
           <Input
-            label="Cycle time"
+            label={<LabelWithInfo text="Cycle time" help={HELP.cycleTime} />}
             type="number"
             min="30"
             max="600"
@@ -5791,7 +6710,7 @@ function OvenCurvePanel({
             description="Neapolitan dough ~90s"
           />
           <Input
-            label="Realistic efficiency"
+            label={<LabelWithInfo text="Realistic efficiency" help={HELP.ovenEfficiency} />}
             type="number"
             min="5"
             max="100"
@@ -6949,7 +7868,7 @@ function FleetPanel({
       <CardBody>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
           <Input
-            label="Unit count"
+            label={<LabelWithInfo text="Unit count" help={HELP.unitCount} />}
             type="number"
             min="1"
             max="200"
@@ -6961,7 +7880,7 @@ function FleetPanel({
             description="≥ 2 activates fleet panel"
           />
           <Input
-            label="HQ overhead"
+            label={<LabelWithInfo text="HQ overhead" help={HELP.hqOverhead} />}
             type="number"
             min="0"
             step="500"
@@ -6975,7 +7894,7 @@ function FleetPanel({
             description="Regional manager, ops, finance"
           />
           <Input
-            label="Royalty %"
+            label={<LabelWithInfo text="Royalty %" help={HELP.royaltyPct} />}
             type="number"
             min="0"
             max="20"
@@ -6988,7 +7907,7 @@ function FleetPanel({
             description="Franchise norm 5-6%"
           />
           <Input
-            label="Marketing fund %"
+            label={<LabelWithInfo text="Marketing fund %" help={HELP.marketingFund} />}
             type="number"
             min="0"
             max="10"
@@ -7001,7 +7920,7 @@ function FleetPanel({
             description="Norm 2-3%"
           />
           <Input
-            label="Supply discount at"
+            label={<LabelWithInfo text="Supply discount at" help={HELP.supplyDiscountAt} />}
             type="number"
             min="1"
             max="200"
@@ -7013,7 +7932,7 @@ function FleetPanel({
             description="Units before COGS discount kicks in"
           />
           <Input
-            label="Supply discount"
+            label={<LabelWithInfo text="Supply discount" help={HELP.supplyDiscountPct} />}
             type="number"
             min="0"
             max="40"
@@ -7026,7 +7945,7 @@ function FleetPanel({
             description="-8 to -12% typical"
           />
           <Input
-            label="Commissary at"
+            label={<LabelWithInfo text="Commissary at" help={HELP.commissaryAt} />}
             type="number"
             min="1"
             max="200"
@@ -7038,7 +7957,7 @@ function FleetPanel({
             description="Units before central dough/sauce"
           />
           <Input
-            label="Commissary saving"
+            label={<LabelWithInfo text="Commissary saving" help={HELP.commissarySaving} />}
             type="number"
             min="0"
             max="20"
@@ -7051,7 +7970,7 @@ function FleetPanel({
             description="Net of commissary run-rate cost"
           />
           <Input
-            label="DMA cannibalisation"
+            label={<LabelWithInfo text="DMA cannibalisation" help={HELP.dmaCannibalisation} />}
             type="number"
             min="0"
             max="50"
@@ -7064,7 +7983,7 @@ function FleetPanel({
             description="Revenue loss per overlapping prior unit"
           />
           <Input
-            label="Build-out learning"
+            label={<LabelWithInfo text="Build-out learning" help={HELP.buildoutLearning} />}
             type="number"
             min="0"
             max="20"
@@ -7077,7 +7996,7 @@ function FleetPanel({
             description="Setup cost decline per added unit"
           />
           <Input
-            label="Build-out floor"
+            label={<LabelWithInfo text="Build-out floor" help={HELP.buildoutFloor} />}
             type="number"
             min="20"
             max="100"
@@ -8882,7 +9801,7 @@ function WeatherCalendarCard({ weather, baseOrdersPerDay, baseDaysOpen, onChange
             description="Default 0.75 — 25% volume drop on rainy days."
           />
           <Input
-            label="Rainy-day share"
+            label={<LabelWithInfo text="Rainy-day share" help={HELP.rainyShare} />}
             type="number"
             step="1"
             min="0"
@@ -8907,7 +9826,7 @@ function WeatherCalendarCard({ weather, baseOrdersPerDay, baseDaysOpen, onChange
             description="Default 1.40 — patio evenings drive +40%."
           />
           <Input
-            label="Heatwave evening share"
+            label={<LabelWithInfo text="Heatwave evening share" help={HELP.heatwaveShare} />}
             type="number"
             step="1"
             min="0"
@@ -8954,7 +9873,7 @@ function WeatherCalendarCard({ weather, baseOrdersPerDay, baseDaysOpen, onChange
             description="NYE, Valentine's, Mother's Day."
           />
           <Input
-            label="Peak day multiplier"
+            label={<LabelWithInfo text="Peak day multiplier" help={HELP.peakDayMultiplier} />}
             type="number"
             step="0.1"
             min="0"
@@ -8997,7 +9916,7 @@ function WeatherCalendarCard({ weather, baseOrdersPerDay, baseDaysOpen, onChange
             description="Street fairs, food-truck rallies, Nocny Market."
           />
           <Input
-            label="Event day multiplier"
+            label={<LabelWithInfo text="Event day multiplier" help={HELP.eventDayMultiplier} />}
             type="number"
             step="0.1"
             min="0"
