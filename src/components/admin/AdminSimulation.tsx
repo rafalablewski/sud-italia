@@ -1772,16 +1772,17 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
         <p style={{ margin: 0 }}>
           Coffee is the easiest extra złoty in the business — beans cost
           {" "}~{fmtZl(v.cogsZl)} zł, you sell the cup for {fmtZl(v.sellZl)} zł.
-          Push attach from{" "}
-          <strong>
-            {Math.round(v.currentPct * 100)}% → {Math.round(v.targetPct * 100)}%
-          </strong>{" "}
-          on {Math.round(v.ordersPerDay)} orders/day and you&apos;ve added
-          {" "}~{fmtUnits(v.extraUnitsPerDay)} extra coffees daily × ~{fmtZl(v.marginZl)} zł
-          margin ={" "}
-          <strong>~{fmtZlRounded(v.monthlyMarginZl)} zł/month</strong> of
-          nearly-pure profit. No new SKU, no extra labor — just one more sentence
-          at the till (&quot;espresso with that?&quot;).
+          At your current <strong>{Math.round(v.currentPct * 100)}%</strong> attach
+          that&apos;s ~{fmtUnits(v.ordersPerDay * v.currentPct)} coffees a day ×
+          {" "}~{fmtZl(v.marginZl)} zł margin ={" "}
+          <strong>~{fmtZlRounded(v.currentMonthlyMarginZl)} zł/month</strong>{" "}
+          already baked in. Push to{" "}
+          <strong>{Math.round(v.targetPct * 100)}%</strong> on{" "}
+          {Math.round(v.ordersPerDay)} orders/day and you&apos;d add
+          {" "}~{fmtUnits(v.extraUnitsPerDay)} more coffees daily —{" "}
+          <strong>+~{fmtZlRounded(v.monthlyMarginZl)} zł/month</strong> of
+          nearly-pure profit on top. No new SKU, no extra labor — just one more
+          sentence at the till (&quot;espresso with that?&quot;).
         </p>
       );
     },
@@ -1884,13 +1885,15 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
         <p style={{ margin: 0 }}>
           Tiramisu travels well, photographs better than the pizza, and earns better
           margin than the main dish. At {fmtZl(v.sellZl)} zł a portion that&apos;s
-          {" "}~{fmtZl(v.marginZl)} zł of margin per dessert. Lifting attach from{" "}
-          <strong>
-            {Math.round(v.currentPct * 100)}% → {Math.round(v.targetPct * 100)}%
-          </strong>{" "}
-          on {Math.round(v.ordersPerDay)} orders/day =
-          {" "}~{fmtUnits(v.extraUnitsPerDay)} more desserts daily × ~{fmtZl(v.marginZl)} zł
-          margin = <strong>~{fmtZlRounded(v.monthlyMarginZl)} zł/month</strong> — pure
+          {" "}~{fmtZl(v.marginZl)} zł of margin per dessert. Your current{" "}
+          <strong>{Math.round(v.currentPct * 100)}%</strong> attach is
+          {" "}~{fmtUnits(v.ordersPerDay * v.currentPct)} desserts a day ={" "}
+          <strong>~{fmtZlRounded(v.currentMonthlyMarginZl)} zł/month</strong>{" "}
+          already booked. Lift to{" "}
+          <strong>{Math.round(v.targetPct * 100)}%</strong> on{" "}
+          {Math.round(v.ordersPerDay)} orders/day and you&apos;d add
+          {" "}~{fmtUnits(v.extraUnitsPerDay)} more desserts daily —{" "}
+          <strong>+~{fmtZlRounded(v.monthlyMarginZl)} zł/month</strong>, pure
           cream on top of revenue you&apos;d already booked.
         </p>
       );
@@ -1987,15 +1990,17 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
       return (
         <p style={{ margin: 0 }}>
           A burrata starter at {fmtZl(v.sellZl)} zł can earn ~{fmtZl(v.marginZl)} zł
-          of margin while customers wait for the pizza anyway. Push attach from{" "}
-          <strong>
-            {Math.round(v.currentPct * 100)}% → {Math.round(v.targetPct * 100)}%
-          </strong>{" "}
-          on {Math.round(v.ordersPerDay)} orders/day and you&apos;ve added
-          {" "}~{fmtUnits(v.extraUnitsPerDay)} more starters daily, about{" "}
-          <strong>~{fmtZlRounded(v.monthlyMarginZl)} zł/month</strong> in margin.
-          Watch the prep station though — if it slows the pizza out, you&apos;ve
-          traded a starter for a complaint.
+          of margin while customers wait for the pizza anyway. At your current{" "}
+          <strong>{Math.round(v.currentPct * 100)}%</strong> attach that&apos;s
+          {" "}~{fmtUnits(v.ordersPerDay * v.currentPct)} starters a day ={" "}
+          <strong>~{fmtZlRounded(v.currentMonthlyMarginZl)} zł/month</strong>{" "}
+          already on the line. Push to{" "}
+          <strong>{Math.round(v.targetPct * 100)}%</strong> on{" "}
+          {Math.round(v.ordersPerDay)} orders/day and you&apos;d add
+          {" "}~{fmtUnits(v.extraUnitsPerDay)} more daily —{" "}
+          <strong>+~{fmtZlRounded(v.monthlyMarginZl)} zł/month</strong>. Watch the
+          prep station though — if it slows the pizza out, you&apos;ve traded a
+          starter for a complaint.
         </p>
       );
     },
@@ -2091,16 +2096,17 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
         <p style={{ margin: 0 }}>
           An Aperol Spritz costs you ~{fmtZl(v.cogsZl)} zł to make and sells for
           {" "}{fmtZl(v.sellZl)} zł — that&apos;s{" "}
-          <strong>{fmtZl(v.marginZl)} zł of margin per glass</strong>. Lift attach
-          from{" "}
-          <strong>
-            {Math.round(v.currentPct * 100)}% → {Math.round(v.targetPct * 100)}%
-          </strong>{" "}
-          on {Math.round(v.ordersPerDay)} orders/day and you&apos;ll add
-          {" "}~{fmtUnits(v.extraUnitsPerDay)} extra drinks daily, about{" "}
-          <strong>~{fmtZlRounded(v.monthlyMarginZl)} zł/month</strong> — easily
-          covering the ~5,000 zł/year alcohol licence in the first month or two.
-          Drinks are how Italian dinner spots keep the lights on.
+          <strong>{fmtZl(v.marginZl)} zł of margin per glass</strong>. Your current{" "}
+          <strong>{Math.round(v.currentPct * 100)}%</strong> attach is
+          {" "}~{fmtUnits(v.ordersPerDay * v.currentPct)} pours a day ={" "}
+          <strong>~{fmtZlRounded(v.currentMonthlyMarginZl)} zł/month</strong>{" "}
+          already covering the lights. Lift to{" "}
+          <strong>{Math.round(v.targetPct * 100)}%</strong> on{" "}
+          {Math.round(v.ordersPerDay)} orders/day and you&apos;d add
+          {" "}~{fmtUnits(v.extraUnitsPerDay)} more drinks daily —{" "}
+          <strong>+~{fmtZlRounded(v.monthlyMarginZl)} zł/month</strong> on top,
+          easily covering the ~5,000 zł/year alcohol licence in the first month or
+          two. Drinks are how Italian dinner spots keep the lights on.
         </p>
       );
     },
@@ -2197,15 +2203,17 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
         <p style={{ margin: 0 }}>
           A drizzle of truffle oil costs ~{fmtZl(v.cogsZl)} zł but customers pay
           {" "}{fmtZl(v.sellZl)} zł for it — ~{fmtZl(v.marginZl)} zł of margin per
-          pizza. If attach goes from{" "}
-          <strong>
-            {Math.round(v.currentPct * 100)}% → {Math.round(v.targetPct * 100)}%
-          </strong>{" "}
-          on {Math.round(v.ordersPerDay)} orders/day, that&apos;s
-          {" "}~{fmtUnits(v.extraUnitsPerDay)} more premium pizzas daily and{" "}
-          <strong>~{fmtZlRounded(v.monthlyMarginZl)} zł/month extra</strong>. Same
-          dough, same oven — just better ingredients on top, easier to merchandise
-          than raising base prices.
+          pizza. At your current{" "}
+          <strong>{Math.round(v.currentPct * 100)}%</strong> attach that&apos;s
+          {" "}~{fmtUnits(v.ordersPerDay * v.currentPct)} upgraded pizzas a day ={" "}
+          <strong>~{fmtZlRounded(v.currentMonthlyMarginZl)} zł/month</strong>{" "}
+          already in the till. If attach climbs to{" "}
+          <strong>{Math.round(v.targetPct * 100)}%</strong> on{" "}
+          {Math.round(v.ordersPerDay)} orders/day, that&apos;s
+          {" "}~{fmtUnits(v.extraUnitsPerDay)} more premium pizzas daily —{" "}
+          <strong>+~{fmtZlRounded(v.monthlyMarginZl)} zł/month</strong> on top.
+          Same dough, same oven — just better ingredients on top, easier to
+          merchandise than raising base prices.
         </p>
       );
     },
@@ -2300,15 +2308,17 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
         <p style={{ margin: 0 }}>
           A primo pasta course is a second item from the same table — same staff,
           same plate-pickup trip. At {fmtZl(v.sellZl)} zł a plate that&apos;s
-          {" "}~{fmtZl(v.marginZl)} zł of margin per pasta. Push attach from{" "}
-          <strong>
-            {Math.round(v.currentPct * 100)}% → {Math.round(v.targetPct * 100)}%
-          </strong>{" "}
-          on {Math.round(v.ordersPerDay)} dine-in orders/day =
-          {" "}~{fmtUnits(v.extraUnitsPerDay)} pastas/day, about{" "}
-          <strong>~{fmtZlRounded(v.monthlyMarginZl)} zł/month</strong>. Only works
-          where customers actually sit — but if you have seating, it&apos;s the
-          single biggest dine-in lever you have.
+          {" "}~{fmtZl(v.marginZl)} zł of margin per pasta. Your current{" "}
+          <strong>{Math.round(v.currentPct * 100)}%</strong> attach is
+          {" "}~{fmtUnits(v.ordersPerDay * v.currentPct)} pastas a day ={" "}
+          <strong>~{fmtZlRounded(v.currentMonthlyMarginZl)} zł/month</strong>{" "}
+          already booked. Push to{" "}
+          <strong>{Math.round(v.targetPct * 100)}%</strong> on{" "}
+          {Math.round(v.ordersPerDay)} dine-in orders/day =
+          {" "}~{fmtUnits(v.extraUnitsPerDay)} more pastas/day,{" "}
+          <strong>+~{fmtZlRounded(v.monthlyMarginZl)} zł/month</strong>. Only
+          works where customers actually sit — but if you have seating, it&apos;s
+          the single biggest dine-in lever you have.
         </p>
       );
     },
