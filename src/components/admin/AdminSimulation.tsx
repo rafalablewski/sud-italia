@@ -6890,6 +6890,22 @@ const HELP = {
             payback math turns into fantasy.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Inflation-proof your floor:</strong> minimum setup cost rises 5-8%/year. Update the floor annually.</li>
+            <li><strong>Identify the hard-cost line:</strong> vehicle (40-50k), oven (35-55k), permits (10-15k) — these don&apos;t shrink with scale. They&apos;re the floor.</li>
+            <li><strong>Used trucks bend the floor:</strong> a fleet of 5-yr-old trucks (40-50k each) drops the floor 30% vs new. Trade-off: more maintenance.</li>
+            <li><strong>Modular buildouts:</strong> standardised interior modules from one fabricator drop the floor more than the learning curve alone.</li>
+            <li><strong>Keep the model honest:</strong> if the model says unit 30 costs 80k, you&apos;ll plan for fantasy. The floor enforces reality.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> minimum setup cost as % of unit 1 (default 60%).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> setup_cost(n) = max(unit1 × (1 − learning)^(n−1), unit1 × buildoutFloor).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Realistic floor:</strong> 55-70% of unit 1. The floor reflects unavoidable hard costs: truck/vehicle, oven, permits, ZUS startup ZUS costs. Even with perfect learning curve, you can&apos;t buy a working pizza truck for &lt;55% of the first one.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> manufacturing learning-curve floor analyses (Boston Consulting Group), pizzeria buildout cost decomposition.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> regulation tightening over time (PL gastronomic permits inflated 2020-2024). The floor might rise even at scale; track if you&apos;re building in 2026+.</p>
+        </Methodology>
       </>
     ),
   },
@@ -6912,6 +6928,22 @@ const HELP = {
             lease.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Adjust seasonally:</strong> rainy share is ~25% in summer, ~38% in autumn/winter. Don&apos;t use one annual average if you can flex.</li>
+            <li><strong>Calibrate to your location:</strong> Gdańsk 35%, Warsaw 30%, Kraków 28%, Wrocław 30%. IMGW regional data published quarterly.</li>
+            <li><strong>Indoor pitch shifts the math:</strong> if your unit is inside a mall food court, set rainyShare to a fraction (10-15%) since rain doesn&apos;t affect access.</li>
+            <li><strong>Cross-check with your actual data:</strong> overlay 90 days of POS revenue with weather. Calibrate the share to what you actually saw.</li>
+            <li><strong>Climate change creep:</strong> PL rainy days have crept up 3-5% over the past decade. Future projections should account.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> share of days with meaningful rain (default 30% Warsaw avg).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> effective volume = base × (rainyShare × rainyMultiplier + (1 − rainyShare) × 1.0). Composes with other weather levers.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>IMGW regional averages (PL, annual):</strong> Warsaw 30%, Kraków 28%, Gdańsk 35%, Wrocław 30%, Poznań 28%, Lublin 26%, Zakopane 40%.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> IMGW Polish meteorological service, EU Copernicus climate data, owner-operator weather logs.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> rain intensity (drizzle vs downpour). A 30% share including drizzle is gentler than 30% all-downpour. Calibrate the rainyMultiplier to your blended rain experience.</p>
+        </Methodology>
       </>
     ),
   },
@@ -6933,6 +6965,22 @@ const HELP = {
             hot-Friday forecasts and you&apos;ll capture it routinely.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Use weather forecast for staffing:</strong> 25°C+ predicted = add an extra staff member 48h ahead.</li>
+            <li><strong>Pre-stock spritz ingredients:</strong> Aperol shortage on the hottest night of summer is criminal.</li>
+            <li><strong>Patio expansion in summer:</strong> rent extra outdoor furniture for the heatwave months. The marginal cost is small vs the upside.</li>
+            <li><strong>Climate shift:</strong> heatwave share is rising 2-4 pp/decade in PL. Future-proof by building outdoor capacity now.</li>
+            <li><strong>Calibrate to your pitch:</strong> a downtown patio captures heatwaves; a delivery-only kitchen doesn&apos;t benefit. Set the multiplier accordingly.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> share of evenings hot enough (25°C+ at 19h) to fire the heatwave bonus (default 10% annual avg).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> effective volume = base × (heatwaveShare × heatwaveMultiplier + (1 − heatwaveShare) × 1.0). Composed in the seasonality stack.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>IMGW heatwave averages (PL, annual %):</strong> Warsaw 10%, Kraków 12%, Wrocław 14%, Poznań 11%, Gdańsk 7% (coastal cooler), Lublin 12%.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> IMGW Polish meteorological data 2014-2024, Eurostat climate-change indicators.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> 35°C+ extreme heat that REDUCES rather than lifts volume. The model assumes 25-32°C moderate heat; extreme heat is a separate (negative) effect not currently captured.</p>
+        </Methodology>
       </>
     ),
   },
@@ -6955,6 +7003,22 @@ const HELP = {
             upside. Under-staff: you blow the line in front of 30 dates.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Pre-book reservations:</strong> open Valentine&apos;s / Mother&apos;s Day booking 2 weeks ahead. Eliminates walk-in chaos.</li>
+            <li><strong>Limited menu for peak days:</strong> 5-6 SKUs only. Faster line, higher throughput, less stress.</li>
+            <li><strong>Over-staff deliberately:</strong> +1 cook, +1 runner. Cost of overrun &lt; cost of blown-up service.</li>
+            <li><strong>Pre-portion everything:</strong> day before, ready to assemble. Saves 30-45 min of prep on the day.</li>
+            <li><strong>Plan peak calendar 90 days ahead:</strong> Valentine&apos;s, Mother&apos;s Day, NYE, BF — staffing + menu + marketing locked early.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> volume multiplier for designated peak calendar days (default 1.60 = +60%).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> peak_day_orders = base_orders × peakDayMultiplier. Stacked with other multipliers (e.g. Valentine&apos;s on a Friday compounds).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Typical multipliers:</strong> Valentine&apos;s Friday 2.0-2.5×; NYE 1.5-2.0× (early dinner only); Mother&apos;s/Father&apos;s Day 1.6-1.8×; Halloween/BF 1.2-1.4×.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> POS-data composites from Italian-style PL chains, OpenTable peak-day analytics, holiday-dining surveys.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> capacity ceiling (you might WANT 2.5× but your oven caps at 1.5×). Cross-check the peak multiplier against your kitchen-saturation KPI.</p>
+        </Methodology>
       </>
     ),
   },
