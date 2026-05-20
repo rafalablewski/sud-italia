@@ -3311,20 +3311,26 @@ const HELP = {
     body: (
       <>
         <p>
-          Each row is one role on the team. Monthly cost = headcount × weekly hours
-          × 4.345 weeks × hourly rate.
+          Each row is one role on the team. Monthly cost = headcount ×
+          weekly hours × 4.345 weeks × hourly rate.
         </p>
-        <p>
-          <strong>Why 1.22× brutto:</strong> in Poland, the employer pays ZUS
-          (social insurance) and Labor Fund <em>on top</em> of the gross wage —
-          about 22% extra. So if a pizzaiolo&apos;s gross wage is 35 zł/h, the
-          truck&apos;s real cost is ~43 zł/h. We bake this into the default rates
-          so &quot;rate × hours&quot; lands at the full employer cost.
-        </p>
-        <p>
-          <strong>Target:</strong> total labor should be ≤ 30% of revenue. The
-          KPI strip lower down flags red/amber/green.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Why 1.22× brutto:</strong> in Poland the employer
+            pays ZUS (social insurance) + Labor Fund <em>on top</em> of
+            the gross wage — about 22% extra. A pizzaiolo&apos;s 35 zł/h
+            brutto wage actually costs the truck ~43 zł/h. The default
+            rates already bake this in.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Target: total labor ≤ 30% of revenue.</strong> The
+            KPI strip flags red/amber/green. Above 33% indicates either
+            over-staffing for current volume or under-pricing — diagnose
+            which before cutting heads. Schedule flexibility (part-time
+            mix vs salaried core) governs how fast labor responds to a
+            volume dip; the laborFlex lever models this elasticity.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Every hour someone is on the clock costs you money — even if no customer
@@ -3407,15 +3413,23 @@ const HELP = {
     body: (
       <>
         <p>
-          What you pay every month <em>regardless of how many orders you do</em>:
-          rent, insurance, accountant, software, ZUS for the owner, etc. Variable
-          costs (ingredients) live in COGS instead.
+          Monthly bills you pay <em>regardless of how many orders you do</em>
+          — rent, insurance, accountant, software, owner ZUS. Variable
+          food costs live in COGS instead.
         </p>
-        <p>
-          <strong>Why split them out:</strong> fixed costs set your break-even
-          point. If they go up by 1 000 zł/mo, you need more orders to cover them
-          before you make any profit.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            <strong>Why split them out:</strong> fixed costs set your
+            break-even point. Each 1,000 zł/mo of fixed adds ~1.5
+            orders/day to break-even (at typical contribution margin),
+            and a higher break-even compresses the margin-of-safety
+            ratio — the buffer between actual and break-even revenue.
+            Rent is the dominant fixed line for casual-Italian in PL
+            (occupancy ratio target ≤ 8% of revenue); above 12% the
+            real-estate decision is costing more than the location
+            premium can justify.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Fixed costs are the bills that arrive whether you sell 5 pizzas or 5,000.
@@ -3494,22 +3508,28 @@ const HELP = {
       <>
         <p>
           Pick one of five archetypal menu shapes for a Neapolitan pizza
-          truck. Each preset overwrites the four Revenue inputs (orders/day,
-          avg ticket, days open, COGS) <em>and</em> the six attach-rate
-          levers (coffee, dessert, antipasti, aperitivo, premium toppings,
-          pasta primo) — one click loads a coherent business model.
+          truck. Each preset seeds the four Revenue inputs + the six
+          attach-rate lever values — a coherent business model in one
+          click.
         </p>
-        <ul style={{ margin: "8px 0", paddingLeft: 20, listStyle: "disc" }}>
-          <li><strong>Takeaway classic</strong> — 100 ord/d × 45 zł, low attach</li>
-          <li><strong>Balanced</strong> — 70 ord/d × 65 zł, mixed attach</li>
-          <li><strong>Premium</strong> — 55 ord/d × 88 zł, high attach</li>
-          <li><strong>Family / Group</strong> — 30 ord/d × 155 zł, weekend / events</li>
-          <li><strong>Aperitivo / Dinner</strong> — 45 ord/d × 82 zł, drinks-led (needs alcohol licence)</li>
-        </ul>
-        <p>
-          After applying a preset you can still tweak any value — the preset
-          is a starting point, not a lock-in.
-        </p>
+        <InstitutionalAnalysis>
+          <ul style={{ margin: "0 0 6px", paddingLeft: 18 }}>
+            <li><strong>Takeaway classic</strong> — 100 ord/d × 45 zł, low attach</li>
+            <li><strong>Balanced</strong> — 70 ord/d × 65 zł, mixed attach</li>
+            <li><strong>Premium</strong> — 55 ord/d × 88 zł, high attach</li>
+            <li><strong>Family / Group</strong> — 30 ord/d × 155 zł, weekend / events</li>
+            <li><strong>Aperitivo / Dinner</strong> — 45 ord/d × 82 zł, drinks-led (needs alcohol licence)</li>
+          </ul>
+          <p style={{ margin: 0 }}>
+            Each is a different business model with different unit
+            economics — volume-led (Takeaway) vs ticket-led (Aperitivo).
+            Same truck, same kitchen, can earn 60-110k zł/month
+            depending on which preset the team + pricing + roster is
+            built around. Presets are starting points, not lock-ins —
+            tweak any field afterward without resetting the preset, and
+            the lever enabled state is preserved across loads.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Each preset is a different business model in disguise.
@@ -3596,29 +3616,36 @@ const HELP = {
     body: (
       <>
         <p>
-          Instead of typing one flat average ticket, you describe customer
-          behavior with levers like &quot;25% of orders add a coffee&quot; or
-          &quot;20% of mains convert to a combo&quot;. The simulator does the
-          math on top of the base ticket.
+          Instead of typing one flat average ticket, you describe
+          customer behavior with levers like &quot;25% of orders add a
+          coffee&quot; or &quot;20% of mains convert to a combo&quot;.
+          The simulator does the math on top of the base ticket.
         </p>
-        <p>
-          Every lever folds into the same effective ticket + COGS that the rest
-          of the page uses. Drag one slider and the headline KPIs, P&amp;L, pie
-          chart, heatmaps, projection and break-even all update live.
-        </p>
-        <p>
-          <strong>Toggle on/off:</strong> each lever has a green &quot;On&quot;
-          pill in the corner. Click it to flip the lever off — its values stay
-          configured but it&apos;s excluded from the math. Use this to isolate
-          the impact of a single hypothesis (&quot;what would my P&amp;L look
-          like without the coffee attach?&quot;) or use the <em>All off</em>
-          {" "}button in the card header to see the raw baseline ticket × volume
-          without any behavioral lifts.
-        </p>
-        <p className="v2-muted text-sm">
-          Defaults are tuned to a Neapolitan truck in Warsaw 2026. Tune them to
-          match your real attach data once you have it.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Mechanics.</strong> Every lever folds into the same
+            effective ticket + COGS that the rest of the page uses via
+            <code> applyAssumptions()</code>. Drag one slider and the
+            headline KPIs, P&amp;L, cost pie, heatmaps, projection,
+            break-even and Attachment Efficiency panel all re-derive
+            simultaneously.
+          </p>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Toggle on/off:</strong> each lever has a green
+            &quot;On&quot; pill in its corner. Off excludes the lever
+            from the math while preserving its configured values — use
+            this to isolate a single hypothesis (e.g. &quot;what would
+            my P&amp;L look like without coffee?&quot;) or click{" "}
+            <em>All off</em> in the card header to see the raw baseline
+            ticket × volume without any behavioural lifts.
+          </p>
+          <p className="v2-muted text-sm" style={{ margin: 0 }}>
+            Defaults are tuned to a Neapolitan truck in Warsaw 2026 and
+            every lever ships disabled — operator opts in explicitly.
+            Match assumptions to real POS attach data within ±5 pp or
+            the forecast is fiction.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Instead of guessing one &quot;average&quot; bill, you describe how
