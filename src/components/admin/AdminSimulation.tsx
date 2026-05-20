@@ -4273,6 +4273,71 @@ const HELP = {
             under-staff and you blow the line and lose 30+ angry customers in one night.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Book reservations 14 days out:</strong> Valentine&apos;s,
+              Mother&apos;s Day, NYE — open a booking link two weeks ahead.
+              Eliminates the no-show + walk-in chaos.
+            </li>
+            <li>
+              <strong>Pre-fix special menus:</strong> a 4-course Valentine&apos;s
+              tasting at 89 zł/person beats à-la-carte chaos — faster
+              kitchen throughput, higher ticket, easier to plan supplies.
+            </li>
+            <li>
+              <strong>Over-staff peak days deliberately:</strong> +1 cook, +1
+              server, +1 runner. Under-staff costs more than the labor
+              overrun ever does.
+            </li>
+            <li>
+              <strong>Pre-prep more dough:</strong> a peak day can run 2×
+              your dough. Pre-portion + cold-prove the day before — saves
+              35-45 min of fresh-dough waiting.
+            </li>
+            <li>
+              <strong>Plan the peak calendar 90 days out:</strong> mark
+              Valentine&apos;s, Mother&apos;s/Father&apos;s Day, Halloween,
+              Black Friday, NYE in admin. Each gets a unique menu + staffing
+              + comms plan.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> number of peak days per month (default
+            ~0.4, i.e. ~5/year ÷ 12), peak multiplier (default 1.60 = +60%
+            volume).
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formula:</strong> peak contribution =
+            (peakDaysPerMonth × peakMultiplier + (daysOpen − peakDays) × 1.0)
+            ÷ daysOpen. Multiplies through base orders/day for the month.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Common Polish peak days:</strong> 14 Feb
+            (Valentine&apos;s), 26 May (Mother&apos;s), 23 Jun
+            (Father&apos;s), 31 Oct (Halloween), Black Friday weekend,
+            31 Dec (NYE), bank-holiday-eve Fridays.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Realistic range:</strong> multiplier 1.30–2.50
+            depending on event. Valentine&apos;s on a Friday: 2.0-2.5×.
+            NYE: 1.5-2× (early dinner only). Random Halloween Tuesday:
+            1.20-1.40×.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> POS data from Italian-style PL
+            chains (Da Grasso, Pizza Hut PL), holiday-dining surveys,
+            owner-operator peak-day reports.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> capacity constraints on peak
+            days (a 2× peak day might be limited by kitchen throughput,
+            not demand). The model assumes you can serve the multiplier;
+            if your oven caps at 60 pizzas/hr, the peak gets clipped.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -4300,6 +4365,67 @@ const HELP = {
             energy into evening service when the tourists arrive.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Cut lunch headcount Jul-Aug:</strong> remove one
+              staff per lunch shift. Saves ~2,500 zł/month without
+              hurting service if covers really did drop 30%.
+            </li>
+            <li>
+              <strong>Pivot to tourist crowds:</strong> bilingual menu,
+              Instagram-friendly Margherita with basil leaf, English-speaking
+              staff. Tourist evenings often EXCEED office lunch revenue.
+            </li>
+            <li>
+              <strong>Catering / corporate-event push:</strong> offices still
+              run summer team-building. Build a catering offer (10 pizzas
+              delivered for 580 zł). Captures the displaced lunch crowd
+              in batch.
+            </li>
+            <li>
+              <strong>Shorter summer lunch hours:</strong> 12:00-13:30 instead
+              of 12:00-15:00. Same revenue, half the labor.
+            </li>
+            <li>
+              <strong>Plan a summer menu refresh:</strong> lighter items
+              (insalata, prosciutto with melon), aperitivo-led evenings.
+              Use the dip as an excuse to seasonally rotate.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> single multiplier (default 0.85 = 15%
+            lunch volume haircut). Applies only to Jul-Aug; the simulator
+            averages across the 2/12 months of the year for the headline
+            monthly figure.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formula:</strong> effective summer monthly = base
+            × (multiplier × 2/12 + 1.0 × 10/12). So a 0.85 multiplier
+            = ~97.5% of theoretical annual volume just from the
+            lunch-dip effect.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Realistic range:</strong> 0.70-0.95. Office-heavy
+            pitch (Mokotów, Wola): 0.70 (deep dip). Tourist-heavy
+            (Old Town, Kazimierz): 0.95+ (might even invert if
+            tourist evenings dominate). Residential: 0.85 (medium).
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> Polish gastronomic-sector
+            seasonality data, Warsaw office-vacancy reports, owner-operator
+            summer-revenue surveys.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> the offsetting summer
+            tourist evening bump (which the quarterly summer multiplier
+            handles separately). Don&apos;t double-count — if you&apos;ve
+            already set summer ×1.15 in the seasonality card, the school
+            holiday dip should net to a smaller effect.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -4326,6 +4452,67 @@ const HELP = {
             some trucks earn 30% of their annual revenue from 20 weekends.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Book event slots 6 months out:</strong> the best
+              festivals (Nocny Market, Mazury Hip Hop, OFF Festival) book
+              vendors way ahead. Don&apos;t wait for last-minute slots —
+              they go to the lowest-quality trucks.
+            </li>
+            <li>
+              <strong>Calculate per-event ROI:</strong> some festivals
+              charge 3-8k zł vendor fee. Run the numbers: at 2× multiplier
+              and 200k base monthly, you need ~7,000 zł of net upside for
+              a 5k fee to pay back.
+            </li>
+            <li>
+              <strong>Event-specific menu:</strong> simpler, faster pizzas
+              (3-4 SKUs max). 8-min ticket times at events vs 12 at the
+              truck. Customers tolerate less wait outdoors.
+            </li>
+            <li>
+              <strong>Cash + card both:</strong> events still see lots of
+              cash. Have backup payment options — a broken card terminal
+              at 2× volume is a disaster.
+            </li>
+            <li>
+              <strong>Plan crew rotation:</strong> 12-hour event days
+              destroy a single team. Two shifts (day + evening crew) with
+              an overlap helps maintain quality through the rush.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> number of event days per month
+            (typically 1-4), event multiplier (default 1.50 = +50%
+            volume). Configure higher (2.0-3.0×) if you have specific
+            festival bookings.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formula:</strong> identical structure to peak-days
+            lever: effective = (eventDays × eventMultiplier + (daysOpen
+            − eventDays) × 1.0) ÷ daysOpen. Multiplies through orders/day.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Realistic events for a PL pizza truck:</strong>
+            food-truck rallies (Nocny Market — Warsaw), street fairs (Open
+            Mokotów), Christmas markets (Dec), summer concerts at parks,
+            festival bookings (OFF, Krakow Live, Selector).
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> Polish food-truck association event
+            calendars, vendor-revenue surveys at major festivals,
+            owner-operator interviews on event chasing strategy.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> event vendor fees (booth rental,
+            permits, electricity hookup). Subtract these from the event
+            revenue before celebrating — a 5k zł vendor fee plus 2k zł of
+            event-specific costs needs ~7k zł of net margin to break even.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -4361,6 +4548,67 @@ const HELP = {
             the way — that&apos;s where the money lives.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Review monthly, not weekly:</strong> a single week is
+              too noisy to act on. Compare month-over-month — variances of
+              &gt;3 pp on any line need investigation.
+            </li>
+            <li>
+              <strong>Watch prime cost (COGS + labor):</strong> together
+              should be ≤60% of revenue. Above 65% you&apos;re losing money
+              even at full capacity. The two together is more telling than
+              either alone.
+            </li>
+            <li>
+              <strong>Net margin target:</strong> 8-12% for casual-Italian
+              in Poland. Below 5% you&apos;re running a charity; above 15%
+              you&apos;re probably underpaying staff or accounting for
+              owner labor wrong.
+            </li>
+            <li>
+              <strong>Compare to break-even regularly:</strong> the
+              &quot;5.2 above&quot; sentence below the table shows your
+              safety margin. Below 2 orders/day above is too thin.
+            </li>
+            <li>
+              <strong>Run the P&amp;L sensitivity:</strong> what happens at
+              −15% revenue? At +20% rent? Use the Sensitivity card — it
+              shows which inputs the bottom line is most fragile to.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> everything from the Scenario, Behaviour
+            and Weather cards flows here. The P&amp;L is a read-only
+            aggregation — change any input above and watch every line move.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formulas (top-down):</strong>
+          </p>
+          <ul style={{ margin: "0 0 4px", paddingLeft: 18 }}>
+            <li>Revenue = orders × ticket × days × weather/event multipliers</li>
+            <li>COGS = revenue × effective COGS% (incl. attach &amp; ingredient stresses)</li>
+            <li>Gross profit = revenue − COGS</li>
+            <li>Labor = Σ(headcount × hours × 4.345 × rate × 1.22)</li>
+            <li>Net profit = gross profit − labor − fixed costs − misc</li>
+            <li>Break-even orders/day = fixed ÷ (ticket × (1 − COGS%) × days)</li>
+          </ul>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> standard restaurant accounting
+            (Schmidgall, &quot;Hospitality Industry Managerial Accounting&quot;),
+            Polish UoR (Ustawa o Rachunkowości) gastronomic reporting
+            standards.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> CIT (corporate income tax) and
+            VAT timing — handled by the separate CIT-rate field. Also no
+            depreciation by default (use the Depreciation field if you
+            have CAPEX to amortise).
+          </p>
+        </Methodology>
       </>
     ),
   },
