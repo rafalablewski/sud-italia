@@ -1574,8 +1574,39 @@ function deriveArchetypes(s: SimulationScenario) {
 // --- Amateur-friendly explanations ---------------------------------------
 //
 // Every concept on this page has an InfoButton that opens a Dialog with
-// the matching entry below. Written for someone who's never run a P&L
-// before — short, concrete, with the formula and a worked example.
+// the matching entry below. Each entry pairs an institutional/CFA-level
+// explanation with a "plain terms" callout showing real-life examples and
+// how the lever moves the actual zł numbers.
+
+function PlainTalk({ children }: { children: ReactNode }) {
+  return (
+    <div
+      style={{
+        marginTop: 12,
+        padding: "10px 12px",
+        background: "rgba(234, 88, 12, 0.06)",
+        borderLeft: "3px solid rgb(234, 88, 12)",
+        borderRadius: 6,
+        fontSize: 13.5,
+        lineHeight: 1.55,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 700,
+          textTransform: "uppercase",
+          letterSpacing: 0.6,
+          color: "rgb(194, 65, 12)",
+          marginBottom: 6,
+        }}
+      >
+        In plain terms
+      </div>
+      {children}
+    </div>
+  );
+}
 
 const HELP = {
   // Inputs
@@ -1592,6 +1623,16 @@ const HELP = {
           this number roughly doubles revenue but only adds variable food cost — labor
           and rent are mostly fixed, so the extra orders are very profitable.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            The more pizzas you sell each day, the more money you keep. Growing from
+            <strong> 60 → 80 orders/day</strong> at 65 zł each is an extra
+            <strong> 1,300 zł/day in revenue</strong>. Because rent, electricity and most
+            of the team are the same whether you do 60 or 80, nearly the whole extra
+            ~900 zł/day drops to profit — about <strong>~25,000 zł more profit per
+            month</strong> from selling 20 more pizzas a day.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1612,6 +1653,15 @@ const HELP = {
           When the Menu mix card has weights, this field becomes display-only — the
           number is computed from how often each menu item sells.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Every extra złoty on the average bill is a złoty you earn without serving a
+            single extra person. Convince every customer to spend just <strong>5 zł
+            more</strong> (one espresso + a small tiramisu) on 80 orders/day and you&apos;ve
+            added <strong>~11,000 zł/month</strong> — same kitchen, same staff, same
+            hours.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1628,6 +1678,15 @@ const HELP = {
           <strong>Trade-off:</strong> 7-day operation maximises revenue but burns out
           staff. 6 days/week (~26 days/mo) is a sustainable sweet spot.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Each closed day is a day with zero revenue but rent still due. Going from
+            <strong> 28 → 26 days/month</strong> (closing two extra days for staff rest)
+            on a 200,000 zł/month truck costs ~14,000 zł in revenue — about
+            <strong> ~8,000 zł of lost profit</strong>. Often worth it if it stops your
+            best pizzaiolo from quitting; burnout costs more than two slow days.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1648,6 +1707,15 @@ const HELP = {
           When the Menu mix card is active, this number is computed from each
           item&apos;s actual recipe cost ÷ price, weighted by how often it sells.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            For every 100 zł a customer pays, ~30 zł is the ingredients you burned.
+            Shave just <strong>2 percentage points</strong> (better mozzarella supplier,
+            tighter end-of-shift waste) and you keep an extra 2 zł per 100 zł sold. On a
+            200,000 zł/month truck that&apos;s <strong>~4,000 zł more profit</strong> —
+            same pizza, smarter buying.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1670,6 +1738,15 @@ const HELP = {
           <strong>Target:</strong> total labor should be ≤ 30% of revenue. The
           KPI strip lower down flags red/amber/green.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Every hour someone is on the clock costs you money — even if no customer
+            walks in. If you&apos;ve got 2 staff during the dead 14:00–16:00 slot when
+            1 could handle it, you&apos;re paying <strong>~50 zł for nothing</strong>.
+            Cutting 4 wasted hours a week saves <strong>~800 zł/month</strong>, straight
+            to the bottom line.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1687,6 +1764,15 @@ const HELP = {
           point. If they go up by 1 000 zł/mo, you need more orders to cover them
           before you make any profit.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Fixed costs are the bills that arrive whether you sell 5 pizzas or 5,000.
+            If your rent jumps from <strong>8,000 → 10,000 zł/month</strong>, you need
+            to sell ~67 more pizzas every month (at ~30 zł of margin each) just to stay
+            even. That&apos;s why moving to a cheaper pitch — even one with 10% less
+            foot traffic — can be a winning trade.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1712,6 +1798,16 @@ const HELP = {
           After applying a preset you can still tweak any value — the preset
           is a starting point, not a lock-in.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Each preset is a different business model in disguise.
+            <strong> Takeaway Classic</strong> sells lots of cheap pizzas to lunch
+            crowds; <strong>Aperitivo Dinner</strong> sells fewer, bigger tickets with
+            wine in the evening. The same truck can earn
+            <strong> 60,000 vs 110,000 zł/month</strong> depending which menu shape
+            you build the team and pricing around.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1745,6 +1841,16 @@ const HELP = {
           Defaults are tuned to a Neapolitan truck in Warsaw 2026. Tune them to
           match your real attach data once you have it.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Instead of guessing one &quot;average&quot; bill, you describe how
+            customers actually behave: <em>&quot;one in four buys coffee&quot;</em>,
+            <em>&quot;one in ten buys dessert&quot;</em>. Move any slider 5 percentage
+            points and watch the bottom line shift by <strong>hundreds of zł per
+            month</strong> — you&apos;ll see immediately which lever is worth your
+            staff&apos;s attention next week.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1765,6 +1871,16 @@ const HELP = {
           <strong>How to grow it:</strong> staff prompt at order
           (&quot;espresso with that?&quot;), combo deals, post-meal dessert+coffee bundle.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Coffee is the easiest extra złoty in the business — beans cost ~1 zł, you
+            sell the cup for 9 zł. Push attach from <strong>20% → 35%</strong> on 80
+            orders/day and you&apos;ve added ~12 extra coffees daily × ~8 zł margin =
+            <strong> ~2,900 zł/month</strong> of nearly-pure profit. No new SKU, no
+            extra labor — just one more sentence at the till
+            (&quot;espresso with that?&quot;).
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1781,6 +1897,15 @@ const HELP = {
           pizza&apos;s 30%. So more dessert attach lifts AOV <em>and</em>
           improves the blended margin %.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Tiramisu travels well, photographs better than the pizza, and earns better
+            margin than the main dish. Lifting dessert attach from <strong>10% →
+            18%</strong> on 80 orders/day = ~6 more desserts daily × ~13 zł margin =
+            <strong> ~3,100 zł/month</strong> — pure cream on top of revenue you&apos;d
+            already booked.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1798,6 +1923,15 @@ const HELP = {
           line — make sure the antipasti station can keep up before pushing
           this lever.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            A burrata starter at 28 zł can earn ~20 zł of margin while customers wait
+            for the pizza anyway. Get just <strong>8% of dine-in tables</strong> to add
+            one and on 80 orders/day you&apos;ve added <strong>~13,000 zł of
+            revenue/month</strong>. Watch the prep station though — if it slows the
+            pizza out, you&apos;ve traded a starter for a complaint.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1815,6 +1949,15 @@ const HELP = {
           &quot;what would happen if we got licensed?&quot; before paying the
           ~5 000 zł/year fee.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            An Aperol Spritz costs you ~5 zł to make and sells for 22 zł — that&apos;s
+            <strong> 17 zł of margin per glass</strong>. Lift aperitivo attach to
+            <strong> 30% of evening orders</strong> and you&apos;ll add ~5,000–9,000
+            zł/month, easily covering the ~5,000 zł/year alcohol licence in the first
+            month. Drinks are how Italian dinner spots keep the lights on.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1831,6 +1974,15 @@ const HELP = {
           <strong>Where the money is:</strong> ~50% incremental margin — among
           the cheapest ways to lift AOV.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            A drizzle of truffle oil costs ~2 zł but customers pay 9 zł for it. If
+            <strong> 1 in 5 pizzas</strong> gets a premium topping on 80 orders/day,
+            you&apos;ve stacked ~7 zł of margin × 480 pizzas/month =
+            <strong> ~3,400 zł/month extra</strong>. Same dough, same oven — just better
+            ingredients on top, easier to merchandise than raising base prices.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1847,6 +1999,16 @@ const HELP = {
           <strong>Big AOV bump.</strong> Best lever where seating allows — most
           relevant for indoor locations, less so for a takeaway truck.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            A primo pasta course is a second item from the same table — same staff,
+            same plate-pickup trip. At <strong>12% attach</strong> on 50 dine-in
+            orders/day you get ~6 pastas/day × 24 zł margin =
+            <strong> ~4,300 zł/month</strong>. Only works where customers actually sit
+            — but if you add seating, it&apos;s the single biggest dine-in lever you
+            have.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1868,6 +2030,16 @@ const HELP = {
           <strong>Math:</strong> for each converted order, ticket goes up by
           (addon price − discount); food cost goes up by (addon × addon COGS%).
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            A combo is a &quot;yes ladder&quot; — say yes once and you&apos;ve bought
+            pizza + drink + dessert without re-deciding each item. If
+            <strong> 30% of customers</strong> take the 65 zł combo instead of just a
+            45 zł pizza, that&apos;s 20 zł × ~24 orders/day =
+            <strong> ~14,000 zł/month</strong> extra revenue, almost all margin
+            because the second and third items wouldn&apos;t have attached on their own.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1889,6 +2061,16 @@ const HELP = {
           <strong>Default is 0 pp</strong> — turn it on only when you want to
           model a stress scenario.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            When wallets tighten, customers downgrade to the cheapest pie on the menu.
+            If <strong>20% trade down</strong> from a 55 zł pizza to a 38 zł Margherita
+            on 80 orders/day, that&apos;s 17 zł × 16 customers/day =
+            <strong> ~270 zł/day, ~8,000 zł/month evaporated</strong>. Counter it with
+            a 42 zł &quot;value champion&quot; you actually profit on, so the downshift
+            lands somewhere safe instead of on your cheapest item.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1910,6 +2092,16 @@ const HELP = {
           Tune this to model channel-mix shifts: more delivery = more volume
           but worse per-order margin.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Every Glovo order looks the same on screen but earns ~30% less profit — the
+            platform takes ~28% commission and you pay for the box. Shift
+            <strong> 10% of orders</strong> from delivery back to walk-up (loyalty
+            perks, in-store discount) and on 2,400 orders/month that&apos;s 240 orders
+            × ~12 zł extra margin each = <strong>~2,900 zł/month</strong> straight to
+            the bottom line — same pizzas, smarter channel mix.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1944,6 +2136,16 @@ const HELP = {
           Toggle a single lever off to compare with vs without, or use the
           {" "}<em>All off</em> button up top to clear every stress test.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Cheese is the single biggest line in your food cost — usually
+            <strong> ~28% of all ingredients</strong>. If your mozzarella supplier raises
+            prices 10%, it doesn&apos;t sound like much, but it lifts your total food
+            cost by ~2.8 percentage points. On a 200,000 zł/month truck that&apos;s
+            <strong> ~5,600 zł of profit gone</strong> unless you switch suppliers or
+            trim portions. Use these levers to plan for that before it happens.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1962,6 +2164,15 @@ const HELP = {
           downstream. Live preview at the bottom of the card shows you the
           composite impact.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Weather isn&apos;t a feel-good factor — it directly changes your day. A
+            rainy Tuesday in October can do <strong>35 orders</strong> when a sunny one
+            does <strong>65</strong>. Over a month that&apos;s ~12,000 zł of revenue
+            the calendar dictates, not your effort. Plan for it (rain awnings, delivery
+            push, indoor seating) and you can claw most of it back.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -1986,6 +2197,16 @@ const HELP = {
           <strong>Combined:</strong> 0.30 × 0.75 + 0.70 × 1.00 = 0.925, so the
           average month runs at 92.5% of theoretical volume just from rain.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            When it pours, walk-up customers vanish — a <strong>0.55 multiplier</strong>
+            means you do 45% less business on rainy days. On Warsaw&apos;s ~30% rainy
+            days, that&apos;s a ~14% haircut on the whole month&apos;s revenue. Add a
+            rain awning, push a &quot;rainy-day delivery&quot; promo and you might lift
+            the multiplier to <strong>0.75</strong> — recovering
+            <strong> ~9,000 zł/month</strong>.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -2004,6 +2225,16 @@ const HELP = {
           already has a quarterly summer bonus, this stacks on top for the hot
           evening micro-effect.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            When it hits 28°C+, people stay out longer, order spritzes, and bring
+            friends. A normal Tuesday doing <strong>50 orders becomes 70</strong>.
+            Across summer that&apos;s ~2,000 extra orders ≈
+            <strong> ~140,000 zł of revenue</strong> — easily worth buying more patio
+            chairs, chilling extra wine and rostering one more staff member for hot
+            evenings.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -2020,6 +2251,15 @@ const HELP = {
           <strong>Effect:</strong> reduces effective days open. If you&apos;re
           normally 28 days/mo and lose 1 day, you lose ~3.6% of monthly revenue.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Every closed day is a hole in the month — 28 normal days vs 27 means
+            <strong> 3.6% of monthly revenue gone</strong>. Losing 2 closed days (Easter
+            + 15 August) on a 200,000 zł truck costs ~14,000 zł. If you can&apos;t open
+            (staff legally off, suppliers closed), plan a tourist-area pop-up the day
+            before to capture some of that demand early.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -2037,6 +2277,15 @@ const HELP = {
           extra normal day&apos;s revenue to the month. Worth investing in
           extra staffing on those nights.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Valentine&apos;s Day on a Friday can do <strong>2–3× a normal Friday</strong>
+            — couples book early, share a bottle, dessert is non-negotiable. Five peak
+            days at 1.6× across the year are worth an extra full week of revenue.
+            Don&apos;t be cute about staffing them: over-staff and the upside is huge,
+            under-staff and you blow the line and lose 30+ angry customers in one night.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -2055,6 +2304,15 @@ const HELP = {
           evenings often more than make up for the lunch drop — make sure the
           summer seasonal multiplier (in Assumptions) reflects both effects.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            When schools close in July–August, the office lunch crowd vanishes — your
+            12:00–14:00 covers can drop <strong>30%</strong> even though evenings stay
+            strong. Don&apos;t fight it with discounts; cut lunch staffing by one head
+            instead, save <strong>~2,500 zł/month in labor</strong>, and pour the
+            energy into evening service when the tourists arrive.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -2072,6 +2330,15 @@ const HELP = {
           known festival weekend, bump event days to 2 and the multiplier to
           2.0× to see if it&apos;s worth the operational hassle.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            A food-truck rally weekend can do <strong>1.5–3× a normal day</strong> with
+            the same staff and the same pizzas. Two event days per month at 2.0× nets
+            you <strong>~25,000 zł of extra revenue</strong>. Pay attention to where
+            the events are — chasing them is a real strategy, not a side hustle, and
+            some trucks earn 30% of their annual revenue from 20 weekends.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -2097,6 +2364,16 @@ const HELP = {
           you&apos;re running — &quot;5.2 above&quot; means you&apos;re doing 5.2
           more orders/day than the minimum needed to not lose money.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Think of the P&amp;L as a stack of glasses: revenue pours in at the top,
+            each cost is a glass that catches some, and net profit is what reaches the
+            bottom one. If the top glass holds <strong>200,000 zł</strong> and the
+            bottom one holds <strong>20,000 zł</strong>, then every złoty of waste,
+            theft or schedule bloat steals from that last 10%. Watch what spills along
+            the way — that&apos;s where the money lives.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -2118,6 +2395,16 @@ const HELP = {
           If labor or COGS slice gets above ~32%, drill into the source
           (recipe costs? schedule bloat?) before raising prices.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            If any slice of the pie balloons past <strong>32%</strong>, you have your
+            culprit. <strong>Labor too big?</strong> You&apos;re overstaffed for the
+            volume. <strong>Food too big?</strong> Recipes leak or portions are sloppy.
+            The pie is the fastest &quot;where did the money go?&quot; diagnostic in the
+            business — glance at it weekly and you&apos;ll catch problems before they
+            cost a month of profit.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -2165,6 +2452,16 @@ const HELP = {
             to recoup the truck buildout cost. Investors look for &lt; 24 months.
           </li>
         </ul>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            These eight numbers are what a pro restaurateur stares at on Monday
+            mornings. <strong>Prime cost</strong> is the one to know: food + labor as %
+            of revenue. Under 60% you breathe; at 65% you&apos;re working for the staff;
+            at 70% you close. Each <strong>1 percentage point</strong> you cut at
+            typical volumes is <strong>~2,000 zł more profit/month</strong> — same
+            sales, same menu, just tighter ops.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -2194,6 +2491,16 @@ const HELP = {
           much better than Realistic, you&apos;re bumping a structural ceiling
           — fix the model, not the marketing.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Three runs side by side: <em>&quot;a bit worse&quot;</em>, <em>&quot;as
+            expected&quot;</em>, <em>&quot;a bit better&quot;</em>. If your
+            <strong> Conservative</strong> case still makes money, your plan is robust
+            and you can sleep. If <strong>Optimistic</strong> isn&apos;t much better
+            than Realistic, you&apos;re hitting a ceiling (small oven, limited seating)
+            — growth requires capex, not more elbow grease.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -2212,6 +2519,15 @@ const HELP = {
           &quot;if I could grow orders 20% <em>or</em> raise ticket 10%, which
           delivers more profit?&quot;.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Each square is &quot;what would I earn if I sold this many pizzas at this
+            price?&quot;. Fastest read: pick the centre cell (today), then look which
+            direction goes greenest. Sometimes it&apos;s <strong>selling more</strong>
+            (extending hours, marketing); often it&apos;s <strong>charging more</strong>
+            (a 2 zł price bump usually beats chasing 20% more volume).
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -2228,6 +2544,16 @@ const HELP = {
           ticket 5 zł — which wins?&quot; Comparing two cells diagonally
           across the centre tells you the trade-off immediately.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Should you negotiate cheaper mozzarella or just raise the Margherita by 3
+            zł? This grid answers in seconds. Pick the two cells you&apos;re choosing
+            between — the colour difference is the profit difference, usually
+            <strong> a couple of thousand zł/month</strong> per swap. The lazy answer
+            (raise prices) often wins; the hard answer (renegotiate cheese) compounds
+            for years.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -2260,6 +2586,15 @@ const HELP = {
             winter (0.7×).
           </li>
         </ul>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Inflation isn&apos;t a rumour — Poland is running ~7% wage hikes and ~4%
+            food cost hikes every year. If you don&apos;t raise menu prices by ~5% every
+            January, your margin shrinks by <strong>~2 percentage points/year</strong>.
+            On a 200,000 zł/month truck that&apos;s <strong>~48,000 zł of profit gone in
+            12 months</strong> — the projection chart below shows that drift live.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -2281,6 +2616,15 @@ const HELP = {
           The four KPIs below (12-mo revenue / costs / net profit / best vs
           worst month) summarise the whole year.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Twelve months in one chart. Watch the gap between the revenue line and the
+            profit line — <strong>if it widens, inflation is eating you alive</strong>.
+            If the gap narrows by December, you&apos;re running out of margin and need
+            to raise prices or trim costs before year-end. Most operators discover this
+            in January when the accountant calls; you&apos;ll see it in May.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -2303,6 +2647,16 @@ const HELP = {
           you&apos;re running 60, every order beyond 45 contributes
           (ticket × (1 − COGS% − card fee %)) zł of pure profit.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Below this number you bleed; above it, you print. If break-even is
+            <strong> 45 orders/day</strong> and you sell <strong>60</strong>, the last
+            15 pizzas drop ~22 zł each straight into the bank — that&apos;s
+            <strong> ~330 zł/day, ~9,000 zł/month</strong> of &quot;free money&quot;,
+            because the first 45 already paid the rent. Every order past break-even is
+            wildly profitable; every order under it deepens the hole.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -2321,6 +2675,16 @@ const HELP = {
           — raise prices, cut a fixed cost, or grow attach rates before
           opening day 1.
         </p>
+        <PlainTalk>
+          <p style={{ margin: 0 }}>
+            Profit is a thin slice of revenue — usually <strong>10–15%</strong>. So a
+            <strong> 10% revenue dip wipes out 60–70% of profit</strong>, not 10%.
+            If your −10% column tips into the red, you&apos;re running too close to the
+            line: one bad week (food poisoning rumour, road closure, heat dome) closes
+            the truck. Grow attach, raise prices, or cut a fixed cost before opening
+            day 1.
+          </p>
+        </PlainTalk>
       </>
     ),
   },
@@ -3336,6 +3700,17 @@ export function AdminSimulation() {
             <li><strong>Promo-adjusted AOV</strong> = avg ticket × (1 − loyalty burn). The honest ticket after the loyalty engine&apos;s effective discount.</li>
             <li><strong>True CM1 / order</strong> = revenue − every variable leakage. The audit&apos;s headline per-order number; full breakdown in the panel below.</li>
           </ul>
+          <PlainTalk>
+            <p style={{ margin: 0 }}>
+              These are the numbers an investor reads before deciding whether to write
+              you a cheque. The one to memorise: <strong>cash-on-cash</strong>. If you
+              spent <strong>300,000 zł</strong> setting up the truck and it generates
+              <strong> 90,000 zł of profit/year</strong>, that&apos;s
+              <strong> 30% cash-on-cash</strong> — better than almost any stock or
+              bond. Below 15% an investor will ask why you didn&apos;t just buy index
+              funds.
+            </p>
+          </PlainTalk>
         </InfoButton>
         <span className="v2-muted text-xs">EBITDA / EBITDAR / cash-on-cash / occupancy — IC-grade headline metrics</span>
       </div>
@@ -3459,6 +3834,17 @@ export function AdminSimulation() {
             <li><strong>NPV @ 10/15/20%</strong> — net present value at three discount rates (cost of capital). Positive = beats the rate; negative = destroys value at that hurdle. 20% is the PE-style hurdle.</li>
             <li><strong>IRR (24 mo)</strong> — annualised internal rate of return solved via Newton-Raphson on the monthly cash-flow series. ≥ 30% = strong, ≥ 15% = acceptable, &lt; 0 = capital destruction.</li>
           </ul>
+          <PlainTalk>
+            <p style={{ margin: 0 }}>
+              The honest version of &quot;when do I get my money back?&quot;. If you
+              spent <strong>300,000 zł</strong> on truck + buildout and the first 4
+              months only do 50–100% of normal volume (training, slow word-of-mouth),
+              you don&apos;t actually clear setup until month <strong>18–22</strong>,
+              not month 12 like the simple math suggests. Investors care: a 20-month
+              payback beats a 30-month one by ~<strong>40% in IRR terms</strong>, and
+              that&apos;s the difference between funded and ignored.
+            </p>
+          </PlainTalk>
         </InfoButton>
         <span className="v2-muted text-xs">
           24-month projection with a 4-month opening ramp · setup{" "}
@@ -3997,6 +4383,19 @@ export function AdminSimulation() {
                   netting out the True CM1 per order. Total pre-tax profit is
                   identical either way; the difference is honest unit economics.
                 </p>
+                <PlainTalk>
+                  <p style={{ margin: 0 }}>
+                    Are Instagram ads &quot;rent&quot; (you pay it regardless) or
+                    &quot;customer cost&quot; (you only pay because of the customers
+                    you got)? Flipping this changes the answer. If you spend
+                    <strong> 3,000 zł/month</strong> on marketing and get
+                    <strong> 2,400 orders/month</strong>, that&apos;s
+                    <strong> 1.25 zł of CAC per order</strong> — invisible in the
+                    fixed-cost view, but big enough to flip Glovo orders from
+                    &quot;profitable&quot; to &quot;losing&quot; once you do the math
+                    honestly.
+                  </p>
+                </PlainTalk>
               </InfoButton>
             </div>
             <Input
@@ -5066,6 +5465,18 @@ function ShiftPlanPanel({ rows }: { rows: ShiftPlanRow[] }) {
               <p>
                 <strong>Coverage ratio</strong> = labor / revenue per daypart. Green &lt; 20% (rush is profitable), amber 28-35% (tight margin), red &gt; 35% (over-staffed for the volume). Prep + close are revenue-zero so coverage is undefined — but the headcount column tells you you&apos;re still paying somebody to be there.
               </p>
+              <PlainTalk>
+                <p style={{ margin: 0 }}>
+                  The flat labor number lies. If you&apos;ve got <strong>2 people at
+                  14:00</strong> when one would do, and <strong>2 people at 19:00</strong>
+                  when you need four, you&apos;re losing on both ends — the empty
+                  lunch costs ~50 zł/hour and the dinner rush leaves angry customers
+                  walking off (~500 zł of orders refused). Reshuffle headcount to peak
+                  dayparts and you can drop total hours by <strong>10–15%</strong> while
+                  actually serving more pizzas — typically <strong>~3,000 zł/month
+                  saved</strong>.
+                </p>
+              </PlainTalk>
             </InfoButton>
             <ChefHat className="h-4 w-4 v2-muted" />
           </span>
@@ -5182,6 +5593,17 @@ function PrepFlowPanel({
               </p>
               <p>Three remediations: open a unit (fleet panel), add a second oven /
               pizzaiolo (kitchen capacity), or push orders off-peak (dayparting).</p>
+              <PlainTalk>
+                <p style={{ margin: 0 }}>
+                  Customers walk when the line is too long. If your peak hour wants
+                  <strong> 40 pizzas</strong> but the oven only does 30, the 10 that
+                  show up later wait 7+ minutes — and <strong>2 of them just leave</strong>.
+                  Across a month that&apos;s ~60 lost orders ≈
+                  <strong> ~4,000 zł of contribution gone</strong>. Adding a second
+                  pizzaiolo for the dinner rush (~600 zł/month extra labor) more than
+                  pays for itself.
+                </p>
+              </PlainTalk>
             </InfoButton>
             <Clock className="h-4 w-4 v2-muted" />
           </span>
@@ -5325,6 +5747,17 @@ function OvenCurvePanel({
                 of realistic, you&apos;ve hit the institutional &quot;open another unit&quot;
                 threshold. The fleet panel above models the economics of that decision.
               </p>
+              <PlainTalk>
+                <p style={{ margin: 0 }}>
+                  The brochure says the oven does <strong>320 pizzas/hour</strong>.
+                  In real life you&apos;ll see <strong>70</strong>. Every pull, sweep,
+                  dough rebuild and &quot;sorry, can I see the menu?&quot; eats oven
+                  time. When your busiest hour hits <strong>85% of realistic capacity</strong>
+                  (~60 pizzas/hr in this example), you&apos;re leaving money on the
+                  table at peak — that&apos;s the signal to open truck #2 or add a
+                  second oven, not push harder on marketing.
+                </p>
+              </PlainTalk>
             </InfoButton>
             <Flame className="h-4 w-4 v2-muted" />
           </span>
@@ -5478,6 +5911,18 @@ function HourlyThroughputPanel({
                 you have headroom to push more volume into the existing window
                 (marketing, hours extension, second daypart).
               </p>
+              <PlainTalk>
+                <p style={{ margin: 0 }}>
+                  Look at the bar pattern, not just the height. A truck with
+                  <strong> 4 blue bars and 1 red bar</strong> is leaving money on the
+                  table — you have a 4-hour empty window that could host a lunch
+                  promotion or pre-rush coffee menu. A truck with
+                  <strong> 18 blue bars and 6 red bars</strong> is fine; one with
+                  <strong> 8 red bars in a row</strong> needs a second oven yesterday.
+                  Each red hour is 5–15 walked-away customers ≈ 300–900 zł of revenue
+                  refused that day.
+                </p>
+              </PlainTalk>
             </InfoButton>
             <SourceTag kind="actuals" hint="Computed from real order timestamps." />
           </span>
@@ -5575,6 +6020,17 @@ function DaypartPanel({ dayparts }: { dayparts: SimulationDaypartLine[] }) {
                 late-night is the only green column, your slice strategy is doing more
                 work than your dinner plates.
               </p>
+              <PlainTalk>
+                <p style={{ margin: 0 }}>
+                  Treat each daypart like a separate business. A red <strong>lunch
+                  column</strong> with green dinner means your lunch menu is wrong (too
+                  cheap, too few sides) — fix it with a 35 zł panini combo and the
+                  daypart can go from <strong>−500 zł/month to +3,000 zł/month</strong>.
+                  A red <strong>late-night column</strong> usually means staff cost
+                  doesn&apos;t match the few orders — cut hours by 1 and save
+                  ~1,200 zł/month.
+                </p>
+              </PlainTalk>
             </InfoButton>
             <SourceTag kind="actuals" hint="Computed from real order timestamps." />
           </span>
@@ -5878,6 +6334,17 @@ function AttachmentEfficiencyPanel({ rows }: { rows: AttachLeverEfficiency[] }) 
                 85-88% margin, near-zero kitchen time. A 25→45pp espresso push adds
                 ~3,900 zł/mo of pure CM at default volumes with no capex.
               </p>
+              <PlainTalk>
+                <p style={{ margin: 0 }}>
+                  Don&apos;t train your staff to push the lever with the biggest
+                  percentage — train them on the lever with the biggest złoty. A
+                  <strong> 50% pasta attach sounds amazing</strong>, but each pasta only
+                  earns 8 zł of margin (high food cost). A <strong>30% espresso
+                  attach</strong> sounds small, but each cup earns 8 zł of margin too —
+                  and is 10× easier to suggest. Sort the table, talk about the top row
+                  at every staff meeting.
+                </p>
+              </PlainTalk>
             </InfoButton>
             <HandCoins className="h-4 w-4 v2-muted" />
           </span>
@@ -6182,6 +6649,17 @@ function UnitEconomicsPanel({
                 visually without scaling. The bar lengths reflect absolute zł impact; the %
                 column reflects share of ticket.
               </p>
+              <PlainTalk>
+                <p style={{ margin: 0 }}>
+                  This is the &quot;follow the złoty&quot; chart. A customer hands you
+                  <strong> 65 zł</strong>. By the time it&apos;s in your bank account
+                  after food, packaging, the Glovo cut, a tiny waste allowance, payment
+                  fees and loyalty burn, you&apos;re holding <strong>~28 zł</strong>
+                  (CM1). After labor and rent that drops to <strong>~6 zł</strong>
+                  (CM2). Knowing exactly which line ate the rest is how you find the
+                  biggest fixable leak — usually packaging, fees or waste.
+                </p>
+              </PlainTalk>
             </InfoButton>
             <Calculator className="h-4 w-4 v2-muted" />
           </span>
@@ -6344,6 +6822,17 @@ function ChannelEconomicsPanel({ rows }: { rows: ChannelEconomicsRow[] }) {
                 Operator note: cash share + on-site share + Glovo share + Wolt share
                 should sum to 1. Adjust shares in the assumptions card.
               </p>
+              <PlainTalk>
+                <p style={{ margin: 0 }}>
+                  Same pizza, four different prices once fees are netted. A
+                  <strong> 65 zł pizza</strong> earns you ~28 zł of CM1 on cash, ~26 zł
+                  on a card terminal, but only <strong>~10 zł on Glovo</strong> after
+                  the 27% cut. If 40% of your volume is Glovo, that&apos;s
+                  <strong> ~13,000 zł/month of contribution</strong> the platform is
+                  eating. Doesn&apos;t mean quit Glovo — it means push a 10% discount
+                  for ordering direct via your own site and shift even 5pp of volume.
+                </p>
+              </PlainTalk>
             </InfoButton>
             <Calculator className="h-4 w-4 v2-muted" />
           </span>
@@ -6440,6 +6929,17 @@ function FleetPanel({
                 <li><strong>Build-out learning curve</strong> — each new unit costs <code>(1 − learning)^(n−1)</code> × the original setup, floored at the minimum.</li>
               </ul>
               <p>The per-unit table below shows what each truck contributes after all of the above; the strip above shows fleet totals.</p>
+              <PlainTalk>
+                <p style={{ margin: 0 }}>
+                  Going from 1 truck to 5 isn&apos;t just 5× the spreadsheet. Suppliers
+                  give you <strong>~10% off cheese</strong> when you buy in bulk, but
+                  you now pay <strong>~15,000 zł/month for a regional manager</strong>
+                  that 1 truck couldn&apos;t afford. The model shows whether the math
+                  actually works: typically truck #1 earns 25% margin, truck #4 earns
+                  ~32% margin (supply leverage), but truck #6 might only earn 28% if
+                  it cannibalises truck #3&apos;s catchment.
+                </p>
+              </PlainTalk>
             </InfoButton>
             <Grid3X3 className="h-4 w-4 v2-muted" />
             <span className="v2-muted text-xs">{f.unitCount} unit{f.unitCount === 1 ? "" : "s"}</span>
@@ -6749,6 +7249,16 @@ function SssgStrip({ sssg, simulated }: { sssg: SimulationSssgSnapshot; simulate
             grew. Revenue up + customers flat + ticket up = same people spending more
             (loyalty / attach lifting). Different stories, different next moves.
           </p>
+          <PlainTalk>
+            <p style={{ margin: 0 }}>
+              Two restaurants both report <strong>&quot;+12% growth&quot;</strong>. One
+              raised prices 10% and lost a few customers; the other actually doubled
+              new-customer count but ticket fell. They&apos;ll look identical on the
+              top line and behave totally differently in 6 months — the price-raiser is
+              fragile (one competitor opens nearby and you&apos;re done), the volume-grower
+              is durable. This decomposition tells you which one you are.
+            </p>
+          </PlainTalk>
         </InfoButton>
         <span className="v2-muted text-xs">
           Last {sssg.windowDays}d vs prior {sssg.windowDays}d
@@ -6845,6 +7355,17 @@ function CohortPanel({
             <li><strong>Customer payback</strong> — months for cumulative GP per customer to cover CAC. ≤ 6 mo = strong, ≤ 12 mo = acceptable.</li>
             <li><strong>New vs returning revenue mix</strong> — % from net-new customers vs prior-window customers. Returning &gt; new = sustainable repeat business. New &gt; returning = leaky bucket.</li>
           </ul>
+          <PlainTalk>
+            <p style={{ margin: 0 }}>
+              Acquiring a new customer is expensive; getting one to come back is almost
+              free. If your CAC is <strong>15 zł</strong> and the average customer
+              brings <strong>~45 zł of profit over a year</strong>, that&apos;s a
+              <strong> 3× LTV/CAC</strong> — healthy. If repeat rate falls from 35% to
+              20% (bad experience, competitor opened, menu got stale), LTV drops to
+              <strong> ~25 zł</strong> and suddenly every Instagram ad is losing
+              money. Watch repeat rate weekly; it&apos;s the earliest warning sign.
+            </p>
+          </PlainTalk>
         </InfoButton>
         <SourceTag kind="actuals" hint={`Last ${cohorts.windowDays} days, grouped by phone`} />
       </div>
@@ -7012,6 +7533,18 @@ function TornadoPanel({ bars }: { bars: TornadoBar[] }) {
                 small input changes move the bottom line most — that&apos;s where the
                 operator&apos;s attention belongs.
               </p>
+              <PlainTalk>
+                <p style={{ margin: 0 }}>
+                  Look at the top bar — that&apos;s what to worry about. If
+                  <strong> volume sensitivity</strong> is biggest, your business is
+                  fragile to a slow week (build attach to grow profit per existing
+                  customer). If <strong>food cost</strong> is biggest, one cheese price
+                  hike could wipe out a month of profit (lock in supplier contracts).
+                  Most trucks find volume + food cost are top — that combo says
+                  &quot;defend revenue and renegotiate cheese&quot; is the priority
+                  list, in that order.
+                </p>
+              </PlainTalk>
             </InfoButton>
             <FlaskConical className="h-4 w-4 v2-muted" />
           </span>
@@ -7296,6 +7829,17 @@ function MarginTrapsCallout({ rows, simulated }: { rows: SimulationMenuEngineeri
                 Recommended action: reprice up, swap to a faster recipe, lock to dine-in
                 only (skips the marketplace fee), or delete from the menu.
               </p>
+              <PlainTalk>
+                <p style={{ margin: 0 }}>
+                  The classic case: <strong>burrata pizza at 52 zł</strong>, looks like
+                  a 65% GM star. Reality check: burrata spoils in 48h (waste eats 8%),
+                  90% of orders come via Glovo (27% fee), and one bad shift dumps a
+                  whole portion (4 zł each). <strong>True margin: ~12%</strong>, not
+                  65%. Either reprice to 62 zł, switch to a longer-life cheese, or
+                  pull it from delivery. A single trap item in your top-3 sellers can
+                  silently cost <strong>~3,000 zł/month</strong>.
+                </p>
+              </PlainTalk>
             </InfoButton>
             {simulated && <SourceTag kind="assumption" hint="Simulated from scenario — once real orders flow in, trap detection runs on actuals." />}
             <AlertTriangle className="h-4 w-4 v2-muted" />
@@ -7448,6 +7992,19 @@ function MenuEngineeringPanel({
                 <span style={{ background: "rgba(168,85,247,0.15)", color: "rgb(126,34,206)", padding: "0 4px", borderRadius: 4, fontSize: 10, fontWeight: 700, marginLeft: 4 }}>ANCHOR</span>
                 {" "}premium decoy. An anchor sitting in the puzzle quadrant is there <em>by design</em> — don&apos;t reflexively delete.
               </p>
+              <PlainTalk>
+                <p style={{ margin: 0 }}>
+                  Think of every menu item as living in one of four houses:
+                  <strong> Stars</strong> (your bestsellers, keep them on page 1),
+                  <strong> Puzzles</strong> (great margin but nobody orders them — fix
+                  the photo, mention them at the till), <strong>Plowhorses</strong>
+                  (everyone orders them but margin is thin — raise the price 2 zł,
+                  customers won&apos;t notice) and <strong>Dogs</strong> (nobody buys
+                  them, they earn nothing — delete and free up menu space). Cleaning
+                  the dogs and raising plowhorse prices can lift profit
+                  <strong> ~5,000 zł/month</strong> in one menu update.
+                </p>
+              </PlainTalk>
             </InfoButton>
             <SourceTag
               kind={simulated ? "assumption" : "actuals"}
@@ -7585,6 +8142,17 @@ function ActualsStrip({
                 scenario inputs (with the &quot;actuals&quot; badges marking inputs that
                 match real-order observations within 5%).
               </p>
+              <PlainTalk>
+                <p style={{ margin: 0 }}>
+                  This is the reality check. Your scenario says <strong>80 orders/day,
+                  65 zł ticket</strong>. Real data says <strong>62 orders/day, 71 zł
+                  ticket</strong>. That 22% volume miss means every forecast above
+                  this strip is too optimistic by ~<strong>22,000 zł/month of
+                  revenue</strong>. Click &quot;Apply actuals&quot; to snap the model
+                  to truth — then plan against the real numbers, not the wished-for
+                  ones.
+                </p>
+              </PlainTalk>
             </InfoButton>
             <Stat
               label="Orders / day"
