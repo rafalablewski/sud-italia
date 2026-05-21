@@ -1,10 +1,13 @@
-import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
 import { ChatWidget } from "@/components/chat/ChatWidget";
 import { AbandonedCartWrapper } from "@/components/cart/AbandonedCartWrapper";
 import { CartPresenceSync } from "@/components/cart/CartPresenceSync";
 import { CustomerProvider } from "@/store/customer";
 
+/**
+ * Shared public-side providers. Header + Footer live inside the
+ * (legacy)/ subgroup so the home page can render its own v8 chrome
+ * without the legacy header/footer wrapping it.
+ */
 export default function PublicLayout({
   children,
 }: {
@@ -12,9 +15,7 @@ export default function PublicLayout({
 }) {
   return (
     <CustomerProvider>
-      <Header />
-      <main className="flex-1">{children}</main>
-      <Footer />
+      {children}
       <ChatWidget />
       <AbandonedCartWrapper />
       <CartPresenceSync />

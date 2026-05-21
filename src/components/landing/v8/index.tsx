@@ -1,19 +1,23 @@
 /**
  * V8 — Tuscany trattoria layout. Self-contained landing module.
  *
+ * Renders its OWN header + footer (V8Header, V8Footer) so the home
+ * page is 1:1 with the v8 mockup. The legacy global Header / Footer
+ * are wired up only for the (legacy) route subgroup — locations,
+ * rewards, privacy, etc.
+ *
  * To use: import the default export (`<V8Landing />`) from a page
- * that lives inside the public route group, e.g.
+ * inside the (public) route group. The page must NOT be inside
+ * (public)/(legacy)/ — that subgroup adds the legacy header/footer.
  *
- *   // src/app/(public)/page.tsx
- *   import V8Landing from "@/components/landing/v8";
- *   export default function Home() { return <V8Landing />; }
- *
- * To swap layouts: replace that import with another landing/<vN>/
- * module. This folder and its v8.css can then be removed without
- * touching any other file.
+ * To swap layouts: replace this folder with another landing/<vN>/
+ * module and update the page import. Nothing else needs to change.
  */
 import "./v8.css";
 
+import { V8Header } from "./layout/V8Header";
+import { V8LiveTicker } from "./layout/V8LiveTicker";
+import { V8Footer } from "./layout/V8Footer";
 import { HeroSection } from "./HeroSection";
 import { LocationsGrid } from "./LocationsGrid";
 import { BundlesShowcase } from "./BundlesShowcase";
@@ -25,13 +29,18 @@ import { CTASection } from "./CTASection";
 export default function V8Landing() {
   return (
     <div className="v8-frame">
-      <HeroSection />
-      <LocationsGrid />
-      <BundlesShowcase />
-      <FamigliaQuote />
-      <AboutSection />
-      <SociSection />
-      <CTASection />
+      <V8Header />
+      <V8LiveTicker />
+      <main className="v8-main">
+        <HeroSection />
+        <LocationsGrid />
+        <BundlesShowcase />
+        <FamigliaQuote />
+        <AboutSection />
+        <SociSection />
+        <CTASection />
+      </main>
+      <V8Footer />
     </div>
   );
 }
