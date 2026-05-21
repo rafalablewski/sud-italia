@@ -466,6 +466,9 @@ function RecipesPanel() {
         menuItem={editing}
         recipe={editing ? recipeByMenuId.get(editing.id) : undefined}
         ingredients={ingredients}
+        locationLabel={
+          activeLocations.find((l) => l.slug === pageLoc)?.city ?? pageLoc
+        }
         onClose={() => setEditing(null)}
         onSaved={onSaved}
         onEditIngredient={(id) => {
@@ -661,6 +664,12 @@ interface EditorProps {
   menuItem: MenuItemData | null;
   recipe?: RecipeData;
   ingredients: IngredientData[];
+  /** City label of the location whose menu item this recipe is keyed
+   *  to. Recipes are per-(menuItemId), and menu items are per-location,
+   *  so each city has its own Margherita recipe + Margherita listed
+   *  price. Without this label the dialog header is misleading: it
+   *  shows ONE listed price + ONE cost but doesn't say which location. */
+  locationLabel?: string;
   onClose: () => void;
   onSaved: () => void;
   /** Open the IngredientDialog for the given ingredient — lets the
@@ -710,7 +719,7 @@ function productDraftFromItem(item: MenuItemData): ProductDraft {
   };
 }
 
-function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved, onEditIngredient }: EditorProps) {
+function RecipeEditor({ menuItem, recipe, ingredients, locationLabel, onClose, onSaved, onEditIngredient }: EditorProps) {
   const toast = useToast();
   const [rows, setRows] = useState<EnrichedRecipeIngredient[]>([]);
   const [yieldPortions, setYieldPortions] = useState(1);
@@ -977,8 +986,8 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved, onEditI
         open
         onClose={onClose}
         size="xl"
-        title={`Recipe · ${menuItem.name}`}
-        description={`Listed price ${formatPrice(menuItem.price)} · Product info, dietary disclosures, and recipe live here. Cost recalculates from real ingredient prices.`}
+        title={locationLabel ? `Recipe · ${menuItem.name} · ${locationLabel}` : `Recipe · ${menuItem.name}`}
+        description={`${locationLabel ? `${locationLabel} listed price ` : "Listed price "}${formatPrice(menuItem.price)} · Recipes + offerings + prices are per-location — edit the other truck's Margherita separately via the location lens. Cost recalculates from real ingredient prices.`}
         footer={
           <>
             {hasExisting && (
