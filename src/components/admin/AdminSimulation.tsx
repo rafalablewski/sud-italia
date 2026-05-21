@@ -5218,14 +5218,14 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            <strong>Use it to answer:</strong> &quot;cut food cost 2 pp
-            or raise ticket 5 zł — which wins?&quot; Diagonal comparison
-            across centre quantifies the trade-off. Cost cuts compound
-            year-over-year (a permanent 2 pp COGS reduction is worth
-            the same every future month), while price hikes work once
-            and then require another cycle. Use Kasavana &amp; Smith
-            menu-engineering: place high-CM items second-from-top to
-            anchor decisions before reaching for the COGS lever.
+            Cost cuts and price hikes are not symmetric: a permanent
+            2pp COGS reduction is worth the same every future month at
+            every future revenue level, while price hikes work once
+            and then require another cycle. So when both cells show
+            similar profit on this grid, the cost lever is the better
+            long-run move. Menu engineering (rearrange the menu to
+            shift mix toward high-CM items) often beats both — same
+            grid, free.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -5307,30 +5307,15 @@ const HELP = {
           The drivers behind the 12-month projection and payback calc.
         </p>
         <InstitutionalAnalysis>
-          <ul style={{ margin: 0, paddingLeft: 18 }}>
-            <li>
-              <strong>Wage inflation</strong> — annual % labor cost
-              growth. PL 2026 ~7% (min-wage hike + sector pressure).
-            </li>
-            <li>
-              <strong>Ingredient inflation</strong> — ~4% food CPI
-              (GUS); applies to COGS + fixed CPI-indexed lines.
-            </li>
-            <li>
-              <strong>Card processor fee</strong> — Stripe blended
-              ~1.9% of card revenue; lower with negotiated tiers.
-            </li>
-            <li>
-              <strong>Setup cost</strong> — vehicle + buildout +
-              permits + working capital. Drives setup payback + CoC.
-            </li>
-            <li>
-              <strong>Seasonal multipliers</strong> — winter / spring
-              / summer / autumn volume swings. PL pizza trucks peak in
-              summer (~1.3×) and dip hard in winter (~0.7×) for outdoor
-              pitches.
-            </li>
-          </ul>
+          <p style={{ margin: 0 }}>
+            These are the only inputs that compound year-over-year,
+            which is why getting them ±1pp wrong matters more than the
+            other inputs you tune more often. Wage inflation is the
+            ratchet the operator can&apos;t control (statutory floor);
+            ingredient inflation is partially negotiable (supplier
+            mix). Refresh these annually as part of the budget cycle;
+            stale defaults distort projection and payback math.
+          </p>
         </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
@@ -5418,13 +5403,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            <strong>Watch for:</strong> the gap between Revenue and Net
-            profit widening = inflation eating margin. If the gap closes
-            by month 12, plan price increases now. The four KPIs (12-mo
-            revenue / costs / net profit / best vs worst month) summarise
-            the year. Use the best-vs-worst spread to size working
-            capital — your reserve should cover the gap between peak
-            cash month and trough cash month.
+            Watch the gap between revenue and net-profit lines widen
+            over the year — that&apos;s inflation eating margin. If
+            the gap closes by month 12, plan a price increase now,
+            don&apos;t wait for it to invert. Use the best-vs-worst
+            spread to size working-capital reserves: your reserve
+            should cover the gap between peak cash month and trough
+            cash month, not the annual average.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -5509,18 +5494,14 @@ const HELP = {
           loss.
         </p>
         <InstitutionalAnalysis>
-          <p style={{ margin: "0 0 6px" }}>
-            Expressed at four scales (hour, day, month, equivalent
-            monthly revenue) so you can match it to whatever metric the
-            team watches live during service.
-          </p>
           <p style={{ margin: 0 }}>
-            <strong>Worked example:</strong> break-even 45 orders/day,
-            running 60 → every order past 45 drops (ticket × (1 − COGS%
-            − card fee % − waste − refunds − loyalty)) zł of pre-tax
-            contribution. The margin-of-safety (60 − 45) ÷ 60 = 25% is
-            the cushion. Below 10% MoS, one bad week wipes you out; ≥
-            20% is comfortable for institutional review.
+            The number to write on the wall — every shift the team
+            sees how many orders away from red they are. The
+            psychological lift of operating above break-even (vs hoping
+            to reach it) is bigger than the math suggests. The
+            margin-of-safety ratio implicit here is the institutional
+            cushion metric: it&apos;s how investors decide whether the
+            unit can survive a bad quarter.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -5617,13 +5598,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            <strong>Why it matters:</strong> profit is a thin slice of
-            revenue (typical 10-15%), so volume swings amplify into
-            profit swings — a 10% revenue drop wipes 60-70% of profit,
-            not 10%. If a −10% volume drop tips you into the red,
-            you&apos;re running too thin — raise prices, cut a fixed
-            cost, or grow attach rates before opening. Below 20% margin
-            of safety is institutionally unsuited for capex.
+            Profit is a thin slice of revenue, so volume swings amplify
+            non-linearly into profit swings — operating leverage cuts
+            both ways. If a −10% volume drop tips you into the red,
+            the business is too fragile for capex — raise prices, cut
+            a fixed cost, or grow attach rates before opening day. Use
+            this card to stress test BEFORE committing capital, not
+            after the bad month arrives.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -5667,14 +5648,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Reflects statutory minimum-wage hikes (MRiPS announces Sep
-            for next year), sector wage pressure, and inflation-linked
-            contract adjustments. The 7% PL benchmark = min-wage jump
-            (4666 zł → ~5000 zł brutto) + sector premium + skill
-            inflation for pizzaiolo / chef roles. Treat as floor: a
-            shock year (mandatory bonus, ZUS rate change) can spike to
-            10-12%. Productivity (revenue per labor hour) is the
-            offset — 5% productivity lift cancels typical wage inflation.
+            Treat the default as a floor — shock years (a new ZUS rate,
+            mandatory bonus) can spike well above it. The only
+            sustainable counter is productivity: a 5% lift in
+            revenue-per-labor-hour cancels typical wage inflation
+            entirely. So this isn&apos;t just an inflation knob, it&apos;s
+            the productivity target — beat this number every year or
+            margin erodes silently.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -5716,14 +5696,14 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Captures food-CPI (~5% per GUS), supplier list-price moves,
-            utility tariff hikes (~6% URE), rent escalators (CPI-capped
-            ~2-3%). 4% is the blended weighted average. Doesn&apos;t
-            model commodity shocks — the Ukraine flour spike 2022 was
-            +30% in 6 months for some operators. Use the Ingredient
-            Stress card to layer specific commodity shocks on top of
-            this baseline. Below 3%, you&apos;re modelling deflation
-            (rare in PL casual-dining 2024+).
+            A smooth-inflation assumption — useful for the base
+            projection, but it doesn&apos;t capture commodity shocks
+            (the 2022 flour spike was +30% in 6 months for some
+            operators). Layer specific shocks on top using the
+            Ingredient Stress card; this lever is the baseline, not
+            the full picture. Below 3% you&apos;re modelling deflation
+            — rare in PL casual-dining and should require a deliberate
+            override, not a default.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -5766,13 +5746,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Single biggest negotiable variable cost line outside COGS.
-            Tier breakpoints around 50k / 100k / 200k zł/month card
-            revenue typically unlock 0.2-0.4 pp savings. The Channel
-            Economics card blends this with cashShare 0%, glovoFee
-            ~27%, woltFee ~25% for the cross-channel weighted average
-            that flows into the P&amp;L. BLIK is cheaper than card
-            (~1.0%); promote in-store to lower the blended rate.
+            Single biggest negotiable variable cost line outside COGS,
+            yet most operators never renegotiate. Volume tiers unlock
+            material savings — track your effective rate quarterly and
+            ask for the next tier. BLIK (instant transfer) is cheaper
+            than card and increasingly popular in PL; promoting it
+            in-store nudges the blended rate down without renegotiating
+            anything.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
