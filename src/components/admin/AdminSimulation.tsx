@@ -8107,14 +8107,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Healthy ranges: 50-55% world-class; 45-50% healthy; 40-45%
-            pressured; &lt; 40% structurally unprofitable. PL casual-
-            Italian benchmark 47-52%. The metric that drives every
-            growth-vs-marketing decision: a 5,000 zł marketing campaign
-            needs to generate ~10k incremental revenue at 50% CM to
-            justify. Track per-channel (delivery CM ~35% vs on-site
-            ~55%) because channel-mix shifts change the blended CM
-            materially.
+            The metric that drives every growth-vs-marketing decision:
+            a marketing campaign needs incremental revenue at least
+            twice its cost at typical CM to net positive. Track
+            per-channel — delivery CM is materially below on-site CM,
+            so a channel-mix shift toward delivery changes the blended
+            number without anyone obviously cutting costs. The honest
+            cash-drop ratio per złoty of sales.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -8154,13 +8153,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Healthy ranges: ≥ 25% comfortable; 15-25% adequate; 10-15%
-            fragile; &lt; 10% one bad week from red. From
-            Schmidgall&apos;s CVP framework, this is the equity-investor
-            gating metric — Series A capital won&apos;t back a plan
-            with steady-state MoS under 20%. Watch seasonally; winter
-            MoS might be 5% while annual average is 22% — investor
-            scrutiny will probe the worst quarter, not the average.
+            The equity-investor gating metric — institutional capital
+            won&apos;t back a plan with steady-state MoS under 20%.
+            Watch the worst quarter, not the average; investor due
+            diligence will probe the trough month explicitly, and a
+            22% annual average that hides a 5% winter trough fails
+            scrutiny. Plan working-capital reserves against the
+            worst-month profile.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -8199,13 +8198,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Healthy ranges (PL pizza): 70-90 zł/h needs work; 90-120
-            zł/h healthy; 120-160 zł/h good; 160+ zł/h excellent
-            (often QSR chains with optimised mise-en-place). At 35 zł/h
-            blended brutto cost, 90 zł/h revenue yields ~25% labor of
-            revenue — the operating threshold. Diagnose by shift: lunch
-            70 zł/h vs dinner 130 zł/h means the lunch shift is the
-            underperformer, not the team.
+            Diagnose by shift, not by team: a low lunch number against
+            a strong dinner number means the lunch slot is the
+            underperformer, not the people. Productivity gaps usually
+            map to shift-design problems (right roles in the wrong
+            hour) before they map to people problems. This is the
+            staffing-decision metric — schedule against the
+            productivity heatmap, not against custom.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -8246,14 +8245,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Healthy: ≤ 18 mo excellent; 18-24 solid; 24-36 acceptable;
-            &gt; 36 marginal; &gt; 48 reconsider. &quot;Naïve&quot;
-            because it ignores ramp (year-1 won&apos;t hit projected
-            profit), time-value (1 zł in month 1 ≠ 1 zł in month 24)
-            and risk. PE/VC use IRR with discount rates 10-20% — use
-            the Investor Returns strip for institutional-grade
-            comparison. Useful only for quick mental anchoring; not
-            for capital-allocation decisions.
+            Naïve because it ignores opening ramp, the time value of
+            money, and risk — so use this only for quick mental
+            anchoring, not capital-allocation decisions. For
+            institutional-grade comparison go to the Investor Returns
+            strip (NPV, IRR, cash-on-cash). The honest payback story
+            is roughly 30-50% longer than the naïve number suggests
+            once ramp + discounting are layered in.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -8296,14 +8294,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            = pizzasPerHour × serviceHoursPerDay × ovenEfficiency ÷
-            prepComplexity. Typical PL single truck 100-180 orders/day;
-            multi-oven 200-300. Sustainable utilisation 70-85%; below
-            70% over-staffed overhead; above 85% blows ticket times at
-            peak. Demand-side or supply-side bottleneck? If observed
-            orders &lt; 60% of capacity, marketing has headroom; if
-            ≥ 90%, marketing spend goes to capacity-driven walkouts —
-            invest in operations first.
+            The most important diagnostic on the page: is the truck
+            demand-constrained or supply-constrained? If observed
+            orders sit well below capacity, marketing has headroom
+            and spend converts to growth. If they&apos;re pressing the
+            ceiling, marketing spend just generates walkouts —
+            ops investment (training, second station, layout) precedes
+            any further demand push.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -8342,15 +8339,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Healthy peak share 12-22% of daily orders concentrated in
-            the single busiest hour. Higher concentration = more
-            sensitive to capacity constraint. Within-hour micro-peaks
-            (the 15-min mega-peak inside the busiest hour) typically
-            inflate real saturation by 20-30% above the hourly stat —
-            customers don&apos;t arrive at evenly-spaced 5-min
-            intervals. Compare to realistic peak capacity for the
-            saturation status flag (Headroom / Heading there / At
-            ceiling / Blown out).
+            The hourly average hides within-hour micro-peaks — customers
+            don&apos;t arrive at evenly-spaced intervals, they cluster
+            into 15-minute waves. So real saturation during the worst
+            quarter-hour runs above the hourly figure, and capacity
+            planning against the hourly average will under-provision
+            for the actual stress moment. Stopwatch the busiest 15
+            minutes, then plan against that.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -8390,15 +8385,14 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Healthy: ≤ 6 min QSR ideal; 6-8 min comfortable; 8-12 min
-            slipping; &gt; 12 min losing customers. Maister&apos;s laws
-            of service apply: customers tolerate 50% longer waits when
-            expectation is set up front (&quot;~7 minutes&quot;). Above
-            12 min median, refund/comp rate empirically jumps 2-4 pp.
-            Track P95 not just P50 — a few 20-min outliers ruin
-            individual experiences and the bad reviews that follow.
-            Delivery customers tolerate longer (15-20 min) because they
-            aren&apos;t watching the kitchen clock — track separately.
+            Maister&apos;s law of service applies: customers tolerate
+            longer waits when expectation is set up front. So a posted
+            &quot;~7 minute&quot; sign extends the patience threshold
+            without changing the kitchen. Track P95 alongside P50 — a
+            few 20-minute outliers ruin individual experiences and
+            generate the bad reviews. Delivery customers tolerate
+            longer because they aren&apos;t watching the kitchen clock;
+            track that channel separately or the blended P50 lies.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -8441,16 +8435,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Strips out financing decisions (interest), tax structures
-            (CIT), and accounting choices (D&amp;A schedule) so
-            underlying operating performance is comparable across deals
-            of different capital structure. Healthy PL casual-Italian:
-            12-18% margin standard; 18-25% strong; &gt; 25% exceptional.
-            Sale multiples: 4-7× EBITDA. The metric that drives
-            valuation — lifting 1 pp margin lifts sale price by 4-7×
-            that amount. Audit / due-diligence normalisations
-            (founder salary, one-off costs) can swing the reported
-            number 10-20%.
+            The metric that drives valuation — sale multiples are
+            applied to EBITDA, so lifting 1 pp of margin lifts sale
+            price by the multiple, not by 1 pp. Audit / due-diligence
+            normalisations (founder salary, one-off costs, related-
+            party rent) routinely swing the reported number by 10-20%,
+            so the &quot;adjusted EBITDA&quot; you defend in a sale
+            process is the one that matters, not the raw P&amp;L line.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
