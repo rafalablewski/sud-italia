@@ -360,10 +360,10 @@ export default async function CapabilitiesPage() {
       title: "Customer ordering",
       items: [
         {
-          name: "Customer theme — Tuscany (V8)",
+          name: "Theme — Tuscany (V8) · platform-wide",
           status: "live",
           href: "/",
-          summary: "Customer-facing surface (landing, locations, menu, cart, checkout, rewards, order confirmation) skinned with the V8 Tuscany trattoria theme: parchment + terracotta + basil palette, Cormorant Garamond display + Lora body. Scoped to the (public) layout via the .tuscany class — admin/kitchen/franchisee keep their own design systems. Original V8 reference at /mockups/cart.html.",
+          summary: "V8 Tuscany trattoria theme is the platform's primary design system across customer (landing, locations, menu, cart, checkout, rewards, order confirmation), admin (~25 pages), kitchen (KDS), franchisee, and corporate surfaces. Palette: parchment / terracotta / basil / oxblood / ochre / espresso. Typography: Cormorant Garamond display + Lora body via next/font (loaded once at root layout). Admin keeps its dark+light dual-mode glassmorphism shell with retargeted tokens (espresso surfaces / parchment ink in dark; parchment surfaces / ink text in light). Chart palette in src/components/admin/v2/theme.ts matches. Customer side adds an extra .tuscany scope for paper-grain backdrop + italic-display headings. Reference mockup: /mockups/cart.html (V8 frame).",
         },
         {
           name: "Stripe checkout",

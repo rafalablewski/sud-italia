@@ -1,7 +1,24 @@
 import type { Metadata, Viewport } from "next";
+import { Cormorant_Garamond, Lora } from "next/font/google";
 import "./globals.css";
 import { SITE_NAME, SITE_DESCRIPTION } from "@/lib/constants";
 import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
+
+const cormorant = Cormorant_Garamond({
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "500", "600", "700"],
+  style: ["normal", "italic"],
+  variable: "--font-cormorant",
+  display: "swap",
+});
+
+const lora = Lora({
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "500", "600", "700"],
+  style: ["normal", "italic"],
+  variable: "--font-lora",
+  display: "swap",
+});
 
 export const viewport: Viewport = {
   // viewport-fit=cover unlocks env(safe-area-inset-*) on notched phones —
@@ -54,7 +71,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pl" className="h-full">
-      <body className="min-h-full flex flex-col antialiased">
+      <body className={`${cormorant.variable} ${lora.variable} min-h-full flex flex-col antialiased`}>
         <ServiceWorkerRegistrar />
         {children}
       </body>
