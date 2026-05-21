@@ -3725,16 +3725,45 @@ html { scroll-behavior: smooth; }
   .v2-rcp-grid { grid-template-columns: 1fr; }
 }
 
-/* Three summary tiles at the top of the recipe editor. Uses the standard
+/* Four summary tiles at the top of the recipe editor. Uses the standard
    `KpiCard` primitive — keeps the look consistent with AdminDashboard /
    AdminReports / AdminInventory and lets the same tone bands tell the
-   story (margin colour-codes itself). */
+   story (margin colour-codes itself). 4th tile (calories) is computed
+   from ingredient kcalPerUnit × quantity × waste. */
 .v2-recipe-summary {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
 }
-@media (max-width: 720px) { .v2-recipe-summary { grid-template-columns: 1fr; } }
+@media (max-width: 960px) { .v2-recipe-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 540px) { .v2-recipe-summary { grid-template-columns: 1fr; } }
+
+/* Section dividers + headers inside the recipe dialog. The dialog body
+   now spans Recipe → Product info → Dietary disclosures; the divider
+   gives the eye a clean break between concerns so the form is scannable
+   instead of a single tall column. */
+.v2-rcp-dialog-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 8px 0 4px;
+}
+.v2-rcp-dialog-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.v2-rcp-dialog-section-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--fg);
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+.v2-rcp-dialog-section-hint {
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+  margin: -8px 0 0;
+}
 
 /* Recipe ingredients table — reuses .v2-mng-section + .v2-mng-row chrome so
    row padding, hover, bold names, and section-header eyebrow all match the

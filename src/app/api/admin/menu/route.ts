@@ -15,25 +15,43 @@ import type { MenuItem } from "@/data/types";
 import { locations } from "@/data/locations";
 import { menuOverridePutSchema, parseBody } from "@/lib/api-schemas";
 
-/** Per-portion food cost for every dish that has a recipe, computed in a single
- * pass instead of N+1 calls to calculateFoodCost. The recipe is the source of
+/** Per-portion food cost + kcal for every dish that has a recipe, computed
+ * in a single pass instead of N+1 calls. The recipe is the source of
  * truth: any item with a recipe gets its menu-shown cost derived from the
  * current ingredient prices, so the Menu and Recipes admin pages can never
- * disagree (or drift when an ingredient price changes). */
-async function getRecipeCostMap(): Promise<Map<string, number>> {
+ * disagree (or drift when an ingredient price changes). The kcal map mirrors
+ * the cost map but only populates when every ingredient on the recipe has a
+ * `kcalPerUnit` value — partial sums would mislead the customer card.
+ */
+async function getRecipeDerivedMaps(): Promise<{
+  cost: Map<string, number>;
+  kcal: Map<string, number>;
+}> {
   const [recipes, ingredients] = await Promise.all([getRecipes(), getIngredients()]);
-  const priceById = new Map(ingredients.map((i) => [i.id, i.costPerUnit]));
-  const map = new Map<string, number>();
+  const ingById = new Map(ingredients.map((i) => [i.id, i]));
+  const cost = new Map<string, number>();
+  const kcal = new Map<string, number>();
   for (const r of recipes) {
     if (r.ingredients.length === 0) continue;
-    let total = 0;
+    let totalCost = 0;
+    let totalKcal = 0;
+    let kcalComplete = true;
     for (const ri of r.ingredients) {
-      const unitCost = priceById.get(ri.ingredientId) ?? 0;
-      total += unitCost * ri.quantity * (ri.wasteFactor || 1);
+      const ing = ingById.get(ri.ingredientId);
+      const unitCost = ing?.costPerUnit ?? 0;
+      totalCost += unitCost * ri.quantity * (ri.wasteFactor || 1);
+      if (ing && typeof ing.kcalPerUnit === "number") {
+        totalKcal += ing.kcalPerUnit * ri.quantity * (ri.wasteFactor || 1);
+      } else {
+        kcalComplete = false;
+      }
     }
-    map.set(r.menuItemId, Math.round(total / (r.yieldPortions || 1)));
+    cost.set(r.menuItemId, Math.round(totalCost / (r.yieldPortions || 1)));
+    if (kcalComplete) {
+      kcal.set(r.menuItemId, Math.round(totalKcal / (r.yieldPortions || 1)));
+    }
   }
-  return map;
+  return { cost, kcal };
 }
 
 // Menu reads are scoped per-location when a slug is provided. When omitted
@@ -42,17 +60,19 @@ async function getRecipeCostMap(): Promise<Map<string, number>> {
 export const GET = withAdmin(
   { locationParam: "location" },
   async (_req, _ctx, { locationSlug }) => {
-    const [overrides, recipeCosts, customItems] = await Promise.all([
+    const [overrides, recipeMaps, customItems] = await Promise.all([
       getMenuOverrides(),
-      getRecipeCostMap(),
+      getRecipeDerivedMaps(),
       getCustomMenuItems(),
     ]);
+    const { cost: recipeCosts, kcal: recipeKcals } = recipeMaps;
 
     const customIds = new Set(customItems.map((c) => c.id));
 
     const enrich = (item: MenuItem, opts?: { isCustom?: boolean }) => {
       const override = overrides[item.id];
       const recipeCost = recipeCosts.get(item.id);
+      const recipeKcal = recipeKcals.get(item.id);
       const hasRecipe = recipeCost !== undefined;
       // Recipe is canonical: when one exists, its computed per-portion cost
       // wins over both the seed cost and the override.cost (override.cost is
@@ -67,6 +87,8 @@ export const GET = withAdmin(
       // skipping null preserves the seed value. Deleting would leave the
       // field undefined and break required props (category, tags).
       const merged: Record<string, unknown> = { ...item };
+      const hasCalorieOverride =
+        override?.calories !== undefined && override?.calories !== null;
       if (override) {
         for (const [k, v] of Object.entries(override)) {
           if (v === null || v === undefined) continue;
@@ -84,12 +106,33 @@ export const GET = withAdmin(
           merged[k] = v;
         }
       }
+      // When no explicit calorie override is on this row, the recipe
+      // is the source of truth: write the computed per-portion kcal
+      // into `nutrition.calories` so admin reads (and the customer
+      // pill) reflect the live ingredient data instead of a stale
+      // seed value. Only writes when the recipe has kcal data on
+      // every ingredient line; partial data is treated as no claim.
+      if (!hasCalorieOverride && recipeKcal !== undefined) {
+        const nutrition = (merged.nutrition ?? item.nutrition) as
+          | { calories: number; protein: number; carbs: number; fat: number }
+          | undefined;
+        merged.nutrition = {
+          ...(nutrition ?? { calories: 0, protein: 0, carbs: 0, fat: 0 }),
+          calories: recipeKcal,
+        };
+      }
+      const calorieSource: "override" | "recipe" | "seed" = hasCalorieOverride
+        ? "override"
+        : recipeKcal !== undefined
+        ? "recipe"
+        : "seed";
       return {
         ...(merged as unknown as MenuItem),
         cost,
         _hasOverride: overrideKeys.length > 0,
         _hasRecipe: hasRecipe,
         _costSource: hasRecipe ? "recipe" : override?.cost !== undefined ? "override" : "seed",
+        _calorieSource: calorieSource,
         _isCustom: Boolean(opts?.isCustom),
         // Surface the soft-delete flag so the admin UI can offer a
         // "Show hidden" toggle + restore action. Customer surfaces filter

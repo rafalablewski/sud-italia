@@ -239,6 +239,13 @@ export interface Ingredient {
   category: IngredientCategory;
   unit: IngredientUnit;
   costPerUnit: number; // grosze per unit (e.g., 2500 = 25.00 PLN per kg)
+  /** Energy content per unit, in kcal (e.g. 2800 kcal/kg of olive oil).
+   *  Optional — when set on every ingredient referenced by a recipe, the
+   *  recipe's per-portion calories are computed from
+   *  Σ (kcalPerUnit × quantity × wasteFactor) / yieldPortions, mirroring
+   *  the cost calc. When unset on any line, the recipe shows "—" instead
+   *  of a partial number that would mislead the customer card. */
+  kcalPerUnit?: number;
   supplier?: string;
   notes?: string;
 }

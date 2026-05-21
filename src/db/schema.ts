@@ -277,6 +277,9 @@ export const ingredients = pgTable("ingredients", {
   category: text("category").notNull(),
   unit: text("unit").notNull(),
   costPerUnit: integer("cost_per_unit").notNull(),
+  /** kcal per unit. Nullable — rows created before the kcal-per-ingredient
+   *  feature shipped have NULL until the operator backfills. */
+  kcalPerUnit: integer("kcal_per_unit"),
   supplier: text("supplier"),
   notes: text("notes"),
 });

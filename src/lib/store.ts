@@ -2790,6 +2790,11 @@ const INGREDIENTS_DDL = [
     supplier text,
     notes text
   )`,
+  // 2026-05 — kcal-per-unit added so recipe calories can be computed from
+  // ingredient totals instead of an operator-typed value. Nullable so rows
+  // created before this column shipped don't need a backfill before the
+  // schema is honoured.
+  `ALTER TABLE ingredients ADD COLUMN IF NOT EXISTS kcal_per_unit integer`,
 ];
 const RECIPES_DDL = [
   `CREATE TABLE IF NOT EXISTS recipes (
@@ -2824,6 +2829,7 @@ async function dualWriteIngredient(ingredient: Ingredient): Promise<void> {
         category: ingredient.category,
         unit: ingredient.unit,
         costPerUnit: ingredient.costPerUnit,
+        kcalPerUnit: ingredient.kcalPerUnit ?? null,
         supplier: ingredient.supplier ?? null,
         notes: ingredient.notes ?? null,
       })
@@ -2834,6 +2840,7 @@ async function dualWriteIngredient(ingredient: Ingredient): Promise<void> {
           category: ingredient.category,
           unit: ingredient.unit,
           costPerUnit: ingredient.costPerUnit,
+          kcalPerUnit: ingredient.kcalPerUnit ?? null,
           supplier: ingredient.supplier ?? null,
           notes: ingredient.notes ?? null,
         },
@@ -2894,6 +2901,7 @@ function rowToIngredient(row: typeof ingredientsTable.$inferSelect): Ingredient 
     category: row.category as Ingredient["category"],
     unit: row.unit as Ingredient["unit"],
     costPerUnit: row.costPerUnit,
+    kcalPerUnit: row.kcalPerUnit ?? undefined,
     supplier: row.supplier ?? undefined,
     notes: row.notes ?? undefined,
   };
@@ -3043,6 +3051,33 @@ export async function calculateFoodCost(menuItemId: string): Promise<number> {
 
   // Cost per portion
   return Math.round(totalCost / (recipe.yieldPortions || 1));
+}
+
+/**
+ * Calculate per-portion kcal from the recipe. Mirrors calculateFoodCost
+ * but reads `kcalPerUnit` instead of `costPerUnit`. Returns `null` when:
+ *  - there's no recipe, or
+ *  - any ingredient referenced by the recipe is missing `kcalPerUnit`.
+ * Both signal "incomplete data" — surfaces as "—" on the operator UI
+ * + skips the customer kcal pill, instead of showing a misleading partial
+ * sum.
+ */
+export async function calculateRecipeCalories(menuItemId: string): Promise<number | null> {
+  const recipe = await getRecipe(menuItemId);
+  if (!recipe || recipe.ingredients.length === 0) return null;
+
+  const ingredients = await getIngredients();
+  const ingredientMap = new Map(ingredients.map((i) => [i.id, i]));
+
+  let totalKcal = 0;
+  for (const ri of recipe.ingredients) {
+    const ing = ingredientMap.get(ri.ingredientId);
+    if (!ing) return null;
+    if (typeof ing.kcalPerUnit !== "number") return null;
+    totalKcal += ing.kcalPerUnit * ri.quantity * (ri.wasteFactor || 1);
+  }
+
+  return Math.round(totalKcal / (recipe.yieldPortions || 1));
 }
 
 // --- Loyalty Members (phone-only signups without orders) ---

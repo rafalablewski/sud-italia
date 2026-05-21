@@ -15,12 +15,18 @@ export const POST = withAdmin(
   async (req) => {
     try {
       const body = await req.json();
+      const kcalRaw = body.kcalPerUnit;
+      const kcalParsed =
+        kcalRaw === null || kcalRaw === undefined || kcalRaw === ""
+          ? undefined
+          : Math.max(0, Math.round(Number(kcalRaw)));
       const ingredient: Ingredient = {
         id: body.id || `ing-${crypto.randomUUID().slice(0, 8)}`,
         name: body.name,
         category: body.category || "other",
         unit: body.unit || "kg",
         costPerUnit: Number(body.costPerUnit) || 0,
+        ...(Number.isFinite(kcalParsed) ? { kcalPerUnit: kcalParsed } : {}),
         supplier: body.supplier || "",
         notes: body.notes || "",
       };
@@ -45,8 +51,23 @@ export const PUT = withAdmin(
       if (!body.id) {
         return NextResponse.json({ error: "Missing ingredient id" }, { status: 400 });
       }
-
-      const saved = await saveIngredient(body as Ingredient);
+      // Normalise kcal the same way as POST: empty string / null / NaN
+      // means "no claim" → drop the field instead of writing 0, which
+      // would otherwise satisfy the `typeof === "number"` check in the
+      // recipe-calories helper and resolve to a fake 0-kcal value.
+      const kcalRaw = body.kcalPerUnit;
+      const kcalParsed =
+        kcalRaw === null || kcalRaw === undefined || kcalRaw === ""
+          ? undefined
+          : Math.max(0, Math.round(Number(kcalRaw)));
+      const incoming = body as Ingredient;
+      const normalised: Ingredient = {
+        ...incoming,
+        ...(Number.isFinite(kcalParsed)
+          ? { kcalPerUnit: kcalParsed }
+          : { kcalPerUnit: undefined }),
+      };
+      const saved = await saveIngredient(normalised);
       return NextResponse.json(saved);
     } catch {
       return NextResponse.json({ error: "Internal server error" }, { status: 500 });

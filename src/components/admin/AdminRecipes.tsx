@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Coffee,
+  Flame,
   FlaskConical,
   IceCream,
   Leaf,
@@ -61,6 +62,7 @@ interface IngredientData {
   category: IngredientCategory;
   unit: IngredientUnit;
   costPerUnit: number;
+  kcalPerUnit?: number;
   supplier?: string;
   notes?: string;
 }
@@ -72,7 +74,9 @@ interface EnrichedRecipeIngredient {
   name?: string;
   unit?: string;
   unitCost?: number;
+  unitKcal?: number | null;
   lineCost?: number;
+  lineKcal?: number | null;
 }
 
 /**
@@ -127,6 +131,11 @@ interface RecipeData {
   yieldPortions: number;
   notes?: string;
   calculatedCost?: number;
+  /** Per-portion kcal computed from `ingredient.kcalPerUnit` × qty × waste.
+   *  Null when any ingredient is missing its `kcalPerUnit` value — the
+   *  recipe editor surfaces a "—" placeholder + a hint instead of a
+   *  misleading partial sum. */
+  calculatedCalories?: number | null;
 }
 
 interface MenuItemData {
@@ -584,7 +593,6 @@ interface ProductDraft {
   description: string;
   category: MenuCategory;
   tags: ("vegetarian" | "vegan" | "spicy" | "gluten-free")[];
-  caloriesStr: string;
   halalStatus: "" | "halal" | "non-halal" | "uncertified";
   nutriGrade: "" | "A" | "B" | "C" | "D";
   containsPork: boolean;
@@ -597,10 +605,6 @@ function productDraftFromItem(item: MenuItemData): ProductDraft {
     description: item.description ?? "",
     category: item.category,
     tags: (item.tags ?? []).slice(),
-    caloriesStr:
-      typeof item.nutrition?.calories === "number"
-        ? String(item.nutrition.calories)
-        : "",
     halalStatus: item.halalStatus ?? "",
     nutriGrade: item.nutriGrade ?? "",
     containsPork: Boolean(item.containsPork),
@@ -625,7 +629,6 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
     description: "",
     category: "pizza",
     tags: [],
-    caloriesStr: "",
     halalStatus: "",
     nutriGrade: "",
     containsPork: false,
@@ -645,6 +648,7 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
         name: r.name,
         unit: r.unit,
         unitCost: r.unitCost,
+        unitKcal: r.unitKcal,
       })),
     );
     setYieldPortions(recipe?.yieldPortions ?? 1);
@@ -679,6 +683,7 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
         name: ing.name,
         unit: ing.unit,
         unitCost: ing.costPerUnit,
+        unitKcal: ing.kcalPerUnit,
       },
     ]);
     setPickerIngId("");
@@ -700,6 +705,23 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
     menuItem && menuItem.price > 0
       ? Math.round(((menuItem.price - perPortion) / menuItem.price) * 100)
       : 0;
+  // Per-portion kcal computed locally so the KPI updates as the operator
+  // edits quantities, without waiting for the server roundtrip. Null when
+  // any row lacks `unitKcal` — partial sums would mislead the customer.
+  const rowsMissingKcal = rows.filter(
+    (r) => typeof r.unitKcal !== "number",
+  );
+  const totalKcal = rows.reduce(
+    (acc, r) =>
+      typeof r.unitKcal === "number"
+        ? acc + r.unitKcal * r.quantity * (r.wasteFactor || 1)
+        : acc,
+    0,
+  );
+  const perPortionKcal =
+    rows.length > 0 && rowsMissingKcal.length === 0
+      ? Math.round(totalKcal / (yieldPortions || 1))
+      : null;
 
   const save = async () => {
     if (!menuItem) return;
@@ -780,16 +802,6 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
           ? true
           : null;
       }
-      const curKcal = product.caloriesStr.trim();
-      const initKcal = productInitial.caloriesStr.trim();
-      if (curKcal !== initKcal) {
-        if (curKcal === "") {
-          productPatch.calories = null;
-        } else {
-          const n = Math.max(0, Math.round(Number(curKcal)));
-          if (Number.isFinite(n)) productPatch.calories = n;
-        }
-      }
 
       if (Object.keys(productPatch).length > 0) {
         const productRes = menuItem._isCustom
@@ -869,6 +881,7 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
         }
       >
         <div className="v2-stack-12">
+          {/* ============ KPI summary — 4 cards across the top ============ */}
           <section className="v2-recipe-summary">
             <KpiCard
               label="Per portion"
@@ -904,157 +917,27 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
               staticValue
               hint={`${yieldPortions} portion${yieldPortions === 1 ? "" : "s"} per batch`}
             />
-          </section>
-
-          {/* Product info + dietary disclosures. Moved here from
-              /admin/menu/[slug] in 2026-05 so the kitchen owns the full
-              product definition; the menu page stays narrowly focused on
-              pricing / per-location settings / modifiers. Saved on the
-              same submit as the ingredients table. */}
-          <section className="v2-stack-12">
-            <Input
-              label="Name"
-              value={product.name}
-              onChange={(e) => setProduct((p) => ({ ...p, name: e.target.value }))}
-            />
-            <div className="v2-form-row-2">
-              <Select
-                label="Category"
-                value={product.category}
-                onChange={(e) =>
-                  setProduct((p) => ({
-                    ...p,
-                    category: e.target.value as MenuCategory,
-                  }))
-                }
-                options={PRODUCT_CATEGORY_ORDER.map((cc) => ({
-                  value: cc,
-                  label: MENU_CATEGORY_LABELS[cc],
-                }))}
-              />
-              <div className="v2-field">
-                <label className="v2-field-label">Tags</label>
-                <div
-                  className="v2-detail-tags-row"
-                  role="group"
-                  aria-label="Dietary tags"
-                >
-                  {MENU_TAGS.map((tag) => {
-                    const on = product.tags.includes(tag);
-                    return (
-                      <button
-                        key={tag}
-                        type="button"
-                        className={`v2-chip ${on ? "is-on" : ""}`}
-                        aria-pressed={on}
-                        onClick={() =>
-                          setProduct((p) => ({
-                            ...p,
-                            tags: on
-                              ? p.tags.filter((t) => t !== tag)
-                              : [...p.tags, tag],
-                          }))
-                        }
-                      >
-                        {tag}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-            <Textarea
-              label="Description"
-              value={product.description}
-              onChange={(e) =>
-                setProduct((p) => ({ ...p, description: e.target.value }))
+            <KpiCard
+              label="Calories"
+              value={perPortionKcal ?? 0}
+              display={perPortionKcal === null ? "—" : `${perPortionKcal} kcal`}
+              icon={Flame}
+              tone="neutral"
+              staticValue
+              hint={
+                perPortionKcal === null
+                  ? rowsMissingKcal.length === 0
+                    ? "Add ingredients to compute"
+                    : `${rowsMissingKcal.length} ingredient${
+                        rowsMissingKcal.length === 1 ? "" : "s"
+                      } missing kcal data`
+                  : "Auto-computed from ingredient kcal × qty"
               }
-              rows={3}
             />
-            <div className="v2-form-row-2">
-              <Input
-                type="number"
-                step="1"
-                min="0"
-                label="Calories"
-                value={product.caloriesStr}
-                onChange={(e) =>
-                  setProduct((p) => ({ ...p, caloriesStr: e.target.value }))
-                }
-                trailingAdornment={<span className="v2-muted">kcal</span>}
-                placeholder="—"
-                description="Per serving. Shown on the customer card when the truck's zone requires kcal (NYC always; EU opt-in)."
-              />
-              <Select
-                label="Halal status"
-                value={product.halalStatus}
-                onChange={(e) =>
-                  setProduct((p) => ({
-                    ...p,
-                    halalStatus: e.target.value as ProductDraft["halalStatus"],
-                  }))
-                }
-                options={[
-                  { value: "", label: "— No claim" },
-                  { value: "halal", label: "Halal (MUIS-covered)" },
-                  { value: "non-halal", label: "Non-halal" },
-                  { value: "uncertified", label: "Uncertified" },
-                ]}
-                description="Renders only on SG trucks."
-              />
-            </div>
-            <div className="v2-form-row-2">
-              <Select
-                label="Nutri-Grade"
-                value={product.nutriGrade}
-                onChange={(e) =>
-                  setProduct((p) => ({
-                    ...p,
-                    nutriGrade: e.target.value as ProductDraft["nutriGrade"],
-                  }))
-                }
-                options={[
-                  { value: "", label: "— Not graded" },
-                  { value: "A", label: "A — healthiest" },
-                  { value: "B", label: "B" },
-                  { value: "C", label: "C" },
-                  { value: "D", label: "D — least healthy" },
-                ]}
-                description="SG NEA Nutri-Grade for sugar-sweetened beverages."
-              />
-              <div className="v2-field">
-                <label className="v2-field-label">Disclaimers</label>
-                <label className="v2-detail-toggle">
-                  <input
-                    type="checkbox"
-                    checked={product.containsPork}
-                    onChange={(e) =>
-                      setProduct((p) => ({
-                        ...p,
-                        containsPork: e.target.checked,
-                      }))
-                    }
-                  />
-                  <span>Contains pork</span>
-                </label>
-                <label className="v2-detail-toggle">
-                  <input
-                    type="checkbox"
-                    checked={product.containsAlcohol}
-                    onChange={(e) =>
-                      setProduct((p) => ({
-                        ...p,
-                        containsAlcohol: e.target.checked,
-                      }))
-                    }
-                  />
-                  <span>Contains alcohol</span>
-                </label>
-              </div>
-            </div>
           </section>
 
-          {/* Ingredients table — uses the same `v2-mng-section` class system
+          {/* ============ Ingredients table — the main recipe edit surface ============ */}
+          {/* Uses the same `v2-mng-section` class system
               as the Menu page so the section header (icon + name + count) +
               row padding + hover + bold names all match exactly. */}
           <section className="v2-mng-section" data-variant="recipe-edit">
@@ -1175,6 +1058,161 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
             />
           </div>
           <Textarea label="Notes" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
+
+          {/* ============ Product info ============
+              Name + category + tags + description. Moved here from
+              /admin/menu/[slug] so the kitchen owns the product
+              definition. Edits flow into the menu override map (seed)
+              or the custom-item row (custom), saved alongside the
+              recipe on submit. */}
+          <div className="v2-rcp-dialog-divider" role="separator" aria-hidden />
+          <div className="v2-rcp-dialog-section">
+            <h3 className="v2-rcp-dialog-section-title">Product info</h3>
+            <p className="v2-rcp-dialog-section-hint">
+              Name, category, tags, description — applies to {menuItem.name}
+              {" "}on this location.
+            </p>
+            <Input
+              label="Name"
+              value={product.name}
+              onChange={(e) => setProduct((p) => ({ ...p, name: e.target.value }))}
+            />
+            <div className="v2-form-row-2">
+              <Select
+                label="Category"
+                value={product.category}
+                onChange={(e) =>
+                  setProduct((p) => ({
+                    ...p,
+                    category: e.target.value as MenuCategory,
+                  }))
+                }
+                options={PRODUCT_CATEGORY_ORDER.map((cc) => ({
+                  value: cc,
+                  label: MENU_CATEGORY_LABELS[cc],
+                }))}
+              />
+              <div className="v2-field">
+                <label className="v2-field-label">Tags</label>
+                <div
+                  className="v2-detail-tags-row"
+                  role="group"
+                  aria-label="Dietary tags"
+                >
+                  {MENU_TAGS.map((tag) => {
+                    const on = product.tags.includes(tag);
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        className={`v2-chip ${on ? "is-on" : ""}`}
+                        aria-pressed={on}
+                        onClick={() =>
+                          setProduct((p) => ({
+                            ...p,
+                            tags: on
+                              ? p.tags.filter((t) => t !== tag)
+                              : [...p.tags, tag],
+                          }))
+                        }
+                      >
+                        {tag}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+            <Textarea
+              label="Description"
+              value={product.description}
+              onChange={(e) =>
+                setProduct((p) => ({ ...p, description: e.target.value }))
+              }
+              rows={3}
+            />
+          </div>
+
+          {/* ============ Dietary disclosures ============
+              Halal status, Nutri-Grade, contains-pork / -alcohol. The
+              customer card only renders each chip when the location's
+              compliance zone enables that disclosure — see
+              /admin/regulatory-compliance. */}
+          <div className="v2-rcp-dialog-divider" role="separator" aria-hidden />
+          <div className="v2-rcp-dialog-section">
+            <h3 className="v2-rcp-dialog-section-title">Dietary disclosures</h3>
+            <p className="v2-rcp-dialog-section-hint">
+              Per-item flags surfaced as chips on the customer menu card.
+              Calories are computed above from ingredient totals — set kcal
+              per ingredient on the Ingredients tab.
+            </p>
+            <div className="v2-form-row-2">
+              <Select
+                label="Halal status"
+                value={product.halalStatus}
+                onChange={(e) =>
+                  setProduct((p) => ({
+                    ...p,
+                    halalStatus: e.target.value as ProductDraft["halalStatus"],
+                  }))
+                }
+                options={[
+                  { value: "", label: "— No claim" },
+                  { value: "halal", label: "Halal (MUIS-covered)" },
+                  { value: "non-halal", label: "Non-halal" },
+                  { value: "uncertified", label: "Uncertified" },
+                ]}
+                description="Renders only on SG trucks."
+              />
+              <Select
+                label="Nutri-Grade"
+                value={product.nutriGrade}
+                onChange={(e) =>
+                  setProduct((p) => ({
+                    ...p,
+                    nutriGrade: e.target.value as ProductDraft["nutriGrade"],
+                  }))
+                }
+                options={[
+                  { value: "", label: "— Not graded" },
+                  { value: "A", label: "A — healthiest" },
+                  { value: "B", label: "B" },
+                  { value: "C", label: "C" },
+                  { value: "D", label: "D — least healthy" },
+                ]}
+                description="SG NEA Nutri-Grade for sugar-sweetened beverages."
+              />
+            </div>
+            <div className="v2-field">
+              <label className="v2-field-label">Disclaimers</label>
+              <label className="v2-detail-toggle">
+                <input
+                  type="checkbox"
+                  checked={product.containsPork}
+                  onChange={(e) =>
+                    setProduct((p) => ({
+                      ...p,
+                      containsPork: e.target.checked,
+                    }))
+                  }
+                />
+                <span>Contains pork</span>
+              </label>
+              <label className="v2-detail-toggle">
+                <input
+                  type="checkbox"
+                  checked={product.containsAlcohol}
+                  onChange={(e) =>
+                    setProduct((p) => ({
+                      ...p,
+                      containsAlcohol: e.target.checked,
+                    }))
+                  }
+                />
+                <span>Contains alcohol</span>
+              </label>
+            </div>
+          </div>
         </div>
       </Dialog>
 
@@ -1263,6 +1301,18 @@ function IngredientsPanel() {
       align: "right",
       cell: (i) => formatPrice(i.costPerUnit),
       sortValue: (i) => i.costPerUnit,
+    },
+    {
+      key: "kcal",
+      header: "kcal / unit",
+      align: "right",
+      cell: (i) =>
+        typeof i.kcalPerUnit === "number" ? (
+          <span className="tabular">{i.kcalPerUnit}</span>
+        ) : (
+          <span className="v2-muted" title="No kcal set — recipes referencing this ingredient won't show a computed calorie value.">—</span>
+        ),
+      sortValue: (i) => i.kcalPerUnit ?? -1,
     },
     {
       key: "supplier",
@@ -1394,6 +1444,7 @@ function IngredientDialog({ state, onClose, onSaved }: IngDialogProps) {
   const [category, setCategory] = useState<IngredientCategory>("produce");
   const [unit, setUnit] = useState<IngredientUnit>("kg");
   const [costStr, setCostStr] = useState("0.00");
+  const [kcalStr, setKcalStr] = useState("");
   const [supplier, setSupplier] = useState("");
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
@@ -1405,6 +1456,9 @@ function IngredientDialog({ state, onClose, onSaved }: IngDialogProps) {
     setCategory(ing?.category ?? "produce");
     setUnit(ing?.unit ?? "kg");
     setCostStr(ing ? (ing.costPerUnit / 100).toFixed(2) : "0.00");
+    setKcalStr(
+      ing && typeof ing.kcalPerUnit === "number" ? String(ing.kcalPerUnit) : "",
+    );
     setSupplier(ing?.supplier ?? "");
     setNotes(ing?.notes ?? "");
   }, [state]);
@@ -1418,12 +1472,19 @@ function IngredientDialog({ state, onClose, onSaved }: IngDialogProps) {
     }
     setBusy(true);
     try {
+      const trimmedKcal = kcalStr.trim();
+      const kcalParsed =
+        trimmedKcal === ""
+          ? null
+          : Math.max(0, Math.round(Number(trimmedKcal)));
       const payload = {
         id: state.ingredient?.id,
         name: name.trim(),
         category,
         unit,
         costPerUnit: Math.round(parseFloat(costStr || "0") * 100),
+        // null = "no claim" (drops the field server-side). Number = set.
+        kcalPerUnit: Number.isFinite(kcalParsed) ? kcalParsed : null,
         supplier: supplier.trim() || undefined,
         notes: notes.trim() || undefined,
       };
@@ -1471,15 +1532,28 @@ function IngredientDialog({ state, onClose, onSaved }: IngDialogProps) {
             options={INGREDIENT_UNITS.map((u) => ({ value: u, label: u }))}
           />
         </div>
-        <Input
-          label={`Cost per ${unit}`}
-          type="number"
-          step="0.01"
-          min="0"
-          value={costStr}
-          onChange={(e) => setCostStr(e.target.value)}
-          trailingAdornment={<span className="v2-muted">zł</span>}
-        />
+        <div className="v2-form-row-2">
+          <Input
+            label={`Cost per ${unit}`}
+            type="number"
+            step="0.01"
+            min="0"
+            value={costStr}
+            onChange={(e) => setCostStr(e.target.value)}
+            trailingAdornment={<span className="v2-muted">zł</span>}
+          />
+          <Input
+            label={`kcal per ${unit}`}
+            type="number"
+            step="1"
+            min="0"
+            value={kcalStr}
+            onChange={(e) => setKcalStr(e.target.value)}
+            trailingAdornment={<span className="v2-muted">kcal</span>}
+            placeholder="—"
+            description="Used to auto-compute recipe calories."
+          />
+        </div>
         <Input label="Supplier" value={supplier} onChange={(e) => setSupplier(e.target.value)} placeholder="Optional" />
         <Textarea label="Notes" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
       </div>
