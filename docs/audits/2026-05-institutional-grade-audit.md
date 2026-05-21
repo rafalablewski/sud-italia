@@ -129,11 +129,11 @@ The product side is sophisticated for a 2-truck Polish pizza concept: 27 admin p
 
 But:
 
-- **Zero tests.** None. Not one `.test.ts` file in 126 API routes. ([package.json](../../package.json), no test runner declared.)
+- **Zero tests.** None. Not one `.test.ts` file across 154 API routes. ([package.json](../../package.json), no test runner declared.)
 - ~~**Stock does not decrement on order.** Inventory is a manual logbook with a pretty chart.~~ **✅ RESOLVED 2026-05-16** — see §0.1 resolution log. `createOrder` now calls `consumeRecipeForOrder` and refunds/cancellations call `restoreRecipeForOrder`.
-- **Admin password is plaintext compared.** Default `admin123`. No bcrypt, no MFA, no rotation. ([src/lib/admin-auth.ts:143](../../src/lib/admin-auth.ts).)
+- **Admin password is plaintext compared.** No bcrypt, no MFA, no rotation. Production refuses to start without `ADMIN_PASSWORD` set ([admin-auth.ts:136–138](../../src/lib/admin-auth.ts)), but `admin123` is still the local-dev fallback and the live `verifyPassword` is a literal `password === getAdminPassword()` equality check ([src/lib/admin-auth.ts:143–145](../../src/lib/admin-auth.ts)).
 - ~~**The “AI Operating System”** advertised on `/admin/capabilities` is a **7-day moving average** and a heuristic anomaly detector.~~ **✅ RESOLVED 2026-05-16** — Demand forecast is now Claude-backed with explicit `Heuristic` fallback badge when `ANTHROPIC_API_KEY` is unset. Anomaly detector is still heuristic but the capabilities page calls it out as such (audit §0.1).
-- **Real-time is 10-second polling** dressed up as SSE on parts of the public-facing tracker. KDS v2 (the operator-facing board) was already on SSE via `useAdminOrdersStream` before this audit; the legacy `KitchenOrderBoard.tsx` polling path remains. ([src/components/kitchen/KitchenOrderBoard.tsx](../../src/components/kitchen/KitchenOrderBoard.tsx).)
+- **Real-time on the customer-facing order tracker is 10-second polling — no SSE, no fallback, just `setInterval(fetchOrder, 10000)`** ([src/components/order/OrderTracker.tsx:107–112](../../src/components/order/OrderTracker.tsx)). The operator-facing KDS v2 is genuinely on SSE via `useAdminOrdersStream` (with a 15s REST fallback when the stream dies); the legacy `KitchenOrderBoard.tsx` operator board is also still on 10-second polling ([src/components/kitchen/KitchenOrderBoard.tsx:189](../../src/components/kitchen/KitchenOrderBoard.tsx)).
 - ~~**Two locations live. Wrocław is hardcoded-but-inactive.** The "100-location" framing in the capabilities page is fiction until a third location exists.~~ **✅ HARDCODING RESOLVED 2026-05-16 (PR #38)** — `locations` table + admin CRUD; adding a third truck is a 30-second admin form, no deploy. The "100-location" framing is still fiction until a third truck actually opens, but the code is no longer the blocker.
 
 The honest framing: this is a **product engineering exercise** with a real restaurant attached. The risk is the opposite of most startups — the software is far ahead of the business and the operator is at risk of polishing the dashboard while the trucks under-trade. Every hour spent on the 27th admin page is an hour not spent on demand generation, supplier negotiation, or hiring a second great pizzaiolo.
@@ -218,17 +218,17 @@ This was the most important section of the audit when written: **`/admin/capabil
 | Issue | File | Severity |
 |---|---|---|
 | **Zero tests** | repo-wide | Critical — refund, slot, payment, RBAC, upsell scoring all unverified |
-| **Plaintext password compare** | [src/lib/admin-auth.ts:143](../../src/lib/admin-auth.ts) | Critical — no hashing, no MFA, default `admin123` |
-| **Distributed locks degrade silently to in-process** when Redis is down | [src/lib/locks.ts](../../src/lib/locks.ts) | High — silent corruption potential under partial outage |
-| **No row-level transactions** for order create + slot increment + customer rollup | [src/lib/store.ts:1088](../../src/lib/store.ts) | High — partial states under failure |
-| **Dual-write to normalized table is fire-and-forget** | [src/lib/store.ts:163](../../src/lib/store.ts) | High — silent kv_store/normalized divergence |
+| **Plaintext password compare** | [src/lib/admin-auth.ts:143–145](../../src/lib/admin-auth.ts) | Critical — no hashing, no MFA, no rotation. Production throws if `ADMIN_PASSWORD` is unset ([admin-auth.ts:136–138](../../src/lib/admin-auth.ts)); `admin123` is the local-dev fallback only. |
+| **Distributed locks degrade to in-process** when Redis is down or unconfigured. The fallback is logged + counted (`logger.warn` + `metrics.inProcessFallbacks`), but the request itself never fails, so a partial Upstash outage only surfaces if someone is watching the counter. | [src/lib/locks.ts:134–146](../../src/lib/locks.ts), [src/lib/locks.ts:158–164](../../src/lib/locks.ts) | High — cross-instance race returns under outage; relies on operator monitoring of `inProcessFallbacks` |
+| **No row-level transactions** for order create + slot increment + customer rollup | [src/lib/store.ts:1186–1247](../../src/lib/store.ts) (`createOrder`) | High — partial states under failure |
+| **Dual-write fire-and-forget — mixed direction by entity.** For **slots** the kv_store blob is still source of truth and `dualWriteSlot` into the normalized table is best-effort ([src/lib/store.ts:182–199](../../src/lib/store.ts)); some callsites `await` it, others `void Promise.all(…dualWriteSlot…)` ([src/lib/store.ts:255](../../src/lib/store.ts)). For **orders** PR #38 inverted the direction — the normalized table is primary and the kv_store mirror is fire-and-forget ([src/lib/store.ts:1204–1205](../../src/lib/store.ts)). The leftover stale comment "kv_store remains source of truth" inside `dualWriteOrder` ([src/lib/store.ts:926](../../src/lib/store.ts)) no longer matches the wiring. | [src/lib/store.ts:182](../../src/lib/store.ts), [src/lib/store.ts:1204](../../src/lib/store.ts) | High — silent kv_store/normalized divergence on the slot path; comment drift on the order path |
 | **`kv_store` table is single-row-per-key JSONB** | repo-wide | Medium — `UPDATE … SET value = …` rewrites entire JSON; orders.json becomes O(N) on every write |
 | ~~**`webhook_events`, `point_adjustments`, `audit_log` have no retention/trim**~~ **✅ RESOLVED 2026-05-16 (PR #38)** — `/api/admin/cron/retention-trim` runs daily; 30d / 7d / 180d cutoffs overridable via env vars | schema | ~~Medium~~ |
 | **`dangerouslySetInnerHTML`** for theme bootstrap | [src/app/admin/layout.tsx](../../src/app/admin/layout.tsx) | Low — intentional; document it |
-| **10-second polling everywhere** (KDS, order tracker, dashboard) | [src/components/kitchen/](../../src/components/kitchen/) | Medium — fine at 2 trucks, expensive past 10 |
+| **10-second polling on the legacy kitchen board and the customer-facing tracker.** KDS v2 is on SSE via `useAdminOrdersStream` (with a 15s REST fallback). Dashboard polls at 30s, not 10s. The "everywhere" framing of the earlier draft of this audit was too broad. | [src/components/kitchen/KitchenOrderBoard.tsx:189](../../src/components/kitchen/KitchenOrderBoard.tsx), [src/components/order/OrderTracker.tsx:107–112](../../src/components/order/OrderTracker.tsx) | Medium — fine at 2 trucks, expensive past 10 |
 | **No CSRF token**, relying on SameSite=Lax | admin POST routes | Low — acceptable for cookie-auth SPA, but document & double-submit a token before going B2B |
-| **Self-bootstrapping DDL at runtime** via `ensureTable` | [src/lib/store.ts:131](../../src/lib/store.ts) | Medium — race condition risk on first deploy; migrate to drizzle-kit migrations |
-| **126 API routes, no rate-limit on most admin endpoints** | repo-wide | Medium — once you have staff, you have insider risk |
+| **Self-bootstrapping DDL at runtime** via `ensureTable` (imported from `@/db/migrate`, called from per-entity wrappers like `ensureSlotsTable` / `ensureOrdersTable` / `ensureCustomersTable`) | [src/db/migrate.ts](../../src/db/migrate.ts), [src/lib/store.ts:150–151](../../src/lib/store.ts), [src/lib/store.ts:544–545](../../src/lib/store.ts) | Medium — race condition risk on first deploy; migrate to drizzle-kit migrations |
+| **154 API routes, no rate-limit on most admin endpoints.** `enforceRateLimit` exists ([src/lib/rate-limit.ts](../../src/lib/rate-limit.ts)) but is wired into only 2 admin routes — `admin/login` and `admin/customers/[phone]/send`. | repo-wide | Medium — once you have staff, you have insider risk |
 | **No backup/restore documentation** | repo-wide | High — single Neon DB is your single point of failure |
 | **No staging env evident** | repo-wide | Medium — every deploy is production |
 
@@ -366,8 +366,8 @@ The customer attach-history data ([src/lib/upsell.ts:111](../../src/lib/upsell.t
 
 | Path | Ready? | What's blocking |
 |---|---|---|
-| **3rd location (Wrocław)** | 70% | Hardcoded `locations.ts`; need menu file; need photographer for hero shots; supplier relationship local |
-| **4th–5th location** | 30% | Lock contention starts; manual stock at 4× volume = unsustainable; one operator becomes single point of failure |
+| **3rd location (Wrocław)** | ~~70%~~ **90%** *(post 2026-05-16, PR #38)* | ~~Hardcoded `locations.ts`~~ **resolved** — `src/data/locations.ts` is now a seed/fallback only ([file docstring lines 3–17](../../src/data/locations.ts)); runtime source is the `locations` Postgres table edited via `/admin/locations/manage`. ~~Need menu file~~ **optional** — a third location can be populated entirely through admin-created custom items via `getCustomMenuItems(locationSlug)` ([src/data/menus/index.ts:19](../../src/data/menus/index.ts)) without authoring a new `src/data/menus/wroclaw.ts`. Still need: a hero image (none of the three locations have one — `/images/locations/*-hero.jpg` paths all 404), and a local supplier relationship. |
+| **4th–5th location** | ~~30%~~ **70%** *(post 2026-05-16, PR #38)* | ~~Lock contention starts~~ **resolved** — per-location lock keys (`orders.kv:${slug}`) split the queue, see §0.1. ~~Manual stock at 4× volume = unsustainable~~ **resolved** — `consumeRecipeForOrder` posts movements on every paid order ([src/lib/store.ts:1244–1245](../../src/lib/store.ts)) and PAR-driven draft POs run daily. Remaining blocker: one operator is still the single point of failure for ops, supplier negotiation, and quality control — a code-side problem only insofar as it can't fix the human one. |
 | **Franchising** | 5% | No franchise tech: no per-franchisee royalty splitting, no franchisee accounting export, no enforced brand pack, no franchisee training portal, no compliance auto-monitoring per location, no per-tenant data isolation |
 | **International (e.g., Berlin)** | 25% | ✅ Multi-currency display (PLN / USD / SGD / EUR via `/admin/currency`) + i18n dictionary covering pl / en / de / en-SG via `/admin/languages` (shipped 2026-05-21). ❌ Still blocked on: Stripe merchant account is PLN-bound so charges still settle PLN (multi-currency display only), Polish VAT (JPK XML) logic, phone-prefix +48, and a Polish supplier graph. The customer surface is now multilingual; the back-office tax + payment plumbing is still PL-only. |
 | **Licensing / white-label** | 10% | Branding is baked into Tailwind tokens (italia-red etc.); not theme-able. Multi-tenant data model doesn’t exist |
@@ -375,7 +375,7 @@ The customer attach-history data ([src/lib/upsell.ts:111](../../src/lib/upsell.t
 | **Ghost kitchens** | 60% | The architecture supports it (location-as-truck abstraction); the marketing and brand operate as "trucks" not "kitchens" |
 | **Enterprise / corporate ordering** | 40% | Banner + invoice cron exist; pricing model, AR ledger, contract management absent |
 
-**Honest read:** the operator should plan for **5 trucks max under this architecture**, then a serious replatform if franchising or SaaS is the goal. Trying to skip that step will burn 12–18 months.
+**Honest read:** ~~the operator should plan for **5 trucks max under this architecture**~~, then a serious replatform if franchising or SaaS is the goal. **Revised post 2026-05-16 (PR #38): the architecture is now honestly good for ~10 trucks** — matches the revised §4 scale ceiling. Per-location locks, DB-backed locations CRUD, retention-trim, and recipe-driven stock decrement are all in. The 10-truck planning horizon should hold for the next 24 months; past that, a multi-tenant + multi-region replatform is the franchising / SaaS gate.
 
 ---
 
@@ -444,15 +444,15 @@ The customer attach-history data ([src/lib/upsell.ts:111](../../src/lib/upsell.t
 Pick at most six. Sequence by week.
 
 ### Week 1 — Stop the bleed
-- Hash + salt the admin password. **No MFA-debate first; just stop the plaintext compare.** [src/lib/admin-auth.ts:143](../../src/lib/admin-auth.ts).
+- Hash + salt the admin password. **No MFA-debate first; just stop the plaintext compare.** [src/lib/admin-auth.ts:143–145](../../src/lib/admin-auth.ts).
 - Rotate the production admin password and document where it’s stored.
-- Add basic rate-limit to ALL `/api/admin/*` routes, not just login.
-- Add Sentry alerting on > 1% 5xx and on lock-acquisition failure.
+- Extend `enforceRateLimit` to ALL `/api/admin/*` routes — today only `admin/login` and `admin/customers/[phone]/send` use it, 2 of 154.
+- Add Sentry alerting on > 1% 5xx and on lock-acquisition failure. The counter already exists (`incrCounter("lock.timeouts")` in [src/lib/locks.ts:170](../../src/lib/locks.ts)) and lock fallbacks bump `metrics.inProcessFallbacks` ([src/lib/locks.ts:135, 163](../../src/lib/locks.ts)); only the dashboard alert config is missing.
 - Add a manual nightly Neon backup → S3, cron-driven, with a documented restore script.
 
 ### Week 2 — Trust the dashboard again
 - ~~Audit `/admin/capabilities` and downgrade every "live" claim that is heuristic, stubbed, or partial. Add a `caveats` field.~~ **✅ DONE 2026-05-16** — single highest-leverage operator-honesty move.
-- Add four tests: (1) checkout idempotency, (2) slot oversell prevention, (3) refund flow, (4) RBAC location scope enforcement. Use a real test runner (Vitest). Even five tests prevents three production fires.
+- Add four tests: (1) checkout idempotency, (2) slot oversell prevention, (3) refund flow, (4) RBAC location scope enforcement. Use a real test runner (Vitest). Even four tests prevents three production fires.
 - ~~Add `audit_log` retention (90d) and `webhook_events` retention (30d) jobs.~~ **✅ DONE 2026-05-16 (PR #38)** — daily `retention-trim` cron prunes both; cutoffs overridable via env vars.
 
 ### Week 3 — Move the AOV needle
@@ -499,7 +499,7 @@ This sequence is intentionally conservative. Every quarter assumes the previous 
 ## 13. Long-Term Strategic Opportunities (1–5 years)
 
 ### Path A: Premium Polish chain (recommended)
-6–12 trucks across Polish A-cities (Kraków, Warsaw, Wrocław, Poznań, Gdańsk, Łódź, Lublin), all corporate-owned. Tight brand control, premium positioning, founder remains creative director. Code base is sufficient with the Q2–Q4 medium-term work. Margin expansion via supplier consolidation + corporate B2B.
+6–10 trucks across Polish A-cities (Kraków, Warsaw, Wrocław, Poznań, Gdańsk, Łódź, Lublin), all corporate-owned, matching the revised ~10-truck architectural ceiling from §4 and §8. Tight brand control, premium positioning, founder remains creative director. The Q2 medium-term work that this path used to require (recipe-driven stock, PAR-driven POs, cohort dashboard, CLTV, Claude-backed forecast, DB-backed locations, per-location locks, SPLH + schedule-vs-forecast) is mostly already in place per §0.1; what's still required is the Q3–Q4 work (B2B sales motion, A/B framework, MFA, staging env, hash-chained cash sessions, cashier mode). Margin expansion via supplier consolidation + corporate B2B.
 
 ### Path B: Franchise after 5 corporate
 The “Subway model” for premium Neapolitan. Requires (1) operational manuals, (2) franchisee tech: royalty splits, mandatory compliance gates, brand-pack enforcement, training portal, (3) data isolation in the tech, (4) a national kitchen-supply contract. 18-month investment.
@@ -555,11 +555,11 @@ But:
 - ~~**Stock doesn't decrement on order.** The most expensive thing you've avoided fixing because the dashboard looks fine without it.~~ **✅ RESOLVED 2026-05-16** — variance reports now reflect real consumption.
 - **You are competing for the operator's attention against the trucks.** This is the strongest existential risk in the audit and it has nothing to do with code.
 
-**The business can become elite.** The path is: 30-day safety + honesty pass → 90-day AOV and retention push → 180-day operational automation → 12-month 3rd–5th truck → 24-month franchise decision. Skip the SaaS detour unless it's funded separately.
+**The business can become elite.** The path is: 30-day safety + honesty pass → 90-day AOV and retention push → ~~180-day operational automation~~ **(largely shipped 2026-05-16 — recipe-driven stock, PAR-driven POs, KDS SLA, push, Claude forecast, retention trim, DB-backed locations, per-location locks, SPLH, cohort, segments, referral backend; see §0.1)** → 12-month 3rd–5th truck → 24-month franchise decision. Skip the SaaS detour unless it's funded separately.
 
 **If you change one thing this week:** hire the photographer. Pizza is visual; you're selling it with emoji.
 
-**If you change one thing this month:** make `/admin/capabilities` honest. The instant you can no longer fool yourself, every priority will align.
+**If you change one thing this month:** ~~make `/admin/capabilities` honest~~ **(done 2026-05-16; the page now carries a `caveats` field rendered as an amber callout and every stubbed/heuristic surface is downgraded)** → **hash + salt the admin password and rotate it** ([admin-auth.ts:143–145](../../src/lib/admin-auth.ts)). You are one phishing email away from a refund-authority breach; this is now the highest-leverage open item from §11 Week 1.
 
 **If you change one thing this year:** decide whether you are a restaurateur or a software-CEO and staff the other role from outside immediately. The current trajectory has you doing both badly; either done well is a real business.
 
