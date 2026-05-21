@@ -5794,15 +5794,14 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Net economic benefit depends on shrinkage discipline.
-            Saving ~1.9% in card fees on cash revenue is real, but 3-5%
-            cash shrinkage (till skim, miscounts, &quot;borrowed
-            change&quot;) inverts the trade. Daily till reconciliation,
-            CCTV at the till, and limited cash floats are the
-            institutional controls; without them the cashless tax is
-            actually cheaper. BLIK (instant transfer at ~1.0% fee) is
-            the cleanest way to lower card-fee burden without cash-
-            handling overhead.
+            Looks like free margin (no card fee) but pays for itself in
+            shrinkage risk. The trade only nets positive with
+            institutional controls — daily till reconciliation, CCTV at
+            the till, limited cash floats. Without them, cash shrinkage
+            quietly costs more than the card fees it avoided. Most
+            modern operators are migrating customers toward BLIK
+            instead — most of the fee savings, none of the cash-
+            handling risk.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -5844,15 +5843,14 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Glovo carries the ~28% blended commission tax — every order
-            here loses ~26 pp of CM1 vs equivalent walk-up. Cap at
-            ~30-35% of total share to retain channel control; past that
-            you&apos;re running their business with your kitchen. Note
-            the incremental-demand caveat: the model treats Glovo orders
-            as substitutes for on-site, but 30-50% are typically
-            incremental (orders that wouldn&apos;t exist without the
-            platform). Check the Channel Economics card for the
-            per-channel breakdown before re-allocating share.
+            Cap at ~30-35% of total share to retain channel control —
+            past that you&apos;re running Glovo&apos;s business with
+            your kitchen, and their algorithm controls your visibility.
+            The incremental-demand caveat matters: the model treats
+            Glovo orders as substitutes for on-site, but a real chunk
+            are genuinely new demand. Whether to grow Glovo share is
+            an incremental-vs-substitute question, not a margin
+            question.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -5893,14 +5891,14 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Tier structure: 30% baseline → 27% at ~50 orders/week → 24%
-            at ~200/wk → 22% at ~500/wk. Watch effective rate, not list
-            rate — Glovo adds advertising fees, co-marketing funds and
-            promo-period uplifts that can lift the headline rate by
-            2-4 pp. Quarterly renegotiation cycle: account managers
-            respond to data (90-day growth, exclusivity offers).
-            Surcharging Glovo prices ~10-15% above on-site is legal in
-            PL and standard practice for high-commission tiers.
+            Watch the EFFECTIVE rate, not the list rate — Glovo adds
+            advertising fees, co-marketing funds and promo-period
+            uplifts that drift the headline rate up over time.
+            Surcharging platform prices above on-site is legal in PL
+            and standard practice for high-commission tiers; this
+            preserves on-site margin while keeping the platform
+            channel open as a feeder for new customers who later
+            convert to direct.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -5943,14 +5941,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
+            Listing on both Glovo + Wolt provides redundancy against
+            single-platform outages and creates negotiating leverage —
+            exclusivity-vs-non-exclusivity terms differ materially.
             Wolt&apos;s app design emphasises sides + drinks more than
-            Glovo, leading to ~5-10 pp higher attach rates on platform
-            orders. Service area is smaller (mostly central Warsaw,
-            Kraków, Gdańsk) — verify coverage before listing. Listing
-            on both Glovo + Wolt provides redundancy against single-
-            platform outages and lets you negotiate exclusivity-vs-
-            non-exclusivity rates. The Wolt+ subscription program drives
-            incremental order frequency among power users.
+            Glovo, so attach rates on Wolt orders typically run higher.
+            Verify service-area coverage before listing — Wolt&apos;s
+            footprint is narrower than Glovo&apos;s.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -5992,12 +5989,12 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Tier structure: 28-30% baseline → 22-25% above ~300
-            orders/week. Wolt is more flexible on promo co-funding than
-            Glovo (offers shared discount campaigns). Watch effective
-            rate: Wolt occasionally adds merchant-funded delivery-fee
-            subsidies on top of headline commission. Bundle as
-            exclusive to negotiate 20% or below in some categories.
+            Wolt is more flexible than Glovo on promo co-funding (shared
+            discount campaigns), so the real economics depend on whether
+            you negotiate these into the deal. Watch the effective rate:
+            Wolt occasionally adds merchant-funded delivery-fee subsidies
+            on top of headline commission. Bundle as exclusive to
+            negotiate sub-20% rates in some categories.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -6039,15 +6036,14 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            PL 2026 ranges: used truck 60-90k, new buildout 100-150k,
-            oven 35-55k (wood/gas/electric), permits 10-20k, working
-            capital 50-80k. Total: 280-350k for a Neapolitan-style
-            operation. Setup denominator drives every investor metric
-            — every 30k zł trimmed off shortens payback ~2 months at
-            typical margins and lifts cash-on-cash ~2 pp. Lease vs
-            buy: leasing the oven preserves working capital but adds
-            ~12% finance cost vs cash. BGK / PARP grants for new SMEs
-            often cover 15-30% of buildout.
+            The denominator of every investor metric — every złoty
+            trimmed off setup shortens payback and lifts cash-on-cash
+            return. Lease-vs-buy is the strategic split: leasing the
+            oven preserves working capital but adds finance cost;
+            buying outright frees CAPEX for unit-2 sooner. Check
+            BGK / PARP grant programmes for new SMEs — they often
+            cover a chunk of buildout and the application cost is
+            small.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -6091,13 +6087,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Useful-life norms (PL gastro per UoR): truck 4-5 yr, kitchen
-            8-10 yr, fit-out 5-7 yr, IT/POS 3 yr. Blended ~5 yr typical.
             Doesn&apos;t hit cash today but accrues toward replacement
             capex — savvy operators auto-transfer the monthly D&amp;A
-            line to a reserve account so year-5 refurb is pre-funded.
-            Accelerated depreciation (Polish tax law) can shift 10-15k
-            of taxable profit out of year 1 — ask the accountant.
+            line to a reserve account so year-5 refurb is pre-funded
+            without disrupting trading. The accelerated-depreciation
+            option in Polish tax law can shift taxable profit out of
+            year 1 — worth a conversation with the accountant rather
+            than defaulting to straight-line.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -6139,14 +6135,14 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            PL 2026 SME loan rates 8-12% APR commercial bank; 7-10%
-            equipment leasing; 5-8% ZUS-backed startup loans; 4-6%
-            PARP/BGK public programmes. Tax-deductible expense — effective
-            cost = nominal × (1 − CIT). The cash-vs-finance trade-off:
-            financing preserves working capital flexibility but the
-            spread between loan rate and cash-on-cash return is the
-            real economic cost; if cash earns 5% in deposit while loan
-            costs 10%, you&apos;re effectively paying 5pp/yr for liquidity.
+            Tax-deductible, so effective cost is nominal rate × (1 − CIT)
+            — usually lower than headlines suggest. The cash-vs-finance
+            trade-off isn&apos;t simply &quot;cheap money good&quot;:
+            the spread between loan rate and the truck&apos;s
+            cash-on-cash return is the real economic cost of borrowing,
+            and if cash sitting in a deposit nearly matches the loan
+            rate, you&apos;re paying for working-capital liquidity, not
+            access to growth.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
