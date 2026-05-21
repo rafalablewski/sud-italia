@@ -122,6 +122,32 @@ function percentToFactor(pct: number): number {
   return 1 + pct / 100;
 }
 
+/**
+ * Nutrition-label basis for the kcal input + ingredients column. Storage
+ * stays per-unit (per kg, per L, per piece) so recipe maths (kcalPerUnit
+ * × quantity-in-unit × waste) stays exact; only the input/display layer
+ * shows the operator-friendly "per 100g / 100ml / piece" basis that
+ * matches what they read off real-world food packaging.
+ */
+function kcalBasisLabel(unit: IngredientUnit): string {
+  if (unit === "kg" || unit === "g") return "100g";
+  if (unit === "L" || unit === "ml") return "100ml";
+  return unit;
+}
+
+function storedKcalToDisplay(stored: number | undefined, unit: IngredientUnit): string {
+  if (typeof stored !== "number") return "";
+  if (unit === "kg" || unit === "L") return String(Math.round(stored / 10));
+  if (unit === "g" || unit === "ml") return String(Math.round(stored * 100));
+  return String(stored);
+}
+
+function displayKcalToStored(display: number, unit: IngredientUnit): number {
+  if (unit === "kg" || unit === "L") return Math.max(0, Math.round(display * 10));
+  if (unit === "g" || unit === "ml") return Math.max(0, Math.round(display / 100));
+  return Math.max(0, Math.round(display));
+}
+
 interface RecipeData {
   id?: string;
   menuItemId: string;
@@ -1304,11 +1330,14 @@ function IngredientsPanel() {
     },
     {
       key: "kcal",
-      header: "kcal / unit",
+      header: "Calories",
       align: "right",
       cell: (i) =>
         typeof i.kcalPerUnit === "number" ? (
-          <span className="tabular">{i.kcalPerUnit}</span>
+          <span className="tabular">
+            {storedKcalToDisplay(i.kcalPerUnit, i.unit)}
+            <span className="v2-muted"> / {kcalBasisLabel(i.unit)}</span>
+          </span>
         ) : (
           <span className="v2-muted" title="No kcal set — recipes referencing this ingredient won't show a computed calorie value.">—</span>
         ),
@@ -1456,9 +1485,7 @@ function IngredientDialog({ state, onClose, onSaved }: IngDialogProps) {
     setCategory(ing?.category ?? "produce");
     setUnit(ing?.unit ?? "kg");
     setCostStr(ing ? (ing.costPerUnit / 100).toFixed(2) : "0.00");
-    setKcalStr(
-      ing && typeof ing.kcalPerUnit === "number" ? String(ing.kcalPerUnit) : "",
-    );
+    setKcalStr(ing ? storedKcalToDisplay(ing.kcalPerUnit, ing.unit) : "");
     setSupplier(ing?.supplier ?? "");
     setNotes(ing?.notes ?? "");
   }, [state]);
@@ -1473,10 +1500,13 @@ function IngredientDialog({ state, onClose, onSaved }: IngDialogProps) {
     setBusy(true);
     try {
       const trimmedKcal = kcalStr.trim();
+      // Operator types kcal per 100g / per 100ml / per piece (matches
+      // food packaging). Convert to per-unit storage so recipe maths
+      // stays a clean (kcalPerUnit × quantity × waste) sum.
       const kcalParsed =
         trimmedKcal === ""
           ? null
-          : Math.max(0, Math.round(Number(trimmedKcal)));
+          : displayKcalToStored(Number(trimmedKcal), unit);
       const payload = {
         id: state.ingredient?.id,
         name: name.trim(),
@@ -1484,7 +1514,8 @@ function IngredientDialog({ state, onClose, onSaved }: IngDialogProps) {
         unit,
         costPerUnit: Math.round(parseFloat(costStr || "0") * 100),
         // null = "no claim" (drops the field server-side). Number = set.
-        kcalPerUnit: Number.isFinite(kcalParsed) ? kcalParsed : null,
+        kcalPerUnit:
+          kcalParsed !== null && Number.isFinite(kcalParsed) ? kcalParsed : null,
         supplier: supplier.trim() || undefined,
         notes: notes.trim() || undefined,
       };
@@ -1543,7 +1574,7 @@ function IngredientDialog({ state, onClose, onSaved }: IngDialogProps) {
             trailingAdornment={<span className="v2-muted">zł</span>}
           />
           <Input
-            label={`kcal per ${unit}`}
+            label={`kcal per ${kcalBasisLabel(unit)}`}
             type="number"
             step="1"
             min="0"
@@ -1551,7 +1582,7 @@ function IngredientDialog({ state, onClose, onSaved }: IngDialogProps) {
             onChange={(e) => setKcalStr(e.target.value)}
             trailingAdornment={<span className="v2-muted">kcal</span>}
             placeholder="—"
-            description="Used to auto-compute recipe calories."
+            description="From the nutrition label. Used to auto-compute recipe calories."
           />
         </div>
         <Input label="Supplier" value={supplier} onChange={(e) => setSupplier(e.target.value)} placeholder="Optional" />
