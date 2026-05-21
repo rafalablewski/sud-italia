@@ -5,25 +5,33 @@ import { V8LangSwitcher, V8CurrencySwitcher } from "./V8LangCurrencySwitcher";
 
 function BasilMark() {
   return (
-    <svg width="34" height="34" viewBox="0 0 38 38" fill="none" aria-hidden="true">
+    <svg width="36" height="36" viewBox="0 0 36 36" fill="none" aria-hidden="true">
       <path
-        d="M19 33 C 19 27, 19 20, 19 12"
+        d="M18 32 C 18 26, 18 20, 18 12"
         stroke="#4A7C59"
-        strokeWidth="1.6"
+        strokeWidth="1.5"
         strokeLinecap="round"
       />
       <path
-        d="M19 24 C 14 22, 11 19, 10 15 C 14 17, 17 19, 19 22"
+        d="M18 24 C 14 22, 12 19, 11 16 C 14 17, 17 19, 18 22"
         fill="#4A7C59"
-        fillOpacity="0.3"
+        fillOpacity="0.22"
         stroke="#4A7C59"
         strokeWidth="1.5"
         strokeLinejoin="round"
       />
       <path
-        d="M19 19 C 24 17, 27 14, 28 10 C 24 12, 21 14, 19 17"
+        d="M18 19 C 22 17, 24 14, 25 11 C 22 12, 19 14, 18 17"
         fill="#4A7C59"
-        fillOpacity="0.3"
+        fillOpacity="0.22"
+        stroke="#4A7C59"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M18 14 C 15 13, 13 10, 13 7 C 16 8, 17 11, 18 13"
+        fill="#4A7C59"
+        fillOpacity="0.22"
         stroke="#4A7C59"
         strokeWidth="1.5"
         strokeLinejoin="round"
@@ -31,6 +39,14 @@ function BasilMark() {
     </svg>
   );
 }
+
+const NAV: { href: string; en: string; pl: string; it: string }[] = [
+  { href: "#menu", en: "Menu", pl: "Menu", it: "Menù" },
+  { href: "#bundles", en: "Bundles", pl: "Zestawy", it: "Menù del giorno" },
+  { href: "#locations", en: "Locations", pl: "Lokale", it: "Botteghe" },
+  { href: "#famiglia", en: "Story", pl: "Historia", it: "La famiglia" },
+  { href: "#soci", en: "Rewards", pl: "Nagrody", it: "Soci" },
+];
 
 export function V8Header() {
   return (
@@ -42,25 +58,27 @@ export function V8Header() {
           </span>
           <span className="v8-header-brand-text">
             <span className="v8-header-brand-name">Sud Italia</span>
-            <span className="v8-header-brand-sub v8-it">italian street food</span>
+            <span className="v8-header-brand-sub v8-it">
+              <Bi en="Neapolitan pizza" pl="Pizza neapolitańska" /> ·{" "}
+              pizza napoletana · <Bi en="since 2019" pl="od 2019" />
+            </span>
           </span>
         </Link>
 
         <nav className="v8-header-nav" aria-label="Primary">
-          <Link href="#locations" className="v8-header-nav-link">
-            <Bi en="Locations" pl="Lokale" />
-          </Link>
-          <Link href="#bundles" className="v8-header-nav-link">
-            <Bi en="Bundles" pl="Zestawy" />
-          </Link>
-          <Link href="#soci" className="v8-header-nav-link">
-            <Bi en="Rewards" pl="Nagrody" />
-          </Link>
+          {NAV.map((n) => (
+            <Link key={n.href} href={n.href} className="v8-header-nav-link">
+              <span className="v8-header-nav-en">
+                <Bi en={n.en} pl={n.pl} />
+              </span>
+              <span className="v8-header-nav-it v8-it">{n.it}</span>
+            </Link>
+          ))}
         </nav>
 
         <div className="v8-header-actions">
-          <V8CurrencySwitcher />
           <V8LangSwitcher />
+          <V8CurrencySwitcher />
           <V8CartButton />
         </div>
       </div>
