@@ -37,9 +37,13 @@ interface MenuSectionProps {
    * with callers that don't yet pass it (e.g. tests or older fixtures).
    */
   initialAvailability?: Record<string, boolean>;
+  /** Audit §11.1 — per-location regulatory disclosure. Drives per-item
+   *  pills (kcal on NYC, Nutri-Grade + halal on SG). Passed in by the
+   *  location page so SSR has it on first paint. */
+  compliance?: import("./CompliancePills").PublicCompliance | null;
 }
 
-export function MenuSection({ items, locationSlug, initialAvailability }: MenuSectionProps) {
+export function MenuSection({ items, locationSlug, initialAvailability, compliance }: MenuSectionProps) {
   // Editorial badges from /admin/crosssell → Menu badges. Fetched once per
   // mount; each MenuItemCard reads from it (no per-item refetch).
   const [upsellConfig, setUpsellConfig] = useState<UpsellConfig | null>(null);
@@ -335,6 +339,7 @@ export function MenuSection({ items, locationSlug, initialAvailability }: MenuSe
                   popularThisWeek={hotThisWeekIds.has(item.id)}
                   variant={heroSpan ? "hero" : "default"}
                   upsellConfig={upsellConfig}
+                  compliance={compliance ?? null}
                 />
               </div>
             );

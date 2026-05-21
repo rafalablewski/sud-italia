@@ -2288,6 +2288,20 @@ export interface MenuOverride {
    *  in code), so this is the closest operational primitive. `null` /
    *  unset = visible. Restoreable via the admin "Show hidden" toggle. */
   hidden?: boolean | null;
+  // Audit §11.1 — per-item regulatory disclosures. `null` clears back
+  // to the seed flag so operators can withdraw a claim cleanly.
+  /** SG MUIS halal status — surfaces a green / red / grey chip on the
+   *  customer card when the location's zone is "SG". */
+  halalStatus?: "halal" | "non-halal" | "uncertified" | null;
+  /** SG NEA Nutri-Grade (beverages mainly) — renders the A/B/C/D
+   *  hexagon badge when the location's `nutriGradeRequired` flag is on. */
+  nutriGrade?: "A" | "B" | "C" | "D" | null;
+  /** Surface a "Contains pork" disclaimer alongside the item card —
+   *  independent of halalStatus so dishes that use non-halal beef but
+   *  no pork can still skip this badge. */
+  containsPork?: boolean | null;
+  /** Surface a "Contains alcohol" disclaimer alongside the item card. */
+  containsAlcohol?: boolean | null;
 }
 
 export async function getMenuOverrides(): Promise<Record<string, MenuOverride>> {
@@ -2473,6 +2487,11 @@ export interface AppSettings {
   currency?: CurrencyConfig;
   /** Customer locale config — switcher options + default language. */
   locale?: LocaleConfig;
+  /** Per-location regulatory disclosures (NYC §81.50 + DOH grade +
+   *  FRESH Act, SG NEA Nutri-Grade + MUIS Halal + GST + PDPA consent).
+   *  EU/PL operates on the defaults; operators tag specific trucks as
+   *  NYC or SG and the customer-facing chrome upgrades to match. */
+  compliance?: ComplianceConfig;
 }
 
 export const DEFAULT_CURRENCY_CONFIG: CurrencyConfig = {
@@ -2488,6 +2507,84 @@ export const DEFAULT_LOCALE_CONFIG: LocaleConfig = {
   enabledLocales: ["pl", "en", "de", "en-SG"],
 };
 
+// --- Regulatory compliance (audit §11.1) -------------------------------
+//
+// Per-location regulatory disclosures the operator must surface to the
+// customer. EU/PL is the default — the customer-facing surfaces only
+// upgrade their compliance chrome when the operator explicitly tags a
+// location as "NYC" or "SG" and fills the relevant fields. Nothing is
+// inferred; the model is "show only what the operator confirms applies."
+
+export type RegulatoryZone = "EU" | "NYC" | "SG";
+
+export type DohGrade = "A" | "B" | "C" | "Pending";
+
+export interface LocationComplianceConfig {
+  /** Which regulatory pack the location operates under. EU = default
+   *  Polish/EU rules (1169/2011 allergens). NYC = §81.50 calorie display,
+   *  DOH letter grade, FRESH Act packaging. SG = NEA Nutri-Grade, MUIS
+   *  Halal, GST invoicing, PDPA consent. */
+  zone: RegulatoryZone;
+  /** NYC DOH letter grade (most recent inspection). Required to be
+   *  posted at the point of sale per NYC Health Code §81.51 + §23-04. */
+  dohGrade?: DohGrade | null;
+  /** ISO date the DOH grade was issued. */
+  dohGradeIssued?: string | null;
+  /** When true, the menu page shows per-item kcal next to the price for
+   *  every standard menu item, per NYC §81.50 (also UK 2022 Calorie
+   *  Labelling Regs). Independent of the zone so an EU operator can
+   *  also opt in voluntarily. */
+  calorieDisclosureRequired?: boolean;
+  /** SG MUIS Halal certification number. When set, the location header
+   *  shows the cert + serves the SG Halal disclosure footer note. */
+  halalCertId?: string | null;
+  /** ISO date the MUIS Halal cert expires. */
+  halalCertExpires?: string | null;
+  /** Whether the operator is GST-registered for SG. Required for any
+   *  business with annual turnover >S$1M; flips the cart total to show
+   *  GST as a separate line. */
+  gstRegistered?: boolean;
+  /** SG GST registration number (e.g. "201234567M"). Surfaces on the
+   *  email receipt + tax invoice. */
+  gstNumber?: string | null;
+  /** GST rate in basis points. Default 900 (9 %) for SG; operator can
+   *  override if rates change. */
+  gstRateBps?: number;
+  /** When true, the menu page surfaces NEA Nutri-Grade badges on any
+   *  beverage with `nutriGrade` set. */
+  nutriGradeRequired?: boolean;
+  /** Customer-visible packaging composition text per NYC FRESH Act +
+   *  EU 94/62/EC. Rendered in the cart and on the email receipt. */
+  packagingDisclosure?: string | null;
+  /** SG PDPA Section 13 / EU GDPR Art 13 consent body shown in the
+   *  consent dialog before the customer's phone is collected at
+   *  checkout. Operator-editable so legal copy stays current without
+   *  a code deploy. */
+  pdpaConsentText?: string | null;
+}
+
+export interface ComplianceConfig {
+  /** Map keyed by location slug. Locations not in the map fall back to
+   *  the zone-default below — keeps existing PL trucks untouched. */
+  byLocation: Record<string, LocationComplianceConfig>;
+  /** Default zone applied when a slug isn't in `byLocation`. */
+  defaultZone: RegulatoryZone;
+}
+
+export const DEFAULT_COMPLIANCE_CONFIG: ComplianceConfig = {
+  byLocation: {},
+  defaultZone: "EU",
+};
+
+export function resolveLocationCompliance(
+  config: ComplianceConfig | undefined,
+  locationSlug: string,
+): LocationComplianceConfig {
+  const explicit = config?.byLocation?.[locationSlug];
+  if (explicit) return explicit;
+  return { zone: config?.defaultZone ?? "EU" };
+}
+
 const DEFAULT_SETTINGS: AppSettings = {
   deliveryFee: 1000, // 10.00 PLN
   minOrderAmount: 3000, // 30.00 PLN
@@ -2495,6 +2592,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   businessEmail: "",
   currency: DEFAULT_CURRENCY_CONFIG,
   locale: DEFAULT_LOCALE_CONFIG,
+  compliance: DEFAULT_COMPLIANCE_CONFIG,
 };
 
 function mergeSettings(
@@ -2519,6 +2617,15 @@ function mergeSettings(
     ...DEFAULT_LOCALE_CONFIG,
     ...(saved.locale ?? {}),
     ...(overrides.locale ?? {}),
+  };
+  base.compliance = {
+    ...DEFAULT_COMPLIANCE_CONFIG,
+    ...(saved.compliance ?? {}),
+    ...(overrides.compliance ?? {}),
+    byLocation: {
+      ...(saved.compliance?.byLocation ?? {}),
+      ...(overrides.compliance?.byLocation ?? {}),
+    },
   };
   return base;
 }

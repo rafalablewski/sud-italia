@@ -102,6 +102,15 @@ export default async function CapabilitiesPage() {
             "Customer-facing i18n dictionary (src/lib/i18n.ts) covers all four locales for nav, hero, menu, cart, order confirmation, loyalty, and footer copy. Header switcher dropdown picks among the operator-enabled set; /admin/languages controls which appear + which loads as default. Reload-on-change keeps SSR and client hydration agreed.",
         },
         {
+          name: "Per-location regulatory disclosures (EU / NYC / SG)",
+          status: "live",
+          href: "/admin/regulatory-compliance",
+          summary:
+            "Operators tag each truck with a regulatory pack (EU 1169/2011 default · NYC §81.50 calorie + DOH letter grade + FRESH Act packaging + FDA Big-9 allergen · SG NEA Nutri-Grade + MUIS Halal + 9% GST + PDPA §13 consent). Customer surfaces upgrade their chrome to match: location-page DOH banner, per-item kcal pill on NYC, Nutri-Grade hex + halal/non-halal chip + contains-pork / contains-alcohol disclaimer on SG, GST line + PDPA consent text in the cart. Nothing is inferred — if the operator hasn't filled the field, the customer sees no claim. Compliance config served via /api/settings/public?location= so SSR + client hydration agree.",
+          caveats:
+            "Display-only. Legal copy still needs counsel review for each jurisdiction — the admin lets the operator paste the lawyer-approved text without a code deploy. The GST line is back-calculated from the inclusive total (IRAS practice for GST-inclusive F&B pricing); when Stripe Tax / TaxJar is wired in, the per-line GST will flow from there instead.",
+        },
+        {
           name: "Global admin search",
           status: "live",
           href: "/admin",

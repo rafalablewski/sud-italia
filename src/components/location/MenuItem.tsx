@@ -14,6 +14,7 @@ import {
 } from "@/lib/upsell";
 import { getItemDetails } from "@/data/kodawari";
 import { ItemDetailDrawer } from "./ItemDetailDrawer";
+import { CompliancePills } from "./CompliancePills";
 import { useCartStore } from "@/store/cart";
 import {
   Plus,
@@ -45,6 +46,10 @@ interface MenuItemProps {
    *  present, additive to the item's intrinsic `menuRole` so admins can
    *  promote items without editing seed data. */
   upsellConfig?: UpsellConfig | null;
+  /** Audit §11.1 — operator-set regulatory disclosure for this location.
+   *  Drives the per-item compliance pill row (kcal on NYC, Nutri-Grade +
+   *  halal on SG, pork / alcohol everywhere). */
+  compliance?: import("./CompliancePills").PublicCompliance | null;
 }
 
 const TAG_LABELS: Record<string, { label: string; variant: "green" | "red" | "gold" | "default" }> = {
@@ -76,6 +81,7 @@ export function MenuItemCard({
   popularThisWeek = false,
   variant = "default",
   upsellConfig,
+  compliance,
 }: MenuItemProps) {
   const addItem = useCartStore((s) => s.addItem);
   const removeItem = useCartStore((s) => s.removeItem);
@@ -291,6 +297,11 @@ export function MenuItemCard({
           )}
         </div>
       )}
+
+      {/* Row 2b: regulatory disclosure pills (kcal / Nutri-Grade / halal /
+          pork / alcohol). Renders nothing on PL/EU trucks unless the
+          operator explicitly opts an item into the disclosure. */}
+      <CompliancePills item={item} compliance={compliance ?? null} />
 
       {/* Row 3: price + cart actions */}
       <div className="flex items-center justify-between">
