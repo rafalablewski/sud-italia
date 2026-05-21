@@ -8851,15 +8851,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Approximates Polish risk-free + small premium — roughly
-            the long-run equity-market return for a passive investor.
-            Minimum bar for capital deployment: if NPV @ 10% &lt; 0,
-            you&apos;d have made more sitting on the cash. Sensitivity
-            to monthly cash-flow timing matters because of discounting
-            — early ramp helps NPV more than equivalent late-period
-            cash. Doesn&apos;t capture terminal value beyond month 24;
-            for going-concern operations the &quot;real&quot; NPV is
-            higher than the 24-month truncated view suggests.
+            The minimum bar for capital deployment — if NPV at this
+            rate goes negative, the money would have done better
+            sitting in a passive option. Discounting means cash-flow
+            TIMING matters, not just total: an early ramp helps NPV
+            more than the same total cash arriving later. Doesn&apos;t
+            capture terminal value beyond month 24, so for going
+            concerns the real NPV is higher than the truncated view.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -8898,15 +8896,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Approximates VC / seed-investor expected return for
-            moderate-risk SME investments. Positive at this rate signals
-            the truck beats venture-grade alternatives — better than
-            putting the money into a friend&apos;s startup. Sensitivity
-            check: NPV @ 15% close to zero means the project is
-            marginal — small variance in assumptions flips the
-            verdict. Investors look at the slope across NPV @ 10/15/20
-            to assess robustness: steeper drop = more dependent on
-            long-horizon cash, more risk.
+            Positive at this rate signals the truck beats venture-grade
+            alternatives. Watch sensitivity: NPV close to zero at 15%
+            means the project is marginal — small assumption changes
+            flip the verdict. Investors look at the slope across
+            NPV-at-10/15/20 to assess robustness: a steeper drop
+            between rates means the case depends heavily on long-
+            horizon cash, which carries more execution risk.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -8944,14 +8940,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Reflects illiquidity premium + minority-stake risk + sector
-            risk for restaurant investments. Positive at this rate
-            attracts institutional / rollup capital (PL examples: Castle,
-            AdVent, Innova screen against ~20% IRR). Real PE deals
-            adjust for control premium, synergy expectations, exit-
-            multiple compression on top of the base hurdle. The
-            sale-grade benchmark — if you&apos;re building toward a
-            future exit, this is the metric to optimise.
+            The sale-grade benchmark — if you&apos;re building toward
+            a future exit, this is the rate institutional / rollup
+            capital screens against. Real PE deals further adjust for
+            control premium, synergy expectations, and exit-multiple
+            compression, so positive at 20% is necessary but not
+            sufficient for getting a deal done. Below 20% you&apos;re
+            building a lifestyle business, not a saleable asset.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -8991,15 +8986,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Solved numerically as the discount rate where the cumulative
-            PV of monthly cash flows equals zero. Healthy: &gt; 30%
-            exceptional; 20-30% solid; 15-20% acceptable; &lt; 15%
-            reconsider; &lt; 0 destroys value. IRR implicitly assumes
-            reinvestment-at-IRR — often unrealistic for multi-period
-            decisions; MIRR (Modified IRR) is more honest for true
+            IRR implicitly assumes reinvestment of cash flows AT the
+            IRR rate — often unrealistic for multi-period decisions,
+            which is why MIRR (Modified IRR) is more honest for
             capital-allocation reasoning. 24-month IRR is typically
-            higher than 5-year IRR because terminal-value drag isn&apos;t
-            modeled here.
+            higher than a 5-year IRR on the same project because
+            terminal-value drag isn&apos;t modelled here. Use IRR for
+            ranking, NPV for sizing.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -9040,14 +9033,12 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Σ over m=1..12 of (base × seasonal_multiplier(m) × ticket ×
-            days × inflation^(m/12)). The annual top-line that
-            determines CIT bracket (€2M ≈ 8.5M zł threshold for 9% vs
-            19%) and informs revenue growth targets. Seasonal split (PL
-            pizza truck): Q1 ~17%, Q2 ~25%, Q3 ~33%, Q4 ~25%. Not a
-            flat 1/12 per month — winter cash crunch funds working-
-            capital reserve sizing. Year-over-year growth target:
-            8-12% nominal (above 4% PL inflation = real growth).
+            Q1 generates the smallest revenue share against a normal
+            share of fixed cost — not a flat 1/12 per month, so use
+            this number to size the working-capital reserve that
+            floats Q1 through the trough. The annual figure also
+            anchors against the small-CIT entity threshold; structuring
+            decisions follow the annual total.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -9086,14 +9077,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Σ m=1..12 of (labor × (1+wage_infl)^(m/12) + COGS ×
-            (1+food_infl)^(m/12) × seasonal_multiplier + fixed ×
-            (1+CPI)^(m/12)). Typical composition: 40% labor, 40% COGS,
-            15% fixed, 5% variable leakage. Step-function changes
-            (rent renewal, mandatory ZUS jump) don&apos;t fit the
-            smooth-inflation model — add as a separate fixed line if
-            material. Cost trajectory monitoring: if 12-mo cost growth
-            outpaces 12-mo revenue growth, margin erodes year-over-year.
+            Step-function changes (rent renewal, mandatory ZUS jump,
+            min-wage shock) don&apos;t fit the smooth-inflation model
+            — add them as a separate fixed-cost line if material, or
+            the projection understates the cost wall. The trajectory
+            check that matters: if 12-mo cost growth outpaces 12-mo
+            revenue growth, margin erodes year over year — that&apos;s
+            the trigger to price or restructure now.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -9132,15 +9122,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Healthy ranges: 120-200k zł/year single PL casual-Italian
-            truck; 600k-1.5M for 5-7 unit chain; 3M+ for 20+ unit
-            chain. Compares directly to alternative-employment income:
-            a salaried head chef earns ~90-130k zł/yr in PL — if your
-            truck nets below that, the risk-adjusted return is
-            negative. Year-over-year growth target 10-15% real
-            (above inflation) to be considered growing. Valuation
-            anchor for sale: ~4-7× annual net (or EBITDA, depending on
-            buyer&apos;s framework).
+            Compares directly to alternative-employment income — if
+            the truck nets below what a salaried equivalent role would
+            pay, the risk-adjusted return is negative even when the
+            P&amp;L looks profitable. So this is the &quot;am I better
+            off running this or working for someone else?&quot;
+            metric. Also the valuation anchor for a future sale; lift
+            this and the saleable asset grows by the multiple.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -9180,14 +9168,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            The spread (best − worst) sizes the working-capital reserve
-            requirement: enough cash to bridge the trough month while
-            still covering fixed-cost monthly bills. Healthy: 3-5× ratio
-            for PL outdoor truck; lower 1.5-2× = well-diversified
-            channels (delivery counter-seasonal); higher 5-8× = heavy
-            seasonality risk requiring careful Q4 reserve build-up.
-            Investors look at the worst month, not the average — the
-            average can hide a winter cash crunch that closes the truck.
+            The spread sizes the working-capital reserve: enough cash
+            to bridge the trough month while still covering monthly
+            fixed bills. Investors look at the worst month, not the
+            average — an attractive annual average can hide a winter
+            cash crunch that closes the truck. A diversified channel
+            mix (delivery is partly counter-seasonal) narrows the
+            spread; pure-outdoor pitches widen it.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
