@@ -1,19 +1,9 @@
-import { HeroSection } from "@/components/landing/HeroSection";
-import { LocationsGrid } from "@/components/landing/LocationsGrid";
-import { BundlesShowcase } from "@/components/landing/BundlesShowcase";
-import { AboutSection } from "@/components/landing/AboutSection";
-import { CTASection } from "@/components/landing/CTASection";
-import { LoyaltySection } from "@/components/location/LoyaltySection";
+import V8Landing from "@/components/landing/v8";
+
+// Re-render the home page every 10 minutes so admin edits to loyalty
+// settings (read by SociSection) propagate without a full deploy.
+export const revalidate = 600;
 
 export default function Home() {
-  return (
-    <>
-      <HeroSection />
-      <LocationsGrid />
-      <BundlesShowcase />
-      <AboutSection />
-      <LoyaltySection />
-      <CTASection />
-    </>
-  );
+  return <V8Landing />;
 }
