@@ -444,15 +444,15 @@ The customer attach-history data ([src/lib/upsell.ts:111](../../src/lib/upsell.t
 Pick at most six. Sequence by week.
 
 ### Week 1 — Stop the bleed
-- Hash + salt the admin password. **No MFA-debate first; just stop the plaintext compare.** [src/lib/admin-auth.ts:143](../../src/lib/admin-auth.ts).
+- Hash + salt the admin password. **No MFA-debate first; just stop the plaintext compare.** [src/lib/admin-auth.ts:143–145](../../src/lib/admin-auth.ts).
 - Rotate the production admin password and document where it’s stored.
-- Add basic rate-limit to ALL `/api/admin/*` routes, not just login.
-- Add Sentry alerting on > 1% 5xx and on lock-acquisition failure.
+- Extend `enforceRateLimit` to ALL `/api/admin/*` routes — today only `admin/login` and `admin/customers/[phone]/send` use it, 2 of 154.
+- Add Sentry alerting on > 1% 5xx and on lock-acquisition failure. The counter already exists (`incrCounter("lock.timeouts")` in [src/lib/locks.ts:170](../../src/lib/locks.ts)) and lock fallbacks bump `metrics.inProcessFallbacks` ([src/lib/locks.ts:135, 163](../../src/lib/locks.ts)); only the dashboard alert config is missing.
 - Add a manual nightly Neon backup → S3, cron-driven, with a documented restore script.
 
 ### Week 2 — Trust the dashboard again
 - ~~Audit `/admin/capabilities` and downgrade every "live" claim that is heuristic, stubbed, or partial. Add a `caveats` field.~~ **✅ DONE 2026-05-16** — single highest-leverage operator-honesty move.
-- Add four tests: (1) checkout idempotency, (2) slot oversell prevention, (3) refund flow, (4) RBAC location scope enforcement. Use a real test runner (Vitest). Even five tests prevents three production fires.
+- Add four tests: (1) checkout idempotency, (2) slot oversell prevention, (3) refund flow, (4) RBAC location scope enforcement. Use a real test runner (Vitest). Even four tests prevents three production fires.
 - ~~Add `audit_log` retention (90d) and `webhook_events` retention (30d) jobs.~~ **✅ DONE 2026-05-16 (PR #38)** — daily `retention-trim` cron prunes both; cutoffs overridable via env vars.
 
 ### Week 3 — Move the AOV needle
@@ -499,7 +499,7 @@ This sequence is intentionally conservative. Every quarter assumes the previous 
 ## 13. Long-Term Strategic Opportunities (1–5 years)
 
 ### Path A: Premium Polish chain (recommended)
-6–12 trucks across Polish A-cities (Kraków, Warsaw, Wrocław, Poznań, Gdańsk, Łódź, Lublin), all corporate-owned. Tight brand control, premium positioning, founder remains creative director. Code base is sufficient with the Q2–Q4 medium-term work. Margin expansion via supplier consolidation + corporate B2B.
+6–10 trucks across Polish A-cities (Kraków, Warsaw, Wrocław, Poznań, Gdańsk, Łódź, Lublin), all corporate-owned, matching the revised ~10-truck architectural ceiling from §4 and §8. Tight brand control, premium positioning, founder remains creative director. The Q2 medium-term work that this path used to require (recipe-driven stock, PAR-driven POs, cohort dashboard, CLTV, Claude-backed forecast, DB-backed locations, per-location locks, SPLH + schedule-vs-forecast) is mostly already in place per §0.1; what's still required is the Q3–Q4 work (B2B sales motion, A/B framework, MFA, staging env, hash-chained cash sessions, cashier mode). Margin expansion via supplier consolidation + corporate B2B.
 
 ### Path B: Franchise after 5 corporate
 The “Subway model” for premium Neapolitan. Requires (1) operational manuals, (2) franchisee tech: royalty splits, mandatory compliance gates, brand-pack enforcement, training portal, (3) data isolation in the tech, (4) a national kitchen-supply contract. 18-month investment.
