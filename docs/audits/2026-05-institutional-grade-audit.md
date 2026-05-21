@@ -366,8 +366,8 @@ The customer attach-history data ([src/lib/upsell.ts:111](../../src/lib/upsell.t
 
 | Path | Ready? | What's blocking |
 |---|---|---|
-| **3rd location (Wrocław)** | 70% | Hardcoded `locations.ts`; need menu file; need photographer for hero shots; supplier relationship local |
-| **4th–5th location** | 30% | Lock contention starts; manual stock at 4× volume = unsustainable; one operator becomes single point of failure |
+| **3rd location (Wrocław)** | ~~70%~~ **90%** *(post 2026-05-16, PR #38)* | ~~Hardcoded `locations.ts`~~ **resolved** — `src/data/locations.ts` is now a seed/fallback only ([file docstring lines 3–17](../../src/data/locations.ts)); runtime source is the `locations` Postgres table edited via `/admin/locations/manage`. ~~Need menu file~~ **optional** — a third location can be populated entirely through admin-created custom items via `getCustomMenuItems(locationSlug)` ([src/data/menus/index.ts:19](../../src/data/menus/index.ts)) without authoring a new `src/data/menus/wroclaw.ts`. Still need: a hero image (none of the three locations have one — `/images/locations/*-hero.jpg` paths all 404), and a local supplier relationship. |
+| **4th–5th location** | ~~30%~~ **70%** *(post 2026-05-16, PR #38)* | ~~Lock contention starts~~ **resolved** — per-location lock keys (`orders.kv:${slug}`) split the queue, see §0.1. ~~Manual stock at 4× volume = unsustainable~~ **resolved** — `consumeRecipeForOrder` posts movements on every paid order ([src/lib/store.ts:1244–1245](../../src/lib/store.ts)) and PAR-driven draft POs run daily. Remaining blocker: one operator is still the single point of failure for ops, supplier negotiation, and quality control — a code-side problem only insofar as it can't fix the human one. |
 | **Franchising** | 5% | No franchise tech: no per-franchisee royalty splitting, no franchisee accounting export, no enforced brand pack, no franchisee training portal, no compliance auto-monitoring per location, no per-tenant data isolation |
 | **International (e.g., Berlin)** | 25% | ✅ Multi-currency display (PLN / USD / SGD / EUR via `/admin/currency`) + i18n dictionary covering pl / en / de / en-SG via `/admin/languages` (shipped 2026-05-21). ❌ Still blocked on: Stripe merchant account is PLN-bound so charges still settle PLN (multi-currency display only), Polish VAT (JPK XML) logic, phone-prefix +48, and a Polish supplier graph. The customer surface is now multilingual; the back-office tax + payment plumbing is still PL-only. |
 | **Licensing / white-label** | 10% | Branding is baked into Tailwind tokens (italia-red etc.); not theme-able. Multi-tenant data model doesn’t exist |
@@ -375,7 +375,7 @@ The customer attach-history data ([src/lib/upsell.ts:111](../../src/lib/upsell.t
 | **Ghost kitchens** | 60% | The architecture supports it (location-as-truck abstraction); the marketing and brand operate as "trucks" not "kitchens" |
 | **Enterprise / corporate ordering** | 40% | Banner + invoice cron exist; pricing model, AR ledger, contract management absent |
 
-**Honest read:** the operator should plan for **5 trucks max under this architecture**, then a serious replatform if franchising or SaaS is the goal. Trying to skip that step will burn 12–18 months.
+**Honest read:** ~~the operator should plan for **5 trucks max under this architecture**~~, then a serious replatform if franchising or SaaS is the goal. **Revised post 2026-05-16 (PR #38): the architecture is now honestly good for ~10 trucks** — matches the revised §4 scale ceiling. Per-location locks, DB-backed locations CRUD, retention-trim, and recipe-driven stock decrement are all in. The 10-truck planning horizon should hold for the next 24 months; past that, a multi-tenant + multi-region replatform is the franchising / SaaS gate.
 
 ---
 
