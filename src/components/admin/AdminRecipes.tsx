@@ -829,27 +829,37 @@ function RecipeEditor({ menuItem, recipe, ingredients, locationLabel, onClose, o
       : 0;
   // Per-portion macros computed locally so the KPI + nutrition panel
   // update as the operator edits quantities, without waiting for the
-  // server roundtrip. Each macro is independent — calories can resolve
-  // even if `fiber` is missing on one row — so operators can roll macros
-  // out gradually without blanking everything.
+  // server roundtrip. Missing values default to 0 (rather than null'ing
+  // the whole total) so the operator sees a working number while they
+  // backfill — accompanied by a "N ingredients defaulted to 0" hint
+  // so they know which rows still need real data. The customer-facing
+  // kcal pill keeps the stricter "all complete or no claim" rule
+  // server-side; NYC §81.50 / EU 1169 disclosures shouldn't ship
+  // 0-defaulted figures.
   type MacroKey = "unitKcal" | "unitProtein" | "unitCarbs" | "unitSugar" | "unitFiber" | "unitFat";
-  const perPortionMacro = (key: MacroKey): number | null => {
-    if (rows.length === 0) return null;
+  const perPortionMacro = (key: MacroKey): { value: number; defaulted: number } => {
+    if (rows.length === 0) return { value: 0, defaulted: 0 };
     let total = 0;
+    let defaulted = 0;
     for (const r of rows) {
       const raw = r[key];
-      if (typeof raw !== "number") return null;
+      if (typeof raw !== "number") {
+        defaulted++;
+        continue;
+      }
       total += raw * r.quantity * (r.wasteFactor || 1);
     }
-    return Math.round(total / (yieldPortions || 1));
+    return {
+      value: Math.round(total / (yieldPortions || 1)),
+      defaulted,
+    };
   };
-  const perPortionKcal = perPortionMacro("unitKcal");
-  const perPortionProtein = perPortionMacro("unitProtein");
-  const perPortionCarbs = perPortionMacro("unitCarbs");
-  const perPortionSugar = perPortionMacro("unitSugar");
-  const perPortionFiber = perPortionMacro("unitFiber");
-  const perPortionFat = perPortionMacro("unitFat");
-  const rowsMissingKcal = rows.filter((r) => typeof r.unitKcal !== "number");
+  const kcalSummary = perPortionMacro("unitKcal");
+  const proteinSummary = perPortionMacro("unitProtein");
+  const carbsSummary = perPortionMacro("unitCarbs");
+  const sugarSummary = perPortionMacro("unitSugar");
+  const fiberSummary = perPortionMacro("unitFiber");
+  const fatSummary = perPortionMacro("unitFat");
 
   const save = async () => {
     if (!menuItem) return;
@@ -1047,18 +1057,18 @@ function RecipeEditor({ menuItem, recipe, ingredients, locationLabel, onClose, o
             />
             <KpiCard
               label="Calories"
-              value={perPortionKcal ?? 0}
-              display={perPortionKcal === null ? "—" : `${perPortionKcal} kcal`}
+              value={kcalSummary.value}
+              display={rows.length === 0 ? "—" : `${kcalSummary.value} kcal`}
               icon={Flame}
               tone="neutral"
               staticValue
               hint={
-                perPortionKcal === null
-                  ? rowsMissingKcal.length === 0
-                    ? "Add ingredients to compute"
-                    : `${rowsMissingKcal.length} ingredient${
-                        rowsMissingKcal.length === 1 ? "" : "s"
-                      } missing kcal data`
+                rows.length === 0
+                  ? "Add ingredients to compute"
+                  : kcalSummary.defaulted > 0
+                  ? `${kcalSummary.defaulted} ingredient${
+                      kcalSummary.defaulted === 1 ? "" : "s"
+                    } defaulted to 0 — fill kcal on the warning rows for accuracy`
                   : "Auto-computed from ingredient kcal × qty"
               }
             />
@@ -1066,9 +1076,13 @@ function RecipeEditor({ menuItem, recipe, ingredients, locationLabel, onClose, o
 
           {/* ============ Per-portion macros ============
               Compact nutrition-label-style row. Each cell shows the
-              computed gram value or "—" when any ingredient is missing
-              that specific macro. Sugar is nested under carbs to mirror
-              EU 1169/2011 + FDA NFP "of which sugars" convention. */}
+              computed gram value with a small "(N defaulted)" suffix
+              when any ingredient line was missing that specific macro
+              — so operators get a usable number while they backfill
+              instead of a blanket "—". Sugar is nested under carbs to
+              mirror EU 1169/2011 + FDA NFP "of which sugars" convention.
+              The customer-facing pill keeps the stricter "all
+              complete" rule server-side. */}
           <section
             className="v2-rcp-nutrition"
             role="group"
@@ -1077,39 +1091,62 @@ function RecipeEditor({ menuItem, recipe, ingredients, locationLabel, onClose, o
             <header className="v2-rcp-nutrition-header">
               <span className="v2-rcp-nutrition-eyebrow">Per-portion nutrition</span>
               <span className="v2-rcp-nutrition-hint">
-                Auto-computed from each ingredient&apos;s nutrition label.
+                Missing values default to 0 — fill ingredient nutrition for accuracy.
               </span>
             </header>
             <dl className="v2-rcp-nutrition-grid">
               <div className="v2-rcp-nutrition-cell">
                 <dt>Carbs</dt>
                 <dd className="tabular">
-                  {perPortionCarbs === null ? "—" : `${perPortionCarbs} g`}
+                  {rows.length === 0 ? "—" : `${carbsSummary.value} g`}
                 </dd>
                 <small className="v2-rcp-nutrition-sub">
                   of which sugars{" "}
                   <span className="tabular">
-                    {perPortionSugar === null ? "—" : `${perPortionSugar} g`}
+                    {rows.length === 0 ? "—" : `${sugarSummary.value} g`}
                   </span>
+                  {sugarSummary.defaulted > 0
+                    ? <span className="v2-rcp-nutrition-warn"> ({sugarSummary.defaulted} defaulted)</span>
+                    : null}
                 </small>
+                {carbsSummary.defaulted > 0 ? (
+                  <small className="v2-rcp-nutrition-warn">
+                    {carbsSummary.defaulted} defaulted to 0
+                  </small>
+                ) : null}
               </div>
               <div className="v2-rcp-nutrition-cell">
                 <dt>Fiber</dt>
                 <dd className="tabular">
-                  {perPortionFiber === null ? "—" : `${perPortionFiber} g`}
+                  {rows.length === 0 ? "—" : `${fiberSummary.value} g`}
                 </dd>
+                {fiberSummary.defaulted > 0 ? (
+                  <small className="v2-rcp-nutrition-warn">
+                    {fiberSummary.defaulted} defaulted to 0
+                  </small>
+                ) : null}
               </div>
               <div className="v2-rcp-nutrition-cell">
                 <dt>Protein</dt>
                 <dd className="tabular">
-                  {perPortionProtein === null ? "—" : `${perPortionProtein} g`}
+                  {rows.length === 0 ? "—" : `${proteinSummary.value} g`}
                 </dd>
+                {proteinSummary.defaulted > 0 ? (
+                  <small className="v2-rcp-nutrition-warn">
+                    {proteinSummary.defaulted} defaulted to 0
+                  </small>
+                ) : null}
               </div>
               <div className="v2-rcp-nutrition-cell">
                 <dt>Fat</dt>
                 <dd className="tabular">
-                  {perPortionFat === null ? "—" : `${perPortionFat} g`}
+                  {rows.length === 0 ? "—" : `${fatSummary.value} g`}
                 </dd>
+                {fatSummary.defaulted > 0 ? (
+                  <small className="v2-rcp-nutrition-warn">
+                    {fatSummary.defaulted} defaulted to 0
+                  </small>
+                ) : null}
               </div>
             </dl>
           </section>

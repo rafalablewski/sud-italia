@@ -3825,6 +3825,13 @@ html { scroll-behavior: smooth; }
   color: var(--fg-subtle);
   margin-top: 2px;
 }
+.v2-rcp-nutrition-warn {
+  display: block;
+  font-size: 10px;
+  color: var(--warning);
+  margin-top: 2px;
+  font-weight: 500;
+}
 
 /* Inline distributor-offering provenance under each recipe row's name.
    Surfaces which distributor + product the cost + macros come from so
