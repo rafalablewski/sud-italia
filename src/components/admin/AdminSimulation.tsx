@@ -6574,14 +6574,13 @@ const HELP = {
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
             Trade-off between cost discipline and staff retention. Low
-            flex (0-20%) = stable team, brutal margins on slow days.
-            High flex (60%+) = elastic labor, faster bad-day savings,
-            but turnover climbs (part-timers churn 3-5× full-time).
-            Industry ranges: 20-30% world-class chains (Domino&apos;s,
-            Telepizza); 40-50% independent casual-Italian; 70%+ heavy
-            part-time fast-casual. Drives how fast variable_labor =
-            base × flex × (orders − anchor)/anchor scales above the
-            anchor point.
+            flex preserves a stable team but bleeds margin on slow
+            days; high flex protects margin but raises turnover
+            because part-timers churn faster than full-timers. The
+            right setting depends on local labor market and brand
+            promise: a craft / quality-led concept needs continuity
+            (low flex); a volume / speed-led concept can absorb churn
+            (high flex).
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -6624,14 +6623,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Set to the realistic typical-day demand your roster is
-            built around (averaged over 30 days). Anchor too low →
-            model over-states labor scaling on growth; too high →
-            understates labor for projected volume. Re-anchor
-            quarterly as volume trend shifts. Labor below the anchor
-            stays constant (you can&apos;t unhire fixed staff on a
-            slow day — that&apos;s what the laborFlex lever handles);
-            above the anchor, marginal labor scales linearly.
+            Wrong anchor poisons the labor projection in both
+            directions: too low overstates the labor that growth
+            requires; too high understates it. Re-anchor quarterly as
+            volume trends shift — stale anchors are the single biggest
+            source of labor-forecast error in chains that grew quickly
+            then plateaued. Anchor on the trailing 30-day median, not
+            the peak week.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -6674,14 +6672,14 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            80 orders/day spread over 10 hours is 8/hr, easy. The same
-            80 with 22% pile into one hour = 17.6/hr — and if the
-            kitchen caps at 14/hr you turn away ~4 customers in that
-            window. Same daily total, totally different capacity story.
-            Ranges: 12-15% spread-load lunch + dinner; 18-22% dinner-led
-            casual; 25-32% special-event / weekend-only; aperitivo bars
-            can hit 30%+ in the 18-20h window. This single % often
-            decides whether you need a second oven.
+            The same daily order total tells two completely different
+            capacity stories depending on how concentrated peak is:
+            spread evenly, the kitchen never feels stress; piled into
+            one hour, the same total turns customers away. So this
+            single percentage often decides whether the operation
+            needs a second oven, more than the headline orders/day
+            does. Read against the kitchen-saturation KPI before
+            planning capex.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -6723,14 +6721,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Calibration: pizza-only 1.00, pizza + drinks 1.05, +
-            dessert/antipasti 1.15, + pasta primo 1.40, full-menu
-            Italian 1.55+. Effective pizzas/hr = pizzasPerHour ÷
-            prepComplexity. Pushing pasta or antipasti attach without
-            adjusting this multiplier makes the modelled capacity lie
-            — the marginal prep load on a separate station compounds
-            the pizza line, and total throughput drops more than the
-            additive estimate suggests.
+            Pushing pasta or antipasti attach without adjusting this
+            multiplier makes the modelled capacity lie — the marginal
+            prep load on a separate station compounds the pizza line,
+            and total throughput drops more than an additive estimate
+            suggests. So menu expansion isn&apos;t free even at zero
+            capex: it taxes the headline capacity figure. Re-calibrate
+            when the menu changes.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -6771,14 +6768,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Range 1.15-1.45 outdoor truck; 0.95-1.10 indoor mall (less
-            seasonal); 1.20-1.30 tourist-area indoor; 1.50+
-            resort/beach. This is the season that funds winter survival
-            — the best:worst-month ratio implied by summer × 1.3 /
-            winter × 0.5 ≈ 2.6× is typical and demands a reserve sized
-            against the trough month. Heatwave bonus stacks on top for
-            the hot-evening micro-effect; school-holiday lunch dip
-            partly offsets weekday lunch revenue.
+            The season that funds winter survival — Q3 cash must build
+            the reserve that floats Q1 through the winter trough.
+            Heatwave bonus stacks on top for the hot-evening micro-
+            effect; school-holiday lunch dip partly offsets weekday
+            lunch revenue. Pitch type changes the magnitude
+            dramatically — outdoor truck swings hardest, indoor mall
+            barely moves.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -6819,14 +6815,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Spring is the calibration anchor — multipliers for summer
-            / autumn / winter all flex relative to this 1.00 reference.
-            If you&apos;re forecasting from a spring data sample, this
-            keeps the projection honest. Typical range 0.95-1.10;
-            late spring (May) often runs higher than March as patio
-            reopens. Easter weekend is volatile (peak day if open,
-            zero if closed) — handle via the peak/closure levers, not
-            by inflating the quarterly multiplier.
+            Spring is the calibration anchor — the other three
+            multipliers all flex relative to this 1.00 reference, so
+            forecast-from-spring keeps the projection internally
+            consistent. Easter weekend is volatile (peak day if open,
+            zero if closed) — handle via the peak / closure levers
+            rather than inflating the quarterly multiplier, or you
+            double-count.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -6867,14 +6862,12 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Range 0.85-1.05. Early autumn (Sep) often runs at 1.05
-            (back-to-school + back-to-office return); November
-            typically 0.85 (daylight collapses, patio dies). Halloween
-            is the peak day in autumn — handle via the peak-days lever.
-            All Saints&apos; (1 Nov) typically forces closure — count
-            in holidayClosed. The quarterly multiplier averages across
-            all three months including the dip, so don&apos;t double-
-            count Halloween or 1 Nov.
+            Autumn hides two opposing forces inside one multiplier:
+            early September runs hot (back-to-school + back-to-office),
+            November collapses (daylight + patio close). Halloween
+            (peak) and All Saints&apos; (closure) are calendar-specific
+            — handle via the peak / closure levers so you don&apos;t
+            double-count them inside the quarterly average.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -6914,14 +6907,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Oven types: wood-fired Neapolitan (Ferrara) 6-9 pies;
-            gas/electric deck 4-8; multi-deck Lincoln 12-16; conveyor
-            Middleby 16-20. Theoretical capacity = pizzasPerBake ×
-            cycles/hr × ovenEfficiency. Batching is the biggest team-
-            level lever: a pizzaiolo loading 4-6 pies per bake vs 1-2
-            doubles realistic throughput on the same oven. Second-oven
-            CAPEX usually loses to a second truck at chain scale (same
-            capex, doubles geographic reach).
+            Batching discipline is the biggest team-level lever — a
+            pizzaiolo loading 4-6 pies per bake vs 1-2 doubles real
+            throughput on the same oven, free. So before reaching for
+            capex, train the line. Strategic note at chain scale:
+            second-oven CAPEX usually loses to a second truck (same
+            capex, doubles geographic reach instead of doubling one
+            location).
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
