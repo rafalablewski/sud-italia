@@ -9589,14 +9589,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Healthy PL casual-Italian ranges: pizza-only 45-55 zł; with
-            drinks 60-68 zł; full dinner 70-85 zł; upscale Italian 90+
-            zł. Compared to attach-driven AOV: pushing attach is the
-            preferred lever because customers don&apos;t perceive add-
-            ons as price hikes. Track per-channel — on-site, Glovo,
-            Wolt typically vary by 5-15 zł. Year-over-year growth target
-            5-8% nominal (matches inflation + small mix lift); above
-            10% is aggressive pricing or large mix shift.
+            Pushing attach beats raw price hikes because customers
+            don&apos;t perceive add-ons as price moves — the
+            elasticity penalty is zero. Track per-channel (on-site
+            vs Glovo vs Wolt typically vary materially); a channel-mix
+            shift can change blended AOV without anyone touching the
+            menu price, and the cause matters when diagnosing
+            ticket-growth trends.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -9635,14 +9634,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Healthy: &gt; 10 zł/order excellent; 5-10 zł healthy; 2-5
-            marginal; &lt; 2 fragile; negative = structurally broken
-            (every order loses money). The gating metric for unit
-            economics — alongside CM1 shows whether the unit is
-            structurally profitable and how fixed-cost-heavy the
-            structure is. By-daypart variance: off-peak CM2 might be
-            negative while peak CM2 is strongly positive — blended
-            hides the truth.
+            The gating metric for unit economics — alongside CM1, this
+            shows whether the unit is structurally profitable and how
+            fixed-cost-heavy the structure is. By-daypart variance
+            matters: off-peak CM2 might be negative while peak CM2 is
+            strongly positive, and the blended number hides the truth.
+            Drop the worst dayparts before reaching for menu or pricing
+            changes.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -9682,14 +9680,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Healthy PL pizza truck: 1,400-2,800 orders/month single unit.
-            Below 1,400 = sub-scale; above 2,800 = capacity-pressed
-            (cross-check against kitchen capacity KPI). Customer count
-            distinct from order count when party size &gt; 1 — at 2.5
-            avg party, 2,240 orders = ~900 unique transactions. Track
-            both metrics; YoY growth target 8-12% on orders (real
-            growth) — order-count growth is the volume-truth-teller
-            (vs ticket-driven revenue growth).
+            Order-count growth is the volume-truth-teller — it
+            can&apos;t be faked by price hikes the way revenue can.
+            Customer count is distinct from order count when party size
+            &gt; 1; track both. Revenue growing while orders flat means
+            ticket is doing the work (price or mix), which has a
+            ceiling; orders growing means real demand is expanding,
+            which doesn&apos;t.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -9730,14 +9727,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Scale economics kick in at specific thresholds: 5 units
-            ≈ 700k-1.2M zł/mo unlocks tier-3 supplier discounts and
-            commissary economics. Watch the €2M (~8.5M zł) annual
-            threshold per legal entity — under = 9% small-CIT, over =
-            19%. Compare YoY fleet revenue growth vs per-unit revenue
+            Compare YoY fleet revenue growth vs per-unit revenue
             growth: if total grows but per-unit stays flat,
-            cannibalisation is in play; if both grow, true scaling is
-            working.
+            cannibalisation is in play and you&apos;re buying revenue
+            with new capex rather than scaling existing units. If both
+            grow, true scaling is working. Watch the small-CIT entity
+            threshold at the legal-entity level; chains often structure
+            around it.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -9776,14 +9772,14 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Healthy: 15-22% margin chain-grade; 22-28% investor-grade;
-            28-35% world-class; &gt; 35% suspicious (check
-            normalisations). Multiples: 4-7× EBITDA in PL casual-Italian
-            sale. So fleet EBITDA 2.4M zł → 10-17M zł valuation —
-            material. Driver of self-fundable growth: at 20%+ EBITDA
-            margin the fleet can open new units from operations without
-            external capital. Reinvest 30-40%, debt-paydown 40-50%,
-            distribution 20-30% is a balanced post-EBITDA split.
+            The metric that drives valuation in a sale process — sale
+            multiples are applied to fleet EBITDA, so every margin
+            point becomes a multiple-point of enterprise value. Also
+            the driver of self-fundable growth: at strong EBITDA margin
+            the fleet can open new units from operations without raising
+            external capital. A disciplined post-EBITDA split between
+            reinvestment, debt paydown and distribution prevents the
+            fleet from over-distributing in good years.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -9822,14 +9818,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Healthy: 25-40k zł/month/unit at scale (PL casual-Italian);
-            world-class chains 45-60k/unit. Rising EBITDA/unit as units
-            grow = scale economics compounding (supplier discounts, HQ
-            absorption); flat = scale isn&apos;t happening; declining =
-            cannibalisation eating per-unit revenue. Use median or P25
-            per-unit EBITDA alongside the mean — outlier units can mask
-            distribution weakness. Below 25k/unit = restructure or
-            close.
+            Rising per-unit EBITDA as the chain grows = scale economics
+            actually compounding (supplier discounts, HQ absorption);
+            flat = scale isn&apos;t happening; declining = cannibalisation
+            or HQ bloat eating into per-unit performance. Use median or
+            P25 per-unit EBITDA alongside the mean — outlier units can
+            mask a weak distribution and an investor will probe the
+            spread, not just the average.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -9869,13 +9864,14 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Healthy trajectory: 10% at 2 units → 7% at 5 → 5% at 10
-            → 3% at 20+. Rising absorption % means HQ is growing faster
-            than fleet — either accelerate openings or freeze HQ hires.
-            Top-heavy chains (mature corporate office, small unit count)
-            face structural unit-level margin pressure that compounds.
-            HQ capability quality vs spend isn&apos;t visible in this
-            metric; a 5% HQ can be wasteful or world-class.
+            Rising absorption % means HQ is growing faster than the
+            fleet — the trigger to either accelerate openings or
+            freeze HQ hires. Top-heavy chains (mature corporate office,
+            small unit count) compound unit-level margin pressure
+            because the same HQ cost spreads over too few units. HQ
+            quality isn&apos;t visible in this metric: a low HQ % can
+            be lean or under-resourced, and only operational results
+            tell which.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -9914,15 +9910,14 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Realistic range: 2 units ~520-580k zł (no learning yet);
-            5 units ~1.1-1.3M; 10 units ~1.9-2.3M; 20 units ~3.5-4.2M
-            with mature learning curve. The denominator of cash-on-cash
-            and fleet-IRR — every 100k off fleet buildout lifts both
-            metrics materially. Capital-allocation strategy at scale:
-            equity for units 1-2 (high uncertainty), debt for units 3+
-            (proven economics); franchise to lower fleet buildout
-            entirely (franchisees fund their own units, fleet revenue
-            grows without HQ capex).
+            The denominator of cash-on-cash and fleet-IRR — every złoty
+            trimmed off fleet buildout lifts both metrics materially.
+            Capital-allocation strategy at scale: equity for the first
+            units (high uncertainty), debt for units 3+ (proven
+            economics), franchise to lower fleet buildout entirely
+            (franchisees fund their own units, fleet revenue grows
+            without HQ capex). Mixing the structures over the growth
+            curve is the standard chain playbook.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
