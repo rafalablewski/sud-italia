@@ -1,8 +1,8 @@
 /**
  * Verification harness for the dynamic-mains bundle rewrite. Mirrors
- * scripts/verify-combo-fix.ts. Run with:
+ * scripts/legacy/verify-combo-fix.ts. Run with:
  *
- *   npx tsx scripts/verify-bundle-fix.ts
+ *   npx tsx scripts/legacy/verify-bundle-fix.ts
  */
 
 import {
@@ -10,8 +10,8 @@ import {
   buildBundleCartLines,
   cartSatisfiesBundle,
   computeBundlePrice,
-} from "../src/lib/bundles";
-import type { CartItem, MenuCategory, MenuItem } from "../src/data/types";
+} from "@/lib/bundles";
+import type { CartItem, MenuCategory, MenuItem } from "@/data/types";
 
 const item = (id: string, category: MenuCategory, price: number): MenuItem => ({
   id,

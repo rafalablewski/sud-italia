@@ -1,7 +1,7 @@
 # Sud Italia — Mobile Admin: Improvements & Next Steps
 
 **Date:** 2026-05-17
-**Companion:** `mobile-final-review.md`, `mobile-audit.md`
+**Companion:** `final-review.md`, `audit.md`
 **Scope:** what was *not* shipped in this branch and the order to ship it.
 
 ---

@@ -2,7 +2,7 @@
 
 **Date:** 2026-05-17
 **Reviewer scope:** Senior product designer, operational UX architect, restaurant-tech benchmark survey
-**Object of review:** the mobile admin built in this branch — shell (`src/components/admin/v2/mobile/*`), mobile views (`src/components/admin/mobile/*`), CSS additions to `globals.css`, and clickable mockups (`mockups/mobile/`)
+**Object of review:** the mobile admin built in this branch — shell (`src/components/admin/v2/mobile/*`), mobile views (`src/components/admin/mobile/*`), CSS additions to `globals.css`, and clickable mockups (`public/mockups/mobile/`)
 **Benchmark set:** Toast POS mobile, Square Dashboard, Uber Eats Merchant, Shopify mobile, Stripe Dashboard mobile, Linear, Notion mobile
 
 > This review is intentionally adversarial. The goal is to identify exactly where the redesign holds up under operator pressure, where it slips, and what the next pass must address. Each section is a comparative critique — not a feature list.
@@ -221,4 +221,4 @@ Where we win:
 
 The mobile admin is **shippable to a Phase-1 cohort** (the owner + 2 managers across Kraków + Warsaw) **today**. It is **not yet** at the polish level where it would feel native to a Linear or Stripe team — that gap is animation polish and a few list virtualization details, all in the "next-steps" doc.
 
-Score: **8.2 / 10** against the best mobile-merchant products on the market. With the punch-list items in `mobile-improvements-next-steps.md` shipped, the score reaches **9.0**.
+Score: **8.2 / 10** against the best mobile-merchant products on the market. With the punch-list items in `next-steps.md` shipped, the score reaches **9.0**.

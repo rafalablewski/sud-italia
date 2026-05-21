@@ -281,7 +281,7 @@ Operator margin holds at 45–50% across all three tiers because the discount ap
 
 Bundles collapse to one Stripe line, so the discount is implicit in the price. Combos are different — line items keep their per-item prices on the Stripe receipt, and the discount is attached as a one-shot Stripe coupon (`amount_off = comboDiscount`, `currency = pln`, `duration = once`) via `session.discounts`. Without this, line items summed to the pre-discount subtotal and the customer was charged the full amount while `order.totalAmount` showed the discount — a financial-correctness bug fixed in `/api/checkout/route.ts`. `createOrderFromCart` threads `comboDiscount` + `comboName` onto the success result so the Stripe layer can build the coupon with the right name on the customer's receipt.
 
-Three combo behaviours are now correctness-verified end-to-end (`scripts/verify-combo-fix.ts`):
+Three combo behaviours are now correctness-verified end-to-end (`scripts/legacy/verify-combo-fix.ts`):
 
 - **Order-independent scoring.** `getActiveComboDeals` scores every combo, prefers fully-complete ones (largest savings, original-index tiebreak), then partials. Fixes the prior short-circuit where a panino+drink cart got "still need pizza+desserts for meal-deal" instead of the 8% lunch-special applied.
 - **Quantity-capped discount.** Savings = `discountPercent` × cheapest unit per matched category (or per required item suffix). 5 pizzas + drink + dessert no longer scales 10% across all 5 pizzas; one combo's worth caps the savings.

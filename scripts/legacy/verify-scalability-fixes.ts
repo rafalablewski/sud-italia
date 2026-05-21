@@ -5,7 +5,7 @@
  * cohort, segment, and labor-efficiency math without spinning up
  * the full stack.
  *
- * Usage:  npx tsx scripts/verify-scalability-fixes.ts
+ * Usage:  npx tsx scripts/legacy/verify-scalability-fixes.ts
  */
 
 import { buildCohortReport } from "@/lib/cohort-analytics";
