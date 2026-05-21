@@ -358,7 +358,7 @@ The customer attach-history data ([src/lib/upsell.ts:111](../../src/lib/upsell.t
 | **3rd location (Wrocław)** | 70% | Hardcoded `locations.ts`; need menu file; need photographer for hero shots; supplier relationship local |
 | **4th–5th location** | 30% | Lock contention starts; manual stock at 4× volume = unsustainable; one operator becomes single point of failure |
 | **Franchising** | 5% | No franchise tech: no per-franchisee royalty splitting, no franchisee accounting export, no enforced brand pack, no franchisee training portal, no compliance auto-monitoring per location, no per-tenant data isolation |
-| **International (e.g., Berlin)** | 5% | Hardcoded currency assumptions (grosze everywhere), Polish VAT logic, JPK XML, phone-prefix +48, all Polish-localized copy. Real i18n missing |
+| **International (e.g., Berlin)** | 25% | ✅ Multi-currency display (PLN / USD / SGD / EUR via `/admin/currency`) + i18n dictionary covering pl / en / de / en-SG via `/admin/languages` (shipped 2026-05-21). ❌ Still blocked on: Stripe merchant account is PLN-bound so charges still settle PLN (multi-currency display only), Polish VAT (JPK XML) logic, phone-prefix +48, and a Polish supplier graph. The customer surface is now multilingual; the back-office tax + payment plumbing is still PL-only. |
 | **Licensing / white-label** | 10% | Branding is baked into Tailwind tokens (italia-red etc.); not theme-able. Multi-tenant data model doesn’t exist |
 | **SaaS productization** | 15% | The system is well-designed for one chain. Tearing it into a SaaS for other operators is a 6–9 month rewrite |
 | **Ghost kitchens** | 60% | The architecture supports it (location-as-truck abstraction); the marketing and brand operate as "trucks" not "kitchens" |
@@ -500,7 +500,7 @@ The cleanest software story in this audit. There is a real, defensible product h
 Realistic exit in 24–36 months if the chain hits 8+ trucks. Acquirers value the proprietary customer data and the loyalty wallet more than the trucks.
 
 ### Path E: International (Berlin, Vienna, Prague)
-Most expensive path. Hardcoded Polish currency, fiscal codes, and copy mean ~3 months of i18n + 3 months of local supplier and compliance discovery per geography.
+Most expensive path. ✅ i18n + display-currency now ship out of the box (4 locales × 4 currencies via `/admin/languages` and `/admin/currency` as of 2026-05-21) — that's roughly 6 weeks off the previous estimate. ❌ Still need: per-region Stripe merchant accounts (currency is bound to the merchant account at creation, so true EUR/USD/SGD settlement is its own workstream), a tax engine to replace JPK_V7M (Stripe Tax or TaxJar), and local supplier + compliance discovery per geography (~3 months each).
 
 **My recommendation: A → B → optional C.** Don’t pursue D actively; let it find you.
 

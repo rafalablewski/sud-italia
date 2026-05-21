@@ -2429,6 +2429,27 @@ export async function renameCustomMenuItem(
 
 // --- Settings ---
 
+export type AppCurrency = "PLN" | "USD" | "SGD" | "EUR";
+export type AppLocale = "pl" | "en" | "de" | "en-SG";
+
+export interface CurrencyConfig {
+  /** Currency the homepage switcher defaults to before the customer
+   *  picks one. PLN keeps existing users untouched. */
+  defaultCurrency: AppCurrency;
+  /** Currencies the customer switcher exposes. The admin can disable any
+   *  except PLN (always enabled — it's the source-of-truth charge currency). */
+  enabledCurrencies: AppCurrency[];
+  /** Multiplier applied to a PLN-zloty amount to produce the display
+   *  value in the target currency. PLN is always 1. Operators retune
+   *  these from /admin/currency without a deploy. */
+  rates: Record<AppCurrency, number>;
+}
+
+export interface LocaleConfig {
+  defaultLocale: AppLocale;
+  enabledLocales: AppLocale[];
+}
+
 export interface AppSettings {
   deliveryFee: number; // in grosze
   minOrderAmount: number; // in grosze
@@ -2447,24 +2468,70 @@ export interface AppSettings {
   /** Master toggle for /admin/simulation. When false the nav link is
    *  hidden and the page redirects to /admin. */
   simulationEnabled?: boolean;
+  /** Display-currency config — customer-side switcher + admin rates.
+   *  Charges always settle in PLN; this controls the rendered amount. */
+  currency?: CurrencyConfig;
+  /** Customer locale config — switcher options + default language. */
+  locale?: LocaleConfig;
 }
+
+export const DEFAULT_CURRENCY_CONFIG: CurrencyConfig = {
+  defaultCurrency: "PLN",
+  enabledCurrencies: ["PLN", "USD", "SGD", "EUR"],
+  // Reference rates per 1 PLN as of mid-2026 — operator overrides via
+  // /admin/currency the moment FX moves.
+  rates: { PLN: 1, USD: 0.25, SGD: 0.34, EUR: 0.23 },
+};
+
+export const DEFAULT_LOCALE_CONFIG: LocaleConfig = {
+  defaultLocale: "pl",
+  enabledLocales: ["pl", "en", "de", "en-SG"],
+};
 
 const DEFAULT_SETTINGS: AppSettings = {
   deliveryFee: 1000, // 10.00 PLN
   minOrderAmount: 3000, // 30.00 PLN
   businessPhone: "",
   businessEmail: "",
+  currency: DEFAULT_CURRENCY_CONFIG,
+  locale: DEFAULT_LOCALE_CONFIG,
 };
+
+function mergeSettings(
+  saved: Partial<AppSettings>,
+  overrides: Partial<AppSettings> = {},
+): AppSettings {
+  // Deep-merge for nested currency/locale so partial PATCHes (e.g. only
+  // rates) preserve the operator-set enabled list + default.
+  const base = { ...DEFAULT_SETTINGS, ...saved, ...overrides };
+  base.currency = {
+    ...DEFAULT_CURRENCY_CONFIG,
+    ...(saved.currency ?? {}),
+    ...(overrides.currency ?? {}),
+    rates: {
+      ...DEFAULT_CURRENCY_CONFIG.rates,
+      ...(saved.currency?.rates ?? {}),
+      ...(overrides.currency?.rates ?? {}),
+      PLN: 1,
+    },
+  };
+  base.locale = {
+    ...DEFAULT_LOCALE_CONFIG,
+    ...(saved.locale ?? {}),
+    ...(overrides.locale ?? {}),
+  };
+  return base;
+}
 
 export async function getSettings(): Promise<AppSettings> {
   const saved = await readJSON<Partial<AppSettings>>("settings.json", {});
-  return { ...DEFAULT_SETTINGS, ...saved };
+  return mergeSettings(saved);
 }
 
 export async function updateSettings(updates: Partial<AppSettings>): Promise<AppSettings> {
   return withLock("settings.json", async () => {
     const current = await readJSON<Partial<AppSettings>>("settings.json", {});
-    const merged = { ...DEFAULT_SETTINGS, ...current, ...updates };
+    const merged = mergeSettings(current, updates);
     await writeJSON("settings.json", merged);
     return merged;
   });

@@ -54,5 +54,12 @@ export async function GET(req: NextRequest) {
      *  charge calculated server-side. Undefined per-segment fields fall
      *  back to the SEGMENT_FREE_DELIVERY_THRESHOLD defaults at use. */
     deliveryThresholds: appSettings.deliveryThresholds ?? null,
+    /** Customer display-currency config: switcher options + rates.
+     *  The customer site hydrates the currency module from this so a
+     *  switch from PLN → SGD reflects operator-set rates, not the
+     *  build-time defaults. */
+    currency: appSettings.currency,
+    /** Customer locale config: switcher options + default language. */
+    locale: appSettings.locale,
   });
 }

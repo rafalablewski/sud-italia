@@ -2,8 +2,6 @@
 
 import { MenuItem as MenuItemType, ALLERGEN_LABELS, Allergen, NutritionInfo } from "@/data/types";
 import { getItemDetails } from "@/data/kodawari";
-import { getItemRating } from "@/data/ratings";
-import { StarRating } from "@/components/rating/StarRating";
 import { Sheet } from "@/components/ui/Sheet";
 import { Button } from "@/components/ui/Button";
 import { formatPrice } from "@/lib/utils";
@@ -69,7 +67,6 @@ export function ItemDetailDrawer({
 }: ItemDetailDrawerProps) {
   const addItem = useCartStore((s) => s.addItem);
   const details = getItemDetails(item.id);
-  const rating = getItemRating(item.id);
   const emoji = CATEGORY_EMOJI[item.category] || "🍽️";
 
   const allergens = details?.allergens || [];
@@ -95,11 +92,6 @@ export function ItemDetailDrawer({
               {item.name}
             </h2>
             <p className="text-sm text-italia-gray mt-0.5">{item.description}</p>
-            {rating && (
-              <div className="mt-1">
-                <StarRating rating={rating.rating} reviewCount={rating.count} />
-              </div>
-            )}
             {(item.isLimited || item.limitedUntil) && (
               <p className="text-xs text-italia-red font-medium mt-2 flex items-center gap-1">
                 <Clock className="h-3 w-3 flex-shrink-0" />

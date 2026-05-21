@@ -86,6 +86,22 @@ export default async function CapabilitiesPage() {
           summary: "Loyalty, growth, AI, seasonal items and feature toggles. Persists via withLock on save.",
         },
         {
+          name: "Multi-currency display (PLN / USD / SGD / EUR)",
+          status: "live",
+          href: "/admin/currency",
+          summary:
+            "Customer header switcher exposes USD, SGD, EUR alongside the source-of-truth PLN. Operator sets exchange rates + enabled list + default at /admin/currency; rates flow to /api/settings/public so the customer site hydrates the formatter on mount. formatPrice() in src/lib/utils.ts routes through src/lib/currency.ts and converts grosze→target at display time. Charges still settle in PLN via the Stripe account — non-PLN selections are a reference display, with an explicit footer note in the switcher. Admin pages never mount the customer CurrencyProvider so they continue to render PLN.",
+          caveats:
+            "Display-only. Stripe Checkout still creates PLN sessions — to charge in USD/SGD/EUR end-to-end we'd need separate Stripe accounts (currency is bound to the merchant account at creation). Acceptable for cross-border tourists / DACH-Singapore expansion who want to see what they'd pay in their home currency before committing.",
+        },
+        {
+          name: "Multi-language UI (pl / en / de / en-SG)",
+          status: "live",
+          href: "/admin/languages",
+          summary:
+            "Customer-facing i18n dictionary (src/lib/i18n.ts) covers all four locales for nav, hero, menu, cart, order confirmation, loyalty, and footer copy. Header switcher dropdown picks among the operator-enabled set; /admin/languages controls which appear + which loads as default. Reload-on-change keeps SSR and client hydration agreed.",
+        },
+        {
           name: "Global admin search",
           status: "live",
           href: "/admin",
@@ -133,11 +149,13 @@ export default async function CapabilitiesPage() {
             "Add / edit / archive locations from the admin UI — no code change or deploy. Hardcoded src/data/locations.ts is the first-deploy seed only; once the table has rows it wins. 30s in-process cache.",
         },
         {
-          name: "Per-location lock scoping",
+          name: "Per-location lock scoping (hot path)",
           status: has("UPSTASH_REDIS_REST_URL") ? "live" : "needs-config",
           envVars: ["UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN"],
           summary:
-            "Order writes scope locks as `orders:${slug}` instead of the global `orders.json`. Lifts the 300 orders/hour ceiling from audit §4 to N × that (one queue per location) and unblocks horizontal scaling.",
+            "Request-blocking writes are concurrency-safe per location: createOrder's kv-fallback path scopes its lock as `orders:${slug}` via withLockScoped (and the DB-first path doesn't need an app-level lock at all — Postgres handles row-level concurrency via drizzle). The 300 orders/hour ceiling from audit §4 is lifted to N × that on the hot path.",
+          caveats:
+            "Mirror writes to the legacy kv_store['orders.json'] / kv_store['slots.json'] blobs still take a single global lock — those blobs share one key across all locations, so the lock has to be global to prevent interleaved read-modify-write. They run as fire-and-forget (void mirrorOrderToKvStore) so they never block the user, but cross-truck mirror updates do serialize on the same Redis key. The proper fix is to split the kv mirror into per-location keys (orders.krakow.json, orders.warszawa.json), or — since the DB is now source-of-truth — delete the kv mirror entirely. Tracked in audit §10.3.",
         },
         {
           name: "Retention trim (webhook_events, audit_log)",
@@ -1085,12 +1103,8 @@ export default async function CapabilitiesPage() {
       title: "Aggregators",
       items: [
         {
-          name: "Wolt + Glovo webhook intake",
-          status: env.ENABLE_AGGREGATORS === "true"
-            ? has("WOLT_WEBHOOK_SECRET") || has("GLOVO_WEBHOOK_SECRET")
-              ? "live"
-              : "needs-config"
-            : "disabled",
+          name: "Wolt + Glovo webhook intake (scaffold)",
+          status: "needs-config",
           envVars: [
             "ENABLE_AGGREGATORS",
             "WOLT_API_KEY",
@@ -1098,12 +1112,16 @@ export default async function CapabilitiesPage() {
             "GLOVO_API_KEY",
             "GLOVO_WEBHOOK_SECRET",
           ],
-          summary: "HMAC-verified webhooks. Mock providers run when credentials are absent.",
+          summary:
+            "Webhook route + HMAC signature verification + idempotency wiring are real. The provider classes (WoltProvider, GlovoProvider) throw 'not implemented' for syncMenu / ingestOrder / updateStatus — there is no live merchant integration today.",
+          caveats:
+            "Earlier revisions shipped Wolt + Glovo mock providers that returned true from verifyWebhookSignature() and just logged every event. That was a forged-webhook foot-gun — removed 2026-05-21 (audit §10.3). Until WOLT_API_KEY + GLOVO_API_KEY + secrets land and the three method bodies are implemented, the webhook returns 503 with a clear message. Treat this as a placeholder, not a live aggregator integration.",
         },
         {
           name: "Unified KDS source tagging",
           status: "live",
-          summary: "Aggregator orders flow into the same KDS as direct, tagged via specialInstructions.",
+          summary:
+            "KDS rendering + reports already key off payload.source so when the aggregator implementation lands, orders flow into the same KDS as direct, tagged via specialInstructions — no UI changes needed.",
         },
       ],
     },

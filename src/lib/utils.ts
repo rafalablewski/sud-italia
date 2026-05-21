@@ -1,16 +1,23 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { formatPriceInCurrency } from "@/lib/currency";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/** Display-format a PLN-grosze amount. Reads the customer's selected
+ *  display currency (USD / SGD / EUR / PLN) from the currency module
+ *  state — admin contexts never set it, so they stay in PLN. */
 export function formatPrice(priceInGrosze: number): string {
-  const zloty = priceInGrosze / 100;
-  return new Intl.NumberFormat("pl-PL", {
-    style: "currency",
-    currency: "PLN",
-  }).format(zloty);
+  return formatPriceInCurrency(priceInGrosze);
+}
+
+/** Explicit PLN-only formatter for back-office surfaces (admin reports,
+ *  KDS, cash, audit log) where the operator must see source-of-truth
+ *  currency regardless of customer display preference. */
+export function formatPricePLN(priceInGrosze: number): string {
+  return formatPriceInCurrency(priceInGrosze, "PLN");
 }
 
 export function generateOrderId(): string {

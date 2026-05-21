@@ -297,13 +297,15 @@ Yes, in three distinct ways:
 
 ### 6.1 Could An Owner Run 10 Locations With This Today?
 
-**No.** Specific failure points:
+**Partially.** Original audit findings + current status:
 
-1. **Locations are hardcoded.** `src/data/locations.ts` is a TypeScript array. Adding a new truck requires a deploy. There is no `/admin/locations` CRUD wired despite the page existing.
-2. **All data shares one schema.** `SELECT * FROM orders` scans every location. No partitioning, no index strategy guaranteed (the audit found no `(location_slug, created_at DESC)` composite index promise).
-3. **Cross-location queries are unscoped.** `requireLocationAccess()` exists (`src/lib/admin-auth.ts`), but is *handler-optional* — not middleware. A route that forgets to call it leaks across tenants.
-4. **Global `slots.json` and `orders.json` locks.** Every truck contends on the same Redis key.
-5. **No multi-currency, no multi-timezone, no multi-tax-jurisdiction.** PLN is hardcoded.
+1. ✅ **Locations are hardcoded.** ~~`src/data/locations.ts` is a TypeScript array. Adding a new truck requires a deploy. There is no `/admin/locations` CRUD wired despite the page existing.~~ **RESOLVED 2026-05-16 (PR #38)** — DB-backed `locations` table + admin CRUD at `/admin/locations/manage`. Adding a third truck is a 30-second admin form, no deploy. The hardcoded array is demoted to first-deploy seed only.
+2. ✅ **Per-location lock scoping.** ~~Global `slots.json` and `orders.json` locks. Every truck contends on the same Redis key.~~ **RESOLVED** — order writes now scope locks as `orders:${slug}`; capabilities ledger row "Per-location lock scoping" confirms each truck has its own queue.
+3. ❌ **All data shares one schema.** `SELECT * FROM orders` scans every location. No partitioning, no index strategy guaranteed (the audit found no `(location_slug, created_at DESC)` composite index promise).
+4. ❌ **Cross-location queries are unscoped.** `requireLocationAccess()` exists (`src/lib/admin-auth.ts`), but is *handler-optional* — not middleware. A route that forgets to call it leaks across tenants. `withAdmin({ locationParam: ... })` wrapper now exists and the audit ledger claims ~80 routes wrapped, but **coverage is still not enforced as middleware** — a developer who skips the wrapper still leaks.
+5. ✅ **Multi-currency display.** ~~No multi-currency. PLN is hardcoded.~~ **RESOLVED 2026-05-21** — customer header switcher (USD / SGD / EUR / PLN), operator-set exchange rates + enabled list + default at `/admin/currency`, rates served to the customer site via `/api/settings/public`. `formatPrice()` in `src/lib/utils.ts` routes through `src/lib/currency.ts` and converts grosze→target at render time. **Display-only**: charges still settle in PLN via the Stripe merchant account (currency is bound at account creation, so true USD/SGD/EUR settlement requires separate Stripe accounts per region — tracked as a separate workstream for an actual NYC/SG launch).
+6. ❌ **No multi-timezone, no multi-tax-jurisdiction.** Still PLN-only on tax (JPK_V7M is Polish VAT). Timezone is still implicit UTC + Europe/Warsaw. NYC needs sales-tax engine (e.g. Stripe Tax / TaxJar), SG needs GST 9% with composite reporting.
+7. ✅ **Multi-language UI.** **ADDED 2026-05-21** — i18n dictionary covers Polish, English, German, and Singapore English with a header switcher and `/admin/languages` admin panel for enable/disable + default selection. Direct prereq for SG (English / Singlish customers) and DACH expansion.
 
 ### 6.2 Manager / Regional Workflow
 
@@ -542,10 +544,10 @@ With 6–9 months of work in §13: plausibly a $3–5M seed-stage hospitality-OS
 
 ### 10.3 Unnecessary Complexity To Cut
 
-- Hardcoded fake ratings.
-- `ai-engine.ts` heuristic forecasting masquerading as ML (rebrand to "Insights" — the previous audit started this).
-- Single global locks (re-scope, don't add more).
-- Two providers in `aggregator.ts` that both just `console.log` (delete or build).
+- ✅ **Hardcoded fake ratings.** ~~Per-item ratings in `data/ratings.ts` were hand-typed values like 4.8 ★ 342 reviews — fake.~~ **RESOLVED 2026-05-21** — `src/data/ratings.ts` deleted; `StarRating` chips removed from `MenuItem`, `MenuSection` (incl. "Highest rated" sort), and `ItemDetailDrawer`. The `StarRating` component remains for the post-order feedback survey where customers enter real ratings.
+- ✅ **`ai-engine.ts` heuristic forecasting masquerading as ML.** ~~Random-number generators dressed as ML.~~ **RESOLVED 2026-05-21** — the file is now a customer-side FAQ matcher (`getChatResponse`) with a header comment that explicitly names it as keyword-rule lookup, not AI. The dead `generateDemandForecast` / `generatePriceSuggestions` / `generateInsights` heuristic exports were deleted (they had zero callers; the real AI surfaces live under `src/lib/ai/forecast.ts`, `src/lib/ai/gateway.ts`, and `src/lib/ai/tools/`).
+- ⚠ **Single global locks.** Hot-path writes (`createOrder` kv fallback) already scope via `withLockScoped("orders", slug, …)`. **Mirror writes** to the legacy `kv_store["orders.json"]` / `kv_store["slots.json"]` blobs remain global — the lock has to be global because the kv key holds all rows; re-scoping the lock without splitting the blob would lose cross-truck mutual exclusion. Mirror writes run `void` fire-and-forget so they don't block the user, but cross-truck mirror updates serialize on Redis. **Honest path forward**: split the kv mirror into per-location keys, or — since the DB is source-of-truth — delete the kv mirror entirely. No new global locks added in this pass. Capabilities ledger updated to disclose the split.
+- ✅ **Two providers in `aggregator.ts` that both just `console.log`.** ~~Mock Wolt + Glovo providers auto-accepted unsigned webhooks (`verifyWebhookSignature → true`).~~ **RESOLVED 2026-05-21** — `WoltMockProvider` and `GlovoMockProvider` deleted. `getAggregatorProvider` now throws a typed `AggregatorNotConfigured` error when ENABLE_AGGREGATORS is on but the per-provider API key + webhook secret are absent; the webhook route catches this and returns 503 with the missing env var list. The live `WoltProvider` / `GlovoProvider` scaffolds remain — their HMAC verification path is real, the three RPC bodies still throw "not implemented" pending merchant credentials. Capabilities ledger updated to mark "Wolt + Glovo webhook intake" as a scaffold, not a live integration.
 
 ---
 

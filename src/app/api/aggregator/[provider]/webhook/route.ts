@@ -3,6 +3,7 @@ import { logger } from "@/lib/logger";
 import { claimWebhookEvent } from "@/lib/idempotency";
 import {
   aggregatorsEnabled,
+  AggregatorNotConfigured,
   getAggregatorProvider,
   type AggregatorName,
 } from "@/lib/providers/aggregator";
@@ -49,7 +50,23 @@ export async function POST(
     return NextResponse.json({ error: "Unknown provider" }, { status: 404 });
   }
 
-  const providerImpl = getAggregatorProvider(provider);
+  let providerImpl;
+  try {
+    providerImpl = getAggregatorProvider(provider);
+  } catch (err) {
+    if (err instanceof AggregatorNotConfigured) {
+      logger.warn("aggregator.webhook.not_configured", {
+        provider,
+        message: err.message,
+        layer: "aggregator.webhook",
+      });
+      return NextResponse.json(
+        { error: err.message },
+        { status: 503 },
+      );
+    }
+    throw err;
+  }
   const rawBody = await req.text();
 
   if (!providerImpl.verifyWebhookSignature(req.headers, rawBody)) {

@@ -12,8 +12,6 @@ import {
   BadgeType,
   type UpsellConfig,
 } from "@/lib/upsell";
-import { StarRating } from "@/components/rating/StarRating";
-import { getItemRating } from "@/data/ratings";
 import { getItemDetails } from "@/data/kodawari";
 import { ItemDetailDrawer } from "./ItemDetailDrawer";
 import { useCartStore } from "@/store/cart";
@@ -100,7 +98,6 @@ export function MenuItemCard({
     (b) => !(b === "staff-pick" && roleBadges.includes("pizzaiolo-choice")),
   );
   const badges: BadgeType[] = [...roleBadges, ...adminBadges];
-  const itemRating = getItemRating(item.id);
   const details = getItemDetails(item.id);
   const isHero = variant === "hero" || item.menuRole === "hero";
   const isAnchor = item.menuRole === "anchor";
@@ -143,8 +140,7 @@ export function MenuItemCard({
   const isPopular = badges.includes("popular");
 
   const hasMetaStrip = Boolean(
-    itemRating ||
-      details?.prepTimeMinutes ||
+    details?.prepTimeMinutes ||
       details?.nutrition ||
       details
   );
@@ -265,12 +261,9 @@ export function MenuItemCard({
         </div>
       </div>
 
-      {/* Row 2: full-width meta strip (rating, time, kcal, Details) */}
+      {/* Row 2: full-width meta strip (time, kcal, Details) */}
       {hasMetaStrip && (
         <div className="flex items-center gap-3 flex-wrap border-t border-gray-100 pt-3">
-          {itemRating && (
-            <StarRating rating={itemRating.rating} reviewCount={itemRating.count} />
-          )}
           {details?.prepTimeMinutes && (
             <span className="flex items-center gap-0.5 text-[11px] text-italia-gray">
               <Clock className="h-3 w-3" aria-hidden />
