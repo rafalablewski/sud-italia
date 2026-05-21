@@ -23,10 +23,14 @@ import { LocationsGrid } from "./LocationsGrid";
 import { BundlesShowcase } from "./BundlesShowcase";
 import { FamigliaQuote } from "./FamigliaQuote";
 import { HomeMenuPreview } from "./HomeMenuPreview";
-import { AboutSection } from "./AboutSection";
 import { SociSection } from "./SociSection";
-import { CTASection } from "./CTASection";
 
+/**
+ * V8 home composition. Mirrors the mockup's page-home structure
+ * verbatim: hero → locations → bundles → famiglia quote → menu →
+ * soci → footer. About / CTA sections live in this folder for any
+ * future page that wants them, but the mockup home does not.
+ */
 export default function V8Landing() {
   return (
     <div className="v8-frame">
@@ -38,9 +42,7 @@ export default function V8Landing() {
         <BundlesShowcase />
         <FamigliaQuote />
         <HomeMenuPreview />
-        <AboutSection />
         <SociSection />
-        <CTASection />
       </main>
       <V8Footer />
     </div>

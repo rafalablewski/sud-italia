@@ -4,9 +4,11 @@ import { getLoyaltySettings } from "@/lib/store";
 
 export async function SociSection() {
   const loyalty = await getLoyaltySettings();
-  const activeRewards = loyalty.rewards.filter((r) => r.active).sort((a, b) => a.pointsCost - b.pointsCost);
+  const activeRewards = loyalty.rewards
+    .filter((r) => r.active)
+    .sort((a, b) => a.pointsCost - b.pointsCost);
   const firstReward = activeRewards[0];
-  const silverThreshold = loyalty.tiers.silver.threshold;
+  const goldThreshold = loyalty.tiers.gold.threshold;
 
   return (
     <section id="soci" className="v8-section v8-dark v8-soci">
@@ -26,24 +28,25 @@ export async function SociSection() {
             1 <Bi en="point" pl="punkt" />
           </span>{" "}
           <Bi
-            en="for every złoty spent. No app to install — your phone number remembers you."
+            en="for each złoty spent. No app to install — your phone number remembers you."
             pl="za każdą wydaną złotówkę. Bez instalowania aplikacji — Twój numer telefonu Cię pamięta."
           />{" "}
+          <span className="v8-soci-em">Famiglia Oro</span>{" "}
+          <Bi en="at" pl="po" />{" "}
+          <span className="v8-soci-points v8-num">{goldThreshold}</span>{" "}
+          <Bi en="points unlocks an" pl="punktach odblokowuje" />{" "}
+          <span className="v8-soci-em">antipasto della casa</span>{" "}
+          <Bi en="on every visit." pl="przy każdej wizycie." />
           {firstReward && (
             <>
-              <Bi en="Your first reward" pl="Pierwsza nagroda" />{" "}
+              {" "}
+              <Bi en="First reward" pl="Pierwsza nagroda" />{" "}
               (<span className="v8-soci-em">{firstReward.name}</span>){" "}
-              <Bi en="at" pl="już od" />{" "}
+              <Bi en="from" pl="już od" />{" "}
               <span className="v8-soci-points v8-num">{firstReward.pointsCost}</span>{" "}
-              <Bi en="points." pl="punktów." />{" "}
+              <Bi en="points." pl="punktów." />
             </>
           )}
-          <Bi
-            en="Silver tier unlocks at"
-            pl="Poziom Silver odblokowuje się przy"
-          />{" "}
-          <span className="v8-soci-points v8-num">{silverThreshold}</span>{" "}
-          <Bi en="points — multipliers, perks, the works." pl="punktach — mnożniki, korzyści, wszystko." />
         </p>
 
         <div className="v8-soci-cta-wrap">
