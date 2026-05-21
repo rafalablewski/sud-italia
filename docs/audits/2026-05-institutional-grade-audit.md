@@ -106,7 +106,7 @@ The simulation also carries:
 
 **The Tuscany mockup is a brand-direction artifact, not a production change.** V8 is hosted only at `/mockups/cart.html` (frame switcher) and `/mockups/v8/*` location pages. It is not deployed to the live customer site. The decision to ship it as a production redesign is a separate go/no-go that the brand strategy in §5 of this audit hasn't yet been asked to make.
 
-**Net effect on the §15 final verdict.** The codebase moves from "no longer the binding constraint on the next three trucks" to "now also carries an institutional-grade financial model that a private-equity or franchise-buyer diligence team can run scenarios against on day one." The §15 list of remaining bottlenecks shrinks by one bullet (the "no unit economics" tax in operator psychology). It does _not_ shrink the safety/tests/food-photo bullets — those are still the same five items they were a week ago.
+**Net effect on the §15 final verdict.** The codebase moves from "no longer the binding constraint on the next three trucks" to "now also carries an institutional-grade financial model that a private-equity or franchise-buyer diligence team can run scenarios against on day one." None of the four still-open bullets in §15 (plaintext password / zero tests / legacy-board polling / operator attention vs trucks) is closed by this pass. What does change is the post-2026-05-16 addendum line in §15 that read "the conversation in a diligence room would now be about marketing and unit economics, not theatre" — half of that ("unit economics") is now answerable inside the admin, so the residual diligence conversation narrows further toward demand generation and the same security + tests hygiene from §11.
 
 ---
 
