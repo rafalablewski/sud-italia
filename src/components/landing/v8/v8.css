@@ -2290,3 +2290,311 @@
   padding: 6px 12px;
   font-size: 13px;
 }
+
+/* ============================================================
+   V8 LANGUAGE + CURRENCY SWITCHERS (header)
+   ============================================================ */
+.v8-switcher { position: relative; }
+.v8-switcher-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-family: var(--v8-display);
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--espresso-soft);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 36px;
+}
+.v8-switcher-btn:hover {
+  background: rgba(184,92,56,0.06);
+  border-color: var(--terracotta-soft);
+  color: var(--terracotta-dark);
+}
+.v8-switcher-code {
+  font-family: var(--v8-display);
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  font-size: 12.5px;
+}
+.v8-switcher-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  min-width: 200px;
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  background: var(--parchment);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: var(--v8-shadow-card);
+  z-index: 60;
+}
+.v8-switcher-opt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  font-family: var(--v8-display);
+  font-size: 14px;
+  color: var(--espresso);
+  cursor: pointer;
+  transition: background 0.15s ease;
+  text-align: left;
+}
+.v8-switcher-opt:hover { background: var(--parchment-deep); }
+.v8-switcher-opt.on { color: var(--terracotta-dark); font-weight: 600; }
+.v8-switcher-opt-name {
+  font-style: italic;
+  font-size: 12px;
+  color: var(--muted);
+  margin-left: 2px;
+}
+.v8-switcher-check { margin-left: auto; color: var(--terracotta); }
+.v8-switcher-foot {
+  list-style: none;
+  padding: 8px 10px 6px;
+  margin-top: 4px;
+  border-top: 1px dashed var(--line-soft);
+  font-size: 11.5px;
+  color: var(--muted);
+  font-family: var(--v8-display);
+  font-style: italic;
+  line-height: 1.4;
+}
+
+/* ============================================================
+   CART — Time-of-day banner
+   ============================================================ */
+.v8-cart-tod {
+  margin: 8px 22px 4px;
+  padding: 12px 14px;
+  background:
+    radial-gradient(at 100% 0%, rgba(201,162,62,0.15), transparent 60%),
+    linear-gradient(180deg, rgba(201,162,62,0.08) 0%, transparent 100%),
+    var(--parchment);
+  border: 1px solid rgba(201,162,62,0.4);
+  border-radius: 8px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.v8-cart-tod-icon { flex-shrink: 0; }
+.v8-cart-tod-title {
+  font-family: var(--v8-display);
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--espresso);
+}
+.v8-cart-tod-sub {
+  font-family: var(--v8-display);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+/* ============================================================
+   CART — Loyalty card
+   ============================================================ */
+.v8-cart-loyalty {
+  margin: 8px 22px;
+  padding: 14px 16px 12px;
+  background:
+    radial-gradient(at 100% 0%, rgba(201,162,62,0.18), transparent 55%),
+    linear-gradient(180deg, var(--espresso) 0%, #2D1810 100%);
+  border: 1px solid rgba(230,201,122,0.35);
+  border-radius: 8px;
+  color: var(--parchment);
+}
+.v8-cart-loyalty-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-family: var(--v8-display);
+  font-size: 11px;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: var(--ochre-light);
+  margin-bottom: 6px;
+}
+.v8-cart-loyalty-head .v8-it { letter-spacing: 0; text-transform: none; opacity: 0.7; }
+.v8-cart-loyalty-name {
+  font-family: var(--v8-display);
+  font-style: italic;
+  font-size: 18px;
+  color: var(--parchment);
+  margin-bottom: 4px;
+}
+.v8-cart-loyalty-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: var(--v8-display);
+  font-size: 13px;
+  color: rgba(244,245,240,0.8);
+  margin-bottom: 8px;
+}
+.v8-cart-loyalty-pts {
+  font-family: var(--v8-display);
+  font-weight: 600;
+  font-size: 17px;
+  color: var(--ochre-light);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.v8-cart-loyalty-bar {
+  height: 4px;
+  background: rgba(244,245,240,0.12);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.v8-cart-loyalty-bar span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--ochre) 0%, var(--ochre-light) 100%);
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+.v8-cart-loyalty-foot {
+  margin-top: 6px;
+  font-family: var(--v8-display);
+  font-style: italic;
+  font-size: 12px;
+  color: rgba(244,245,240,0.65);
+  line-height: 1.4;
+}
+
+/* ============================================================
+   CART — Tier perk banner
+   ============================================================ */
+.v8-cart-perk {
+  margin: 4px 22px 8px;
+  padding: 10px 14px;
+  background: rgba(201,162,62,0.10);
+  border: 1px dashed rgba(201,162,62,0.5);
+  border-radius: 8px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.v8-cart-perk-icon { flex-shrink: 0; }
+.v8-cart-perk-title {
+  font-family: var(--v8-display);
+  font-weight: 600;
+  font-style: italic;
+  font-size: 14px;
+  color: var(--espresso);
+}
+.v8-cart-perk-sub {
+  font-family: var(--v8-display);
+  font-style: italic;
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+/* ============================================================
+   CART — Bundle ladder (Festa di famiglia)
+   ============================================================ */
+.v8-cart-ladder {
+  margin: 8px 22px;
+  padding: 14px 16px 12px;
+  background:
+    linear-gradient(180deg, rgba(122,43,43,0.04) 0%, transparent 100%),
+    var(--parchment);
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+}
+.v8-cart-ladder-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.v8-cart-ladder-title {
+  font-family: var(--v8-display);
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--espresso);
+}
+.v8-cart-ladder-pct {
+  font-family: var(--v8-display);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--terracotta-dark);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.v8-cart-ladder-sub {
+  font-family: var(--v8-display);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--muted);
+  margin: 2px 0 10px;
+}
+.v8-cart-ladder-rail {
+  position: relative;
+  height: 6px;
+  background: rgba(122,43,43,0.10);
+  border-radius: 4px;
+  margin-bottom: 10px;
+}
+.v8-cart-ladder-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--oxblood) 0%, var(--terracotta) 100%);
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+.v8-cart-ladder-marks {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  margin-bottom: 4px;
+}
+.v8-cart-ladder-mark {
+  font-family: var(--v8-display);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  letter-spacing: 1px;
+}
+.v8-cart-ladder-mark.done { color: var(--basil-deep); }
+.v8-cart-ladder-mark.active { color: var(--terracotta-dark); }
+.v8-cart-ladder-labels {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  font-family: var(--v8-display);
+  font-size: 11.5px;
+  color: var(--muted);
+  text-align: center;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.v8-cart-ladder-foot {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line-soft);
+  font-family: var(--v8-display);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--espresso-soft);
+  line-height: 1.45;
+}
+.v8-cart-ladder-foot strong {
+  font-family: var(--v8-display);
+  font-style: normal;
+  font-weight: 600;
+  color: var(--terracotta-dark);
+}

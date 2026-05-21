@@ -17,6 +17,13 @@ import { krakowMenu } from "@/data/menus/krakow";
 import { warszawaMenu } from "@/data/menus/warszawa";
 import { postCartPresenceToServer } from "@/lib/cart-presence-post-client";
 import type { MenuItem } from "@/data/types";
+import {
+  calculateTier,
+  getNextTier,
+  pointsToNextTier,
+  TIER_CONFIG,
+  TIER_THRESHOLDS,
+} from "@/lib/loyalty";
 import { Bi } from "../Bi";
 
 const PHONE_PATTERN = /^[\d\s\-()]{7,}$/;
@@ -51,6 +58,131 @@ const tipBands = [
   { pct: 15, label: { en: "generous", pl: "hojnie" } },
   { pct: 20, label: { en: "family", pl: "rodzina" } },
 ];
+
+// Time-of-day windows for the cart's aperitivo / pranzo / colazione banner.
+// Returns null outside the windows so the banner only fires when it has
+// something to say.
+function getTodMessage(hour: number): {
+  title: { en: string; pl: string; it: string };
+  sub: { en: string; pl: string };
+  icon: "espresso" | "lunch" | "aperitivo" | "moon";
+} | null {
+  if (hour >= 7 && hour < 11) {
+    return {
+      title: {
+        en: "Morning espresso",
+        pl: "Poranne espresso",
+        it: "buongiorno",
+      },
+      sub: {
+        en: "Add a doppio to your order — the beans come from Napoli.",
+        pl: "Dorzuć doppio do zamówienia — ziarna prosto z Neapolu.",
+      },
+      icon: "espresso",
+    };
+  }
+  if (hour >= 11 && hour < 14) {
+    return {
+      title: {
+        en: "Lunch · Pranzo",
+        pl: "Lunch · Pranzo",
+        it: "pranzo",
+      },
+      sub: {
+        en: "Pizza Lunch+ bundle unlocks at this hour — Pizza + drink + dolce, flat price.",
+        pl: "Pakiet Pizza Lunch+ jest aktywny — pizza + napój + dolce w stałej cenie.",
+      },
+      icon: "lunch",
+    };
+  }
+  if (hour >= 17 && hour < 19) {
+    return {
+      title: {
+        en: "Aperitivo hour",
+        pl: "Pora aperitivo",
+        it: "l'ora dell'aperitivo",
+      },
+      sub: {
+        en: "Pair tonight's pizza with a Negroni Sbagliato — sparkling.",
+        pl: "Zestaw dzisiejszą pizzę z Negroni Sbagliato — musujące.",
+      },
+      icon: "aperitivo",
+    };
+  }
+  if (hour >= 21 || hour < 4) {
+    return {
+      title: {
+        en: "Late slice",
+        pl: "Nocna pizza",
+        it: "spicchio notturno",
+      },
+      sub: {
+        en: "Slice + drink bundle at a flat price — reheated in 60 seconds.",
+        pl: "Pakiet kawałek + napój w stałej cenie — odgrzewany w 60 sekund.",
+      },
+      icon: "moon",
+    };
+  }
+  return null;
+}
+
+function TodIcon({ kind }: { kind: "espresso" | "lunch" | "aperitivo" | "moon" }) {
+  if (kind === "espresso") {
+    return (
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M4 10 L20 10 L19 18 C 19 20, 17 21, 15 21 L 9 21 C 7 21, 5 20, 5 18 Z" stroke="#B85C38" strokeWidth="1.5" fill="none" />
+        <path d="M20 12 C 23 12, 23 17, 20 17" stroke="#B85C38" strokeWidth="1.5" fill="none" />
+        <path d="M8 6 C 8 8, 10 8, 10 6 C 10 4, 12 4, 12 6" stroke="#C9A23E" strokeWidth="1.2" fill="none" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  if (kind === "moon") {
+    return (
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M16 4 A 8 8 0 1 0 16 20 A 6 6 0 0 1 16 4 Z" stroke="#C9A23E" strokeWidth="1.5" fill="rgba(201,162,62,0.2)" />
+        <circle cx="6" cy="9" r="0.8" fill="#C9A23E" />
+        <circle cx="9" cy="15" r="0.6" fill="#C9A23E" />
+      </svg>
+    );
+  }
+  if (kind === "lunch") {
+    return (
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="12" cy="12" r="8" stroke="#C9A23E" strokeWidth="1.5" fill="rgba(201,162,62,0.18)" />
+        <path d="M12 4 L12 6 M12 18 L12 20 M4 12 L6 12 M18 12 L20 12" stroke="#C9A23E" strokeWidth="1.4" strokeLinecap="round" />
+        <path d="M12 12 L12 7 M12 12 L16 14" stroke="#B85C38" strokeWidth="1.6" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  // aperitivo — wine glass
+  return (
+    <svg width="36" height="36" viewBox="0 0 38 44" fill="none" aria-hidden="true">
+      <path d="M8 4 C 8 16, 12 22, 19 22 C 26 22, 30 16, 30 4 Z" stroke="#C9A23E" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M11 8 C 14 12, 24 12, 27 8" stroke="#B85C38" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+      <path d="M19 22 L19 38" stroke="#C9A23E" strokeWidth="1.5" />
+      <path d="M11 40 L27 40" stroke="#C9A23E" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function StarIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      <path
+        d="M9 2 L10.5 6.5 L15 7 L11.5 10 L12.5 14.5 L9 12 L5.5 14.5 L6.5 10 L3 7 L7.5 6.5 Z"
+        stroke="#C9A23E"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+        fill="#C9A23E"
+        fillOpacity="0.3"
+      />
+    </svg>
+  );
+}
+
+// Bundle ladder thresholds in grosze. Mirrors the v8 mockup's
+// "Festa di famiglia" four-rung shape (100 / 150 / 200 / 280 zł).
+const LADDER_THRESHOLDS_GROSZE = [10000, 15000, 20000, 28000];
 
 export function V8CartDrawer({ open, onClose }: V8CartDrawerProps) {
   const items = useCartStore((s) => s.items);
@@ -294,6 +426,118 @@ export function V8CartDrawer({ open, onClose }: V8CartDrawerProps) {
             </div>
           ) : (
             <>
+              {(() => {
+                const tod = getTodMessage(new Date().getHours());
+                if (!tod) return null;
+                return (
+                  <div className="v8-cart-tod">
+                    <div className="v8-cart-tod-icon">
+                      <TodIcon kind={tod.icon} />
+                    </div>
+                    <div>
+                      <div className="v8-cart-tod-title">
+                        <Bi en={tod.title.en} pl={tod.title.pl} />{" "}
+                        <span className="v8-it">· {tod.title.it}</span>
+                      </div>
+                      <div className="v8-cart-tod-sub">
+                        <Bi en={tod.sub.en} pl={tod.sub.pl} />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {customer && (() => {
+                const tier = calculateTier(customer.points);
+                const tierLabel = TIER_CONFIG[tier].label;
+                const nextTier = getNextTier(tier);
+                const toNext = pointsToNextTier(customer.points, tier);
+                const tierBase = TIER_THRESHOLDS[tier];
+                const nextBase = nextTier ? TIER_THRESHOLDS[nextTier] : tierBase;
+                const progress =
+                  nextTier && nextBase > tierBase
+                    ? Math.min(
+                        100,
+                        Math.round(
+                          ((customer.points - tierBase) /
+                            (nextBase - tierBase)) *
+                            100,
+                        ),
+                      )
+                    : 100;
+                const memberNo = customer.phone
+                  ? customer.phone.slice(-4)
+                  : "0000";
+                const firstName = customer.name.split(" ")[0];
+                return (
+                  <>
+                    <div className="v8-cart-loyalty">
+                      <div className="v8-cart-loyalty-head">
+                        <span>
+                          <Bi en="Membership" pl="Członkostwo" />{" "}
+                          <span className="v8-it">· soci e amici</span>
+                        </span>
+                        <span className="v8-num">N° {memberNo}</span>
+                      </div>
+                      <div className="v8-cart-loyalty-name">
+                        <Bi en="Hi" pl="Cześć" />, {firstName}
+                      </div>
+                      <div className="v8-cart-loyalty-meta">
+                        <span className="v8-cart-loyalty-pts">
+                          {customer.points.toLocaleString()}{" "}
+                          <Bi en="points" pl="punktów" />
+                        </span>
+                        {nextTier && (
+                          <span>
+                            · {toNext} <Bi en="to" pl="do" />{" "}
+                            <span className="v8-it">
+                              {tierLabel} → {TIER_CONFIG[nextTier].label}
+                            </span>
+                          </span>
+                        )}
+                      </div>
+                      <div className="v8-cart-loyalty-bar">
+                        <span style={{ width: `${progress}%` }} />
+                      </div>
+                      <div className="v8-cart-loyalty-foot">
+                        <span className="v8-it-em">
+                          &ldquo;Una pizza, una storia.&rdquo;
+                        </span>{" "}
+                        —{" "}
+                        <Bi
+                          en="earn 1 point for each złoty spent."
+                          pl="zdobądź 1 punkt za każdą wydaną złotówkę."
+                        />
+                      </div>
+                    </div>
+
+                    {(tier === "gold" || tier === "platinum") && (
+                      <div className="v8-cart-perk">
+                        <div className="v8-cart-perk-icon">
+                          <StarIcon />
+                        </div>
+                        <div>
+                          <div className="v8-cart-perk-title">
+                            {tierLabel} ·{" "}
+                            <span className="v8-it">
+                              {tier === "gold" ? "Famiglia Oro" : "Famiglia Platino"}
+                            </span>
+                          </div>
+                          <div className="v8-cart-perk-sub">
+                            <Bi en="A complimentary" pl="Bezpłatne" />{" "}
+                            <span className="v8-it-em">antipasto della casa</span>{" "}
+                            <Bi
+                              en="on us — added at the truck."
+                              pl="od nas — dodane przy odbiorze."
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+
               <section className="v8-cart-section">
                 <div className="v8-cart-section-title">
                   <Bi en="The table" pl="Stół" />{" "}
@@ -418,6 +662,91 @@ export function V8CartDrawer({ open, onClose }: V8CartDrawerProps) {
                   ))}
                 </section>
               )}
+
+              {(() => {
+                const subtotalZl = subtotal - comboDiscount;
+                const rungs = LADDER_THRESHOLDS_GROSZE;
+                const maxRung = rungs[rungs.length - 1];
+                const cappedPct = Math.min(100, Math.round((subtotalZl / maxRung) * 100));
+                const reached = rungs.filter((r) => subtotalZl >= r).length;
+                const nextRung = rungs.find((r) => subtotalZl < r);
+                if (!nextRung) {
+                  return (
+                    <div className="v8-cart-ladder">
+                      <div className="v8-cart-ladder-head">
+                        <div className="v8-cart-ladder-title">
+                          <Bi en="Family feast" pl="Rodzinna uczta" />{" "}
+                          <span className="v8-it">· festa di famiglia</span>
+                        </div>
+                        <div className="v8-cart-ladder-pct">
+                          <Bi en="all the way there" pl="cała droga" />
+                        </div>
+                      </div>
+                      <div className="v8-cart-ladder-foot">
+                        <span className="v8-it-em">
+                          Tiramisù della nonna
+                        </span>{" "}
+                        <Bi
+                          en="unlocked — burned into the oven door."
+                          pl="odblokowane — wypalone na drzwiach pieca."
+                        />
+                      </div>
+                    </div>
+                  );
+                }
+                const remaining = nextRung - subtotalZl;
+                return (
+                  <div className="v8-cart-ladder">
+                    <div className="v8-cart-ladder-head">
+                      <div className="v8-cart-ladder-title">
+                        <Bi en="Family feast" pl="Rodzinna uczta" />{" "}
+                        <span className="v8-it">· festa di famiglia</span>
+                      </div>
+                      <div className="v8-cart-ladder-pct">{cappedPct}%</div>
+                    </div>
+                    <div className="v8-cart-ladder-sub">
+                      <Bi
+                        en="Cross the next threshold — share a feast with the family."
+                        pl="Przekrocz kolejny próg — dziel ucztę z rodziną."
+                      />
+                    </div>
+                    <div className="v8-cart-ladder-rail">
+                      <div
+                        className="v8-cart-ladder-fill"
+                        style={{ width: `${cappedPct}%` }}
+                      />
+                    </div>
+                    <div className="v8-cart-ladder-marks">
+                      {rungs.map((r, i) => {
+                        const cls =
+                          subtotalZl >= r
+                            ? "done"
+                            : i === reached
+                              ? "active"
+                              : "";
+                        return (
+                          <div key={r} className={`v8-cart-ladder-mark ${cls}`}>
+                            {["I", "II", "III", "IV"][i]}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="v8-cart-ladder-labels">
+                      {rungs.map((r) => (
+                        <span key={r}>{formatPrice(r)}</span>
+                      ))}
+                    </div>
+                    <div className="v8-cart-ladder-foot">
+                      <Bi en="Add" pl="Dodaj" />{" "}
+                      <strong>{formatPrice(remaining)}</strong>{" "}
+                      <Bi
+                        en="more to reach the next rung — share a feast worth telling stories about."
+                        pl="aby przejść na następny próg — uczta o której się opowiada."
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
 
               {fulfillmentType === "delivery" && (
                 <div className="v8-cart-delivery">

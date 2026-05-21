@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { Bi } from "../Bi";
 import { V8CartButton } from "./V8CartButton";
-import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
-import { CurrencySwitcher } from "@/components/ui/CurrencySwitcher";
+import { V8LangSwitcher, V8CurrencySwitcher } from "./V8LangCurrencySwitcher";
 
 function BasilMark() {
   return (
@@ -60,8 +59,8 @@ export function V8Header() {
         </nav>
 
         <div className="v8-header-actions">
-          <CurrencySwitcher />
-          <LanguageSwitcher />
+          <V8CurrencySwitcher />
+          <V8LangSwitcher />
           <V8CartButton />
         </div>
       </div>
