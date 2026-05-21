@@ -236,6 +236,30 @@
     background: var(--ink);
     color: var(--cream);
   }
+  .nav-i18n {
+    display: inline-flex; align-items: center; gap: 6px; margin-right: 4px;
+  }
+  .nav-pill {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700; font-size: 12px;
+    letter-spacing: 0.02em; text-transform: lowercase;
+    padding: 7px 10px;
+    background: rgba(255,255,255,0.7);
+    border: 2px solid var(--border); border-radius: 100px;
+    color: var(--ink); cursor: pointer;
+    box-shadow: 2px 2px 0 var(--ink);
+    transition: transform 0.15s, box-shadow 0.15s, background-color 0.2s;
+  }
+  .nav-pill:hover {
+    transform: translate(-1px,-1px);
+    box-shadow: 3px 3px 0 var(--ink);
+    background-color: var(--yellow);
+  }
+  .nav-pill:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
+  @media (max-width: 720px) {
+    .nav-i18n { gap: 4px; margin-right: 2px; }
+    .nav-pill { padding: 6px 8px; font-size: 11px; box-shadow: 1px 1px 0 var(--ink); }
+  }
   .nav-cart-btn {
     position: relative;
     background: linear-gradient(120deg, #FF4458 0%, #FF3CAC 50%, #FFE74C 100%);
@@ -4016,6 +4040,20 @@
     <a href=&quot;#/&quot; class=&quot;nav-chip&quot; data-nav=&quot;locations&quot;>locations</a>
     <a href=&quot;#/locations/krakow&quot; class=&quot;nav-chip&quot;>kraków</a>
     <a href=&quot;#/locations/warszawa&quot; class=&quot;nav-chip&quot;>warszawa</a>
+  </div>
+  <div class=&quot;nav-i18n&quot; role=&quot;group&quot; aria-label=&quot;Language and currency&quot;>
+    <select class=&quot;nav-pill nav-pill-lang&quot; aria-label=&quot;Language&quot;>
+      <option value=&quot;en&quot;>🇬🇧 EN</option>
+      <option value=&quot;pl&quot;>🇵🇱 PL</option>
+      <option value=&quot;de&quot;>🇩🇪 DE</option>
+      <option value=&quot;en-SG&quot;>🇸🇬 SG</option>
+    </select>
+    <select class=&quot;nav-pill nav-pill-curr&quot; aria-label=&quot;Currency&quot;>
+      <option value=&quot;PLN&quot;>zł PLN</option>
+      <option value=&quot;EUR&quot;>€ EUR</option>
+      <option value=&quot;USD&quot;>$ USD</option>
+      <option value=&quot;SGD&quot;>S$ SGD</option>
+    </select>
   </div>
   <button class=&quot;nav-cart-btn&quot; id=&quot;navCartBtn&quot; aria-label=&quot;open cart&quot;>
     <span class=&quot;nav-cart-emoji&quot;>🛒</span>
@@ -7904,6 +7942,32 @@
   }
   @media (max-width: 640px) { .lang-opt { padding: 5px 8px; font-size: 10px; } }
 
+  /* Currency picker — sibling of the language picker, same Tuscany palette.
+     Symbol-only buttons keep the four currencies inside the same width
+     budget as the language pill row. */
+  .curr-picker {
+    display: inline-flex; align-items: center;
+    background: rgba(74, 124, 89, 0.08);
+    border: 1px solid rgba(74, 124, 89, 0.28);
+    border-radius: 999px; padding: 2px; gap: 2px; margin-left: 6px;
+  }
+  .curr-opt {
+    appearance: none; border: 0; background: transparent;
+    font-family: var(--serif-body, var(--sans));
+    font-size: 12px; font-weight: 700; letter-spacing: 0.02em;
+    color: var(--muted); padding: 4px 9px; border-radius: 999px;
+    cursor: pointer; transition: background 0.16s ease, color 0.16s ease; line-height: 1;
+  }
+  .curr-opt:hover { color: #2E5840; }
+  .curr-opt.active {
+    background: #4A7C59; color: #FFF7E8;
+    box-shadow: 0 1px 2px rgba(46, 88, 64, 0.18);
+  }
+  @media (max-width: 640px) {
+    .curr-picker { margin-left: 4px; }
+    .curr-opt { padding: 4px 7px; font-size: 11px; }
+  }
+
 
   /* ============================================================
      LIVE ACTIVITY TICKER — slim dark banner under the top nav.
@@ -9908,6 +9972,14 @@
       <div class=&quot;lang-picker&quot; role=&quot;radiogroup&quot; aria-label=&quot;Primary language&quot;>
         <button class=&quot;lang-opt active&quot; type=&quot;button&quot; data-set-lang=&quot;en&quot; role=&quot;radio&quot; aria-checked=&quot;true&quot;>EN</button>
         <button class=&quot;lang-opt&quot; type=&quot;button&quot; data-set-lang=&quot;pl&quot; role=&quot;radio&quot; aria-checked=&quot;false&quot;>PL</button>
+        <button class=&quot;lang-opt&quot; type=&quot;button&quot; data-set-lang=&quot;de&quot; role=&quot;radio&quot; aria-checked=&quot;false&quot;>DE</button>
+        <button class=&quot;lang-opt&quot; type=&quot;button&quot; data-set-lang=&quot;en-SG&quot; role=&quot;radio&quot; aria-checked=&quot;false&quot;>SG</button>
+      </div>
+      <div class=&quot;curr-picker&quot; role=&quot;radiogroup&quot; aria-label=&quot;Display currency&quot;>
+        <button class=&quot;curr-opt active&quot; type=&quot;button&quot; data-set-curr=&quot;PLN&quot; role=&quot;radio&quot; aria-checked=&quot;true&quot;>zł</button>
+        <button class=&quot;curr-opt&quot; type=&quot;button&quot; data-set-curr=&quot;EUR&quot; role=&quot;radio&quot; aria-checked=&quot;false&quot;>€</button>
+        <button class=&quot;curr-opt&quot; type=&quot;button&quot; data-set-curr=&quot;USD&quot; role=&quot;radio&quot; aria-checked=&quot;false&quot;>$</button>
+        <button class=&quot;curr-opt&quot; type=&quot;button&quot; data-set-curr=&quot;SGD&quot; role=&quot;radio&quot; aria-checked=&quot;false&quot;>S$</button>
       </div>
       <button class=&quot;nav-cart&quot; id=&quot;nav-cart-btn&quot; aria-label=&quot;Open cart&quot;>
         <svg width=&quot;18&quot; height=&quot;18&quot; viewBox=&quot;0 0 20 20&quot; fill=&quot;none&quot; aria-hidden=&quot;true&quot;>
@@ -12575,7 +12647,7 @@
   // LANGUAGE PICKER — primary language (Italian is always 2nd)
   // ============================================================
   var LANG_KEY = 'sud-italia-v8-lang';
-  var SUPPORTED = ['en', 'pl'];
+  var SUPPORTED = ['en', 'pl', 'de', 'en-SG'];
   function getStoredLang() {
     try {
       var v = localStorage.getItem(LANG_KEY);
@@ -12616,6 +12688,66 @@
     applyLang(btn.getAttribute('data-set-lang'));
   });
   applyLang(getStoredLang());
+
+  // ============================================================
+  // CURRENCY PICKER — display-only conversion against PLN (the
+  // truck's source-of-truth currency). Mirrors the production
+  // /admin/currency rates the customer site hydrates on mount.
+  // ============================================================
+  var CURR_KEY = 'sud-italia-v8-curr';
+  var CURR_SUPPORTED = ['PLN', 'EUR', 'USD', 'SGD'];
+  // Reference rates per 1 PLN — operator overrides in /admin/currency.
+  var CURR_RATES = { PLN: 1, EUR: 0.23, USD: 0.25, SGD: 0.34 };
+  var CURR_SYMBOL = { PLN: 'zł', EUR: '€', USD: '$', SGD: 'S$' };
+  var CURR_LOCALE = { PLN: 'pl-PL', EUR: 'de-DE', USD: 'en-US', SGD: 'en-SG' };
+  var currFormatters = {};
+  function getCurrFormatter(code) {
+    if (!currFormatters[code]) {
+      try {
+        currFormatters[code] = new Intl.NumberFormat(CURR_LOCALE[code] || 'en-US', {
+          style: 'currency', currency: code,
+        });
+      } catch (e) {
+        currFormatters[code] = { format: function (v) { return CURR_SYMBOL[code] + ' ' + v.toFixed(2); } };
+      }
+    }
+    return currFormatters[code];
+  }
+  function getStoredCurr() {
+    try {
+      var v = localStorage.getItem(CURR_KEY);
+      if (v &amp;&amp; CURR_SUPPORTED.indexOf(v) >= 0) return v;
+    } catch (e) {}
+    return 'PLN';
+  }
+  function applyCurr(code) {
+    if (CURR_SUPPORTED.indexOf(code) < 0) code = 'PLN';
+    var rate = CURR_RATES[code] || 1;
+    document.documentElement.setAttribute('data-curr', code);
+    // Every priced node opts in via data-pln="<grosze>". The lang strings
+    // around it (e.g. "·", separators) stay untouched.
+    var priced = document.querySelectorAll('[data-pln]');
+    for (var i = 0; i < priced.length; i++) {
+      var grosze = parseFloat(priced[i].getAttribute('data-pln'));
+      if (!isFinite(grosze)) continue;
+      var zloty = grosze / 100;
+      var converted = code === 'PLN' ? zloty : zloty * rate;
+      priced[i].textContent = getCurrFormatter(code).format(converted);
+    }
+    var opts = document.querySelectorAll('.curr-opt[data-set-curr]');
+    for (var j = 0; j < opts.length; j++) {
+      var on = opts[j].getAttribute('data-set-curr') === code;
+      opts[j].classList.toggle('active', on);
+      opts[j].setAttribute('aria-checked', on ? 'true' : 'false');
+    }
+    try { localStorage.setItem(CURR_KEY, code); } catch (e) {}
+  }
+  document.addEventListener('click', function (e) {
+    var btn = e.target &amp;&amp; e.target.closest ? e.target.closest('.curr-opt[data-set-curr]') : null;
+    if (!btn) return;
+    applyCurr(btn.getAttribute('data-set-curr'));
+  });
+  applyCurr(getStoredCurr());
 
   // ----- Toast -----
   var toastEl = document.getElementById('toast');
@@ -14574,6 +14706,35 @@
   .topnav__cart:hover { background: var(--ink); color: var(--bone); border-color: var(--ink); }
   .topnav__cart:hover .num { color: var(--bone); }
 
+  /* V9 — language + currency selectors. Editorial palette: hairline
+     border, tracking-heavy upcase labels, OS-default disclosure arrow
+     so the chrome stays minimal. */
+  .topnav__i18n {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .topnav__sel {
+    font-family: var(--sans);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    background: transparent;
+    border: 1px solid var(--hairline-strong);
+    padding: 6px 8px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 240ms ease, color 240ms ease, border-color 240ms ease;
+  }
+  .topnav__sel:hover { background: var(--ink); color: var(--bone); border-color: var(--ink); }
+  .topnav__sel:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+  @media (max-width: 720px) {
+    .topnav__i18n { gap: 4px; }
+    .topnav__sel { padding: 5px 6px; font-size: 9px; letter-spacing: 0.14em; }
+  }
+
   .topnav__bar {
     height: 1px;
     background: var(--hairline);
@@ -16007,6 +16168,20 @@
         <a href=&quot;#locations&quot;>Locations</a>
         <a href=&quot;#story&quot;>Story</a>
         <a href=&quot;#members&quot;>Members</a>
+      </div>
+      <div class=&quot;topnav__i18n&quot; role=&quot;group&quot; aria-label=&quot;Language and currency&quot;>
+        <select class=&quot;topnav__sel&quot; aria-label=&quot;Language&quot; id=&quot;v9LangSel&quot;>
+          <option value=&quot;en&quot;>EN</option>
+          <option value=&quot;pl&quot;>PL</option>
+          <option value=&quot;de&quot;>DE</option>
+          <option value=&quot;en-SG&quot;>SG</option>
+        </select>
+        <select class=&quot;topnav__sel&quot; aria-label=&quot;Currency&quot; id=&quot;v9CurrSel&quot;>
+          <option value=&quot;PLN&quot;>PLN</option>
+          <option value=&quot;EUR&quot;>EUR</option>
+          <option value=&quot;USD&quot;>USD</option>
+          <option value=&quot;SGD&quot;>SGD</option>
+        </select>
       </div>
       <a href=&quot;#cart&quot; class=&quot;topnav__cart&quot; id=&quot;topnavCart&quot;>
         Cart <span class=&quot;num&quot; id=&quot;topnavCartCount&quot;>03</span>
@@ -17758,8 +17933,75 @@
      ---------------------------------------------------------------- */
 
   // ----- helpers ---------------------------------------------------
-  const fmt = (n) => n.toFixed(2).replace('.', ',') + ' zł';
-  const fmtNeg = (n) => '— ' + n.toFixed(2).replace('.', ',') + ' zł';
+  // V9 carries its own light i18n + FX state. The lang/curr <select>
+  // boxes in the topnav persist through localStorage so a reload
+  // restores the visitor's choice. Display-only conversion — same
+  // contract as the production /admin/currency rates.
+  const V9_LANG_KEY = 'sud-italia-v9-lang';
+  const V9_CURR_KEY = 'sud-italia-v9-curr';
+  const V9_RATES = { PLN: 1, EUR: 0.23, USD: 0.25, SGD: 0.34 };
+  const V9_LOC = { PLN: 'pl-PL', EUR: 'de-DE', USD: 'en-US', SGD: 'en-SG' };
+  const V9_FORMATTERS = {};
+  function v9Formatter(code) {
+    if (!V9_FORMATTERS[code]) {
+      try {
+        V9_FORMATTERS[code] = new Intl.NumberFormat(V9_LOC[code] || 'en-US', {
+          style: 'currency', currency: code,
+        });
+      } catch (e) {
+        V9_FORMATTERS[code] = { format: (v) => code + ' ' + v.toFixed(2) };
+      }
+    }
+    return V9_FORMATTERS[code];
+  }
+  let v9Curr = 'PLN';
+  try { const s = localStorage.getItem(V9_CURR_KEY); if (s) v9Curr = s; } catch (e) {}
+  let v9Lang = 'en';
+  try { const s = localStorage.getItem(V9_LANG_KEY); if (s) v9Lang = s; } catch (e) {}
+
+  function v9SetCurr(code) {
+    if (!V9_RATES[code]) code = 'PLN';
+    v9Curr = code;
+    try { localStorage.setItem(V9_CURR_KEY, code); } catch (e) {}
+    const sel = document.getElementById('v9CurrSel');
+    if (sel) sel.value = code;
+    // Re-run any function that reads `fmt` after switching — declared
+    // below; lazily call into `render` once it's defined.
+    if (typeof render === 'function') render();
+  }
+  function v9SetLang(code) {
+    v9Lang = code;
+    try { localStorage.setItem(V9_LANG_KEY, code); } catch (e) {}
+    document.documentElement.setAttribute('lang', code === 'pl' ? 'pl' : 'en');
+    document.documentElement.setAttribute('data-lang', code);
+    const sel = document.getElementById('v9LangSel');
+    if (sel) sel.value = code;
+  }
+  document.addEventListener('change', (e) => {
+    const t = e.target;
+    if (!t) return;
+    if (t.id === 'v9CurrSel') v9SetCurr(t.value);
+    else if (t.id === 'v9LangSel') v9SetLang(t.value);
+  });
+  // Sync the dropdowns to the saved choice as soon as they exist in the
+  // DOM. Run on next frame because the IIFE evaluates before the parser
+  // reaches the closing tags of the topnav selects.
+  requestAnimationFrame(() => {
+    const cs = document.getElementById('v9CurrSel');
+    const ls = document.getElementById('v9LangSel');
+    if (cs) cs.value = v9Curr;
+    if (ls) ls.value = v9Lang;
+    document.documentElement.setAttribute('data-lang', v9Lang);
+  });
+
+  const fmt = (n) => {
+    const rate = V9_RATES[v9Curr] || 1;
+    return v9Formatter(v9Curr).format(n * rate);
+  };
+  const fmtNeg = (n) => {
+    const rate = V9_RATES[v9Curr] || 1;
+    return '— ' + v9Formatter(v9Curr).format(n * rate);
+  };
 
   const state = {
     items: [
