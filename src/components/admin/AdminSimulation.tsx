@@ -4468,15 +4468,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            <strong>Asymmetric upside, asymmetric staffing risk.</strong>{" "}
-            5 peak days/yr at 1.6× ≈ one extra normal day&apos;s revenue
-            per year added to the average. Worth investing in extra
-            staffing on those nights: under-staffing the peak costs more
-            (blown service to 30+ couples on Valentine&apos;s) than the
-            extra labor ever does. Capacity ceiling caveat: if your
-            kitchen saturation maxes at 1.4× normal, the modelled 1.6×
-            multiplier over-states upside — cross-check against the
-            kitchen saturation KPI before staffing.
+            Asymmetric risk: under-staffing the peak costs more than
+            the extra labor ever does — blown service on Valentine&apos;s
+            to thirty couples is a brand wound, not a margin question.
+            Capacity ceiling caveat: if your kitchen saturation maxes
+            at 1.4× normal, the modelled peak multiplier overstates
+            upside — cross-check against the kitchen saturation KPI
+            before staffing or taking reservations.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -4567,13 +4565,12 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            <strong>Counter-balance:</strong> tourists and outdoor
-            festival evenings often more than offset the lunch drop —
-            make sure the summer seasonal multiplier reflects both
-            effects so you don&apos;t double-count. Pitch-type modifies
-            the multiplier: office-heavy pitch (Mokotów / Wola) 0.70
-            (deep dip); tourist-heavy (Old Town / Kazimierz) 0.95+
-            (might invert); residential 0.85 (medium).
+            Pitch type drives whether this lever even applies: office-
+            heavy locations see a deep summer-lunch dip; tourist-heavy
+            locations might see lunch volume invert and increase. Make
+            sure the summer seasonal multiplier reflects whichever
+            effect dominates so you don&apos;t double-count tourist
+            uplift with both levers pulling in the same direction.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -4660,15 +4657,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            <strong>Booked upside vs operational drag.</strong> Unlike
-            peak days (which arrive on the calendar), event days are
-            elective — you choose which festivals to vendor. Small
-            street fair 1.3-1.5×; food-truck rally 1.6-2.0×; major
-            festival 2.0-3.0×; concert / sports with captive audience
-            2.5-4.0×. Subtract vendor fees (3-10k zł/event), permits,
-            and event-day overtime before celebrating — some festivals
-            net less than a normal Saturday once the fee + transport +
-            spoilage risk is in.
+            Unlike calendar peak days, event days are elective — you
+            choose which festivals to vendor. The trap is comparing
+            gross event revenue to a normal day: subtract vendor fees,
+            permits, transport, event-day overtime and spoilage risk
+            and many festivals net less than the Saturday you skipped.
+            Repeat-vendoring the same events compounds through brand
+            recognition; chasing one-shot fees doesn&apos;t.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -4755,22 +4750,14 @@ const HELP = {
           ingredients, labor and fixed to net profit.
         </p>
         <InstitutionalAnalysis>
-          <ol style={{ margin: "0 0 6px", paddingLeft: 18 }}>
-            <li><strong>Revenue</strong> — orders × ticket × days × weather/event multipliers</li>
-            <li><strong>− Ingredients (COGS)</strong> — food cost net of attach + ingredient stresses</li>
-            <li><strong>= Gross profit</strong></li>
-            <li><strong>− Labor</strong> — drilled down by role, 1.22× brutto ZUS gross-up</li>
-            <li><strong>− Fixed costs</strong> — rent, software, accountant, owner ZUS</li>
-            <li><strong>− Variable leakage</strong> — payment fees, waste, refunds, loyalty burn</li>
-            <li><strong>= Pre-tax profit → CIT → Net profit / (loss)</strong></li>
-          </ol>
           <p style={{ margin: 0 }}>
-            The sentence below the table reports the margin-of-safety
-            in orders/day — &quot;5.2 above&quot; = 5.2 more orders/day
-            than the minimum to break even. Below 10% MoS, one bad
-            week wipes you; 20%+ is comfortable. Each P&amp;L line
-            should be benchmarked vs PHG/NRA targets; the
-            operationsKpis strip flags red/amber/green automatically.
+            Read top to bottom and the question being asked changes at
+            each line: gross profit asks &quot;is the recipe priced
+            right?&quot; — labor asks &quot;is the schedule sized
+            right?&quot; — fixed asks &quot;is the location right?&quot;.
+            The sentence below the table reports margin-of-safety in
+            orders/day, which is the working-capital question:
+            &quot;how many bad days before this hurts?&quot;.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -4856,22 +4843,13 @@ const HELP = {
           business.
         </p>
         <InstitutionalAnalysis>
-          <p style={{ margin: "0 0 6px" }}>
-            Healthy Polish casual-Italian truck composition:
-          </p>
-          <ul style={{ margin: "0 0 6px", paddingLeft: 18 }}>
-            <li>~30% ingredients (COGS)</li>
-            <li>~28% labor (incl. 22% ZUS gross-up)</li>
-            <li>~8% fixed costs (rent, accountant, software)</li>
-            <li>~2% card fees + 4-5% variable leakage</li>
-            <li>~28% net profit (pre-CIT)</li>
-          </ul>
           <p style={{ margin: 0 }}>
-            Any slice bloating past ~32% is the first place to drill.
-            COGS → recipe costs or portion drift. Labor → schedule bloat
-            or under-pricing. Fixed → rent escalator or unbounded
-            software subscriptions. Don&apos;t raise prices to fix a
-            cost problem — diagnose the slice first.
+            The slice that bloats is the slice that reveals the
+            problem: COGS → recipe or portion drift; labor → schedule
+            bloat or under-pricing; fixed → rent escalator or unchecked
+            software subscriptions. Don&apos;t reach for a price hike
+            to fix a cost problem — diagnose which slice expanded
+            before treating the symptom on the wrong line.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -4954,41 +4932,16 @@ const HELP = {
           — the institutional ops dashboard.
         </p>
         <InstitutionalAnalysis>
-          <ul style={{ margin: 0, paddingLeft: 18 }}>
-            <li>
-              <strong>Food cost % revenue</strong> — ingredient discipline.
-              Target ≤ 30%; &gt; 32% = recipe leakage or under-pricing.
-            </li>
-            <li>
-              <strong>Labor % revenue</strong> — target ≤ 30%; &gt; 35% =
-              over-staffed or under-priced.
-            </li>
-            <li>
-              <strong>Prime cost %</strong> — COGS + labor. The single
-              most-watched number in the industry. ≤ 60-65% healthy.
-            </li>
-            <li>
-              <strong>Contribution margin</strong> — revenue after ALL
-              variable costs (COGS, fees, waste, refunds, loyalty).
-              &lt; 40% = structurally unprofitable; ≥ 50% healthy.
-            </li>
-            <li>
-              <strong>Margin of safety</strong> — revenue cushion above
-              break-even. &lt; 10% one bad week wipes you; ≥ 25% comfortable.
-            </li>
-            <li>
-              <strong>Revenue per labor hour</strong> — staff productivity.
-              90-140 zł/h PL casual-Italian norm.
-            </li>
-            <li>
-              <strong>Net profit per order</strong> — bottom-line buffer
-              per ticket. &lt; 5 zł = no margin for refunds or waste.
-            </li>
-            <li>
-              <strong>Setup payback</strong> — months of profit to recoup
-              buildout. Investor-grade: &lt; 24 months.
-            </li>
-          </ul>
+          <p style={{ margin: 0 }}>
+            The discipline embedded in this panel: managing eight
+            single numbers beats managing eight thousand line items,
+            because every operational decision eventually maps to one
+            of these. The traffic-light gates aren&apos;t arbitrary —
+            they&apos;re the industry-standard sustainability
+            thresholds. A weekly review of red lines and a quarterly
+            review of amber-trending lines catches problems before
+            they compound.
+          </p>
         </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
@@ -5081,26 +5034,14 @@ const HELP = {
           current inputs ± a deterministic stress factor.
         </p>
         <InstitutionalAnalysis>
-          <ul style={{ margin: "0 0 6px", paddingLeft: 18 }}>
-            <li>
-              <strong>Conservative</strong> — −15% orders + 2pp worse
-              COGS. &quot;What if everything goes a bit wrong?&quot;
-            </li>
-            <li>
-              <strong>Realistic</strong> — current scenario as entered.
-            </li>
-            <li>
-              <strong>Optimistic</strong> — +15% orders + 2pp better
-              COGS. &quot;What if we execute well?&quot;
-            </li>
-          </ul>
           <p style={{ margin: 0 }}>
-            <strong>Decision frame:</strong> Conservative-still-profitable
-            is the institutional gate for raising capital — investors
-            won&apos;t back a plan that only works in best case.
-            Optimistic-not-much-better-than-Realistic signals a
-            structural ceiling (small oven, limited seating, capped
-            attach headroom) — fix the model, not the marketing.
+            Two decision frames embedded in this panel. (1)
+            Conservative-still-profitable is the institutional gate for
+            raising capital — investors won&apos;t back a plan that
+            only works in the best case. (2) Optimistic-not-much-
+            better-than-Realistic signals a structural ceiling (small
+            oven, limited seating, capped attach headroom) — fix the
+            model, not the marketing.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -5187,16 +5128,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            <strong>How to read:</strong> green = profitable, red =
-            loss. Move from centre outward to answer &quot;volume vs
-            price — which lever has higher NPV?&quot;. Counter-intuitively
-            for most casual-Italian operations, ticket-led growth
-            dominates volume-led growth on a per-pp basis: +5% ticket
-            adds revenue with zero additional COGS or labor scaling,
-            while +5% volume scales variable food and packaging and
-            often pushes labor into a new staffing tier. The diagonal
-            cells are unrealistic (raising ticket usually loses
-            volume) — use the Sensitivity card for linked effects.
+            The diagonal cells are misleading on their own — raising
+            ticket usually loses volume (elasticity) and growing volume
+            usually requires a price-sensitive discount push. Read the
+            grid as &quot;all else equal&quot; — fine for sizing the
+            potential, not for predicting the outcome. Use the
+            Sensitivity card for the linked-effects view that bakes
+            elasticity back in.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
