@@ -7733,14 +7733,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Range by event type: small street fair 1.3-1.5×; food-
-            truck rally 1.6-2.0×; major festival 2.0-3.0×; concert /
-            sports with captive audience 2.5-4.0×. Net economic value
-            = (event revenue × event margin) − vendor fee − transport
-            cost − event-day overtime − spoilage. Some festivals charge
-            5-10k zł vendor fees; net only worth it if multiplier ≥
-            1.6× on top of typical fixed-cost recoupment for the day.
-            Repeat events compound through brand recognition.
+            Net economic value isn&apos;t the gross event revenue —
+            subtract vendor fees, transport, event-day overtime and
+            spoilage risk before celebrating. Some festivals net less
+            than the Saturday you skipped to attend them. Repeat-
+            vendoring the same events compounds through brand
+            recognition with that audience; chasing one-shot fees does
+            not.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -7786,14 +7785,14 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Net of attach-driven AOV lifts, weather/event multipliers
-            and channel-mix adjustments. Healthy PL casual-Italian
-            truck: 100-180k zł/month single unit; premium central
-            locations 200-300k+; chain per-unit (post-cannibalisation)
-            120-180k. Watch the €2M annual threshold per entity — under
-            stays at 9% small-CIT, over jumps to 19%. Revenue growth
-            should beat inflation (~4% PL) to be real growth; flat
-            nominal = real decline.
+            Watch the annual revenue against the small-CIT threshold:
+            stay under and the corporate-tax rate is materially lower,
+            cross it and the rate jumps on the entire base. The
+            threshold is a structuring trigger — multi-entity setups
+            (separate sp. z o.o. per unit) preserve the lower rate at
+            chain scale. Flat nominal revenue equals real decline once
+            inflation is in; growth has to clear the inflation bar to
+            count as growth.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -7833,14 +7832,12 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Healthy split (PL casual-Italian): COGS 28-32%, labor
-            25-30%, fixed 6-10%, leakage 4-6%, D&amp;A + interest
-            3-5%. Total: 70-80% of revenue. Net profit pre-tax:
-            20-30% range; sustainable steady-state typically 15-22%
-            after CIT. Cost % matters more than cost zł for trend
-            analysis — growing revenue while holding cost % flat is
-            the cleanest path; growing cost % faster than revenue is
-            the warning signal.
+            Cost % matters more than cost zł for trend analysis —
+            growing revenue while holding cost % flat is the cleanest
+            sign of operational discipline. Cost % rising faster than
+            revenue % is the warning signal that growth is inflating
+            structure rather than dropping to profit. Compare cost
+            mix YoY (not just total) to spot which slice is drifting.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -7881,15 +7878,14 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Healthy margin ranges: 8-12% net = average; 12-18% =
-            good; 18-25% = excellent; 25%+ = exceptional or
-            cost line missing. NRA pizza-segment benchmark sits at
-            8-15%. Watch trajectory more than level — eroding 1pp/qtr
-            means inflation winning the race. Pay yourself first (auto-
-            transfer 30% of net to a separate account on month-end),
-            keep 3× monthly fixed costs in reserve, re-invest 20% in
-            growth. Pre-tax / post-tax distinction matters: sole
-            proprietorship (JDG) faces progressive PIT (12-32%) on top.
+            Watch trajectory more than level — eroding 1pp / quarter
+            means inflation is winning the race and a course
+            correction is overdue. Practical discipline: pay yourself
+            first (auto-transfer a fixed share of net to a separate
+            account on month-end), keep 3× monthly fixed costs in
+            reserve, reinvest a defined share into growth. Without
+            this structure, profit dissolves into operating cash and
+            nothing accumulates.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -7928,13 +7924,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Healthy range 35-50 orders/day for PL pizza truck. Below 30
-            indicates unusually low fixed costs (suburban pitch); above
-            55 indicates structural fragility. The margin-of-safety
-            (actual − break-even) ÷ actual is the institutional
-            cushion metric: ≥ 25% comfortable; 15-25% adequate; 10-15%
-            fragile; &lt; 10% one bad week from red. Below 10% MoS the
-            unit is not investment-grade.
+            The number to write on the wall — every shift the team
+            knows how many orders from red they are. Margin-of-safety
+            (actual − break-even) ÷ actual is the cushion metric
+            investors care about; below 10% the unit isn&apos;t
+            investment-grade because a single bad week wipes the
+            quarter. Lowering break-even is usually cheaper than
+            raising volume.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -7975,14 +7971,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Industry targets: ≤ 28% world-class chains; 30% healthy
-            independent; 32%+ requires intervention. PL pizza-segment
-            benchmark 28-32%. The single highest-leverage P&amp;L line
-            for margin work — each 1pp reduction flows directly to
-            gross margin (then through variable leakage and CIT). Track
-            per-item COGS% via the menu-engineering matrix; some items
-            run 20%, others 40% — push the low-COGS items in menu
-            placement.
+            The single highest-leverage P&amp;L line for margin work —
+            permanent COGS improvements compound every future month at
+            every future revenue level. Track per-item COGS%, not just
+            blended; some items run far below average and some far
+            above, so menu placement and mix shifting often beat
+            recipe re-engineering for the same margin impact and zero
+            cost.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -8021,14 +8016,12 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Tiers: ≤ 25% world-class chains; 28-30% healthy
-            independent; 35%+ requires action. PL casual-Italian
-            benchmark 27-32%. Diagnose direction before cutting heads:
-            high labor % can mean over-staffing (cut schedule) OR
-            under-pricing (raise prices) OR low productivity (training).
-            Productivity (revenue per labor hour) is often the
-            cheapest lever — a 10% productivity lift cancels typical
-            wage inflation.
+            Three different problems share the same symptom (high
+            labor %): over-staffing, under-pricing, or low productivity.
+            Each has a different fix, so diagnose before cutting heads.
+            Productivity is usually the cheapest lever — a modest
+            revenue-per-labor-hour lift cancels typical wage inflation
+            without changing schedule, price, or team composition.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -8068,15 +8061,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Industry tiers: ≤ 55% world-class QSR chains; 60% healthy
-            independent; 65% acceptable; &gt; 70% restructure or close.
-            Tracks the &quot;Schmidgall benchmark&quot; universally
-            referenced in hospitality managerial accounting. Combines
-            the two largest cost lines into a single discipline metric
-            — beats tracking food and labor separately because trade-offs
-            (lower COGS via from-scratch prep adds labor) reveal in the
-            combined number. Watch seasonally — winter prime can be
-            68% while summer is 55% on the same operation.
+            Combines the two largest cost lines into one discipline
+            metric — beats tracking food and labor separately because
+            the genuine trade-offs (from-scratch prep cuts COGS but
+            adds labor) only reveal themselves in the combined number.
+            Watch seasonally; the same operation can run very different
+            prime in winter vs summer, and a flat annual average hides
+            the winter pressure point.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
