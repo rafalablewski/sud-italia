@@ -6955,14 +6955,14 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Range by oven type: Neapolitan wood-fired 60-90s at
-            450-480°C (AVPN spec); gas deck 90-120s at 350-420°C;
-            conveyor 4-6 min at 280-310°C (low-temp, high-throughput).
-            Real-world cycle drifts 15-30% above spec at peak — oven
-            recovery between bakes, door-open heat loss, dough drag.
-            Hydration matters: 60-65% (Neapolitan sweet spot) cooks
-            faster than drier doughs. Stopwatch the real number at the
-            Friday rush; calibrate against that, not the manual.
+            Real cycle drifts above spec at peak: oven recovery between
+            bakes, door-open heat loss, dough drag. So stopwatch the
+            real number at the Friday rush and calibrate against that,
+            not against the manual. Dough hydration is a subtle lever
+            — Neapolitan-spec hydration cooks faster than drier
+            recipes, which is one reason AVPN-compliant pizzerias
+            achieve higher real throughput than the cycle numbers
+            alone predict.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -7005,15 +7005,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Tiers: 15-20% first-week crews; 20-25% trained crew with
-            single pizzaiolo; 28-35% multi-station with runner; 35-40%
-            world-class chains with optimised mise-en-place. The gap
-            between theoretical (oven brochure) and realistic
-            (Friday-night stopwatch) is structural — a Ferrara rated at
-            320 pizzas/hr sustains ~70/hr in real ops because the
-            pizzaiolo can&apos;t feed the oven that fast. Improving
-            efficiency by 5pp (training, mise-en-place, runner support)
-            beats almost any capex play.
+            The gap between brochure capacity and Friday-night reality
+            is structural, not a defect — the pizzaiolo can&apos;t feed
+            the oven as fast as the oven can bake. So improving
+            efficiency by a few percentage points (training, mise-en-
+            place, runner support) usually beats almost any capex play
+            for less money. Vendor demos run at theoretical efficiency;
+            real-world ops never do.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -7056,15 +7054,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Critical-mass thresholds (PL casual-Italian chains): Units
-            2-3 are hardest — cost layered without scale economics
-            kicking in yet. Unit 4-5 unlocks supplier discounts (~10%
-            COGS reduction). Unit 6-8 unlocks commissary economics
-            (~3-5 pp COGS net of facility cost). 10+ = real chain
-            with full HQ absorption. Per-unit revenue typically dilutes
-            with cannibalisation (~15% within same DMA &lt; 3 km
-            radius). Don&apos;t enable the fleet model unless you&apos;re
-            seriously modelling multi-unit growth.
+            Units 2-3 are the hardest stage — costs layer on (HQ, supply
+            coordination) before scale economics kick in. The
+            psychology of operators planning unit 2 is &quot;double the
+            profit&quot;; the math is closer to &quot;same profit, more
+            stress&quot; until unit 4-5 unlocks meaningful supplier
+            discounts. Plan the trough explicitly so it doesn&apos;t
+            surprise you.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -7107,14 +7103,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Per-unit absorption = hqOverhead ÷ unitCount. Healthy
-            trajectory: 10% at 2 units → 7% at 5 → 5% at 10 → 3% at 20+.
-            Don&apos;t hire HQ ahead of need — owner-operator the first
-            3 trucks, fractional CFO instead of full-time finance, and
-            centralise the highest-leverage functions first (finance,
-            marketing, supply). Each HQ hire should be ROI-justified
-            via per-unit performance lift; if rising HQ % isn&apos;t
-            tracked against falling per-unit cost, the structure is
+            The classic chain failure mode is hiring HQ ahead of unit
+            economics — fractional CFO before full-time, centralise
+            only the highest-leverage functions first (finance,
+            marketing, supply), owner-operator the first units. Each
+            HQ hire should be ROI-justified via measured per-unit
+            performance lift; if rising HQ cost isn&apos;t tracked
+            against falling per-unit operating cost, the structure is
             bloating.
           </p>
         </InstitutionalAnalysis>
@@ -7157,15 +7152,14 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            QSR pizza benchmarks: Domino&apos;s 5.5%, Papa John&apos;s
-            5%, Telepizza 5.5%, independent concepts 5-7%. Validate the
-            franchisee P&amp;L can still net 8-12% AFTER royalty + 2.5%
-            marketing fund + 7.5%-ish combined platform fees — otherwise
-            no rational operator buys. Royalty + marketing &lt; 10% is
-            the practical sustainability gate. Tiered royalty (4% Y1 →
-            5% Y2 → 6% steady-state) eases ramp. The brand is the
-            product — royalty income vanishes if franchisees don&apos;t
-            replicate quality from the documented playbook.
+            Validate that the franchisee P&amp;L still nets 8-12%
+            AFTER royalty + marketing + platform fees — otherwise no
+            rational operator signs. Tiered royalty (lower in year 1,
+            climbing to steady-state) eases franchisee ramp and lifts
+            sign-up rates. The brand IS the product on the royalty
+            side — royalty income vanishes if franchisees don&apos;t
+            replicate quality from the documented playbook, so
+            enforcement is part of the economics.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -7207,14 +7201,14 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Pooled spend across the fleet creates national-scale
-            advertising leverage no individual unit could afford. Mix
-            typically 70% national brand campaigns / 30% local-area
-            allocation. Trust depends on visible deployment — quarterly
-            spend reports to franchisees prevent the perception of HQ
-            siphoning the fund into operating costs. Polish pizzeria
-            chains (Pizza Hut, Telepizza) typically run 2.5-3.5%; the
-            higher rate funds heavy digital + sponsorship spend.
+            Pooled spend creates national-scale advertising leverage
+            no individual unit could afford — the strategic value of
+            franchising as a marketing engine, not just a capital
+            engine. Trust is the binding constraint: quarterly spend
+            reports to franchisees prevent the perception that HQ is
+            siphoning the fund into operating cost. Without that
+            transparency, franchisees push back on every collection
+            cycle.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -7255,14 +7249,14 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Tier pattern with PL distributors (Makro, Eurocash,
-            regional cheese specialists): 1-3 units = list price; 4-7
-            units = 5-8% off list; 8-15 units = 10-12% off + payment
-            terms; 15+ units = bespoke contracts, possibly &gt;15% off.
             Centralising orders through one buyer is the practical
-            unlock — per-truck ordering doesn&apos;t aggregate volume.
-            Concentration risk: single-supplier dependency means a
-            disruption hits the whole fleet.
+            unlock — per-truck ordering doesn&apos;t aggregate volume,
+            so the discount stays theoretical. The strategic trade is
+            concentration risk: single-supplier dependency means one
+            disruption (fire, contract dispute, food-safety scandal)
+            hits the whole fleet at once. Dual-source the critical
+            lines even if the second source is slightly worse on
+            price.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -7303,14 +7297,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Realistic tier sizes: 6-9% at first tier (4-7 units);
-            10-13% mid-tier (8-15 units); 15-20% at scale (15+, bespoke
-            contracts). Cheese carries the highest discount headroom
-            (~35-45% of pizza COGS, deep supplier pools); specialty
-            ingredients (truffle, premium cured meats) the least.
-            Reinvest 25-30% of the saving into recipe quality vs flat-
-            pass-through — customer-perceived upgrades drive repeat
-            rate, which compounds faster than the raw margin gain.
+            Cheese carries the highest discount headroom (deep supplier
+            pools, large fraction of pizza COGS); specialty ingredients
+            the least. Strategic move at chain scale: don&apos;t
+            pocket the whole saving — reinvest a portion into recipe
+            quality. Customer-perceived ingredient upgrades drive
+            repeat rate, which compounds faster than the raw margin
+            gain from pass-through to the bottom line.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
