@@ -1181,7 +1181,7 @@ The §10 "Cost Optimisation & P&L Improvement" section assumed the operator type
 
 **What that does for the audit's analysis:**
 
-- The §10 "Real cost discipline" critique was right (the seed costs were typed in); it is now resolvable by the operator running an RFQ against three distributors and clicking "activate" on the winner. Every bundle ladder, every menu-engineering quadrant, every channel CM1 number updates the same day.
+- The §10 "Real cost discipline" critique was right (the seed costs were typed in); the storage shape for resolving it is now in place — each ingredient carries multiple offerings, one is marked active, and every bundle ladder / menu-engineering quadrant / channel CM1 number reads through the active pointer. **The RFQ workflow UI that operationalises this — request quotes from three distributors, score them, one-click activate the winner — is still a future build** (tracked as item 14 ⭐⭐ in the elite-QSR future-recommendations doc; ~1 sprint of UI work since the storage layer is correct). Today the operator can swap distributors by editing the active-offering pointer manually; the bidding workflow is the missing piece.
 - The §4 "Menu engineering — quadrant migration" call-out gets an honest cost basis to score against. A "puzzle" item flipping to a "star" because the operator switched distributors is now a measurable event in the menu-engineering matrix, not a recompute artefact.
 - The "magic constants" critique in the previous 2026-05-21 update is _further_ reduced — the cost ledger is no longer "one number per ingredient" but "one number per (ingredient × distributor) at a specific timestamp."
 
@@ -1201,7 +1201,7 @@ The recipe nutrition pipeline (`calculateRecipeCalories`, `calculateRecipeNutrit
 **What this unlocks for §3 + §4 of the audit:**
 
 - The §3 "Cross-sell psychology" section talks about "balanced meal" framing in cross-sell chips ("add a side for a complete meal"). With actual per-100g macros now flowing from active offerings, the chip can carry a real "rounds out your protein / fiber" rationale instead of a generic prompt. Schema-ready; UI build not done.
-- The §4 "Menu engineering — Nutri-Grade as decoy" play (cited but not shipped in the original audit) is structurally one step away: per-100g sugar + saturated fat flow through to the simulation, and a Nutri-Grade computation function can read them. Not written yet.
+- The §4 "Menu engineering — Nutri-Grade as decoy" play (cited but not shipped in the original audit) is **two structural steps away, not one**: per-100g sugar + total fat are on the active offering, but the schema is still missing `saturatedFatPerUnit` (and the SSB bands distinguish added vs total sugars) — both are NEA inputs the bucketing function would need. Field migration on `IngredientProduct` first, then the computation function. Not written yet.
 - The "Defaulted to 0" indicator on incomplete macros keeps the operator honest — partial-data states are visibly marked on the operator side; customer surfaces never show a 0-defaulted figure (they hide rather than mislead). Matches the audit's §8 "Psychological design — trust" principle.
 
 ### Where this lands against §12 lists
@@ -1217,7 +1217,7 @@ The recipe nutrition pipeline (`calculateRecipeCalories`, `calculateRecipeNutrit
 
 ### Three follow-ups that surfaced
 
-1. **NEA Nutri-Grade computation from recipe nutrition.** Schema is ready. Not written. ~Half-day of work to read per-100g sugar + saturated fat through the existing `calculateRecipeNutrition` path and bucket into A/B/C/D bands.
+1. **NEA Nutri-Grade computation from recipe nutrition.** Schema is **not yet ready** — `IngredientProduct` carries sugar + total fat but not `saturatedFatPerUnit` (a required NEA bucketing input), and the SSB bands also distinguish added vs total sugars which the schema does not separate. The work is: (a) field migration on `IngredientProduct` for saturated fat (and ideally added-sugars), (b) plumbing through `calculateRecipeNutrition`, (c) the A/B/C/D bucketing function reading the recipe sums against NEA thresholds. Closer to 1–2 days than a half-day, and field migration not pure code.
 2. **Recipe-derived allergens.** Today `MenuItem.allergens[]` is per-item, hand-flagged. Migrating to "this dish carries allergen X because some ingredient does" would close one of the most-cited compliance foot-guns in the audit. Few-hour job.
 3. **Cost-ledger-driven bundle save-time gate** (already flagged as ⭐ in the elite-QSR future-recommendations doc item #12) is materially cheaper now — drops from "1 day" to "half day" because the ledger has audit-traceable provenance.
 
