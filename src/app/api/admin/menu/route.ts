@@ -82,7 +82,11 @@ async function getRecipeDerivedMaps(): Promise<{
           complete = false;
           break;
         }
-        total += raw * ri.quantity * (ri.wasteFactor || 1);
+        // No wasteFactor on macros — `quantity` is what ends up in
+        // the dish; the trim covered by wasteFactor is thrown away
+        // and never reaches the customer's plate, so its calories
+        // shouldn't count.
+        total += raw * ri.quantity;
       }
       if (complete) macros[field] = Math.round(total / (r.yieldPortions || 1));
     }

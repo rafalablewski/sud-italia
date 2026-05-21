@@ -58,7 +58,8 @@ async function getRecipeNutritionMap(): Promise<Map<string, Partial<Record<Recip
           complete = false;
           break;
         }
-        total += raw * ri.quantity * (ri.wasteFactor || 1);
+        // No wasteFactor on macros — see /api/admin/menu enrich.
+        total += raw * ri.quantity;
       }
       if (complete) macros[field] = Math.round(total / (r.yieldPortions || 1));
     }

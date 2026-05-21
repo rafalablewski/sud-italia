@@ -98,10 +98,11 @@ export const GET = withAdmin({}, async (req) => {
           lineCost: Math.round((ing?.costPerUnit ?? 0) * ri.quantity * (ri.wasteFactor || 1)),
           // null when this ingredient is missing kcal data — the dialog
           // surfaces a hint so the operator knows which line is blocking
-          // the per-portion total.
+          // the per-portion total. No wasteFactor here — the trim
+          // covered by wasteFactor doesn't reach the customer's plate.
           lineKcal:
             typeof unitKcal === "number"
-              ? Math.round(unitKcal * ri.quantity * (ri.wasteFactor || 1))
+              ? Math.round(unitKcal * ri.quantity)
               : null,
           // Inline provenance: which distributor offering this recipe
           // line is actually using. Null when the ingredient has no

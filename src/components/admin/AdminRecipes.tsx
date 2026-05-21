@@ -836,6 +836,12 @@ function RecipeEditor({ menuItem, recipe, ingredients, locationLabel, onClose, o
   // kcal pill keeps the stricter "all complete or no claim" rule
   // server-side; NYC §81.50 / EU 1169 disclosures shouldn't ship
   // 0-defaulted figures.
+  //
+  // Waste factor is NOT applied to nutrition — `quantity` is the
+  // amount that ends up in the dish (what the customer actually eats);
+  // `wasteFactor` covers extra purchased to cover trim/spill loss,
+  // which feeds cost only. Including it here would inflate kcal by
+  // the trim that gets thrown away.
   type MacroKey = "unitKcal" | "unitProtein" | "unitCarbs" | "unitSugar" | "unitFiber" | "unitFat";
   const perPortionMacro = (key: MacroKey): { value: number; defaulted: number } => {
     if (rows.length === 0) return { value: 0, defaulted: 0 };
@@ -847,7 +853,7 @@ function RecipeEditor({ menuItem, recipe, ingredients, locationLabel, onClose, o
         defaulted++;
         continue;
       }
-      total += raw * r.quantity * (r.wasteFactor || 1);
+      total += raw * r.quantity;
     }
     return {
       value: Math.round(total / (yieldPortions || 1)),

@@ -3529,6 +3529,10 @@ export async function calculateFoodCost(menuItemId: string): Promise<number> {
  *  - any active offering is missing `kcalPerUnit`.
  * Surfaces as "—" in the operator UI + skips the customer kcal pill,
  * instead of showing a misleading partial sum.
+ *
+ * `wasteFactor` is NOT applied — `quantity` is the amount that ends
+ * up in the dish (what the customer eats); `wasteFactor` only covers
+ * extra purchased to cover trim/spill loss, which is a cost concern.
  */
 export async function calculateRecipeCalories(menuItemId: string): Promise<number | null> {
   const recipe = await getRecipe(menuItemId);
@@ -3543,7 +3547,7 @@ export async function calculateRecipeCalories(menuItemId: string): Promise<numbe
     const product = activeProducts.get(ri.ingredientId);
     if (!product) return null;
     if (typeof product.kcalPerUnit !== "number") return null;
-    totalKcal += product.kcalPerUnit * ri.quantity * (ri.wasteFactor || 1);
+    totalKcal += product.kcalPerUnit * ri.quantity;
   }
 
   return Math.round(totalKcal / (recipe.yieldPortions || 1));
@@ -3607,7 +3611,8 @@ export async function calculateRecipeNutrition(menuItemId: string): Promise<Reci
         complete = false;
         break;
       }
-      total += raw * ri.quantity * (ri.wasteFactor || 1);
+      // No wasteFactor on macros — see calculateRecipeCalories.
+      total += raw * ri.quantity;
     }
     if (complete) out[field] = Math.round(total / (recipe.yieldPortions || 1));
   }
