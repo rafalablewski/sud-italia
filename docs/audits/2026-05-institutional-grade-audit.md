@@ -555,11 +555,11 @@ But:
 - ~~**Stock doesn't decrement on order.** The most expensive thing you've avoided fixing because the dashboard looks fine without it.~~ **✅ RESOLVED 2026-05-16** — variance reports now reflect real consumption.
 - **You are competing for the operator's attention against the trucks.** This is the strongest existential risk in the audit and it has nothing to do with code.
 
-**The business can become elite.** The path is: 30-day safety + honesty pass → 90-day AOV and retention push → 180-day operational automation → 12-month 3rd–5th truck → 24-month franchise decision. Skip the SaaS detour unless it's funded separately.
+**The business can become elite.** The path is: 30-day safety + honesty pass → 90-day AOV and retention push → ~~180-day operational automation~~ **(largely shipped 2026-05-16 — recipe-driven stock, PAR-driven POs, KDS SLA, push, Claude forecast, retention trim, DB-backed locations, per-location locks, SPLH, cohort, segments, referral backend; see §0.1)** → 12-month 3rd–5th truck → 24-month franchise decision. Skip the SaaS detour unless it's funded separately.
 
 **If you change one thing this week:** hire the photographer. Pizza is visual; you're selling it with emoji.
 
-**If you change one thing this month:** make `/admin/capabilities` honest. The instant you can no longer fool yourself, every priority will align.
+**If you change one thing this month:** ~~make `/admin/capabilities` honest~~ **(done 2026-05-16; the page now carries a `caveats` field rendered as an amber callout and every stubbed/heuristic surface is downgraded)** → **hash + salt the admin password and rotate it** ([admin-auth.ts:143–145](../../src/lib/admin-auth.ts)). You are one phishing email away from a refund-authority breach; this is now the highest-leverage open item from §11 Week 1.
 
 **If you change one thing this year:** decide whether you are a restaurateur or a software-CEO and staff the other role from outside immediately. The current trajectory has you doing both badly; either done well is a real business.
 
