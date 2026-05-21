@@ -19,7 +19,7 @@ import {
   UtensilsCrossed,
   type LucideIcon,
 } from "lucide-react";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, getBaseSlug } from "@/lib/utils";
 import {
   MENU_CATEGORY_LABELS,
   type IngredientCategory,
@@ -341,7 +341,11 @@ function RecipesPanel() {
     fetchAll();
   }, [fetchAll]);
 
-  const recipeByMenuId = useMemo(() => {
+  // Recipes are chain-wide (keyed by dish base slug after the
+  // 2026-05 refactor), but the recipes board groups by per-location
+  // menu items. Map by base slug so a Kraków + Warsaw Margherita card
+  // both resolve to the same recipe row.
+  const recipeByBaseSlug = useMemo(() => {
     const m = new Map<string, RecipeData>();
     for (const r of recipes) m.set(r.menuItemId, r);
     return m;
@@ -435,7 +439,7 @@ function RecipesPanel() {
                 </header>
                 <div className="v2-rcp-grid">
                   {items.map((item) => {
-                    const recipe = recipeByMenuId.get(item.id);
+                    const recipe = recipeByBaseSlug.get(getBaseSlug(item.id));
                     const hasRecipe = !!recipe;
                     const enriched = (recipe?.enrichedIngredients ?? []) as EnrichedRecipeIngredient[];
                     const calculatedCost = recipe?.calculatedCost ?? 0;
@@ -464,7 +468,7 @@ function RecipesPanel() {
 
       <RecipeEditor
         menuItem={editing}
-        recipe={editing ? recipeByMenuId.get(editing.id) : undefined}
+        recipe={editing ? recipeByBaseSlug.get(getBaseSlug(editing.id)) : undefined}
         ingredients={ingredients}
         locationLabel={
           activeLocations.find((l) => l.slug === pageLoc)?.city ?? pageLoc
@@ -986,8 +990,8 @@ function RecipeEditor({ menuItem, recipe, ingredients, locationLabel, onClose, o
         open
         onClose={onClose}
         size="xl"
-        title={locationLabel ? `Recipe · ${menuItem.name} · ${locationLabel}` : `Recipe · ${menuItem.name}`}
-        description={`${locationLabel ? `${locationLabel} listed price ` : "Listed price "}${formatPrice(menuItem.price)} · Recipes + offerings + prices are per-location — edit the other truck's Margherita separately via the location lens. Cost recalculates from real ingredient prices.`}
+        title={`Recipe · ${menuItem.name}`}
+        description={`Chain-wide formula · ${locationLabel ? `listed at ${formatPrice(menuItem.price)} in ${locationLabel}` : `listed price ${formatPrice(menuItem.price)}`}. Cost + nutrition recalculate from each ingredient's active distributor offering. Other locations on this dish share the same recipe — only the listed price varies.`}
         footer={
           <>
             {hasExisting && (

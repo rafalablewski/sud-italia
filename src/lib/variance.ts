@@ -1,5 +1,6 @@
 import type { Ingredient, Order, Recipe, StockMovement } from "@/data/types";
 import { getIngredients, getOrders, getRecipes, getStockMovements } from "@/lib/store";
+import { getBaseSlug } from "@/lib/utils";
 
 export interface IngredientVariance {
   ingredientId: string;
@@ -52,8 +53,10 @@ export async function computeVariance(
     getStockMovements({ locationSlug }),
   ]);
 
-  const recipeByMenuItem = new Map<string, Recipe>();
-  for (const r of recipes) recipeByMenuItem.set(r.menuItemId, r);
+  // Recipes are chain-wide (keyed by dish base slug); orders carry the
+  // per-location prefixed id. Derive the base slug for the lookup.
+  const recipeByBaseSlug = new Map<string, Recipe>();
+  for (const r of recipes) recipeByBaseSlug.set(r.menuItemId, r);
   const ingredientById = new Map(ingredients.map((i) => [i.id, i]));
 
   const fromMs = new Date(fromIso).getTime();
@@ -67,7 +70,7 @@ export async function computeVariance(
     const occurred = new Date(o.paidAt || o.createdAt).getTime();
     if (occurred < fromMs || occurred > toMs) continue;
     for (const line of o.items) {
-      const recipe = recipeByMenuItem.get(line.menuItem.id);
+      const recipe = recipeByBaseSlug.get(getBaseSlug(line.menuItem.id));
       if (!recipe) continue;
       const portions = recipe.yieldPortions || 1;
       const portionsSold = line.quantity;

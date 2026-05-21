@@ -21,6 +21,7 @@ import { getDb } from "@/db/client";
 import { allergenIncidents as allergenIncidentsTable, auditLog as auditLogTable, brands as brandsTable, customerNotes as customerNotesTable, customers as customersTable, feedback as feedbackTable, franchisees as franchiseesTable, ingredientProducts as ingredientProductsTable, ingredientStock as ingredientStockTable, ingredients as ingredientsTable, kdsTickets as kdsTicketsTable, locationAssignments as locationAssignmentsTable, loyaltyMembers as loyaltyMembersTable, menuItemStation as menuItemStationTable, orderItems as orderItemsTable, orders as ordersTable, pointAdjustments as pointAdjustmentsTable, recipes as recipesTable, royaltyStatements as royaltyStatementsTable, shifts as shiftsTable, slots as slotsTable, staff as staffTable, stations as stationsTable, stockMovements as stockMovementsTable, tempLogs as tempLogsTable, timePunches as timePunchesTable, whatsappMessages as whatsappMessagesTable } from "@/db/schema";
 import { lte } from "drizzle-orm";
 import { bumpLazyBackfillHit, ensureTable } from "@/db/migrate";
+import { getBaseSlug } from "@/lib/utils";
 
 // --- Storage abstraction: Neon Postgres when DATABASE_URL is set, filesystem fallback for local dev ---
 
@@ -3331,8 +3332,64 @@ export async function deleteIngredientProduct(id: string): Promise<boolean> {
 }
 
 // --- Recipes ---
+//
+// Recipes are chain-wide: one row per dish, keyed by the dish's base
+// slug (the part of the menu-item id after the location prefix —
+// `krk-pizza-margherita` and `waw-pizza-margherita` both resolve to
+// `pizza-margherita`). Callers keep passing menu item ids; the store
+// layer derives the base slug on read + write so the API doesn't have
+// to change.
+//
+// Prior to 2026-05 recipes were stored per-(location, dish) — one row
+// per menu item id. A lazy migration on first read collapses any old
+// rows to the base-slug shape, deduping on collision (first wins).
+
+let normalizedRecipeKeys = false;
+
+async function normalizeRecipeKeysOnce(): Promise<void> {
+  if (normalizedRecipeKeys) return;
+  normalizedRecipeKeys = true;
+  await withLock("recipes.json", async () => {
+    const list = await readJSON<Recipe[]>("recipes.json", []);
+    let needsRewrite = false;
+    const seen = new Map<string, Recipe>();
+    for (const r of list) {
+      const base = getBaseSlug(r.menuItemId);
+      if (base !== r.menuItemId) needsRewrite = true;
+      // First occurrence wins; any later prefixed duplicate is dropped
+      // so the unique-by-menu-item-id invariant holds post-migration.
+      if (!seen.has(base)) {
+        seen.set(base, { ...r, menuItemId: base });
+      } else {
+        needsRewrite = true;
+      }
+    }
+    if (!needsRewrite) return;
+    const next = Array.from(seen.values());
+    await writeJSON("recipes.json", next);
+    // DB side: wipe + rewrite. The recipes table is small (one row per
+    // dish) so the bulk replace is cheap, and it sidesteps the unique
+    // constraint conflicts that would otherwise arise when two
+    // prefixed rows collapse to the same base slug.
+    const db = getDb();
+    if (db) {
+      try {
+        await ensureRecipesTable();
+        await db.delete(recipesTable);
+        for (const r of next) await dualWriteRecipe(r);
+      } catch (err) {
+        logger.warn(
+          "normalizeRecipeKeysOnce DB sync failed; KV is now canonical",
+          { layer: "store.recipes" },
+          err,
+        );
+      }
+    }
+  });
+}
 
 export async function getRecipes(): Promise<Recipe[]> {
+  await normalizeRecipeKeysOnce();
   const db = getDb();
   if (db) {
     try {
@@ -3352,6 +3409,10 @@ export async function getRecipes(): Promise<Recipe[]> {
 }
 
 export async function getRecipe(menuItemId: string): Promise<Recipe | undefined> {
+  await normalizeRecipeKeysOnce();
+  // Always look up by base slug — `krk-pizza-margherita` and
+  // `waw-pizza-margherita` share one Margherita recipe.
+  const baseSlug = getBaseSlug(menuItemId);
   const db = getDb();
   if (db) {
     try {
@@ -3359,15 +3420,15 @@ export async function getRecipe(menuItemId: string): Promise<Recipe | undefined>
       const rows = await db
         .select()
         .from(recipesTable)
-        .where(eq(recipesTable.menuItemId, menuItemId))
+        .where(eq(recipesTable.menuItemId, baseSlug))
         .limit(1);
       if (rows.length > 0) return rowToRecipe(rows[0]);
     } catch (err) {
-      logger.warn("getRecipe DB read failed; falling back", { menuItemId, layer: "store.recipes" }, err);
+      logger.warn("getRecipe DB read failed; falling back", { menuItemId, baseSlug, layer: "store.recipes" }, err);
     }
   }
   const recipes = await readJSON<Recipe[]>("recipes.json", []);
-  const hit = recipes.find((r) => r.menuItemId === menuItemId);
+  const hit = recipes.find((r) => r.menuItemId === baseSlug);
   if (hit) {
     bumpLazyBackfillHit("recipes");
     void dualWriteRecipe(hit);
@@ -3376,27 +3437,37 @@ export async function getRecipe(menuItemId: string): Promise<Recipe | undefined>
 }
 
 export async function saveRecipe(recipe: Recipe): Promise<Recipe> {
+  await normalizeRecipeKeysOnce();
+  // Store under the base slug so future reads find the same row
+  // regardless of which location's menu item the operator was editing
+  // from. The recipe row carries the canonical chain-wide formula.
+  const normalised: Recipe = {
+    ...recipe,
+    menuItemId: getBaseSlug(recipe.menuItemId),
+  };
   return withLock("recipes.json", async () => {
     const list = await readJSON<Recipe[]>("recipes.json", []);
-    const idx = list.findIndex((r) => r.menuItemId === recipe.menuItemId);
+    const idx = list.findIndex((r) => r.menuItemId === normalised.menuItemId);
     if (idx >= 0) {
-      list[idx] = recipe;
+      list[idx] = normalised;
     } else {
-      list.push(recipe);
+      list.push(normalised);
     }
     await writeJSON("recipes.json", list);
-    await dualWriteRecipe(recipe);
-    return recipe;
+    await dualWriteRecipe(normalised);
+    return normalised;
   });
 }
 
 export async function deleteRecipe(menuItemId: string): Promise<boolean> {
+  await normalizeRecipeKeysOnce();
+  const baseSlug = getBaseSlug(menuItemId);
   return withLock("recipes.json", async () => {
     const list = await readJSON<Recipe[]>("recipes.json", []);
-    const filtered = list.filter((r) => r.menuItemId !== menuItemId);
+    const filtered = list.filter((r) => r.menuItemId !== baseSlug);
     if (filtered.length === list.length) return false;
     await writeJSON("recipes.json", filtered);
-    await dualDeleteRecipe(menuItemId);
+    await dualDeleteRecipe(baseSlug);
     return true;
   });
 }

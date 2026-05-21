@@ -15,6 +15,7 @@ import { getMenu } from "@/data/menus";
 import type { MenuItem } from "@/data/types";
 import { locations } from "@/data/locations";
 import { menuOverridePutSchema, parseBody } from "@/lib/api-schemas";
+import { getBaseSlug } from "@/lib/utils";
 
 /** Per-portion food cost + full nutrition map for every dish that has a
  * recipe, computed in a single pass instead of N+1 calls. The recipe is
@@ -107,8 +108,12 @@ export const GET = withAdmin(
 
     const enrich = (item: MenuItem, opts?: { isCustom?: boolean }) => {
       const override = overrides[item.id];
-      const recipeCost = recipeCosts.get(item.id);
-      const recipeNutrition = recipeNutritions.get(item.id);
+      // Recipes are chain-wide — keyed by dish base slug. Same recipe
+      // applies to krk-pizza-margherita and waw-pizza-margherita, so
+      // both look up under `pizza-margherita`.
+      const recipeKey = getBaseSlug(item.id);
+      const recipeCost = recipeCosts.get(recipeKey);
+      const recipeNutrition = recipeNutritions.get(recipeKey);
       const recipeKcal = recipeNutrition?.calories;
       const hasRecipe = recipeCost !== undefined;
       // Recipe is canonical: when one exists, its computed per-portion cost

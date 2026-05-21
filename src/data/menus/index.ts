@@ -8,6 +8,7 @@ import {
   getMenuOverrides,
   getRecipes,
 } from "@/lib/store";
+import { getBaseSlug } from "@/lib/utils";
 
 const baseMenus: Record<string, MenuItem[]> = {
   krakow: krakowMenu,
@@ -75,7 +76,10 @@ export async function getMenuWithOverrides(locationSlug: string): Promise<MenuIt
   ]);
   const applyOverride = (item: MenuItem): MenuItem => {
     const o = overrides[item.id];
-    const recipeNutrition = recipeNutritions.get(item.id);
+    // Recipes are chain-wide (keyed by dish base slug), so the
+    // Margherita's nutrition is the same on krk-pizza-margherita and
+    // waw-pizza-margherita. Look up by base slug.
+    const recipeNutrition = recipeNutritions.get(getBaseSlug(item.id));
     const hasCalorieOverride =
       o?.calories !== undefined && o?.calories !== null;
     if (!o && !recipeNutrition) return item;

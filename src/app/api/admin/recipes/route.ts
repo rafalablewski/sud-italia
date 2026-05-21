@@ -11,7 +11,6 @@ import {
   getRecipes,
   getSuppliers,
   saveRecipe,
-  setMenuOverride,
 } from "@/lib/store";
 import type { Recipe } from "@/data/types";
 
@@ -149,21 +148,20 @@ export const POST = withAdmin(
 
       const saved = await saveRecipe(recipe);
       const [foodCost, nutrition] = await Promise.all([
-        calculateFoodCost(recipe.menuItemId),
-        calculateRecipeNutrition(recipe.menuItemId),
+        calculateFoodCost(saved.menuItemId),
+        calculateRecipeNutrition(saved.menuItemId),
       ]);
 
-      // Keep the menu page honest: every recipe save writes the per-portion
-      // cost back to MenuOverride.cost so the Menu admin's cost + margin
-      // columns reflect the real ingredient maths instead of the static
-      // seed value.
-      await setMenuOverride(recipe.menuItemId, { cost: foodCost });
+      // Recipes are chain-wide now (keyed by dish base slug); the menu
+      // page derives cost from the recipe at read time via the same
+      // base-slug lookup, so there's no per-menu-item override cache to
+      // sync. Just log the recompute for traceability.
       await appendAuditLog({
         actor: user.email || user.id,
-        action: "menu.cost_synced_from_recipe",
-        entityType: "menu_item",
-        entityId: recipe.menuItemId,
-        after: { cost: foodCost },
+        action: "recipe.saved",
+        entityType: "recipe",
+        entityId: saved.menuItemId,
+        after: { cost: foodCost, calories: nutrition.calories },
       });
 
       return NextResponse.json(
