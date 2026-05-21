@@ -76,6 +76,14 @@ interface IngredientData {
   notes?: string;
 }
 
+interface ActiveOfferingInfo {
+  productId: string;
+  supplierId: string;
+  supplierName: string;
+  displayName: string | null;
+  supplierSku: string | null;
+}
+
 interface EnrichedRecipeIngredient {
   ingredientId: string;
   quantity: number;
@@ -91,6 +99,10 @@ interface EnrichedRecipeIngredient {
   unitFat?: number | null;
   lineCost?: number;
   lineKcal?: number | null;
+  /** Which distributor offering this line is currently using. Null when
+   *  the ingredient has no active offering yet — the row surfaces a
+   *  "Link offering" affordance instead of provenance text. */
+  activeOffering?: ActiveOfferingInfo | null;
 }
 
 /**
@@ -299,6 +311,13 @@ function RecipesPanel() {
   const [ingredients, setIngredients] = useState<IngredientData[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<MenuItemData | null>(null);
+  /** Mounted alongside the recipe editor so a recipe row's "Link
+   *  offering" affordance can open the ingredient dialog in-place,
+   *  no tab hop required. */
+  const [ingredientDialog, setIngredientDialog] = useState<IngredientDialogState>({
+    open: false,
+    ingredient: null,
+  });
   const [search, setSearch] = useState("");
   const [filterCat, setFilterCat] = useState<MenuCategory | "all">("all");
 
@@ -449,6 +468,20 @@ function RecipesPanel() {
         ingredients={ingredients}
         onClose={() => setEditing(null)}
         onSaved={onSaved}
+        onEditIngredient={(id) => {
+          const ing = ingredients.find((i) => i.id === id);
+          if (ing) setIngredientDialog({ open: true, ingredient: ing });
+        }}
+      />
+
+      <IngredientDialog
+        state={ingredientDialog}
+        onClose={() => setIngredientDialog({ open: false, ingredient: null })}
+        onSaved={async () => {
+          setIngredientDialog({ open: false, ingredient: null });
+          await fetchAll();
+          toast.success("Saved");
+        }}
       />
     </>
   );
@@ -630,6 +663,11 @@ interface EditorProps {
   ingredients: IngredientData[];
   onClose: () => void;
   onSaved: () => void;
+  /** Open the IngredientDialog for the given ingredient — lets the
+   *  recipe row's "Link offering" button take operators straight to
+   *  the place where they set up the per-distributor product without
+   *  hopping tabs. */
+  onEditIngredient?: (ingredientId: string) => void;
 }
 
 const MENU_TAGS: ("vegetarian" | "vegan" | "spicy" | "gluten-free")[] = [
@@ -672,7 +710,7 @@ function productDraftFromItem(item: MenuItemData): ProductDraft {
   };
 }
 
-function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: EditorProps) {
+function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved, onEditIngredient }: EditorProps) {
   const toast = useToast();
   const [rows, setRows] = useState<EnrichedRecipeIngredient[]>([]);
   const [yieldPortions, setYieldPortions] = useState(1);
@@ -714,6 +752,7 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
         unitSugar: r.unitSugar,
         unitFiber: r.unitFiber,
         unitFat: r.unitFat,
+        activeOffering: r.activeOffering ?? null,
       })),
     );
     setYieldPortions(recipe?.yieldPortions ?? 1);
@@ -1103,6 +1142,37 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
                             {r.name ?? r.ingredientId}
                           </span>
                         </div>
+                        {/* Inline provenance: surface which distributor
+                            offering this line's cost + macros come from
+                            so the recipe → ingredient → offering chain
+                            is visible at a glance. Click jumps to the
+                            ingredient editor to (re)link a distributor. */}
+                        {r.activeOffering ? (
+                          <button
+                            type="button"
+                            className="v2-rcp-row-offering"
+                            onClick={() =>
+                              onEditIngredient?.(r.ingredientId)
+                            }
+                            title="Edit distributor offerings for this ingredient"
+                          >
+                            via <strong>{r.activeOffering.supplierName}</strong>
+                            {r.activeOffering.displayName
+                              ? ` · ${r.activeOffering.displayName}`
+                              : null}
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="v2-rcp-row-offering is-empty"
+                            onClick={() =>
+                              onEditIngredient?.(r.ingredientId)
+                            }
+                            title="Add a distributor offering so cost + calories compute"
+                          >
+                            No offering linked — add one
+                          </button>
+                        )}
                       </div>
                       <Input
                         type="number"

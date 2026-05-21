@@ -3826,6 +3826,41 @@ html { scroll-behavior: smooth; }
   margin-top: 2px;
 }
 
+/* Inline distributor-offering provenance under each recipe row's name.
+   Surfaces which distributor + product the cost + macros come from so
+   the recipe → ingredient → offering chain is glanceable. The empty
+   variant calls operators to action when an ingredient hasn't been
+   linked yet — clicking either form opens the ingredient dialog. */
+.v2-rcp-row-offering {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font-size: 11px;
+  color: var(--fg-subtle);
+  text-align: left;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-top: 2px;
+  border-bottom: 1px dashed transparent;
+}
+.v2-rcp-row-offering:hover,
+.v2-rcp-row-offering:focus-visible {
+  color: var(--fg);
+  border-bottom-color: var(--border);
+  outline: none;
+}
+.v2-rcp-row-offering.is-empty {
+  color: var(--warning);
+  font-weight: 500;
+}
+.v2-rcp-row-offering.is-empty:hover,
+.v2-rcp-row-offering.is-empty:focus-visible {
+  color: var(--warning);
+  border-bottom-color: var(--warning);
+}
+
 /* Distributor offerings sub-form inside the IngredientDialog. Each
    offering is a fieldset card so a multi-supplier ingredient reads as
    a stack of distinct rows rather than a single long form. The

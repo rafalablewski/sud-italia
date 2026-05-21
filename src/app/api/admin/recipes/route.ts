@@ -5,9 +5,11 @@ import {
   calculateFoodCost,
   calculateRecipeNutrition,
   deleteRecipe,
+  getIngredientProducts,
   getIngredients,
   getRecipe,
   getRecipes,
+  getSuppliers,
   saveRecipe,
   setMenuOverride,
 } from "@/lib/store";
@@ -38,8 +40,38 @@ export const GET = withAdmin({}, async (req) => {
   }
 
   const recipes = await getRecipes();
-  const ingredients = await getIngredients();
+  const [ingredients, products, suppliers] = await Promise.all([
+    getIngredients(),
+    getIngredientProducts(),
+    getSuppliers(),
+  ]);
   const ingredientMap = new Map(ingredients.map((i) => [i.id, i]));
+  const productById = new Map(products.map((p) => [p.id, p]));
+  const supplierById = new Map(suppliers.map((s) => [s.id, s]));
+
+  /** Resolve the active offering for a recipe line so the recipe row
+   *  can surface "via <supplier> · <product>" inline — closes the loop
+   *  between recipe edits and which distributor's data is driving cost
+   *  + nutrition. Returns null when the ingredient has no active
+   *  offering yet (operator hasn't linked a distributor). */
+  const offeringFor = (ingredientId: string) => {
+    const ing = ingredientMap.get(ingredientId);
+    if (!ing?.activeProductId) return null;
+    const product = productById.get(ing.activeProductId);
+    if (!product) return null;
+    const supplier = supplierById.get(product.supplierId);
+    const supplierName = supplier?.name
+      ?? (product.supplierId.startsWith("legacy:")
+        ? product.supplierId.slice("legacy:".length) || "Legacy supplier"
+        : "Unknown supplier");
+    return {
+      productId: product.id,
+      supplierId: product.supplierId,
+      supplierName,
+      displayName: product.displayName ?? null,
+      supplierSku: product.supplierSku ?? null,
+    };
+  };
 
   const enriched = await Promise.all(
     recipes.map(async (r) => {
@@ -72,6 +104,11 @@ export const GET = withAdmin({}, async (req) => {
             typeof unitKcal === "number"
               ? Math.round(unitKcal * ri.quantity * (ri.wasteFactor || 1))
               : null,
+          // Inline provenance: which distributor offering this recipe
+          // line is actually using. Null when the ingredient has no
+          // active offering — the row UI surfaces a "Link offering"
+          // affordance instead of a value.
+          activeOffering: offeringFor(ri.ingredientId),
         };
       });
       return {
