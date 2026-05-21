@@ -3,14 +3,12 @@
 import { useState } from "react";
 import { useCartStore } from "@/store/cart";
 import { formatPrice } from "@/lib/utils";
-import { CartDrawer } from "@/components/cart/CartDrawer";
+import { V8CartDrawer } from "./V8CartDrawer";
 import { Bi } from "../Bi";
 
 /**
  * V8-styled cart trigger. Reads the same Zustand store as the legacy
- * CartButton, opens the same CartDrawer — only the chrome is restyled
- * to fit the parchment header. Rewriting the drawer body is a
- * separate, much larger task.
+ * CartButton, opens the v8 cart drawer.
  */
 export function V8CartButton() {
   const [open, setOpen] = useState(false);
@@ -51,7 +49,7 @@ export function V8CartButton() {
           </span>
         )}
       </button>
-      <CartDrawer open={open} onClose={() => setOpen(false)} />
+      <V8CartDrawer open={open} onClose={() => setOpen(false)} />
     </>
   );
 }
