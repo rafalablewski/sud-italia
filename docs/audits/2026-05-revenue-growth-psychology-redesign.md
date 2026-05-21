@@ -701,7 +701,7 @@ The premium signals to add:
 
 ### 9.1 Replace `Math.random()` With Actual Models
 
-The current `ai-engine.ts` is heuristic + noise. The genuinely high-ROI AI systems to deploy, ranked:
+✅ **Partially resolved 2026-05-16 / 2026-05-21.** ~~The current `ai-engine.ts` is heuristic + noise.~~ Demand forecasting now lives at `src/lib/ai/forecast.ts` (Claude-backed with structured-JSON 7-day predicted_orders + 80% confidence band + honest "Heuristic" fallback badge when `ANTHROPIC_API_KEY` is unset). The dead heuristic exports (`generateDemandForecast`, `generatePriceSuggestions`, `generateInsights`) were deleted from `ai-engine.ts` (they had zero callers); the file is now a labelled FAQ matcher for the customer chat widget. Anomaly detection is still heuristic-with-thresholds and the capabilities page calls that out explicitly. The remaining high-ROI AI systems to deploy, ranked:
 
 | System | Approach | Effort | Annual revenue lift (per truck) |
 |---|---|---|---:|
@@ -861,7 +861,7 @@ Restaurant tech multiples in 2026 (per recent PE / SaaS comps):
 | 18 | Speed Menu for lunch rush (auto-disable items) | 1 wk | +PLN 40k throughput | menu overrides + slot |
 | 19 | Pre-pay queue screen at truck | 1 wk | +PLN 25k (throughput) | new kiosk surface |
 | 20 | "Order Again" home-page card | 2 d | +PLN 40k | landing, customer store |
-| 21 | Real reviews replacing fake `ratings.ts` | 2 wk | +PLN 30k | `/review/[orderId]` wiring |
+| 21 | Real reviews replacing fake `ratings.ts` | ⚠ 1 wk left | +PLN 30k | `/review/[orderId]` aggregate wiring. ✅ Fake `ratings.ts` deleted 2026-05-21; `<StarRating>` chips removed from customer surfaces. ❌ Real-review aggregation + chip reintroduction pending. |
 | 22 | Mystery-box variable reward | 1 wk | +PLN 25k | `growth-engine.ts` + UI |
 | 23 | Founder Member tier (first 500) | 3 d code + PLN 11k pins | +PLN 35k | `loyalty.ts` |
 | 24 | Pizzaiolo cam + "in the oven" push | 1 wk | +PLN 15k (CSAT) | push, ops |
@@ -1041,7 +1041,7 @@ Restaurant tech multiples in 2026 (per recent PE / SaaS comps):
 15. Variable-ratio reward (mystery box).
 16. Founder Member tier.
 17. DOB capture + birthday rewards.
-18. Real reviews (replace fake ratings).
+18. Real reviews (replace fake ratings). — ⚠ Partial 2026-05-21: fake ratings deleted; real-review aggregation pending.
 19. Speed Menu auto-activation at peak.
 20. Standing-order subscription / "Wednesday usual".
 
