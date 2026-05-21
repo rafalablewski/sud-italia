@@ -9215,15 +9215,12 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Base oven cycle + Σ (per-attach prep × attach %). Default
-            adds per attach: dessert +20s, antipasti +60s, aperitivo
-            +30s, premium toppings +15s, pasta primo +90s. Compare to
-            observed: observed &gt; 1.5× modelled = team process gap
-            (mise-en-place, peel technique, station hand-offs);
-            observed &lt; modelled = kitchen is more efficient than the
-            menu predicts (often the case with veteran teams). The
-            model assumes serial flow; batch-discipline crews beat the
-            model by parallelising.
+            Compare to observed: observed running materially above
+            modelled signals a team-process gap (mise-en-place, peel
+            technique, station hand-offs); observed running below means
+            the kitchen is more efficient than the menu math predicts
+            — usually a veteran team batching well. The model assumes
+            serial flow; batch-discipline crews beat it by parallelising.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -9262,13 +9259,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Ground truth — the model lies, this doesn&apos;t. Tiers:
-            ≤ 6 min QSR ideal; 6-8 min comfortable; 8-12 min slipping;
-            &gt; 12 min losing customers. Track P95 alongside P50 — a
-            few 20-min outliers ruin individual experiences. Per-channel
-            divergence: delivery customers tolerate 15-20 min (not
-            watching the kitchen clock); dine-in cratering at 12 min.
-            Calibrate each channel separately if delivery share is
+            Ground truth — the model can lie, the stopwatch can&apos;t.
+            Track P95 alongside P50, because a few long-tail outliers
+            ruin individual experiences and generate the bad reviews
+            that an average hides. Delivery customers tolerate longer
+            waits than dine-in (they&apos;re not watching the kitchen
+            clock), so blend the two and the picture distorts —
+            calibrate each channel separately when delivery share is
             material.
           </p>
         </InstitutionalAnalysis>
@@ -9309,15 +9306,14 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            max(0, peak_hour_orders − realistic_oven_capacity). Even
-            3 lost orders/hr × 3 peak hours × 30 zł margin × 30 days =
-            ~8,100 zł/month gone — invisibly. Erlang queueing theory
-            shows that arrival-rate concentration drives walkaway
-            non-linearly; smoothing arrivals (reservations + SMS
-            ready-alerts) often beats raw capacity expansion. Partial-
-            balking (customers seeing the queue and leaving without
-            trying) means real lost orders typically run 1.5-2× the
-            modelled overflow.
+            Lost-order math is invisible on the P&amp;L but visible
+            here — the customers who walked never showed up in any
+            other report. Smoothing arrivals (reservations, SMS
+            ready-alerts) often beats raw capacity expansion because
+            it&apos;s cheaper and faster to deploy. Real lost orders
+            run higher than the modelled overflow because of partial
+            balking — customers who see the queue and leave without
+            trying.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -9358,14 +9354,14 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Conversion-vs-wait curve (Polish QSR research): 0-5 min
-            wait 95% complete; 5-10 min 70%; 10-15 min 40%; &gt; 15
-            min ~20%. Maister&apos;s law: customers tolerate 50% longer
-            wait when expectation is set up front. Perceived-wait
-            interventions (visible build, sample bites, QR menu) reduce
-            real abandonment by 30-40% without reducing actual wait —
-            cheaper than capacity expansion. Daypart variance applies:
-            lunch crowd has lowest tolerance, tourists highest.
+            Perceived-wait interventions (visible build, sample bites,
+            QR menu) reduce real abandonment substantially without
+            reducing the actual wait — usually cheaper and faster than
+            capacity expansion. Maister&apos;s law: customers tolerate
+            longer waits when expectation is set up front. Daypart
+            variance applies: lunch crowd has the lowest tolerance,
+            tourists the highest — design service around the strictest
+            segment.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -9407,13 +9403,12 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Useful only as a ceiling-check, not a staffing target.
-            Real-world realistic capacity sustains 20-35% of theoretical
-            because the pizzaiolo also takes orders, builds pizzas,
-            wipes the peel, rebuilds dough balls, plates and hands
-            across. A Ferrara rated &quot;320 pizzas/hr&quot; sustains
-            ~70/hr in real ops. Vendor demos = theoretical (best case);
-            apply ovenEfficiency multiplier for honest planning.
+            Useful only as a ceiling check, never a staffing target —
+            real ops never approach this number because the pizzaiolo
+            is also taking orders, building pizzas, wiping the peel,
+            rebuilding dough balls and plating. Vendor demos and oven
+            brochures cite this figure; planning service against it
+            guarantees a blown service.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -9452,14 +9447,14 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            This is the binding constraint for capacity planning — what
-            the oven + line + cook combined actually deliver. Healthy
-            range: 50-90 pizzas/hr single pizzaiolo + Neapolitan oven;
-            110-160 multi-station with runner; 200+ QSR conveyor.
-            Improving by 5pp (training, mise-en-place, runner support)
-            usually beats capex. Validate with stopwatch on a Friday
-            rush — if observed runs &lt; modelled realistic, recalibrate
-            ovenEfficiency down.
+            The binding constraint for capacity planning — what oven
+            + line + cook combined actually deliver under sustained
+            pressure. Improving by a few percentage points through
+            training, mise-en-place, runner support usually beats
+            capex for less money. Validate with stopwatch on a Friday
+            rush; if observed runs below modelled realistic,
+            recalibrate the efficiency input down rather than wishing
+            it weren&apos;t.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -9498,14 +9493,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Healthy ratio: observed ÷ realisticPeak between 60-85% =
-            sustainable; 85-100% = at-capacity with frequent walkouts;
-            &gt; 100% = expansion needed. Watch trend over time —
-            rising = healthy growth; flat = market saturation; falling
-            = problem (competitor, quality drift, channel-mix issues).
+            Watch trend over time, not just level — rising = healthy
+            growth, flat = market saturation, falling = a problem to
+            diagnose (competitor entry, quality drift, channel mix).
             Seasonal extremes matter more than annual average: summer
-            peak hour might be 30% higher than winter — check both
-            against capacity to avoid mid-year service collapse.
+            peak might be substantially higher than winter, so capacity
+            planning that uses the annual average over-provisions
+            winter and under-provisions summer at the same time.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -9545,15 +9539,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Boundary rationale: 60% = utilisation enough to keep team
-            sharp but not stressed; 85% = sustainable at peak with no
-            buffer; 100% = boundary above which customers actively walk
-            away (Erlang queue saturation). Most QSR chains plan
-            capex against the 85% threshold to maintain service
-            quality at the peak. Decision frames: Headroom = push
-            marketing; Heading there = begin capex planning; At
-            ceiling = active expansion required; Blown out = emergency
-            (limit menu, close early, push reservations).
+            Decision frames embedded in the four buckets: Headroom →
+            push marketing; Heading there → begin capex planning; At
+            ceiling → active expansion required; Blown out → emergency
+            mode (limit menu, close early, push reservations). Most
+            QSR chains plan capex against the &quot;At ceiling&quot;
+            boundary so service quality holds when peak arrives, not
+            after it overruns.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
