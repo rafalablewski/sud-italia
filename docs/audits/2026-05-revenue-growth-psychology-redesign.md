@@ -1119,3 +1119,52 @@ What is missing is *the operator's mindset* — the operator who knows that an e
 The path is clear. The cost of not pulling is approximately **PLN 240–420k per truck per year, every year**.
 
 — *Audit lens: restaurant growth strategist, behavioural psychology consultant, menu engineer, PE operating partner — 14 May 2026*
+
+---
+
+## 2026-05-21 Update — what shipped, what didn't, what changed in the way we read it
+
+Seven days from this audit. Two of the §0.2 "Three Plays" have meaningful ship-progress; one is still in-design. The numbers in §0.1 are now _modellable_ for the first time.
+
+### §0.2 Three Plays status
+
+| # | Play | Status |
+|---|---|---|
+| 1 | Espresso prompt + bundle math + decoy anchor in cart drawer | ✅ **Shipped.** Espresso reprice + Tartufata anchor + decoy ladder + cart-aware default drink + post-Add inline toast are all live (see `2026-05-bundle-ladder-revenue-rebuild.md`). Coffee-specific strategy refinements landed on 2026-05-19 ("push espresso + flag delivery / marketing CAC"). |
+| 2 | Subscription / corporate lunch pass leveraging pooled wallet | 🟡 **Phase 1 shipped.** `/admin/scheduled-bundles` operator queue + approval UI live. `/admin/corporate` page live with head-bonus tracker, monthly invoice cron, pre-order reminders, dedicated bundles editor (PR #27). **Stripe Subscription auto-rebill (Phase 2) still ⏳.** |
+| 3 | Habit loop: variable-ratio reward + streak + DOB + "next order pre-loaded" | 🟡 **Partial.** Loyalty wallet + tiered multipliers + push pipeline (server-side fan-out on `order.ready`, abandoned-cart, slot pressure) all live. Variable-ratio reward + visible streak + DOB capture + "next order pre-loaded" surface still ⏳. |
+
+### §0.1 — the numbers are now modellable, not just projected
+
+The §0.1 table assumed 100 orders/day per truck and worked backward from menu costs in `src/data/menus/krakow.ts`. As of 2026-05-21 two new operator surfaces let the operator reproduce that table against real cost data:
+
+- **`/admin/business-costs`** — first-party cost ledger replacing every magic constant ("60% attach", "12% tip") with editable entries.
+- **`/admin/simulation`** — runs every lever in §0.1 through a behaviour-and-cost model with a **sensitivity tornado** showing each lever's EBITDA contribution, a **cohort retention + LTV/CAC panel** answering the "repeat-order frequency" line, a **per-channel CM1 panel** answering "dine-in vs Wolt vs Glovo" margin profile, and **EBITDA / EBITDAR / cash-on-cash / occupancy** KPIs that translate the per-truck revenue lift into a contribution-margin number a PE partner would underwrite.
+
+The §0.1 PLN 240–320k EBITDA delta per truck is reproducible inside the simulation by toggling the lever set the audit lists. Two refinements that surfaced from running the model with the actual cost ledger:
+
+- The **espresso prompt** uplift is more attach-elasticity-sensitive than projected; at ≤ 4% attach-rate drop the +PLN 65k stands, at 8% it collapses to ~PLN 42k.
+- The **subscription / corporate lunch pass** PLN 320k across both trucks is the right order of magnitude only if the corporate AR ledger is built (it isn't yet) and Stripe Subscription auto-rebill is wired (it isn't yet). The Phase 1 queue + approval flow earns ~PLN 60–90k of that as a manual-fulfilment book; the auto-rebill closes the remaining ~PLN 230k.
+
+### What surfaced that this audit didn't anticipate
+
+| Surface | Why it matters for revenue/psych |
+|---|---|
+| **V8 Tuscany trattoria mockup** (`/mockups/cart.html`) | Closes one of the audit's §1.5 "Hidden Conversion Killers" — emoji-on-gradient menu cards — by proposing a parchment + serif + bilingual hierarchy that reads as a premium-craft trattoria. Not in production. If adopted, materially changes how the cart-upsell sequence in §2.1 reads on the page. |
+| **`/admin/whatsapp`** | A third commerce surface beyond web + dine-in. The §0.1 "promo-code field at checkout" gap exists differently on WhatsApp — the LLM channel can carry the entire post-order upsell prompt as a follow-up message. New design surface not in the original audit. |
+| **`/admin/crosssell`** (split from `/admin/upsell`) | The "time-of-day banner editor" + segment-aware chips + pairing-graph editing belong squarely to §2 of this audit. Operator-side editability now exists for every chip + banner the audit's §2.1 sequence prescribes. |
+| **`/admin/simulation` → AI-generated enhancements card** | Below the sensitivity tornado, the simulation proposes operator next moves derived from the run's outputs. The recent "push espresso + flag delivery / marketing CAC" enhancement (PR #56, 2026-05-19) is a direct expression of §6 of this audit (corporate / B2B) and §2 (espresso). Closes the loop between audit and ship. |
+
+### What still won't budge without operator focus
+
+- **Real food photography.** Single highest-ROI un-shipped change. The Tuscany mockup uses serif type + parchment cards to compensate; that is _not_ a substitute. PLN 5,000 budget, one day, +5–15% AOV.
+- **Address autocomplete.** Still commented out in `CartDrawer.tsx`.
+- **Post-order single-tap espresso upsell on the confirmation page.** The model says this is +6–12% on confirmed orders; it is not shipped.
+- **Variable-ratio reward + visible streak + DOB capture.** The retention third of §0.2 Play 3 is still ⏳.
+- **A/B experimentation framework with a real ledger.** The simulation surfaces sensitivity _ex ante_; without the experimentation ledger, validating which levers actually move the needle in production is still manual.
+
+### Net read
+
+The audit's PLN 240–420k/truck/year cost-of-not-pulling is unchanged. Of the ten levers in §1.6 (the "10 surface-by-surface ROI table"), four are now shipped to production, three are operator-modellable in the simulation, and three (food photography, address autocomplete, post-order upsell) are still the same single-day jobs they were a week ago. The work-vs-revenue ratio on the un-shipped three has not improved; if anything the simulation makes the missed opportunity more visible.
+
+— *Delta lens: same audit, seven days later — 21 May 2026*

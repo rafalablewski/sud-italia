@@ -31,6 +31,35 @@ The remaining ~200 ✗ rows reflect honest assessments of work that is genuinely
 
 ---
 
+## 2026-05-21 Update — nine new days of admin
+
+Since this audit was published on 12 May, the admin surface has grown by **six top-level pages** and several thousand lines of operator-facing code. The relevant changes for this audit:
+
+| New page | What it does | Audit row it touches |
+|---|---|---|
+| **`/admin/whatsapp`** | LLM-driven WhatsApp ordering channel with Stripe Pay-in-chat, in-admin transcripts + reply + templates + metrics. (PR #28) | §1.2 POS & Order Flow ("missing voice / multi-channel"); §1.7 Customer-facing surfaces |
+| **`/admin/corporate`** | Corporate / B2B head-bonus tracker, monthly invoice cron, pre-order reminders, dedicated bundles editor. (PR #27) | §1.5 Customers; §1.11 Growth |
+| **`/admin/crosssell`** | Cross-sell config split out from `/admin/upsell` — time-of-day banner editor, segment-aware chips, pairing-graph editor. (PR #29) | §1.11 Growth; §2.2 Discoverability |
+| **`/admin/scheduled-bundles`** | Operator-side queue + approve UI for the weekly-usual scheduled-bundle intent layer (Phase 1 of the Pret-style subscription). | §1.5 Customers; §1.11 Growth |
+| **`/admin/business-costs`** | First-party cost ledger — rent, labour bands, ingredient unit costs, packaging, marketing, card fees, marketplace commissions, D&A, interest, tax — persisted via `withLock`. Source of truth for the simulation. (PR #51) | §1.6 Finance / Reports; §3 priorities; §5 sophistication score |
+| **`/admin/simulation`** | Full finance simulation sandbox (~17,400 LOC component) gated by `simulationEnabled`. Unit economics, cohort retention, LTV/CAC, EBITDA / EBITDAR / cash-on-cash / occupancy, SSSG, per-channel CM1, sensitivity tornado, menu engineering matrix, oven curve panel, prep-flow + queue model, multi-unit fleet model, daypart breakdown, hourly throughput, with `InfoButton` "Brief + InstitutionalAnalysis" annotations on every concept. Gated behind a feature flag in `/admin/settings`. (PRs #51, #52, #53, #54, #55, #56) | §1.6 Finance / Reports; §1.10 AI / Intelligence; §3 Phase 1–3 priorities |
+
+**Effect on §1 gap tables:**
+
+- §1.2 — "WhatsApp ordering" goes from ✗ to ✓ for the operator surface; customer-side commerce still requires the env vars (`WHATSAPP_*`) to be set. The capabilities row carries the caveat.
+- §1.5 — "B2B / corporate motion" goes from ✗ (banner only) to 🟡 (banner + head-bonus + invoice cron + bundles editor; AR ledger + contract management still ✗).
+- §1.6 / §1.10 — "No unit economics, no cohort dashboard, no CLTV, no menu engineering matrix, no sensitivity analysis, no fleet model, no EBITDA forecast, no scenario sandbox" all become ✓ (in the simulation sandbox) or ✓ (in `/admin/reports/cohort` for cohort + CLTV, see institutional-grade audit §0.1). The simulation does not yet write its scenario outcomes back into the live ops surface — it informs the operator, it doesn't act. That's the next bridge.
+- §1.11 — "Cross-sell split from upsell" goes from ✗ to ✓; "scheduled-bundle Phase 1 queue" goes from ✗ to ✓; "Stripe Subscription auto-rebill" still ✗ (it is the Phase 2 noted in the elite-QSR future-recommendations doc).
+- §1.4 / §2.5 — Mobile admin shell has matured significantly since the audit (PRs #45–#47): every operator-facing page now has a mobile-native view with offline KDS queue, barcode scan on inventory, virtualized lists, server-side push, spring physics, auto-theme, and a PWA shell. Config surfaces (growth/upsell/crosssell/scheduled-bundles/corporate) intentionally stay desktop-only and are documented in `docs/mobile-*.md`. The audit's "Tablet-and-up only" assumption is now out of date.
+
+**Sidebar update.** The nav now groups items into 9 sections — Overview, Operations, Inventory, People, Customers, Finance, Growth, Intelligence, System — with role-based filtering wired (`src/components/admin/v2/nav.config.ts`). `Simulation` and `Business costs` sit under Finance; `Cross-sell`, `Scheduled bundles`, `Corporate` sit under Customers / Growth; `Multi-location`, `Manage locations`, `Cohort & CLTV`, `Insights`, `Expansion` under Intelligence; `Compliance`, `Audit log`, `Capabilities`, `Users & roles`, `Settings` under System.
+
+**Sophistication score (§5).** The pre-2026-05-16 score was 38/100. Post the institutional-grade audit's resolution log (2026-05-16) the score lifts to roughly **55–60/100**. Post the simulation + business-costs + mobile work (2026-05-21) it sits at roughly **62–66/100**. The remaining gap to investor-grade (70+) is bounded by: zero tests, plaintext admin password, no MFA, no real food photography, no staging environment, no Neon backup/restore runbook, no third-party delivery integration in production, no offline-first POS terminal. None of those is a documentation problem.
+
+**Bottom line for this audit.** The "fake AI" callout in §0 is partially obsolete: `/admin/ai` is now relabelled **Insights** and explicitly carries "No ML model is in the loop yet"; demand forecasting routes through Claude with structured JSON and a heuristic-fallback badge; the simulation is a sophisticated deterministic financial model with explicit lever-economics — not ML, but also not "fake." Anomaly detection is still heuristic-with-thresholds and the capabilities page calls that out. The five hard truths from §0 are now (1) tests still zero, (2) admin password still plaintext compare, (3) real-time is SSE on the KDS v2 path and polling on the legacy `/kitchen/[slug]` board, (4) per-location lock keys lifted the store's 300-orders/hour ceiling roughly N×, (5) the operator still has the simulation and the operator-trust gap together — the model is only as honest as the cost ledger feeding it.
+
+---
+
 ## 0. Executive Summary — Hard Truths
 
 The system is a competent **small-group restaurant admin tool**. It is **not** an enterprise hospitality OS, not a franchise platform, not AI-native, and not multi-tenant. It is currently somewhere between **MICROS-lite circa 2014** and **a well-designed Notion-style internal tool**, with a polished glassmorphism skin.

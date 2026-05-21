@@ -720,3 +720,38 @@ It is, however, salvageable, and three things give it more credibility than most
 No politeness. No protected feelings. This is what I would tell a partner before they wrote the check.
 
 — *Audit lens: senior hospitality-tech consultant, restaurant operations expert, UX/UI critic, Series-A diligence partner — 14 May 2026*
+
+---
+
+## 2026-05-21 Update — what's changed for diligence
+
+Seven calendar days since this audit, including the institutional-grade audit's 2026-05-16 resolution log (PR #38) and a 2026-05-17 → 2026-05-21 push that materially changes the **investor readiness** row of §1.1.
+
+**What now scores differently:**
+
+| §1.1 row | 2026-05-14 | 2026-05-21 | Why |
+|---|---:|---:|---|
+| Overall | 42/100 | **51/100** | The two-step move on operational maturity + investor readiness lifts the average; UX maturity, NYC viability, and SG viability are unchanged. |
+| NYC viability | 22/100 | **24/100** | DB-backed locations + cohort/CLTV/segmentation give a NYC opening a fighting chance to be _measured_, but no Uber/DoorDash, no USD, no Spanish, no allergen-at-checkout, no calorie labelling. The needle barely moves. |
+| Singapore viability | 27/100 | **29/100** | Same: cohort + CLTV are now visible, but no GrabFood/foodpanda, no SGD, no PayNow/PayLah!, no GST invoicing, no NEA Nutri-Grade. |
+| Operational maturity | 35/100 | **62/100** | Recipe-driven stock decrement, PAR-driven draft POs, Claude-backed demand forecast, promised-ready SLA + KDS hotkeys + chime, push notifications, daily retention trim, per-location lock keys, SPLH metric, schedule-vs-forecast gap — all wired 2026-05-16 (PR #38). Refunds-with-reason-codes, modifiers-on-line-items, item-86 propagation, cash-session hash chain still ✗. |
+| UX maturity | 48/100 | **52/100** | Production UX unchanged in this window. The **V8 Tuscany trattoria mockup** at `/mockups/cart.html` (Cormorant Garamond + Lora + parchment/terracotta palette, bilingual hierarchy, live activity ticker, full home + menu + location pages) is a credible brand-direction proposal that, if adopted, closes one of the audit's biggest UX complaints (Italian authenticity at premium price). Real food photography still missing. |
+| Scalability | 30/100 | **65/100** | Per-location lock keys + DB-backed locations + retention cron lift the ceiling from "~200 orders/hr on a single global lock" to "N × per-location concurrency" and from "code-change-per-truck" to "30-second admin form per truck." Still no test coverage, no multi-region DB. |
+| Franchise readiness | 25/100 | **33/100** | DB-backed locations + cohort + segments + multi-unit fleet model in `/admin/simulation` give the operator a model to underwrite a franchise pro forma. Royalty-split, brand-pack enforcement, FDD scaffolding, per-tenant data isolation still ✗. |
+| Investor readiness | 20/100 | **42/100** | This is the big move. **Heuristic "AI" is now Claude-backed (forecast) + heuristic (anomaly) with honest badging.** **Cohort + CLTV + RFM segmentation + referral give-get backend** all live. The new `/admin/simulation` page lets a diligence partner sit beside the operator and run scenarios on unit economics, EBITDA, cash-on-cash, occupancy, peak capacity, fleet scaling, sensitivity, and cohort LTV without leaving the admin. **Zero tests, plaintext password, no MFA, no SOC 2, no offline POS, no aggregator integrations, no food photography all remain — those are the floor on this score.** |
+
+**Effect on the five "hard truths" in §1.2:**
+
+1. **The "AI" is a random number generator** → **Mostly resolved 2026-05-16.** Demand forecast routes to Claude with structured JSON + 80% confidence band + heuristic-fallback badge. Anomaly detection is still heuristic-with-thresholds, and the capabilities page calls that out explicitly. The `Math.random()` lines are gone from `src/lib/ai-engine.ts` for the surfaces this audit flagged.
+2. **Lock contention at 200 orders/hour** → **Resolved 2026-05-16 (PR #38).** Per-location lock keys split the global queue; ceiling lifts roughly N×.
+3. **No real third-party delivery** → **Still true.** Wolt and Glovo remain mock providers; Uber Eats / DoorDash / Deliveroo / GrabFood / foodpanda not designed for. The simulation _models_ marketplace commission (per-channel CM1) but the integration itself is unchanged.
+4. **Customer never sees their food** → **Still true.** `MenuItem.image` is still empty. The V8 Tuscany mockup uses serif typography + parchment cards to compensate but does not substitute for actual food photography. **Single highest-ROI un-shipped change in this audit.**
+5. **Zero automated tests** → **Still true (mostly).** A single `scripts/verify-scalability-fixes.ts` tsx smoke test exists (11 assertions) for the cohort + segment pure functions. That is not real coverage. The simulation engine itself has no tests.
+
+**One new operator surface the audit didn't anticipate but a diligence partner would want to see.** `/admin/simulation` (~17,400 LOC), gated by `simulationEnabled`. It carries `InfoButton` "Brief + InstitutionalAnalysis" annotations on every concept, every KPI tile, every lever — written at a level that an institutional reader can audit the methodology and an operator with no MBA can read what each number means. The fact that this exists, and was built _after_ the diligence-style audits, is itself a signal about the operator's response to outside-in critique.
+
+**One new operator surface that addresses the §10 "Brand & Product Quality" wedge.** `/admin/business-costs` is the first-party cost ledger feeding the simulation. The combination of this audit's §10 critique (no real photography, no real cost discipline) + the business-costs ledger + the simulation makes "what does this look like at 5 trucks?" a question the operator can _answer_ in the admin, not just guess.
+
+**What does NOT change in the diligence story.** The original §0 / §1 verdict that "Sud Italia would not survive NYC or SG as-is" is preserved. The Polish-currency baked into types, the no-aggregator-integration, the no-USD/SGD, the no-i18n, the no-food-photography, the zero-tests, the plaintext-password — none of those are addressed. The §13 Phase 1–3 sequencing remains the right path; the operator is now ~2 months ahead on the operational-maturity dimension of Phase 1 thanks to the 2026-05-16 and 2026-05-21 pushes.
+
+— *Diligence delta lens: same five auditors, six days later — 21 May 2026*

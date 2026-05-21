@@ -174,3 +174,37 @@ Conservative reconstruction at 100 orders/day/truck:
 4. **A/B test the espresso reprice.** Confirm attach rate doesn't dip more than 4% (revenue still up if it does).
 5. **Add zone-based delivery surcharge** once the postcode → zone mapper lands.
 
+---
+
+## 2026-05-21 Update — what's changed in six days
+
+**Modelled, not yet measured.** No 30-day window has closed since the rebuild went live, but two new operator surfaces now make the impact hypotheses above _modellable_ rather than purely projected:
+
+- **`/admin/business-costs`** — first-party cost ledger (rent, labour bands, ingredient unit costs, packaging, marketing, card fees, Wolt/Glovo commissions). Every cost basis quoted in this document (64–78% per-plate GM) is now an editable ledger entry instead of a magic constant.
+- **`/admin/simulation`** — finance simulation sandbox that runs the bundle ladder against the cost ledger and a behaviour-lever panel:
+  - **Per-item True CM1** + "margin traps" callout — flags any item whose attach-blended CM1 falls below the chain target.
+  - **Menu engineering matrix** (star / cash cow / puzzle / dog quadrants).
+  - **Sensitivity tornado** — shows EBITDA sensitivity to espresso attach, Family Pack penetration, slice velocity, modifier attach, delivery commission, packaging cost, ingredient inflation.
+  - **Per-channel CM1 panel** (dine-in vs Wolt vs Glovo) — the Pantry Pack delivery-only bundle and the +7 zł flat delivery floor were both implicitly assumed to be break-even+; the simulation now models that explicitly.
+  - **Cohort retention + LTV/CAC panel** — the espresso reprice and Family Pack hypothesis can be cross-checked against the modelled new-vs-returning revenue mix.
+  - **Five preset menu scenarios + Custom** with edit + save — including a "Tartufata anchor on" / "anchor off" toggle that surfaces the price-perception lift quantitatively.
+  - **`InfoButton` Brief + InstitutionalAnalysis** annotation on every lever and KPI, so the operator can read the underlying methodology without leaving the page.
+
+**Impact on this audit's recovery hypothesis:** the PLN ~261k/truck subtotal in the table above is now reproducible inside the simulation by toggling the seven levers it lists. Two refinements surfaced from running the model:
+
+- **Espresso reprice** uplift is more sensitive to attach-rate elasticity than the original projection assumed. The "+PLN 43,800" figure stands at ≤ 4% attach-rate drop but collapses to ~PLN 28,000 at 8% attach-rate drop. The A/B test in "next steps #4" is more economically important than it reads.
+- **Family Pack** GM-blend depends materially on the cost ledger entries for Margherita dough (Tipo 00 PLN/kg) and 1L Limonata. The simulation surfaces the bundle's true blended margin once the ledger is filled.
+
+**Still ✗:**
+
+- Per-item modifier picker on the customer menu page (next-steps #2) — schema and cart math remain ready; UI build outstanding.
+- Per-bundle margin floor enforcement at admin save-time (next-steps #3) — alert still fires post-order; admin-save-time guard outstanding.
+- Espresso reprice A/B (next-steps #4) — no live experiment ledger yet.
+- Zone-based delivery surcharge (next-steps #5) — flat 7 zł still applies.
+
+**Adjacent ship since this audit (worth noting for the bundle/ladder thinking):**
+
+- **`/admin/whatsapp`** LLM-driven ordering channel with Stripe Pay-in-chat opens a third commerce surface for bundle conversion measurement.
+- **V8 Tuscany trattoria mockup** at `/mockups/cart.html` includes a full bundles section cloned into location pages — useful as a brand-direction reference for how the ladder reads on a "slow-food warmth" surface vs the current production design.
+- **`/admin/crosssell`** (split out from `/admin/upsell`) now has dedicated time-of-day banner editing + segment-aware chips + pairing-graph editing.
+
