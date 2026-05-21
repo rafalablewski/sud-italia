@@ -3,6 +3,7 @@ import { krakowMenu } from "./krakow";
 import { warszawaMenu } from "./warszawa";
 import {
   getCustomMenuItems,
+  getIngredientProducts,
   getIngredients,
   getMenuOverrides,
   getRecipes,
@@ -33,8 +34,15 @@ const RECIPE_MACRO_FIELDS: Array<[RecipeMacro, string]> = [
   ["fat", "fatPerUnit"],
 ];
 async function getRecipeNutritionMap(): Promise<Map<string, Partial<Record<RecipeMacro, number>>>> {
-  const [recipes, ingredients] = await Promise.all([getRecipes(), getIngredients()]);
-  const ingById = new Map(ingredients.map((i) => [i.id, i]));
+  const [recipes, ingredients, products] = await Promise.all([
+    getRecipes(),
+    getIngredients(),
+    getIngredientProducts(),
+  ]);
+  const productById = new Map(products.map((p) => [p.id, p]));
+  const activeByIngredient = new Map(
+    ingredients.map((i) => [i.id, i.activeProductId ? productById.get(i.activeProductId) : undefined]),
+  );
   const map = new Map<string, Partial<Record<RecipeMacro, number>>>();
   for (const r of recipes) {
     if (r.ingredients.length === 0) continue;
@@ -43,8 +51,8 @@ async function getRecipeNutritionMap(): Promise<Map<string, Partial<Record<Recip
       let total = 0;
       let complete = true;
       for (const ri of r.ingredients) {
-        const ing = ingById.get(ri.ingredientId);
-        const raw = ing ? (ing as unknown as Record<string, unknown>)[key] : undefined;
+        const product = activeByIngredient.get(ri.ingredientId);
+        const raw = product ? (product as unknown as Record<string, unknown>)[key] : undefined;
         if (typeof raw !== "number") {
           complete = false;
           break;

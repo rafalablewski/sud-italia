@@ -3,6 +3,7 @@ import { withAdmin } from "@/lib/api-middleware";
 import {
   appendAuditLog,
   getCustomMenuItems,
+  getIngredientProducts,
   getIngredients,
   getMenuOverrides,
   getRecipes,
@@ -44,16 +45,27 @@ async function getRecipeDerivedMaps(): Promise<{
   cost: Map<string, number>;
   nutrition: Map<string, Partial<Record<MacroKey, number>>>;
 }> {
-  const [recipes, ingredients] = await Promise.all([getRecipes(), getIngredients()]);
-  const ingById = new Map(ingredients.map((i) => [i.id, i]));
+  const [recipes, ingredients, products] = await Promise.all([
+    getRecipes(),
+    getIngredients(),
+    getIngredientProducts(),
+  ]);
+  // Resolve each ingredient → its active distributor offering once,
+  // then read cost + macros off the offering. Switching distributors
+  // on an ingredient (setting a different activeProductId) flows
+  // through here automatically — no recipe re-edit needed.
+  const productById = new Map(products.map((p) => [p.id, p]));
+  const activeByIngredient = new Map(
+    ingredients.map((i) => [i.id, i.activeProductId ? productById.get(i.activeProductId) : undefined]),
+  );
   const cost = new Map<string, number>();
   const nutrition = new Map<string, Partial<Record<MacroKey, number>>>();
   for (const r of recipes) {
     if (r.ingredients.length === 0) continue;
     let totalCost = 0;
     for (const ri of r.ingredients) {
-      const ing = ingById.get(ri.ingredientId);
-      const unitCost = ing?.costPerUnit ?? 0;
+      const product = activeByIngredient.get(ri.ingredientId);
+      const unitCost = product?.costPerUnit ?? 0;
       totalCost += unitCost * ri.quantity * (ri.wasteFactor || 1);
     }
     cost.set(r.menuItemId, Math.round(totalCost / (r.yieldPortions || 1)));
@@ -63,8 +75,8 @@ async function getRecipeDerivedMaps(): Promise<{
       let total = 0;
       let complete = true;
       for (const ri of r.ingredients) {
-        const ing = ingById.get(ri.ingredientId);
-        const raw = ing ? (ing as unknown as Record<string, unknown>)[key] : undefined;
+        const product = activeByIngredient.get(ri.ingredientId);
+        const raw = product ? (product as unknown as Record<string, unknown>)[key] : undefined;
         if (typeof raw !== "number") {
           complete = false;
           break;

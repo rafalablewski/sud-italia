@@ -117,7 +117,10 @@ export const GET = withAdmin({}, async (req) => {
       id: `ingredient:${ing.id}`,
       type: "ingredient",
       label: ing.name,
-      sublabel: `${ing.category} · ${(ing.costPerUnit / 100).toFixed(2)} PLN/${ing.unit}`,
+      sublabel:
+        typeof ing.costPerUnit === "number"
+          ? `${ing.category} · ${(ing.costPerUnit / 100).toFixed(2)} PLN/${ing.unit}`
+          : `${ing.category} · no active offering`,
       href: `/admin/recipes#${ing.id}`,
     }));
 

@@ -3826,6 +3826,32 @@ html { scroll-behavior: smooth; }
   margin-top: 2px;
 }
 
+/* Distributor offerings sub-form inside the IngredientDialog. Each
+   offering is a fieldset card so a multi-supplier ingredient reads as
+   a stack of distinct rows rather than a single long form. The
+   "Active" radio sits in the legend so it's always visible next to the
+   supplier name. */
+.v2-ing-offering {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--surface-0);
+}
+.v2-ing-offering legend {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 0 6px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--fg);
+}
+
 /* Nutrition sub-form inside the IngredientDialog — groups the 6 macro
    inputs with a header so it doesn't read as a wall of fields. */
 .v2-rcp-ing-nutrition {

@@ -1,11 +1,24 @@
 import { NextResponse } from "next/server";
 import { withAdmin } from "@/lib/api-middleware";
-import { saveIngredient, saveRecipe } from "@/lib/store";
-import type { Ingredient, Recipe } from "@/data/types";
+import { saveIngredient, saveIngredientProduct, saveRecipe } from "@/lib/store";
+import type { Ingredient, IngredientCategory, IngredientUnit, Recipe } from "@/data/types";
 import { getMenu } from "@/data/menus";
 
-// Seed data: ingredients with avg Polish market prices (2026)
-const SEED_INGREDIENTS: Ingredient[] = [
+// Seed data: ingredients + default distributor offerings with avg Polish
+// market prices (2026). Each row spawns one IngredientProduct keyed to a
+// "legacy:<supplier name>" id so existing data renders sensibly until
+// the operator wires a real Supplier row.
+interface SeedIngredient {
+  id: string;
+  name: string;
+  category: IngredientCategory;
+  unit: IngredientUnit;
+  costPerUnit: number;
+  supplier: string;
+  notes?: string;
+}
+
+const SEED_INGREDIENTS: SeedIngredient[] = [
   {
     id: "ing-flour-00",
     name: "Caputo 00 Flour",
@@ -104,9 +117,25 @@ const MARGHERITA_RECIPE: Omit<Recipe, "id"> = {
 // Seeding ingredients + recipes is a chain-level operation; owner only.
 export const POST = withAdmin({ roles: ["owner"] }, async () => {
   try {
-    // Save ingredients (upsert)
-    for (const ing of SEED_INGREDIENTS) {
-      await saveIngredient(ing);
+    // Save ingredients (identity-only) + default offering (cost +
+    // legacy supplier name). Pointing activeProductId at the new
+    // offering means recipe cost picks up the seed cost immediately.
+    for (const seed of SEED_INGREDIENTS) {
+      const product = await saveIngredientProduct({
+        ingredientId: seed.id,
+        supplierId: seed.supplier ? `legacy:${seed.supplier}` : "legacy:unknown",
+        displayName: "Default offering",
+        costPerUnit: seed.costPerUnit,
+      });
+      const ingredient: Ingredient = {
+        id: seed.id,
+        name: seed.name,
+        category: seed.category,
+        unit: seed.unit,
+        activeProductId: product.id,
+        notes: seed.notes,
+      };
+      await saveIngredient(ingredient);
     }
 
     // Save Margherita recipe

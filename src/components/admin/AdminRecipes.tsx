@@ -61,7 +61,11 @@ interface IngredientData {
   name: string;
   category: IngredientCategory;
   unit: IngredientUnit;
-  costPerUnit: number;
+  activeProductId?: string;
+  /** All cost / macro fields below are derived — hydrated from the
+   *  active `IngredientProduct` on read. Writes go through
+   *  /api/admin/ingredient-products instead. */
+  costPerUnit?: number;
   kcalPerUnit?: number;
   proteinPerUnit?: number;
   carbsPerUnit?: number;
@@ -1154,7 +1158,10 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
               placeholder="Pick an ingredient…"
               options={availableIngredients.map((i) => ({
                 value: i.id,
-                label: `${i.name} · ${formatPrice(i.costPerUnit)}/${i.unit}`,
+                label:
+                  typeof i.costPerUnit === "number"
+                    ? `${i.name} · ${formatPrice(i.costPerUnit)}/${i.unit}`
+                    : `${i.name} · no active offering`,
               }))}
             />
             <Button leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={addIngredient} disabled={!pickerIngId}>
@@ -1421,8 +1428,18 @@ function IngredientsPanel() {
       key: "cost",
       header: "Cost / unit",
       align: "right",
-      cell: (i) => formatPrice(i.costPerUnit),
-      sortValue: (i) => i.costPerUnit,
+      cell: (i) =>
+        typeof i.costPerUnit === "number" ? (
+          formatPrice(i.costPerUnit)
+        ) : (
+          <span
+            className="v2-muted"
+            title="No distributor offering linked yet — open the ingredient to add one."
+          >
+            —
+          </span>
+        ),
+      sortValue: (i) => i.costPerUnit ?? -1,
     },
     {
       key: "kcal",
@@ -1563,20 +1580,62 @@ interface IngDialogProps {
   onSaved: () => void;
 }
 
+interface SupplierLite {
+  id: string;
+  name: string;
+}
+
+interface OfferingDraft {
+  /** Server id once persisted. Drafts created in-dialog stay client-only
+   *  until save spawns a POST. */
+  id?: string;
+  supplierId: string;
+  supplierSku: string;
+  displayName: string;
+  costStr: string;
+  kcalStr: string;
+  proteinStr: string;
+  carbsStr: string;
+  sugarStr: string;
+  fiberStr: string;
+  fatStr: string;
+  notes: string;
+  /** Local key for React rendering — survives across renders without an
+   *  id, since drafts may not have one yet. */
+  key: string;
+}
+
+function emptyOffering(supplierId: string = ""): OfferingDraft {
+  return {
+    supplierId,
+    supplierSku: "",
+    displayName: "",
+    costStr: "",
+    kcalStr: "",
+    proteinStr: "",
+    carbsStr: "",
+    sugarStr: "",
+    fiberStr: "",
+    fatStr: "",
+    notes: "",
+    key: `draft-${Math.random().toString(36).slice(2, 10)}`,
+  };
+}
+
 function IngredientDialog({ state, onClose, onSaved }: IngDialogProps) {
   const toast = useToast();
   const [name, setName] = useState("");
   const [category, setCategory] = useState<IngredientCategory>("produce");
   const [unit, setUnit] = useState<IngredientUnit>("kg");
-  const [costStr, setCostStr] = useState("0.00");
-  const [kcalStr, setKcalStr] = useState("");
-  const [proteinStr, setProteinStr] = useState("");
-  const [carbsStr, setCarbsStr] = useState("");
-  const [sugarStr, setSugarStr] = useState("");
-  const [fiberStr, setFiberStr] = useState("");
-  const [fatStr, setFatStr] = useState("");
-  const [supplier, setSupplier] = useState("");
   const [notes, setNotes] = useState("");
+  const [suppliers, setSuppliers] = useState<SupplierLite[]>([]);
+  const [offerings, setOfferings] = useState<OfferingDraft[]>([]);
+  /** Tracks which offering should be active on save. Keyed by either
+   *  the server id (for existing) or the draft key (for new). */
+  const [activeKey, setActiveKey] = useState<string>("");
+  /** Server ids of offerings present at open time but removed in the
+   *  dialog — sent as DELETE on save so the server stays in sync. */
+  const [deletedIds, setDeletedIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -1585,83 +1644,247 @@ function IngredientDialog({ state, onClose, onSaved }: IngDialogProps) {
     setName(ing?.name ?? "");
     setCategory(ing?.category ?? "produce");
     setUnit(ing?.unit ?? "kg");
-    setCostStr(ing ? (ing.costPerUnit / 100).toFixed(2) : "0.00");
-    setKcalStr(ing ? storedKcalToDisplay(ing.kcalPerUnit, ing.unit) : "");
-    setProteinStr(ing ? storedKcalToDisplay(ing.proteinPerUnit, ing.unit) : "");
-    setCarbsStr(ing ? storedKcalToDisplay(ing.carbsPerUnit, ing.unit) : "");
-    setSugarStr(ing ? storedKcalToDisplay(ing.sugarPerUnit, ing.unit) : "");
-    setFiberStr(ing ? storedKcalToDisplay(ing.fiberPerUnit, ing.unit) : "");
-    setFatStr(ing ? storedKcalToDisplay(ing.fatPerUnit, ing.unit) : "");
-    setSupplier(ing?.supplier ?? "");
     setNotes(ing?.notes ?? "");
+    setDeletedIds([]);
+    // Load existing offerings (+ supplier list) in parallel. New
+    // ingredients start with an empty offerings list — the operator
+    // adds the first offering before saving the recipe-affecting cost.
+    let cancelled = false;
+    (async () => {
+      const [supRes, offRes] = await Promise.all([
+        fetch("/api/admin/suppliers"),
+        ing
+          ? fetch(`/api/admin/ingredient-products?ingredientId=${encodeURIComponent(ing.id)}`)
+          : Promise.resolve(null),
+      ]);
+      if (cancelled) return;
+      const sups: SupplierLite[] = supRes.ok ? await supRes.json() : [];
+      setSuppliers(sups);
+      let active = "";
+      if (ing && offRes && offRes.ok) {
+        const products = (await offRes.json()) as Array<{
+          id: string;
+          supplierId: string;
+          supplierSku?: string;
+          displayName?: string;
+          costPerUnit: number;
+          kcalPerUnit?: number;
+          proteinPerUnit?: number;
+          carbsPerUnit?: number;
+          sugarPerUnit?: number;
+          fiberPerUnit?: number;
+          fatPerUnit?: number;
+          notes?: string;
+        }>;
+        const next: OfferingDraft[] = products.map((p) => ({
+          id: p.id,
+          supplierId: p.supplierId,
+          supplierSku: p.supplierSku ?? "",
+          displayName: p.displayName ?? "",
+          costStr: (p.costPerUnit / 100).toFixed(2),
+          kcalStr: storedKcalToDisplay(p.kcalPerUnit, ing.unit),
+          proteinStr: storedKcalToDisplay(p.proteinPerUnit, ing.unit),
+          carbsStr: storedKcalToDisplay(p.carbsPerUnit, ing.unit),
+          sugarStr: storedKcalToDisplay(p.sugarPerUnit, ing.unit),
+          fiberStr: storedKcalToDisplay(p.fiberPerUnit, ing.unit),
+          fatStr: storedKcalToDisplay(p.fatPerUnit, ing.unit),
+          notes: p.notes ?? "",
+          key: p.id,
+        }));
+        setOfferings(next);
+        active = ing.activeProductId ?? next[0]?.id ?? "";
+      } else {
+        setOfferings([]);
+      }
+      setActiveKey(active);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [state]);
 
   if (!state.open) return <Dialog open={false} onClose={onClose} />;
+
+  const supplierLabel = (id: string): string => {
+    if (!id) return "(no supplier)";
+    if (id.startsWith("legacy:")) return id.slice("legacy:".length) || "(legacy)";
+    return suppliers.find((s) => s.id === id)?.name ?? "(unknown supplier)";
+  };
+
+  const addOffering = () => {
+    const next = emptyOffering(suppliers[0]?.id ?? "");
+    setOfferings((arr) => [...arr, next]);
+    // First offering on a fresh ingredient auto-becomes active; later
+    // additions require an explicit pick so existing recipes don't
+    // silently flip to an untested distributor.
+    if (offerings.length === 0) setActiveKey(next.key);
+  };
+
+  const removeOffering = (key: string) => {
+    setOfferings((arr) => {
+      const target = arr.find((o) => o.key === key);
+      if (target?.id) setDeletedIds((d) => [...d, target.id!]);
+      const remaining = arr.filter((o) => o.key !== key);
+      if (activeKey === key) setActiveKey(remaining[0]?.key ?? "");
+      return remaining;
+    });
+  };
+
+  const updateOffering = (key: string, patch: Partial<OfferingDraft>) => {
+    setOfferings((arr) => arr.map((o) => (o.key === key ? { ...o, ...patch } : o)));
+  };
 
   const save = async () => {
     if (!name.trim()) {
       toast.warning("Name required");
       return;
     }
+    // Every offering needs a supplier picked — otherwise the row makes
+    // no sense (no distributor to attribute the cost to). Block save
+    // with a clear message rather than silently dropping bad rows.
+    const missingSupplier = offerings.find((o) => !o.supplierId);
+    if (missingSupplier) {
+      toast.error(
+        "Pick a supplier for every offering",
+        suppliers.length === 0
+          ? "No suppliers yet — add one at /admin/suppliers first."
+          : undefined,
+      );
+      return;
+    }
     setBusy(true);
     try {
-      // Operator types each macro per 100g / per 100ml / per piece
-      // (matches what's printed on food packaging). Convert to per-unit
-      // storage so recipe maths stays a clean (perUnit × qty × waste)
-      // sum. Empty / NaN → null = "no claim", which drops the field
-      // server-side so the recipe total only resolves when the data
-      // is actually present.
+      // 1. Persist the ingredient row (identity only — cost + macros
+      //    live on the offerings).
+      const ingPayload = {
+        id: state.ingredient?.id,
+        name: name.trim(),
+        category,
+        unit,
+        notes: notes.trim() || undefined,
+        // Leave activeProductId off; we'll PATCH it after offerings
+        // settle so we can reference newly-created products by their
+        // server id.
+        activeProductId: undefined,
+      };
+      const ingRes = await fetch("/api/admin/ingredients", {
+        method: state.ingredient ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(ingPayload),
+      });
+      if (!ingRes.ok) {
+        toast.error("Could not save ingredient");
+        return;
+      }
+      const savedIng = (await ingRes.json()) as { id: string };
+
+      // 2. Per-offering CRUD. Convert per-100g display values back to
+      //    per-unit storage via the same helpers used everywhere else
+      //    so recipe maths stays exact.
       const parseMacro = (raw: string): number | null => {
         const t = raw.trim();
         if (t === "") return null;
         const n = displayKcalToStored(Number(t), unit);
         return Number.isFinite(n) ? n : null;
       };
-      const payload = {
-        id: state.ingredient?.id,
-        name: name.trim(),
-        category,
-        unit,
-        costPerUnit: Math.round(parseFloat(costStr || "0") * 100),
-        kcalPerUnit: parseMacro(kcalStr),
-        proteinPerUnit: parseMacro(proteinStr),
-        carbsPerUnit: parseMacro(carbsStr),
-        sugarPerUnit: parseMacro(sugarStr),
-        fiberPerUnit: parseMacro(fiberStr),
-        fatPerUnit: parseMacro(fatStr),
-        supplier: supplier.trim() || undefined,
-        notes: notes.trim() || undefined,
-      };
-      const res = await fetch("/api/admin/ingredients", {
-        method: state.ingredient ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (res.ok) {
-        onSaved();
-      } else {
-        toast.error("Could not save");
+
+      // Track which offering ends up active. For existing offerings the
+      // server id is stable; for new offerings we read the id off the
+      // POST response.
+      let chosenActiveServerId: string | undefined;
+      const failed: string[] = [];
+
+      for (const o of offerings) {
+        const payload = {
+          id: o.id,
+          ingredientId: savedIng.id,
+          supplierId: o.supplierId,
+          supplierSku: o.supplierSku.trim() || undefined,
+          displayName: o.displayName.trim() || undefined,
+          costPerUnit: Math.round(parseFloat(o.costStr || "0") * 100),
+          kcalPerUnit: parseMacro(o.kcalStr),
+          proteinPerUnit: parseMacro(o.proteinStr),
+          carbsPerUnit: parseMacro(o.carbsStr),
+          sugarPerUnit: parseMacro(o.sugarStr),
+          fiberPerUnit: parseMacro(o.fiberStr),
+          fatPerUnit: parseMacro(o.fatStr),
+          notes: o.notes.trim() || undefined,
+        };
+        const res = await fetch("/api/admin/ingredient-products", {
+          method: o.id ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          failed.push(supplierLabel(o.supplierId));
+          continue;
+        }
+        const saved = (await res.json()) as { id: string };
+        if (o.key === activeKey) chosenActiveServerId = saved.id;
       }
+
+      // 3. DELETE offerings the operator removed.
+      for (const id of deletedIds) {
+        await fetch(`/api/admin/ingredient-products?id=${encodeURIComponent(id)}`, {
+          method: "DELETE",
+        });
+      }
+
+      // 4. Flip active offering. The product create / update routes
+      //    auto-activate the first-ever offering for an ingredient, so
+      //    new ingredients with one offering need no explicit PATCH —
+      //    but multi-offering edits do.
+      if (chosenActiveServerId) {
+        await fetch("/api/admin/ingredient-products", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ingredientId: savedIng.id,
+            productId: chosenActiveServerId,
+          }),
+        });
+      }
+
+      if (failed.length > 0) {
+        toast.error(
+          "Some offerings failed",
+          `Couldn't save: ${failed.join(", ")}.`,
+        );
+        return;
+      }
+      onSaved();
     } finally {
       setBusy(false);
     }
   };
 
+  const ing = state.ingredient;
+
   return (
     <Dialog
       open
       onClose={onClose}
-      size="md"
-      title={state.ingredient ? `Edit ${state.ingredient.name}` : "New ingredient"}
+      size="lg"
+      title={ing ? `Edit ${ing.name}` : "New ingredient"}
+      description="Identity + per-distributor offerings. Cost + nutrition come from the active offering — switching distributors = activating a different row."
       footer={
         <>
-          <Button variant="ghost" onClick={onClose} disabled={busy}>Cancel</Button>
-          <Button variant="primary" onClick={save} loading={busy}>{state.ingredient ? "Save changes" : "Create ingredient"}</Button>
+          <Button variant="ghost" onClick={onClose} disabled={busy}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={save} loading={busy}>
+            {ing ? "Save changes" : "Create ingredient"}
+          </Button>
         </>
       }
     >
       <div className="v2-stack-12">
-        <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. San Marzano tomatoes" />
+        <Input
+          label="Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="e.g. San Marzano tomatoes"
+        />
         <div className="v2-form-row-2">
           <Select
             label="Category"
@@ -1676,97 +1899,171 @@ function IngredientDialog({ state, onClose, onSaved }: IngDialogProps) {
             options={INGREDIENT_UNITS.map((u) => ({ value: u, label: u }))}
           />
         </div>
-        <Input
-          label={`Cost per ${unit}`}
-          type="number"
-          step="0.01"
-          min="0"
-          value={costStr}
-          onChange={(e) => setCostStr(e.target.value)}
-          trailingAdornment={<span className="v2-muted">zł</span>}
+        <Textarea
+          label="Notes"
+          rows={2}
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
         />
-        {/* Nutrition (per 100g / 100ml / per piece — matches the basis
-            printed on real-world food packaging). All optional: blank
-            fields drop the macro server-side, so a recipe total only
-            resolves once every line has the value. */}
+
         <div className="v2-rcp-ing-nutrition">
           <header className="v2-rcp-ing-nutrition-header">
-            <span className="v2-rcp-ing-nutrition-eyebrow">
-              Nutrition per {kcalBasisLabel(unit)}
-            </span>
+            <span className="v2-rcp-ing-nutrition-eyebrow">Distributor offerings</span>
             <span className="v2-rcp-ing-nutrition-hint">
-              Copy from the back of the pack. Blank = no claim.
+              One row per supplier carrying this ingredient. Cost + nutrition
+              from the <strong>active</strong> row drive recipe totals.
             </span>
           </header>
-          <div className="v2-form-row-2">
-            <Input
-              label="Energy"
-              type="number"
-              step="1"
-              min="0"
-              value={kcalStr}
-              onChange={(e) => setKcalStr(e.target.value)}
-              trailingAdornment={<span className="v2-muted">kcal</span>}
-              placeholder="—"
-            />
-            <Input
-              label="Fat"
-              type="number"
-              step="1"
-              min="0"
-              value={fatStr}
-              onChange={(e) => setFatStr(e.target.value)}
-              trailingAdornment={<span className="v2-muted">g</span>}
-              placeholder="—"
-            />
-          </div>
-          <div className="v2-form-row-2">
-            <Input
-              label="Carbohydrate"
-              type="number"
-              step="1"
-              min="0"
-              value={carbsStr}
-              onChange={(e) => setCarbsStr(e.target.value)}
-              trailingAdornment={<span className="v2-muted">g</span>}
-              placeholder="—"
-            />
-            <Input
-              label="of which sugars"
-              type="number"
-              step="1"
-              min="0"
-              value={sugarStr}
-              onChange={(e) => setSugarStr(e.target.value)}
-              trailingAdornment={<span className="v2-muted">g</span>}
-              placeholder="—"
-            />
-          </div>
-          <div className="v2-form-row-2">
-            <Input
-              label="Fiber"
-              type="number"
-              step="1"
-              min="0"
-              value={fiberStr}
-              onChange={(e) => setFiberStr(e.target.value)}
-              trailingAdornment={<span className="v2-muted">g</span>}
-              placeholder="—"
-            />
-            <Input
-              label="Protein"
-              type="number"
-              step="1"
-              min="0"
-              value={proteinStr}
-              onChange={(e) => setProteinStr(e.target.value)}
-              trailingAdornment={<span className="v2-muted">g</span>}
-              placeholder="—"
-            />
-          </div>
+          {suppliers.length === 0 ? (
+            <p className="v2-muted" style={{ fontSize: "var(--text-xs)" }}>
+              No suppliers yet. Add one at{" "}
+              <a href="/admin/suppliers" target="_blank" rel="noreferrer">
+                /admin/suppliers
+              </a>
+              {" "}then come back to link offerings.
+            </p>
+          ) : null}
+          {offerings.map((o) => (
+            <fieldset key={o.key} className="v2-ing-offering">
+              <legend>
+                <label className="v2-detail-toggle" style={{ display: "inline-flex" }}>
+                  <input
+                    type="radio"
+                    name="active-offering"
+                    checked={activeKey === o.key}
+                    onChange={() => setActiveKey(o.key)}
+                  />
+                  <span>
+                    {activeKey === o.key ? "Active" : "Make active"} ·{" "}
+                    {supplierLabel(o.supplierId)}
+                  </span>
+                </label>
+                <button
+                  type="button"
+                  className="v2-rcp-remove"
+                  onClick={() => removeOffering(o.key)}
+                  title="Remove offering"
+                  aria-label={`Remove offering from ${supplierLabel(o.supplierId)}`}
+                  style={{ opacity: 1 }}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </legend>
+              <div className="v2-form-row-2">
+                <Select
+                  label="Supplier"
+                  value={o.supplierId}
+                  onChange={(e) => updateOffering(o.key, { supplierId: e.target.value })}
+                  options={[
+                    { value: "", label: "— Pick supplier" },
+                    ...suppliers.map((s) => ({ value: s.id, label: s.name })),
+                    ...(o.supplierId.startsWith("legacy:")
+                      ? [{ value: o.supplierId, label: `${o.supplierId.slice("legacy:".length)} (legacy)` }]
+                      : []),
+                  ]}
+                />
+                <Input
+                  label="Supplier SKU"
+                  value={o.supplierSku}
+                  onChange={(e) => updateOffering(o.key, { supplierSku: e.target.value })}
+                  placeholder="e.g. SM-DOP-400G"
+                />
+              </div>
+              <div className="v2-form-row-2">
+                <Input
+                  label="Display name"
+                  value={o.displayName}
+                  onChange={(e) => updateOffering(o.key, { displayName: e.target.value })}
+                  placeholder="optional"
+                />
+                <Input
+                  label={`Cost per ${unit}`}
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={o.costStr}
+                  onChange={(e) => updateOffering(o.key, { costStr: e.target.value })}
+                  trailingAdornment={<span className="v2-muted">zł</span>}
+                />
+              </div>
+              <div className="v2-form-row-2">
+                <Input
+                  label={`Energy per ${kcalBasisLabel(unit)}`}
+                  type="number"
+                  step="1"
+                  min="0"
+                  value={o.kcalStr}
+                  onChange={(e) => updateOffering(o.key, { kcalStr: e.target.value })}
+                  trailingAdornment={<span className="v2-muted">kcal</span>}
+                  placeholder="—"
+                />
+                <Input
+                  label={`Fat per ${kcalBasisLabel(unit)}`}
+                  type="number"
+                  step="1"
+                  min="0"
+                  value={o.fatStr}
+                  onChange={(e) => updateOffering(o.key, { fatStr: e.target.value })}
+                  trailingAdornment={<span className="v2-muted">g</span>}
+                  placeholder="—"
+                />
+              </div>
+              <div className="v2-form-row-2">
+                <Input
+                  label={`Carbs per ${kcalBasisLabel(unit)}`}
+                  type="number"
+                  step="1"
+                  min="0"
+                  value={o.carbsStr}
+                  onChange={(e) => updateOffering(o.key, { carbsStr: e.target.value })}
+                  trailingAdornment={<span className="v2-muted">g</span>}
+                  placeholder="—"
+                />
+                <Input
+                  label="of which sugars"
+                  type="number"
+                  step="1"
+                  min="0"
+                  value={o.sugarStr}
+                  onChange={(e) => updateOffering(o.key, { sugarStr: e.target.value })}
+                  trailingAdornment={<span className="v2-muted">g</span>}
+                  placeholder="—"
+                />
+              </div>
+              <div className="v2-form-row-2">
+                <Input
+                  label={`Fiber per ${kcalBasisLabel(unit)}`}
+                  type="number"
+                  step="1"
+                  min="0"
+                  value={o.fiberStr}
+                  onChange={(e) => updateOffering(o.key, { fiberStr: e.target.value })}
+                  trailingAdornment={<span className="v2-muted">g</span>}
+                  placeholder="—"
+                />
+                <Input
+                  label={`Protein per ${kcalBasisLabel(unit)}`}
+                  type="number"
+                  step="1"
+                  min="0"
+                  value={o.proteinStr}
+                  onChange={(e) => updateOffering(o.key, { proteinStr: e.target.value })}
+                  trailingAdornment={<span className="v2-muted">g</span>}
+                  placeholder="—"
+                />
+              </div>
+            </fieldset>
+          ))}
+          <Button
+            variant="ghost"
+            size="sm"
+            leadingIcon={<Plus className="h-3.5 w-3.5" />}
+            onClick={addOffering}
+            disabled={suppliers.length === 0}
+          >
+            Add distributor offering
+          </Button>
         </div>
-        <Input label="Supplier" value={supplier} onChange={(e) => setSupplier(e.target.value)} placeholder="Optional" />
-        <Textarea label="Notes" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
       </div>
     </Dialog>
   );

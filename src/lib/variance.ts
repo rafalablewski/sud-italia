@@ -105,7 +105,7 @@ export async function computeVariance(
     const act = actual.get(id) || 0;
     const variance = act - theo;
     const variancePercent = theo > 0 ? (variance / theo) * 100 : 0;
-    const varianceCostGrosze = Math.round(variance * ing.costPerUnit);
+    const varianceCostGrosze = Math.round(variance * (ing.costPerUnit ?? 0));
     rows.push({
       ingredientId: id,
       name: ing.name,

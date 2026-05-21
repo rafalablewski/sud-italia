@@ -746,13 +746,13 @@ export default async function CapabilitiesPage() {
       title: "Operations",
       items: [
         {
-          name: "Inventory + recipes + stock",
+          name: "Inventory + recipes + stock + distributor offerings",
           status: "live",
           href: "/admin/inventory",
           summary:
-            "Per-ingredient stock, recipe BOMs, variance reports. Audit §3 fix wired: createOrder now calls consumeRecipeForOrder() (lib/inventory-decrement.ts) — every paid line posts one `consume` stock movement per recipe ingredient with qty (recipe.quantity × wasteFactor / yieldPortions) × portions. Full refunds + cancellations call restoreRecipeForOrder() via the symmetric `adjust` movement so the variance report no longer carries ghost-consumed stock from refunded orders.",
+            "Per-ingredient stock, recipe BOMs, variance reports. Ingredients carry identity only (name / category / unit); cost + full nutrition (kcal + protein + carbs + sugar + fiber + fat) live on `ingredient_products` — one row per (ingredient, distributor) pair. Each ingredient points at one active offering via `activeProductId`; recipe cost + nutrition + customer kcal pill read through that pointer. Switching distributors = activating a different row — no retyping per-100g values. Existing rows lazy-migrate to a default offering keyed `legacy:<old supplier name>` on first read, so historical data renders without a manual migration step. Audit §3 fix still wired: createOrder calls consumeRecipeForOrder() (lib/inventory-decrement.ts) — every paid line posts one `consume` stock movement per recipe ingredient. Full refunds + cancellations restore symmetrically.",
           caveats:
-            "Partial refunds don't carry line-level data so they don't restore — rare, and the operator can reconcile from the audit log. Recipe rows still need to exist for an item before its order decrements anything — operator is responsible for setting them up in /admin/recipes.",
+            "Partial refunds don't carry line-level data so they don't restore — rare, and the operator can reconcile from the audit log. Recipe rows still need to exist for an item before its order decrements anything — operator is responsible for setting them up in /admin/recipes. Inventory consumption uses the active offering's `costPerUnit` for valuation — historical movement records keep the snapshot they were posted with.",
         },
         {
           name: "Suppliers + purchase orders",

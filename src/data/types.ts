@@ -243,27 +243,81 @@ export interface Ingredient {
   name: string;
   category: IngredientCategory;
   unit: IngredientUnit;
-  costPerUnit: number; // grosze per unit (e.g., 2500 = 25.00 PLN per kg)
-  /** Energy content per unit, in kcal (e.g. 2800 kcal/kg of olive oil).
-   *  Optional — when set on every ingredient referenced by a recipe, the
-   *  recipe's per-portion calories are computed from
-   *  Σ (kcalPerUnit × quantity × wasteFactor) / yieldPortions, mirroring
-   *  the cost calc. When unset on any line, the recipe shows "—" instead
-   *  of a partial number that would mislead the customer card. */
+  /** Reference into `IngredientProduct.id` — the per-distributor offering
+   *  whose cost + nutrition values are used when this ingredient appears
+   *  in a recipe. Operators switch distributors by changing which
+   *  offering is active, not by retyping cost / kcal / macros. Unset on
+   *  ingredients that haven't been linked to any supplier offering yet. */
+  activeProductId?: string;
+  notes?: string;
+  // ---- Derived read-only fields ------------------------------------
+  //
+  // Source of truth for cost + nutrition lives on `IngredientProduct`
+  // — one row per (ingredient, distributor) combo. `getIngredients()`
+  // joins each ingredient to its active offering and surfaces the
+  // values below as a convenience so call sites (recipe cost, PO
+  // pricing, variance, inventory valuation, search) don't have to
+  // re-do the join themselves.
+  //
+  // Writes go through ingredient_products + activeProductId; never
+  // through these fields directly. Treat them as readonly cache.
+  costPerUnit?: number;
   kcalPerUnit?: number;
-  /** Macronutrients per unit, in grams. Same semantics as `kcalPerUnit`
-   *  — display layer renders these on a per-100g basis (per-100ml for
-   *  L / ml units), storage stays per-unit so recipe maths stays exact.
-   *  All optional + nullable so operators can fill macros gradually. */
   proteinPerUnit?: number;
   carbsPerUnit?: number;
-  /** Grams of sugars within `carbsPerUnit`. Surfaced as "of which sugars"
-   *  on the recipe editor, matching nutrition-label conventions. */
   sugarPerUnit?: number;
   fiberPerUnit?: number;
   fatPerUnit?: number;
+  /** Free-text supplier name from the active offering (or the legacy
+   *  text field on rows that haven't been migrated to a real Supplier
+   *  FK yet). Surfaces in search results + the ingredients table. */
   supplier?: string;
+}
+
+/**
+ * Per-distributor offering of an ingredient — what the chain buys, with
+ * the distributor-specific cost, supplier SKU, and nutrition label
+ * (energy + macros per-unit). One ingredient can have many offerings
+ * (one per distributor that carries it); a single offering is flagged
+ * "active" via `Ingredient.activeProductId` and drives recipe cost +
+ * nutrition. Swapping distributor = pointing `activeProductId` at a
+ * different row.
+ *
+ * Nutrition lives here rather than on Ingredient because two
+ * distributors selling "Mozzarella di Bufala" may print different macro
+ * profiles on the back of the pack (different fat / moisture / brining).
+ * Same reason for cost: it's a property of the offering, not the
+ * ingredient.
+ */
+export interface IngredientProduct {
+  id: string;
+  ingredientId: string;
+  /** FK into `Supplier.id`. Required so an offering always traces back
+   *  to a Supplier row — we use the supplier name in the picker label
+   *  + the operator can update contact / lead time / address in one
+   *  place. */
+  supplierId: string;
+  /** Distributor's catalogue SKU / part number for this product — e.g.
+   *  "MZ-BUFALA-1KG-EU". Free-form so operators can plug into whatever
+   *  scheme the distributor uses. Optional. */
+  supplierSku?: string;
+  /** Operator-friendly display name, e.g. "Bufala 1kg pack". When
+   *  blank, the UI falls back to `<supplier name> · <ingredient name>`. */
+  displayName?: string;
+  /** Grosze per unit (per kg / per L / per piece). */
+  costPerUnit: number;
+  /** Energy + macros per unit. Same semantics as the previous
+   *  ingredient-level fields — display layer renders per-100g, storage
+   *  stays per-unit. All optional so operators can backfill gradually. */
+  kcalPerUnit?: number;
+  proteinPerUnit?: number;
+  carbsPerUnit?: number;
+  sugarPerUnit?: number;
+  fiberPerUnit?: number;
+  fatPerUnit?: number;
   notes?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface RecipeIngredient {
