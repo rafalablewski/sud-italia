@@ -1845,14 +1845,13 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
     ),
     institutionalAnalysis: (
       <p style={{ margin: 0 }}>
-        <strong>Why it&apos;s gold:</strong> coffee is ~88% gross margin (an
-        espresso uses about 1 zł of beans + milk for a 9 zł sell price).
-        Every +10 pp on attach lifts your average ticket by ~0.90 zł at
-        almost no extra COGS — only the variable-leakage stack (payment
-        fees, waste, refunds, loyalty burn) and CIT pare it back. Among
-        all attach levers this is the highest contribution-per-złoty-of-
-        revenue because the marginal kitchen / labour cost is near zero
-        (espresso is parallel-station work, not on the pizza line).
+        Highest contribution-per-złoty-of-revenue of any attach lever
+        because the marginal kitchen / labour cost is near zero —
+        espresso is a parallel-station task, not on the pizza line. So
+        a +10 pp attach push lifts AOV without slowing the kitchen or
+        pulling labor from the main flow. The decision frame: when
+        kitchen saturation is rising, coffee attach is the only AOV
+        lever that doesn&apos;t make the bottleneck worse.
       </p>
     ),
     story: (v) => {
@@ -2001,14 +2000,12 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
     ),
     institutionalAnalysis: (
       <p style={{ margin: 0 }}>
-        <strong>Why it matters:</strong> desserts run ~28% COGS — better
-        than pizza&apos;s 30% — so more dessert attach lifts AOV{" "}
-        <em>and</em> improves the blended gross-margin %. Two-axis benefit:
-        AOV up, COGS% down. Best when paired with a coffee attach push
-        (dessert + espresso bundle eliminates the second decision cycle
-        and stacks two high-margin items on one ticket). Casual-Italian
-        benchmark sits at 12-18% steady-state; dinner-led concepts can
-        sustain 25-30%.
+        Two-axis benefit: AOV up <em>and</em> blended COGS% down,
+        because dessert COGS is lower than pizza. Most attach levers
+        only push one axis. Best paired with a coffee attach push —
+        dessert + espresso bundle eliminates the second decision cycle
+        and stacks two high-margin items on one ticket, which is why
+        the highest-performing operators move them together.
       </p>
     ),
     story: (v) => {
@@ -2146,13 +2143,13 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
     ),
     institutionalAnalysis: (
       <p style={{ margin: 0 }}>
-        <strong>Trade-off — ticket lift vs station load.</strong> Antipasti
-        carry ~32% COGS (higher than coffee but lower than pasta primo)
-        and order timing matters: served while pizza bakes, the starter
-        doesn&apos;t cannibalise the main attach. But the antipasti station
-        must absorb the marginal prep load — if it slows pizza out, the
-        complaint cost exceeds the starter margin. Lever is dine-in only;
-        for takeaway-heavy concepts the lever effectively doesn&apos;t apply.
+        Order timing is the strategic key: served while pizza bakes, the
+        starter doesn&apos;t cannibalise the main attach and fills the
+        dead 6-8 minutes the customer would otherwise spend bored. But
+        the antipasti station must absorb the marginal prep load — if
+        it slows pizza out, the complaint cost exceeds the starter
+        margin. Lever is dine-in only; for takeaway-heavy concepts it
+        effectively doesn&apos;t apply.
       </p>
     ),
     story: (v) => {
@@ -2288,14 +2285,13 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
     ),
     institutionalAnalysis: (
       <p style={{ margin: 0 }}>
-        <strong>Highest-margin lever, lowest barrier to AOV lift.</strong>{" "}
-        Drinks run ~22% COGS at 22 zł a glass — a 78% gross margin
-        structure that pre-leakage is only beaten by espresso. Requires an
-        alcohol licence (~5,000 zł/year), which adds a fixed-cost line but
-        is recovered in ~6-8 weeks of attach revenue at typical PL casual-
-        Italian dinner volumes. Use this lever to model the &quot;what
-        would happen if we got licensed?&quot; question before signing.
-        Evenings-only effect; lunch attach is near zero.
+        Use this lever to model the &quot;what would happen if we got
+        licensed?&quot; question before paying the annual licence fee.
+        Evenings-only effect — lunch attach is near zero, so the lever
+        only adds value if the operating hours actually run into the
+        7-10pm window. Pair with antipasti for a true Italian-aperitivo
+        ritual: starter + drink before pizza arrives is the highest-
+        revenue table format in the casual-Italian playbook.
       </p>
     ),
     story: (v) => {
@@ -2433,14 +2429,13 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
     ),
     institutionalAnalysis: (
       <p style={{ margin: 0 }}>
-        <strong>~50% incremental gross margin — cheapest AOV lever.</strong>{" "}
-        No kitchen-time penalty (the topping goes on the same pizza,
-        same oven cycle, same labour minute), no incremental packaging,
-        no second checkout decision. The only ceiling is menu cognitive
-        load — past ~4-5 premium options the operator gets diminishing
-        returns because customers default to plain. Pair with menu
-        engineering (place the highest-margin premium combo second-from-
-        top per Kasavana / Smith to anchor decisions).
+        Zero kitchen-time penalty — the topping goes on the same pizza,
+        same oven cycle, same labour minute — so this lever lifts AOV
+        without any operational drag. The only ceiling is menu cognitive
+        load: past ~4-5 premium options the operator gets diminishing
+        returns because customers default to plain. Menu placement is
+        the unlock; bury the premiums and attach collapses regardless
+        of how good the recipe is.
       </p>
     ),
     story: (v) => {
@@ -2579,15 +2574,13 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
     ),
     institutionalAnalysis: (
       <p style={{ margin: 0 }}>
-        <strong>Biggest single-lever AOV bump — but only where seating
-        allows.</strong> A 32 zł incremental ticket through a separate
-        course adds materially more than coffee or dessert in absolute
-        zł, but it requires a pasta station (separate pan + burner +
-        cook minute per order) so the marginal labour cost is non-zero.
-        Best for indoor dinner-led concepts; for a takeaway truck without
-        seating, model attach &lt; 5% — the lever effectively doesn&apos;t
-        apply. Compounds with antipasti and aperitivo for a full
-        trattoria-style ticket structure.
+        The biggest single-lever AOV bump in absolute złoty, but the
+        only attach lever with a real marginal labour cost — a pasta
+        station means a separate pan + burner + cook minute per order.
+        Compounds with antipasti and aperitivo for a full trattoria-
+        style ticket structure; isolated, the incremental margin gets
+        eaten by the station overhead. Strategic only for indoor
+        dinner-led concepts with seating; not for takeaway trucks.
       </p>
     ),
     story: (v) => {
@@ -2934,14 +2927,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            <strong>Why it matters:</strong> revenue = orders × ticket ×
-            days open. Doubling this number roughly doubles revenue but
-            only adds variable food cost — labor and rent are mostly
-            fixed, so the extra orders are very profitable. The most
-            operational-leverage of all top-line inputs: capacity is
-            constrained by oven throughput × service hours, but until
-            you saturate that ceiling, every additional order/day drops
-            ~70-80% of its revenue to the bottom line.
+            The highest operating-leverage input on the page: until you
+            saturate kitchen capacity, every incremental order drops a
+            very large share of its revenue to the bottom line, because
+            labor and rent are mostly fixed. That asymmetry is why the
+            volume vs ticket trade-off (the Sensitivity card) usually
+            tilts toward volume growth — unless you&apos;re already at
+            capacity, in which case price is the only remaining lever.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -3028,19 +3020,13 @@ const HELP = {
           menu has drinks and desserts.
         </p>
         <InstitutionalAnalysis>
-          <p style={{ margin: "0 0 6px" }}>
-            <strong>How to think about it:</strong> raise this by selling
-            combos and add-ons rather than cranking pizza prices —
-            customers notice price hikes, they don&apos;t notice that
-            they added an espresso. Attach-driven AOV growth is the
-            highest-NPV path: zero acquisition cost, near-zero kitchen
-            time penalty (for coffee/dessert), and the marginal item
-            inherits the same fixed-cost coverage as the base pizza.
-          </p>
-          <p className="v2-muted text-sm" style={{ margin: 0 }}>
-            When the Menu mix card has weights, this field becomes
-            display-only — the number is computed from each item&apos;s
-            recipe price × menu mix.
+          <p style={{ margin: 0 }}>
+            Attach-driven AOV growth is the highest-NPV path: customers
+            notice price hikes but don&apos;t notice that they added an
+            espresso, so the elasticity penalty is zero. The marginal
+            item also inherits the same fixed-cost coverage as the base
+            pizza, which is why attach economics dominate raw-price
+            economics until you&apos;ve maxed out menu cognitive load.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -3126,14 +3112,14 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            <strong>Trade-off: revenue vs sustainability.</strong> 7-day
-            operation maximises top-line but burns out staff (and
-            triggers Kodeks Pracy rest-period overtime premiums); 6
-            days/week (~26 days/mo) is the sustainable sweet spot.
-            Critical input for fixed-cost amortisation: rent + accountant
-            + insurance are monthly, so per-day burden = fixed ÷ days
-            open. Cutting days open without cutting fixed inflates the
-            break-even daily volume.
+            The lever where revenue and sustainability trade off
+            directly: 7-day operation maxes top-line but burns out
+            staff and triggers rest-period overtime premiums; cutting
+            days without cutting fixed costs inflates the break-even
+            daily volume. The strategic question is rarely &quot;more
+            or fewer days&quot; — it&apos;s &quot;which days are
+            actually contributing&quot; once you size against the
+            heatmap.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -3217,20 +3203,15 @@ const HELP = {
           ingredients. Polish pizzeria benchmark: 25–35%.
         </p>
         <InstitutionalAnalysis>
-          <p style={{ margin: "0 0 6px" }}>
-            <strong>Formula:</strong> recipe cost ÷ price, weighted by
-            menu mix. Under 30% is healthy; 30-32% is the operating norm;
-            over 35% indicates recipe leakage (over-portioning, supplier
-            drift, or under-priced menu). Each 1pp of COGS reduction
-            flows directly to gross margin (then through the variable-
-            leakage stack and CIT to net). On a 200k zł/mo truck, 1pp
-            COGS ≈ 2,000 zł/mo pre-tax — the single highest-leverage
-            line on the P&amp;L because it scales with revenue.
-          </p>
           <p style={{ margin: 0 }}>
-            When the Menu mix card has weights, this field is
-            display-only — driven by Σ (item cost × qty) ÷ Σ (item price
-            × qty).
+            The single highest-leverage line on the P&amp;L because it
+            scales with revenue — every 1pp saved compounds every
+            future month at every future revenue level. A permanent
+            recipe re-engineering is worth more than a one-shot price
+            hike of equivalent magnitude. Diagnose the source before
+            cutting: COGS drift can mean supplier-price creep,
+            portion-control slippage, or menu-mix shift toward heavier
+            recipes — each has a different fix.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -3315,20 +3296,14 @@ const HELP = {
           weekly hours × 4.345 weeks × hourly rate.
         </p>
         <InstitutionalAnalysis>
-          <p style={{ margin: "0 0 6px" }}>
-            <strong>Why 1.22× brutto:</strong> in Poland the employer
-            pays ZUS (social insurance) + Labor Fund <em>on top</em> of
-            the gross wage — about 22% extra. A pizzaiolo&apos;s 35 zł/h
-            brutto wage actually costs the truck ~43 zł/h. The default
-            rates already bake this in.
-          </p>
           <p style={{ margin: 0 }}>
-            <strong>Target: total labor ≤ 30% of revenue.</strong> The
-            KPI strip flags red/amber/green. Above 33% indicates either
-            over-staffing for current volume or under-pricing — diagnose
-            which before cutting heads. Schedule flexibility (part-time
-            mix vs salaried core) governs how fast labor responds to a
-            volume dip; the laborFlex lever models this elasticity.
+            Above-target labor % has two distinct root causes — over-
+            staffing for current volume vs under-pricing for current
+            staffing — and the correct fix differs entirely. Diagnose
+            which before cutting heads. Schedule flexibility (the
+            part-time vs salaried-core mix) governs how fast labor
+            responds when volume dips; rigid rosters convert short-run
+            volume shocks into structural margin damage.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -3419,15 +3394,14 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            <strong>Why split them out:</strong> fixed costs set your
-            break-even point. Each 1,000 zł/mo of fixed adds ~1.5
-            orders/day to break-even (at typical contribution margin),
-            and a higher break-even compresses the margin-of-safety
-            ratio — the buffer between actual and break-even revenue.
-            Rent is the dominant fixed line for casual-Italian in PL
-            (occupancy ratio target ≤ 8% of revenue); above 12% the
-            real-estate decision is costing more than the location
-            premium can justify.
+            Fixed costs set the break-even floor and compress the
+            margin-of-safety ratio above it — the buffer between
+            actual revenue and the point where you start losing money.
+            Strategic implication: every recurring subscription, every
+            additional fixed line, raises the daily volume threshold
+            for survival. Audit fixed costs annually for &quot;creep&quot;
+            — the small SaaS lines no-one cancels but everyone forgot
+            why they signed up.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -3513,21 +3487,14 @@ const HELP = {
           click.
         </p>
         <InstitutionalAnalysis>
-          <ul style={{ margin: "0 0 6px", paddingLeft: 18 }}>
-            <li><strong>Takeaway classic</strong> — 100 ord/d × 45 zł, low attach</li>
-            <li><strong>Balanced</strong> — 70 ord/d × 65 zł, mixed attach</li>
-            <li><strong>Premium</strong> — 55 ord/d × 88 zł, high attach</li>
-            <li><strong>Family / Group</strong> — 30 ord/d × 155 zł, weekend / events</li>
-            <li><strong>Aperitivo / Dinner</strong> — 45 ord/d × 82 zł, drinks-led (needs alcohol licence)</li>
-          </ul>
           <p style={{ margin: 0 }}>
-            Each is a different business model with different unit
-            economics — volume-led (Takeaway) vs ticket-led (Aperitivo).
-            Same truck, same kitchen, can earn 60-110k zł/month
-            depending on which preset the team + pricing + roster is
-            built around. Presets are starting points, not lock-ins —
-            tweak any field afterward without resetting the preset, and
-            the lever enabled state is preserved across loads.
+            Each preset is a different business model in disguise —
+            volume-led (Takeaway) vs ticket-led (Aperitivo) — and the
+            choice cascades into staff hours, supplier mix, pitch
+            requirements, and licensing decisions. Same truck and same
+            kitchen perform very differently depending on which preset
+            the team + pricing + roster is built around, so the preset
+            is a strategic positioning choice, not a forecast knob.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -3622,28 +3589,15 @@ const HELP = {
           The simulator does the math on top of the base ticket.
         </p>
         <InstitutionalAnalysis>
-          <p style={{ margin: "0 0 6px" }}>
-            <strong>Mechanics.</strong> Every lever folds into the same
-            effective ticket + COGS that the rest of the page uses via
-            <code> applyAssumptions()</code>. Drag one slider and the
-            headline KPIs, P&amp;L, cost pie, heatmaps, projection,
-            break-even and Attachment Efficiency panel all re-derive
-            simultaneously.
-          </p>
-          <p style={{ margin: "0 0 6px" }}>
-            <strong>Toggle on/off:</strong> each lever has a green
-            &quot;On&quot; pill in its corner. Off excludes the lever
-            from the math while preserving its configured values — use
-            this to isolate a single hypothesis (e.g. &quot;what would
-            my P&amp;L look like without coffee?&quot;) or click{" "}
-            <em>All off</em> in the card header to see the raw baseline
-            ticket × volume without any behavioural lifts.
-          </p>
-          <p className="v2-muted text-sm" style={{ margin: 0 }}>
-            Defaults are tuned to a Neapolitan truck in Warsaw 2026 and
-            every lever ships disabled — operator opts in explicitly.
-            Match assumptions to real POS attach data within ±5 pp or
-            the forecast is fiction.
+          <p style={{ margin: 0 }}>
+            The discipline this card enforces: assumptions become
+            forecast inputs only when the operator opts each one in
+            explicitly. Defaults are intentionally conservative so the
+            base case isn&apos;t built on optimistic attach guesses.
+            Match assumptions to real POS attach data within ±5pp or
+            the forecast is fiction — operator judgement on aspirational
+            attach should live in the Optimistic archetype, not in the
+            Realistic base.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
