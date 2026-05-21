@@ -8,6 +8,7 @@ import { SITE_NAME } from "@/lib/constants";
 import { getActiveLocations } from "@/data/locations";
 import { CartButton } from "@/components/cart/CartButton";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
+import { CurrencySwitcher } from "@/components/ui/CurrencySwitcher";
 import { useCustomer } from "@/store/customer";
 
 export function Header() {
@@ -79,12 +80,14 @@ export function Header() {
                 {loc.city}
               </Link>
             ))}
+            <CurrencySwitcher />
             <LanguageSwitcher />
             <CartButton />
           </nav>
 
           {/* Mobile: Cart + Hamburger */}
-          <div className="flex items-center gap-3 md:hidden">
+          <div className="flex items-center gap-2 md:hidden">
+            <CurrencySwitcher />
             <LanguageSwitcher />
             <CartButton />
             <button

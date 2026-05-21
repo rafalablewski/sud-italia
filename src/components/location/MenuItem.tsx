@@ -12,10 +12,9 @@ import {
   BadgeType,
   type UpsellConfig,
 } from "@/lib/upsell";
-import { StarRating } from "@/components/rating/StarRating";
-import { getItemRating } from "@/data/ratings";
 import { getItemDetails } from "@/data/kodawari";
 import { ItemDetailDrawer } from "./ItemDetailDrawer";
+import { CompliancePills } from "./CompliancePills";
 import { useCartStore } from "@/store/cart";
 import {
   Plus,
@@ -47,6 +46,10 @@ interface MenuItemProps {
    *  present, additive to the item's intrinsic `menuRole` so admins can
    *  promote items without editing seed data. */
   upsellConfig?: UpsellConfig | null;
+  /** Audit §11.1 — operator-set regulatory disclosure for this location.
+   *  Drives the per-item compliance pill row (kcal on NYC, Nutri-Grade +
+   *  halal on SG, pork / alcohol everywhere). */
+  compliance?: import("./CompliancePills").PublicCompliance | null;
 }
 
 const TAG_LABELS: Record<string, { label: string; variant: "green" | "red" | "gold" | "default" }> = {
@@ -78,6 +81,7 @@ export function MenuItemCard({
   popularThisWeek = false,
   variant = "default",
   upsellConfig,
+  compliance,
 }: MenuItemProps) {
   const addItem = useCartStore((s) => s.addItem);
   const removeItem = useCartStore((s) => s.removeItem);
@@ -100,7 +104,6 @@ export function MenuItemCard({
     (b) => !(b === "staff-pick" && roleBadges.includes("pizzaiolo-choice")),
   );
   const badges: BadgeType[] = [...roleBadges, ...adminBadges];
-  const itemRating = getItemRating(item.id);
   const details = getItemDetails(item.id);
   const isHero = variant === "hero" || item.menuRole === "hero";
   const isAnchor = item.menuRole === "anchor";
@@ -143,8 +146,7 @@ export function MenuItemCard({
   const isPopular = badges.includes("popular");
 
   const hasMetaStrip = Boolean(
-    itemRating ||
-      details?.prepTimeMinutes ||
+    details?.prepTimeMinutes ||
       details?.nutrition ||
       details
   );
@@ -265,12 +267,9 @@ export function MenuItemCard({
         </div>
       </div>
 
-      {/* Row 2: full-width meta strip (rating, time, kcal, Details) */}
+      {/* Row 2: full-width meta strip (time, kcal, Details) */}
       {hasMetaStrip && (
         <div className="flex items-center gap-3 flex-wrap border-t border-gray-100 pt-3">
-          {itemRating && (
-            <StarRating rating={itemRating.rating} reviewCount={itemRating.count} />
-          )}
           {details?.prepTimeMinutes && (
             <span className="flex items-center gap-0.5 text-[11px] text-italia-gray">
               <Clock className="h-3 w-3" aria-hidden />
@@ -298,6 +297,11 @@ export function MenuItemCard({
           )}
         </div>
       )}
+
+      {/* Row 2b: regulatory disclosure pills (kcal / Nutri-Grade / halal /
+          pork / alcohol). Renders nothing on PL/EU trucks unless the
+          operator explicitly opts an item into the disclosure. */}
+      <CompliancePills item={item} compliance={compliance ?? null} />
 
       {/* Row 3: price + cart actions */}
       <div className="flex items-center justify-between">

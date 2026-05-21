@@ -15,6 +15,17 @@ There are already five thick audits in this directory (admin dashboard, NYC/Sing
 
 ## 0.1 Resolution log (post-audit)
 
+**2026-05-21 — i18n + FX + "unnecessary complexity" pass.** Three classes of finding from the NYC/Singapore audit §6.1, §10.2, and §10.3 (cross-referenced into this audit's §4 "What is alarming" and §13 international-expansion blocker) were addressed in one branch:
+
+| Surface | Resolution |
+|---|---|
+| **Multi-currency display** (NYC/SG audit §6.1 row 5, §10.2 row 4) | `src/lib/currency.ts` formats grosze in PLN / USD / SGD / EUR with operator-set rates. Customer header switcher; admin at `/admin/currency` (owner-only). Rates exposed via `/api/settings/public` so the customer site hydrates the formatter on mount. Charges still settle in PLN via the Stripe merchant account — display-only, with an explicit footer note in the switcher. The Path E "International (Berlin)" row in §13 lifts from 5% → 25% readiness. |
+| **Multi-language UI** (NYC/SG audit §6.1, §10.2 row 4) | `src/lib/i18n.ts` dictionary now covers Polish, English, German, Singapore English. Header dropdown switcher; admin at `/admin/languages`. Direct prerequisite for DACH expansion + the SG market. |
+| **Fake hand-typed per-item ratings** (NYC/SG audit §1.2 hard truth, §2.1 row, §10.3 cut #1) | `src/data/ratings.ts` deleted. `<StarRating>` chips removed from `MenuItem`, `MenuSection` (incl. "Highest rated" sort that read fake data), and `ItemDetailDrawer`. The `StarRating` component itself is kept — it still powers the post-order feedback survey where customers enter real ratings. Removes legal exposure under FTC §5 / UK CMA / SG CCCS / EU UCPD. |
+| **`ai-engine.ts` heuristics masquerading as ML** (NYC/SG audit §1.2 hard truth, §10.3 cut #2) | The dead heuristic exports (`generateDemandForecast`, `generatePriceSuggestions`, `generateInsights`) had zero callers and were deleted. The file is now a labelled FAQ keyword-matcher (`getChatResponse`) for the customer chat widget. The real AI surfaces remain at `src/lib/ai/forecast.ts` (Claude-backed) + `src/lib/ai/gateway.ts` + `src/lib/ai/tools/`. |
+| **Auto-accepting aggregator mocks** (NYC/SG audit §1.2 hard truth, §10.3 cut #4) | `WoltMockProvider` + `GlovoMockProvider` deleted. Their `verifyWebhookSignature` returned `true` unconditionally — a forged-webhook foot-gun the moment `ENABLE_AGGREGATORS` flipped on without credentials. `getAggregatorProvider` now throws `AggregatorNotConfigured` and the webhook route returns 503 with the missing env-var list. Live `WoltProvider` / `GlovoProvider` scaffolds remain with real HMAC verification; the three RPC bodies still throw until credentials land. |
+| **Per-location lock honesty** (NYC/SG audit §10.3 cut #3) | The capabilities-ledger entry "Per-location lock scoping" was misleading — claimed `orders:${slug}` but the mirror writes still used the global `orders.json` lock. Renamed to "Per-location lock scoping (hot path)" with a `caveats` callout explaining that the hot path is concurrency-safe via Postgres + `withLockScoped`, while the kv-mirror writes are global by necessity (the kv key holds all rows). No new global locks were added; the honest fix is to either split the mirror per-location or delete it now that the DB is source-of-truth. |
+
 **2026-05-16 — Theatre-to-function pass.** The five "theatre, not function" surfaces called out in §3 and §15 (Inventory, AI demand forecast, Suppliers/POs, KDS SLA + hotkeys, Push notifications) were wired end-to-end the same day this audit landed. Commit `c863a3a` on `claude/audit-findings-documentation-2gMJh`:
 
 | Surface | Resolution |
@@ -358,7 +369,7 @@ The customer attach-history data ([src/lib/upsell.ts:111](../../src/lib/upsell.t
 | **3rd location (Wrocław)** | 70% | Hardcoded `locations.ts`; need menu file; need photographer for hero shots; supplier relationship local |
 | **4th–5th location** | 30% | Lock contention starts; manual stock at 4× volume = unsustainable; one operator becomes single point of failure |
 | **Franchising** | 5% | No franchise tech: no per-franchisee royalty splitting, no franchisee accounting export, no enforced brand pack, no franchisee training portal, no compliance auto-monitoring per location, no per-tenant data isolation |
-| **International (e.g., Berlin)** | 5% | Hardcoded currency assumptions (grosze everywhere), Polish VAT logic, JPK XML, phone-prefix +48, all Polish-localized copy. Real i18n missing |
+| **International (e.g., Berlin)** | 25% | ✅ Multi-currency display (PLN / USD / SGD / EUR via `/admin/currency`) + i18n dictionary covering pl / en / de / en-SG via `/admin/languages` (shipped 2026-05-21). ❌ Still blocked on: Stripe merchant account is PLN-bound so charges still settle PLN (multi-currency display only), Polish VAT (JPK XML) logic, phone-prefix +48, and a Polish supplier graph. The customer surface is now multilingual; the back-office tax + payment plumbing is still PL-only. |
 | **Licensing / white-label** | 10% | Branding is baked into Tailwind tokens (italia-red etc.); not theme-able. Multi-tenant data model doesn’t exist |
 | **SaaS productization** | 15% | The system is well-designed for one chain. Tearing it into a SaaS for other operators is a 6–9 month rewrite |
 | **Ghost kitchens** | 60% | The architecture supports it (location-as-truck abstraction); the marketing and brand operate as "trucks" not "kitchens" |
@@ -500,7 +511,7 @@ The cleanest software story in this audit. There is a real, defensible product h
 Realistic exit in 24–36 months if the chain hits 8+ trucks. Acquirers value the proprietary customer data and the loyalty wallet more than the trucks.
 
 ### Path E: International (Berlin, Vienna, Prague)
-Most expensive path. Hardcoded Polish currency, fiscal codes, and copy mean ~3 months of i18n + 3 months of local supplier and compliance discovery per geography.
+Most expensive path. ✅ i18n + display-currency now ship out of the box (4 locales × 4 currencies via `/admin/languages` and `/admin/currency` as of 2026-05-21) — that's roughly 6 weeks off the previous estimate. ❌ Still need: per-region Stripe merchant accounts (currency is bound to the merchant account at creation, so true EUR/USD/SGD settlement is its own workstream), a tax engine to replace JPK_V7M (Stripe Tax or TaxJar), and local supplier + compliance discovery per geography (~3 months each).
 
 **My recommendation: A → B → optional C.** Don’t pursue D actively; let it find you.
 

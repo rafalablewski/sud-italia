@@ -1,6 +1,5 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import type { Order } from "@/data/types";
-import { logger } from "@/lib/logger";
 
 /**
  * Aggregator provider interface (m2_21). Wolt + Glovo are the priorities
@@ -11,10 +10,22 @@ import { logger } from "@/lib/logger";
  * All aggregator work is gated by ENABLE_AGGREGATORS=true on env so the
  * code can land without surfacing the integration to customers.
  *
- * No real merchant credentials are wired today — both providers expose
- * the same interface but the live implementations live behind env vars
- * (e.g. WOLT_API_KEY, GLOVO_API_KEY, *_WEBHOOK_SECRET). Until those
- * land we use the mock providers below for local dev + staging.
+ * **No live merchant integration exists today.** Earlier revisions
+ * shipped Wolt + Glovo "mock" providers that returned `true` from
+ * `verifyWebhookSignature()` and just `console.log`'d every event —
+ * that was a forged-webhook foot-gun the moment ENABLE_AGGREGATORS
+ * flipped on without credentials. The mocks were removed (2026-05-21,
+ * audit §10.3 "Unnecessary Complexity To Cut"); the registry now throws
+ * a clear `AggregatorNotConfigured` error when credentials are absent
+ * so the webhook route returns 503 and the operator knows what's
+ * missing instead of silently accepting unsigned payloads.
+ *
+ * The Live*Provider classes are still scaffolds — `syncMenu`,
+ * `ingestOrder`, and `updateStatus` throw until the credentials,
+ * payload-mapping, and status-translation work lands. The
+ * `verifyWebhookSignature` HMAC paths are real so a future PR only
+ * needs to fill in the three method bodies + provider-specific status
+ * mappings.
  */
 
 export type AggregatorName = "wolt" | "glovo";
@@ -77,6 +88,20 @@ export interface AggregatorProvider {
   verifyWebhookSignature(headers: Headers, rawBody: string): boolean;
 }
 
+/** Thrown by `getAggregatorProvider` when ENABLE_AGGREGATORS is on but
+ *  the per-provider credentials aren't set. The webhook route catches
+ *  this and returns a 503 with a clear message — strictly better than
+ *  the previous behaviour of returning a mock that auto-accepts every
+ *  unsigned payload. */
+export class AggregatorNotConfigured extends Error {
+  constructor(provider: AggregatorName, missing: string[]) {
+    super(
+      `Aggregator '${provider}' is enabled but missing required env vars: ${missing.join(", ")}`,
+    );
+    this.name = "AggregatorNotConfigured";
+  }
+}
+
 /**
  * Shared HMAC-SHA256 verifier — both Wolt and Glovo use this pattern;
  * the header name differs.
@@ -96,61 +121,6 @@ function verifyHmacSignature(
     );
   } catch {
     return false;
-  }
-}
-
-// --- Mock providers ------------------------------------------------------
-
-class WoltMockProvider implements AggregatorProvider {
-  readonly name: AggregatorName = "wolt";
-  async syncMenu(items: MenuSyncItem[]): Promise<void> {
-    logger.info("aggregator.syncMenu.mock", {
-      provider: "wolt",
-      itemCount: items.length,
-      layer: "providers.aggregator",
-    });
-  }
-  async ingestOrder(raw: unknown): Promise<IngestedOrder> {
-    // Trust the test harness to pass our own shape through. Real Wolt
-    // payload mapping ships when credentials land.
-    return raw as IngestedOrder;
-  }
-  async updateStatus(externalOrderId: string, status: Order["status"]): Promise<void> {
-    logger.info("aggregator.updateStatus.mock", {
-      provider: "wolt",
-      externalOrderId,
-      status,
-      layer: "providers.aggregator",
-    });
-  }
-  verifyWebhookSignature(): boolean {
-    // Mock provider always accepts — staging only.
-    return true;
-  }
-}
-
-class GlovoMockProvider implements AggregatorProvider {
-  readonly name: AggregatorName = "glovo";
-  async syncMenu(items: MenuSyncItem[]): Promise<void> {
-    logger.info("aggregator.syncMenu.mock", {
-      provider: "glovo",
-      itemCount: items.length,
-      layer: "providers.aggregator",
-    });
-  }
-  async ingestOrder(raw: unknown): Promise<IngestedOrder> {
-    return raw as IngestedOrder;
-  }
-  async updateStatus(externalOrderId: string, status: Order["status"]): Promise<void> {
-    logger.info("aggregator.updateStatus.mock", {
-      provider: "glovo",
-      externalOrderId,
-      status,
-      layer: "providers.aggregator",
-    });
-  }
-  verifyWebhookSignature(): boolean {
-    return true;
   }
 }
 
@@ -212,21 +182,28 @@ const cached = new Map<AggregatorName, AggregatorProvider>();
 export function getAggregatorProvider(name: AggregatorName): AggregatorProvider {
   const hit = cached.get(name);
   if (hit) return hit;
-  // In mock mode (no creds yet, dev/staging) we hand back the mock so
-  // the webhook routes + sync jobs can exercise the full code path
-  // without a real merchant relationship.
   if (name === "wolt") {
     const apiKey = process.env.WOLT_API_KEY?.trim();
     const secret = process.env.WOLT_WEBHOOK_SECRET?.trim();
-    const p: AggregatorProvider =
-      apiKey && secret ? new WoltProvider(apiKey, secret) : new WoltMockProvider();
+    if (!apiKey || !secret) {
+      const missing: string[] = [];
+      if (!apiKey) missing.push("WOLT_API_KEY");
+      if (!secret) missing.push("WOLT_WEBHOOK_SECRET");
+      throw new AggregatorNotConfigured("wolt", missing);
+    }
+    const p = new WoltProvider(apiKey, secret);
     cached.set(name, p);
     return p;
   }
   const apiKey = process.env.GLOVO_API_KEY?.trim();
   const secret = process.env.GLOVO_WEBHOOK_SECRET?.trim();
-  const p: AggregatorProvider =
-    apiKey && secret ? new GlovoProvider(apiKey, secret) : new GlovoMockProvider();
+  if (!apiKey || !secret) {
+    const missing: string[] = [];
+    if (!apiKey) missing.push("GLOVO_API_KEY");
+    if (!secret) missing.push("GLOVO_WEBHOOK_SECRET");
+    throw new AggregatorNotConfigured("glovo", missing);
+  }
+  const p = new GlovoProvider(apiKey, secret);
   cached.set(name, p);
   return p;
 }

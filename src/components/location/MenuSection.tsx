@@ -13,11 +13,10 @@ import { ReorderSection } from "./ReorderSection";
 import { SpeedGuarantee } from "./SpeedGuarantee";
 import { ComboDealsPreview } from "./ComboDealsPreview";
 import { compareMenuEngineering, type UpsellConfig } from "@/lib/upsell";
-import { getItemRating } from "@/data/ratings";
 import { useLiveMenuAvailability } from "@/lib/useLiveMenuAvailability";
 import { Search, X, ArrowUpDown, Check } from "lucide-react";
 
-type MenuSortValue = "default" | "price-low" | "price-high" | "rating";
+type MenuSortValue = "default" | "price-low" | "price-high";
 
 const MENU_SORT_OPTIONS: { value: MenuSortValue; label: string }[] = [
   // "default" applies the audit §4.4 hierarchy: hero → profit-driver →
@@ -26,7 +25,6 @@ const MENU_SORT_OPTIONS: { value: MenuSortValue; label: string }[] = [
   { value: "default", label: "Pizzaiolo's layout" },
   { value: "price-low", label: "Price: low → high" },
   { value: "price-high", label: "Price: high → low" },
-  { value: "rating", label: "Highest rated" },
 ];
 
 interface MenuSectionProps {
@@ -39,9 +37,13 @@ interface MenuSectionProps {
    * with callers that don't yet pass it (e.g. tests or older fixtures).
    */
   initialAvailability?: Record<string, boolean>;
+  /** Audit §11.1 — per-location regulatory disclosure. Drives per-item
+   *  pills (kcal on NYC, Nutri-Grade + halal on SG). Passed in by the
+   *  location page so SSR has it on first paint. */
+  compliance?: import("./CompliancePills").PublicCompliance | null;
 }
 
-export function MenuSection({ items, locationSlug, initialAvailability }: MenuSectionProps) {
+export function MenuSection({ items, locationSlug, initialAvailability, compliance }: MenuSectionProps) {
   // Editorial badges from /admin/crosssell → Menu badges. Fetched once per
   // mount; each MenuItemCard reads from it (no per-item refetch).
   const [upsellConfig, setUpsellConfig] = useState<UpsellConfig | null>(null);
@@ -170,7 +172,6 @@ export function MenuSection({ items, locationSlug, initialAvailability }: MenuSe
 
     if (sortBy === "price-low") return [...result].sort((a, b) => a.price - b.price);
     if (sortBy === "price-high") return [...result].sort((a, b) => b.price - a.price);
-    if (sortBy === "rating") return [...result].sort((a, b) => (getItemRating(b.id)?.rating || 0) - (getItemRating(a.id)?.rating || 0));
     // "default" — Pizzaiolo's layout (audit §4.4):
     //   hero → profit-driver → anchor → standards by popularity → alpha tie-break.
     // compareMenuEngineering already does the popularity tie-break inside
@@ -338,6 +339,7 @@ export function MenuSection({ items, locationSlug, initialAvailability }: MenuSe
                   popularThisWeek={hotThisWeekIds.has(item.id)}
                   variant={heroSpan ? "hero" : "default"}
                   upsellConfig={upsellConfig}
+                  compliance={compliance ?? null}
                 />
               </div>
             );

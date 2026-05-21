@@ -40,6 +40,7 @@ import { warszawaMenu } from "@/data/menus/warszawa";
 import { useCustomer } from "@/store/customer";
 import { postCartPresenceToServer } from "@/lib/cart-presence-post-client";
 import { useLiveMenuAvailability } from "@/lib/useLiveMenuAvailability";
+import { fetchPublicSettings } from "@/lib/public-settings";
 
 interface CartDrawerProps {
   open: boolean;
@@ -222,21 +223,40 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
     regular?: number;
     vip?: number;
   } | null>(null);
+  // Audit §11.1 — per-location regulatory disclosure surfaced in the
+  // cart: GST line for SG, FRESH Act packaging text for NYC, PDPA §13
+  // consent dialog gating the customer's phone collection.
+  const [compliance, setCompliance] = useState<{
+    zone: "EU" | "NYC" | "SG";
+    gstRegistered?: boolean;
+    gstRateBps?: number;
+    gstNumber?: string | null;
+    packagingDisclosure?: string | null;
+    pdpaConsentText?: string | null;
+  } | null>(null);
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
-    fetch("/api/settings/public", { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (cancelled || !data) return;
-        const t = data.deliveryThresholds;
-        if (t && typeof t === "object") setDeliveryThresholdsOverride(t);
-      })
-      .catch(() => {});
+    fetchPublicSettings(locationSlug).then((data) => {
+      if (cancelled || !data) return;
+      const t = data.deliveryThresholds;
+      if (t && typeof t === "object") setDeliveryThresholdsOverride(t);
+      if (data.compliance && typeof data.compliance === "object") {
+        setCompliance(data.compliance);
+      }
+    });
     return () => {
       cancelled = true;
     };
-  }, [open]);
+  }, [open, locationSlug]);
+
+  // GST line surfaces only when the truck is SG GST-registered. We compute
+  // the GST owed as a back-out from the inclusive total (IRAS practice for
+  // GST-inclusive pricing in F&B). 9% inclusive → GST = total × 9/109.
+  const gstRateBps = compliance?.gstRegistered ? compliance.gstRateBps ?? 900 : 0;
+  const gstAmount = gstRateBps > 0
+    ? Math.round((subtotal * gstRateBps) / (10_000 + gstRateBps))
+    : 0;
   const deliveryThreshold = getDeliveryThresholdForCustomer(
     deliverySegment,
     deliveryThresholdsOverride,
@@ -797,11 +817,35 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
               </span>
             </div>
           )}
+          {gstAmount > 0 && (
+            <div className="flex justify-between items-center text-xs text-italia-gray">
+              <span>
+                of which GST{compliance?.gstNumber ? ` (${compliance.gstNumber})` : ""} @{" "}
+                {(gstRateBps / 100).toFixed(gstRateBps % 100 === 0 ? 0 : 1)}%
+              </span>
+              <span>{formatPrice(gstAmount)}</span>
+            </div>
+          )}
           <div className="flex justify-between items-center text-lg font-bold border-t border-gray-100 pt-2">
             <span>Total</span>
             <span className="text-italia-red">{formatPrice(total)}</span>
           </div>
         </div>
+
+        {compliance?.zone === "NYC" && compliance.packagingDisclosure && (
+          <p className="mt-2 text-[10px] leading-relaxed text-italia-gray border-t border-gray-100 pt-2">
+            <span className="font-semibold">Packaging:</span>{" "}
+            {compliance.packagingDisclosure}
+          </p>
+        )}
+
+        {compliance?.zone === "SG" && compliance.pdpaConsentText && (
+          <p className="mt-2 text-[10px] leading-relaxed text-italia-gray border-t border-gray-100 pt-2">
+            <span className="font-semibold">PDPA §13 consent:</span>{" "}
+            {compliance.pdpaConsentText} By placing this order you confirm
+            you have read this notice.
+          </p>
+        )}
 
         <div className="mt-1.5 flex flex-col gap-1 empty:hidden">
           <LoyaltyEarnPreview cartTotal={total} />

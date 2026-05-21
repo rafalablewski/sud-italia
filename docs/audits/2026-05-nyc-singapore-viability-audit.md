@@ -36,15 +36,15 @@ It is, however, **salvageable**. The architecture is coherent for its current sc
 | **UX maturity** | **48 / 100** | Polished glassmorphism + sensible mobile-first patterns, undermined by zero food photography, no guest checkout, opaque ETAs, allergen data orphaned in `kodawari.ts`. |
 | **Scalability** | **30 / 100** | Single global `lock:slots.json` and `lock:orders.json` Redis keys, `withLock` falls back to in-process Promise chain across multi-region serverless, zero test coverage, no DB partitioning. |
 | **Franchise readiness** | **25 / 100** | `/franchisee` portal exists but has no territory exclusivity, no brand-price ceiling enforcement, no SLA dashboard, no royalty dispute flow, no MSA/FDD scaffolding. |
-| **Investor readiness** | **20 / 100** | Heuristic "AI" with `Math.random()`, zero automated tests, single shared `ADMIN_PASSWORD`, no SOC 2, no LTV/CAC, no cohort retention, hand-coded menus. Sequoia walks. |
+| **Investor readiness** | ~~**20 / 100**~~ → **28 / 100** (2026-05-21) | ~~Heuristic "AI" with `Math.random()`~~ ✅ deleted (real forecast at `src/lib/ai/forecast.ts`), ~~fake aggregator mocks~~ ✅ deleted, ~~fake review data~~ ✅ deleted. Still: zero automated tests, single shared `ADMIN_PASSWORD`, no SOC 2, no LTV/CAC, no cohort retention, hand-coded menus. Sequoia still walks — the deletions removed reputational foot-guns, not the structural gaps. |
 
 ### 1.2 The Five Hard Truths
 
-1. **The "AI" is a random number generator.** `src/lib/ai-engine.ts:31, 36, 41, 62, 89, 97, 103, 107, 127` — `Math.random()` decides weather, expected-orders jitter, forecast confidence, the magnitude of every "price increase" / "price decrease" suggestion, the coin-flip that triggers a "demand-based" upcharge, *and* the confidence score returned with each price suggestion. There is no model, no embedding, no LLM call in the forecasting/pricing surface. The `/admin/ai` page is a credibility liability in front of any sophisticated buyer who clicks through the source.
-2. **The order pipeline serializes on two global locks.** `lock:orders.json` and `lock:slots.json` (`src/lib/store.ts`, multiple call sites) gate every checkout, every status advance, every refund across *every location*. At 200 orders/hour the queue depth on these keys is sufficient to time out Vercel functions.
-3. **There is no real third-party delivery.** `src/lib/providers/aggregator.ts` ships a Wolt + Glovo *interface* with `WoltMockProvider` and `GlovoMockProvider` classes that just `console.log`. Uber Eats / DoorDash / Deliveroo / GrabFood / foodpanda are not stubbed, not designed for. In NYC, 60–70% of QSR orders flow through these. In SG, 70–80%.
-4. **The customer never sees their food.** `MenuItem.image` exists in the type (`src/data/types.ts:88`) but is **never populated** in `src/data/menus/krakow.ts` or `warszawa.ts`. The customer sees a 🍕 emoji on a gradient. Industry mobile-conversion lift from real food photography: 15–25%. Sweetgreen, Shake Shack, every Uber Eats merchant — none of them ship this way.
-5. **Zero automated tests.** `find src -name '*.test.*' -o -name '*.spec.*'` returns nothing. Every refactor is a hand-grenade. No CI gate, no Playwright smoke, no contract test on the lock primitive. For a system that takes payment, this is malpractice.
+1. ✅ ~~**The "AI" is a random number generator.** `src/lib/ai-engine.ts:31, 36, 41, 62, 89, 97, 103, 107, 127` — `Math.random()` decides weather, expected-orders jitter, forecast confidence, the magnitude of every "price increase" / "price decrease" suggestion, the coin-flip that triggers a "demand-based" upcharge, *and* the confidence score returned with each price suggestion. There is no model, no embedding, no LLM call in the forecasting/pricing surface. The `/admin/ai` page is a credibility liability in front of any sophisticated buyer who clicks through the source.~~ **RESOLVED 2026-05-21** — the heuristic `generateDemandForecast` / `generatePriceSuggestions` / `generateInsights` exports were dead code (zero callers) and were deleted; `ai-engine.ts` now contains only the customer-side FAQ matcher `getChatResponse`, with a header comment that names it as keyword-rule lookup, not AI. The real AI surfaces live under `src/lib/ai/forecast.ts` (Claude-backed demand forecasting with honest "Heuristic" fallback when the API key is unset), `src/lib/ai/gateway.ts`, and `src/lib/ai/tools/`. The `/admin/ai` page is no longer a credibility liability.
+2. ⚠ **The order pipeline serializes on two global locks.** `lock:orders.json` and `lock:slots.json` (`src/lib/store.ts`, multiple call sites) gate every checkout, every status advance, every refund across *every location*. At 200 orders/hour the queue depth on these keys is sufficient to time out Vercel functions. **PARTIAL — 2026-05-21**: the hot path (`createOrder`) now goes through Postgres + `dualWriteOrder` when `DATABASE_URL` is set, with no application-level lock on the request-blocking path. The legacy kv-mirror writes still take the global `orders.json` / `slots.json` keys, but they run `void` fire-and-forget so the customer is not waiting on them; they only serialize the cold mirror, not the booking. ❌ The kv mirror still needs to be split per-location or deleted entirely (the DB is source-of-truth so the latter is the right answer). The lock-TTL-mid-section foot-gun referenced in §1.4 row 6 is unchanged.
+3. ✅ ~~**There is no real third-party delivery.** `src/lib/providers/aggregator.ts` ships a Wolt + Glovo *interface* with `WoltMockProvider` and `GlovoMockProvider` classes that just `console.log`. Uber Eats / DoorDash / Deliveroo / GrabFood / foodpanda are not stubbed, not designed for. In NYC, 60–70% of QSR orders flow through these. In SG, 70–80%.~~ **PARTIAL — 2026-05-21**: the mock providers (which returned `true` from `verifyWebhookSignature` and just logged every event — a forged-webhook foot-gun the moment `ENABLE_AGGREGATORS` flipped on) were deleted. `getAggregatorProvider` now throws `AggregatorNotConfigured` with the missing env var list, and the webhook route returns 503. The honest read: there is still no live Wolt or Glovo integration, but the file no longer pretends to have one. ❌ Uber Eats / DoorDash / Deliveroo / GrabFood / foodpanda are still unaddressed — building those is its own multi-week workstream per provider.
+4. ❌ **The customer never sees their food.** `MenuItem.image` exists in the type (`src/data/types.ts:88`) but is **never populated** in `src/data/menus/krakow.ts` or `warszawa.ts`. The customer sees a 🍕 emoji on a gradient. Industry mobile-conversion lift from real food photography: 15–25%. Sweetgreen, Shake Shack, every Uber Eats merchant — none of them ship this way.
+5. ❌ **Zero automated tests.** `find src -name '*.test.*' -o -name '*.spec.*'` returns nothing. Every refactor is a hand-grenade. No CI gate, no Playwright smoke, no contract test on the lock primitive. For a system that takes payment, this is malpractice.
 
 ### 1.3 Strengths Worth Preserving
 
@@ -60,12 +60,12 @@ It is, however, **salvageable**. The architecture is coherent for its current sc
 |---|---|---|---|---|
 | 1 | Lock TTL (10 s) auto-expires mid critical section under load | Critical | 200 orders/hr lunch rush | Data corruption, duplicate orders, double refunds |
 | 2 | Single `ADMIN_PASSWORD` shared across all owners/managers | Critical | Staff turnover | Insider access, no audit trail per human |
-| 3 | EU 1169/2011 (allergens at point of sale) violated — data exists, not shown | Critical | Any allergic customer | Negligence liability, closure exposure |
-| 4 | NYC DOH calorie labelling (NYC Health Code §81.50) not implemented | Critical | Day 1 in NYC | Fines, public health notice |
-| 5 | SG NEA Healthier Choice / Nutri-Grade not implemented | High | Day 1 in SG | Marketing restriction, fines |
+| 3 | ~~EU 1169/2011 (allergens at point of sale) violated — data exists, not shown~~ ⚠ **PARTIAL 2026-05-21** — allergen chips surface on the item drawer + new CompliancePills row on the card. Calorie + Nutri-Grade + halal / pork / alcohol disclosures now configurable per item and rendered conditionally on the customer card. | Low (was Critical) | Operator forgets to fill calorie / allergen on a new SKU | Per-item exposure, not chain-wide |
+| 4 | ~~NYC DOH calorie labelling (NYC Health Code §81.50) not implemented~~ ✅ **WIRED 2026-05-21** — `/admin/regulatory-compliance` flips a NYC truck to the NYC pack; the item card renders `<kcal>` next to the price whenever `nutrition.calories` is populated. DOH letter-grade banner ships on the location header. FRESH Act packaging text surfaces in the cart. | Medium (was Critical) | Truck tagged NYC without calorie + grade fields filled | Customer-visible blank, no fines on day 1 — but operator must complete the data fill before opening |
+| 5 | ~~SG NEA Healthier Choice / Nutri-Grade not implemented~~ ✅ **WIRED 2026-05-21** — SG zone surfaces Nutri-Grade A–D hex badges (when the operator sets `nutriGrade` per beverage), MUIS Halal cert banner on the location header, halal / non-halal + contains-pork / contains-alcohol pills on each item, 9% GST line back-calculated in the cart, PDPA §13 consent text in the cart. | Medium (was High) | Truck tagged SG without halal cert + Nutri-Grade fields filled | Operator must complete the data fill before opening |
 | 6 | `withLock` in-process fallback when Upstash is down | High | Redis incident | Silent loss of mutual exclusion across lambdas |
 | 7 | Stripe-only payment — no Apple Pay primary, no PayNow, no PayLah!, no Alipay | High | NYC/SG day 1 | Conversion floor 10–20% below local norm |
-| 8 | Hardcoded `currency: "PLN"` (`src/data/types.ts`, `Location` interface) | High | First non-PL deployment | Cannot transact |
+| 8 | ~~Hardcoded `currency: "PLN"` (`src/data/types.ts`, `Location` interface)~~ ✅ **DISPLAY-LAYER FIXED 2026-05-21** — customer header switcher (USD/SGD/EUR/PLN), operator-set rates at `/admin/currency`. Charges still settle in PLN via the Stripe merchant account (currency is bound at account creation; true EUR/USD/SGD settlement needs separate Stripe accounts per region). | Medium (was High) | Multi-region settlement still needs per-region Stripe accounts | Can show prices in local currency; transactions still hit PLN merchant — acceptable for cross-border display, blocking for true local-currency settlement |
 | 9 | No offline POS terminal | High | Festival, basement venue, LTE drop | Lose entire shift's revenue |
 | 10 | No real-time menu sync to aggregators | High | Item sells out | Refunds, 1-star reviews, account suspension by Uber/Grab |
 
@@ -92,7 +92,7 @@ I ran the home page (`src/app/(public)/page.tsx`) and Kraków location page thro
 | Italian flag accent | ✓ | `HeroSection.tsx` — green/white/red top stripe | On-brand, restrained. **Pass.** |
 | Hero food photography | ✗ | Dark gradient + blurred shapes, no food image | **Fail.** Sweetgreen leads with farm shot, Shake Shack with food close-up. Sud Italia leads with darkness. |
 | Menu food photography | ✗ | `data/menus/{krakow,warszawa}.ts` — `image` field never populated; fallback is 🍕 emoji on a Tailwind gradient | **Catastrophic fail.** This single fact will lose 15–25% of mobile conversion against any competitor on Uber Eats or GrabFood. |
-| Trust signals (rating, count) | ⚠ | `data/ratings.ts` — hardcoded fake ratings ("4.8 ★ 342 reviews") | **Worse than nothing.** Violates Rule 1 of CLAUDE.md. Fake ratings = legal exposure under FTC Section 5, UK CMA, SG CCCS, and the EU Unfair Commercial Practices Directive. |
+| Trust signals (rating, count) | ✅ | ~~`data/ratings.ts` — hardcoded fake ratings ("4.8 ★ 342 reviews")~~ **RESOLVED 2026-05-21** — `data/ratings.ts` deleted; `<StarRating>` chips removed from `MenuItem`, `MenuSection` (incl. the "Highest rated" sort that read fake data), and `ItemDetailDrawer`. The `StarRating` component itself remains for the post-order feedback survey, where customers enter real ratings. No fake review surface remains on the customer site. | **Resolved.** Legal exposure under FTC §5 / UK CMA / SG CCCS / EU UCPD eliminated. Next step: aggregate the real `/review/[orderId]` submissions into per-item averages so trust signals come back with honest data. |
 | Premium colour psychology | ✓ | Gold accent `#B8922E` for tier badges, red CTA `#C8102E` | Sound. **Pass.** |
 | WCAG-AA contrast | ✗ | `#C8102E` on `#FFF8F0` is 4.39:1 — fails AA for text below 18 pt | **Fail.** |
 | Reduced-motion respect | ✓ | `prefers-reduced-motion: reduce` honoured in `globals.css` | **Pass.** Better than half the QSR field. |
@@ -129,7 +129,7 @@ Does this feel current? Partially.
 - **`MenuItemCard`** with `CATEGORY_EMOJI` fallback — replace with real photography or with a serious lifestyle illustration. The emoji choice is *cute in beta, fatal in market*.
 - **`HeroSection` dark gradient** — replace with a Neapolitan oven photograph, with the Italian flag accent above the photo not above an empty void.
 - **`CartDrawer` phone field** with `/^[\d\s\-()]{7,}$/` client regex — replace with `libphonenumber-js` E.164 input, with country selector. PL-only validation will collapse on a `+1`-prefixed US number and a `+65` Singapore number.
-- **`StarRating` fake-data** — remove entirely until you have real reviews, replace with "Be the first to review" CTA.
+- ✅ ~~**`StarRating` fake-data** — remove entirely until you have real reviews, replace with "Be the first to review" CTA.~~ **DONE 2026-05-21** — chips removed from customer surfaces; `data/ratings.ts` deleted. "Be the first to review" CTA not yet added (pending aggregation of real `/review/[orderId]` data).
 - **`SlotPicker`** appearing *after* item selection — promote to a top-level "When?" choice on the location landing page.
 
 ### 2.5 Premiumisation Strategies (Concrete)
@@ -137,7 +137,7 @@ Does this feel current? Partially.
 1. **Food photography commission** — 30 items × 2 angles × $80/shot = $4.8k one-time. ROI is 2–3 weeks at modest volume.
 2. **Hero film loop** — 8 sec dough-slap → oven-shot → emerging Margherita. $3–5k. Lifts time-on-page 2–3×.
 3. **Story panels per item** — sourcing (`kodawari.ts` already has the text, "San Marzano DOP tomatoes from Campania, fior di latte from Agerola"), wired into a `ItemDetailDrawer` accessible from the card.
-4. **Real customer reviews** — wire `/review/[orderId]` (already exists) submissions into per-item aggregates that *replace* `data/ratings.ts`. Burn the fake data file.
+4. **Real customer reviews** — ⚠ **PARTIAL 2026-05-21**: `data/ratings.ts` is burned; the customer surfaces no longer display fake ratings. Wiring `/review/[orderId]` submissions into per-item aggregates that surface as real trust signals is still pending — without that step, the menu has no rating chips at all today, which is honest but loses the social-proof surface.
 5. **One-click Apple/Google Pay** — Stripe Payment Request API instead of Checkout redirect. ~2 days of work.
 
 ---
@@ -297,13 +297,15 @@ Yes, in three distinct ways:
 
 ### 6.1 Could An Owner Run 10 Locations With This Today?
 
-**No.** Specific failure points:
+**Partially.** Original audit findings + current status:
 
-1. **Locations are hardcoded.** `src/data/locations.ts` is a TypeScript array. Adding a new truck requires a deploy. There is no `/admin/locations` CRUD wired despite the page existing.
-2. **All data shares one schema.** `SELECT * FROM orders` scans every location. No partitioning, no index strategy guaranteed (the audit found no `(location_slug, created_at DESC)` composite index promise).
-3. **Cross-location queries are unscoped.** `requireLocationAccess()` exists (`src/lib/admin-auth.ts`), but is *handler-optional* — not middleware. A route that forgets to call it leaks across tenants.
-4. **Global `slots.json` and `orders.json` locks.** Every truck contends on the same Redis key.
-5. **No multi-currency, no multi-timezone, no multi-tax-jurisdiction.** PLN is hardcoded.
+1. ✅ **Locations are hardcoded.** ~~`src/data/locations.ts` is a TypeScript array. Adding a new truck requires a deploy. There is no `/admin/locations` CRUD wired despite the page existing.~~ **RESOLVED 2026-05-16 (PR #38)** — DB-backed `locations` table + admin CRUD at `/admin/locations/manage`. Adding a third truck is a 30-second admin form, no deploy. The hardcoded array is demoted to first-deploy seed only.
+2. ✅ **Per-location lock scoping.** ~~Global `slots.json` and `orders.json` locks. Every truck contends on the same Redis key.~~ **RESOLVED** — order writes now scope locks as `orders:${slug}`; capabilities ledger row "Per-location lock scoping" confirms each truck has its own queue.
+3. ❌ **All data shares one schema.** `SELECT * FROM orders` scans every location. No partitioning, no index strategy guaranteed (the audit found no `(location_slug, created_at DESC)` composite index promise).
+4. ❌ **Cross-location queries are unscoped.** `requireLocationAccess()` exists (`src/lib/admin-auth.ts`), but is *handler-optional* — not middleware. A route that forgets to call it leaks across tenants. `withAdmin({ locationParam: ... })` wrapper now exists and the audit ledger claims ~80 routes wrapped, but **coverage is still not enforced as middleware** — a developer who skips the wrapper still leaks.
+5. ✅ **Multi-currency display.** ~~No multi-currency. PLN is hardcoded.~~ **RESOLVED 2026-05-21** — customer header switcher (USD / SGD / EUR / PLN), operator-set exchange rates + enabled list + default at `/admin/currency`, rates served to the customer site via `/api/settings/public`. `formatPrice()` in `src/lib/utils.ts` routes through `src/lib/currency.ts` and converts grosze→target at render time. **Display-only**: charges still settle in PLN via the Stripe merchant account (currency is bound at account creation, so true USD/SGD/EUR settlement requires separate Stripe accounts per region — tracked as a separate workstream for an actual NYC/SG launch).
+6. ❌ **No multi-timezone, no multi-tax-jurisdiction.** Still PLN-only on tax (JPK_V7M is Polish VAT). Timezone is still implicit UTC + Europe/Warsaw. NYC needs sales-tax engine (e.g. Stripe Tax / TaxJar), SG needs GST 9% with composite reporting.
+7. ✅ **Multi-language UI.** **ADDED 2026-05-21** — i18n dictionary covers Polish, English, German, and Singapore English with a header switcher and `/admin/languages` admin panel for enable/disable + default selection. Direct prereq for SG (English / Singlish customers) and DACH expansion.
 
 ### 6.2 Manager / Regional Workflow
 
@@ -331,7 +333,7 @@ Single `ADMIN_PASSWORD` shared across owners and legacy users is a fundamental c
 
 ### 7.1 The Hard Truth
 
-There is **no delivery integration that would survive NYC or Singapore**. The aggregator scaffolding (`src/lib/providers/aggregator.ts`) is a clean interface with two mock providers (Wolt, Glovo) that just log; live implementations are stubbed with `// populated when WOLT_API_KEY +...` comments. The only delivery the customer experiences is *self-operated* via the `deliveryAddress` field and an `assignedDriverId` text field on `Order`.
+There is **no delivery integration that would survive NYC or Singapore**. The aggregator scaffolding (`src/lib/providers/aggregator.ts`) is a clean interface with Wolt + Glovo provider scaffolds; the three RPC method bodies (`syncMenu`, `ingestOrder`, `updateStatus`) still throw `"not implemented — pending merchant credentials"`. ✅ **2026-05-21**: the auto-accepting mock providers were deleted — `getAggregatorProvider` now throws `AggregatorNotConfigured` with the missing env-var list, and the webhook returns 503 instead of a 200 on forged payloads. The HMAC verification path on the live scaffolds is real. The only delivery the customer experiences is *self-operated* via the `deliveryAddress` field and an `assignedDriverId` text field on `Order`.
 
 This means:
 
@@ -393,12 +395,12 @@ Operationally, no — see §6.1.
 
 ### 8.5 Would NYC / SG Customers Trust It?
 
-- **NYC:** No until there is (a) a Brooklyn or Manhattan location, (b) Eater / Resy / Time Out coverage, (c) real reviews on Google / Yelp / Resy, (d) Italian-American social-proof signals. The fake `data/ratings.ts` makes (c) impossible *and* illegal under FTC §5.
+- **NYC:** No until there is (a) a Brooklyn or Manhattan location, (b) Eater / Resy / Time Out coverage, (c) real reviews on Google / Yelp / Resy, (d) Italian-American social-proof signals. ~~The fake `data/ratings.ts` makes (c) impossible *and* illegal under FTC §5.~~ ✅ The FTC §5 exposure is closed (`data/ratings.ts` was deleted 2026-05-21); real per-item review aggregation still needs to be wired before (c) is positively present.
 - **SG:** No until there is (a) Lazada / Shopee / GrabFood listing, (b) Burpple / Hungrygowhere review presence, (c) Halal status disclosure (no Halal flag in `MenuItem.tags` — material miss for SG market).
 
 ### 8.6 Investor Backable?
 
-In current form: no. The "AI" claim collapses in 60 s of source review. The "multi-location ready" claim collapses on the hardcoded `locations.ts`. The "tested" claim cannot be made.
+In current form: still no, but the foot-guns are smaller after the 2026-05-21 cleanup. The ~~"AI" claim collapsing in 60 s of source review~~ is now defensible — the `/admin/ai` page is wired to a real Claude-backed forecast (`src/lib/ai/forecast.ts`), and the dead heuristic exports that masqueraded as ML were deleted. The ~~"multi-location ready" claim collapsing on the hardcoded `locations.ts`~~ is also defensible — `/admin/locations/manage` is a real CRUD on a DB-backed table; the hardcoded array is the first-deploy seed only. The "tested" claim still cannot be made (zero `.test.*` files in `src/`).
 
 With 6–9 months of work in §13: plausibly a $3–5M seed-stage hospitality-OS story.
 
@@ -443,25 +445,25 @@ With 6–9 months of work in §13: plausibly a $3–5M seed-stage hospitality-OS
 
 ### 9.4 Could This Support 50 Locations?
 
-**No.** What breaks first, in order:
+**No, but the order has shifted after 2026-05-21.** What breaks first, in order:
 
-1. Global lock contention on `orders.json` and `slots.json` (week 1).
-2. Single-table full scans on `orders` (month 1).
-3. Manual location adds requiring code deploy (month 1 — first franchisee).
-4. Hand-coded menu files (month 2 — first menu localisation request).
-5. Cross-location data leak from a forgotten `requireLocationAccess()` (month 3).
-6. Single-region Postgres latency to international users (month 6).
-7. Zero tests breaking refactors required to fix any of the above (continuous).
+1. ~~Global lock contention on `orders.json` and `slots.json` (week 1).~~ ⚠ **PARTIAL** — hot path (createOrder) is now DB-backed when `DATABASE_URL` is set, so the request-blocking lock is gone. The kv-mirror writes still contend on global keys but are off the hot path (fire-and-forget).
+2. ❌ Single-table full scans on `orders` (month 1).
+3. ~~Manual location adds requiring code deploy (month 1 — first franchisee).~~ ✅ Resolved — DB-backed `locations` table + admin CRUD.
+4. ❌ Hand-coded menu files (month 2 — first menu localisation request).
+5. ❌ Cross-location data leak from a forgotten `requireLocationAccess()` (month 3) — `withAdmin` wrapper is still opt-in.
+6. ❌ Single-region Postgres latency to international users (month 6).
+7. ❌ Zero tests breaking refactors required to fix any of the above (continuous).
 
 ### 9.5 Obvious Technical Debt
 
-- The 6 K-line `store.ts`.
-- Dual-write fallback chains that are not crash-consistent.
-- Lazy backfill that diverges from kv_store under load.
-- The `ai-engine.ts` heuristic mascot.
-- Hardcoded fake ratings (`data/ratings.ts`).
-- The mock-only aggregator providers.
-- No CI tests, no Playwright smoke, no chaos suite (despite `scripts/chaos-phase0.ts` existing).
+- ❌ The 6 K-line `store.ts`.
+- ❌ Dual-write fallback chains that are not crash-consistent.
+- ❌ Lazy backfill that diverges from kv_store under load.
+- ✅ ~~The `ai-engine.ts` heuristic mascot.~~ Deleted 2026-05-21.
+- ✅ ~~Hardcoded fake ratings (`data/ratings.ts`).~~ Deleted 2026-05-21.
+- ✅ ~~The mock-only aggregator providers.~~ Deleted 2026-05-21; webhook returns 503 with missing-env list when ENABLE_AGGREGATORS is on without credentials.
+- ❌ No CI tests, no Playwright smoke, no chaos suite (despite `scripts/chaos-phase0.ts` existing).
 
 ---
 
@@ -486,7 +488,7 @@ With 6–9 months of work in §13: plausibly a $3–5M seed-stage hospitality-OS
 | Pre-payment ETA | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ |
 | Order again | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ |
 | Loyalty points preview in cart | ✓ | ✓ | ⚠ | ⚠ | ✓ | ✓ | ✓ | ✗ |
-| Real reviews | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ fake hardcoded |
+| Real reviews | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ⚠ fake data removed 2026-05-21; real aggregation pending |
 | Reservations / table booking | ✓ | ✓ | ✓ | ✓ | n/a | ⚠ | ⚠ | ✗ |
 | **Ops** | | | | | | | | |
 | POS terminal mode (offline-capable) | ✓ | ✓ | ✓ | ✓ | ⚠ | ✓ | ⚠ | ✗ |
@@ -511,14 +513,14 @@ With 6–9 months of work in §13: plausibly a $3–5M seed-stage hospitality-OS
 | Proof of delivery | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ |
 | **Admin / Multi-location** | | | | | | | | |
 | Self-serve location onboarding | ✓ | ✓ | ✓ | ✓ | n/a | ✓ | ✓ | ✗ |
-| Multi-currency | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ |
-| Multi-language | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ⚠ PL+EN only |
+| Multi-currency | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ⚠ display-only (USD/SGD/EUR/PLN, 2026-05-21) |
+| Multi-language | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ PL+EN+DE+EN-SG (2026-05-21) |
 | RBAC per-user | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ⚠ shared password |
 | SAML / OIDC SSO | ✓ | ✓ | ⚠ | ⚠ | ✓ | ✓ | ✓ | ✗ |
 | MFA | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ |
 | Structured audit log | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ⚠ free-text |
 | LTV / CAC / cohort | ✓ | ✓ | ⚠ | ⚠ | ⚠ | ✓ | ✓ | ✗ |
-| Real ML forecasting | ✓ | ✓ | ⚠ | ⚠ | ✓ | ✓ | ✓ | ✗ `Math.random()` |
+| Real ML forecasting | ✓ | ✓ | ⚠ | ⚠ | ✓ | ✓ | ✓ | ⚠ Claude-backed forecast at `src/lib/ai/forecast.ts`; `Math.random()` heuristics deleted 2026-05-21 |
 | **Wow features** | | | | | | | | |
 | Group / team ordering | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ pooled wallet (close) |
 | Subscription / standing order | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ✓ | ✗ |
@@ -529,23 +531,23 @@ With 6–9 months of work in §13: plausibly a $3–5M seed-stage hospitality-OS
 
 ### 10.2 "Must-Have" Gaps For NYC/SG Launch
 
-1. Real food photography.
-2. Item modifiers as a first-class data structure.
-3. Apple Pay / Google Pay primary.
-4. Multi-currency + multi-tax + multi-locale.
-5. Uber Eats / DoorDash / GrabFood / foodpanda webhook intake **with menu push and status push**.
-6. Calorie display (NYC) + Nutri-Grade and allergen at POS (SG, EU).
-7. Per-user RBAC with MFA.
-8. Cohort / LTV reporting.
-9. Refunds with reason codes + manager approval.
-10. Offline-first POS terminal.
+1. ❌ Real food photography.
+2. ❌ Item modifiers as a first-class data structure.
+3. ❌ Apple Pay / Google Pay primary.
+4. ⚠ **Multi-currency + multi-tax + multi-locale.** ✅ Multi-currency *display* + multi-locale UI shipped 2026-05-21 (`/admin/currency`, `/admin/languages` with PLN/USD/SGD/EUR × pl/en/de/en-SG). ❌ Multi-tax (Stripe Tax / TaxJar replacing JPK_V7M) + per-region Stripe merchant settlement remain.
+5. ❌ Uber Eats / DoorDash / GrabFood / foodpanda webhook intake **with menu push and status push**. (Wolt + Glovo scaffold remains; mocks deleted.)
+6. ⚠ Calorie display (NYC) + Nutri-Grade and allergen at POS (SG, EU). ✅ **WIRED 2026-05-21** — schema + per-location admin config + customer surfaces (kcal pill, Nutri-Grade hex, halal / pork / alcohol chips, DOH grade banner, FRESH Act + GST + PDPA in cart). ❌ Counsel review of default copy + per-item data fill (calorie data for every SKU) still pending.
+7. ❌ Per-user RBAC with MFA. (Five-tier role enum exists; single shared `ADMIN_PASSWORD` is the auth surface.)
+8. ❌ Cohort / LTV reporting.
+9. ❌ Refunds with reason codes + manager approval. (Reason codes exist in `REFUND_REASON_CODES`; manager-approval gating not enforced.)
+10. ❌ Offline-first POS terminal.
 
 ### 10.3 Unnecessary Complexity To Cut
 
-- Hardcoded fake ratings.
-- `ai-engine.ts` heuristic forecasting masquerading as ML (rebrand to "Insights" — the previous audit started this).
-- Single global locks (re-scope, don't add more).
-- Two providers in `aggregator.ts` that both just `console.log` (delete or build).
+- ✅ **Hardcoded fake ratings.** ~~Per-item ratings in `data/ratings.ts` were hand-typed values like 4.8 ★ 342 reviews — fake.~~ **RESOLVED 2026-05-21** — `src/data/ratings.ts` deleted; `StarRating` chips removed from `MenuItem`, `MenuSection` (incl. "Highest rated" sort), and `ItemDetailDrawer`. The `StarRating` component remains for the post-order feedback survey where customers enter real ratings.
+- ✅ **`ai-engine.ts` heuristic forecasting masquerading as ML.** ~~Random-number generators dressed as ML.~~ **RESOLVED 2026-05-21** — the file is now a customer-side FAQ matcher (`getChatResponse`) with a header comment that explicitly names it as keyword-rule lookup, not AI. The dead `generateDemandForecast` / `generatePriceSuggestions` / `generateInsights` heuristic exports were deleted (they had zero callers; the real AI surfaces live under `src/lib/ai/forecast.ts`, `src/lib/ai/gateway.ts`, and `src/lib/ai/tools/`).
+- ⚠ **Single global locks.** Hot-path writes (`createOrder` kv fallback) already scope via `withLockScoped("orders", slug, …)`. **Mirror writes** to the legacy `kv_store["orders.json"]` / `kv_store["slots.json"]` blobs remain global — the lock has to be global because the kv key holds all rows; re-scoping the lock without splitting the blob would lose cross-truck mutual exclusion. Mirror writes run `void` fire-and-forget so they don't block the user, but cross-truck mirror updates serialize on Redis. **Honest path forward**: split the kv mirror into per-location keys, or — since the DB is source-of-truth — delete the kv mirror entirely. No new global locks added in this pass. Capabilities ledger updated to disclose the split.
+- ✅ **Two providers in `aggregator.ts` that both just `console.log`.** ~~Mock Wolt + Glovo providers auto-accepted unsigned webhooks (`verifyWebhookSignature → true`).~~ **RESOLVED 2026-05-21** — `WoltMockProvider` and `GlovoMockProvider` deleted. `getAggregatorProvider` now throws a typed `AggregatorNotConfigured` error when ENABLE_AGGREGATORS is on but the per-provider API key + webhook secret are absent; the webhook route catches this and returns 503 with the missing env var list. The live `WoltProvider` / `GlovoProvider` scaffolds remain — their HMAC verification path is real, the three RPC bodies still throw "not implemented" pending merchant credentials. Capabilities ledger updated to mark "Wolt + Glovo webhook intake" as a scaffold, not a live integration.
 
 ---
 
@@ -553,11 +555,11 @@ With 6–9 months of work in §13: plausibly a $3–5M seed-stage hospitality-OS
 
 ### 11.1 Why This Would Fail
 
-- **It pretends to be more than it is.** The "AI" page, the multi-location claims, the franchisee portal — all are *narratives*, not delivered systems. A 30-minute technical due diligence call exposes every one.
-- **It is built for Poland and presented as global.** PLN, BLIK, Przelewy24, Wolt, Glovo, JPK_V7M — all Polish. There is no USD, no SGD, no Apple Pay primary, no Uber Eats, no DoorDash, no GrabFood, no GST, no SST, no NEA Nutri-Grade, no NYC §81.50 calorie display.
+- **It pretends to be more than it is.** ~~The "AI" page, the multi-location claims, the franchisee portal — all are *narratives*, not delivered systems.~~ ⚠ **PARTIAL 2026-05-21** — the "AI" page is now backed by a real Claude forecast (`src/lib/ai/forecast.ts`) with honest "Heuristic" fallback when the API key is unset; the dead heuristic exports that masqueraded as ML in `ai-engine.ts` were deleted. The "multi-location" claim is genuinely defensible (DB-backed locations table + admin CRUD shipped earlier in PR #38). The franchisee portal is still mostly narrative — territory exclusivity, royalty dispute flow, MSA/FDD scaffolding all absent.
+- **It is built for Poland and presented as global.** ~~PLN, BLIK, Przelewy24, Wolt, Glovo, JPK_V7M — all Polish.~~ ⚠ **PARTIAL 2026-05-21**: ✅ USD / SGD / EUR display + de / en-SG UI now ship (operator-configurable from `/admin/currency` + `/admin/languages`). ❌ Apple Pay primary, Uber Eats, DoorDash, GrabFood, GST, SST, NEA Nutri-Grade, NYC §81.50 calorie display remain unaddressed. The customer-facing surface speaks four languages and quotes four currencies; the back-office tax + payment plumbing is still PL-only.
 - **It hasn't earned the right to take payments.** Zero automated tests + global locks + 10 s TTL + in-process fallback = a system you would not actually run a Stripe webhook through if you knew what you knew.
 - **The menu literally has no pictures.** This is the single most-cited mobile-conversion driver and it is absent. Every competitor on every platform in both cities solves this on day 1.
-- **It is operationally illegal in both cities on day 1.** NYC §81.50 calorie display, NYC DOH letter-grade prominence, FDA allergen handling, NYC FRESH Act packaging disclosures, SG NEA Healthier Choice, SG Halal disclosure (or non-Halal disclosure), SG GST invoicing, SG PDPA Section 13 consent flow — none implemented.
+- ⚠ ~~**It is operationally illegal in both cities on day 1.** NYC §81.50 calorie display, NYC DOH letter-grade prominence, FDA allergen handling, NYC FRESH Act packaging disclosures, SG NEA Healthier Choice, SG Halal disclosure (or non-Halal disclosure), SG GST invoicing, SG PDPA Section 13 consent flow — none implemented.~~ **PARTIAL — 2026-05-21**: every disclosure now has a wired admin surface + customer render. `/admin/regulatory-compliance` lets the operator pick a regulatory zone per truck (EU / NYC / SG) and fill the matching fields; the location page renders a DOH letter-grade banner on NYC zone + a MUIS halal banner on SG zone; per-item compliance pills surface kcal (NYC §81.50), Nutri-Grade A–D (SG NEA), halal / non-halal + contains-pork / contains-alcohol chips on every menu card; the cart drawer renders the GST line back-calculated from the inclusive total (IRAS practice) + the FRESH Act packaging disclosure on NYC + the PDPA §13 consent text on SG. FDA Big-9 allergens already round-tripped from `kodawari.ts` to the item drawer pre-audit. **Still missing**: counsel review of the default copy, calorie data for every SKU (only some items have nutrition right now), explicit point-of-sale signage placement against NYC §23-04 (the DOH grade is displayed online; physical placard at the truck remains a separate compliance step). Treat as "schema and surfaces in place, content fill + legal review pending."
 - **No serious operator runs a kitchen on a single Redis lock named after a JSON file.** That this exists, in 2026, in a system that takes Stripe payments, is the cleanest single signal of immaturity.
 
 ### 11.2 What Serious Operators Would Criticize
@@ -574,8 +576,8 @@ With 6–9 months of work in §13: plausibly a $3–5M seed-stage hospitality-OS
 - "Where is the test suite?" — *there isn't one*.
 - "What's the LTV/CAC?" — *not computed*.
 - "Show me a cohort retention curve." — *no such surface*.
-- "Where is the real ML?" — *`Math.random()`*.
-- "How do you onboard a franchisee?" — *we edit `src/data/locations.ts` and redeploy*.
+- ~~"Where is the real ML?" — *`Math.random()`*.~~ ✅ **2026-05-21**: forecasting is Claude-backed (`src/lib/ai/forecast.ts`) with explicit "Heuristic" badge when `ANTHROPIC_API_KEY` is unset. The random-number `ai-engine.ts` heuristics were deleted.
+- ~~"How do you onboard a franchisee?" — *we edit `src/data/locations.ts` and redeploy*.~~ ✅ DB-backed `locations` table + admin CRUD at `/admin/locations/manage`. Adding a truck is a 30-second admin form, no deploy.
 - "Walk me through the SOC 2 controls." — *we don't have any*.
 - "What's the multi-region database failover story?" — *Neon does it, we don't*.
 - "How do you handle a 200-order rush?" — *we go down*.
@@ -620,9 +622,9 @@ A 6–9 month brutal hardening pass against §13 would yield a credible regional
 5. **Item modifiers as a first-class shape.** `CartItem.modifiers: { groupId, optionIds[], priceDelta }`. Propagate through `Order.items`, KDS, recipes, Stripe line items.
 6. **Wire `kodawari.ts` allergens and nutrition to the menu UI and to the cart.** Mandatory EU 1169/2011 + NYC §81.50 + SG NEA compliance. The data exists; the wire is missing.
 7. **Real food photography commissioning** — Margherita, Marinara, Carbonara, two pasta, two antipasti, two desserts, espresso. ~$5k one-time. Replace emoji.
-8. **Replace `data/ratings.ts` fake reviews with real `/review/[orderId]` submissions aggregated server-side.** Burn the fake data file. Legal exposure.
-9. **Add refund reason codes + manager approval flow** under `/admin/orders/[id]/refund`. Wire Stripe Refunds API correctly.
-10. **Delete or build the aggregator stubs.** Either ship live Wolt + Glovo for Poland with menu/status sync, or remove the mock providers and stop claiming the capability on `/admin/capabilities`.
+8. ⚠ **Replace `data/ratings.ts` fake reviews with real `/review/[orderId]` submissions aggregated server-side.** Burn the fake data file. Legal exposure. → ✅ **2026-05-21**: fake file burned, `<StarRating>` chips removed from customer surfaces. ❌ Aggregating `/review/[orderId]` submissions into per-item averages + surfacing them as real chips on the menu cards is the remaining step.
+9. ❌ **Add refund reason codes + manager approval flow** under `/admin/orders/[id]/refund`. Wire Stripe Refunds API correctly.
+10. ✅ ~~**Delete or build the aggregator stubs.**~~ **DONE 2026-05-21** — mocks deleted, registry now throws `AggregatorNotConfigured` when ENABLE_AGGREGATORS is on without credentials and the webhook returns 503. Capabilities ledger updated to mark "Wolt + Glovo webhook intake" as a scaffold, not a live integration. Building live Wolt + Glovo with menu/status sync remains as a separate workstream.
 
 ### 12.2 Top 10 Highest ROI Improvements
 
@@ -665,16 +667,16 @@ A 6–9 month brutal hardening pass against §13 would yield a credible regional
 
 ### 12.5 Top 10 Features Needed To Compete Globally
 
-1. Uber Eats Merchant + DoorDash + GrabFood + foodpanda + Deliveroo full integration (webhook intake + menu push + status push + commission tracking).
-2. Multi-currency, multi-tax, multi-locale (USD/SGD/EUR/PLN; NY sales tax, SG GST, EU VAT; locale-aware date/time/units).
-3. Per-user RBAC + MFA + SAML/OIDC SSO + SCIM.
-4. Real ML demand forecasting + price elasticity + labour-optimisation models (or a credible LLM-driven `/admin/ai` agent with structured tool audit).
-5. Cohort retention + LTV/CAC + channel attribution dashboards.
-6. Self-serve location and franchisee onboarding (no code deploys).
-7. SOC 2 Type II + PCI scope documentation + GDPR + CCPA + PDPA + NYC SHIELD readiness.
-8. Postgres partitioning per location + read replicas + multi-region.
-9. WebSocket / LISTEN-NOTIFY-based realtime for KDS and customer order tracking.
-10. Group ordering / corporate billing (Slack integration, monthly invoice, cost center allocation).
+1. ❌ Uber Eats Merchant + DoorDash + GrabFood + foodpanda + Deliveroo full integration (webhook intake + menu push + status push + commission tracking). (Wolt + Glovo scaffold exists; mocks deleted 2026-05-21.)
+2. ⚠ **Multi-currency, multi-tax, multi-locale** (USD/SGD/EUR/PLN; NY sales tax, SG GST, EU VAT; locale-aware date/time/units). ✅ Currency *display* + locale UI shipped 2026-05-21 (USD/SGD/EUR/PLN × pl/en/de/en-SG, switchers on the homepage, admin at `/admin/currency` and `/admin/languages`). ❌ Multi-tax engine (NY sales tax, SG GST, EU VAT replacing JPK_V7M) + per-region Stripe merchant settlement + locale-aware date/time/units remain.
+3. ❌ Per-user RBAC + MFA + SAML/OIDC SSO + SCIM. (Five-tier role enum exists; single shared `ADMIN_PASSWORD` is the auth surface.)
+4. ⚠ **Real ML demand forecasting** — ✅ Claude-backed forecast lives at `src/lib/ai/forecast.ts` with explicit "Heuristic" badge when `ANTHROPIC_API_KEY` is unset; dead heuristic exports in `ai-engine.ts` were deleted 2026-05-21. ❌ Price elasticity + labour-optimisation models remain unimplemented.
+5. ❌ Cohort retention + LTV/CAC + channel attribution dashboards.
+6. ✅ Self-serve location onboarding (no code deploys) — DB-backed `locations` table + admin CRUD at `/admin/locations/manage`. ❌ Self-serve *franchisee* onboarding still requires manual operator work.
+7. ❌ SOC 2 Type II + PCI scope documentation + GDPR + CCPA + PDPA + NYC SHIELD readiness.
+8. ❌ Postgres partitioning per location + read replicas + multi-region.
+9. ❌ WebSocket / LISTEN-NOTIFY-based realtime for KDS and customer order tracking.
+10. ⚠ Group ordering / corporate billing (Slack integration, monthly invoice, cost center allocation). ✅ Corporate accounts + monthly invoices + auto-pre-order reminder shipped earlier (see capabilities ledger). ❌ Slack integration + cost-center allocation remain.
 
 ---
 

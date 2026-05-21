@@ -178,6 +178,28 @@ export interface MenuItem {
    *  crust types). Each group can be optional (minSelections=0) or
    *  required, single-select (radio) or multi-select (checkbox). */
   modifierGroups?: ModifierGroup[];
+  // --- Regulatory disclosures (audit §11.1) ---------------------------
+  /** SG MUIS halal status. "halal" = the truck holds a current MUIS
+   *  certificate AND this specific item is halal-compliant; "non-halal"
+   *  = explicitly contains pork / non-halal slaughter / alcohol used in
+   *  prep; "uncertified" = no claim. SG operators must disclose halal
+   *  status or absence of certification. */
+  halalStatus?: "halal" | "non-halal" | "uncertified";
+  /** SG NEA Nutri-Grade (A best — D worst). Mandatory front-of-pack on
+   *  pre-packaged sugar-sweetened beverages from Dec-2023. Restaurants
+   *  must display the grade next to the item price when an in-house
+   *  beverage qualifies. */
+  nutriGrade?: "A" | "B" | "C" | "D";
+  /** Per SG religious-disclosure expectation: items containing pork
+   *  must be visibly flagged so Muslim and Jewish customers can avoid
+   *  them at a glance. Independent of halalStatus (an item can be
+   *  non-halal without containing pork — e.g. uses non-halal beef). */
+  containsPork?: boolean;
+  /** Items containing alcohol (cooking wine, beer reduction, gelato
+   *  flambéed in rum). Required disclosure for Muslim customers in SG
+   *  and for jurisdictions that ban under-18 sale of any alcohol-bearing
+   *  preparation. */
+  containsAlcohol?: boolean;
 }
 
 // --- Ingredients & Recipes ---

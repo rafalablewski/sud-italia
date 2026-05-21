@@ -310,6 +310,12 @@ const modifierGroupSchema = z.object({
   options: z.array(modifierOptionSchema).min(1).max(20),
 });
 
+// Regulatory disclosures — audit §11.1. Per-item flags surfaced on the
+// customer card and the admin editor. Stored as override fields so the
+// operator can adjust without touching the seed menu files.
+const halalStatusEnum = z.enum(["halal", "non-halal", "uncertified"]);
+const nutriGradeEnum = z.enum(["A", "B", "C", "D"]);
+
 const menuOverrideEditSchema = z.object({
   price: grosze.max(100_000).optional(),
   cost: grosze.max(100_000).optional(),
@@ -331,6 +337,11 @@ const menuOverrideEditSchema = z.object({
   // Soft-delete for seed rows — `true` hides from customer + admin lists,
   // `null` / unset restores. Custom rows hard-delete via the custom API.
   hidden: z.boolean().nullable().optional(),
+  // Audit §11.1 — per-item regulatory disclosures.
+  halalStatus: halalStatusEnum.nullable().optional(),
+  nutriGrade: nutriGradeEnum.nullable().optional(),
+  containsPork: z.boolean().nullable().optional(),
+  containsAlcohol: z.boolean().nullable().optional(),
 });
 
 /**
@@ -356,6 +367,10 @@ export const menuOverridePutSchema = z
     category: menuCategoryEnum.nullable().optional(),
     tags: z.array(menuTagEnum).max(8).nullable().optional(),
     hidden: z.boolean().nullable().optional(),
+    halalStatus: halalStatusEnum.nullable().optional(),
+    nutriGrade: nutriGradeEnum.nullable().optional(),
+    containsPork: z.boolean().nullable().optional(),
+    containsAlcohol: z.boolean().nullable().optional(),
   })
   .refine((data) => !!data.id || !!data.items, {
     message: "Provide either `id` for single override or `items` map for bulk",

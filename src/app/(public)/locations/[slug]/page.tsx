@@ -9,7 +9,9 @@ import { FloatingCartButton } from "@/components/cart/FloatingCartButton";
 import { AddToCartToast } from "@/components/cart/AddToCartToast";
 import { LoyaltySection } from "@/components/location/LoyaltySection";
 import { LiveActivityBar } from "@/components/location/LiveActivityBar";
+import { ComplianceBanner } from "@/components/location/ComplianceBanner";
 import { SITE_NAME } from "@/lib/constants";
+import { getSettings, resolveLocationCompliance } from "@/lib/store";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -60,6 +62,12 @@ export default async function LocationPage({ params }: PageProps) {
   const initialAvailability: Record<string, boolean> = {};
   for (const item of fullMenu) initialAvailability[item.id] = item.available;
 
+  // Audit §11.1 — per-location regulatory disclosures. Loaded server-side
+  // so SSR + client hydration agree (no fetch flicker before the DOH
+  // grade / halal banner appears).
+  const appSettings = await getSettings();
+  const compliance = resolveLocationCompliance(appSettings.compliance, slug);
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "FoodEstablishment",
@@ -107,12 +115,14 @@ export default async function LocationPage({ params }: PageProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <LocationHero location={location} />
+      <ComplianceBanner compliance={compliance} />
       <LiveActivityBar locationSlug={slug} />
       <LoyaltySection />
       <MenuSection
         items={fullMenu}
         locationSlug={slug}
         initialAvailability={initialAvailability}
+        compliance={compliance}
       />
       <LocationInfo location={location} />
       <FloatingCartButton allMenuItems={menuItems} />

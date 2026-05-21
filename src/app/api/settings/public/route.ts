@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isCartPresenceEnabled } from "@/lib/cart-presence-config";
-import { getLoyaltySettings, getSettings, LIVE_WIDGET_LIMIT } from "@/lib/store";
+import {
+  getLoyaltySettings,
+  getSettings,
+  LIVE_WIDGET_LIMIT,
+  resolveLocationCompliance,
+} from "@/lib/store";
 
 // Public endpoint — returns only non-sensitive settings needed by the frontend
 export async function GET(req: NextRequest) {
@@ -54,5 +59,20 @@ export async function GET(req: NextRequest) {
      *  charge calculated server-side. Undefined per-segment fields fall
      *  back to the SEGMENT_FREE_DELIVERY_THRESHOLD defaults at use. */
     deliveryThresholds: appSettings.deliveryThresholds ?? null,
+    /** Customer display-currency config: switcher options + rates.
+     *  The customer site hydrates the currency module from this so a
+     *  switch from PLN → SGD reflects operator-set rates, not the
+     *  build-time defaults. */
+    currency: appSettings.currency,
+    /** Customer locale config: switcher options + default language. */
+    locale: appSettings.locale,
+    /** Per-location regulatory disclosure resolved for this request's
+     *  `?location=` (when present). Customer surfaces use this to decide
+     *  whether to render the NYC DOH grade banner, the SG Nutri-Grade
+     *  badges, the GST line in the cart, the PDPA consent dialog, etc.
+     *  Falls back to the global default zone when no slug is supplied. */
+    compliance: location
+      ? resolveLocationCompliance(appSettings.compliance, location)
+      : { zone: appSettings.compliance?.defaultZone ?? "EU" },
   });
 }
