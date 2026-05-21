@@ -6,16 +6,11 @@ import {
   CURRENCY_META,
   getCurrency,
   setCurrency,
-  setExchangeRates,
+  unmarkAdminContext,
   type Currency,
 } from "@/lib/currency";
+import { fetchPublicSettings } from "@/lib/public-settings";
 import { Coins, Check } from "lucide-react";
-
-interface PublicCurrencyConfig {
-  enabledCurrencies: Currency[];
-  defaultCurrency: Currency;
-  rates: Record<Currency, number>;
-}
 
 export function CurrencySwitcher() {
   const [currency, setCurrencyState] = useState<Currency>("PLN");
@@ -24,25 +19,24 @@ export function CurrencySwitcher() {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Hydrate the module's currentCurrency from localStorage so every
-    // subsequent formatPrice() in the customer tree picks up the user's
-    // saved preference (getCurrency reads localStorage too, but only
-    // setCurrency actually mutates the module-level state the
-    // formatter reads on SSR-mismatched re-renders).
+    // Clear any admin-context pin from a previous /admin visit — the
+    // customer site should reflect the visitor's stored preference, not
+    // the operator's forced PLN.
+    unmarkAdminContext();
+    // Hydrate the module's currentCurrency from the cookie / localStorage
+    // so every subsequent formatPrice() in the customer tree picks up the
+    // user's saved preference.
     const saved = getCurrency();
     setCurrency(saved);
     setCurrencyState(saved);
-    fetch("/api/settings/public")
-      .then((r) => r.json())
-      .then((data: { currency?: PublicCurrencyConfig }) => {
-        if (data.currency) {
-          if (data.currency.rates) setExchangeRates(data.currency.rates);
-          if (data.currency.enabledCurrencies?.length) {
-            setEnabled(data.currency.enabledCurrencies);
-          }
-        }
-      })
-      .catch(() => {});
+    // Shared single-flight fetch — LanguageSwitcher + cart drawer reuse
+    // the cached response, so the top bar only hits /api/settings/public
+    // once per page load.
+    fetchPublicSettings().then((data) => {
+      if (data?.currency?.enabledCurrencies?.length) {
+        setEnabled(data.currency.enabledCurrencies);
+      }
+    });
   }, []);
 
   useEffect(() => {

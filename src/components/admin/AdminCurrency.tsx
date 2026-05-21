@@ -73,18 +73,8 @@ export function AdminCurrency() {
   }, [fetchConfig]);
 
   const save = async () => {
-    const rates: Record<Currency, number> = {
-      PLN: 1,
-      USD: Number(rateStrings.USD),
-      SGD: Number(rateStrings.SGD),
-      EUR: Number(rateStrings.EUR),
-    };
-    for (const c of ALL) {
-      if (!Number.isFinite(rates[c]) || rates[c] <= 0) {
-        toast.error(`Rate for ${c} must be a positive number`);
-        return;
-      }
-    }
+    const rates = parseRates();
+    if (!rates) return; // toast already fired
     const enabledList = ALL.filter((c) => enabled[c] || c === "PLN");
     if (!enabledList.includes(defaultCurrency)) {
       toast.error("Default currency must be enabled");
@@ -113,8 +103,33 @@ export function AdminCurrency() {
     }
   };
 
+  // Parse `rateStrings` into the numeric payload the API expects. Returns
+  // null + flags the first offending field via toast when any rate isn't
+  // a positive finite number — prevents the toggle path from POSTing a
+  // payload Zod will reject server-side (which would round-trip a 400
+  // for nothing).
+  const parseRates = (): Record<Currency, number> | null => {
+    const rates: Record<Currency, number> = {
+      PLN: 1,
+      USD: Number(rateStrings.USD),
+      SGD: Number(rateStrings.SGD),
+      EUR: Number(rateStrings.EUR),
+    };
+    for (const c of ALL) {
+      if (!Number.isFinite(rates[c]) || rates[c] <= 0) {
+        toast.error(
+          `Rate for ${c} must be a positive number before changing the enabled list`,
+        );
+        return null;
+      }
+    }
+    return rates;
+  };
+
   const toggle = async (currency: Currency, next: boolean) => {
     if (currency === "PLN") return; // PLN is always on
+    const rates = parseRates();
+    if (!rates) return; // toast already fired
     const nextEnabled = { ...enabled, [currency]: next };
     setEnabled(nextEnabled);
     // Persist immediately so toggle = saved (Rule 7).
@@ -123,12 +138,6 @@ export function AdminCurrency() {
       ? defaultCurrency
       : "PLN";
     if (safeDefault !== defaultCurrency) setDefault(safeDefault);
-    const rates: Record<Currency, number> = {
-      PLN: 1,
-      USD: Number(rateStrings.USD),
-      SGD: Number(rateStrings.SGD),
-      EUR: Number(rateStrings.EUR),
-    };
     const res = await fetch("/api/admin/currency", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },

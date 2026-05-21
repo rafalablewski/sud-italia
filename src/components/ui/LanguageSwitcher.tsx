@@ -2,12 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { getLocale, setLocale, ALL_LOCALES, LOCALE_META, Locale } from "@/lib/i18n";
+import { fetchPublicSettings } from "@/lib/public-settings";
 import { Globe, Check } from "lucide-react";
-
-interface PublicLocaleConfig {
-  enabledLocales: Locale[];
-  defaultLocale: Locale;
-}
 
 export function LanguageSwitcher() {
   const [locale, setLocaleState] = useState<Locale>("pl");
@@ -17,16 +13,13 @@ export function LanguageSwitcher() {
 
   useEffect(() => {
     setLocaleState(getLocale());
-    // Fetch operator-configured enabled list; fall back to all locales if
-    // the endpoint isn't yet returning it (zero-friction defaults).
-    fetch("/api/settings/public")
-      .then((r) => r.json())
-      .then((data: { locale?: PublicLocaleConfig }) => {
-        if (data.locale?.enabledLocales?.length) {
-          setEnabled(data.locale.enabledLocales);
-        }
-      })
-      .catch(() => {});
+    // Shared single-flight fetch — coalesces with CurrencySwitcher so the
+    // top bar only hits /api/settings/public once per page load.
+    fetchPublicSettings().then((data) => {
+      if (data?.locale?.enabledLocales?.length) {
+        setEnabled(data.locale.enabledLocales);
+      }
+    });
   }, []);
 
   useEffect(() => {

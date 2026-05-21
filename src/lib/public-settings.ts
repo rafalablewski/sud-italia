@@ -1,0 +1,98 @@
+// Client-side single-flight cache for /api/settings/public.
+//
+// Multiple top-bar components (CurrencySwitcher, LanguageSwitcher, the
+// cart drawer's compliance read) all need the same public settings on
+// mount. Without dedup, a single page load triggers three identical
+// requests; this module gives them one shared promise.
+
+import { ALL_CURRENCIES, setExchangeRates, type Currency } from "./currency";
+import type { Locale } from "./i18n";
+
+type Zone = "EU" | "NYC" | "SG";
+
+export interface PublicSettings {
+  currency?: {
+    defaultCurrency: Currency;
+    enabledCurrencies: Currency[];
+    rates: Record<Currency, number>;
+  };
+  locale?: {
+    defaultLocale: Locale;
+    enabledLocales: Locale[];
+  };
+  compliance?: {
+    zone: Zone;
+    dohGrade?: "A" | "B" | "C" | "Pending" | null;
+    dohGradeIssued?: string | null;
+    calorieDisclosureRequired?: boolean;
+    halalCertId?: string | null;
+    halalCertExpires?: string | null;
+    gstRegistered?: boolean;
+    gstNumber?: string | null;
+    gstRateBps?: number;
+    nutriGradeRequired?: boolean;
+    packagingDisclosure?: string | null;
+    pdpaConsentText?: string | null;
+  };
+  deliveryThresholds?: Record<string, number | undefined> | null;
+}
+
+// One in-flight promise per location key. `null` location = origin-wide
+// fetch (no ?location= param) which the cart drawer also calls when no
+// location is set yet.
+const inflight = new Map<string, Promise<PublicSettings | null>>();
+const cached = new Map<string, PublicSettings>();
+
+function cacheKey(locationSlug?: string | null): string {
+  return locationSlug ?? "__origin__";
+}
+
+export function getCachedPublicSettings(
+  locationSlug?: string | null,
+): PublicSettings | undefined {
+  return cached.get(cacheKey(locationSlug));
+}
+
+export async function fetchPublicSettings(
+  locationSlug?: string | null,
+  opts: { force?: boolean } = {},
+): Promise<PublicSettings | null> {
+  const key = cacheKey(locationSlug);
+  if (!opts.force) {
+    const hit = cached.get(key);
+    if (hit) return hit;
+    const pending = inflight.get(key);
+    if (pending) return pending;
+  }
+  const url = locationSlug
+    ? `/api/settings/public?location=${encodeURIComponent(locationSlug)}`
+    : "/api/settings/public";
+  const p = fetch(url, { cache: "no-store" })
+    .then((r) => (r.ok ? (r.json() as Promise<PublicSettings>) : null))
+    .then((data) => {
+      if (data) {
+        cached.set(key, data);
+        // Hydrate the currency module's rate table the first time we see
+        // the operator-set rates so every formatPrice() call returns the
+        // configured number, not the build-time DEFAULT_RATES.
+        if (data.currency?.rates) {
+          const rates: Partial<Record<Currency, number>> = {};
+          for (const c of ALL_CURRENCIES) {
+            const v = data.currency.rates[c];
+            if (typeof v === "number" && Number.isFinite(v) && v > 0) {
+              rates[c] = v;
+            }
+          }
+          setExchangeRates(rates);
+        }
+      }
+      inflight.delete(key);
+      return data;
+    })
+    .catch(() => {
+      inflight.delete(key);
+      return null;
+    });
+  inflight.set(key, p);
+  return p;
+}

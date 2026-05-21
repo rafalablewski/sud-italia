@@ -40,6 +40,7 @@ import { warszawaMenu } from "@/data/menus/warszawa";
 import { useCustomer } from "@/store/customer";
 import { postCartPresenceToServer } from "@/lib/cart-presence-post-client";
 import { useLiveMenuAvailability } from "@/lib/useLiveMenuAvailability";
+import { fetchPublicSettings } from "@/lib/public-settings";
 
 interface CartDrawerProps {
   open: boolean;
@@ -236,20 +237,14 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
-    const url = locationSlug
-      ? `/api/settings/public?location=${encodeURIComponent(locationSlug)}`
-      : "/api/settings/public";
-    fetch(url, { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (cancelled || !data) return;
-        const t = data.deliveryThresholds;
-        if (t && typeof t === "object") setDeliveryThresholdsOverride(t);
-        if (data.compliance && typeof data.compliance === "object") {
-          setCompliance(data.compliance);
-        }
-      })
-      .catch(() => {});
+    fetchPublicSettings(locationSlug).then((data) => {
+      if (cancelled || !data) return;
+      const t = data.deliveryThresholds;
+      if (t && typeof t === "object") setDeliveryThresholdsOverride(t);
+      if (data.compliance && typeof data.compliance === "object") {
+        setCompliance(data.compliance);
+      }
+    });
     return () => {
       cancelled = true;
     };
