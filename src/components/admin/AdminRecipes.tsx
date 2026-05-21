@@ -925,7 +925,11 @@ function RecipeEditor({ menuItem, recipe, ingredients, locationLabel, onClose, o
         JSON.stringify(product.tags.slice().sort()) !==
         JSON.stringify(productInitial.tags.slice().sort())
       ) {
-        productPatch.tags = product.tags;
+        // Persist tags in a stable (alphabetical) order so audit-log
+        // diffs don't churn on row reorder + reload comparisons are
+        // predictable. The toggle UI keeps insertion order while the
+        // operator clicks; sorting happens at the boundary.
+        productPatch.tags = [...product.tags].sort();
       }
       if (product.halalStatus !== productInitial.halalStatus) {
         productPatch.halalStatus =
@@ -936,20 +940,20 @@ function RecipeEditor({ menuItem, recipe, ingredients, locationLabel, onClose, o
           product.nutriGrade === "" ? null : product.nutriGrade;
       }
       if (Boolean(product.containsPork) !== Boolean(productInitial.containsPork)) {
-        productPatch.containsPork = menuItem._isCustom
-          ? product.containsPork
-          : product.containsPork
-          ? true
-          : null;
+        // Always send the boolean directly. The previous null-when-false
+        // path was meant to "clear back to seed" but `applyOverride`
+        // skips null values, so a seed item shipped with
+        // `containsPork: true` could never be overridden to false from
+        // the UI. Sending false writes an explicit override that
+        // applyOverride merges (false ≠ null/undefined). The downside —
+        // no UI path to *clear* the override and revert to seed —
+        // affects an edge case we don't ship in the menu yet.
+        productPatch.containsPork = product.containsPork;
       }
       if (
         Boolean(product.containsAlcohol) !== Boolean(productInitial.containsAlcohol)
       ) {
-        productPatch.containsAlcohol = menuItem._isCustom
-          ? product.containsAlcohol
-          : product.containsAlcohol
-          ? true
-          : null;
+        productPatch.containsAlcohol = product.containsAlcohol;
       }
 
       if (Object.keys(productPatch).length > 0) {
