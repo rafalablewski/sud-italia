@@ -9958,14 +9958,14 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Industry benchmark (PL gastronomic 2024): +6-9% nominal
-            annual growth healthy; +12% strong; +15%+ exceptional or
-            capacity-constrained. Beat inflation (~4% PL) to be real
-            growth; nominal +4% = real 0%. Decompose: revenue growth =
-            order growth + ticket growth. Volume-led growth (more
-            orders) is healthier than ticket-led (price hikes); the
-            latter eventually tops out. SSSG excludes new units —
-            pure organic same-store performance.
+            Decompose: revenue growth ≈ order growth + ticket growth.
+            Volume-led growth is healthier than ticket-led because
+            price hikes top out at customer-elasticity ceilings while
+            volume can keep compounding. Beat inflation to count as
+            real growth; flat nominal is real decline. SSSG excludes
+            new units, so it&apos;s pure organic same-store
+            performance — the metric investors trust over total
+            chain revenue.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -10004,14 +10004,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            The most-truthful growth metric: volume can&apos;t be
-            faked by price hikes. Healthy: +3-7% annual = real growth
-            above inflation; &lt; +2% concerning; &gt; +12% likely
-            capacity-pressed (cross-check kitchen saturation). Negative
-            order growth + positive ticket growth = defensive sign
-            (customers paying more individually but fewer customers
-            overall). Trace acquisition channel to double down on what
-            works.
+            The most truthful growth metric — volume can&apos;t be
+            faked by price hikes. Negative order growth combined with
+            positive ticket growth is a defensive pattern (fewer
+            customers paying more individually) and usually signals
+            customer attrition the operator hasn&apos;t noticed yet.
+            Trace acquisition channels to know which one is doing the
+            real work.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -10050,14 +10049,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Healthy: +3-6% annual matches inflation + mix lift; +8%+
-            indicates aggressive pricing or large mix shift. Decompose:
-            mix-driven (attach lifts) is healthy and invisible to
-            customers; price-driven hits customer-elasticity ceilings.
-            Price elasticity caveat: 10% price hike doesn&apos;t
-            translate to 10% ticket — typically ~7% (some customers
-            downshift). Use the cheapestPizzaShift stress lever to
-            model downside.
+            Decompose: mix-driven ticket growth (attach lifts, premium
+            up-sells) is healthy and invisible to customers; price-
+            driven growth hits elasticity ceilings and the higher
+            apparent ticket gets clawed back by some customers
+            downshifting. So mix-growth compounds, price-growth
+            doesn&apos;t. Use the recession stress lever to model the
+            downside risk to price-driven ticket inflation.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -10096,14 +10094,14 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Healthy: 5-10% annual net-new customer growth; &gt; 15% =
-            high; &lt; 0 = customer-base decay. Sustainable growth
-            requires both positive customer growth AND positive repeat
-            rate; without both, the funnel leaks no matter how high
-            acquisition spend goes. Track quarterly trend — shifts in
-            new-vs-returning signal market saturation, brand fatigue,
-            or competitor entry. Anonymous walk-up cash customers may
-            be undercounted without phone capture at checkout.
+            Sustainable growth requires both positive customer growth
+            AND positive repeat rate; without both, the funnel leaks
+            faster than acquisition fills it. Track quarterly trend —
+            shifts in new-vs-returning signal market saturation, brand
+            fatigue, or competitor entry. Anonymous cash walk-up
+            customers go undercounted without phone capture at
+            checkout, so this metric reflects the trackable-customer
+            subset rather than absolute traffic.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -10145,14 +10143,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Tiers: 30%+ healthy (90-day); 40%+ strong; 50%+ excellent.
-            Below 15% indicates a product problem — fix the food,
-            wait, temperature, service before any marketing spend.
-            Reichheld&apos;s &quot;Loyalty Effect&quot;: a 5pp lift in
-            repeat rate typically lifts unit-economic profit by 25-50%
-            because returning customers cost &lt; 10% of acquisition
-            cost. Compare across channels (delivery typically halves
-            direct-channel repeat rate).
+            Low repeat rate indicates a product problem — fix the
+            food, the wait, the temperature or the service before
+            spending another złoty on marketing. Per Reichheld&apos;s
+            Loyalty Effect, returning customers cost a fraction of
+            acquisition, so a small repeat-rate lift compounds into
+            outsized profit gain. Compare across channels — delivery
+            customer repeat is structurally lower than direct.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -10191,13 +10188,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Healthy 90-day window: 1.0-1.5 transient; 1.5-2.5 average;
-            2.5-4 healthy regulars; 4+ cult following. Drives LTV
-            directly (orders × ticket × CM = lifetime value).
-            Distribution matters more than mean — &quot;3.0 avg&quot;
-            could be 20% at 8 orders and 80% at 0.75 orders.
-            Cohort decay/growth is a leading indicator of brand
-            health.
+            Distribution matters more than mean — a 3.0 average could
+            be 20% of customers at 8 orders and 80% at 0.75 orders,
+            and the marketing strategy for those two patterns is
+            completely different. Cohort decay or growth is a leading
+            indicator of brand health: rising = the product is
+            getting stickier, falling = something in the experience is
+            degrading.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -10236,13 +10233,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Healthy (90-day window): 80-150 zł GP/customer for healthy
-            casual-Italian. Drives the 3× LTV/CAC investor gate —
-            spend up to 1/3 of GP/customer on acquiring them.
-            Cohort-tracked: month-1 cohort GP vs month-12 cohort GP
-            shows whether retention is compounding. Per-channel
-            divergence: walk-up GP ~2× Glovo GP (no commission
-            erosion).
+            The acquisition-budget ceiling: spend at most about a
+            third of GP-per-customer on acquiring one and you stay
+            inside the LTV/CAC investor gate. Cohort-tracked, this is
+            the retention compounding signal — early-month vs later-
+            month cohort GP shows whether the product is getting more
+            valuable per customer over time. Per-channel walk-up GP
+            substantially exceeds platform GP because of commission.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -10282,15 +10279,14 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Healthy PL casual-Italian: 8-15 zł CAC with mostly-organic
-            / referral mix; 15-30 zł with paid-social channels;
-            30-50 zł heavy paid acquisition. Channel mix: Instagram
-            geo-targeted CAC ~10-25 zł, Google ~15-35 zł, referral
-            ~3-8 zł (lowest). Net-new attribution caveat: don&apos;t
-            count organic walk-up traffic in the denominator, or CAC
-            looks artificially low. Multi-touch attribution (one
-            customer sees 3 ads + a friend&apos;s post + Glovo
-            placement) makes single-touch CAC measurements imperfect.
+            Net-new attribution caveat: counting organic walk-up
+            traffic in the denominator makes CAC look artificially low,
+            so isolate the marketing-driven customers carefully. Multi-
+            touch attribution (one customer sees 3 ads + a friend&apos;s
+            post + Glovo placement before walking in) means single-
+            touch CAC measurements always understate the actual cost
+            of acquisition. Use this metric for direction, not for
+            precision.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -10330,14 +10326,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Healthy: ≥ 3× institutional-grade; 2-3× workable; 1.5-2×
-            tight; &lt; 1.5× pause marketing; &lt; 1× destroying value.
-            The universal SaaS / marketplace economics gate (David
-            Skok framework). Improve via numerator (lift attach + repeat
-            rate + ticket = lift LTV) over denominator (cut CAC) —
-            referral programs + organic content compound; paid
-            acquisition has rising CAC. Below 1.0× you&apos;re paying
-            customers to come; pause and fix before scaling.
+            The universal SaaS / marketplace economics gate. Improve
+            via numerator (lift attach + repeat rate + ticket = lift
+            LTV) before denominator (cut CAC) — referral programs and
+            organic content compound, while paid acquisition has rising
+            CAC. Below 1.0× the operator is literally paying customers
+            to come — pause acquisition and fix the unit economics
+            before scaling.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -10376,14 +10371,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Healthy ranges: ≤ 3 mo rocket fuel; 3-6 mo strong; 6-12
-            acceptable; 12-18 constrained; &gt; 18 stop. The pace
-            metric: shorter payback = faster compounding of marketing
-            spend into customer LTV. Cohort variance is real — first-
-            month customers might break even immediately while long-
-            tail cohorts months 6-12. Lift first-order CM1 (attach +
-            ticket on initial visit) to shorten payback faster than
-            CAC reduction alone.
+            The pace metric — shorter payback = faster compounding of
+            marketing spend into customer LTV. Lift first-order CM1
+            (more attach + higher ticket on initial visit) and payback
+            shortens faster than chasing lower CAC. Cohort variance is
+            real: first-month customers may break even immediately
+            while later cohorts take longer, so the headline average
+            hides the new-customer reality.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -10423,14 +10417,15 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Healthy: 30-40% new = balanced acquisition + retention;
-            50-60% = acquisition-led growth; &gt; 60% = leaky bucket
-            (fix retention before scaling marketing); &lt; 20% =
-            saturating customer base (open new acquisition channels).
-            CAC trajectory often rises as new-customer share rises —
-            harder to reach incremental cohorts. Seasonal tourist
-            surges look like new acquisition but aren&apos;t
-            retainable; track tourist share separately if material.
+            A leaky-bucket vs saturated-base diagnostic: high
+            new-customer share means acquisition is working but the
+            base isn&apos;t retaining; low new-customer share means
+            you&apos;ve mined the addressable market and need new
+            channels. CAC trajectory tends to rise as new-customer
+            share rises because incremental cohorts are harder to reach.
+            Seasonal tourist surges look like acquisition but
+            aren&apos;t retainable; track tourist share separately if
+            material.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -10470,14 +10465,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Healthy: 50-60% returning = sustainable repeat business;
-            60-70% = strong loyalty + retention; &gt; 70% = saturated
-            or low-acquisition (paradoxically can mean stagnation).
-            New &gt; returning = leaky bucket; fix retention before
-            scaling ads or you&apos;re running on a treadmill.
-            Returning customers cost less than 10% of acquisition
-            cost (Reichheld) — each pp shift toward returning
-            improves blended CAC efficiency.
+            New revenue greater than returning revenue is a leaky-
+            bucket pattern — fix retention before scaling marketing
+            spend, or you run on a treadmill. Paradoxically, very high
+            returning share can indicate market saturation rather than
+            health (no new customers coming in). Each pp shift toward
+            returning improves blended CAC efficiency because returning
+            customers cost a fraction of acquired ones (Reichheld).
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
