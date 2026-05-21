@@ -3725,16 +3725,202 @@ html { scroll-behavior: smooth; }
   .v2-rcp-grid { grid-template-columns: 1fr; }
 }
 
-/* Three summary tiles at the top of the recipe editor. Uses the standard
+/* Four summary tiles at the top of the recipe editor. Uses the standard
    `KpiCard` primitive — keeps the look consistent with AdminDashboard /
    AdminReports / AdminInventory and lets the same tone bands tell the
-   story (margin colour-codes itself). */
+   story (margin colour-codes itself). 4th tile (calories) is computed
+   from ingredient kcalPerUnit × quantity × waste. */
 .v2-recipe-summary {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
 }
-@media (max-width: 720px) { .v2-recipe-summary { grid-template-columns: 1fr; } }
+@media (max-width: 960px) { .v2-recipe-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 540px) { .v2-recipe-summary { grid-template-columns: 1fr; } }
+
+/* Section dividers + headers inside the recipe dialog. The dialog body
+   now spans Recipe → Product info → Dietary disclosures; the divider
+   gives the eye a clean break between concerns so the form is scannable
+   instead of a single tall column. */
+.v2-rcp-dialog-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 8px 0 4px;
+}
+.v2-rcp-dialog-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.v2-rcp-dialog-section-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--fg);
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+.v2-rcp-dialog-section-hint {
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+  margin: -8px 0 0;
+}
+
+/* Per-portion nutrition panel — sits below the 4 KPIs in the recipe
+   editor. Compact carb / fiber / protein / fat row with sugars nested
+   under carbs (matches EU 1169 / FDA NFP "of which sugars" label
+   layout). Operators glance at this to gut-check whether a recipe
+   makes sense before saving. */
+.v2-rcp-nutrition {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.v2-rcp-nutrition-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.v2-rcp-nutrition-eyebrow {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+}
+.v2-rcp-nutrition-hint {
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+}
+.v2-rcp-nutrition-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+@media (max-width: 720px) { .v2-rcp-nutrition-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 420px) { .v2-rcp-nutrition-grid { grid-template-columns: 1fr; } }
+.v2-rcp-nutrition-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.v2-rcp-nutrition-cell dt {
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+}
+.v2-rcp-nutrition-cell dd {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--fg);
+  margin: 0;
+}
+.v2-rcp-nutrition-sub {
+  font-size: 11px;
+  color: var(--fg-subtle);
+  margin-top: 2px;
+}
+.v2-rcp-nutrition-warn {
+  display: block;
+  font-size: 10px;
+  color: var(--warning);
+  margin-top: 2px;
+  font-weight: 500;
+}
+
+/* Inline distributor-offering provenance under each recipe row's name.
+   Surfaces which distributor + product the cost + macros come from so
+   the recipe → ingredient → offering chain is glanceable. The empty
+   variant calls operators to action when an ingredient hasn't been
+   linked yet — clicking either form opens the ingredient dialog. */
+.v2-rcp-row-offering {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font-size: 11px;
+  color: var(--fg-subtle);
+  text-align: left;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-top: 2px;
+  border-bottom: 1px dashed transparent;
+}
+.v2-rcp-row-offering:hover,
+.v2-rcp-row-offering:focus-visible {
+  color: var(--fg);
+  border-bottom-color: var(--border);
+  outline: none;
+}
+.v2-rcp-row-offering.is-empty {
+  color: var(--warning);
+  font-weight: 500;
+}
+.v2-rcp-row-offering.is-empty:hover,
+.v2-rcp-row-offering.is-empty:focus-visible {
+  color: var(--warning);
+  border-bottom-color: var(--warning);
+}
+
+/* Distributor offerings sub-form inside the IngredientDialog. Each
+   offering is a fieldset card so a multi-supplier ingredient reads as
+   a stack of distinct rows rather than a single long form. The
+   "Active" radio sits in the legend so it's always visible next to the
+   supplier name. */
+.v2-ing-offering {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--surface-0);
+}
+.v2-ing-offering legend {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 0 6px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--fg);
+}
+
+/* Nutrition sub-form inside the IngredientDialog — groups the 6 macro
+   inputs with a header so it doesn't read as a wall of fields. */
+.v2-rcp-ing-nutrition {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.v2-rcp-ing-nutrition-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.v2-rcp-ing-nutrition-eyebrow {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+}
+.v2-rcp-ing-nutrition-hint {
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+}
 
 /* Recipe ingredients table — reuses .v2-mng-section + .v2-mng-row chrome so
    row padding, hover, bold names, and section-header eyebrow all match the

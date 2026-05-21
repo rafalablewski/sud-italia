@@ -5,7 +5,7 @@ import { FlaskConical } from "lucide-react";
 import type { MenuCategory } from "@/data/types";
 import { MENU_CATEGORY_LABELS } from "@/data/types";
 import { getActiveLocations } from "@/data/locations";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, getBaseSlug } from "@/lib/utils";
 import { useAdminLocation } from "../v2/LocationContext";
 import {
   Chip,
@@ -101,11 +101,14 @@ export function MobileRecipes() {
   }, [pageLoc]);
 
   const combined: CombinedRow[] = useMemo(() => {
-    const byId = new Map(recipes.map((r) => [r.menuItemId, r]));
+    // Recipes are chain-wide (keyed by dish base slug). Look up by
+    // base slug so Kraków's krk-X and Warsaw's waw-X both resolve to
+    // the same row.
+    const byBaseSlug = new Map(recipes.map((r) => [r.menuItemId, r]));
     return items
       .filter((it) => cat === "all" || it.category === cat)
       .map((it) => {
-        const r = byId.get(it.id);
+        const r = byBaseSlug.get(getBaseSlug(it.id));
         return {
           id: it.id,
           name: it.name,
@@ -118,7 +121,7 @@ export function MobileRecipes() {
       });
   }, [items, recipes, cat]);
 
-  const recipeByMenuId = useMemo(() => {
+  const recipeByBaseSlug = useMemo(() => {
     const m = new Map<string, RecipeRow>();
     for (const r of recipes) m.set(r.menuItemId, r);
     return m;
@@ -192,7 +195,7 @@ export function MobileRecipes() {
       </PullToRefresh>
       <MobileRecipeEditor
         menuItem={editing}
-        recipe={editing ? recipeByMenuId.get(editing.id) : undefined}
+        recipe={editing ? recipeByBaseSlug.get(getBaseSlug(editing.id)) : undefined}
         ingredients={ingredients}
         onClose={() => setEditing(null)}
         onSaved={async () => {

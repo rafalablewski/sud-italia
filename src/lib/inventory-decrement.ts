@@ -1,6 +1,7 @@
 import type { Order, Recipe } from "@/data/types";
 import { createStockMovement, getRecipes } from "@/lib/store";
 import { logger } from "@/lib/logger";
+import { getBaseSlug } from "@/lib/utils";
 
 /**
  * Recipe-driven stock decrement (audit §3 — turns the inventory module
@@ -32,12 +33,15 @@ function buildDraws(
   order: Order,
   recipes: Recipe[],
 ): DraftMovement[] {
-  const recipeByMenuItem = new Map<string, Recipe>();
-  for (const r of recipes) recipeByMenuItem.set(r.menuItemId, r);
+  // Recipes are chain-wide (keyed by dish base slug); the menu line
+  // carries the per-location prefixed id. Derive the base slug to
+  // resolve back to the shared formula.
+  const recipeByBaseSlug = new Map<string, Recipe>();
+  for (const r of recipes) recipeByBaseSlug.set(r.menuItemId, r);
 
   const draws = new Map<string, number>();
   for (const line of order.items) {
-    const recipe = recipeByMenuItem.get(line.menuItem.id);
+    const recipe = recipeByBaseSlug.get(getBaseSlug(line.menuItem.id));
     if (!recipe) continue;
     const portions = recipe.yieldPortions || 1;
     const portionsSold = line.quantity;

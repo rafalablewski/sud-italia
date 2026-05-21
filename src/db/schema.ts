@@ -276,9 +276,46 @@ export const ingredients = pgTable("ingredients", {
   name: text("name").notNull(),
   category: text("category").notNull(),
   unit: text("unit").notNull(),
-  costPerUnit: integer("cost_per_unit").notNull(),
+  /** Legacy cost / macros — kept nullable so the rolling backfill can
+   *  move historical values down into `ingredient_products` lazily on
+   *  first read. New writes go through ingredient_products + the
+   *  active_product_id pointer below. */
+  costPerUnit: integer("cost_per_unit"),
+  kcalPerUnit: integer("kcal_per_unit"),
+  proteinPerUnit: integer("protein_per_unit"),
+  carbsPerUnit: integer("carbs_per_unit"),
+  sugarPerUnit: integer("sugar_per_unit"),
+  fiberPerUnit: integer("fiber_per_unit"),
+  fatPerUnit: integer("fat_per_unit"),
+  /** FK into ingredient_products.id — the offering whose cost + nutrition
+   *  values are used in recipe calcs. Nullable until an offering exists. */
+  activeProductId: text("active_product_id"),
   supplier: text("supplier"),
   notes: text("notes"),
+});
+
+/**
+ * Per-distributor offering of an ingredient — what the chain buys, with
+ * the distributor-specific cost + nutrition profile + SKU. Recipes
+ * reference the ingredient; calc uses `ingredients.active_product_id`
+ * to pick which offering's values to multiply through.
+ */
+export const ingredientProducts = pgTable("ingredient_products", {
+  id: text("id").primaryKey(),
+  ingredientId: text("ingredient_id").notNull(),
+  supplierId: text("supplier_id").notNull(),
+  supplierSku: text("supplier_sku"),
+  displayName: text("display_name"),
+  costPerUnit: integer("cost_per_unit").notNull(),
+  kcalPerUnit: integer("kcal_per_unit"),
+  proteinPerUnit: integer("protein_per_unit"),
+  carbsPerUnit: integer("carbs_per_unit"),
+  sugarPerUnit: integer("sugar_per_unit"),
+  fiberPerUnit: integer("fiber_per_unit"),
+  fatPerUnit: integer("fat_per_unit"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 /**

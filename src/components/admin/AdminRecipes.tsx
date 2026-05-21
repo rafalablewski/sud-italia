@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Coffee,
+  Flame,
   FlaskConical,
   IceCream,
   Leaf,
@@ -18,12 +19,13 @@ import {
   UtensilsCrossed,
   type LucideIcon,
 } from "lucide-react";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, getBaseSlug } from "@/lib/utils";
 import {
   MENU_CATEGORY_LABELS,
   type IngredientCategory,
   type IngredientUnit,
   type MenuCategory,
+  type NutritionInfo,
 } from "@/data/types";
 import dynamic from "next/dynamic";
 import { useAdminLocation } from "./v2/LocationContext";
@@ -59,9 +61,27 @@ interface IngredientData {
   name: string;
   category: IngredientCategory;
   unit: IngredientUnit;
-  costPerUnit: number;
+  activeProductId?: string;
+  /** All cost / macro fields below are derived — hydrated from the
+   *  active `IngredientProduct` on read. Writes go through
+   *  /api/admin/ingredient-products instead. */
+  costPerUnit?: number;
+  kcalPerUnit?: number;
+  proteinPerUnit?: number;
+  carbsPerUnit?: number;
+  sugarPerUnit?: number;
+  fiberPerUnit?: number;
+  fatPerUnit?: number;
   supplier?: string;
   notes?: string;
+}
+
+interface ActiveOfferingInfo {
+  productId: string;
+  supplierId: string;
+  supplierName: string;
+  displayName: string | null;
+  supplierSku: string | null;
 }
 
 interface EnrichedRecipeIngredient {
@@ -71,7 +91,18 @@ interface EnrichedRecipeIngredient {
   name?: string;
   unit?: string;
   unitCost?: number;
+  unitKcal?: number | null;
+  unitProtein?: number | null;
+  unitCarbs?: number | null;
+  unitSugar?: number | null;
+  unitFiber?: number | null;
+  unitFat?: number | null;
   lineCost?: number;
+  lineKcal?: number | null;
+  /** Which distributor offering this line is currently using. Null when
+   *  the ingredient has no active offering yet — the row surfaces a
+   *  "Link offering" affordance instead of provenance text. */
+  activeOffering?: ActiveOfferingInfo | null;
 }
 
 /**
@@ -117,6 +148,48 @@ function percentToFactor(pct: number): number {
   return 1 + pct / 100;
 }
 
+/**
+ * Nutrition-label basis for the kcal input + ingredients column. Storage
+ * stays per-unit (per kg, per L, per piece) so recipe maths (kcalPerUnit
+ * × quantity-in-unit × waste) stays exact; only the input/display layer
+ * shows the operator-friendly "per 100g / 100ml / piece" basis that
+ * matches what they read off real-world food packaging.
+ */
+function kcalBasisLabel(unit: IngredientUnit): string {
+  if (unit === "kg" || unit === "g") return "100g";
+  if (unit === "L" || unit === "ml") return "100ml";
+  return unit;
+}
+
+function storedKcalToDisplay(stored: number | undefined, unit: IngredientUnit): string {
+  if (typeof stored !== "number") return "";
+  // For kg / L units, storage is per-kg / per-L but display is per-100g
+  // / per-100ml — so divide by 10. Keep one decimal of precision so
+  // values like 0.5g sugar per 100g salt round-trip exactly (typed "0.5"
+  // → stored 5 → displayed "0.5" not "1").
+  if (unit === "kg" || unit === "L") return String(stored / 10);
+  if (unit === "g" || unit === "ml") return String(stored * 100);
+  return String(stored);
+}
+
+function displayKcalToStored(display: number, unit: IngredientUnit): number {
+  // Use Math.round only at storage time so small per-100g values
+  // (sugar / fiber in trace amounts) keep their precision. For kg / L
+  // we multiply by 10 (per-100g → per-kg).
+  if (unit === "kg" || unit === "L") return Math.max(0, Math.round(display * 10));
+  if (unit === "g" || unit === "ml") return Math.max(0, Math.round(display / 100));
+  return Math.max(0, Math.round(display));
+}
+
+interface CalculatedNutrition {
+  calories: number | null;
+  protein: number | null;
+  carbs: number | null;
+  sugar: number | null;
+  fiber: number | null;
+  fat: number | null;
+}
+
 interface RecipeData {
   id?: string;
   menuItemId: string;
@@ -126,6 +199,15 @@ interface RecipeData {
   yieldPortions: number;
   notes?: string;
   calculatedCost?: number;
+  /** Per-portion kcal computed from `ingredient.kcalPerUnit` × qty × waste.
+   *  Null when any ingredient is missing its `kcalPerUnit` value — the
+   *  recipe editor surfaces a "—" placeholder + a hint instead of a
+   *  misleading partial sum. */
+  calculatedCalories?: number | null;
+  /** Per-portion macros (in grams) computed the same way. Each field is
+   *  independent — `protein` is set when every line has `proteinPerUnit`,
+   *  even if `fiber` is missing on one ingredient. */
+  calculatedNutrition?: CalculatedNutrition;
 }
 
 interface MenuItemData {
@@ -134,6 +216,16 @@ interface MenuItemData {
   category: MenuCategory;
   price: number;
   cost: number;
+  // Surface the rest of the product fields so the Recipe editor (now the
+  // owner of product info + dietary disclosures) can render + edit them.
+  description?: string;
+  tags?: ("vegetarian" | "vegan" | "spicy" | "gluten-free")[];
+  halalStatus?: "halal" | "non-halal" | "uncertified";
+  nutriGrade?: "A" | "B" | "C" | "D";
+  containsPork?: boolean;
+  containsAlcohol?: boolean;
+  nutrition?: NutritionInfo;
+  _isCustom?: boolean;
 }
 
 const INGREDIENT_CATEGORIES: IngredientCategory[] = [
@@ -219,6 +311,13 @@ function RecipesPanel() {
   const [ingredients, setIngredients] = useState<IngredientData[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<MenuItemData | null>(null);
+  /** Mounted alongside the recipe editor so a recipe row's "Link
+   *  offering" affordance can open the ingredient dialog in-place,
+   *  no tab hop required. */
+  const [ingredientDialog, setIngredientDialog] = useState<IngredientDialogState>({
+    open: false,
+    ingredient: null,
+  });
   const [search, setSearch] = useState("");
   const [filterCat, setFilterCat] = useState<MenuCategory | "all">("all");
 
@@ -242,7 +341,11 @@ function RecipesPanel() {
     fetchAll();
   }, [fetchAll]);
 
-  const recipeByMenuId = useMemo(() => {
+  // Recipes are chain-wide (keyed by dish base slug after the
+  // 2026-05 refactor), but the recipes board groups by per-location
+  // menu items. Map by base slug so a Kraków + Warsaw Margherita card
+  // both resolve to the same recipe row.
+  const recipeByBaseSlug = useMemo(() => {
     const m = new Map<string, RecipeData>();
     for (const r of recipes) m.set(r.menuItemId, r);
     return m;
@@ -276,7 +379,7 @@ function RecipesPanel() {
   const onSaved = async () => {
     setEditing(null);
     await fetchAll();
-    toast.success("Recipe saved");
+    toast.success("Saved");
   };
 
   return (
@@ -336,7 +439,7 @@ function RecipesPanel() {
                 </header>
                 <div className="v2-rcp-grid">
                   {items.map((item) => {
-                    const recipe = recipeByMenuId.get(item.id);
+                    const recipe = recipeByBaseSlug.get(getBaseSlug(item.id));
                     const hasRecipe = !!recipe;
                     const enriched = (recipe?.enrichedIngredients ?? []) as EnrichedRecipeIngredient[];
                     const calculatedCost = recipe?.calculatedCost ?? 0;
@@ -365,10 +468,27 @@ function RecipesPanel() {
 
       <RecipeEditor
         menuItem={editing}
-        recipe={editing ? recipeByMenuId.get(editing.id) : undefined}
+        recipe={editing ? recipeByBaseSlug.get(getBaseSlug(editing.id)) : undefined}
         ingredients={ingredients}
+        locationLabel={
+          activeLocations.find((l) => l.slug === pageLoc)?.city ?? pageLoc
+        }
         onClose={() => setEditing(null)}
         onSaved={onSaved}
+        onEditIngredient={(id) => {
+          const ing = ingredients.find((i) => i.id === id);
+          if (ing) setIngredientDialog({ open: true, ingredient: ing });
+        }}
+      />
+
+      <IngredientDialog
+        state={ingredientDialog}
+        onClose={() => setIngredientDialog({ open: false, ingredient: null })}
+        onSaved={async () => {
+          setIngredientDialog({ open: false, ingredient: null });
+          await fetchAll();
+          toast.success("Saved");
+        }}
       />
     </>
   );
@@ -379,10 +499,11 @@ function RecipesPanel() {
 // =============================================================
 
 /**
- * Stable palette of segment colours for the cost-breakdown bar. We pick a
- * colour per ingredient by hashing its id, so the same ingredient lights up
- * the same colour on every dish — easier to scan than a per-card random
- * palette. Six tones is enough to feel varied without a rainbow.
+ * Palette of segment colours for the cost-breakdown bar. Picked
+ * positionally within each card (largest-cost ingredient → first
+ * colour, next-largest → second, etc.) so no two adjacent segments
+ * collide on the same hue. Eight tones — enough for any realistic
+ * recipe before "Other" kicks in (we already group <2% slivers).
  */
 const COST_BAR_COLORS = [
   "var(--brand)",
@@ -391,12 +512,9 @@ const COST_BAR_COLORS = [
   "var(--warning)",
   "#a855f7",
   "#06b6d4",
+  "#ec4899",
+  "#84cc16",
 ] as const;
-function colorForIngredient(id: string): string {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
-  return COST_BAR_COLORS[Math.abs(h) % COST_BAR_COLORS.length];
-}
 
 interface RecipeCardProps {
   item: MenuItemData;
@@ -429,6 +547,12 @@ function RecipeCard({
     const sorted = [...ingredients].sort((a, b) => (b.lineCost ?? 0) - (a.lineCost ?? 0));
     const visible: { id: string; name: string; cost: number; pct: number; color: string }[] = [];
     let otherCost = 0;
+    // Position-based palette: assign the next palette colour to each
+    // visible segment in descending-cost order. Guarantees no two
+    // ingredients within a single recipe collide on the same hue —
+    // a previous hash-based scheme produced clashes like Fior di Latte
+    // + San Marzano both rendering violet on the Margherita card.
+    let paletteIdx = 0;
     for (const ri of sorted) {
       const cost = ri.lineCost ?? 0;
       const pct = (cost / total) * 100;
@@ -440,8 +564,9 @@ function RecipeCard({
           name: ri.name ?? "Unknown",
           cost,
           pct,
-          color: colorForIngredient(ri.ingredientId),
+          color: COST_BAR_COLORS[paletteIdx % COST_BAR_COLORS.length],
         });
+        paletteIdx++;
       }
     }
     if (otherCost > 0) {
@@ -548,11 +673,62 @@ interface EditorProps {
   menuItem: MenuItemData | null;
   recipe?: RecipeData;
   ingredients: IngredientData[];
+  /** City label of the location whose menu item this recipe is keyed
+   *  to. Recipes are per-(menuItemId), and menu items are per-location,
+   *  so each city has its own Margherita recipe + Margherita listed
+   *  price. Without this label the dialog header is misleading: it
+   *  shows ONE listed price + ONE cost but doesn't say which location. */
+  locationLabel?: string;
   onClose: () => void;
   onSaved: () => void;
+  /** Open the IngredientDialog for the given ingredient — lets the
+   *  recipe row's "Link offering" button take operators straight to
+   *  the place where they set up the per-distributor product without
+   *  hopping tabs. */
+  onEditIngredient?: (ingredientId: string) => void;
 }
 
-function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: EditorProps) {
+const MENU_TAGS: ("vegetarian" | "vegan" | "spicy" | "gluten-free")[] = [
+  "vegetarian",
+  "vegan",
+  "spicy",
+  "gluten-free",
+];
+
+const PRODUCT_CATEGORY_ORDER: MenuCategory[] = [
+  "pizza",
+  "pasta",
+  "antipasti",
+  "panini",
+  "drinks",
+  "desserts",
+];
+
+interface ProductDraft {
+  name: string;
+  description: string;
+  category: MenuCategory;
+  tags: ("vegetarian" | "vegan" | "spicy" | "gluten-free")[];
+  halalStatus: "" | "halal" | "non-halal" | "uncertified";
+  nutriGrade: "" | "A" | "B" | "C" | "D";
+  containsPork: boolean;
+  containsAlcohol: boolean;
+}
+
+function productDraftFromItem(item: MenuItemData): ProductDraft {
+  return {
+    name: item.name,
+    description: item.description ?? "",
+    category: item.category,
+    tags: (item.tags ?? []).slice(),
+    halalStatus: item.halalStatus ?? "",
+    nutriGrade: item.nutriGrade ?? "",
+    containsPork: Boolean(item.containsPork),
+    containsAlcohol: Boolean(item.containsAlcohol),
+  };
+}
+
+function RecipeEditor({ menuItem, recipe, ingredients, locationLabel, onClose, onSaved, onEditIngredient }: EditorProps) {
   const toast = useToast();
   const [rows, setRows] = useState<EnrichedRecipeIngredient[]>([]);
   const [yieldPortions, setYieldPortions] = useState(1);
@@ -561,6 +737,21 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
   const [pickerIngId, setPickerIngId] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // Product info + dietary fields used to live on /admin/menu/[slug] but
+  // were moved here so the kitchen owns the full product definition in
+  // one place. Saved alongside the recipe ingredients on submit.
+  const emptyProduct: ProductDraft = {
+    name: "",
+    description: "",
+    category: "pizza",
+    tags: [],
+    halalStatus: "",
+    nutriGrade: "",
+    containsPork: false,
+    containsAlcohol: false,
+  };
+  const [product, setProduct] = useState<ProductDraft>(emptyProduct);
+  const [productInitial, setProductInitial] = useState<ProductDraft>(emptyProduct);
 
   useEffect(() => {
     if (!menuItem) return;
@@ -573,12 +764,22 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
         name: r.name,
         unit: r.unit,
         unitCost: r.unitCost,
+        unitKcal: r.unitKcal,
+        unitProtein: r.unitProtein,
+        unitCarbs: r.unitCarbs,
+        unitSugar: r.unitSugar,
+        unitFiber: r.unitFiber,
+        unitFat: r.unitFat,
+        activeOffering: r.activeOffering ?? null,
       })),
     );
     setYieldPortions(recipe?.yieldPortions ?? 1);
     setPrepTime(recipe?.prepTimeMinutes ? String(recipe.prepTimeMinutes) : "");
     setNotes(recipe?.notes ?? "");
     setPickerIngId("");
+    const next = productDraftFromItem(menuItem);
+    setProduct(next);
+    setProductInitial(next);
   }, [menuItem, recipe]);
 
   const ingredientMap = useMemo(() => {
@@ -604,6 +805,12 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
         name: ing.name,
         unit: ing.unit,
         unitCost: ing.costPerUnit,
+        unitKcal: ing.kcalPerUnit,
+        unitProtein: ing.proteinPerUnit,
+        unitCarbs: ing.carbsPerUnit,
+        unitSugar: ing.sugarPerUnit,
+        unitFiber: ing.fiberPerUnit,
+        unitFat: ing.fatPerUnit,
       },
     ]);
     setPickerIngId("");
@@ -625,31 +832,155 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
     menuItem && menuItem.price > 0
       ? Math.round(((menuItem.price - perPortion) / menuItem.price) * 100)
       : 0;
+  // Per-portion macros computed locally so the KPI + nutrition panel
+  // update as the operator edits quantities, without waiting for the
+  // server roundtrip. Missing values default to 0 (rather than null'ing
+  // the whole total) so the operator sees a working number while they
+  // backfill — accompanied by a "N ingredients defaulted to 0" hint
+  // so they know which rows still need real data. The customer-facing
+  // kcal pill keeps the stricter "all complete or no claim" rule
+  // server-side; NYC §81.50 / EU 1169 disclosures shouldn't ship
+  // 0-defaulted figures.
+  //
+  // Waste factor is NOT applied to nutrition — `quantity` is the
+  // amount that ends up in the dish (what the customer actually eats);
+  // `wasteFactor` covers extra purchased to cover trim/spill loss,
+  // which feeds cost only. Including it here would inflate kcal by
+  // the trim that gets thrown away.
+  type MacroKey = "unitKcal" | "unitProtein" | "unitCarbs" | "unitSugar" | "unitFiber" | "unitFat";
+  const perPortionMacro = (key: MacroKey): { value: number; defaulted: number } => {
+    if (rows.length === 0) return { value: 0, defaulted: 0 };
+    let total = 0;
+    let defaulted = 0;
+    for (const r of rows) {
+      const raw = r[key];
+      if (typeof raw !== "number") {
+        defaulted++;
+        continue;
+      }
+      total += raw * r.quantity;
+    }
+    return {
+      value: Math.round(total / (yieldPortions || 1)),
+      defaulted,
+    };
+  };
+  const kcalSummary = perPortionMacro("unitKcal");
+  const proteinSummary = perPortionMacro("unitProtein");
+  const carbsSummary = perPortionMacro("unitCarbs");
+  const sugarSummary = perPortionMacro("unitSugar");
+  const fiberSummary = perPortionMacro("unitFiber");
+  const fatSummary = perPortionMacro("unitFat");
 
   const save = async () => {
     if (!menuItem) return;
+    if (!product.name.trim()) {
+      toast.error("Name required");
+      return;
+    }
     setBusy(true);
     try {
-      const res = await fetch("/api/admin/recipes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          menuItemId: menuItem.id,
-          ingredients: rows.map((r) => ({
-            ingredientId: r.ingredientId,
-            quantity: r.quantity,
-            wasteFactor: r.wasteFactor,
-          })),
-          prepTimeMinutes: prepTime ? Number(prepTime) : undefined,
-          yieldPortions,
-          notes,
-        }),
-      });
-      if (res.ok) {
-        onSaved();
-      } else {
-        toast.error("Save failed", "Try again.");
+      // 1. Ingredients + yield + prep time + notes — the original recipe
+      //    save. Skip the round trip when the operator opened the dialog
+      //    just to edit product info on an item that has no recipe yet
+      //    and added no rows — otherwise we'd persist an empty recipe
+      //    that flips the card from "No recipe" to "0 ingredients".
+      if (rows.length > 0 || hasExisting) {
+        const recipeRes = await fetch("/api/admin/recipes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            menuItemId: menuItem.id,
+            ingredients: rows.map((r) => ({
+              ingredientId: r.ingredientId,
+              quantity: r.quantity,
+              wasteFactor: r.wasteFactor,
+            })),
+            prepTimeMinutes: prepTime ? Number(prepTime) : undefined,
+            yieldPortions,
+            notes,
+          }),
+        });
+        if (!recipeRes.ok) {
+          toast.error("Recipe save failed", "Try again.");
+          return;
+        }
       }
+
+      // 2. Product info + dietary fields — diff vs initial. The menu page
+      //    no longer offers inputs for these, so the recipe editor is the
+      //    single source of truth. Seed items go through PUT /api/admin/menu
+      //    (override map); custom items go through PATCH /api/admin/menu/custom.
+      const productPatch: Record<string, unknown> = {};
+      if (product.name.trim() !== productInitial.name.trim()) {
+        productPatch.name = product.name.trim();
+      }
+      if (product.description !== productInitial.description) {
+        productPatch.description = product.description;
+      }
+      if (product.category !== productInitial.category) {
+        productPatch.category = product.category;
+      }
+      if (
+        JSON.stringify(product.tags.slice().sort()) !==
+        JSON.stringify(productInitial.tags.slice().sort())
+      ) {
+        // Persist tags in a stable (alphabetical) order so audit-log
+        // diffs don't churn on row reorder + reload comparisons are
+        // predictable. The toggle UI keeps insertion order while the
+        // operator clicks; sorting happens at the boundary.
+        productPatch.tags = [...product.tags].sort();
+      }
+      if (product.halalStatus !== productInitial.halalStatus) {
+        productPatch.halalStatus =
+          product.halalStatus === "" ? null : product.halalStatus;
+      }
+      if (product.nutriGrade !== productInitial.nutriGrade) {
+        productPatch.nutriGrade =
+          product.nutriGrade === "" ? null : product.nutriGrade;
+      }
+      if (Boolean(product.containsPork) !== Boolean(productInitial.containsPork)) {
+        // Always send the boolean directly. The previous null-when-false
+        // path was meant to "clear back to seed" but `applyOverride`
+        // skips null values, so a seed item shipped with
+        // `containsPork: true` could never be overridden to false from
+        // the UI. Sending false writes an explicit override that
+        // applyOverride merges (false ≠ null/undefined). The downside —
+        // no UI path to *clear* the override and revert to seed —
+        // affects an edge case we don't ship in the menu yet.
+        productPatch.containsPork = product.containsPork;
+      }
+      if (
+        Boolean(product.containsAlcohol) !== Boolean(productInitial.containsAlcohol)
+      ) {
+        productPatch.containsAlcohol = product.containsAlcohol;
+      }
+
+      if (Object.keys(productPatch).length > 0) {
+        const productRes = menuItem._isCustom
+          ? await fetch(
+              `/api/admin/menu/custom?id=${encodeURIComponent(menuItem.id)}`,
+              {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(productPatch),
+              },
+            )
+          : await fetch("/api/admin/menu", {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ items: { [menuItem.id]: productPatch } }),
+            });
+        if (!productRes.ok) {
+          toast.error(
+            "Product info save failed",
+            "Recipe saved but the product fields didn't update.",
+          );
+          return;
+        }
+      }
+
+      onSaved();
     } finally {
       setBusy(false);
     }
@@ -685,7 +1016,7 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
         onClose={onClose}
         size="xl"
         title={`Recipe · ${menuItem.name}`}
-        description={`Listed price ${formatPrice(menuItem.price)} · Recipe cost auto-recalculates from real ingredient prices.`}
+        description={`Chain-wide formula · ${locationLabel ? `listed at ${formatPrice(menuItem.price)} in ${locationLabel}` : `listed price ${formatPrice(menuItem.price)}`}. Cost + nutrition recalculate from each ingredient's active distributor offering. Other locations on this dish share the same recipe — only the listed price varies.`}
         footer={
           <>
             {hasExisting && (
@@ -697,12 +1028,13 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
               Cancel
             </Button>
             <Button variant="primary" onClick={save} loading={busy}>
-              Save recipe
+              Save changes
             </Button>
           </>
         }
       >
         <div className="v2-stack-12">
+          {/* ============ KPI summary — 4 cards across the top ============ */}
           <section className="v2-recipe-summary">
             <KpiCard
               label="Per portion"
@@ -738,9 +1070,104 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
               staticValue
               hint={`${yieldPortions} portion${yieldPortions === 1 ? "" : "s"} per batch`}
             />
+            <KpiCard
+              label="Calories"
+              value={kcalSummary.value}
+              display={rows.length === 0 ? "—" : `${kcalSummary.value} kcal`}
+              icon={Flame}
+              tone="neutral"
+              staticValue
+              hint={
+                rows.length === 0
+                  ? "Add ingredients to compute"
+                  : kcalSummary.defaulted > 0
+                  ? `${kcalSummary.defaulted} ingredient${
+                      kcalSummary.defaulted === 1 ? "" : "s"
+                    } defaulted to 0 — fill kcal on the warning rows for accuracy`
+                  : "Auto-computed from ingredient kcal × qty"
+              }
+            />
           </section>
 
-          {/* Ingredients table — uses the same `v2-mng-section` class system
+          {/* ============ Per-portion macros ============
+              Compact nutrition-label-style row. Each cell shows the
+              computed gram value with a small "(N defaulted)" suffix
+              when any ingredient line was missing that specific macro
+              — so operators get a usable number while they backfill
+              instead of a blanket "—". Sugar is nested under carbs to
+              mirror EU 1169/2011 + FDA NFP "of which sugars" convention.
+              The customer-facing pill keeps the stricter "all
+              complete" rule server-side. */}
+          <section
+            className="v2-rcp-nutrition"
+            role="group"
+            aria-label="Per-portion nutrition"
+          >
+            <header className="v2-rcp-nutrition-header">
+              <span className="v2-rcp-nutrition-eyebrow">Per-portion nutrition</span>
+              <span className="v2-rcp-nutrition-hint">
+                Missing values default to 0 — fill ingredient nutrition for accuracy.
+              </span>
+            </header>
+            <dl className="v2-rcp-nutrition-grid">
+              <div className="v2-rcp-nutrition-cell">
+                <dt>Carbs</dt>
+                <dd className="tabular">
+                  {rows.length === 0 ? "—" : `${carbsSummary.value} g`}
+                </dd>
+                <small className="v2-rcp-nutrition-sub">
+                  of which sugars{" "}
+                  <span className="tabular">
+                    {rows.length === 0 ? "—" : `${sugarSummary.value} g`}
+                  </span>
+                  {sugarSummary.defaulted > 0
+                    ? <span className="v2-rcp-nutrition-warn"> ({sugarSummary.defaulted} defaulted)</span>
+                    : null}
+                </small>
+                {carbsSummary.defaulted > 0 ? (
+                  <small className="v2-rcp-nutrition-warn">
+                    {carbsSummary.defaulted} defaulted to 0
+                  </small>
+                ) : null}
+              </div>
+              <div className="v2-rcp-nutrition-cell">
+                <dt>Fiber</dt>
+                <dd className="tabular">
+                  {rows.length === 0 ? "—" : `${fiberSummary.value} g`}
+                </dd>
+                {fiberSummary.defaulted > 0 ? (
+                  <small className="v2-rcp-nutrition-warn">
+                    {fiberSummary.defaulted} defaulted to 0
+                  </small>
+                ) : null}
+              </div>
+              <div className="v2-rcp-nutrition-cell">
+                <dt>Protein</dt>
+                <dd className="tabular">
+                  {rows.length === 0 ? "—" : `${proteinSummary.value} g`}
+                </dd>
+                {proteinSummary.defaulted > 0 ? (
+                  <small className="v2-rcp-nutrition-warn">
+                    {proteinSummary.defaulted} defaulted to 0
+                  </small>
+                ) : null}
+              </div>
+              <div className="v2-rcp-nutrition-cell">
+                <dt>Fat</dt>
+                <dd className="tabular">
+                  {rows.length === 0 ? "—" : `${fatSummary.value} g`}
+                </dd>
+                {fatSummary.defaulted > 0 ? (
+                  <small className="v2-rcp-nutrition-warn">
+                    {fatSummary.defaulted} defaulted to 0
+                  </small>
+                ) : null}
+              </div>
+            </dl>
+          </section>
+
+          {/* ============ Ingredients table — the main recipe edit surface ============ */}
+          {/* Uses the same `v2-mng-section` class system
               as the Menu page so the section header (icon + name + count) +
               row padding + hover + bold names all match exactly. */}
           <section className="v2-mng-section" data-variant="recipe-edit">
@@ -780,6 +1207,51 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
                             {r.name ?? r.ingredientId}
                           </span>
                         </div>
+                        {/* Inline provenance: surface which distributor
+                            offering this line's cost + macros come from
+                            so the recipe → ingredient → offering chain
+                            is visible at a glance. The warning variant
+                            flags two debugging-friendly states:
+                              - "No offering linked" → no active row
+                              - "missing kcal" → active row exists but
+                                its Energy field is blank, blocking the
+                                per-portion calorie KPI.
+                            Click on either jumps to the ingredient
+                            editor. */}
+                        {r.activeOffering ? (() => {
+                          const missingKcal = typeof r.unitKcal !== "number";
+                          return (
+                            <button
+                              type="button"
+                              className={`v2-rcp-row-offering ${missingKcal ? "is-empty" : ""}`}
+                              onClick={() =>
+                                onEditIngredient?.(r.ingredientId)
+                              }
+                              title={
+                                missingKcal
+                                  ? "Active offering has no kcal value — click to fill in Energy from the back of the pack"
+                                  : "Edit distributor offerings for this ingredient"
+                              }
+                            >
+                              via <strong>{r.activeOffering.supplierName}</strong>
+                              {r.activeOffering.displayName
+                                ? ` · ${r.activeOffering.displayName}`
+                                : null}
+                              {missingKcal ? " — missing kcal" : null}
+                            </button>
+                          );
+                        })() : (
+                          <button
+                            type="button"
+                            className="v2-rcp-row-offering is-empty"
+                            onClick={() =>
+                              onEditIngredient?.(r.ingredientId)
+                            }
+                            title="Add a distributor offering so cost + calories compute"
+                          >
+                            No offering linked — add one
+                          </button>
+                        )}
                       </div>
                       <Input
                         type="number"
@@ -835,7 +1307,10 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
               placeholder="Pick an ingredient…"
               options={availableIngredients.map((i) => ({
                 value: i.id,
-                label: `${i.name} · ${formatPrice(i.costPerUnit)}/${i.unit}`,
+                label:
+                  typeof i.costPerUnit === "number"
+                    ? `${i.name} · ${formatPrice(i.costPerUnit)}/${i.unit}`
+                    : `${i.name} · no active offering`,
               }))}
             />
             <Button leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={addIngredient} disabled={!pickerIngId}>
@@ -861,6 +1336,161 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
             />
           </div>
           <Textarea label="Notes" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
+
+          {/* ============ Product info ============
+              Name + category + tags + description. Moved here from
+              /admin/menu/[slug] so the kitchen owns the product
+              definition. Edits flow into the menu override map (seed)
+              or the custom-item row (custom), saved alongside the
+              recipe on submit. */}
+          <div className="v2-rcp-dialog-divider" role="separator" aria-hidden />
+          <div className="v2-rcp-dialog-section">
+            <h3 className="v2-rcp-dialog-section-title">Product info</h3>
+            <p className="v2-rcp-dialog-section-hint">
+              Name, category, tags, description — applies to {menuItem.name}
+              {" "}on this location.
+            </p>
+            <Input
+              label="Name"
+              value={product.name}
+              onChange={(e) => setProduct((p) => ({ ...p, name: e.target.value }))}
+            />
+            <div className="v2-form-row-2">
+              <Select
+                label="Category"
+                value={product.category}
+                onChange={(e) =>
+                  setProduct((p) => ({
+                    ...p,
+                    category: e.target.value as MenuCategory,
+                  }))
+                }
+                options={PRODUCT_CATEGORY_ORDER.map((cc) => ({
+                  value: cc,
+                  label: MENU_CATEGORY_LABELS[cc],
+                }))}
+              />
+              <div className="v2-field">
+                <label className="v2-field-label">Tags</label>
+                <div
+                  className="v2-detail-tags-row"
+                  role="group"
+                  aria-label="Dietary tags"
+                >
+                  {MENU_TAGS.map((tag) => {
+                    const on = product.tags.includes(tag);
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        className={`v2-chip ${on ? "is-on" : ""}`}
+                        aria-pressed={on}
+                        onClick={() =>
+                          setProduct((p) => ({
+                            ...p,
+                            tags: on
+                              ? p.tags.filter((t) => t !== tag)
+                              : [...p.tags, tag],
+                          }))
+                        }
+                      >
+                        {tag}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+            <Textarea
+              label="Description"
+              value={product.description}
+              onChange={(e) =>
+                setProduct((p) => ({ ...p, description: e.target.value }))
+              }
+              rows={3}
+            />
+          </div>
+
+          {/* ============ Dietary disclosures ============
+              Halal status, Nutri-Grade, contains-pork / -alcohol. The
+              customer card only renders each chip when the location's
+              compliance zone enables that disclosure — see
+              /admin/regulatory-compliance. */}
+          <div className="v2-rcp-dialog-divider" role="separator" aria-hidden />
+          <div className="v2-rcp-dialog-section">
+            <h3 className="v2-rcp-dialog-section-title">Dietary disclosures</h3>
+            <p className="v2-rcp-dialog-section-hint">
+              Per-item flags surfaced as chips on the customer menu card.
+              Calories are computed above from ingredient totals — set kcal
+              per ingredient on the Ingredients tab.
+            </p>
+            <div className="v2-form-row-2">
+              <Select
+                label="Halal status"
+                value={product.halalStatus}
+                onChange={(e) =>
+                  setProduct((p) => ({
+                    ...p,
+                    halalStatus: e.target.value as ProductDraft["halalStatus"],
+                  }))
+                }
+                options={[
+                  { value: "", label: "— No claim" },
+                  { value: "halal", label: "Halal (MUIS-covered)" },
+                  { value: "non-halal", label: "Non-halal" },
+                  { value: "uncertified", label: "Uncertified" },
+                ]}
+                description="Renders only on SG trucks."
+              />
+              <Select
+                label="Nutri-Grade"
+                value={product.nutriGrade}
+                onChange={(e) =>
+                  setProduct((p) => ({
+                    ...p,
+                    nutriGrade: e.target.value as ProductDraft["nutriGrade"],
+                  }))
+                }
+                options={[
+                  { value: "", label: "— Not graded" },
+                  { value: "A", label: "A — healthiest" },
+                  { value: "B", label: "B" },
+                  { value: "C", label: "C" },
+                  { value: "D", label: "D — least healthy" },
+                ]}
+                description="SG NEA Nutri-Grade for sugar-sweetened beverages."
+              />
+            </div>
+            <div className="v2-field">
+              <label className="v2-field-label">Disclaimers</label>
+              <label className="v2-detail-toggle">
+                <input
+                  type="checkbox"
+                  checked={product.containsPork}
+                  onChange={(e) =>
+                    setProduct((p) => ({
+                      ...p,
+                      containsPork: e.target.checked,
+                    }))
+                  }
+                />
+                <span>Contains pork</span>
+              </label>
+              <label className="v2-detail-toggle">
+                <input
+                  type="checkbox"
+                  checked={product.containsAlcohol}
+                  onChange={(e) =>
+                    setProduct((p) => ({
+                      ...p,
+                      containsAlcohol: e.target.checked,
+                    }))
+                  }
+                />
+                <span>Contains alcohol</span>
+              </label>
+            </div>
+          </div>
         </div>
       </Dialog>
 
@@ -947,8 +1577,33 @@ function IngredientsPanel() {
       key: "cost",
       header: "Cost / unit",
       align: "right",
-      cell: (i) => formatPrice(i.costPerUnit),
-      sortValue: (i) => i.costPerUnit,
+      cell: (i) =>
+        typeof i.costPerUnit === "number" ? (
+          formatPrice(i.costPerUnit)
+        ) : (
+          <span
+            className="v2-muted"
+            title="No distributor offering linked yet — open the ingredient to add one."
+          >
+            —
+          </span>
+        ),
+      sortValue: (i) => i.costPerUnit ?? -1,
+    },
+    {
+      key: "kcal",
+      header: "Calories",
+      align: "right",
+      cell: (i) =>
+        typeof i.kcalPerUnit === "number" ? (
+          <span className="tabular">
+            {storedKcalToDisplay(i.kcalPerUnit, i.unit)}
+            <span className="v2-muted"> / {kcalBasisLabel(i.unit)}</span>
+          </span>
+        ) : (
+          <span className="v2-muted" title="No kcal set — recipes referencing this ingredient won't show a computed calorie value.">—</span>
+        ),
+      sortValue: (i) => i.kcalPerUnit ?? -1,
     },
     {
       key: "supplier",
@@ -1074,14 +1729,62 @@ interface IngDialogProps {
   onSaved: () => void;
 }
 
+interface SupplierLite {
+  id: string;
+  name: string;
+}
+
+interface OfferingDraft {
+  /** Server id once persisted. Drafts created in-dialog stay client-only
+   *  until save spawns a POST. */
+  id?: string;
+  supplierId: string;
+  supplierSku: string;
+  displayName: string;
+  costStr: string;
+  kcalStr: string;
+  proteinStr: string;
+  carbsStr: string;
+  sugarStr: string;
+  fiberStr: string;
+  fatStr: string;
+  notes: string;
+  /** Local key for React rendering — survives across renders without an
+   *  id, since drafts may not have one yet. */
+  key: string;
+}
+
+function emptyOffering(supplierId: string = ""): OfferingDraft {
+  return {
+    supplierId,
+    supplierSku: "",
+    displayName: "",
+    costStr: "",
+    kcalStr: "",
+    proteinStr: "",
+    carbsStr: "",
+    sugarStr: "",
+    fiberStr: "",
+    fatStr: "",
+    notes: "",
+    key: `draft-${Math.random().toString(36).slice(2, 10)}`,
+  };
+}
+
 function IngredientDialog({ state, onClose, onSaved }: IngDialogProps) {
   const toast = useToast();
   const [name, setName] = useState("");
   const [category, setCategory] = useState<IngredientCategory>("produce");
   const [unit, setUnit] = useState<IngredientUnit>("kg");
-  const [costStr, setCostStr] = useState("0.00");
-  const [supplier, setSupplier] = useState("");
   const [notes, setNotes] = useState("");
+  const [suppliers, setSuppliers] = useState<SupplierLite[]>([]);
+  const [offerings, setOfferings] = useState<OfferingDraft[]>([]);
+  /** Tracks which offering should be active on save. Keyed by either
+   *  the server id (for existing) or the draft key (for new). */
+  const [activeKey, setActiveKey] = useState<string>("");
+  /** Server ids of offerings present at open time but removed in the
+   *  dialog — sent as DELETE on save so the server stays in sync. */
+  const [deletedIds, setDeletedIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -1090,59 +1793,249 @@ function IngredientDialog({ state, onClose, onSaved }: IngDialogProps) {
     setName(ing?.name ?? "");
     setCategory(ing?.category ?? "produce");
     setUnit(ing?.unit ?? "kg");
-    setCostStr(ing ? (ing.costPerUnit / 100).toFixed(2) : "0.00");
-    setSupplier(ing?.supplier ?? "");
     setNotes(ing?.notes ?? "");
+    setDeletedIds([]);
+    // Load existing offerings (+ supplier list) in parallel. New
+    // ingredients start with an empty offerings list — the operator
+    // adds the first offering before saving the recipe-affecting cost.
+    let cancelled = false;
+    (async () => {
+      const [supRes, offRes] = await Promise.all([
+        fetch("/api/admin/suppliers"),
+        ing
+          ? fetch(`/api/admin/ingredient-products?ingredientId=${encodeURIComponent(ing.id)}`)
+          : Promise.resolve(null),
+      ]);
+      if (cancelled) return;
+      const sups: SupplierLite[] = supRes.ok ? await supRes.json() : [];
+      setSuppliers(sups);
+      let active = "";
+      if (ing && offRes && offRes.ok) {
+        const products = (await offRes.json()) as Array<{
+          id: string;
+          supplierId: string;
+          supplierSku?: string;
+          displayName?: string;
+          costPerUnit: number;
+          kcalPerUnit?: number;
+          proteinPerUnit?: number;
+          carbsPerUnit?: number;
+          sugarPerUnit?: number;
+          fiberPerUnit?: number;
+          fatPerUnit?: number;
+          notes?: string;
+        }>;
+        const next: OfferingDraft[] = products.map((p) => ({
+          id: p.id,
+          supplierId: p.supplierId,
+          supplierSku: p.supplierSku ?? "",
+          displayName: p.displayName ?? "",
+          costStr: (p.costPerUnit / 100).toFixed(2),
+          kcalStr: storedKcalToDisplay(p.kcalPerUnit, ing.unit),
+          proteinStr: storedKcalToDisplay(p.proteinPerUnit, ing.unit),
+          carbsStr: storedKcalToDisplay(p.carbsPerUnit, ing.unit),
+          sugarStr: storedKcalToDisplay(p.sugarPerUnit, ing.unit),
+          fiberStr: storedKcalToDisplay(p.fiberPerUnit, ing.unit),
+          fatStr: storedKcalToDisplay(p.fatPerUnit, ing.unit),
+          notes: p.notes ?? "",
+          key: p.id,
+        }));
+        setOfferings(next);
+        active = ing.activeProductId ?? next[0]?.id ?? "";
+      } else {
+        setOfferings([]);
+      }
+      setActiveKey(active);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [state]);
 
   if (!state.open) return <Dialog open={false} onClose={onClose} />;
+
+  const supplierLabel = (id: string): string => {
+    if (!id) return "(no supplier)";
+    if (id.startsWith("legacy:")) return id.slice("legacy:".length) || "(legacy)";
+    return suppliers.find((s) => s.id === id)?.name ?? "(unknown supplier)";
+  };
+
+  const addOffering = () => {
+    const next = emptyOffering(suppliers[0]?.id ?? "");
+    setOfferings((arr) => [...arr, next]);
+    // New offering becomes active by default — operators add a row
+    // because they want to use it. If they're adding for cost
+    // comparison only, they untick after; the radio is right there.
+    // Without this default, freshly-typed kcal values land on a row
+    // nothing reads from and calories never resolve.
+    setActiveKey(next.key);
+  };
+
+  const removeOffering = (key: string) => {
+    setOfferings((arr) => {
+      const target = arr.find((o) => o.key === key);
+      if (target?.id) setDeletedIds((d) => [...d, target.id!]);
+      const remaining = arr.filter((o) => o.key !== key);
+      if (activeKey === key) setActiveKey(remaining[0]?.key ?? "");
+      return remaining;
+    });
+  };
+
+  const updateOffering = (key: string, patch: Partial<OfferingDraft>) => {
+    setOfferings((arr) => arr.map((o) => (o.key === key ? { ...o, ...patch } : o)));
+  };
 
   const save = async () => {
     if (!name.trim()) {
       toast.warning("Name required");
       return;
     }
+    // Every offering needs a supplier picked — otherwise the row makes
+    // no sense (no distributor to attribute the cost to). Block save
+    // with a clear message rather than silently dropping bad rows.
+    const missingSupplier = offerings.find((o) => !o.supplierId);
+    if (missingSupplier) {
+      toast.error(
+        "Pick a supplier for every offering",
+        suppliers.length === 0
+          ? "No suppliers yet — add one at /admin/suppliers first."
+          : undefined,
+      );
+      return;
+    }
     setBusy(true);
     try {
-      const payload = {
+      // 1. Persist the ingredient row (identity only — cost + macros
+      //    live on the offerings).
+      const ingPayload = {
         id: state.ingredient?.id,
         name: name.trim(),
         category,
         unit,
-        costPerUnit: Math.round(parseFloat(costStr || "0") * 100),
-        supplier: supplier.trim() || undefined,
         notes: notes.trim() || undefined,
+        // Leave activeProductId off; we'll PATCH it after offerings
+        // settle so we can reference newly-created products by their
+        // server id.
+        activeProductId: undefined,
       };
-      const res = await fetch("/api/admin/ingredients", {
+      const ingRes = await fetch("/api/admin/ingredients", {
         method: state.ingredient ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(ingPayload),
       });
-      if (res.ok) {
-        onSaved();
-      } else {
-        toast.error("Could not save");
+      if (!ingRes.ok) {
+        toast.error("Could not save ingredient");
+        return;
       }
+      const savedIng = (await ingRes.json()) as { id: string };
+
+      // 2. Per-offering CRUD. Convert per-100g display values back to
+      //    per-unit storage via the same helpers used everywhere else
+      //    so recipe maths stays exact.
+      const parseMacro = (raw: string): number | null => {
+        const t = raw.trim();
+        if (t === "") return null;
+        const n = displayKcalToStored(Number(t), unit);
+        return Number.isFinite(n) ? n : null;
+      };
+
+      // Track which offering ends up active. For existing offerings the
+      // server id is stable; for new offerings we read the id off the
+      // POST response.
+      let chosenActiveServerId: string | undefined;
+      const failed: string[] = [];
+
+      for (const o of offerings) {
+        const payload = {
+          id: o.id,
+          ingredientId: savedIng.id,
+          supplierId: o.supplierId,
+          supplierSku: o.supplierSku.trim() || undefined,
+          displayName: o.displayName.trim() || undefined,
+          costPerUnit: Math.round(parseFloat(o.costStr || "0") * 100),
+          kcalPerUnit: parseMacro(o.kcalStr),
+          proteinPerUnit: parseMacro(o.proteinStr),
+          carbsPerUnit: parseMacro(o.carbsStr),
+          sugarPerUnit: parseMacro(o.sugarStr),
+          fiberPerUnit: parseMacro(o.fiberStr),
+          fatPerUnit: parseMacro(o.fatStr),
+          notes: o.notes.trim() || undefined,
+        };
+        const res = await fetch("/api/admin/ingredient-products", {
+          method: o.id ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          failed.push(supplierLabel(o.supplierId));
+          continue;
+        }
+        const saved = (await res.json()) as { id: string };
+        if (o.key === activeKey) chosenActiveServerId = saved.id;
+      }
+
+      // 3. DELETE offerings the operator removed.
+      for (const id of deletedIds) {
+        await fetch(`/api/admin/ingredient-products?id=${encodeURIComponent(id)}`, {
+          method: "DELETE",
+        });
+      }
+
+      // 4. Flip active offering. The product create / update routes
+      //    auto-activate the first-ever offering for an ingredient, so
+      //    new ingredients with one offering need no explicit PATCH —
+      //    but multi-offering edits do.
+      if (chosenActiveServerId) {
+        await fetch("/api/admin/ingredient-products", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ingredientId: savedIng.id,
+            productId: chosenActiveServerId,
+          }),
+        });
+      }
+
+      if (failed.length > 0) {
+        toast.error(
+          "Some offerings failed",
+          `Couldn't save: ${failed.join(", ")}.`,
+        );
+        return;
+      }
+      onSaved();
     } finally {
       setBusy(false);
     }
   };
 
+  const ing = state.ingredient;
+
   return (
     <Dialog
       open
       onClose={onClose}
-      size="md"
-      title={state.ingredient ? `Edit ${state.ingredient.name}` : "New ingredient"}
+      size="lg"
+      title={ing ? `Edit ${ing.name}` : "New ingredient"}
+      description="Identity + per-distributor offerings. Cost + nutrition come from the active offering — switching distributors = activating a different row."
       footer={
         <>
-          <Button variant="ghost" onClick={onClose} disabled={busy}>Cancel</Button>
-          <Button variant="primary" onClick={save} loading={busy}>{state.ingredient ? "Save changes" : "Create ingredient"}</Button>
+          <Button variant="ghost" onClick={onClose} disabled={busy}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={save} loading={busy}>
+            {ing ? "Save changes" : "Create ingredient"}
+          </Button>
         </>
       }
     >
       <div className="v2-stack-12">
-        <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. San Marzano tomatoes" />
+        <Input
+          label="Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="e.g. San Marzano tomatoes"
+        />
         <div className="v2-form-row-2">
           <Select
             label="Category"
@@ -1157,17 +2050,171 @@ function IngredientDialog({ state, onClose, onSaved }: IngDialogProps) {
             options={INGREDIENT_UNITS.map((u) => ({ value: u, label: u }))}
           />
         </div>
-        <Input
-          label={`Cost per ${unit}`}
-          type="number"
-          step="0.01"
-          min="0"
-          value={costStr}
-          onChange={(e) => setCostStr(e.target.value)}
-          trailingAdornment={<span className="v2-muted">zł</span>}
+        <Textarea
+          label="Notes"
+          rows={2}
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
         />
-        <Input label="Supplier" value={supplier} onChange={(e) => setSupplier(e.target.value)} placeholder="Optional" />
-        <Textarea label="Notes" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
+
+        <div className="v2-rcp-ing-nutrition">
+          <header className="v2-rcp-ing-nutrition-header">
+            <span className="v2-rcp-ing-nutrition-eyebrow">Distributor offerings</span>
+            <span className="v2-rcp-ing-nutrition-hint">
+              One row per supplier carrying this ingredient. Cost + nutrition
+              from the <strong>active</strong> row drive recipe totals.
+            </span>
+          </header>
+          {suppliers.length === 0 ? (
+            <p className="v2-muted" style={{ fontSize: "var(--text-xs)" }}>
+              No suppliers yet. Add one at{" "}
+              <a href="/admin/suppliers" target="_blank" rel="noreferrer">
+                /admin/suppliers
+              </a>
+              {" "}then come back to link offerings.
+            </p>
+          ) : null}
+          {offerings.map((o) => (
+            <fieldset key={o.key} className="v2-ing-offering">
+              <legend>
+                <label className="v2-detail-toggle" style={{ display: "inline-flex" }}>
+                  <input
+                    type="radio"
+                    name="active-offering"
+                    checked={activeKey === o.key}
+                    onChange={() => setActiveKey(o.key)}
+                  />
+                  <span>
+                    {activeKey === o.key ? "Active" : "Make active"} ·{" "}
+                    {supplierLabel(o.supplierId)}
+                  </span>
+                </label>
+                <button
+                  type="button"
+                  className="v2-rcp-remove"
+                  onClick={() => removeOffering(o.key)}
+                  title="Remove offering"
+                  aria-label={`Remove offering from ${supplierLabel(o.supplierId)}`}
+                  style={{ opacity: 1 }}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </legend>
+              <div className="v2-form-row-2">
+                <Select
+                  label="Supplier"
+                  value={o.supplierId}
+                  onChange={(e) => updateOffering(o.key, { supplierId: e.target.value })}
+                  options={[
+                    { value: "", label: "— Pick supplier" },
+                    ...suppliers.map((s) => ({ value: s.id, label: s.name })),
+                    ...(o.supplierId.startsWith("legacy:")
+                      ? [{ value: o.supplierId, label: `${o.supplierId.slice("legacy:".length)} (legacy)` }]
+                      : []),
+                  ]}
+                />
+                <Input
+                  label="Supplier SKU"
+                  value={o.supplierSku}
+                  onChange={(e) => updateOffering(o.key, { supplierSku: e.target.value })}
+                  placeholder="e.g. SM-DOP-400G"
+                />
+              </div>
+              <div className="v2-form-row-2">
+                <Input
+                  label="Display name"
+                  value={o.displayName}
+                  onChange={(e) => updateOffering(o.key, { displayName: e.target.value })}
+                  placeholder="optional"
+                />
+                <Input
+                  label={`Cost per ${unit}`}
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={o.costStr}
+                  onChange={(e) => updateOffering(o.key, { costStr: e.target.value })}
+                  trailingAdornment={<span className="v2-muted">zł</span>}
+                />
+              </div>
+              <div className="v2-form-row-2">
+                <Input
+                  label={`Energy per ${kcalBasisLabel(unit)}`}
+                  type="number"
+                  step="1"
+                  min="0"
+                  value={o.kcalStr}
+                  onChange={(e) => updateOffering(o.key, { kcalStr: e.target.value })}
+                  trailingAdornment={<span className="v2-muted">kcal</span>}
+                  placeholder="—"
+                />
+                <Input
+                  label={`Fat per ${kcalBasisLabel(unit)}`}
+                  type="number"
+                  step="1"
+                  min="0"
+                  value={o.fatStr}
+                  onChange={(e) => updateOffering(o.key, { fatStr: e.target.value })}
+                  trailingAdornment={<span className="v2-muted">g</span>}
+                  placeholder="—"
+                />
+              </div>
+              <div className="v2-form-row-2">
+                <Input
+                  label={`Carbs per ${kcalBasisLabel(unit)}`}
+                  type="number"
+                  step="1"
+                  min="0"
+                  value={o.carbsStr}
+                  onChange={(e) => updateOffering(o.key, { carbsStr: e.target.value })}
+                  trailingAdornment={<span className="v2-muted">g</span>}
+                  placeholder="—"
+                />
+                <Input
+                  label="of which sugars"
+                  type="number"
+                  step="1"
+                  min="0"
+                  value={o.sugarStr}
+                  onChange={(e) => updateOffering(o.key, { sugarStr: e.target.value })}
+                  trailingAdornment={<span className="v2-muted">g</span>}
+                  placeholder="—"
+                />
+              </div>
+              <div className="v2-form-row-2">
+                <Input
+                  label={`Fiber per ${kcalBasisLabel(unit)}`}
+                  type="number"
+                  step="1"
+                  min="0"
+                  value={o.fiberStr}
+                  onChange={(e) => updateOffering(o.key, { fiberStr: e.target.value })}
+                  trailingAdornment={<span className="v2-muted">g</span>}
+                  placeholder="—"
+                />
+                <Input
+                  label={`Protein per ${kcalBasisLabel(unit)}`}
+                  type="number"
+                  step="1"
+                  min="0"
+                  value={o.proteinStr}
+                  onChange={(e) => updateOffering(o.key, { proteinStr: e.target.value })}
+                  trailingAdornment={<span className="v2-muted">g</span>}
+                  placeholder="—"
+                />
+              </div>
+            </fieldset>
+          ))}
+          <Button
+            variant="ghost"
+            size="sm"
+            leadingIcon={<Plus className="h-3.5 w-3.5" />}
+            onClick={addOffering}
+            disabled={suppliers.length === 0}
+          >
+            Add distributor offering
+          </Button>
+        </div>
       </div>
     </Dialog>
   );

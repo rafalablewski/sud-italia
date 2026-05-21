@@ -2,7 +2,7 @@ import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel, SimulationMenuScenarioOverride } from "@/data/types";
+import { TimeSlot, Order, Ingredient, IngredientProduct, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel, SimulationMenuScenarioOverride } from "@/data/types";
 import { getActiveLocations, locations as allLocations } from "@/data/locations";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -18,9 +18,10 @@ import { appendOutboxEvent } from "@/lib/outbox";
 import { incrCounter } from "@/lib/metrics";
 import { and, asc, desc, eq, gte, inArray, lt, ne, sql as drizzleSql } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { allergenIncidents as allergenIncidentsTable, auditLog as auditLogTable, brands as brandsTable, customerNotes as customerNotesTable, customers as customersTable, feedback as feedbackTable, franchisees as franchiseesTable, ingredientStock as ingredientStockTable, ingredients as ingredientsTable, kdsTickets as kdsTicketsTable, locationAssignments as locationAssignmentsTable, loyaltyMembers as loyaltyMembersTable, menuItemStation as menuItemStationTable, orderItems as orderItemsTable, orders as ordersTable, pointAdjustments as pointAdjustmentsTable, recipes as recipesTable, royaltyStatements as royaltyStatementsTable, shifts as shiftsTable, slots as slotsTable, staff as staffTable, stations as stationsTable, stockMovements as stockMovementsTable, tempLogs as tempLogsTable, timePunches as timePunchesTable, whatsappMessages as whatsappMessagesTable } from "@/db/schema";
+import { allergenIncidents as allergenIncidentsTable, auditLog as auditLogTable, brands as brandsTable, customerNotes as customerNotesTable, customers as customersTable, feedback as feedbackTable, franchisees as franchiseesTable, ingredientProducts as ingredientProductsTable, ingredientStock as ingredientStockTable, ingredients as ingredientsTable, kdsTickets as kdsTicketsTable, locationAssignments as locationAssignmentsTable, loyaltyMembers as loyaltyMembersTable, menuItemStation as menuItemStationTable, orderItems as orderItemsTable, orders as ordersTable, pointAdjustments as pointAdjustmentsTable, recipes as recipesTable, royaltyStatements as royaltyStatementsTable, shifts as shiftsTable, slots as slotsTable, staff as staffTable, stations as stationsTable, stockMovements as stockMovementsTable, tempLogs as tempLogsTable, timePunches as timePunchesTable, whatsappMessages as whatsappMessagesTable } from "@/db/schema";
 import { lte } from "drizzle-orm";
 import { bumpLazyBackfillHit, ensureTable } from "@/db/migrate";
+import { getBaseSlug } from "@/lib/utils";
 
 // --- Storage abstraction: Neon Postgres when DATABASE_URL is set, filesystem fallback for local dev ---
 
@@ -2302,6 +2303,12 @@ export interface MenuOverride {
   containsPork?: boolean | null;
   /** Surface a "Contains alcohol" disclaimer alongside the item card. */
   containsAlcohol?: boolean | null;
+  /** Per-portion kcal override (NYC §81.50, EU 1169 opt-in). When set,
+   *  `applyOverride` merges this into `item.nutrition.calories` so the
+   *  customer-facing kcal pill picks it up without losing the rest of
+   *  the nutrition struct (protein / carbs / fat). `null` clears back
+   *  to the seed value. */
+  calories?: number | null;
 }
 
 export async function getMenuOverrides(): Promise<Record<string, MenuOverride>> {
@@ -2784,6 +2791,52 @@ const INGREDIENTS_DDL = [
     supplier text,
     notes text
   )`,
+  // 2026-05 — kcal-per-unit added so recipe calories can be computed from
+  // ingredient totals instead of an operator-typed value. Nullable so rows
+  // created before this column shipped don't need a backfill before the
+  // schema is honoured.
+  `ALTER TABLE ingredients ADD COLUMN IF NOT EXISTS kcal_per_unit integer`,
+  // 2026-05 — full macros (protein / carbs / sugar / fiber / fat) per
+  // unit. Same pattern as kcal: nullable, populated lazily, computed
+  // into recipe per-portion totals when every line has the value.
+  `ALTER TABLE ingredients ADD COLUMN IF NOT EXISTS protein_per_unit integer`,
+  `ALTER TABLE ingredients ADD COLUMN IF NOT EXISTS carbs_per_unit integer`,
+  `ALTER TABLE ingredients ADD COLUMN IF NOT EXISTS sugar_per_unit integer`,
+  `ALTER TABLE ingredients ADD COLUMN IF NOT EXISTS fiber_per_unit integer`,
+  `ALTER TABLE ingredients ADD COLUMN IF NOT EXISTS fat_per_unit integer`,
+  // 2026-05 — ingredient → multiple distributor offerings. Cost +
+  // nutrition move down to ingredient_products; the active offering's
+  // values drive recipe calc. Cost is dropped to NULLable so the
+  // backfill helper can clear it after migrating values down.
+  `ALTER TABLE ingredients ALTER COLUMN cost_per_unit DROP NOT NULL`,
+  `ALTER TABLE ingredients ADD COLUMN IF NOT EXISTS active_product_id text`,
+];
+
+/** Per-distributor offerings. One ingredient can have N rows; the
+ *  ingredient's `active_product_id` picks which row's values are used
+ *  in recipe calc. */
+const INGREDIENT_PRODUCTS_DDL = [
+  `CREATE TABLE IF NOT EXISTS ingredient_products (
+    id text PRIMARY KEY,
+    ingredient_id text NOT NULL,
+    supplier_id text NOT NULL,
+    supplier_sku text,
+    display_name text,
+    cost_per_unit integer NOT NULL,
+    kcal_per_unit integer,
+    protein_per_unit integer,
+    carbs_per_unit integer,
+    sugar_per_unit integer,
+    fiber_per_unit integer,
+    fat_per_unit integer,
+    notes text,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
+  )`,
+  `CREATE INDEX IF NOT EXISTS ingredient_products_ingredient_id_idx
+    ON ingredient_products (ingredient_id)`,
+  `CREATE INDEX IF NOT EXISTS ingredient_products_supplier_id_idx
+    ON ingredient_products (supplier_id)`,
 ];
 const RECIPES_DDL = [
   `CREATE TABLE IF NOT EXISTS recipes (
@@ -2801,6 +2854,9 @@ const RECIPES_DDL = [
 async function ensureIngredientsTable(): Promise<void> {
   await ensureTable("ingredients", INGREDIENTS_DDL);
 }
+async function ensureIngredientProductsTable(): Promise<void> {
+  await ensureTable("ingredient_products", INGREDIENT_PRODUCTS_DDL);
+}
 async function ensureRecipesTable(): Promise<void> {
   await ensureTable("recipes", RECIPES_DDL);
 }
@@ -2810,6 +2866,10 @@ async function dualWriteIngredient(ingredient: Ingredient): Promise<void> {
   if (!db) return;
   try {
     await ensureIngredientsTable();
+    // Cost + macros live on `ingredient_products` rows now. Ingredient
+    // row carries identity (name / category / unit) + the active offering
+    // pointer. Old columns stay nullable for the backfill phase but
+    // we write null going forward.
     await db
       .insert(ingredientsTable)
       .values({
@@ -2817,8 +2877,15 @@ async function dualWriteIngredient(ingredient: Ingredient): Promise<void> {
         name: ingredient.name,
         category: ingredient.category,
         unit: ingredient.unit,
-        costPerUnit: ingredient.costPerUnit,
-        supplier: ingredient.supplier ?? null,
+        costPerUnit: null,
+        kcalPerUnit: null,
+        proteinPerUnit: null,
+        carbsPerUnit: null,
+        sugarPerUnit: null,
+        fiberPerUnit: null,
+        fatPerUnit: null,
+        activeProductId: ingredient.activeProductId ?? null,
+        supplier: null,
         notes: ingredient.notes ?? null,
       })
       .onConflictDoUpdate({
@@ -2827,8 +2894,7 @@ async function dualWriteIngredient(ingredient: Ingredient): Promise<void> {
           name: ingredient.name,
           category: ingredient.category,
           unit: ingredient.unit,
-          costPerUnit: ingredient.costPerUnit,
-          supplier: ingredient.supplier ?? null,
+          activeProductId: ingredient.activeProductId ?? null,
           notes: ingredient.notes ?? null,
         },
       });
@@ -2843,8 +2909,67 @@ async function dualDeleteIngredient(id: string): Promise<void> {
   try {
     await ensureIngredientsTable();
     await db.delete(ingredientsTable).where(eq(ingredientsTable.id, id));
+    // Cascading delete of all offerings — recipes that referenced this
+    // ingredient already lose the line, so the per-supplier rows are
+    // orphaned data.
+    await ensureIngredientProductsTable();
+    await db
+      .delete(ingredientProductsTable)
+      .where(eq(ingredientProductsTable.ingredientId, id));
   } catch (err) {
     logger.warn("dualDeleteIngredient failed", { id, layer: "store.ingredients" }, err);
+  }
+}
+
+async function dualWriteIngredientProduct(product: IngredientProduct): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureIngredientProductsTable();
+    const values = {
+      id: product.id,
+      ingredientId: product.ingredientId,
+      supplierId: product.supplierId,
+      supplierSku: product.supplierSku ?? null,
+      displayName: product.displayName ?? null,
+      costPerUnit: product.costPerUnit,
+      kcalPerUnit: product.kcalPerUnit ?? null,
+      proteinPerUnit: product.proteinPerUnit ?? null,
+      carbsPerUnit: product.carbsPerUnit ?? null,
+      sugarPerUnit: product.sugarPerUnit ?? null,
+      fiberPerUnit: product.fiberPerUnit ?? null,
+      fatPerUnit: product.fatPerUnit ?? null,
+      notes: product.notes ?? null,
+      createdAt: new Date(product.createdAt),
+      updatedAt: new Date(product.updatedAt),
+    };
+    const { id: _id, createdAt: _c, ...updateSet } = values;
+    void _id; void _c;
+    await db
+      .insert(ingredientProductsTable)
+      .values(values)
+      .onConflictDoUpdate({ target: ingredientProductsTable.id, set: updateSet });
+  } catch (err) {
+    logger.warn(
+      "dualWriteIngredientProduct failed",
+      { id: product.id, layer: "store.ingredient_products" },
+      err,
+    );
+  }
+}
+
+async function dualDeleteIngredientProduct(id: string): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureIngredientProductsTable();
+    await db.delete(ingredientProductsTable).where(eq(ingredientProductsTable.id, id));
+  } catch (err) {
+    logger.warn(
+      "dualDeleteIngredientProduct failed",
+      { id, layer: "store.ingredient_products" },
+      err,
+    );
   }
 }
 
@@ -2887,9 +3012,30 @@ function rowToIngredient(row: typeof ingredientsTable.$inferSelect): Ingredient 
     name: row.name,
     category: row.category as Ingredient["category"],
     unit: row.unit as Ingredient["unit"],
-    costPerUnit: row.costPerUnit,
-    supplier: row.supplier ?? undefined,
+    activeProductId: row.activeProductId ?? undefined,
     notes: row.notes ?? undefined,
+  };
+}
+
+function rowToIngredientProduct(
+  row: typeof ingredientProductsTable.$inferSelect,
+): IngredientProduct {
+  return {
+    id: row.id,
+    ingredientId: row.ingredientId,
+    supplierId: row.supplierId,
+    supplierSku: row.supplierSku ?? undefined,
+    displayName: row.displayName ?? undefined,
+    costPerUnit: row.costPerUnit,
+    kcalPerUnit: row.kcalPerUnit ?? undefined,
+    proteinPerUnit: row.proteinPerUnit ?? undefined,
+    carbsPerUnit: row.carbsPerUnit ?? undefined,
+    sugarPerUnit: row.sugarPerUnit ?? undefined,
+    fiberPerUnit: row.fiberPerUnit ?? undefined,
+    fatPerUnit: row.fatPerUnit ?? undefined,
+    notes: row.notes ?? undefined,
+    createdAt: (row.createdAt as Date).toISOString(),
+    updatedAt: (row.updatedAt as Date).toISOString(),
   };
 }
 
@@ -2904,13 +3050,143 @@ function rowToRecipe(row: typeof recipesTable.$inferSelect): Recipe {
   };
 }
 
+/**
+ * Per-process backfill flag. Older ingredient rows stored cost +
+ * macros directly on the ingredients table; after the migration to
+ * `ingredient_products`, we lazily relocate those values into a default
+ * offering on first `getIngredients()` call. Idempotent: re-running
+ * skips ingredients that already have an `activeProductId`.
+ */
+let backfilledIngredientProducts = false;
+
+async function backfillIngredientProductsOnce(legacyIngredients: Ingredient[]): Promise<void> {
+  if (backfilledIngredientProducts) return;
+  backfilledIngredientProducts = true;
+  const products = await readJSON<IngredientProduct[]>("ingredient-products.json", []);
+  const existing = new Set(products.map((p) => p.ingredientId));
+  const created: IngredientProduct[] = [];
+  for (const ing of legacyIngredients) {
+    // Pull legacy fields off the row even though the new Ingredient
+    // type doesn't list them — they survive on KV-stored JSON until
+    // migrated.
+    const legacy = ing as unknown as Record<string, unknown>;
+    const legacyCost =
+      typeof legacy.costPerUnit === "number" ? (legacy.costPerUnit as number) : undefined;
+    if (ing.activeProductId || existing.has(ing.id) || legacyCost === undefined) continue;
+    const now = new Date().toISOString();
+    const product: IngredientProduct = {
+      id: `ipr-${crypto.randomUUID().slice(0, 8)}`,
+      ingredientId: ing.id,
+      // No real Supplier FK yet — operators set the supplier text field
+      // free-form before the join existed. Stash that text under a
+      // synthetic supplier id so existing data renders sensibly until
+      // the operator picks a real Supplier row in the new UI.
+      supplierId: typeof legacy.supplier === "string" && (legacy.supplier as string).trim()
+        ? `legacy:${(legacy.supplier as string).trim()}`
+        : "legacy:unknown",
+      supplierSku: undefined,
+      displayName: "Default offering",
+      costPerUnit: legacyCost,
+      kcalPerUnit: typeof legacy.kcalPerUnit === "number" ? (legacy.kcalPerUnit as number) : undefined,
+      proteinPerUnit: typeof legacy.proteinPerUnit === "number" ? (legacy.proteinPerUnit as number) : undefined,
+      carbsPerUnit: typeof legacy.carbsPerUnit === "number" ? (legacy.carbsPerUnit as number) : undefined,
+      sugarPerUnit: typeof legacy.sugarPerUnit === "number" ? (legacy.sugarPerUnit as number) : undefined,
+      fiberPerUnit: typeof legacy.fiberPerUnit === "number" ? (legacy.fiberPerUnit as number) : undefined,
+      fatPerUnit: typeof legacy.fatPerUnit === "number" ? (legacy.fatPerUnit as number) : undefined,
+      createdAt: now,
+      updatedAt: now,
+    };
+    created.push(product);
+    ing.activeProductId = product.id;
+    // Strip the legacy fields off the in-memory row so callers see the
+    // new shape immediately.
+    delete (ing as unknown as Record<string, unknown>).costPerUnit;
+    delete (ing as unknown as Record<string, unknown>).kcalPerUnit;
+    delete (ing as unknown as Record<string, unknown>).proteinPerUnit;
+    delete (ing as unknown as Record<string, unknown>).carbsPerUnit;
+    delete (ing as unknown as Record<string, unknown>).sugarPerUnit;
+    delete (ing as unknown as Record<string, unknown>).fiberPerUnit;
+    delete (ing as unknown as Record<string, unknown>).fatPerUnit;
+    delete (ing as unknown as Record<string, unknown>).supplier;
+  }
+  if (created.length === 0) return;
+  // Persist both sides — write the new products + the updated
+  // activeProductId pointers so the next read sees the migration.
+  await withLock("ingredient-products.json", async () => {
+    const fresh = await readJSON<IngredientProduct[]>("ingredient-products.json", []);
+    await writeJSON("ingredient-products.json", [...fresh, ...created]);
+  });
+  await withLock("ingredients.json", async () => {
+    const fresh = await readJSON<Ingredient[]>("ingredients.json", []);
+    const map = new Map(legacyIngredients.map((i) => [i.id, i] as const));
+    for (let i = 0; i < fresh.length; i++) {
+      const migrated = map.get(fresh[i].id);
+      if (migrated) fresh[i] = migrated;
+    }
+    await writeJSON("ingredients.json", fresh);
+  });
+  void Promise.all(created.map((p) => dualWriteIngredientProduct(p)));
+  void Promise.all(legacyIngredients.map((i) => dualWriteIngredient(i)));
+}
+
+/** Hydrate Ingredient rows with the active offering's cost + nutrition
+ *  + supplier name. Source of truth lives on IngredientProduct; this
+ *  helper is a convenience read so consumers (recipe cost, PO pricing,
+ *  variance, search, inventory valuation) can keep doing `ing.costPerUnit`
+ *  without re-running the join every time. */
+async function hydrateActiveOfferings(ings: Ingredient[]): Promise<Ingredient[]> {
+  if (ings.length === 0) return ings;
+  const products = await getIngredientProducts();
+  if (products.length === 0) return ings;
+  const productById = new Map(products.map((p) => [p.id, p]));
+  const suppliers = await getSuppliers();
+  const supplierById = new Map(suppliers.map((s) => [s.id, s]));
+  for (const ing of ings) {
+    if (!ing.activeProductId) continue;
+    const product = productById.get(ing.activeProductId);
+    if (!product) continue;
+    ing.costPerUnit = product.costPerUnit;
+    if (typeof product.kcalPerUnit === "number") ing.kcalPerUnit = product.kcalPerUnit;
+    if (typeof product.proteinPerUnit === "number") ing.proteinPerUnit = product.proteinPerUnit;
+    if (typeof product.carbsPerUnit === "number") ing.carbsPerUnit = product.carbsPerUnit;
+    if (typeof product.sugarPerUnit === "number") ing.sugarPerUnit = product.sugarPerUnit;
+    if (typeof product.fiberPerUnit === "number") ing.fiberPerUnit = product.fiberPerUnit;
+    if (typeof product.fatPerUnit === "number") ing.fatPerUnit = product.fatPerUnit;
+    const supplier = supplierById.get(product.supplierId);
+    if (supplier) ing.supplier = supplier.name;
+    else if (product.supplierId.startsWith("legacy:")) {
+      ing.supplier = product.supplierId.slice("legacy:".length);
+    }
+  }
+  return ings;
+}
+
 export async function getIngredients(): Promise<Ingredient[]> {
   const db = getDb();
   if (db) {
     try {
       await ensureIngredientsTable();
       const rows = await db.select().from(ingredientsTable);
-      if (rows.length > 0) return rows.map(rowToIngredient);
+      if (rows.length > 0) {
+        const mapped = rows.map(rowToIngredient);
+        // DB rows may still carry pre-migration cost/macros on the
+        // ingredient row itself. Surface them to the backfill so it
+        // can move them down into ingredient_products.
+        for (let i = 0; i < rows.length; i++) {
+          const r = rows[i];
+          const m = mapped[i] as unknown as Record<string, unknown>;
+          if (r.costPerUnit !== null && r.costPerUnit !== undefined) m.costPerUnit = r.costPerUnit;
+          if (r.kcalPerUnit !== null && r.kcalPerUnit !== undefined) m.kcalPerUnit = r.kcalPerUnit;
+          if (r.proteinPerUnit !== null && r.proteinPerUnit !== undefined) m.proteinPerUnit = r.proteinPerUnit;
+          if (r.carbsPerUnit !== null && r.carbsPerUnit !== undefined) m.carbsPerUnit = r.carbsPerUnit;
+          if (r.sugarPerUnit !== null && r.sugarPerUnit !== undefined) m.sugarPerUnit = r.sugarPerUnit;
+          if (r.fiberPerUnit !== null && r.fiberPerUnit !== undefined) m.fiberPerUnit = r.fiberPerUnit;
+          if (r.fatPerUnit !== null && r.fatPerUnit !== undefined) m.fatPerUnit = r.fatPerUnit;
+          if (r.supplier) m.supplier = r.supplier;
+        }
+        if (!backfilledIngredientProducts) await backfillIngredientProductsOnce(mapped);
+        return hydrateActiveOfferings(mapped);
+      }
     } catch (err) {
       logger.warn("getIngredients DB read failed; falling back", { layer: "store.ingredients" }, err);
     }
@@ -2918,9 +3194,10 @@ export async function getIngredients(): Promise<Ingredient[]> {
   const fromKv = await readJSON<Ingredient[]>("ingredients.json", []);
   if (fromKv.length > 0) {
     bumpLazyBackfillHit("ingredients");
+    if (!backfilledIngredientProducts) await backfillIngredientProductsOnce(fromKv);
     void Promise.all(fromKv.map((i) => dualWriteIngredient(i)));
   }
-  return fromKv;
+  return hydrateActiveOfferings(fromKv);
 }
 
 export async function saveIngredient(ingredient: Ingredient): Promise<Ingredient> {
@@ -2945,13 +3222,174 @@ export async function deleteIngredient(id: string): Promise<boolean> {
     if (filtered.length === list.length) return false;
     await writeJSON("ingredients.json", filtered);
     await dualDeleteIngredient(id);
+    // Cascade: drop every offering tied to this ingredient too.
+    await withLock("ingredient-products.json", async () => {
+      const products = await readJSON<IngredientProduct[]>("ingredient-products.json", []);
+      const remaining = products.filter((p) => p.ingredientId !== id);
+      if (remaining.length !== products.length) {
+        await writeJSON("ingredient-products.json", remaining);
+      }
+    });
+    return true;
+  });
+}
+
+// --- Ingredient products (per-distributor offerings) -----------------
+
+export async function getIngredientProducts(
+  filter?: { ingredientId?: string; supplierId?: string },
+): Promise<IngredientProduct[]> {
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureIngredientProductsTable();
+      const rows = await db.select().from(ingredientProductsTable);
+      if (rows.length > 0) {
+        const mapped = rows.map(rowToIngredientProduct);
+        return filterProducts(mapped, filter);
+      }
+    } catch (err) {
+      logger.warn(
+        "getIngredientProducts DB read failed; falling back",
+        { layer: "store.ingredient_products" },
+        err,
+      );
+    }
+  }
+  const fromKv = await readJSON<IngredientProduct[]>("ingredient-products.json", []);
+  if (fromKv.length > 0) {
+    bumpLazyBackfillHit("ingredient_products");
+    void Promise.all(fromKv.map((p) => dualWriteIngredientProduct(p)));
+  }
+  return filterProducts(fromKv, filter);
+}
+
+function filterProducts(
+  list: IngredientProduct[],
+  filter?: { ingredientId?: string; supplierId?: string },
+): IngredientProduct[] {
+  if (!filter) return list;
+  return list.filter((p) => {
+    if (filter.ingredientId && p.ingredientId !== filter.ingredientId) return false;
+    if (filter.supplierId && p.supplierId !== filter.supplierId) return false;
+    return true;
+  });
+}
+
+export async function saveIngredientProduct(
+  input: Omit<IngredientProduct, "id" | "createdAt" | "updatedAt"> & {
+    id?: string;
+    createdAt?: string;
+  },
+): Promise<IngredientProduct> {
+  return withLock("ingredient-products.json", async () => {
+    const list = await readJSON<IngredientProduct[]>("ingredient-products.json", []);
+    const now = new Date().toISOString();
+    const id = input.id ?? `ipr-${crypto.randomUUID().slice(0, 8)}`;
+    const existing = list.find((p) => p.id === id);
+    const next: IngredientProduct = {
+      ...existing,
+      ...input,
+      id,
+      createdAt: existing?.createdAt ?? input.createdAt ?? now,
+      updatedAt: now,
+    } as IngredientProduct;
+    const idx = list.findIndex((p) => p.id === id);
+    if (idx >= 0) list[idx] = next;
+    else list.push(next);
+    await writeJSON("ingredient-products.json", list);
+    await dualWriteIngredientProduct(next);
+    return next;
+  });
+}
+
+export async function deleteIngredientProduct(id: string): Promise<boolean> {
+  return withLock("ingredient-products.json", async () => {
+    const list = await readJSON<IngredientProduct[]>("ingredient-products.json", []);
+    const filtered = list.filter((p) => p.id !== id);
+    if (filtered.length === list.length) return false;
+    await writeJSON("ingredient-products.json", filtered);
+    await dualDeleteIngredientProduct(id);
+    // If an ingredient was pointing at this offering, clear the pointer
+    // so the next read computes correctly (no recipe values) instead of
+    // resolving to a stale reference.
+    await withLock("ingredients.json", async () => {
+      const ings = await readJSON<Ingredient[]>("ingredients.json", []);
+      let changed = false;
+      for (const ing of ings) {
+        if (ing.activeProductId === id) {
+          ing.activeProductId = undefined;
+          changed = true;
+        }
+      }
+      if (changed) {
+        await writeJSON("ingredients.json", ings);
+        void Promise.all(ings.map((i) => dualWriteIngredient(i)));
+      }
+    });
     return true;
   });
 }
 
 // --- Recipes ---
+//
+// Recipes are chain-wide: one row per dish, keyed by the dish's base
+// slug (the part of the menu-item id after the location prefix —
+// `krk-pizza-margherita` and `waw-pizza-margherita` both resolve to
+// `pizza-margherita`). Callers keep passing menu item ids; the store
+// layer derives the base slug on read + write so the API doesn't have
+// to change.
+//
+// Prior to 2026-05 recipes were stored per-(location, dish) — one row
+// per menu item id. A lazy migration on first read collapses any old
+// rows to the base-slug shape, deduping on collision (first wins).
+
+let normalizedRecipeKeys = false;
+
+async function normalizeRecipeKeysOnce(): Promise<void> {
+  if (normalizedRecipeKeys) return;
+  normalizedRecipeKeys = true;
+  await withLock("recipes.json", async () => {
+    const list = await readJSON<Recipe[]>("recipes.json", []);
+    let needsRewrite = false;
+    const seen = new Map<string, Recipe>();
+    for (const r of list) {
+      const base = getBaseSlug(r.menuItemId);
+      if (base !== r.menuItemId) needsRewrite = true;
+      // First occurrence wins; any later prefixed duplicate is dropped
+      // so the unique-by-menu-item-id invariant holds post-migration.
+      if (!seen.has(base)) {
+        seen.set(base, { ...r, menuItemId: base });
+      } else {
+        needsRewrite = true;
+      }
+    }
+    if (!needsRewrite) return;
+    const next = Array.from(seen.values());
+    await writeJSON("recipes.json", next);
+    // DB side: wipe + rewrite. The recipes table is small (one row per
+    // dish) so the bulk replace is cheap, and it sidesteps the unique
+    // constraint conflicts that would otherwise arise when two
+    // prefixed rows collapse to the same base slug.
+    const db = getDb();
+    if (db) {
+      try {
+        await ensureRecipesTable();
+        await db.delete(recipesTable);
+        for (const r of next) await dualWriteRecipe(r);
+      } catch (err) {
+        logger.warn(
+          "normalizeRecipeKeysOnce DB sync failed; KV is now canonical",
+          { layer: "store.recipes" },
+          err,
+        );
+      }
+    }
+  });
+}
 
 export async function getRecipes(): Promise<Recipe[]> {
+  await normalizeRecipeKeysOnce();
   const db = getDb();
   if (db) {
     try {
@@ -2971,6 +3409,10 @@ export async function getRecipes(): Promise<Recipe[]> {
 }
 
 export async function getRecipe(menuItemId: string): Promise<Recipe | undefined> {
+  await normalizeRecipeKeysOnce();
+  // Always look up by base slug — `krk-pizza-margherita` and
+  // `waw-pizza-margherita` share one Margherita recipe.
+  const baseSlug = getBaseSlug(menuItemId);
   const db = getDb();
   if (db) {
     try {
@@ -2978,15 +3420,15 @@ export async function getRecipe(menuItemId: string): Promise<Recipe | undefined>
       const rows = await db
         .select()
         .from(recipesTable)
-        .where(eq(recipesTable.menuItemId, menuItemId))
+        .where(eq(recipesTable.menuItemId, baseSlug))
         .limit(1);
       if (rows.length > 0) return rowToRecipe(rows[0]);
     } catch (err) {
-      logger.warn("getRecipe DB read failed; falling back", { menuItemId, layer: "store.recipes" }, err);
+      logger.warn("getRecipe DB read failed; falling back", { menuItemId, baseSlug, layer: "store.recipes" }, err);
     }
   }
   const recipes = await readJSON<Recipe[]>("recipes.json", []);
-  const hit = recipes.find((r) => r.menuItemId === menuItemId);
+  const hit = recipes.find((r) => r.menuItemId === baseSlug);
   if (hit) {
     bumpLazyBackfillHit("recipes");
     void dualWriteRecipe(hit);
@@ -2995,48 +3437,186 @@ export async function getRecipe(menuItemId: string): Promise<Recipe | undefined>
 }
 
 export async function saveRecipe(recipe: Recipe): Promise<Recipe> {
+  await normalizeRecipeKeysOnce();
+  // Store under the base slug so future reads find the same row
+  // regardless of which location's menu item the operator was editing
+  // from. The recipe row carries the canonical chain-wide formula.
+  const normalised: Recipe = {
+    ...recipe,
+    menuItemId: getBaseSlug(recipe.menuItemId),
+  };
   return withLock("recipes.json", async () => {
     const list = await readJSON<Recipe[]>("recipes.json", []);
-    const idx = list.findIndex((r) => r.menuItemId === recipe.menuItemId);
+    const idx = list.findIndex((r) => r.menuItemId === normalised.menuItemId);
     if (idx >= 0) {
-      list[idx] = recipe;
+      list[idx] = normalised;
     } else {
-      list.push(recipe);
+      list.push(normalised);
     }
     await writeJSON("recipes.json", list);
-    await dualWriteRecipe(recipe);
-    return recipe;
+    await dualWriteRecipe(normalised);
+    return normalised;
   });
 }
 
 export async function deleteRecipe(menuItemId: string): Promise<boolean> {
+  await normalizeRecipeKeysOnce();
+  const baseSlug = getBaseSlug(menuItemId);
   return withLock("recipes.json", async () => {
     const list = await readJSON<Recipe[]>("recipes.json", []);
-    const filtered = list.filter((r) => r.menuItemId !== menuItemId);
+    const filtered = list.filter((r) => r.menuItemId !== baseSlug);
     if (filtered.length === list.length) return false;
     await writeJSON("recipes.json", filtered);
-    await dualDeleteRecipe(menuItemId);
+    await dualDeleteRecipe(baseSlug);
     return true;
   });
 }
 
-// Calculate food cost from recipe
+/** Resolve each ingredient referenced by the recipe to the active
+ *  per-distributor offering. Returns a map keyed by `ingredientId`
+ *  pointing at the active `IngredientProduct` row (or undefined if the
+ *  ingredient has no active offering yet — caller decides whether to
+ *  treat that as zero-cost / null-macro). */
+async function resolveActiveProducts(
+  ingredientIds: Iterable<string>,
+): Promise<Map<string, IngredientProduct | undefined>> {
+  const ids = new Set(ingredientIds);
+  if (ids.size === 0) return new Map();
+  const [ingredients, products] = await Promise.all([
+    getIngredients(),
+    getIngredientProducts(),
+  ]);
+  const ingById = new Map(ingredients.map((i) => [i.id, i]));
+  const productById = new Map(products.map((p) => [p.id, p]));
+  const out = new Map<string, IngredientProduct | undefined>();
+  for (const id of ids) {
+    const ing = ingById.get(id);
+    const pid = ing?.activeProductId;
+    out.set(id, pid ? productById.get(pid) : undefined);
+  }
+  return out;
+}
+
+// Calculate food cost from recipe. Reads from each ingredient's active
+// distributor offering (set by the operator via the Suppliers list on
+// the ingredient dialog) rather than a flat cost on the ingredient
+// itself. Switching distributors = point the ingredient at a different
+// offering; cost flows through automatically.
 export async function calculateFoodCost(menuItemId: string): Promise<number> {
   const recipe = await getRecipe(menuItemId);
   if (!recipe || recipe.ingredients.length === 0) return 0;
 
-  const ingredients = await getIngredients();
-  const ingredientMap = new Map(ingredients.map((i) => [i.id, i]));
+  const activeProducts = await resolveActiveProducts(
+    recipe.ingredients.map((ri) => ri.ingredientId),
+  );
 
   let totalCost = 0;
   for (const ri of recipe.ingredients) {
-    const ing = ingredientMap.get(ri.ingredientId);
-    if (!ing) continue;
-    totalCost += ing.costPerUnit * ri.quantity * (ri.wasteFactor || 1);
+    const product = activeProducts.get(ri.ingredientId);
+    if (!product) continue;
+    totalCost += product.costPerUnit * ri.quantity * (ri.wasteFactor || 1);
   }
 
   // Cost per portion
   return Math.round(totalCost / (recipe.yieldPortions || 1));
+}
+
+/**
+ * Calculate per-portion kcal from the recipe. Reads each ingredient's
+ * active distributor offering. Returns `null` when:
+ *  - there's no recipe, or
+ *  - any ingredient is missing an active offering, or
+ *  - any active offering is missing `kcalPerUnit`.
+ * Surfaces as "—" in the operator UI + skips the customer kcal pill,
+ * instead of showing a misleading partial sum.
+ *
+ * `wasteFactor` is NOT applied — `quantity` is the amount that ends
+ * up in the dish (what the customer eats); `wasteFactor` only covers
+ * extra purchased to cover trim/spill loss, which is a cost concern.
+ */
+export async function calculateRecipeCalories(menuItemId: string): Promise<number | null> {
+  const recipe = await getRecipe(menuItemId);
+  if (!recipe || recipe.ingredients.length === 0) return null;
+
+  const activeProducts = await resolveActiveProducts(
+    recipe.ingredients.map((ri) => ri.ingredientId),
+  );
+
+  let totalKcal = 0;
+  for (const ri of recipe.ingredients) {
+    const product = activeProducts.get(ri.ingredientId);
+    if (!product) return null;
+    if (typeof product.kcalPerUnit !== "number") return null;
+    totalKcal += product.kcalPerUnit * ri.quantity;
+  }
+
+  return Math.round(totalKcal / (recipe.yieldPortions || 1));
+}
+
+/**
+ * Per-portion nutrition computed from the recipe. Each field is
+ * independent: `protein` is set whenever every recipe line has
+ * `proteinPerUnit`, even if (say) `fiberPerUnit` is missing on one
+ * ingredient. Allows operators to roll macros out gradually without
+ * blanking every figure when one ingredient is incomplete.
+ *
+ * Quantities below are in grams per portion except `calories` which
+ * stays in kcal. Storage on each ingredient is per-unit (per kg / per
+ * L / per piece) so the multiplication `perUnit × quantity × waste`
+ * keeps the same units; division by `yieldPortions` turns the batch
+ * total into a per-serving figure.
+ */
+export interface RecipeNutrition {
+  calories: number | null;
+  protein: number | null;
+  carbs: number | null;
+  sugar: number | null;
+  fiber: number | null;
+  fat: number | null;
+}
+
+const MACRO_FIELDS = [
+  ["calories", "kcalPerUnit"],
+  ["protein", "proteinPerUnit"],
+  ["carbs", "carbsPerUnit"],
+  ["sugar", "sugarPerUnit"],
+  ["fiber", "fiberPerUnit"],
+  ["fat", "fatPerUnit"],
+] as const;
+
+export async function calculateRecipeNutrition(menuItemId: string): Promise<RecipeNutrition> {
+  const empty: RecipeNutrition = {
+    calories: null,
+    protein: null,
+    carbs: null,
+    sugar: null,
+    fiber: null,
+    fat: null,
+  };
+  const recipe = await getRecipe(menuItemId);
+  if (!recipe || recipe.ingredients.length === 0) return empty;
+
+  const activeProducts = await resolveActiveProducts(
+    recipe.ingredients.map((ri) => ri.ingredientId),
+  );
+
+  const out: RecipeNutrition = { ...empty };
+  for (const [field, key] of MACRO_FIELDS) {
+    let total = 0;
+    let complete = true;
+    for (const ri of recipe.ingredients) {
+      const product = activeProducts.get(ri.ingredientId);
+      const raw = product ? (product as unknown as Record<string, unknown>)[key] : undefined;
+      if (typeof raw !== "number") {
+        complete = false;
+        break;
+      }
+      // No wasteFactor on macros — see calculateRecipeCalories.
+      total += raw * ri.quantity;
+    }
+    if (complete) out[field] = Math.round(total / (recipe.yieldPortions || 1));
+  }
+  return out;
 }
 
 // --- Loyalty Members (phone-only signups without orders) ---

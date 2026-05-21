@@ -13,32 +13,12 @@ import {
   RotateCcw,
   Trash2,
 } from "lucide-react";
-import {
-  MENU_CATEGORY_LABELS,
-  type MenuCategory,
-  type ModifierGroup,
-} from "@/data/types";
+import type { MenuCategory, ModifierGroup } from "@/data/types";
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice, getBaseSlug, marginPct, marginTone } from "@/lib/utils";
 import { useToast } from "./v2/ui/Toast";
-import { Button, Card, CardBody, Input, Select, Textarea } from "./v2/ui";
+import { Button, Card, CardBody, Input } from "./v2/ui";
 import { ModifierMatrix } from "./menu/ModifierEditor";
-
-const MENU_TAGS: ("vegetarian" | "vegan" | "spicy" | "gluten-free")[] = [
-  "vegetarian",
-  "vegan",
-  "spicy",
-  "gluten-free",
-];
-
-const CATEGORY_ORDER: MenuCategory[] = [
-  "pizza",
-  "pasta",
-  "antipasti",
-  "panini",
-  "drinks",
-  "desserts",
-];
 
 interface MenuItemData {
   id: string;
@@ -923,62 +903,6 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
                 </div>
               );
             })}
-          </div>
-        </CardBody>
-      </Card>
-
-      <Card data-locked="true">
-        <CardBody>
-          <div className="v2-detail-head">
-            <h2>Product · chain-wide</h2>
-            <span className="v2-detail-head-hint">
-              Same across every truck. Locked here.
-            </span>
-          </div>
-
-          <div className="v2-detail-form">
-            <Input
-              label="Name"
-              value={chain.name}
-              onChange={() => {}}
-              disabled
-            />
-            <div className="v2-detail-form-row" data-cols="2">
-              <Select
-                label="Category"
-                value={chain.category}
-                onChange={() => {}}
-                disabled
-                options={CATEGORY_ORDER.map((cc) => ({
-                  value: cc,
-                  label: MENU_CATEGORY_LABELS[cc],
-                }))}
-              />
-              <div className="v2-field">
-                <label className="v2-field-label">Tags</label>
-                <div className="v2-detail-tags-row v2-detail-tags-row-locked">
-                  {MENU_TAGS.map((tag) => {
-                    const on = chain.tags.includes(tag);
-                    return (
-                      <span
-                        key={tag}
-                        className={`v2-chip ${on ? "is-on" : ""}`}
-                        aria-disabled="true"
-                      >
-                        {tag}
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-            <Textarea
-              label="Description"
-              value={chain.description}
-              onChange={() => {}}
-              disabled
-              rows={3}
-            />
           </div>
         </CardBody>
       </Card>

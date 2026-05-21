@@ -124,7 +124,10 @@ export async function generateParPurchaseOrders(locationSlug: string): Promise<{
     draft.lines.push({
       ingredientId: ingredient.id,
       quantity: orderQty,
-      unitCost: ingredient.costPerUnit,
+      // 0 when ingredient has no active offering yet — PO line still
+      // surfaces (operator needs the qty) but the total reads 0 until
+      // a distributor is linked.
+      unitCost: ingredient.costPerUnit ?? 0,
     });
     draft.threshold.push({
       ingredientId: ingredient.id,

@@ -82,6 +82,13 @@ export const POST = withAdmin(
       ...(body.packagingCost !== undefined ? { packagingCost: body.packagingCost } : {}),
       ...(body.modifierGroups !== undefined ? { modifierGroups: body.modifierGroups } : {}),
       ...(body.sku !== undefined ? { sku: body.sku } : {}),
+      ...(body.halalStatus !== undefined ? { halalStatus: body.halalStatus } : {}),
+      ...(body.nutriGrade !== undefined ? { nutriGrade: body.nutriGrade } : {}),
+      ...(body.containsPork !== undefined ? { containsPork: body.containsPork } : {}),
+      ...(body.containsAlcohol !== undefined ? { containsAlcohol: body.containsAlcohol } : {}),
+      ...(body.calories !== undefined
+        ? { nutrition: { calories: body.calories, protein: 0, carbs: 0, fat: 0 } }
+        : {}),
       createdAt: now,
       updatedAt: now,
     };
@@ -108,7 +115,15 @@ export const PATCH = withAdmin(
     }
     const parsed = await parseBody(req, customMenuItemUpdateSchema);
     if ("error" in parsed) return parsed.error;
-    const { newId, ...patch } = parsed.data;
+    const {
+      newId,
+      calories,
+      halalStatus,
+      nutriGrade,
+      containsPork,
+      containsAlcohol,
+      ...rest
+    } = parsed.data;
 
     const all = await getCustomMenuItems();
     const prev = all.find((i) => i.id === id);
@@ -145,6 +160,39 @@ export const PATCH = withAdmin(
       }
     }
 
+    // kcal lives at item.nutrition.calories; merge it into the nested
+    // struct so protein / carbs / fat stay put. Clear back to seed by
+    // sending `calories: null` — that drops the nutrition row entirely
+    // (acceptable for custom items where no seed value exists).
+    const dietaryPatch: Partial<
+      Omit<CustomMenuItem, "id" | "locationSlug" | "createdAt">
+    > = {};
+    if (calories !== undefined) {
+      dietaryPatch.nutrition =
+        calories === null
+          ? undefined
+          : {
+              ...(prev.nutrition ?? { calories: 0, protein: 0, carbs: 0, fat: 0 }),
+              calories,
+            };
+    }
+    // Null on the regulatory fields means "withdraw the claim". For
+    // enum fields that's `undefined` (no value); for booleans we
+    // collapse to false so the customer pill check (`if (item.x)`)
+    // falls through cleanly.
+    if (halalStatus !== undefined) {
+      dietaryPatch.halalStatus = halalStatus ?? undefined;
+    }
+    if (nutriGrade !== undefined) {
+      dietaryPatch.nutriGrade = nutriGrade ?? undefined;
+    }
+    if (containsPork !== undefined) {
+      dietaryPatch.containsPork = containsPork ?? false;
+    }
+    if (containsAlcohol !== undefined) {
+      dietaryPatch.containsAlcohol = containsAlcohol ?? false;
+    }
+    const patch = { ...rest, ...dietaryPatch };
     const next = await updateCustomMenuItem(effectiveId, patch);
     if (!next) {
       // Lost-update race: another tab deleted the row between the
