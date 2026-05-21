@@ -12,6 +12,7 @@ import {
   type MenuOverride,
 } from "@/lib/store";
 import { getMenu } from "@/data/menus";
+import { getItemDetails } from "@/data/kodawari";
 import type { MenuItem } from "@/data/types";
 import { locations } from "@/data/locations";
 import { menuOverridePutSchema, parseBody } from "@/lib/api-schemas";
@@ -189,6 +190,14 @@ export const GET = withAdmin(
         : recipeKcal !== undefined
         ? "recipe"
         : "seed";
+      // Allergens: backfill from kodawari when the operator hasn't set an
+      // override. The recipe editor reads `item.allergens` and the
+      // customer surfaces (item drawer, expo) prefer it over the kodawari
+      // direct read, so this single line unifies the data source.
+      if ((merged as { allergens?: unknown }).allergens === undefined) {
+        const seedAllergens = getItemDetails(item.id)?.allergens;
+        if (seedAllergens) (merged as { allergens?: unknown }).allergens = seedAllergens;
+      }
       return {
         ...(merged as unknown as MenuItem),
         cost,

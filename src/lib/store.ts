@@ -2309,6 +2309,13 @@ export interface MenuOverride {
    *  the nutrition struct (protein / carbs / fat). `null` clears back
    *  to the seed value. */
   calories?: number | null;
+  /** EU 1169/2011 + FDA Big-9 allergen list. Replaces the seed/kodawari
+   *  allergens entirely (so an operator can _remove_ a previously-flagged
+   *  allergen if a sourcing change has eliminated it). `null` clears the
+   *  override and the customer surface falls back to the kodawari seed.
+   *  Empty array `[]` means "explicitly no major allergens declared" and
+   *  the drawer renders the "no major allergens" line. */
+  allergens?: import("@/data/types").Allergen[] | null;
 }
 
 export async function getMenuOverrides(): Promise<Record<string, MenuOverride>> {

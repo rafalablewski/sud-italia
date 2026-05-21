@@ -315,6 +315,22 @@ const modifierGroupSchema = z.object({
 // operator can adjust without touching the seed menu files.
 const halalStatusEnum = z.enum(["halal", "non-halal", "uncertified"]);
 const nutriGradeEnum = z.enum(["A", "B", "C", "D"]);
+const allergenEnum = z.enum([
+  "gluten",
+  "dairy",
+  "eggs",
+  "fish",
+  "shellfish",
+  "nuts",
+  "peanuts",
+  "soy",
+  "celery",
+  "mustard",
+  "sesame",
+  "sulfites",
+  "lupin",
+  "molluscs",
+]);
 
 const menuOverrideEditSchema = z.object({
   price: grosze.max(100_000).optional(),
@@ -344,6 +360,10 @@ const menuOverrideEditSchema = z.object({
   containsAlcohol: z.boolean().nullable().optional(),
   // Per-portion kcal override (NYC §81.50, EU 1169 opt-in).
   calories: z.number().int().min(0).max(5_000).nullable().optional(),
+  // EU 1169/2011 + FDA Big-9 allergens. `null` clears the override
+  // (falls back to kodawari seed); `[]` declares "no major allergens"
+  // explicitly. Capped at 14 (the full Allergen union from data/types).
+  allergens: z.array(allergenEnum).max(14).nullable().optional(),
 });
 
 /**
@@ -374,6 +394,7 @@ export const menuOverridePutSchema = z
     containsPork: z.boolean().nullable().optional(),
     containsAlcohol: z.boolean().nullable().optional(),
     calories: z.number().int().min(0).max(5_000).nullable().optional(),
+    allergens: z.array(allergenEnum).max(14).nullable().optional(),
   })
   .refine((data) => !!data.id || !!data.items, {
     message: "Provide either `id` for single override or `items` map for bulk",
@@ -459,6 +480,7 @@ export const customMenuItemCreateSchema = z.object({
   containsPork: z.boolean().optional(),
   containsAlcohol: z.boolean().optional(),
   calories: z.number().int().min(0).max(5_000).optional(),
+  allergens: z.array(allergenEnum).max(14).optional(),
 });
 
 /** PATCH /api/admin/menu/custom — partial edit of an admin-created item.
@@ -487,6 +509,7 @@ export const customMenuItemUpdateSchema = z.object({
   containsPork: z.boolean().nullable().optional(),
   containsAlcohol: z.boolean().nullable().optional(),
   calories: z.number().int().min(0).max(5_000).nullable().optional(),
+  allergens: z.array(allergenEnum).max(14).nullable().optional(),
 });
 
 // --- Admin: users (RBAC) -------------------------------------------------

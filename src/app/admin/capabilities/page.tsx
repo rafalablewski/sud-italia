@@ -221,9 +221,10 @@ export default async function CapabilitiesPage() {
           summary: "P50 / P95 bump time per station. Manager+.",
         },
         {
-          name: "Allergen surfacing",
+          name: "Allergen surfacing + admin edit",
           status: "live",
-          summary: "menu_items.allergens chips render on the customer item-detail drawer + on the kitchen expo board (/kitchen/[slug]/expo via ExpoBoard) + via CompliancePills on the customer card. Not yet rendered on the per-station AdminKDS ticket. Sourced from src/data/kodawari.ts; no admin edit form yet — operator edits the seed file.",
+          href: "/admin/recipes",
+          summary: "EU 1169/2011 + FDA Big-9 allergens (gluten, dairy, eggs, fish, shellfish, nuts, peanuts, soy, celery, mustard, sesame, sulfites, lupin, molluscs) on each menu item. Editable from the recipe editor at /admin/recipes — tap a chip in the Dietary disclosures section to toggle. Persists through MenuOverride.allergens (seed items) or CustomMenuItem.allergens (admin-created items); `null` clears the override and the customer falls back to the kodawari seed; `[]` declares 'no major allergens' explicitly. Render surfaces: customer item-detail drawer, kitchen expo board (/kitchen/[slug]/expo). Not yet rendered on the per-station AdminKDS ticket or on the menu-card CompliancePills row — both planned. The merge in getMenuWithOverrides() backfills item.allergens from src/data/kodawari.ts when no override is set, so the data path is unified for downstream consumers.",
         },
       ],
     },
