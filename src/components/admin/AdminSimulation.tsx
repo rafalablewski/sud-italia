@@ -6184,13 +6184,14 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            PL 2026 ranges: 30cm pizza box plain 1.80-2.20 zł, branded
-            2.50-3.50 zł, kraft bag 0.30-0.50 zł, napkin 0.05-0.10 zł,
-            cutlery 0.40-0.80 zł. Bulk-buying quarterly cuts unit price
-            8-15%. Watch out for incoming EU single-use plastic levy
-            (SUP directive expansion 2026-2027) — likely adds 0.20-0.50
-            zł/order. Don&apos;t double-count: packaging is per-order
-            VARIABLE, separate from COGS (food only) and fixed costs.
+            An overlooked variable cost in margin models — most
+            operators forget it sits separately from COGS (food only)
+            and fixed costs. Bulk-buying quarterly cuts unit price
+            materially, but watch the EU single-use plastic levy roll-
+            out — incoming regulation will likely add a per-order
+            cost that compounds on every ticket. Branded packaging is
+            paid marketing in disguise; weigh the brand lift against
+            the unit-cost penalty.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -6233,14 +6234,14 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Industry tiers (NRA): 1.0-1.5% world-class chains
-            (McDonald&apos;s, Domino&apos;s); 2-3% healthy independent;
-            4-5% under-measured; 6%+ undisciplined. Most independent
-            operators don&apos;t measure until forced to — daily logs
-            are 5 min/shift and routinely uncover 2-3 pp of hidden
-            leakage. EU food-waste reduction targets (forthcoming SUP-
-            adjacent regulation) will likely mandate measurement +
-            reporting from 2027 — build the log now.
+            Most independent operators don&apos;t measure until forced
+            to — daily logs are 5 min per shift and routinely uncover
+            hidden leakage that the team didn&apos;t know was
+            happening. EU food-waste reduction regulation is incoming
+            and will likely mandate measurement + reporting — build
+            the log now before it becomes a compliance project. What
+            gets measured gets managed; what gets logged daily gets
+            improved.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -6281,13 +6282,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Industry tiers: 0.5-1% world-class (tight POS controls,
-            manager-only voids); 1-2% healthy independent; 3%+ requires
-            investigation (often hides cash skim or process drift). The
-            single biggest control: manager-only void authority +
-            written limit on free-staff-meals. Track per-staff void
-            rate — outliers ≥ 5× team average indicate honesty problem,
-            not quality problem.
+            A drift this category is rarely a quality problem — it&apos;s
+            usually a process problem (no manager-only void authority)
+            or a people problem (cash skim hiding inside legitimate
+            voids). Track per-staff void rate alongside the aggregate
+            and outliers identify themselves. Single biggest control:
+            manager-only void authority + a written limit on free
+            staff meals.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -6328,14 +6329,14 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Loyalty cost is real only if it drives incremental
-            frequency. Healthy programmes sit at 40-60% redemption — at
-            80%+ you&apos;re bleeding margin; at &lt; 30% the programme
-            isn&apos;t engaging. Measure repeat-rate lift, not just
-            burn — without the lift, the programme is a pure discount
-            (Reichheld). Tier high-spend customers (3% earn for 200+
-            zł/month vs 1% baseline) to focus the burn on the Pareto
-            top.
+            The economic question is whether the burn buys you
+            incremental frequency, not just whether the programme
+            &quot;works.&quot; Without measured repeat-rate lift, the
+            programme is a pure discount in disguise. Tiering high-
+            spend customers (higher earn rate for top spenders) focuses
+            the burn on the Pareto top, where it actually drives
+            behaviour — flat earn rates spread it thin and reward
+            customers who&apos;d come back anyway.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -6377,14 +6378,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            The €2M (~8.5M zł) threshold is a sharp cliff: crossing it
-            bumps CIT 10pp on the entire base, not just the marginal
-            złoty. Multi-entity structures (each sp. z o.o. under €2M)
-            are a common PL chain pattern. Estonian-CIT
-            (na zasadach estońskich) defers tax until dividend
-            distribution — useful for reinvesting growth. R&amp;D tax
-            relief allows up to 200% deductibility on qualified spend
-            (recipe development, POS software).
+            The €2M threshold is a sharp cliff, not a sliding scale —
+            crossing it bumps CIT on the entire base, not just the
+            marginal złoty. Multi-entity structures (each sp. z o.o.
+            kept under €2M) are a common PL chain pattern for that
+            reason. Estonian-CIT defers tax until dividend distribution,
+            which favours reinvested growth over distribution; ask the
+            accountant if your growth profile fits.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -6426,14 +6426,14 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Range 0.40-0.65 outdoor PL truck depending on shelter and
-            channel mix; indoor mall pitch ~0.85-0.95 (almost no dip);
-            pure delivery 0.80 (delivery surges in cold weather). The
-            single biggest seasonal stress on cash flow — Q1 typically
-            uses 17% of annual revenue against 25% of annual fixed
-            costs. Operators with marginal fundamentals (MoS &lt; 15%)
-            should treat winter survival as a separate planning
-            problem, not assume it averages out.
+            The single biggest seasonal stress on cash flow — Q1
+            generates the least revenue while incurring a normal share
+            of fixed costs, so winter is the working-capital crunch
+            point. Operators with marginal fundamentals should treat
+            winter survival as a separate planning problem, not assume
+            it averages out across the year. Build the cash reserve in
+            Q3 to fund the Q1 trough; don&apos;t plan against the
+            annual average.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -6475,15 +6475,14 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Bottleneck is usually the pizzaiolo&apos;s shape-rate, not
-            the oven (Neapolitan ovens can bake 8-16 simultaneously
-            but the line can&apos;t feed them that fast). Conveyor /
-            multi-deck setups push 120+/hr. Capacity sets the upside
-            ceiling on the orders/day input — past this × service hours
-            × efficiency, additional marketing spend has zero return.
-            Decision threshold for capex: peak-hour saturation &gt; 90%
-            for 3+ days/week consistently triggers second-oven payback
-            in 6-9 months at typical margins.
+            The bottleneck is usually the pizzaiolo&apos;s shape-rate,
+            not the oven — Neapolitan ovens can bake more
+            simultaneously than the line can feed them. Once peak-hour
+            saturation passes ~90% three+ days a week, additional
+            marketing spend has zero return because the kitchen
+            can&apos;t take more orders; that&apos;s the trigger to
+            think about a second oven, a runner, or a layout
+            re-design.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -6525,14 +6524,14 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Typical splits: lunch-only 4 hr, dinner-only 5 hr, lunch +
-            dinner 9 hr, all-day 11 hr, aperitivo extensions to 14 hr.
             Adding service hours scales labor linearly but only captures
-            demand if there&apos;s unmet demand in that hour — extending
-            into off-peak periods often adds &lt; 30% utilisation, so
-            the marginal cost (one staff-hour ≈ 45 zł brutto) needs &gt;
-            5 incremental orders at typical margin to break even on the
-            extension.
+            demand if there&apos;s unmet demand in that hour —
+            extending into off-peak periods adds cost faster than
+            revenue and quietly damages labor %. The decision should
+            be data-driven: look at the hourly heatmap and ask whether
+            the new hour&apos;s expected demand actually clears the
+            staff-cost threshold to break even, not just &quot;more
+            hours = more revenue.&quot;
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
