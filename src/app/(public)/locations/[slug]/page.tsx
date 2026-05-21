@@ -2,25 +2,18 @@ import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { locations, getLocation } from "@/data/locations";
 import { getMenuWithOverrides } from "@/data/menus";
-import { LocationHero } from "@/components/location/LocationHero";
-import { MenuSection } from "@/components/location/MenuSection";
-import { LocationInfo } from "@/components/location/LocationInfo";
-import { FloatingCartButton } from "@/components/cart/FloatingCartButton";
-import { AddToCartToast } from "@/components/cart/AddToCartToast";
-import { LoyaltySection } from "@/components/location/LoyaltySection";
-import { LiveActivityBar } from "@/components/location/LiveActivityBar";
-import { ComplianceBanner } from "@/components/location/ComplianceBanner";
+import { V8RouteShell } from "@/components/landing/v8/layout/V8RouteShell";
+import { V8LocationHero } from "@/components/landing/v8/location/V8LocationHero";
+import { V8MenuSection } from "@/components/landing/v8/location/V8MenuSection";
+import { V8LocationInfo } from "@/components/landing/v8/location/V8LocationInfo";
 import { SITE_NAME } from "@/lib/constants";
-import { getSettings, resolveLocationCompliance } from "@/lib/store";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
 export async function generateStaticParams() {
-  return locations
-    .filter((l) => l.isActive)
-    .map((l) => ({ slug: l.slug }));
+  return locations.filter((l) => l.isActive).map((l) => ({ slug: l.slug }));
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -54,19 +47,10 @@ export default async function LocationPage({ params }: PageProps) {
     notFound();
   }
 
-  // We pass the full menu (incl. currently-unavailable items) so the client
-  // can flip availability live when admin 86's an item without a full reload.
-  // The structured-data block + cart fallbacks still respect availability.
   const fullMenu = await getMenuWithOverrides(slug);
   const menuItems = fullMenu.filter((i) => i.available);
   const initialAvailability: Record<string, boolean> = {};
   for (const item of fullMenu) initialAvailability[item.id] = item.available;
-
-  // Audit §11.1 — per-location regulatory disclosures. Loaded server-side
-  // so SSR + client hydration agree (no fetch flicker before the DOH
-  // grade / halal banner appears).
-  const appSettings = await getSettings();
-  const compliance = resolveLocationCompliance(appSettings.compliance, slug);
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -109,24 +93,18 @@ export default async function LocationPage({ params }: PageProps) {
   };
 
   return (
-    <>
+    <V8RouteShell>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <LocationHero location={location} />
-      <ComplianceBanner compliance={compliance} />
-      <LiveActivityBar locationSlug={slug} />
-      <LoyaltySection />
-      <MenuSection
+      <V8LocationHero location={location} />
+      <V8MenuSection
         items={fullMenu}
         locationSlug={slug}
         initialAvailability={initialAvailability}
-        compliance={compliance}
       />
-      <LocationInfo location={location} />
-      <FloatingCartButton allMenuItems={menuItems} />
-      <AddToCartToast allMenuItems={menuItems} />
-    </>
+      <V8LocationInfo location={location} />
+    </V8RouteShell>
   );
 }
