@@ -2302,6 +2302,12 @@ export interface MenuOverride {
   containsPork?: boolean | null;
   /** Surface a "Contains alcohol" disclaimer alongside the item card. */
   containsAlcohol?: boolean | null;
+  /** Per-portion kcal override (NYC §81.50, EU 1169 opt-in). When set,
+   *  `applyOverride` merges this into `item.nutrition.calories` so the
+   *  customer-facing kcal pill picks it up without losing the rest of
+   *  the nutrition struct (protein / carbs / fat). `null` clears back
+   *  to the seed value. */
+  calories?: number | null;
 }
 
 export async function getMenuOverrides(): Promise<Record<string, MenuOverride>> {

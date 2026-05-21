@@ -342,6 +342,8 @@ const menuOverrideEditSchema = z.object({
   nutriGrade: nutriGradeEnum.nullable().optional(),
   containsPork: z.boolean().nullable().optional(),
   containsAlcohol: z.boolean().nullable().optional(),
+  // Per-portion kcal override (NYC §81.50, EU 1169 opt-in).
+  calories: z.number().int().min(0).max(5_000).nullable().optional(),
 });
 
 /**
@@ -371,6 +373,7 @@ export const menuOverridePutSchema = z
     nutriGrade: nutriGradeEnum.nullable().optional(),
     containsPork: z.boolean().nullable().optional(),
     containsAlcohol: z.boolean().nullable().optional(),
+    calories: z.number().int().min(0).max(5_000).nullable().optional(),
   })
   .refine((data) => !!data.id || !!data.items, {
     message: "Provide either `id` for single override or `items` map for bulk",
@@ -448,6 +451,14 @@ export const customMenuItemCreateSchema = z.object({
   packagingCost: grosze.max(5_000).optional(),
   modifierGroups: z.array(modifierGroupSchema).max(8).optional(),
   sku: z.string().max(60).optional(),
+  // Audit §11.1 — per-item regulatory disclosures, mirrored from the
+  // override schema so custom items can carry the same fields without
+  // going through /api/admin/menu PUT first.
+  halalStatus: halalStatusEnum.optional(),
+  nutriGrade: nutriGradeEnum.optional(),
+  containsPork: z.boolean().optional(),
+  containsAlcohol: z.boolean().optional(),
+  calories: z.number().int().min(0).max(5_000).optional(),
 });
 
 /** PATCH /api/admin/menu/custom — partial edit of an admin-created item.
@@ -471,6 +482,11 @@ export const customMenuItemUpdateSchema = z.object({
   packagingCost: grosze.max(5_000).optional(),
   modifierGroups: z.array(modifierGroupSchema).max(8).optional(),
   sku: z.string().max(60).optional(),
+  halalStatus: halalStatusEnum.nullable().optional(),
+  nutriGrade: nutriGradeEnum.nullable().optional(),
+  containsPork: z.boolean().nullable().optional(),
+  containsAlcohol: z.boolean().nullable().optional(),
+  calories: z.number().int().min(0).max(5_000).nullable().optional(),
 });
 
 // --- Admin: users (RBAC) -------------------------------------------------

@@ -27,7 +27,16 @@ export async function getMenuWithOverrides(locationSlug: string): Promise<MenuIt
     // `category` / `tags` undefined and break renderers downstream.
     const merged: Record<string, unknown> = { ...item };
     for (const [k, v] of Object.entries(o)) {
-      if (v !== null && v !== undefined) merged[k] = v;
+      if (v === null || v === undefined) continue;
+      // `calories` is a flat override convenience: the customer card
+      // reads `item.nutrition.calories`, but we don't want operators
+      // to retype protein / carbs / fat just to nudge kcal. Merge
+      // it into the nested struct instead of replacing it.
+      if (k === "calories") {
+        merged.nutrition = { ...(item.nutrition ?? { calories: 0, protein: 0, carbs: 0, fat: 0 }), calories: v as number };
+        continue;
+      }
+      merged[k] = v;
     }
     return merged as unknown as MenuItem;
   };

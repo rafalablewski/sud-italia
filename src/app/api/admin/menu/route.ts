@@ -69,7 +69,19 @@ export const GET = withAdmin(
       const merged: Record<string, unknown> = { ...item };
       if (override) {
         for (const [k, v] of Object.entries(override)) {
-          if (v !== null && v !== undefined) merged[k] = v;
+          if (v === null || v === undefined) continue;
+          // Mirror applyOverride: a flat `calories` override nests
+          // into `nutrition.calories` so the admin editor (which
+          // reads `item.nutrition?.calories`) sees the operator's
+          // last write, not the stale seed value.
+          if (k === "calories") {
+            merged.nutrition = {
+              ...(item.nutrition ?? { calories: 0, protein: 0, carbs: 0, fat: 0 }),
+              calories: v as number,
+            };
+            continue;
+          }
+          merged[k] = v;
         }
       }
       return {
@@ -177,7 +189,12 @@ export const PUT = withAdmin(
               JSON.stringify(next.tags) !== JSON.stringify(prev?.tags)) ||
             (next.hidden !== undefined && next.hidden !== prev?.hidden) ||
             (next.modifierGroups !== undefined &&
-              JSON.stringify(next.modifierGroups) !== JSON.stringify(prev?.modifierGroups));
+              JSON.stringify(next.modifierGroups) !== JSON.stringify(prev?.modifierGroups)) ||
+            (next.halalStatus !== undefined && next.halalStatus !== prev?.halalStatus) ||
+            (next.nutriGrade !== undefined && next.nutriGrade !== prev?.nutriGrade) ||
+            (next.containsPork !== undefined && next.containsPork !== prev?.containsPork) ||
+            (next.containsAlcohol !== undefined && next.containsAlcohol !== prev?.containsAlcohol) ||
+            (next.calories !== undefined && next.calories !== prev?.calories);
           if (otherChanged) {
             await appendAuditLog({
               actor: user.email || user.id,
