@@ -12724,8 +12724,8 @@
     if (CURR_SUPPORTED.indexOf(code) < 0) code = 'PLN';
     var rate = CURR_RATES[code] || 1;
     document.documentElement.setAttribute('data-curr', code);
-    // Every priced node opts in via data-pln="<grosze>". The lang strings
-    // around it (e.g. "·", separators) stay untouched.
+    // Every priced node opts in via data-pln=&quot;&lt;grosze&gt;&quot;. The lang strings
+    // around it (e.g. &quot;·&quot;, separators) stay untouched.
     var priced = document.querySelectorAll('[data-pln]');
     for (var i = 0; i < priced.length; i++) {
       var grosze = parseFloat(priced[i].getAttribute('data-pln'));
