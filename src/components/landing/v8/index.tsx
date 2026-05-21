@@ -22,6 +22,7 @@ import { HeroSection } from "./HeroSection";
 import { LocationsGrid } from "./LocationsGrid";
 import { BundlesShowcase } from "./BundlesShowcase";
 import { FamigliaQuote } from "./FamigliaQuote";
+import { HomeMenuPreview } from "./HomeMenuPreview";
 import { AboutSection } from "./AboutSection";
 import { SociSection } from "./SociSection";
 import { CTASection } from "./CTASection";
@@ -36,6 +37,7 @@ export default function V8Landing() {
         <LocationsGrid />
         <BundlesShowcase />
         <FamigliaQuote />
+        <HomeMenuPreview />
         <AboutSection />
         <SociSection />
         <CTASection />

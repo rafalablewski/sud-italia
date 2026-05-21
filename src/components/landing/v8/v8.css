@@ -2598,3 +2598,38 @@
   font-weight: 600;
   color: var(--terracotta-dark);
 }
+
+/* ============================================================
+   HOME MENU PREVIEW — "Showing Kraków menu" flag
+   ============================================================ */
+.v8-home-menu { position: relative; }
+.v8-home-menu-flag {
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 18px 22px 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-family: var(--v8-display);
+  font-size: 13px;
+  color: var(--muted);
+  font-style: italic;
+}
+.v8-home-menu-flag strong {
+  font-family: var(--v8-display);
+  font-style: normal;
+  font-weight: 600;
+  color: var(--espresso);
+}
+.v8-home-menu-switch { display: flex; gap: 14px; flex-wrap: wrap; }
+.v8-home-menu-switch a {
+  font-family: var(--v8-display);
+  color: var(--terracotta);
+  text-decoration: none;
+  font-style: normal;
+  font-weight: 500;
+  font-size: 13.5px;
+}
+.v8-home-menu-switch a:hover { color: var(--terracotta-dark); text-decoration: underline; }
