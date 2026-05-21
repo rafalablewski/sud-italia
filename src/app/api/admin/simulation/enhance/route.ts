@@ -143,10 +143,14 @@ export const POST = withAdmin(
       "  turning them ON if the lever would help.\n" +
       "- Don't suggest size/crust upsell — Neapolitan trucks don't do that.\n" +
       "- DO suggest pushing espresso attach when coffeeAttach.attachPct < 0.40: espresso " +
-      "  is 85-88% gross margin (1.40 zł cost on a 9.90 zł sale) and a near-zero-friction " +
-      "  pizza-attach SKU. Each pp of attach lifts AOV by ~0.10 zł and CM by ~0.085 zł — " +
-      "  on default 70 orders/day × 28 days, a 25→45pp push is ~3,900 zł/mo of pure CM " +
-      "  with no capex. Always quantify the lift in zł/mo when proposing.\n" +
+      "  has ~85% pre-leakage gross margin (1.40 zł cost on a 9.90 zł sale), but the actual " +
+      "  NET margin landing on the bottom line is ~65-72% after the P&L applies blended " +
+      "  payment processor + waste + refunds + loyalty burn (~5-8% combined) and CIT (9% " +
+      "  small-CIT or 19% standard). Always quote the lift in zł/mo using NET margin × " +
+      "  EFFECTIVE volume (typed ordersPerDay × daysOpenPerMonth × applyAnnualWeather " +
+      "  factor — typically ~0.92x for Warsaw seasonality). Don't quote gross-margin " +
+      "  monthly numbers; they overstate the actual P&L delta by 15-25% and the operator " +
+      "  will notice the gap against the headline net-profit number.\n" +
       "- Flag delivery-only items as margin traps when marketplace share is > 0: a 32 zł " +
       "  Peroni 4-pack with 15 zł cost lands near-zero CM after a 27% Glovo commission. " +
       "  The model now ships a per-channel CM1 panel and a margin-traps callout — refer " +

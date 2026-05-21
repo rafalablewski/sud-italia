@@ -180,6 +180,11 @@ const INGREDIENT_LEVERS: { key: IngredientKey; label: string; hint: string }[] =
 const LABOR_SEASONAL_FLEX = 0.4;
 
 const DEFAULT_WEATHER: SimulationWeather = {
+  // Ships disabled — matches the "off by default, operator opts in
+  // explicitly" contract used for every Behaviour Assumption lever.
+  // Calibrated values stay populated so the card springs to life with
+  // sensible numbers the moment it's toggled on.
+  enabled: false,
   rainyDayMultiplier: 0.75,
   rainyShare: 0.30,
   heatwaveMultiplier: 1.40,
@@ -1423,7 +1428,7 @@ function attachDelta(
  *  dip fires only in Jul–Aug. Used by both the headline annual-average
  *  view and the per-month 12-month projection. */
 function monthVolumeMult(monthIndex: number, w: SimulationWeather | undefined): number {
-  if (!w) return 1;
+  if (!w || w.enabled === false) return 1;
   let m = w.rainyShare * w.rainyDayMultiplier + (1 - w.rainyShare);
   // Heatwaves are a summer phenomenon — Jun (5), Jul (6), Aug (7).
   if (monthIndex >= 5 && monthIndex <= 7) {
@@ -1439,7 +1444,7 @@ function monthVolumeMult(monthIndex: number, w: SimulationWeather | undefined): 
 /** Average volume multiplier across all 12 months — the right composite
  *  for the headline "single typical month" view. */
 function averageAnnualVolumeMult(w: SimulationWeather | undefined): number {
-  if (!w) return 1;
+  if (!w || w.enabled === false) return 1;
   let sum = 0;
   for (let i = 0; i < 12; i++) sum += monthVolumeMult(i, w);
   return sum / 12;
@@ -1539,6 +1544,9 @@ function applyAssumptions(s: SimulationScenario): SimulationScenario {
 function applyAnnualWeather(s: SimulationScenario): SimulationScenario {
   const w = s.weather;
   if (!w) return s;
+  // Master toggle off — pass the scenario through unchanged. headline P&L
+  // then runs on raw operator-typed ordersPerDay × daysOpenPerMonth.
+  if (w.enabled === false) return s;
   const avgMult = averageAnnualVolumeMult(w);
   const daysOpen = Math.max(0, s.daysOpenPerMonth - w.holidayClosedDaysPerMonth);
   let ordersPerDay = s.ordersPerDay * avgMult;
@@ -1599,12 +1607,1310 @@ function PlainTalk({ children }: { children: ReactNode }) {
           letterSpacing: 0.6,
           color: "rgb(194, 65, 12)",
           marginBottom: 6,
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
         }}
       >
-        In plain terms
+        <Sparkles style={{ width: 12, height: 12 }} aria-hidden /> In plain terms
       </div>
       {children}
     </div>
+  );
+}
+
+function Tips({ children }: { children: ReactNode }) {
+  return (
+    <div
+      style={{
+        marginTop: 10,
+        padding: "10px 12px",
+        background: "rgba(22, 163, 74, 0.07)",
+        borderLeft: "3px solid rgb(22, 163, 74)",
+        borderRadius: 6,
+        fontSize: 13.5,
+        lineHeight: 1.55,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 700,
+          textTransform: "uppercase",
+          letterSpacing: 0.6,
+          color: "rgb(21, 128, 61)",
+          marginBottom: 6,
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+        }}
+      >
+        <Lightbulb style={{ width: 12, height: 12 }} aria-hidden /> Tips — how to push this lever
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function Methodology({ children }: { children: ReactNode }) {
+  return (
+    <div
+      style={{
+        marginTop: 10,
+        padding: "10px 12px",
+        background: "rgba(59, 130, 246, 0.06)",
+        borderLeft: "3px solid rgb(59, 130, 246)",
+        borderRadius: 6,
+        fontSize: 13,
+        lineHeight: 1.55,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 700,
+          textTransform: "uppercase",
+          letterSpacing: 0.6,
+          color: "rgb(30, 64, 175)",
+          marginBottom: 6,
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+        }}
+      >
+        <Calculator style={{ width: 12, height: 12 }} aria-hidden /> Methodology — how this is determined
+      </div>
+      {children}
+    </div>
+  );
+}
+
+/** Slate/navy callout for the deeper CFA-3 / institutional analysis tier.
+ *  Sits between the 1-2 sentence brief description and the storytelling
+ *  PlainTalk callout. Carries the rigorous "why it matters, how to think
+ *  about it" content — benchmarks, formulas, structural commentary. */
+function InstitutionalAnalysis({ children }: { children: ReactNode }) {
+  return (
+    <div
+      style={{
+        marginTop: 10,
+        padding: "10px 12px",
+        background: "rgba(71, 85, 105, 0.06)",
+        borderLeft: "3px solid rgb(71, 85, 105)",
+        borderRadius: 6,
+        fontSize: 13.5,
+        lineHeight: 1.55,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 700,
+          textTransform: "uppercase",
+          letterSpacing: 0.6,
+          color: "rgb(30, 41, 59)",
+          marginBottom: 6,
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+        }}
+      >
+        <Scale style={{ width: 12, height: 12 }} aria-hidden /> Institutional analysis
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// --- Dynamic attach-lever help -------------------------------------------
+//
+// Each attach lever's InfoButton popup keeps the storytelling voice of the
+// original "In plain terms" copy ("Coffee is the easiest extra złoty in
+// the business — beans cost ~1 zł, you sell the cup for 9 zł…") but weaves
+// the live values from `lever.avgPriceGrosze`, `lever.cogsPct`,
+// `lever.attachPct` and the scenario's `ordersPerDay × daysOpenPerMonth`
+// directly into the narrative. The story stays narrative no matter what
+// the operator types — extreme-value notes appear separately when the
+// price or attach% falls outside a realistic range, and the story has a
+// distinct negative-margin variant when sell < cost.
+
+type AttachLeverKind =
+  | "coffee"
+  | "dessert"
+  | "antipasti"
+  | "aperitivo"
+  | "premiumToppings"
+  | "pastaPrimo";
+
+interface NarrativeValues {
+  sellZl: number;
+  cogsZl: number;
+  /** Gross margin per unit = sell − COGS. Used for the "~7.92 zł margin"
+   *  flavor line in the narrative — easy to reason about visually. */
+  marginZl: number;
+  /** Pre-CIT margin per unit after variable leakage (payment fees, waste,
+   *  refunds, loyalty burn). What hits EBITDA. */
+  preCitMarginZl: number;
+  /** Net margin per unit after variable leakage AND CIT. What actually
+   *  lands on the bottom line of the P&L. Drives the monthly figures so
+   *  they match the actual net-profit delta. */
+  netMarginZl: number;
+  /** Sum of variable-leakage rates applied on incremental revenue. */
+  leakagePct: number;
+  /** CIT rate (0.09 small-CIT or 0.19 standard PL). */
+  citPct: number;
+  currentPct: number;
+  targetPct: number;
+  deltaPp: number;
+  ordersPerDay: number;
+  daysOpenPerMonth: number;
+  extraUnitsPerDay: number;
+  monthlyMarginZl: number;
+  currentMonthlyMarginZl: number;
+}
+
+interface AttachHelpProfile {
+  title: string;
+  /** 1-2 sentence brief — what the lever IS at a glance. Renders as
+   *  plain prose at the top of the popup. */
+  briefDescription: ReactNode;
+  /** Deeper CFA-3 / institutional commentary — why the lever matters,
+   *  margin economics, trade-offs, benchmarks. Renders inside the
+   *  slate-tinted InstitutionalAnalysis callout. */
+  institutionalAnalysis: ReactNode;
+  /** Storytelling body of the IN PLAIN TERMS callout. Live values are
+   *  woven into the narrative voice, not formatted as a math recap.
+   *  Each story handles three branches internally: normal,
+   *  already-at-cap (deltaPp ≤ 0), and negative-margin (sell < cost). */
+  story: (v: NarrativeValues) => ReactNode;
+  // Realistic market range for the SELL price in zł. Outside this range,
+  // an extreme-value note explains why the simulation becomes unrealistic.
+  priceFloor: number;
+  priceCeiling: number;
+  lowNote: (price: number) => ReactNode;
+  highNote: (price: number) => ReactNode;
+  // Realistic ceiling for attach % — above this, the simulation is in
+  // fantasy territory (no one converts 90% of customers to dessert).
+  attachCeiling: number;
+  attachCeilingNote: (pct: number) => ReactNode;
+  tips: ReactNode;
+  /** Per-lever methodology context. Rendered inside the Methodology block
+   *  beneath shared formulas, so the operator can see WHY the realistic
+   *  ceiling and price-range thresholds are set where they are, what
+   *  drives the COGS for this category, and what the simulation does NOT
+   *  account for. */
+  methodology: {
+    ceilingRationale: ReactNode;
+    priceRationale: ReactNode;
+    cogsRationale: ReactNode;
+    notModelled: ReactNode;
+  };
+}
+
+// Storytelling number formatters — keep the narrative readable.
+//   fmtZl(9)     → "9"        (drops trailing zeros for round numbers)
+//   fmtZl(9.50)  → "9.50"
+//   fmtZl(0.24)  → "0.24"
+//   fmtZlRounded(2916)   → "2 900"   (rounded to nearest 100)
+//   fmtZlRounded(13250)  → "13 000"  (rounded to nearest 1000 for big numbers)
+function fmtZl(zl: number): string {
+  if (Math.abs(zl - Math.round(zl)) < 0.005) return String(Math.round(zl));
+  return zl.toFixed(2);
+}
+
+function fmtZlRounded(zl: number): string {
+  const abs = Math.abs(zl);
+  let rounded: number;
+  if (abs >= 10000) rounded = Math.round(zl / 1000) * 1000;
+  else if (abs >= 1000) rounded = Math.round(zl / 100) * 100;
+  else if (abs >= 100) rounded = Math.round(zl / 10) * 10;
+  else rounded = Math.round(zl);
+  return rounded.toLocaleString("pl-PL");
+}
+
+function fmtUnits(n: number): string {
+  if (n <= 0) return "0";
+  if (n < 1) return n.toFixed(1);
+  return String(Math.round(n));
+}
+
+const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
+  coffee: {
+    title: "Coffee attach rate",
+    briefDescription: (
+      <p>
+        Share of orders that add an espresso, cappuccino or similar.
+        25% means one in four customers takes coffee.
+      </p>
+    ),
+    institutionalAnalysis: (
+      <p style={{ margin: 0 }}>
+        Highest contribution-per-złoty-of-revenue of any attach lever
+        because the marginal kitchen / labour cost is near zero —
+        espresso is a parallel-station task, not on the pizza line. So
+        a +10 pp attach push lifts AOV without slowing the kitchen or
+        pulling labor from the main flow. The decision frame: when
+        kitchen saturation is rising, coffee attach is the only AOV
+        lever that doesn&apos;t make the bottleneck worse.
+      </p>
+    ),
+    story: (v) => {
+      if (v.marginZl <= 0) {
+        return (
+          <p style={{ margin: 0 }}>
+            Coffee is usually the easiest extra złoty in the business — but right now
+            your sell price ({fmtZl(v.sellZl)} zł) doesn&apos;t cover the
+            {" "}{fmtZl(v.cogsZl)} zł of beans + milk you&apos;re using, so every cup{" "}
+            <strong>loses</strong> ~{fmtZl(-v.marginZl)} zł. Pushing attach here just
+            multiplies the loss. Fix the price or the COGS first — then attach
+            becomes the lever it&apos;s meant to be.
+          </p>
+        );
+      }
+      if (v.deltaPp <= 0) {
+        return (
+          <p style={{ margin: 0 }}>
+            You&apos;re already at <strong>{Math.round(v.currentPct * 100)}%</strong>{" "}
+            coffee attach — basically everyone walks out with a cup. That&apos;s
+            ~{Math.round(v.ordersPerDay * v.currentPct)} coffees a day at
+            {" "}~{fmtZl(v.marginZl)} zł margin each, about{" "}
+            <strong>~{fmtZlRounded(v.currentMonthlyMarginZl)} zł/month</strong> of
+            nearly-pure profit already baked in. Holding this is the win — pushing
+            further means changing the product, not the pitch.
+          </p>
+        );
+      }
+      return (
+        <p style={{ margin: 0 }}>
+          Coffee is the easiest extra złoty in the business — beans cost
+          {" "}~{fmtZl(v.cogsZl)} zł, you sell the cup for {fmtZl(v.sellZl)} zł.
+          At your current <strong>{Math.round(v.currentPct * 100)}%</strong> attach
+          that&apos;s ~{fmtUnits(v.ordersPerDay * v.currentPct)} coffees a day ×
+          {" "}~{fmtZl(v.marginZl)} zł margin ={" "}
+          <strong>~{fmtZlRounded(v.currentMonthlyMarginZl)} zł/month</strong>{" "}
+          already baked in. Push to{" "}
+          <strong>{Math.round(v.targetPct * 100)}%</strong> on{" "}
+          {Math.round(v.ordersPerDay)} orders/day and you&apos;d add
+          {" "}~{fmtUnits(v.extraUnitsPerDay)} more coffees daily —{" "}
+          <strong>+~{fmtZlRounded(v.monthlyMarginZl)} zł/month</strong> of
+          nearly-pure profit on top. No new SKU, no extra labor — just one more
+          sentence at the till (&quot;espresso with that?&quot;).
+        </p>
+      );
+    },
+    priceFloor: 3,
+    priceCeiling: 14,
+    lowNote: (price) => (
+      <>
+        <strong>Heads up:</strong> at {price.toFixed(2)} zł a cup you&apos;re barely
+        covering beans (~1 zł) + milk (~0.50 zł) + cup &amp; lid (~0.40 zł) + the
+        barista&apos;s 30 seconds. Below ~3 zł the lever stops being &quot;easy
+        money&quot; — it&apos;s a loss-leader at best.
+      </>
+    ),
+    highNote: (price) => (
+      <>
+        <strong>Reality check:</strong> {price.toFixed(2)} zł for an espresso is well
+        above the Polish market (Costa, Starbucks, Green Caffè Nero cap at ~13–14 zł
+        for specialty drinks; standalone espresso usually sits at 8–12 zł).
+        The simulation will over-state your monthly upside — real attach will
+        collapse at this price point.
+      </>
+    ),
+    attachCeiling: 0.55,
+    attachCeilingNote: (pct) => (
+      <>
+        <strong>Reality check:</strong> {(pct * 100).toFixed(0)}% attach is above
+        what even Italian dinner spots achieve (best-in-class ~40–50%). Numbers
+        below are theoretical — don&apos;t plan staffing on this attach rate.
+      </>
+    ),
+    tips: (
+      <ul style={{ margin: 0, paddingLeft: 18 }}>
+        <li>
+          <strong>Scripted prompt at the till:</strong> &quot;espresso with that?&quot;
+          adds 5–10 pp to attach in week one. Train, role-play, monitor.
+        </li>
+        <li>
+          <strong>One-tap dessert + coffee bundle</strong> on the POS — combos sell
+          twice as fast as à-la-carte upsells because there&apos;s no second decision.
+        </li>
+        <li>
+          <strong>Auto-suggest in the cart</strong> for online &amp; delivery orders
+          (already wired via <code>getCartSuggestions()</code> in
+          <code>src/lib/upsell.ts</code>) — make sure coffee fires for pizza/pasta carts.
+        </li>
+        <li>
+          <strong>Sensory cues:</strong> visible espresso machine at the counter, the
+          smell of fresh grind, a chalk &quot;espresso 9 zł&quot; sign. Decision happens
+          before the customer even orders.
+        </li>
+        <li>
+          <strong>Pair with loyalty:</strong> &quot;3 coffees = free panna cotta&quot;
+          punch card. The marginal cup costs you 1 zł; the panna cotta costs you ~4 zł
+          — you net 3× ~8 zł margin for a 4 zł giveaway.
+        </li>
+      </ul>
+    ),
+    methodology: {
+      ceilingRationale: (
+        <>
+          Polish casual-dining benchmark. Italian-style dinner spots can push
+          60–65% in evening service, but for a pizza truck / pizzeria with
+          mixed lunch + dinner + takeaway, 50–55% is the upper bound where
+          roughly every other customer takes a coffee. Above 55% the
+          simulation is modelling fantasy demand.
+        </>
+      ),
+      priceRationale: (
+        <>
+          Standalone espresso prices in PL: Costa / Starbucks 10–14 zł for
+          specialty drinks, Green Caffè Nero 8–12 zł, Italian-style cafés
+          7–11 zł. Below 3 zł doesn&apos;t cover ~1 zł beans + 0.40 zł cup &amp;
+          lid + 0.50 zł milk + barista&apos;s 30 seconds — the lever flips
+          negative.
+        </>
+      ),
+      cogsRationale: (
+        <>
+          Espresso COGS at 9 zł sell: ~1 zł beans + 0.40 zł cup &amp; lid ≈
+          1.40 zł / 9 zł = ~15%. Cappuccino / latte adds ~0.50 zł of milk →
+          ~20%. The 12% default is the espresso-heavy blend; raise it
+          toward 18–22% if your mix skews milk-based.
+        </>
+      ),
+      notModelled: (
+        <>
+          Barista time and queue impact at peak. A coffee-heavy rush can slow
+          pizza service if you don&apos;t have a dedicated machine. The
+          simulation also doesn&apos;t deduct espresso-machine depreciation
+          (~150 zł/month for a prosumer setup) — fold that into fixed costs
+          if you&apos;re comparing &quot;coffee on vs. off&quot;.
+        </>
+      ),
+    },
+  },
+  dessert: {
+    title: "Dessert attach rate",
+    briefDescription: (
+      <p>
+        Share of orders that add tiramisu, cannoli or panna cotta.
+        10–15% is typical; aggressive merchandising can push to 25%.
+      </p>
+    ),
+    institutionalAnalysis: (
+      <p style={{ margin: 0 }}>
+        Two-axis benefit: AOV up <em>and</em> blended COGS% down,
+        because dessert COGS is lower than pizza. Most attach levers
+        only push one axis. Best paired with a coffee attach push —
+        dessert + espresso bundle eliminates the second decision cycle
+        and stacks two high-margin items on one ticket, which is why
+        the highest-performing operators move them together.
+      </p>
+    ),
+    story: (v) => {
+      if (v.marginZl <= 0) {
+        return (
+          <p style={{ margin: 0 }}>
+            Dessert is normally pure cream on top — but at {fmtZl(v.sellZl)} zł a
+            portion with this COGS%, every tiramisu that leaves the kitchen is
+            actually <strong>losing</strong> you ~{fmtZl(-v.marginZl)} zł. Raise the
+            price or shrink the portion before pushing attach.
+          </p>
+        );
+      }
+      if (v.deltaPp <= 0) {
+        return (
+          <p style={{ margin: 0 }}>
+            At <strong>{Math.round(v.currentPct * 100)}%</strong> dessert attach almost
+            every table is finishing with tiramisu —
+            {" "}~{Math.round(v.ordersPerDay * v.currentPct)} desserts a day at
+            {" "}~{fmtZl(v.marginZl)} zł margin each, about{" "}
+            <strong>~{fmtZlRounded(v.currentMonthlyMarginZl)} zł/month</strong> of
+            cream already booked. Pushing further needs a new dessert SKU, not a
+            better prompt.
+          </p>
+        );
+      }
+      return (
+        <p style={{ margin: 0 }}>
+          Tiramisu travels well, photographs better than the pizza, and earns better
+          margin than the main dish. At {fmtZl(v.sellZl)} zł a portion that&apos;s
+          {" "}~{fmtZl(v.marginZl)} zł of margin per dessert. Your current{" "}
+          <strong>{Math.round(v.currentPct * 100)}%</strong> attach is
+          {" "}~{fmtUnits(v.ordersPerDay * v.currentPct)} desserts a day ={" "}
+          <strong>~{fmtZlRounded(v.currentMonthlyMarginZl)} zł/month</strong>{" "}
+          already booked. Lift to{" "}
+          <strong>{Math.round(v.targetPct * 100)}%</strong> on{" "}
+          {Math.round(v.ordersPerDay)} orders/day and you&apos;d add
+          {" "}~{fmtUnits(v.extraUnitsPerDay)} more desserts daily —{" "}
+          <strong>+~{fmtZlRounded(v.monthlyMarginZl)} zł/month</strong>, pure
+          cream on top of revenue you&apos;d already booked.
+        </p>
+      );
+    },
+    priceFloor: 6,
+    priceCeiling: 30,
+    lowNote: (price) => (
+      <>
+        <strong>Heads up:</strong> at {price.toFixed(2)} zł you&apos;re below cost
+        for any decent tiramisu portion (mascarpone alone runs ~4 zł). Either the
+        portion is too small to actually merchandise, or your COGS% is understated.
+      </>
+    ),
+    highNote: (price) => (
+      <>
+        <strong>Reality check:</strong> {price.toFixed(2)} zł for one dessert is at
+        fine-dining levels. Casual-Italian benchmark is 14–22 zł; above ~25 zł
+        attach rate drops sharply because customers split or skip.
+      </>
+    ),
+    attachCeiling: 0.4,
+    attachCeilingNote: (pct) => (
+      <>
+        <strong>Reality check:</strong> {(pct * 100).toFixed(0)}% dessert attach
+        exceeds even strong dinner-only restaurants. Best-in-class with active
+        merchandising tops out around 25–30%.
+      </>
+    ),
+    tips: (
+      <ul style={{ margin: 0, paddingLeft: 18 }}>
+        <li>
+          <strong>Time the prompt:</strong> server suggests dessert when clearing
+          mains, not at first order. Hits ~3× the conversion of menu-only.
+        </li>
+        <li>
+          <strong>Photo merchandising:</strong> a single hero shot of the tiramisu on
+          the menu/order screen lifts attach more than adding three new SKUs.
+        </li>
+        <li>
+          <strong>Small-portion option</strong> (mini cannoli, half tiramisu) at
+          8–10 zł captures the &quot;too full but tempted&quot; crowd.
+        </li>
+        <li>
+          <strong>Dessert + espresso combo</strong> bundles two attach levers into
+          one yes — the highest-margin pairing in the entire menu.
+        </li>
+        <li>
+          <strong>Showcase at the counter:</strong> a chilled dessert display you
+          walk past on the way out converts impulse takeaway orders too.
+        </li>
+      </ul>
+    ),
+    methodology: {
+      ceilingRationale: (
+        <>
+          Casual-Italian benchmark. Dinner-focused restaurants in Warsaw /
+          Kraków hit 35–40% on full table service; lunch and takeaway
+          typically sit at 10–15%. Above 40% is dessert-bar or fine-dining
+          territory — not realistic for a pizzeria mix.
+        </>
+      ),
+      priceRationale: (
+        <>
+          Polish casual-Italian range: tiramisu 14–20 zł, cannoli 12–16 zł,
+          panna cotta 14–18 zł, affogato 12–16 zł. Above 30 zł moves to
+          fine-dining where attach drops sharply; below 6 zł means the
+          portion isn&apos;t a real dessert (probably a free amuse-bouche).
+        </>
+      ),
+      cogsRationale: (
+        <>
+          Tiramisu at 16 zł sell: ~4 zł mascarpone + 1 zł ladyfingers + 0.50 zł
+          coffee &amp; cocoa = ~5.50 zł / 16 zł = ~34%. Cannoli and panna
+          cotta land at 22–28%. The 28% default sits in the middle of the
+          range — adjust toward 32% for cream-heavy menus.
+        </>
+      ),
+      notModelled: (
+        <>
+          Travel / takeaway damage to delicate desserts (tiramisu survives,
+          panna cotta doesn&apos;t). If delivery share is &gt;30% in the channel
+          mix, dial attach down or restrict the dessert menu to
+          travel-friendly items in the recipe data.
+        </>
+      ),
+    },
+  },
+  antipasti: {
+    title: "Antipasti / starter attach",
+    briefDescription: (
+      <p>
+        Share of dine-in tables that order a starter — bruschetta
+        (~22 zł), burrata (~28 zł), olives, mortadella plate. 5–10%
+        baseline, much higher in evening service.
+      </p>
+    ),
+    institutionalAnalysis: (
+      <p style={{ margin: 0 }}>
+        Order timing is the strategic key: served while pizza bakes, the
+        starter doesn&apos;t cannibalise the main attach and fills the
+        dead 6-8 minutes the customer would otherwise spend bored. But
+        the antipasti station must absorb the marginal prep load — if
+        it slows pizza out, the complaint cost exceeds the starter
+        margin. Lever is dine-in only; for takeaway-heavy concepts it
+        effectively doesn&apos;t apply.
+      </p>
+    ),
+    story: (v) => {
+      if (v.marginZl <= 0) {
+        return (
+          <p style={{ margin: 0 }}>
+            A starter is normally a margin booster while customers wait — but at
+            {" "}{fmtZl(v.sellZl)} zł with this COGS%, every plate <strong>loses</strong>
+            {" "}~{fmtZl(-v.marginZl)} zł. Fix the recipe or the price first; then
+            the attach lever earns its keep.
+          </p>
+        );
+      }
+      if (v.deltaPp <= 0) {
+        return (
+          <p style={{ margin: 0 }}>
+            <strong>{Math.round(v.currentPct * 100)}%</strong> of tables already
+            taking a starter is evening-restaurant territory — that&apos;s
+            {" "}~{Math.round(v.ordersPerDay * v.currentPct)} starters a day at
+            {" "}~{fmtZl(v.marginZl)} zł margin, around{" "}
+            <strong>~{fmtZlRounded(v.currentMonthlyMarginZl)} zł/month</strong>
+            {" "}already booked. The next pp comes from the prep station, not from
+            the script — make sure the line can hold up.
+          </p>
+        );
+      }
+      return (
+        <p style={{ margin: 0 }}>
+          A burrata starter at {fmtZl(v.sellZl)} zł can earn ~{fmtZl(v.marginZl)} zł
+          of margin while customers wait for the pizza anyway. At your current{" "}
+          <strong>{Math.round(v.currentPct * 100)}%</strong> attach that&apos;s
+          {" "}~{fmtUnits(v.ordersPerDay * v.currentPct)} starters a day ={" "}
+          <strong>~{fmtZlRounded(v.currentMonthlyMarginZl)} zł/month</strong>{" "}
+          already on the line. Push to{" "}
+          <strong>{Math.round(v.targetPct * 100)}%</strong> on{" "}
+          {Math.round(v.ordersPerDay)} orders/day and you&apos;d add
+          {" "}~{fmtUnits(v.extraUnitsPerDay)} more daily —{" "}
+          <strong>+~{fmtZlRounded(v.monthlyMarginZl)} zł/month</strong>. Watch the
+          prep station though — if it slows the pizza out, you&apos;ve traded a
+          starter for a complaint.
+        </p>
+      );
+    },
+    priceFloor: 10,
+    priceCeiling: 60,
+    lowNote: (price) => (
+      <>
+        <strong>Heads up:</strong> at {price.toFixed(2)} zł the starter is a snack,
+        not an antipasto. Below ~10 zł the COGS% assumption usually breaks (good
+        burrata, prosciutto and bread aren&apos;t cheap).
+      </>
+    ),
+    highNote: (price) => (
+      <>
+        <strong>Reality check:</strong> {price.toFixed(2)} zł is platter / shared-board
+        territory, not a typical first-course. Re-think this lever as a
+        &quot;shared antipasti board&quot; SKU and lower the attach assumption
+        accordingly (one board per table of 4, not per customer).
+      </>
+    ),
+    attachCeiling: 0.35,
+    attachCeilingNote: (pct) => (
+      <>
+        <strong>Reality check:</strong> {(pct * 100).toFixed(0)}% starter attach is
+        only realistic in evening service with full table-service. Lunch &amp;
+        takeaway will be far lower; blend the two before trusting this number.
+      </>
+    ),
+    tips: (
+      <ul style={{ margin: 0, paddingLeft: 18 }}>
+        <li>
+          <strong>Bring free bread + olives</strong> to seated tables — primes the
+          appetite, and the server&apos;s &quot;something to start while the oven
+          fires up?&quot; lands much better.
+        </li>
+        <li>
+          <strong>Station capacity first:</strong> a starter order that delays the
+          pizza is a net negative. Pre-plate burrata + bruschetta during the rush.
+        </li>
+        <li>
+          <strong>Wait-time framing:</strong> &quot;our pizzas take 8 minutes — a
+          burrata is 60 seconds&quot; converts the dead-time objection.
+        </li>
+        <li>
+          <strong>Table-share boards:</strong> 38–48 zł shared antipasti per table
+          beats per-person starters on both attach and ticket.
+        </li>
+      </ul>
+    ),
+    methodology: {
+      ceilingRationale: (
+        <>
+          Evening dine-in only. Best-in-class Italian dinner spots in
+          Warsaw / Kraków with full table service hit 30–35% on the
+          evening; mixed-service averages 8–15%. For a pizza truck or
+          takeaway-heavy location, model attach ≤5% — the lever barely
+          applies.
+        </>
+      ),
+      priceRationale: (
+        <>
+          Polish casual-Italian benchmarks: bruschetta 18–26 zł, burrata
+          24–32 zł, mortadella plate 28–38 zł, olive plate 14–18 zł. Above
+          60 zł the item is a shared antipasti board, not a per-cover
+          starter — recompute attach as &quot;per table&quot; instead.
+        </>
+      ),
+      cogsRationale: (
+        <>
+          Burrata at 28 zł sell: ~9 zł cheese + 1.50 zł bread &amp; oil = ~10.50
+          zł / 28 zł = ~38%. Bruschetta lands at 18–22% (cheap bread base);
+          prosciutto plates 35–42%. The 32% default is the burrata-heavy
+          blend.
+        </>
+      ),
+      notModelled: (
+        <>
+          Antipasti-station capacity. A heavy starter rush during prime
+          time can delay pizza output — the simulation doesn&apos;t deduct
+          for that. Test attach increases against your kitchen throughput
+          KPI before pushing in production.
+        </>
+      ),
+    },
+  },
+  aperitivo: {
+    title: "Aperitivo / wine attach",
+    briefDescription: (
+      <p>
+        Share of evening orders that include an Aperol Spritz, glass of
+        wine, beer or limoncello. The highest-margin attach we can model.
+      </p>
+    ),
+    institutionalAnalysis: (
+      <p style={{ margin: 0 }}>
+        Use this lever to model the &quot;what would happen if we got
+        licensed?&quot; question before paying the annual licence fee.
+        Evenings-only effect — lunch attach is near zero, so the lever
+        only adds value if the operating hours actually run into the
+        7-10pm window. Pair with antipasti for a true Italian-aperitivo
+        ritual: starter + drink before pizza arrives is the highest-
+        revenue table format in the casual-Italian playbook.
+      </p>
+    ),
+    story: (v) => {
+      if (v.marginZl <= 0) {
+        return (
+          <p style={{ margin: 0 }}>
+            Drinks are normally the highest-margin attach in the building — but at
+            {" "}{fmtZl(v.sellZl)} zł a glass with this COGS%, you&apos;re{" "}
+            <strong>losing</strong> ~{fmtZl(-v.marginZl)} zł per pour. Re-check the
+            recipe and the by-the-glass cost before pushing this lever.
+          </p>
+        );
+      }
+      if (v.deltaPp <= 0) {
+        return (
+          <p style={{ margin: 0 }}>
+            <strong>{Math.round(v.currentPct * 100)}%</strong> drink attach across all
+            orders is bar territory —
+            {" "}~{Math.round(v.ordersPerDay * v.currentPct)} pours a day at
+            {" "}~{fmtZl(v.marginZl)} zł margin ={" "}
+            <strong>~{fmtZlRounded(v.currentMonthlyMarginZl)} zł/month</strong> already
+            covering the lights and then some. The next pp comes from a real cocktail
+            program, not from scripted prompts.
+          </p>
+        );
+      }
+      return (
+        <p style={{ margin: 0 }}>
+          An Aperol Spritz costs you ~{fmtZl(v.cogsZl)} zł to make and sells for
+          {" "}{fmtZl(v.sellZl)} zł — that&apos;s{" "}
+          <strong>{fmtZl(v.marginZl)} zł of margin per glass</strong>. Your current{" "}
+          <strong>{Math.round(v.currentPct * 100)}%</strong> attach is
+          {" "}~{fmtUnits(v.ordersPerDay * v.currentPct)} pours a day ={" "}
+          <strong>~{fmtZlRounded(v.currentMonthlyMarginZl)} zł/month</strong>{" "}
+          already covering the lights. Lift to{" "}
+          <strong>{Math.round(v.targetPct * 100)}%</strong> on{" "}
+          {Math.round(v.ordersPerDay)} orders/day and you&apos;d add
+          {" "}~{fmtUnits(v.extraUnitsPerDay)} more drinks daily —{" "}
+          <strong>+~{fmtZlRounded(v.monthlyMarginZl)} zł/month</strong> on top.
+          Drinks are how Italian dinner spots keep the lights on.
+        </p>
+      );
+    },
+    priceFloor: 8,
+    priceCeiling: 35,
+    lowNote: (price) => (
+      <>
+        <strong>Heads up:</strong> at {price.toFixed(2)} zł you&apos;re below Aperol
+        Spritz / house-wine market floor in Poland (16–22 zł). Either the COGS%
+        assumption is wrong, or you&apos;re selling beer-not-cocktails — model
+        them separately.
+      </>
+    ),
+    highNote: (price) => (
+      <>
+        <strong>Reality check:</strong> {price.toFixed(2)} zł is fine-dining
+        cocktail / premium-wine territory. Casual-Italian benchmark for one glass
+        is 18–26 zł — above this attach rate halves at minimum.
+      </>
+    ),
+    attachCeiling: 0.5,
+    attachCeilingNote: (pct) => (
+      <>
+        <strong>Reality check:</strong> {(pct * 100).toFixed(0)}% drink attach across
+        ALL orders is bar territory. Even the best Italian dinner spots only hit
+        50%+ on evening-only orders. Apply this lever to evenings only when
+        planning.
+      </>
+    ),
+    tips: (
+      <ul style={{ margin: 0, paddingLeft: 18 }}>
+        <li>
+          <strong>Aperitivo hour (5–7 PM):</strong> drink + small antipasto for
+          24 zł lures the 6 PM crowd before they commit to another spot.
+        </li>
+        <li>
+          <strong>Drink-with-food default:</strong> &quot;wine pairing for this
+          pizza?&quot; built into the POS recommendation engine.
+        </li>
+        <li>
+          <strong>House-wine pour:</strong> 14 zł by the glass, ~3 zł COGS, no
+          decision fatigue from a long list — fastest path to attach lift.
+        </li>
+        <li>
+          <strong>Licence math:</strong> at +10 pp attach × 80 orders/day × 17 zł
+          margin × 28 days = ~3,800 zł/month — covers the ~5,000 zł/year licence
+          in the first 6 weeks.
+        </li>
+      </ul>
+    ),
+    methodology: {
+      ceilingRationale: (
+        <>
+          Evening-only attach (5–11 PM). Dinner-led Italian / aperitivo bars
+          in PL hit 40–50% on evening orders; mixed-service all-day spots
+          average 10–20%. Above 50% across ALL orders is bar territory —
+          requires a real cocktail program, not just bottles on a shelf.
+        </>
+      ),
+      priceRationale: (
+        <>
+          Polish casual-Italian glass-pour range: Aperol Spritz 18–26 zł,
+          house wine 14–22 zł, Italian beer 12–18 zł, limoncello shot
+          12–16 zł. Below 8 zł you&apos;re modelling cheap beer only — split
+          this lever in two. Above 35 zł is cocktail-bar / fine-dining.
+        </>
+      ),
+      cogsRationale: (
+        <>
+          Aperol Spritz at 22 zł sell: ~3 zł Aperol + ~2 zł prosecco + ~0.50
+          zł soda + ice + garnish ≈ 5.50 zł / 22 zł = ~25%. House wine
+          25–30%, Italian beer 30–35%. The 22% default sits at the
+          spritz-led-with-some-wine blend.
+        </>
+      ),
+      notModelled: (
+        <>
+          The ~5,000 zł/year alcohol licence fee itself — fold it into the
+          fixed-costs card if you&apos;re comparing &quot;licensed vs
+          unlicensed.&quot; Also doesn&apos;t model glass-pour wastage (open
+          bottles spoil after 2–3 days), which adds 3–5 pp of effective
+          COGS for a wine-heavy program.
+        </>
+      ),
+    },
+  },
+  premiumToppings: {
+    title: "Premium toppings attach",
+    briefDescription: (
+      <p>
+        Share of pizzas that add buffalo mozzarella (+6 zł), &apos;nduja
+        (+7 zł), truffle oil (+9 zł), etc. ~3 zł marginal food cost,
+        the rest is margin.
+      </p>
+    ),
+    institutionalAnalysis: (
+      <p style={{ margin: 0 }}>
+        Zero kitchen-time penalty — the topping goes on the same pizza,
+        same oven cycle, same labour minute — so this lever lifts AOV
+        without any operational drag. The only ceiling is menu cognitive
+        load: past ~4-5 premium options the operator gets diminishing
+        returns because customers default to plain. Menu placement is
+        the unlock; bury the premiums and attach collapses regardless
+        of how good the recipe is.
+      </p>
+    ),
+    story: (v) => {
+      if (v.marginZl <= 0) {
+        return (
+          <p style={{ margin: 0 }}>
+            Premium toppings are normally ~50% incremental margin — but at
+            {" "}{fmtZl(v.sellZl)} zł per add-on with this COGS%, you&apos;re actually
+            {" "}<strong>losing</strong> ~{fmtZl(-v.marginZl)} zł each time someone
+            says yes. Re-price the upgrade or rework the recipe before pushing
+            attach.
+          </p>
+        );
+      }
+      if (v.deltaPp <= 0) {
+        return (
+          <p style={{ margin: 0 }}>
+            <strong>{Math.round(v.currentPct * 100)}%</strong> of pizzas already going
+            out with a premium topping is aggressive merchandising —
+            {" "}~{Math.round(v.ordersPerDay * v.currentPct)} upgraded pizzas a day at
+            {" "}~{fmtZl(v.marginZl)} zł margin ={" "}
+            <strong>~{fmtZlRounded(v.currentMonthlyMarginZl)} zł/month</strong> already
+            in the books. Pushing higher needs a new flagship topping, not more
+            prompts.
+          </p>
+        );
+      }
+      return (
+        <p style={{ margin: 0 }}>
+          A drizzle of truffle oil costs ~{fmtZl(v.cogsZl)} zł but customers pay
+          {" "}{fmtZl(v.sellZl)} zł for it — ~{fmtZl(v.marginZl)} zł of margin per
+          pizza. At your current{" "}
+          <strong>{Math.round(v.currentPct * 100)}%</strong> attach that&apos;s
+          {" "}~{fmtUnits(v.ordersPerDay * v.currentPct)} upgraded pizzas a day ={" "}
+          <strong>~{fmtZlRounded(v.currentMonthlyMarginZl)} zł/month</strong>{" "}
+          already in the till. If attach climbs to{" "}
+          <strong>{Math.round(v.targetPct * 100)}%</strong> on{" "}
+          {Math.round(v.ordersPerDay)} orders/day, that&apos;s
+          {" "}~{fmtUnits(v.extraUnitsPerDay)} more premium pizzas daily —{" "}
+          <strong>+~{fmtZlRounded(v.monthlyMarginZl)} zł/month</strong> on top.
+          Same dough, same oven — just better ingredients on top, easier to
+          merchandise than raising base prices.
+        </p>
+      );
+    },
+    priceFloor: 2,
+    priceCeiling: 18,
+    lowNote: (price) => (
+      <>
+        <strong>Heads up:</strong> at {price.toFixed(2)} zł per upgrade the topping
+        margin barely justifies the menu real-estate. Bundle several upgrades
+        into one premium SKU instead.
+      </>
+    ),
+    highNote: (price) => (
+      <>
+        <strong>Reality check:</strong> {price.toFixed(2)} zł for ONE topping
+        upgrade is steep. Truffle is the only ingredient that sustains 9–12 zł in
+        the Polish market — above that attach drops to single digits.
+      </>
+    ),
+    attachCeiling: 0.45,
+    attachCeilingNote: (pct) => (
+      <>
+        <strong>Reality check:</strong> {(pct * 100).toFixed(0)}% of pizzas getting
+        a premium topping is achievable only with aggressive merchandising
+        (chef&apos;s recommendation, photo callout, default-add). Plan for
+        15–25%, treat 30%+ as upside.
+      </>
+    ),
+    tips: (
+      <ul style={{ margin: 0, paddingLeft: 18 }}>
+        <li>
+          <strong>One signature upgrade:</strong> a single &quot;chef&apos;s pick&quot;
+          topping merchandised at the top of every pizza converts 2× a long
+          menu of choices.
+        </li>
+        <li>
+          <strong>Photo merchandising:</strong> show the bubble of buffalo mozzarella
+          or the truffle shaving — visual upgrades sell themselves.
+        </li>
+        <li>
+          <strong>Default-toggle on premium pizzas:</strong> &apos;nduja pre-checked
+          on the Diavola, customer opts OUT instead of opting IN. Lift is 3–5×.
+        </li>
+        <li>
+          <strong>Seasonal rotation:</strong> truffle in autumn, fresh basil in
+          summer — limited-time framing beats permanent menu items on attach.
+        </li>
+      </ul>
+    ),
+    methodology: {
+      ceilingRationale: (
+        <>
+          Best-in-class with aggressive merchandising (default-add,
+          photo callout, chef&apos;s-pick framing). Polish casual-Italian
+          average sits at 15–25%; above 45% only with auto-add programs
+          that opt the customer in rather than out.
+        </>
+      ),
+      priceRationale: (
+        <>
+          Polish casual-Italian add-on range: buffalo mozzarella +6–8 zł,
+          &apos;nduja +5–7 zł, truffle oil +8–12 zł, prosciutto crudo
+          +7–9 zł, anchovies +3–5 zł. Below 2 zł isn&apos;t worth menu
+          real-estate; above 18 zł is luxury-only territory (real truffle).
+        </>
+      ),
+      cogsRationale: (
+        <>
+          Truffle oil drizzle at 7 zł sell: ~2 zł oil = ~30%. Buffalo
+          mozzarella +7 zł sell: ~2.50 zł cheese / 7 zł = ~36%. Premium
+          toppings run 25–35% COGS because the ingredient cost is
+          concentrated — real buffalo, real truffle, cured meats.
+        </>
+      ),
+      notModelled: (
+        <>
+          Menu cognitive load. Every additional premium topping competes
+          with the previous ones for customer attention — past 4–5
+          choices, attach drops because customers default to plain. The
+          simulation treats all premium toppings as one undifferentiated
+          attach.
+        </>
+      ),
+    },
+  },
+  pastaPrimo: {
+    title: "Pasta primo attach",
+    briefDescription: (
+      <p>
+        Share of dine-in tables that order a pasta course alongside the
+        pizza (Italian-style: primo = pasta first, then pizza as secondo).
+        Avg 32 zł, ~26% COGS.
+      </p>
+    ),
+    institutionalAnalysis: (
+      <p style={{ margin: 0 }}>
+        The biggest single-lever AOV bump in absolute złoty, but the
+        only attach lever with a real marginal labour cost — a pasta
+        station means a separate pan + burner + cook minute per order.
+        Compounds with antipasti and aperitivo for a full trattoria-
+        style ticket structure; isolated, the incremental margin gets
+        eaten by the station overhead. Strategic only for indoor
+        dinner-led concepts with seating; not for takeaway trucks.
+      </p>
+    ),
+    story: (v) => {
+      if (v.marginZl <= 0) {
+        return (
+          <p style={{ margin: 0 }}>
+            A primo course is supposed to be a free ticket bump from the same table
+            — but at {fmtZl(v.sellZl)} zł with this COGS%, each pasta{" "}
+            <strong>loses</strong> ~{fmtZl(-v.marginZl)} zł. Re-look at portion size
+            and price before pushing attach.
+          </p>
+        );
+      }
+      if (v.deltaPp <= 0) {
+        return (
+          <p style={{ margin: 0 }}>
+            <strong>{Math.round(v.currentPct * 100)}%</strong> of dine-in tables
+            ordering a pasta course is full-Italian-restaurant territory —
+            {" "}~{Math.round(v.ordersPerDay * v.currentPct)} pastas a day at
+            {" "}~{fmtZl(v.marginZl)} zł margin ={" "}
+            <strong>~{fmtZlRounded(v.currentMonthlyMarginZl)} zł/month</strong> already
+            in the books. The next pp comes from seating + pasta-station throughput,
+            not from a better suggestion.
+          </p>
+        );
+      }
+      return (
+        <p style={{ margin: 0 }}>
+          A primo pasta course is a second item from the same table — same staff,
+          same plate-pickup trip. At {fmtZl(v.sellZl)} zł a plate that&apos;s
+          {" "}~{fmtZl(v.marginZl)} zł of margin per pasta. Your current{" "}
+          <strong>{Math.round(v.currentPct * 100)}%</strong> attach is
+          {" "}~{fmtUnits(v.ordersPerDay * v.currentPct)} pastas a day ={" "}
+          <strong>~{fmtZlRounded(v.currentMonthlyMarginZl)} zł/month</strong>{" "}
+          already booked. Push to{" "}
+          <strong>{Math.round(v.targetPct * 100)}%</strong> on{" "}
+          {Math.round(v.ordersPerDay)} dine-in orders/day =
+          {" "}~{fmtUnits(v.extraUnitsPerDay)} more pastas/day,{" "}
+          <strong>+~{fmtZlRounded(v.monthlyMarginZl)} zł/month</strong>. Only
+          works where customers actually sit — but if you have seating, it&apos;s
+          the single biggest dine-in lever you have.
+        </p>
+      );
+    },
+    priceFloor: 15,
+    priceCeiling: 60,
+    lowNote: (price) => (
+      <>
+        <strong>Heads up:</strong> at {price.toFixed(2)} zł you&apos;re below the
+        minimum viable pasta plate price in Poland (carbonara starts around 24 zł
+        for a portion that&apos;s actually a primo). COGS will eat the margin.
+      </>
+    ),
+    highNote: (price) => (
+      <>
+        <strong>Reality check:</strong> {price.toFixed(2)} zł for a pasta course is
+        upscale-Italian territory. Casual benchmark is 28–38 zł — above ~45 zł
+        attach drops because customers default to just ordering pizza.
+      </>
+    ),
+    attachCeiling: 0.35,
+    attachCeilingNote: (pct) => (
+      <>
+        <strong>Reality check:</strong> {(pct * 100).toFixed(0)}% of dine-in tables
+        ordering a full pasta course is restaurant-only territory. For a truck or
+        takeaway-heavy location, model this lever at &lt;5% or disable it.
+      </>
+    ),
+    tips: (
+      <ul style={{ margin: 0, paddingLeft: 18 }}>
+        <li>
+          <strong>Half-portion primo:</strong> 16–18 zł lets the table share one
+          pasta &quot;to start&quot; before the pizza arrives — converts the
+          &quot;not that hungry&quot; objection.
+        </li>
+        <li>
+          <strong>Daily pasta special:</strong> one rotating dish (chalkboard, not
+          menu) beats the static list — Italians do this for a reason.
+        </li>
+        <li>
+          <strong>Share-plate framing:</strong> &quot;our pastas are designed to
+          share — one between two before the pizza?&quot; lifts attach without
+          stretching the kitchen.
+        </li>
+        <li>
+          <strong>Kitchen capacity first:</strong> pasta needs a separate pan +
+          burner per order. Don&apos;t push this lever past your pasta-station
+          throughput or you&apos;ll blow up pizza times.
+        </li>
+      </ul>
+    ),
+    methodology: {
+      ceilingRationale: (
+        <>
+          Full-Italian-restaurant pattern. Italian dinner-only spots
+          (Trastevere-style) in Poland hit 30–35% pasta attach with
+          dedicated pasta stations; casual pizzerias with a token pasta
+          menu sit at 5–15%. For a takeaway truck without seating, model
+          attach ≤2% — the lever effectively doesn&apos;t apply.
+        </>
+      ),
+      priceRationale: (
+        <>
+          Polish casual-Italian range: carbonara / cacio e pepe 28–38 zł,
+          ragù / amatriciana 32–42 zł, daily specials 38–48 zł, filled
+          pastas (ravioli, tortellini) 36–46 zł. Below 15 zł is a snack
+          portion, not a primo; above 60 zł is fine-dining.
+        </>
+      ),
+      cogsRationale: (
+        <>
+          Carbonara at 32 zł sell: ~2 zł pasta + ~6 zł guanciale + ~2.50 zł
+          pecorino + 0.50 zł eggs = ~11 zł / 32 zł = ~34%. Cacio e pepe
+          runs 18–22%; filled pastas 28–35%. The 26% default sits at a
+          ragù-led blend; raise toward 30% for cured-meat-heavy menus.
+        </>
+      ),
+      notModelled: (
+        <>
+          Pasta-station throughput. Every order needs its own pan +
+          burner — at &gt;6 orders / hour a single induction station
+          chokes. The simulation also doesn&apos;t account for the
+          extra prep labor (dough vs. sauce reduction is a different
+          skill), so heavy attach can require a second hire.
+        </>
+      ),
+    },
+  },
+};
+
+interface AttachLeverHelpProps {
+  kind: AttachLeverKind;
+  lever: SimulationAttachLever;
+  /** EFFECTIVE annualised volume (typed × applyAnnualWeather: rainy days,
+   *  heatwave evenings, holiday closures, peak/event multipliers). What
+   *  the actual P&L runs on. */
+  ordersPerDay: number;
+  daysOpenPerMonth: number;
+  /** Raw operator-typed values for the same fields. Shown next to the
+   *  effective values in the Methodology block so the operator sees the
+   *  weather adjustment factor explicitly, not as silent magic. */
+  typedOrdersPerDay: number;
+  typedDaysOpenPerMonth: number;
+  /** Variable-leakage rates from the scenario — applied to incremental
+   *  attach revenue to compute the EFFECTIVE net margin (matches actual
+   *  P&L delta), not just the gross sell − COGS. */
+  paymentProcessorPct: number;
+  wastePct: number;
+  refundPct: number;
+  loyaltyBurnPct: number;
+  citPct: number;
+}
+
+function AttachLeverHelp({
+  kind,
+  lever,
+  ordersPerDay,
+  daysOpenPerMonth,
+  typedOrdersPerDay,
+  typedDaysOpenPerMonth,
+  paymentProcessorPct,
+  wastePct,
+  refundPct,
+  loyaltyBurnPct,
+  citPct,
+}: AttachLeverHelpProps) {
+  const profile = ATTACH_HELP[kind];
+  const sellZl = lever.avgPriceGrosze / 100;
+  const cogsZl = sellZl * lever.cogsPct;
+  const marginZl = sellZl - cogsZl;
+  // Effective net margin per attached unit — what actually lands on the
+  // bottom line after the P&L applies the same variable-leakage rates to
+  // incremental attach revenue that it applies to all other revenue, then
+  // small/full CIT. Matches the actual delta in monthly net profit when
+  // the lever's attach % moves.
+  const leakagePct = paymentProcessorPct + wastePct + refundPct + loyaltyBurnPct;
+  const effectiveRatio = Math.max(0, 1 - lever.cogsPct - leakagePct);
+  const preCitMarginZl = sellZl * effectiveRatio;
+  const netMarginZl = preCitMarginZl * (1 - citPct);
+
+  const currentPct = Math.max(0, Math.min(1, lever.attachPct));
+  // Target is always the lever's realistic attach ceiling, so the +bump
+  // represents the TOTAL upside left in this lever from where you are now
+  // — not a fixed pp step. That way each different currentPct gives a
+  // different bump number: from 0% coffee attach you've got ~55 pp of
+  // headroom (huge bump); from 50% you've only got ~5 pp left (small
+  // bump); at-or-above the ceiling the at-cap story fires instead.
+  const targetPct = currentPct < profile.attachCeiling ? profile.attachCeiling : currentPct;
+  const deltaPp = Math.max(0, targetPct - currentPct);
+
+  const extraUnitsPerDay = ordersPerDay * deltaPp;
+  // Monthly figures use the EFFECTIVE NET margin per unit (after variable
+  // leakage + CIT) so the headroom matches the actual P&L delta — not the
+  // headline gross margin which would over-state by ~15-25%. Negative
+  // values flow through unclamped: when sell < cost the projected impact
+  // is genuinely negative and the operator should see the loss.
+  const monthlyMarginZl = extraUnitsPerDay * netMarginZl * daysOpenPerMonth;
+  const currentMonthlyMarginZl = ordersPerDay * currentPct * netMarginZl * daysOpenPerMonth;
+
+  const values: NarrativeValues = {
+    sellZl,
+    cogsZl,
+    marginZl,
+    netMarginZl,
+    preCitMarginZl,
+    leakagePct,
+    citPct,
+    currentPct,
+    targetPct,
+    deltaPp,
+    ordersPerDay,
+    daysOpenPerMonth,
+    extraUnitsPerDay,
+    monthlyMarginZl,
+    currentMonthlyMarginZl,
+  };
+
+  const showLowNote = sellZl > 0 && sellZl < profile.priceFloor;
+  const showHighNote = sellZl > profile.priceCeiling;
+  const showAttachNote = currentPct > profile.attachCeiling;
+  const noteStyle = {
+    margin: "8px 0 0",
+    padding: "6px 8px",
+    background: "rgba(234, 88, 12, 0.12)",
+    borderRadius: 4,
+    color: "rgb(154, 52, 18)",
+  } as const;
+
+  return (
+    <>
+      {profile.briefDescription}
+      <InstitutionalAnalysis>{profile.institutionalAnalysis}</InstitutionalAnalysis>
+      <PlainTalk>
+        {profile.story(values)}
+        {showLowNote && <p style={noteStyle}>{profile.lowNote(sellZl)}</p>}
+        {showHighNote && <p style={noteStyle}>{profile.highNote(sellZl)}</p>}
+        {showAttachNote && (
+          <p style={noteStyle}>{profile.attachCeilingNote(currentPct)}</p>
+        )}
+      </PlainTalk>
+      <Tips>{profile.tips}</Tips>
+      <Methodology>
+        <p style={{ margin: "0 0 6px" }}>
+          <strong>Inputs (live):</strong> the three fields on this row — attach %,
+          avg price, COGS % — plus orders/day and open days/month from the
+          scenario card above. All five flow into the formulas in real-time as
+          you edit them; nothing is hardcoded.
+        </p>
+        <p style={{ margin: "0 0 6px" }}>
+          <strong>Formulas (with your current values plugged in):</strong>
+        </p>
+        <ul style={{ margin: "0 0 6px", paddingLeft: 18 }}>
+          <li>
+            gross margin per unit = sell − (sell × COGS%) = {fmtZl(sellZl)} − (
+            {fmtZl(sellZl)} × {(lever.cogsPct * 100).toFixed(0)}%) ={" "}
+            <strong>{fmtZl(marginZl)} zł</strong>
+          </li>
+          <li>
+            <strong>net margin per unit</strong> = sell × (1 − COGS% −
+            payment-fee − waste − refunds − loyalty) × (1 − CIT) ={" "}
+            {fmtZl(sellZl)} × (1 −{" "}
+            {(lever.cogsPct * 100).toFixed(0)}% −{" "}
+            {(leakagePct * 100).toFixed(1)}%) × (1 −{" "}
+            {(citPct * 100).toFixed(0)}%) ={" "}
+            <strong>{fmtZl(netMarginZl)} zł</strong>{" "}
+            <span className="v2-muted">
+              (matches actual P&amp;L delta)
+            </span>
+          </li>
+          <li>
+            baked-in monthly = currentPct × orders/day × net margin × open days
+            = {(currentPct * 100).toFixed(0)}% × {Math.round(ordersPerDay)} ×{" "}
+            {fmtZl(netMarginZl)} × {Math.round(daysOpenPerMonth)} ={" "}
+            <strong>~{fmtZlRounded(currentMonthlyMarginZl)} zł</strong>
+          </li>
+          <li>
+            headroom monthly = (ceiling − currentPct) × orders/day × net margin
+            × open days = ({Math.round(profile.attachCeiling * 100)}% −{" "}
+            {(currentPct * 100).toFixed(0)}%) × {Math.round(ordersPerDay)} ×{" "}
+            {fmtZl(netMarginZl)} × {Math.round(daysOpenPerMonth)} ={" "}
+            <strong>~{fmtZlRounded(monthlyMarginZl)} zł</strong>
+          </li>
+        </ul>
+        <p style={{ margin: "0 0 4px", fontSize: 12.5, opacity: 0.85 }}>
+          <strong>Variable leakage on incremental revenue ({(leakagePct * 100).toFixed(1)}%):</strong>{" "}
+          payment processor {(paymentProcessorPct * 100).toFixed(1)}% (blended
+          on-site card + cash 0% + Glovo/Wolt commission) + waste{" "}
+          {(wastePct * 100).toFixed(1)}% + refunds {(refundPct * 100).toFixed(1)}%
+          + loyalty burn {(loyaltyBurnPct * 100).toFixed(1)}%. Then CIT{" "}
+          {(citPct * 100).toFixed(0)}% on the pre-tax incremental margin. Fixed
+          costs (labor, rent) are unchanged by the lever and don&apos;t enter
+          the marginal calculation.
+        </p>
+        <p style={{ margin: "0 0 4px", fontSize: 12.5, opacity: 0.85 }}>
+          <strong>Volume:</strong> formulas use the EFFECTIVE annualised volume
+          (your typed values × weather/holiday adjustments) so monthly numbers
+          reconcile to the actual P&amp;L line. You typed{" "}
+          <strong>{Math.round(typedOrdersPerDay)} orders/day × {Math.round(typedDaysOpenPerMonth)} days</strong>
+          {" "}= {Math.round(typedOrdersPerDay * typedDaysOpenPerMonth).toLocaleString("pl-PL")} orders/month;
+          {" "}after rainy days, heatwave bonuses, holiday closures and peak/event
+          multipliers the effective volume is{" "}
+          <strong>{Math.round(ordersPerDay)} orders/day × {Math.round(daysOpenPerMonth)} days</strong>
+          {" "}= {Math.round(ordersPerDay * daysOpenPerMonth).toLocaleString("pl-PL")} orders/month
+          {typedOrdersPerDay > 0 && Math.abs(ordersPerDay * daysOpenPerMonth - typedOrdersPerDay * typedDaysOpenPerMonth) > 0.5 && (
+            <>
+              {" "}({((ordersPerDay * daysOpenPerMonth) / (typedOrdersPerDay * typedDaysOpenPerMonth)).toFixed(2)}× the
+              typed total). Change the Weather card to flex this.
+            </>
+          )}.
+        </p>
+        <p style={{ margin: "0 0 4px" }}>
+          <strong>
+            Realistic attach ceiling ({Math.round(profile.attachCeiling * 100)}%):
+          </strong>{" "}
+          {profile.methodology.ceilingRationale}
+        </p>
+        <p style={{ margin: "0 0 4px" }}>
+          <strong>
+            Realistic sell-price range ({profile.priceFloor}–{profile.priceCeiling} zł):
+          </strong>{" "}
+          {profile.methodology.priceRationale}
+        </p>
+        <p style={{ margin: "0 0 4px" }}>
+          <strong>COGS context:</strong> {profile.methodology.cogsRationale}
+        </p>
+        <p style={{ margin: 0 }}>
+          <strong>Not modelled:</strong> {profile.methodology.notModelled}
+        </p>
+      </Methodology>
+    </>
   );
 }
 
@@ -1615,14 +2921,21 @@ const HELP = {
     body: (
       <>
         <p>
-          The average number of orders the truck completes on a normal day. A typical
-          Neapolitan pizza truck does 50–100/day; busy summer evenings can push 120+.
+          Average orders the truck completes on a normal day. A typical
+          Neapolitan pizza truck does 50–100/day; summer evenings can
+          push 120+.
         </p>
-        <p>
-          <strong>Why it matters:</strong> revenue = orders × ticket × days open. Doubling
-          this number roughly doubles revenue but only adds variable food cost — labor
-          and rent are mostly fixed, so the extra orders are very profitable.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The highest operating-leverage input on the page: until you
+            saturate kitchen capacity, every incremental order drops a
+            very large share of its revenue to the bottom line, because
+            labor and rent are mostly fixed. That asymmetry is why the
+            volume vs ticket trade-off (the Sensitivity card) usually
+            tilts toward volume growth — unless you&apos;re already at
+            capacity, in which case price is the only remaining lever.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             The more pizzas you sell each day, the more money you keep. Growing from
@@ -1633,6 +2946,67 @@ const HELP = {
             month</strong> from selling 20 more pizzas a day.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Daypart smarter, not longer:</strong> 80% of orders cluster in
+              ~4 hours. Map your hourly heatmap and staff peaks heavily, off-peak
+              minimally — same revenue, lower labor%.
+            </li>
+            <li>
+              <strong>Local marketing:</strong> Instagram geo-targeted posts within
+              2 km of the truck convert ~3× a wide-net ad. Cost per new order
+              typically 8–15 zł.
+            </li>
+            <li>
+              <strong>Speed up checkout:</strong> every 30 s shaved off ticket time
+              lets you take one more order in the peak hour — that&apos;s ~4 extra
+              orders/day if you trim consistently.
+            </li>
+            <li>
+              <strong>Pre-order &amp; slot booking:</strong> push customers to
+              reserve a 15-min pickup window. Smooths the queue, lets the kitchen
+              batch better, recovers 10–20% of lost-to-queue orders.
+            </li>
+            <li>
+              <strong>Loyalty drives frequency:</strong> a working punch card
+              (4 pizzas → free) lifts return rate by 15–25% on the existing base —
+              cheaper than acquiring new customers.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> this field is the operator&apos;s typed
+            forecast for daily order volume. When live order data exists, the
+            Actuals strip above pre-fills this from a rolling 90-day window
+            (<code>/api/admin/simulation/actuals</code>) so the scenario
+            stays anchored in reality.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Where it flows:</strong> orders/day × avg ticket × days
+            open = monthly revenue (top of P&amp;L). Orders/day × hourly
+            distribution (peak share + service hours) sets the kitchen-saturation
+            KPI. Every attach lever uses orders/day to compute extra units.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Realistic range:</strong> 30–120 orders/day for a single
+            Neapolitan truck. Below 30 you&apos;re structurally unprofitable on
+            Warsaw/Kraków rents; above 120 you need a second oven or you&apos;ll
+            blow ticket times past 25 min.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> Polish food-truck association benchmarks
+            2024, GUS gastronomic-sector reports, and the truck&apos;s own
+            6-month actuals when present.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> day-of-week variance (Saturday is
+            ~2× a Tuesday). The Weather card handles seasonal volume; the
+            Heatmap card handles intraday — but neither replaces operator
+            judgement on event-day spikes.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -1641,18 +3015,20 @@ const HELP = {
     body: (
       <>
         <p>
-          The total each customer pays per order, all-in (pizza + sides + drink + tip
-          excluded). Polish pizzerias run 60–72 zł when the menu has drinks and desserts.
+          Total each customer pays per order, all-in (pizza + sides +
+          drinks, tip excluded). Polish pizzerias run 60–72 zł when the
+          menu has drinks and desserts.
         </p>
-        <p>
-          <strong>How to think about it:</strong> raise this by selling combos and
-          add-ons rather than cranking pizza prices — customers notice price hikes,
-          they don&apos;t notice that they added an espresso.
-        </p>
-        <p className="v2-muted text-sm">
-          When the Menu mix card has weights, this field becomes display-only — the
-          number is computed from how often each menu item sells.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Attach-driven AOV growth is the highest-NPV path: customers
+            notice price hikes but don&apos;t notice that they added an
+            espresso, so the elasticity penalty is zero. The marginal
+            item also inherits the same fixed-cost coverage as the base
+            pizza, which is why attach economics dominate raw-price
+            economics until you&apos;ve maxed out menu cognitive load.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Every extra złoty on the average bill is a złoty you earn without serving a
@@ -1662,6 +3038,66 @@ const HELP = {
             hours.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Bundle, don&apos;t hike:</strong> a 65 zł combo (pizza + drink
+              + dessert) beats raising pizza prices by 5 zł — same revenue lift,
+              no customer complaints.
+            </li>
+            <li>
+              <strong>Menu engineering:</strong> place the highest-margin pizza
+              second-from-top on the menu (the &quot;decoy effect&quot; anchor).
+              Lifts attach to that item by 15–25%.
+            </li>
+            <li>
+              <strong>Default upsells in the POS:</strong> one-tap &quot;add
+              espresso (9 zł)&quot; on the checkout screen lifts ticket more
+              cheaply than any menu change.
+            </li>
+            <li>
+              <strong>Premium toppings, not premium pies:</strong> let the
+              customer build up — a +9 zł truffle upgrade feels cheaper than a
+              60 zł pizza, even if the resulting ticket is the same.
+            </li>
+            <li>
+              <strong>Watch the &quot;cheapest pizza&quot; share:</strong> if
+              &gt;25% of orders pick the cheapest item, your menu pricing is too
+              wide — compress the range and the ticket lifts on its own.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> typed by the operator as a blended average,
+            OR computed live from the Menu mix card (Σ qty × price ÷ Σ qty
+            across the current menu weights). When menu mix is on, this field
+            becomes display-only and shows the menu-derived value.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Where it flows:</strong> avg ticket × orders/day × days
+            open = monthly revenue. Also drives contribution margin (ticket −
+            ticket × COGS%) and revenue-per-labor-hour. Combo deals, attach
+            levers and discount engines all stack on top of this base.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Realistic range:</strong> 45–85 zł for a Polish pizzeria.
+            Pizza-only menus 45–55 zł; with drinks 60–68 zł; full dinner
+            (pasta + drinks + dessert) 70–85 zł. Above 90 zł is upscale
+            Italian, not casual.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> Polish hospitality association 2024,
+            Glovo/Wolt published GMV-per-order data, plus the truck&apos;s
+            actuals when available.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> party-size variance (a 4-person
+            order isn&apos;t 4 × the individual ticket). The model assumes
+            one order = one customer; if your basket is multi-person heavy,
+            scale ticket up accordingly.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -1670,14 +3106,22 @@ const HELP = {
     body: (
       <>
         <p>
-          How many days each month the truck takes orders. 28 is typical (one day off
-          per week). Closing extra days lets staff rest but loses ~3.6% of monthly
-          revenue per day.
+          How many days each month the truck takes orders. 28 is typical
+          (one day off per week). Each closed day loses ~3.6% of monthly
+          revenue but holds fixed costs flat.
         </p>
-        <p>
-          <strong>Trade-off:</strong> 7-day operation maximises revenue but burns out
-          staff. 6 days/week (~26 days/mo) is a sustainable sweet spot.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The lever where revenue and sustainability trade off
+            directly: 7-day operation maxes top-line but burns out
+            staff and triggers rest-period overtime premiums; cutting
+            days without cutting fixed costs inflates the break-even
+            daily volume. The strategic question is rarely &quot;more
+            or fewer days&quot; — it&apos;s &quot;which days are
+            actually contributing&quot; once you size against the
+            heatmap.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Each closed day is a day with zero revenue but rent still due. Going from
@@ -1687,6 +3131,66 @@ const HELP = {
             best pizzaiolo from quitting; burnout costs more than two slow days.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Close the worst day, not Sunday:</strong> Sunday usually
+              over-indexes for pizza demand. Pick the lowest-volume day from
+              your heatmap (often Monday/Tuesday) — same staff rest, less lost
+              revenue.
+            </li>
+            <li>
+              <strong>Reduced hours, not closed days:</strong> 18:00–22:00 only
+              on a slow day keeps the lights on for the dinner peak while
+              saving ~6 hours of labor.
+            </li>
+            <li>
+              <strong>Roll staff days off:</strong> stagger across the team
+              instead of closing — one cook off Monday, another Tuesday — so
+              the truck stays open at lower headcount.
+            </li>
+            <li>
+              <strong>Use closed days for prep:</strong> dough batches,
+              tomato-sauce reductions, cleaning. Pre-prep saves ~15% prep
+              labor on open days.
+            </li>
+            <li>
+              <strong>Plan around fixed costs:</strong> rent is monthly, not
+              daily — closing a day saves you ~1.5–2 hours of labor + 50 zł of
+              utilities, nothing on rent. Calculate before deciding.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> operator-typed integer (1–31). Defaults to
+            28 (6-day work week with 1 rest day average).
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Where it flows:</strong> multiplies into monthly revenue,
+            monthly variable costs and the daily fixed-cost amortisation
+            (rent ÷ days-open inflates per-day burden if you close more).
+            Also gates the heatmap aggregation and the throughput KPIs.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Realistic range:</strong> 22–30 days. Under 22 means
+            you&apos;re effectively part-time (struggles to cover rent); 30
+            means 7-day operation which is sustainable for ~3 months before
+            burnout. 26–28 is the typical sweet spot.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> Polish labour code (mandatory rest
+            periods), Italian-style trattoria operating patterns,
+            owner-operator surveys.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> public holidays (the Holiday
+            Calendar card handles those separately as event-day deltas
+            rather than closures). Also doesn&apos;t model day-of-week
+            revenue mix — closing Saturday is much costlier than closing
+            Monday, but the field treats every day as equal weight.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -1695,18 +3199,21 @@ const HELP = {
     body: (
       <>
         <p>
-          COGS = Cost Of Goods Sold. The share of revenue that gets eaten by
-          ingredients. <strong>Polish pizzeria benchmark is 25–35%</strong>; under 30%
-          is healthy, over 35% means recipes need re-engineering.
+          COGS = Cost Of Goods Sold. The share of revenue eaten by
+          ingredients. Polish pizzeria benchmark: 25–35%.
         </p>
-        <p>
-          <strong>Formula:</strong> if a pizza sells for 30 zł and the dough +
-          tomato + mozzarella cost 9 zł, that&apos;s 30% COGS.
-        </p>
-        <p>
-          When the Menu mix card is active, this number is computed from each
-          item&apos;s actual recipe cost ÷ price, weighted by how often it sells.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The single highest-leverage line on the P&amp;L because it
+            scales with revenue — every 1pp saved compounds every
+            future month at every future revenue level. A permanent
+            recipe re-engineering is worth more than a one-shot price
+            hike of equivalent magnitude. Diagnose the source before
+            cutting: COGS drift can mean supplier-price creep,
+            portion-control slippage, or menu-mix shift toward heavier
+            recipes — each has a different fix.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             For every 100 zł a customer pays, ~30 zł is the ingredients you burned.
@@ -1716,6 +3223,67 @@ const HELP = {
             same pizza, smarter buying.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Negotiate with the cheese supplier first:</strong>
+              mozzarella + fior di latte is 35–45% of pizza COGS. A 5%
+              discount there beats squeezing 5% out of basil.
+            </li>
+            <li>
+              <strong>Track end-of-shift waste daily:</strong> if &gt;3% of
+              dough goes in the bin, your hourly forecast is off. Tighten the
+              hourly dough-batch plan.
+            </li>
+            <li>
+              <strong>Recipe-cost every menu item monthly:</strong> ingredient
+              prices drift (especially flour, oil, tomatoes). Re-cost in the
+              Recipes admin page every 30 days; bump prices on the worst
+              drifters.
+            </li>
+            <li>
+              <strong>Standardise portion weights:</strong> the difference
+              between a generous and stingy cook is 2–4 pp of COGS. Train +
+              weigh + spot-check.
+            </li>
+            <li>
+              <strong>Bulk-buy long-shelf items:</strong> flour, tomato passata,
+              oil — order quarterly with a freight-saving partner. Saves 8–12%
+              on those line items.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> typed as a blended %, OR computed from the
+            Menu mix card as Σ (qty × recipe cost) ÷ Σ (qty × price), weighted
+            by menu mix. When live actuals exist, the Actuals strip pulls the
+            menu-mix-weighted figure from the last 90 days of orders.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Where it flows:</strong> monthly variable food cost =
+            revenue × COGS%. Inverts into gross margin (1 − COGS%) on the
+            P&amp;L. Feeds the contribution-margin and prime-cost KPIs.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Realistic range:</strong> 22–35%. Under 25% is rare in
+            Poland for casual-Italian (means cheap ingredients or super-tight
+            ops); 28–32% is healthy; over 35% means recipes need
+            re-engineering (better suppliers, smaller portions, or higher
+            prices).
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> Polish restaurant association
+            benchmarks, OECD food-cost data, Italian-pizzeria
+            owner-operator reports. Margins tighten in inflationary periods
+            (2022–2024 flour spike pushed industry avg from 28% → 33%).
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> waste %, employee-meal cost,
+            comps and refunds — all of these are separate fields lower in
+            the page. Don&apos;t double-count by stuffing them into COGS%.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -1724,20 +3292,20 @@ const HELP = {
     body: (
       <>
         <p>
-          Each row is one role on the team. Monthly cost = headcount × weekly hours
-          × 4.345 weeks × hourly rate.
+          Each row is one role on the team. Monthly cost = headcount ×
+          weekly hours × 4.345 weeks × hourly rate.
         </p>
-        <p>
-          <strong>Why 1.22× brutto:</strong> in Poland, the employer pays ZUS
-          (social insurance) and Labor Fund <em>on top</em> of the gross wage —
-          about 22% extra. So if a pizzaiolo&apos;s gross wage is 35 zł/h, the
-          truck&apos;s real cost is ~43 zł/h. We bake this into the default rates
-          so &quot;rate × hours&quot; lands at the full employer cost.
-        </p>
-        <p>
-          <strong>Target:</strong> total labor should be ≤ 30% of revenue. The
-          KPI strip lower down flags red/amber/green.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Above-target labor % has two distinct root causes — over-
+            staffing for current volume vs under-pricing for current
+            staffing — and the correct fix differs entirely. Diagnose
+            which before cutting heads. Schedule flexibility (the
+            part-time vs salaried-core mix) governs how fast labor
+            responds when volume dips; rigid rosters convert short-run
+            volume shocks into structural margin damage.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Every hour someone is on the clock costs you money — even if no customer
@@ -1747,6 +3315,71 @@ const HELP = {
             to the bottom line.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Build the schedule from the hourly heatmap:</strong> staff
+              up only when the demand curve says you need it. Don&apos;t default
+              to 2 cooks if 1 + a runner handles 80% of the day.
+            </li>
+            <li>
+              <strong>Cross-train, don&apos;t hire:</strong> a pizzaiolo who can
+              also run the till saves a half-shift of cashier labor without
+              losing throughput.
+            </li>
+            <li>
+              <strong>Use short shifts for peaks:</strong> a 17:00–21:00
+              part-timer at the dinner rush is half the cost of a full-day
+              hire and matches when you actually need help.
+            </li>
+            <li>
+              <strong>Tip-pool with capped service charge:</strong> ZUS-friendly
+              way to lift effective pay without raising brutto — staff
+              retention without inflating your labor % on paper.
+            </li>
+            <li>
+              <strong>Watch labor % weekly:</strong> if it&apos;s &gt;33% for two
+              weeks running, either revenue dropped or you over-staffed —
+              re-cut the schedule before it becomes structural.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> per-role table with headcount, weekly
+            hours and hourly rate. Owner-typed; can be auto-seeded from the
+            Staff admin page (which holds real contracts) if the truck has
+            data there.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formula:</strong> monthly cost per row = headcount ×
+            weekly hours × 4.345 weeks × hourly rate (brutto inclusive of
+            ~22% ZUS / Labour Fund). Sum across roles = total labor; total
+            labor ÷ revenue = labor %.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Why ×1.22 brutto:</strong> Polish employers pay ZUS
+            (~19.5%) + Labour Fund (~2.5%) on top of gross wages, so the
+            real cost is ~22% above the brutto rate. The default hourly
+            rates already bake this in — &quot;rate × hours&quot; lands at
+            full employer cost.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Realistic range:</strong> total labor 25–32% of revenue
+            for casual-Italian in Poland. Under 25% is rare (suggests
+            under-staffing or off-the-books pay); over 33% means revenue
+            problem OR over-staffing — fix one or the other.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> Polish hospitality association labor
+            benchmarks, ZUS rates 2024, JOPI gastronomic-employer surveys.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> overtime premiums (50% / 100%
+            uplifts), holiday pay, sick-leave coverage, recruiting costs.
+            Add a 5–8% buffer on total labor to absorb these in real ops.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -1755,15 +3388,22 @@ const HELP = {
     body: (
       <>
         <p>
-          What you pay every month <em>regardless of how many orders you do</em>:
-          rent, insurance, accountant, software, ZUS for the owner, etc. Variable
-          costs (ingredients) live in COGS instead.
+          Monthly bills you pay <em>regardless of how many orders you do</em>
+          — rent, insurance, accountant, software, owner ZUS. Variable
+          food costs live in COGS instead.
         </p>
-        <p>
-          <strong>Why split them out:</strong> fixed costs set your break-even
-          point. If they go up by 1 000 zł/mo, you need more orders to cover them
-          before you make any profit.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Fixed costs set the break-even floor and compress the
+            margin-of-safety ratio above it — the buffer between
+            actual revenue and the point where you start losing money.
+            Strategic implication: every recurring subscription, every
+            additional fixed line, raises the daily volume threshold
+            for survival. Audit fixed costs annually for &quot;creep&quot;
+            — the small SaaS lines no-one cancels but everyone forgot
+            why they signed up.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Fixed costs are the bills that arrive whether you sell 5 pizzas or 5,000.
@@ -1773,6 +3413,66 @@ const HELP = {
             foot traffic — can be a winning trade.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Renegotiate rent annually:</strong> landlords expect
+              year-end reviews. A 5% rent reduction or rent-free month is
+              worth ~5,000–10,000 zł/year for a typical pitch. Always ask.
+            </li>
+            <li>
+              <strong>Audit subscriptions quarterly:</strong> POS software,
+              accountant, design tools, music licensing — small line items
+              accumulate. Cancel anything used &lt;2× / month.
+            </li>
+            <li>
+              <strong>Shop insurance every 2 years:</strong> commercial
+              policies drift up if you stay with the same broker.
+              10–20% savings on re-quote is common.
+            </li>
+            <li>
+              <strong>Self-do bookkeeping with software:</strong> Wfirma,
+              iFirma, inFakt around 60–100 zł/month vs ~600–1,000 zł/month
+              for an accountant. Use the accountant only for year-end.
+            </li>
+            <li>
+              <strong>Electricity tariff matters:</strong> dynamic-pricing
+              tariffs cut cost ~15–25% for evening-peak businesses. Worth
+              the switch if you have a smart meter.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> per-line table of monthly bills (rent,
+            insurance, utilities, accountant, software, owner ZUS, etc.).
+            Operator-typed; can be auto-seeded from Business Costs admin if
+            the truck logs them there.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Where it flows:</strong> sum = monthly fixed cost. Plugs
+            straight into the P&amp;L as a constant; sets break-even via
+            fixed ÷ contribution-margin. Higher fixed = more orders needed
+            before profit starts.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Realistic range:</strong> 12–25k zł/month for a
+            Warsaw/Kraków pizza truck. Premium pitches (Hala Koszyki,
+            Hala Gwardii) push 30k+ but compensate with footfall.
+            Suburban pitches sit at 8–14k.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> Warsaw/Kraków commercial-real-estate
+            reports 2024 (Cushman Wakefield, JLL), ZUS owner rates,
+            insurance-broker quotes for gastronomic units.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> equipment depreciation
+            (separate card), interest expense (separate card), one-off
+            repairs. The model assumes steady-state fixed costs; add a
+            5–8% buffer for unexpected repairs.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -1782,22 +3482,21 @@ const HELP = {
       <>
         <p>
           Pick one of five archetypal menu shapes for a Neapolitan pizza
-          truck. Each preset overwrites the four Revenue inputs (orders/day,
-          avg ticket, days open, COGS) <em>and</em> the six attach-rate
-          levers (coffee, dessert, antipasti, aperitivo, premium toppings,
-          pasta primo) — one click loads a coherent business model.
+          truck. Each preset seeds the four Revenue inputs + the six
+          attach-rate lever values — a coherent business model in one
+          click.
         </p>
-        <ul style={{ margin: "8px 0", paddingLeft: 20, listStyle: "disc" }}>
-          <li><strong>Takeaway classic</strong> — 100 ord/d × 45 zł, low attach</li>
-          <li><strong>Balanced</strong> — 70 ord/d × 65 zł, mixed attach</li>
-          <li><strong>Premium</strong> — 55 ord/d × 88 zł, high attach</li>
-          <li><strong>Family / Group</strong> — 30 ord/d × 155 zł, weekend / events</li>
-          <li><strong>Aperitivo / Dinner</strong> — 45 ord/d × 82 zł, drinks-led (needs alcohol licence)</li>
-        </ul>
-        <p>
-          After applying a preset you can still tweak any value — the preset
-          is a starting point, not a lock-in.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Each preset is a different business model in disguise —
+            volume-led (Takeaway) vs ticket-led (Aperitivo) — and the
+            choice cascades into staff hours, supplier mix, pitch
+            requirements, and licensing decisions. Same truck and same
+            kitchen perform very differently depending on which preset
+            the team + pricing + roster is built around, so the preset
+            is a strategic positioning choice, not a forecast knob.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Each preset is a different business model in disguise.
@@ -1808,6 +3507,72 @@ const HELP = {
             you build the team and pricing around.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Pick the preset closest to YOUR pitch reality:</strong>
+              office-park lunch? Takeaway Classic. Tourist street? Premium.
+              Residential evenings? Aperitivo Dinner. Wrong preset = wrong
+              staffing &amp; supplier orders.
+            </li>
+            <li>
+              <strong>Use presets to A/B-test direction:</strong> load
+              Balanced, then Premium — see how your P&amp;L changes if you
+              pivot toward higher tickets &amp; lower volume.
+            </li>
+            <li>
+              <strong>Combine with menu-mix overrides:</strong> a preset
+              loads averages — refine on the Menu mix card afterwards with
+              your actual top-10 items.
+            </li>
+            <li>
+              <strong>Aperitivo needs the licence:</strong> don&apos;t pick
+              it unless you actually have (or plan) the ~5,000 zł/year
+              alcohol permit. Otherwise model with Aperitivo OFF.
+            </li>
+            <li>
+              <strong>Family/Group is high-variance:</strong> 30 orders/day
+              × 155 zł means few big tickets. One bad weekend wipes the
+              week — only use if you have event bookings or weekend
+              destination traffic.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> a dropdown of 5 archetypes. Picking one
+            overwrites the four Revenue inputs (orders/day, avg ticket, days,
+            COGS%) AND the six attach-rate levers in one go.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Where it flows:</strong> the preset is a starting point,
+            not a lock-in. After applying, every downstream KPI, P&amp;L row
+            and heatmap recomputes from the new inputs. Tweaking individual
+            fields afterward refines but doesn&apos;t auto-revert to the
+            preset.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Preset profiles (Warsaw 2026 calibration):</strong>
+          </p>
+          <ul style={{ margin: "0 0 4px", paddingLeft: 18 }}>
+            <li>Takeaway Classic — 100 ord/d × 45 zł × 28%, low attach</li>
+            <li>Balanced — 70 ord/d × 65 zł × 30%, mixed attach</li>
+            <li>Premium — 55 ord/d × 88 zł × 32%, high attach</li>
+            <li>Family/Group — 30 ord/d × 155 zł × 30%, weekend-led</li>
+            <li>Aperitivo Dinner — 45 ord/d × 82 zł × 28%, drinks-led</li>
+          </ul>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> Warsaw/Kraków pizza-truck operator
+            interviews 2024, Polish gastronomic-sector benchmarks, Italian
+            quick-service vs full-service split data.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> hybrid models (a truck that does
+            Takeaway at lunch + Aperitivo at dinner is a real archetype
+            but isn&apos;t a single preset). Run the simulation twice with
+            different presets and weight the results manually.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -1818,29 +3583,23 @@ const HELP = {
     body: (
       <>
         <p>
-          Instead of typing one flat average ticket, you describe customer
-          behavior with levers like &quot;25% of orders add a coffee&quot; or
-          &quot;20% of mains convert to a combo&quot;. The simulator does the
-          math on top of the base ticket.
+          Instead of typing one flat average ticket, you describe
+          customer behavior with levers like &quot;25% of orders add a
+          coffee&quot; or &quot;20% of mains convert to a combo&quot;.
+          The simulator does the math on top of the base ticket.
         </p>
-        <p>
-          Every lever folds into the same effective ticket + COGS that the rest
-          of the page uses. Drag one slider and the headline KPIs, P&amp;L, pie
-          chart, heatmaps, projection and break-even all update live.
-        </p>
-        <p>
-          <strong>Toggle on/off:</strong> each lever has a green &quot;On&quot;
-          pill in the corner. Click it to flip the lever off — its values stay
-          configured but it&apos;s excluded from the math. Use this to isolate
-          the impact of a single hypothesis (&quot;what would my P&amp;L look
-          like without the coffee attach?&quot;) or use the <em>All off</em>
-          {" "}button in the card header to see the raw baseline ticket × volume
-          without any behavioral lifts.
-        </p>
-        <p className="v2-muted text-sm">
-          Defaults are tuned to a Neapolitan truck in Warsaw 2026. Tune them to
-          match your real attach data once you have it.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The discipline this card enforces: assumptions become
+            forecast inputs only when the operator opts each one in
+            explicitly. Defaults are intentionally conservative so the
+            base case isn&apos;t built on optimistic attach guesses.
+            Match assumptions to real POS attach data within ±5pp or
+            the forecast is fiction — operator judgement on aspirational
+            attach should live in the Optimistic archetype, not in the
+            Realistic base.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Instead of guessing one &quot;average&quot; bill, you describe how
@@ -1851,185 +3610,98 @@ const HELP = {
             staff&apos;s attention next week.
           </p>
         </PlainTalk>
-      </>
-    ),
-  },
-  coffeeAttach: {
-    title: "Coffee attach rate",
-    body: (
-      <>
-        <p>
-          Share of orders that add an espresso, cappuccino or similar.
-          25% means one in four customers takes coffee.
-        </p>
-        <p>
-          <strong>Why it&apos;s gold:</strong> coffee is ~88% margin (an espresso
-          uses about 1 zł of beans + milk for a 9 zł sell price). Every +10 pp
-          on attach lifts your average ticket by ~0.90 zł at almost no extra cost.
-        </p>
-        <p>
-          <strong>How to grow it:</strong> staff prompt at order
-          (&quot;espresso with that?&quot;), combo deals, post-meal dessert+coffee bundle.
-        </p>
-        <PlainTalk>
-          <p style={{ margin: 0 }}>
-            Coffee is the easiest extra złoty in the business — beans cost ~1 zł, you
-            sell the cup for 9 zł. Push attach from <strong>20% → 35%</strong> on 80
-            orders/day and you&apos;ve added ~12 extra coffees daily × ~8 zł margin =
-            <strong> ~2,900 zł/month</strong> of nearly-pure profit. No new SKU, no
-            extra labor — just one more sentence at the till
-            (&quot;espresso with that?&quot;).
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Calibrate one lever at a time:</strong> tune the default
+              attach % on coffee to your actual rate before touching the
+              others. Wrong baselines compound across all 6 levers.
+            </li>
+            <li>
+              <strong>Use &quot;All off&quot; to find your base ticket:</strong>
+              the card header has a toggle to disable every lever. The
+              resulting AOV is your raw pizza-only ticket — useful for
+              comparing levers against a clean baseline.
+            </li>
+            <li>
+              <strong>Rank levers by &quot;baked-in + headroom&quot;:</strong>
+              click each one&apos;s (i) — the IN PLAIN TERMS shows current
+              monthly + remaining upside. Push the lever with the biggest
+              headroom first.
+            </li>
+            <li>
+              <strong>Match attach to channel mix:</strong> delivery
+              customers attach less than dine-in. If your channel split
+              shifts toward delivery, scale all attach assumptions down 20-30%.
+            </li>
+            <li>
+              <strong>Verify with weekly POS data:</strong> the Actuals
+              card pulls real attach from the last 90 days. Match
+              assumptions to actuals within ±5 pp or your forecast is
+              fiction.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> 6 attach levers (coffee, dessert,
+            antipasti, aperitivo, premium toppings, pasta primo) + combo
+            conversion + cheapest-pizza shift + delivery share + ingredient
+            levers. Each has its own (i) with full per-lever methodology.
           </p>
-        </PlainTalk>
-      </>
-    ),
-  },
-  dessertAttach: {
-    title: "Dessert attach rate",
-    body: (
-      <>
-        <p>
-          Share of orders that add tiramisu, cannoli or panna cotta. 10–15% is
-          typical; can push to 25% with strong dessert merchandising.
-        </p>
-        <p>
-          <strong>Why it matters:</strong> desserts are ~28% COGS — better than
-          pizza&apos;s 30%. So more dessert attach lifts AOV <em>and</em>
-          improves the blended margin %.
-        </p>
-        <PlainTalk>
-          <p style={{ margin: 0 }}>
-            Tiramisu travels well, photographs better than the pizza, and earns better
-            margin than the main dish. Lifting dessert attach from <strong>10% →
-            18%</strong> on 80 orders/day = ~6 more desserts daily × ~13 zł margin =
-            <strong> ~3,100 zł/month</strong> — pure cream on top of revenue you&apos;d
-            already booked.
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>How it folds in:</strong> each lever computes a
+            per-order ticket lift and COGS lift via{" "}
+            <code>attachDelta()</code>. All deltas sum into{" "}
+            <code>extraTicket</code> and <code>extraCogs</code>, which
+            replace the typed avg ticket and COGS% downstream. Every
+            KPI, P&amp;L row, heatmap and projection re-renders from the
+            adjusted base.
           </p>
-        </PlainTalk>
-      </>
-    ),
-  },
-  antipastiAttach: {
-    title: "Antipasti / starter attach",
-    body: (
-      <>
-        <p>
-          Share of dine-in tables that order a starter — bruschetta (~22 zł),
-          burrata (~28 zł), olives, mortadella plate. 5–10% baseline, much
-          higher in evening service.
-        </p>
-        <p>
-          <strong>Trade-off:</strong> bigger ticket but adds prep load on the
-          line — make sure the antipasti station can keep up before pushing
-          this lever.
-        </p>
-        <PlainTalk>
-          <p style={{ margin: 0 }}>
-            A burrata starter at 28 zł can earn ~20 zł of margin while customers wait
-            for the pizza anyway. Get just <strong>8% of dine-in tables</strong> to add
-            one and on 80 orders/day you&apos;ve added <strong>~13,000 zł of
-            revenue/month</strong>. Watch the prep station though — if it slows the
-            pizza out, you&apos;ve traded a starter for a complaint.
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Toggling:</strong> the green &quot;On&quot; pill on each
+            lever excludes it from the math without losing the typed
+            values. Use this to isolate a single hypothesis or build a
+            &quot;before vs after&quot; comparison.
           </p>
-        </PlainTalk>
-      </>
-    ),
-  },
-  aperitivoAttach: {
-    title: "Aperitivo / wine attach",
-    body: (
-      <>
-        <p>
-          Share of evening orders that include an Aperol Spritz, glass of wine,
-          beer or limoncello. Highest-margin attach we can model — drinks are
-          ~22% COGS at 22 zł a glass.
-        </p>
-        <p>
-          <strong>Requires an alcohol licence.</strong> Use this lever to model
-          &quot;what would happen if we got licensed?&quot; before paying the
-          ~5 000 zł/year fee.
-        </p>
-        <PlainTalk>
-          <p style={{ margin: 0 }}>
-            An Aperol Spritz costs you ~5 zł to make and sells for 22 zł — that&apos;s
-            <strong> 17 zł of margin per glass</strong>. Lift aperitivo attach to
-            <strong> 30% of evening orders</strong> and you&apos;ll add ~5,000–9,000
-            zł/month, easily covering the ~5,000 zł/year alcohol licence in the first
-            month. Drinks are how Italian dinner spots keep the lights on.
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> Polish casual-Italian benchmark data,
+            Italian gastronomic surveys, restaurant-economics literature
+            (Norman, Walker), POS attach-rate studies from Glovo/Wolt.
           </p>
-        </PlainTalk>
-      </>
-    ),
-  },
-  premiumToppingsAttach: {
-    title: "Premium toppings attach",
-    body: (
-      <>
-        <p>
-          Share of pizzas that add buffalo mozzarella (+6 zł), &apos;nduja
-          (+7 zł), truffle oil (+9 zł) etc. Charge ~3 zł of marginal food
-          cost, capture the rest as margin.
-        </p>
-        <p>
-          <strong>Where the money is:</strong> ~50% incremental margin — among
-          the cheapest ways to lift AOV.
-        </p>
-        <PlainTalk>
           <p style={{ margin: 0 }}>
-            A drizzle of truffle oil costs ~2 zł but customers pay 9 zł for it. If
-            <strong> 1 in 5 pizzas</strong> gets a premium topping on 80 orders/day,
-            you&apos;ve stacked ~7 zł of margin × 480 pizzas/month =
-            <strong> ~3,400 zł/month extra</strong>. Same dough, same oven — just better
-            ingredients on top, easier to merchandise than raising base prices.
+            <strong>Not modelled:</strong> attach correlations (customers
+            who buy coffee are more likely to buy dessert too). The model
+            treats each lever independently — in reality, lifting one
+            often lifts the others 1–3 pp as a side-effect.
           </p>
-        </PlainTalk>
+        </Methodology>
       </>
     ),
   },
-  pastaPrimoAttach: {
-    title: "Pasta primo attach",
-    body: (
-      <>
-        <p>
-          Share of dine-in tables that order a pasta course alongside the pizza
-          (Italian-style: primo = pasta first, then pizza as secondo). Average
-          32 zł, ~26% COGS.
-        </p>
-        <p>
-          <strong>Big AOV bump.</strong> Best lever where seating allows — most
-          relevant for indoor locations, less so for a takeaway truck.
-        </p>
-        <PlainTalk>
-          <p style={{ margin: 0 }}>
-            A primo pasta course is a second item from the same table — same staff,
-            same plate-pickup trip. At <strong>12% attach</strong> on 50 dine-in
-            orders/day you get ~6 pastas/day × 24 zł margin =
-            <strong> ~4,300 zł/month</strong>. Only works where customers actually sit
-            — but if you add seating, it&apos;s the single biggest dine-in lever you
-            have.
-          </p>
-        </PlainTalk>
-      </>
-    ),
-  },
+  // NOTE: coffee/dessert/antipasti/aperitivo/premiumToppings/pastaPrimo
+  // attach-lever help lives in ATTACH_HELP — that variant renders a live
+  // body computed from the lever's current price/COGS/attach values so the
+  // "In plain terms" numbers and extreme-value notes stay in sync.
   comboConversion: {
     title: "Combo conversion",
     body: (
       <>
         <p>
-          What % of mains convert to a Combo (pizza + drink + dessert at a
-          bundle discount of, say, 6 zł off vs à-la-carte).
+          % of mains that convert to a Combo (pizza + drink + dessert
+          at a bundle discount, e.g. 6 zł off vs à-la-carte).
         </p>
-        <p>
-          <strong>Why combos win:</strong> the combo pulls a second/third item
-          that <em>wouldn&apos;t have attached on its own</em>. Even with the
-          discount, the total order is bigger and the kitchen amortises one
-          ticket across more units.
-        </p>
-        <p>
-          <strong>Math:</strong> for each converted order, ticket goes up by
-          (addon price − discount); food cost goes up by (addon × addon COGS%).
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Combos pull a second / third item that wouldn&apos;t have
+            attached on its own — the customer decides once, not three
+            times. Watch the cannibalisation question: customers who
+            would have bought everything à-la-carte anyway just got
+            the discount for free, which is why blunt &quot;combo on
+            everything&quot; campaigns underperform targeted combos
+            aimed at low-attach segments.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             A combo is a &quot;yes ladder&quot; — say yes once and you&apos;ve bought
@@ -2040,6 +3712,81 @@ const HELP = {
             because the second and third items wouldn&apos;t have attached on their own.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Position combos as the default choice:</strong> menu
+              top-left with a hero photo. Don&apos;t let customers find them —
+              push them. Conversion lifts 2-3× when prominent.
+            </li>
+            <li>
+              <strong>The 6 zł discount is the lure, not the goal:</strong>
+              you&apos;re trading a 6 zł discount for an ~18 zł extra ticket.
+              Don&apos;t bigger the discount to drive conversion — bigger the
+              perceived value (better dessert, branded glass).
+            </li>
+            <li>
+              <strong>Lunch combo + dinner combo:</strong> daypart-specific
+              bundles convert better than a single all-day combo. Lunch = pizza
+              + drink (faster); dinner = pizza + dessert + coffee (slower,
+              higher ticket).
+            </li>
+            <li>
+              <strong>Tap-to-add on the POS:</strong> when the cashier opens a
+              pizza item, the POS should pop &quot;Make it a combo? +20 zł.&quot;
+              One tap. Built-in &gt; cashier discretion.
+            </li>
+            <li>
+              <strong>Track combo % weekly:</strong> if it drops below 15%
+              your placement is wrong or your value isn&apos;t obvious. If it&apos;s
+              above 40% you might be cannibalising à-la-carte attach (people
+              who&apos;d have bought ALL the items at full price).
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> conversion % (share of main orders that
+            take the combo), addon price (the cost of the bundled
+            drink+dessert as displayed), discount (how much the combo undercuts
+            à-la-carte) and addon COGS%.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formula:</strong> for each converted order:
+            <br />
+            ticket lift = (addon price − discount)
+            <br />
+            COGS lift = addon price × addon COGS%
+            <br />
+            Per-order margin lift = ticket lift − COGS lift. Multiplied by
+            (conversion% × orders/day × days) for monthly impact.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Why combos earn even at a discount:</strong> the addon
+            items wouldn&apos;t have attached à-la-carte. So the 6 zł
+            discount is real, but the alternative is selling 0 extras, not
+            selling them at full price. Math beats intuition here.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Realistic range:</strong> 15–35% conversion is healthy
+            for a Polish casual-Italian. Above 40% suggests you&apos;re
+            cannibalising à-la-carte; below 10% suggests the combo is
+            invisible or over-priced.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> QSR International combo-attach
+            benchmarks, Polish casual-dining studies, McDonald&apos;s
+            Extra-Value-Meal economics (published case studies).
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> the cannibalisation rate
+            (some combo buyers would have bought all items at full
+            price anyway). The model treats every combo conversion as
+            net-new attach — in reality 15–25% would have attached
+            anyway. Discount your monthly lift by that share for a
+            conservative estimate.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -2048,19 +3795,23 @@ const HELP = {
     body: (
       <>
         <p>
-          A <em>downside</em> stress lever. Customers under price pressure shift
-          toward Margherita and Marinara (the cheapest pies). Set how many
-          percentage points of share move, and the simulator drops AOV and COGS
-          proportionally.
+          A <em>downside</em> stress lever. Customers under price
+          pressure shift toward Margherita and Marinara (the cheapest
+          pies); the simulator drops AOV and COGS proportionally to the
+          pp share that moves.
         </p>
-        <p>
-          <strong>Use it to ask:</strong> &quot;If economy gets bad enough that
-          20% more orders are Margherita, do we still break even?&quot;
-        </p>
-        <p>
-          <strong>Default is 0 pp</strong> — turn it on only when you want to
-          model a stress scenario.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            A stress-test lever, not a forecast input — turn on to
+            answer &quot;if the economy makes another 20% of customers
+            pick Margherita, do we still break even?&quot;. The model
+            treats the shift as pure ticket loss; in practice some
+            downshift customers up-attach on coffee (the &quot;treat&quot;
+            behaviour), partially offsetting the AOV drop. Use
+            alongside the Sensitivity card for paired volume × ticket
+            downside scenarios.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             When wallets tighten, customers downgrade to the cheapest pie on the menu.
@@ -2071,6 +3822,69 @@ const HELP = {
             lands somewhere safe instead of on your cheapest item.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Design a profitable &quot;value champion&quot;:</strong>
+              one 42–45 zł pizza with strong margin (high-margin toppings
+              + smaller portion). Position it as &quot;our daily special&quot;
+              so the downshift lands there instead of on a Margherita.
+            </li>
+            <li>
+              <strong>Smaller portions, not lower prices:</strong> launch a
+              30 cm &quot;personal&quot; version at 60% of the full price.
+              Captures budget customers without devaluing the menu.
+            </li>
+            <li>
+              <strong>Combo the cheapest pizza:</strong> Margherita + drink
+              for 48 zł lifts the ticket back up and keeps the cost-conscious
+              customer happy. They feel they got a deal; you got the drink margin.
+            </li>
+            <li>
+              <strong>Watch leading indicators:</strong> when search trends
+              for &quot;cheap pizza Warsaw&quot; rise, you have ~6 weeks
+              before the shift hits your menu. Pre-launch the value champion
+              before you need it.
+            </li>
+            <li>
+              <strong>Don&apos;t panic-discount:</strong> a 10% discount on
+              all pizzas during a downturn cuts revenue by ~10% but only
+              shifts demand 3-5%. Targeted value items beat blanket
+              discounts every time.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> shift in percentage points of orders
+            moving toward the cheapest pies, ticket delta (per-order
+            revenue drop), COGS delta (per-order food-cost change). Default
+            0 pp — only turn on when modelling a downside scenario.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formula:</strong> effective AOV reduction = shift × ticket
+            delta. Effective COGS reduction = shift × COGS delta. Both
+            applied proportionally to all orders.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Realistic stress:</strong> 10–20 pp shift in a mild
+            recession; 25–35 pp in a severe one. Polish 2022–2023 inflation
+            shifted ~15 pp toward cheaper SKUs across casual-dining. Use
+            this lever to ask &quot;what&apos;s our worst case?&quot;.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> GUS consumer-confidence index,
+            Polish gastronomic sector inflation reports 2022–2024,
+            EU-wide downshift studies in QSR.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> the cross-price elasticity
+            between menu items (some customers downshift on price but
+            up-attach on coffee — &quot;treat&quot; behaviour). The
+            simulation treats the price-shift as pure ticket loss
+            without compensating attach changes.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -2079,19 +3893,20 @@ const HELP = {
     body: (
       <>
         <p>
-          What % of orders go through delivery (vs takeaway / dine-in). Delivery
-          changes the order economics in four places:
+          % of orders that go through delivery (vs takeaway / dine-in).
         </p>
-        <ul style={{ margin: "8px 0", paddingLeft: 20, listStyle: "disc" }}>
-          <li><strong>+ Packaging cost</strong> (boxes, bag, napkins) — ~2.50 zł/order</li>
-          <li><strong>+ Extra processor fee</strong> if you use a different processor for delivery</li>
-          <li><strong>+ Fee revenue</strong> if you charge a delivery fee (~8 zł)</li>
-          <li><strong>Different cohort</strong> — delivery customers usually have lower attach</li>
-        </ul>
-        <p>
-          Tune this to model channel-mix shifts: more delivery = more volume
-          but worse per-order margin.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            More delivery = more volume but worse per-order margin —
+            the central trade-off. The simulator treats channel mix as
+            substitution (delivery replaces dine-in 1:1), but a chunk
+            of platform orders are genuinely incremental demand
+            (customers who wouldn&apos;t have walked in). Validate the
+            incremental-vs-substitute split with the per-channel
+            contribution panel before re-allocating marketing spend
+            toward or away from delivery.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Every Glovo order looks the same on screen but earns ~30% less profit — the
@@ -2102,6 +3917,68 @@ const HELP = {
             the bottom line — same pizzas, smarter channel mix.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Run direct delivery (your own driver):</strong> 5–8 zł
+              delivery fee at full margin beats 28% Glovo commission. Works
+              for ~3 km radius if you have an e-bike + driver.
+            </li>
+            <li>
+              <strong>Don&apos;t list cheap pizzas on Glovo/Wolt:</strong>
+              the platform commission eats half the margin on a Margherita.
+              List only mains 50+ zł where the margin survives.
+            </li>
+            <li>
+              <strong>In-app loyalty pulls them off platforms:</strong>
+              &quot;5% off when you order through our app&quot; — your app
+              costs 0% commission. The discount is cheaper than the platform fee.
+            </li>
+            <li>
+              <strong>Optimise packaging cost:</strong> 2.50 zł per order ×
+              2,400 orders = 6,000 zł/month. Negotiate bulk on boxes or
+              switch to a cheaper kraft alternative.
+            </li>
+            <li>
+              <strong>Track per-channel attach:</strong> delivery customers
+              attach 30-50% less on coffee + dessert. Push delivery-specific
+              attach via &quot;add a dessert for 9 zł&quot; toggles on the
+              cart screen.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> share of orders via delivery (%),
+            packaging cost per order (zł), processor fee % for delivery
+            (different from in-store if you use a separate one), avg
+            marketplace commission % (~28% blended for Glovo+Wolt).
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formula:</strong> per-delivery-order: ticket × (1 −
+            commission%) − packaging cost. Versus in-store: ticket × (1 −
+            in-store processor fee). Difference × delivery share × orders/day
+            × days = monthly delivery profit drag.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Realistic range:</strong> 15–45% delivery share for a
+            Polish pizzeria with platform presence. Pure-takeaway trucks
+            often 0–10%; mall food-courts can hit 50%+. Match your real
+            channel mix or you&apos;ll mis-forecast margin.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> Glovo and Wolt commission schedules
+            (PL 2024), KPMG delivery-economics reports, Polish casual-Italian
+            channel-mix surveys.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> platform-driven demand
+            (delivery might be 30% of revenue but 60% incremental — without
+            Glovo those orders might not exist at all). Test by toggling
+            the lever off and comparing total order volume against your
+            actuals.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -2112,30 +3989,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Ten recipe + supplier &quot;what ifs&quot; that flex the base-pizza
-          COGS. Each lever has two numbers:
+          Ten recipe + supplier &quot;what ifs&quot; that flex the
+          base-pizza COGS. Each lever has a share-of-COGS weight and
+          a cost-change delta.
         </p>
-        <ul style={{ margin: "8px 0", paddingLeft: 20, listStyle: "disc" }}>
-          <li>
-            <strong>Share of COGS</strong> — what fraction of base-pizza
-            food cost this ingredient represents. Calibrate to your actual
-            recipe (mozz is ~28%, tomato ~10%, flour ~6%, etc).
-          </li>
-          <li>
-            <strong>Cost change</strong> — the &quot;what if&quot; itself.
-            +20% = supplier raised price 20% or recipe uses 20% more. −10% =
-            cheaper supplier or trimmed portion.
-          </li>
-        </ul>
-        <p>
-          Impact = share × delta, applied to base-pizza COGS only. So a 25%
-          cheese line getting 10% more expensive lifts total COGS by 2.5 pp.
-          Attach items (coffee, dessert, etc) keep their own COGS.
-        </p>
-        <p className="v2-muted text-sm">
-          Toggle a single lever off to compare with vs without, or use the
-          {" "}<em>All off</em> button up top to clear every stress test.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Useful for sourcing decisions and supplier negotiations:
+            quantify the margin impact of a 10% mozzarella hike before
+            agreeing to it, or the gain from a tomato-supplier switch.
+            The stress is recipe-localised (base pizza only, attach
+            items unaffected), so this lever is the supplier-side
+            counterpart to the attach levers — same goal of margin
+            management, opposite end of the value chain.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Cheese is the single biggest line in your food cost — usually
@@ -2146,6 +4014,70 @@ const HELP = {
             trim portions. Use these levers to plan for that before it happens.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Hedge the cheese line:</strong> annual contracts with
+              two suppliers (50/50 split) buffer you against single-supplier
+              shocks. Costs ~1% on average price; saves 8–12% in a spike year.
+            </li>
+            <li>
+              <strong>Test cheaper alternatives blind:</strong> fior di latte
+              vs buffalo, generic mozzarella vs branded — most customers
+              can&apos;t tell. A blind taste test of 20 friends costs you
+              ~100 zł of pizza and might save you 5,000 zł/year on cheese.
+            </li>
+            <li>
+              <strong>Pre-buy in the dip:</strong> tomato prices peak summer,
+              dip November–February. Buy 6 months of passata in Dec at the
+              low — locks in cost, saves freezer space if you portion right.
+            </li>
+            <li>
+              <strong>Recipe-redesign before price hikes hit:</strong> if a
+              stress lever shows +10% cheese ruins your P&amp;L, develop a
+              lighter-cheese recipe NOW (50 g less per pie) and have it
+              ready to launch as &quot;our new lighter Margherita&quot;.
+            </li>
+            <li>
+              <strong>Use the stress test for supplier negotiation:</strong>
+              show the supplier the +10% scenario and what it costs you.
+              Hard data wins discounts that vibes can&apos;t.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> per-ingredient pair of (share of base-pizza
+            COGS, cost-change %). 10 levers cover: cheese, tomato, flour, oil,
+            yeast, dough additives, premium toppings, paper goods, packaging,
+            misc. Each is independently toggleable.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formula:</strong> per-lever COGS impact = lever.share × lever.delta.
+            Applied to base-pizza COGS only — attach items (coffee, drinks,
+            etc.) keep their own COGS unaffected. All enabled levers sum.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Default shares (calibrate to your recipes):</strong>
+          </p>
+          <ul style={{ margin: "0 0 4px", paddingLeft: 18 }}>
+            <li>Cheese 28%, tomato 10%, flour 6%, oil 3%</li>
+            <li>Yeast 1%, dough additives 2%, premium toppings 15%</li>
+            <li>Paper goods 4%, packaging 6%, misc 25%</li>
+          </ul>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> Italian pizzeria recipe-cost data,
+            Polish supplier price-index history 2020–2024, Eurostat
+            food-price indices for stress-test ranges.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> substitution elasticity (if cheese
+            spikes, you don&apos;t just pay more — you might switch type or
+            cut portion). The model assumes recipe stays fixed at the new
+            price. Use the lever to ask &quot;what if I do nothing?&quot;,
+            then plan a counter-move.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -2154,16 +4086,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Real-world volume isn&apos;t flat. Rainy days kill outdoor truck
-          service; heatwaves drive patio crowds; Easter Sunday is closed; NYE
-          is a peak. This block lets you model all of that.
+          Real-world volume isn&apos;t flat. Rainy days kill outdoor
+          truck service; heatwaves drive patio crowds; Easter is closed;
+          NYE is a peak. This block models all of it.
         </p>
-        <p>
-          The levers compose into a single &quot;effective orders per day&quot;
-          and &quot;effective days open&quot; — which then feed the whole P&amp;L
-          downstream. Live preview at the bottom of the card shows you the
-          composite impact.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Outdoor-pitch trucks live and die by these levers, and
+            unmodelled weather is the single biggest reason naïve P&amp;L
+            forecasts disappoint. Indoor / mall locations should run
+            this card mostly disabled (weather doesn&apos;t affect
+            access). The master toggle in the header switches the whole
+            adjustment on/off — useful for &quot;what does the P&amp;L
+            look like ignoring seasonality?&quot; sanity checks.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Weather isn&apos;t a feel-good factor — it directly changes your day. A
@@ -2173,6 +4110,68 @@ const HELP = {
             push, indoor seating) and you can claw most of it back.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Build a rainy-day playbook:</strong> auto-trigger Glovo
+              promo + Instagram &quot;stay dry, we deliver&quot; story when
+              forecast shows rain. Recovers 8–15% of lost walk-up.
+            </li>
+            <li>
+              <strong>Hot-day prep checklist:</strong> chill extra spritz
+              ingredients, stage outdoor furniture, schedule the extra staff
+              member when forecast hits 25°C+. Don&apos;t miss the upside.
+            </li>
+            <li>
+              <strong>Track weather vs orders weekly:</strong> overlay your
+              POS daily orders with weather data — calibrate your multipliers
+              every quarter from real data, not defaults.
+            </li>
+            <li>
+              <strong>Pre-plan the holidays 90 days out:</strong> NYE menu,
+              Valentine&apos;s booking system, Easter closure communications.
+              Last-minute scrambles cost upside.
+            </li>
+            <li>
+              <strong>Don&apos;t over-correct on bad weeks:</strong> one rainy
+              week isn&apos;t a trend. Calibrate against monthly weather
+              averages, not isolated events.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> 7 sub-levers — rainy-day multiplier &amp;
+            share, heatwave bonus &amp; share, holiday closures, peak days &amp;
+            multiplier, school-holiday lunch dip, event days. Each has its
+            own (i) with full per-lever methodology.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>How it composes:</strong> the levers blend into an
+            &quot;effective orders/day × effective days/month&quot; pair via
+            a weighted average:
+            <br />
+            effective = base × (share×multiplier + (1−share)×1.0) for each
+            lever, then composed across all levers.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Default calibration:</strong> Warsaw 2024 IMGW
+            meteorological averages — ~30% rainy days, ~10% heatwave evenings
+            in summer, ~12 fixed holiday closures/year (Easter, Christmas,
+            Boże Ciało, 15 Aug, 1 Nov, 11 Nov, 1 May, 3 May).
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> IMGW (Polish meteorological service)
+            climate averages, GUS holiday-calendar data, owner-operator
+            surveys on weather-revenue correlation.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> weather extremes (snow days,
+            heatwaves &gt;35°C that hurt rather than help). The model
+            assumes mild Polish weather distribution; for
+            mountain/coastal locations, override the defaults.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -2181,22 +4180,20 @@ const HELP = {
     body: (
       <>
         <p>
-          Two knobs work together:
+          Two knobs: rainy-day multiplier (how much rain hurts volume,
+          default 0.75 = −25%) and rainy share (% of days in a typical
+          month with meaningful rain, Warsaw ~30%).
         </p>
-        <ul style={{ margin: "8px 0", paddingLeft: 20, listStyle: "disc" }}>
-          <li>
-            <strong>Multiplier</strong> — how much rain hurts volume. 0.75 = rainy
-            days run 25% below normal.
-          </li>
-          <li>
-            <strong>Rainy share</strong> — what % of days are rainy in a typical
-            month. Warsaw averages ~30%.
-          </li>
-        </ul>
-        <p>
-          <strong>Combined:</strong> 0.30 × 0.75 + 0.70 × 1.00 = 0.925, so the
-          average month runs at 92.5% of theoretical volume just from rain.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The shelter design of the pitch is the strategic decision
+            embedded in this lever — exposed outdoor trucks dip the
+            deepest on rain, covered indoor pitches barely move. A
+            capex on a permanent awning / heated patio buys a permanent
+            uplift in the rainy multiplier; quantify the lift here
+            before signing the construction contract.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             When it pours, walk-up customers vanish — a <strong>0.55 multiplier</strong>
@@ -2207,6 +4204,66 @@ const HELP = {
             <strong> ~9,000 zł/month</strong>.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Awning + heat lamps:</strong> a 4 m retractable awning
+              + 2 patio heaters cost ~3,000 zł one-time. Pays back in
+              ~2 months of recovered rainy-day revenue.
+            </li>
+            <li>
+              <strong>Weather-triggered ad spend:</strong> set up automation
+              that boosts Instagram Story budget when rain forecast hits
+              80%+. Capture delivery demand the day it shifts.
+            </li>
+            <li>
+              <strong>Indoor pickup zone:</strong> a dry covered area where
+              walk-up customers can wait. Cuts the &quot;I&apos;m getting
+              soaked, I&apos;ll skip it&quot; abandonment.
+            </li>
+            <li>
+              <strong>Rainy-day combo:</strong> &quot;wet outside? warm
+              pizza + hot espresso for 49 zł&quot; — promo only fires when
+              weather API says &gt;5mm/h. Targeted offers convert better
+              than blanket discounts.
+            </li>
+            <li>
+              <strong>Verify with your POS data:</strong> the default 0.75
+              multiplier is a starting point. Overlay 90 days of rainy vs
+              dry day POS volume to calibrate to your specific pitch.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> rainy-day multiplier (volume on rainy
+            vs dry days), rainy share (% of days in a typical month with
+            meaningful rain). Two separate sliders.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formula:</strong> effective multiplier = rainyShare ×
+            rainyMultiplier + (1 − rainyShare) × 1.0. Applied to base
+            orders/day. So 30% rainy × 0.75 + 70% × 1.0 = 0.925 → average
+            month runs at 92.5% of theoretical volume just from rain.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Realistic range:</strong> multiplier 0.55–0.85 depending
+            on shelter — exposed truck pitch dips deeper (0.55); covered
+            indoor pitch barely 0.85. Rainy share 25–35% in PL (highest
+            April-July and October-December).
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> IMGW Warsaw climate averages 2014-2024,
+            owner-operator weather-correlation surveys.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> drizzle vs downpour distinction
+            (a light shower might lift delivery 20%; a thunderstorm kills
+            both walk-up AND delivery). The model treats &quot;rainy&quot;
+            as a single category — calibrate the multiplier to your
+            blended rain experience.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -2215,16 +4272,22 @@ const HELP = {
     body: (
       <>
         <p>
-          Hot patio evenings (25 °C+) drive +40% volume — people want to be
-          outside, eat lighter, drink more. Set the multiplier and the share of
-          evenings hot enough to fire it (~10% in Warsaw, way higher in summer
-          months).
+          Hot patio evenings (25 °C+) drive +40% volume — people stay out
+          longer, eat lighter, drink more. Tune the multiplier and the
+          share of evenings hot enough to fire it (~10% Warsaw annual,
+          ~30% Jun-Aug).
         </p>
-        <p>
-          <strong>Combine with seasonal multipliers</strong> — the simulator
-          already has a quarterly summer bonus, this stacks on top for the hot
-          evening micro-effect.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The bonus stacks with quarterly summer seasonality — it
+            captures the hot-evening micro-effect on top of the broad
+            Jun-Aug uplift, so don&apos;t double-count by inflating
+            summer multiplier too. Outdoor seating capacity is the
+            mechanical unlock: no patio means the bonus is mostly a
+            delivery uptick; a real patio means an evening boom.
+            Useful for evaluating a patio-expansion capex case.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             When it hits 28°C+, people stay out longer, order spritzes, and bring
@@ -2235,6 +4298,67 @@ const HELP = {
             evenings.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Pre-stock for the heatwave:</strong> Aperol, prosecco,
+              spritz glasses, ice — check inventory weekly Jun-Aug. Running
+              out of Aperol at 30°C is leaving 1,000+ zł on the patio.
+            </li>
+            <li>
+              <strong>Outdoor seating multiplier:</strong> add cheap café
+              tables when forecast shows 25°C+. Each extra 4-seater fills
+              twice per evening = 8 covers × 75 zł ≈ 600 zł / table /
+              evening.
+            </li>
+            <li>
+              <strong>Cold-drink prep:</strong> chill the prosecco bottles
+              in advance — warm spritz is a complaint. Buy a dedicated
+              under-counter fridge if you don&apos;t have one.
+            </li>
+            <li>
+              <strong>Heatwave staffing:</strong> add a runner +1 server
+              for hot evenings. Faster service = more covers; slow service
+              in heat = walkouts.
+            </li>
+            <li>
+              <strong>Promote cooler dishes:</strong> push lighter pizzas
+              (Margherita, prosciutto + arugula) over heavy meat ones in
+              heat. Quicker to make, more appealing to hot customers.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> heatwave multiplier (volume on 25°C+
+            evenings), heatwave share (% of evenings hot enough to trigger).
+            Two separate sliders.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formula:</strong> effective multiplier = heatwaveShare ×
+            heatwaveMultiplier + (1 − heatwaveShare) × 1.0. Applied to base
+            orders/day during the relevant season — stacks ON TOP of the
+            quarterly summer seasonality multiplier (separate field).
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Realistic range:</strong> multiplier 1.20–1.60 depending
+            on outdoor seating capacity. Truck with no patio: 1.10
+            (delivery uptick only); 8-seat patio: 1.30; 20+ seat patio: 1.50+.
+            Share 8–15% across the year (mostly Jun-Aug evenings).
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> IMGW Warsaw 2014-2024 max-temperature
+            distribution, hospitality-sector weather-revenue correlation
+            studies.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> extreme heat (35°C+ hurts
+            instead of helping — cooks struggle, customers stay indoors with
+            AC). The model assumes a moderate heatwave (25-32°C). For PL
+            this is fine; for southern Europe, override the multiplier
+            curve.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -2243,14 +4367,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Days each month you&apos;re forced closed by the calendar — Easter
-          Sunday, 15 August, 25 December, Boże Ciało (Corpus Christi),
-          1 November. About 12 closed days a year ÷ 12 ≈ 1 per month average.
+          Days each month you&apos;re forced closed by the calendar —
+          Easter Sunday, 15 August, 25 December, Boże Ciało (Corpus
+          Christi), 1 November. About 12 closed days/yr ÷ 12 ≈ 1/month.
         </p>
-        <p>
-          <strong>Effect:</strong> reduces effective days open. If you&apos;re
-          normally 28 days/mo and lose 1 day, you lose ~3.6% of monthly revenue.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The hit is bigger than the gross share suggests, because
+            fixed costs don&apos;t shrink on a closed day — per-open-
+            day fixed burden grows. PL restaurants are NOT legally
+            barred from trading on standard holidays (the Sunday ban
+            doesn&apos;t cover gastronomy); strategic question is
+            whether premium holiday volume justifies the overtime
+            premiums + supplier-availability gaps + staff morale cost.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Every closed day is a hole in the month — 28 normal days vs 27 means
@@ -2260,6 +4391,69 @@ const HELP = {
             before to capture some of that demand early.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Push the day-before promo:</strong> &quot;closed tomorrow
+              for Easter — stock up tonight&quot;. Lifts the previous evening
+              by 15-25% as customers pre-buy.
+            </li>
+            <li>
+              <strong>Check if you legally CAN open:</strong> some PL holidays
+              (Easter Sunday, 1 May, 11 Nov) have trading restrictions for
+              certain business types. Confirm with your accountant — if
+              you can open, your competition probably won&apos;t.
+            </li>
+            <li>
+              <strong>Holiday-special menu the day before:</strong> Christmas
+              Eve carp-free pizza? Easter brunch combo? Frame it as a
+              destination so people come on the DAY BEFORE the closure.
+            </li>
+            <li>
+              <strong>Reduce closures by rotating staff:</strong> if you
+              MUST close because of staff legal rest, see if a rotating
+              schedule keeps the truck open across all 12 closures with
+              the same team headcount.
+            </li>
+            <li>
+              <strong>Use the closure for big-prep:</strong> deep-clean,
+              equipment service, dough trial-batches. Otherwise lost
+              revenue is also lost prep time.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> number of forced-closure days per month
+            (slider). Default 1 (~12/year ÷ 12).
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formula:</strong> effective days/month = base days
+            × ((daysOpen − holidayClosed) ÷ daysOpen). E.g. 28 base − 1
+            holiday = 27 effective → 96.4% of monthly volume.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Polish fixed-closure calendar:</strong>
+          </p>
+          <ul style={{ margin: "0 0 4px", paddingLeft: 18 }}>
+            <li>1 Jan (New Year), 6 Jan (Epiphany)</li>
+            <li>Easter Sunday + Monday (movable)</li>
+            <li>1 May, 3 May (Constitution Day)</li>
+            <li>Boże Ciało / Corpus Christi (movable, 60 days after Easter)</li>
+            <li>15 Aug (Assumption), 1 Nov (All Saints), 11 Nov (Independence)</li>
+            <li>25 Dec, 26 Dec (Christmas)</li>
+          </ul>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> Polish labour code (Kodeks Pracy)
+            holiday calendar, GUS official non-working-days list.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> distinction between &quot;closed
+            by law&quot; vs &quot;closed by choice&quot; (some pizzerias
+            DO open on Easter or 15 Aug). If you plan to operate on
+            standard holidays, set this to 0 and let revenue flow.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -2268,15 +4462,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Calendar days that run hot: NYE, Valentine&apos;s, Mother&apos;s Day,
-          Father&apos;s Day, Halloween, Black Friday. Set how many you have per
-          month and a peak multiplier (default 1.60 = +60%).
+          Calendar days that run hot: NYE, Valentine&apos;s, Mother&apos;s
+          Day, Father&apos;s Day, Halloween, Black Friday. Configure
+          count per month + a peak multiplier (default 1.60 = +60%).
         </p>
-        <p>
-          <strong>Why it matters:</strong> 5 peak days at 1.6× can add a whole
-          extra normal day&apos;s revenue to the month. Worth investing in
-          extra staffing on those nights.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Asymmetric risk: under-staffing the peak costs more than
+            the extra labor ever does — blown service on Valentine&apos;s
+            to thirty couples is a brand wound, not a margin question.
+            Capacity ceiling caveat: if your kitchen saturation maxes
+            at 1.4× normal, the modelled peak multiplier overstates
+            upside — cross-check against the kitchen saturation KPI
+            before staffing or taking reservations.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Valentine&apos;s Day on a Friday can do <strong>2–3× a normal Friday</strong>
@@ -2286,6 +4486,71 @@ const HELP = {
             under-staff and you blow the line and lose 30+ angry customers in one night.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Book reservations 14 days out:</strong> Valentine&apos;s,
+              Mother&apos;s Day, NYE — open a booking link two weeks ahead.
+              Eliminates the no-show + walk-in chaos.
+            </li>
+            <li>
+              <strong>Pre-fix special menus:</strong> a 4-course Valentine&apos;s
+              tasting at 89 zł/person beats à-la-carte chaos — faster
+              kitchen throughput, higher ticket, easier to plan supplies.
+            </li>
+            <li>
+              <strong>Over-staff peak days deliberately:</strong> +1 cook, +1
+              server, +1 runner. Under-staff costs more than the labor
+              overrun ever does.
+            </li>
+            <li>
+              <strong>Pre-prep more dough:</strong> a peak day can run 2×
+              your dough. Pre-portion + cold-prove the day before — saves
+              35-45 min of fresh-dough waiting.
+            </li>
+            <li>
+              <strong>Plan the peak calendar 90 days out:</strong> mark
+              Valentine&apos;s, Mother&apos;s/Father&apos;s Day, Halloween,
+              Black Friday, NYE in admin. Each gets a unique menu + staffing
+              + comms plan.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> number of peak days per month (default
+            ~0.4, i.e. ~5/year ÷ 12), peak multiplier (default 1.60 = +60%
+            volume).
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formula:</strong> peak contribution =
+            (peakDaysPerMonth × peakMultiplier + (daysOpen − peakDays) × 1.0)
+            ÷ daysOpen. Multiplies through base orders/day for the month.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Common Polish peak days:</strong> 14 Feb
+            (Valentine&apos;s), 26 May (Mother&apos;s), 23 Jun
+            (Father&apos;s), 31 Oct (Halloween), Black Friday weekend,
+            31 Dec (NYE), bank-holiday-eve Fridays.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Realistic range:</strong> multiplier 1.30–2.50
+            depending on event. Valentine&apos;s on a Friday: 2.0-2.5×.
+            NYE: 1.5-2× (early dinner only). Random Halloween Tuesday:
+            1.20-1.40×.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> POS data from Italian-style PL
+            chains (Da Grasso, Pizza Hut PL), holiday-dining surveys,
+            owner-operator peak-day reports.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> capacity constraints on peak
+            days (a 2× peak day might be limited by kitchen throughput,
+            not demand). The model assumes you can serve the multiplier;
+            if your oven caps at 60 pizzas/hr, the peak gets clipped.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -2294,16 +4559,20 @@ const HELP = {
     body: (
       <>
         <p>
-          July and August: schools closed, offices half-empty, lunch covers
-          drop. Default multiplier 0.85 means 15% lunch-volume haircut, but
-          only for those two months — the simulator averages 2/12 of the year
-          for the headline.
+          Jul-Aug: schools closed, offices half-empty, lunch covers drop.
+          Default multiplier 0.85 = 15% lunch haircut for those two months
+          (the simulator averages 2/12 of the year for the headline).
         </p>
-        <p>
-          <strong>Counter-balance:</strong> tourists and outdoor festival
-          evenings often more than make up for the lunch drop — make sure the
-          summer seasonal multiplier (in Assumptions) reflects both effects.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Pitch type drives whether this lever even applies: office-
+            heavy locations see a deep summer-lunch dip; tourist-heavy
+            locations might see lunch volume invert and increase. Make
+            sure the summer seasonal multiplier reflects whichever
+            effect dominates so you don&apos;t double-count tourist
+            uplift with both levers pulling in the same direction.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             When schools close in July–August, the office lunch crowd vanishes — your
@@ -2313,6 +4582,67 @@ const HELP = {
             energy into evening service when the tourists arrive.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Cut lunch headcount Jul-Aug:</strong> remove one
+              staff per lunch shift. Saves ~2,500 zł/month without
+              hurting service if covers really did drop 30%.
+            </li>
+            <li>
+              <strong>Pivot to tourist crowds:</strong> bilingual menu,
+              Instagram-friendly Margherita with basil leaf, English-speaking
+              staff. Tourist evenings often EXCEED office lunch revenue.
+            </li>
+            <li>
+              <strong>Catering / corporate-event push:</strong> offices still
+              run summer team-building. Build a catering offer (10 pizzas
+              delivered for 580 zł). Captures the displaced lunch crowd
+              in batch.
+            </li>
+            <li>
+              <strong>Shorter summer lunch hours:</strong> 12:00-13:30 instead
+              of 12:00-15:00. Same revenue, half the labor.
+            </li>
+            <li>
+              <strong>Plan a summer menu refresh:</strong> lighter items
+              (insalata, prosciutto with melon), aperitivo-led evenings.
+              Use the dip as an excuse to seasonally rotate.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> single multiplier (default 0.85 = 15%
+            lunch volume haircut). Applies only to Jul-Aug; the simulator
+            averages across the 2/12 months of the year for the headline
+            monthly figure.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formula:</strong> effective summer monthly = base
+            × (multiplier × 2/12 + 1.0 × 10/12). So a 0.85 multiplier
+            = ~97.5% of theoretical annual volume just from the
+            lunch-dip effect.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Realistic range:</strong> 0.70-0.95. Office-heavy
+            pitch (Mokotów, Wola): 0.70 (deep dip). Tourist-heavy
+            (Old Town, Kazimierz): 0.95+ (might even invert if
+            tourist evenings dominate). Residential: 0.85 (medium).
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> Polish gastronomic-sector
+            seasonality data, Warsaw office-vacancy reports, owner-operator
+            summer-revenue surveys.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> the offsetting summer
+            tourist evening bump (which the quarterly summer multiplier
+            handles separately). Don&apos;t double-count — if you&apos;ve
+            already set summer ×1.15 in the seasonality card, the school
+            holiday dip should net to a smaller effect.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -2321,15 +4651,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Days when the truck pitch hosts a street fair, food-truck rally,
-          Nocny Market, concert, sports event etc. You set how many per month
-          and the multiplier (default 1.50 = +50%).
+          Days when the pitch hosts a street fair, food-truck rally,
+          Nocny Market, concert, sports event. Configure count per month
+          + multiplier (default 1.50 = +50%).
         </p>
-        <p>
-          <strong>How to use:</strong> if you&apos;ve booked the truck for a
-          known festival weekend, bump event days to 2 and the multiplier to
-          2.0× to see if it&apos;s worth the operational hassle.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Unlike calendar peak days, event days are elective — you
+            choose which festivals to vendor. The trap is comparing
+            gross event revenue to a normal day: subtract vendor fees,
+            permits, transport, event-day overtime and spoilage risk
+            and many festivals net less than the Saturday you skipped.
+            Repeat-vendoring the same events compounds through brand
+            recognition; chasing one-shot fees doesn&apos;t.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             A food-truck rally weekend can do <strong>1.5–3× a normal day</strong> with
@@ -2339,6 +4675,67 @@ const HELP = {
             some trucks earn 30% of their annual revenue from 20 weekends.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Book event slots 6 months out:</strong> the best
+              festivals (Nocny Market, Mazury Hip Hop, OFF Festival) book
+              vendors way ahead. Don&apos;t wait for last-minute slots —
+              they go to the lowest-quality trucks.
+            </li>
+            <li>
+              <strong>Calculate per-event ROI:</strong> some festivals
+              charge 3-8k zł vendor fee. Run the numbers: at 2× multiplier
+              and 200k base monthly, you need ~7,000 zł of net upside for
+              a 5k fee to pay back.
+            </li>
+            <li>
+              <strong>Event-specific menu:</strong> simpler, faster pizzas
+              (3-4 SKUs max). 8-min ticket times at events vs 12 at the
+              truck. Customers tolerate less wait outdoors.
+            </li>
+            <li>
+              <strong>Cash + card both:</strong> events still see lots of
+              cash. Have backup payment options — a broken card terminal
+              at 2× volume is a disaster.
+            </li>
+            <li>
+              <strong>Plan crew rotation:</strong> 12-hour event days
+              destroy a single team. Two shifts (day + evening crew) with
+              an overlap helps maintain quality through the rush.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> number of event days per month
+            (typically 1-4), event multiplier (default 1.50 = +50%
+            volume). Configure higher (2.0-3.0×) if you have specific
+            festival bookings.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formula:</strong> identical structure to peak-days
+            lever: effective = (eventDays × eventMultiplier + (daysOpen
+            − eventDays) × 1.0) ÷ daysOpen. Multiplies through orders/day.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Realistic events for a PL pizza truck:</strong>
+            food-truck rallies (Nocny Market — Warsaw), street fairs (Open
+            Mokotów), Christmas markets (Dec), summer concerts at parks,
+            festival bookings (OFF, Krakow Live, Selector).
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> Polish food-truck association event
+            calendars, vendor-revenue surveys at major festivals,
+            owner-operator interviews on event chasing strategy.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> event vendor fees (booth rental,
+            permits, electricity hookup). Subtract these from the event
+            revenue before celebrating — a 5k zł vendor fee plus 2k zł of
+            event-specific costs needs ~7k zł of net margin to break even.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -2349,21 +4746,20 @@ const HELP = {
     body: (
       <>
         <p>
-          The classic top-down profit statement, one line per cost bucket:
+          The classic top-down profit statement: revenue down through
+          ingredients, labor and fixed to net profit.
         </p>
-        <ol style={{ margin: "8px 0", paddingLeft: 20 }}>
-          <li><strong>Revenue</strong> — orders × ticket × days</li>
-          <li><strong>− Ingredients (COGS)</strong> — food cost</li>
-          <li><strong>= Gross profit</strong> — what&apos;s left after food</li>
-          <li><strong>− Labor</strong> — everyone on the team, drilled down by role</li>
-          <li><strong>− Fixed costs</strong> — rent, software, accountant, etc</li>
-          <li><strong>= Net profit / (loss)</strong> — the bottom line</li>
-        </ol>
-        <p>
-          The sentence below the table says how far above or below break-even
-          you&apos;re running — &quot;5.2 above&quot; means you&apos;re doing 5.2
-          more orders/day than the minimum needed to not lose money.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Read top to bottom and the question being asked changes at
+            each line: gross profit asks &quot;is the recipe priced
+            right?&quot; — labor asks &quot;is the schedule sized
+            right?&quot; — fixed asks &quot;is the location right?&quot;.
+            The sentence below the table reports margin-of-safety in
+            orders/day, which is the working-capital question:
+            &quot;how many bad days before this hurts?&quot;.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Think of the P&amp;L as a stack of glasses: revenue pours in at the top,
@@ -2374,6 +4770,67 @@ const HELP = {
             the way — that&apos;s where the money lives.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Review monthly, not weekly:</strong> a single week is
+              too noisy to act on. Compare month-over-month — variances of
+              &gt;3 pp on any line need investigation.
+            </li>
+            <li>
+              <strong>Watch prime cost (COGS + labor):</strong> together
+              should be ≤60% of revenue. Above 65% you&apos;re losing money
+              even at full capacity. The two together is more telling than
+              either alone.
+            </li>
+            <li>
+              <strong>Net margin target:</strong> 8-12% for casual-Italian
+              in Poland. Below 5% you&apos;re running a charity; above 15%
+              you&apos;re probably underpaying staff or accounting for
+              owner labor wrong.
+            </li>
+            <li>
+              <strong>Compare to break-even regularly:</strong> the
+              &quot;5.2 above&quot; sentence below the table shows your
+              safety margin. Below 2 orders/day above is too thin.
+            </li>
+            <li>
+              <strong>Run the P&amp;L sensitivity:</strong> what happens at
+              −15% revenue? At +20% rent? Use the Sensitivity card — it
+              shows which inputs the bottom line is most fragile to.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> everything from the Scenario, Behaviour
+            and Weather cards flows here. The P&amp;L is a read-only
+            aggregation — change any input above and watch every line move.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formulas (top-down):</strong>
+          </p>
+          <ul style={{ margin: "0 0 4px", paddingLeft: 18 }}>
+            <li>Revenue = orders × ticket × days × weather/event multipliers</li>
+            <li>COGS = revenue × effective COGS% (incl. attach &amp; ingredient stresses)</li>
+            <li>Gross profit = revenue − COGS</li>
+            <li>Labor = Σ(headcount × hours × 4.345 × rate × 1.22)</li>
+            <li>Net profit = gross profit − labor − fixed costs − misc</li>
+            <li>Break-even orders/day = fixed ÷ (ticket × (1 − COGS%) × days)</li>
+          </ul>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> standard restaurant accounting
+            (Schmidgall, &quot;Hospitality Industry Managerial Accounting&quot;),
+            Polish UoR (Ustawa o Rachunkowości) gastronomic reporting
+            standards.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> CIT (corporate income tax) and
+            VAT timing — handled by the separate CIT-rate field. Also no
+            depreciation by default (use the Depreciation field if you
+            have CAPEX to amortise).
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -2382,19 +4839,19 @@ const HELP = {
     body: (
       <>
         <p>
-          Where each złoty goes. A healthy Neapolitan truck looks roughly:
+          Where each złoty goes. The fastest weekly diagnostic in the
+          business.
         </p>
-        <ul style={{ margin: "8px 0", paddingLeft: 20, listStyle: "disc" }}>
-          <li>~30% ingredients</li>
-          <li>~28% labor</li>
-          <li>~8% fixed costs</li>
-          <li>~2% card fees</li>
-          <li>~30% net profit</li>
-        </ul>
-        <p>
-          If labor or COGS slice gets above ~32%, drill into the source
-          (recipe costs? schedule bloat?) before raising prices.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The slice that bloats is the slice that reveals the
+            problem: COGS → recipe or portion drift; labor → schedule
+            bloat or under-pricing; fixed → rent escalator or unchecked
+            software subscriptions. Don&apos;t reach for a price hike
+            to fix a cost problem — diagnose which slice expanded
+            before treating the symptom on the wrong line.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             If any slice of the pie balloons past <strong>32%</strong>, you have your
@@ -2405,6 +4862,64 @@ const HELP = {
             cost a month of profit.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Screenshot the pie weekly:</strong> save it Monday
+              morning. Compare week-over-week. Visible drift on any slice
+              is your early-warning signal.
+            </li>
+            <li>
+              <strong>If COGS bloats:</strong> first check the Recipes admin
+              for price drift. Then weigh actual portions. Then audit
+              waste.
+            </li>
+            <li>
+              <strong>If labor bloats:</strong> overlay the hourly heatmap
+              with your schedule. Cut the over-staffed hour — almost
+              always 14:00-16:00 or after 21:00.
+            </li>
+            <li>
+              <strong>If fixed costs bloat:</strong> something one-off
+              (insurance renewal, software upgrade) or something is
+              compounding (rent escalator, new ZUS rate). Audit line by
+              line.
+            </li>
+            <li>
+              <strong>Net profit slice &lt; 8%?</strong> Don&apos;t panic-cut
+              — diagnose which slice expanded. Pricing problems and cost
+              problems have different fixes.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> the same monthly P&amp;L lines feed
+            this. Each slice = (line item ÷ revenue) × 100%. The chart
+            renders top-5 categories plus a &quot;misc&quot; rollup.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Healthy Polish casual-Italian shares:</strong>
+          </p>
+          <ul style={{ margin: "0 0 4px", paddingLeft: 18 }}>
+            <li>Ingredients (COGS) ~28-32%</li>
+            <li>Labor ~25-30%</li>
+            <li>Fixed costs ~6-10%</li>
+            <li>Card fees + packaging ~3-5%</li>
+            <li>Net profit ~25-32%</li>
+          </ul>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> NRA (National Restaurant Association)
+            benchmarks, Polish PHG hospitality reports, owner-operator
+            P&amp;L composites.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> CIT (separate field), founder
+            opportunity cost (the unpaid hours of the owner). If you do
+            30 hours/week unpaid, mentally subtract ~5,000 zł/month from
+            net to value your time honestly.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -2412,46 +4927,22 @@ const HELP = {
     title: "Operations KPIs",
     body: (
       <>
-        <p>The eight numbers professional restaurateurs watch every week:</p>
-        <ul style={{ margin: "8px 0", paddingLeft: 20, listStyle: "disc" }}>
-          <li>
-            <strong>Food cost % of revenue</strong> — ingredient discipline.
-            Target ≤ 30%. Over 32% means recipes are leaking margin or prices
-            are too soft.
-          </li>
-          <li>
-            <strong>Labor % of revenue</strong> — target ≤ 30%. Over 35%? You&apos;re
-            overstaffed or under-pricing.
-          </li>
-          <li>
-            <strong>Prime cost %</strong> — COGS + labor as % of revenue. The
-            single most-watched number in the industry; ≤ 60–65% is healthy.
-          </li>
-          <li>
-            <strong>Contribution margin</strong> — share of each PLN of revenue
-            left after ALL variable costs (COGS, payment fees, waste, refunds,
-            loyalty burn) to cover fixed costs and profit. This is the honest
-            cash-drop ratio per order. Below 50% and there&apos;s no room for
-            rent shocks; below 40% the unit is structurally unprofitable.
-          </li>
-          <li>
-            <strong>Margin of safety</strong> — how far revenue can fall before
-            you hit break-even. Below 10% and one bad week wipes you out;
-            above 25% is comfortable.
-          </li>
-          <li>
-            <strong>Revenue per labor hour</strong> — how productive each
-            staff-hour is. 90–140 zł/h is normal for Polish pizza service.
-          </li>
-          <li>
-            <strong>Net profit per order</strong> — what&apos;s left after every
-            cost. If this is &lt; 5 zł you have no buffer for refunds or waste.
-          </li>
-          <li>
-            <strong>Setup payback</strong> — how many months of profit it takes
-            to recoup the truck buildout cost. Investors look for &lt; 24 months.
-          </li>
-        </ul>
+        <p>
+          The eight numbers professional restaurateurs watch every week
+          — the institutional ops dashboard.
+        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The discipline embedded in this panel: managing eight
+            single numbers beats managing eight thousand line items,
+            because every operational decision eventually maps to one
+            of these. The traffic-light gates aren&apos;t arbitrary —
+            they&apos;re the industry-standard sustainability
+            thresholds. A weekly review of red lines and a quarterly
+            review of amber-trending lines catches problems before
+            they compound.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             These eight numbers are what a pro restaurateur stares at on Monday
@@ -2462,6 +4953,75 @@ const HELP = {
             sales, same menu, just tighter ops.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Set thresholds for alerts:</strong> red flag when
+              prime cost &gt; 65%, food &gt; 32%, labor &gt; 32%. Build
+              alert automations on the Reports admin so you find out
+              within 24h, not at month-end.
+            </li>
+            <li>
+              <strong>Weekly KPI review:</strong> 30 min every Monday with
+              the head chef + manager. Five-minute version of each KPI,
+              plus &quot;what we&apos;ll do this week&quot;. Catches
+              drift before it&apos;s structural.
+            </li>
+            <li>
+              <strong>Revenue per labor hour is the productivity dial:</strong>
+              below 90 zł/h, you&apos;re either overstaffed or under-pricing.
+              Drill into shift schedules first.
+            </li>
+            <li>
+              <strong>Setup-payback &lt; 24 months is investor-grade:</strong>
+              if you&apos;re raising money, this is the single number
+              investors will judge you on. Get it under 18 months for
+              competitive deals.
+            </li>
+            <li>
+              <strong>Compare to industry KPIs publicly:</strong> NRA, BCG
+              and PHG publish quarterly benchmarks. If you&apos;re top
+              quartile on prime cost, talk to suppliers and franchisees —
+              you&apos;re doing something replicable.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> all KPIs derive from the P&amp;L lines
+            + scenario inputs. The KPI strip is read-only and updates live
+            as you tune anything above.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formulas:</strong>
+          </p>
+          <ul style={{ margin: "0 0 4px", paddingLeft: 18 }}>
+            <li>Food cost % = COGS ÷ revenue</li>
+            <li>Labor % = total labor ÷ revenue</li>
+            <li>Prime cost % = (COGS + labor) ÷ revenue</li>
+            <li>Contribution margin = (revenue − all variable costs) ÷ revenue</li>
+            <li>Margin of safety = (revenue − break-even revenue) ÷ revenue</li>
+            <li>Revenue/labor hr = revenue ÷ total labor hours</li>
+            <li>Net profit/order = net profit ÷ monthly orders</li>
+            <li>Setup payback = setup cost ÷ monthly profit (months)</li>
+          </ul>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Industry targets (Polish casual-Italian):</strong> food
+            ≤30%, labor ≤30%, prime ≤60%, contribution ≥50%, MoS ≥20%,
+            rev/labor 90-140 zł/h, payback &lt;24 mo.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> NRA Restaurant Industry Operations
+            Report, BCG hospitality benchmarks, PHG Polish gastronomic
+            association annual surveys.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> seasonal variance — KPIs at
+            average annual volumes can hide that winter prime cost is
+            68% and summer is 55%. Check the Heatmap card to spot
+            seasonality issues.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -2470,27 +5030,20 @@ const HELP = {
     body: (
       <>
         <p>
-          Three side-by-side runs built automatically from your current inputs:
+          Three side-by-side P&amp;L runs built automatically from your
+          current inputs ± a deterministic stress factor.
         </p>
-        <ul style={{ margin: "8px 0", paddingLeft: 20, listStyle: "disc" }}>
-          <li>
-            <strong>Conservative</strong> — −15% orders + 2 percentage points
-            worse COGS. &quot;What if everything goes a bit wrong?&quot;
-          </li>
-          <li>
-            <strong>Realistic</strong> — your current scenario as entered.
-          </li>
-          <li>
-            <strong>Optimistic</strong> — +15% orders + 2 pp better COGS.
-            &quot;What if we execute well?&quot;
-          </li>
-        </ul>
-        <p>
-          <strong>Use it like this:</strong> if Conservative is still
-          profitable, your business plan is sound. If Optimistic isn&apos;t
-          much better than Realistic, you&apos;re bumping a structural ceiling
-          — fix the model, not the marketing.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Two decision frames embedded in this panel. (1)
+            Conservative-still-profitable is the institutional gate for
+            raising capital — investors won&apos;t back a plan that
+            only works in the best case. (2) Optimistic-not-much-
+            better-than-Realistic signals a structural ceiling (small
+            oven, limited seating, capped attach headroom) — fix the
+            model, not the marketing.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Three runs side by side: <em>&quot;a bit worse&quot;</em>, <em>&quot;as
@@ -2501,6 +5054,66 @@ const HELP = {
             — growth requires capex, not more elbow grease.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Conservative must be profitable:</strong> if the
+              −15% scenario shows a loss, your plan is fragile. Either
+              reduce fixed costs or raise prices BEFORE launching.
+            </li>
+            <li>
+              <strong>Optimistic vs Realistic spread:</strong> if
+              Optimistic is &lt;30% better than Realistic, you have a
+              capacity ceiling. Investigate: oven capacity, seating,
+              labor structure.
+            </li>
+            <li>
+              <strong>Show investors the Conservative case:</strong>
+              never present only Optimistic. The Conservative-still-profitable
+              proof is what makes deals close.
+            </li>
+            <li>
+              <strong>Use it for hiring decisions:</strong> if Conservative
+              covers a new hire&apos;s 6-month cost, the hire is safe. If
+              it doesn&apos;t, wait until Realistic improves.
+            </li>
+            <li>
+              <strong>Re-run quarterly:</strong> assumptions drift.
+              What was Optimistic last quarter might be Realistic now;
+              what was Realistic might be Conservative. Refresh.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> the current scenario as Realistic; two
+            programmatic variants (Conservative = base − 15% orders + 2pp
+            COGS; Optimistic = base + 15% orders − 2pp COGS).
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formula:</strong> identical P&amp;L stack applied
+            independently to each variant&apos;s adjusted inputs. Shows
+            three full P&amp;Ls side-by-side.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Why ±15%:</strong> empirically, a year-1 forecast for
+            a new pizzeria misses by ±15-25%. ±15% captures &quot;normal
+            execution variance&quot;; severe stress (recession, location
+            failure) needs the separate Cheapest-Pizza Shift lever.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> startup forecasting literature
+            (Saras Sarasvathy on effectuation, Steve Blank on
+            customer-development), restaurant-industry post-mortem
+            reviews on forecast accuracy.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> simultaneous swings (Conservative
+            on revenue AND a rent shock AND a key staff departure). For
+            true worst-case planning, manually compose scenarios using
+            the Stress card.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -2509,16 +5122,21 @@ const HELP = {
     body: (
       <>
         <p>
-          A 5×5 grid showing the net profit you&apos;d make at every
-          combination of orders/day (X axis, ±30%) and average ticket (Y axis,
-          ±30%). The centre cell is your current scenario.
+          5×5 grid of net profit at every combination of orders/day
+          (X axis, ±30%) and avg ticket (Y axis, ±30%). Centre cell =
+          current scenario.
         </p>
-        <p>
-          <strong>How to read it:</strong> green cells are profitable, red are
-          losses. Move from the centre outward to ask
-          &quot;if I could grow orders 20% <em>or</em> raise ticket 10%, which
-          delivers more profit?&quot;.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The diagonal cells are misleading on their own — raising
+            ticket usually loses volume (elasticity) and growing volume
+            usually requires a price-sensitive discount push. Read the
+            grid as &quot;all else equal&quot; — fine for sizing the
+            potential, not for predicting the outcome. Use the
+            Sensitivity card for the linked-effects view that bakes
+            elasticity back in.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Each square is &quot;what would I earn if I sold this many pizzas at this
@@ -2528,6 +5146,65 @@ const HELP = {
             (a 2 zł price bump usually beats chasing 20% more volume).
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Read the diagonals:</strong> the upper-right corner
+              (more orders AND higher ticket) is the dream — but rarely
+              achievable simultaneously. Pick one axis to push.
+            </li>
+            <li>
+              <strong>Ticket usually wins over volume:</strong> a 5 zł
+              ticket bump on the same orders adds revenue with zero
+              additional COGS or labor. Pushing volume adds labor and
+              wear-and-tear.
+            </li>
+            <li>
+              <strong>Test before you commit:</strong> if the heatmap says
+              +10% ticket is huge, A/B-test a 5 zł price bump on one menu
+              category for 2 weeks. Watch attach %, not just revenue.
+            </li>
+            <li>
+              <strong>Red cells are warnings, not predictions:</strong>
+              they show &quot;here&apos;s what would happen IF&quot;.
+              They&apos;re directional, not forecasts.
+            </li>
+            <li>
+              <strong>Use diagonally for marketing math:</strong> if you
+              push volume +15% AND tickets bump −2 zł (because new
+              customers convert at lower attach), the heatmap shows you
+              if the net is positive.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> 5×5 grid with current orders/day and
+            avg ticket at the centre. Each cell is a ±15% or ±30% delta
+            in either axis.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formula:</strong> per cell, recompute the full P&amp;L
+            with the grid&apos;s orders/day and ticket substituted, all
+            other inputs held constant. Cell value = net profit (zł/month).
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Color scale:</strong> green = above centre, red =
+            below. Intensity scales with delta-from-centre, not absolute
+            zł — designed to surface the steepest local gradients.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> standard restaurant menu-engineering
+            (Kasavana &amp; Smith), revenue management analytics (cited
+            in hospitality-school curricula).
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> the demand curve (raising
+            ticket usually loses orders). Each cell is independent — in
+            reality, +10% ticket might cost you 5% volume. Use the
+            Sensitivity card if you want to model linked effects.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -2536,14 +5213,21 @@ const HELP = {
     body: (
       <>
         <p>
-          The menu-engineering view. X axis = food cost ratio (±8 pp around
-          current); Y axis = average ticket (±30%).
+          The menu-engineering view. X axis = food cost ratio (±8 pp);
+          Y axis = avg ticket (±30%).
         </p>
-        <p>
-          <strong>Use it to answer:</strong> &quot;cut food cost 2 pp or raise
-          ticket 5 zł — which wins?&quot; Comparing two cells diagonally
-          across the centre tells you the trade-off immediately.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Cost cuts and price hikes are not symmetric: a permanent
+            2pp COGS reduction is worth the same every future month at
+            every future revenue level, while price hikes work once
+            and then require another cycle. So when both cells show
+            similar profit on this grid, the cost lever is the better
+            long-run move. Menu engineering (rearrange the menu to
+            shift mix toward high-CM items) often beats both — same
+            grid, free.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Should you negotiate cheaper mozzarella or just raise the Margherita by 3
@@ -2554,6 +5238,64 @@ const HELP = {
             for years.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Cost cuts compound, prices don&apos;t:</strong> a 2pp
+              COGS cut today saves the same amount every year forward.
+              A 5 zł price hike works once, then customers adjust.
+            </li>
+            <li>
+              <strong>Use it before menu re-pricing:</strong> what looks
+              like a tiny 2 zł bump might add 4-6k zł/month — the heatmap
+              quantifies the upside before you commit.
+            </li>
+            <li>
+              <strong>Combine with the Recipes admin:</strong> the heatmap
+              says &quot;cut 2 pp COGS = +4k zł/month&quot;. The Recipes
+              admin shows which ingredient is the soft target. Pair them.
+            </li>
+            <li>
+              <strong>Watch the diagonal:</strong> cutting COGS AND
+              raising ticket together compounds — but it&apos;s also the
+              hardest combo to execute (customers notice both moves).
+            </li>
+            <li>
+              <strong>Beware the worst-cell:</strong> bottom-left (high
+              COGS, low ticket) is what an inflation spike + downturn
+              looks like. Stress-test against it; if you survive there,
+              you&apos;re fine.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> 5×5 grid with current COGS% and avg
+            ticket at the centre. X axis = COGS% ±8 pp; Y axis = ticket
+            ±30%.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formula:</strong> per cell, recompute net profit with
+            the grid&apos;s COGS% + ticket substituted, all other inputs
+            held constant.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Why ±8 pp on COGS:</strong> empirical range of
+            achievable supplier/recipe optimisation. Beyond ±8 pp,
+            you&apos;re typically reformulating the menu, not optimising.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> menu-engineering literature
+            (Kasavana &amp; Smith), restaurant cost-optimisation case
+            studies.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> ingredient substitution
+            elasticity (cutting COGS by switching to cheaper cheese
+            might cost you 3% of customers). Each cell is independent;
+            real cost cuts have customer-perception consequences.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -2562,30 +5304,19 @@ const HELP = {
     body: (
       <>
         <p>
-          The drivers behind the 12-month projection and payback calc:
+          The drivers behind the 12-month projection and payback calc.
         </p>
-        <ul style={{ margin: "8px 0", paddingLeft: 20, listStyle: "disc" }}>
-          <li>
-            <strong>Wage inflation</strong> — annual % labor goes up. Poland
-            2026 ~7% (min-wage hike + sector pressure).
-          </li>
-          <li>
-            <strong>Ingredient inflation</strong> — annual % food costs grow.
-            ~4% food CPI.
-          </li>
-          <li>
-            <strong>Card processor fee</strong> — Stripe blended ~1.9% of revenue.
-          </li>
-          <li>
-            <strong>Setup cost</strong> — total cost to launch the truck
-            (vehicle + buildout + permits + working capital). Drives payback.
-          </li>
-          <li>
-            <strong>Seasonal multipliers</strong> — winter/spring/summer/autumn
-            volume swings. Pizza trucks peak in summer (1.3×) and dip hard in
-            winter (0.7×).
-          </li>
-        </ul>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            These are the only inputs that compound year-over-year,
+            which is why getting them ±1pp wrong matters more than the
+            other inputs you tune more often. Wage inflation is the
+            ratchet the operator can&apos;t control (statutory floor);
+            ingredient inflation is partially negotiable (supplier
+            mix). Refresh these annually as part of the budget cycle;
+            stale defaults distort projection and payback math.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Inflation isn&apos;t a rumour — Poland is running ~7% wage hikes and ~4%
@@ -2595,6 +5326,69 @@ const HELP = {
             12 months</strong> — the projection chart below shows that drift live.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Plan an annual price review:</strong> January 15th
+              every year. Match menu prices to last-year inflation. Customers
+              accept small annual bumps; they revolt against big catch-up
+              hikes.
+            </li>
+            <li>
+              <strong>Index your prices to suppliers:</strong> if a key
+              ingredient is up 10%, raise the relevant menu items 5-8%
+              within 30 days. Don&apos;t absorb the full shock.
+            </li>
+            <li>
+              <strong>Watch the min-wage announcement:</strong> Polish
+              min-wage is published Sep for next year. Re-run the
+              simulation with new labor rates before approving budgets.
+            </li>
+            <li>
+              <strong>Lock seasonal staffing 90 days out:</strong>
+              summer hires negotiated in March cost 10-15% less than
+              June panic-hires.
+            </li>
+            <li>
+              <strong>Set up an inflation-tracker dashboard:</strong>
+              monthly GUS food-CPI overlay on your COGS%. Variance &gt; 1
+              pp triggers a recipe-cost review.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> wage inflation %, ingredient inflation
+            %, processor fee %, setup cost, 4 seasonal multipliers
+            (winter/spring/summer/autumn).
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formula (per month m, m=0..11):</strong>
+            <br />
+            labor_m = base_labor × (1 + wageInflation)^(m/12)
+            <br />
+            cogs_m = base_revenue × cogsPct × (1 + foodInflation)^(m/12) × seasonalMultiplier(m)
+            <br />
+            revenue_m = base_revenue × seasonalMultiplier(m)
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Polish 2026 calibration:</strong> wage 7% (min-wage
+            jump + sector pressure), food 4% (GUS CPI), processor 1.9%
+            (Stripe blended), seasonal {"["}winter 0.85, spring 1.05,
+            summer 1.15, autumn 0.95{"]"}.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> GUS inflation reports, Polish
+            min-wage announcements, Stripe published rates, Italian-style
+            gastronomic seasonality studies.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> shock events (war-driven flour
+            spike, sudden VAT change). Use it for steady-state planning;
+            for shocks, manually adjust ingredient lever +20% and stress
+            test.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -2603,19 +5397,21 @@ const HELP = {
     body: (
       <>
         <p>
-          The current scenario rolled forward 12 months. Each month applies the
-          relevant seasonal multiplier and compounds wage + ingredient inflation
-          to that point.
+          Current scenario rolled forward 12 months — each month applies
+          the seasonal multiplier and compounds wage + ingredient
+          inflation to that point.
         </p>
-        <p>
-          <strong>Watch for:</strong> the gap between Revenue and Net profit
-          widening — that&apos;s inflation eating margin. If the gap closes by
-          month 12, you need to plan price increases now.
-        </p>
-        <p>
-          The four KPIs below (12-mo revenue / costs / net profit / best vs
-          worst month) summarise the whole year.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Watch the gap between revenue and net-profit lines widen
+            over the year — that&apos;s inflation eating margin. If
+            the gap closes by month 12, plan a price increase now,
+            don&apos;t wait for it to invert. Use the best-vs-worst
+            spread to size working-capital reserves: your reserve
+            should cover the gap between peak cash month and trough
+            cash month, not the annual average.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Twelve months in one chart. Watch the gap between the revenue line and the
@@ -2625,6 +5421,66 @@ const HELP = {
             in January when the accountant calls; you&apos;ll see it in May.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Check the chart monthly:</strong> if month N&apos;s
+              actuals diverge &gt;10% from the projection, recalibrate
+              your inputs. The projection is only useful if it stays
+              honest.
+            </li>
+            <li>
+              <strong>Plan price hikes for the dip:</strong> if you see
+              winter Q1 dipping near break-even, raise prices in
+              November/December so the new price is established before
+              the dip bites.
+            </li>
+            <li>
+              <strong>Cash-flow plan from the chart:</strong> the
+              best-vs-worst month delta is your buffer requirement. If
+              December nets 30k and February nets 8k, you need ~22k of
+              working capital to bridge.
+            </li>
+            <li>
+              <strong>Plan capex around the peaks:</strong> buy the new
+              oven in May with summer cash on the way, not in February.
+            </li>
+            <li>
+              <strong>Investor presentations need this view:</strong>
+              monthly seasonality is more honest than annual averages.
+              Always show the chart, not just the total.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> all scenario fields + the financial
+            assumptions (inflation, seasonality). The chart is read-only
+            and updates live.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formula:</strong> per month, apply the seasonal
+            multiplier to base orders/day and compound the wage +
+            ingredient inflation to that month&apos;s point. Recompute
+            the full P&amp;L for each month.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Read-out KPIs:</strong> 12-mo revenue, 12-mo costs,
+            12-mo net profit, best month, worst month. The best-vs-worst
+            spread is your working-capital requirement.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> Polish gastronomic seasonality
+            data, restaurant-industry cash-flow patterns, NRA Industry
+            Operations Report.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> opening / closing months
+            (ramp + wind-down). Projection assumes steady-state ops
+            across all 12 months. For year-1 projections, manually
+            ramp the first 3-6 months.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -2633,20 +5489,21 @@ const HELP = {
     body: (
       <>
         <p>
-          The minimum throughput needed to cover labor + fixed costs (variable
-          food cost scales with volume so it cancels out). At break-even, net
-          profit = 0 — anything above is profit, anything below is loss.
+          The minimum throughput needed to cover labor + fixed costs.
+          At break-even, net = 0 — anything above is profit, below is
+          loss.
         </p>
-        <p>
-          Same number expressed at four scales — per hour, per day, per month,
-          and the equivalent monthly revenue — so you can match it to whatever
-          metric you watch during service.
-        </p>
-        <p>
-          <strong>Worked example:</strong> if break-even = 45 orders/day and
-          you&apos;re running 60, every order beyond 45 contributes
-          (ticket × (1 − COGS% − card fee %)) zł of pure profit.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The number to write on the wall — every shift the team
+            sees how many orders away from red they are. The
+            psychological lift of operating above break-even (vs hoping
+            to reach it) is bigger than the math suggests. The
+            margin-of-safety ratio implicit here is the institutional
+            cushion metric: it&apos;s how investors decide whether the
+            unit can survive a bad quarter.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Below this number you bleed; above it, you print. If break-even is
@@ -2657,6 +5514,76 @@ const HELP = {
             wildly profitable; every order under it deepens the hole.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <strong>Know your break-even per hour:</strong> if break-even
+              is 45 orders/day across a 10-hour service window, the
+              break-even hour is 4.5 orders. Use this for live KDS
+              dashboards.
+            </li>
+            <li>
+              <strong>Track hourly above/below break-even:</strong> red
+              hours (below break-even) might need consolidation. Blue
+              hours (way above) need more capacity to capture upside.
+            </li>
+            <li>
+              <strong>Don&apos;t cut to break-even:</strong> running RIGHT
+              at break-even leaves no buffer for shocks. Build a 20%
+              margin-of-safety floor below current revenue.
+            </li>
+            <li>
+              <strong>Use it to plan investments:</strong> if a new
+              oven costs 15k and you currently sell 5 more pizzas/day
+              than break-even, it&apos;ll pay back in ~6 months at 22 zł
+              of profit each.
+            </li>
+            <li>
+              <strong>Break-even falls if you cut fixed costs:</strong>
+              every 1,000 zł off fixed costs is ~1.5 fewer orders/day
+              needed to break even. Sometimes lower break-even matters
+              more than higher revenue.
+            </li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}>
+            <strong>Inputs:</strong> derived — fixed costs, labor, ticket,
+            COGS%, days/month all feed here. The break-even card is
+            read-only.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Formula:</strong>
+            <br />
+            contribution margin per order = ticket × (1 − COGS% −
+            processor fee %)
+            <br />
+            break-even orders/month = (labor + fixed) ÷ contribution
+            margin per order
+            <br />
+            break-even orders/day = break-even orders/month ÷ days/month
+            <br />
+            break-even orders/hour = break-even orders/day ÷ service hours
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Realistic range:</strong> 30-55 orders/day break-even
+            for a Polish pizza truck depending on fixed costs and prime
+            cost. Below 30 you have unusually low fixed costs (suburban
+            pitch); above 55 you&apos;re structurally fragile.
+          </p>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Sources:</strong> standard break-even analysis
+            (Garrison &amp; Noreen, &quot;Managerial Accounting&quot;),
+            restaurant unit-economics textbooks.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Not modelled:</strong> step-function labor (going
+            from 1 cook to 2 isn&apos;t a smooth scaling). Real labor
+            jumps in discrete chunks; the model treats it as continuous.
+            For accurate near-break-even planning, lock in your hire
+            decisions and recompute.
+          </p>
+        </Methodology>
       </>
     ),
   },
@@ -2665,16 +5592,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Five &quot;what if&quot; runs that flex orders/day by −20%, −10%, 0,
-          +10%, +20%. Shows how net profit and margin respond.
+          Five &quot;what if&quot; runs that flex orders/day by −20%,
+          −10%, 0, +10%, +20% and report the net profit / margin
+          response.
         </p>
-        <p>
-          <strong>Why it matters:</strong> profit is a thin slice of revenue, so
-          a small revenue swing causes a big profit swing. If a −10% volume
-          drop tips you into the red, you&apos;re running on too thin a margin
-          — raise prices, cut a fixed cost, or grow attach rates before
-          opening day 1.
-        </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Profit is a thin slice of revenue, so volume swings amplify
+            non-linearly into profit swings — operating leverage cuts
+            both ways. If a −10% volume drop tips you into the red,
+            the business is too fragile for capex — raise prices, cut
+            a fixed cost, or grow attach rates before opening day. Use
+            this card to stress test BEFORE committing capital, not
+            after the bad month arrives.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Profit is a thin slice of revenue — usually <strong>10–15%</strong>. So a
@@ -2685,6 +5617,22 @@ const HELP = {
             day 1.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Target a +20% buffer:</strong> if you can&apos;t survive a −10% volume hit, your plan is too fragile to launch.</li>
+            <li><strong>Use −20% as your &quot;worst case&quot;:</strong> stress-test working capital against the red end of the curve.</li>
+            <li><strong>Re-run after every fixed-cost change:</strong> rent hikes and software subscriptions silently raise your sensitivity.</li>
+            <li><strong>Match marketing spend to the upside:</strong> if +10% volume nets ~6k zł more profit, you can spend up to ~3k on customer acquisition and still win.</li>
+            <li><strong>Watch the convexity:</strong> +20% lift is rarely 2× the +10% lift (capacity caps in). Validate with your kitchen throughput.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> derived. The card runs the full P&amp;L 5 times with orders/day flexed by −20%, −10%, 0, +10%, +20%.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> for each variant: revenue × multiplier, COGS scales linearly, labor + fixed held constant, recompute net.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Why ±20%:</strong> empirically a year-1 forecast misses by ±20-30%. Captures &quot;normal-execution variance&quot; without modelling extreme stress (use Cheapest-Pizza Shift for that).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> restaurant forecasting accuracy studies, OECD sectoral volatility data.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> capacity caps (you can&apos;t serve +20% if the oven is already saturated). Cross-check with the kitchen-saturation KPI.</p>
+        </Methodology>
       </>
     ),
   },
@@ -2695,11 +5643,20 @@ const HELP = {
     body: (
       <>
         <p>
-          Annual % growth in labor cost, compounded monthly in the 12-month
-          projection. Reflects statutory minimum-wage hikes, sector wage
-          pressure and inflation-linked contract adjustments. Polish 2026
-          baseline: ~7%.
+          Annual % growth in labor cost, compounded monthly in the
+          12-month projection. PL 2026 baseline: ~7%.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Treat the default as a floor — shock years (a new ZUS rate,
+            mandatory bonus) can spike well above it. The only
+            sustainable counter is productivity: a 5% lift in
+            revenue-per-labor-hour cancels typical wage inflation
+            entirely. So this isn&apos;t just an inflation knob, it&apos;s
+            the productivity target — beat this number every year or
+            margin erodes silently.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Wages in Poland are rising <strong>~7% a year</strong>. If your
@@ -2710,6 +5667,22 @@ const HELP = {
             see the squeeze coming before payroll Friday hits.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Update yearly (Oct/Nov):</strong> the Polish min-wage for next year is announced in September. Refresh this field before the Q4 review.</li>
+            <li><strong>Match menu prices to wage inflation:</strong> if labor is 30% of revenue and wages rise 7%, menu prices need ~2.1% lift just to hold margin flat.</li>
+            <li><strong>Productivity beats price hikes:</strong> a 5% lift in revenue/labor-hour offsets the entire wage inflation. Invest in oven speed, layout, training.</li>
+            <li><strong>Lock multi-year contracts where possible:</strong> 12-month contracts with key staff give cost certainty (and reduce poach risk).</li>
+            <li><strong>Reduce labor-intensive SKUs:</strong> if a hand-stretched pizza takes 4 min vs 2 min for a pre-portioned one, wage inflation compounds the gap. Re-engineer for speed.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> single annual % (default 7% for PL 2026).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> labor_m = base_labor × (1 + wageInflation)^(m/12). Compounded monthly across the 12-month projection.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>PL 2026 calibration:</strong> ~7% reflects: min-wage jump (4666 zł → ~5000 zł brutto), sector premium (gastro pays above min), inflation-linked salaries for skilled roles (pizzaiolo, chef).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> GUS wage-growth data 2020-2025, MRiPS min-wage announcements, ZUS-published sectoral averages.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> structural hikes (a new ZUS rate, mandatory bonus). The model assumes smooth annual growth; for shock years use ingredient lever to stress-test.</p>
+        </Methodology>
       </>
     ),
   },
@@ -2718,10 +5691,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Annual growth rate applied monthly to COGS and fixed cost lines.
-          Captures food-CPI, supplier list-price moves, utility tariff hikes,
-          rent escalators. Poland 2026 ~4%.
+          Annual growth rate applied monthly to COGS and fixed-cost
+          lines. PL 2026 ~4%.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            A smooth-inflation assumption — useful for the base
+            projection, but it doesn&apos;t capture commodity shocks
+            (the 2022 flour spike was +30% in 6 months for some
+            operators). Layer specific shocks on top using the
+            Ingredient Stress card; this lever is the baseline, not
+            the full picture. Below 3% you&apos;re modelling deflation
+            — rare in PL casual-dining and should require a deliberate
+            override, not a default.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Cheese, flour and electricity all creep up <strong>~4% a year</strong>.
@@ -2732,6 +5716,22 @@ const HELP = {
             by ~2pp/year quietly.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Annual menu re-pricing in January:</strong> match average COGS inflation. Customers expect small annual bumps; they revolt against years of catch-up hikes.</li>
+            <li><strong>Re-cost recipes quarterly:</strong> not every ingredient inflates at the same rate. The Recipes admin spots the worst drifters.</li>
+            <li><strong>Hedge the cheese line:</strong> annual contracts with key suppliers lock the rate against sudden spikes.</li>
+            <li><strong>Diversify suppliers:</strong> two suppliers per major ingredient = leverage in negotiation + insurance against single-supplier shocks.</li>
+            <li><strong>Watch the GUS food CPI monthly:</strong> if it&apos;s &gt;6% your assumption is too low — bump this field and rerun the projection.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> single annual % applied to both COGS and fixed-cost lines (rent escalators are typically CPI-indexed in PL leases).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> cogs_m = base_cogs × (1 + foodInflation)^(m/12). Compounded monthly.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>PL 2026 calibration:</strong> ~4% blended. Food CPI ~5%, utilities ~6%, rent escalators ~2-3% (CPI-capped). Weighted average across cost structure.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> GUS food-CPI series 2020-2025, URE (energy regulator) tariff history, commercial-lease standard escalator clauses.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> commodity shocks (Ukraine war flour spike 2022 was +30% in 6 months). For shock scenarios, use the Ingredient Stress card on top of this baseline.</p>
+        </Methodology>
       </>
     ),
   },
@@ -2740,10 +5740,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Blended Stripe / terminal processor rate. Applied only to revenue
-          paid on-site via card — not delivery aggregators, not cash. Polish
-          2026 norm 1.4–2.1% depending on volume tier.
+          Blended Stripe / terminal processor rate, applied to on-site
+          card revenue only — not delivery aggregators, not cash. PL
+          2026 norm 1.4-2.1% depending on volume tier.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Single biggest negotiable variable cost line outside COGS,
+            yet most operators never renegotiate. Volume tiers unlock
+            material savings — track your effective rate quarterly and
+            ask for the next tier. BLIK (instant transfer) is cheaper
+            than card and increasingly popular in PL; promoting it
+            in-store nudges the blended rate down without renegotiating
+            anything.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Every time a customer taps a card, the bank takes <strong>~1.9%</strong>.
@@ -2753,6 +5764,22 @@ const HELP = {
             <strong> ~600 zł/month back</strong> for one phone call.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Negotiate at volume tiers:</strong> Stripe/Adyen/PayU all drop rates above 50k zł/month and again at 100k. Always ask for the next tier.</li>
+            <li><strong>Same-day settlement isn&apos;t free:</strong> default T+1 saves ~0.1-0.2 pp vs same-day. If cash flow allows, take the slower payout.</li>
+            <li><strong>Avoid premium-card surcharges:</strong> Amex / corporate cards cost 2.5-3.5%. If they&apos;re &gt;5% of your volume, decline them or surcharge legally (PL allows).</li>
+            <li><strong>BLIK is cheaper than card:</strong> typical 0.8-1.2% vs 1.9% for cards. Push BLIK in-store with on-screen prompts.</li>
+            <li><strong>Annual PSP review:</strong> ask 2-3 PSPs for quotes every year. Switch every 2-3 years to keep rates honest.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> blended on-site card fee %. Applied to on-site revenue only (delivery aggregators take a different commission via the deliveryShare lever).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> monthly fee = revenue × cardShare × onSiteCardFee. cardShare = 1 − cashShare.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>PL 2026 norms:</strong> Stripe blended ~1.9%, Adyen ~1.7%, PayU ~1.6%, BLIK ~1.0%, local terminals ~1.4-2.1% depending on tier.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Stripe, PayU, Adyen published rate cards 2024-2025; PaySign Polish payments report.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> per-transaction fixed fees (0.10-0.20 zł per tx). At low ticket sizes these matter; at 65 zł average, the % rate dominates.</p>
+        </Methodology>
       </>
     ),
   },
@@ -2761,9 +5788,22 @@ const HELP = {
     body: (
       <>
         <p>
-          % of revenue settled in cash. Zero processor fee, but reconciliation
-          and shrinkage risk are higher. Polish food-truck norm 15–25%.
+          % of revenue settled in cash. Zero processor fee, but
+          reconciliation and shrinkage risk are higher. PL food-truck
+          norm 15-25%.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Looks like free margin (no card fee) but pays for itself in
+            shrinkage risk. The trade only nets positive with
+            institutional controls — daily till reconciliation, CCTV at
+            the till, limited cash floats. Without them, cash shrinkage
+            quietly costs more than the card fees it avoided. Most
+            modern operators are migrating customers toward BLIK
+            instead — most of the fee savings, none of the cash-
+            handling risk.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Cash orders carry <strong>zero card fee</strong>. If 20% of your
@@ -2774,6 +5814,22 @@ const HELP = {
             tightly or the cashless tax is cheaper.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Daily cash reconciliation:</strong> count cash at end-of-shift against POS cash sales. &gt;1% drift demands investigation.</li>
+            <li><strong>CCTV at the till:</strong> not for punishment, for protection — staff are less tempted, and you have evidence if reconciliation fails.</li>
+            <li><strong>Limit cash floats:</strong> 200-300 zł till float; bank deposit nightly. Less cash on premises = less shrinkage.</li>
+            <li><strong>Push BLIK over cash:</strong> instant settlement, lower fees than card, no shrinkage. Promote with on-screen QR.</li>
+            <li><strong>Track cash share vs neighborhood:</strong> tourist areas trend 40%+ cash, office areas under 10%. Set your expectation by location.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> share of on-site revenue paid in cash (0-100%). Default 15% for Warsaw urban; higher in tourist areas.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> cardShare = 1 − cashShare. Card fee applies only to cardShare × on-site revenue.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>PL 2026 norms:</strong> 10-15% in central Warsaw/Kraków, 20-35% in tourist districts (Stare Miasto, Kazimierz), 5-10% in office-heavy pitches.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> NBP cash-usage reports, Polish retail-payments studies, owner-operator till data.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> cash shrinkage / theft. Add 2-5% to your cash-channel COGS effectively, or use the dedicated Waste% field to capture it.</p>
+        </Methodology>
       </>
     ),
   },
@@ -2782,10 +5838,21 @@ const HELP = {
     body: (
       <>
         <p>
-          % of orders routed through Glovo. Glovo&apos;s commission replaces the
-          on-site card fee on this share. Channel mix flows through Per-channel
-          CM1 below.
+          % of orders routed through Glovo. Glovo commission replaces the
+          on-site card fee on this share; flows through Per-channel CM1.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Cap at ~30-35% of total share to retain channel control —
+            past that you&apos;re running Glovo&apos;s business with
+            your kitchen, and their algorithm controls your visibility.
+            The incremental-demand caveat matters: the model treats
+            Glovo orders as substitutes for on-site, but a real chunk
+            are genuinely new demand. Whether to grow Glovo share is
+            an incremental-vs-substitute question, not a margin
+            question.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Every <strong>10pp shift toward Glovo</strong> on a 2,400-orders/month
@@ -2795,6 +5862,22 @@ const HELP = {
             you&apos;re effectively running their business with your kitchen.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Cap Glovo at 30-35%:</strong> beyond that, the platform owns your demand and can squeeze commission. Build direct channels.</li>
+            <li><strong>Don&apos;t list low-margin SKUs:</strong> Margherita on Glovo at 25% commission earns nothing. Restrict the menu to mains 50+ zł.</li>
+            <li><strong>Surcharge Glovo orders:</strong> PL allows menu-price differentiation between channels. Many ops add 10-15% to Glovo prices to net the commission.</li>
+            <li><strong>Run direct delivery within 2 km:</strong> own driver + 5-8 zł fee retains all the margin Glovo would take.</li>
+            <li><strong>In-app loyalty pulls customers off Glovo:</strong> 5% off via your own app costs you 5%; saves you 25% Glovo commission. Net +20pp margin per converted order.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> share of orders via Glovo (0-100%). Excluded from on-site card-fee math; uses its own commission rate.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> Glovo channel revenue = orders × ticket × glovoShare. Glovo channel fee = revenue × glovoCommission. Margin gap vs on-site ≈ (glovoCommission − onSiteCardFee).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>PL 2026 norms:</strong> Glovo commission 25-30% depending on tier; some merchants negotiate to 22% at 300+ orders/week.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Glovo merchant agreements, food-delivery industry reports (KPMG, Roland Berger).</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> incremental demand (some Glovo orders wouldn&apos;t exist without the platform). The model treats Glovo orders as substitutes for on-site; check your real data — incremental share might be 30-50%.</p>
+        </Methodology>
       </>
     ),
   },
@@ -2803,9 +5886,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Glovo&apos;s marketplace take rate. Typical 25–30%; negotiable past
-          ~200-300 orders/week thresholds.
+          Glovo&apos;s marketplace take rate on platform revenue.
+          Typical 25-30%; negotiable past ~200-300 orders/week.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Watch the EFFECTIVE rate, not the list rate — Glovo adds
+            advertising fees, co-marketing funds and promo-period
+            uplifts that drift the headline rate up over time.
+            Surcharging platform prices above on-site is legal in PL
+            and standard practice for high-commission tiers; this
+            preserves on-site margin while keeping the platform
+            channel open as a feeder for new customers who later
+            convert to direct.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Glovo keeps <strong>~27 zł of every 100 zł</strong> of order
@@ -2816,6 +5911,22 @@ const HELP = {
             you cross their threshold.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Hit a volume tier:</strong> Glovo tiers at ~50 / 200 / 500 orders/week. Each unlocks a 1-3 pp discount.</li>
+            <li><strong>Negotiate quarterly:</strong> account managers respond to data. Show your 30-day growth, ask for the next tier rate.</li>
+            <li><strong>Bundle Glovo + Wolt in negotiation:</strong> &quot;I&apos;ll commit to exclusivity for a year at 22%&quot; sometimes works.</li>
+            <li><strong>Promo periods are negotiable:</strong> Glovo runs co-marketing campaigns where they discount their take in exchange for menu placement. Always ask.</li>
+            <li><strong>Watch effective rate, not list rate:</strong> Glovo charges advertising fees, marketing co-fund, etc. Calculate fee ÷ revenue monthly.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> Glovo commission % (default 27% blended). Applied to Glovo channel revenue only.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> monthly Glovo fee = orders × ticket × glovoShare × glovoCommission.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Tiers (PL 2024-2025):</strong> 30% baseline → 27% at ~50 orders/week → 24% at ~200/wk → 22% at ~500/wk. Plus optional advertising co-fund.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Glovo merchant rate cards 2024, public reseller agreements, food-delivery industry analysis.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> advertising spend on the platform (some merchants pay 5-10% extra for featured placement). Add as a marketing fixed cost.</p>
+        </Methodology>
       </>
     ),
   },
@@ -2824,9 +5935,21 @@ const HELP = {
     body: (
       <>
         <p>
-          % of orders routed via Wolt. Like Glovo but smaller fleet in Poland;
+          % of orders routed via Wolt. Smaller PL footprint than Glovo
+          (25-30% of food-delivery market vs Glovo&apos;s 55-60%);
           commission tier slightly lower.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Listing on both Glovo + Wolt provides redundancy against
+            single-platform outages and creates negotiating leverage —
+            exclusivity-vs-non-exclusivity terms differ materially.
+            Wolt&apos;s app design emphasises sides + drinks more than
+            Glovo, so attach rates on Wolt orders typically run higher.
+            Verify service-area coverage before listing — Wolt&apos;s
+            footprint is narrower than Glovo&apos;s.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Wolt is usually the smaller platform in PL but adds a useful
@@ -2837,6 +5960,22 @@ const HELP = {
             will), Wolt covers the gap.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>List on both Glovo + Wolt:</strong> redundancy beats lock-in. If one platform&apos;s app crashes (it will), the other covers the gap.</li>
+            <li><strong>Wolt customers tend to attach better:</strong> the app design emphasises sides + drinks more than Glovo. Push higher-margin SKUs first on Wolt.</li>
+            <li><strong>Wolt&apos;s service area is smaller:</strong> if your pitch isn&apos;t central Warsaw / Kraków / Gdańsk, Wolt might not even cover you. Verify before listing.</li>
+            <li><strong>Use Wolt for evening / dinner crowd:</strong> empirically Wolt indexes higher for dinner orders, Glovo for lunch.</li>
+            <li><strong>Cross-promote:</strong> mention Wolt-only deals on Glovo-customer receipts (drives the lower-fee channel).</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> share of orders via Wolt (0-100%). Treated identically to Glovo but with its own commission tier.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> Wolt channel revenue = orders × ticket × woltShare. Wolt channel fee = revenue × woltCommission.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>PL 2026 norms:</strong> Wolt is smaller in PL (~25-30% of food-delivery market vs Glovo&apos;s 55-60%). Commission typically 22-30%, slightly cheaper than Glovo on average.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Wolt merchant agreements, food-delivery market-share reports (UCE, OECD).</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> overlap between Glovo + Wolt customers (some customers use both — the model assumes channel exclusivity which understates platform reach).</p>
+        </Methodology>
       </>
     ),
   },
@@ -2845,9 +5984,19 @@ const HELP = {
     body: (
       <>
         <p>
-          Wolt&apos;s take rate. Typical 22–30%; slightly cheaper than Glovo on
-          average.
+          Wolt&apos;s take rate on platform revenue. Typical 22-30%;
+          slightly cheaper than Glovo on average.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Wolt is more flexible than Glovo on promo co-funding (shared
+            discount campaigns), so the real economics depend on whether
+            you negotiate these into the deal. Watch the effective rate:
+            Wolt occasionally adds merchant-funded delivery-fee subsidies
+            on top of headline commission. Bundle as exclusive to
+            negotiate sub-20% rates in some categories.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Wolt typically takes <strong>~25 zł of every 100 zł</strong> —
@@ -2857,6 +6006,22 @@ const HELP = {
             you save fees; lift Glovo&apos;s share and you grow volume.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Negotiate on volume:</strong> Wolt tiers at ~30 / 100 / 300 orders/week. Each unlocks 1-2 pp lower rate.</li>
+            <li><strong>Wolt is more flexible on promo:</strong> they often co-fund discounts to grow your share; Glovo less so. Pitch this when account-managing.</li>
+            <li><strong>Watch effective rate:</strong> Wolt occasionally adds delivery-fee subsidies that the merchant funds — read the fine print quarterly.</li>
+            <li><strong>Bundle as exclusive:</strong> if you commit to Wolt-only delivery, you can sometimes negotiate 20% or below.</li>
+            <li><strong>Test menu pricing:</strong> Wolt customers tolerate slightly higher prices than Glovo (different demographic). Test a 5% lift on Wolt items.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> Wolt commission % (default 25% blended).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> monthly Wolt fee = orders × ticket × woltShare × woltCommission.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>PL 2026 norms:</strong> baseline 28-30%; volume tiers drop to 22-25% above ~300 orders/week. Some categories (alcohol via licensed merchants) see different rates.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Wolt merchant rate cards 2024, food-delivery industry analyses.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> Wolt+ subscription discounts (customers in the Wolt+ program order more frequently — incremental demand effect not captured).</p>
+        </Methodology>
       </>
     ),
   },
@@ -2865,10 +6030,22 @@ const HELP = {
     body: (
       <>
         <p>
-          Total capital outlay to launch the unit — vehicle, kitchen buildout,
-          oven, permits, working capital. Drives payback months and
-          cash-on-cash return.
+          Total capital outlay to launch the unit — vehicle + kitchen
+          buildout + oven + permits + working capital. Drives setup
+          payback and cash-on-cash return.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The denominator of every investor metric — every złoty
+            trimmed off setup shortens payback and lifts cash-on-cash
+            return. Lease-vs-buy is the strategic split: leasing the
+            oven preserves working capital but adds finance cost;
+            buying outright frees CAPEX for unit-2 sooner. Check
+            BGK / PARP grant programmes for new SMEs — they often
+            cover a chunk of buildout and the application cost is
+            small.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             This is the <strong>one big cheque at the start</strong>. A used
@@ -2880,6 +6057,22 @@ const HELP = {
             payback by ~3 months.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Buy used, finish new:</strong> a 5-year-old food truck refurbished saves ~80,000 zł vs new. Resale value barely differs.</li>
+            <li><strong>Lease the oven if cash-tight:</strong> a Ferrara/Marra Forni lease at 1,500 zł/month over 5 years protects working capital but adds ~12% finance cost vs cash.</li>
+            <li><strong>Permits + buildout = 30% of total:</strong> budget 90-110k for the regulatory + interior. Surprises here kill payback.</li>
+            <li><strong>Keep 60k working capital:</strong> first 6 months you might be break-even at best. Don&apos;t starve the launch.</li>
+            <li><strong>Negotiate landlord buildout contribution:</strong> for fixed pitches in malls/halls, landlords often cover 30-50k of buildout in exchange for longer lease.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> single sum capturing vehicle + oven + buildout + permits + working capital.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Where it flows:</strong> setup payback (months) = setup ÷ monthly net profit. Also feeds cash-on-cash return and investor-facing payback KPI.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>PL 2026 ranges:</strong> used truck 60-90k, new buildout 100-150k, oven 35-55k (wood/gas/electric), permits 10-20k, working capital 50-80k. Total: 280-350k for a Neapolitan-style operation.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish food-truck broker pricing, Ferrara/Marra Forni dealer quotes, owner-operator buildout post-mortems.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> contingency (most launches overrun by 10-15%). Add a 30k buffer to your real budget.</p>
+        </Methodology>
       </>
     ),
   },
@@ -2888,10 +6081,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Non-cash expense spreading setup cost across the asset&apos;s economic
-          life. 5-year truck = setup/60 per month. Required for EBITDA →
-          net-profit walk.
+          Non-cash expense spreading setup cost across the asset&apos;s
+          economic life. 5-year truck = setup ÷ 60 per month. Required
+          for the EBITDA → net-profit walk.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Doesn&apos;t hit cash today but accrues toward replacement
+            capex — savvy operators auto-transfer the monthly D&amp;A
+            line to a reserve account so year-5 refurb is pre-funded
+            without disrupting trading. The accelerated-depreciation
+            option in Polish tax law can shift taxable profit out of
+            year 1 — worth a conversation with the accountant rather
+            than defaulting to straight-line.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             D&amp;A is the accountant&apos;s way of saying &quot;your truck loses
@@ -2902,6 +6106,22 @@ const HELP = {
             storing up for replacement in year 5. Ignore it at your peril.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Save D&amp;A to a separate account:</strong> auto-transfer the monthly D&amp;A figure to a savings account. Year 5 oven replacement = pre-funded.</li>
+            <li><strong>Vehicle depreciates faster than kitchen:</strong> consider 4 years for the truck, 8-10 for the oven. The blended rate is a simplification.</li>
+            <li><strong>D&amp;A vs CAPEX timing:</strong> the cash hits at purchase, the P&amp;L spreads it. Don&apos;t confuse the two when budgeting cash.</li>
+            <li><strong>Tax-efficient choice:</strong> Polish CIT allows accelerated depreciation for some equipment. Ask your accountant — could shift 10-15k of profit out of year 1.</li>
+            <li><strong>EBITDA excludes D&amp;A:</strong> when banks evaluate you, they look at EBITDA. Knowing the D&amp;A line helps you walk between EBITDA and bank-relevant numbers.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> monthly D&amp;A in zł. Default = setupCost ÷ 60 (5-year straight-line).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> monthly D&amp;A = capex ÷ useful_life_in_months. Subtracted from EBITDA to derive net profit.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Useful-life norms (PL gastro):</strong> truck 4-5 yr, kitchen equipment 8-10 yr, fit-out 5-7 yr, IT/POS 3 yr. Blended: 5 yr average.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish UoR depreciation tables, gastronomic accounting practices, KPMG fixed-asset benchmarks.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> mid-life repairs (the oven might need a 15k refurb at year 3). Add as a one-off fixed cost or extend the depreciation tail to cover renewal.</p>
+        </Methodology>
       </>
     ),
   },
@@ -2910,9 +6130,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Monthly debt-service cost (leasing, bank loan, asset finance). Zero
-          for cash-purchased trucks.
+          Monthly debt-service cost (leasing, bank loan, asset finance).
+          Zero for cash-purchased trucks.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Tax-deductible, so effective cost is nominal rate × (1 − CIT)
+            — usually lower than headlines suggest. The cash-vs-finance
+            trade-off isn&apos;t simply &quot;cheap money good&quot;:
+            the spread between loan rate and the truck&apos;s
+            cash-on-cash return is the real economic cost of borrowing,
+            and if cash sitting in a deposit nearly matches the loan
+            rate, you&apos;re paying for working-capital liquidity, not
+            access to growth.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             If you financed the truck instead of paying cash, the bank takes a
@@ -2922,6 +6154,22 @@ const HELP = {
             principal. Worth modelling vs draining your savings.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>BGK / PARP grants first:</strong> Polish public funding programs cover ~15-30% of buildout for new SMEs. Apply before signing a loan.</li>
+            <li><strong>Equipment leasing &gt; bank loan:</strong> ovens, fridges, POS — leasing is usually 1-2 pp cheaper than a comparable bank loan and tax-deductible monthly.</li>
+            <li><strong>Refinance after year 1:</strong> once you have 12 months of operating data, banks offer better rates than at launch. Aim for a 2-3 pp drop.</li>
+            <li><strong>Interest is tax-deductible:</strong> in PL CIT, interest expense reduces taxable income. Effective cost ≈ rate × (1 − CIT rate).</li>
+            <li><strong>Cash-vs-finance trade:</strong> if your cash earns 5% in a deposit and the loan costs 10%, financing burns 5 pp of net wealth. But it preserves working capital flexibility.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> monthly interest expense in zł. Zero for cash-purchased trucks.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> monthly interest ≈ loan_balance × annual_rate ÷ 12. Subtracted from EBITDA → net profit.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>PL 2026 norms:</strong> commercial bank loans for SMEs 8-12% APR, equipment leasing 7-10%, ZUS-backed startup loans 5-8%. Polish public programmes (PARP, BGK) often run 4-6%.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish bank SME-loan rate cards 2024, BGK published programmes, NBP base-rate trajectory.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> principal repayment (cash impact). Interest only affects P&amp;L; principal hits cash flow separately — track in the Cash Flow card if you have one.</p>
+        </Methodology>
       </>
     ),
   },
@@ -2930,10 +6178,22 @@ const HELP = {
     body: (
       <>
         <p>
-          Per-order variable cost of takeaway boxes, napkins, plate wash, paper
-          bags. Hits every order. Delivery-channel packaging (branded box +
-          sleeve) usually layered on top.
+          Per-order variable cost of boxes, napkins, plate wash, paper
+          bags. Hits every order. Delivery-channel branded box + sleeve
+          usually layered on top.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            An overlooked variable cost in margin models — most
+            operators forget it sits separately from COGS (food only)
+            and fixed costs. Bulk-buying quarterly cuts unit price
+            materially, but watch the EU single-use plastic levy roll-
+            out — incoming regulation will likely add a per-order
+            cost that compounds on every ticket. Branded packaging is
+            paid marketing in disguise; weigh the brand lift against
+            the unit-cost penalty.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Box ~2.50 zł, napkins ~0.30 zł, bag ~0.40 zł — about
@@ -2944,6 +6204,22 @@ const HELP = {
             50-100 zł ticket.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Bulk-buy quarterly:</strong> 3-month orders cut unit price by 8-15%. Calculate the storage cost vs the discount.</li>
+            <li><strong>Differentiate dine-in vs takeaway:</strong> dine-in needs no box, just a plate. Push dine-in if your pitch allows — eliminates ~2.50 zł/order.</li>
+            <li><strong>Audit napkin / cutlery consumption:</strong> staff often default to &quot;extra of everything&quot;. Train + measure.</li>
+            <li><strong>Negotiate with two suppliers:</strong> swap annually, quote shopping = 5-12% saving.</li>
+            <li><strong>Premium branded for delivery only:</strong> a 0.80 zł cheaper kraft for in-store + branded for delivery = no perceived downgrade but lower blended cost.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> per-order packaging cost in zł. Default 3.00 zł blended (mix of dine-in + takeaway + delivery).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> monthly packaging cost = orders × ticket_factor (1 for takeaway, 0 for dine-in) × cost_per_order. Treated as variable cost.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>PL 2026 cost ranges:</strong> 30cm pizza box plain 1.80-2.20 zł, branded 2.50-3.50 zł, kraft bag 0.30-0.50 zł, napkin 0.05-0.10 zł. Cutlery another 0.40-0.80 zł if included.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish packaging-supplier price lists 2024-2025, gastronomic-procurement benchmarks.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> single-use plastic levy (likely PL 2026-2027 will introduce CRP-style packaging fees). Add 0.20-0.50 zł/order buffer if launching in this window.</p>
+        </Methodology>
       </>
     ),
   },
@@ -2952,9 +6228,22 @@ const HELP = {
     body: (
       <>
         <p>
-          Spoilage + over-portioning + end-of-shift discards as % of revenue.
-          QSR norm 1–3%. Tracked as variable leakage in True CM1.
+          Spoilage + over-portioning + end-of-shift discards as % of
+          revenue. QSR norm 1-3%. Tracked as variable leakage in True
+          CM1.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Most independent operators don&apos;t measure until forced
+            to — daily logs are 5 min per shift and routinely uncover
+            hidden leakage that the team didn&apos;t know was
+            happening. EU food-waste reduction regulation is incoming
+            and will likely mandate measurement + reporting — build
+            the log now before it becomes a compliance project. What
+            gets measured gets managed; what gets logged daily gets
+            improved.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Dough goes off, mozzarella balls get nicked, the last 4 portions of
@@ -2964,6 +6253,22 @@ const HELP = {
             do, and discover it&apos;s 4-5%, not 2%.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Daily waste log:</strong> 2-min end-of-shift form. What got binned, why. Quantifying it is half the fix.</li>
+            <li><strong>Smaller, more frequent dough batches:</strong> 4× 4-hour batches beat 1× 16-hour batch on freshness AND waste.</li>
+            <li><strong>End-of-day half-price program:</strong> 21:30 onwards 50% off — converts waste into goodwill + small revenue.</li>
+            <li><strong>FIFO discipline:</strong> oldest stock first. Train + spot-check. A wrong rotation costs you the difference between 1% and 4% waste.</li>
+            <li><strong>Pre-prep vs cook-to-order:</strong> too much pre-prep raises waste; too little raises ticket time. Balance based on hourly forecast.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> waste % of revenue. Default 2% (QSR healthy).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> monthly waste cost = revenue × wastePct. Counted as variable cost in the True CM1 calculation.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Industry norms (QSR):</strong> 1.0-1.5% world-class (McDonald&apos;s, Domino&apos;s); 2-3% healthy independent; 4-5% under-measured; 6%+ undisciplined.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> NRA Industry Operations Report, MAPA-Polska gastronomic waste study, owner-operator daily-log compositions.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> EU food-waste regulations (the SUP directive + future EU food-waste reduction targets could mandate measurement &amp; reporting). Build the daily log now to be ready.</p>
+        </Methodology>
       </>
     ),
   },
@@ -2972,9 +6277,20 @@ const HELP = {
     body: (
       <>
         <p>
-          Voided orders, comp meals, staff free meals, till shortages as % of
-          revenue. QSR norm 1–2%.
+          Voided orders + comp meals + staff free meals + till shortages
+          as % of revenue. QSR norm 1-2%.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            A drift this category is rarely a quality problem — it&apos;s
+            usually a process problem (no manager-only void authority)
+            or a people problem (cash skim hiding inside legitimate
+            voids). Track per-staff void rate alongside the aggregate
+            and outliers identify themselves. Single biggest control:
+            manager-only void authority + a written limit on free
+            staff meals.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             A burnt pizza you refunded, the staff meal that&apos;s &quot;free&quot;,
@@ -2984,6 +6300,22 @@ const HELP = {
             by half — easiest 2,000 zł/month you&apos;ll ever find.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Manager-only voids:</strong> the single biggest lever. Voids without manager auth often hide cash-skim or favouritism.</li>
+            <li><strong>Standardise staff meals:</strong> one set meal/day per staff member, billed at cost not retail. Stops &quot;casual freebies&quot;.</li>
+            <li><strong>Cap comps per shift:</strong> manager can comp 1 ticket/shift on their own; anything more needs ownership approval.</li>
+            <li><strong>Burnt-pizza incidence is recipe drift:</strong> if you&apos;re comping 4+ pizzas/week for cooking errors, retrain the line. Don&apos;t accept it as cost-of-doing-business.</li>
+            <li><strong>Track per-staff comp rate:</strong> if one staff member comps 5× the team average, you have an honesty problem, not a quality problem.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> refunds + comps + staff meals + till shortages as % of revenue. Default 1.5%.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> monthly leakage = revenue × refundsPct. Treated as revenue-side reduction (not cost) in True CM1.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>QSR norms:</strong> 0.5-1% world-class (tight ops); 1-2% healthy independent; 3%+ requires investigation.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> NRA, restaurant-loss-prevention literature (e.g. Henson on internal-loss controls), POS audit-trail data.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> the customer-relationship value of generous comps. A 50 zł comp that earns a 2,000 zł lifetime customer is net positive — but the model doesn&apos;t see that. Track customer LTV separately.</p>
+        </Methodology>
       </>
     ),
   },
@@ -2992,9 +6324,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Effective discount rate = points earned × redemption rate × point
-          value. Default: 1 pt/PLN × 50% redeem × 5% value = ~1.2%.
+          Effective discount rate = earn × redemption × point value.
+          Default 1 pt/PLN × 50% redeem × 5% value = ~1.2%.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The economic question is whether the burn buys you
+            incremental frequency, not just whether the programme
+            &quot;works.&quot; Without measured repeat-rate lift, the
+            programme is a pure discount in disguise. Tiering high-
+            spend customers (higher earn rate for top spenders) focuses
+            the burn on the Pareto top, where it actually drives
+            behaviour — flat earn rates spread it thin and reward
+            customers who&apos;d come back anyway.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Loyalty isn&apos;t free — every 100 zł a regular spends earns them
@@ -3005,6 +6349,22 @@ const HELP = {
             just the burn.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Measure repeat-rate lift:</strong> the only metric that justifies loyalty cost. If repeat rate didn&apos;t move, the program is just a discount.</li>
+            <li><strong>Tier the program:</strong> 1% earn for casual, 3% for VIPs (200+ zł/month spend). Pareto distribution applies — your top 20% justify the burn.</li>
+            <li><strong>Use redemption pressure:</strong> &quot;you have 25 zł of credit expiring Sunday&quot; lifts re-visit frequency more than &quot;you have 25 zł of credit&quot;.</li>
+            <li><strong>Bundle loyalty redemptions with attach:</strong> &quot;free coffee with your 4th pizza&quot; — high-margin redemption that boosts attach.</li>
+            <li><strong>Watch the burn-to-earn ratio:</strong> healthy programs sit at 40-60% redemption. Above 80% you&apos;re bleeding; below 30% the program isn&apos;t engaging.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> effective discount rate as % of revenue. Default 1.2% (1 pt/PLN × 50% redeem × 5% point value).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> monthly loyalty cost = revenue × loyaltyBurn. Treated as revenue-side reduction in True CM1.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Default decomposition:</strong> 1 point earned per zł (100% earn rate) × 50% redeemed within 90 days (half forfeit) × 5 zł value per 100 points (typical PL casual-Italian scale) = 0.5 × 0.05 = 2.5% earned, ~1.2% effective burn.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> loyalty-program benchmarks (Sailthru, Bond), Polish e-commerce loyalty studies (PMR).</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> point breakage (forfeited points). Unredeemed points cost nothing but the model treats earned points as fully redeemed at the burn rate. For accuracy, run a quarterly breakage audit and refine the rate.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3013,9 +6373,20 @@ const HELP = {
     body: (
       <>
         <p>
-          Effective CIT rate. Polish small-CIT 9% applies up to €2M turnover;
-          standard 19% above. Drives net-of-tax profit and IRR.
+          Effective CIT rate. Polish small-CIT 9% applies up to €2M
+          turnover; standard 19% above. Drives net-of-tax profit and IRR.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The €2M threshold is a sharp cliff, not a sliding scale —
+            crossing it bumps CIT on the entire base, not just the
+            marginal złoty. Multi-entity structures (each sp. z o.o.
+            kept under €2M) are a common PL chain pattern for that
+            reason. Estonian-CIT defers tax until dividend distribution,
+            which favours reinvested growth over distribution; ask the
+            accountant if your growth profile fits.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             After everything else, the tax-man takes a cut. <strong>9% small-CIT</strong>
@@ -3026,6 +6397,22 @@ const HELP = {
             stay deliberately under the threshold.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Stay under €2M turnover if borderline:</strong> the jump from 9% → 19% is a 10pp tax hike. A 1.95M zł truck might net more than a 2.1M zł truck.</li>
+            <li><strong>Multi-entity structure for chains:</strong> 2 trucks × separate sp. z o.o. each under €2M = both at 9%. Common PL structure for multi-unit operators.</li>
+            <li><strong>Capex timing:</strong> a large equipment purchase in Q4 reduces this year&apos;s taxable profit — possibly worth bringing forward a planned year-1 buy.</li>
+            <li><strong>R&amp;D tax relief:</strong> recipe development + POS software counts in PL. Talk to a tax advisor — up to 200% deductibility on qualified R&amp;D.</li>
+            <li><strong>Estonian CIT (taxation when profits distributed):</strong> available for some PL companies; defers CIT until dividends paid out. Useful for reinvesting growth.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> effective CIT rate %. Default 9% (PL small-CIT).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> after-tax profit = pre-tax profit × (1 − CIT rate). Applied at the bottom of the P&amp;L.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>PL 2026 rates:</strong> 9% small-CIT for revenues ≤ €2M; 19% standard above. Estonian CIT (CIT na zasadach estońskich) defers tax until dividend distribution.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish tax code (Ustawa o CIT), Ministry of Finance interpretive notes, gastronomic tax-advisor guides (Crido, KPMG PL).</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> VAT (revenue gross-up vs net). The model treats revenue as net of VAT — if you enter gross figures, the tax math will overstate. Also doesn&apos;t model PIT for sole-proprietor operations (JDG), which has different rate structure.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3034,9 +6421,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Dec / Jan / Feb volume multiplier applied to base orders/day. Default
-          0.50 — Polish outdoor pizza-truck winter is brutal.
+          Dec/Jan/Feb volume multiplier applied to base orders/day.
+          Default 0.50 — Polish outdoor pizza-truck winter is brutal.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The single biggest seasonal stress on cash flow — Q1
+            generates the least revenue while incurring a normal share
+            of fixed costs, so winter is the working-capital crunch
+            point. Operators with marginal fundamentals should treat
+            winter survival as a separate planning problem, not assume
+            it averages out across the year. Build the cash reserve in
+            Q3 to fund the Q1 trough; don&apos;t plan against the
+            annual average.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Winter halves your business. A truck doing <strong>80 orders/day</strong>
@@ -3047,6 +6446,22 @@ const HELP = {
             indoor pop-up for Q1.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Build a winter menu:</strong> hot soups, baked pasta, mulled wine. Higher-margin warming items that justify the visit.</li>
+            <li><strong>Indoor pop-up partnership:</strong> December-February rent a corner in a mall food court. Saves the rent stack.</li>
+            <li><strong>Push delivery harder Dec-Feb:</strong> bad weather = high delivery demand. Marketing spend pivots to delivery.</li>
+            <li><strong>Reduce staff hours, not headcount:</strong> shorten service to 16-21h Dec-Feb. Keeps the team but cuts labor.</li>
+            <li><strong>Cash plan from Q3:</strong> save 3 months of fixed costs by September. Winter eats reserves; running out triggers panic decisions.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> winter multiplier (default 0.50). Applied to base orders/day for Dec/Jan/Feb.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> winter_orders/day = base_orders/day × winterMultiplier. Applied in the monthly projection for the 3 winter months.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Range:</strong> 0.40-0.65 for outdoor PL truck. Indoor mall pitch: 0.85-0.95 (almost no dip). Pure delivery operation: 0.80 (delivery surges in cold weather).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish gastronomic seasonality reports, IMGW Warsaw winter-day data, owner-operator winter-revenue surveys.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> regional variation (Gdańsk vs Kraków vs Zakopane winter is very different). Override the multiplier for non-Warsaw locations.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3055,9 +6470,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Sustained throughput of one pizzaiolo + one Neapolitan oven. 60–80
-          pizzas/hr realistic; 90+ needs a second line.
+          Sustained throughput of one pizzaiolo + one Neapolitan oven.
+          60-80 pizzas/hr realistic; 90+ needs a second line.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The bottleneck is usually the pizzaiolo&apos;s shape-rate,
+            not the oven — Neapolitan ovens can bake more
+            simultaneously than the line can feed them. Once peak-hour
+            saturation passes ~90% three+ days a week, additional
+            marketing spend has zero return because the kitchen
+            can&apos;t take more orders; that&apos;s the trigger to
+            think about a second oven, a runner, or a layout
+            re-design.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Your oven physically can&apos;t go faster than this. If your peak
@@ -3068,6 +6495,22 @@ const HELP = {
             consistently saturating the current ceiling.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Pre-launch a pizzaiolo on the line for the peak hour only:</strong> 1-hour shift extension lifts capacity 50% at the rush, not 100%.</li>
+            <li><strong>Pre-shape dough during slow hours:</strong> instead of full stretch-to-order, pre-portion + cold-prove during 14-17h. Cuts per-pizza time ~30s.</li>
+            <li><strong>Batch the orders:</strong> 4-6 pizzas per oven cycle vs 1-2 lifts throughput dramatically. Train the line on batch discipline.</li>
+            <li><strong>Watch for saturation:</strong> if your hourly heatmap shows red cells (saturated), every additional marketing zł is wasted. Capacity = constraint.</li>
+            <li><strong>Second oven decision threshold:</strong> if peak hour saturation &gt; 90% on 3+ days/week consistently, the second oven pays back in 6-9 months.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> sustained pizzas/hour the line can produce. Default 70 (one pizzaiolo + one Neapolitan oven).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> daily kitchen capacity = pizzasPerHour × serviceHoursPerDay × oven_efficiency. Saturation = peak_hour_orders ÷ pizzasPerHour.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Realistic range:</strong> Neapolitan wood-fired oven 60-90/hr per pizzaiolo. Gas/electric deck 80-110. Conveyor 120+. The bottleneck is usually the pizzaiolo&apos;s shaping speed, not the oven.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Pizzeria operations literature (Bianco, Forni Ferrara dealer guides), AVPN (Associazione Verace Pizza Napoletana) production studies.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> menu mix complexity (a topping-heavy pizza takes ~25% longer than Margherita). The model assumes uniform pizza time; high-attach evenings might effectively run 10-15% slower.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3076,9 +6519,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Hours the line is producing — excludes prep + close-down. Drives
-          capacity-orders-per-day calc.
+          Productive hours — excludes prep + close-down. Drives daily
+          capacity (= pizzas/hr × service hours × efficiency).
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Adding service hours scales labor linearly but only captures
+            demand if there&apos;s unmet demand in that hour —
+            extending into off-peak periods adds cost faster than
+            revenue and quietly damages labor %. The decision should
+            be data-driven: look at the hourly heatmap and ask whether
+            the new hour&apos;s expected demand actually clears the
+            staff-cost threshold to break even, not just &quot;more
+            hours = more revenue.&quot;
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Your kitchen is &quot;open&quot; 12 hours but really only producing
@@ -3089,6 +6544,22 @@ const HELP = {
             with it.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Add the highest-margin hour first:</strong> dinner peak (18-21) beats opening earlier on margin. Test late-evening (21-23) for premium aperitivo crowd before extending lunch.</li>
+            <li><strong>Add lunch with a simplified menu:</strong> 4 fast pizzas at 35-45 zł, no antipasti, fewer SKUs. Different ops profile from dinner.</li>
+            <li><strong>Calculate marginal labor cost:</strong> each extra service hour = ~1 staff-hour × ~45 zł brutto. Break-even at ~5 extra orders × ~12 zł margin.</li>
+            <li><strong>Watch the demand curve:</strong> if the new hour fills less than 40% of capacity, you&apos;re paying for empty time. Cut it back.</li>
+            <li><strong>Use the heatmap to validate:</strong> the hourly chart shows where adding an hour would actually capture demand vs add cost.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> service hours per day (default 8 — typical lunch + dinner split).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> daily capacity = pizzasPerHour × serviceHoursPerDay × ovenEfficiency. Excludes prep + setup + close-down hours.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Typical splits:</strong> lunch-only 4 hr, dinner-only 5 hr, lunch+dinner 9 hr, all-day 11 hr. Aperitivo bars sometimes extend to 12-14 hr.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish gastronomic operating-hours surveys, NRA service-window studies, owner-operator schedule analytics.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> prep + close-down labor (typically 1.5-2 hr/day each). The labor card should account for those hours even though they don&apos;t produce orders.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3097,9 +6568,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Share of labor that scales with order volume vs fully-fixed crew. 0%
-          = always-on team, 100% = fully variable. 40% QSR norm.
+          Share of labor that scales with order volume vs fully-fixed
+          crew. 0% = always-on; 100% = fully variable. QSR norm 40%.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Trade-off between cost discipline and staff retention. Low
+            flex preserves a stable team but bleeds margin on slow
+            days; high flex protects margin but raises turnover
+            because part-timers churn faster than full-timers. The
+            right setting depends on local labor market and brand
+            promise: a craft / quality-led concept needs continuity
+            (low flex); a volume / speed-led concept can absorb churn
+            (high flex).
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             How &quot;elastic&quot; is your roster? <strong>0% flex</strong>
@@ -3110,6 +6593,22 @@ const HELP = {
             <strong> 40%</strong> is the sweet spot for most trucks.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Fixed core + flexible edges:</strong> 2-3 fixed pizzaiolos, 1-2 cooks; flex part-timers for peaks. Keeps quality + flex.</li>
+            <li><strong>Use student-friendly hours:</strong> students want 18-22h shifts on weekdays — perfect for the dinner peak.</li>
+            <li><strong>Call-off rules in writing:</strong> &quot;you may be called off with 4h notice during defined slow windows&quot;. Sets expectations early.</li>
+            <li><strong>Pay slightly above market for flex:</strong> a part-timer paid 38 zł/h vs market 35 zł/h reduces turnover, which matters more than the 8% premium.</li>
+            <li><strong>Cross-train fixed staff:</strong> they cover absence + flex roles without scheduling chaos.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> labor flex % (0-100). Default 40% (QSR norm — mix of fixed core + variable part-timers).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> variable_labor = labor × laborFlex × max(0, (orders/day − laborAnchor) ÷ laborAnchor). Adds proportionally above anchor; doesn&apos;t subtract below.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Industry ranges:</strong> 20-30% world-class chains (Domino&apos;s, Telepizza); 40-50% independent casual-Italian; 70%+ fast-casual w/ heavy part-time.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> NRA labor benchmarks, Polish fast-casual chain published reports, gig-economy gastronomic studies.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> minimum staffing constraints (you can&apos;t run a kitchen with 1 person no matter how slow). Real labor has a floor; the model treats variability as continuous.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3118,9 +6617,21 @@ const HELP = {
     body: (
       <>
         <p>
-          The orders/day for which the current labor mix is sized. Volume past
-          this anchor pulls in additional variable labor proportionally.
+          The orders/day for which the current labor mix is sized.
+          Volume past the anchor pulls in additional variable labor
+          proportionally.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Wrong anchor poisons the labor projection in both
+            directions: too low overstates the labor that growth
+            requires; too high understates it. Re-anchor quarterly as
+            volume trends shift — stale anchors are the single biggest
+            source of labor-forecast error in chains that grew quickly
+            then plateaued. Anchor on the trailing 30-day median, not
+            the peak week.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Tell the model what volume your current roster is designed for. If
@@ -3131,6 +6642,22 @@ const HELP = {
             fixed crew.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Set anchor to your typical orders/day:</strong> avg over 30 days. Not your good days, not your bad days.</li>
+            <li><strong>Re-anchor quarterly:</strong> if volume grows steadily, your &quot;normal&quot; shifts up. Keep the anchor honest.</li>
+            <li><strong>Anchor too low = overstated labor scaling:</strong> the model will project huge labor inflation as orders grow. Recalibrate.</li>
+            <li><strong>Anchor too high = understated labor for growth:</strong> the model assumes you have spare capacity that doesn&apos;t exist. Budget more.</li>
+            <li><strong>Tie to schedule:</strong> if your roster is sized for 80, set anchor=80. Match the model to your real ops.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> the orders/day for which the current labor mix is sized. Default = base orders/day.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> anchor is the reference point against which variable labor scales (see laborFlex methodology).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Best practice:</strong> set to the order volume your current schedule is built around. Don&apos;t use scenario projections; use historical actuals.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> labor scheduling literature, restaurant ops case studies.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> seasonal anchor shift (summer roster vs winter roster). The model uses one anchor across the year — use the seasonality card for volume swings.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3139,9 +6666,22 @@ const HELP = {
     body: (
       <>
         <p>
-          % of daily orders concentrated in the peak hour. This is the binding
-          constraint, not the daily average. Default 18% on dinner-led truck.
+          % of daily orders concentrated in the peak hour. The binding
+          capacity constraint — not the daily average. Default 18% for
+          dinner-led truck.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The same daily order total tells two completely different
+            capacity stories depending on how concentrated peak is:
+            spread evenly, the kitchen never feels stress; piled into
+            one hour, the same total turns customers away. So this
+            single percentage often decides whether the operation
+            needs a second oven, more than the headline orders/day
+            does. Read against the kitchen-saturation KPI before
+            planning capex.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             80 orders/day spread over 10 hours is 8/hour — easy. But if
@@ -3151,6 +6691,22 @@ const HELP = {
             This single percentage often decides whether you need a second oven.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Measure your peak hour from POS:</strong> not your perception. Friday 19h vs 20h vs Saturday 20h — find the worst hour, design capacity for it.</li>
+            <li><strong>Flatten the peak with pre-orders:</strong> push customers to book 18:30 or 21:00 slots with a small incentive (free coffee).</li>
+            <li><strong>Pre-bake low-attach items:</strong> Margherita / Marinara can pre-bake 5min early, finish in oven on order. Lifts capacity at peak.</li>
+            <li><strong>Limited menu at peak:</strong> 3-4 SKUs only during 19-21h. Slashes per-pizza time, lifts throughput.</li>
+            <li><strong>Capacity = peak × hour, not avg × day:</strong> when scaling, the peak hour is the binding constraint. Plan investments against it.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> % of daily orders concentrated in the single busiest hour. Default 18%.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> peak_hour_orders = orders/day × peakHourShare. Saturation = peak_hour_orders ÷ pizzasPerHour. If saturation &gt;1.0, demand exceeds capacity = lost orders.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Realistic ranges:</strong> 12-15% spread-load lunch-and-dinner; 18-22% dinner-led casual; 25-32% special-event / weekend-only; bar / aperitivo can hit 30%+ in the 18-20h window.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish POS data composites, NRA hourly-mix studies, restaurant capacity-planning literature (Kasavana).</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> within-hour volatility (most peak hours have a 15-min mega-peak). The model assumes flat distribution within the hour, which under-states real saturation.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3160,9 +6716,20 @@ const HELP = {
       <>
         <p>
           Derates kitchen capacity for slow-prep menus. 1.0 = pizza-only;
-          1.4–1.6 = pasta-heavy. Captures station bottlenecks the headline
-          pizzas/hour misses.
+          1.4-1.6 = pasta-heavy. Captures station bottlenecks the
+          headline pizzas/hour misses.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Pushing pasta or antipasti attach without adjusting this
+            multiplier makes the modelled capacity lie — the marginal
+            prep load on a separate station compounds the pizza line,
+            and total throughput drops more than an additive estimate
+            suggests. So menu expansion isn&apos;t free even at zero
+            capex: it taxes the headline capacity figure. Re-calibrate
+            when the menu changes.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             A 70-pizza/hr kitchen drops to <strong>~45 effective orders/hr</strong>
@@ -3172,6 +6739,22 @@ const HELP = {
             &quot;capacity&quot; looks bigger than it actually is.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Calibrate from your menu mix:</strong> if 30% of orders are pasta primo, your multiplier is ~1.25. If 50%, ~1.5. Mix-weight your way to the right number.</li>
+            <li><strong>Separate stations help:</strong> a dedicated pasta cook + pan + burner reduces the effective complexity drag — invest if pasta attach exceeds 20%.</li>
+            <li><strong>Simplify the slow items:</strong> if antipasti needs assembly + plating, pre-portion to slash 60s/order at the line.</li>
+            <li><strong>Audit your slowest SKU monthly:</strong> use POS prep-time stamps. Cut or simplify the 90%+ time outliers.</li>
+            <li><strong>Mix-aware roster:</strong> peak with high pasta attach needs more line cooks, not more pizzaiolos. Match labor to the actual mix.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> effective-capacity multiplier (1.0 = pizza-only). Default 1.0; raise to 1.4-1.6 for pasta-heavy menus.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> effective pizzas/hour = pizzasPerHour ÷ prepComplexity. So a 70/hr line × 1.4 complexity = 50 effective orders/hr.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Typical calibration:</strong> pizza-only 1.00, pizza+drinks 1.05, +dessert/antipasti 1.15, +pasta primo 1.40, full-menu Italian 1.55+.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> kitchen-throughput studies, Italian-restaurant ops literature (Pomodoro Foundation training materials).</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> per-station bottlenecks (the pasta station might saturate before the pizza station). The model derates everything uniformly; real ops can have one station idle while another&apos;s slammed.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3180,8 +6763,20 @@ const HELP = {
     body: (
       <>
         <p>
-          Jun / Jul / Aug volume multiplier. Default 1.30 — peak truck season.
+          Jun/Jul/Aug volume multiplier. Default 1.30 — peak truck
+          season.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The season that funds winter survival — Q3 cash must build
+            the reserve that floats Q1 through the winter trough.
+            Heatwave bonus stacks on top for the hot-evening micro-
+            effect; school-holiday lunch dip partly offsets weekday
+            lunch revenue. Pitch type changes the magnitude
+            dramatically — outdoor truck swings hardest, indoor mall
+            barely moves.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Summer is when trucks make money. A baseline truck doing
@@ -3192,6 +6787,22 @@ const HELP = {
             the margin.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Save summer surplus for winter:</strong> auto-transfer 30% of summer net profit to a winter reserve. Otherwise you&apos;ll spend it.</li>
+            <li><strong>Pre-hire summer staff in April:</strong> students/part-timers book early. Wait until June and the talent pool is empty.</li>
+            <li><strong>Patio expansion in May:</strong> rent extra outdoor furniture, get permits done early. Day-1 of warm weather = max revenue.</li>
+            <li><strong>Aperitivo / spritz push:</strong> summer evenings reward drink attach. Train + stock + promote.</li>
+            <li><strong>Don&apos;t over-extend:</strong> summer multiplier 1.30 doesn&apos;t mean you can do 1.30× capacity. Match labor + supplies; don&apos;t blow out service times.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> summer (Jun-Aug) volume multiplier. Default 1.30.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> summer_orders/day = base × summerMultiplier × heatwaveMultiplier × ... composed with other weather levers.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Range:</strong> 1.15-1.45 outdoor truck; 0.95-1.10 indoor mall (less seasonal); 1.20-1.30 tourist-area indoor. Resort/beach 1.50+.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish gastronomic seasonality studies, GUS hospitality reports, owner-operator monthly variance data.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> capacity-limited demand (your 1.30× theoretical might be capped by oven throughput). Check kitchen saturation against the summer peak.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3200,8 +6811,19 @@ const HELP = {
     body: (
       <>
         <p>
-          Mar / Apr / May multiplier. Default 1.00 (baseline season).
+          Mar/Apr/May multiplier. Default 1.00 (baseline season).
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Spring is the calibration anchor — the other three
+            multipliers all flex relative to this 1.00 reference, so
+            forecast-from-spring keeps the projection internally
+            consistent. Easter weekend is volatile (peak day if open,
+            zero if closed) — handle via the peak / closure levers
+            rather than inflating the quarterly multiplier, or you
+            double-count.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Spring is your &quot;normal&quot;. Use it as the calibration anchor
@@ -3211,6 +6833,22 @@ const HELP = {
             don&apos;t over-promise.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>April patio launch:</strong> set up outdoor seating for the first warm weekend. Visibility = early-season buzz.</li>
+            <li><strong>Easter is volatile:</strong> can be peak (family lunches) or zero (closure). Plan both scenarios.</li>
+            <li><strong>Use spring to test menu changes:</strong> low-stakes season to A/B new items before summer rush.</li>
+            <li><strong>Refresh marketing for the new season:</strong> &quot;spring menu&quot; framing converts even if the items are the same.</li>
+            <li><strong>Calibrate the model:</strong> spring is your baseline. Match it to your last-year actuals so the other seasons are correctly flexed.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> spring (Mar-May) volume multiplier. Default 1.00 (baseline).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> spring_orders/day = base × springMultiplier × {"(other weather adjustments)"}.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Range:</strong> 0.95-1.10 typical. Late spring (May) often runs higher than early (March) — the multiplier averages across the quarter.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> seasonality studies, owner-operator monthly variance.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> Easter weekend swing (can be 2× or 0.3× depending on whether you open). Add as event-day if planning to open; as holiday-closure if not.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3219,8 +6857,19 @@ const HELP = {
     body: (
       <>
         <p>
-          Sep / Oct / Nov multiplier. Default 0.95 — slight cooling vs spring.
+          Sep/Oct/Nov multiplier. Default 0.95 — slight cooling vs
+          spring.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Autumn hides two opposing forces inside one multiplier:
+            early September runs hot (back-to-school + back-to-office),
+            November collapses (daylight + patio close). Halloween
+            (peak) and All Saints&apos; (closure) are calendar-specific
+            — handle via the peak / closure levers so you don&apos;t
+            double-count them inside the quarterly average.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             September starts hot then cools fast. <strong>5% lower volume</strong>
@@ -3229,6 +6878,22 @@ const HELP = {
             crowd) to compensate before the dark days hit.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>September back-to-school push:</strong> office lunch crowd returns. Marketing aimed at &quot;September resets&quot; outperforms June ads.</li>
+            <li><strong>Autumn menu launch in early Oct:</strong> truffle, pumpkin, root-veg toppings. Higher-margin SKUs justify the seasonal effort.</li>
+            <li><strong>Plan for Halloween:</strong> the peak day in autumn. Pre-promo, themed items, evening hours extended.</li>
+            <li><strong>Watch the daylight drop:</strong> November evenings get dark at 16h. Patio dining dies; pivot to indoor / delivery emphasis.</li>
+            <li><strong>Build the winter reserve:</strong> autumn is your last cash-positive season before winter. Save aggressively in October-November.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> autumn (Sep-Nov) volume multiplier. Default 0.95.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> autumn_orders/day = base × autumnMultiplier × ... composed with other weather levers.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Range:</strong> 0.85-1.05. Early autumn (Sep) often runs at 1.05; November typically 0.85. Multiplier averages across the quarter.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish gastronomic seasonality, owner-operator monthly variance, IMGW daylight-hour data.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> All Saints&apos; Day (1 Nov) revenue impact. Most pizzerias close — use the holidayClosed field separately.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3237,9 +6902,20 @@ const HELP = {
     body: (
       <>
         <p>
-          Number of pizzas one oven cycle accommodates. Stefano Ferrara 6–9;
-          multi-deck/conveyor 16+. Drives theoretical hourly capacity.
+          Pizzas one oven cycle holds. Stefano Ferrara 6-9; multi-deck
+          / conveyor 16+. Drives theoretical hourly capacity.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Batching discipline is the biggest team-level lever — a
+            pizzaiolo loading 4-6 pies per bake vs 1-2 doubles real
+            throughput on the same oven, free. So before reaching for
+            capex, train the line. Strategic note at chain scale:
+            second-oven CAPEX usually loses to a second truck (same
+            capex, doubles geographic reach instead of doubling one
+            location).
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             One bake = how many pies side-by-side. A Ferrara holds
@@ -3250,6 +6926,22 @@ const HELP = {
             is cheaper than a bigger oven.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Train the pizzaiolo to batch:</strong> 4-6 pies per bake vs 1-2 is the single biggest throughput lever. Cheap, fast, big impact.</li>
+            <li><strong>Match orders to bakes:</strong> hold a tablet showing &quot;next 6 orders&quot; — the pizzaiolo prepares the batch together.</li>
+            <li><strong>Pre-rotate dough during slow:</strong> portioned discs ready to stretch save 30-45s per pizza when the rush hits.</li>
+            <li><strong>Oven layout matters:</strong> a deeper oven holds more but is harder to peel. Train on peel technique to max the capacity.</li>
+            <li><strong>Second oven vs second truck:</strong> a second oven helps within one location; a second truck doubles your geographic reach. Different problems, different solutions.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> number of pizzas per single bake cycle. Default 8 (Stefano Ferrara). Multi-deck/conveyor 16+.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> theoretical pizzas/hour = pizzasPerBake × (3600 ÷ cycleTime) × ovenEfficiency.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Oven types &amp; capacity:</strong> Stefano Ferrara 8 pies, Marra Forni 6-9, Forno Bravo 4-6, multi-deck Lincoln 12-16, conveyor Middleby 16-20.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> oven manufacturer specs, AVPN production guides, Pizza University throughput data.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> uneven oven heat distribution (front vs back, hot spots). Real bakes need rotation; the model treats every slot as identical.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3258,9 +6950,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Bake cycle in seconds. Neapolitan dough cooks ~90s at 450°C. Drives
-          theoretical pizzas/hour.
+          Bake cycle in seconds. Neapolitan dough cooks ~90s at 450°C.
+          Drives theoretical pizzas/hour.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Real cycle drifts above spec at peak: oven recovery between
+            bakes, door-open heat loss, dough drag. So stopwatch the
+            real number at the Friday rush and calibrate against that,
+            not against the manual. Dough hydration is a subtle lever
+            — Neapolitan-spec hydration cooks faster than drier
+            recipes, which is one reason AVPN-compliant pizzerias
+            achieve higher real throughput than the cycle numbers
+            alone predict.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Neapolitan = <strong>90 seconds at 450°C</strong>. Slower ovens
@@ -3271,6 +6975,22 @@ const HELP = {
             Friday rush.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Stopwatch the actual time:</strong> measure 10 pizzas at peak. The real number is usually 15-30% longer than the recipe says.</li>
+            <li><strong>Hotter oven = faster cycle:</strong> wood-fired Neapolitan at 480°C bakes in 60-75s; gas at 420°C is 90-110s.</li>
+            <li><strong>Watch the dough hydration:</strong> wetter dough cooks faster but is harder to shape. 60-65% hydration is the Neapolitan sweet spot.</li>
+            <li><strong>Recalibrate seasonally:</strong> winter cold-start ovens take longer to recover between bakes. Adjust cycle time in Dec-Feb.</li>
+            <li><strong>If &gt;120s, audit the bake:</strong> peel technique, oven door discipline, dough drag — all add seconds.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> bake cycle in seconds. Default 90s (Neapolitan).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> theoretical pizzas/hour = pizzasPerBake × (3600 ÷ cycleTime) × ovenEfficiency.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Typical cycles:</strong> Neapolitan wood-fired 60-90s @ 450-480°C; gas deck 90-120s @ 350-420°C; conveyor 4-6 min @ 280-310°C (low-temp, high-throughput).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> AVPN standards, oven-manufacturer specs (Ferrara, Marra, Forno Bravo), pizzeria operations literature.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> oven recovery time after high-volume bakes (wood-fired ovens cool between rushes). Real cycle time creeps up in sustained peaks.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3279,10 +6999,21 @@ const HELP = {
     body: (
       <>
         <p>
-          % of theoretical bake capacity actually achieved. 20–35% on a real
-          truck — pulls, sweeps, dough rebuilds, customer-facing time, plate-up
-          all eat oven-adjacent time.
+          % of theoretical bake capacity actually achieved. 20-35% on a
+          real truck — pulls, sweeps, dough rebuilds, customer-facing
+          time, plate-up all eat oven-adjacent time.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The gap between brochure capacity and Friday-night reality
+            is structural, not a defect — the pizzaiolo can&apos;t feed
+            the oven as fast as the oven can bake. So improving
+            efficiency by a few percentage points (training, mise-en-
+            place, runner support) usually beats almost any capex play
+            for less money. Vendor demos run at theoretical efficiency;
+            real-world ops never do.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             The brochure says <strong>320 pizzas/hr</strong>; reality is
@@ -3293,6 +7024,22 @@ const HELP = {
             limp along at 18%.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Add a runner to free the pizzaiolo:</strong> a runner does pre-build, plate-up, counter handoff. Lifts efficiency 4-8 pp.</li>
+            <li><strong>Dedicated cashier at peak:</strong> separating order-taking from production lifts 2-4 pp.</li>
+            <li><strong>Mise-en-place discipline:</strong> pre-portioned cheese, sliced toppings, ready dough — all save seconds per build.</li>
+            <li><strong>Measure your real efficiency monthly:</strong> tickets baked ÷ theoretical. Watch the trend; if it&apos;s slipping, retrain.</li>
+            <li><strong>Veterans hit 28-32%, newbies 15-20%:</strong> training is the highest-ROI investment in throughput.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> % of theoretical bake capacity actually achieved. Default 22%.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> realistic pizzas/hour = pizzasPerBake × (3600 ÷ cycleTime) × ovenEfficiency. Captures the gap between &quot;what the oven could do&quot; and &quot;what the pizzaiolo+oven combined actually do&quot;.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Realistic ranges:</strong> 15-20% first-week crews, 20-25% trained crew with single pizzaiolo, 28-35% multi-station with runner, 35-40% world-class chains with optimised mise-en-place.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> pizzeria operations time-and-motion studies, AVPN training data, owner-operator throughput audits.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> efficiency degradation late in shift (12+ hour shifts drop efficiency 5-10 pp by hour 10). Match shift-end with low-volume hours.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3301,9 +7048,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Number of operating trucks. Setting ≥ 2 activates the fleet model
-          (HQ overhead, supply discount, commissary, cannibalisation, royalty).
+          Number of operating trucks. Setting ≥ 2 activates the fleet
+          model (HQ overhead, supply discount, commissary,
+          cannibalisation, royalty).
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Units 2-3 are the hardest stage — costs layer on (HQ, supply
+            coordination) before scale economics kick in. The
+            psychology of operators planning unit 2 is &quot;double the
+            profit&quot;; the math is closer to &quot;same profit, more
+            stress&quot; until unit 4-5 unlocks meaningful supplier
+            discounts. Plan the trough explicitly so it doesn&apos;t
+            surprise you.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             One truck = one P&amp;L. Five trucks = a chain with totally
@@ -3314,6 +7073,22 @@ const HELP = {
             include franchise overhead you don&apos;t actually have.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Unit 2 is the hardest:</strong> you carry HQ overhead for two units but supply discounts haven&apos;t kicked in yet. Plan for 6-12 months of margin pressure.</li>
+            <li><strong>Don&apos;t open Unit 2 within 1 km of Unit 1:</strong> cannibalisation is real. Use the cannibalisation lever to model the overlap.</li>
+            <li><strong>Standardise before scaling:</strong> if your recipes/SOPs aren&apos;t documented, Unit 2 will not look like Unit 1. Customers notice.</li>
+            <li><strong>Choose franchise vs corporate per unit:</strong> franchise = lower capex + royalty income; corporate = full margin + full risk. Plan the mix.</li>
+            <li><strong>5 units is the magic number:</strong> below 5, HQ overhead drags. Above 5, scale economics start working.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> total operating trucks. Single unit = 1; chain mode activates at 2+.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Where it flows:</strong> activates the fleet panel showing HQ overhead allocation, supply discounts (kicks in at supplyDiscountAt), commissary savings (kicks in at commissaryAt), cannibalisation drag, royalty income (if franchised).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Critical-mass thresholds (PL casual-Italian):</strong> Unit 2-3 are hardest (cost layered without scale). Unit 4-5 unlocks supplier discounts. Unit 6-10 unlocks commissary economics. Above 10 = real chain.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> franchise economics literature (Justis &amp; Judd, Khan), PL chain post-mortems (Pizza Hut PL, Da Grasso, Telepizza).</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> location-specific revenue variance (Unit 5 in Gdańsk might do 70% of Unit 1 in Warsaw). Set unit count for the fleet structure; manually adjust per-unit revenue in real plans.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3322,10 +7097,22 @@ const HELP = {
     body: (
       <>
         <p>
-          Monthly cost of shared regional management, ops, finance. Spread
-          across all units. Should fall below 5% of fleet revenue past 10
-          units.
+          Monthly cost of shared regional management, ops, finance,
+          marketing. Spread across all units. Target &lt; 5% of fleet
+          revenue past 10 units.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The classic chain failure mode is hiring HQ ahead of unit
+            economics — fractional CFO before full-time, centralise
+            only the highest-leverage functions first (finance,
+            marketing, supply), owner-operator the first units. Each
+            HQ hire should be ROI-justified via measured per-unit
+            performance lift; if rising HQ cost isn&apos;t tracked
+            against falling per-unit operating cost, the structure is
+            bloating.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             A regional manager costs <strong>~15,000 zł/month</strong>. One
@@ -3336,6 +7123,22 @@ const HELP = {
             than the 5th.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Owner-operator the first 3:</strong> defer HQ overhead until unit 4-5. Owner doubles as regional manager.</li>
+            <li><strong>Outsource finance early:</strong> a fractional CFO at 4,000 zł/month beats hiring full-time at 15k until you&apos;re at 5+ units.</li>
+            <li><strong>Centralise the back-office:</strong> POS, marketing, accounting — one team across all units. Don&apos;t duplicate per-truck.</li>
+            <li><strong>Target HQ &lt; 5% of fleet revenue:</strong> above 5% is dragging unit-level profitability. Restructure or absorb at higher volume.</li>
+            <li><strong>Track HQ absorption monthly:</strong> as units grow, the % should fall. If it&apos;s rising, HQ growth is outpacing unit growth.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> monthly HQ overhead in zł (shared cost across all units).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> per-unit HQ overhead = hqOverhead ÷ unitCount. Deducted from each unit&apos;s EBITDA in the fleet panel.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>HQ overhead components:</strong> regional manager (~12-18k/mo), ops/finance/marketing leads (~10-15k each), shared software (~5-8k), accountant (~3-6k). Total typically 25-50k for a 5-10 unit chain.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish gastronomic chain financials, franchise system economics literature.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> step-function HQ hires. Going from 5 → 10 units doesn&apos;t double HQ — but going 10 → 20 might. Real HQ cost has staircase shape; the model treats it as linear allocation.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3344,9 +7147,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Franchise royalty taken from unit revenue. Industry norm 5–6%.
-          Deducted from unit-level EBITDA.
+          Franchise royalty taken from unit revenue. Industry norm
+          5-6%. Deducted from unit-level EBITDA.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Validate that the franchisee P&amp;L still nets 8-12%
+            AFTER royalty + marketing + platform fees — otherwise no
+            rational operator signs. Tiered royalty (lower in year 1,
+            climbing to steady-state) eases franchisee ramp and lifts
+            sign-up rates. The brand IS the product on the royalty
+            side — royalty income vanishes if franchisees don&apos;t
+            replicate quality from the documented playbook, so
+            enforcement is part of the economics.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             If you franchise the concept, you keep <strong>5–6% of every
@@ -3357,6 +7172,22 @@ const HELP = {
             royalty.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Validate the franchisee P&amp;L first:</strong> if a franchisee can&apos;t net 8-12% AFTER paying you 5-6%, the franchise won&apos;t sell.</li>
+            <li><strong>Tiered royalty by performance:</strong> 4% for first year, 5% second, 6% steady-state. Eases the early ramp.</li>
+            <li><strong>Royalty + marketing combined &lt; 10%:</strong> above that, franchisees struggle. Industry sweet spot is 5% royalty + 2.5% marketing = 7.5% total.</li>
+            <li><strong>Royalty income is real ops cash:</strong> use it to fund HQ, not as personal income. Otherwise scaling stalls.</li>
+            <li><strong>Document the playbook before franchising:</strong> if a franchisee can&apos;t replicate from your manual, royalties collapse with quality.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> royalty % of franchisee revenue (default 5%).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> royalty income = franchisee revenue × royaltyPct, summed across all franchised units. Deducted from franchisee unit-level EBITDA.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Industry norms:</strong> QSR pizza chains 4-6% (Domino&apos;s 5.5%, Papa John&apos;s 5%, Telepizza 5.5%). Independent concepts: 5-7%.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> franchise disclosure documents (FDDs), Polish Franchise Association data.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> franchise fee (upfront, typically 30-80k zł). Treated separately in the buildoutLearning lever.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3365,9 +7196,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Mandatory franchisee contribution to a shared marketing pool.
-          Industry norm 2–3%.
+          Mandatory franchisee contribution to a shared brand-marketing
+          pool. Industry norm 2-3%.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Pooled spend creates national-scale advertising leverage
+            no individual unit could afford — the strategic value of
+            franchising as a marketing engine, not just a capital
+            engine. Trust is the binding constraint: quarterly spend
+            reports to franchisees prevent the perception that HQ is
+            siphoning the fund into operating cost. Without that
+            transparency, franchisees push back on every collection
+            cycle.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Franchisees pay another <strong>2–3%</strong> into a national
@@ -3377,6 +7220,22 @@ const HELP = {
             but the franchisee sees it as another fee on top of the royalty.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Spend the marketing fund visibly:</strong> franchisees lose patience if they pay 2.5% and don&apos;t see ad spend. Quarterly reports keep faith.</li>
+            <li><strong>Mix local + national spend:</strong> 70% national brand campaigns, 30% allocated to franchisee local-area marketing. Both matter.</li>
+            <li><strong>Earmark for digital, not legacy:</strong> Instagram/TikTok beats TV for casual-Italian audiences. Adjust the mix yearly.</li>
+            <li><strong>Audit annually:</strong> some chains divert marketing-fund cash into HQ ops, which is contractually questionable. Stay clean.</li>
+            <li><strong>Co-fund peak campaigns:</strong> Valentine&apos;s Day, summer aperitivo. Aligned spend across the fleet beats fragmented effort.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> mandatory marketing-fund contribution % of franchisee revenue (default 2.5%).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> marketing fund inflow = franchisee revenue × marketingFundPct. Pooled at HQ, spent on shared advertising/brand campaigns.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Industry norms:</strong> 2-3% for casual-Italian chains; sometimes 4% for heavy-marketing concepts (Pizza Hut historically 4%).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> franchise disclosure documents, Polish Franchise Association data.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> local-area marketing requirement (franchisees may also be required to spend 2-3% locally above the pooled fund). Add as separate variable cost if franchisees do this.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3385,9 +7244,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Number of units before wholesale suppliers offer COGS discounts.
-          Typical threshold 4–5 units in PL food-service supply chains.
+          Unit-count threshold at which wholesale suppliers offer COGS
+          discounts. Typical 4-5 units in PL food-service distribution.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Centralising orders through one buyer is the practical
+            unlock — per-truck ordering doesn&apos;t aggregate volume,
+            so the discount stays theoretical. The strategic trade is
+            concentration risk: single-supplier dependency means one
+            disruption (fire, contract dispute, food-safety scandal)
+            hits the whole fleet at once. Dual-source the critical
+            lines even if the second source is slightly worse on
+            price.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             A mozzarella supplier won&apos;t budge off list price for one
@@ -3397,6 +7268,22 @@ const HELP = {
             5th feels easy (supply margin kicks in).
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Negotiate when you cross 4 units:</strong> volume thresholds matter. Ask all key suppliers for the next-tier price.</li>
+            <li><strong>Centralise ordering:</strong> one buyer for all units beats per-truck ordering. Volume leverage + admin saving.</li>
+            <li><strong>Annual supplier reviews:</strong> renegotiate or switch yearly. Suppliers expect it; loyalty without leverage costs you.</li>
+            <li><strong>Long-term contracts at thresholds:</strong> a 12-month commitment at 4+ units unlocks deeper discounts than month-to-month.</li>
+            <li><strong>Push cheese hardest:</strong> ~35% of pizza COGS. A 10% discount on mozzarella = 3.5 pp COGS reduction across the fleet.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> minimum unit count to qualify for supply discount (default 4).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> if unitCount &gt;= supplyDiscountAt, apply supplyDiscountPct to base COGS. Below threshold, no discount.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Polish supplier-tier patterns:</strong> 1-3 units = list price; 4-7 units = 5-8% off list; 8-15 units = 10-12% off + payment terms; 15+ units = bespoke contracts, possibly &gt;15% off.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish food-service distribution reports (Makro, Eurocash), chain-supply negotiations literature.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> single-supplier risk (concentrating all volume on one cheese supplier means a 100% disruption if they fail). Discount comes with concentration risk.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3405,9 +7292,20 @@ const HELP = {
     body: (
       <>
         <p>
-          COGS reduction once the supply-discount threshold is reached. −8 to
-          −12% typical.
+          COGS reduction once the supplyDiscountAt threshold is reached.
+          Typical 8-12%.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Cheese carries the highest discount headroom (deep supplier
+            pools, large fraction of pizza COGS); specialty ingredients
+            the least. Strategic move at chain scale: don&apos;t
+            pocket the whole saving — reinvest a portion into recipe
+            quality. Customer-perceived ingredient upgrades drive
+            repeat rate, which compounds faster than the raw margin
+            gain from pass-through to the bottom line.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             When supply discount activates at <strong>10%</strong>, your 30%
@@ -3417,6 +7315,22 @@ const HELP = {
             biggest line, so push hardest on the dairy supplier first.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Don&apos;t pocket the saving — reinvest some:</strong> if COGS drops 3pp, reinvest 1pp into recipe quality. Customers reward perceptible upgrades.</li>
+            <li><strong>Pass-through pricing for franchisees:</strong> centralised supply at HQ discount, sold to franchisees at slight markup. Earns HQ + saves franchisees.</li>
+            <li><strong>Hedge cheese specifically:</strong> annual contracts at the discounted rate insulate against spike years.</li>
+            <li><strong>Audit per-supplier:</strong> not all discount equally. Cheese and flour are easier; specialty (truffle, prosciutto) usually doesn&apos;t budge.</li>
+            <li><strong>Quarterly review:</strong> as you grow, push for the next tier. Loyalty doesn&apos;t get rewarded — leverage does.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> COGS reduction % when fleet qualifies for supply discount (default 10%).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> if unitCount &gt;= supplyDiscountAt: effective COGS = baseCOGS × (1 − supplyDiscountPct). Otherwise no change.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Realistic discount sizes:</strong> 6-9% at first tier (4-7 units), 10-13% mid-tier (8-15 units), 15-20% at scale (15+ units, bespoke contracts). Cheese: highest discount headroom. Specialty ingredients: lowest.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish food-service supply margin data, chain procurement case studies, Makro/Eurocash wholesale-tier pricing.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> discount distribution across ingredient lines. The model applies uniform reduction; in reality cheese might be −12% while flour is only −3%. Calibrate to your supplier mix.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3425,9 +7339,20 @@ const HELP = {
     body: (
       <>
         <p>
-          Units before centralised dough/sauce production becomes cost-positive.
-          Typically 4+ units.
+          Unit count at which centralised dough/sauce production becomes
+          cost-positive. Typically 4+ units in PL casual-Italian.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The under-modelled benefit is quality consistency: uniform
+            dough and sauce across the fleet drives customer
+            perception and repeat rate in a way the cost model
+            doesn&apos;t capture. So the commissary trigger is partly
+            a quality-control decision, not purely a cost-saving
+            decision — chains that scale without a commissary
+            eventually find consistency drifting unit to unit.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             A central kitchen making all the dough + sauce only makes sense
@@ -3437,6 +7362,22 @@ const HELP = {
             <strong> 3–6 pp of COGS</strong> clawed back fleet-wide.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Start with just dough:</strong> central dough production is the highest-leverage commissary win. Add sauce and pre-portioned cheese later.</li>
+            <li><strong>Locate centrally:</strong> a commissary in the middle of your delivery radius cuts logistics. 30-min max to any truck.</li>
+            <li><strong>Hire a head commissary chef:</strong> separates dough discipline from per-unit chaos. Worth the 8-10k zł/month.</li>
+            <li><strong>Cold-chain logistics matter:</strong> dough needs &lt;6°C transport. Refrigerated van or daily delivery rounds — budget the operating cost.</li>
+            <li><strong>HACCP from day 1:</strong> central production multiplies food-safety risk. Get certified before launching.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> minimum unit count before commissary becomes net-positive (default 4).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> if unitCount &gt;= commissaryAt: apply commissarySaving as a COGS reduction. Otherwise commissary cost outweighs benefit.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Commissary break-even math:</strong> ~15-25k zł/month commissary fixed cost (rent + 1 chef + utilities). To net-positive at 4 trucks: each truck must save ~5-7k zł/month from central production (i.e. 3-4 pp COGS).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> commissary case studies (Polish chains: Pizzeria 105, Da Grasso), QSR supply-chain literature.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> quality-consistency benefit (commissary recipes are uniform; per-unit production drifts). The model captures the COGS saving but not the customer-perception lift.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3445,9 +7386,22 @@ const HELP = {
     body: (
       <>
         <p>
-          COGS reduction from centralised production, net of commissary
-          run-rate cost (rent, equipment, labor). ~3–6 pp typical.
+          NET COGS reduction from centralised production, after deducting
+          commissary run-rate cost (rent, equipment, labor). Typical
+          3-6 pp.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Captures three benefits at once: centralised supplier
+            rebates, lower per-truck waste through precise central
+            forecasting, and enforced recipe standardisation. Stacks
+            with supplyDiscount — the combination at chain scale can
+            drop blended COGS materially. The risk is concentration:
+            commissary failure (fire, contamination) shuts the whole
+            fleet, so business-continuity planning matters more than
+            for distributed prep.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             A commissary saves <strong>~4 pp of COGS</strong> (bulk purchasing,
@@ -3457,6 +7411,22 @@ const HELP = {
             facility&apos;s own bills.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Use the saving to subsidise quality:</strong> if you save 4 pp COGS, reinvest 1 pp into better cheese / flour. Customers notice — the model doesn&apos;t see the upside but it shows in repeat rate.</li>
+            <li><strong>Capture supplier rebates centrally:</strong> commissary buys volume; HQ keeps end-of-year rebates. Adds another 1-2 pp on top of the headline saving.</li>
+            <li><strong>Reduce waste through forecasting:</strong> central production lets you forecast precisely. Per-truck production over-builds &quot;just in case&quot;.</li>
+            <li><strong>Standardise the recipe books:</strong> commissary forces this; do it before launching the central kitchen.</li>
+            <li><strong>Don&apos;t over-promise:</strong> commissary saving NET of fixed cost. Gross 4 pp can be net 2 pp at a small fleet — model both honestly.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> NET commissary saving as a COGS % reduction (default 4 pp, after subtracting commissary&apos;s own operating cost).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> effective COGS = baseCOGS − commissarySaving (in pp), applied only when unitCount &gt;= commissaryAt.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Decomposition:</strong> gross saving ~6-8 pp (bulk + waste + consistency); operating cost ~2-4 pp; net ~3-5 pp at fleet maturity.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> commissary economics literature, Polish chain post-mortems, QSR commissary studies.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> commissary CAPEX (a central kitchen costs 250-500k to build out). Add as a separate fleet-level setup cost in the multi-unit scenario.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3465,9 +7435,22 @@ const HELP = {
     body: (
       <>
         <p>
-          Revenue % a new unit takes from prior units in the same trade area.
-          Modelled as (1 − pct)^(n−1) retained.
+          Revenue % a new unit takes from prior units in the same trade
+          area. Modelled as (1 − pct)^(n−1) retained per overlapping
+          unit.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Some chains deliberately cluster (Starbucks, Domino&apos;s)
+            for the brand-density flywheel — at high density the new
+            unit may add incremental demand exceeding the
+            cannibalisation hit. Below that density threshold,
+            cannibalisation is a pure tax on the fleet. The model is
+            conservative on purpose — investor due diligence will
+            assume cannibalisation is real and asks the operator to
+            prove the incremental-demand offset.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Open truck #2 across town and the existing one doesn&apos;t keep
@@ -3477,6 +7460,22 @@ const HELP = {
             opening in a different city, not next door.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Choose new units &gt; 3 km from existing:</strong> below 3 km, cannibalisation typically 15-25%; above 5 km, &lt;10%.</li>
+            <li><strong>Different daypart focus:</strong> if Unit 1 is lunch-led, position Unit 2 as evening-led. Reduces overlap.</li>
+            <li><strong>Different demographic:</strong> office vs residential vs tourist. Same brand, different customer base.</li>
+            <li><strong>Measure post-opening:</strong> Unit 1 revenue 30 days before vs after Unit 2 opens. The drop = your real cannibalisation.</li>
+            <li><strong>Use it to model honestly to investors:</strong> presenting Unit 2 economics without cannibalisation gets you torn apart in due diligence.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> % of new-unit revenue cannibalised from prior units in same trade area (default 15%).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> effective per-unit revenue = baseRevenue × (1 − dmaCannibalisation)^(n−1) where n = number of overlapping units. The geometric formula reflects diminishing per-unit revenue as units cluster.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Realistic ranges:</strong> Same neighbourhood (&lt; 1 km): 25-40% cannibalisation. Same city, different district (3-5 km): 8-15%. Different city: 0-3% (residual brand effect only).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> trade-area analysis literature (Applebaum, Reilly), QSR cannibalisation case studies (Domino&apos;s, Starbucks density studies).</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> brand-density benefits (high-density clusters can have a marketing flywheel effect). Some chains deliberately cluster to dominate a district.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3485,9 +7484,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Setup-cost reduction per added unit, applied as (1 − learning)^(n−1).
-          Reflects supplier rolodex, permit familiarity, build-team efficiency.
+          Setup-cost reduction per added unit, applied as
+          (1 − learning)^(n−1). Reflects supplier rolodex, permit
+          familiarity, build-team efficiency.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The biggest enabler of a real learning curve is using the
+            same buildout team across units, not different contractors
+            per opening. Operators who switch contractors lose the
+            curve and pay near-list price every time. The curve also
+            captures supplier rolodex (knowing which oven dealer
+            actually delivers) and permit muscle memory (knowing which
+            sanepid inspector cares about which detail).
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Your first truck cost <strong>300,000 zł</strong> because you made
@@ -3497,6 +7508,22 @@ const HELP = {
             scale, which compounds with the supply discount.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Document every cost in unit 1:</strong> the buildout log becomes the playbook for unit 2-3.</li>
+            <li><strong>Single buildout team:</strong> hire one contractor + repeat. They learn your spec, save 10-15% on labor and time.</li>
+            <li><strong>Standardise the kit:</strong> same oven, same fridge, same POS across all units. Bulk-buy savings + zero training overhead.</li>
+            <li><strong>Pre-negotiate volume contracts:</strong> if you commit to 4 ovens / 4 fridges over 2 years, manufacturers offer 10-15% off list.</li>
+            <li><strong>Test the playbook on unit 2:</strong> the second unit is where you find the gaps. Better to discover with #2 than #5.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> learning-curve reduction % per added unit. Default 8% (each unit ~8% cheaper than the previous).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> setup_cost(n) = setup_cost(1) × (1 − buildoutLearning)^(n−1), floored at buildoutFloor% of unit 1.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Realistic ranges:</strong> 5-12% per unit; chains tend toward the lower end (8%); fast-growing concepts hit 10-12% as the playbook tightens.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Wright&apos;s learning-curve theory, manufacturing &amp; construction learning-rate literature, QSR rollout case studies.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> learning loss with team turnover. If the build team changes between units 3 and 4, learning resets. Stable teams compound; rotating teams don&apos;t.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3506,9 +7533,20 @@ const HELP = {
       <>
         <p>
           Minimum unit setup cost as % of unit 1. Caps the learning-curve
-          benefit so the model doesn&apos;t simulate &quot;20th truck costs
-          nothing&quot;.
+          benefit so the model doesn&apos;t simulate &quot;20th truck
+          costs nothing&quot;.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Reflects the irreducible hard costs that don&apos;t shrink
+            with experience — vehicle, oven, permits, startup ZUS.
+            Even a perfect playbook can&apos;t buy a working pizza
+            truck below this floor. The floor itself drifts up with
+            inflation each year, so refresh the assumption annually
+            during budgeting rather than treating it as a one-off
+            calibration.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Even the 50th truck still costs <em>something</em> — oven,
@@ -3518,6 +7556,22 @@ const HELP = {
             payback math turns into fantasy.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Inflation-proof your floor:</strong> minimum setup cost rises 5-8%/year. Update the floor annually.</li>
+            <li><strong>Identify the hard-cost line:</strong> vehicle (40-50k), oven (35-55k), permits (10-15k) — these don&apos;t shrink with scale. They&apos;re the floor.</li>
+            <li><strong>Used trucks bend the floor:</strong> a fleet of 5-yr-old trucks (40-50k each) drops the floor 30% vs new. Trade-off: more maintenance.</li>
+            <li><strong>Modular buildouts:</strong> standardised interior modules from one fabricator drop the floor more than the learning curve alone.</li>
+            <li><strong>Keep the model honest:</strong> if the model says unit 30 costs 80k, you&apos;ll plan for fantasy. The floor enforces reality.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> minimum setup cost as % of unit 1 (default 60%).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> setup_cost(n) = max(unit1 × (1 − learning)^(n−1), unit1 × buildoutFloor).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Realistic floor:</strong> 55-70% of unit 1. The floor reflects unavoidable hard costs: truck/vehicle, oven, permits, ZUS startup ZUS costs. Even with perfect learning curve, you can&apos;t buy a working pizza truck for &lt;55% of the first one.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> manufacturing learning-curve floor analyses (Boston Consulting Group), pizzeria buildout cost decomposition.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> regulation tightening over time (PL gastronomic permits inflated 2020-2024). The floor might rise even at scale; track if you&apos;re building in 2026+.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3526,9 +7580,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Fraction of days in a typical month with significant rain. Warsaw
-          average ~30% (autumn/winter higher, summer lower).
+          Fraction of days in a typical month with meaningful rain.
+          Warsaw average ~30% per IMGW (autumn/winter higher, summer
+          lower).
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            For indoor mall pitches the ECONOMIC sensitivity drops
+            sharply even when the literal weather is the same — rain
+            doesn&apos;t block access. So tune rainyShare against the
+            customer-impact reality of your pitch, not against the
+            actual weather data. Climate trend matters at horizon &gt;
+            5 years: PL rainy-day share has been creeping up over the
+            past decade.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Warsaw has rain on roughly <strong>1 day in 3</strong>. At a 0.55
@@ -3540,6 +7606,22 @@ const HELP = {
             lease.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Adjust seasonally:</strong> rainy share is ~25% in summer, ~38% in autumn/winter. Don&apos;t use one annual average if you can flex.</li>
+            <li><strong>Calibrate to your location:</strong> Gdańsk 35%, Warsaw 30%, Kraków 28%, Wrocław 30%. IMGW regional data published quarterly.</li>
+            <li><strong>Indoor pitch shifts the math:</strong> if your unit is inside a mall food court, set rainyShare to a fraction (10-15%) since rain doesn&apos;t affect access.</li>
+            <li><strong>Cross-check with your actual data:</strong> overlay 90 days of POS revenue with weather. Calibrate the share to what you actually saw.</li>
+            <li><strong>Climate change creep:</strong> PL rainy days have crept up 3-5% over the past decade. Future projections should account.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> share of days with meaningful rain (default 30% Warsaw avg).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> effective volume = base × (rainyShare × rainyMultiplier + (1 − rainyShare) × 1.0). Composes with other weather levers.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>IMGW regional averages (PL, annual):</strong> Warsaw 30%, Kraków 28%, Gdańsk 35%, Wrocław 30%, Poznań 28%, Lublin 26%, Zakopane 40%.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> IMGW Polish meteorological service, EU Copernicus climate data, owner-operator weather logs.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> rain intensity (drizzle vs downpour). A 30% share including drizzle is gentler than 30% all-downpour. Calibrate the rainyMultiplier to your blended rain experience.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3548,9 +7630,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Share of evenings hot enough (typically 25°C+ at 19:00) to fire the
-          heatwave volume bonus. Warsaw annual avg ~10%; ~30% in Jun–Aug.
+          Share of evenings hot enough (typically 25°C+ at 19h) to fire
+          the heatwave volume bonus. Warsaw annual avg ~10%; ~30% in
+          Jun-Aug.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Above ~32°C the effect inverts — cooks struggle in an
+            already-hot kitchen, customers stay in air conditioning
+            instead of on the patio. So the heatwave bonus is a
+            U-shaped relationship the model treats as linear; in
+            unusual extremes the multiplier should be overridden
+            downward. PL heatwave share is on a rising trend, which
+            increases the long-run value of outdoor seating capex.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             A real heatwave evening only happens <strong>~1 in 10
@@ -3561,6 +7655,22 @@ const HELP = {
             hot-Friday forecasts and you&apos;ll capture it routinely.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Use weather forecast for staffing:</strong> 25°C+ predicted = add an extra staff member 48h ahead.</li>
+            <li><strong>Pre-stock spritz ingredients:</strong> Aperol shortage on the hottest night of summer is criminal.</li>
+            <li><strong>Patio expansion in summer:</strong> rent extra outdoor furniture for the heatwave months. The marginal cost is small vs the upside.</li>
+            <li><strong>Climate shift:</strong> heatwave share is rising 2-4 pp/decade in PL. Future-proof by building outdoor capacity now.</li>
+            <li><strong>Calibrate to your pitch:</strong> a downtown patio captures heatwaves; a delivery-only kitchen doesn&apos;t benefit. Set the multiplier accordingly.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> share of evenings hot enough (25°C+ at 19h) to fire the heatwave bonus (default 10% annual avg).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> effective volume = base × (heatwaveShare × heatwaveMultiplier + (1 − heatwaveShare) × 1.0). Composed in the seasonality stack.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>IMGW heatwave averages (PL, annual %):</strong> Warsaw 10%, Kraków 12%, Wrocław 14%, Poznań 11%, Gdańsk 7% (coastal cooler), Lublin 12%.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> IMGW Polish meteorological data 2014-2024, Eurostat climate-change indicators.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> 35°C+ extreme heat that REDUCES rather than lifts volume. The model assumes 25-32°C moderate heat; extreme heat is a separate (negative) effect not currently captured.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3569,10 +7679,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Volume multiplier applied to designated peak calendar days
-          (Valentine&apos;s, NYE, Black Friday, Mother&apos;s Day). Default
-          1.60.
+          Volume multiplier on designated peak calendar days
+          (Valentine&apos;s, NYE, Black Friday, Mother&apos;s Day).
+          Default 1.60.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Capacity caveat: if the kitchen-saturation KPI caps below
+            the peak multiplier, the modelled upside is theoretical —
+            real lift gets clipped at the saturation ceiling and the
+            extra demand walks away. So peak days are a service-design
+            problem as much as a math problem: plan reservations, a
+            simplified peak-day menu, and pre-baked dough to extract
+            the upside without blowing service.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>5 peak days/year at 1.60×</strong> is the difference
@@ -3583,6 +7704,22 @@ const HELP = {
             upside. Under-staff: you blow the line in front of 30 dates.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Pre-book reservations:</strong> open Valentine&apos;s / Mother&apos;s Day booking 2 weeks ahead. Eliminates walk-in chaos.</li>
+            <li><strong>Limited menu for peak days:</strong> 5-6 SKUs only. Faster line, higher throughput, less stress.</li>
+            <li><strong>Over-staff deliberately:</strong> +1 cook, +1 runner. Cost of overrun &lt; cost of blown-up service.</li>
+            <li><strong>Pre-portion everything:</strong> day before, ready to assemble. Saves 30-45 min of prep on the day.</li>
+            <li><strong>Plan peak calendar 90 days ahead:</strong> Valentine&apos;s, Mother&apos;s Day, NYE, BF — staffing + menu + marketing locked early.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> volume multiplier for designated peak calendar days (default 1.60 = +60%).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> peak_day_orders = base_orders × peakDayMultiplier. Stacked with other multipliers (e.g. Valentine&apos;s on a Friday compounds).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Typical multipliers:</strong> Valentine&apos;s Friday 2.0-2.5×; NYE 1.5-2.0× (early dinner only); Mother&apos;s/Father&apos;s Day 1.6-1.8×; Halloween/BF 1.2-1.4×.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> POS-data composites from Italian-style PL chains, OpenTable peak-day analytics, holiday-dining surveys.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> capacity ceiling (you might WANT 2.5× but your oven caps at 1.5×). Cross-check the peak multiplier against your kitchen-saturation KPI.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3591,19 +7728,47 @@ const HELP = {
     body: (
       <>
         <p>
-          Volume multiplier on booked event days (food-truck rally, festival,
-          sport game, concert). Default 1.50.
+          Volume multiplier on booked event days (food-truck rally,
+          festival, sports event, concert). Default 1.50.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Net economic value isn&apos;t the gross event revenue —
+            subtract vendor fees, transport, event-day overtime and
+            spoilage risk before celebrating. Some festivals net less
+            than the Saturday you skipped to attend them. Repeat-
+            vendoring the same events compounds through brand
+            recognition with that audience; chasing one-shot fees does
+            not.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Food-truck rally? Concert near the pitch? Two event days/month at
             <strong> 1.50×</strong> adds <strong>~10,000 zł of monthly
             revenue</strong> without changing anything except the calendar.
+            Different from peak days: events you can BOOK, peaks you just GET.
             Some trucks build their entire annual P&amp;L around
             <strong> 20–30 event weekends</strong> — the only question is how
             aggressively you chase them.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Build a dedicated event team:</strong> 1 truck + 1 dedicated trailer for events. Don&apos;t cannibalise your pitch for festival weekends.</li>
+            <li><strong>Pre-cost the event:</strong> vendor fee + transport + extra labor + spoilage risk. Net only worth it if multiplier &gt;= 1.6×.</li>
+            <li><strong>Book 6-12 months ahead:</strong> top festivals (Nocny Market, Krakow Live, OFF) book vendors way out. Late booking = worse slots.</li>
+            <li><strong>Repeat events build loyalty:</strong> being &quot;the pizza truck&quot; at a recurring market 8 weekends/year compounds with brand recognition.</li>
+            <li><strong>Track event ROI:</strong> tag event-day POS data. If your effective multiplier is &lt;1.4× on a given event, drop it next year.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> volume multiplier for booked event days (default 1.50).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> event_day_orders = base_orders × eventDayMultiplier. Stacks with weekend/peak multipliers if event happens on a peak day.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Realistic ranges:</strong> small street fair 1.3-1.5×, food-truck rally 1.6-2.0×, major festival 2.0-3.0×, concert / sports event with captive audience 2.5-4.0×. Calibrate per event type.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish food-truck event-revenue surveys, festival vendor-revenue reports, owner-operator event ROI analysis.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> vendor fees (often 3-10k zł per event). Subtract from event revenue to get true ROI. Some events have hidden costs (mandatory marketing fee, exclusivity contracts).</p>
+        </Methodology>
       </>
     ),
   },
@@ -3615,8 +7780,21 @@ const HELP = {
       <>
         <p>
           Total revenue per month = orders/day × avg ticket × days open.
-          Headline top-line — everything below is some flavour of cost or margin.
+          Headline top-line — everything below is some flavour of cost
+          or margin.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Watch the annual revenue against the small-CIT threshold:
+            stay under and the corporate-tax rate is materially lower,
+            cross it and the rate jumps on the entire base. The
+            threshold is a structuring trigger — multi-entity setups
+            (separate sp. z o.o. per unit) preserve the lower rate at
+            chain scale. Flat nominal revenue equals real decline once
+            inflation is in; growth has to clear the inflation bar to
+            count as growth.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             The biggest number you&apos;ll see — total cash flowing in before
@@ -3625,6 +7803,21 @@ const HELP = {
             your <em>profit</em> from this is much easier through margin work.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Don&apos;t fixate on revenue alone:</strong> a 200k truck at 10% margin nets 20k; a 150k truck at 18% margin nets 27k. Profit, not revenue, is the goal.</li>
+            <li><strong>Grow revenue 3 ways:</strong> more orders (marketing), higher ticket (attach), more days (extend hours). Pick the cheapest lever.</li>
+            <li><strong>Watch for revenue ceiling:</strong> if marketing isn&apos;t lifting orders, capacity might be the cap. Check kitchen saturation.</li>
+            <li><strong>Net revenue vs gross:</strong> Glovo/Wolt show gross order value; the cash you bank is after commission. Use net for comparisons.</li>
+            <li><strong>Track revenue trend, not single month:</strong> compare 90-day rolling vs prior period. Single-month noise hides the trajectory.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> monthly revenue = orders/day × avg ticket × days/month × weather&amp;event multipliers. Net of attach lever ticket lifts.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy Polish casual-Italian truck revenue:</strong> 100-180k zł/month single truck; 200-300k+ for premium central locations.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish gastronomic-sector revenue benchmarks, food-truck association data.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> revenue from non-pizza streams (catering, special events, branded merchandise). Add as separate line if material.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3633,9 +7826,20 @@ const HELP = {
     body: (
       <>
         <p>
-          COGS + labor + fixed + variable leakage (waste, refund, fees,
-          loyalty). Everything that doesn&apos;t end up as net profit.
+          COGS + labor + fixed + variable leakage (waste, refunds,
+          fees, loyalty) + D&amp;A + interest. Everything that
+          doesn&apos;t end up as net profit.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Cost % matters more than cost zł for trend analysis —
+            growing revenue while holding cost % flat is the cleanest
+            sign of operational discipline. Cost % rising faster than
+            revenue % is the warning signal that growth is inflating
+            structure rather than dropping to profit. Compare cost
+            mix YoY (not just total) to spot which slice is drifting.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             Every złoty in the truck that doesn&apos;t end up in your pocket.
@@ -3645,6 +7849,21 @@ const HELP = {
             <strong> ~2,000 zł/month more profit</strong>.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Diagnose the biggest line first:</strong> COGS at 35%? Audit recipes. Labor at 35%? Audit schedule. Don&apos;t scatter effort.</li>
+            <li><strong>Watch the variable leakage:</strong> waste + refunds + loyalty often add to 4-6% combined. Each pp tightened = 1pp net margin.</li>
+            <li><strong>Compare to prior month, not budget:</strong> budgets get out of date. Last 30 days vs prior 30 days is the live diagnostic.</li>
+            <li><strong>Fixed costs &lt; 10% of revenue ideal:</strong> above that, you&apos;re too rent-heavy. Renegotiate or relocate.</li>
+            <li><strong>Cost % matters more than cost zł:</strong> growing revenue while holding cost % flat is the cleanest path.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> total cost = COGS + labor + fixed + variable leakage (waste + refunds + card fees + loyalty burn). Sum of all P&amp;L cost lines.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy split (Polish casual-Italian):</strong> COGS 28-32%, labor 25-30%, fixed 6-10%, leakage 4-6%. Total: 65-78% of revenue. Net profit: 22-35% (rare for &gt;30 to be sustainable).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> NRA Industry Operations Report, PHG benchmark data.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> founder opportunity cost (your unpaid hours). Add ~5-10k zł/month mentally to value your own time honestly.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3653,9 +7872,22 @@ const HELP = {
     body: (
       <>
         <p>
-          Bottom-line monthly profit after all variable + labor + fixed costs,
-          before tax. Drives owner take-home, cash-on-cash and payback.
+          Bottom-line monthly profit after all variable + labor + fixed
+          costs + D&amp;A + interest, AFTER CIT. Drives owner take-home,
+          cash-on-cash, payback.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Watch trajectory more than level — eroding 1pp / quarter
+            means inflation is winning the race and a course
+            correction is overdue. Practical discipline: pay yourself
+            first (auto-transfer a fixed share of net to a separate
+            account on month-end), keep 3× monthly fixed costs in
+            reserve, reinvest a defined share into growth. Without
+            this structure, profit dissolves into operating cash and
+            nothing accumulates.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             The only number that ends up in your bank. Everything above it is
@@ -3664,6 +7896,21 @@ const HELP = {
             too little. Track this monthly; the rest is diagnostics.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Pay yourself first:</strong> set up auto-transfer of 30% of net profit to a separate account on month-end. Otherwise it gets spent.</li>
+            <li><strong>Build a 3-month reserve:</strong> winter cash crunch ruins businesses that don&apos;t save during peak. Aim for 3× monthly fixed costs in reserve.</li>
+            <li><strong>Re-invest 20% in growth:</strong> equipment upgrades, marketing, training. Compounds the next year.</li>
+            <li><strong>Watch CIT exposure:</strong> 9% small-CIT below €2M; 19% above. Net is BEFORE tax — actual take-home is net × (1 − CIT%).</li>
+            <li><strong>Track net profit margin trend:</strong> if it&apos;s eroding 1pp/quarter, you&apos;re losing the inflation race. Re-price or cut costs.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> net profit = revenue − COGS − labor − fixed − variable leakage − D&amp;A − interest. Before CIT.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy margin ranges:</strong> 8-12% net = average; 12-18% = good; 18-25% = excellent; 25%+ = exceptional (or you&apos;re missing a cost).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> NRA pizza-segment benchmarks (typically 8-15% net), Polish PHG data, Bain restaurant-economics reports.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> personal income tax (PIT) for sole proprietors. The model shows pre-tax net; sole proprietors face progressive PIT (12-32%) on top.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3672,9 +7919,20 @@ const HELP = {
     body: (
       <>
         <p>
-          Orders/day required to cover all labor + fixed + variable costs.
-          Below = loss, above = profit. Headline buffer metric.
+          Orders/day required to cover labor + fixed + variable costs.
+          Below = loss; above = profit. Headline buffer metric.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The number to write on the wall — every shift the team
+            knows how many orders from red they are. Margin-of-safety
+            (actual − break-even) ÷ actual is the cushion metric
+            investors care about; below 10% the unit isn&apos;t
+            investment-grade because a single bad week wipes the
+            quarter. Lowering break-even is usually cheaper than
+            raising volume.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             The <strong>minimum you have to sell</strong> to not lose money. If
@@ -3683,6 +7941,21 @@ const HELP = {
             month. The cushion <em>is</em> the business.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Compute break-even daily, not monthly:</strong> a 45 orders/day number is more actionable than &quot;1,260 orders/month&quot;. Use it as the live target.</li>
+            <li><strong>Visualise on the KDS:</strong> a counter showing orders-to-break-even gives the team a live target.</li>
+            <li><strong>Lower break-even = more flexibility:</strong> every 1 order/day off break-even gives you ~1.5% safety margin. Cut fixed costs to shrink the floor.</li>
+            <li><strong>Reset on rent changes:</strong> a 1,000 zł/month rent hike adds ~1.5 orders/day to break-even. Negotiate hard.</li>
+            <li><strong>Compare across months:</strong> break-even shouldn&apos;t move much. If it&apos;s creeping up, costs are inflating faster than tickets.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> break-even orders/day = (fixed + labor) ÷ (avg ticket × contribution margin × days). Contribution margin = 1 − COGS% − payment-fee% − variable-leakage%.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy range:</strong> 35-50 orders/day break-even for a Polish pizza truck. Below 30 indicates super-low fixed costs (suburban pitch); above 55 = structural fragility.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> standard break-even theory, restaurant unit-economics literature.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> demand variability (some days hit break-even, others don&apos;t). Average break-even hides daily volatility; use the sensitivity card to stress-test.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3693,9 +7966,20 @@ const HELP = {
     body: (
       <>
         <p>
-          COGS as % of revenue. QSR target ≤ 30%. Sensitive to menu mix,
-          portion control, supplier prices.
+          COGS as % of revenue. QSR target ≤ 30%. Sensitive to menu
+          mix, portion control, supplier prices.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The single highest-leverage P&amp;L line for margin work —
+            permanent COGS improvements compound every future month at
+            every future revenue level. Track per-item COGS%, not just
+            blended; some items run far below average and some far
+            above, so menu placement and mix shifting often beat
+            recipe re-engineering for the same margin impact and zero
+            cost.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             For every 100 zł you sell, this is how much was food cost. Industry
@@ -3704,6 +7988,21 @@ const HELP = {
             <strong> ~10,000 zł/month back</strong> on a 200,000 zł revenue.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Cheese is the leverage point:</strong> 35-45% of pizza COGS. Cut 5% on the cheese = ~1.5pp on total food cost.</li>
+            <li><strong>Re-cost every recipe quarterly:</strong> ingredient prices drift. Bumps to menu prices follow recipe-cost increases.</li>
+            <li><strong>Standardise portions:</strong> +5g cheese per pizza × 2,400 pizzas = 12kg/month wastage. Train + weigh + spot-check.</li>
+            <li><strong>Audit waste daily:</strong> if dough waste &gt;3%, your hourly forecast is off. Tighten the batch plan.</li>
+            <li><strong>Track per-menu-item COGS%:</strong> some items run 40%, others 20%. Push the low-COGS items in marketing &amp; menu placement.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> food cost % = COGS ÷ revenue. COGS = Σ (recipe cost × menu mix × volume) + variable food costs (waste, employee meals).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Industry targets:</strong> ≤ 28% world-class chains, 30% healthy independent, 32%+ requires intervention. Polish pizza-segment benchmark: 28-32%.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> NRA Industry Operations Report, PHG Polish gastronomic benchmarks, Italian pizzeria economics studies.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> per-channel COGS variance (delivery COGS includes packaging differently). Track separately if delivery share is &gt;30%.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3712,9 +8011,19 @@ const HELP = {
     body: (
       <>
         <p>
-          Total labor (incl. ZUS narzut) as % of revenue. QSR target ≤ 30%; hard
-          cap at 35%.
+          Total labor (incl. 1.22× brutto ZUS narzut) as % of revenue.
+          QSR target ≤ 30%; hard cap 35%.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Three different problems share the same symptom (high
+            labor %): over-staffing, under-pricing, or low productivity.
+            Each has a different fix, so diagnose before cutting heads.
+            Productivity is usually the cheapest lever — a modest
+            revenue-per-labor-hour lift cancels typical wage inflation
+            without changing schedule, price, or team composition.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             For every 100 zł you sell, this is how much went to
@@ -3724,6 +8033,21 @@ const HELP = {
             number.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Adjust schedule, not headcount:</strong> over-staffing 2 hours/day × 5 days × 4 weeks = 40h/month per role. Trim shift edges first.</li>
+            <li><strong>Cross-train for fewer roles:</strong> a pizzaiolo who can run the till saves a half-shift cashier. Pay slightly more, save more.</li>
+            <li><strong>Watch labor:revenue every week:</strong> if it&apos;s drifting up, demand might be softening or schedule is rigid. Catch within 14 days.</li>
+            <li><strong>Productivity beats headcount cuts:</strong> 10% more revenue/labor-hour is better than 10% fewer hours. Train + tool.</li>
+            <li><strong>Owner labor = real labor:</strong> if you work 40h/week unpaid, the model under-states labor. Add a notional owner-wage line.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> labor % = total brutto labor (incl. ~22% ZUS narzut) ÷ revenue.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Industry targets:</strong> ≤ 25% world-class chains, 28-30% healthy independent, 35%+ requires action. PL casual-Italian benchmark: 27-32%.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> NRA labor benchmarks, ZUS rates 2024, PHG annual gastronomic-employer surveys.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> tips received by staff (don&apos;t flow through P&amp;L but lift effective pay). Useful when retaining staff but not in margin math.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3732,9 +8056,20 @@ const HELP = {
     body: (
       <>
         <p>
-          Food + labor combined as % of revenue. The single most-watched number
-          in restaurant ops; ≤ 60–65% is healthy.
+          Food + labor combined as % of revenue. The single most-watched
+          number in restaurant ops; ≤ 60-65% is healthy.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Combines the two largest cost lines into one discipline
+            metric — beats tracking food and labor separately because
+            the genuine trade-offs (from-scratch prep cuts COGS but
+            adds labor) only reveal themselves in the combined number.
+            Watch seasonally; the same operation can run very different
+            prime in winter vs summer, and a flat annual average hides
+            the winter pressure point.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>The one number to memorize.</strong> Under 60% you breathe,
@@ -3743,6 +8078,21 @@ const HELP = {
             Old restaurateurs scribble this number on their fridge mirror.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Make the team see it:</strong> a single dashboard number visible to the whole kitchen. Alignment around one KPI moves it.</li>
+            <li><strong>Trade-off: lower one, accept higher other:</strong> sometimes lower food cost requires more labor (made from scratch). The combined number is what counts.</li>
+            <li><strong>Re-engineer when prime &gt; 65%:</strong> it&apos;s not a wage cut or supplier squeeze — it&apos;s a menu/operations redesign issue.</li>
+            <li><strong>Beware the false comfort of prime &lt; 55%:</strong> often means you&apos;re paying too little (high turnover) or under-portioning (customer complaints).</li>
+            <li><strong>Set a 60% target line on the dashboard:</strong> visual reminder; everyone knows when they&apos;re above or below.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> prime cost % = (food + labor) ÷ revenue. The most-tracked operational KPI in restaurant management.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Industry targets:</strong> ≤ 55% world-class QSR chains; 60% healthy independent; 65% acceptable; &gt; 70% restructure or close.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> NRA Restaurant Industry Operations Report, Schmidgall &quot;Hospitality Industry Managerial Accounting&quot;, the universal-benchmark of restaurant ops literature.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> seasonal variance — winter prime might be 68% while summer is 55%. Annual averages can hide trouble; check monthly.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3751,10 +8101,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Share of revenue left after every variable cost (COGS, packaging,
-          waste, refunds, loyalty burn, payment fees, marketing CAC). Honest
-          cash-drop per złoty of sales.
+          Share of revenue left after every variable cost — COGS,
+          packaging, waste, refunds, loyalty burn, payment fees,
+          marketing CAC. The honest cash-drop per złoty of sales.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The metric that drives every growth-vs-marketing decision:
+            a marketing campaign needs incremental revenue at least
+            twice its cost at typical CM to net positive. Track
+            per-channel — delivery CM is materially below on-site CM,
+            so a channel-mix shift toward delivery changes the blended
+            number without anyone obviously cutting costs. The honest
+            cash-drop ratio per złoty of sales.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             For every 100 zł sold, this is <strong>how much survives</strong>
@@ -3764,6 +8125,21 @@ const HELP = {
             re-price before opening day 1.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Track per-item contribution:</strong> some pizzas contribute 60%, others 35%. Push the high-CM items in menu placement &amp; marketing.</li>
+            <li><strong>Cut low-CM items:</strong> if an item runs &lt; 40% CM after all variable costs, it&apos;s subsidising — restrict or remove.</li>
+            <li><strong>Channel matters:</strong> on-site CM might be 55%, Glovo CM might be 35%. Track separately when making channel decisions.</li>
+            <li><strong>Inflation compresses CM:</strong> recompute monthly. If CM drops 2pp over 6 months, re-price or re-engineer.</li>
+            <li><strong>Use CM for &quot;is this worth it?&quot; decisions:</strong> a 5,000 zł marketing campaign needs to generate ~10k incremental revenue at 50% CM to justify.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> contribution margin % = 1 − (COGS + packaging + waste + refunds + loyalty burn + payment fees) ÷ revenue.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> 50-55% world-class; 45-50% healthy; 40-45% pressured; &lt; 40% structurally unprofitable. PL casual-Italian benchmark: 47-52%.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> restaurant managerial-accounting literature (Schmidgall), NRA industry-economics data.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> CAC (customer acquisition cost) as a variable. The model treats marketing as fixed; if you scale CAC with volume, CM contracts.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3772,9 +8148,20 @@ const HELP = {
     body: (
       <>
         <p>
-          (Actual revenue − break-even revenue) ÷ actual revenue. The buffer
-          before going underwater.
+          (Actual revenue − break-even revenue) ÷ actual revenue. The
+          buffer before going underwater.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The equity-investor gating metric — institutional capital
+            won&apos;t back a plan with steady-state MoS under 20%.
+            Watch the worst quarter, not the average; investor due
+            diligence will probe the trough month explicitly, and a
+            22% annual average that hides a 5% winter trough fails
+            scrutiny. Plan working-capital reserves against the
+            worst-month profile.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>How much revenue can drop before you go red.</strong> Below
@@ -3783,6 +8170,21 @@ const HELP = {
             <em> now</em> — don&apos;t wait for the first red month.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Target ≥ 20%:</strong> survives most one-off shocks (rainy 2 weeks, slow January). Below 15% you&apos;re running on luck.</li>
+            <li><strong>Track quarterly:</strong> seasonality + inflation can erode MoS quietly. Reset the target each quarter.</li>
+            <li><strong>Build MoS through cost cuts first:</strong> reducing fixed costs shrinks break-even; growing revenue grows MoS. Both matter.</li>
+            <li><strong>Use it for hiring decisions:</strong> if a new hire raises break-even by 3 orders/day, you need MoS ≥ 10% AFTER the hire to be safe.</li>
+            <li><strong>Investor expectation:</strong> Series A investors want 20%+ MoS in steady state. Founders pitching at 8% MoS struggle.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> margin of safety = (actual revenue − break-even revenue) ÷ actual revenue.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> ≥ 25% comfortable; 15-25% adequate; 10-15% fragile; &lt; 10% one bad week from red.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Schmidgall &quot;Hospitality Industry Managerial Accounting&quot;, CVP (cost-volume-profit) literature.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> MoS at the worst weather/season point (winter MoS might be 5% while annual is 22%). The model uses average; check seasonal lows.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3791,9 +8193,20 @@ const HELP = {
     body: (
       <>
         <p>
-          Monthly revenue ÷ total labor hours. Productivity benchmark for
-          staffing decisions. PL pizza norm 90–140 zł/h.
+          Monthly revenue ÷ total labor hours. Productivity benchmark
+          for staffing decisions. PL pizza norm 90-140 zł/h.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Diagnose by shift, not by team: a low lunch number against
+            a strong dinner number means the lunch slot is the
+            underperformer, not the people. Productivity gaps usually
+            map to shift-design problems (right roles in the wrong
+            hour) before they map to people problems. This is the
+            staffing-decision metric — schedule against the
+            productivity heatmap, not against custom.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             How much each hour of staff time generates. If it&apos;s
@@ -3803,6 +8216,21 @@ const HELP = {
             watch this jump.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Target ≥ 100 zł/labor hour:</strong> below 90 you&apos;re overstaffed or under-priced. Diagnose which.</li>
+            <li><strong>Compare by shift:</strong> lunch shift might be 70 zł/h, dinner 130. Cut underperforming shifts.</li>
+            <li><strong>Trim shift-edges first:</strong> 30 min of pre/post-service is often the lowest productivity. Cut those before reducing peak hours.</li>
+            <li><strong>Productivity training pays:</strong> a faster pizzaiolo lifts this number more than hiring. Invest in skill.</li>
+            <li><strong>Compare against PL benchmarks:</strong> casual-Italian PL norm 90-140 zł/h. World-class 150+. Top quartile = real ops discipline.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> revenue per labor hour = monthly revenue ÷ total monthly labor hours (all roles, all shifts).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges (PL pizza):</strong> 70-90 zł/h needs work; 90-120 zł/h healthy; 120-160 zł/h good; 160+ zł/h excellent (often QSR chains with optimised mise-en-place).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> NRA labor-productivity benchmarks, PHG Polish gastronomic-employer surveys.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> non-productive hours (prep, cleaning, training). These count in the denominator but don&apos;t produce revenue. The model dilutes the metric; track productive-hour-only separately if needed.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3811,9 +8239,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Naïve months of net profit needed to recoup setup cost. Setup ÷
-          monthly profit. Investor-grade view in the Investor returns strip below.
+          Naïve months of net profit needed to recoup setup cost.
+          Setup ÷ monthly profit. See Investor Returns for IRR-based
+          honest view.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Naïve because it ignores opening ramp, the time value of
+            money, and risk — so use this only for quick mental
+            anchoring, not capital-allocation decisions. For
+            institutional-grade comparison go to the Investor Returns
+            strip (NPV, IRR, cash-on-cash). The honest payback story
+            is roughly 30-50% longer than the naïve number suggests
+            once ramp + discounting are layered in.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>How many months until the truck pays itself off</strong>.
@@ -3823,6 +8263,22 @@ const HELP = {
             lent you 50,000 zł will ask about.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Target &lt; 24 months:</strong> investor-grade. Above 30 you struggle to attract capital; above 48 you&apos;re a hobby business by their standards.</li>
+            <li><strong>Trim setup to shorten payback:</strong> every 30k zł off setup = ~2 months shorter payback at typical margins.</li>
+            <li><strong>Don&apos;t over-prioritise vs IRR:</strong> a 14-month payback with 5% growth is worse than 22-month with 20% growth. Use IRR for honest comparison.</li>
+            <li><strong>Payback ignores time-value:</strong> good for quick mental math, terrible for capital allocation. Use the investor-grade returns strip for real decisions.</li>
+            <li><strong>Watch how the &quot;real&quot; investor metrics differ:</strong> NPV/IRR account for ramp, risk, discount rate. The Investor Returns card shows the gap.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> naïve payback = setup cost ÷ monthly net profit. Treats every month identically (no ramp, no discount).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> ≤ 18 months excellent; 18-24 solid; 24-36 acceptable; &gt; 36 marginal; &gt; 48 reconsider.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Why it&apos;s naïve:</strong> ignores year-1 ramp (your first 6 months won&apos;t hit projected profit), ignores discount rate (1 zł today &gt; 1 zł in 24 months), ignores risk. Use the Investor-Returns card for honest IRR/NPV.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> classical finance textbooks, restaurant-industry payback benchmarks.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> ramp curve. Real businesses ramp over 6-12 months. Adjust payback to start counting from month 7 for realistic expectations.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3833,9 +8289,20 @@ const HELP = {
     body: (
       <>
         <p>
-          Theoretical orders/day the kitchen can produce at peak. Sets the
-          ceiling on volume growth without capex.
+          Realistic orders/day the kitchen can produce at peak. Sets
+          the volume ceiling before capex.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The most important diagnostic on the page: is the truck
+            demand-constrained or supply-constrained? If observed
+            orders sit well below capacity, marketing has headroom
+            and spend converts to growth. If they&apos;re pressing the
+            ceiling, marketing spend just generates walkouts —
+            ops investment (training, second station, layout) precedes
+            any further demand push.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>The most orders/day this kitchen can physically do.</strong>
@@ -3844,6 +8311,21 @@ const HELP = {
             have headroom and the bottleneck is demand, not supply.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Stay at 70-85% of capacity:</strong> below 70% you have wasted overhead; above 85% you blow ticket times under peak.</li>
+            <li><strong>Capacity expansion checklist:</strong> second oven first, second truck second, bigger oven last (expensive, locks you in).</li>
+            <li><strong>Bottleneck is rarely the oven:</strong> usually the pizzaiolo shape-rate or the prep station. Identify before investing.</li>
+            <li><strong>Capacity = peak × service hours, not daily avg:</strong> a 70 pizza/hr oven for 8 hours = 560 pizza/day theoretical, ~150 realistic with the efficiency factor.</li>
+            <li><strong>Demand vs capacity:</strong> if demand exceeds capacity, marketing is wasted. Spend on operations.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> kitchen capacity (orders/day) = pizzasPerHour × serviceHoursPerDay × ovenEfficiency ÷ prepComplexity.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Typical PL pizza truck capacity:</strong> 100-180 orders/day at 70 pizzas/hr × 8 hours × 22% efficiency = ~123 orders/day. Multi-oven setups: 200-300.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> pizzeria operations literature, oven-manufacturer specs.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> within-day capacity bursts. A kitchen can hit 90 pizzas in the peak hour but average 30/hour across the day. Real saturation is hourly, not daily.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3852,9 +8334,20 @@ const HELP = {
     body: (
       <>
         <p>
-          Observed busiest hour from real orders. Compared against realistic
-          oven capacity to flag saturation.
+          Observed busiest hour from real POS orders. Compared against
+          realistic oven capacity to flag saturation.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The hourly average hides within-hour micro-peaks — customers
+            don&apos;t arrive at evenly-spaced intervals, they cluster
+            into 15-minute waves. So real saturation during the worst
+            quarter-hour runs above the hourly figure, and capacity
+            planning against the hourly average will under-provision
+            for the actual stress moment. Stopwatch the busiest 15
+            minutes, then plan against that.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>Your busiest hour of the day.</strong> If your kitchen does
@@ -3863,6 +8356,22 @@ const HELP = {
             revenue walked</strong> per peak shift.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Smooth the peak:</strong> push pre-orders for 18:30 or 21:00 to drain the 19:30 spike. Free coffee bait works.</li>
+            <li><strong>Limit menu at peak:</strong> simplified 4-SKU peak menu = +20% throughput.</li>
+            <li><strong>Add a peak-hour staff:</strong> one part-timer 18:30-21:00 only. Captures the peak without paying full-day labor.</li>
+            <li><strong>Watch the peak hour move:</strong> Friday peak might be 20h, Saturday 21h. Calibrate per day.</li>
+            <li><strong>If peak hour &gt; capacity, expand:</strong> bigger oven, second oven, or limit orders to manage queue. Hidden walked customers cost more than visible ones.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Inputs:</strong> from real POS data — the busiest single hour across the analysis window.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Formula:</strong> peak orders/hour = max(orders in any 60-min window) across the observation period. Compared against pizzasPerHour × ovenEfficiency for saturation flag.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy peak share:</strong> 12-22% of daily orders concentrated in the peak hour. Higher = more sensitive to capacity.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> POS hourly-distribution analytics, NRA hourly-mix studies.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> within-hour micro-peaks (the 15-min mega-peak inside the busiest hour). Real saturation is often worse than the hourly stat shows.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3871,9 +8380,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Median order-to-ready time. Past 8 min, customer satisfaction
+          P50 order-to-ready time. Past 8 min, customer satisfaction
           craters; past 12 min, refund rate spikes.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Maister&apos;s law of service applies: customers tolerate
+            longer waits when expectation is set up front. So a posted
+            &quot;~7 minute&quot; sign extends the patience threshold
+            without changing the kitchen. Track P95 alongside P50 — a
+            few 20-minute outliers ruin individual experiences and
+            generate the bad reviews. Delivery customers tolerate
+            longer because they aren&apos;t watching the kitchen clock;
+            track that channel separately or the blended P50 lies.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>How long the average pizza takes</strong> from order to
@@ -3883,6 +8404,21 @@ const HELP = {
             accordingly.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Target ≤ 8 min median:</strong> the breakpoint where customers&apos; subjective experience flips from &quot;fast&quot; to &quot;long&quot;.</li>
+            <li><strong>Worse at peak:</strong> median is &lt; 8 min off-peak but &gt; 12 at the rush. Calibrate staffing to peak.</li>
+            <li><strong>Display order-ready times:</strong> a screen showing estimated ready times sets expectations + reduces complaints.</li>
+            <li><strong>Pre-bake at peak:</strong> Margherita / Marinara 5 min early, finish on order. Cuts perceived wait.</li>
+            <li><strong>Refunds correlate inversely:</strong> if median ticket time &gt; 12 min, refunds tend to jump 2-4 pp. Fix the time, refunds drop.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> median ticket time = P50 of order-to-ready elapsed time, derived from KDS event log. Median (not mean) because slow outliers shouldn&apos;t dominate.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> ≤ 6 min QSR ideal; 6-8 min comfortable; 8-12 min slipping; &gt; 12 min losing customers.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> QSR customer-satisfaction studies, restaurant ops literature on perceived-wait psychology (Maister&apos;s laws of service).</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> dine-in vs takeaway vs delivery distinction. Delivery tolerates longer (15-20 min OK); dine-in cratering at 12. Calibrate per channel.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3893,10 +8429,21 @@ const HELP = {
     body: (
       <>
         <p>
-          <strong>Earnings Before Interest, Tax, Depreciation, Amortisation.</strong>
-          The headline cash-generation number. Strips out financing and accounting
-          decisions so the underlying operating profit is comparable across deals.
+          Earnings Before Interest, Tax, Depreciation, Amortisation —
+          the headline cash-generation number used in M&amp;A and credit
+          analysis.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The metric that drives valuation — sale multiples are
+            applied to EBITDA, so lifting 1 pp of margin lifts sale
+            price by the multiple, not by 1 pp. Audit / due-diligence
+            normalisations (founder salary, one-off costs, related-
+            party rent) routinely swing the reported number by 10-20%,
+            so the &quot;adjusted EBITDA&quot; you defend in a sale
+            process is the one that matters, not the raw P&amp;L line.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>Profit before paperwork.</strong> Strips out bank interest,
@@ -3907,6 +8454,21 @@ const HELP = {
             attractiveness.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Investor minimum 15-20% EBITDA margin:</strong> below that, valuation drops fast. Many PE deals require ≥ 18%.</li>
+            <li><strong>EBITDA grows by raising prices OR cutting variable costs:</strong> capex and depreciation don&apos;t affect it. Focus there for valuation.</li>
+            <li><strong>Multiple of EBITDA = your sale price:</strong> Polish casual-Italian sells at 4-6× EBITDA. Lifting 1pp margin lifts valuation 4-6× more.</li>
+            <li><strong>Track EBITDA trend yearly:</strong> investors look at trajectory, not just level. A flat 22% beats a declining 25%.</li>
+            <li><strong>Don&apos;t game it:</strong> reclassifying real costs to depreciation inflates EBITDA but auditors catch it. Honest numbers.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> EBITDA = net profit + interest + tax + depreciation + amortisation. Standard adjusted EBITDA excludes one-off items.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges (PL casual-Italian):</strong> 12-18% standard; 18-25% strong; &gt; 25% exceptional (often a chain with scale economics).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> standard finance (Brealey, Myers, Allen), restaurant-industry valuation literature, Polish M&amp;A multiples data.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> &quot;normalisations&quot; that investors apply (founder salary normalisation, one-off legal costs, etc.). These can swing EBITDA 10-20% in either direction during diligence.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3915,9 +8477,20 @@ const HELP = {
     body: (
       <>
         <p>
-          EBITDA + Rent. Rent-adjusted so chains with different real-estate
-          strategies are comparable. The franchise-rollup standard.
+          EBITDA + Rent. Real-estate-adjusted so chains with different
+          property strategies are comparable. Franchise-rollup standard.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Removes the real-estate decision from the operating-
+            performance measure — useful when comparing your truck to
+            one that owns its location, or when packaging multiple
+            units with different rent profiles for sale. Watch the
+            EBITDA-vs-EBITDAR spread: a wide spread means rent is
+            heavy in your cost stack (renegotiate or relocate); a
+            narrow spread means rent is well controlled.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>EBITDA but ignoring rent.</strong> Useful when comparing
@@ -3926,6 +8499,21 @@ const HELP = {
             land and you don&apos;t. EBITDAR puts you on equal footing.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Use EBITDAR for franchise rollups:</strong> when buying multiple units with different rent profiles, EBITDAR is the apples-to-apples metric.</li>
+            <li><strong>Compare against industry EBITDAR benchmarks:</strong> NRA / PHG publish ranges. Falling below means your operations OR your rent is uncompetitive.</li>
+            <li><strong>Sale-leaseback consideration:</strong> if you own the land, EBITDAR shows what a buyer would pay assuming they pay rent. Used in real-estate-and-operating-business separations.</li>
+            <li><strong>Watch the EBITDA-vs-EBITDAR spread:</strong> wide spread = high rent burden. Renegotiate or relocate.</li>
+            <li><strong>Doesn&apos;t replace EBITDA for tax/financing:</strong> banks still look at EBITDA. EBITDAR is for valuation comparisons.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> EBITDAR = EBITDA + rent expense. Removes the real-estate decision from the operating-performance measure.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Industry standard:</strong> franchise rollups, hotel comparisons, restaurant chain valuations. PL casual-Italian benchmark EBITDAR margin: 22-32%.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> S&amp;P / Fitch credit-analysis frameworks, hospitality-finance textbooks (Vannoy).</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> other location-related costs (utilities, common-area maintenance). Pure rent only.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3934,10 +8522,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Annualised net profit ÷ setup cost. The most-asked multi-unit return
-          metric. ≥ 30% = success, ≥ 15% = acceptable, &lt; 0 = capital
-          destruction.
+          Annualised net profit ÷ setup cost. The most-asked multi-unit
+          return metric. ≥ 30% = success, ≥ 15% = acceptable, &lt; 0 =
+          capital destruction.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Compare directly against alternative-use returns — public
+            equity, deposit, REITs, PE. Below the alternative, your
+            capital is destroying value relative to a passive option.
+            Leverage caveat: debt-funded setups lift CoC mathematically
+            (smaller cash denominator) but interest expense erodes the
+            numerator and the ratio hides this. Use alongside NPV / IRR
+            for the honest investment view.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>Of every złoty you spent setting up, how many come back per
@@ -3947,6 +8546,21 @@ const HELP = {
             spend the year skiing.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Target ≥ 30% for retail investors:</strong> S&amp;P returns ~8% historical; if you&apos;re below 20%, the comparison gets uncomfortable.</li>
+            <li><strong>Compare against alternative use of cash:</strong> a 50k zł deposit at 5% = 2,500 zł/year. If your truck CoC is below 5%, you&apos;re destroying value.</li>
+            <li><strong>Trim setup to lift CoC:</strong> denominator effect. 20k zł off setup lifts CoC ~3pp at typical margins.</li>
+            <li><strong>Lever up cautiously:</strong> a smaller cash investment (debt-funded) lifts CoC mathematically — but interest expense erodes the numerator.</li>
+            <li><strong>Use in fleet expansion decisions:</strong> if unit 5 CoC &lt; unit 1 CoC, you&apos;re hitting diminishing returns on rollout.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> cash-on-cash = (annual net profit) ÷ (setup cost / cash invested). Steady-state metric — assumes you&apos;ve passed the ramp.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> ≥ 30% investor-grade; 20-30% solid; 15-20% acceptable; &lt; 15% reconsider deployment of capital; &lt; 0 destroying value.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> standard finance (Damodaran), restaurant-investment literature, PL venture-economics reports.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> debt structure. A levered truck (less cash, more loan) has higher CoC mathematically but more risk. CoC alone hides leverage.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3955,8 +8569,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Rent ÷ revenue. QSR target &lt; 8%; past 12% = real-estate overspend.
+          (Rent + property tax + insurance) ÷ revenue. QSR target
+          &lt; 8%; past 12% = real-estate overspend.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The occupancy &quot;cliff&quot; isn&apos;t universal —
+            premium high-footfall pitches (Hala Koszyki, Hala Gwardii
+            and similar) routinely run above standard targets but the
+            footfall justifies the rent. So combine this ratio with
+            revenue-per-square-metre to judge whether rent is
+            expensive in absolute or expensive relative to what the
+            location delivers. Lock long leases when the ratio is
+            comfortable; renegotiate when it&apos;s pressured.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>What fraction of revenue goes to the landlord.</strong>
@@ -3966,6 +8593,21 @@ const HELP = {
             long renewal.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Lock long-term leases when occupancy &lt; 8%:</strong> if you have a steal of a pitch, sign 5+ years. Protect the asset.</li>
+            <li><strong>Renegotiate at &gt; 10% occupancy:</strong> rent should track revenue. If revenue dropped 15% and rent didn&apos;t, present data and ask for relief.</li>
+            <li><strong>Move &gt; 12% — seriously:</strong> a different pitch with 8% occupancy adds 4pp net margin. Often more than any operational lever.</li>
+            <li><strong>Watch the renewal clauses:</strong> CPI-linked escalators bump rent. Negotiate caps (e.g. max 5%/year).</li>
+            <li><strong>Pop-up &gt; long-term in untested pitches:</strong> 6-month pop-ups test demand before signing 5-year leases.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> occupancy ratio = rent + property tax + insurance ÷ revenue. All real-estate-related costs.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> ≤ 8% excellent; 8-10% healthy; 10-12% pressured; &gt; 12% restructure (renegotiate, relocate, or scale revenue).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> NRA real-estate benchmarks, Cushman Wakefield / JLL Polish commercial-rent reports, PHG occupancy data.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> location-quality premium. Sometimes 12% occupancy in a great pitch beats 7% in a bad one. Use occupancy ratio AND revenue per sqm together.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3974,8 +8616,20 @@ const HELP = {
     body: (
       <>
         <p>
-          Revenue − refunds − comps. The honest top-line after voids/comps.
+          Revenue − refunds − comps − discounts − loyalty redemptions.
+          The honest top-line for accounting and VAT/CIT filing.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The investor top-line standard — gross sales is misleading
+            because it can be padded with comps and loyalty redemptions
+            that never converted to cash. CIT and VAT calculate on net,
+            so the accountant&apos;s figure should match this one;
+            if it doesn&apos;t, dig into the reconciliation before
+            tax season. A wide gross-to-net gap is a control signal,
+            not just an accounting curiosity.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>Revenue minus the orders you refunded or comped.</strong>
@@ -3984,6 +8638,21 @@ const HELP = {
             quality or service has a real problem.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Track gross-to-net spread weekly:</strong> if it widens, find the cause (recipe issue, training problem, void abuse) within 7 days.</li>
+            <li><strong>Manager-only voids:</strong> the biggest source of leakage. Tighten the POS.</li>
+            <li><strong>Comp budget per shift:</strong> manager can comp 1 ticket; anything more needs ownership approval.</li>
+            <li><strong>Use net sales for tax filing:</strong> CIT/VAT calculated on net (refunded sales aren&apos;t taxable). Make sure your accountant uses net, not gross.</li>
+            <li><strong>Investor reporting uses net:</strong> gross numbers are misleading. Net sales is the honest top-line.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> net sales = gross revenue − refunds − comps − discounts − loyalty redemptions. The clean top-line for accounting.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy gross-to-net:</strong> &lt; 3% gap (typical refunds + small loyalty); 3-5% acceptable; 5-8% indicates control problems; &gt; 8% structural issues.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> standard restaurant accounting (Schmidgall), Polish UoR reporting requirements.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> VAT (Polish 8% gastronomic VAT) — the model shows net of VAT throughout, but if you enter gross figures, expect a discrepancy at the bottom.</p>
+        </Methodology>
       </>
     ),
   },
@@ -3992,9 +8661,20 @@ const HELP = {
     body: (
       <>
         <p>
-          Monthly contribution ÷ labor hours. The labor KPI that actually
-          drives staffing decisions. QSR target ≥ 150 zł/hr.
+          Monthly contribution ÷ labor hours. The labor KPI that
+          actually drives staffing decisions. QSR target ≥ 150 zł/hr.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Better than rev-per-labor-hour because it weights by
+            margin — pushing more high-CM items (espresso, drinks)
+            lifts this metric while pushing low-CM items (plain
+            Margherita) doesn&apos;t. So this is the shift-level
+            staffing-decision metric: weakest-CM-per-labor-hour shifts
+            are the staffing-cut candidates, regardless of how many
+            orders they ring.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>How much profit (not revenue) each labor hour creates.</strong>
@@ -4003,6 +8683,21 @@ const HELP = {
             protect them with raises before competitors poach.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Target ≥ 150 zł/labor hour:</strong> world-class QSR territory. Below 100 = under-staffed or under-priced.</li>
+            <li><strong>Better than rev/labor-hr for staffing:</strong> rev counts revenue from low-margin items equally. This counts the profit-weighted output.</li>
+            <li><strong>Use it for shift-level decisions:</strong> compare lunch shift contribution/hr vs dinner. Cut the underperforming shift.</li>
+            <li><strong>Promotion vs raise:</strong> if a top performer&apos;s shift hits 250+ zł/hr, give them a promotion path before they leave.</li>
+            <li><strong>Compare against benchmarks:</strong> top quartile PL casual-Italian ≥ 180 zł/hr. If you&apos;re there, you&apos;re running tight.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> contribution per labor hour = monthly contribution (revenue − all variable costs) ÷ total monthly labor hours.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges (PL pizza):</strong> &lt; 100 weak; 100-150 OK; 150-200 good; &gt; 200 excellent.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> NRA labor-productivity studies, hospitality-school KPI literature.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> prep hours that don&apos;t directly create contribution but are necessary. Track productive vs prep hours separately if labor mix is unusual.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4011,9 +8706,19 @@ const HELP = {
     body: (
       <>
         <p>
-          Avg ticket × (1 − loyalty burn). The honest ticket after loyalty
-          discounts.
+          Avg ticket × (1 − loyalty burn). The honest ticket after
+          loyalty discounts.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            For forecasting and investor reports, use this metric —
+            gross AOV hides the promo discount and overstates real
+            customer-paid ticket. Loyalty burn isn&apos;t inherently
+            bad; the question is whether the resulting repeat-rate
+            lift justifies it. Without measured repeat lift, the
+            programme is just a discount campaign with extra steps.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>Your ticket size after loyalty discounts come out.</strong>
@@ -4022,6 +8727,21 @@ const HELP = {
             measure both sides, not just the burn.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Promo-adjusted AOV is the honest ticket:</strong> for forecasting + investor reports.</li>
+            <li><strong>Watch the gross-to-net gap:</strong> &gt; 2pp gap = loyalty program is expensive (good if it&apos;s driving repeat).</li>
+            <li><strong>Channel-specific:</strong> Glovo customers redeem less than walk-up regulars. Track per-channel.</li>
+            <li><strong>Use for pricing:</strong> if you target 65 zł net AOV, list prices at 67 zł knowing ~3% comes off via promo.</li>
+            <li><strong>Burn isn&apos;t inherently bad:</strong> the question is whether the resulting repeat rate justifies it. Measure both.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> promo-adjusted AOV = avg ticket × (1 − loyalty burn − promo discount rate − coupon usage).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Typical gap:</strong> 1-3% for healthy loyalty program; 3-5% for aggressive promotion; 5%+ may be over-discounting.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> loyalty-economics literature (Bond Brand Loyalty studies, Sailthru data).</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> incremental sales (some redemptions wouldn&apos;t have happened without the loyalty trigger). The model treats burn as pure cost; real incremental analysis usually shows loyalty is net positive at moderate burn.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4030,9 +8750,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Per-order contribution after every variable leakage (COGS, fees,
-          waste, refund, loyalty, packaging, CAC). Audit-grade unit economics.
+          Per-order contribution after every variable leakage (COGS,
+          payment fees, waste, refunds, loyalty, packaging, marketing
+          CAC). Audit-grade unit economics.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Cleaner than gross margin (which ignores variable leakage)
+            and cleaner than net margin (which mixes in labor + rent).
+            The diagnostic for whether the truck has a viable unit
+            before scaling. If CM1 &gt; CAC the first order pays for
+            the customer; if not, repeat rate has to cover the gap —
+            and a chain that scales acquisition faster than retention
+            with CM1 &lt; CAC compounds losses.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>Of every customer&apos;s 65 zł, how many you actually
@@ -4041,6 +8773,21 @@ const HELP = {
             disguise. This number doesn&apos;t lie the way gross-margin does.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Target ≥ 25 zł/order at AOV ~65 zł:</strong> ~40% true CM1. Below 20 zł indicates structural issues.</li>
+            <li><strong>Per-channel CM1:</strong> Glovo CM1 often 12-18 zł; on-site CM1 25-32 zł. The channel mix determines the blended number.</li>
+            <li><strong>Use for menu engineering:</strong> some items have negative CM1 after all variable costs. Cut or re-price them.</li>
+            <li><strong>Compare against marketing CAC:</strong> if a new customer costs 15 zł to acquire and CM1 is 20 zł, you break even on first order. Need repeat rate to make money.</li>
+            <li><strong>Most-honest metric for investor pitches:</strong> beats both gross margin (ignores variable leakage) and net margin (mixes in labor + rent).</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> True CM1 per order = avg ticket × (1 − COGS% − payment fee % − packaging/order − waste% − refunds% − loyalty burn% − marketing CAC/order).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> &gt; 30 zł/order excellent; 25-30 healthy; 20-25 pressured; &lt; 20 structural problem.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> &quot;Unit economics&quot; venture-finance literature, restaurant-investment due-diligence frameworks.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> attached customer lifetime value (LTV). CM1 is order-level; LTV captures cumulative orders over a customer&apos;s relationship. Use both in growth decisions.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4051,9 +8798,21 @@ const HELP = {
     body: (
       <>
         <p>
-          First month where cumulative net profit clears the setup cost (with a
-          4-month opening ramp). Institutional success: ≤ 24 months.
+          First month where cumulative net profit clears setup cost
+          (after a 4-month opening ramp). Institutional success ≤ 24
+          months.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            More honest than naïve payback because it incorporates the
+            opening ramp and counts cumulative cash rather than
+            steady-state run-rate. Use this for investor decks
+            alongside IRR — investors look at both: NPV captures
+            value, cash break-even captures speed. A 30%-IRR deal that
+            takes 36 months to break even is harder to fund than a
+            20%-IRR deal that breaks even in 18.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>When you&apos;ve earned back every złoty you spent
@@ -4063,6 +8822,21 @@ const HELP = {
             deck.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>More honest than naïve payback:</strong> includes 4-month ramp + cumulative cash. Use this number for real decisions.</li>
+            <li><strong>&lt; 24 months = institutional grade:</strong> PE/VC investors expect this. Above 30 months, you&apos;re a lifestyle business in their eyes.</li>
+            <li><strong>Improve via setup reduction, not just margin:</strong> 30k off setup shortens payback ~2 months. Pre-negotiate hard.</li>
+            <li><strong>Ramp assumption matters:</strong> 4-month ramp is generous; reality can be 6-8. Stress-test if your launch playbook isn&apos;t proven.</li>
+            <li><strong>Show cash break-even alongside NPV in pitches:</strong> investors look at both. NPV captures value, cash break-even captures speed.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> first month where cumulative net profit (with 4-month ramp: m1=20%, m2=40%, m3=60%, m4=80% of steady-state, m5+=100%) exceeds setup cost.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Institutional thresholds:</strong> &lt; 18 months excellent; 18-24 strong; 24-30 acceptable; 30-36 marginal; &gt; 36 reconsider.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> private-equity restaurant-investment frameworks (Roark Capital, L Catterton case studies), restaurant venture-economics literature.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> seasonal opening (launching in November vs May has very different ramp curves). The model uses smooth 4-month linear ramp; reality is choppier.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4071,9 +8845,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Net present value of 24-month cash flows at 10% annual discount rate.
-          Positive = beats the rate. 10% ≈ safe-asset benchmark.
+          Net present value of 24-month cash flows at 10% annual
+          discount. Positive = beats the rate. 10% ≈ safe-asset
+          benchmark.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The minimum bar for capital deployment — if NPV at this
+            rate goes negative, the money would have done better
+            sitting in a passive option. Discounting means cash-flow
+            TIMING matters, not just total: an early ramp helps NPV
+            more than the same total cash arriving later. Doesn&apos;t
+            capture terminal value beyond month 24, so for going
+            concerns the real NPV is higher than the truncated view.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>&quot;Is this truck worth more than a 10% bond?&quot;</strong>
@@ -4082,6 +8868,21 @@ const HELP = {
             it is the minimum bar for not feeling foolish.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>NPV &gt; 0 at 10% = minimum bar:</strong> if you can&apos;t beat a 10% bond return, the truck doesn&apos;t justify your time.</li>
+            <li><strong>Use 10% for personal-investment decisions:</strong> matches typical PL deposit + equity blended alternative.</li>
+            <li><strong>Compare across scenarios:</strong> Conservative NPV vs Optimistic NPV shows the upside if execution is strong.</li>
+            <li><strong>Watch the assumption set:</strong> NPV is sensitive to 24-month projections; small input changes swing it materially.</li>
+            <li><strong>Higher discount rates penalise long-horizon profits:</strong> if NPV @ 10 is high but NPV @ 20 is low, you have late-arriving cash. Investors discount more.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> NPV = Σ (monthly_cashflow_m ÷ (1 + 10%/12)^m) for m=1..24 minus setup cost.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Why 10%:</strong> approximates Polish risk-free + small premium. Roughly the long-run equity-market return for a passive investor.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> standard corporate finance (Brealey/Myers/Allen), CFA Institute investment-decision frameworks.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> terminal value beyond month 24. If the truck keeps running profitably for years 3+, the NPV understates true value. Add a terminal-value adjustment for long-term investments.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4090,8 +8891,20 @@ const HELP = {
     body: (
       <>
         <p>
-          NPV at 15% discount rate. The &quot;decent venture&quot; hurdle.
+          NPV at 15% annual discount. The &quot;decent venture&quot;
+          hurdle.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Positive at this rate signals the truck beats venture-grade
+            alternatives. Watch sensitivity: NPV close to zero at 15%
+            means the project is marginal — small assumption changes
+            flip the verdict. Investors look at the slope across
+            NPV-at-10/15/20 to assess robustness: a steeper drop
+            between rates means the case depends heavily on long-
+            horizon cash, which carries more execution risk.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>Same question, harder hurdle.</strong> 15% is the &quot;decent
@@ -4100,6 +8913,21 @@ const HELP = {
             startup.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>15% is the &quot;real business&quot; bar:</strong> serious investors expect returns clearing 15% to allocate capital.</li>
+            <li><strong>If NPV @ 15 = 0 but NPV @ 10 &gt; 0, you&apos;re lifestyle:</strong> good for you, not for institutional money.</li>
+            <li><strong>Plot all three (10/15/20) together:</strong> the curve&apos;s slope shows how concentrated the returns are. Steeper = more dependent on long-horizon cash.</li>
+            <li><strong>Run sensitivity around 15%:</strong> if a 1pp drop in discount rate flips NPV positive, the project is marginal — be cautious.</li>
+            <li><strong>Use for &quot;invest in growth?&quot; decisions:</strong> if you have spare cash, NPV @ 15 of opening unit #2 vs investing in stocks tells you which is better.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> identical to NPV @ 10 but with 15% annual discount.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Why 15%:</strong> &quot;decent venture&quot; benchmark. Approximates VC/seed-investor expected return for moderate-risk SME investments.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> corporate finance literature, VC return benchmarks.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> tax-adjusted vs pre-tax discount rate. Investors typically use after-tax hurdles; the model uses pre-tax cash flows so the comparison isn&apos;t perfectly apples-to-apples.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4108,8 +8936,19 @@ const HELP = {
     body: (
       <>
         <p>
-          NPV at 20%. PE-style hurdle.
+          NPV at 20% annual discount. The PE-style hurdle.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The sale-grade benchmark — if you&apos;re building toward
+            a future exit, this is the rate institutional / rollup
+            capital screens against. Real PE deals further adjust for
+            control premium, synergy expectations, and exit-multiple
+            compression, so positive at 20% is necessary but not
+            sufficient for getting a deal done. Below 20% you&apos;re
+            building a lifestyle business, not a saleable asset.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>The Private Equity bar.</strong> If positive, even
@@ -4118,6 +8957,21 @@ const HELP = {
             when you go raising for unit #6.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>NPV @ 20 ≥ 0 = institutional-grade:</strong> PE firms target 18-22% IRR. Clearing this means you&apos;ll attract their capital.</li>
+            <li><strong>If you&apos;re scaling 5+ units, this is the bar:</strong> rollup acquirers (Polish: Castle, AdVent, Innova) screen against ~20% IRR equivalent.</li>
+            <li><strong>Hard to clear without supply discounts:</strong> usually requires unit 4+ economics (HQ overhead + supply discount kicking in).</li>
+            <li><strong>Build the deck around it:</strong> &quot;positive NPV @ 20%&quot; is the line that closes meetings.</li>
+            <li><strong>Compare across pitches:</strong> if location A clears NPV @ 20 and location B doesn&apos;t, you have your priority.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> NPV with 20% annual discount.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Why 20%:</strong> PE-style hurdle. Reflects illiquidity premium + minority-stake risk + sector risk for restaurant investments.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> private-equity return frameworks, S&amp;P/Cambridge PE-fund-of-funds benchmarks.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> deal-specific structural premiums (control premium, synergy expectations, exit-multiple compression). Real PE returns adjust for these on top of the base hurdle.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4126,9 +8980,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Annualised internal rate of return on 24-month cash-flow series.
-          ≥ 30% strong, ≥ 15% acceptable, &lt; 0 capital destruction.
+          Annualised internal rate of return on the 24-month cash-flow
+          series. ≥ 30% strong; ≥ 15% acceptable; &lt; 0 capital
+          destruction.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            IRR implicitly assumes reinvestment of cash flows AT the
+            IRR rate — often unrealistic for multi-period decisions,
+            which is why MIRR (Modified IRR) is more honest for
+            capital-allocation reasoning. 24-month IRR is typically
+            higher than a 5-year IRR on the same project because
+            terminal-value drag isn&apos;t modelled here. Use IRR for
+            ranking, NPV for sizing.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>The effective &quot;interest rate&quot; your money earns by
@@ -4137,6 +9003,21 @@ const HELP = {
             stocks instead and saved yourself the 14-hour Sundays.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Target 25-35% for retail success:</strong> beats most asset classes. Anything 40%+ is exceptional and probably temporary.</li>
+            <li><strong>Compare against your opportunity cost:</strong> what else could the cash do? Index fund (~8%), property (~6-10%), private equity (~12-18%).</li>
+            <li><strong>IRR includes time-value:</strong> better than CoC because it accounts for when the cash arrives.</li>
+            <li><strong>Sensitivity-test the 30% claim:</strong> what if revenue drops 15%? What if COGS rises 3pp? If IRR stays above 20% under stress, robust business.</li>
+            <li><strong>Long-horizon IRR drops:</strong> 24-month IRR is typically higher than 5-year because terminal value pulls down. Use the appropriate horizon for the comparison.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> IRR = the discount rate r where Σ (monthly_cashflow_m ÷ (1 + r/12)^m) = setup cost. Solved numerically (no closed form).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> &gt; 30% chef&apos;s-kiss; 20-30% solid; 15-20% acceptable; &lt; 15% reconsider; &lt; 0 capital destruction.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> standard corporate finance, CFA Level 1-2 capital-budgeting materials.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> reinvestment-rate assumption (IRR implicitly assumes interim cash flows reinvest at IRR rate — often unrealistic). Modified IRR (MIRR) is more honest for multi-period decisions.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4150,6 +9031,16 @@ const HELP = {
           Forward 12-month revenue projection with seasonality + price
           inflation baked in.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Q1 generates the smallest revenue share against a normal
+            share of fixed cost — not a flat 1/12 per month, so use
+            this number to size the working-capital reserve that
+            floats Q1 through the trough. The annual figure also
+            anchors against the small-CIT entity threshold; structuring
+            decisions follow the annual total.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>The year ahead, top-line.</strong> A 200,000 zł/month truck
@@ -4158,6 +9049,21 @@ const HELP = {
             ~260k). The shape matters more than the headline.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Watch the €2M turnover line:</strong> ~8.5M zł. Crossing it bumps CIT from 9% → 19%. Plan revenue around the threshold.</li>
+            <li><strong>Use as your annual budget:</strong> the projection becomes the year&apos;s revenue target by month.</li>
+            <li><strong>Re-run quarterly:</strong> as actuals come in, recalibrate. A January way under projection signals a real-world deviation.</li>
+            <li><strong>Compare to last year:</strong> growing 10% on revenue is investor-grade; flat is OK; declining requires intervention.</li>
+            <li><strong>Watch the inflation contribution:</strong> 5% revenue growth from price hikes alone is &quot;treading water&quot; — real growth is volume growth.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> 12-month revenue = Σ over m=1..12 of (base_orders × seasonal_multiplier(m) × ticket × days × (1 + ingredient_inflation)^(m/12)).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Seasonal split (PL pizza truck):</strong> winter Q1 ~17%, spring Q2 ~25%, summer Q3 ~33%, autumn Q4 ~25%. Note: NOT a flat 1/12 per month.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish gastronomic seasonality data, GUS sectoral monthly revenues.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> year-over-year growth from marketing investment or new menu launches. Treats the 12 months as steady-state projection from current inputs.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4166,9 +9072,20 @@ const HELP = {
     body: (
       <>
         <p>
-          Forward 12-month total cost compounding wage + ingredient inflation
-          monthly.
+          Forward 12-month total cost projection, compounding wage and
+          ingredient inflation monthly.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Step-function changes (rent renewal, mandatory ZUS jump,
+            min-wage shock) don&apos;t fit the smooth-inflation model
+            — add them as a separate fixed-cost line if material, or
+            the projection understates the cost wall. The trajectory
+            check that matters: if 12-mo cost growth outpaces 12-mo
+            revenue growth, margin erodes year over year — that&apos;s
+            the trigger to price or restructure now.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>Total costs over the year ahead, with inflation baked in.</strong>
@@ -4177,6 +9094,21 @@ const HELP = {
             <strong> ~60,000 zł of margin erosion</strong> per year.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Plan price hikes against this projection:</strong> if 12-mo costs are projected to grow 6%, plan a January menu price refresh of ~4% to offset.</li>
+            <li><strong>Track cost trend monthly:</strong> if actuals diverge from projection by &gt;5% for 2 consecutive months, recalibrate.</li>
+            <li><strong>Decompose by category:</strong> the projection rolls up COGS/labor/fixed. Look at each separately if a line is bloating.</li>
+            <li><strong>Inflation is the silent killer:</strong> 4-5% annual cost growth needs matching price growth. Don&apos;t let it compound year-over-year unchecked.</li>
+            <li><strong>Use for hiring decisions:</strong> new hire at 6,000 zł/month adds ~72k to the projection. Can you absorb it?</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> 12-mo costs = Σ m=1..12 of (labor × (1+wage_infl)^(m/12) + COGS × (1+food_infl)^(m/12) + fixed × (1+CPI)^(m/12)).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Composition:</strong> typically 40% labor, 40% COGS, 15% fixed, 5% variable leakage. Inflation impacts vary per line.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> GUS inflation data, ZUS rate-card history, owner-operator cost-tracking surveys.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> step-function cost changes (rent renewal, mandatory ZUS jump). The model treats inflation as smooth; reality has cliffs.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4185,8 +9117,20 @@ const HELP = {
     body: (
       <>
         <p>
-          Forward 12-month net profit. Drives setup-payback math.
+          Forward 12-month cumulative net profit (= 12-mo revenue − 12-mo
+          costs, post-CIT). Drives setup-payback math.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Compares directly to alternative-employment income — if
+            the truck nets below what a salaried equivalent role would
+            pay, the risk-adjusted return is negative even when the
+            P&amp;L looks profitable. So this is the &quot;am I better
+            off running this or working for someone else?&quot;
+            metric. Also the valuation anchor for a future sale; lift
+            this and the saleable asset grows by the multiple.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>Total take-home for the year ahead.</strong> Divide by 12
@@ -4196,6 +9140,21 @@ const HELP = {
             wouldn&apos;t earn more as a salaried pizzaiolo.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Compare to your alternative employment:</strong> a salaried head chef earns 90-130k zł/year in PL. If your truck nets below that, the math + risk doesn&apos;t justify.</li>
+            <li><strong>Plan tax payments quarterly:</strong> 9% CIT × ~240k = ~22k zł/year. Set aside monthly.</li>
+            <li><strong>Reinvestment plan:</strong> 30% personal take-home, 30% reserve, 20% growth, 20% buffer. Adjust to your goals.</li>
+            <li><strong>Year-over-year growth target:</strong> 10-15% net growth annual is healthy. Below 5% you&apos;re losing to inflation in real terms.</li>
+            <li><strong>Use for valuation:</strong> if you sell at 5× annual net profit, your truck&apos;s value is ~5× 12-mo net.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> 12-mo net profit = 12-mo revenue − 12-mo costs (both inflation-adjusted, seasonality-applied). Before CIT.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges (PL casual-Italian):</strong> 120-200k zł/year for single truck, 600k-1.5M for 5-7 unit chain, 3M+ for 20+ unit chain.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> PHG gastronomic benchmarks, restaurant-industry valuation reports.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> founder salary as a cost. The model treats unpaid owner labor as zero; mentally subtract ~80-120k zł/year if you&apos;re working full-time, to value your time honestly.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4204,9 +9163,20 @@ const HELP = {
     body: (
       <>
         <p>
-          Highest vs lowest month-net-profit in the projection. Measures
-          seasonal swing risk.
+          Highest vs lowest month-net-profit in the 12-month projection.
+          Measures seasonal swing risk.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The spread sizes the working-capital reserve: enough cash
+            to bridge the trough month while still covering monthly
+            fixed bills. Investors look at the worst month, not the
+            average — an attractive annual average can hide a winter
+            cash crunch that closes the truck. A diversified channel
+            mix (delivery is partly counter-seasonal) narrows the
+            spread; pure-outdoor pitches widen it.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>Your best month vs your worst.</strong> A 4× swing (e.g.,
@@ -4215,6 +9185,21 @@ const HELP = {
             spend it the day it lands or January will be financially terrifying.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Reserve = 1.5× worst month:</strong> minimum cash buffer. Below that and a bad February closes you.</li>
+            <li><strong>Auto-transfer summer surplus:</strong> after each high-month, move 30-40% to a separate reserve. Otherwise you spend it.</li>
+            <li><strong>Best:worst ratio &gt; 3× is hot:</strong> indicates heavy seasonality. Plan staffing, cash, marketing accordingly.</li>
+            <li><strong>If &gt; 5× ratio, consider indoor pivot:</strong> winter pop-up, catering, etc. Counter-seasonal revenue smooths the curve.</li>
+            <li><strong>Use best-month for capex timing:</strong> buy equipment in your highest-cash month. Don&apos;t wait for a slow month and starve cash.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> best-vs-worst = max(monthly net profit) − min(monthly net profit) across the 12-month projection.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy swings (PL outdoor truck):</strong> typical 3-5× best:worst ratio. Lower (1.5-2×) means well-diversified channels; higher (5-8×) means heavy seasonality risk.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish gastronomic seasonality data, restaurant cash-flow management literature.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> intra-month cash-flow variance (timing of supplier payments, payroll cycles). Even within a &quot;best&quot; month, there can be cash-low days. Plan against a 7-day working capital minimum.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4225,9 +9210,19 @@ const HELP = {
     body: (
       <>
         <p>
-          Predicted order-to-ready time from menu mix + per-attach prep
-          seconds.
+          Predicted order-to-ready time from menu mix + per-attach
+          prep seconds.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Compare to observed: observed running materially above
+            modelled signals a team-process gap (mise-en-place, peel
+            technique, station hand-offs); observed running below means
+            the kitchen is more efficient than the menu math predicts
+            — usually a veteran team batching well. The model assumes
+            serial flow; batch-discipline crews beat it by parallelising.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>What the spreadsheet says your ticket time should be.</strong>
@@ -4236,6 +9231,21 @@ const HELP = {
             efficient than you give them credit for.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Use modelled vs observed gap as the diagnostic:</strong> if observed is much higher, find the bottleneck (prep, peel, plate-up).</li>
+            <li><strong>Calibrate per-SKU prep time:</strong> Margherita 90s, Quattro Stagioni 150s, pasta 240s. Wrong per-SKU times = wrong overall model.</li>
+            <li><strong>Re-run after menu changes:</strong> adding pasta primo lifts modelled time by 60-90s. Make sure observed catches up.</li>
+            <li><strong>If observed &lt; modelled, the team is heroes:</strong> figure out why (better mise-en-place? smaller portions?) and document.</li>
+            <li><strong>If modelled is &gt; 12 min, your menu is too complex:</strong> simplify before launching, not after.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> modelled ticket time = base oven cycle + Σ per-attach prep seconds × attach%. Each lever adds prep time proportional to its attach rate.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Default prep additions (seconds):</strong> dessert +20s, antipasti +60s, aperitivo +30s, premium toppings +15s, pasta primo +90s. Coffee +0s (parallel station).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> kitchen-throughput studies, pizzeria operations time-and-motion data.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> queue effects, batch optimisation (multiple orders prepped together can be faster than serial). The model assumes serial flow; well-run kitchens are partially parallel.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4244,8 +9254,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Real measured order-to-ready time from actual orders (median).
+          Real measured order-to-ready time from POS / KDS data
+          (median, P50).
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Ground truth — the model can lie, the stopwatch can&apos;t.
+            Track P95 alongside P50, because a few long-tail outliers
+            ruin individual experiences and generate the bad reviews
+            that an average hides. Delivery customers tolerate longer
+            waits than dine-in (they&apos;re not watching the kitchen
+            clock), so blend the two and the picture distorts —
+            calibrate each channel separately when delivery share is
+            material.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>The actual stopwatch time from real orders.</strong> Past
@@ -4254,6 +9277,21 @@ const HELP = {
             truth — the model lies, this doesn&apos;t.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Measure weekly:</strong> not just at peak. Off-peak should be ~5-6 min; if it&apos;s 8+ already, you have a process issue.</li>
+            <li><strong>Display the running median on KDS:</strong> creates team awareness + healthy competition.</li>
+            <li><strong>Cross-reference with bad reviews:</strong> Google reviews mentioning &quot;slow&quot; vs your observed median — direct correlation above 12 min.</li>
+            <li><strong>Per-station timing:</strong> the slowest station (pasta? assembly?) sets the overall pace. Fix the slowest.</li>
+            <li><strong>Track P95, not just P50:</strong> a few 20-minute outliers ruin individual experiences. Reduce variance, not just the median.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> observed ticket time = P50 (median) of order-placement to order-ready timestamps from KDS event log.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> ≤ 6 min QSR-class; 6-8 min comfortable; 8-12 min slipping; &gt; 12 min losing customers.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> KDS log data, customer-satisfaction surveys cross-referenced with wait time.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> delivery customer perception (Glovo customers tolerate longer because they aren&apos;t watching the kitchen clock). Track on-site separately.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4262,10 +9300,22 @@ const HELP = {
     body: (
       <>
         <p>
-          Excess orders <em>per hour</em> at peak — arrivals beyond what the
-          oven can produce. These are customers who walk because the queue is
-          too long.
+          Excess orders <em>per hour</em> at peak — arrivals beyond
+          what the oven can produce. These are customers who walk
+          because the queue is too long.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Lost-order math is invisible on the P&amp;L but visible
+            here — the customers who walked never showed up in any
+            other report. Smoothing arrivals (reservations, SMS
+            ready-alerts) often beats raw capacity expansion because
+            it&apos;s cheaper and faster to deploy. Real lost orders
+            run higher than the modelled overflow because of partial
+            balking — customers who see the queue and leave without
+            trying.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>Orders walking away at peak hour.</strong> Even
@@ -4276,6 +9326,21 @@ const HELP = {
             the monthly bleed.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Visible queue = lost queue:</strong> if customers can see &gt; 8 people waiting, ~25% walk. Hide the line or break it up visually.</li>
+            <li><strong>Reservation system for the peak hour:</strong> 18:45 / 19:15 / 19:45 slots. Smooths arrivals.</li>
+            <li><strong>SMS &quot;ready&quot; notifications:</strong> let customers wait at the pub next door, come back when buzzed. Adds 20-30% effective capacity.</li>
+            <li><strong>Off-peak incentive:</strong> 10% off orders before 18:00 or after 21:00 shifts ~15% of demand.</li>
+            <li><strong>Quantify the loss:</strong> use queue × wait-time abandonment rate × ticket value to size the monthly cost of inaction.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> peak-hour queue = max(0, peak_hour_orders − realistic_oven_capacity). Customers arriving above capacity who walk.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy range:</strong> 0 lost orders/hr at peak = perfect calibration. 1-3/hr = manageable. &gt; 5/hr = expansion required.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> queueing-theory literature (Erlang, Maister&apos;s laws of service), QSR throughput studies.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> partial-balking (customers who see the queue and leave without trying). Real lost orders may be 1.5-2× the modelled overflow.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4284,9 +9349,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Average back-of-queue wait time at peak hour. Past 5 minutes drives
-          5% conversion loss per extra minute, capped at 60%.
+          Average back-of-queue wait at peak hour. Past 5 min, each
+          extra minute drops conversion by ~5% (capped at 60%).
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Perceived-wait interventions (visible build, sample bites,
+            QR menu) reduce real abandonment substantially without
+            reducing the actual wait — usually cheaper and faster than
+            capacity expansion. Maister&apos;s law: customers tolerate
+            longer waits when expectation is set up front. Daypart
+            variance applies: lunch crowd has the lowest tolerance,
+            tourists the highest — design service around the strictest
+            segment.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>How long the average customer waits at peak.</strong> Past
@@ -4296,6 +9373,21 @@ const HELP = {
             week.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Target ≤ 3 min wait off-peak, ≤ 6 min peak:</strong> sets customer expectation, sustainable service quality.</li>
+            <li><strong>Set expectation up front:</strong> &quot;your order in ~7 minutes&quot; — when set, customers tolerate 50% longer than ambient wait without complaint (Maister&apos;s law).</li>
+            <li><strong>Give them something to do:</strong> menu QR codes, small bites samples, table-side coloring sheets. Perceived wait drops by 30-40%.</li>
+            <li><strong>Queue Manager (one staff role) at peak:</strong> takes orders early, answers questions, manages perceived wait. Pays back in saved walkouts.</li>
+            <li><strong>Wait time &gt; ticket time:</strong> wait time is queue + ticket time. Reduce queue first; ticket time is harder.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> wait time = queue_length × per-order ticket time. Queue derived from arrival rate vs serving rate.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Conversion sensitivity:</strong> 0-5 min wait: 95% complete; 5-10 min: 70%; 10-15 min: 40%; &gt; 15 min: ~20%. Polish QSR research.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> queueing theory, customer-experience research (Maister, Berry), QSR walkout-rate studies.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> day-part tolerance (lunch crowd has lower tolerance than dinner; tourists higher than locals). Calibrate per channel/daypart.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4306,8 +9398,19 @@ const HELP = {
     body: (
       <>
         <p>
-          Pizzas-per-cycle × cycles per hour. Vendor-spec capacity in a vacuum.
+          Pizzas-per-bake × cycles/hour. Vendor-spec maximum in a
+          vacuum.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Useful only as a ceiling check, never a staffing target —
+            real ops never approach this number because the pizzaiolo
+            is also taking orders, building pizzas, wiping the peel,
+            rebuilding dough balls and plating. Vendor demos and oven
+            brochures cite this figure; planning service against it
+            guarantees a blown service.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>What the oven brochure says it can do.</strong> Ignore it —
@@ -4316,6 +9419,21 @@ const HELP = {
             you account for prep, plate-up and customer-facing time.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Useful only for ceiling check:</strong> if your observed peak hits 50% of theoretical, the oven is fine. Bottleneck is elsewhere.</li>
+            <li><strong>Don&apos;t plan staffing against it:</strong> always use realistic peak. Theoretical is marketing.</li>
+            <li><strong>Test new oven purchases vs theoretical:</strong> two ovens at half the theoretical each &gt; one at double theoretical because parallel beats serial.</li>
+            <li><strong>Vendor demos ARE the theoretical:</strong> they show the absolute best case. Discount by 70% for reality.</li>
+            <li><strong>Theoretical &gt; demand = capacity wins:</strong> when demand &lt; theoretical, you have room to grow before capex.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> theoretical peak = pizzasPerBake × (3600 / cycleTime). No efficiency or labor de-rating.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Realistic ratio:</strong> 20-35% of theoretical sustained in real operation. The gap is labor, prep, plate-up, customer interaction.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> oven-vendor specifications, real-world pizzeria throughput audits.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> burst capacity (an oven can hit theoretical for 10-15 min before recovery drag). Useful for short peaks; not sustainable.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4324,9 +9442,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Theoretical × efficiency factor (default 22%). Sustainable peak in
-          real service.
+          Theoretical × efficiency ÷ prepComplexity. The sustainable
+          peak in real service.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The binding constraint for capacity planning — what oven
+            + line + cook combined actually deliver under sustained
+            pressure. Improving by a few percentage points through
+            training, mise-en-place, runner support usually beats
+            capex for less money. Validate with stopwatch on a Friday
+            rush; if observed runs below modelled realistic,
+            recalibrate the efficiency input down rather than wishing
+            it weren&apos;t.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>What the oven actually delivers</strong> at a sustained
@@ -4335,6 +9465,21 @@ const HELP = {
             no matter what the spec sheet promised.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Plan against this, not theoretical:</strong> realistic peak is the binding constraint for capacity planning.</li>
+            <li><strong>Validate with stopwatch:</strong> run a Friday-night audit. If your modelled realistic peak is 70/hr but observed is 50/hr, recalibrate ovenEfficiency.</li>
+            <li><strong>Track team-level improvements:</strong> training + better mise-en-place lifts realistic peak by 5-10 pizzas/hr. Cheaper than buying a second oven.</li>
+            <li><strong>Compare against demand:</strong> if realistic peak &gt; peak demand by 30%+, you have growth headroom.</li>
+            <li><strong>Investment threshold:</strong> if observed peak consistently &gt;= realistic peak for 30+ days, expansion conversation begins.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> realistic peak = theoretical_peak × ovenEfficiency ÷ prepComplexity.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy range:</strong> 50-90 pizzas/hr realistic for single pizzaiolo + Neapolitan oven; 110-160 with multi-station + runner; 200+ for QSR conveyor setup.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> pizzeria operations research, time-and-motion studies.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> hour-of-shift fatigue. Realistic peak drops 10-15% by hour 5+ of a shift. Schedule peak hours early in shifts.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4343,8 +9488,20 @@ const HELP = {
     body: (
       <>
         <p>
-          Max avg-orders-per-hour over the last 30 days of real orders.
+          Max orders observed in any 60-minute window over the last 30
+          days of real POS data.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Watch trend over time, not just level — rising = healthy
+            growth, flat = market saturation, falling = a problem to
+            diagnose (competitor entry, quality drift, channel mix).
+            Seasonal extremes matter more than annual average: summer
+            peak might be substantially higher than winter, so capacity
+            planning that uses the annual average over-provisions
+            winter and under-provisions summer at the same time.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>Your busiest hour, from real data.</strong> Compare to
@@ -4353,6 +9510,21 @@ const HELP = {
             60% and growth is a marketing problem, not a kitchen problem.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Watch the trend:</strong> rising = healthy growth; flat = market saturation; falling = problem (competitor? quality?).</li>
+            <li><strong>Compare across days of week:</strong> Friday vs Tuesday peaks tell you which days drive your business.</li>
+            <li><strong>Day-part breakdown:</strong> lunch peak vs dinner peak — invest in the bigger one.</li>
+            <li><strong>Track per-channel:</strong> on-site, Glovo, Wolt peaks may differ. Each has its own capacity story.</li>
+            <li><strong>If observed = realistic, expand:</strong> the kitchen is the bottleneck. Either second oven, second unit, or peak-shifting (reservations).</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> observed peak = max(orders in any single 60-min window) across the analysis window (default 30 days).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ratio:</strong> observed ÷ realistic 60-85% = sustainable; 85-100% = at-capacity (frequent walkouts); &gt; 100% = expansion required.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> POS hourly-event analytics, NRA hourly-mix benchmarks.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> seasonal peak shifts (summer peaks higher than winter for outdoor trucks). Average masks this; check seasonal extremes too.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4362,10 +9534,20 @@ const HELP = {
       <>
         <p>
           Four-bucket categorisation of observed peak ÷ realistic peak:
-          <strong> Headroom</strong> (&lt; 60%), <strong>Heading there</strong>
-          (60–85%), <strong>At ceiling</strong> (85–100%),
-          <strong> Blown out</strong> (&gt; 100%).
+          Headroom (&lt; 60%), Heading there (60-85%), At ceiling
+          (85-100%), Blown out (&gt; 100%).
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Decision frames embedded in the four buckets: Headroom →
+            push marketing; Heading there → begin capex planning; At
+            ceiling → active expansion required; Blown out → emergency
+            mode (limit menu, close early, push reservations). Most
+            QSR chains plan capex against the &quot;At ceiling&quot;
+            boundary so service quality holds when peak arrives, not
+            after it overruns.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             A one-glance read on whether you&apos;re slammed.
@@ -4377,6 +9559,21 @@ const HELP = {
             are where most chains start planning capex.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Headroom (&lt; 60%):</strong> spend on marketing/awareness. Capacity isn&apos;t the issue.</li>
+            <li><strong>Heading there (60-85%):</strong> begin capex planning — second oven, peak-hour staffing, reservation system.</li>
+            <li><strong>At ceiling (85-100%):</strong> active expansion required. One bad Saturday wipes you out from over-promising.</li>
+            <li><strong>Blown out (&gt; 100%):</strong> you&apos;re losing customers daily. Emergency: limit menu at peak, push reservations, or close the order book hours early.</li>
+            <li><strong>Re-check after expansion:</strong> opening unit 2 might drop unit 1 from &quot;blown out&quot; back to &quot;heading there&quot;. Quantify.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> saturation ratio = observed peak hour ÷ realistic peak. Four-bucket categorisation at 60% / 85% / 100% thresholds.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Why the thresholds:</strong> 60% = utilisation enough to keep team sharp but not stressed. 85% = sustainable at peak but with no buffer. 100% = boundary; above = active customer loss.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> QSR operations literature (Domino&apos;s, McDonald&apos;s case studies on capacity utilisation), queueing theory.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> intraday saturation variance (you might be 60% average but 110% in the 15-min mega-peak). Use observed peak hour as the bound, not the average.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4387,8 +9584,20 @@ const HELP = {
     body: (
       <>
         <p>
-          Average ticket size. Persists from real orders; matches scenario AOV.
+          Average ticket size. From real POS orders; matches scenario
+          AOV.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Pushing attach beats raw price hikes because customers
+            don&apos;t perceive add-ons as price moves — the
+            elasticity penalty is zero. Track per-channel (on-site
+            vs Glovo vs Wolt typically vary materially); a channel-mix
+            shift can change blended AOV without anyone touching the
+            menu price, and the cause matters when diagnosing
+            ticket-growth trends.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>What the average customer pays per order.</strong> Polish
@@ -4397,6 +9606,21 @@ const HELP = {
             per day (full marketing campaign).
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Push attach over price:</strong> raising avg ticket via coffee/dessert attach is invisible to customers; raising menu prices is visible.</li>
+            <li><strong>Track per-channel:</strong> on-site, Glovo, Wolt typically vary by 5-15 zł. Different optimisation per channel.</li>
+            <li><strong>Combo conversion is the lever:</strong> 30% of customers taking a 65 zł combo vs 45 zł pizza raises blended AOV ~6 zł.</li>
+            <li><strong>Monthly trend matters:</strong> if AOV is declining, customers are downshifting. Counter with value items or attach push.</li>
+            <li><strong>Compare to peers:</strong> casual-Italian PL benchmark 60-72 zł. Below 50 = aggressive value positioning; above 80 = upscale.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> revenue per order = monthly revenue ÷ monthly orders. Net of refunds/comps.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges (PL casual-Italian):</strong> Pizza-only menu 45-55 zł; with drinks 60-68 zł; full dinner 70-85 zł; upscale Italian 90+ zł.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Glovo/Wolt published GMV-per-order, PHG benchmarks.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> party size (a 4-person order isn&apos;t 4× individual). The model treats one order = one customer.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4405,9 +9629,20 @@ const HELP = {
     body: (
       <>
         <p>
-          CM1 minus per-order share of labor and fixed costs. Net unit-economic
-          profit per ticket.
+          True CM1 minus per-order share of labor and fixed costs. Net
+          unit-economic profit per ticket.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The gating metric for unit economics — alongside CM1, this
+            shows whether the unit is structurally profitable and how
+            fixed-cost-heavy the structure is. By-daypart variance
+            matters: off-peak CM2 might be negative while peak CM2 is
+            strongly positive, and the blended number hides the truth.
+            Drop the worst dayparts before reaching for menu or pricing
+            changes.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>What&apos;s left per order after labor and rent.</strong>
@@ -4417,6 +9652,21 @@ const HELP = {
             marketing will fix that.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Negative CM2 = stop right now:</strong> every order loses money. Pause growth, fix the unit, then resume.</li>
+            <li><strong>Healthy CM2:</strong> 5-10 zł/order for a well-run truck. Below 3 zł = fragile.</li>
+            <li><strong>Levers for CM2:</strong> raise prices, reduce labor-per-order (productivity), trim fixed costs. Variable cost lifts CM1 not CM2.</li>
+            <li><strong>Use it in unit-2 decisions:</strong> if Unit 1 CM2 is 8 zł, Unit 2 expected CM2 should be similar before opening. If projected lower, ask why.</li>
+            <li><strong>Investor metric:</strong> alongside CM1, CM2 shows whether the unit is structurally profitable. The gap = how fixed-cost-heavy you are.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> True CM2 per order = True CM1 − (labor + fixed costs) ÷ monthly orders.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> &gt; 10 zł/order excellent; 5-10 healthy; 2-5 marginal; &lt; 2 fragile; &lt; 0 structurally broken.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> unit economics frameworks (a16z, Bain), restaurant due-diligence literature.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> CM2 variance by daypart. Off-peak CM2 might be negative; peak CM2 strongly positive. Blended hides the truth — check both.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4425,8 +9675,20 @@ const HELP = {
     body: (
       <>
         <p>
-          Total orders booked in the month. Drives all variable cost lines.
+          Total orders booked in the month. Drives all variable cost
+          lines.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Order-count growth is the volume-truth-teller — it
+            can&apos;t be faked by price hikes the way revenue can.
+            Customer count is distinct from order count when party size
+            &gt; 1; track both. Revenue growing while orders flat means
+            ticket is doing the work (price or mix), which has a
+            ceiling; orders growing means real demand is expanding,
+            which doesn&apos;t.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>Total orders in the month.</strong> 80/day × 28 days =
@@ -4435,6 +9697,21 @@ const HELP = {
             improvement scales by this number.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Multiplier on every per-order improvement:</strong> a 1 zł lift in CM2 × 2,240 orders = 2,240 zł/month. Multipliers matter.</li>
+            <li><strong>Customer count vs order count:</strong> if avg party size is 2.5, 2,240 orders = ~900 unique transactions. Track both.</li>
+            <li><strong>Compare to capacity:</strong> kitchen capacity 4,000/month means you have ~45% headroom for growth.</li>
+            <li><strong>Channel mix matters:</strong> 1,500 on-site + 700 delivery has different operations than 2,000 on-site + 240 delivery. Same number, very different ops.</li>
+            <li><strong>Year-over-year growth target:</strong> 8-15% order growth annual is healthy. Lower = stagnating; much higher = check capacity.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> monthly orders = orders/day × days/month × weather/event multipliers. Net of refunds (counted as anti-orders, reducing the total).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges (PL pizza truck):</strong> 1,400-2,800 orders/month for a single unit. Below 1,400 = sub-scale; above 2,800 = capacity-pressed.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish food-truck association benchmarks, POS-data composites.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> order-vs-customer distinction. If avg party = 1.2, orders ≈ customers; if 3.0+, very different. Track party size separately.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4445,8 +9722,20 @@ const HELP = {
     body: (
       <>
         <p>
-          Sum of per-unit revenue across all units. Headline chain metric.
+          Σ per-unit revenue across all units, after cannibalisation
+          adjustments. Headline chain metric.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Compare YoY fleet revenue growth vs per-unit revenue
+            growth: if total grows but per-unit stays flat,
+            cannibalisation is in play and you&apos;re buying revenue
+            with new capex rather than scaling existing units. If both
+            grow, true scaling is working. Watch the small-CIT entity
+            threshold at the legal-entity level; chains often structure
+            around it.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>Total revenue across all your trucks combined.</strong> At
@@ -4455,6 +9744,21 @@ const HELP = {
             you&apos;re effectively just one operator with backup units.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>5 units = real chain:</strong> below 5, you&apos;re scaling; at 5, you have leverage; above 5, you have a system.</li>
+            <li><strong>Watch per-unit dilution:</strong> if fleet revenue grows 30% but unit-1 dropped, you have cannibalisation. Diagnose with per-unit data.</li>
+            <li><strong>1M zł/mo unlocks tier-3 supply discounts:</strong> negotiate the next supplier tier when crossing.</li>
+            <li><strong>Watch the €2M annual threshold per entity:</strong> staying under keeps 9% CIT. Cross it and you jump to 19%.</li>
+            <li><strong>Compare YoY growth:</strong> fleet revenue should grow faster than per-unit. If they grow together, you&apos;re not scaling.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> fleet revenue = Σ per-unit revenue. Adjusted for cannibalisation between same-DMA units.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges by fleet size:</strong> 2 units 250-400k zł/mo; 5 units 700k-1.2M; 10 units 1.4-2.4M; 20 units 2.8-5M.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish franchise-system financials, chain-economics literature.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> per-unit variance. Fleet revenue averages mask outlier units. A struggling unit can be hidden in a successful fleet.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4463,9 +9767,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Sum of per-unit EBITDA across the fleet. The investor question for
-          franchise rollups.
+          Σ per-unit EBITDA across the fleet minus HQ overhead. The
+          institutional metric for franchise rollups.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The metric that drives valuation in a sale process — sale
+            multiples are applied to fleet EBITDA, so every margin
+            point becomes a multiple-point of enterprise value. Also
+            the driver of self-fundable growth: at strong EBITDA margin
+            the fleet can open new units from operations without raising
+            external capital. A disciplined post-EBITDA split between
+            reinvestment, debt paydown and distribution prevents the
+            fleet from over-distributing in good years.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>Total EBITDA across the fleet.</strong> <strong>20%+ of
@@ -4474,6 +9790,21 @@ const HELP = {
             equity — and the bank wants to see this number first.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Fleet EBITDA &gt; 20% = self-fundable growth:</strong> can open new units from operations.</li>
+            <li><strong>Watch the EBITDA margin trend:</strong> as you scale, HQ overhead can drag margin. If it&apos;s falling, HQ is bloating.</li>
+            <li><strong>Valuation multiple: 4-7× EBITDA in PL casual-Italian:</strong> a 2.4M zł fleet EBITDA = 10-17M sale price. Material.</li>
+            <li><strong>Reinvestment vs distribution:</strong> 30-40% reinvest, 40-50% pay down debt, 20-30% to owners is a balanced split.</li>
+            <li><strong>Don&apos;t confuse EBITDA with cash:</strong> tax, working-capital changes, capex eat real cash. EBITDA is a proxy, not the bank account.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> fleet EBITDA = Σ (per-unit revenue − per-unit operating costs) − HQ overhead. Before D&amp;A, interest, tax.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> 15-22% chain-grade; 22-28% investor-grade; 28-35% world-class chains; &gt; 35% suspicious (check normalisations).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> NRA chain-economics benchmarks, Polish franchise-system financials, M&amp;A multiples data.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> normalisations applied by investors in due diligence (founder salary normalisation, one-off costs). Real reported EBITDA can swing 10-20% from these adjustments.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4482,9 +9813,20 @@ const HELP = {
     body: (
       <>
         <p>
-          Average per-unit EBITDA (fleet EBITDA ÷ units). Tracks unit-level
-          health as the chain scales.
+          Mean per-unit EBITDA (fleet EBITDA ÷ unit count). Tracks
+          unit-level health as the chain scales.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Rising per-unit EBITDA as the chain grows = scale economics
+            actually compounding (supplier discounts, HQ absorption);
+            flat = scale isn&apos;t happening; declining = cannibalisation
+            or HQ bloat eating into per-unit performance. Use median or
+            P25 per-unit EBITDA alongside the mean — outlier units can
+            mask a weak distribution and an investor will probe the
+            spread, not just the average.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>Average EBITDA per truck.</strong> If unit #1 does 50k
@@ -4494,6 +9836,21 @@ const HELP = {
             next truck is harder to justify.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Rising EBITDA/unit = scale working:</strong> as you add units, supplier discounts &amp; HQ absorption compound. If flat, something&apos;s off.</li>
+            <li><strong>Decompose new-unit performance:</strong> if Unit 5 underperforms Unit 1, identify why (worse location? leadership gap? cannibalisation?).</li>
+            <li><strong>Set per-unit EBITDA floors:</strong> &quot;no unit allowed to ship at &lt; 30k zł EBITDA&quot; — clear bar for closure or restructuring.</li>
+            <li><strong>Compare to industry chain benchmarks:</strong> Polish QSR chains avg ~35-50k EBITDA per casual-Italian unit. Above 50k is genuinely strong.</li>
+            <li><strong>Year-over-year per-unit:</strong> should grow 5-10% as systems mature. Flat year-over-year = process stagnation.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> EBITDA per unit = fleet EBITDA ÷ unit count. Average; doesn&apos;t show distribution.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges (PL casual-Italian):</strong> 25-40k zł/month/unit at scale. World-class chains 45-60k/unit.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> NRA chain-economics, Polish franchise-system per-unit financials.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> outlier impact. One mega-unit can pull the average up while others struggle. Also use median or P25 per-unit EBITDA to spot weakness.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4502,8 +9859,21 @@ const HELP = {
     body: (
       <>
         <p>
-          HQ overhead ÷ fleet revenue. Should fall below 5% past 10 units.
+          HQ overhead ÷ fleet revenue. Should fall below 5% past 10
+          units.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Rising absorption % means HQ is growing faster than the
+            fleet — the trigger to either accelerate openings or
+            freeze HQ hires. Top-heavy chains (mature corporate office,
+            small unit count) compound unit-level margin pressure
+            because the same HQ cost spreads over too few units. HQ
+            quality isn&apos;t visible in this metric: a low HQ % can
+            be lean or under-resourced, and only operational results
+            tell which.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>What share of revenue goes to regional management.</strong>
@@ -4512,6 +9882,21 @@ const HELP = {
             you&apos;re building a corporate office, not a restaurant business.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Target trajectory:</strong> 10% at 2 units → 7% at 5 → 5% at 10 → 3% at 20. Linear scale wins.</li>
+            <li><strong>Don&apos;t hire HQ ahead of need:</strong> a 3-unit chain doesn&apos;t need a full operations director. Outsource fractional.</li>
+            <li><strong>Audit HQ value-add quarterly:</strong> each HQ hire should justify their cost via per-unit performance lift. Cut roles that don&apos;t.</li>
+            <li><strong>Centralise the highest-leverage functions first:</strong> finance, marketing, supply. Operations last (each unit needs local ops leadership).</li>
+            <li><strong>Watch the absorption trend:</strong> rising = HQ growing faster than fleet. Either accelerate openings or freeze HQ hires.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> HQ overhead absorption = HQ overhead ÷ fleet revenue × 100%.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy trajectory:</strong> &lt; 3% at 20+ units (mature chain); 3-5% at 10-19 units; 5-8% at 5-9 units; 8-12% at 2-4 units.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> franchise economics literature, Polish chain financials (Pizza Hut PL, Da Grasso, Telepizza).</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> capability vs spend. A 5% HQ can be wasteful or world-class — the model only sees the cost ratio, not the output quality.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4520,9 +9905,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Total capital outlay across all units. Aggregate setup cost driving
-          fleet payback.
+          Σ per-unit setup cost across all units (post-learning curve).
+          Aggregate capital deployed drives fleet payback + cash-on-cash.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The denominator of cash-on-cash and fleet-IRR — every złoty
+            trimmed off fleet buildout lifts both metrics materially.
+            Capital-allocation strategy at scale: equity for the first
+            units (high uncertainty), debt for units 3+ (proven
+            economics), franchise to lower fleet buildout entirely
+            (franchisees fund their own units, fleet revenue grows
+            without HQ capex). Mixing the structures over the growth
+            curve is the standard chain playbook.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>Total money sunk into all the trucks combined.</strong>
@@ -4531,6 +9928,21 @@ const HELP = {
             only return number that matters at scale.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Watch the learning-curve compounding:</strong> if you save 8%/unit, by unit 6 your buildout is ~50% of unit 1. That&apos;s the chain economics moment.</li>
+            <li><strong>Mix debt and equity strategically:</strong> equity for unit 1-2 (high uncertainty), debt for unit 3+ (proven). Cuts dilution.</li>
+            <li><strong>Use franchise to lower fleet buildout:</strong> franchisees fund their own units. Fleet revenue grows; capital outlay stays flat.</li>
+            <li><strong>Plan capex calendar:</strong> 2 units in spring, 1 in autumn. Don&apos;t bunch openings — split-cash risk.</li>
+            <li><strong>Compare fleet buildout to fleet EBITDA:</strong> if it&apos;s 3-5× annual EBITDA, you&apos;re leveraged on growth. 2-3× is healthier.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> fleet buildout = Σ per-unit setup cost. Per-unit setup = unit_1 setup × (1 − learning)^(n−1), floored at buildoutFloor%.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Realistic range:</strong> 2 units ~520-580k zł (no learning yet); 5 units ~1.1-1.3M; 10 units ~1.9-2.3M; 20 units ~3.5-4.2M with mature learning curve.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish chain expansion case studies, franchise rollout literature.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> commissary buildout. If you add a central kitchen, add 250-500k to fleet buildout.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4541,8 +9953,21 @@ const HELP = {
     body: (
       <>
         <p>
-          % growth in revenue vs prior trailing window. SSSG headline.
+          % growth in revenue vs prior trailing window. SSSG headline
+          — same-store sales growth, the universal chain-tracking metric.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Decompose: revenue growth ≈ order growth + ticket growth.
+            Volume-led growth is healthier than ticket-led because
+            price hikes top out at customer-elasticity ceilings while
+            volume can keep compounding. Beat inflation to count as
+            real growth; flat nominal is real decline. SSSG excludes
+            new units, so it&apos;s pure organic same-store
+            performance — the metric investors trust over total
+            chain revenue.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>How much more (or less) you sold vs the same period
@@ -4551,6 +9976,21 @@ const HELP = {
             light — drop everything and figure out why.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Decompose growth weekly:</strong> orders growth + ticket growth = revenue growth. Know which lever is moving.</li>
+            <li><strong>Beat inflation:</strong> nominal +4% growth in PL = real 0% (inflation matches). Aim for +8-10% nominal to grow in real terms.</li>
+            <li><strong>SSSG (Same-Store Sales Growth) is THE chain metric:</strong> excludes new units. Pure organic growth of existing operations.</li>
+            <li><strong>Negative growth = root-cause analysis:</strong> competitor opened? Quality drift? Bad reviews? Investigate within 30 days.</li>
+            <li><strong>Compare to peers, not just yourself:</strong> if industry is +12% and you&apos;re +6%, you&apos;re losing share even while growing nominally.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> revenue growth = (current period revenue − prior period revenue) ÷ prior period revenue. Same-store basis (exclude new units).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Industry benchmark (PL gastronomic 2024):</strong> +6-9% nominal annual growth = healthy; +12% = strong; +15%+ = exceptional or capacity-constrained.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> GUS quarterly gastronomic-sector data, Polish hospitality association SSSG benchmarks.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> weather-adjusted growth. A rainy year hurts year-over-year unfairly. Compare to weather-adjusted baselines for honest measurement.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4559,8 +9999,20 @@ const HELP = {
     body: (
       <>
         <p>
-          % growth in order count. Volume-led growth signal.
+          % growth in order count vs prior window. Same-store basis.
+          The volume-led growth signal.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The most truthful growth metric — volume can&apos;t be
+            faked by price hikes. Negative order growth combined with
+            positive ticket growth is a defensive pattern (fewer
+            customers paying more individually) and usually signals
+            customer attrition the operator hasn&apos;t noticed yet.
+            Trace acquisition channels to know which one is doing the
+            real work.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>How many more (or fewer) orders you booked.</strong>
@@ -4569,6 +10021,21 @@ const HELP = {
             actually winning new people, not just charging existing ones more.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Volume growth is the truth-teller:</strong> if orders are flat but revenue grew, you&apos;ve only raised prices. That tops out.</li>
+            <li><strong>Trace order growth to marketing channels:</strong> which channel acquired the new orders? Double down on what works.</li>
+            <li><strong>Compare to capacity:</strong> if orders growing but capacity flat, you&apos;re approaching saturation. Plan capex.</li>
+            <li><strong>Negative order growth + positive ticket growth:</strong> customers paying more individually but FEWER customers — defensive sign.</li>
+            <li><strong>Watch retention vs acquisition split:</strong> growth from new customers vs returning. Different cost / different signal.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> order growth = (current period orders − prior period orders) ÷ prior period orders. Same-store basis.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> +3-7% volume growth annual (real growth above inflation); &lt; +2% concerning; &gt; +12% likely capacity-pressed.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> GUS sectoral order-count data, NRA volume-growth benchmarks.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> seasonality. Compare year-over-year same-month, not month-over-month, for apples-to-apples.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4577,8 +10044,20 @@ const HELP = {
     body: (
       <>
         <p>
-          % growth in avg ticket. Price/mix-led signal.
+          % growth in avg ticket vs prior window. Same-store basis.
+          The price / mix-led growth signal.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Decompose: mix-driven ticket growth (attach lifts, premium
+            up-sells) is healthy and invisible to customers; price-
+            driven growth hits elasticity ceilings and the higher
+            apparent ticket gets clawed back by some customers
+            downshifting. So mix-growth compounds, price-growth
+            doesn&apos;t. Use the recession stress lever to model the
+            downside risk to price-driven ticket inflation.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>How much bigger the average bill got.</strong> Price hikes
@@ -4587,6 +10066,21 @@ const HELP = {
             (one day a customer says &quot;65 zł for a pizza? no thanks&quot;).
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Mix-driven ticket growth = healthy:</strong> attach more dessert/coffee = bigger ticket, customer doesn&apos;t notice. Best lever.</li>
+            <li><strong>Price-driven ticket growth = compounds risk:</strong> annual menu hike of 5% matches inflation. Above that, customers feel it.</li>
+            <li><strong>Decompose by SKU:</strong> the daily special is 10% higher YoY? Re-cost recipe. Premium pizza category 25% higher? Customers shifting to luxury items? Both?</li>
+            <li><strong>Compare to capacity ROI:</strong> +5 zł avg ticket on 2,400 orders = ~12k zł/month. Worth a marketing investment of up to ~6k zł to lift attach.</li>
+            <li><strong>Watch for downshift in ticket growth:</strong> consumer recession signal. Combine with cheapest-pizza shift to plan defensive.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> ticket growth = (current avg ticket − prior avg ticket) ÷ prior avg ticket. Same-store basis; pure mix/price effect.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> +3-6% annual ticket growth = healthy (matches inflation + small mix lift); +8%+ = aggressive pricing or large mix shift.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> GUS price-index data, restaurant-industry mix-shift analysis.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> price elasticity. A 10% price hike doesn&apos;t lift ticket 10% — usually ~7% (some customers downshift). Adjust expectations.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4595,8 +10089,21 @@ const HELP = {
     body: (
       <>
         <p>
-          % growth in unique-customer count. Acquisition-led signal.
+          % growth in unique-customer count vs prior window
+          (phone-deduplicated). The acquisition signal.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Sustainable growth requires both positive customer growth
+            AND positive repeat rate; without both, the funnel leaks
+            faster than acquisition fills it. Track quarterly trend —
+            shifts in new-vs-returning signal market saturation, brand
+            fatigue, or competitor entry. Anonymous cash walk-up
+            customers go undercounted without phone capture at
+            checkout, so this metric reflects the trackable-customer
+            subset rather than absolute traffic.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>How many more new people walked through the door.</strong>
@@ -4605,6 +10112,21 @@ const HELP = {
             fast you pour in marketing spend.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Customer growth + repeat rate = total growth:</strong> new customers acquire, repeat customers compound. Track both.</li>
+            <li><strong>Negative customer growth + positive revenue:</strong> existing customers paying more. Defensive — will collapse.</li>
+            <li><strong>Trace channels:</strong> which marketing brought the new customers? Spend more there.</li>
+            <li><strong>3-month rolling, not single month:</strong> single-month noise hides the trend.</li>
+            <li><strong>Compare to local population:</strong> in a 50k-resident neighbourhood, growing customers 50%/year forever is impossible. Plan saturation.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> customer growth = (current period unique customers − prior period unique customers) ÷ prior period unique customers. Phone-based deduplication.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> 5-10% annual net-new customer growth; &gt; 15% = high; &lt; 0 = customer-base decay.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Polish loyalty-program data, restaurant-customer-acquisition literature.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> phone-anonymous customers. Without phone-capture at checkout, the model can&apos;t deduplicate. Walk-up cash customers may be undercounted.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4615,9 +10137,21 @@ const HELP = {
     body: (
       <>
         <p>
-          % of customers with ≥ 2 orders in the window. Healthy 30%+; below 15%
-          = one-night-stand funnel.
+          % of customers with ≥ 2 orders in the analysis window
+          (phone-deduplicated). Healthy 30%+; below 15% = one-time
+          funnel.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Low repeat rate indicates a product problem — fix the
+            food, the wait, the temperature or the service before
+            spending another złoty on marketing. Per Reichheld&apos;s
+            Loyalty Effect, returning customers cost a fraction of
+            acquisition, so a small repeat-rate lift compounds into
+            outsized profit gain. Compare across channels — delivery
+            customer repeat is structurally lower than direct.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>What % of customers come back.</strong> 30%+ means people
@@ -4626,6 +10160,21 @@ const HELP = {
             marketing. No amount of Instagram spend rescues bad cheese.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Low repeat = product problem:</strong> the food, the wait, the temperature, the service. Fix this first; marketing only multiplies what&apos;s there.</li>
+            <li><strong>Loyalty program targets repeat:</strong> &quot;4th pizza free&quot; gives a reason to return. Burn vs repeat-lift = the trade.</li>
+            <li><strong>Texting recent customers:</strong> &quot;haven&apos;t seen you in 30 days, here&apos;s 5 zł off&quot; — converts ~12-18% of lapsed regulars.</li>
+            <li><strong>Track within-90-day repeat:</strong> the meaningful metric (yearly is too long). 30%+ within 90 days = solid.</li>
+            <li><strong>Compare across channels:</strong> direct customers repeat 2× more than Glovo customers. Channel mix affects this number directly.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> repeat rate = (customers with ≥ 2 orders in window) ÷ (total unique customers in window). Phone-based dedup.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> 30%+ healthy (90-day); 40%+ strong; 50%+ excellent. Below 15% = one-time funnel; below 10% = product failure.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> loyalty-economics literature (Reichheld &quot;The Loyalty Effect&quot;), QSR repeat-rate benchmarks.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> seasonal-only customers (tourists, holiday-event-only). These look like non-repeaters but are repeat-by-season. Track separately if relevant.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4634,8 +10183,20 @@ const HELP = {
     body: (
       <>
         <p>
-          Mean lifetime orders observed in the window.
+          Mean orders per unique customer in the window (total orders ÷
+          unique phone-dedup customers).
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Distribution matters more than mean — a 3.0 average could
+            be 20% of customers at 8 orders and 80% at 0.75 orders,
+            and the marketing strategy for those two patterns is
+            completely different. Cohort decay or growth is a leading
+            indicator of brand health: rising = the product is
+            getting stickier, falling = something in the experience is
+            degrading.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>How many times the average customer orders.</strong> 1.0 =
@@ -4644,6 +10205,21 @@ const HELP = {
             within walking distance to monetise the foot traffic).
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Drives LTV directly:</strong> orders/customer × avg ticket × CM = customer lifetime value. More orders = more value.</li>
+            <li><strong>Frequency-based loyalty:</strong> punch cards (4 pizzas → free dessert) directly lift this number.</li>
+            <li><strong>SMS/email pings increase frequency:</strong> &quot;been a while, weekend special&quot; converts ~10% of lapsed regulars to repeat.</li>
+            <li><strong>Watch the trend, not absolute:</strong> 2.3 → 2.7 over 6 months is healthy; flat at 1.5 forever is a fix-the-product signal.</li>
+            <li><strong>Compare across cohorts:</strong> month-1 acquisition cohort might have 1.2 orders/customer; year-1 cohort might have 4.5. Cohort decay/growth is informative.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> orders per customer = total orders in window ÷ unique customers in window. Phone-based dedup.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges (90-day window):</strong> 1.0-1.5 transient; 1.5-2.5 average; 2.5-4 healthy regulars; 4+ cult following.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> loyalty-program data, restaurant-customer-frequency literature.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> frequency segmentation. A &quot;3.0 avg&quot; could be 20% of customers at 8 orders and 80% at 0.75 orders. Median tells a different story than mean.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4652,8 +10228,20 @@ const HELP = {
     body: (
       <>
         <p>
-          Gross profit per unique customer in the window.
+          Gross profit per unique customer in the analysis window —
+          the cash-yield-per-customer metric.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The acquisition-budget ceiling: spend at most about a
+            third of GP-per-customer on acquiring one and you stay
+            inside the LTV/CAC investor gate. Cohort-tracked, this is
+            the retention compounding signal — early-month vs later-
+            month cohort GP shows whether the product is getting more
+            valuable per customer over time. Per-channel walk-up GP
+            substantially exceeds platform GP because of commission.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>Total profit you make per customer over the window.</strong>
@@ -4663,6 +10251,21 @@ const HELP = {
             one (3× LTV/CAC rule).
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>3× LTV-to-CAC is the bar:</strong> spend up to 1/3 of GP/customer on acquiring them. Above that, payback gets too long.</li>
+            <li><strong>Use GP, not revenue:</strong> revenue per customer overstates what you can afford. GP after variable costs is the cash you actually have.</li>
+            <li><strong>Track cohort GP:</strong> month-1 cohort GP, month-12 cohort GP. Compounding cohorts = healthy growth.</li>
+            <li><strong>Segment by channel:</strong> walk-up customer GP ≈ 2× Glovo customer GP (no commission). Allocate marketing accordingly.</li>
+            <li><strong>Run unit economics test:</strong> at GP/customer = 60 zł × 90-day window, if marketing CAC = 30 zł, you have 100% payback in 90 days. Investor-grade.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> GP per customer = (revenue − COGS) ÷ unique customers, both computed over the analysis window.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges (90-day window, PL casual-Italian):</strong> 80-150 zł GP/customer for healthy operation; &lt; 60 zł indicates either low frequency or low ticket.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> SaaS/restaurant unit-economics literature (David Skok on cohort LTV).</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> customer LTV beyond the window. A 90-day GP underestimates a 24-month LTV. For investor-grade LTV, project the GP curve forward.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4671,9 +10274,21 @@ const HELP = {
     body: (
       <>
         <p>
-          Marketing fixed cost ÷ new customers per month. Real
+          Marketing fixed cost ÷ net-new customers per month. The real
           customer-acquisition cost.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            Net-new attribution caveat: counting organic walk-up
+            traffic in the denominator makes CAC look artificially low,
+            so isolate the marketing-driven customers carefully. Multi-
+            touch attribution (one customer sees 3 ads + a friend&apos;s
+            post + Glovo placement before walking in) means single-
+            touch CAC measurements always understate the actual cost
+            of acquisition. Use this metric for direction, not for
+            precision.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>What each new customer cost you in marketing.</strong>
@@ -4683,6 +10298,21 @@ const HELP = {
             retention first.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Channel mix CAC matters:</strong> Instagram CAC ~10-25 zł, Google ~15-35 zł, referral ~3-8 zł. Push the cheapest channel.</li>
+            <li><strong>Loyalty referrals are gold:</strong> &quot;tell a friend, both get 10 zł off&quot; — CAC drops to ~5-8 zł for referred customers.</li>
+            <li><strong>Track by acquisition cohort:</strong> January cohort CAC vs March cohort. Test creative + targeting changes.</li>
+            <li><strong>Compare CAC to first-order CM1:</strong> if CAC = 25 zł and first-order CM1 = 25 zł, you break even on first visit. Profit comes from repeat.</li>
+            <li><strong>Don&apos;t include organic in CAC denominator:</strong> only count attributed-marketing customers. Organic shouldn&apos;t flatter your numbers.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> CAC = marketing fixed cost ÷ net-new customers/month. Net-new = customers in current window with zero orders in prior window.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges (PL casual-Italian):</strong> 8-15 zł CAC with mostly-organic / referral mix; 15-30 zł with paid-social channels; 30-50 zł heavy paid acquisition.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> marketing-economics literature, restaurant-acquisition cost studies.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> attribution (one customer sees 3 ads + a friend&apos;s post + a Glovo placement). The model assumes single-touch attribution; reality is multi-touch.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4691,9 +10321,20 @@ const HELP = {
     body: (
       <>
         <p>
-          Customer lifetime value ÷ CAC. Institutional gate ≥ 3×. Below 1.5×
-          is unprofitable acquisition.
+          Customer lifetime value ÷ acquisition cost. Institutional
+          gate ≥ 3×; below 1.5× = unprofitable acquisition.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The universal SaaS / marketplace economics gate. Improve
+            via numerator (lift attach + repeat rate + ticket = lift
+            LTV) before denominator (cut CAC) — referral programs and
+            organic content compound, while paid acquisition has rising
+            CAC. Below 1.0× the operator is literally paying customers
+            to come — pause acquisition and fix the unit economics
+            before scaling.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>The most important number in marketing.</strong> 3×+ = scale
@@ -4702,6 +10343,21 @@ const HELP = {
             above 5×; that&apos;s where you want to be before the second truck.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>3× is the institutional gate:</strong> below this, investors won&apos;t back marketing scale-up. It&apos;s the universal SaaS/QSR benchmark.</li>
+            <li><strong>Improve the numerator (LTV):</strong> attach lift + repeat rate increase + ticket growth all raise LTV. Easier than cutting CAC.</li>
+            <li><strong>Improve the denominator (CAC):</strong> referral programs + organic content. Paid acquisition has rising CAC; organic compounds.</li>
+            <li><strong>Watch the trend, not just level:</strong> if LTV/CAC dropped 0.5× in 6 months, you&apos;re scaling marketing faster than you should.</li>
+            <li><strong>Below 1.0× = stop:</strong> you&apos;re paying customers to come. Pause acquisition, fix the funnel, restart.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> LTV/CAC ratio = customer lifetime value ÷ customer acquisition cost. LTV = orders/customer × avg ticket × CM (over LTV window — typically 12-24 months).</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> ≥ 3× institutional-grade; 2-3× workable; 1.5-2× tight; &lt; 1.5× pause marketing; &lt; 1 destroy value.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> SaaS/marketplace economics literature (David Skok), restaurant unit-economics frameworks.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> LTV time-horizon. Some champions cite LTV/CAC at 5+ years; restaurant churn is faster. Use 12-24 month window for honest casual-Italian math.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4710,9 +10366,20 @@ const HELP = {
     body: (
       <>
         <p>
-          Months for cumulative GP per customer to cover CAC. ≤ 6 mo strong,
-          ≤ 12 mo acceptable.
+          Months for cumulative GP per customer to cover the CAC.
+          ≤ 6 mo strong; ≤ 12 mo acceptable.
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            The pace metric — shorter payback = faster compounding of
+            marketing spend into customer LTV. Lift first-order CM1
+            (more attach + higher ticket on initial visit) and payback
+            shortens faster than chasing lower CAC. Cohort variance is
+            real: first-month customers may break even immediately
+            while later cohorts take longer, so the headline average
+            hides the new-customer reality.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>How many months until a new customer pays back what you
@@ -4722,6 +10389,21 @@ const HELP = {
             growth-hack stories happen.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Payback &lt; 6 months = scale acquisition aggressively:</strong> your money compounds twice within the year.</li>
+            <li><strong>6-12 months payback = balanced spend:</strong> match acquisition with cash flow; don&apos;t lever.</li>
+            <li><strong>&gt; 12 months payback = constrain spend:</strong> the cash gap is too long; only spend what you can carry for &gt; 12 months.</li>
+            <li><strong>Cohort payback varies:</strong> first-month customers might break even immediately; long-tail cohorts months 6-12. Mix matters.</li>
+            <li><strong>Lift first-order CM1 to shorten payback:</strong> attach + ticket on the first visit makes the math work faster.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> customer payback = months for cumulative GP per customer to cover CAC. Numerically solved as the first month where Σ(month_m GP) ≥ CAC.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> ≤ 3 mo = rocket fuel; 3-6 mo = strong; 6-12 mo = acceptable; 12-18 mo = constrained; &gt; 18 mo = stop.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> SaaS/marketplace payback frameworks, restaurant-cohort literature.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> customer survival (churn). The model assumes a typical customer continues earning GP; reality has cohort decay. Use a 24-month projected GP curve for accurate payback.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4730,8 +10412,22 @@ const HELP = {
     body: (
       <>
         <p>
-          % of period revenue from net-new customers.
+          % of period revenue from net-new customers (zero orders in
+          prior window).
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            A leaky-bucket vs saturated-base diagnostic: high
+            new-customer share means acquisition is working but the
+            base isn&apos;t retaining; low new-customer share means
+            you&apos;ve mined the addressable market and need new
+            channels. CAC trajectory tends to rise as new-customer
+            share rises because incremental cohorts are harder to reach.
+            Seasonal tourist surges look like acquisition but
+            aren&apos;t retainable; track tourist share separately if
+            material.
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>% of revenue from people who walked through the door for
@@ -4741,6 +10437,21 @@ const HELP = {
             new</strong>.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>30-40% new for mature operation:</strong> sustainable acquisition + healthy retention.</li>
+            <li><strong>&gt; 60% new = leaky bucket:</strong> you&apos;re replacing churn with acquisition. Fix retention before scaling further.</li>
+            <li><strong>&lt; 20% new = saturating:</strong> dependent on existing base. Open new acquisition channels.</li>
+            <li><strong>Track quarterly:</strong> shifts in new vs returning signal market saturation, brand fatigue, or competitor entry.</li>
+            <li><strong>Newer cohorts cost more to acquire:</strong> if new-customer share rises while CAC rises, you&apos;re scaling but bleeding. Investigate the funnel.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> new customer revenue share = revenue from customers with zero orders in prior window ÷ total revenue this window. Phone-based.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> 30-40% new = balanced; 50-60% = acquisition-led growth; &gt; 60% = leaky; &lt; 20% = saturated.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> loyalty-economics literature, restaurant-customer-cohort studies.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> seasonal new-customer surges (tourists, festival visitors). These look like new acquisition but aren&apos;t retainable. Track tourist share separately if material.</p>
+        </Methodology>
       </>
     ),
   },
@@ -4749,8 +10460,20 @@ const HELP = {
     body: (
       <>
         <p>
-          % of period revenue from prior-window customers.
+          % of period revenue from prior-window customers
+          (phone-deduplicated against the previous analysis window).
         </p>
+        <InstitutionalAnalysis>
+          <p style={{ margin: 0 }}>
+            New revenue greater than returning revenue is a leaky-
+            bucket pattern — fix retention before scaling marketing
+            spend, or you run on a treadmill. Paradoxically, very high
+            returning share can indicate market saturation rather than
+            health (no new customers coming in). Each pp shift toward
+            returning improves blended CAC efficiency because returning
+            customers cost a fraction of acquired ones (Reichheld).
+          </p>
+        </InstitutionalAnalysis>
         <PlainTalk>
           <p style={{ margin: 0 }}>
             <strong>% of revenue from people who came back.</strong> The mirror
@@ -4759,6 +10482,21 @@ const HELP = {
             retention before scaling ads, or you&apos;re running on a treadmill.
           </p>
         </PlainTalk>
+        <Tips>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Returning &gt; 50% = sustainable:</strong> the institutional sign of a real brand vs a one-night-stand funnel.</li>
+            <li><strong>Loyalty program lifts this directly:</strong> punch cards, app discounts, SMS reminders. Each compounds returning share.</li>
+            <li><strong>Watch the customer LTV embedded here:</strong> returning customers cost less to retain than acquiring new ones. Each pp shift toward returning improves CAC efficiency.</li>
+            <li><strong>If returning declining: check product quality:</strong> price, taste, service. Don&apos;t solve it with marketing.</li>
+            <li><strong>Frequency boost = returning lift:</strong> SMS &quot;haven&apos;t seen you in 30 days&quot; recovers ~10-15% of lapsed regulars.</li>
+          </ul>
+        </Tips>
+        <Methodology>
+          <p style={{ margin: "0 0 6px" }}><strong>Formula:</strong> returning revenue share = revenue from customers with ≥ 1 order in prior window ÷ total revenue this window. Phone-based dedup.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Healthy ranges:</strong> 50-60% returning = sustainable; 60-70% = strong loyalty; &gt; 70% = saturated or low-acquisition.</p>
+          <p style={{ margin: "0 0 4px" }}><strong>Sources:</strong> Reichheld &quot;The Loyalty Effect&quot;, QSR returning-customer literature.</p>
+          <p style={{ margin: 0 }}><strong>Not modelled:</strong> partially-anonymous customers (no phone captured = can&apos;t deduplicate). Walk-up cash customers may be miscounted as new each visit.</p>
+        </Methodology>
       </>
     ),
   },
@@ -5081,36 +10819,37 @@ export function AdminSimulation() {
       daysOpenPerMonth: preset.daysOpenPerMonth,
       avgTicketGrosze: preset.avgTicketGrosze,
       cogsPct: preset.cogsPct,
+      // Preset sets the attach % VALUES but does NOT auto-enable the levers.
+      // Every behavior assumption ships disabled by default; the operator
+      // opts in explicitly by toggling each lever. Otherwise loading a
+      // preset silently flips on six attach levers + their effect on the
+      // P&L, which surprised operators who expected the preset to just
+      // re-shape the base ticket / volume / COGS. Enabled state is
+      // preserved if a lever was already on.
       assumptions: {
         ...(s.assumptions ?? DEFAULT_ASSUMPTIONS),
         coffeeAttach: {
           ...(s.assumptions?.coffeeAttach ?? DEFAULT_ASSUMPTIONS.coffeeAttach!),
-          enabled: true,
           attachPct: preset.attach.coffee,
         },
         dessertAttach: {
           ...(s.assumptions?.dessertAttach ?? DEFAULT_ASSUMPTIONS.dessertAttach!),
-          enabled: true,
           attachPct: preset.attach.dessert,
         },
         antipastiAttach: {
           ...(s.assumptions?.antipastiAttach ?? DEFAULT_ASSUMPTIONS.antipastiAttach!),
-          enabled: true,
           attachPct: preset.attach.antipasti,
         },
         aperitivoAttach: {
           ...(s.assumptions?.aperitivoAttach ?? DEFAULT_ASSUMPTIONS.aperitivoAttach!),
-          enabled: true,
           attachPct: preset.attach.aperitivo,
         },
         premiumToppingsAttach: {
           ...(s.assumptions?.premiumToppingsAttach ?? DEFAULT_ASSUMPTIONS.premiumToppingsAttach!),
-          enabled: true,
           attachPct: preset.attach.premiumToppings,
         },
         pastaPrimoAttach: {
           ...(s.assumptions?.pastaPrimoAttach ?? DEFAULT_ASSUMPTIONS.pastaPrimoAttach!),
-          enabled: true,
           attachPct: preset.attach.pastaPrimo,
         },
       },
@@ -5175,11 +10914,26 @@ export function AdminSimulation() {
     scenario.setupCostGrosze ?? 0,
   );
   const tornado = computeTornado(effectiveScenario!);
-  // Channel economics uses the RAW scenario so the on-site card rate is the
-  // operator's input, not the blended one applyAssumptions produced.
-  const channels = computeChannelEconomics(scenario);
+  // Channel economics + fleet economics use the RAW scenario's rates
+  // (cogsPct, on-site paymentProcessorPct) so per-channel / per-unit rows
+  // show the operator's typed values rather than the cross-channel
+  // blended rate applyAssumptions produced. But the VOLUME (ordersPerDay
+  // × daysOpenPerMonth) must come from effectiveScenario so monthly
+  // amounts reconcile to the headline P&L — using typed volume here
+  // over-states by ~8% for typical Warsaw seasonality (rainy days,
+  // holiday closures, peak/event bonuses).
+  const effectiveVolume = effectiveScenario
+    ? {
+        ordersPerDay: effectiveScenario.ordersPerDay,
+        daysOpenPerMonth: effectiveScenario.daysOpenPerMonth,
+      }
+    : { ordersPerDay: scenario.ordersPerDay, daysOpenPerMonth: scenario.daysOpenPerMonth };
+  const channels = computeChannelEconomics({ ...scenario, ...effectiveVolume });
   const attachEfficiency = computeAttachmentEfficiency(effectiveScenario!);
-  const fleetEcon = computeFleetEconomics(scenario, scenario.setupCostGrosze ?? 0);
+  const fleetEcon = computeFleetEconomics(
+    { ...scenario, ...effectiveVolume },
+    scenario.setupCostGrosze ?? 0,
+  );
   const prepFlow = computePrepFlow(scenario);
   const shiftPlan = computeShiftPlan(scenario, dayparts);
   const archetypes = deriveArchetypes(effectiveScenario!);
@@ -5480,8 +11234,19 @@ export function AdminSimulation() {
         assumptions={scenario.assumptions ?? DEFAULT_ASSUMPTIONS}
         baseTicketGrosze={scenario.avgTicketGrosze}
         baseCogsPct={scenario.cogsPct}
+        ordersPerDay={effectiveScenario?.ordersPerDay ?? scenario.ordersPerDay}
+        daysOpenPerMonth={effectiveScenario?.daysOpenPerMonth ?? scenario.daysOpenPerMonth}
+        typedOrdersPerDay={scenario.ordersPerDay}
+        typedDaysOpenPerMonth={scenario.daysOpenPerMonth}
+        paymentProcessorPct={effectiveScenario?.paymentProcessorPct ?? scenario.paymentProcessorPct ?? 0}
+        wastePct={scenario.wastePct ?? 0}
+        refundPct={scenario.refundPct ?? 0}
+        loyaltyBurnPct={scenario.loyaltyBurnPct ?? 0}
+        citPct={scenario.citPct ?? 0}
         onChange={(next) => update((s) => ({ ...s, assumptions: next }))}
       />
+
+      {attachEfficiency.length > 0 && <AttachmentEfficiencyPanel rows={attachEfficiency} />}
 
       <WeatherCalendarCard
         weather={scenario.weather ?? DEFAULT_WEATHER}
@@ -6006,7 +11771,7 @@ export function AdminSimulation() {
         sssg={
           sssg && (sssg.currentOrders > 0 || sssg.priorOrders > 0)
             ? sssg
-            : computeSimulatedSssg(scenario)
+            : computeSimulatedSssg(effectiveScenario ?? scenario)
         }
         simulated={!sssg || (sssg.currentOrders === 0 && sssg.priorOrders === 0)}
       />
@@ -6036,11 +11801,13 @@ export function AdminSimulation() {
         anchorId="unit-economics"
       />
 
-      <UnitEconomicsPanel scenario={scenario} computed={computed} actuals={actuals} />
+      <UnitEconomicsPanel
+        scenario={effectiveScenario ?? scenario}
+        computed={computed}
+        actuals={actuals}
+      />
 
       <ChannelEconomicsPanel rows={channels} />
-
-      {attachEfficiency.length > 0 && <AttachmentEfficiencyPanel rows={attachEfficiency} />}
 
       <ModuleDivider
         index={4}
@@ -6110,7 +11877,7 @@ export function AdminSimulation() {
 
       {(() => {
         const hasReal = menuEng && menuEng.length > 0;
-        const rows = hasReal ? menuEng : computeSimulatedMenuEngineering(scenario);
+        const rows = hasReal ? menuEng : computeSimulatedMenuEngineering(effectiveScenario ?? scenario);
         if (rows.length === 0) return null;
         return (
           <>
@@ -8334,20 +14101,37 @@ interface AttachLeverEfficiency {
   attachPct: number;
   avgPriceGrosze: number;
   cogsPct: number;
-  /** Per-attached-order incremental contribution after own COGS only —
-   *  what each attached unit actually adds to gross margin. */
-  incrementalCmPerUnitGrosze: number;
-  /** Monthly profit lift = attachPct × incrementalCm × ordersPerMonth. */
+  /** Per-attached-unit gross margin (sell − COGS only). Easy mental
+   *  anchor; over-states the actual P&L impact by ~15-25%. */
+  grossMarginPerUnitGrosze: number;
+  /** Per-attached-unit NET margin after variable leakage (payment fees,
+   *  waste, refunds, loyalty burn) AND CIT. Drives monthlyLift so the
+   *  panel reconciles to the actual P&L delta. */
+  netMarginPerUnitGrosze: number;
+  /** Monthly profit lift = attachPct × netMargin × ordersPerMonth.
+   *  Matches the actual P&L delta when this lever's attach % moves. */
   monthlyLiftGrosze: number;
 }
 
 /** Per-lever attachment efficiency — answers "is the espresso push actually
- *  earning its slot?" by computing the incremental contribution per attached
- *  item (avgPrice × (1 − itemCogsPct)) and the total monthly lift. */
+ *  earning its slot?" by computing the EFFECTIVE NET contribution per
+ *  attached item (sell × (1 − itemCOGS − blendedPaymentFee − waste − refunds
+ *  − loyaltyBurn) × (1 − CIT)) and the total monthly lift. Match the actual
+ *  P&L delta rather than the misleadingly higher gross-margin number — see
+ *  the AttachLeverHelp methodology block for the same decomposition. */
 function computeAttachmentEfficiency(s: SimulationScenario): AttachLeverEfficiency[] {
   const a = s.assumptions;
   if (!a) return [];
   const ordersPerMonth = s.ordersPerDay * s.daysOpenPerMonth;
+  // Scenario-level variable leakage applied to incremental attach revenue.
+  // paymentProcessorPct is already the blended on-site/card/cash/Glovo/Wolt
+  // rate when effectiveScenario was passed in (applyAssumptions blends it).
+  const leakagePct =
+    (s.paymentProcessorPct ?? 0) +
+    (s.wastePct ?? 0) +
+    (s.refundPct ?? 0) +
+    (s.loyaltyBurnPct ?? 0);
+  const citPct = s.citPct ?? 0;
   const rows: AttachLeverEfficiency[] = [];
   const levers: Array<[string, string, typeof a.coffeeAttach]> = [
     ["coffee", "Coffee attach", a.coffeeAttach],
@@ -8359,15 +14143,18 @@ function computeAttachmentEfficiency(s: SimulationScenario): AttachLeverEfficien
   ];
   for (const [key, label, lever] of levers) {
     if (!lever || lever.enabled === false || lever.attachPct === 0) continue;
-    const incrementalCm = lever.avgPriceGrosze * (1 - lever.cogsPct);
+    const grossMargin = lever.avgPriceGrosze * (1 - lever.cogsPct);
+    const effRatio = Math.max(0, 1 - lever.cogsPct - leakagePct);
+    const netMargin = lever.avgPriceGrosze * effRatio * (1 - citPct);
     rows.push({
       key,
       label,
       attachPct: lever.attachPct,
       avgPriceGrosze: lever.avgPriceGrosze,
       cogsPct: lever.cogsPct,
-      incrementalCmPerUnitGrosze: incrementalCm,
-      monthlyLiftGrosze: lever.attachPct * incrementalCm * ordersPerMonth,
+      grossMarginPerUnitGrosze: grossMargin,
+      netMarginPerUnitGrosze: netMargin,
+      monthlyLiftGrosze: lever.attachPct * netMargin * ordersPerMonth,
     });
   }
   return rows.sort((a, b) => b.monthlyLiftGrosze - a.monthlyLiftGrosze);
@@ -8384,39 +14171,45 @@ function AttachmentEfficiencyPanel({ rows }: { rows: AttachLeverEfficiency[] }) 
     <Card>
       <CardHeader
         title="Attachment efficiency"
-        description="Per-attach-lever incremental contribution and monthly profit lift. Ranks the levers by absolute money — not just attach rate."
+        description="Per-attach-lever NET contribution and monthly profit lift. Reconciles to the actual P&L delta — not just gross sell − COGS."
         actions={
           <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
             <InfoButton title="Attachment efficiency" label="About attachment efficiency">
               <p>
-                Attach rate is half the story. A 30% espresso attach at 88% margin earns
-                more than a 50% pasta attach at 26% margin — the lever you push depends on
-                the <em>money</em>, not the percentage.
+                Attach rate is half the story. A 30% espresso attach at high net margin
+                earns more than a 50% pasta attach at lower net margin — the lever you
+                push depends on the <em>money</em>, not the percentage.
               </p>
               <p>
-                <strong>Incremental margin / unit = avgPrice × (1 − itemCOGS%)</strong>.
-                The food cost of the attached item only; the rest of variable leakage
-                (waste, refund, loyalty, fees) is already netted in the main P&amp;L.
+                <strong>Net margin / unit</strong> = sell × (1 − itemCOGS% −
+                blendedPaymentFee − waste − refunds − loyaltyBurn) × (1 − CIT).{" "}
+                This is the actual złoty each attached unit puts on the bottom line —
+                not the gross sell − COGS, which over-states by 15-25% because the
+                P&amp;L also applies all the variable-leakage rates and CIT to
+                incremental attach revenue.
               </p>
               <p>
-                <strong>Monthly lift = attachPct × incremental margin × orders/month.</strong>
-                Sorted descending so the lever with the biggest absolute money is at the
-                top of the table — that&apos;s where to push.
+                <strong>Monthly lift = attachPct × net margin × orders/month.</strong>
+                Reconciles directly to the actual monthly net-profit delta when the
+                lever&apos;s attach % moves. Sorted descending — top row is where to
+                push first.
               </p>
               <p>
-                Espresso is almost always the #1 puzzle in a Neapolitan menu: low friction,
-                85-88% margin, near-zero kitchen time. A 25→45pp espresso push adds
-                ~3,900 zł/mo of pure CM at default volumes with no capex.
+                The &quot;Gross&quot; column shows sell − COGS for context — useful for
+                staff coaching (&quot;each cup earns ~7.92 zł in raw margin&quot;) but
+                don&apos;t use it for forecasting; the &quot;Net&quot; column is what
+                actually lands.
               </p>
               <PlainTalk>
                 <p style={{ margin: 0 }}>
                   Don&apos;t train your staff to push the lever with the biggest
                   percentage — train them on the lever with the biggest złoty. A
                   <strong> 50% pasta attach sounds amazing</strong>, but each pasta only
-                  earns 8 zł of margin (high food cost). A <strong>30% espresso
-                  attach</strong> sounds small, but each cup earns 8 zł of margin too —
-                  and is 10× easier to suggest. Sort the table, talk about the top row
-                  at every staff meeting.
+                  earns ~6 zł of NET margin after everything (high food cost, payment
+                  fees, tax). A <strong>30% espresso attach</strong> sounds small, but
+                  each cup nets ~6 zł too — and is 10× easier to suggest. Sort by the{" "}
+                  <em>Monthly lift</em> column, talk about the top row at every staff
+                  meeting.
                 </p>
               </PlainTalk>
             </InfoButton>
@@ -8432,8 +14225,24 @@ function AttachmentEfficiencyPanel({ rows }: { rows: AttachLeverEfficiency[] }) 
               <th style={{ padding: "8px 4px", textAlign: "right" }}>Attach</th>
               <th style={{ padding: "8px 4px", textAlign: "right" }}>Price</th>
               <th style={{ padding: "8px 4px", textAlign: "right" }}>Item COGS</th>
-              <th style={{ padding: "8px 4px", textAlign: "right" }}>Inc. margin</th>
-              <th style={{ padding: "8px 4px", textAlign: "right" }}>Monthly lift</th>
+              <th
+                style={{ padding: "8px 4px", textAlign: "right" }}
+                title="Sell − COGS only. Easy mental anchor; over-states actual P&L impact."
+              >
+                Gross / unit
+              </th>
+              <th
+                style={{ padding: "8px 4px", textAlign: "right" }}
+                title="Sell × (1 − COGS − payment − waste − refunds − loyalty) × (1 − CIT). What actually lands on the bottom line."
+              >
+                Net / unit
+              </th>
+              <th
+                style={{ padding: "8px 4px", textAlign: "right" }}
+                title="attachPct × Net / unit × orders/month — matches actual P&L delta."
+              >
+                Monthly lift
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -8454,11 +14263,21 @@ function AttachmentEfficiencyPanel({ rows }: { rows: AttachLeverEfficiency[] }) 
                   style={{
                     padding: "8px 4px",
                     textAlign: "right",
-                    color: r.incrementalCmPerUnitGrosze >= 500 ? "rgb(22,163,74)" : "inherit",
+                    opacity: 0.75,
+                  }}
+                >
+                  {(r.grossMarginPerUnitGrosze / 100).toFixed(2)} zł
+                </td>
+                <td
+                  className="tabular"
+                  style={{
+                    padding: "8px 4px",
+                    textAlign: "right",
+                    color: r.netMarginPerUnitGrosze >= 500 ? "rgb(22,163,74)" : "inherit",
                     fontWeight: 500,
                   }}
                 >
-                  {(r.incrementalCmPerUnitGrosze / 100).toFixed(2)} zł
+                  {(r.netMarginPerUnitGrosze / 100).toFixed(2)} zł
                 </td>
                 <td
                   className="tabular"
@@ -8470,7 +14289,7 @@ function AttachmentEfficiencyPanel({ rows }: { rows: AttachLeverEfficiency[] }) 
             ))}
             <tr style={{ borderTop: "2px solid rgba(0,0,0,0.12)" }}>
               <td style={{ padding: "8px 4px", fontWeight: 700 }}>Total lift</td>
-              <td colSpan={4}></td>
+              <td colSpan={5}></td>
               <td
                 className="tabular"
                 style={{ padding: "8px 4px", textAlign: "right", fontWeight: 700 }}
@@ -9683,7 +15502,12 @@ const SPOILAGE_KEYWORDS_CLIENT = ["burrata", "truffle", "tartufata", "frozen", "
  *  order history yet so the matrix isn't empty in simulation mode —
  *  every preset still produces a believable mix of stars / plowhorses /
  *  puzzles / dogs. Once real orders flow in (≥1 order), the server
- *  endpoint takes over. */
+ *  endpoint takes over.
+ *
+ *  IMPORTANT: callers must pass `effectiveScenario` (post-applyAnnualWeather),
+ *  not the raw operator-typed scenario. Volume math must match the headline
+ *  P&L which runs on effective annualised volume — using typed values
+ *  over-states monthly numbers by ~8% for typical Warsaw seasonality. */
 function computeSimulatedMenuEngineering(
   s: SimulationScenario,
 ): SimulationMenuEngineeringLine[] {
@@ -9832,7 +15656,12 @@ function computeSimulatedMenuEngineering(
  *  real order history. Treats the current scenario's monthly revenue as
  *  "current period" and applies a seasonality-driven multiplier for the
  *  prior period so the panel surfaces a plausible comp signal in
- *  simulation mode. Real-orders path takes over once the actuals exist. */
+ *  simulation mode. Real-orders path takes over once the actuals exist.
+ *
+ *  IMPORTANT: callers must pass `effectiveScenario` (post-applyAnnualWeather),
+ *  not the raw operator-typed scenario. Volume math must match the headline
+ *  P&L which runs on effective annualised volume — using typed values
+ *  over-states monthly numbers by ~8% for typical Warsaw seasonality. */
 function computeSimulatedSssg(s: SimulationScenario): SimulationSssgSnapshot {
   const monthlyRevenue = s.ordersPerDay * s.avgTicketGrosze * s.daysOpenPerMonth;
   const monthlyOrders = s.ordersPerDay * s.daysOpenPerMonth;
@@ -10322,9 +16151,46 @@ interface AttachRowProps {
   baseTicketGrosze: number;
   onChange: (next: SimulationAttachLever) => void;
   help?: { title: string; body: ReactNode };
+  /** When set, the help popup renders the live-computed AttachLeverHelp body
+   *  using the lever's current price / COGS / attach values. Used by the
+   *  six standard attach levers (coffee, dessert, antipasti, aperitivo,
+   *  premium toppings, pasta primo). */
+  helpKind?: AttachLeverKind;
+  /** EFFECTIVE annualised volume after weather + holiday adjustments. */
+  ordersPerDay?: number;
+  daysOpenPerMonth?: number;
+  /** Raw typed values — surfaced in the Methodology block so the operator
+   *  sees the weather drag explicitly instead of being confused why the
+   *  narrative shows different numbers from the Scenario card. */
+  typedOrdersPerDay?: number;
+  typedDaysOpenPerMonth?: number;
+  /** Variable-leakage rates the P&L applies on incremental attach revenue —
+   *  threaded through so the headroom matches the actual net P&L delta. */
+  paymentProcessorPct?: number;
+  wastePct?: number;
+  refundPct?: number;
+  loyaltyBurnPct?: number;
+  citPct?: number;
 }
 
-function AttachLeverRow({ label, hint, lever, baseTicketGrosze, onChange, help }: AttachRowProps) {
+function AttachLeverRow({
+  label,
+  hint,
+  lever,
+  baseTicketGrosze,
+  onChange,
+  help,
+  helpKind,
+  ordersPerDay,
+  daysOpenPerMonth,
+  typedOrdersPerDay,
+  typedDaysOpenPerMonth,
+  paymentProcessorPct,
+  wastePct,
+  refundPct,
+  loyaltyBurnPct,
+  citPct,
+}: AttachRowProps) {
   const enabled = lever.enabled !== false;
   // Per-order projected ticket lift = attachPct × price; margin = (1 − cogsPct) × ticket lift.
   const ticketLift = lever.attachPct * lever.avgPriceGrosze;
@@ -10341,10 +16207,32 @@ function AttachLeverRow({ label, hint, lever, baseTicketGrosze, onChange, help }
             ariaLabel={`Toggle ${label}`}
           />
           <span>{label}</span>
-          {help && (
-            <InfoButton title={help.title} label={`About ${help.title.toLowerCase()}`} size="sm">
-              {help.body}
+          {helpKind ? (
+            <InfoButton
+              title={ATTACH_HELP[helpKind].title}
+              label={`About ${ATTACH_HELP[helpKind].title.toLowerCase()}`}
+              size="sm"
+            >
+              <AttachLeverHelp
+                kind={helpKind}
+                lever={lever}
+                ordersPerDay={ordersPerDay ?? 0}
+                daysOpenPerMonth={daysOpenPerMonth ?? 0}
+                typedOrdersPerDay={typedOrdersPerDay ?? ordersPerDay ?? 0}
+                typedDaysOpenPerMonth={typedDaysOpenPerMonth ?? daysOpenPerMonth ?? 0}
+                paymentProcessorPct={paymentProcessorPct ?? 0}
+                wastePct={wastePct ?? 0}
+                refundPct={refundPct ?? 0}
+                loyaltyBurnPct={loyaltyBurnPct ?? 0}
+                citPct={citPct ?? 0}
+              />
             </InfoButton>
+          ) : (
+            help && (
+              <InfoButton title={help.title} label={`About ${help.title.toLowerCase()}`} size="sm">
+                {help.body}
+              </InfoButton>
+            )
           )}
         </div>
         <div className="v2-muted text-xs">{hint}</div>
@@ -10499,10 +16387,42 @@ interface BehaviorCardProps {
   assumptions: SimulationAssumptions;
   baseTicketGrosze: number;
   baseCogsPct: number;
+  /** EFFECTIVE annualised volume after weather + holiday-closure adjustments
+   *  (i.e. typed × applyAnnualWeather). Used for all monetary math so the
+   *  headroom matches the actual P&L delta. */
+  ordersPerDay: number;
+  daysOpenPerMonth: number;
+  /** Raw values the operator typed in the Scenario card — shown alongside
+   *  the effective values in the Methodology block so the operator sees
+   *  the weather adjustment explicitly. */
+  typedOrdersPerDay: number;
+  typedDaysOpenPerMonth: number;
+  /** Variable-leakage rates the P&L applies on incremental attach revenue.
+   *  Without these the headroom number would overstate the actual net P&L
+   *  delta — see AttachLeverHelp methodology for the full decomposition. */
+  paymentProcessorPct: number;
+  wastePct: number;
+  refundPct: number;
+  loyaltyBurnPct: number;
+  citPct: number;
   onChange: (next: SimulationAssumptions) => void;
 }
 
-function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, baseCogsPct, onChange }: BehaviorCardProps) {
+function BehaviorAssumptionsCard({
+  assumptions,
+  baseTicketGrosze,
+  baseCogsPct,
+  ordersPerDay,
+  daysOpenPerMonth,
+  typedOrdersPerDay,
+  typedDaysOpenPerMonth,
+  paymentProcessorPct,
+  wastePct,
+  refundPct,
+  loyaltyBurnPct,
+  citPct,
+  onChange,
+}: BehaviorCardProps) {
   const a = assumptions;
   const baseCogsValueGrosze = baseTicketGrosze * baseCogsPct;
   const set = <K extends keyof SimulationAssumptions>(key: K, value: SimulationAssumptions[K]) =>
@@ -10561,7 +16481,16 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, baseCogsPct, o
               lever={a.coffeeAttach}
               baseTicketGrosze={baseTicketGrosze}
               onChange={(v) => set("coffeeAttach", v)}
-              help={HELP.coffeeAttach}
+              helpKind="coffee"
+              ordersPerDay={ordersPerDay}
+              daysOpenPerMonth={daysOpenPerMonth}
+              typedOrdersPerDay={typedOrdersPerDay}
+              typedDaysOpenPerMonth={typedDaysOpenPerMonth}
+              paymentProcessorPct={paymentProcessorPct}
+              wastePct={wastePct}
+              refundPct={refundPct}
+              loyaltyBurnPct={loyaltyBurnPct}
+              citPct={citPct}
             />
           )}
           {a.dessertAttach && (
@@ -10571,7 +16500,16 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, baseCogsPct, o
               lever={a.dessertAttach}
               baseTicketGrosze={baseTicketGrosze}
               onChange={(v) => set("dessertAttach", v)}
-              help={HELP.dessertAttach}
+              helpKind="dessert"
+              ordersPerDay={ordersPerDay}
+              daysOpenPerMonth={daysOpenPerMonth}
+              typedOrdersPerDay={typedOrdersPerDay}
+              typedDaysOpenPerMonth={typedDaysOpenPerMonth}
+              paymentProcessorPct={paymentProcessorPct}
+              wastePct={wastePct}
+              refundPct={refundPct}
+              loyaltyBurnPct={loyaltyBurnPct}
+              citPct={citPct}
             />
           )}
           {a.antipastiAttach && (
@@ -10581,7 +16519,16 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, baseCogsPct, o
               lever={a.antipastiAttach}
               baseTicketGrosze={baseTicketGrosze}
               onChange={(v) => set("antipastiAttach", v)}
-              help={HELP.antipastiAttach}
+              helpKind="antipasti"
+              ordersPerDay={ordersPerDay}
+              daysOpenPerMonth={daysOpenPerMonth}
+              typedOrdersPerDay={typedOrdersPerDay}
+              typedDaysOpenPerMonth={typedDaysOpenPerMonth}
+              paymentProcessorPct={paymentProcessorPct}
+              wastePct={wastePct}
+              refundPct={refundPct}
+              loyaltyBurnPct={loyaltyBurnPct}
+              citPct={citPct}
             />
           )}
           {a.aperitivoAttach && (
@@ -10591,7 +16538,16 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, baseCogsPct, o
               lever={a.aperitivoAttach}
               baseTicketGrosze={baseTicketGrosze}
               onChange={(v) => set("aperitivoAttach", v)}
-              help={HELP.aperitivoAttach}
+              helpKind="aperitivo"
+              ordersPerDay={ordersPerDay}
+              daysOpenPerMonth={daysOpenPerMonth}
+              typedOrdersPerDay={typedOrdersPerDay}
+              typedDaysOpenPerMonth={typedDaysOpenPerMonth}
+              paymentProcessorPct={paymentProcessorPct}
+              wastePct={wastePct}
+              refundPct={refundPct}
+              loyaltyBurnPct={loyaltyBurnPct}
+              citPct={citPct}
             />
           )}
           {a.premiumToppingsAttach && (
@@ -10601,7 +16557,16 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, baseCogsPct, o
               lever={a.premiumToppingsAttach}
               baseTicketGrosze={baseTicketGrosze}
               onChange={(v) => set("premiumToppingsAttach", v)}
-              help={HELP.premiumToppingsAttach}
+              helpKind="premiumToppings"
+              ordersPerDay={ordersPerDay}
+              daysOpenPerMonth={daysOpenPerMonth}
+              typedOrdersPerDay={typedOrdersPerDay}
+              typedDaysOpenPerMonth={typedDaysOpenPerMonth}
+              paymentProcessorPct={paymentProcessorPct}
+              wastePct={wastePct}
+              refundPct={refundPct}
+              loyaltyBurnPct={loyaltyBurnPct}
+              citPct={citPct}
             />
           )}
           {a.pastaPrimoAttach && (
@@ -10611,7 +16576,16 @@ function BehaviorAssumptionsCard({ assumptions, baseTicketGrosze, baseCogsPct, o
               lever={a.pastaPrimoAttach}
               baseTicketGrosze={baseTicketGrosze}
               onChange={(v) => set("pastaPrimoAttach", v)}
-              help={HELP.pastaPrimoAttach}
+              helpKind="pastaPrimo"
+              ordersPerDay={ordersPerDay}
+              daysOpenPerMonth={daysOpenPerMonth}
+              typedOrdersPerDay={typedOrdersPerDay}
+              typedDaysOpenPerMonth={typedDaysOpenPerMonth}
+              paymentProcessorPct={paymentProcessorPct}
+              wastePct={wastePct}
+              refundPct={refundPct}
+              loyaltyBurnPct={loyaltyBurnPct}
+              citPct={citPct}
             />
           )}
 
@@ -10914,16 +16888,21 @@ interface WeatherCardProps {
 
 function WeatherCalendarCard({ weather, baseOrdersPerDay, baseDaysOpen, onChange }: WeatherCardProps) {
   const w = weather;
+  const enabled = w.enabled !== false;
   const patch = (next: Partial<SimulationWeather>) => onChange({ ...w, ...next });
 
-  // Live preview of the composite volume multiplier (matches applyAssumptionsAndWeather).
-  const rainAdj = w.rainyShare * w.rainyDayMultiplier + (1 - w.rainyShare);
-  const hotAdj = w.heatwaveShare * w.heatwaveMultiplier + (1 - w.heatwaveShare);
-  const schoolAdj = (2 / 12) * w.schoolHolidayLunchMultiplier + 10 / 12;
+  // Live preview of the composite volume multiplier (matches applyAnnualWeather).
+  // When the card is toggled OFF these all collapse to 1.0 / no-op so the
+  // displayed "effective" row equals the baseline.
+  const rainAdj = enabled ? w.rainyShare * w.rainyDayMultiplier + (1 - w.rainyShare) : 1;
+  const hotAdj = enabled ? w.heatwaveShare * w.heatwaveMultiplier + (1 - w.heatwaveShare) : 1;
+  const schoolAdj = enabled ? (2 / 12) * w.schoolHolidayLunchMultiplier + 10 / 12 : 1;
   const compositeVolume = rainAdj * hotAdj * schoolAdj;
-  const peakBonus = w.holidayPeakDaysPerMonth * (w.holidayPeakMultiplier - 1) * baseOrdersPerDay;
-  const eventBonus = w.eventDaysPerMonth * (w.eventDayMultiplier - 1) * baseOrdersPerDay;
-  const effectiveDaysOpen = Math.max(0, baseDaysOpen - w.holidayClosedDaysPerMonth);
+  const peakBonus = enabled ? w.holidayPeakDaysPerMonth * (w.holidayPeakMultiplier - 1) * baseOrdersPerDay : 0;
+  const eventBonus = enabled ? w.eventDaysPerMonth * (w.eventDayMultiplier - 1) * baseOrdersPerDay : 0;
+  const effectiveDaysOpen = enabled
+    ? Math.max(0, baseDaysOpen - w.holidayClosedDaysPerMonth)
+    : baseDaysOpen;
   const effectiveOrdersPerDay =
     effectiveDaysOpen > 0
       ? baseOrdersPerDay * compositeVolume + (peakBonus + eventBonus) / effectiveDaysOpen
@@ -10936,13 +16915,22 @@ function WeatherCalendarCard({ weather, baseOrdersPerDay, baseDaysOpen, onChange
         description="Rain, heat, Polish holidays, school-holiday lunch dip and event days. Modifies effective volume + days open — propagates into every chart below."
         actions={
           <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+            <LeverSwitch
+              enabled={enabled}
+              onChange={(next) => patch({ enabled: next })}
+              ariaLabel="Toggle weather & calendar adjustments"
+            />
             <InfoButton title={HELP.weatherOverview.title} label="About weather & calendar">{HELP.weatherOverview.body}</InfoButton>
             <CalendarRange className="h-4 w-4 v2-muted" />
           </span>
         }
       />
       <CardBody>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"
+          style={{ opacity: enabled ? 1 : 0.55, pointerEvents: enabled ? "auto" : "none" }}
+          aria-disabled={!enabled}
+        >
           <Input
             label={<LabelWithInfo text="Rainy-day multiplier" help={HELP.rainyDay} />}
             type="number"
