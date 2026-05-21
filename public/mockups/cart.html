@@ -13067,11 +13067,10 @@
         var routeName = 'home';
         if (pageId === 'page-krakow') routeName = 'krakow';
         else if (pageId === 'page-warszawa') routeName = 'warszawa';
-        // navigate, then scroll after the page is active
-        var route = ROUTES[routeName];
-        if (route &amp;&amp; window.location.hash !== route.hash) {
-          window.location.hash = route.hash;
-          // After hashchange + activate (which scrolls to top), scroll to anchor
+        // Route directly via navigate() (which calls activatePage),
+        // then scroll to the anchor after the page is active.
+        if (ROUTES[routeName] &amp;&amp; routeFromHash() !== routeName) {
+          navigate(routeName);
           setTimeout(function () {
             var t2 = document.querySelector(href);
             if (!t2) return;
@@ -13135,6 +13134,13 @@
     if (h === '#/locations/warszawa') return 'warszawa';
     return 'home';
   }
+  function routeFromHref(href) {
+    var h = (href || '').toLowerCase();
+    if (h === '#/locations/krakow') return 'krakow';
+    if (h === '#/locations/warszawa') return 'warszawa';
+    if (h === '#/' || h === '') return 'home';
+    return null;
+  }
   function activatePage(routeName, opts) {
     opts = opts || {};
     var route = ROUTES[routeName] || ROUTES.home;
@@ -13155,13 +13161,15 @@
   }
   function navigate(routeName) {
     var route = ROUTES[routeName] || ROUTES.home;
-    if (window.location.hash !== route.hash) {
-      // setting hash triggers hashchange listener
-      window.location.hash = route.hash;
-    } else {
-      // already on this hash — just (re)activate
-      activatePage(routeName, { scroll: true });
-    }
+    // srcdoc iframes (about:srcdoc) don't reliably mutate location.hash
+    // or fire hashchange in Chromium, so activatePage is the source of
+    // truth. Hash update below is best-effort for back/forward support.
+    activatePage(routeName, { scroll: true });
+    try {
+      if (window.location.hash !== route.hash) {
+        window.location.hash = route.hash;
+      }
+    } catch (err) {}
   }
   window.addEventListener('hashchange', function () {
     activatePage(routeFromHash(), { scroll: true });
@@ -13169,22 +13177,19 @@
   // initial route on load
   activatePage(routeFromHash(), { scroll: false, smooth: false });
 
-  // Defensive: srcdoc iframes don't reliably honor default <a href=&quot;#/...&quot;> link
-  // clicks in Chromium — the action can navigate the TOP window instead of the
-  // iframe. Intercept route hashes (#/...) and update window.location.hash
-  // explicitly so the hashchange listener (and activatePage) always run.
+  // srcdoc iframes (about:srcdoc) don't reliably mutate location.hash in
+  // Chromium, so intercept #/... clicks and route directly via navigate()
+  // which calls activatePage() unconditionally. Without this the location
+  // cards on the V8 home page did nothing visible.
   document.addEventListener('click', function (e) {
     var a = e.target &amp;&amp; e.target.closest ? e.target.closest('a[href^=&quot;#/&quot;]') : null;
     if (!a) return;
     var href = a.getAttribute('href') || '';
-    if (!href) return;
+    var routeName = routeFromHref(href);
+    if (!routeName) return;
     e.preventDefault();
     e.stopPropagation();
-    if (window.location.hash !== href) {
-      window.location.hash = href;
-    } else {
-      activatePage(routeFromHash(), { scroll: true });
-    }
+    navigate(routeName);
   }, true);
 
   // ============================================================
