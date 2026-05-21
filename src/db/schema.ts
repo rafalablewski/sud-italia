@@ -280,6 +280,14 @@ export const ingredients = pgTable("ingredients", {
   /** kcal per unit. Nullable — rows created before the kcal-per-ingredient
    *  feature shipped have NULL until the operator backfills. */
   kcalPerUnit: integer("kcal_per_unit"),
+  /** Macros per unit, in grams. Nullable so operators can fill them in
+   *  gradually; recipe-derived totals only surface when every line on
+   *  the recipe has data for the specific macro being computed. */
+  proteinPerUnit: integer("protein_per_unit"),
+  carbsPerUnit: integer("carbs_per_unit"),
+  sugarPerUnit: integer("sugar_per_unit"),
+  fiberPerUnit: integer("fiber_per_unit"),
+  fatPerUnit: integer("fat_per_unit"),
   supplier: text("supplier"),
   notes: text("notes"),
 });

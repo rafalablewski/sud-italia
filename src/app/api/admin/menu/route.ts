@@ -15,43 +15,67 @@ import type { MenuItem } from "@/data/types";
 import { locations } from "@/data/locations";
 import { menuOverridePutSchema, parseBody } from "@/lib/api-schemas";
 
-/** Per-portion food cost + kcal for every dish that has a recipe, computed
- * in a single pass instead of N+1 calls. The recipe is the source of
- * truth: any item with a recipe gets its menu-shown cost derived from the
- * current ingredient prices, so the Menu and Recipes admin pages can never
- * disagree (or drift when an ingredient price changes). The kcal map mirrors
- * the cost map but only populates when every ingredient on the recipe has a
- * `kcalPerUnit` value — partial sums would mislead the customer card.
+/** Per-portion food cost + full nutrition map for every dish that has a
+ * recipe, computed in a single pass instead of N+1 calls. The recipe is
+ * the source of truth: any item with a recipe gets its menu-shown cost
+ * derived from the current ingredient prices, so the Menu and Recipes
+ * admin pages can never disagree (or drift when an ingredient price
+ * changes). Each macro is independent — `protein` is set even when
+ * `fiber` is missing, so operators can roll macros out gradually.
  */
+type MacroKey = "calories" | "protein" | "carbs" | "sugar" | "fiber" | "fat";
+type IngredientMacroKey =
+  | "kcalPerUnit"
+  | "proteinPerUnit"
+  | "carbsPerUnit"
+  | "sugarPerUnit"
+  | "fiberPerUnit"
+  | "fatPerUnit";
+const MACRO_FIELD_MAP: Array<[MacroKey, IngredientMacroKey]> = [
+  ["calories", "kcalPerUnit"],
+  ["protein", "proteinPerUnit"],
+  ["carbs", "carbsPerUnit"],
+  ["sugar", "sugarPerUnit"],
+  ["fiber", "fiberPerUnit"],
+  ["fat", "fatPerUnit"],
+];
+
 async function getRecipeDerivedMaps(): Promise<{
   cost: Map<string, number>;
-  kcal: Map<string, number>;
+  nutrition: Map<string, Partial<Record<MacroKey, number>>>;
 }> {
   const [recipes, ingredients] = await Promise.all([getRecipes(), getIngredients()]);
   const ingById = new Map(ingredients.map((i) => [i.id, i]));
   const cost = new Map<string, number>();
-  const kcal = new Map<string, number>();
+  const nutrition = new Map<string, Partial<Record<MacroKey, number>>>();
   for (const r of recipes) {
     if (r.ingredients.length === 0) continue;
     let totalCost = 0;
-    let totalKcal = 0;
-    let kcalComplete = true;
     for (const ri of r.ingredients) {
       const ing = ingById.get(ri.ingredientId);
       const unitCost = ing?.costPerUnit ?? 0;
       totalCost += unitCost * ri.quantity * (ri.wasteFactor || 1);
-      if (ing && typeof ing.kcalPerUnit === "number") {
-        totalKcal += ing.kcalPerUnit * ri.quantity * (ri.wasteFactor || 1);
-      } else {
-        kcalComplete = false;
-      }
     }
     cost.set(r.menuItemId, Math.round(totalCost / (r.yieldPortions || 1)));
-    if (kcalComplete) {
-      kcal.set(r.menuItemId, Math.round(totalKcal / (r.yieldPortions || 1)));
+
+    const macros: Partial<Record<MacroKey, number>> = {};
+    for (const [field, key] of MACRO_FIELD_MAP) {
+      let total = 0;
+      let complete = true;
+      for (const ri of r.ingredients) {
+        const ing = ingById.get(ri.ingredientId);
+        const raw = ing ? (ing as unknown as Record<string, unknown>)[key] : undefined;
+        if (typeof raw !== "number") {
+          complete = false;
+          break;
+        }
+        total += raw * ri.quantity * (ri.wasteFactor || 1);
+      }
+      if (complete) macros[field] = Math.round(total / (r.yieldPortions || 1));
     }
+    if (Object.keys(macros).length > 0) nutrition.set(r.menuItemId, macros);
   }
-  return { cost, kcal };
+  return { cost, nutrition };
 }
 
 // Menu reads are scoped per-location when a slug is provided. When omitted
@@ -65,14 +89,15 @@ export const GET = withAdmin(
       getRecipeDerivedMaps(),
       getCustomMenuItems(),
     ]);
-    const { cost: recipeCosts, kcal: recipeKcals } = recipeMaps;
+    const { cost: recipeCosts, nutrition: recipeNutritions } = recipeMaps;
 
     const customIds = new Set(customItems.map((c) => c.id));
 
     const enrich = (item: MenuItem, opts?: { isCustom?: boolean }) => {
       const override = overrides[item.id];
       const recipeCost = recipeCosts.get(item.id);
-      const recipeKcal = recipeKcals.get(item.id);
+      const recipeNutrition = recipeNutritions.get(item.id);
+      const recipeKcal = recipeNutrition?.calories;
       const hasRecipe = recipeCost !== undefined;
       // Recipe is canonical: when one exists, its computed per-portion cost
       // wins over both the seed cost and the override.cost (override.cost is
@@ -107,18 +132,35 @@ export const GET = withAdmin(
         }
       }
       // When no explicit calorie override is on this row, the recipe
-      // is the source of truth: write the computed per-portion kcal
-      // into `nutrition.calories` so admin reads (and the customer
-      // pill) reflect the live ingredient data instead of a stale
-      // seed value. Only writes when the recipe has kcal data on
-      // every ingredient line; partial data is treated as no claim.
-      if (!hasCalorieOverride && recipeKcal !== undefined) {
+      // is the source of truth: write the computed per-portion macros
+      // into `nutrition` so admin reads (and the customer pill) reflect
+      // the live ingredient data instead of a stale seed value. Each
+      // macro is independent — kcal can populate even if `fiber` is
+      // missing on one ingredient — so operators can roll macros out
+      // gradually without blanking everything.
+      if (recipeNutrition && Object.keys(recipeNutrition).length > 0) {
         const nutrition = (merged.nutrition ?? item.nutrition) as
-          | { calories: number; protein: number; carbs: number; fat: number }
+          | {
+              calories: number;
+              protein: number;
+              carbs: number;
+              fat: number;
+              sugar?: number;
+              fiber?: number;
+              sodium?: number;
+            }
           | undefined;
         merged.nutrition = {
           ...(nutrition ?? { calories: 0, protein: 0, carbs: 0, fat: 0 }),
-          calories: recipeKcal,
+          // Operator's explicit calorie override (if any) still wins over
+          // the recipe sum for that one field — pinned legally-vetted
+          // figures shouldn't drift when an ingredient kcal changes.
+          ...(hasCalorieOverride ? {} : recipeNutrition.calories !== undefined ? { calories: recipeNutrition.calories } : {}),
+          ...(recipeNutrition.protein !== undefined ? { protein: recipeNutrition.protein } : {}),
+          ...(recipeNutrition.carbs !== undefined ? { carbs: recipeNutrition.carbs } : {}),
+          ...(recipeNutrition.sugar !== undefined ? { sugar: recipeNutrition.sugar } : {}),
+          ...(recipeNutrition.fiber !== undefined ? { fiber: recipeNutrition.fiber } : {}),
+          ...(recipeNutrition.fat !== undefined ? { fat: recipeNutrition.fat } : {}),
         };
       }
       const calorieSource: "override" | "recipe" | "seed" = hasCalorieOverride

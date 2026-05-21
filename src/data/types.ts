@@ -74,6 +74,11 @@ export interface NutritionInfo {
   protein: number;       // grams
   carbs: number;         // grams
   fat: number;           // grams
+  /** Grams of sugars within `carbs` — reported separately because EU
+   *  1169/2011 + UK FIR + FDA NFP all require "of which sugars" on the
+   *  back-of-pack label. Always ≤ `carbs`. Optional because operators
+   *  may roll out macros gradually. */
+  sugar?: number;        // grams
   fiber?: number;        // grams
   sodium?: number;       // mg
 }
@@ -246,6 +251,17 @@ export interface Ingredient {
    *  the cost calc. When unset on any line, the recipe shows "—" instead
    *  of a partial number that would mislead the customer card. */
   kcalPerUnit?: number;
+  /** Macronutrients per unit, in grams. Same semantics as `kcalPerUnit`
+   *  — display layer renders these on a per-100g basis (per-100ml for
+   *  L / ml units), storage stays per-unit so recipe maths stays exact.
+   *  All optional + nullable so operators can fill macros gradually. */
+  proteinPerUnit?: number;
+  carbsPerUnit?: number;
+  /** Grams of sugars within `carbsPerUnit`. Surfaced as "of which sugars"
+   *  on the recipe editor, matching nutrition-label conventions. */
+  sugarPerUnit?: number;
+  fiberPerUnit?: number;
+  fatPerUnit?: number;
   supplier?: string;
   notes?: string;
 }

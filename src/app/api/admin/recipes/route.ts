@@ -3,7 +3,7 @@ import { withAdmin } from "@/lib/api-middleware";
 import {
   appendAuditLog,
   calculateFoodCost,
-  calculateRecipeCalories,
+  calculateRecipeNutrition,
   deleteRecipe,
   getIngredients,
   getRecipe,
@@ -25,11 +25,16 @@ export const GET = withAdmin({}, async (req) => {
     if (!recipe) {
       return NextResponse.json(null);
     }
-    const [foodCost, kcal] = await Promise.all([
+    const [foodCost, nutrition] = await Promise.all([
       calculateFoodCost(menuItemId),
-      calculateRecipeCalories(menuItemId),
+      calculateRecipeNutrition(menuItemId),
     ]);
-    return NextResponse.json({ ...recipe, calculatedCost: foodCost, calculatedCalories: kcal });
+    return NextResponse.json({
+      ...recipe,
+      calculatedCost: foodCost,
+      calculatedNutrition: nutrition,
+      calculatedCalories: nutrition.calories,
+    });
   }
 
   const recipes = await getRecipes();
@@ -38,9 +43,9 @@ export const GET = withAdmin({}, async (req) => {
 
   const enriched = await Promise.all(
     recipes.map(async (r) => {
-      const [cost, kcal] = await Promise.all([
+      const [cost, nutrition] = await Promise.all([
         calculateFoodCost(r.menuItemId),
-        calculateRecipeCalories(r.menuItemId),
+        calculateRecipeNutrition(r.menuItemId),
       ]);
       const enrichedIngredients = r.ingredients.map((ri) => {
         const ing = ingredientMap.get(ri.ingredientId);
@@ -51,6 +56,14 @@ export const GET = withAdmin({}, async (req) => {
           unit: ing?.unit ?? "kg",
           unitCost: ing?.costPerUnit ?? 0,
           unitKcal: typeof unitKcal === "number" ? unitKcal : null,
+          // Pass through the rest of the macros so the editor can run
+          // the same live-compute it does for kcal as the operator
+          // tweaks quantities.
+          unitProtein: typeof ing?.proteinPerUnit === "number" ? ing.proteinPerUnit : null,
+          unitCarbs: typeof ing?.carbsPerUnit === "number" ? ing.carbsPerUnit : null,
+          unitSugar: typeof ing?.sugarPerUnit === "number" ? ing.sugarPerUnit : null,
+          unitFiber: typeof ing?.fiberPerUnit === "number" ? ing.fiberPerUnit : null,
+          unitFat: typeof ing?.fatPerUnit === "number" ? ing.fatPerUnit : null,
           lineCost: Math.round((ing?.costPerUnit ?? 0) * ri.quantity * (ri.wasteFactor || 1)),
           // null when this ingredient is missing kcal data — the dialog
           // surfaces a hint so the operator knows which line is blocking
@@ -61,7 +74,13 @@ export const GET = withAdmin({}, async (req) => {
               : null,
         };
       });
-      return { ...r, calculatedCost: cost, calculatedCalories: kcal, enrichedIngredients };
+      return {
+        ...r,
+        calculatedCost: cost,
+        calculatedNutrition: nutrition,
+        calculatedCalories: nutrition.calories,
+        enrichedIngredients,
+      };
     }),
   );
 
@@ -92,9 +111,9 @@ export const POST = withAdmin(
       };
 
       const saved = await saveRecipe(recipe);
-      const [foodCost, kcal] = await Promise.all([
+      const [foodCost, nutrition] = await Promise.all([
         calculateFoodCost(recipe.menuItemId),
-        calculateRecipeCalories(recipe.menuItemId),
+        calculateRecipeNutrition(recipe.menuItemId),
       ]);
 
       // Keep the menu page honest: every recipe save writes the per-portion
@@ -111,7 +130,12 @@ export const POST = withAdmin(
       });
 
       return NextResponse.json(
-        { ...saved, calculatedCost: foodCost, calculatedCalories: kcal },
+        {
+          ...saved,
+          calculatedCost: foodCost,
+          calculatedNutrition: nutrition,
+          calculatedCalories: nutrition.calories,
+        },
         { status: 201 },
       );
     } catch {

@@ -6,6 +6,31 @@ import type { Ingredient } from "@/data/types";
 // Ingredients are chain-wide. Writes are manager+ because cost-per-unit
 // flows into recipe cost which flows into menu margins.
 
+/** Numeric macro fields the operator can set on each ingredient. Empty
+ *  string / null / undefined / NaN means "no claim" — drop the field
+ *  instead of writing 0, which would otherwise satisfy downstream
+ *  `typeof === "number"` checks and resolve to a fake 0-g/kcal value
+ *  in recipe totals. */
+const MACRO_FIELDS = [
+  "kcalPerUnit",
+  "proteinPerUnit",
+  "carbsPerUnit",
+  "sugarPerUnit",
+  "fiberPerUnit",
+  "fatPerUnit",
+] as const;
+
+function pickMacros(body: Record<string, unknown>): Partial<Ingredient> {
+  const out: Partial<Ingredient> = {};
+  for (const key of MACRO_FIELDS) {
+    const raw = body[key];
+    if (raw === null || raw === undefined || raw === "") continue;
+    const n = Math.max(0, Math.round(Number(raw)));
+    if (Number.isFinite(n)) (out as Record<string, number>)[key] = n;
+  }
+  return out;
+}
+
 export const GET = withAdmin({}, async () => {
   return NextResponse.json(await getIngredients());
 });
@@ -15,18 +40,13 @@ export const POST = withAdmin(
   async (req) => {
     try {
       const body = await req.json();
-      const kcalRaw = body.kcalPerUnit;
-      const kcalParsed =
-        kcalRaw === null || kcalRaw === undefined || kcalRaw === ""
-          ? undefined
-          : Math.max(0, Math.round(Number(kcalRaw)));
       const ingredient: Ingredient = {
         id: body.id || `ing-${crypto.randomUUID().slice(0, 8)}`,
         name: body.name,
         category: body.category || "other",
         unit: body.unit || "kg",
         costPerUnit: Number(body.costPerUnit) || 0,
-        ...(Number.isFinite(kcalParsed) ? { kcalPerUnit: kcalParsed } : {}),
+        ...pickMacros(body),
         supplier: body.supplier || "",
         notes: body.notes || "",
       };
@@ -51,22 +71,18 @@ export const PUT = withAdmin(
       if (!body.id) {
         return NextResponse.json({ error: "Missing ingredient id" }, { status: 400 });
       }
-      // Normalise kcal the same way as POST: empty string / null / NaN
-      // means "no claim" → drop the field instead of writing 0, which
-      // would otherwise satisfy the `typeof === "number"` check in the
-      // recipe-calories helper and resolve to a fake 0-kcal value.
-      const kcalRaw = body.kcalPerUnit;
-      const kcalParsed =
-        kcalRaw === null || kcalRaw === undefined || kcalRaw === ""
-          ? undefined
-          : Math.max(0, Math.round(Number(kcalRaw)));
       const incoming = body as Ingredient;
-      const normalised: Ingredient = {
-        ...incoming,
-        ...(Number.isFinite(kcalParsed)
-          ? { kcalPerUnit: kcalParsed }
-          : { kcalPerUnit: undefined }),
-      };
+      const macros = pickMacros(body);
+      // Strip macro keys from the incoming row first so unset fields
+      // (cleared by the operator) actually clear instead of round-
+      // tripping the old value. Then re-apply the parsed macros — any
+      // field absent from `macros` ends up undefined → dropped on
+      // write → SQL NULL.
+      const stripped: Ingredient = { ...incoming };
+      for (const key of MACRO_FIELDS) {
+        (stripped as unknown as Record<string, unknown>)[key] = undefined;
+      }
+      const normalised: Ingredient = { ...stripped, ...macros };
       const saved = await saveIngredient(normalised);
       return NextResponse.json(saved);
     } catch {

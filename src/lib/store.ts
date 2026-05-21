@@ -2795,6 +2795,14 @@ const INGREDIENTS_DDL = [
   // created before this column shipped don't need a backfill before the
   // schema is honoured.
   `ALTER TABLE ingredients ADD COLUMN IF NOT EXISTS kcal_per_unit integer`,
+  // 2026-05 — full macros (protein / carbs / sugar / fiber / fat) per
+  // unit. Same pattern as kcal: nullable, populated lazily, computed
+  // into recipe per-portion totals when every line has the value.
+  `ALTER TABLE ingredients ADD COLUMN IF NOT EXISTS protein_per_unit integer`,
+  `ALTER TABLE ingredients ADD COLUMN IF NOT EXISTS carbs_per_unit integer`,
+  `ALTER TABLE ingredients ADD COLUMN IF NOT EXISTS sugar_per_unit integer`,
+  `ALTER TABLE ingredients ADD COLUMN IF NOT EXISTS fiber_per_unit integer`,
+  `ALTER TABLE ingredients ADD COLUMN IF NOT EXISTS fat_per_unit integer`,
 ];
 const RECIPES_DDL = [
   `CREATE TABLE IF NOT EXISTS recipes (
@@ -2830,6 +2838,11 @@ async function dualWriteIngredient(ingredient: Ingredient): Promise<void> {
         unit: ingredient.unit,
         costPerUnit: ingredient.costPerUnit,
         kcalPerUnit: ingredient.kcalPerUnit ?? null,
+        proteinPerUnit: ingredient.proteinPerUnit ?? null,
+        carbsPerUnit: ingredient.carbsPerUnit ?? null,
+        sugarPerUnit: ingredient.sugarPerUnit ?? null,
+        fiberPerUnit: ingredient.fiberPerUnit ?? null,
+        fatPerUnit: ingredient.fatPerUnit ?? null,
         supplier: ingredient.supplier ?? null,
         notes: ingredient.notes ?? null,
       })
@@ -2841,6 +2854,11 @@ async function dualWriteIngredient(ingredient: Ingredient): Promise<void> {
           unit: ingredient.unit,
           costPerUnit: ingredient.costPerUnit,
           kcalPerUnit: ingredient.kcalPerUnit ?? null,
+          proteinPerUnit: ingredient.proteinPerUnit ?? null,
+          carbsPerUnit: ingredient.carbsPerUnit ?? null,
+          sugarPerUnit: ingredient.sugarPerUnit ?? null,
+          fiberPerUnit: ingredient.fiberPerUnit ?? null,
+          fatPerUnit: ingredient.fatPerUnit ?? null,
           supplier: ingredient.supplier ?? null,
           notes: ingredient.notes ?? null,
         },
@@ -2902,6 +2920,11 @@ function rowToIngredient(row: typeof ingredientsTable.$inferSelect): Ingredient 
     unit: row.unit as Ingredient["unit"],
     costPerUnit: row.costPerUnit,
     kcalPerUnit: row.kcalPerUnit ?? undefined,
+    proteinPerUnit: row.proteinPerUnit ?? undefined,
+    carbsPerUnit: row.carbsPerUnit ?? undefined,
+    sugarPerUnit: row.sugarPerUnit ?? undefined,
+    fiberPerUnit: row.fiberPerUnit ?? undefined,
+    fatPerUnit: row.fatPerUnit ?? undefined,
     supplier: row.supplier ?? undefined,
     notes: row.notes ?? undefined,
   };
@@ -3078,6 +3101,70 @@ export async function calculateRecipeCalories(menuItemId: string): Promise<numbe
   }
 
   return Math.round(totalKcal / (recipe.yieldPortions || 1));
+}
+
+/**
+ * Per-portion nutrition computed from the recipe. Each field is
+ * independent: `protein` is set whenever every recipe line has
+ * `proteinPerUnit`, even if (say) `fiberPerUnit` is missing on one
+ * ingredient. Allows operators to roll macros out gradually without
+ * blanking every figure when one ingredient is incomplete.
+ *
+ * Quantities below are in grams per portion except `calories` which
+ * stays in kcal. Storage on each ingredient is per-unit (per kg / per
+ * L / per piece) so the multiplication `perUnit × quantity × waste`
+ * keeps the same units; division by `yieldPortions` turns the batch
+ * total into a per-serving figure.
+ */
+export interface RecipeNutrition {
+  calories: number | null;
+  protein: number | null;
+  carbs: number | null;
+  sugar: number | null;
+  fiber: number | null;
+  fat: number | null;
+}
+
+const MACRO_FIELDS = [
+  ["calories", "kcalPerUnit"],
+  ["protein", "proteinPerUnit"],
+  ["carbs", "carbsPerUnit"],
+  ["sugar", "sugarPerUnit"],
+  ["fiber", "fiberPerUnit"],
+  ["fat", "fatPerUnit"],
+] as const;
+
+export async function calculateRecipeNutrition(menuItemId: string): Promise<RecipeNutrition> {
+  const empty: RecipeNutrition = {
+    calories: null,
+    protein: null,
+    carbs: null,
+    sugar: null,
+    fiber: null,
+    fat: null,
+  };
+  const recipe = await getRecipe(menuItemId);
+  if (!recipe || recipe.ingredients.length === 0) return empty;
+
+  const ingredients = await getIngredients();
+  const ingredientMap = new Map(ingredients.map((i) => [i.id, i]));
+
+  const out: RecipeNutrition = { ...empty };
+  for (const [field, key] of MACRO_FIELDS) {
+    let total = 0;
+    let complete = true;
+    for (const ri of recipe.ingredients) {
+      const ing = ingredientMap.get(ri.ingredientId);
+      const raw = ing ? (ing as unknown as Record<string, unknown>)[key] : undefined;
+      if (typeof raw !== "number") {
+        complete = false;
+        break;
+      }
+      total += raw * ri.quantity * (ri.wasteFactor || 1);
+    }
+    if (complete) out[field] = Math.round(total / (recipe.yieldPortions || 1));
+  }
+  return out;
 }
 
 // --- Loyalty Members (phone-only signups without orders) ---

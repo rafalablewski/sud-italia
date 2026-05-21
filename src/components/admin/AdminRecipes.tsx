@@ -63,6 +63,11 @@ interface IngredientData {
   unit: IngredientUnit;
   costPerUnit: number;
   kcalPerUnit?: number;
+  proteinPerUnit?: number;
+  carbsPerUnit?: number;
+  sugarPerUnit?: number;
+  fiberPerUnit?: number;
+  fatPerUnit?: number;
   supplier?: string;
   notes?: string;
 }
@@ -75,6 +80,11 @@ interface EnrichedRecipeIngredient {
   unit?: string;
   unitCost?: number;
   unitKcal?: number | null;
+  unitProtein?: number | null;
+  unitCarbs?: number | null;
+  unitSugar?: number | null;
+  unitFiber?: number | null;
+  unitFat?: number | null;
   lineCost?: number;
   lineKcal?: number | null;
 }
@@ -137,15 +147,31 @@ function kcalBasisLabel(unit: IngredientUnit): string {
 
 function storedKcalToDisplay(stored: number | undefined, unit: IngredientUnit): string {
   if (typeof stored !== "number") return "";
-  if (unit === "kg" || unit === "L") return String(Math.round(stored / 10));
-  if (unit === "g" || unit === "ml") return String(Math.round(stored * 100));
+  // For kg / L units, storage is per-kg / per-L but display is per-100g
+  // / per-100ml — so divide by 10. Keep one decimal of precision so
+  // values like 0.5g sugar per 100g salt round-trip exactly (typed "0.5"
+  // → stored 5 → displayed "0.5" not "1").
+  if (unit === "kg" || unit === "L") return String(stored / 10);
+  if (unit === "g" || unit === "ml") return String(stored * 100);
   return String(stored);
 }
 
 function displayKcalToStored(display: number, unit: IngredientUnit): number {
+  // Use Math.round only at storage time so small per-100g values
+  // (sugar / fiber in trace amounts) keep their precision. For kg / L
+  // we multiply by 10 (per-100g → per-kg).
   if (unit === "kg" || unit === "L") return Math.max(0, Math.round(display * 10));
   if (unit === "g" || unit === "ml") return Math.max(0, Math.round(display / 100));
   return Math.max(0, Math.round(display));
+}
+
+interface CalculatedNutrition {
+  calories: number | null;
+  protein: number | null;
+  carbs: number | null;
+  sugar: number | null;
+  fiber: number | null;
+  fat: number | null;
 }
 
 interface RecipeData {
@@ -162,6 +188,10 @@ interface RecipeData {
    *  recipe editor surfaces a "—" placeholder + a hint instead of a
    *  misleading partial sum. */
   calculatedCalories?: number | null;
+  /** Per-portion macros (in grams) computed the same way. Each field is
+   *  independent — `protein` is set when every line has `proteinPerUnit`,
+   *  even if `fiber` is missing on one ingredient. */
+  calculatedNutrition?: CalculatedNutrition;
 }
 
 interface MenuItemData {
@@ -675,6 +705,11 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
         unit: r.unit,
         unitCost: r.unitCost,
         unitKcal: r.unitKcal,
+        unitProtein: r.unitProtein,
+        unitCarbs: r.unitCarbs,
+        unitSugar: r.unitSugar,
+        unitFiber: r.unitFiber,
+        unitFat: r.unitFat,
       })),
     );
     setYieldPortions(recipe?.yieldPortions ?? 1);
@@ -710,6 +745,11 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
         unit: ing.unit,
         unitCost: ing.costPerUnit,
         unitKcal: ing.kcalPerUnit,
+        unitProtein: ing.proteinPerUnit,
+        unitCarbs: ing.carbsPerUnit,
+        unitSugar: ing.sugarPerUnit,
+        unitFiber: ing.fiberPerUnit,
+        unitFat: ing.fatPerUnit,
       },
     ]);
     setPickerIngId("");
@@ -731,23 +771,29 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
     menuItem && menuItem.price > 0
       ? Math.round(((menuItem.price - perPortion) / menuItem.price) * 100)
       : 0;
-  // Per-portion kcal computed locally so the KPI updates as the operator
-  // edits quantities, without waiting for the server roundtrip. Null when
-  // any row lacks `unitKcal` — partial sums would mislead the customer.
-  const rowsMissingKcal = rows.filter(
-    (r) => typeof r.unitKcal !== "number",
-  );
-  const totalKcal = rows.reduce(
-    (acc, r) =>
-      typeof r.unitKcal === "number"
-        ? acc + r.unitKcal * r.quantity * (r.wasteFactor || 1)
-        : acc,
-    0,
-  );
-  const perPortionKcal =
-    rows.length > 0 && rowsMissingKcal.length === 0
-      ? Math.round(totalKcal / (yieldPortions || 1))
-      : null;
+  // Per-portion macros computed locally so the KPI + nutrition panel
+  // update as the operator edits quantities, without waiting for the
+  // server roundtrip. Each macro is independent — calories can resolve
+  // even if `fiber` is missing on one row — so operators can roll macros
+  // out gradually without blanking everything.
+  type MacroKey = "unitKcal" | "unitProtein" | "unitCarbs" | "unitSugar" | "unitFiber" | "unitFat";
+  const perPortionMacro = (key: MacroKey): number | null => {
+    if (rows.length === 0) return null;
+    let total = 0;
+    for (const r of rows) {
+      const raw = r[key];
+      if (typeof raw !== "number") return null;
+      total += raw * r.quantity * (r.wasteFactor || 1);
+    }
+    return Math.round(total / (yieldPortions || 1));
+  };
+  const perPortionKcal = perPortionMacro("unitKcal");
+  const perPortionProtein = perPortionMacro("unitProtein");
+  const perPortionCarbs = perPortionMacro("unitCarbs");
+  const perPortionSugar = perPortionMacro("unitSugar");
+  const perPortionFiber = perPortionMacro("unitFiber");
+  const perPortionFat = perPortionMacro("unitFat");
+  const rowsMissingKcal = rows.filter((r) => typeof r.unitKcal !== "number");
 
   const save = async () => {
     if (!menuItem) return;
@@ -960,6 +1006,56 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
                   : "Auto-computed from ingredient kcal × qty"
               }
             />
+          </section>
+
+          {/* ============ Per-portion macros ============
+              Compact nutrition-label-style row. Each cell shows the
+              computed gram value or "—" when any ingredient is missing
+              that specific macro. Sugar is nested under carbs to mirror
+              EU 1169/2011 + FDA NFP "of which sugars" convention. */}
+          <section
+            className="v2-rcp-nutrition"
+            role="group"
+            aria-label="Per-portion nutrition"
+          >
+            <header className="v2-rcp-nutrition-header">
+              <span className="v2-rcp-nutrition-eyebrow">Per-portion nutrition</span>
+              <span className="v2-rcp-nutrition-hint">
+                Auto-computed from each ingredient&apos;s nutrition label.
+              </span>
+            </header>
+            <dl className="v2-rcp-nutrition-grid">
+              <div className="v2-rcp-nutrition-cell">
+                <dt>Carbs</dt>
+                <dd className="tabular">
+                  {perPortionCarbs === null ? "—" : `${perPortionCarbs} g`}
+                </dd>
+                <small className="v2-rcp-nutrition-sub">
+                  of which sugars{" "}
+                  <span className="tabular">
+                    {perPortionSugar === null ? "—" : `${perPortionSugar} g`}
+                  </span>
+                </small>
+              </div>
+              <div className="v2-rcp-nutrition-cell">
+                <dt>Fiber</dt>
+                <dd className="tabular">
+                  {perPortionFiber === null ? "—" : `${perPortionFiber} g`}
+                </dd>
+              </div>
+              <div className="v2-rcp-nutrition-cell">
+                <dt>Protein</dt>
+                <dd className="tabular">
+                  {perPortionProtein === null ? "—" : `${perPortionProtein} g`}
+                </dd>
+              </div>
+              <div className="v2-rcp-nutrition-cell">
+                <dt>Fat</dt>
+                <dd className="tabular">
+                  {perPortionFat === null ? "—" : `${perPortionFat} g`}
+                </dd>
+              </div>
+            </dl>
           </section>
 
           {/* ============ Ingredients table — the main recipe edit surface ============ */}
@@ -1474,6 +1570,11 @@ function IngredientDialog({ state, onClose, onSaved }: IngDialogProps) {
   const [unit, setUnit] = useState<IngredientUnit>("kg");
   const [costStr, setCostStr] = useState("0.00");
   const [kcalStr, setKcalStr] = useState("");
+  const [proteinStr, setProteinStr] = useState("");
+  const [carbsStr, setCarbsStr] = useState("");
+  const [sugarStr, setSugarStr] = useState("");
+  const [fiberStr, setFiberStr] = useState("");
+  const [fatStr, setFatStr] = useState("");
   const [supplier, setSupplier] = useState("");
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
@@ -1486,6 +1587,11 @@ function IngredientDialog({ state, onClose, onSaved }: IngDialogProps) {
     setUnit(ing?.unit ?? "kg");
     setCostStr(ing ? (ing.costPerUnit / 100).toFixed(2) : "0.00");
     setKcalStr(ing ? storedKcalToDisplay(ing.kcalPerUnit, ing.unit) : "");
+    setProteinStr(ing ? storedKcalToDisplay(ing.proteinPerUnit, ing.unit) : "");
+    setCarbsStr(ing ? storedKcalToDisplay(ing.carbsPerUnit, ing.unit) : "");
+    setSugarStr(ing ? storedKcalToDisplay(ing.sugarPerUnit, ing.unit) : "");
+    setFiberStr(ing ? storedKcalToDisplay(ing.fiberPerUnit, ing.unit) : "");
+    setFatStr(ing ? storedKcalToDisplay(ing.fatPerUnit, ing.unit) : "");
     setSupplier(ing?.supplier ?? "");
     setNotes(ing?.notes ?? "");
   }, [state]);
@@ -1499,23 +1605,30 @@ function IngredientDialog({ state, onClose, onSaved }: IngDialogProps) {
     }
     setBusy(true);
     try {
-      const trimmedKcal = kcalStr.trim();
-      // Operator types kcal per 100g / per 100ml / per piece (matches
-      // food packaging). Convert to per-unit storage so recipe maths
-      // stays a clean (kcalPerUnit × quantity × waste) sum.
-      const kcalParsed =
-        trimmedKcal === ""
-          ? null
-          : displayKcalToStored(Number(trimmedKcal), unit);
+      // Operator types each macro per 100g / per 100ml / per piece
+      // (matches what's printed on food packaging). Convert to per-unit
+      // storage so recipe maths stays a clean (perUnit × qty × waste)
+      // sum. Empty / NaN → null = "no claim", which drops the field
+      // server-side so the recipe total only resolves when the data
+      // is actually present.
+      const parseMacro = (raw: string): number | null => {
+        const t = raw.trim();
+        if (t === "") return null;
+        const n = displayKcalToStored(Number(t), unit);
+        return Number.isFinite(n) ? n : null;
+      };
       const payload = {
         id: state.ingredient?.id,
         name: name.trim(),
         category,
         unit,
         costPerUnit: Math.round(parseFloat(costStr || "0") * 100),
-        // null = "no claim" (drops the field server-side). Number = set.
-        kcalPerUnit:
-          kcalParsed !== null && Number.isFinite(kcalParsed) ? kcalParsed : null,
+        kcalPerUnit: parseMacro(kcalStr),
+        proteinPerUnit: parseMacro(proteinStr),
+        carbsPerUnit: parseMacro(carbsStr),
+        sugarPerUnit: parseMacro(sugarStr),
+        fiberPerUnit: parseMacro(fiberStr),
+        fatPerUnit: parseMacro(fatStr),
         supplier: supplier.trim() || undefined,
         notes: notes.trim() || undefined,
       };
@@ -1563,27 +1676,94 @@ function IngredientDialog({ state, onClose, onSaved }: IngDialogProps) {
             options={INGREDIENT_UNITS.map((u) => ({ value: u, label: u }))}
           />
         </div>
-        <div className="v2-form-row-2">
-          <Input
-            label={`Cost per ${unit}`}
-            type="number"
-            step="0.01"
-            min="0"
-            value={costStr}
-            onChange={(e) => setCostStr(e.target.value)}
-            trailingAdornment={<span className="v2-muted">zł</span>}
-          />
-          <Input
-            label={`kcal per ${kcalBasisLabel(unit)}`}
-            type="number"
-            step="1"
-            min="0"
-            value={kcalStr}
-            onChange={(e) => setKcalStr(e.target.value)}
-            trailingAdornment={<span className="v2-muted">kcal</span>}
-            placeholder="—"
-            description="From the nutrition label. Used to auto-compute recipe calories."
-          />
+        <Input
+          label={`Cost per ${unit}`}
+          type="number"
+          step="0.01"
+          min="0"
+          value={costStr}
+          onChange={(e) => setCostStr(e.target.value)}
+          trailingAdornment={<span className="v2-muted">zł</span>}
+        />
+        {/* Nutrition (per 100g / 100ml / per piece — matches the basis
+            printed on real-world food packaging). All optional: blank
+            fields drop the macro server-side, so a recipe total only
+            resolves once every line has the value. */}
+        <div className="v2-rcp-ing-nutrition">
+          <header className="v2-rcp-ing-nutrition-header">
+            <span className="v2-rcp-ing-nutrition-eyebrow">
+              Nutrition per {kcalBasisLabel(unit)}
+            </span>
+            <span className="v2-rcp-ing-nutrition-hint">
+              Copy from the back of the pack. Blank = no claim.
+            </span>
+          </header>
+          <div className="v2-form-row-2">
+            <Input
+              label="Energy"
+              type="number"
+              step="1"
+              min="0"
+              value={kcalStr}
+              onChange={(e) => setKcalStr(e.target.value)}
+              trailingAdornment={<span className="v2-muted">kcal</span>}
+              placeholder="—"
+            />
+            <Input
+              label="Fat"
+              type="number"
+              step="1"
+              min="0"
+              value={fatStr}
+              onChange={(e) => setFatStr(e.target.value)}
+              trailingAdornment={<span className="v2-muted">g</span>}
+              placeholder="—"
+            />
+          </div>
+          <div className="v2-form-row-2">
+            <Input
+              label="Carbohydrate"
+              type="number"
+              step="1"
+              min="0"
+              value={carbsStr}
+              onChange={(e) => setCarbsStr(e.target.value)}
+              trailingAdornment={<span className="v2-muted">g</span>}
+              placeholder="—"
+            />
+            <Input
+              label="of which sugars"
+              type="number"
+              step="1"
+              min="0"
+              value={sugarStr}
+              onChange={(e) => setSugarStr(e.target.value)}
+              trailingAdornment={<span className="v2-muted">g</span>}
+              placeholder="—"
+            />
+          </div>
+          <div className="v2-form-row-2">
+            <Input
+              label="Fiber"
+              type="number"
+              step="1"
+              min="0"
+              value={fiberStr}
+              onChange={(e) => setFiberStr(e.target.value)}
+              trailingAdornment={<span className="v2-muted">g</span>}
+              placeholder="—"
+            />
+            <Input
+              label="Protein"
+              type="number"
+              step="1"
+              min="0"
+              value={proteinStr}
+              onChange={(e) => setProteinStr(e.target.value)}
+              trailingAdornment={<span className="v2-muted">g</span>}
+              placeholder="—"
+            />
+          </div>
         </div>
         <Input label="Supplier" value={supplier} onChange={(e) => setSupplier(e.target.value)} placeholder="Optional" />
         <Textarea label="Notes" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
