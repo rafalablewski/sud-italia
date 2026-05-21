@@ -13067,9 +13067,10 @@
         var routeName = 'home';
         if (pageId === 'page-krakow') routeName = 'krakow';
         else if (pageId === 'page-warszawa') routeName = 'warszawa';
-        // Route directly via navigate() (which calls activatePage),
-        // then scroll to the anchor after the page is active.
-        if (ROUTES[routeName] &amp;&amp; routeFromHash() !== routeName) {
+        // ownerPage isn't active and we know which route it belongs to,
+        // so always navigate first, then scroll to the anchor once the
+        // target page is visible.
+        if (ROUTES[routeName]) {
           navigate(routeName);
           setTimeout(function () {
             var t2 = document.querySelector(href);
@@ -13078,7 +13079,6 @@
             window.scrollTo({ top: y2, behavior: 'smooth' });
           }, 60);
         } else {
-          // already on the right page (or no route) — just scroll
           var y0 = target.getBoundingClientRect().top + window.pageYOffset - 70;
           window.scrollTo({ top: y0, behavior: 'smooth' });
         }
@@ -13160,21 +13160,14 @@
     }
   }
   function navigate(routeName) {
-    var route = ROUTES[routeName] || ROUTES.home;
-    // srcdoc iframes (about:srcdoc) don't reliably mutate location.hash
-    // or fire hashchange in Chromium, so activatePage is the source of
-    // truth. Hash update below is best-effort for back/forward support.
+    // srcdoc iframes (about:srcdoc) can't safely mutate location.hash —
+    // in Chromium it can be treated as a navigation away from the
+    // srcdoc content, leaving the iframe blank. activatePage is the
+    // sole source of truth; we don't try to keep the URL in sync.
     activatePage(routeName, { scroll: true });
-    try {
-      if (window.location.hash !== route.hash) {
-        window.location.hash = route.hash;
-      }
-    } catch (err) {}
   }
-  window.addEventListener('hashchange', function () {
-    activatePage(routeFromHash(), { scroll: true });
-  });
-  // initial route on load
+  // initial route on load — handles the case where the iframe URL
+  // happens to have a hash (e.g. a paste from outside).
   activatePage(routeFromHash(), { scroll: false, smooth: false });
 
   // srcdoc iframes (about:srcdoc) don't reliably mutate location.hash in
