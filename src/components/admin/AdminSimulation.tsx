@@ -7344,14 +7344,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Break-even math: ~15-25k zł/month commissary fixed cost
-            (rent + 1 chef + utilities + transport). To net-positive at
-            4 trucks each truck must save ~5-7k zł/month from central
-            production (i.e. 3-4 pp of COGS). Beyond cost: quality
-            consistency improves dramatically (uniform dough across the
-            fleet) — this benefit doesn&apos;t show in the model but
-            shows in customer perception and repeat rate. Capex 250-
-            500k for the central kitchen; HACCP certification mandatory.
+            The under-modelled benefit is quality consistency: uniform
+            dough and sauce across the fleet drives customer
+            perception and repeat rate in a way the cost model
+            doesn&apos;t capture. So the commissary trigger is partly
+            a quality-control decision, not purely a cost-saving
+            decision — chains that scale without a commissary
+            eventually find consistency drifting unit to unit.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -7393,14 +7392,14 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Decomposition: gross saving ~6-8 pp (bulk purchasing + waste
-            reduction + consistency); minus operating cost ~2-4 pp;
-            net ~3-5 pp at fleet maturity. Captures supplier rebates
-            centrally (vs distributed per-unit), reduces per-truck
-            waste through precise central forecasting, and enforces
-            recipe standardisation. Stacks with supplyDiscount —
-            commissary + supplier discount at scale can drop blended
-            COGS by 8-12 pp combined.
+            Captures three benefits at once: centralised supplier
+            rebates, lower per-truck waste through precise central
+            forecasting, and enforced recipe standardisation. Stacks
+            with supplyDiscount — the combination at chain scale can
+            drop blended COGS materially. The risk is concentration:
+            commissary failure (fire, contamination) shuts the whole
+            fleet, so business-continuity planning matters more than
+            for distributed prep.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -7442,16 +7441,14 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Realistic ranges by distance: same neighbourhood (&lt; 1 km)
-            25-40% cannibalisation; same city different district (3-5
-            km) 8-15%; different city 0-3% (residual brand effect
-            only). The geometric retention formula reflects diminishing
-            marginal cannibalisation as the cluster grows. Some chains
-            deliberately cluster (Starbucks, Domino&apos;s) for brand-
-            density flywheel — at high density the new unit might add
-            incremental demand exceeding the cannibalisation hit. The
-            model is conservative — investor due diligence will assume
-            it&apos;s real.
+            Some chains deliberately cluster (Starbucks, Domino&apos;s)
+            for the brand-density flywheel — at high density the new
+            unit may add incremental demand exceeding the
+            cannibalisation hit. Below that density threshold,
+            cannibalisation is a pure tax on the fleet. The model is
+            conservative on purpose — investor due diligence will
+            assume cannibalisation is real and asks the operator to
+            prove the incremental-demand offset.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -7493,13 +7490,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Wright&apos;s learning-curve theory adapted to gastronomic
-            buildout. Realistic range 5-12% per unit; chains tend toward
-            8%; fast-growing concepts with tight playbooks 10-12%. The
-            biggest enabler is a single buildout team across units
-            (vs different contractors per opening). Floored at
-            buildoutFloor% so the model doesn&apos;t simulate
-            &quot;20th unit costs nothing&quot;.
+            The biggest enabler of a real learning curve is using the
+            same buildout team across units, not different contractors
+            per opening. Operators who switch contractors lose the
+            curve and pay near-list price every time. The curve also
+            captures supplier rolodex (knowing which oven dealer
+            actually delivers) and permit muscle memory (knowing which
+            sanepid inspector cares about which detail).
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -7541,14 +7538,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Realistic floor 55-70% of unit 1 — reflects unavoidable
-            hard costs that don&apos;t shrink with experience: vehicle
-            (~40-50k), oven (~35-55k), permits (~10-15k), startup ZUS.
+            Reflects the irreducible hard costs that don&apos;t shrink
+            with experience — vehicle, oven, permits, startup ZUS.
             Even a perfect playbook can&apos;t buy a working pizza
-            truck for &lt; 55% of the first one. Floor inflation-
-            adjusts annually as minimum hard-cost lines drift up; if
-            building in 2026+ track regulation tightening for the
-            permit line.
+            truck below this floor. The floor itself drifts up with
+            inflation each year, so refresh the assumption annually
+            during budgeting rather than treating it as a one-off
+            calibration.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -7590,13 +7586,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            IMGW regional annual averages: Warsaw 30%, Kraków 28%,
-            Gdańsk 35%, Wrocław 30%, Poznań 28%, Lublin 26%, Zakopane
-            40%. PL rainy-day share has crept up 3-5% over the past
-            decade (climate trend). For indoor mall pitches the
-            economic sensitivity drops sharply (rain doesn&apos;t
-            affect access) — set rainyShare 10-15% there even when
-            literal weather is 30%.
+            For indoor mall pitches the ECONOMIC sensitivity drops
+            sharply even when the literal weather is the same — rain
+            doesn&apos;t block access. So tune rainyShare against the
+            customer-impact reality of your pitch, not against the
+            actual weather data. Climate trend matters at horizon &gt;
+            5 years: PL rainy-day share has been creeping up over the
+            past decade.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -7640,13 +7636,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            IMGW regional averages (annual %): Warsaw 10%, Kraków 12%,
-            Wrocław 14%, Poznań 11%, Gdańsk 7% (coastal cooler),
-            Lublin 12%. Climate trend: PL heatwave share has risen
-            2-4 pp/decade. Above 32°C the effect inverts (cooks
-            struggle, customers stay in AC) — the model assumes
-            moderate 25-32°C heat; for southern Europe or unusual
-            extremes, override the multiplier.
+            Above ~32°C the effect inverts — cooks struggle in an
+            already-hot kitchen, customers stay in air conditioning
+            instead of on the patio. So the heatwave bonus is a
+            U-shaped relationship the model treats as linear; in
+            unusual extremes the multiplier should be overridden
+            downward. PL heatwave share is on a rising trend, which
+            increases the long-run value of outdoor seating capex.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -7689,14 +7685,12 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Per-event ranges: Valentine&apos;s on Friday 2.0-2.5×; NYE
-            1.5-2.0× (early dinner only); Mother&apos;s/Father&apos;s
-            Day 1.6-1.8×; Halloween/BF 1.2-1.4×. Stacks with
-            day-of-week multipliers — Valentine&apos;s on a Friday
-            compounds. Capacity caveat: if the kitchen-saturation KPI
-            caps at 1.4× normal, the modelled 1.6× multiplier
-            over-states upside; real lift gets clipped at the saturation
-            ceiling. Plan reservations + simplified menu to extract
+            Capacity caveat: if the kitchen-saturation KPI caps below
+            the peak multiplier, the modelled upside is theoretical —
+            real lift gets clipped at the saturation ceiling and the
+            extra demand walks away. So peak days are a service-design
+            problem as much as a math problem: plan reservations, a
+            simplified peak-day menu, and pre-baked dough to extract
             the upside without blowing service.
           </p>
         </InstitutionalAnalysis>
