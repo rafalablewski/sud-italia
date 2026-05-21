@@ -24,6 +24,7 @@ import {
   type IngredientCategory,
   type IngredientUnit,
   type MenuCategory,
+  type NutritionInfo,
 } from "@/data/types";
 import dynamic from "next/dynamic";
 import { useAdminLocation } from "./v2/LocationContext";
@@ -134,6 +135,16 @@ interface MenuItemData {
   category: MenuCategory;
   price: number;
   cost: number;
+  // Surface the rest of the product fields so the Recipe editor (now the
+  // owner of product info + dietary disclosures) can render + edit them.
+  description?: string;
+  tags?: ("vegetarian" | "vegan" | "spicy" | "gluten-free")[];
+  halalStatus?: "halal" | "non-halal" | "uncertified";
+  nutriGrade?: "A" | "B" | "C" | "D";
+  containsPork?: boolean;
+  containsAlcohol?: boolean;
+  nutrition?: NutritionInfo;
+  _isCustom?: boolean;
 }
 
 const INGREDIENT_CATEGORIES: IngredientCategory[] = [
@@ -276,7 +287,7 @@ function RecipesPanel() {
   const onSaved = async () => {
     setEditing(null);
     await fetchAll();
-    toast.success("Recipe saved");
+    toast.success("Saved");
   };
 
   return (
@@ -552,6 +563,51 @@ interface EditorProps {
   onSaved: () => void;
 }
 
+const MENU_TAGS: ("vegetarian" | "vegan" | "spicy" | "gluten-free")[] = [
+  "vegetarian",
+  "vegan",
+  "spicy",
+  "gluten-free",
+];
+
+const PRODUCT_CATEGORY_ORDER: MenuCategory[] = [
+  "pizza",
+  "pasta",
+  "antipasti",
+  "panini",
+  "drinks",
+  "desserts",
+];
+
+interface ProductDraft {
+  name: string;
+  description: string;
+  category: MenuCategory;
+  tags: ("vegetarian" | "vegan" | "spicy" | "gluten-free")[];
+  caloriesStr: string;
+  halalStatus: "" | "halal" | "non-halal" | "uncertified";
+  nutriGrade: "" | "A" | "B" | "C" | "D";
+  containsPork: boolean;
+  containsAlcohol: boolean;
+}
+
+function productDraftFromItem(item: MenuItemData): ProductDraft {
+  return {
+    name: item.name,
+    description: item.description ?? "",
+    category: item.category,
+    tags: (item.tags ?? []).slice(),
+    caloriesStr:
+      typeof item.nutrition?.calories === "number"
+        ? String(item.nutrition.calories)
+        : "",
+    halalStatus: item.halalStatus ?? "",
+    nutriGrade: item.nutriGrade ?? "",
+    containsPork: Boolean(item.containsPork),
+    containsAlcohol: Boolean(item.containsAlcohol),
+  };
+}
+
 function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: EditorProps) {
   const toast = useToast();
   const [rows, setRows] = useState<EnrichedRecipeIngredient[]>([]);
@@ -561,6 +617,22 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
   const [pickerIngId, setPickerIngId] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // Product info + dietary fields used to live on /admin/menu/[slug] but
+  // were moved here so the kitchen owns the full product definition in
+  // one place. Saved alongside the recipe ingredients on submit.
+  const emptyProduct: ProductDraft = {
+    name: "",
+    description: "",
+    category: "pizza",
+    tags: [],
+    caloriesStr: "",
+    halalStatus: "",
+    nutriGrade: "",
+    containsPork: false,
+    containsAlcohol: false,
+  };
+  const [product, setProduct] = useState<ProductDraft>(emptyProduct);
+  const [productInitial, setProductInitial] = useState<ProductDraft>(emptyProduct);
 
   useEffect(() => {
     if (!menuItem) return;
@@ -579,6 +651,9 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
     setPrepTime(recipe?.prepTimeMinutes ? String(recipe.prepTimeMinutes) : "");
     setNotes(recipe?.notes ?? "");
     setPickerIngId("");
+    const next = productDraftFromItem(menuItem);
+    setProduct(next);
+    setProductInitial(next);
   }, [menuItem, recipe]);
 
   const ingredientMap = useMemo(() => {
@@ -628,28 +703,119 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
 
   const save = async () => {
     if (!menuItem) return;
+    if (!product.name.trim()) {
+      toast.error("Name required");
+      return;
+    }
     setBusy(true);
     try {
-      const res = await fetch("/api/admin/recipes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          menuItemId: menuItem.id,
-          ingredients: rows.map((r) => ({
-            ingredientId: r.ingredientId,
-            quantity: r.quantity,
-            wasteFactor: r.wasteFactor,
-          })),
-          prepTimeMinutes: prepTime ? Number(prepTime) : undefined,
-          yieldPortions,
-          notes,
-        }),
-      });
-      if (res.ok) {
-        onSaved();
-      } else {
-        toast.error("Save failed", "Try again.");
+      // 1. Ingredients + yield + prep time + notes — the original recipe
+      //    save. Skip the round trip when the operator opened the dialog
+      //    just to edit product info on an item that has no recipe yet
+      //    and added no rows — otherwise we'd persist an empty recipe
+      //    that flips the card from "No recipe" to "0 ingredients".
+      if (rows.length > 0 || hasExisting) {
+        const recipeRes = await fetch("/api/admin/recipes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            menuItemId: menuItem.id,
+            ingredients: rows.map((r) => ({
+              ingredientId: r.ingredientId,
+              quantity: r.quantity,
+              wasteFactor: r.wasteFactor,
+            })),
+            prepTimeMinutes: prepTime ? Number(prepTime) : undefined,
+            yieldPortions,
+            notes,
+          }),
+        });
+        if (!recipeRes.ok) {
+          toast.error("Recipe save failed", "Try again.");
+          return;
+        }
       }
+
+      // 2. Product info + dietary fields — diff vs initial. The menu page
+      //    no longer offers inputs for these, so the recipe editor is the
+      //    single source of truth. Seed items go through PUT /api/admin/menu
+      //    (override map); custom items go through PATCH /api/admin/menu/custom.
+      const productPatch: Record<string, unknown> = {};
+      if (product.name.trim() !== productInitial.name.trim()) {
+        productPatch.name = product.name.trim();
+      }
+      if (product.description !== productInitial.description) {
+        productPatch.description = product.description;
+      }
+      if (product.category !== productInitial.category) {
+        productPatch.category = product.category;
+      }
+      if (
+        JSON.stringify(product.tags.slice().sort()) !==
+        JSON.stringify(productInitial.tags.slice().sort())
+      ) {
+        productPatch.tags = product.tags;
+      }
+      if (product.halalStatus !== productInitial.halalStatus) {
+        productPatch.halalStatus =
+          product.halalStatus === "" ? null : product.halalStatus;
+      }
+      if (product.nutriGrade !== productInitial.nutriGrade) {
+        productPatch.nutriGrade =
+          product.nutriGrade === "" ? null : product.nutriGrade;
+      }
+      if (Boolean(product.containsPork) !== Boolean(productInitial.containsPork)) {
+        productPatch.containsPork = menuItem._isCustom
+          ? product.containsPork
+          : product.containsPork
+          ? true
+          : null;
+      }
+      if (
+        Boolean(product.containsAlcohol) !== Boolean(productInitial.containsAlcohol)
+      ) {
+        productPatch.containsAlcohol = menuItem._isCustom
+          ? product.containsAlcohol
+          : product.containsAlcohol
+          ? true
+          : null;
+      }
+      const curKcal = product.caloriesStr.trim();
+      const initKcal = productInitial.caloriesStr.trim();
+      if (curKcal !== initKcal) {
+        if (curKcal === "") {
+          productPatch.calories = null;
+        } else {
+          const n = Math.max(0, Math.round(Number(curKcal)));
+          if (Number.isFinite(n)) productPatch.calories = n;
+        }
+      }
+
+      if (Object.keys(productPatch).length > 0) {
+        const productRes = menuItem._isCustom
+          ? await fetch(
+              `/api/admin/menu/custom?id=${encodeURIComponent(menuItem.id)}`,
+              {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(productPatch),
+              },
+            )
+          : await fetch("/api/admin/menu", {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ items: { [menuItem.id]: productPatch } }),
+            });
+        if (!productRes.ok) {
+          toast.error(
+            "Product info save failed",
+            "Recipe saved but the product fields didn't update.",
+          );
+          return;
+        }
+      }
+
+      onSaved();
     } finally {
       setBusy(false);
     }
@@ -685,7 +851,7 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
         onClose={onClose}
         size="xl"
         title={`Recipe · ${menuItem.name}`}
-        description={`Listed price ${formatPrice(menuItem.price)} · Recipe cost auto-recalculates from real ingredient prices.`}
+        description={`Listed price ${formatPrice(menuItem.price)} · Product info, dietary disclosures, and recipe live here. Cost recalculates from real ingredient prices.`}
         footer={
           <>
             {hasExisting && (
@@ -697,7 +863,7 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
               Cancel
             </Button>
             <Button variant="primary" onClick={save} loading={busy}>
-              Save recipe
+              Save changes
             </Button>
           </>
         }
@@ -738,6 +904,154 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved }: Edito
               staticValue
               hint={`${yieldPortions} portion${yieldPortions === 1 ? "" : "s"} per batch`}
             />
+          </section>
+
+          {/* Product info + dietary disclosures. Moved here from
+              /admin/menu/[slug] in 2026-05 so the kitchen owns the full
+              product definition; the menu page stays narrowly focused on
+              pricing / per-location settings / modifiers. Saved on the
+              same submit as the ingredients table. */}
+          <section className="v2-stack-12">
+            <Input
+              label="Name"
+              value={product.name}
+              onChange={(e) => setProduct((p) => ({ ...p, name: e.target.value }))}
+            />
+            <div className="v2-form-row-2">
+              <Select
+                label="Category"
+                value={product.category}
+                onChange={(e) =>
+                  setProduct((p) => ({
+                    ...p,
+                    category: e.target.value as MenuCategory,
+                  }))
+                }
+                options={PRODUCT_CATEGORY_ORDER.map((cc) => ({
+                  value: cc,
+                  label: MENU_CATEGORY_LABELS[cc],
+                }))}
+              />
+              <div className="v2-field">
+                <label className="v2-field-label">Tags</label>
+                <div
+                  className="v2-detail-tags-row"
+                  role="group"
+                  aria-label="Dietary tags"
+                >
+                  {MENU_TAGS.map((tag) => {
+                    const on = product.tags.includes(tag);
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        className={`v2-chip ${on ? "is-on" : ""}`}
+                        aria-pressed={on}
+                        onClick={() =>
+                          setProduct((p) => ({
+                            ...p,
+                            tags: on
+                              ? p.tags.filter((t) => t !== tag)
+                              : [...p.tags, tag],
+                          }))
+                        }
+                      >
+                        {tag}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+            <Textarea
+              label="Description"
+              value={product.description}
+              onChange={(e) =>
+                setProduct((p) => ({ ...p, description: e.target.value }))
+              }
+              rows={3}
+            />
+            <div className="v2-form-row-2">
+              <Input
+                type="number"
+                step="1"
+                min="0"
+                label="Calories"
+                value={product.caloriesStr}
+                onChange={(e) =>
+                  setProduct((p) => ({ ...p, caloriesStr: e.target.value }))
+                }
+                trailingAdornment={<span className="v2-muted">kcal</span>}
+                placeholder="—"
+                description="Per serving. Shown on the customer card when the truck's zone requires kcal (NYC always; EU opt-in)."
+              />
+              <Select
+                label="Halal status"
+                value={product.halalStatus}
+                onChange={(e) =>
+                  setProduct((p) => ({
+                    ...p,
+                    halalStatus: e.target.value as ProductDraft["halalStatus"],
+                  }))
+                }
+                options={[
+                  { value: "", label: "— No claim" },
+                  { value: "halal", label: "Halal (MUIS-covered)" },
+                  { value: "non-halal", label: "Non-halal" },
+                  { value: "uncertified", label: "Uncertified" },
+                ]}
+                description="Renders only on SG trucks."
+              />
+            </div>
+            <div className="v2-form-row-2">
+              <Select
+                label="Nutri-Grade"
+                value={product.nutriGrade}
+                onChange={(e) =>
+                  setProduct((p) => ({
+                    ...p,
+                    nutriGrade: e.target.value as ProductDraft["nutriGrade"],
+                  }))
+                }
+                options={[
+                  { value: "", label: "— Not graded" },
+                  { value: "A", label: "A — healthiest" },
+                  { value: "B", label: "B" },
+                  { value: "C", label: "C" },
+                  { value: "D", label: "D — least healthy" },
+                ]}
+                description="SG NEA Nutri-Grade for sugar-sweetened beverages."
+              />
+              <div className="v2-field">
+                <label className="v2-field-label">Disclaimers</label>
+                <label className="v2-detail-toggle">
+                  <input
+                    type="checkbox"
+                    checked={product.containsPork}
+                    onChange={(e) =>
+                      setProduct((p) => ({
+                        ...p,
+                        containsPork: e.target.checked,
+                      }))
+                    }
+                  />
+                  <span>Contains pork</span>
+                </label>
+                <label className="v2-detail-toggle">
+                  <input
+                    type="checkbox"
+                    checked={product.containsAlcohol}
+                    onChange={(e) =>
+                      setProduct((p) => ({
+                        ...p,
+                        containsAlcohol: e.target.checked,
+                      }))
+                    }
+                  />
+                  <span>Contains alcohol</span>
+                </label>
+              </div>
+            </div>
           </section>
 
           {/* Ingredients table — uses the same `v2-mng-section` class system

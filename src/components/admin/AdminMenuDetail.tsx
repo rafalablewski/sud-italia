@@ -13,33 +13,12 @@ import {
   RotateCcw,
   Trash2,
 } from "lucide-react";
-import {
-  MENU_CATEGORY_LABELS,
-  type MenuCategory,
-  type ModifierGroup,
-  type NutritionInfo,
-} from "@/data/types";
+import type { MenuCategory, ModifierGroup } from "@/data/types";
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice, getBaseSlug, marginPct, marginTone } from "@/lib/utils";
 import { useToast } from "./v2/ui/Toast";
-import { Button, Card, CardBody, Input, Select, Textarea } from "./v2/ui";
+import { Button, Card, CardBody, Input } from "./v2/ui";
 import { ModifierMatrix } from "./menu/ModifierEditor";
-
-const MENU_TAGS: ("vegetarian" | "vegan" | "spicy" | "gluten-free")[] = [
-  "vegetarian",
-  "vegan",
-  "spicy",
-  "gluten-free",
-];
-
-const CATEGORY_ORDER: MenuCategory[] = [
-  "pizza",
-  "pasta",
-  "antipasti",
-  "panini",
-  "drinks",
-  "desserts",
-];
 
 interface MenuItemData {
   id: string;
@@ -54,12 +33,6 @@ interface MenuItemData {
   deliveryOnly?: boolean;
   packagingCost?: number;
   modifierGroups?: ModifierGroup[];
-  // Audit §11.1 — per-item regulatory disclosures.
-  halalStatus?: "halal" | "non-halal" | "uncertified";
-  nutriGrade?: "A" | "B" | "C" | "D";
-  containsPork?: boolean;
-  containsAlcohol?: boolean;
-  nutrition?: NutritionInfo;
   _hasOverride: boolean;
   _hasRecipe?: boolean;
   _costSource?: "recipe" | "override" | "seed";
@@ -82,42 +55,6 @@ interface PerLocationDraft {
   hidden: boolean;
   // null when location has no variant; true when operator wants to add one on save
   present: boolean;
-}
-
-/** Per-location regulatory + nutrition draft. Independent from the
- *  product / pricing drafts because operators tune disclosures per
- *  truck (e.g. only the SG truck tags items with halalStatus). All
- *  fields are nullable — empty / "" = "no claim", which clears any
- *  override and falls back to the seed value (or shows nothing). */
-interface DietaryDraft {
-  caloriesStr: string;
-  halalStatus: "" | "halal" | "non-halal" | "uncertified";
-  nutriGrade: "" | "A" | "B" | "C" | "D";
-  containsPork: boolean;
-  containsAlcohol: boolean;
-}
-
-function emptyDietary(): DietaryDraft {
-  return {
-    caloriesStr: "",
-    halalStatus: "",
-    nutriGrade: "",
-    containsPork: false,
-    containsAlcohol: false,
-  };
-}
-
-function dietaryFromItem(item: MenuItemData): DietaryDraft {
-  return {
-    caloriesStr:
-      typeof item.nutrition?.calories === "number"
-        ? String(item.nutrition.calories)
-        : "",
-    halalStatus: item.halalStatus ?? "",
-    nutriGrade: item.nutriGrade ?? "",
-    containsPork: Boolean(item.containsPork),
-    containsAlcohol: Boolean(item.containsAlcohol),
-  };
 }
 
 interface ChainDraft {
@@ -161,10 +98,6 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
   const [chainInitialByLoc, setChainInitialByLoc] = useState<Record<string, ChainDraft>>({});
   const [perLoc, setPerLoc] = useState<Record<string, PerLocationDraft>>({});
   const [perLocInitial, setPerLocInitial] = useState<Record<string, PerLocationDraft>>({});
-  const [dietaryByLoc, setDietaryByLoc] = useState<Record<string, DietaryDraft>>({});
-  const [dietaryInitialByLoc, setDietaryInitialByLoc] = useState<
-    Record<string, DietaryDraft>
-  >({});
   const [modifierGroupsByLoc, setModifierGroupsByLoc] = useState<
     Record<string, ModifierGroup[]>
   >({});
@@ -233,7 +166,6 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
       const nextChainByLoc: Record<string, ChainDraft> = {};
       const nextSlugByLoc: Record<string, string> = {};
       const nextGroupsByLoc: Record<string, ModifierGroup[]> = {};
-      const nextDietaryByLoc: Record<string, DietaryDraft> = {};
       for (const v of found) {
         if (!v.item) continue;
         nextChainByLoc[v.slug] = {
@@ -252,7 +184,6 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
         nextGroupsByLoc[v.slug] = v.item.modifierGroups
           ? JSON.parse(JSON.stringify(v.item.modifierGroups))
           : [];
-        nextDietaryByLoc[v.slug] = dietaryFromItem(v.item);
       }
       setChainByLoc(nextChainByLoc);
       setChainInitialByLoc(JSON.parse(JSON.stringify(nextChainByLoc)));
@@ -260,8 +191,6 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
       setSlugInitialByLoc({ ...nextSlugByLoc });
       setModifierGroupsByLoc(nextGroupsByLoc);
       setModifierGroupsInitialByLoc(JSON.parse(JSON.stringify(nextGroupsByLoc)));
-      setDietaryByLoc(nextDietaryByLoc);
-      setDietaryInitialByLoc(JSON.parse(JSON.stringify(nextDietaryByLoc)));
 
       // One shared lens — defaults to the first present location and
       // sticks across refetches if the operator's previous pick is
@@ -331,13 +260,6 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
     setChainByLoc((prev) => ({
       ...prev,
       [activeLoc]: updater(prev[activeLoc] ?? emptyChain()),
-    }));
-  };
-  const dietary = dietaryByLoc[activeLoc] ?? emptyDietary();
-  const setDietary = (updater: (prev: DietaryDraft) => DietaryDraft) => {
-    setDietaryByLoc((prev) => ({
-      ...prev,
-      [activeLoc]: updater(prev[activeLoc] ?? emptyDietary()),
     }));
   };
   const activeVariant = present.find((v) => v.slug === activeLoc);
@@ -582,45 +504,6 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
           seedPatch.hidden = cur.hidden ? true : null;
         }
 
-        // Audit §11.1 — per-item dietary + nutrition fields. Diffed per
-        // variant against the snapshot we captured on load. Empty string
-        // / unset clears the override (null), so operators can withdraw
-        // a halal claim or kcal value cleanly.
-        const dCur = dietaryByLoc[v.slug] ?? emptyDietary();
-        const dInit = dietaryInitialByLoc[v.slug] ?? emptyDietary();
-        if (dCur.halalStatus !== dInit.halalStatus) {
-          const value = dCur.halalStatus === "" ? null : dCur.halalStatus;
-          seedPatch.halalStatus = value;
-          customBody.halalStatus = value;
-        }
-        if (dCur.nutriGrade !== dInit.nutriGrade) {
-          const value = dCur.nutriGrade === "" ? null : dCur.nutriGrade;
-          seedPatch.nutriGrade = value;
-          customBody.nutriGrade = value;
-        }
-        if (Boolean(dCur.containsPork) !== Boolean(dInit.containsPork)) {
-          seedPatch.containsPork = dCur.containsPork ? true : null;
-          customBody.containsPork = dCur.containsPork;
-        }
-        if (Boolean(dCur.containsAlcohol) !== Boolean(dInit.containsAlcohol)) {
-          seedPatch.containsAlcohol = dCur.containsAlcohol ? true : null;
-          customBody.containsAlcohol = dCur.containsAlcohol;
-        }
-        const curKcalRaw = dCur.caloriesStr.trim();
-        const initKcalRaw = dInit.caloriesStr.trim();
-        if (curKcalRaw !== initKcalRaw) {
-          if (curKcalRaw === "") {
-            seedPatch.calories = null;
-            customBody.calories = null;
-          } else {
-            const n = Math.max(0, Math.round(Number(curKcalRaw)));
-            if (Number.isFinite(n)) {
-              seedPatch.calories = n;
-              customBody.calories = n;
-            }
-          }
-        }
-
         // Per-location slug rename (custom items only). Seed slugs live
         // in code so a server PATCH would reject; the input is disabled
         // for seed variants in the UI as a guard.
@@ -675,7 +558,6 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
       );
       if (additions.length > 0) {
         const template = chainByLoc[activeLoc] ?? emptyChain();
-        const templateDietary = dietaryByLoc[activeLoc] ?? emptyDietary();
         const templatePackaging =
           template.packagingStr.trim() === ""
             ? null
@@ -686,14 +568,6 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
         const canonicalAddGroups = cleanedModifierGroups(
           modifierGroupsByLoc[activeLoc] ?? [],
         );
-        const templateKcalRaw = templateDietary.caloriesStr.trim();
-        const templateKcal =
-          templateKcalRaw === ""
-            ? null
-            : (() => {
-                const n = Math.max(0, Math.round(Number(templateKcalRaw)));
-                return Number.isFinite(n) ? n : null;
-              })();
         const cloneResults = await Promise.all(
           additions.map(async (a) => {
             const draft = perLoc[a.slug];
@@ -725,15 +599,6 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
               ...(canonicalAddGroups.length > 0
                 ? { modifierGroups: canonicalAddGroups }
                 : {}),
-              ...(templateDietary.halalStatus
-                ? { halalStatus: templateDietary.halalStatus }
-                : {}),
-              ...(templateDietary.nutriGrade
-                ? { nutriGrade: templateDietary.nutriGrade }
-                : {}),
-              ...(templateDietary.containsPork ? { containsPork: true } : {}),
-              ...(templateDietary.containsAlcohol ? { containsAlcohol: true } : {}),
-              ...(templateKcal !== null ? { calories: templateKcal } : {}),
             };
             const res = await fetch("/api/admin/menu/custom", {
               method: "POST",
@@ -1042,62 +907,6 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
         </CardBody>
       </Card>
 
-      <Card data-locked="true">
-        <CardBody>
-          <div className="v2-detail-head">
-            <h2>Product · chain-wide</h2>
-            <span className="v2-detail-head-hint">
-              Same across every truck. Locked here.
-            </span>
-          </div>
-
-          <div className="v2-detail-form">
-            <Input
-              label="Name"
-              value={chain.name}
-              onChange={() => {}}
-              disabled
-            />
-            <div className="v2-detail-form-row" data-cols="2">
-              <Select
-                label="Category"
-                value={chain.category}
-                onChange={() => {}}
-                disabled
-                options={CATEGORY_ORDER.map((cc) => ({
-                  value: cc,
-                  label: MENU_CATEGORY_LABELS[cc],
-                }))}
-              />
-              <div className="v2-field">
-                <label className="v2-field-label">Tags</label>
-                <div className="v2-detail-tags-row v2-detail-tags-row-locked">
-                  {MENU_TAGS.map((tag) => {
-                    const on = chain.tags.includes(tag);
-                    return (
-                      <span
-                        key={tag}
-                        className={`v2-chip ${on ? "is-on" : ""}`}
-                        aria-disabled="true"
-                      >
-                        {tag}
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-            <Textarea
-              label="Description"
-              value={chain.description}
-              onChange={() => {}}
-              disabled
-              rows={3}
-            />
-          </div>
-        </CardBody>
-      </Card>
-
       {present.length > 1 && (
         <div className="v2-scope-bar" role="group" aria-label="Active location for editing below">
           <span className="v2-scope-bar-eyebrow">Editing for</span>
@@ -1183,107 +992,6 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
                     }
                   />
                   <span>Delivery-only item</span>
-                </label>
-              </div>
-            </div>
-          </div>
-        </CardBody>
-      </Card>
-
-      <Card>
-        <CardBody>
-          <div className="v2-detail-head">
-            <h2>Dietary &amp; disclosures</h2>
-            <span className="v2-detail-head-hint">
-              {present.length > 1 ? (
-                <>
-                  Per-location — applies to <strong>{activeCity}</strong>.
-                </>
-              ) : (
-                "Per-location."
-              )}{" "}
-              Chips only render on the customer card when the truck&apos;s
-              zone enables that disclosure (kcal: NYC + EU opt-in; halal +
-              Nutri-Grade: SG; pork / alcohol: everywhere).
-            </span>
-          </div>
-
-          <div className="v2-detail-form">
-            <div className="v2-detail-form-row" data-cols="2">
-              <Input
-                type="number"
-                step="1"
-                min="0"
-                label="Calories"
-                value={dietary.caloriesStr}
-                onChange={(e) =>
-                  setDietary((d) => ({ ...d, caloriesStr: e.target.value }))
-                }
-                trailingAdornment={<span className="v2-muted">kcal</span>}
-                placeholder="—"
-                description="Per serving. Surfaces as the kcal pill on the customer menu card."
-              />
-              <Select
-                label="Halal status"
-                value={dietary.halalStatus}
-                onChange={(e) =>
-                  setDietary((d) => ({
-                    ...d,
-                    halalStatus: e.target.value as DietaryDraft["halalStatus"],
-                  }))
-                }
-                options={[
-                  { value: "", label: "— No claim" },
-                  { value: "halal", label: "Halal (MUIS-covered)" },
-                  { value: "non-halal", label: "Non-halal" },
-                  { value: "uncertified", label: "Uncertified" },
-                ]}
-                description="Renders only on SG trucks."
-              />
-            </div>
-            <div className="v2-detail-form-row" data-cols="2">
-              <Select
-                label="Nutri-Grade"
-                value={dietary.nutriGrade}
-                onChange={(e) =>
-                  setDietary((d) => ({
-                    ...d,
-                    nutriGrade: e.target.value as DietaryDraft["nutriGrade"],
-                  }))
-                }
-                options={[
-                  { value: "", label: "— Not graded" },
-                  { value: "A", label: "A — healthiest" },
-                  { value: "B", label: "B" },
-                  { value: "C", label: "C" },
-                  { value: "D", label: "D — least healthy" },
-                ]}
-                description="SG NEA Nutri-Grade for sugar-sweetened beverages."
-              />
-              <div className="v2-field">
-                <label className="v2-field-label">Disclaimers</label>
-                <label className="v2-detail-toggle">
-                  <input
-                    type="checkbox"
-                    checked={dietary.containsPork}
-                    onChange={(e) =>
-                      setDietary((d) => ({ ...d, containsPork: e.target.checked }))
-                    }
-                  />
-                  <span>Contains pork</span>
-                </label>
-                <label className="v2-detail-toggle">
-                  <input
-                    type="checkbox"
-                    checked={dietary.containsAlcohol}
-                    onChange={(e) =>
-                      setDietary((d) => ({
-                        ...d,
-                        containsAlcohol: e.target.checked,
-                      }))
-                    }
-                  />
-                  <span>Contains alcohol</span>
                 </label>
               </div>
             </div>
