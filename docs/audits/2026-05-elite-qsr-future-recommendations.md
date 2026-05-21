@@ -150,3 +150,30 @@ That's still 10 elements. v1 audit called out 9; v3 reduced to 5–6 in the comm
 The ranking above is the answer. Items 1, 2, 4 are the tier that turns "complete monetization stack" into "self-improving monetization stack with a customer-feedback loop." Items 6 and 7 are quick wins. Items 8 and 9 are 2027+.
 
 Items 3, 5, 6, 7 add 4–6 days of engineering and close the analytics gaps the v3 audit grades as A− on §3.2.4 and §3.2.5. Items 1, 2, 4 are the tier that pushes the whole system from "elite QSR clone" to "elite QSR with proprietary data flywheel."
+
+---
+
+## 2026-05-21 Update — status check on the ten
+
+| # | Item | Status today |
+|---|---|---|
+| 1 | Per-customer ML upsell scoring | ⏳ Still rules-based in `getCartSuggestions` + `scorePairing`. **However**: per-customer **RFM segmentation** (`new` / `occasional` / `regular` / `champion` / `vip` / `lapsed`) shipped 2026-05-16 (PR #38), and the **simulation** now reports per-channel CM1 + attachment efficiency per segment. The remaining work is to wire the segment buckets into the upsell scorer as an additional feature column. Sprint slot Q3-1 still valid. |
+| 2 | Voice-of-customer feedback on bundle apply | ⏳ Not shipped. Bundle audit log still captures _what was sold_ only. `BundleAnalyticsCard` does not yet show thumbs-up/down. 2–3 days of work; sprint slot Q3-1 still valid. |
+| 3 | Refund × bundle correlation | ⏳ Not shipped. `OrderRefund` reason-code enum still absent; no admin reason-picker on the refund button. Joining `BundleEvent` × refund records on the analytics card is gated on that schema work. |
+| 4 | Stripe Subscription auto-rebill for weekly usual | 🟡 **Phase 1 shipped** — `/admin/scheduled-bundles` queue + approval UI is live; the operator can approve and run a scheduled bundle order on the chosen weekday from the queue. **Phase 2 still outstanding** — Stripe Subscription create + customer portal + webhook handler + payment-failure auto-pause are not wired. The intent layer is in place; the auto-rebill is not. Sprint slot Q3-2 still valid. |
+| 5 | Slot-capacity × bundle dashboard pivot | ⏳ Not shipped. `BundleEvent.slotId` is still captured on every bundle order; the "of slots that hit ≥ 80% capacity, what % had a bundle in their first 5 minutes" pivot is not yet rendered. 2–3 days of work. |
+| 6 | "Bundle is the path" — hide cross-sell chips when bundle showable | ⏳ Not shipped. Combo banner is correctly suppressed when bundle is showable, but `CartUpsell` chips still render alongside. Half-day fix; still a quick win. |
+| 7 | Per-day-of-week bundle conversion analysis | ⏳ Not shipped. `activeDays` is configurable per bundle; the day-of-week breakdown on `byBundle` rollup is not yet rendered. 1 day. |
+| 8 | Drone / sidewalk-robot delivery × bundle weight | ⏳ Out of scope; still 2027+. |
+| 9 | Per-segment elasticity testing as a continuous loop | ⏳ Not shipped. The A/B framework still requires a human to spin up an experiment. **But**: the **simulation page now models sensitivity** for the operator via the tornado chart, which is a useful manual proxy until the auto-scheduler exists. The continuous loop is still 1–2 sprints. |
+| 10 | Refresh of the customer-side promo overload | ⏳ Not shipped. Cart drawer still renders bundle ladder + combo banner + cross-sell chips + delivery progress + fulfillment toggle + slot picker + tip picker + loyalty earn preview + weekly-usual opt-in + pay button. 1 sprint. |
+
+**New items that have surfaced since this doc was written and that belong on the list:**
+
+| # | Item | Impact | Effort |
+|---|---|---|---|
+| 11 | **Wire the simulation's bundle-economics output back into the live ladder ordering** — the sim already ranks bundles by margin-weighted expected value at a given hour × cohort × weather. Today the production ladder is ordered by a static priority. Bridging the two means the simulation stops being purely an operator-facing tool and starts driving customer-facing merchandising. | ⭐⭐ | 1–2 sprints |
+| 12 | **Cost-ledger-driven bundle gating** — `/admin/business-costs` now carries the per-ingredient unit cost ledger. The bundle low-margin alert can pre-compute against the ledger at admin save-time, not just post-order. Closes one of the bundle-ladder-revenue-rebuild "still ✗" items. | ⭐ | 1 day |
+| 13 | **Brand direction commitment for the customer site** — the V8 Tuscany trattoria mockup at `/mockups/cart.html` is a live brand-direction proposal that, if adopted, materially changes the bundle ladder presentation (parchment cards, Cormorant Garamond display type, bilingual hierarchy). Decision impacts items 6 and 10 of the original list. | strategic | 1 sprint to ship the redesign live; 0 days to decide |
+
+**Net read.** A → A+ remains an honest characterisation, but the **simulation engine** that landed between PR #51 and PR #56 closes a different gap than the ten listed above — it pulls the operator-side from "elite QSR _ordering_" toward "elite QSR with an institutional-grade financial model in the same admin." That is a separate axis of A+ ("self-improving stack" vs "auditable stack"), and the items in this doc remain the right roadmap for the customer-facing flywheel half.

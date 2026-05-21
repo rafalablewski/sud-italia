@@ -49,6 +49,65 @@ The original §3 "What is theatre" table, the §15 "Final Brutal Verdict" bullet
 
 A new tsx smoke test (`scripts/verify-scalability-fixes.ts`) exercises the cohort + segment pure functions with synthetic data — 11 assertions, all green. Drizzle migration `0017_little_fat_cobra.sql` adds the new tables; production picks them up via the existing self-bootstrap DDL path on first read.
 
+**2026-05-21 — Finance modelling, cost ledger, and brand-direction mockups pass.** Five business-days of post-audit shipping (PRs #48, #51, #52, #53, #54, #55, #56). The headline additions:
+
+| Surface | What shipped |
+|---|---|
+| **`/admin/business-costs`** | First-party cost ledger (`src/components/admin/AdminBusinessCosts.tsx`, 903 LOC). Operator can register every fixed and variable cost line — rent, labour bands, ingredient unit costs, packaging, marketing, card fees, Wolt/Glovo commissions, D&A, interest, tax — as the source of truth that the simulation reads from. Persisted via `withLock` on the store. |
+| **`/admin/simulation`** | Full finance simulation sandbox (`src/components/admin/AdminSimulation.tsx`, ~17,400 LOC) gated behind `simulationEnabled` in settings. The single biggest answer to the "you have no unit economics" critique in this audit. See decomposition below. |
+| **`public/mockups/cart.html`** | Three concept directions for the customer site — V7 Animated (TikTok-gen gradient), V8 **Elegant Tuscany / rustic-modern trattoria** (Cormorant Garamond + Lora, parchment/terracotta/basil/oxblood/ochre palette, bilingual EN/IT hierarchy), V9 Minimal editorial. Full home + menu + location pages cloned into each frame. Live activity ticker on V8. Hosted on `/mockups/cart.html`. CSP loosened on `/mockups/*` to allow Google Fonts. |
+
+**Simulation engine — what is now answerable from the admin without leaving the app:**
+
+| Question the audit raised | Where it's answered now |
+|---|---|
+| What is the true CM1 per item including packaging + card fee + delivery commission? | Unit Economics breakdown panel + per-item True CM1 + "margin traps" callout (`feat: per-item True CM1`, 2026-05-19). |
+| What is EBITDA / EBITDAR / cash-on-cash / occupancy ratio? | EBITDA / EBITDAR / CoC / occupancy KPI tiles (2026-05-19). |
+| What is SSSG and new-vs-returning revenue mix? | SSSG + new vs returning panel (2026-05-19). |
+| What is CM1 per channel (dine-in / Wolt / Glovo)? | Per-channel CM1 panel + marketplace contribution (2026-05-19). |
+| What is peak orders/hour and ticket time per daypart? | Attachment efficiency + peak orders/hr + ticket time KPIs + daypart breakdown (P3-4) + hourly throughput vs capacity chart (P2-3). |
+| What does the cohort retention curve and LTV/CAC look like? | Cohort retention + LTV/CAC panel (P2-1, 2026-05-19). |
+| What's the menu engineering matrix (star/cash cow/puzzle/dog)? | Menu engineering matrix (P3-1, 2026-05-19). |
+| What's the sensitivity of EBITDA to each cost lever? | Sensitivity tornado (P3-2, 2026-05-19). |
+| What's the kitchen capacity ceiling, and does prep complexity derate it? | Oven curve panel (Neapolitan throughput physics) + prep flow + queue model with peak-hour conversion loss + prep-complexity multiplier (2026-05-19). |
+| What does the shift plan look like at a given daypart? | Shift plan by daypart with `menuRole` tags (2026-05-19). |
+| What does the model say about a 3rd, 5th, 10th truck? | Multi-unit fleet model — §8 scalability path (2026-05-19). |
+| Are espresso and delivery the marginal revenue levers? | Push-espresso enhancement + delivery / marketing-as-CAC reclassification (2026-05-19, the "coffee strategy" PR #56 naming). |
+| What's the COGS heatmap when seasonality + menu mix shift? | Menu-mix-weighted COGS from real orders (P1-1) + per-month seasonality overrides (P1-3b) + diverging green/red profit heatmap (PR #52). |
+
+The simulation also carries:
+
+- **Five preset menu scenarios + a Custom scenario** with editable + saveable cards and a real-time preview popup.
+- **Behaviour assumption levers + weather/calendar levers** with on/off switches, defaulting all-off (PR #54 behaviour-economic hardening pass — a one-time migration forces saved-pre-PR scenarios all-off so old saves can't silently inflate numbers).
+- **Ingredient cost stress tests** with sticky headline KPI row that compacts when pinned, a mobile-swipeable KPI slider, and operations KPIs expanded to 8 cards (PR #52, PR #53).
+- **Source-of-truth badges** on every input (P3-5) so the operator can see which numbers come from real orders vs. assumed defaults.
+- **AI-generated enhancements card** below the sensitivity tornado that proposes next moves from the run's outputs.
+- **An `InfoButton` on every concept + KPI tile + lever + 44 textbook-only inputs** with a "Brief" (one-line plain-English) and a longer "InstitutionalAnalysis" annotation (PR #55 + the C-through-HH batch + the May-21 dedupe passes). The annotations are textbook-grade enough that an operator with no MBA can read the simulation, and an institutional reader can cross-check the methodology.
+
+**Where this lands against the §3 scorecard:**
+
+| Dimension | Pre-pass (post 2026-05-16) | Post-pass (2026-05-21) | Why |
+|---|---|---|---|
+| Operational sophistication | 8 | **8.5** | The simulation gives every dimension of operational decision-making a model. Still need to wire the model's recommendations back into the live ops surfaces — today it informs the operator, doesn't act. |
+| Investor readiness | (was 20/100 in NYC/SG audit, ~5.5/10 here) | **6.5–7/10** | Unit economics, cohort retention, LTV/CAC, EBITDA/EBITDAR, peak capacity, fleet scaling are all visible in-app. A diligence partner can now sit beside the operator and run scenarios — that is the single biggest change between this audit and today. |
+| Operator capability / honesty | (high) | **higher** | The simulation page replaces every "we don't have the numbers" excuse with a working sandbox. The remaining honesty risk is the operator over-trusting the model's outputs without booking the underlying behaviour-lever evidence — hence the all-off default in PR #54. |
+
+**What the new surfaces do _not_ fix from this audit:**
+
+- Zero tests (the simulation engine itself has no tests; this is the largest unaddressed code-quality regression).
+- Plaintext admin password compare.
+- No MFA on admin.
+- No Neon backup/restore runbook, no staging env.
+- Address autocomplete still commented out.
+- Real food photography still missing (the V8 Tuscany mockup uses serif typography + parchment cards to compensate, but it doesn't substitute for actual food photography).
+- Partial-refund stock restoration still TODO.
+- Cart-drawer referral-cookie hookup still pending.
+- Hash-chained cash sessions still outstanding.
+
+**The Tuscany mockup is a brand-direction artifact, not a production change.** V8 is hosted only at `/mockups/cart.html` (frame switcher) and `/mockups/v8/*` location pages. It is not deployed to the live customer site. The decision to ship it as a production redesign is a separate go/no-go that the brand strategy in §5 of this audit hasn't yet been asked to make.
+
+**Net effect on the §15 final verdict.** The codebase moves from "no longer the binding constraint on the next three trucks" to "now also carries an institutional-grade financial model that a private-equity or franchise-buyer diligence team can run scenarios against on day one." None of the four still-open bullets in §15 (plaintext password / zero tests / legacy-board polling / operator attention vs trucks) is closed by this pass. What does change is the post-2026-05-16 addendum line in §15 that read "the conversation in a diligence room would now be about marketing and unit economics, not theatre" — half of that ("unit economics") is now answerable inside the admin, so the residual diligence conversation narrows further toward demand generation and the same security + tests hygiene from §11.
+
 ---
 
 ## 1. Executive Summary
