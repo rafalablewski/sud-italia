@@ -8485,11 +8485,10 @@ const HELP = {
             Removes the real-estate decision from the operating-
             performance measure — useful when comparing your truck to
             one that owns its location, or when packaging multiple
-            units with different rent profiles for sale. Used in S&amp;P
-            / Fitch credit analysis frameworks. Watch the EBITDA-vs-
-            EBITDAR spread: wide spread means rent is heavy in your
-            cost stack (renegotiate or relocate); narrow spread means
-            rent is well-controlled.
+            units with different rent profiles for sale. Watch the
+            EBITDA-vs-EBITDAR spread: a wide spread means rent is
+            heavy in your cost stack (renegotiate or relocate); a
+            narrow spread means rent is well controlled.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -8529,15 +8528,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Compares directly against alternative-use returns: S&amp;P
-            500 historical ~8%, PL deposit ~5%, REITs ~6-10%, private
-            equity ~12-18%. Below the alternative, the capital is
-            destroying value. Steady-state metric — assumes ramp is
-            complete. Leverage caveat: a smaller cash investment
-            (debt-funded) lifts CoC mathematically but interest expense
-            erodes the numerator. Use alongside IRR and NPV (Investor
-            Returns strip) for the honest investment view; CoC alone
-            hides leverage risk.
+            Compare directly against alternative-use returns — public
+            equity, deposit, REITs, PE. Below the alternative, your
+            capital is destroying value relative to a passive option.
+            Leverage caveat: debt-funded setups lift CoC mathematically
+            (smaller cash denominator) but interest expense erodes the
+            numerator and the ratio hides this. Use alongside NPV / IRR
+            for the honest investment view.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -8577,15 +8574,14 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Healthy ranges: ≤ 8% excellent (lock long lease); 8-10%
-            healthy; 10-12% pressured (renegotiate); &gt; 12% restructure
-            (relocate, sublet, or scale revenue). Polish commercial-real-
-            estate market (Cushman Wakefield, JLL data) shows
-            casual-Italian premium pitches at Hala Koszyki / Hala
-            Gwardii running 11-14% occupancy — premium locations carry
-            heavy rent but compensate with footfall. The 12% &quot;cliff&quot;
-            isn&apos;t universal; combine with revenue-per-square-meter
-            to assess location quality.
+            The occupancy &quot;cliff&quot; isn&apos;t universal —
+            premium high-footfall pitches (Hala Koszyki, Hala Gwardii
+            and similar) routinely run above standard targets but the
+            footfall justifies the rent. So combine this ratio with
+            revenue-per-square-metre to judge whether rent is
+            expensive in absolute or expensive relative to what the
+            location delivers. Lock long leases when the ratio is
+            comfortable; renegotiate when it&apos;s pressured.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -8625,14 +8621,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Healthy gross-to-net gap: &lt; 3% (typical refunds + small
-            loyalty); 3-5% acceptable; 5-8% indicates control problems;
-            &gt; 8% structural issues. CIT/VAT are calculated on net,
-            not gross — make sure the accountant uses net. The investor
-            top-line standard is also net sales — gross is misleading
-            (Hooters / Fridays-style chains have padded reporting at
-            gross). Polish UoR (Ustawa o Rachunkowości) requires net
-            reporting for gastronomic GAAP.
+            The investor top-line standard — gross sales is misleading
+            because it can be padded with comps and loyalty redemptions
+            that never converted to cash. CIT and VAT calculate on net,
+            so the accountant&apos;s figure should match this one;
+            if it doesn&apos;t, dig into the reconciliation before
+            tax season. A wide gross-to-net gap is a control signal,
+            not just an accounting curiosity.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -8671,14 +8666,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Healthy ranges (PL pizza): &lt; 100 weak; 100-150 OK;
-            150-200 good; &gt; 200 excellent. Better than rev/labor-hr
-            because it weights by margin — pushing more high-CM items
-            (espresso, drinks) lifts this metric while pushing low-CM
-            items (Margherita) doesn&apos;t. Use for shift-level
-            scheduling decisions: if Monday lunch hits 80 zł/hr while
-            Friday dinner hits 220 zł/hr, the Monday slot is the
-            staffing-cut candidate.
+            Better than rev-per-labor-hour because it weights by
+            margin — pushing more high-CM items (espresso, drinks)
+            lifts this metric while pushing low-CM items (plain
+            Margherita) doesn&apos;t. So this is the shift-level
+            staffing-decision metric: weakest-CM-per-labor-hour shifts
+            are the staffing-cut candidates, regardless of how many
+            orders they ring.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -8717,14 +8711,12 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Typical gross-to-net gap: 1-3% (healthy loyalty), 3-5%
-            (aggressive promotion), 5%+ (over-discounting). For
-            forecasting + investor reports, use this metric; promo
-            discounts hide in gross AOV otherwise. Per-channel: Glovo
-            customers redeem less than walk-up regulars, so the gap
-            varies by channel mix. Loyalty burn isn&apos;t inherently
-            bad — the question is whether the resulting repeat rate
-            justifies it (Reichheld&apos;s Loyalty Effect framework).
+            For forecasting and investor reports, use this metric —
+            gross AOV hides the promo discount and overstates real
+            customer-paid ticket. Loyalty burn isn&apos;t inherently
+            bad; the question is whether the resulting repeat-rate
+            lift justifies it. Without measured repeat lift, the
+            programme is just a discount campaign with extra steps.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -8764,14 +8756,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            Healthy: &gt; 30 zł/order excellent; 25-30 healthy; 20-25
-            pressured; &lt; 20 structural problem. The unit-economics
-            framework from venture finance (a16z, Bain) — beats both
-            gross margin (ignores variable leakage) and net margin
-            (mixes in labor + rent). Most-honest metric for investor
-            pitches; the diagnostic for whether the truck has a viable
-            unit before scaling. If CM1 &gt; CAC, you break even on
-            first order; if not, repeat rate has to cover the gap.
+            Cleaner than gross margin (which ignores variable leakage)
+            and cleaner than net margin (which mixes in labor + rent).
+            The diagnostic for whether the truck has a viable unit
+            before scaling. If CM1 &gt; CAC the first order pays for
+            the customer; if not, repeat rate has to cover the gap —
+            and a chain that scales acquisition faster than retention
+            with CM1 &lt; CAC compounds losses.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -8813,14 +8804,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            More honest than naïve payback because it includes the
-            ramp curve (m1=20% / m2=40% / m3=60% / m4=80% / m5+=100%
-            of steady-state) and counts cumulative cash, not just
-            run-rate. Institutional thresholds: &lt; 18 mo excellent;
-            18-24 strong; 24-30 acceptable; 30-36 marginal; &gt; 36
-            reconsider. Use this number for investor decks alongside
-            IRR — investors look at both: NPV captures value, cash
-            break-even captures speed.
+            More honest than naïve payback because it incorporates the
+            opening ramp and counts cumulative cash rather than
+            steady-state run-rate. Use this for investor decks
+            alongside IRR — investors look at both: NPV captures
+            value, cash break-even captures speed. A 30%-IRR deal that
+            takes 36 months to break even is harder to fund than a
+            20%-IRR deal that breaks even in 18.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
