@@ -1145,23 +1145,37 @@ function RecipeEditor({ menuItem, recipe, ingredients, onClose, onSaved, onEditI
                         {/* Inline provenance: surface which distributor
                             offering this line's cost + macros come from
                             so the recipe → ingredient → offering chain
-                            is visible at a glance. Click jumps to the
-                            ingredient editor to (re)link a distributor. */}
-                        {r.activeOffering ? (
-                          <button
-                            type="button"
-                            className="v2-rcp-row-offering"
-                            onClick={() =>
-                              onEditIngredient?.(r.ingredientId)
-                            }
-                            title="Edit distributor offerings for this ingredient"
-                          >
-                            via <strong>{r.activeOffering.supplierName}</strong>
-                            {r.activeOffering.displayName
-                              ? ` · ${r.activeOffering.displayName}`
-                              : null}
-                          </button>
-                        ) : (
+                            is visible at a glance. The warning variant
+                            flags two debugging-friendly states:
+                              - "No offering linked" → no active row
+                              - "missing kcal" → active row exists but
+                                its Energy field is blank, blocking the
+                                per-portion calorie KPI.
+                            Click on either jumps to the ingredient
+                            editor. */}
+                        {r.activeOffering ? (() => {
+                          const missingKcal = typeof r.unitKcal !== "number";
+                          return (
+                            <button
+                              type="button"
+                              className={`v2-rcp-row-offering ${missingKcal ? "is-empty" : ""}`}
+                              onClick={() =>
+                                onEditIngredient?.(r.ingredientId)
+                              }
+                              title={
+                                missingKcal
+                                  ? "Active offering has no kcal value — click to fill in Energy from the back of the pack"
+                                  : "Edit distributor offerings for this ingredient"
+                              }
+                            >
+                              via <strong>{r.activeOffering.supplierName}</strong>
+                              {r.activeOffering.displayName
+                                ? ` · ${r.activeOffering.displayName}`
+                                : null}
+                              {missingKcal ? " — missing kcal" : null}
+                            </button>
+                          );
+                        })() : (
                           <button
                             type="button"
                             className="v2-rcp-row-offering is-empty"
@@ -1784,10 +1798,12 @@ function IngredientDialog({ state, onClose, onSaved }: IngDialogProps) {
   const addOffering = () => {
     const next = emptyOffering(suppliers[0]?.id ?? "");
     setOfferings((arr) => [...arr, next]);
-    // First offering on a fresh ingredient auto-becomes active; later
-    // additions require an explicit pick so existing recipes don't
-    // silently flip to an untested distributor.
-    if (offerings.length === 0) setActiveKey(next.key);
+    // New offering becomes active by default — operators add a row
+    // because they want to use it. If they're adding for cost
+    // comparison only, they untick after; the radio is right there.
+    // Without this default, freshly-typed kcal values land on a row
+    // nothing reads from and calories never resolve.
+    setActiveKey(next.key);
   };
 
   const removeOffering = (key: string) => {
