@@ -499,10 +499,11 @@ function RecipesPanel() {
 // =============================================================
 
 /**
- * Stable palette of segment colours for the cost-breakdown bar. We pick a
- * colour per ingredient by hashing its id, so the same ingredient lights up
- * the same colour on every dish — easier to scan than a per-card random
- * palette. Six tones is enough to feel varied without a rainbow.
+ * Palette of segment colours for the cost-breakdown bar. Picked
+ * positionally within each card (largest-cost ingredient → first
+ * colour, next-largest → second, etc.) so no two adjacent segments
+ * collide on the same hue. Eight tones — enough for any realistic
+ * recipe before "Other" kicks in (we already group <2% slivers).
  */
 const COST_BAR_COLORS = [
   "var(--brand)",
@@ -511,12 +512,9 @@ const COST_BAR_COLORS = [
   "var(--warning)",
   "#a855f7",
   "#06b6d4",
+  "#ec4899",
+  "#84cc16",
 ] as const;
-function colorForIngredient(id: string): string {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
-  return COST_BAR_COLORS[Math.abs(h) % COST_BAR_COLORS.length];
-}
 
 interface RecipeCardProps {
   item: MenuItemData;
@@ -549,6 +547,12 @@ function RecipeCard({
     const sorted = [...ingredients].sort((a, b) => (b.lineCost ?? 0) - (a.lineCost ?? 0));
     const visible: { id: string; name: string; cost: number; pct: number; color: string }[] = [];
     let otherCost = 0;
+    // Position-based palette: assign the next palette colour to each
+    // visible segment in descending-cost order. Guarantees no two
+    // ingredients within a single recipe collide on the same hue —
+    // a previous hash-based scheme produced clashes like Fior di Latte
+    // + San Marzano both rendering violet on the Margherita card.
+    let paletteIdx = 0;
     for (const ri of sorted) {
       const cost = ri.lineCost ?? 0;
       const pct = (cost / total) * 100;
@@ -560,8 +564,9 @@ function RecipeCard({
           name: ri.name ?? "Unknown",
           cost,
           pct,
-          color: colorForIngredient(ri.ingredientId),
+          color: COST_BAR_COLORS[paletteIdx % COST_BAR_COLORS.length],
         });
+        paletteIdx++;
       }
     }
     if (otherCost > 0) {
