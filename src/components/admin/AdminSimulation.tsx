@@ -3692,19 +3692,14 @@ const HELP = {
           at a bundle discount, e.g. 6 zł off vs à-la-carte).
         </p>
         <InstitutionalAnalysis>
-          <p style={{ margin: "0 0 6px" }}>
-            <strong>Why combos win:</strong> the combo pulls a second /
-            third item that <em>wouldn&apos;t have attached on its own</em>.
-            Even after the discount, the total order is bigger and the
-            kitchen amortises one ticket across more units — the
-            classic McDonald&apos;s Extra-Value-Meal economics.
-          </p>
           <p style={{ margin: 0 }}>
-            <strong>Math:</strong> per converted order, ticket = addon
-            price − discount; COGS = addon price × addon COGS%. The
-            cannibalisation question (would the customer have bought
-            the items à-la-carte anyway?) caps the real incremental
-            lift at ~75-85% of the modelled number for casual-Italian.
+            Combos pull a second / third item that wouldn&apos;t have
+            attached on its own — the customer decides once, not three
+            times. Watch the cannibalisation question: customers who
+            would have bought everything à-la-carte anyway just got
+            the discount for free, which is why blunt &quot;combo on
+            everything&quot; campaigns underperform targeted combos
+            aimed at low-attach segments.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -3807,14 +3802,14 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            <strong>Use it to ask:</strong> &quot;If the economy gets
-            bad enough that 20% more orders are Margherita, do we still
-            break even?&quot; Polish 2022-2023 inflation shifted ~15 pp
-            toward cheaper SKUs across casual dining. Default is 0 pp —
-            turn on only to model a stress scenario. The model treats
-            the shift as pure ticket loss; in practice some downshift
-            customers up-attach on coffee (the &quot;treat&quot;
-            behavior), partially offsetting the AOV drop.
+            A stress-test lever, not a forecast input — turn on to
+            answer &quot;if the economy makes another 20% of customers
+            pick Margherita, do we still break even?&quot;. The model
+            treats the shift as pure ticket loss; in practice some
+            downshift customers up-attach on coffee (the &quot;treat&quot;
+            behaviour), partially offsetting the AOV drop. Use
+            alongside the Sensitivity card for paired volume × ticket
+            downside scenarios.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -3901,22 +3896,15 @@ const HELP = {
           % of orders that go through delivery (vs takeaway / dine-in).
         </p>
         <InstitutionalAnalysis>
-          <p style={{ margin: "0 0 6px" }}>
-            Delivery flips the order economics in four places:
-          </p>
-          <ul style={{ margin: "0 0 6px", paddingLeft: 18 }}>
-            <li><strong>+ Packaging cost</strong> (box, bag, napkins) — ~2.50 zł/order</li>
-            <li><strong>+ Extra processor fee</strong> if a separate PSP handles delivery</li>
-            <li><strong>+ Delivery-fee revenue</strong> (if you charge one, ~8 zł)</li>
-            <li><strong>Different attach cohort</strong> — delivery customers attach 30-50% less</li>
-          </ul>
           <p style={{ margin: 0 }}>
-            More delivery = more volume but worse per-order margin. The
-            simulator treats the channel mix as substitution (delivery
-            replaces dine-in 1:1); in reality 30-50% of platform orders
-            are incremental demand (customers who wouldn&apos;t have
-            walked in). Validate with the per-channel contribution
-            panel before re-allocating marketing spend.
+            More delivery = more volume but worse per-order margin —
+            the central trade-off. The simulator treats channel mix as
+            substitution (delivery replaces dine-in 1:1), but a chunk
+            of platform orders are genuinely incremental demand
+            (customers who wouldn&apos;t have walked in). Validate the
+            incremental-vs-substitute split with the per-channel
+            contribution panel before re-allocating marketing spend
+            toward or away from delivery.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -4006,29 +3994,14 @@ const HELP = {
           a cost-change delta.
         </p>
         <InstitutionalAnalysis>
-          <ul style={{ margin: "0 0 6px", paddingLeft: 18 }}>
-            <li>
-              <strong>Share of COGS</strong> — fraction of base-pizza
-              food cost this ingredient represents. Calibrate to your
-              actual recipe (mozz ~28%, tomato ~10%, flour ~6%, etc).
-            </li>
-            <li>
-              <strong>Cost change</strong> — +20% = supplier raised
-              prices 20% or recipe uses 20% more. −10% = cheaper
-              supplier or trimmed portion.
-            </li>
-          </ul>
-          <p style={{ margin: "0 0 6px" }}>
-            <strong>Impact = share × delta</strong>, applied to base-
-            pizza COGS only. A 25% cheese line at +10% lifts total
-            base-pizza COGS by 2.5 pp. Attach items (coffee, dessert
-            etc) keep their own COGS — the stress is recipe-localised,
-            not menu-wide.
-          </p>
-          <p className="v2-muted text-sm" style={{ margin: 0 }}>
-            Toggle individual levers to isolate an ingredient&apos;s
-            elasticity; use <em>All off</em> in the card header to
-            clear every stress test.
+          <p style={{ margin: 0 }}>
+            Useful for sourcing decisions and supplier negotiations:
+            quantify the margin impact of a 10% mozzarella hike before
+            agreeing to it, or the gain from a tomato-supplier switch.
+            The stress is recipe-localised (base pizza only, attach
+            items unaffected), so this lever is the supplier-side
+            counterpart to the attach levers — same goal of margin
+            management, opposite end of the value chain.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -4119,16 +4092,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            The levers compose into a single &quot;effective orders per
-            day&quot; × &quot;effective days open&quot; pair that feeds
-            the whole P&amp;L downstream. Annualised composite typically
-            comes out to ~0.92× typed volume for Warsaw seasonality
-            (rainy 30% × 0.75 + sunny 70% × 1.0, minus 1 holiday
-            closure/mo, plus modest peak/event bonuses). The live
-            preview at the card&apos;s bottom shows the composite
-            impact. Master toggle in the header switches the whole
+            Outdoor-pitch trucks live and die by these levers, and
+            unmodelled weather is the single biggest reason naïve P&amp;L
+            forecasts disappoint. Indoor / mall locations should run
+            this card mostly disabled (weather doesn&apos;t affect
+            access). The master toggle in the header switches the whole
             adjustment on/off — useful for &quot;what does the P&amp;L
-            look like ignoring seasonality?&quot; comparisons.
+            look like ignoring seasonality?&quot; sanity checks.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -4216,14 +4186,12 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            <strong>Combined effective multiplier</strong> = rainyShare
-            × rainyMultiplier + (1 − rainyShare) × 1.0. So 0.30 × 0.75
-            + 0.70 × 1.00 = 0.925 — the average month runs at 92.5%
-            of theoretical volume just from rain. Multiplier 0.55-0.85
-            depending on shelter (exposed truck dips deepest; covered
-            indoor pitch barely 0.85). Rainy share 25-35% in PL
-            (highest April-July and October-December per IMGW
-            10-year averages).
+            The shelter design of the pitch is the strategic decision
+            embedded in this lever — exposed outdoor trucks dip the
+            deepest on rain, covered indoor pitches barely move. A
+            capex on a permanent awning / heated patio buys a permanent
+            uplift in the rainy multiplier; quantify the lift here
+            before signing the construction contract.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -4311,14 +4279,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            <strong>Stacks on top of the quarterly summer multiplier</strong>
-            — the heatwave bonus models the hot-evening micro-effect,
-            while the summer seasonality covers the broad Jun-Aug
-            uplift. Multiplier 1.20-1.60 depending on outdoor seating
-            capacity: truck with no patio ~1.10 (delivery uptick only);
-            8-seat patio 1.30; 20+ seat patio 1.50+. Climate-change
-            creep: PL heatwave share has crept up 2-4 pp/decade per
-            IMGW data — future-proof by building outdoor capacity now.
+            The bonus stacks with quarterly summer seasonality — it
+            captures the hot-evening micro-effect on top of the broad
+            Jun-Aug uplift, so don&apos;t double-count by inflating
+            summer multiplier too. Outdoor seating capacity is the
+            mechanical unlock: no patio means the bonus is mostly a
+            delivery uptick; a real patio means an evening boom.
+            Useful for evaluating a patio-expansion capex case.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
@@ -4406,15 +4373,13 @@ const HELP = {
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
-            <strong>Effect:</strong> reduces effective days open. At 28
-            typical days, losing 1 day = ~3.6% of monthly revenue. The
-            net hit is higher than the gross share suggests because
-            fixed costs (rent, accountant) don&apos;t scale down with
-            the closure — per-open-day fixed burden grows. Some PL
-            gastronomic units DO trade on standard holidays (no legal
-            prohibition for restaurants); the question is whether the
-            premium volume justifies the staff overtime and supplier
-            availability.
+            The hit is bigger than the gross share suggests, because
+            fixed costs don&apos;t shrink on a closed day — per-open-
+            day fixed burden grows. PL restaurants are NOT legally
+            barred from trading on standard holidays (the Sunday ban
+            doesn&apos;t cover gastronomy); strategic question is
+            whether premium holiday volume justifies the overtime
+            premiums + supplier-availability gaps + staff morale cost.
           </p>
         </InstitutionalAnalysis>
         <PlainTalk>
