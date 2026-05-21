@@ -1168,3 +1168,67 @@ The §0.1 PLN 240–320k EBITDA delta per truck is reproducible inside the simul
 The audit's PLN 240–420k/truck/year cost-of-not-pulling is unchanged. Of the eight levers in §0.1's "Where the money is" table, four are shipped or partly shipped to production (drink attach via espresso prompt, AOV uplift via 3-tier combo, subscription/corporate as Phase 1 queue + invoice cron, promo-code field gating Italian Classic Combo at cart), three are operator-modellable in the new simulation but unshipped to the customer surface (dessert attach, repeat-order frequency via streaks, loyalty point ROI), and one (tip pool capture with named-pizzaiolo framing) remains the same single-day job it was a week ago. The audit's three single-day un-shipped items called out in the body of this document — food photography, address autocomplete, post-order single-tap espresso upsell — remain unshipped. The work-vs-revenue ratio on those has not improved; if anything the simulation makes the missed opportunity more visible. (See also §12.A "Top 50 Highest-ROI Improvements" for the full ranked list — that table is now also auditable inside the simulation.)
 
 — *Delta lens: same audit, seven days later — 21 May 2026*
+
+---
+
+## 2026-05-21 Update #2 — Recipe + per-distributor cost ledger lands the True-CM substrate (later same day)
+
+A second batch of commits today (PR #61 + the recipes sequence) doesn't ship new revenue surfaces, but it materially upgrades the substrate under §10 (cost optimisation), §4 (menu engineering), and the §12.E "Top 20 Margin Improvements" list. Three substrate changes worth flagging for the revenue/psychology reader:
+
+### 1. Per-distributor ingredient offerings drive True CM1, not a typed-in number
+
+The §10 "Cost Optimisation & P&L Improvement" section assumed the operator types a cost into each ingredient row and the recipe sums them. That was correct on the audit date. As of this update, costs flow through a `IngredientProduct` table — one row per (ingredient × distributor) pair (`src/data/types.ts:292`). Each ingredient has an `activeProductId` pointing at the offering currently in effect. Recipe cost + bundle margin alert + per-channel CM1 panel + sensitivity tornado all read through this pointer.
+
+**What that does for the audit's analysis:**
+
+- The §10 "Real cost discipline" critique was right (the seed costs were typed in); it is now resolvable by the operator running an RFQ against three distributors and clicking "activate" on the winner. Every bundle ladder, every menu-engineering quadrant, every channel CM1 number updates the same day.
+- The §4 "Menu engineering — quadrant migration" call-out gets an honest cost basis to score against. A "puzzle" item flipping to a "star" because the operator switched distributors is now a measurable event in the menu-engineering matrix, not a recompute artefact.
+- The "magic constants" critique in the previous 2026-05-21 update is _further_ reduced — the cost ledger is no longer "one number per ingredient" but "one number per (ingredient × distributor) at a specific timestamp."
+
+### 2. Chain-wide recipes mean a single formula change moves both trucks
+
+Recipes are now keyed by dish base slug, not by location-prefixed menu-item id. Editing the Kraków Margherita formula updates Warsaw automatically. The audit's §6 "Bundle deals must subtract from cart total" → §12.E "Top 20 Margin Improvements" math depends on the formula being identical across locations; that's now structurally enforced rather than visually enforced.
+
+**What that does:**
+
+- The §10 "Tartufata anchor on / off" toggle in the simulation now reads truffle oil cost from whichever distributor the operator has marked active — across both trucks, in one click — instead of operator-typed numbers per location that could silently drift.
+- The §12.E "Recipe yield testing workflow" gap (last on the original list because of the per-location fork problem) is now schema-unblocked: a single yield-test entity can drive the whole fleet.
+
+### 3. Auto-computed per-portion kcal + macros let psychology surfaces lean on real data
+
+The recipe nutrition pipeline (`calculateRecipeCalories`, `calculateRecipeNutrition` at `src/lib/store.ts:3537` / `:3587`) sums ingredient `kcalPerUnit × quantity` ÷ `yieldPortions`. **`wasteFactor` is intentionally excluded from nutrition math** because `quantity` is eaten weight; the trim/spill purchased extra is a cost concern, not a calorie one. The customer kcal pill is now a derived figure, not a typed-in one.
+
+**What this unlocks for §3 + §4 of the audit:**
+
+- The §3 "Cross-sell psychology" section talks about "balanced meal" framing in cross-sell chips ("add a side for a complete meal"). With actual per-100g macros now flowing from active offerings, the chip can carry a real "rounds out your protein / fiber" rationale instead of a generic prompt. Schema-ready; UI build not done.
+- The §4 "Menu engineering — Nutri-Grade as decoy" play (cited but not shipped in the original audit) is structurally one step away: per-100g sugar + saturated fat flow through to the simulation, and a Nutri-Grade computation function can read them. Not written yet.
+- The "Defaulted to 0" indicator on incomplete macros keeps the operator honest — partial-data states are visibly marked on the operator side; customer surfaces never show a 0-defaulted figure (they hide rather than mislead). Matches the audit's §8 "Psychological design — trust" principle.
+
+### Where this lands against §12 lists
+
+| List entry | Effect |
+|---|---|
+| §12.A #4 "Tip pool surfacing with named-pizzaiolo" | Unchanged (no tip-pool work in this batch). |
+| §12.A #11 "Real reviews replacing fake `ratings.ts`" | Unchanged from the am update. |
+| §12.A #15 "Live True CM1 per item" | **Substrate upgrade.** The simulation already reports per-item True CM1; the cost number it reports now traces to a specific distributor SKU at a specific timestamp. Operator-side True CM1 panel is more defensible. Live per-order CM at completion still ✗. |
+| §12.E "Top 20 Margin Improvements" — most entries assume an editable cost ledger | The ledger is now distributor-specific. The §12.E #3 "Renegotiate flour" entry is now a one-click "activate alternative offering" rather than a multi-row recipe-cost rewrite. |
+| §12.E "Recipe yield testing workflow" | Schema-unblocked by chain-wide recipes; workflow UI still to build. |
+| §12.G #18 "Real reviews" | Unchanged. |
+
+### Three follow-ups that surfaced
+
+1. **NEA Nutri-Grade computation from recipe nutrition.** Schema is ready. Not written. ~Half-day of work to read per-100g sugar + saturated fat through the existing `calculateRecipeNutrition` path and bucket into A/B/C/D bands.
+2. **Recipe-derived allergens.** Today `MenuItem.allergens[]` is per-item, hand-flagged. Migrating to "this dish carries allergen X because some ingredient does" would close one of the most-cited compliance foot-guns in the audit. Few-hour job.
+3. **Cost-ledger-driven bundle save-time gate** (already flagged as ⭐ in the elite-QSR future-recommendations doc item #12) is materially cheaper now — drops from "1 day" to "half day" because the ledger has audit-traceable provenance.
+
+### Net read on the §0.1 economics
+
+Of the eight levers in §0.1's "Where the money is" table, the substrate moves are:
+
+- **True CM1 per item** — the cost basis is now distributor-specific and audit-traceable. Operator can run RFQ-style cost-discipline in the admin without a code change.
+- **Menu engineering quadrant migration** — the matrix scores against the real ledger, not typed-in numbers.
+- **Per-channel CM1** — the dine-in vs Wolt vs Glovo comparison now uses real distributor cost on the ingredient side, real channel commission on the revenue side.
+
+The PLN 240–420k/truck/year cost-of-not-pulling is unchanged. The cost-of-getting-it-wrong is **smaller** today than a week ago, because the operator's path from "I want to switch mozzarella suppliers" to "every bundle's True CM1 updates" is one click rather than a multi-row recipe edit.
+
+— *Substrate lens: same audit, structural unblock — 21 May 2026 (pm)*

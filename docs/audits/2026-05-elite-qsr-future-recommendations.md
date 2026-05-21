@@ -177,3 +177,35 @@ Items 3, 5, 6, 7 add 4–6 days of engineering and close the analytics gaps the 
 | 13 | **Brand direction commitment for the customer site** — the V8 Tuscany trattoria mockup at `/mockups/cart.html` is a live brand-direction proposal that, if adopted, materially changes the bundle ladder presentation (parchment cards, Cormorant Garamond display type, bilingual hierarchy). Decision impacts items 6 and 10 of the original list. | strategic | 1 sprint to ship the redesign live; 0 days to decide |
 
 **Net read.** A → A+ remains an honest characterisation, but the **simulation engine** that landed between PR #51 and PR #56 closes a different gap than the ten listed above — it pulls the operator-side from "elite QSR _ordering_" toward "elite QSR with an institutional-grade financial model in the same admin." That is a separate axis of A+ ("self-improving stack" vs "auditable stack"), and the items in this doc remain the right roadmap for the customer-facing flywheel half.
+
+---
+
+## 2026-05-21 Update #2 — Recipes + per-distributor offerings change the substrate (later same day)
+
+A second batch of commits today (PR #61 + the recipes sequence) doesn't tick off any of the original ten items, but it materially changes the **substrate items 1, 3, 11, and 12 run on**. Updating those rows + adding two more.
+
+### Effect on the original ten
+
+| # | Item | Substrate change |
+|---|---|---|
+| 1 | Per-customer ML upsell scoring | The scorer's feature column for "what does this attach actually cost?" now reads through `Ingredient.activeProductId` → `IngredientProduct.costPerUnit` rather than a typed-in flat cost. When the operator switches distributors, the model's margin-weighted ranking updates the same day, not the next data-warehouse refresh. Effort estimate unchanged (1.5–2 sprints) but the model output is more defensible. |
+| 3 | Refund × bundle correlation | The same active-offering chain means a refund's "what did this cost us?" is now resolved to a specific distributor SKU at the time of order. Sharpens the "bundle refund rate × variant" join and makes the refund-reason-code feature more useful (operator can see "we refund Margherita 2.4× more often when we run Galbani vs Lactalis"). Effort unchanged. |
+
+### Two new items the substrate unlocks
+
+| # | Item | Impact | Effort |
+|---|---|---|---|
+| 14 | **Per-distributor offering RFQ workflow** — `IngredientProduct` rows already store cost + macros per (ingredient × distributor) combo. An operator-side RFQ overlay lets a buyer request quotes from three distributors on the same SKU list, scores them by total spend × lead time × quality, and one-click activates the winner. The cost flows through to every recipe + bundle the next time the page renders. Closes the institutional-grade audit's §1.5 row 4 ("Supplier bidding / RFQ"). | ⭐⭐ | 1 sprint (UI + workflow; storage is already correct) |
+| 15 | **Chain-wide recipe + yield-test entity** — recipes are now keyed by dish base slug, not by location-prefixed menu-item id. A single yield-test entity ("cook 10 Margheritas across Kraków + Warsaw, capture actual flour weight, adjust `wasteFactor`") can drive the whole fleet, not per-location forks. Closes the institutional-grade audit's §1.5 row 10 + the admin-dashboard audit's §5.5 #8 ("Recipe yield testing workflow"). | ⭐ | 1.5 sprints (entity + capture UI + variance-feedback loop) |
+
+### Items 11–13 (added in the previous update) — status check
+
+| # | Item | Status |
+|---|---|---|
+| 11 | Wire the simulation's bundle-economics output back into the live ladder ordering | Unchanged. The simulation still reads but does not write to the live ladder. The per-distributor cost ledger makes the simulation's recommendations sharper, so the lift from doing this work is now bigger. |
+| 12 | Cost-ledger-driven bundle gating | **Half-day effort.** The per-distributor offering chain means the bundle save-time alert pre-computes against a deterministic figure with audit trail (distributor + SKU + cost-update timestamp). Drops from "1 day" to "half day" — the ambiguity that needed a heuristic ("which distributor are we costing this against?") is now resolved by the active-offering pointer. |
+| 13 | Brand direction commitment for the customer site | Unchanged. The V8 Tuscany trattoria mockup at `/mockups/cart.html` still shows the parchment + serif + bilingual hierarchy; no production adoption decision has been made. |
+
+### Net read on A → A+
+
+The customer-facing flywheel half (items 1–10) is unchanged in spec but cleaner in supporting data. Items 14 + 15 are new and operator-side; both are direct expressions of the elite-QSR pattern (Toast's RFQ, Domino's chain-wide recipe consistency) that the original list under-weighted because the data shape couldn't support them a week ago. With items 1, 2, 4 still the headline "self-improving stack" work, items 12 + 14 + 15 are now the highest-value operator-side adds at the lowest effort.

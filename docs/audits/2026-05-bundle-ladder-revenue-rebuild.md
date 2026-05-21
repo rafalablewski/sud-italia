@@ -208,3 +208,42 @@ Conservative reconstruction at 100 orders/day/truck:
 - **V8 Tuscany trattoria mockup** at `/mockups/cart.html` includes a full bundles section cloned into location pages — useful as a brand-direction reference for how the ladder reads on a "slow-food warmth" surface vs the current production design.
 - **`/admin/crosssell`** (split out from `/admin/upsell`) now has dedicated time-of-day banner editing + segment-aware chips + pairing-graph editing.
 
+---
+
+## 2026-05-21 Update #2 — Recipe + ingredient + nutrition refactor lands the cost basis (later same day)
+
+A second batch of commits today (PR #61 + the recipes sequence on the same branch) closes the largest open variable in this audit's economics: **"Per-item cost basis varied across plates — costs no longer reverse-engineered from a flat margin ratio."** That claim was true in the seed data when this audit shipped, but the numbers were typed in. As of this update they are derived.
+
+**What changed structurally:**
+
+- **`IngredientProduct`** — new table holding one row per (ingredient × distributor) pair, each carrying `costPerUnit` + `kcalPerUnit` + `proteinPerUnit` + `carbsPerUnit` + `sugarPerUnit` + `fiberPerUnit` + `fatPerUnit`. `Ingredient.activeProductId` is a foreign key into the active offering. `src/data/types.ts:292`.
+- **`calculateFoodCost`** (`src/lib/store.ts:3505`) now multiplies the active offering's `costPerUnit` × `quantity` × `wasteFactor`, summed across recipe lines, divided by `yieldPortions`. Switching distributors is a single FK flip — every bundle ladder's True CM1 reads through it immediately.
+- **`calculateRecipeNutrition`** (`src/lib/store.ts:3587`) is its sibling for energy + macros — the per-portion kcal pill on the customer card now derives from the same ledger. **`wasteFactor` is intentionally dropped from the nutrition math** because `quantity` is the eaten weight; trim/spill purchased extra is a cost issue, not a calorie one.
+- **Chain-wide recipes.** A single Margherita formula is now shared across `krk-pizza-margherita` and `waw-pizza-margherita` (keyed by base slug, location prefix collapsed). Editing the bundle math in Kraków updates Warsaw. The "Pantry Pack" delivery-only bundle, the Family Feast, and the Italian Classic combo all read from one formula, not two.
+
+**Effect on the bundle ladder economics:**
+
+| Claim in this audit | Status after this batch |
+|---|---|
+| "Margins now genuinely vary 64–78% by plate." | Still true. Now also _editable_ on a per-distributor basis. Operator switching mozzarella from Galbani to a cheaper distributor moves every Margherita-bearing bundle's CM1 in the same admin click. The 64–78% range becomes a live operator dial, not a one-time hand-coded fact. |
+| "Cart math wires through `effectiveUnitPrice()` / `effectiveUnitCost()` so the cart total, server checkout total, and bundle margin alert all agree." | Still true. The unit-cost helper now resolves through the active offering, not a flat number on the ingredient. The bundle margin alert's threshold is now anchored in a defensible ledger. |
+| "`/admin/business-costs` — first-party cost ledger (rent, labour bands, ingredient unit costs ...). Every cost basis quoted in this document (64–78% per-plate GM) is now an editable ledger entry instead of a magic constant." | Still true and **strictly more accurate**. The ingredient-unit-cost row of that ledger is now distributor-specific, not a single number per ingredient. The "Tartufata anchor on / off" toggle in the simulation now reads truffle oil cost from whichever distributor the operator has marked active — a more honest "what does the anchor really cost us?" answer. |
+| Next-steps #2 — "Ship the per-item modifier picker on the customer menu page." | Unchanged. Still ✗. Schema and cart math remain ready. |
+| Next-steps #3 — "Build the per-bundle margin floor enforcement in the admin save flow." | **Schematic unblock.** The per-distributor cost ledger makes save-time enforcement cleaner (the alert pre-computes against a deterministic figure) without the "but which distributor are we costing this against?" ambiguity. Half-day of work; closes the "elite-QSR future recommendations" doc's item #12 ("Cost-ledger-driven bundle gating"). |
+| Next-steps #4 — "A/B test the espresso reprice." | Unchanged. Still ✗ (no experiment ledger). |
+| Next-steps #5 — "Add zone-based delivery surcharge once the postcode → zone mapper lands." | Unchanged. Still ✗. |
+
+**Two refinements that surface from running the bundle simulation against the new cost basis:**
+
+- **Family Pack GM-blend** now reads from the actual mozzarella + Tipo 00 flour + 1L Limonata distributor offerings, not the typed-in `costPerUnit` of a week ago. If the operator switches to a cheaper mozzarella supplier on a soft Tuesday, the Family Pack's blended margin in the simulation updates the same day. The +PLN 261k/truck recovery hypothesis in the table above is now traceable to real distributor SKUs rather than to operator memory.
+- **Pizza Slice + Garlic Bread** late-night ladder margins depend disproportionately on the dough cost; the active-offering chain means a Tipo 00 flour distributor switch (PLN/kg from one supplier to another) flows through to the bundle's GM column without a recipe edit.
+
+**Still ✗** (this batch did not address):
+
+- Per-item modifier picker on the customer menu page.
+- Per-bundle margin floor enforcement at admin save-time.
+- Espresso reprice A/B with a real experiment ledger.
+- Zone-based delivery surcharge.
+
+The audit's PLN ~261k/truck subtotal stands. Today's batch moves the model from "modellable" to "modellable with audit trail" — every cost basis now has a distributor + SKU + timestamp behind it. That is the right substrate for the per-bundle margin enforcement (next-steps #3) to ship on a half-day budget rather than a multi-day budget.
+
