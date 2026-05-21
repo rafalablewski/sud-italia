@@ -12724,8 +12724,8 @@
     if (CURR_SUPPORTED.indexOf(code) < 0) code = 'PLN';
     var rate = CURR_RATES[code] || 1;
     document.documentElement.setAttribute('data-curr', code);
-    // Every priced node opts in via data-pln="<grosze>". The lang strings
-    // around it (e.g. "·", separators) stay untouched.
+    // Every priced node opts in via data-pln=&quot;&lt;grosze&gt;&quot;. The lang strings
+    // around it (e.g. &quot;·&quot;, separators) stay untouched.
     var priced = document.querySelectorAll('[data-pln]');
     for (var i = 0; i < priced.length; i++) {
       var grosze = parseFloat(priced[i].getAttribute('data-pln'));
@@ -13067,11 +13067,11 @@
         var routeName = 'home';
         if (pageId === 'page-krakow') routeName = 'krakow';
         else if (pageId === 'page-warszawa') routeName = 'warszawa';
-        // navigate, then scroll after the page is active
-        var route = ROUTES[routeName];
-        if (route &amp;&amp; window.location.hash !== route.hash) {
-          window.location.hash = route.hash;
-          // After hashchange + activate (which scrolls to top), scroll to anchor
+        // ownerPage isn't active and we know which route it belongs to,
+        // so always navigate first, then scroll to the anchor once the
+        // target page is visible.
+        if (ROUTES[routeName]) {
+          navigate(routeName);
           setTimeout(function () {
             var t2 = document.querySelector(href);
             if (!t2) return;
@@ -13079,7 +13079,6 @@
             window.scrollTo({ top: y2, behavior: 'smooth' });
           }, 60);
         } else {
-          // already on the right page (or no route) — just scroll
           var y0 = target.getBoundingClientRect().top + window.pageYOffset - 70;
           window.scrollTo({ top: y0, behavior: 'smooth' });
         }
@@ -13135,6 +13134,13 @@
     if (h === '#/locations/warszawa') return 'warszawa';
     return 'home';
   }
+  function routeFromHref(href) {
+    var h = (href || '').toLowerCase();
+    if (h === '#/locations/krakow') return 'krakow';
+    if (h === '#/locations/warszawa') return 'warszawa';
+    if (h === '#/' || h === '') return 'home';
+    return null;
+  }
   function activatePage(routeName, opts) {
     opts = opts || {};
     var route = ROUTES[routeName] || ROUTES.home;
@@ -13154,37 +13160,29 @@
     }
   }
   function navigate(routeName) {
-    var route = ROUTES[routeName] || ROUTES.home;
-    if (window.location.hash !== route.hash) {
-      // setting hash triggers hashchange listener
-      window.location.hash = route.hash;
-    } else {
-      // already on this hash — just (re)activate
-      activatePage(routeName, { scroll: true });
-    }
+    // srcdoc iframes (about:srcdoc) can't safely mutate location.hash —
+    // in Chromium it can be treated as a navigation away from the
+    // srcdoc content, leaving the iframe blank. activatePage is the
+    // sole source of truth; we don't try to keep the URL in sync.
+    activatePage(routeName, { scroll: true });
   }
-  window.addEventListener('hashchange', function () {
-    activatePage(routeFromHash(), { scroll: true });
-  });
-  // initial route on load
+  // initial route on load — handles the case where the iframe URL
+  // happens to have a hash (e.g. a paste from outside).
   activatePage(routeFromHash(), { scroll: false, smooth: false });
 
-  // Defensive: srcdoc iframes don't reliably honor default <a href=&quot;#/...&quot;> link
-  // clicks in Chromium — the action can navigate the TOP window instead of the
-  // iframe. Intercept route hashes (#/...) and update window.location.hash
-  // explicitly so the hashchange listener (and activatePage) always run.
+  // srcdoc iframes (about:srcdoc) don't reliably mutate location.hash in
+  // Chromium, so intercept #/... clicks and route directly via navigate()
+  // which calls activatePage() unconditionally. Without this the location
+  // cards on the V8 home page did nothing visible.
   document.addEventListener('click', function (e) {
     var a = e.target &amp;&amp; e.target.closest ? e.target.closest('a[href^=&quot;#/&quot;]') : null;
     if (!a) return;
     var href = a.getAttribute('href') || '';
-    if (!href) return;
+    var routeName = routeFromHref(href);
+    if (!routeName) return;
     e.preventDefault();
     e.stopPropagation();
-    if (window.location.hash !== href) {
-      window.location.hash = href;
-    } else {
-      activatePage(routeFromHash(), { scroll: true });
-    }
+    navigate(routeName);
   }, true);
 
   // ============================================================
