@@ -69,7 +69,11 @@ export function ItemDetailDrawer({
   const details = getItemDetails(item.id);
   const emoji = CATEGORY_EMOJI[item.category] || "🍽️";
 
-  const allergens = details?.allergens || [];
+  // Prefer the operator-edited list from /admin/recipes when present; fall
+  // back to the kodawari seed so untouched items still surface allergens.
+  // An explicit empty array on the override (operator says "no major
+  // allergens") is preserved and renders the "no major allergens" line.
+  const allergens = item.allergens ?? details?.allergens ?? [];
   const nutrition = details?.nutrition;
   const sourcing = details?.sourcing;
   const prepTime = details?.prepTimeMinutes;

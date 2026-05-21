@@ -163,7 +163,7 @@ T+pay (Stripe sheet)                                                 ⏳ deferre
 | ⛔ | "Make it a large +PLN 6" (modifier) | smart | +14% | **Rejected** — fixed Neapolitan portions are a brand core value (overrules §2.5 Starbucks too) |
 | ✅ | "Add Pizzaiolo's espresso PLN 6" (named, named) | curated | +11% | `CartUpsell` chip with `suggestion.reason` copy |
 | ✅ | "Family Feast: your mains + 2 antipasti + 4 drinks + tiramisù, 28% off" | savings | +22% AOV per family order | §3.2 bundle engine live; `family-feast` tier in `DEFAULT_BUNDLES` (`src/lib/bundles.ts`) is now *dynamic on mains* — every pizza/pasta in cart carries into the bundle 1:1 and price scales from `(mains-à-la-carte + cheapest-add-ons) × 0.72`. Surfaces at ≥2 main items, locks subtotal to the computed price via `appliedBundleId`. Sample: 3 margheritas → PLN 120.74 (save 46.96). |
-| 🟡 | "Lunch combo PLN 39: pasta + drink" | value | +18% | `TodBanner` lunch variant surfaces the generic `pasta-combo` (any pasta + drink + dessert, 10% off) during 11:30–13:00. The category-only combos sit alongside the new item-locked **Italian Classic Deal** (Margherita + Espresso + Tiramisù, 10%) — admins choose either pattern per location at `/admin/crosssell` → Combo deals. |
+| 🟡 | "Lunch combo PLN 39: pasta + drink" | value | +18% | `TodBanner` lunch variant surfaces the generic `pasta-combo` (any pasta + drink + dessert, 10% off) during 11:30–13:00. The category-only combos sit alongside the new item-locked **Italian Classic Deal** (Margherita + Limonata + Tiramisù, 10%) — admins choose either pattern per location at `/admin/crosssell` → Combo deals. The Limonata pick (vs the originally-considered espresso) was deliberate: espresso already attaches ~60% organically, so subsidising it would have paid customers to do what they were doing for free; Limonata captures the non-espresso cohort. |
 | ✅ | "Tap to make it a Gold-Tier order: +pesto bruschetta included" | status | +9% | `TierPerkBanner` — Gold/Platinum-gated, comp'd via price-0 cart line |
 | ⏳ | "Try the new burrata — first 12 today" | scarcity | +6% | needs per-day inventory tracking on seasonal items |
 | ⛔ | **Don't:** "Are you sure you want to add fries?" | annoying | -3% | not shipped |
@@ -204,7 +204,7 @@ From `src/data/menus/krakow.ts` actuals:
 
 ### 2.5 How The Best Operators Upsell
 
-- **McDonald's:** Default-combo psychology. The single button "Make it a meal +PLN X" frames *non*-combo as the deviant choice. AOV uplift: 22%. — 🟡 **partial:** the `TodBanner` lunch variant surfaces the active combo as the default expectation during 11:00–13:00. Auto-apply when categories match exists via `getActiveComboDeals`, which now scores combos by largest savings (complete beats partial, original-index breaks ties) so a fully-satisfied combo always wins over an earlier partial one — fixes the order-dependent short-circuit that previously hid completed discounts. The new item-locked **Italian Classic Deal** (Margherita + Espresso + Tiramisù) is McDonald's-style "make it the Italian Classic" framing, admin-configurable from `/admin/crosssell` → Combo deals. A "Remove combo" CTA on the applied banner is the follow-up.
+- **McDonald's:** Default-combo psychology. The single button "Make it a meal +PLN X" frames *non*-combo as the deviant choice. AOV uplift: 22%. — 🟡 **partial:** the `TodBanner` lunch variant surfaces the active combo as the default expectation during 11:00–13:00. Auto-apply when categories match exists via `getActiveComboDeals`, which now scores combos by largest savings (complete beats partial, original-index breaks ties) so a fully-satisfied combo always wins over an earlier partial one — fixes the order-dependent short-circuit that previously hid completed discounts. The new item-locked **Italian Classic Deal** (Margherita + Limonata + Tiramisù) is McDonald's-style "make it the Italian Classic" framing, admin-configurable from `/admin/crosssell` → Combo deals. A "Remove combo" CTA on the applied banner is the follow-up.
 - **Starbucks:** Size laddering with named premium ("Venti"). Modifier upsells ("add an espresso shot +PLN 4"). Personalised "your usual" rebuild. — ⛔ **rejected** on the size-laddering / modifier half (fixed Neapolitan portions). The "your usual" rebuild belongs in §5.2.4 habit-loop work.
 - **Uber Eats:** "Frequently bought together" + "Customers near you ordered" + algorithmic free-delivery threshold tuned per user. AOV uplift attributable to algorithmic upsell: 11%. — ✅ **shipped:** per-segment delivery threshold (first-time 39 / regular 60 / Gold/Platinum 0) live in `DeliveryProgress` and respected by the checkout charge via `computeDeliveryFee(_, _, override)`. ML upsell scorer is §9.1.
 - **Domino's:** Pre-checkout "wait, don't forget…" upsell card. Polarising but proven +8% per checkout. — ✅ **shipped via** `CartUpsell` (3-up chips above subtotal).
@@ -285,7 +285,7 @@ Three combo behaviours are now correctness-verified end-to-end (`scripts/verify-
 
 - **Order-independent scoring.** `getActiveComboDeals` scores every combo, prefers fully-complete ones (largest savings, original-index tiebreak), then partials. Fixes the prior short-circuit where a panino+drink cart got "still need pizza+desserts for meal-deal" instead of the 8% lunch-special applied.
 - **Quantity-capped discount.** Savings = `discountPercent` × cheapest unit per matched category (or per required item suffix). 5 pizzas + drink + dessert no longer scales 10% across all 5 pizzas; one combo's worth caps the savings.
-- **Item-locked combos.** New `requiredItems: { suffix; label }[]` on `ComboDeal` gates a combo on specific menu items via `id.endsWith(suffix)` so the same definition matches `krk-pizza-margherita` and `waw-pizza-margherita`. The default ladder now ships with **Italian Classic Deal** as an item-locked example (Margherita + Espresso + Tiramisù, 10%) — a Quattro Formaggi cart routes to a different promo rather than fraudulently completing this one.
+- **Item-locked combos.** New `requiredItems: { suffix; label }[]` on `ComboDeal` gates a combo on specific menu items via `id.endsWith(suffix)` so the same definition matches `krk-pizza-margherita` and `waw-pizza-margherita`. The default ladder now ships with **Italian Classic Deal** as an item-locked example (Margherita + Limonata + Tiramisù, 10%) — a Quattro Formaggi cart routes to a different promo rather than fraudulently completing this one.
 
 Admin manages combos end-to-end at `/admin/crosssell` → Combo deals: toggle, rename, edit discount %, min items, required categories, **and pick specific menu items** via a grouped-by-category dropdown. The PUT `/api/admin/upsell` route validates `combos[].categories` against the `MenuCategory` enum and validates `requiredItems` shape, so a typo can no longer silently disable a deal at checkout.
 
@@ -378,10 +378,10 @@ What shipped:
 - ✅ **Premium anchor.** `Pizza del Pizzaiolo` lives in both menus (`krk-pizza-pizzaiolo` PLN 47.90, `waw-pizza-pizzaiolo` PLN 52.90) with `menuRole: "anchor"` + `isLimited: true` + `limitedUntil`. Renders with the dark Chef's Signature treatment and a days-left countdown chip (hydration-safe — countdown defers to `useEffect` so SSR and client first paint agree).
 - ✅ **Hero / profit-driver triangle.** New `MenuRole` type on `MenuItem`. Margherita = hero (full-width card, cream-gradient frame, "The gateway — start here" subtitle). Quattro Formaggi / Linguine al Pesto / Espresso = profit driver (gold "Pizzaiolo's Choice" badge, ChefHat icon, "quietly his favourite to make" copy).
 - ✅ **Hierarchy of menu page.** The default sort is now Pizzaiolo's layout — `compareMenuEngineering()` orders hero → profit-driver → anchor → standards by popularity → alpha tie-break. Sort dropdown still exposes price-low / price-high / rating.
-- ✅ **Admin-editable.** `/admin/menu` edit dialog exposes the role dropdown + LTO toggle + "available until" date picker. `MenuOverride.menuRole / isLimited / limitedUntil` accept `null = clear back to seed`. Cross-location clone (Kraków ↔ Warszawa) propagates the role + LTO state.
+- ⚠ **Admin-editable — partially rolled back.** The original `/admin/menu` edit dialog briefly carried a role dropdown + LTO toggle + "available until" date picker (PR commit `b0d48cc`), but the editorial-badge editor was dropped from the admin dialog shortly after (PR commit `1b2de1c`) when the menu detail page narrowed its scope. `MenuOverride.menuRole / isLimited / limitedUntil` are still accepted by the `PUT /api/admin/menu` payload schema and propagated in the bulk-edit / cross-location clone paths (`src/app/api/admin/menu/route.ts:287`, `src/app/api/admin/menu/bulk/route.ts:384`), so the role + LTO state is operator-controllable via the API and the seed file — but there is no admin-form affordance today. Menu role-derived chips do surface on `/admin/menu` via the Menu badges tab (PR commit `854044a`), so the operator can see which items carry which role, just not edit it from the form.
 - ✅ **Capability ledger.** `Menu engineering hierarchy` row added to `/admin/capabilities` per CLAUDE.md rule #9.
 - ❌ **Loss-leader first-order espresso bundle** (§4.3 row 5). Not built. Distinct from the anchor — would need a first-order detector (orders count == 0 for the phone) + a comp'd or PLN 12 bundle line in the cart.
-- 🟡 **Monthly LTO rotation cadence** (§4.5). Mechanism shipped (admin can flip role + dates from `/admin/menu`); ongoing rotation is a manager operational action, not yet automated.
+- 🟡 **Monthly LTO rotation cadence** (§4.5). Mechanism shipped at the API + seed layer (`MenuOverride.menuRole / isLimited / limitedUntil` round-trip end-to-end); the admin-form affordance was dropped from `/admin/menu` when the detail page narrowed scope (commit `1b2de1c`), so flipping role + dates today means editing the seed file or POSTing the API directly. Ongoing rotation is a manager operational action, not yet automated.
 
 Mockup: `public/mockups/menu-engineering.html` — served at `/mockups/menu-engineering.html` on any deploy. Inline CSS only (production CSP blocks Tailwind CDN); same brand variables + DOM as `src/components/location/MenuItem.tsx`.
 
@@ -1168,3 +1168,67 @@ The §0.1 PLN 240–320k EBITDA delta per truck is reproducible inside the simul
 The audit's PLN 240–420k/truck/year cost-of-not-pulling is unchanged. Of the eight levers in §0.1's "Where the money is" table, four are shipped or partly shipped to production (drink attach via espresso prompt, AOV uplift via 3-tier combo, subscription/corporate as Phase 1 queue + invoice cron, promo-code field gating Italian Classic Combo at cart), three are operator-modellable in the new simulation but unshipped to the customer surface (dessert attach, repeat-order frequency via streaks, loyalty point ROI), and one (tip pool capture with named-pizzaiolo framing) remains the same single-day job it was a week ago. The audit's three single-day un-shipped items called out in the body of this document — food photography, address autocomplete, post-order single-tap espresso upsell — remain unshipped. The work-vs-revenue ratio on those has not improved; if anything the simulation makes the missed opportunity more visible. (See also §12.A "Top 50 Highest-ROI Improvements" for the full ranked list — that table is now also auditable inside the simulation.)
 
 — *Delta lens: same audit, seven days later — 21 May 2026*
+
+---
+
+## 2026-05-21 Update #2 — Recipe + per-distributor cost ledger lands the True-CM substrate (later same day)
+
+A second batch of commits today (PR #61 + the recipes sequence) doesn't ship new revenue surfaces, but it materially upgrades the substrate under §10 (cost optimisation), §4 (menu engineering), and the §12.E "Top 20 Margin Improvements" list. Three substrate changes worth flagging for the revenue/psychology reader:
+
+### 1. Per-distributor ingredient offerings drive True CM1, not a typed-in number
+
+The §10 "Cost Optimisation & P&L Improvement" section assumed the operator types a cost into each ingredient row and the recipe sums them. That was correct on the audit date. As of this update, costs flow through a `IngredientProduct` table — one row per (ingredient × distributor) pair (`src/data/types.ts:292`). Each ingredient has an `activeProductId` pointing at the offering currently in effect. Recipe cost + bundle margin alert + per-channel CM1 panel + sensitivity tornado all read through this pointer.
+
+**What that does for the audit's analysis:**
+
+- The §10 "Real cost discipline" critique was right (the seed costs were typed in); the storage shape for resolving it is now in place — each ingredient carries multiple offerings, one is marked active, and every bundle ladder / menu-engineering quadrant / channel CM1 number reads through the active pointer. **The RFQ workflow UI that operationalises this — request quotes from three distributors, score them, one-click activate the winner — is still a future build** (tracked as item 14 ⭐⭐ in the elite-QSR future-recommendations doc; ~1 sprint of UI work since the storage layer is correct). Today the operator can swap distributors by editing the active-offering pointer manually; the bidding workflow is the missing piece.
+- The §4 "Menu engineering — quadrant migration" call-out gets an honest cost basis to score against. A "puzzle" item flipping to a "star" because the operator switched distributors is now a measurable event in the menu-engineering matrix, not a recompute artefact.
+- The "magic constants" critique in the previous 2026-05-21 update is _further_ reduced — the cost ledger is no longer "one number per ingredient" but "one number per (ingredient × distributor) at a specific timestamp."
+
+### 2. Chain-wide recipes mean a single formula change moves both trucks
+
+Recipes are now keyed by dish base slug, not by location-prefixed menu-item id. Editing the Kraków Margherita formula updates Warsaw automatically. The audit's §6 "Bundle deals must subtract from cart total" → §12.E "Top 20 Margin Improvements" math depends on the formula being identical across locations; that's now structurally enforced rather than visually enforced.
+
+**What that does:**
+
+- The §10 "Tartufata anchor on / off" toggle in the simulation now reads truffle oil cost from whichever distributor the operator has marked active — across both trucks, in one click — instead of operator-typed numbers per location that could silently drift.
+- The §12.E "Recipe yield testing workflow" gap (last on the original list because of the per-location fork problem) is now schema-unblocked: a single yield-test entity can drive the whole fleet.
+
+### 3. Auto-computed per-portion kcal + macros let psychology surfaces lean on real data
+
+The recipe nutrition pipeline (`calculateRecipeCalories`, `calculateRecipeNutrition` at `src/lib/store.ts:3537` / `:3587`) sums ingredient `kcalPerUnit × quantity` ÷ `yieldPortions`. **`wasteFactor` is intentionally excluded from nutrition math** because `quantity` is eaten weight; the trim/spill purchased extra is a cost concern, not a calorie one. The customer kcal pill is now a derived figure, not a typed-in one.
+
+**What this unlocks for §3 + §4 of the audit:**
+
+- The §3 "Cross-sell psychology" section talks about "balanced meal" framing in cross-sell chips ("add a side for a complete meal"). With actual per-100g macros now flowing from active offerings, the chip can carry a real "rounds out your protein / fiber" rationale instead of a generic prompt. Schema-ready; UI build not done.
+- The §4 "Menu engineering — Nutri-Grade as decoy" play (cited but not shipped in the original audit) is **two structural steps away, not one**: per-100g sugar + total fat are on the active offering, but the schema is still missing `saturatedFatPerUnit` (and the SSB bands distinguish added vs total sugars) — both are NEA inputs the bucketing function would need. Field migration on `IngredientProduct` first, then the computation function. Not written yet.
+- The "Defaulted to 0" indicator on incomplete macros keeps the operator honest — partial-data states are visibly marked on the operator side; customer surfaces never show a 0-defaulted figure (they hide rather than mislead). Matches the audit's §8 "Psychological design — trust" principle.
+
+### Where this lands against §12 lists
+
+| List entry | Effect |
+|---|---|
+| §12.A #4 "Tip pool surfacing with named-pizzaiolo" | Unchanged (no tip-pool work in this batch). |
+| §12.A #11 "Real reviews replacing fake `ratings.ts`" | Unchanged from the am update. |
+| §12.A #15 "Live True CM1 per item" | **Substrate upgrade.** The simulation already reports per-item True CM1; the cost number it reports now traces to a specific distributor SKU at a specific timestamp. Operator-side True CM1 panel is more defensible. Live per-order CM at completion still ✗. |
+| §12.E "Top 20 Margin Improvements" — most entries assume an editable cost ledger | The ledger is now distributor-specific. The §12.E #3 "Renegotiate flour" entry is now a one-click "activate alternative offering" rather than a multi-row recipe-cost rewrite. |
+| §12.E "Recipe yield testing workflow" | Schema-unblocked by chain-wide recipes; workflow UI still to build. |
+| §12.G #18 "Real reviews" | Unchanged. |
+
+### Three follow-ups that surfaced
+
+1. **NEA Nutri-Grade computation from recipe nutrition.** Schema is **not yet ready** — `IngredientProduct` carries sugar + total fat but not `saturatedFatPerUnit` (a required NEA bucketing input), and the SSB bands also distinguish added vs total sugars which the schema does not separate. The work is: (a) field migration on `IngredientProduct` for saturated fat (and ideally added-sugars), (b) plumbing through `calculateRecipeNutrition`, (c) the A/B/C/D bucketing function reading the recipe sums against NEA thresholds. Closer to 1–2 days than a half-day, and field migration not pure code.
+2. **Recipe-derived allergens.** Today `MenuItem.allergens[]` is per-item, hand-flagged. Migrating to "this dish carries allergen X because some ingredient does" would close one of the most-cited compliance foot-guns in the audit. Few-hour job.
+3. **Cost-ledger-driven bundle save-time gate** (already flagged as ⭐ in the elite-QSR future-recommendations doc item #12) is materially cheaper now — drops from "1 day" to "half day" because the ledger has audit-traceable provenance.
+
+### Net read on the §0.1 economics
+
+Of the eight levers in §0.1's "Where the money is" table, the substrate moves are:
+
+- **True CM1 per item** — the cost basis is now distributor-specific and audit-traceable. Operator can run RFQ-style cost-discipline in the admin without a code change.
+- **Menu engineering quadrant migration** — the matrix scores against the real ledger, not typed-in numbers.
+- **Per-channel CM1** — the dine-in vs Wolt vs Glovo comparison now uses real distributor cost on the ingredient side, real channel commission on the revenue side.
+
+The PLN 240–420k/truck/year cost-of-not-pulling is unchanged. The cost-of-getting-it-wrong is **smaller** today than a week ago, because the operator's path from "I want to switch mozzarella suppliers" to "every bundle's True CM1 updates" is one click rather than a multi-row recipe edit.
+
+— *Substrate lens: same audit, structural unblock — 21 May 2026 (pm)*

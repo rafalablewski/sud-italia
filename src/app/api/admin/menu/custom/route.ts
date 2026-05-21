@@ -86,6 +86,7 @@ export const POST = withAdmin(
       ...(body.nutriGrade !== undefined ? { nutriGrade: body.nutriGrade } : {}),
       ...(body.containsPork !== undefined ? { containsPork: body.containsPork } : {}),
       ...(body.containsAlcohol !== undefined ? { containsAlcohol: body.containsAlcohol } : {}),
+      ...(body.allergens !== undefined ? { allergens: body.allergens } : {}),
       ...(body.calories !== undefined
         ? { nutrition: { calories: body.calories, protein: 0, carbs: 0, fat: 0 } }
         : {}),
@@ -122,6 +123,7 @@ export const PATCH = withAdmin(
       nutriGrade,
       containsPork,
       containsAlcohol,
+      allergens,
       ...rest
     } = parsed.data;
 
@@ -191,6 +193,12 @@ export const PATCH = withAdmin(
     }
     if (containsAlcohol !== undefined) {
       dietaryPatch.containsAlcohol = containsAlcohol ?? false;
+    }
+    if (allergens !== undefined) {
+      // `null` on a custom item drops the row's allergens entirely
+      // (custom items have no kodawari seed to fall back to). An empty
+      // array is preserved as "explicitly no major allergens declared".
+      dietaryPatch.allergens = allergens ?? undefined;
     }
     const patch = { ...rest, ...dietaryPatch };
     const next = await updateCustomMenuItem(effectiveId, patch);

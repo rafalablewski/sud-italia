@@ -1,6 +1,7 @@
 import { MenuItem } from "../types";
 import { krakowMenu } from "./krakow";
 import { warszawaMenu } from "./warszawa";
+import { getItemDetails } from "../kodawari";
 import {
   getCustomMenuItems,
   getIngredientProducts,
@@ -129,6 +130,13 @@ export async function getMenuWithOverrides(locationSlug: string): Promise<MenuIt
         ...(recipeNutrition.fiber !== undefined ? { fiber: recipeNutrition.fiber } : {}),
         ...(recipeNutrition.fat !== undefined ? { fat: recipeNutrition.fat } : {}),
       };
+    }
+    // Allergens: kodawari seed is the default; operator override (when
+    // present and not null) replaces it entirely. Empty array on the
+    // override means "explicitly no major allergens" and is preserved.
+    if (merged.allergens === undefined) {
+      const seedAllergens = getItemDetails(item.id)?.allergens;
+      if (seedAllergens) merged.allergens = seedAllergens;
     }
     return merged as unknown as MenuItem;
   };

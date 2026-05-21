@@ -3765,6 +3765,39 @@ html { scroll-behavior: smooth; }
   margin: -8px 0 0;
 }
 
+/* Allergen multi-select chip grid in the recipe editor. Each chip is a
+   togglable button — pressed state mirrors the .v2-detail-toggle look so
+   the form reads as one consistent control surface. */
+.v2-allergen-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 6px;
+  margin-top: 8px;
+}
+.v2-allergen-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-0);
+  color: var(--fg-default);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+  text-align: left;
+}
+.v2-allergen-chip:hover {
+  background: var(--surface-1);
+}
+.v2-allergen-chip.is-on {
+  background: color-mix(in oklab, var(--accent) 18%, transparent);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 /* Per-portion nutrition panel — sits below the 4 KPIs in the recipe
    editor. Compact carb / fiber / protein / fat row with sugars nested
    under carbs (matches EU 1169 / FDA NFP "of which sugars" label

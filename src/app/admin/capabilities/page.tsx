@@ -106,7 +106,7 @@ export default async function CapabilitiesPage() {
           status: "live",
           href: "/admin/regulatory-compliance",
           summary:
-            "Operators tag each truck with a regulatory pack (EU 1169/2011 default · NYC §81.50 calorie + DOH letter grade + FRESH Act packaging + FDA Big-9 allergen · SG NEA Nutri-Grade + MUIS Halal + 9% GST + PDPA §13 consent) at /admin/regulatory-compliance. Per-item halal / Nutri-Grade / pork / alcohol flags live next to product name + tags + description on each item's recipe editor at /admin/recipes. Per-portion kcal is auto-computed from `ingredient.kcalPerUnit × quantity × wasteFactor / yieldPortions` — set kcal once on each ingredient (also at /admin/recipes → Ingredients tab) and every recipe that uses it gets a live calorie figure with no manual retyping. Customer surfaces upgrade their chrome to match: location-page DOH banner, per-item kcal pill on NYC, Nutri-Grade hex + halal/non-halal chip + contains-pork / contains-alcohol disclaimer on SG, GST line + PDPA consent text in the cart. Nothing is inferred — if the operator hasn't filled the field (or kcal data is missing on any ingredient), the customer sees no claim. Compliance config served via /api/settings/public?location= so SSR + client hydration agree.",
+            "Operators tag each truck with a regulatory pack (EU 1169/2011 default · NYC §81.50 calorie + DOH letter grade + FRESH Act packaging + FDA Big-9 allergen · SG NEA Nutri-Grade + MUIS Halal + 9% GST + PDPA §13 consent) at /admin/regulatory-compliance. Per-item halal / Nutri-Grade / pork / alcohol flags live next to product name + tags + description on each item's recipe editor at /admin/recipes. Per-portion kcal is auto-computed from `ingredient.kcalPerUnit × quantity / yieldPortions` (wasteFactor is excluded — that covers extra purchased for trim/spill, which is a cost concern, not a calorie one; the customer eats `quantity`, not `quantity × wasteFactor`) — set kcal once on each ingredient's active distributor offering (also at /admin/recipes → Ingredients tab) and every recipe that uses it gets a live calorie figure with no manual retyping. Customer surfaces upgrade their chrome to match: location-page DOH banner, per-item kcal pill on NYC, Nutri-Grade hex + halal/non-halal chip + contains-pork / contains-alcohol disclaimer on SG, GST line + PDPA consent text in the cart. Nothing is inferred — if the operator hasn't filled the field (or kcal data is missing on any ingredient), the customer sees no claim. Compliance config served via /api/settings/public?location= so SSR + client hydration agree.",
           caveats:
             "Display-only. Legal copy still needs counsel review for each jurisdiction — the admin lets the operator paste the lawyer-approved text without a code deploy. The GST line is back-calculated from the inclusive total (IRAS practice for GST-inclusive F&B pricing); when Stripe Tax / TaxJar is wired in, the per-line GST will flow from there instead.",
         },
@@ -221,9 +221,10 @@ export default async function CapabilitiesPage() {
           summary: "P50 / P95 bump time per station. Manager+.",
         },
         {
-          name: "Allergen surfacing on tickets",
+          name: "Allergen surfacing + admin edit",
           status: "live",
-          summary: "menu_items.allergens chips on KDS tickets. Edit in /admin/menu.",
+          href: "/admin/recipes",
+          summary: "EU 1169/2011 + FDA Big-9 allergens (gluten, dairy, eggs, fish, shellfish, nuts, peanuts, soy, celery, mustard, sesame, sulfites, lupin, molluscs) on each menu item. Editable from the recipe editor at /admin/recipes — tap a chip in the Dietary disclosures section to toggle. Persists through MenuOverride.allergens (seed items) or CustomMenuItem.allergens (admin-created items); `null` clears the override and the customer falls back to the kodawari seed; `[]` declares 'no major allergens' explicitly. Render surfaces: customer item-detail drawer, kitchen expo board (/kitchen/[slug]/expo). Not yet rendered on the per-station AdminKDS ticket or on the menu-card CompliancePills row — both planned. The merge in getMenuWithOverrides() backfills item.allergens from src/data/kodawari.ts when no override is set, so the data path is unified for downstream consumers.",
         },
       ],
     },

@@ -756,4 +756,53 @@ Seven calendar days since this audit, including the institutional-grade audit's 
 
 **What does NOT change in the diligence story.** The original §0 / §1 verdict that "Sud Italia would not survive NYC or SG as-is" is preserved. The Polish-currency baked into types, the no-aggregator-integration, the no-USD/SGD, the no-i18n, the no-food-photography, the zero-tests, the plaintext-password — none of those are addressed. The §13 Phase 1–3 sequencing remains the right path; the operator is now ~2 months ahead on the operational-maturity dimension of Phase 1 thanks to the 2026-05-16 and 2026-05-21 pushes.
 
+---
+
+## 2026-05-21 Update #2 — Recipe + per-distributor nutrition refactor (later same day)
+
+The largest single-day-late development relative to this audit is structural: a recipe + ingredient + nutrition refactor (PR #61 + the recipes sequence on the same branch) directly attacks the audit's §1.4 NYC §81.50 calorie-display row, the §1.4 SG NEA Nutri-Grade row, the §10.4 "Multi-tax + multi-locale" gap, and the §11.B "Per-item data fill" caveat that was the binding constraint on the regulatory-disclosure work shipped earlier today.
+
+### What changed
+
+| Change | File path |
+|---|---|
+| **`IngredientProduct`** — new table, one row per (ingredient × distributor) pair. Carries `costPerUnit` + `kcalPerUnit` + `proteinPerUnit` + `carbsPerUnit` + `sugarPerUnit` + `fiberPerUnit` + `fatPerUnit`. | `src/data/types.ts:292` |
+| **`Ingredient.activeProductId`** — foreign key into the active offering. Recipe cost + customer kcal pill + PO pricing + inventory valuation all read through this pointer. Switching distributors is a single FK flip. | `src/data/types.ts:241` |
+| **`calculateRecipeCalories`** — sums `kcalPerUnit × quantity` across recipe lines, divides by `yieldPortions`. Returns `null` if any ingredient is missing an active offering or `kcalPerUnit`. **`wasteFactor` is intentionally excluded** (`quantity` = eaten weight; trim/spill is a cost concern). | `src/lib/store.ts:3537` |
+| **`calculateRecipeNutrition`** — sibling for the full macro panel (calories + protein + carbs + sugar + fiber + fat). Each macro is independent — `protein` resolves even if `fiber` is incomplete on one ingredient. | `src/lib/store.ts:3587` |
+| **Chain-wide recipes** — keyed by dish base slug (`pizza-margherita`), not by location-prefixed menu-item id. Edit Kraków, Warsaw updates automatically. Legacy rows migrate lazily on first read. | `src/lib/store.ts:getRecipe` |
+| **Product info + dietary moved into recipe editor.** Name, category, tags, description, kcal, halal status, Nutri-Grade, contains-pork, contains-alcohol all edited at `/admin/recipes` (one editor surface). | `src/components/admin/AdminRecipes.tsx:731` |
+| **"Defaulted to 0" indicator** — when operators backfill macros incrementally, the recipe editor shows `(N defaulted)` and a Calories KPI hint. Customer-facing compliance surfaces keep the stricter "all complete or no claim" rule — partial-data states never reach the customer. | `src/components/admin/AdminRecipes.tsx:perPortionMacro()` |
+
+### Effect on each NYC + SG row
+
+| Row | 2026-05-21 (am) | 2026-05-21 (pm) |
+|---|---|---|
+| **§1.4 row 4 — NYC DOH calorie labelling (§81.50)** | Wired but "operator must complete the data fill before opening" — interpreted as filling `nutrition.calories` on every SKU (≈80 rows). | **Significantly easier.** The customer kcal pill now derives from `kcalPerUnit` on each ingredient's active offering. Fill kcal on the ~30 ingredients, every Margherita-bearing dish gets a live figure with no manual retyping. Operator data-entry surface area collapses by roughly 2/3. The "complete the data fill before opening" caveat shrinks correspondingly. |
+| **§1.4 row 5 — SG NEA Nutri-Grade** | Wired but operator-typed per beverage. | Marginal improvement only. The macro pipeline now stores per-100g sugar + (total) fat on each active offering (`IngredientProduct.sugarPerUnit` + `fatPerUnit` in `src/data/types.ts:312-317`); NEA's A–D bucketing also needs **saturated fat** (and added vs total sugars in some bands), and **neither field exists in the schema yet**. So the automation isn't "one commit away" as an earlier draft of this row said — it's the saturated-fat field migration on `IngredientProduct` _then_ a computation function _then_ the bucketing thresholds. **Still operator-typed today**; the structural gap is wider than the recipe refactor closed. |
+| **§10 row "Allergens at point of sale (EU 1169/2011)"** | Per-item `allergens[]` field shipped, rendered on the item drawer + `CompliancePills` row on the card. | Unchanged. (Allergens are still per-item flags, not derived from ingredients. Recipe-derived allergens — "this dish contains gluten because Tipo 00 flour" — is the next-step but not in this batch.) |
+| **§11.B "Per-item data fill (calorie data for every SKU)"** | Pending. | **Surface area shrunk by ~2/3.** The operator now fills `kcalPerUnit` on each ingredient's active offering once; every recipe that uses it derives the per-portion kcal automatically. |
+| **§1.4 row 8 — "Hardcoded `currency: "PLN"`"** | Display-layer fixed (USD/SGD/EUR/PLN). | Unchanged. The cost ledger inside `IngredientProduct.costPerUnit` is stored in grosze. A per-region offering selector (different distributors for NYC + SG) is now structurally feasible — schema doesn't bind cost to currency at the offering level, so a Brooklyn distributor's offering can hold USD-cents and a Singapore distributor's can hold SGD-cents with no schema migration — but the read-path conversion to render currency isn't wired yet. |
+
+### Effect on the §1.1 scorecard (post-pm row)
+
+| §1.1 row | 2026-05-21 (am) | 2026-05-21 (pm) | Why |
+|---|---:|---:|---|
+| Overall | 51/100 | **52/100** | Operational maturity nudges up; NYC + SG viability stay where they are because the regulatory-disclosure work today is structural unblock, not a new launch surface. |
+| Operational maturity | 62/100 | **65/100** | Chain-wide recipes + per-distributor active offering + auto-computed nutrition + product/dietary editor consolidated into recipes — four wins in one batch on the operational-data-model axis. |
+| NYC viability | 24/100 | **25/100** | The §81.50 calorie pipeline is materially more practical to deploy. Still no Uber/DoorDash, no USD, no Spanish, no real photography. |
+| Singapore viability | 29/100 | **30/100** | The macro pipeline puts sugar + total fat on the active offering, so the operator-side data-entry surface for Nutri-Grade is smaller, but the schema still lacks `saturatedFatPerUnit` (a required NEA input) — so an automatic A–D computation is field-migration-then-code-pending, not just code-pending. Halal cert + MUIS banner + pork/alcohol chips unchanged. |
+| Franchise readiness | 33/100 | **35/100** | Chain-wide recipe shape removes a class of "Kraków Margherita ≠ Warsaw Margherita" failure mode that any franchise model needs to reject. |
+| Investor readiness | 42/100 | **44/100** | Per-distributor cost ledger gives the simulation's True CM1 + sensitivity tornado audit-traceable provenance (distributor + SKU + timestamp). The diligence story can now answer "what does Margherita actually cost?" with a specific row from a specific distributor offering. |
+
+### What still does NOT change
+
+The §1 verdict that "Sud Italia would not survive NYC or SG as-is" is unchanged. The seven binding constraints (no aggregator integration, no USD/SGD settlement via separate Stripe merchants, no SOC 2, no tests, no food photography, no offline POS, no MFA on admin) are not addressed by this refactor. What the refactor does change is the **per-item data fill** caveat that gated the regulatory-disclosure work shipped earlier today — that caveat is now considerably smaller in surface area and considerably more honest in failure mode (partial-data states are visibly marked rather than silently coalesced).
+
+### Three follow-ups that surfaced
+
+1. **NEA Nutri-Grade computation** from recipe nutrition needs two prerequisites first: (a) add `saturatedFatPerUnit` to the `IngredientProduct` schema + a per-product input + a `calculateRecipeSaturatedFat` helper alongside `calculateRecipeNutrition`, and (b) — for the SSB bands — distinguish added vs total sugars (NEA bucket thresholds differ for the two). Then the A–D bucketing function reads through. Roughly a 1–2 day job rather than the "half day" the previous draft of this doc suggested.
+2. **Recipe-derived allergens** — "this dish contains gluten because Tipo 00 flour carries `allergens: ['gluten']`" — would close the audit's §10 allergen row from per-item flag to derived. Schema is partially ready (allergens are per-item not per-ingredient today); the migration is a few-hour job.
+3. **The `/admin/capabilities` entry on regulatory disclosures** references `kcal × quantity × wasteFactor / yieldPortions` for the kcal formula; the actual code drops `wasteFactor` from the nutrition path. Documentation drift — should be tightened to `kcalPerUnit × quantity / yieldPortions`.
+
 — *Diligence delta lens: same five auditors, six days later — 21 May 2026*

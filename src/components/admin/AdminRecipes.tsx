@@ -21,7 +21,9 @@ import {
 } from "lucide-react";
 import { formatPrice, getBaseSlug } from "@/lib/utils";
 import {
+  ALLERGEN_LABELS,
   MENU_CATEGORY_LABELS,
+  type Allergen,
   type IngredientCategory,
   type IngredientUnit,
   type MenuCategory,
@@ -224,6 +226,7 @@ interface MenuItemData {
   nutriGrade?: "A" | "B" | "C" | "D";
   containsPork?: boolean;
   containsAlcohol?: boolean;
+  allergens?: Allergen[];
   nutrition?: NutritionInfo;
   _isCustom?: boolean;
 }
@@ -713,6 +716,7 @@ interface ProductDraft {
   nutriGrade: "" | "A" | "B" | "C" | "D";
   containsPork: boolean;
   containsAlcohol: boolean;
+  allergens: Allergen[];
 }
 
 function productDraftFromItem(item: MenuItemData): ProductDraft {
@@ -725,6 +729,7 @@ function productDraftFromItem(item: MenuItemData): ProductDraft {
     nutriGrade: item.nutriGrade ?? "",
     containsPork: Boolean(item.containsPork),
     containsAlcohol: Boolean(item.containsAlcohol),
+    allergens: (item.allergens ?? []).slice(),
   };
 }
 
@@ -749,6 +754,7 @@ function RecipeEditor({ menuItem, recipe, ingredients, locationLabel, onClose, o
     nutriGrade: "",
     containsPork: false,
     containsAlcohol: false,
+    allergens: [],
   };
   const [product, setProduct] = useState<ProductDraft>(emptyProduct);
   const [productInitial, setProductInitial] = useState<ProductDraft>(emptyProduct);
@@ -954,6 +960,15 @@ function RecipeEditor({ menuItem, recipe, ingredients, locationLabel, onClose, o
         Boolean(product.containsAlcohol) !== Boolean(productInitial.containsAlcohol)
       ) {
         productPatch.containsAlcohol = product.containsAlcohol;
+      }
+      if (
+        JSON.stringify(product.allergens.slice().sort()) !==
+        JSON.stringify(productInitial.allergens.slice().sort())
+      ) {
+        // Sort before persistence so audit-log diffs don't churn on toggle
+        // order and reload comparisons stay stable. The UI keeps the
+        // toggle order while the operator edits.
+        productPatch.allergens = [...product.allergens].sort();
       }
 
       if (Object.keys(productPatch).length > 0) {
@@ -1489,6 +1504,42 @@ function RecipeEditor({ menuItem, recipe, ingredients, locationLabel, onClose, o
                 />
                 <span>Contains alcohol</span>
               </label>
+            </div>
+            <div className="v2-field">
+              <label className="v2-field-label">
+                EU 1169 / FDA Big-9 allergens
+              </label>
+              <p className="v2-rcp-dialog-section-hint" style={{ margin: 0 }}>
+                Surfaces on the item detail drawer + on the kitchen expo
+                board. Tap an allergen to toggle it. Empty = &ldquo;no major
+                allergens declared&rdquo;.
+              </p>
+              <div className="v2-allergen-grid">
+                {(Object.keys(ALLERGEN_LABELS) as Allergen[]).map((a) => {
+                  const checked = product.allergens.includes(a);
+                  const meta = ALLERGEN_LABELS[a];
+                  return (
+                    <button
+                      key={a}
+                      type="button"
+                      role="checkbox"
+                      aria-checked={checked}
+                      className={`v2-allergen-chip${checked ? " is-on" : ""}`}
+                      onClick={() =>
+                        setProduct((p) => ({
+                          ...p,
+                          allergens: checked
+                            ? p.allergens.filter((x) => x !== a)
+                            : [...p.allergens, a],
+                        }))
+                      }
+                    >
+                      <span aria-hidden>{meta.emoji}</span>
+                      <span>{meta.en}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
