@@ -191,6 +191,143 @@ html { scroll-behavior: smooth; }
   transform: translateY(-1px);
 }
 
+/* ============================================================
+   TUSCANY THEME (V8) — customer-facing only
+   Scoped to .tuscany on (public)/layout. Admin keeps its own
+   tokens. Overrides cascade through Tailwind 4 @theme inline
+   utilities (bg-italia-*, text-italia-*, font-heading, ...).
+   Palette: parchment, terracotta, basil, oxblood, ochre, espresso.
+   Typography: Cormorant Garamond (display) + Lora (body).
+   ============================================================ */
+.tuscany {
+  /* Palette — V8 tokens */
+  --tuscany-parchment:       #F8EFDE;
+  --tuscany-parchment-deep:  #F2E2C2;
+  --tuscany-paper-shadow:    #E8D6B5;
+  --tuscany-terracotta:      #B85C38;
+  --tuscany-terracotta-dark: #9A4A2B;
+  --tuscany-terracotta-soft: #D88E6E;
+  --tuscany-basil:           #4A7C59;
+  --tuscany-basil-deep:      #355C40;
+  --tuscany-oxblood:         #7A2B2B;
+  --tuscany-oxblood-soft:    #A85252;
+  --tuscany-ochre:           #C9A23E;
+  --tuscany-ochre-light:     #E6C97A;
+  --tuscany-espresso:        #3D2817;
+  --tuscany-espresso-soft:   #6B4A30;
+  --tuscany-ink:             #2C1810;
+  --tuscany-muted:           #8C6F4F;
+  --tuscany-line:            #C9B48E;
+  --tuscany-line-soft:       #E0CFA8;
+  --tuscany-italy-green:     #008C45;
+  --tuscany-italy-white:     #F4F5F0;
+  --tuscany-italy-red:       #CD212A;
+
+  --tuscany-shadow-paper: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 6px 18px -10px rgba(61, 40, 23, 0.25);
+  --tuscany-shadow-card:  0 1px 0 rgba(255, 255, 255, 0.55) inset, 0 8px 24px -14px rgba(61, 40, 23, 0.35);
+  --tuscany-shadow-cta:   0 1px 0 rgba(255, 255, 255, 0.18) inset, 0 10px 22px -10px rgba(184, 92, 56, 0.55);
+
+  /* Map the customer-facing italia-* tokens to V8 — cascades into
+     every bg-italia-*, text-italia-*, border-italia-* utility used
+     by customer components (Header, Footer, landing, cart, etc.). */
+  --color-italia-red:         var(--tuscany-terracotta);
+  --color-italia-red-dark:    var(--tuscany-terracotta-dark);
+  --color-italia-green:       var(--tuscany-basil);
+  --color-italia-green-dark:  var(--tuscany-basil-deep);
+  --color-italia-cream:       var(--tuscany-parchment);
+  --color-italia-cream-dark:  var(--tuscany-parchment-deep);
+  --color-italia-gold:        var(--tuscany-ochre);
+  --color-italia-gold-dark:   var(--tuscany-terracotta-dark);
+  --color-italia-dark:        var(--tuscany-ink);
+  --color-italia-gray:        var(--tuscany-muted);
+  --color-italia-light-gray:  var(--tuscany-line-soft);
+  --color-background:         var(--tuscany-parchment);
+  --color-foreground:         var(--tuscany-ink);
+
+  /* Typography — Cormorant Garamond for display, Lora for body */
+  --font-heading: var(--font-cormorant), "Cormorant Garamond", "Playfair Display", Georgia, serif;
+  --font-body:    var(--font-lora), "Lora", Georgia, "Times New Roman", serif;
+
+  background: var(--tuscany-parchment);
+  color: var(--tuscany-ink);
+  font-family: var(--font-body);
+  /* Paper-grain backdrop — radial warm tints + SVG noise */
+  background-image:
+    radial-gradient(at 20% 8%, rgba(201, 162, 62, 0.07), transparent 55%),
+    radial-gradient(at 80% 92%, rgba(184, 92, 56, 0.08), transparent 55%),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.42 0 0 0 0 0.32 0 0 0 0 0.18 0 0 0 0.06 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+
+/* Italic display helper — apply for inline poetic accents */
+.tuscany .it {
+  font-family: var(--font-heading);
+  font-style: italic;
+}
+
+/* Thin tricolore stripe — useful as a section divider */
+.tuscany .tricolore {
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    var(--tuscany-italy-green) 0% 33.3%,
+    var(--tuscany-italy-white) 33.3% 66.6%,
+    var(--tuscany-italy-red) 66.6% 100%
+  );
+  opacity: 0.85;
+}
+
+/* Form elements — parchment fields, terracotta focus */
+.tuscany .pub-input,
+.tuscany .pub-select {
+  background: rgba(255, 255, 255, 0.55);
+  border: 1.5px solid var(--tuscany-line);
+  border-radius: var(--tuscany-r-md, 8px);
+  color: var(--tuscany-ink);
+  font-family: var(--font-body);
+}
+
+.tuscany .pub-input::placeholder { color: var(--tuscany-muted); }
+
+.tuscany .pub-input:focus,
+.tuscany .pub-select:focus {
+  border-color: var(--tuscany-terracotta);
+  box-shadow: 0 0 0 3px rgba(184, 92, 56, 0.18);
+}
+
+.tuscany .pub-label {
+  color: var(--tuscany-espresso);
+  font-family: var(--font-heading);
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.tuscany .pub-card {
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid var(--tuscany-line-soft);
+  border-radius: 12px;
+  box-shadow: var(--tuscany-shadow-paper);
+}
+
+.tuscany .pub-card:hover {
+  box-shadow: var(--tuscany-shadow-card);
+  transform: translateY(-1px);
+}
+
+/* Focus-visible — keep the keyboard outline, but in terracotta */
+.tuscany *:focus-visible {
+  outline-color: var(--tuscany-terracotta);
+}
+
+/* Headings — use the display serif by default inside Tuscany */
+.tuscany h1,
+.tuscany h2,
+.tuscany h3,
+.tuscany h4 {
+  font-family: var(--font-heading);
+  color: var(--tuscany-espresso);
+  letter-spacing: 0.2px;
+}
+
 /* ============================
    ADMIN v2 — DESIGN TOKENS
    Scoped to [data-admin-theme]. Coexists with legacy .admin-bg during migration.

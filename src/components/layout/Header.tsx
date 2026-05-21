@@ -17,7 +17,7 @@ export function Header() {
   const { customer } = useCustomer();
 
   return (
-    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-gray-100">
+    <header className="sticky top-0 z-30 bg-italia-cream/90 backdrop-blur-sm border-b border-italia-light-gray">
       <Container>
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}

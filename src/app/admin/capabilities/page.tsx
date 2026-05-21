@@ -360,6 +360,12 @@ export default async function CapabilitiesPage() {
       title: "Customer ordering",
       items: [
         {
+          name: "Customer theme — Tuscany (V8)",
+          status: "live",
+          href: "/",
+          summary: "Customer-facing surface (landing, locations, menu, cart, checkout, rewards, order confirmation) skinned with the V8 Tuscany trattoria theme: parchment + terracotta + basil palette, Cormorant Garamond display + Lora body. Scoped to the (public) layout via the .tuscany class — admin/kitchen/franchisee keep their own design systems. Original V8 reference at /mockups/cart.html.",
+        },
+        {
           name: "Stripe checkout",
           status: has("STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY") ? "live" : "needs-config",
           envVars: ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY"],
