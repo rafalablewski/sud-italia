@@ -10,7 +10,11 @@ import { appendAuditLog, getOrders, updateOrderStatus, deleteOrder } from "@/lib
 export const GET = withAdmin(
   { locationParam: "location" },
   async (req, _ctx, { locationSlug }) => {
-    const orders = await getOrders(locationSlug ?? undefined, undefined, { includeSimulated: true });
+    // Simulator tickets are opt-in (?includeSimulated=1) — only the KDS board
+    // asks for them, so they never leak into the dashboard, Orders list or
+    // any report that reads this route.
+    const includeSimulated = req.nextUrl.searchParams.get("includeSimulated") === "1";
+    const orders = await getOrders(locationSlug ?? undefined, undefined, { includeSimulated });
     orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     return NextResponse.json(orders);
   },
