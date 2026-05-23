@@ -522,12 +522,12 @@ export interface Order {
    *  the right outbound transport — WhatsApp replies for whatsapp
    *  orders, SMS otherwise. */
   channel?: "web" | "whatsapp";
-  /** Synthetic order produced by the KDS live-order simulator. These are
-   *  visible ONLY inside the admin KDS-simulator tab — getOrders() filters
-   *  them out of every other read by default, so they never reach the live
-   *  KDS board, kitchen screens, dashboard, Orders list, reports or CRM, and
-   *  never trigger stock decrement, customer rollups, or customer comms.
-   *  Purged when the simulation toggle is turned off. */
+  /** Synthetic order produced by the KDS live-order simulator. These stream
+   *  onto the Kitchen Display board (clearly marked as SIMULATION) so staff
+   *  can train against a live rush, but getOrders() filters them out of every
+   *  other read by default — they never reach the dashboard, Orders list,
+   *  reports or CRM, and never trigger stock decrement, customer rollups, or
+   *  customer comms. Purged when the simulation toggle is turned off. */
   simulated?: boolean;
 }
 

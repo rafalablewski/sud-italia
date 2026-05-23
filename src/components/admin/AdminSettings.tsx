@@ -229,7 +229,7 @@ function AdminSettingsDesktop() {
             body: JSON.stringify({ action: "purge" }),
           }).catch(() => {});
         }
-        toast.success(next ? "Order simulator on — see the tab under Kitchen Display" : "Order simulator off — tab hidden, board cleared");
+        toast.success(next ? "Order simulator on — marked tickets now stream onto the Kitchen Display" : "Order simulator off — simulated tickets cleared");
         window.dispatchEvent(new Event("sud-admin-settings-updated"));
         await Promise.all([fetchSettings(), fetchAudit()]);
       } else {
@@ -497,12 +497,12 @@ function AdminSettingsDesktop() {
           <Card>
             <CardHeader
               title="Order simulator"
-              description="Demo / training tool. Turning this on adds an Order simulator tab under Kitchen Display in the nav — open it to stream synthetic orders (built only from your real menu) onto a self-contained Kitchen Display board inside that tab, and watch them walk through New → In progress → Ready → Done. Simulated tickets stay inside the simulator tab: they're tagged '(sim)' and never appear on the live KDS, the kitchen screens, the dashboard, the Orders list or any report — never your stock, CRM or customer comms. Turning it off hides the tab and clears any simulated tickets."
+              description="Demo / training tool. Turning this on streams synthetic orders (built only from your real menu) straight onto the live Kitchen Display while a board is open — each ticket is clearly marked SIMULATION and the board shows a banner, so staff can train against a realistic rush. Simulated tickets never appear on the dashboard, the Orders list or any report, and never touch your stock, CRM or customer comms. Turning it off clears every simulated ticket from the board."
               actions={<Zap className="h-4 w-4 v2-muted" />}
             />
             <CardBody>
               <label className="v2-field">
-                <span className="v2-field-label">Show the Order simulator</span>
+                <span className="v2-field-label">Run the order simulator</span>
                 <span className="inline-flex items-center gap-2 mt-1">
                   <input
                     type="checkbox"
@@ -512,8 +512,8 @@ function AdminSettingsDesktop() {
                   />
                   <span className="v2-muted text-sm">
                     {kdsSimulatorEnabled
-                      ? "On — open the Order simulator tab under Kitchen Display to run a rush on its own board."
-                      : "Off — tab hidden. The live KDS only ever shows real tickets."}
+                      ? "On — marked SIMULATION tickets stream onto the Kitchen Display whenever a board is open."
+                      : "Off — the Kitchen Display only ever shows real tickets."}
                   </span>
                 </span>
               </label>

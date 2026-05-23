@@ -9,12 +9,12 @@ import { appendAuditLog, getOrders, updateOrderStatus, deleteOrder } from "@/lib
 
 export const GET = withAdmin(
   { locationParam: "location" },
-  async (_req, _ctx, { locationSlug }) => {
-    // Simulated demo tickets are never served here — getOrders() filters them
-    // out by default, so the dashboard, Orders list and every report that
-    // reads this route only ever see real orders. Synthetic tickets live
-    // solely in the KDS-simulator tab (its own /api/admin/kds-simulator route).
-    const orders = await getOrders(locationSlug ?? undefined);
+  async (req, _ctx, { locationSlug }) => {
+    // Simulator tickets are opt-in (?includeSimulated=1) — only the Kitchen
+    // Display board asks for them, so they surface on the KDS (clearly marked)
+    // but never leak into the dashboard, Orders list or any report.
+    const includeSimulated = req.nextUrl.searchParams.get("includeSimulated") === "1";
+    const orders = await getOrders(locationSlug ?? undefined, undefined, { includeSimulated });
     orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     return NextResponse.json(orders);
   },

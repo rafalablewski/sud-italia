@@ -1015,10 +1015,10 @@ export async function getOrders(
    *  table grows past a few thousand rows. */
   since?: string,
   /** KDS-simulator escape hatch. Simulated orders are filtered out of every
-   *  read by default so they never reach the live KDS, kitchen screens,
-   *  dashboard, Orders list, reports, CRM or analytics. The ONLY caller that
-   *  opts in is the simulator tab's own /api/admin/kds-simulator route (plus
-   *  the purge helper) — synthetic tickets live solely inside that tab. */
+   *  read by default so they never reach the dashboard, Orders list, reports,
+   *  CRM or analytics. Only the Kitchen Display boards (and the simulator's
+   *  own route) opt in, so demo tickets surface on the KDS — clearly marked —
+   *  without polluting any operational or reporting view. */
   opts?: { includeSimulated?: boolean },
 ): Promise<Order[]> {
   const keepSim = opts?.includeSimulated === true;
@@ -1264,13 +1264,14 @@ export async function createOrder(order: Order): Promise<Order> {
 
 /**
  * KDS live-order simulator (admin-gated demo / training tool). Persists a
- * synthetic-but-real order that surfaces ONLY inside the admin KDS-simulator
- * tab (via /api/admin/kds-simulator) — it carries simulated:true so
- * getOrders() hides it from the live KDS, kitchen screens, dashboard, Orders
- * list and every report. It also deliberately SKIPS every side effect
- * createOrder() runs for a paying customer: no stock decrement, no customer
- * rollup, no outbox SMS/email, and no station tickets (kds_tickets has no
- * cascade on order delete, so firing them would orphan rows on purge).
+ * synthetic-but-real order so it streams onto the orders-driven Kitchen
+ * Display (/admin/kds) exactly like a live ticket — where it is clearly
+ * marked as SIMULATION — but carries simulated:true so getOrders() hides it
+ * from the dashboard, Orders list and every report. It also deliberately
+ * SKIPS every side effect createOrder() runs for a paying customer: no stock
+ * decrement, no customer rollup, no outbox SMS/email, and no station tickets
+ * (kds_tickets has no cascade on order delete, so firing them would orphan
+ * rows on purge).
  */
 export async function createSimulatedOrder(order: Order): Promise<Order> {
   const sim: Order = { ...order, simulated: true };
@@ -1285,18 +1286,19 @@ export async function createSimulatedOrder(order: Order): Promise<Order> {
       await writeJSON("orders.json", orders);
     });
   }
-  // No emitOrderEvent: a simulated ticket must stay invisible to every
-  // operational view, so it deliberately does NOT wake the live orders /
-  // kitchen SSE streams. The simulator tab polls its own route for updates.
+  // Fire the same created event a real checkout does so the Kitchen Display
+  // board (which opts into simulated tickets) lights up in real time. The
+  // dashboard / Orders streams ignore the re-read because they filter sims
+  // out, so the event is a no-op for every non-KDS view.
+  emitOrderEvent({ kind: "created", orderId: sim.id, locationSlug: sim.locationSlug });
   return sim;
 }
 
 /**
  * Advance a simulated order's status. Mirrors updateOrderStatus's persistence
- * but skips the customer rollup + outbox comms — and, unlike the real path,
- * emits no order event, keeping the ticket invisible to operational SSE
- * streams. Guarded — refuses to touch a non-simulated order so it can never
- * mutate a real ticket. The simulator tab polls its own route for updates.
+ * + event emission so the KDS board reacts in real time, but skips the
+ * customer rollup + outbox comms. Guarded — refuses to touch a non-simulated
+ * order so it can never mutate a real ticket.
  */
 export async function setSimulatedOrderStatus(
   id: string,
@@ -1339,15 +1341,22 @@ export async function setSimulatedOrderStatus(
       return orders[index];
     });
   }
+  if (updated) {
+    emitOrderEvent({
+      kind: "status_changed",
+      orderId: updated.id,
+      locationSlug: updated.locationSlug,
+      status,
+    });
+  }
   return updated;
 }
 
 /**
  * Purge simulated orders (optionally scoped to one location). Deletes the
- * rows + KV mirror but skips the slot decrement + customer rollup
- * deleteOrder() runs — a simulated order never held a real slot or customer.
- * Emits no order event (sims are invisible to operational streams); the
- * simulator tab refreshes from its own route. Returns the count removed.
+ * rows + KV mirror and emits deleted events so open KDS boards clear, but
+ * skips the slot decrement + customer rollup deleteOrder() runs — a simulated
+ * order never held a real slot or customer. Returns the count removed.
  */
 export async function deleteSimulatedOrders(locationSlug?: string): Promise<number> {
   const sims = (await getOrders(locationSlug, undefined, { includeSimulated: true })).filter(
@@ -1386,6 +1395,7 @@ export async function deleteSimulatedOrders(locationSlug?: string): Promise<numb
     }
     if (didDelete) {
       await removeNotificationsForOrder(o.id);
+      emitOrderEvent({ kind: "deleted", orderId: o.id, locationSlug: o.locationSlug });
       removed++;
     }
   }
@@ -1434,42 +1444,49 @@ export async function updateOrderStatus(id: string, status: Order["status"]): Pr
     });
   }
   if (updated) {
-    // Pending → confirmed flips a checkout from "doesn't count" to
-    // "counts" in lifetime stats; cancelled does the opposite. Both warrant
-    // a rollup refresh.
-    void recomputeCustomerRollup(updated.customerPhone);
     emitOrderEvent({
       kind: "status_changed",
       orderId: updated.id,
       locationSlug: updated.locationSlug,
       status,
     });
-    // Outbox: status transitions that customers care about. dedupeKey
-    // includes the status so a noop status flip can't create a duplicate
-    // notification.
-    incrCounter(`orders.status.${status}`);
-    if (status === "ready" || status === "completed" || status === "cancelled") {
-      await appendOutboxEvent({
-        eventType: `order.${status}`,
-        entityType: "order",
-        entityId: updated.id,
-        dedupeKey: status,
-        payload: {
-          orderId: updated.id,
-          locationSlug: updated.locationSlug,
-          customerPhone: updated.customerPhone,
-          status,
-        },
-      });
-    }
-    // Cancellation returns the predicted ingredient draw to stock so
-    // the variance report doesn't carry ghost consumption. Refund-by-
-    // status (vs the refund API) uses the same path.
-    if (status === "cancelled") {
-      void (async () => {
-        const { restoreRecipeForOrder } = await import("@/lib/inventory-decrement");
-        await restoreRecipeForOrder(updated, "cancel");
-      })();
+    // Simulated demo tickets stop here. A sim has no real customer, comms,
+    // analytics weight or stock draw, so advancing one on the KDS (cook taps
+    // Start prep / Mark ready / Bump) must skip every side effect a real
+    // status change runs — otherwise a demo would fire SMS/email and pollute
+    // lifetime stats.
+    if (!updated.simulated) {
+      // Pending → confirmed flips a checkout from "doesn't count" to
+      // "counts" in lifetime stats; cancelled does the opposite. Both warrant
+      // a rollup refresh.
+      void recomputeCustomerRollup(updated.customerPhone);
+      // Outbox: status transitions that customers care about. dedupeKey
+      // includes the status so a noop status flip can't create a duplicate
+      // notification.
+      incrCounter(`orders.status.${status}`);
+      if (status === "ready" || status === "completed" || status === "cancelled") {
+        await appendOutboxEvent({
+          eventType: `order.${status}`,
+          entityType: "order",
+          entityId: updated.id,
+          dedupeKey: status,
+          payload: {
+            orderId: updated.id,
+            locationSlug: updated.locationSlug,
+            customerPhone: updated.customerPhone,
+            status,
+          },
+        });
+      }
+      // Cancellation returns the predicted ingredient draw to stock so
+      // the variance report doesn't carry ghost consumption. Refund-by-
+      // status (vs the refund API) uses the same path.
+      if (status === "cancelled") {
+        void (async () => {
+          const { restoreRecipeForOrder } = await import("@/lib/inventory-decrement");
+          await restoreRecipeForOrder(updated, "cancel");
+        })();
+      }
     }
   }
   return updated;
