@@ -229,7 +229,7 @@ function AdminSettingsDesktop() {
             body: JSON.stringify({ action: "purge" }),
           }).catch(() => {});
         }
-        toast.success(next ? "Order simulator on — marked tickets now stream onto the Kitchen Display" : "Order simulator off — simulated tickets cleared");
+        toast.success(next ? "Order simulator on — Add / Purge controls now show on the Kitchen Display" : "Order simulator off — simulated tickets cleared");
         window.dispatchEvent(new Event("sud-admin-settings-updated"));
         await Promise.all([fetchSettings(), fetchAudit()]);
       } else {
@@ -497,7 +497,7 @@ function AdminSettingsDesktop() {
           <Card>
             <CardHeader
               title="Order simulator"
-              description="Demo / training tool. Turning this on streams synthetic orders (built only from your real menu) straight onto the live Kitchen Display while a board is open — each ticket is clearly marked SIMULATION and the board shows a banner, so staff can train against a realistic rush. Simulated tickets never appear on the dashboard, the Orders list or any report, and never touch your stock, CRM or customer comms. Turning it off clears every simulated ticket from the board."
+              description="Demo / training tool. Turning this on adds Add 1 / Add 5 / Purge all controls to the Kitchen Display banner, so staff can drop synthetic orders (built only from your real menu) onto the board on demand and work them through with the normal ticket buttons — no auto-spawning trickle. Each ticket is clearly marked SIMULATION. Simulated tickets never appear on the dashboard, the Orders list or any report, and never touch your stock, CRM or customer comms. Turning it off clears every simulated ticket from the board."
               actions={<Zap className="h-4 w-4 v2-muted" />}
             />
             <CardBody>
@@ -512,7 +512,7 @@ function AdminSettingsDesktop() {
                   />
                   <span className="v2-muted text-sm">
                     {kdsSimulatorEnabled
-                      ? "On — marked SIMULATION tickets stream onto the Kitchen Display whenever a board is open."
+                      ? "On — the Kitchen Display shows Add 1 / Add 5 / Purge all controls for staging marked SIMULATION tickets."
                       : "Off — the Kitchen Display only ever shows real tickets."}
                   </span>
                 </span>

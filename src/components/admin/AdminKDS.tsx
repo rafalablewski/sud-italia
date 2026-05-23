@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useAdminOrdersStream } from "@/lib/useAdminOrdersStream";
 import {
   AlertTriangle,
@@ -10,6 +11,9 @@ import {
   ChefHat,
   Clock,
   Flame,
+  LayoutGrid,
+  Maximize2,
+  Minimize2,
   PauseCircle,
   PlayCircle,
   RefreshCw,
@@ -18,7 +22,7 @@ import {
   Truck,
   Users,
 } from "lucide-react";
-import type { Order, MenuCategory } from "@/data/types";
+import type { Order, MenuCategory, OrderStatus } from "@/data/types";
 import dynamic from "next/dynamic";
 import { useAdminLocation } from "./v2/LocationContext";
 import { useIsMobile } from "./v2/mobile";
@@ -29,6 +33,7 @@ import {
   ACTIVE_STATUSES,
   KDS_COLUMNS,
   KdsBoard,
+  KdsLane,
   KdsSimBanner,
   STATION_FILTERS,
   fmtClock,
@@ -155,9 +160,9 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
   const { location } = useAdminLocation();
   const toast = useToast();
 
-  // When the owner-only toggle is on, the board itself streams a marked
-  // SIMULATION rush onto the live KDS (no separate tab).
-  const { enabled: simEnabled } = useKdsSimulator(location);
+  // When the owner-only toggle is on, the board shows manual Add 1 / Add 5 /
+  // Purge all controls (in the simulation banner) for staging a training rush.
+  const { enabled: simEnabled, busy: simBusy, addOrders, purgeAll } = useKdsSimulator(location);
 
   const [station, setStation] = useState<MenuCategory | "all">("all");
 
@@ -185,10 +190,57 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
   const [paused, setPaused] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
+  // Stage focus: "all" shows the three-column board; a single status focuses
+  // that lane into a dense full-width grid (the "switch between came-in / in
+  // prep / done" the floor asked for).
+  const [lane, setLane] = useState<OrderStatus | "all">("all");
+
+  // Fullscreen kitchen-display (kiosk) mode. Flips the board into an
+  // edge-to-edge, dedicated dark high-contrast surface and requests native
+  // browser fullscreen so a wall-mounted screen reads cleanly across the line.
+  const [kiosk, setKiosk] = useState(false);
+
+  const enterKiosk = useCallback(() => {
+    setKiosk(true);
+    // Best-effort native fullscreen — the immersive layout stands on its own
+    // if the browser denies it (sandboxed iframe, kiosk policy, etc.).
+    void document.documentElement.requestFullscreen?.().catch(() => {});
+  }, []);
+  const exitKiosk = useCallback(() => {
+    setKiosk(false);
+    if (document.fullscreenElement) void document.exitFullscreen?.().catch(() => {});
+  }, []);
+
+  // Keep React state in lock-step with the browser: pressing Esc (or the
+  // browser's own control) leaving native fullscreen drops us out of kiosk.
+  useEffect(() => {
+    const onFsChange = () => {
+      if (!document.fullscreenElement) setKiosk(false);
+    };
+    document.addEventListener("fullscreenchange", onFsChange);
+    return () => document.removeEventListener("fullscreenchange", onFsChange);
+  }, []);
+
+  // Lock body scroll while the kiosk overlay covers the viewport, and let Esc
+  // exit even when native fullscreen was denied (no fullscreenchange to catch).
+  useEffect(() => {
+    if (!kiosk) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") exitKiosk();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [kiosk, exitKiosk]);
+
   // Live order stream — SSE with REST fallback. Replaces the old 5 s polling
   // loop. We mirror the stream into a local copy so optimistic updates from
   // advance/recall feel instant; the next SSE frame reconciles either way.
-  const { orders: streamedOrders, refresh } = useAdminOrdersStream(location, { paused });
+  const { orders: streamedOrders, refresh } = useAdminOrdersStream(location, { paused, includeSimulated: true });
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -257,6 +309,26 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
 
   const visibleByStatus = useMemo(() => groupByColumn(orders, station), [orders, station]);
 
+  // Per-lane ticket counts (after the station filter) for the stage switcher.
+  const laneCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: 0 };
+    let total = 0;
+    for (const col of KDS_COLUMNS) {
+      const n = (visibleByStatus.get(col.id) || []).length;
+      counts[col.id] = n;
+      total += n;
+    }
+    counts.all = total;
+    return counts;
+  }, [visibleByStatus]);
+
+  // Wall-clock shown in the kiosk header — a glanceable institutional touch.
+  // Keyed off `now` so it ticks with the live timers already running.
+  const clock = useMemo(
+    () => new Date(now).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    [now],
+  );
+
   // Bump-bar hotkeys (audit §3 — "button-click only" was costing ~3s
   // per bump at rush). Number keys 1-9 advance the corresponding
   // ticket in the leftmost column with tickets (the "next action"
@@ -265,12 +337,15 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
   // Ignored while an input/textarea is focused so admins can still
   // type into search boxes etc.
   const ticketColumnFlat = useMemo(() => {
+    // When a single stage is focused, the number keys act on that lane's
+    // visible tickets; otherwise the leftmost non-empty column ("next action").
+    if (lane !== "all") return visibleByStatus.get(lane) || [];
     for (const col of KDS_COLUMNS) {
       const arr = visibleByStatus.get(col.id) || [];
       if (arr.length > 0) return arr;
     }
     return [] as Order[];
-  }, [visibleByStatus]);
+  }, [visibleByStatus, lane]);
   const orderById = useMemo(() => {
     const m = new Map<string, Order>();
     for (const o of orders) m.set(o.id, o);
@@ -390,8 +465,8 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orders, now]);
 
-  return (
-    <div className="v2-page v2-kds-page">
+  const page = (
+    <div className={`v2-page v2-kds-page${kiosk ? " v2-kds-kiosk kds-os" : ""}`}>
       <header className="v2-page-header">
         <div className="v2-page-title-row">
           <h1 className="v2-page-title">Kitchen Display</h1>
@@ -401,6 +476,11 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
           </p>
         </div>
         <div className="v2-page-actions">
+          {kiosk && (
+            <span className="v2-kds-clock tabular" aria-label="Current time">
+              {clock}
+            </span>
+          )}
           <Tabs
             value={station}
             onChange={(v) => setStation(v as MenuCategory | "all")}
@@ -433,16 +513,59 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
           >
             Refresh
           </Button>
+          <Button
+            variant={kiosk ? "primary" : "secondary"}
+            size="sm"
+            leadingIcon={kiosk ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+            onClick={kiosk ? exitKiosk : enterKiosk}
+            title={kiosk ? "Exit fullscreen kitchen display (Esc)" : "Open fullscreen kitchen display"}
+          >
+            {kiosk ? "Exit" : "Fullscreen"}
+          </Button>
         </div>
       </header>
 
-      {simEnabled && <KdsSimBanner />}
+      {/* Stage switcher — the primary "came in / in prep / done" focus control. */}
+      <div className="v2-kds-lanebar" role="tablist" aria-label="Stage focus">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={lane === "all"}
+          className={`v2-kds-lane-btn${lane === "all" ? " is-active" : ""}`}
+          onClick={() => setLane("all")}
+        >
+          <LayoutGrid className="h-4 w-4" aria-hidden />
+          <span className="v2-kds-lane-label">All lanes</span>
+          <span className="v2-kds-lane-count tabular">{laneCounts.all}</span>
+        </button>
+        {KDS_COLUMNS.map((col) => (
+          <button
+            key={col.id}
+            type="button"
+            role="tab"
+            aria-selected={lane === col.id}
+            className={`v2-kds-lane-btn v2-kds-lane-${col.tone}${lane === col.id ? " is-active" : ""}`}
+            onClick={() => setLane(col.id)}
+          >
+            <span className="v2-kds-lane-label">{col.label}</span>
+            <span className="v2-kds-lane-count tabular">{laneCounts[col.id]}</span>
+          </button>
+        ))}
+      </div>
 
-      {opsHeader && <KdsManagerOpsHeader orders={orders} location={location} />}
+      {simEnabled && (
+        <KdsSimBanner
+          busy={simBusy}
+          onAdd={(n) => void addOrders(n).then(() => refresh())}
+          onPurge={() => void purgeAll().then(() => refresh())}
+        />
+      )}
 
-      {chefStrip && <KdsChefStrip orders={orders} station={station} location={location} />}
+      {!kiosk && opsHeader && <KdsManagerOpsHeader orders={orders} location={location} />}
 
-      {bumpHistory.length > 0 && (
+      {!kiosk && chefStrip && <KdsChefStrip orders={orders} station={station} location={location} />}
+
+      {!kiosk && bumpHistory.length > 0 && (
         <div
           role="region"
           aria-label="Recently bumped"
@@ -530,9 +653,17 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
             />
           </CardBody>
         </Card>
-      ) : (
+      ) : lane === "all" ? (
         <KdsBoard
           columns={visibleByStatus}
+          stationFilter={station}
+          nowMs={now}
+          updatingId={updatingId}
+          onAdvance={advance}
+        />
+      ) : (
+        <KdsLane
+          tickets={visibleByStatus.get(lane) || []}
           stationFilter={station}
           nowMs={now}
           updatingId={updatingId}
@@ -549,6 +680,12 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
       <audio ref={overdueAudioRef} preload="auto" src="data:audio/wav;base64,UklGRkAAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YRwAAAAAAJL/AABuAJL/AABuAJL/AABuAJL/AABuAA==" />
     </div>
   );
+
+  // Kiosk renders through a portal to document.body so the edge-to-edge
+  // display escapes the admin shell's stacking context (CLAUDE.md rule #4);
+  // the component subtree — and all its state, hooks and context — stays
+  // mounted, so the SSE stream, hotkeys and timers keep running uninterrupted.
+  return kiosk ? createPortal(page, document.body) : page;
 }
 
 interface FloorOps {

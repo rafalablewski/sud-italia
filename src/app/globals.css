@@ -2329,6 +2329,148 @@ html { scroll-behavior: smooth; }
   letter-spacing: 0.06em;
 }
 .v2-kds-sim-banner span { color: var(--fg-muted); }
+.v2-kds-sim-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+/* ----------------------------
+   KDS — stage switcher (came in / in prep / done)
+   ---------------------------- */
+.v2-kds-lanebar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: 12px 0;
+}
+.v2-kds-lane-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-strong);
+  background: var(--surface-2);
+  color: var(--fg-muted);
+  font-size: var(--text-base);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--duration-fast), color var(--duration-fast), border-color var(--duration-fast);
+}
+.v2-kds-lane-btn:hover { background: var(--surface-3); color: var(--fg); }
+.v2-kds-lane-btn.is-active {
+  background: var(--surface-1);
+  color: var(--fg);
+  border-color: var(--fg-subtle);
+  box-shadow: var(--shadow-sm);
+}
+.v2-kds-lane-warning.is-active { border-color: var(--warning); }
+.v2-kds-lane-info.is-active { border-color: var(--info); }
+.v2-kds-lane-success.is-active { border-color: var(--success); }
+.v2-kds-lane-label { letter-spacing: 0.01em; }
+.v2-kds-lane-count {
+  font-weight: 800;
+  min-width: 1.6em;
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-3);
+  color: var(--fg);
+}
+.v2-kds-lane-btn.is-active .v2-kds-lane-count { background: var(--surface-3); }
+
+/* Single-stage focus: tickets wrap into a dense full-width grid. */
+.v2-kds-lane-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+  align-content: start;
+}
+.v2-kds-lane-empty {
+  padding: 48px 16px;
+  text-align: center;
+  color: var(--fg-subtle);
+  font-size: var(--text-lg);
+}
+
+@media (max-width: 640px) {
+  .v2-kds-lanebar { grid-template-columns: repeat(2, 1fr); }
+  .v2-kds-lane-grid { grid-template-columns: 1fr; }
+}
+
+/* ----------------------------
+   KDS — fullscreen kiosk + dark "kitchen OS" theme
+   ----------------------------
+   Edge-to-edge display surface, portaled to <body>. Pairs with .kds-os, a
+   dedicated always-dark high-contrast palette + oversized type tuned to be
+   read across a hot, bright kitchen regardless of the admin light/dark toggle.
+*/
+.v2-kds-kiosk {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  margin: 0;
+  padding: 18px 22px 22px;
+  overflow-y: auto;
+  background: var(--kds-bg);
+}
+
+.kds-os {
+  --kds-bg: #06080d;
+  --surface-1: #141a25;
+  --surface-2: #0b0f17;
+  --surface-3: #1e2738;
+  --surface-hover: #243049;
+  --fg: #ffffff;
+  --fg-muted: #c9d3e1;
+  --fg-subtle: #8893a6;
+  --border: rgba(255, 255, 255, 0.10);
+  --border-strong: rgba(255, 255, 255, 0.20);
+  --warning: #fbbf24;
+  --warning-soft: rgba(251, 191, 36, 0.16);
+  --info: #60a5fa;
+  --info-soft: rgba(96, 165, 250, 0.16);
+  --success: #34d399;
+  --success-soft: rgba(52, 211, 153, 0.16);
+  --danger: #f87171;
+  --danger-soft: rgba(248, 113, 113, 0.18);
+  color: var(--fg);
+}
+
+/* Live wall-clock in the kiosk header. */
+.v2-kds-clock {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  color: var(--fg);
+  letter-spacing: 0.02em;
+}
+
+/* Oversized, glanceable type once inside the kiosk. */
+.kds-os .v2-page-title { font-size: var(--text-3xl); color: var(--fg); }
+.kds-os .v2-page-subtitle { color: var(--fg-muted); font-size: var(--text-md); }
+.kds-os .v2-kds-lanebar { margin: 16px 0; gap: 12px; }
+.kds-os .v2-kds-lane-btn { font-size: var(--text-lg); padding: 16px 20px; }
+.kds-os .v2-kds-board { grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.kds-os .v2-kds-col-header { padding: 14px 16px; }
+.kds-os .v2-kds-col-body { max-height: none; gap: 14px; padding: 14px; }
+.kds-os .v2-kds-lane-grid { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+.kds-os .v2-ticket { padding: 16px 18px; gap: 12px; }
+.kds-os .v2-ticket-id { font-size: var(--text-xl); }
+.kds-os .v2-ticket-timer { font-size: var(--text-lg); padding: 4px 12px; }
+.kds-os .v2-ticket-station-label { font-size: var(--text-xs); }
+.kds-os .v2-ticket-station li { font-size: var(--text-lg); }
+.kds-os .v2-ticket-qty { font-weight: 800; color: var(--fg); }
+.kds-os .v2-ticket-foot button { min-height: 46px; font-size: var(--text-md); }
+.kds-os .v2-kds-stats { display: none; }
 
 /* ============================
    ADMIN v2 — MENU

@@ -99,7 +99,7 @@ function tone(order: Order): "neutral" | "warning" | "danger" {
 export function MobileKDS() {
   const { location } = useAdminLocation();
   const toast = useToast();
-  const { enabled: simEnabled } = useKdsSimulator(location);
+  const { enabled: simEnabled, busy: simBusy, addOrders, purgeAll } = useKdsSimulator(location);
   const [paused, setPaused] = useState(false);
   const [muted, setMuted] = useState(false);
   const [lane, setLane] = useState<OrderStatus>("confirmed");
@@ -315,7 +315,13 @@ export function MobileKDS() {
         }
       />
 
-      {simEnabled && <KdsSimBanner />}
+      {simEnabled && (
+        <KdsSimBanner
+          busy={simBusy}
+          onAdd={(n) => void addOrders(n).then(() => refresh())}
+          onPurge={() => void purgeAll().then(() => refresh())}
+        />
+      )}
 
       {filtered.length === 0 ? (
         <div className="v2-m-empty">

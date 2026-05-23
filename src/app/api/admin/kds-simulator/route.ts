@@ -5,45 +5,36 @@ import {
   deleteSimulatedOrders,
   getOrders,
   getSettings,
-  setSimulatedOrderStatus,
 } from "@/lib/store";
 import { getMenuWithOverrides } from "@/data/menus";
 import { getActiveLocations } from "@/data/locations";
-import type { CartItem, Order, OrderStatus } from "@/data/types";
+import type { CartItem, Order } from "@/data/types";
 
 /**
- * KDS live-order simulator API (admin-gated demo / training tool).
+ * KDS order-simulator API (admin-gated demo / training tool).
  *
- * Spawns synthetic-but-real orders built ONLY from the location's real menu
- * (getMenuWithOverrides) and streams them onto the orders-driven Kitchen
- * Display via createSimulatedOrder, where they show up clearly marked as
- * SIMULATION. Orders are tagged simulated:true, so getOrders() hides them
- * from the dashboard, Orders list and every report, and they never touch
- * stock, CRM or customer comms. Auto-advance walks each ticket through
- * confirmed → preparing → ready → completed on dwell timers; purge removes
- * them in one shot.
+ * Manually driven from the Kitchen Display: when the owner-only
+ * settings.kdsSimulatorEnabled toggle is on, the board shows Add 1 / Add 5 /
+ * Purge all controls. `spawn` builds synthetic-but-real orders ONLY from the
+ * location's real menu (getMenuWithOverrides) and drops them onto the
+ * orders-driven KDS via createSimulatedOrder, clearly marked as SIMULATION.
+ * The cook then works each ticket through the board with the normal Start prep
+ * / Mark ready / Bump buttons — there is no auto-spawn or auto-advance. `purge`
+ * clears every simulated ticket in one shot.
  *
- * Driven by the KDS itself: useKdsSimulator runs spawn/advance from any open
- * board while settings.kdsSimulatorEnabled (owner-only toggle) is on. Kitchen+
- * may call it so the generator works for whoever is at the pass, but spawn /
- * advance are re-checked against the toggle below (purge always allowed, so
- * turning the toggle off can clear the board).
+ * Orders are tagged simulated:true, so getOrders() hides them from the
+ * dashboard, Orders list and every report, and they never touch stock, CRM or
+ * customer comms. Kitchen+ may call this so the controls work for whoever is at
+ * the pass; spawn is re-checked against the toggle below (purge is always
+ * allowed, so turning the toggle off can clear the board).
  */
 
-// Dwell windows (ms) the age-derived auto-advance walks each ticket through.
-const DWELL_CONFIRMED = 18_000;
-const DWELL_PREPARING = 42_000;
-const DWELL_READY = 24_000;
-const TOTAL_ACTIVE = DWELL_CONFIRMED + DWELL_PREPARING + DWELL_READY;
-// Ceiling on simultaneously-active simulated tickets so a runaway client
-// loop can't flood the board / DB. Completed sims leave the KDS and don't count.
+// Ceiling on simultaneously-active simulated tickets so repeated Add taps can't
+// flood the board / DB. Completed sims leave the KDS and don't count.
 const MAX_ACTIVE = 40;
 
-// Bound every sim read to the last 24h so the order log can't grow the
-// fetch unbounded. The active dwell window is only ~84s, so 24h is wildly
-// generous for catching anything still in flight — but wide enough that a
-// sim left "confirmed" across a pause still gets advanced (a tight few-minute
-// window would orphan it as a permanent stale ticket on the board).
+// Bound every sim read to the last 24h so the order log can't grow the fetch
+// unbounded — wide enough to catch any simulated ticket still on the board.
 const SIM_LOOKBACK_MS = 24 * 60 * 60 * 1000;
 function simSince(): string {
   return new Date(Date.now() - SIM_LOOKBACK_MS).toISOString();
@@ -59,24 +50,6 @@ function pick<T>(arr: T[]): T {
 }
 function randInt(min: number, max: number): number {
   return min + Math.floor(Math.random() * (max - min + 1));
-}
-
-/** Deterministic age → status so repeated advance() calls converge without
- *  a per-order timer. */
-function targetStatus(ageMs: number): OrderStatus {
-  if (ageMs < DWELL_CONFIRMED) return "confirmed";
-  if (ageMs < DWELL_CONFIRMED + DWELL_PREPARING) return "preparing";
-  if (ageMs < TOTAL_ACTIVE) return "ready";
-  return "completed";
-}
-
-// Forward-only ordering. A cook can now bump a simulated ticket by hand on the
-// live KDS, so the age-based auto-advance must never drag it backwards — it
-// only ever moves a ticket further along the flow.
-const STATUS_FLOW: OrderStatus[] = ["confirmed", "preparing", "ready", "completed"];
-function statusRank(s: OrderStatus): number {
-  const i = STATUS_FLOW.indexOf(s);
-  return i === -1 ? 0 : i;
 }
 
 /** Build a realistic order from the location's real menu only. Returns null
@@ -124,9 +97,8 @@ async function buildOrder(locationSlug: string): Promise<Order | null> {
 }
 
 export const POST = withAdmin(
-  // Kitchen+ so the auto-run generator works for anyone viewing the KDS — the
-  // real gate is the owner-only kdsSimulatorEnabled toggle, re-checked below
-  // for spawn/advance.
+  // Kitchen+ so the controls work for whoever is viewing the KDS — the real
+  // gate is the owner-only kdsSimulatorEnabled toggle, re-checked below for spawn.
   { roles: ["kitchen"], locationParam: "location" },
   async (req, _ctx, { locationSlug }) => {
     let body: { action?: string; count?: number } = {};
@@ -143,35 +115,17 @@ export const POST = withAdmin(
       return NextResponse.json({ ok: true, removed });
     }
 
-    // Spawn + advance generate fake load, so they require the toggle.
+    // Spawn generates fake load, so it requires the toggle.
     const settings = await getSettings();
     if (!settings.kdsSimulatorEnabled) {
       return NextResponse.json({ error: "KDS simulator is disabled in settings" }, { status: 403 });
     }
 
-    // Spawn + advance need a concrete location (orders are per-truck).
-    // Default to the first active truck when the operator is viewing "all".
+    // Spawn needs a concrete location (orders are per-truck). Default to the
+    // first active truck when the operator is viewing "all".
     const slug = locationSlug ?? getActiveLocations()[0]?.slug;
     if (!slug) {
       return NextResponse.json({ error: "No active location" }, { status: 400 });
-    }
-
-    if (body.action === "advance") {
-      // Only non-completed sims can change state, so skip the rest up front.
-      const sims = (await getOrders(slug, simSince(), { includeSimulated: true })).filter(
-        (o) => o.simulated && o.status !== "completed",
-      );
-      const now = Date.now();
-      let advanced = 0;
-      for (const o of sims) {
-        const target = targetStatus(now - Date.parse(o.createdAt));
-        // Forward-only: never undo a manual bump a cook made on the board.
-        if (statusRank(target) > statusRank(o.status)) {
-          await setSimulatedOrderStatus(o.id, target);
-          advanced++;
-        }
-      }
-      return NextResponse.json({ ok: true, advanced });
     }
 
     if (body.action === "spawn") {
@@ -183,7 +137,7 @@ export const POST = withAdmin(
         return NextResponse.json({
           ok: false,
           spawned: 0,
-          error: `Active simulated tickets capped at ${MAX_ACTIVE} — purge before spawning more.`,
+          error: `Active simulated tickets capped at ${MAX_ACTIVE} — purge before adding more.`,
         });
       }
       const count = Math.max(1, Math.min(5, body.count ?? 1));
