@@ -497,7 +497,7 @@ function AdminSettingsDesktop() {
           <Card>
             <CardHeader
               title="Order simulator"
-              description="Demo / training tool. Turning this on adds an Order simulator tab under Kitchen Display in the nav — open it to stream synthetic orders (built only from your real menu) onto the KDS and watch them walk through New → Preparing → Ready → Done. Simulated orders are tagged '(sim)' and excluded from every report — never your stock, CRM or customer comms. Turning it off hides the tab and clears any simulated tickets."
+              description="Demo / training tool. Turning this on adds an Order simulator tab under Kitchen Display in the nav — open it to stream synthetic orders (built only from your real menu) onto a self-contained Kitchen Display board inside that tab, and watch them walk through New → In progress → Ready → Done. Simulated tickets stay inside the simulator tab: they're tagged '(sim)' and never appear on the live KDS, the kitchen screens, the dashboard, the Orders list or any report — never your stock, CRM or customer comms. Turning it off hides the tab and clears any simulated tickets."
               actions={<Zap className="h-4 w-4 v2-muted" />}
             />
             <CardBody>
@@ -512,8 +512,8 @@ function AdminSettingsDesktop() {
                   />
                   <span className="v2-muted text-sm">
                     {kdsSimulatorEnabled
-                      ? "On — open the Order simulator tab under Kitchen Display to run a rush."
-                      : "Off — tab hidden and the board shows only real tickets."}
+                      ? "On — open the Order simulator tab under Kitchen Display to run a rush on its own board."
+                      : "Off — tab hidden. The live KDS only ever shows real tickets."}
                   </span>
                 </span>
               </label>

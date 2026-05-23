@@ -1015,8 +1015,10 @@ export async function getOrders(
    *  table grows past a few thousand rows. */
   since?: string,
   /** KDS-simulator escape hatch. Simulated orders are filtered out of every
-   *  read by default so they never reach reports / CRM / analytics; only the
-   *  kitchen-display + orders-list routes opt in to see them. */
+   *  read by default so they never reach the live KDS, kitchen screens,
+   *  dashboard, Orders list, reports, CRM or analytics. The ONLY caller that
+   *  opts in is the simulator tab's own /api/admin/kds-simulator route (plus
+   *  the purge helper) — synthetic tickets live solely inside that tab. */
   opts?: { includeSimulated?: boolean },
 ): Promise<Order[]> {
   const keepSim = opts?.includeSimulated === true;
@@ -1262,13 +1264,13 @@ export async function createOrder(order: Order): Promise<Order> {
 
 /**
  * KDS live-order simulator (admin-gated demo / training tool). Persists a
- * synthetic-but-real order so it streams into the orders-driven kitchen
- * display (/admin/kds) exactly like a live ticket — but deliberately SKIPS
- * every side effect createOrder() runs for a paying customer: no stock
- * decrement, no customer rollup, no outbox SMS/email, and no station
- * tickets (kds_tickets has no cascade on order delete, so firing them would
- * orphan rows on purge). The order carries simulated:true so getOrders()
- * hides it from every report.
+ * synthetic-but-real order that surfaces ONLY inside the admin KDS-simulator
+ * tab (via /api/admin/kds-simulator) — it carries simulated:true so
+ * getOrders() hides it from the live KDS, kitchen screens, dashboard, Orders
+ * list and every report. It also deliberately SKIPS every side effect
+ * createOrder() runs for a paying customer: no stock decrement, no customer
+ * rollup, no outbox SMS/email, and no station tickets (kds_tickets has no
+ * cascade on order delete, so firing them would orphan rows on purge).
  */
 export async function createSimulatedOrder(order: Order): Promise<Order> {
   const sim: Order = { ...order, simulated: true };
@@ -1283,15 +1285,18 @@ export async function createSimulatedOrder(order: Order): Promise<Order> {
       await writeJSON("orders.json", orders);
     });
   }
-  emitOrderEvent({ kind: "created", orderId: sim.id, locationSlug: sim.locationSlug });
+  // No emitOrderEvent: a simulated ticket must stay invisible to every
+  // operational view, so it deliberately does NOT wake the live orders /
+  // kitchen SSE streams. The simulator tab polls its own route for updates.
   return sim;
 }
 
 /**
  * Advance a simulated order's status. Mirrors updateOrderStatus's persistence
- * + event emission so the KDS board reacts, but skips the customer rollup +
- * outbox comms. Guarded — refuses to touch a non-simulated order so it can
- * never mutate a real ticket.
+ * but skips the customer rollup + outbox comms — and, unlike the real path,
+ * emits no order event, keeping the ticket invisible to operational SSE
+ * streams. Guarded — refuses to touch a non-simulated order so it can never
+ * mutate a real ticket. The simulator tab polls its own route for updates.
  */
 export async function setSimulatedOrderStatus(
   id: string,
@@ -1334,22 +1339,15 @@ export async function setSimulatedOrderStatus(
       return orders[index];
     });
   }
-  if (updated) {
-    emitOrderEvent({
-      kind: "status_changed",
-      orderId: updated.id,
-      locationSlug: updated.locationSlug,
-      status,
-    });
-  }
   return updated;
 }
 
 /**
  * Purge simulated orders (optionally scoped to one location). Deletes the
- * rows + KV mirror and emits deleted events so open KDS boards clear, but
- * skips the slot decrement + customer rollup deleteOrder() runs — a simulated
- * order never held a real slot or customer. Returns the count removed.
+ * rows + KV mirror but skips the slot decrement + customer rollup
+ * deleteOrder() runs — a simulated order never held a real slot or customer.
+ * Emits no order event (sims are invisible to operational streams); the
+ * simulator tab refreshes from its own route. Returns the count removed.
  */
 export async function deleteSimulatedOrders(locationSlug?: string): Promise<number> {
   const sims = (await getOrders(locationSlug, undefined, { includeSimulated: true })).filter(
@@ -1388,7 +1386,6 @@ export async function deleteSimulatedOrders(locationSlug?: string): Promise<numb
     }
     if (didDelete) {
       await removeNotificationsForOrder(o.id);
-      emitOrderEvent({ kind: "deleted", orderId: o.id, locationSlug: o.locationSlug });
       removed++;
     }
   }
@@ -1992,6 +1989,10 @@ export async function getInsights(dateFrom?: string, dateTo?: string): Promise<I
   });
 
   const orders = allOrders.filter((o) => {
+    // Simulated demo tickets never count toward insights — they live solely
+    // in the KDS-simulator tab. (This reads the kv mirror directly, so unlike
+    // getOrders() it must strip sims itself.)
+    if (o.simulated) return false;
     const date = o.slotDate || o.createdAt.split("T")[0];
     if (dateFrom && date < dateFrom) return false;
     if (dateTo && date > dateTo) return false;

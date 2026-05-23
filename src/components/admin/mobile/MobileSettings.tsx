@@ -198,7 +198,7 @@ export function MobileSettings() {
             <Section title="KDS live-order simulator">
               <ToggleField
                 label="Show KDS simulator in the nav"
-                description="Streams synthetic orders (real menu items only) into the Kitchen Display for demos. Tagged + excluded from every report; never touches stock, CRM or comms."
+                description="Streams synthetic orders (real menu items only) onto a self-contained board inside the simulator tab for demos. They never appear on the live KDS, dashboard or any report; never touch stock, CRM or comms."
                 checked={!!settings.kdsSimulatorEnabled}
                 disabled={kdsSimBusy}
                 onChange={toggleKdsSimulator}

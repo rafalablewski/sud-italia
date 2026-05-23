@@ -43,9 +43,9 @@ export const GET = withAdmin(
   { locationParam: "location" },
   async (req, _ctx, { locationSlug: scopedLocation }) => {
     const locationSlug = scopedLocation ?? undefined;
-    // Opt-in via ?includeSimulated=1 — only the KDS board passes it, so the
-    // Orders list / dashboard stream stays free of demo tickets.
-    const includeSimulated = req.nextUrl.searchParams.get("includeSimulated") === "1";
+    // Simulated demo tickets are never streamed here — getOrders() filters
+    // them out by default, so the Orders list / dashboard stream only ever
+    // carries real orders. Synthetic tickets live solely in the simulator tab.
     const encoder = new TextEncoder();
 
     let lastJson = "";
@@ -56,7 +56,7 @@ export const GET = withAdmin(
         const sendIfChanged = async () => {
           if (closed) return;
           try {
-            const orders = await getOrders(locationSlug, undefined, { includeSimulated });
+            const orders = await getOrders(locationSlug);
             // Sort newest first to match the REST endpoint's contract.
             orders.sort(
               (a, b) =>

@@ -13,8 +13,9 @@ import { getActiveLocationsAsync } from "@/lib/locations-store";
  * Open / late / oldest-age are computed client-side from the active orders
  * the board already streams, so they're not duplicated here.
  *
- * Manager+ with per-location scope enforced by withAdmin. Simulated orders
- * are included so a simulator demo reflects in throughput, matching the board.
+ * Manager+ with per-location scope enforced by withAdmin. Real orders only —
+ * simulated demo tickets are filtered out by getOrders(), so throughput
+ * reflects true service, matching the board.
  */
 export const GET = withAdmin(
   { roles: ["manager"], locationParam: "location" },
@@ -26,7 +27,7 @@ export const GET = withAdmin(
     const dayEnd = new Date();
     dayEnd.setHours(23, 59, 59, 999);
 
-    const recent = await getOrders(locationSlug ?? undefined, hourAgoIso, { includeSimulated: true });
+    const recent = await getOrders(locationSlug ?? undefined, hourAgoIso);
     const throughputLastHour = recent.filter((o) => o.status === "completed").length;
 
     const { openShifts } = await getLaborCostInRange(
