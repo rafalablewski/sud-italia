@@ -14,8 +14,20 @@ import { useEffect, useRef, useState } from "react";
  * Returns `{ enabled }` so the board can render the simulation banner.
  */
 
-const SPAWN_MS = 6000;
+// Synthetic orders should arrive the way real ones do — in uneven bursts and
+// lulls, not on a metronome. Each spawn self-schedules the next after a random
+// gap, and occasionally lands two at once (a couple + a walk-up arriving
+// together), so the board fills organically instead of ticking once every 6s.
+const SPAWN_GAP_MIN_MS = 4_500;
+const SPAWN_GAP_MAX_MS = 14_000;
+const BURST_CHANCE = 0.18; // chance a spawn drops 2 tickets instead of 1
+// The board reconciles ticket statuses on a short steady poll; the natural
+// per-ticket pace lives in the server's dwell jitter, not here.
 const ADVANCE_MS = 3000;
+
+function randBetween(min: number, max: number): number {
+  return min + Math.random() * (max - min);
+}
 
 export function useKdsSimulator(location: string | null | undefined): { enabled: boolean } {
   const [enabled, setEnabled] = useState(false);
@@ -56,6 +68,9 @@ export function useKdsSimulator(location: string | null | undefined): { enabled:
   // server self-caps the active count, so multiple open boards can't flood it.
   useEffect(() => {
     if (!enabled) return;
+    let cancelled = false;
+    let spawnTimer: ReturnType<typeof setTimeout> | undefined;
+
     const post = (body: Record<string, unknown>) => {
       const loc = locationRef.current;
       const qs = loc ? `?location=${encodeURIComponent(loc)}` : "";
@@ -65,11 +80,24 @@ export function useKdsSimulator(location: string | null | undefined): { enabled:
         body: JSON.stringify(body),
       }).catch(() => {});
     };
-    void post({ action: "spawn", count: 1 }); // immediate first ticket
-    const spawn = setInterval(() => void post({ action: "spawn", count: 1 }), SPAWN_MS);
+
+    const scheduleSpawn = (delayMs: number) => {
+      spawnTimer = setTimeout(async () => {
+        if (cancelled) return;
+        await post({ action: "spawn", count: Math.random() < BURST_CHANCE ? 2 : 1 });
+        if (cancelled) return;
+        scheduleSpawn(randBetween(SPAWN_GAP_MIN_MS, SPAWN_GAP_MAX_MS));
+      }, delayMs);
+    };
+
+    // First ticket lands soon — so flipping the toggle visibly works — but not
+    // on an instant robotic beat; every arrival after it is organically spaced.
+    scheduleSpawn(randBetween(700, 2_000));
     const advance = setInterval(() => void post({ action: "advance" }), ADVANCE_MS);
+
     return () => {
-      clearInterval(spawn);
+      cancelled = true;
+      if (spawnTimer) clearTimeout(spawnTimer);
       clearInterval(advance);
     };
   }, [enabled]);

@@ -30,17 +30,18 @@ import type { CartItem, Order, OrderStatus } from "@/data/types";
  * turning the toggle off can clear the board).
  */
 
-// Dwell windows (ms) the age-derived auto-advance walks each ticket through.
+// Base dwell windows (ms). Each ticket gets its OWN jittered version of these
+// (see dwellsFor) so tickets don't march through the board in lockstep — a real
+// kitchen always has fast tickets and slow tickets in flight at the same time.
 const DWELL_CONFIRMED = 18_000;
 const DWELL_PREPARING = 42_000;
 const DWELL_READY = 24_000;
-const TOTAL_ACTIVE = DWELL_CONFIRMED + DWELL_PREPARING + DWELL_READY;
 // Ceiling on simultaneously-active simulated tickets so a runaway client
 // loop can't flood the board / DB. Completed sims leave the KDS and don't count.
 const MAX_ACTIVE = 40;
 
 // Bound every sim read to the last 24h so the order log can't grow the
-// fetch unbounded. The active dwell window is only ~84s, so 24h is wildly
+// fetch unbounded. The active dwell window is only ~2 min, so 24h is wildly
 // generous for catching anything still in flight — but wide enough that a
 // sim left "confirmed" across a pause still gets advanced (a tight few-minute
 // window would orphan it as a permanent stale ticket on the board).
@@ -61,12 +62,38 @@ function randInt(min: number, max: number): number {
   return min + Math.floor(Math.random() * (max - min + 1));
 }
 
-/** Deterministic age → status so repeated advance() calls converge without
- *  a per-order timer. */
-function targetStatus(ageMs: number): OrderStatus {
-  if (ageMs < DWELL_CONFIRMED) return "confirmed";
-  if (ageMs < DWELL_CONFIRMED + DWELL_PREPARING) return "preparing";
-  if (ageMs < TOTAL_ACTIVE) return "ready";
+// Stable [0,1) hash of a string (FNV-1a). Lets us derive per-ticket dwell
+// jitter from the order id, so the age→status mapping stays deterministic
+// (repeated advance() calls converge, no per-order timer needed) while every
+// ticket still moves on its own schedule.
+function hashUnit(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0) / 4294967296;
+}
+
+/** Per-ticket dwell windows: each phase runs 60%–150% of its base, drawn
+ *  independently from the id, so one ticket might rush prep but linger at the
+ *  pass while another flies through. */
+function dwellsFor(id: string): { confirmed: number; preparing: number; total: number } {
+  const jitter = (base: number, salt: string) =>
+    Math.round(base * (0.6 + 0.9 * hashUnit(id + salt)));
+  const confirmed = jitter(DWELL_CONFIRMED, "·c");
+  const preparing = jitter(DWELL_PREPARING, "·p");
+  const ready = jitter(DWELL_READY, "·r");
+  return { confirmed, preparing, total: confirmed + preparing + ready };
+}
+
+/** Deterministic age → status using the ticket's own jittered dwells, so
+ *  repeated advance() calls converge without a per-order timer. */
+function targetStatus(ageMs: number, id: string): OrderStatus {
+  const { confirmed, preparing, total } = dwellsFor(id);
+  if (ageMs < confirmed) return "confirmed";
+  if (ageMs < confirmed + preparing) return "preparing";
+  if (ageMs < total) return "ready";
   return "completed";
 }
 
@@ -164,7 +191,7 @@ export const POST = withAdmin(
       const now = Date.now();
       let advanced = 0;
       for (const o of sims) {
-        const target = targetStatus(now - Date.parse(o.createdAt));
+        const target = targetStatus(now - Date.parse(o.createdAt), o.id);
         // Forward-only: never undo a manual bump a cook made on the board.
         if (statusRank(target) > statusRank(o.status)) {
           await setSimulatedOrderStatus(o.id, target);
