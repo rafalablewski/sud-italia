@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAdminOrdersStream } from "@/lib/useAdminOrdersStream";
 import {
   Bell,
@@ -25,6 +25,8 @@ import { useAdminLocation } from "./v2/LocationContext";
 import { useIsMobile } from "./v2/mobile";
 import { useToast } from "./v2/ui/Toast";
 import { Badge, Button, Card, CardBody, EmptyState, Tabs } from "./v2/ui";
+import { AdminKdsFleet } from "./AdminKdsFleet";
+import type { AdminRole } from "@/lib/admin-roles";
 
 const MobileKDS = dynamic(
   () => import("./mobile/MobileKDS").then((m) => m.MobileKDS),
@@ -117,12 +119,101 @@ function ticketCategories(order: Order): MenuCategory[] {
   return Array.from(set);
 }
 
+const KDS_MODE_KEY = "sud-kds-mode";
+
+/**
+ * Role-aware KDS shell. One live-order engine, three lenses:
+ *   • owner   → Fleet command (cross-truck health) by default, with a
+ *               switcher down into any truck's floor board.
+ *   • manager → Floor board (single location).
+ *   • kitchen/staff → Floor board (the line view they've always had).
+ * Mobile keeps the dedicated MobileKDS regardless of role.
+ */
 export function AdminKDS() {
   const { isMobile, ready } = useIsMobile();
+  const { setLocation } = useAdminLocation();
+  const [role, setRole] = useState<AdminRole | null>(null);
+  const [mode, setMode] = useState<"fleet" | "floor">("floor");
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/admin/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (cancelled) return;
+        const r = j?.role as AdminRole | undefined;
+        if (!r) return;
+        setRole(r);
+        if (r === "owner") {
+          let initial: "fleet" | "floor" = "fleet";
+          try {
+            const saved = localStorage.getItem(KDS_MODE_KEY);
+            if (saved === "fleet" || saved === "floor") initial = saved;
+          } catch {
+            /* storage may be blocked */
+          }
+          setMode(initial);
+        }
+      })
+      .catch(() => {
+        /* non-fatal — falls back to the floor board */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const chooseMode = useCallback((m: "fleet" | "floor") => {
+    setMode(m);
+    try {
+      localStorage.setItem(KDS_MODE_KEY, m);
+    } catch {
+      /* non-fatal */
+    }
+  }, []);
+
   if (ready && isMobile) {
     return <MobileKDS />;
   }
-  return <AdminKDSDesktop />;
+
+  // Only owners get the Fleet ↔ Floor switcher; everyone else sees the
+  // floor board exactly as before.
+  if (role !== "owner") {
+    return <AdminKDSDesktop />;
+  }
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 8, padding: "16px 20px 0" }}>
+        <Button
+          variant={mode === "fleet" ? "primary" : "ghost"}
+          size="sm"
+          leadingIcon={<Truck className="h-3.5 w-3.5" />}
+          onClick={() => chooseMode("fleet")}
+        >
+          Fleet
+        </Button>
+        <Button
+          variant={mode === "floor" ? "primary" : "ghost"}
+          size="sm"
+          leadingIcon={<ChefHat className="h-3.5 w-3.5" />}
+          onClick={() => chooseMode("floor")}
+        >
+          Floor board
+        </Button>
+      </div>
+      {mode === "fleet" ? (
+        <AdminKdsFleet
+          onDrillIn={(slug) => {
+            setLocation(slug);
+            chooseMode("floor");
+          }}
+        />
+      ) : (
+        <AdminKDSDesktop />
+      )}
+    </div>
+  );
 }
 
 function AdminKDSDesktop() {

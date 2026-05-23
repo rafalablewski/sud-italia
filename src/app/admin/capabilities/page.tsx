@@ -235,6 +235,15 @@ export default async function CapabilitiesPage() {
           caveats:
             "Off by default — flip it on at /admin/settings. Drives the main orders-based KDS board; it intentionally does not fire per-station kds_tickets rows (that table has no cascade on order delete, so firing them would orphan rows on purge), so the /kitchen station + expo screens won't show simulated tickets.",
         },
+        {
+          name: "Role-aware KDS — owner fleet command",
+          status: "live",
+          href: "/admin/kds",
+          summary:
+            "One live-order KDS engine, lens by role. Owners land on a Fleet command view: a per-truck tile grid showing live open tickets, late / soon-due SLA counts, oldest ticket age, completed-today + revenue-today, and the slowest station's P95 bump time, plus a fleet KPI strip (open / late / trucks-behind / completed / revenue) and a green-amber-red health rail per truck. Click a truck to drop into its floor board (sets the location + switches lens); a Fleet ↔ Floor toggle persists the owner's choice. Managers and kitchen/staff keep the floor board unchanged. Real-time signals come from the same active orders the boards read (includeSimulated, so a simulator demo lights the fleet up); bump-time P95 comes from getKdsStationAnalytics (real kds_tickets only). GET /api/admin/kds/fleet, owner-only, cross-location, auto-refreshes every 6s.",
+          caveats:
+            "Manager floor-control header (late count / oldest age / throughput / staff-vs-demand + expedite/86 actions) and the chef line-view upgrades (my-station focus, queue depth, recall, item-level 86) are the next two lenses — not built yet. P95 reads real station tickets, so it shows '—' during a pure-simulator demo.",
+        },
       ],
     },
     {
