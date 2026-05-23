@@ -10,7 +10,7 @@ import { appendAuditLog, getOrders, updateOrderStatus, deleteOrder } from "@/lib
 export const GET = withAdmin(
   { locationParam: "location" },
   async (req, _ctx, { locationSlug }) => {
-    const orders = await getOrders(locationSlug ?? undefined);
+    const orders = await getOrders(locationSlug ?? undefined, undefined, { includeSimulated: true });
     orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     return NextResponse.json(orders);
   },

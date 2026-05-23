@@ -226,6 +226,15 @@ export default async function CapabilitiesPage() {
           href: "/admin/recipes",
           summary: "EU 1169/2011 + FDA Big-9 allergens (gluten, dairy, eggs, fish, shellfish, nuts, peanuts, soy, celery, mustard, sesame, sulfites, lupin, molluscs) on each menu item. Editable from the recipe editor at /admin/recipes — tap a chip in the Dietary disclosures section to toggle. Persists through MenuOverride.allergens (seed items) or CustomMenuItem.allergens (admin-created items); `null` clears the override and the customer falls back to the kodawari seed; `[]` declares 'no major allergens' explicitly. Render surfaces: customer item-detail drawer, kitchen expo board (/kitchen/[slug]/expo). Not yet rendered on the per-station AdminKDS ticket or on the menu-card CompliancePills row — both planned. The merge in getMenuWithOverrides() backfills item.allergens from src/data/kodawari.ts when no override is set, so the data path is unified for downstream consumers.",
         },
+        {
+          name: "KDS live-order simulator",
+          status: "live",
+          href: "/admin/kds-simulator",
+          summary:
+            "Demo / training tool that streams synthetic-but-real orders into the orders-driven Kitchen Display so operators (and investors) can watch the board run a rush on demand. Orders are built ONLY from the location's real menu via getMenuWithOverrides() — no made-up products — and persisted through createSimulatedOrder(), which fires the same order-created SSE event a paid checkout does so simulated tickets appear on /admin/kds exactly like live ones. Start/Stop + spawn-rate (trickle / steady / lunch-rush) + Spawn one / Spawn 5, with auto-advance walking each ticket confirmed → preparing → ready → completed on dwell timers. Every simulated order carries simulated:true, so getOrders() filters them out of all reports / CRM / analytics by default (only the orders + kitchen routes opt in via { includeSimulated:true }) and they never trigger stock decrement, customer rollups or outbox SMS/email. Purgeable in one click (deleteSimulatedOrders). Gated behind the kdsSimulatorEnabled toggle in /admin/settings exactly like the finance simulation — nav link hidden, page redirects, and POST /api/admin/kds-simulator is rejected when off. Manager+.",
+          caveats:
+            "Off by default — flip it on at /admin/settings. Drives the main orders-based KDS board; it intentionally does not fire per-station kds_tickets rows (that table has no cascade on order delete, so firing them would orphan rows on purge), so the /kitchen station + expo screens won't show simulated tickets.",
+        },
       ],
     },
     {
@@ -286,6 +295,15 @@ export default async function CapabilitiesPage() {
             "Flags today's metrics that deviate ±20% from the trailing 28-day average. Surfaced as cards on the Insights → Anomalies tab.",
           caveats:
             "Heuristic, not Claude-backed. Won't separate weekly seasonality from genuine drops. Good enough for daily sanity check; not 'ML anomaly detection'.",
+        },
+        {
+          name: "Menu engineering matrix (standalone)",
+          status: "live",
+          href: "/admin/menu-engineering",
+          summary:
+            "Dedicated, discoverable Kasavana-Smith page (no longer buried behind the simulation feature flag). Computes star / puzzle / plowhorse / dog quadrants over real order line items from computeMenuEngineering() — velocity (units sold) × per-unit gross profit, cut at the median of each. Window selector (30 / 60 / 90 / 180 days); honours the top-bar location switcher (per-location or chain-wide). Each item carries True CM1 (per-unit GP netted against payment fees + waste + refunds + loyalty burn, delivery-only items at a 27% marketplace-commission proxy), a margin-trap / spoilage-risk / prep-heavy flag, and operator role tags (HERO / DRIVER / ANCHOR). Surfaces a KPI strip, the 2×2 matrix, a margin-traps callout, and a sortable all-items table with a recommended action per row. GET /api/admin/menu-engineering?days=&location=, manager+ with per-location scope enforced by withAdmin; cached 60s.",
+          caveats:
+            "Quadrant cuts are median-relative to the menu in scope, so a tiny menu can put nearly everything on a boundary. Spoilage risk is a name-match heuristic (burrata / truffle / tartufata / frozen tiramisù), not a shelf-life field.",
         },
       ],
     },

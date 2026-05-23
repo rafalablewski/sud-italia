@@ -53,7 +53,7 @@ export const GET = withAdmin(
         const sendIfChanged = async () => {
           if (closed) return;
           try {
-            const orders = await getOrders(locationSlug);
+            const orders = await getOrders(locationSlug, undefined, { includeSimulated: true });
             // Sort newest first to match the REST endpoint's contract.
             orders.sort(
               (a, b) =>

@@ -20,7 +20,7 @@ export async function GET() {
   const { error, session } = await requireKitchenSession();
   if (error) return error;
 
-  const orders = await getOrders(session!.slug);
+  const orders = await getOrders(session!.slug, undefined, { includeSimulated: true });
   orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   return NextResponse.json(orders);

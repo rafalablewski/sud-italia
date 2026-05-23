@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FlaskConical, History, Lock, Settings as SettingsIcon, ShieldAlert } from "lucide-react";
+import { FlaskConical, History, Lock, Settings as SettingsIcon, ShieldAlert, Zap } from "lucide-react";
 import { useToast } from "../v2/ui/Toast";
 import {
   MobilePage,
@@ -23,6 +23,7 @@ interface Settings {
     vip?: number;
   };
   simulationEnabled?: boolean;
+  kdsSimulatorEnabled?: boolean;
 }
 
 type Tab = "general" | "security" | "audit";
@@ -47,6 +48,7 @@ export function MobileSettings() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [busy, setBusy] = useState(false);
   const [simBusy, setSimBusy] = useState(false);
+  const [kdsSimBusy, setKdsSimBusy] = useState(false);
   const [audits, setAudits] = useState<AuditEntry[]>([]);
 
   const refresh = async () => {
@@ -83,6 +85,28 @@ export function MobileSettings() {
       window.dispatchEvent(new Event("sud-admin-settings-updated"));
     } finally {
       setSimBusy(false);
+    }
+  };
+
+  const toggleKdsSimulator = async (next: boolean) => {
+    if (!settings) return;
+    setKdsSimBusy(true);
+    setSettings({ ...settings, kdsSimulatorEnabled: next }); // optimistic
+    try {
+      const r = await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kdsSimulatorEnabled: next }),
+      });
+      if (!r.ok) {
+        setSettings({ ...settings, kdsSimulatorEnabled: !next });
+        toast.error("Could not update toggle");
+        return;
+      }
+      toast.success(next ? "KDS simulator enabled" : "KDS simulator disabled");
+      window.dispatchEvent(new Event("sud-admin-settings-updated"));
+    } finally {
+      setKdsSimBusy(false);
     }
   };
 
@@ -168,6 +192,17 @@ export function MobileSettings() {
                 disabled={simBusy}
                 onChange={toggleSimulation}
                 icon={<FlaskConical className="h-4 w-4" aria-hidden />}
+              />
+            </Section>
+
+            <Section title="KDS live-order simulator">
+              <ToggleField
+                label="Show KDS simulator in the nav"
+                description="Streams synthetic orders (real menu items only) into the Kitchen Display for demos. Tagged + excluded from every report; never touches stock, CRM or comms."
+                checked={!!settings.kdsSimulatorEnabled}
+                disabled={kdsSimBusy}
+                onChange={toggleKdsSimulator}
+                icon={<Zap className="h-4 w-4" aria-hidden />}
               />
             </Section>
 

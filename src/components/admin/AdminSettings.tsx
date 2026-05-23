@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   Sprout,
   Truck,
+  Zap,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useIsMobile } from "./v2/mobile";
@@ -44,6 +45,7 @@ interface Settings {
     vip?: number;
   };
   simulationEnabled?: boolean;
+  kdsSimulatorEnabled?: boolean;
 }
 
 interface AuditEntry {
@@ -91,8 +93,10 @@ function AdminSettingsDesktop() {
   const [thRegular, setThRegular] = useState("");
   const [thVip, setThVip] = useState("");
   const [simulationEnabled, setSimulationEnabled] = useState(false);
+  const [kdsSimulatorEnabled, setKdsSimulatorEnabled] = useState(false);
   const [saving, setSaving] = useState(false);
   const [simBusy, setSimBusy] = useState(false);
+  const [kdsSimBusy, setKdsSimBusy] = useState(false);
 
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [auditLoading, setAuditLoading] = useState(true);
@@ -117,6 +121,7 @@ function AdminSettingsDesktop() {
     setThRegular(typeof t?.regular === "number" ? (t.regular / 100).toFixed(2) : "");
     setThVip(typeof t?.vip === "number" ? (t.vip / 100).toFixed(2) : "");
     setSimulationEnabled(!!data.simulationEnabled);
+    setKdsSimulatorEnabled(!!data.kdsSimulatorEnabled);
   }, []);
 
   const fetchAudit = useCallback(async () => {
@@ -202,6 +207,28 @@ function AdminSettingsDesktop() {
       }
     } finally {
       setSimBusy(false);
+    }
+  };
+
+  const toggleKdsSimulator = async (next: boolean) => {
+    setKdsSimBusy(true);
+    setKdsSimulatorEnabled(next); // optimistic
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kdsSimulatorEnabled: next }),
+      });
+      if (res.ok) {
+        toast.success(next ? "KDS simulator enabled" : "KDS simulator disabled");
+        window.dispatchEvent(new Event("sud-admin-settings-updated"));
+        await Promise.all([fetchSettings(), fetchAudit()]);
+      } else {
+        setKdsSimulatorEnabled(!next); // revert
+        toast.error("Could not update toggle");
+      }
+    } finally {
+      setKdsSimBusy(false);
     }
   };
 
@@ -452,6 +479,32 @@ function AdminSettingsDesktop() {
                     {simulationEnabled
                       ? "Visible at /admin/simulation."
                       : "Hidden from the sidebar and command palette. The page redirects here when off."}
+                  </span>
+                </span>
+              </label>
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardHeader
+              title="KDS live-order simulator"
+              description="Demo / training tool that streams synthetic orders (built only from your real menu) into the Kitchen Display so you can show the board under a rush. Simulated orders are tagged and excluded from every report — never your stock, CRM or customer comms — and are purgeable in one click."
+              actions={<Zap className="h-4 w-4 v2-muted" />}
+            />
+            <CardBody>
+              <label className="v2-field">
+                <span className="v2-field-label">Show KDS simulator in the nav</span>
+                <span className="inline-flex items-center gap-2 mt-1">
+                  <input
+                    type="checkbox"
+                    checked={kdsSimulatorEnabled}
+                    onChange={(e) => toggleKdsSimulator(e.target.checked)}
+                    disabled={kdsSimBusy}
+                  />
+                  <span className="v2-muted text-sm">
+                    {kdsSimulatorEnabled
+                      ? "Visible at /admin/kds-simulator."
+                      : "Hidden from the sidebar and command palette. The page redirects here and the simulator API is rejected when off."}
                   </span>
                 </span>
               </label>
