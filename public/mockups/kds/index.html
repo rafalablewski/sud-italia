@@ -1,0 +1,870 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#080b12" />
+<title>Sud Italia — Kitchen Display System (Redesign)</title>
+
+<!--
+  ============================================================================
+  Sud Italia — KDS redesign mockup
+  ----------------------------------------------------------------------------
+  Self-contained: hand-written CSS + Google Fonts + vanilla JS, no external
+  framework or build step (works under the strict /mockups/* CSP, which only
+  allows 'self' + 'unsafe-inline' scripts and Google Fonts). The whole board
+  renders from a sample ORDERS array. Built for a large landscape kitchen
+  screen.
+
+  Layout
+    ┌───────────────────────────── header ─────────────────────────────┐
+    │ brand · clock · open/late counters · sound                        │
+    ├──────────┬──────────────────────────────────┬────────────────────┤
+    │ queue    │ selected-order detail            │ stations / expo     │
+    │ (left)   │ (main)                           │ (right)             │
+    ├──────────┴──────────────────────────────────┴────────────────────┤
+    │ bottom action bar (recall / start / ready / bump / cancel)        │
+    └───────────────────────────────────────────────────────────────────┘
+
+  Colour language (status-driven, legible from across the line):
+    red = new / urgent   ·   amber = in progress   ·   green = ready
+    a pulsing danger emphasis is layered on when an order is past its SLA.
+  ============================================================================
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
+
+<style>
+  /* ----------------------------- design tokens ----------------------------- */
+  :root {
+    --ink:      #080b12;
+    --panel:    #0f1420;
+    --panel2:   #151c2b;
+    --panel3:   #1d2638;
+    --line:     rgba(255,255,255,0.075);
+    --line-2:   rgba(255,255,255,0.14);
+    --fg:       #f4f6fb;
+    --fg-muted: #b6bfcd;
+    --fg-subtle:#7d8696;
+
+    --brand:  #e11d2a;  /* Sud Italia red */
+    --new:    #f43f5e;  /* new / urgent   */
+    --prog:   #f59e0b;  /* in progress    */
+    --ready:  #10b981;  /* ready          */
+    --info:   #38bdf8;  /* accent cyan    */
+
+    --radius: 16px;
+    font-family: "Inter", system-ui, -apple-system, sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background:
+      radial-gradient(1200px 600px at 12% -10%, rgba(225,29,42,0.10), transparent 60%),
+      radial-gradient(1000px 700px at 100% 0%, rgba(56,189,248,0.07), transparent 55%),
+      var(--ink);
+    color: var(--fg);
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font-family: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+  .tnum { font-variant-numeric: tabular-nums; }
+  .hidden { display: none !important; }
+
+  /* slim dark scrollbars */
+  .scroll { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.18) transparent; }
+  .scroll::-webkit-scrollbar { width: 9px; height: 9px; }
+  .scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.14); border-radius: 99px; border: 2px solid transparent; background-clip: content-box; }
+  .scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); background-clip: content-box; }
+
+  /* ------------------------------- app grid ------------------------------- */
+  .app { display: grid; grid-template-rows: auto 1fr auto; height: 100vh; width: 100vw; }
+
+  /* --------------------------------- header ------------------------------- */
+  .hdr {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 12px 20px; border-bottom: 1px solid var(--line);
+    background: rgba(15,20,32,0.7); backdrop-filter: blur(12px);
+  }
+  .hdr-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .brand-badge {
+    display: grid; place-items: center; height: 44px; width: 44px; border-radius: 14px;
+    background: var(--brand); color: #fff; font-weight: 900; font-size: 18px;
+    box-shadow: 0 8px 22px rgba(225,29,42,0.32); user-select: none;
+  }
+  .brand-name { font-size: 17px; font-weight: 800; letter-spacing: -0.02em; line-height: 1; }
+  .brand-sub { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; color: rgba(255,255,255,0.45); }
+  .brand-row { display: flex; align-items: center; gap: 8px; }
+  .meta-row { margin-top: 5px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--fg-subtle); }
+  .dot-live { height: 6px; width: 6px; border-radius: 50%; background: var(--ready); box-shadow: 0 0 0 0 rgba(16,185,129,0.6); animation: livePulse 2s infinite; }
+  @keyframes livePulse { 0%{box-shadow:0 0 0 0 rgba(16,185,129,0.5)} 70%{box-shadow:0 0 0 6px rgba(16,185,129,0)} 100%{box-shadow:0 0 0 0 rgba(16,185,129,0)} }
+  .loc-btn { display: inline-flex; align-items: center; gap: 5px; padding: 2px 7px; border-radius: 7px; font-weight: 700; color: var(--fg-muted); }
+  .loc-btn:hover { background: rgba(255,255,255,0.06); }
+
+  .clock { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
+  .dateline { margin-top: 5px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.16em; color: var(--fg-subtle); text-align: center; }
+
+  .hdr-right { display: flex; align-items: center; gap: 10px; }
+  .counter-box { display: flex; align-items: center; gap: 14px; padding: 8px 16px; border-radius: var(--radius); background: var(--panel2); border: 1px solid var(--line); }
+  .counter { text-align: right; line-height: 1; }
+  .counter-num { font-family: "JetBrains Mono", monospace; font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .counter-label { margin-top: 5px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.16em; color: var(--fg-subtle); }
+  .divider-v { height: 36px; width: 1px; background: var(--line); }
+  .dim { opacity: 0.4; }
+
+  /* buttons */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 12px; padding: 12px 16px; font-size: 15px; font-weight: 700; transition: transform .08s, background .15s, filter .15s; }
+  .btn:active { transform: translateY(1px) scale(0.985); }
+  .btn-icon { height: 42px; width: 42px; padding: 0; border-radius: 12px; background: var(--panel2); border: 1px solid var(--line); color: rgba(255,255,255,0.8); }
+  .btn-icon:hover { background: var(--panel3); }
+  .btn-info { background: rgba(56,189,248,0.15); color: var(--info); border: 1px solid rgba(56,189,248,0.3); font-size: 14px; padding: 10px 12px; }
+  .btn-info:hover { background: rgba(56,189,248,0.25); }
+  .btn-ghost { background: rgba(255,255,255,0.05); color: var(--fg-muted); border: 1px solid var(--line); }
+  .btn-ghost:hover { background: rgba(255,255,255,0.1); }
+  .btn-danger { background: rgba(255,255,255,0.05); color: var(--fg-muted); border: 1px solid var(--line); }
+  .btn-danger:hover { background: rgba(244,63,94,0.18); color: var(--new); }
+  .btn-amber { background: var(--prog); color: var(--ink); padding-left: 22px; padding-right: 22px; }
+  .btn-amber:hover { filter: brightness(1.1); }
+  .btn-green { background: var(--ready); color: var(--ink); padding-left: 22px; padding-right: 22px; }
+  .btn-green:hover { filter: brightness(1.1); }
+
+  /* --------------------------------- body --------------------------------- */
+  .body { display: grid; grid-template-columns: 340px minmax(0,1fr) 360px; min-height: 0; }
+
+  /* LEFT — queue */
+  .queue-pane { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--line); background: rgba(15,20,32,0.4); }
+  .queue-tools { padding: 12px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 12px; }
+  .search-wrap { position: relative; }
+  .search-wrap svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); height: 16px; width: 16px; color: rgba(255,255,255,0.35); pointer-events: none; }
+  .search { width: 100%; border-radius: 12px; background: var(--panel2); border: 1px solid var(--line); padding: 11px 12px 11px 36px; font-size: 14px; color: var(--fg); }
+  .search::placeholder { color: rgba(255,255,255,0.35); }
+  .search:focus { outline: none; border-color: rgba(56,189,248,0.6); box-shadow: 0 0 0 3px rgba(56,189,248,0.18); }
+
+  .seg { display: flex; gap: 6px; }
+  .seg-tab { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-radius: 10px; padding: 7px 6px; font-size: 12px; font-weight: 700; color: var(--fg-subtle); transition: background .15s, color .15s; }
+  .seg-tab:hover { background: rgba(255,255,255,0.05); }
+  .seg-tab.active { background: rgba(255,255,255,0.1); color: var(--fg); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15); }
+  .seg-tab .seg-count { font-family: "JetBrains Mono", monospace; opacity: 0.6; }
+  .seg-dot { height: 8px; width: 8px; border-radius: 50%; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { border-radius: 999px; padding: 4px 10px; font-size: 11px; font-weight: 600; background: rgba(255,255,255,0.05); color: var(--fg-subtle); transition: background .15s, color .15s; }
+  .chip:hover { background: rgba(255,255,255,0.1); }
+  .chip.active { background: rgba(56,189,248,0.2); color: var(--info); box-shadow: inset 0 0 0 1px rgba(56,189,248,0.4); }
+
+  .queue { flex: 1; min-height: 0; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+  .empty { display: grid; place-items: center; height: 100%; color: rgba(255,255,255,0.32); font-size: 14px; text-align: center; padding: 48px 0; }
+
+  /* ticket card (queue) */
+  .ticket {
+    --tone: var(--new);
+    position: relative; width: 100%; text-align: left; border-radius: var(--radius);
+    border: 1px solid var(--line); background: var(--panel2); padding: 12px 12px 12px 14px;
+    transition: transform .12s, background .15s, box-shadow .15s;
+  }
+  .ticket:hover { background: var(--panel3); transform: translateY(-2px); }
+  .ticket.selected { background: var(--panel3); border-color: rgba(56,189,248,0.4); box-shadow: 0 0 0 2px var(--info); }
+  .ticket .accent { position: absolute; left: 0; top: 12px; bottom: 12px; width: 6px; border-radius: 999px; background: var(--tone); }
+  .ticket-inner { padding-left: 10px; }
+  .ticket-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  .ticket-id { font-family: "JetBrains Mono", monospace; font-size: 18px; font-weight: 700; line-height: 1; }
+  .ticket-cust { margin-top: 5px; display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--fg-subtle); }
+  .ticket-cust b { color: var(--fg-muted); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ticket-right { text-align: right; flex-shrink: 0; }
+  .ticket-timer { font-family: "JetBrains Mono", monospace; font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
+  .ticket-sla { margin-top: 4px; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; }
+  .ticket-tags { margin-top: 9px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .tag-count { display: inline-flex; align-items: center; gap: 4px; border-radius: 7px; background: rgba(255,255,255,0.05); padding: 2px 7px; font-size: 11px; font-weight: 600; color: var(--fg-muted); }
+  .tag-icons { display: inline-flex; align-items: center; gap: 4px; color: rgba(255,255,255,0.4); }
+  .tag-note { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; color: var(--new); }
+
+  .icon { display: inline-block; vertical-align: middle; }
+
+  /* overdue pulse */
+  @keyframes overduePulse {
+    0%,100% { box-shadow: 0 0 0 1px rgba(244,63,94,0.55), 0 0 22px rgba(244,63,94,0.18); }
+    50%     { box-shadow: 0 0 0 1px rgba(244,63,94,0.95), 0 0 34px rgba(244,63,94,0.42); }
+  }
+  .is-overdue { animation: overduePulse 1.4s ease-in-out infinite; }
+
+  /* fresh-ticket entrance */
+  @keyframes ticketIn { 0%{transform:translateY(-10px) scale(.98);opacity:0} 100%{transform:none;opacity:1} }
+  .ticket-in { animation: ticketIn .32s cubic-bezier(.2,.8,.2,1) both; }
+
+  /* bump */
+  @keyframes bumpAway {
+    0%{transform:none;opacity:1}
+    35%{transform:translateY(-6px) scale(1.02);box-shadow:0 0 0 2px rgba(16,185,129,.9),0 0 40px rgba(16,185,129,.55)}
+    100%{transform:translateY(-130%) scale(.9);opacity:0}
+  }
+  .bump-away { animation: bumpAway .5s cubic-bezier(.5,0,.75,0) forwards; pointer-events: none; }
+  @keyframes bumpBurst {
+    0%{transform:translate(-50%,-50%) scale(.4);opacity:0}
+    25%{transform:translate(-50%,-50%) scale(1);opacity:1}
+    80%{transform:translate(-50%,-50%) scale(1);opacity:1}
+    100%{transform:translate(-50%,-50%) scale(1.15);opacity:0}
+  }
+  .burst { position: fixed; left: 50%; top: 50%; z-index: 50; pointer-events: none; }
+  .burst > div { display: grid; place-items: center; height: 112px; width: 112px; border-radius: 50%; background: rgba(16,185,129,0.2); border: 2px solid var(--ready); color: var(--ready); }
+  .burst.play > div { animation: bumpBurst .85s ease forwards; }
+
+  /* MAIN — detail */
+  .detail { min-height: 0; overflow-y: auto; }
+  .detail-inner { padding: 20px; max-width: 880px; margin: 0 auto; }
+  .detail-empty { display: grid; place-items: center; height: 100%; color: rgba(255,255,255,0.32); text-align: center; }
+
+  .detail-head { --tone: var(--new); border-radius: 22px; border: 1px solid var(--line); background: var(--panel2); padding: 20px; box-shadow: inset 4px 0 0 var(--tone); }
+  .detail-head.is-overdue { border-color: transparent; }
+  .dh-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+  .order-id-lg { font-family: "JetBrains Mono", monospace; font-size: 38px; font-weight: 800; letter-spacing: -0.02em; line-height: 1; }
+  .status-pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; background: var(--tone); color: var(--ink); padding: 5px 14px; font-size: 14px; font-weight: 800; }
+  .cust-lg { font-size: 18px; font-weight: 800; color: var(--fg); }
+  .dh-sub { margin-top: 8px; display: flex; align-items: center; gap: 14px; color: var(--fg-muted); flex-wrap: wrap; }
+  .dh-sub .pillette { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; }
+  .detail-timer { font-family: "JetBrains Mono", monospace; font-size: 60px; font-weight: 800; line-height: 0.95; font-variant-numeric: tabular-nums; }
+  .detail-sla { margin-top: 6px; font-size: 14px; font-weight: 700; }
+  .dh-foot { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); display: flex; gap: 18px; flex-wrap: wrap; font-size: 12px; color: var(--fg-subtle); }
+  .dh-foot span { display: inline-flex; align-items: center; gap: 6px; }
+
+  .note-banner { margin-top: 16px; display: flex; align-items: flex-start; gap: 12px; border-radius: var(--radius); border: 1px solid rgba(244,63,94,0.4); background: rgba(244,63,94,0.1); padding: 14px 16px; }
+  .note-banner .ico { color: var(--new); margin-top: 2px; }
+  .note-banner .lbl { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.16em; color: var(--new); }
+  .note-banner .txt { margin-top: 2px; font-size: 16px; font-weight: 600; color: var(--fg); }
+
+  .stations-list { margin-top: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .station-block { border-radius: var(--radius); border: 1px solid var(--line); background: rgba(21,28,43,0.6); overflow: hidden; }
+  .station-block.dim .item-row { opacity: 0.32; }
+  .sb-head { display: flex; align-items: center; gap: 8px; padding: 9px 16px; background: rgba(255,255,255,0.03); border-bottom: 1px solid var(--line); }
+  .sb-head .ico { color: rgba(255,255,255,0.55); }
+  .sb-title { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.16em; color: var(--fg-subtle); }
+  .sb-count { margin-left: auto; font-family: "JetBrains Mono", monospace; font-size: 12px; color: rgba(255,255,255,0.4); }
+  .sb-list { padding: 0 16px; }
+  .item-row { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.05); }
+  .item-row:first-child { border-top: 0; }
+  .qty { display: grid; place-items: center; min-width: 42px; height: 40px; border-radius: 12px; font-family: "JetBrains Mono", monospace; font-size: 18px; font-weight: 700; background: rgba(255,255,255,0.08); color: var(--fg-muted); }
+  .qty.multi { background: var(--brand); color: #fff; }
+  .item-name { font-size: 19px; font-weight: 700; line-height: 1.2; }
+  .mods { margin-top: 5px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .mod { display: inline-flex; align-items: center; gap: 4px; border-radius: 7px; background: rgba(56,189,248,0.12); color: var(--info); border: 1px solid rgba(56,189,248,0.25); padding: 2px 8px; font-size: 12px; font-weight: 600; }
+  .item-note { margin-top: 5px; display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; color: var(--prog); }
+
+  /* RIGHT — stations + expo */
+  .right-pane { display: flex; flex-direction: column; min-height: 0; border-left: 1px solid var(--line); background: rgba(15,20,32,0.4); }
+  .right-sect { padding: 16px; border-bottom: 1px solid var(--line); }
+  .sect-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.16em; color: var(--fg-subtle); }
+  .loads { margin-top: 12px; display: flex; flex-direction: column; gap: 11px; }
+  .load { width: 100%; text-align: left; }
+  .load-top { display: flex; align-items: center; justify-content: space-between; font-size: 13px; margin-bottom: 5px; }
+  .load-name { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; color: var(--fg-muted); }
+  .load-name .ico { color: rgba(255,255,255,0.45); }
+  .load:hover .load-name { color: var(--fg); }
+  .load-num { font-family: "JetBrains Mono", monospace; font-weight: 700; color: var(--fg-subtle); }
+  .load-num.hot { color: var(--new); }
+  .load-bar { height: 8px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; }
+  .load-fill { height: 100%; border-radius: 999px; transition: width .5s cubic-bezier(.2,.8,.2,1); }
+
+  .expo-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 16px 8px; }
+  .expo-count { font-family: "JetBrains Mono", monospace; font-size: 13px; font-weight: 700; color: var(--ready); }
+  .ready-list { flex: 1; min-height: 0; overflow-y: auto; padding: 0 16px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .ready-card { border-radius: var(--radius); border: 1px solid rgba(16,185,129,0.3); background: rgba(16,185,129,0.06); padding: 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .ready-id { font-family: "JetBrains Mono", monospace; font-size: 16px; font-weight: 700; }
+  .ready-sub { font-size: 12px; color: var(--fg-subtle); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bump-btn { flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; border-radius: 12px; background: var(--ready); color: var(--ink); padding: 9px 13px; font-size: 14px; font-weight: 800; transition: filter .15s, transform .08s; }
+  .bump-btn:hover { filter: brightness(1.1); }
+  .bump-btn:active { transform: translateY(1px) scale(.985); }
+
+  /* ----------------------------- action bar ------------------------------ */
+  .actionbar { border-top: 1px solid var(--line); background: rgba(15,20,32,0.8); backdrop-filter: blur(12px); padding: 12px 16px; }
+  .ab-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .ab-empty { font-size: 14px; color: rgba(255,255,255,0.45); }
+  .ab-left { --tone: var(--new); display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .ab-bar { height: 36px; width: 6px; border-radius: 999px; background: var(--tone); }
+  .ab-id { font-family: "JetBrains Mono", monospace; font-size: 18px; font-weight: 700; }
+  .ab-id .muted { color: rgba(255,255,255,0.4); font-family: "Inter", sans-serif; font-size: 14px; }
+  .ab-sub { font-size: 12px; color: var(--fg-subtle); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ab-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .kbd { font-family: "JetBrains Mono", monospace; font-size: 10px; padding: 1px 5px; border-radius: 5px; background: rgba(255,255,255,0.08); border: 1px solid var(--line); color: var(--fg-subtle); }
+
+  /* responsive squeeze for smaller landscape screens */
+  @media (max-width: 1280px) { .body { grid-template-columns: 300px minmax(0,1fr) 320px; } }
+  @media (max-width: 1024px) { .body { grid-template-columns: 270px minmax(0,1fr); } .right-pane { display: none; } }
+</style>
+</head>
+
+<body>
+<div class="app">
+
+  <!-- ───────────────────────── HEADER ───────────────────────── -->
+  <header class="hdr">
+    <div class="hdr-left">
+      <div class="brand-badge">SI</div>
+      <div style="min-width:0">
+        <div class="brand-row">
+          <span class="brand-name">Sud Italia</span>
+          <span class="brand-sub">Kitchen Display</span>
+        </div>
+        <div class="meta-row">
+          <span style="display:inline-flex;align-items:center;gap:6px"><span class="dot-live"></span> Live</span>
+          <span style="color:rgba(255,255,255,0.2)">·</span>
+          <button class="loc-btn" id="locBtn">
+            <svg class="icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span id="locLabel">Kraków</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;align-items:center">
+      <div class="clock mono tnum" id="clock">--:--:--</div>
+      <div class="dateline" id="dateline">—</div>
+    </div>
+
+    <div class="hdr-right">
+      <div class="counter-box">
+        <div class="counter">
+          <div class="counter-num" id="openCount">0</div>
+          <div class="counter-label">Open</div>
+        </div>
+        <div class="divider-v"></div>
+        <div class="counter">
+          <div class="counter-num" id="lateCount" style="color:var(--new)">0</div>
+          <div class="counter-label">Late</div>
+        </div>
+      </div>
+      <button class="btn btn-info" id="addBtn" title="Simulate a new incoming ticket">
+        <svg class="icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        New ticket
+      </button>
+      <button class="btn-icon" id="soundBtn" title="Toggle new-ticket sound">
+        <svg id="soundOn" class="icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a9 9 0 0 1 0 14"/></svg>
+        <svg id="soundOff" class="icon hidden" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="m23 9-6 6M17 9l6 6"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ───────────────────────── BODY ───────────────────────── -->
+  <div class="body">
+    <!-- LEFT: queue -->
+    <aside class="queue-pane">
+      <div class="queue-tools">
+        <div class="search-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <input class="search" id="search" type="text" placeholder="Search order #, name, item…" />
+        </div>
+        <div class="seg" id="statusFilters"></div>
+        <div class="chips" id="stationFilters"></div>
+      </div>
+      <div class="queue scroll" id="queue"></div>
+    </aside>
+
+    <!-- MAIN: detail -->
+    <main class="detail scroll" id="detail"></main>
+
+    <!-- RIGHT: stations + expo -->
+    <aside class="right-pane">
+      <div class="right-sect">
+        <div class="sect-title">Station load</div>
+        <div class="loads" id="stations"></div>
+      </div>
+      <div class="expo-head">
+        <div class="sect-title">Ready · Expo</div>
+        <span class="expo-count" id="readyCount">0</span>
+      </div>
+      <div class="ready-list scroll" id="ready"></div>
+    </aside>
+  </div>
+
+  <!-- ───────────────────────── ACTION BAR ───────────────────────── -->
+  <footer class="actionbar">
+    <div id="actionContext"><span class="ab-empty">Select a ticket to act on it.</span></div>
+  </footer>
+</div>
+
+<!-- bump confirmation burst -->
+<div class="burst hidden" id="burst">
+  <div><svg viewBox="0 0 24 24" width="56" height="56" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+</div>
+
+<script>
+/* ============================================================================
+   DATA — sample orders.
+   Each order carries `elapsedMin` (minutes since placed) and `promiseMin`
+   (the SLA). We turn those into real timestamps at load so the live
+   countdowns are honest.
+   ========================================================================== */
+const STATIONS = {
+  pizza:     { label: "Pizza · Oven",    icon: "flame" },
+  pasta:     { label: "Pasta",           icon: "pasta" },
+  antipasti: { label: "Antipasti · Cold",icon: "leaf" },
+  panini:    { label: "Panini · Grill",  icon: "sandwich" },
+  drinks:    { label: "Bar",             icon: "cup" },
+  desserts:  { label: "Dolci",           icon: "cake" },
+};
+const STATION_ORDER = ["pizza", "pasta", "antipasti", "panini", "drinks", "desserts"];
+
+let SEQ = 100;
+function uid() { return (++SEQ).toString(36).toUpperCase(); }
+
+const RAW = [
+  { code: "A7F3", customer: "Anna Kowalska", channel: "takeout", location: "Kraków", status: "new", elapsedMin: 1.1, promiseMin: 14,
+    note: "Allergy: NO NUTS — separate prep board.",
+    items: [ { qty: 1, name: "Margherita", cat: "pizza", mods: ["Extra basil", "Well done"] }, { qty: 1, name: "Espresso", cat: "drinks", mods: [] } ] },
+  { code: "B2K9", customer: "Marco R.", channel: "delivery", location: "Kraków", status: "new", elapsedMin: 4.6, promiseMin: 12, note: "",
+    items: [ { qty: 2, name: "Diavola", cat: "pizza", mods: ["Extra spicy nduja"] }, { qty: 1, name: "Garlic Bread", cat: "antipasti", mods: [], itemNote: "cut in 6" }, { qty: 1, name: "Aranciata San Pellegrino", cat: "drinks", mods: [] } ] },
+  { code: "C71F", customer: "Giulia M.", channel: "takeout", location: "Kraków", status: "progress", elapsedMin: 8.7, promiseMin: 15, note: "",
+    items: [ { qty: 1, name: "Quattro Formaggi", cat: "pizza", mods: ["Light gorgonzola"] }, { qty: 1, name: "Spaghetti Carbonara", cat: "pasta", mods: ["No black pepper on top"] }, { qty: 1, name: "Tiramisù", cat: "desserts", mods: [] } ] },
+  { code: "D4E8", customer: "Tomek W.", channel: "delivery", location: "Kraków", status: "progress", elapsedMin: 16.4, promiseMin: 13,
+    note: "Birthday order — add a candle to the dessert.",
+    items: [ { qty: 3, name: "Margherita", cat: "pizza", mods: [] }, { qty: 1, name: "Penne Arrabbiata", cat: "pasta", mods: ["Mild"], itemNote: "kid's portion" }, { qty: 2, name: "Limonata Fresca", cat: "drinks", mods: [] }, { qty: 1, name: "Cannoli Siciliani (2 pcs)", cat: "desserts", mods: [] } ] },
+  { code: "E9A1", customer: "Sara P.", channel: "takeout", location: "Kraków", status: "progress", elapsedMin: 3.2, promiseMin: 11, note: "",
+    items: [ { qty: 1, name: "Panino Caprese", cat: "panini", mods: ["No basil"] }, { qty: 1, name: "Burrata con Pomodorini", cat: "antipasti", mods: [] } ] },
+  { code: "F0C5", customer: "Luca B.", channel: "delivery", location: "Kraków", status: "ready", elapsedMin: 11.0, promiseMin: 16, note: "Leave with reception.",
+    items: [ { qty: 2, name: "Margherita", cat: "pizza", mods: [] }, { qty: 1, name: "Cannoli Siciliani (2 pcs)", cat: "desserts", mods: [] } ] },
+  { code: "G3H7", customer: "Ola Z.", channel: "takeout", location: "Kraków", status: "ready", elapsedMin: 6.5, promiseMin: 12, note: "",
+    items: [ { qty: 1, name: "Linguine al Pesto", cat: "pasta", mods: ["Add chilli flakes"] }, { qty: 1, name: "Acqua Minerale", cat: "drinks", mods: [] } ] },
+];
+
+const now0 = Date.now();
+let ORDERS = RAW.map((o) => ({ id: uid(), ...o, placedAt: now0 - Math.round(o.elapsedMin * 60000), promiseMs: o.promiseMin * 60000 }));
+
+/* ----------------------------- state ----------------------------- */
+const state = {
+  selectedId: ORDERS.find((o) => o.status !== "ready")?.id || ORDERS[0].id,
+  statusFilter: "all",
+  stationFilter: "all",
+  query: "",
+  sound: true,
+  location: "Kraków",
+};
+
+/* ------------------------ status meta + helpers ------------------------ */
+const STATUS = {
+  new:      { label: "New",         varc: "--new",   next: "progress", nextLabel: "Start prep" },
+  progress: { label: "In progress", varc: "--prog",  next: "ready",    nextLabel: "Mark ready" },
+  ready:    { label: "Ready",       varc: "--ready", next: null,       nextLabel: "Bump · Done" },
+};
+const TONE_VAR = { new: "--new", prog: "--prog", ready: "--ready" };
+const HEX = { "--new": "#f43f5e", "--prog": "#f59e0b", "--ready": "#10b981", "--fg": "#f4f6fb", "--fg-subtle": "#7d8696" };
+
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+
+function elapsedSec(o)   { return Math.max(0, Math.round((Date.now() - o.placedAt) / 1000)); }
+function remainingSec(o) { return Math.round((o.placedAt + o.promiseMs - Date.now()) / 1000); }
+function isOverdue(o)    { return o.status !== "ready" && remainingSec(o) < 0; }
+function isDueSoon(o)    { const r = remainingSec(o); return o.status !== "ready" && r >= 0 && r < 180; }
+function fmtClock(s)     { const a = Math.abs(s), m = Math.floor(a / 60), r = a % 60; return `${s < 0 ? "-" : ""}${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}`; }
+function itemCount(o)    { return o.items.reduce((n, i) => n + i.qty, 0); }
+function fmtTime(ms)     { return new Date(ms).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }); }
+function esc(s)          { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+
+// Tone var for a ticket: status drives it; overdue overrides to danger red.
+function toneVar(o) { return isOverdue(o) ? "--new" : STATUS[o.status].varc; }
+// Colour for the timer text.
+function timerColorVar(o) {
+  if (o.status === "ready") return "--ready";
+  if (isOverdue(o)) return "--new";
+  if (isDueSoon(o)) return "--prog";
+  return "--fg";
+}
+
+/* ---- inline icon set (lucide-style) ---- */
+const ICONS = {
+  truck:    '<path d="M14 18V6H2v12h12Z"/><path d="M14 9h4l4 4v5h-8"/><circle cx="6.5" cy="18.5" r="1.8"/><circle cx="17.5" cy="18.5" r="1.8"/>',
+  bag:      '<path d="M6 2 4 6v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6l-2-4Z"/><path d="M4 6h16"/><path d="M16 10a4 4 0 0 1-8 0"/>',
+  clock:    '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  timer:    '<path d="M10 2h4"/><path d="M12 14v-4"/><circle cx="12" cy="14" r="8"/>',
+  pin:      '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
+  flame:    '<path d="M12 2c1 4 5 5 5 9a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 1-2-1-4-1-8Z"/>',
+  pasta:    '<path d="M4 20c0-7 4-12 8-12s8 5 8 12"/><path d="M8 20V9M12 20V8M16 20V9"/>',
+  leaf:     '<path d="M11 20A7 7 0 0 1 4 13c0-5 4-9 16-9 0 8-4 12-9 12Z"/><path d="M11 20c0-4 2-7 5-9"/>',
+  sandwich: '<path d="M3 8h18l-2-3H5L3 8Z"/><path d="M3 8v3a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3V8"/><path d="M4 17h16"/>',
+  cup:      '<path d="M6 8h12l-1 11a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 8Z"/><path d="M6 8a3 3 0 0 1 0-6h9"/>',
+  cake:     '<path d="M4 21h16v-7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7Z"/><path d="M4 16h16M12 4v4M9 6v2M15 6v2"/>',
+  check:    '<path d="M20 6 9 17l-5-5"/>',
+  play:     '<path d="M6 4v16l13-8Z"/>',
+  x:        '<path d="M18 6 6 18M6 6l12 12"/>',
+  undo:     '<path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-4"/>',
+  alert:    '<path d="M12 3 2 21h20L12 3Z"/><path d="M12 10v5M12 18h.01"/>',
+};
+function icon(name, size = 16) {
+  return `<svg class="icon ico" viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[name] || ""}</svg>`;
+}
+function channelIcon(ch, size) { return icon(ch === "delivery" ? "truck" : "bag", size); }
+</script>
+
+<script>
+/* ============================================================================
+   RENDER
+   ========================================================================== */
+function visibleOrders() {
+  const q = state.query.trim().toLowerCase();
+  return ORDERS.filter((o) => {
+    if (state.statusFilter !== "all" && o.status !== state.statusFilter) return false;
+    if (state.stationFilter !== "all" && !o.items.some((i) => i.cat === state.stationFilter)) return false;
+    if (q) {
+      const hay = (o.code + " " + o.customer + " " + o.items.map((i) => i.name).join(" ")).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function renderCounters() {
+  const late = ORDERS.filter(isOverdue).length;
+  $("#openCount").textContent = ORDERS.length;
+  $("#lateCount").textContent = late;
+  $("#lateCount").parentElement.classList.toggle("dim", late === 0);
+}
+
+function renderFilters() {
+  const counts = {
+    all: ORDERS.length,
+    new: ORDERS.filter((o) => o.status === "new").length,
+    progress: ORDERS.filter((o) => o.status === "progress").length,
+    ready: ORDERS.filter((o) => o.status === "ready").length,
+  };
+  const tabs = [
+    { id: "all", label: "All", varc: null },
+    { id: "new", label: "New", varc: "--new" },
+    { id: "progress", label: "Prep", varc: "--prog" },
+    { id: "ready", label: "Ready", varc: "--ready" },
+  ];
+  $("#statusFilters").innerHTML = tabs.map((t) => {
+    const active = state.statusFilter === t.id;
+    const dot = t.varc ? `<span class="seg-dot" style="background:var(${t.varc})"></span>` : "";
+    return `<button class="seg-tab${active ? " active" : ""}" data-status="${t.id}">${dot}${t.label}<span class="seg-count">${counts[t.id]}</span></button>`;
+  }).join("");
+
+  const chips = [{ id: "all", label: "All stations" }].concat(
+    STATION_ORDER.filter((s) => ORDERS.some((o) => o.items.some((i) => i.cat === s)))
+      .map((s) => ({ id: s, label: STATIONS[s].label.split(" · ")[0] }))
+  );
+  $("#stationFilters").innerHTML = chips.map((c) =>
+    `<button class="chip${state.stationFilter === c.id ? " active" : ""}" data-station="${c.id}">${esc(c.label)}</button>`
+  ).join("");
+}
+
+function queueCard(o) {
+  const tv = toneVar(o), tcv = timerColorVar(o);
+  const rem = remainingSec(o), overdue = isOverdue(o);
+  const sla = o.status === "ready" ? "READY" : overdue ? `LATE ${fmtClock(Math.abs(rem))}` : `DUE ${fmtClock(rem)}`;
+  const cats = [...new Set(o.items.map((i) => i.cat))].slice(0, 4);
+  return `
+  <button class="ticket${o.id === state.selectedId ? " selected" : ""}${overdue ? " is-overdue" : ""}" data-select="${o.id}" style="--tone:var(${tv})">
+    <span class="accent"></span>
+    <div class="ticket-inner">
+      <div class="ticket-top">
+        <div style="min-width:0">
+          <div class="ticket-id">#${esc(o.code)}</div>
+          <div class="ticket-cust">${channelIcon(o.channel, 14)}<b>${esc(o.customer)}</b></div>
+        </div>
+        <div class="ticket-right">
+          <div class="ticket-timer" style="color:var(${tcv})">${fmtClock(elapsedSec(o))}</div>
+          <div class="ticket-sla" style="color:var(${tcv})">${sla}</div>
+        </div>
+      </div>
+      <div class="ticket-tags">
+        <span class="tag-count">${itemCount(o)} item${itemCount(o) === 1 ? "" : "s"}</span>
+        <span class="tag-icons">${cats.map((c) => icon(STATIONS[c].icon, 14)).join("")}</span>
+        ${o.note ? `<span class="tag-note">${icon("alert", 14)}Note</span>` : ""}
+      </div>
+    </div>
+  </button>`;
+}
+
+function renderQueue() {
+  const list = visibleOrders().sort((a, b) => a.placedAt - b.placedAt);
+  const q = $("#queue");
+  if (!list.length) {
+    q.innerHTML = `<div class="empty"><div>${icon("check", 32)}<div style="margin-top:8px">No tickets match.</div></div></div>`;
+    return;
+  }
+  q.innerHTML = list.map(queueCard).join("");
+}
+
+function renderDetail() {
+  const o = ORDERS.find((x) => x.id === state.selectedId);
+  const main = $("#detail");
+  if (!o) { main.innerHTML = `<div class="detail-empty"><div>${icon("bag", 56)}<div style="margin-top:10px">Select a ticket from the queue.</div></div></div>`; return; }
+
+  const tv = toneVar(o), tcv = timerColorVar(o);
+  const overdue = isOverdue(o), rem = remainingSec(o), st = STATUS[o.status];
+  const byCat = {};
+  o.items.forEach((i) => (byCat[i.cat] = byCat[i.cat] || []).push(i));
+  const cats = STATION_ORDER.filter((c) => byCat[c]);
+
+  const blocks = cats.map((c) => {
+    const dim = state.stationFilter !== "all" && state.stationFilter !== c;
+    const rows = byCat[c].map((it) => `
+      <div class="item-row">
+        <span class="qty${it.qty > 1 ? " multi" : ""}">${it.qty}×</span>
+        <div style="min-width:0;flex:1">
+          <div class="item-name">${esc(it.name)}</div>
+          ${it.mods.length ? `<div class="mods">${it.mods.map((m) => `<span class="mod">+ ${esc(m)}</span>`).join("")}</div>` : ""}
+          ${it.itemNote ? `<div class="item-note">${icon("alert", 14)} ${esc(it.itemNote)}</div>` : ""}
+        </div>
+      </div>`).join("");
+    return `<section class="station-block${dim ? " dim" : ""}">
+      <header class="sb-head">${icon(STATIONS[c].icon, 16)}<span class="sb-title">${STATIONS[c].label}</span><span class="sb-count">${byCat[c].reduce((n, i) => n + i.qty, 0)}</span></header>
+      <div class="sb-list">${rows}</div>
+    </section>`;
+  }).join("");
+
+  main.innerHTML = `
+  <div class="detail-inner">
+    <div class="detail-head${overdue ? " is-overdue" : ""}" style="--tone:var(${tv})">
+      <div class="dh-top">
+        <div style="min-width:0">
+          <div style="display:flex;align-items:center;gap:12px">
+            <span class="order-id-lg">#${esc(o.code)}</span>
+            <span class="status-pill">${overdue ? icon("alert", 16) : ""}${overdue ? "LATE" : st.label}</span>
+          </div>
+          <div class="dh-sub">
+            <span class="cust-lg">${esc(o.customer)}</span>
+            <span class="pillette">${channelIcon(o.channel, 16)}${o.channel === "delivery" ? "Delivery" : "Takeout"}</span>
+            <span class="pillette">${icon("pin", 16)}${esc(o.location)}</span>
+          </div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div class="detail-timer" style="color:var(${tcv})">${fmtClock(elapsedSec(o))}</div>
+          <div class="detail-sla" style="color:var(${tcv})">${o.status === "ready" ? "Waiting at pass" : overdue ? `${fmtClock(Math.abs(rem))} over SLA` : `${fmtClock(rem)} to promised`}</div>
+        </div>
+      </div>
+      <div class="dh-foot">
+        <span>${icon("clock", 15)}Placed ${fmtTime(o.placedAt)}</span>
+        <span>${icon("timer", 15)}SLA ${o.promiseMin} min</span>
+        <span>${itemCount(o)} items · ${cats.length} station${cats.length === 1 ? "" : "s"}</span>
+      </div>
+    </div>
+    ${o.note ? `<div class="note-banner"><span class="ico">${icon("alert", 20)}</span><div><div class="lbl">Special request</div><div class="txt">${esc(o.note)}</div></div></div>` : ""}
+    <div class="stations-list">${blocks}</div>
+  </div>`;
+}
+
+function renderStations() {
+  const load = {};
+  STATION_ORDER.forEach((s) => (load[s] = 0));
+  ORDERS.filter((o) => o.status !== "ready").forEach((o) => o.items.forEach((i) => (load[i.cat] += i.qty)));
+  const max = Math.max(1, ...Object.values(load));
+  const active = STATION_ORDER.filter((s) => ORDERS.some((o) => o.items.some((i) => i.cat === s)));
+  $("#stations").innerHTML = active.map((s) => {
+    const v = load[s], pct = Math.round((v / max) * 100), hot = v >= 4;
+    const color = hot ? "var(--new)" : v >= 2 ? "var(--prog)" : "var(--info)";
+    return `<button class="load" data-station="${s}">
+      <div class="load-top"><span class="load-name">${icon(STATIONS[s].icon, 16)}${STATIONS[s].label}</span><span class="load-num${hot ? " hot" : ""}">${v}</span></div>
+      <div class="load-bar"><div class="load-fill" style="width:${v ? Math.max(8, pct) : 0}%;background:${color}"></div></div>
+    </button>`;
+  }).join("");
+}
+
+function renderReady() {
+  const ready = ORDERS.filter((o) => o.status === "ready").sort((a, b) => a.placedAt - b.placedAt);
+  $("#readyCount").textContent = ready.length;
+  const wrap = $("#ready");
+  if (!ready.length) { wrap.innerHTML = `<div style="text-align:center;color:rgba(255,255,255,0.3);font-size:14px;padding:24px 0">Nothing waiting at the pass.</div>`; return; }
+  wrap.innerHTML = ready.map((o) => `
+    <div class="ready-card" data-readycard="${o.id}">
+      <button data-select="${o.id}" style="min-width:0;text-align:left">
+        <div class="ready-id">#${esc(o.code)}</div>
+        <div class="ready-sub">${esc(o.customer)} · ${itemCount(o)} items</div>
+      </button>
+      <button class="bump-btn" data-bump="${o.id}">${icon("check", 16)}Bump</button>
+    </div>`).join("");
+}
+
+function renderActions() {
+  const o = ORDERS.find((x) => x.id === state.selectedId);
+  const bar = $("#actionContext");
+  if (!o) { bar.innerHTML = `<span class="ab-empty">Select a ticket to act on it.</span>`; return; }
+  const st = STATUS[o.status], tv = toneVar(o);
+
+  const btn = (action, label, ic, cls) => `<button class="btn ${cls}" data-action="${action}" data-id="${o.id}">${icon(ic, 18)}${label}</button>`;
+  const cta =
+    o.status === "new"      ? btn("advance", st.nextLabel, "play",  "btn-amber") :
+    o.status === "progress" ? btn("advance", st.nextLabel, "check", "btn-green") :
+                              btn("bump",    "Bump · Done", "check", "btn-green");
+
+  bar.innerHTML = `
+    <div class="ab-row">
+      <div class="ab-left" style="--tone:var(${tv})">
+        <span class="ab-bar"></span>
+        <div style="min-width:0">
+          <div class="ab-id">#${esc(o.code)} <span class="muted">· ${st.label}</span></div>
+          <div class="ab-sub">${esc(o.customer)} · ${itemCount(o)} items <span class="kbd">↑↓ select</span> <span class="kbd">⏎ advance</span> <span class="kbd">⌫ recall</span></div>
+        </div>
+      </div>
+      <div class="ab-right">
+        ${o.status !== "new" ? btn("recall", "Recall", "undo", "btn-ghost") : ""}
+        ${btn("cancel", "Cancel", "x", "btn-danger")}
+        ${cta}
+      </div>
+    </div>`;
+}
+
+function renderAll() { renderCounters(); renderFilters(); renderQueue(); renderDetail(); renderStations(); renderReady(); renderActions(); }
+</script>
+
+<script>
+/* ============================================================================
+   INTERACTIONS
+   ========================================================================== */
+function selectOrder(id) { state.selectedId = id; renderQueue(); renderDetail(); renderActions(); renderReady(); }
+
+function advance(id) {
+  const o = ORDERS.find((x) => x.id === id); if (!o) return;
+  const nx = STATUS[o.status].next;
+  if (nx) { o.status = nx; renderAll(); } else { bump(id); }
+}
+function recall(id) {
+  const o = ORDERS.find((x) => x.id === id); if (!o) return;
+  if (o.status === "ready") o.status = "progress";
+  else if (o.status === "progress") o.status = "new";
+  renderAll();
+}
+function cancelOrder(id) {
+  ORDERS = ORDERS.filter((o) => o.id !== id);
+  if (state.selectedId === id) state.selectedId = ORDERS[0]?.id || null;
+  renderAll();
+}
+
+let animating = false; // pauses the per-second re-render so animations play out
+function freeze(ms) { animating = true; clearTimeout(freeze._t); freeze._t = setTimeout(() => (animating = false), ms); }
+
+function showBurst() {
+  const b = $("#burst");
+  b.classList.remove("hidden", "play"); void b.offsetWidth; b.classList.add("play");
+  clearTimeout(showBurst._t); showBurst._t = setTimeout(() => b.classList.add("hidden"), 850);
+}
+function bump(id) {
+  const card = $(`[data-readycard="${id}"]`) || $(`[data-select="${id}"]`)?.closest(".ticket");
+  showBurst(); freeze(600);
+  if (card) { card.classList.add("bump-away"); setTimeout(() => finalizeBump(id), 480); }
+  else finalizeBump(id);
+}
+function finalizeBump(id) {
+  ORDERS = ORDERS.filter((o) => o.id !== id);
+  if (state.selectedId === id) state.selectedId = ORDERS.find((o) => o.status !== "ready")?.id || ORDERS[0]?.id || null;
+  renderAll();
+}
+
+/* simulate a fresh incoming ticket */
+const POOL = [
+  { name: "Margherita", cat: "pizza", mods: ["Extra basil"] },
+  { name: "Diavola", cat: "pizza", mods: ["Extra spicy"] },
+  { name: "Tartufata Reale", cat: "pizza", mods: [] },
+  { name: "Tagliatelle Bolognese", cat: "pasta", mods: [] },
+  { name: "Arancini (3 pcs)", cat: "antipasti", mods: [] },
+  { name: "Panino Milano", cat: "panini", mods: ["No onion"] },
+  { name: "Limonata Fresca", cat: "drinks", mods: [] },
+  { name: "Panna Cotta", cat: "desserts", mods: [] },
+];
+const NAMES = ["Kasia D.", "Paolo V.", "Ela N.", "Hubert S.", "Marta G.", "Davide L."];
+function addTicket() {
+  const n = 1 + Math.floor(Math.random() * 3), items = [];
+  for (let i = 0; i < n; i++) { const p = POOL[Math.floor(Math.random() * POOL.length)]; items.push({ qty: 1 + Math.floor(Math.random() * 2), ...p, mods: [...p.mods] }); }
+  const promiseMin = 10 + Math.floor(Math.random() * 8);
+  const o = {
+    id: uid(),
+    code: Math.random().toString(36).slice(2, 6).toUpperCase(),
+    customer: NAMES[Math.floor(Math.random() * NAMES.length)],
+    channel: Math.random() > 0.5 ? "delivery" : "takeout",
+    location: state.location, status: "new", placedAt: Date.now(),
+    promiseMs: promiseMin * 60000, promiseMin,
+    note: Math.random() > 0.7 ? "No cutlery, eco request." : "", items,
+  };
+  ORDERS.push(o);
+  freeze(500); renderAll();
+  requestAnimationFrame(() => { const card = $(`[data-select="${o.id}"]`); if (card) { card.classList.add("ticket-in"); card.scrollIntoView({ block: "nearest", behavior: "smooth" }); } });
+  chime();
+}
+
+/* tiny WebAudio chime for new tickets (no asset, allowed under CSP) */
+let audioCtx = null;
+function chime() {
+  if (!state.sound) return;
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const t = audioCtx.currentTime;
+    [880, 1320].forEach((f, i) => {
+      const osc = audioCtx.createOscillator(), g = audioCtx.createGain();
+      osc.type = "sine"; osc.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t + i * 0.12);
+      g.gain.exponentialRampToValueAtTime(0.18, t + i * 0.12 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.12 + 0.22);
+      osc.connect(g).connect(audioCtx.destination);
+      osc.start(t + i * 0.12); osc.stop(t + i * 0.12 + 0.24);
+    });
+  } catch (e) { /* audio unavailable */ }
+}
+
+/* ------------------------- event wiring (delegation) ------------------------- */
+document.addEventListener("click", (e) => {
+  const bumpBtn = e.target.closest("[data-bump]");
+  if (bumpBtn) { e.stopPropagation(); bump(bumpBtn.dataset.bump); return; }
+  const sel = e.target.closest("[data-select]");
+  if (sel) { selectOrder(sel.dataset.select); return; }
+  const act = e.target.closest("[data-action]");
+  if (act) {
+    const { action, id } = act.dataset;
+    if (action === "advance") advance(id);
+    else if (action === "bump") bump(id);
+    else if (action === "recall") recall(id);
+    else if (action === "cancel") cancelOrder(id);
+    return;
+  }
+  const statusTab = e.target.closest("[data-status]");
+  if (statusTab) { state.statusFilter = statusTab.dataset.status; renderFilters(); renderQueue(); return; }
+  const chip = e.target.closest("[data-station]");
+  if (chip) {
+    const id = chip.dataset.station;
+    state.stationFilter = (state.stationFilter === id && id !== "all") ? "all" : id;
+    renderFilters(); renderQueue(); renderDetail(); renderStations(); return;
+  }
+});
+
+$("#search").addEventListener("input", (e) => { state.query = e.target.value; renderQueue(); });
+$("#addBtn").addEventListener("click", addTicket);
+$("#soundBtn").addEventListener("click", () => {
+  state.sound = !state.sound;
+  $("#soundOn").classList.toggle("hidden", !state.sound);
+  $("#soundOff").classList.toggle("hidden", state.sound);
+  $("#soundBtn").style.color = state.sound ? "" : "rgba(255,255,255,0.3)";
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.target.tagName === "INPUT") return;
+  const o = ORDERS.find((x) => x.id === state.selectedId);
+  const list = visibleOrders().sort((a, b) => a.placedAt - b.placedAt);
+  const idx = list.findIndex((x) => x.id === state.selectedId);
+  if (e.key === "ArrowDown") { e.preventDefault(); if (list[idx + 1]) selectOrder(list[idx + 1].id); }
+  else if (e.key === "ArrowUp") { e.preventDefault(); if (list[idx - 1]) selectOrder(list[idx - 1].id); }
+  else if ((e.key === "Enter" || e.key === " ") && o) { e.preventDefault(); advance(o.id); }
+  else if (e.key === "Backspace" && o) { e.preventDefault(); recall(o.id); }
+});
+
+/* ------------------------------ clock + timers ------------------------------ */
+function tickClock() {
+  const d = new Date();
+  $("#clock").textContent = d.toLocaleTimeString("en-GB");
+  $("#dateline").textContent = d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+}
+function tickTimers() {
+  renderCounters();
+  if (animating) return;
+  const q = $("#queue"), d = $("#detail");
+  const qTop = q.scrollTop, dTop = d.scrollTop;
+  renderQueue(); renderDetail();
+  q.scrollTop = qTop; d.scrollTop = dTop;
+}
+
+tickClock(); renderAll();
+setInterval(tickClock, 1000);
+setInterval(tickTimers, 1000);
+</script>
+</body>
+</html>
