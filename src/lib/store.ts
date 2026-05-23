@@ -2643,9 +2643,9 @@ export interface AppSettings {
   /** Master toggle for /admin/simulation. When false the nav link is
    *  hidden and the page redirects to /admin. */
   simulationEnabled?: boolean;
-  /** Master toggle for /admin/kds-simulator (live-order KDS simulator).
-   *  When false the nav link is hidden, the page redirects to /admin, and
-   *  the simulator API rejects spawn/advance requests. */
+  /** Master toggle for the live-order KDS simulation. When true, an open
+   *  /admin/kds auto-drives synthetic orders onto the board; when false the
+   *  simulator API rejects spawn/advance (purge still works, to clean up). */
   kdsSimulatorEnabled?: boolean;
   /** Display-currency config — customer-side switcher + admin rates.
    *  Charges always settle in PLN; this controls the rendered amount. */

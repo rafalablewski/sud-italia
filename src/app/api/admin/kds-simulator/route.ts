@@ -138,11 +138,6 @@ export const GET = withAdmin(
 export const POST = withAdmin(
   { roles: ["manager"], locationParam: "location" },
   async (req, _ctx, { locationSlug }) => {
-    const settings = await getSettings();
-    if (!settings.kdsSimulatorEnabled) {
-      return NextResponse.json({ error: "KDS simulator is disabled in settings" }, { status: 403 });
-    }
-
     let body: { action?: string; count?: number } = {};
     try {
       body = await req.json();
@@ -150,9 +145,17 @@ export const POST = withAdmin(
       /* empty body is fine for some actions */
     }
 
+    // Purge is cleanup and stays allowed even when the toggle is off — that's
+    // exactly how disabling the simulator clears the board.
     if (body.action === "purge") {
       const removed = await deleteSimulatedOrders(locationSlug ?? undefined);
       return NextResponse.json({ ok: true, removed });
+    }
+
+    // Spawn + advance generate fake load, so they require the toggle.
+    const settings = await getSettings();
+    if (!settings.kdsSimulatorEnabled) {
+      return NextResponse.json({ error: "KDS simulator is disabled in settings" }, { status: 403 });
     }
 
     // Spawn + advance need a concrete location (orders are per-truck).

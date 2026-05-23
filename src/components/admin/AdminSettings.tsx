@@ -220,7 +220,16 @@ function AdminSettingsDesktop() {
         body: JSON.stringify({ kdsSimulatorEnabled: next }),
       });
       if (res.ok) {
-        toast.success(next ? "KDS simulator enabled" : "KDS simulator disabled");
+        // Turning it off clears the synthetic tickets it left on the board
+        // (purge stays allowed even with the toggle now off).
+        if (!next) {
+          await fetch("/api/admin/kds-simulator", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "purge" }),
+          }).catch(() => {});
+        }
+        toast.success(next ? "Order simulation on — open the KDS to watch it run" : "Order simulation off — board cleared");
         window.dispatchEvent(new Event("sud-admin-settings-updated"));
         await Promise.all([fetchSettings(), fetchAudit()]);
       } else {
@@ -487,13 +496,13 @@ function AdminSettingsDesktop() {
 
           <Card>
             <CardHeader
-              title="KDS live-order simulator"
-              description="Demo / training tool that streams synthetic orders (built only from your real menu) into the Kitchen Display so you can show the board under a rush. Simulated orders are tagged and excluded from every report — never your stock, CRM or customer comms — and are purgeable in one click."
+              title="Simulate live orders"
+              description="Demo / training tool. Flip this on and open the Kitchen Display — synthetic orders (built only from your real menu) trickle onto the board and walk through New → Preparing → Ready → Done on their own, so you can show the KDS under a rush with no extra steps. Simulated orders are tagged '(sim)' and excluded from every report — never your stock, CRM or customer comms. Turning it off clears them."
               actions={<Zap className="h-4 w-4 v2-muted" />}
             />
             <CardBody>
               <label className="v2-field">
-                <span className="v2-field-label">Show KDS simulator in the nav</span>
+                <span className="v2-field-label">Auto-simulate orders on the KDS</span>
                 <span className="inline-flex items-center gap-2 mt-1">
                   <input
                     type="checkbox"
@@ -503,8 +512,8 @@ function AdminSettingsDesktop() {
                   />
                   <span className="v2-muted text-sm">
                     {kdsSimulatorEnabled
-                      ? "Visible at /admin/kds-simulator."
-                      : "Hidden from the sidebar and command palette. The page redirects here and the simulator API is rejected when off."}
+                      ? "On — open /admin/kds (any lens) and orders flow automatically."
+                      : "Off — no synthetic orders. The board shows only real tickets."}
                   </span>
                 </span>
               </label>

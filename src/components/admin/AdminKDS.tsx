@@ -124,6 +124,70 @@ function ticketCategories(order: Order): MenuCategory[] {
 const KDS_MODE_KEY = "sud-kds-mode";
 
 /**
+ * Auto-driver for the KDS order simulator. There's no background worker in a
+ * serverless deploy, so when the kdsSimulatorEnabled toggle is on we drive the
+ * simulation from whatever KDS surface is open: each tick advances every
+ * visible truck's tickets through their dwell timers and trickles in a new
+ * order, so the operator just flips the toggle and watches a live rush — no
+ * separate page or buttons. Disabling the toggle stops it (and the settings
+ * handler purges the leftover sims).
+ */
+function useKdsSimulatorDriver(targetSlugs: string[]) {
+  const [enabled, setEnabled] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const check = async () => {
+      try {
+        const r = await fetch("/api/admin/settings");
+        if (!r.ok) return;
+        const j = await r.json();
+        if (!cancelled) setEnabled(!!j.kdsSimulatorEnabled);
+      } catch {
+        /* non-fatal */
+      }
+    };
+    void check();
+    const t = setInterval(check, 20_000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, []);
+
+  const slugsKey = targetSlugs.join(",");
+  useEffect(() => {
+    if (!enabled || !slugsKey) return;
+    const slugs = slugsKey.split(",");
+    let stopped = false;
+    const post = (slug: string, action: string, count?: number) =>
+      fetch(`/api/admin/kds-simulator?location=${encodeURIComponent(slug)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, count }),
+      }).catch(() => {});
+    const tick = () => {
+      if (stopped) return;
+      for (const s of slugs) void post(s, "advance");
+      // Trickle a new ticket into a random open truck most ticks; the
+      // endpoint self-caps active sims so this can't run away.
+      if (Math.random() < 0.6) {
+        const s = slugs[Math.floor(Math.random() * slugs.length)];
+        void post(s, "spawn", 1);
+      }
+    };
+    tick();
+    const t = setInterval(tick, 6_000);
+    return () => {
+      stopped = true;
+      clearInterval(t);
+    };
+  }, [enabled, slugsKey]);
+
+  return enabled;
+}
+
+/**
  * Role-aware KDS shell. One live-order engine, three lenses:
  *   • owner   → Fleet command (cross-truck health) by default, with a
  *               switcher down into any truck's floor board.
@@ -133,7 +197,7 @@ const KDS_MODE_KEY = "sud-kds-mode";
  */
 export function AdminKDS() {
   const { isMobile, ready } = useIsMobile();
-  const { setLocation } = useAdminLocation();
+  const { location, setLocation, activeLocations } = useAdminLocation();
   const [role, setRole] = useState<AdminRole | null>(null);
   const [mode, setMode] = useState<"fleet" | "floor">("floor");
 
@@ -173,6 +237,15 @@ export function AdminKDS() {
       /* non-fatal */
     }
   }, []);
+
+  // Auto-run the order simulator on whatever's open: the selected truck, or
+  // every active truck when an owner is on the fleet view.
+  const targetSlugs = useMemo(() => {
+    if (location) return [location];
+    if (role === "owner") return activeLocations.map((l) => l.slug);
+    return [];
+  }, [location, role, activeLocations]);
+  useKdsSimulatorDriver(targetSlugs);
 
   if (ready && isMobile) {
     return <MobileKDS />;

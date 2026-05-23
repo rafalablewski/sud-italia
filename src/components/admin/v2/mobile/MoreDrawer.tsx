@@ -38,7 +38,6 @@ export function MoreDrawer({ open, onClose, role }: Props) {
   const [pushSettingsOpen, setPushSettingsOpen] = useState(false);
   const [desktopForced, setDesktopForced] = useState(false);
   const [simulationEnabled, setSimulationEnabled] = useState(false);
-  const [kdsSimulatorEnabled, setKdsSimulatorEnabled] = useState(false);
   useEffect(() => {
     if (open) setDesktopForced(getForceDesktop());
   }, [open]);
@@ -50,7 +49,6 @@ export function MoreDrawer({ open, onClose, role }: Props) {
         .then((j) => {
           if (!cancelled && j) {
             setSimulationEnabled(!!j.simulationEnabled);
-            setKdsSimulatorEnabled(!!j.kdsSimulatorEnabled);
           }
         })
         .catch(() => {});
@@ -64,9 +62,9 @@ export function MoreDrawer({ open, onClose, role }: Props) {
   }, []);
   const sections = useMemo(
     () =>
-      filterNavForRole(role, { simulation: simulationEnabled, kdsSimulator: kdsSimulatorEnabled }) ||
+      filterNavForRole(role, { simulation: simulationEnabled }) ||
       NAV_SECTIONS,
-    [role, simulationEnabled, kdsSimulatorEnabled],
+    [role, simulationEnabled],
   );
 
   const navByHref = useMemo(() => {

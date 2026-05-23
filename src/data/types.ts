@@ -526,7 +526,7 @@ export interface Order {
    *  into the kitchen display exactly like real tickets but are excluded
    *  from every financial/CRM aggregation (getOrders filters them out by
    *  default) and never trigger stock decrement, customer rollups, or
-   *  customer comms. Purgeable in one click from /admin/kds-simulator. */
+   *  customer comms. Purged when the simulation toggle is turned off. */
   simulated?: boolean;
 }
 
