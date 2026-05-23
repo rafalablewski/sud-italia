@@ -2360,6 +2360,29 @@ html { scroll-behavior: smooth; }
 .v2-ticket-sla-warning { background: var(--warning-soft); color: var(--warning); }
 .v2-ticket-sla-danger { background: var(--danger-soft); color: var(--danger); }
 
+/* KDS bump button — minimal outline (Bootstrap-style): red border, faded
+   fill, square corners. The terminal bump (ready → done) keeps the same
+   outline shape in green. */
+.v2-ticket-foot .v2-btn { border-radius: 0; box-shadow: none; font-weight: 600; }
+.v2-ticket-foot .v2-btn-primary {
+  background: var(--brand-soft);
+  color: var(--brand);
+  border-color: var(--brand);
+}
+.v2-ticket-foot .v2-btn-primary:hover:not(:disabled):not(.is-loading) {
+  background: var(--brand-soft-strong);
+  color: var(--brand);
+}
+.v2-ticket-foot .v2-btn-success {
+  background: var(--success-soft);
+  color: var(--success);
+  border-color: var(--success);
+}
+.v2-ticket-foot .v2-btn-success:hover:not(:disabled):not(.is-loading) {
+  background: color-mix(in oklab, var(--success) 22%, transparent);
+  color: var(--success);
+}
+
 /* KDS order simulator — unmistakable but tasteful purple marking so a demo
    rush can never be confused with real service: a slim top tag on each ticket
    plus a board-wide banner. A neutral dashed treatment keeps it clearly
@@ -2644,6 +2667,17 @@ html { scroll-behavior: smooth; }
 .kds-os .v2-ticket-foot-info { font-size: var(--text-sm); }
 .kds-os .v2-ticket-sla { font-size: var(--text-xs); }
 .kds-os .v2-ticket-foot button { min-height: 52px; font-size: var(--text-md); }
+/* Brand red is too dark to read on the near-black kiosk; brighten the
+   outline so it stays legible across the line. */
+.kds-os .v2-ticket-foot .v2-btn-primary {
+  color: #ff5d5d;
+  border-color: #ff5d5d;
+  background: rgba(255, 93, 93, 0.12);
+}
+.kds-os .v2-ticket-foot .v2-btn-primary:hover:not(:disabled):not(.is-loading) {
+  background: rgba(255, 93, 93, 0.22);
+  color: #ff5d5d;
+}
 .kds-os .v2-kds-stats { display: none; }
 
 /* ============================
