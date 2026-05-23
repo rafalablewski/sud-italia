@@ -186,6 +186,15 @@ export default async function CapabilitiesPage() {
           summary: "Per-station tickets (pizza / fryer / cold prep / drinks / expo).",
         },
         {
+          name: "Fullscreen kitchen display + stage switcher",
+          status: "live",
+          href: "/admin/kds",
+          summary:
+            "The floor board doubles as a wall-mountable kitchen-display appliance. A Fullscreen button takes it edge-to-edge (native Fullscreen API + a portaled overlay that escapes the admin shell per CLAUDE.md rule #4) and repaints into a dedicated always-dark, high-contrast 'kitchen OS' theme — oversized type, color-coded lanes, live wall-clock — regardless of the admin light/dark toggle, so it reads across a hot, bright kitchen. A stage switcher (All lanes · New · In prep · Ready, each with a live count) focuses one stage into a dense full-width grid or shows the three-column board. The component stays mounted across the portal, so the SSE stream, bump-bar hotkeys, sound and SLA timers keep running; Esc or the browser control exits fullscreen and drops kiosk. Decorative stat cards, the manager ops header and chef strip collapse in kiosk to maximize ticket space.",
+          caveats:
+            "Native fullscreen is best-effort — if the browser denies it (sandboxed iframe, kiosk policy) the immersive dark layout still applies and Esc / the Exit button leave it. Kiosk is the desktop/tablet floor board; phones keep the dedicated mobile KDS, and the owner Fleet roll-up is not a kiosk surface.",
+        },
+        {
           name: "Line cook view",
           status: "live",
           href: "/kitchen/krakow",

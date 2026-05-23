@@ -269,6 +269,42 @@ export function KdsSimBanner() {
   );
 }
 
+export interface KdsLaneProps {
+  /** Tickets for the focused status — pass columns.get(status). */
+  tickets: Order[];
+  stationFilter: MenuCategory | "all";
+  nowMs: number;
+  updatingId: string | null;
+  onAdvance: (order: Order) => void;
+}
+
+/**
+ * Single-stage focus view. When the operator switches the board to one lane
+ * (New / In prep / Ready), the tickets for that status wrap into a dense
+ * full-width grid instead of one narrow column — far more readable from across
+ * the line and the core of the institutional fullscreen display. Reuses the
+ * same Ticket primitive as the three-column board so the cards never drift.
+ */
+export function KdsLane({ tickets, stationFilter, nowMs, updatingId, onAdvance }: KdsLaneProps) {
+  if (tickets.length === 0) {
+    return <div className="v2-kds-lane-empty">No tickets in this lane.</div>;
+  }
+  return (
+    <div className="v2-kds-lane-grid">
+      {tickets.map((o) => (
+        <Ticket
+          key={o.id}
+          order={o}
+          stationFilter={stationFilter}
+          onAdvance={() => onAdvance(o)}
+          isUpdating={updatingId === o.id}
+          nowMs={nowMs}
+        />
+      ))}
+    </div>
+  );
+}
+
 /**
  * The three-column KDS board (New / In progress / Ready · Expo) rendered from
  * a pre-grouped column map. Identical markup for the live board and the
