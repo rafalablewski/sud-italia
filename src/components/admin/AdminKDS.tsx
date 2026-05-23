@@ -976,11 +976,12 @@ function KdsChefStrip({
 
   // Items currently on the active tickets (optionally narrowed to the
   // focused station) — the chef's one-tap 86 candidates.
+  const eightySixedIds = new Set(eightySixed.map((e) => e.id));
   const candidates = new Map<string, string>();
   for (const o of orders) {
     for (const ci of o.items) {
       if (station !== "all" && ci.menuItem.category !== station) continue;
-      if (!eightySixed.some((e) => e.id === ci.menuItem.id)) {
+      if (!eightySixedIds.has(ci.menuItem.id)) {
         candidates.set(ci.menuItem.id, ci.menuItem.name);
       }
     }

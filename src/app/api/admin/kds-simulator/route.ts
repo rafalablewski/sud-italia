@@ -35,6 +35,16 @@ const TOTAL_ACTIVE = DWELL_CONFIRMED + DWELL_PREPARING + DWELL_READY;
 // loop can't flood the board / DB. Completed sims leave the KDS and don't count.
 const MAX_ACTIVE = 40;
 
+// Bound every sim read to the last 24h so the order log can't grow the
+// fetch unbounded. The active dwell window is only ~84s, so 24h is wildly
+// generous for catching anything still in flight — but wide enough that a
+// sim left "confirmed" across a pause still gets advanced (a tight few-minute
+// window would orphan it as a permanent stale ticket on the board).
+const SIM_LOOKBACK_MS = 24 * 60 * 60 * 1000;
+function simSince(): string {
+  return new Date(Date.now() - SIM_LOOKBACK_MS).toISOString();
+}
+
 const SIM_NAMES = [
   "Marco", "Giulia", "Luca", "Sofia", "Matteo", "Chiara",
   "Davide", "Elena", "Francesco", "Aurora", "Lorenzo", "Martina",
@@ -108,7 +118,7 @@ export const GET = withAdmin(
       return NextResponse.json({ enabled: false, orders: [] });
     }
     const sims = (
-      await getOrders(locationSlug ?? undefined, undefined, { includeSimulated: true })
+      await getOrders(locationSlug ?? undefined, simSince(), { includeSimulated: true })
     ).filter((o) => o.simulated);
     return NextResponse.json({
       enabled: true,
@@ -153,8 +163,9 @@ export const POST = withAdmin(
     }
 
     if (body.action === "advance") {
-      const sims = (await getOrders(slug, undefined, { includeSimulated: true })).filter(
-        (o) => o.simulated,
+      // Only non-completed sims can change state, so skip the rest up front.
+      const sims = (await getOrders(slug, simSince(), { includeSimulated: true })).filter(
+        (o) => o.simulated && o.status !== "completed",
       );
       const now = Date.now();
       let advanced = 0;
@@ -169,7 +180,7 @@ export const POST = withAdmin(
     }
 
     if (body.action === "spawn") {
-      const sims = (await getOrders(slug, undefined, { includeSimulated: true })).filter(
+      const sims = (await getOrders(slug, simSince(), { includeSimulated: true })).filter(
         (o) => o.simulated,
       );
       const activeCount = sims.filter((o) => o.status !== "completed").length;
