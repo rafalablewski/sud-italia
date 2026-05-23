@@ -771,20 +771,20 @@ function KdsManagerOpsHeader({ orders, location }: { orders: Order[]; location: 
   return (
     <Card padding="compact" className="v2-kds-ops">
       <CardBody>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 18, alignItems: "center" }}>
-          <OpsStat icon={<ChefHat className="h-4 w-4 v2-muted" />} value={String(orders.length)} label="Open" />
-          <OpsStat icon={<Flame className="h-4 w-4" style={{ color: late > 0 ? "rgb(220,38,38)" : undefined }} />} value={String(late)} label="Late" tone={late > 0 ? "danger" : undefined} />
-          <OpsStat icon={<AlertTriangle className="h-4 w-4" style={{ color: soon > 0 ? "rgb(217,119,6)" : undefined }} />} value={String(soon)} label="Due soon" tone={soon > 0 ? "warning" : undefined} />
-          <OpsStat icon={<Timer className="h-4 w-4 v2-muted" />} value={orders.length > 0 ? fmtClock(oldest) : "—"} label="Oldest" />
-          <OpsStat icon={<Clock className="h-4 w-4 v2-muted" />} value={orders.length > 0 ? fmtClock(avg) : "—"} label="Avg age" />
-          <OpsStat icon={<CheckCircle2 className="h-4 w-4 v2-muted" />} value={ops ? String(ops.throughputLastHour) : "…"} label="Done · last hr" />
-          <OpsStat icon={<Users className="h-4 w-4 v2-muted" />} value={ops ? String(ops.onShift) : "…"} label="On shift" />
+        <div className="v2-kds-ops-stats">
+          <OpsStat icon={<ChefHat className="h-4 w-4" />} value={String(orders.length)} label="Open" />
+          <OpsStat icon={<Flame className="h-4 w-4" />} value={String(late)} label="Late" tone={late > 0 ? "danger" : undefined} />
+          <OpsStat icon={<AlertTriangle className="h-4 w-4" />} value={String(soon)} label="Due soon" tone={soon > 0 ? "warning" : undefined} />
+          <OpsStat icon={<Timer className="h-4 w-4" />} value={orders.length > 0 ? fmtClock(oldest) : "—"} label="Oldest" />
+          <OpsStat icon={<Clock className="h-4 w-4" />} value={orders.length > 0 ? fmtClock(avg) : "—"} label="Avg age" />
+          <OpsStat icon={<CheckCircle2 className="h-4 w-4" />} value={ops ? String(ops.throughputLastHour) : "…"} label="Done · last hr" />
+          <OpsStat icon={<Users className="h-4 w-4" />} value={ops ? String(ops.onShift) : "…"} label="On shift" />
         </div>
 
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--border)" }}>
-          <span style={{ fontWeight: 600, fontSize: 13 }}>86&apos;d:</span>
+        <div className="v2-kds-ops-86">
+          <span className="v2-kds-ops-86-label">86&apos;d</span>
           {eightySixed.length === 0 ? (
-            <span className="v2-muted" style={{ fontSize: 13 }}>nothing — full menu available</span>
+            <span className="v2-kds-ops-86-empty">Nothing — full menu available</span>
           ) : (
             eightySixed.map((m) => (
               <Button
@@ -800,7 +800,7 @@ function KdsManagerOpsHeader({ orders, location }: { orders: Order[]; location: 
               </Button>
             ))
           )}
-          <div style={{ minWidth: 220, marginLeft: "auto" }}>
+          <div className="v2-kds-ops-86-pick">
             <Select
               aria-label="86 an item"
               value={pick}
@@ -816,15 +816,14 @@ function KdsManagerOpsHeader({ orders, location }: { orders: Order[]; location: 
 }
 
 function OpsStat({ icon, value, label, tone }: { icon: React.ReactNode; value: string; label: string; tone?: "danger" | "warning" }) {
-  const color = tone === "danger" ? "rgb(220,38,38)" : tone === "warning" ? "rgb(217,119,6)" : undefined;
   return (
-    <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
-      {icon}
-      <span style={{ display: "flex", flexDirection: "column", lineHeight: 1.1 }}>
-        <span className="tabular" style={{ fontSize: 20, fontWeight: 700, color }}>{value}</span>
-        <span className="v2-muted" style={{ fontSize: 11 }}>{label}</span>
+    <div className={`v2-kds-ops-stat${tone ? ` is-${tone}` : ""}`}>
+      <span className="v2-kds-ops-stat-icon">{icon}</span>
+      <span className="v2-kds-ops-stat-text">
+        <span className="v2-kds-ops-stat-value tabular">{value}</span>
+        <span className="v2-kds-ops-stat-label">{label}</span>
       </span>
-    </span>
+    </div>
   );
 }
 
@@ -915,20 +914,20 @@ function KdsChefStrip({
   return (
     <Card padding="compact" className="v2-kds-chef">
       <CardBody>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 16, alignItems: "center" }}>
-          <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
-            <ChefHat className="h-4 w-4 v2-muted" />
-            <span style={{ fontWeight: 600 }}>{stationLabel}</span>
+        <div className="v2-kds-ops-stats v2-kds-chef-row">
+          <span className="v2-kds-chef-station">
+            <ChefHat className="h-4 w-4" />
+            <span>{stationLabel}</span>
           </span>
           {station === "all" ? (
-            <span className="v2-muted" style={{ fontSize: 13 }}>Pick your station above to focus your queue.</span>
+            <span className="v2-kds-ops-86-empty">Pick your station above to focus your queue.</span>
           ) : (
             <>
-              <OpsStat icon={<Flame className="h-4 w-4 v2-muted" />} value={String(focused.length)} label="In your queue" />
-              <OpsStat icon={<Timer className="h-4 w-4 v2-muted" />} value={focused.length > 0 ? fmtClock(oldest) : "—"} label="Oldest" />
+              <OpsStat icon={<Flame className="h-4 w-4" />} value={String(focused.length)} label="In your queue" />
+              <OpsStat icon={<Timer className="h-4 w-4" />} value={focused.length > 0 ? fmtClock(oldest) : "—"} label="Oldest" />
             </>
           )}
-          <div style={{ minWidth: 200, marginLeft: "auto" }}>
+          <div className="v2-kds-ops-86-pick">
             <Select
               aria-label="86 an item you've run out of"
               value={pick}
@@ -939,8 +938,8 @@ function KdsChefStrip({
           </div>
         </div>
         {eightySixed.length > 0 && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--border)" }}>
-            <span style={{ fontWeight: 600, fontSize: 13 }}>86&apos;d:</span>
+          <div className="v2-kds-ops-86">
+            <span className="v2-kds-ops-86-label">86&apos;d</span>
             {eightySixed.map((m) => (
               <Button
                 key={m.id}
