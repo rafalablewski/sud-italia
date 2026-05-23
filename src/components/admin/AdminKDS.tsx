@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAdminOrdersStream } from "@/lib/useAdminOrdersStream";
 import {
+  AlertTriangle,
   Bell,
   BellOff,
   CheckCircle2,
@@ -16,6 +17,7 @@ import {
   RotateCcw,
   Timer,
   Truck,
+  Users,
   Package,
 } from "lucide-react";
 import type { Order, OrderStatus, MenuCategory } from "@/data/types";
@@ -24,7 +26,7 @@ import dynamic from "next/dynamic";
 import { useAdminLocation } from "./v2/LocationContext";
 import { useIsMobile } from "./v2/mobile";
 import { useToast } from "./v2/ui/Toast";
-import { Badge, Button, Card, CardBody, EmptyState, Tabs } from "./v2/ui";
+import { Badge, Button, Card, CardBody, EmptyState, Select, Tabs } from "./v2/ui";
 import { AdminKdsFleet } from "./AdminKdsFleet";
 import type { AdminRole } from "@/lib/admin-roles";
 
@@ -176,10 +178,13 @@ export function AdminKDS() {
     return <MobileKDS />;
   }
 
-  // Only owners get the Fleet ↔ Floor switcher; everyone else sees the
-  // floor board exactly as before.
+  // Managers + franchisees get the floor-control ops header on the board;
+  // kitchen/staff (and the pre-resolve null state) get the plain line board.
+  const managerControls = role === "manager" || role === "franchisee";
+
+  // Only owners get the Fleet ↔ Floor switcher.
   if (role !== "owner") {
-    return <AdminKDSDesktop />;
+    return <AdminKDSDesktop opsHeader={managerControls} />;
   }
 
   return (
@@ -210,13 +215,14 @@ export function AdminKDS() {
           }}
         />
       ) : (
-        <AdminKDSDesktop />
+        // An owner dropping into a truck gets the manager floor controls too.
+        <AdminKDSDesktop opsHeader />
       )}
     </div>
   );
 }
 
-function AdminKDSDesktop() {
+function AdminKDSDesktop({ opsHeader = false }: { opsHeader?: boolean }) {
   const { location } = useAdminLocation();
   const toast = useToast();
 
@@ -489,6 +495,8 @@ function AdminKDSDesktop() {
         </div>
       </header>
 
+      {opsHeader && <KdsManagerOpsHeader orders={orders} location={location} />}
+
       {bumpHistory.length > 0 && (
         <div
           role="region"
@@ -726,5 +734,145 @@ function Ticket({ order, stationFilter, onAdvance, isUpdating, nowMs }: TicketPr
         </Button>
       </footer>
     </div>
+  );
+}
+
+interface FloorOps {
+  locationSlug: string;
+  menuSlug: string;
+  throughputLastHour: number;
+  onShift: number;
+  menu: { id: string; name: string; category: string; available: boolean }[];
+}
+
+/**
+ * Manager floor-control header. Sits above the board for managers /
+ * franchisees (and owners drilled into a truck). Reuses the active orders
+ * the board already streams to surface live open / late / soon / oldest /
+ * average-age signals, and pulls throughput + on-shift staff + the menu
+ * availability list from /api/admin/kds/floor-ops so the manager can read
+ * the floor and 86 / restore items without leaving the board.
+ */
+function KdsManagerOpsHeader({ orders, location }: { orders: Order[]; location: string }) {
+  const toast = useToast();
+  const [ops, setOps] = useState<FloorOps | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [pick, setPick] = useState("");
+
+  const load = useCallback(async () => {
+    const qs = location ? `?location=${encodeURIComponent(location)}` : "";
+    try {
+      const res = await fetch(`/api/admin/kds/floor-ops${qs}`);
+      if (res.ok) setOps((await res.json()) as FloorOps);
+    } catch {
+      /* non-fatal */
+    }
+  }, [location]);
+
+  useEffect(() => {
+    void load();
+    const t = setInterval(() => void load(), 15000);
+    return () => clearInterval(t);
+  }, [load]);
+
+  const setAvailability = useCallback(
+    async (id: string, available: boolean) => {
+      setBusyId(id);
+      try {
+        const res = await fetch("/api/admin/menu", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id, available }),
+        });
+        if (!res.ok) {
+          toast.error("Could not update availability");
+          return;
+        }
+        toast.success(available ? "Item restored" : "Item 86'd");
+        await load();
+      } finally {
+        setBusyId(null);
+        setPick("");
+      }
+    },
+    [load, toast],
+  );
+
+  // Live SLA roll-up from the active orders the board holds.
+  let late = 0;
+  let soon = 0;
+  let oldest = 0;
+  let ageSum = 0;
+  for (const o of orders) {
+    const age = totalPrepSeconds(o);
+    ageSum += age;
+    if (age > oldest) oldest = age;
+    if (o.status === "ready") continue;
+    const rem = remainingSlaSeconds(o);
+    if (rem !== null && rem < 0) late++;
+    else if (rem !== null && rem < 180) soon++;
+  }
+  const avg = orders.length > 0 ? Math.round(ageSum / orders.length) : 0;
+
+  const eightySixed = (ops?.menu ?? []).filter((m) => !m.available);
+  const availableItems = (ops?.menu ?? []).filter((m) => m.available);
+
+  return (
+    <Card padding="compact" className="v2-kds-ops">
+      <CardBody>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 18, alignItems: "center" }}>
+          <OpsStat icon={<ChefHat className="h-4 w-4 v2-muted" />} value={String(orders.length)} label="Open" />
+          <OpsStat icon={<Flame className="h-4 w-4" style={{ color: late > 0 ? "rgb(220,38,38)" : undefined }} />} value={String(late)} label="Late" tone={late > 0 ? "danger" : undefined} />
+          <OpsStat icon={<AlertTriangle className="h-4 w-4" style={{ color: soon > 0 ? "rgb(217,119,6)" : undefined }} />} value={String(soon)} label="Due soon" tone={soon > 0 ? "warning" : undefined} />
+          <OpsStat icon={<Timer className="h-4 w-4 v2-muted" />} value={orders.length > 0 ? fmtClock(oldest) : "—"} label="Oldest" />
+          <OpsStat icon={<Clock className="h-4 w-4 v2-muted" />} value={orders.length > 0 ? fmtClock(avg) : "—"} label="Avg age" />
+          <OpsStat icon={<CheckCircle2 className="h-4 w-4 v2-muted" />} value={ops ? String(ops.throughputLastHour) : "…"} label="Done · last hr" />
+          <OpsStat icon={<Users className="h-4 w-4 v2-muted" />} value={ops ? String(ops.onShift) : "…"} label="On shift" />
+        </div>
+
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--border)" }}>
+          <span style={{ fontWeight: 600, fontSize: 13 }}>86&apos;d:</span>
+          {eightySixed.length === 0 ? (
+            <span className="v2-muted" style={{ fontSize: 13 }}>nothing — full menu available</span>
+          ) : (
+            eightySixed.map((m) => (
+              <Button
+                key={m.id}
+                size="sm"
+                variant="ghost"
+                disabled={busyId === m.id}
+                onClick={() => setAvailability(m.id, true)}
+                title={`Restore ${m.name}`}
+              >
+                <Badge tone="danger" variant="soft">{m.name}</Badge>
+                <span style={{ marginLeft: 6 }}>Restore</span>
+              </Button>
+            ))
+          )}
+          <div style={{ minWidth: 220, marginLeft: "auto" }}>
+            <Select
+              aria-label="86 an item"
+              value={pick}
+              placeholder="86 an item…"
+              onChange={(e) => { if (e.target.value) void setAvailability(e.target.value, false); }}
+              options={availableItems.map((m) => ({ value: m.id, label: m.name }))}
+            />
+          </div>
+        </div>
+      </CardBody>
+    </Card>
+  );
+}
+
+function OpsStat({ icon, value, label, tone }: { icon: React.ReactNode; value: string; label: string; tone?: "danger" | "warning" }) {
+  const color = tone === "danger" ? "rgb(220,38,38)" : tone === "warning" ? "rgb(217,119,6)" : undefined;
+  return (
+    <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+      {icon}
+      <span style={{ display: "flex", flexDirection: "column", lineHeight: 1.1 }}>
+        <span className="tabular" style={{ fontSize: 20, fontWeight: 700, color }}>{value}</span>
+        <span className="v2-muted" style={{ fontSize: 11 }}>{label}</span>
+      </span>
+    </span>
   );
 }
