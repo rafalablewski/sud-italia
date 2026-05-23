@@ -15,8 +15,9 @@ const FALLBACK_POLL_MS = 15_000;
  * the KDS pause button.
  *
  * Pass `includeSimulated: true` to opt into demo-simulator tickets. Only the
- * KDS board does this; the Orders list (and everything else) leaves it off so
- * synthetic orders never leak into operational / reporting views.
+ * Kitchen Display boards do this; the Orders list, dashboard and every report
+ * leave it off, so synthetic orders surface on the KDS (clearly marked) but
+ * never leak into operational / reporting views.
  */
 export function useAdminOrdersStream(
   location: string | null | undefined,

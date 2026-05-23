@@ -43,7 +43,8 @@ export const GET = withAdmin(
   { locationParam: "location" },
   async (req, _ctx, { locationSlug: scopedLocation }) => {
     const locationSlug = scopedLocation ?? undefined;
-    // Opt-in via ?includeSimulated=1 — only the KDS board passes it, so the
+    // Opt-in via ?includeSimulated=1 — only the Kitchen Display board passes
+    // it, so simulated tickets stream onto the KDS (clearly marked) while the
     // Orders list / dashboard stream stays free of demo tickets.
     const includeSimulated = req.nextUrl.searchParams.get("includeSimulated") === "1";
     const encoder = new TextEncoder();

@@ -7,11 +7,14 @@ import {
   ChevronLeft,
   ChevronRight,
   Flame,
+  FlaskConical,
   PauseCircle,
   PlayCircle,
   Timer,
 } from "lucide-react";
 import { useAdminOrdersStream } from "@/lib/useAdminOrdersStream";
+import { useKdsSimulator } from "@/lib/useKdsSimulator";
+import { KdsSimBanner } from "../kds-board";
 import type { Order, OrderStatus, MenuCategory } from "@/data/types";
 import { MENU_CATEGORY_LABELS } from "@/data/types";
 import { useAdminLocation } from "../v2/LocationContext";
@@ -96,6 +99,7 @@ function tone(order: Order): "neutral" | "warning" | "danger" {
 export function MobileKDS() {
   const { location } = useAdminLocation();
   const toast = useToast();
+  const { enabled: simEnabled } = useKdsSimulator(location);
   const [paused, setPaused] = useState(false);
   const [muted, setMuted] = useState(false);
   const [lane, setLane] = useState<OrderStatus>("confirmed");
@@ -311,6 +315,8 @@ export function MobileKDS() {
         }
       />
 
+      {simEnabled && <KdsSimBanner />}
+
       {filtered.length === 0 ? (
         <div className="v2-m-empty">
           <Flame className="h-6 w-6" aria-hidden />
@@ -403,6 +409,11 @@ function TicketCard({
         boxShadow: "var(--m-elev-1)",
       }}
     >
+      {order.simulated && (
+        <div className="v2-ticket-sim-tag">
+          <FlaskConical className="h-3 w-3" /> SIMULATION — not a real order
+        </div>
+      )}
       <header
         style={{
           display: "flex",

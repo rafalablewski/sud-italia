@@ -15,15 +15,19 @@ import type { CartItem, Order, OrderStatus } from "@/data/types";
  * KDS live-order simulator API (admin-gated demo / training tool).
  *
  * Spawns synthetic-but-real orders built ONLY from the location's real menu
- * (getMenuWithOverrides) and streams them into the orders-driven kitchen
- * display via createSimulatedOrder. Orders are tagged simulated:true, so
- * getOrders() hides them from every report and they never touch stock, CRM
- * or customer comms. Auto-advance walks each ticket through
+ * (getMenuWithOverrides) and streams them onto the orders-driven Kitchen
+ * Display via createSimulatedOrder, where they show up clearly marked as
+ * SIMULATION. Orders are tagged simulated:true, so getOrders() hides them
+ * from the dashboard, Orders list and every report, and they never touch
+ * stock, CRM or customer comms. Auto-advance walks each ticket through
  * confirmed → preparing → ready → completed on dwell timers; purge removes
  * them in one shot.
  *
- * Manager+ and gated behind settings.kdsSimulatorEnabled — the same toggle
- * the nav + page guard read, mirroring the finance-simulation flag.
+ * Driven by the KDS itself: useKdsSimulator runs spawn/advance from any open
+ * board while settings.kdsSimulatorEnabled (owner-only toggle) is on. Kitchen+
+ * may call it so the generator works for whoever is at the pass, but spawn /
+ * advance are re-checked against the toggle below (purge always allowed, so
+ * turning the toggle off can clear the board).
  */
 
 // Dwell windows (ms) the age-derived auto-advance walks each ticket through.
@@ -64,6 +68,15 @@ function targetStatus(ageMs: number): OrderStatus {
   if (ageMs < DWELL_CONFIRMED + DWELL_PREPARING) return "preparing";
   if (ageMs < TOTAL_ACTIVE) return "ready";
   return "completed";
+}
+
+// Forward-only ordering. A cook can now bump a simulated ticket by hand on the
+// live KDS, so the age-based auto-advance must never drag it backwards — it
+// only ever moves a ticket further along the flow.
+const STATUS_FLOW: OrderStatus[] = ["confirmed", "preparing", "ready", "completed"];
+function statusRank(s: OrderStatus): number {
+  const i = STATUS_FLOW.indexOf(s);
+  return i === -1 ? 0 : i;
 }
 
 /** Build a realistic order from the location's real menu only. Returns null
@@ -110,33 +123,11 @@ async function buildOrder(locationSlug: string): Promise<Order | null> {
   };
 }
 
-export const GET = withAdmin(
-  { roles: ["manager"], locationParam: "location" },
-  async (_req, _ctx, { locationSlug }) => {
-    const settings = await getSettings();
-    if (!settings.kdsSimulatorEnabled) {
-      return NextResponse.json({ enabled: false, orders: [] });
-    }
-    const sims = (
-      await getOrders(locationSlug ?? undefined, simSince(), { includeSimulated: true })
-    ).filter((o) => o.simulated);
-    return NextResponse.json({
-      enabled: true,
-      orders: sims.map((o) => ({
-        id: o.id,
-        status: o.status,
-        customerName: o.customerName,
-        itemCount: o.items.reduce((s, l) => s + l.quantity, 0),
-        total: o.totalAmount,
-        createdAt: o.createdAt,
-        fulfillmentType: o.fulfillmentType,
-      })),
-    });
-  },
-);
-
 export const POST = withAdmin(
-  { roles: ["manager"], locationParam: "location" },
+  // Kitchen+ so the auto-run generator works for anyone viewing the KDS — the
+  // real gate is the owner-only kdsSimulatorEnabled toggle, re-checked below
+  // for spawn/advance.
+  { roles: ["kitchen"], locationParam: "location" },
   async (req, _ctx, { locationSlug }) => {
     let body: { action?: string; count?: number } = {};
     try {
@@ -174,7 +165,8 @@ export const POST = withAdmin(
       let advanced = 0;
       for (const o of sims) {
         const target = targetStatus(now - Date.parse(o.createdAt));
-        if (target !== o.status) {
+        // Forward-only: never undo a manual bump a cook made on the board.
+        if (statusRank(target) > statusRank(o.status)) {
           await setSimulatedOrderStatus(o.id, target);
           advanced++;
         }

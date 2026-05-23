@@ -25,7 +25,6 @@ import {
   Truck,
   Brain,
   LineChart,
-  Zap,
   Map,
   MapPin,
   Settings,
@@ -55,7 +54,7 @@ export interface NavItem {
    * unless the corresponding boolean in /api/admin/settings is true.
    * The page itself still enforces the same check server-side.
    */
-  featureFlag?: "simulation" | "kdsSimulator";
+  featureFlag?: "simulation";
 }
 
 export interface NavSection {
@@ -80,7 +79,6 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/admin", label: "Dashboard", icon: LayoutDashboard, shortcut: "d" },
       { href: "/admin/orders", label: "Orders", icon: ClipboardList, shortcut: "o", requiredRole: "staff" },
       { href: "/admin/kds", label: "Kitchen Display", icon: ChefHat, shortcut: "k", requiredRole: "kitchen" },
-      { href: "/admin/kds-simulator", label: "Order simulator", icon: Zap, requiredRole: "manager", featureFlag: "kdsSimulator" },
     ],
   },
   {
@@ -187,7 +185,7 @@ export const ALL_NAV_ITEMS: NavItem[] = NAV_SECTIONS.flatMap((s) => s.items);
  */
 export function filterNavForRole(
   role: AdminRole | null,
-  flags?: { simulation?: boolean; kdsSimulator?: boolean },
+  flags?: { simulation?: boolean },
 ): NavSection[] {
   if (!role) return [];
   const userRank = ROLE_RANK[role];

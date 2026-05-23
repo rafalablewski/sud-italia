@@ -20,7 +20,6 @@ export function Sidebar({ onCloseMobile, isMobile = false }: Props) {
   const [collapsed, setCollapsed] = useState(false);
   const [role, setRole] = useState<AdminRole | null>(null);
   const [simulationEnabled, setSimulationEnabled] = useState(false);
-  const [kdsSimulatorEnabled, setKdsSimulatorEnabled] = useState(false);
 
   useEffect(() => {
     try {
@@ -51,7 +50,6 @@ export function Sidebar({ onCloseMobile, isMobile = false }: Props) {
         .then((j) => {
           if (!cancelled && j) {
             setSimulationEnabled(!!j.simulationEnabled);
-            setKdsSimulatorEnabled(!!j.kdsSimulatorEnabled);
           }
         })
         .catch(() => {
@@ -72,9 +70,9 @@ export function Sidebar({ onCloseMobile, isMobile = false }: Props) {
   const sections = useMemo(
     () =>
       role
-        ? filterNavForRole(role, { simulation: simulationEnabled, kdsSimulator: kdsSimulatorEnabled })
+        ? filterNavForRole(role, { simulation: simulationEnabled })
         : NAV_SECTIONS,
-    [role, simulationEnabled, kdsSimulatorEnabled],
+    [role, simulationEnabled],
   );
 
   const toggleCollapsed = useCallback(() => {

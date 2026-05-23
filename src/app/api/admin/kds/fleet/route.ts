@@ -8,11 +8,10 @@ import type { Order, OrderStatus } from "@/data/types";
  * Owner fleet command — live KDS health across every active truck.
  *
  * Real-time signals (open tickets / late / oldest age) read the same active
- * orders the KDS boards do, including simulated tickets ({ includeSimulated })
- * so a simulator-driven demo lights the fleet view up exactly like a real
- * rush. Bump-time percentiles come from getKdsStationAnalytics (real
- * kds_tickets only — simulated orders don't fire station tickets, so P95 is
- * "—" during a pure-sim demo, which is honest).
+ * orders the KDS boards do — real orders only. Simulated demo tickets are
+ * filtered out by getOrders() so the fleet view always reflects true service
+ * load, never a simulator-driven demo. Bump-time percentiles come from
+ * getKdsStationAnalytics (real kds_tickets only).
  *
  * Owner-only and inherently cross-location, so no locationParam — withAdmin
  * allows the cross-location read for an unrestricted owner session.
@@ -43,7 +42,7 @@ export const GET = withAdmin({ roles: ["owner"] }, async () => {
 
   const tiles = await Promise.all(
     locations.map(async (loc) => {
-      const orders = await getOrders(loc.slug, fromIso, { includeSimulated: true });
+      const orders = await getOrders(loc.slug, fromIso);
       const active = orders.filter((o) => ACTIVE_STATUSES.includes(o.status));
 
       let late = 0;
