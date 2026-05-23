@@ -188,7 +188,7 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
   // Live order stream — SSE with REST fallback. Replaces the old 5 s polling
   // loop. We mirror the stream into a local copy so optimistic updates from
   // advance/recall feel instant; the next SSE frame reconciles either way.
-  const { orders: streamedOrders, refresh } = useAdminOrdersStream(location, { paused });
+  const { orders: streamedOrders, refresh } = useAdminOrdersStream(location, { paused, includeSimulated: true });
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
