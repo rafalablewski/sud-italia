@@ -178,13 +178,15 @@ export function AdminKDS() {
     return <MobileKDS />;
   }
 
-  // Managers + franchisees get the floor-control ops header on the board;
-  // kitchen/staff (and the pre-resolve null state) get the plain line board.
+  // Managers + franchisees get the floor-control ops header; kitchen/staff
+  // get the chef line strip (station focus + queue depth + quick 86); the
+  // pre-resolve null state gets the plain board.
   const managerControls = role === "manager" || role === "franchisee";
+  const chef = role === "kitchen" || role === "staff";
 
   // Only owners get the Fleet ↔ Floor switcher.
   if (role !== "owner") {
-    return <AdminKDSDesktop opsHeader={managerControls} />;
+    return <AdminKDSDesktop opsHeader={managerControls} chefStrip={chef} />;
   }
 
   return (
@@ -222,11 +224,33 @@ export function AdminKDS() {
   );
 }
 
-function AdminKDSDesktop({ opsHeader = false }: { opsHeader?: boolean }) {
+const KDS_STATION_KEY = "sud-kds-station";
+
+function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?: boolean; chefStrip?: boolean }) {
   const { location } = useAdminLocation();
   const toast = useToast();
 
   const [station, setStation] = useState<MenuCategory | "all">("all");
+
+  // Remember the cook's station across reloads — a line cook works one
+  // station all shift and shouldn't re-pick it every refresh.
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(KDS_STATION_KEY);
+      if (saved && STATION_FILTERS.some((s) => s.id === saved)) {
+        setStation(saved as MenuCategory | "all");
+      }
+    } catch {
+      /* storage may be blocked */
+    }
+  }, []);
+  useEffect(() => {
+    try {
+      localStorage.setItem(KDS_STATION_KEY, station);
+    } catch {
+      /* non-fatal */
+    }
+  }, [station]);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [soundOn, setSoundOn] = useState(true);
   const [paused, setPaused] = useState(false);
@@ -496,6 +520,8 @@ function AdminKDSDesktop({ opsHeader = false }: { opsHeader?: boolean }) {
       </header>
 
       {opsHeader && <KdsManagerOpsHeader orders={orders} location={location} />}
+
+      {chefStrip && <KdsChefStrip orders={orders} station={station} location={location} />}
 
       {bumpHistory.length > 0 && (
         <div
@@ -874,5 +900,137 @@ function OpsStat({ icon, value, label, tone }: { icon: React.ReactNode; value: s
         <span className="v2-muted" style={{ fontSize: 11 }}>{label}</span>
       </span>
     </span>
+  );
+}
+
+/**
+ * Chef line strip. Shown to kitchen / staff on the board. Surfaces the
+ * cook's focused-station queue depth (how many tickets hit their station and
+ * how old the oldest is) and a quick 86 control: declare an item you've run
+ * out of (options are the items actually on the active tickets, so it's one
+ * tap mid-cook) and restore items that are currently 86'd. Uses the
+ * kitchen-permitted /api/admin/kds/eighty-six endpoint.
+ */
+function KdsChefStrip({
+  orders,
+  station,
+  location,
+}: {
+  orders: Order[];
+  station: MenuCategory | "all";
+  location: string;
+}) {
+  const toast = useToast();
+  const [eightySixed, setEightySixed] = useState<{ id: string; name: string }[]>([]);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [pick, setPick] = useState("");
+
+  const load = useCallback(async () => {
+    const qs = location ? `?location=${encodeURIComponent(location)}` : "";
+    try {
+      const res = await fetch(`/api/admin/kds/eighty-six${qs}`);
+      if (res.ok) setEightySixed((await res.json()).eightySixed ?? []);
+    } catch {
+      /* non-fatal */
+    }
+  }, [location]);
+
+  useEffect(() => {
+    void load();
+    const t = setInterval(() => void load(), 15000);
+    return () => clearInterval(t);
+  }, [load]);
+
+  const toggle = useCallback(
+    async (id: string, available: boolean) => {
+      setBusyId(id);
+      try {
+        const qs = location ? `?location=${encodeURIComponent(location)}` : "";
+        const res = await fetch(`/api/admin/kds/eighty-six${qs}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id, available }),
+        });
+        if (!res.ok) {
+          toast.error("Could not update availability");
+          return;
+        }
+        toast.success(available ? "Item restored" : "Item 86'd");
+        await load();
+      } finally {
+        setBusyId(null);
+        setPick("");
+      }
+    },
+    [load, location, toast],
+  );
+
+  // Focused-station queue depth from the active tickets.
+  const focused = orders.filter((o) => station === "all" || ticketCategories(o).includes(station as MenuCategory));
+  let oldest = 0;
+  for (const o of focused) {
+    const age = totalPrepSeconds(o);
+    if (age > oldest) oldest = age;
+  }
+  const stationLabel = STATION_FILTERS.find((s) => s.id === station)?.label ?? "All stations";
+
+  // Items currently on the active tickets (optionally narrowed to the
+  // focused station) — the chef's one-tap 86 candidates.
+  const candidates = new Map<string, string>();
+  for (const o of orders) {
+    for (const ci of o.items) {
+      if (station !== "all" && ci.menuItem.category !== station) continue;
+      if (!eightySixed.some((e) => e.id === ci.menuItem.id)) {
+        candidates.set(ci.menuItem.id, ci.menuItem.name);
+      }
+    }
+  }
+
+  return (
+    <Card padding="compact" className="v2-kds-chef">
+      <CardBody>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 16, alignItems: "center" }}>
+          <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+            <ChefHat className="h-4 w-4 v2-muted" />
+            <span style={{ fontWeight: 600 }}>{stationLabel}</span>
+          </span>
+          {station === "all" ? (
+            <span className="v2-muted" style={{ fontSize: 13 }}>Pick your station above to focus your queue.</span>
+          ) : (
+            <>
+              <OpsStat icon={<Flame className="h-4 w-4 v2-muted" />} value={String(focused.length)} label="In your queue" />
+              <OpsStat icon={<Timer className="h-4 w-4 v2-muted" />} value={focused.length > 0 ? fmtClock(oldest) : "—"} label="Oldest" />
+            </>
+          )}
+          <div style={{ minWidth: 200, marginLeft: "auto" }}>
+            <Select
+              aria-label="86 an item you've run out of"
+              value={pick}
+              placeholder="Out of an item? 86 it…"
+              onChange={(e) => { if (e.target.value) void toggle(e.target.value, false); }}
+              options={[...candidates.entries()].map(([id, name]) => ({ value: id, label: name }))}
+            />
+          </div>
+        </div>
+        {eightySixed.length > 0 && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--border)" }}>
+            <span style={{ fontWeight: 600, fontSize: 13 }}>86&apos;d:</span>
+            {eightySixed.map((m) => (
+              <Button
+                key={m.id}
+                size="sm"
+                variant="ghost"
+                disabled={busyId === m.id}
+                onClick={() => toggle(m.id, true)}
+                title={`Restore ${m.name}`}
+              >
+                <Badge tone="danger" variant="soft">{m.name}</Badge>
+                <span style={{ marginLeft: 6 }}>Restore</span>
+              </Button>
+            ))}
+          </div>
+        )}
+      </CardBody>
+    </Card>
   );
 }
