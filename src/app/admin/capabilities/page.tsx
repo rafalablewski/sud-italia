@@ -226,6 +226,24 @@ export default async function CapabilitiesPage() {
           href: "/admin/recipes",
           summary: "EU 1169/2011 + FDA Big-9 allergens (gluten, dairy, eggs, fish, shellfish, nuts, peanuts, soy, celery, mustard, sesame, sulfites, lupin, molluscs) on each menu item. Editable from the recipe editor at /admin/recipes — tap a chip in the Dietary disclosures section to toggle. Persists through MenuOverride.allergens (seed items) or CustomMenuItem.allergens (admin-created items); `null` clears the override and the customer falls back to the kodawari seed; `[]` declares 'no major allergens' explicitly. Render surfaces: customer item-detail drawer, kitchen expo board (/kitchen/[slug]/expo). Not yet rendered on the per-station AdminKDS ticket or on the menu-card CompliancePills row — both planned. The merge in getMenuWithOverrides() backfills item.allergens from src/data/kodawari.ts when no override is set, so the data path is unified for downstream consumers.",
         },
+        {
+          name: "KDS order simulator",
+          status: "live",
+          href: "/admin/kds-simulator",
+          summary:
+            "Demo / training tool, gated like the finance simulation: flip kdsSimulatorEnabled in /admin/settings and an Order simulator tab appears under Kitchen Display in the nav. The page (manager+) streams synthetic orders onto the KDS — Start/Stop, spawn-rate (trickle / steady / lunch-rush), Spawn one / Spawn 5, a live ticket table + KPIs, and an Open-KDS shortcut — with auto-advance walking each ticket New → Preparing → Ready → Done on dwell timers. Orders are built ONLY from the truck's real menu via getMenuWithOverrides() — no made-up products — and persisted through createSimulatedOrder(), which fires the same order-created SSE event a paid checkout does, so simulated tickets appear on /admin/kds (every lens) exactly like live ones and carry a '(sim)' customer-name tag. Every order carries simulated:true, so getOrders() filters them out of all reports / CRM / analytics by default (only the orders + kitchen routes opt in via { includeSimulated:true }) and they never trigger stock decrement, customer rollups or outbox SMS/email. Targets the truck in the top-bar location selector; the endpoint self-caps active sims and bounds its reads to the last 24h. Purge in one click; turning the toggle off hides the tab and purges leftovers (purge stays allowed even when disabled).",
+          caveats:
+            "Off by default — flip it on at /admin/settings. Nav tab hidden + spawn/advance API rejected when off (purge still allowed for cleanup). The generator runs client-side from the simulator page, so it streams while that tab is open. Drives the main orders-based KDS board; it intentionally does not fire per-station kds_tickets rows (that table has no cascade on order delete, so firing them would orphan rows on purge), so the /kitchen station + expo screens and the fleet P95 won't reflect simulated tickets.",
+        },
+        {
+          name: "Role-aware KDS — owner / manager / chef lenses",
+          status: "live",
+          href: "/admin/kds",
+          summary:
+            "One live-order KDS engine, three lenses by role. OWNER lands on a Fleet command view: a per-truck tile grid showing live open tickets, late / soon-due SLA counts, oldest ticket age, completed-today + revenue-today, and the slowest station's P95 bump time, plus a fleet KPI strip and a green-amber-red health rail per truck. Click a truck to drop into its floor board (sets location + switches lens); a Fleet ↔ Floor toggle persists the choice. GET /api/admin/kds/fleet, owner-only, 6s refresh. MANAGER / FRANCHISEE (and an owner drilled into a truck) get the floor board plus a floor-control header: live open / late / due-soon / oldest / average-age from the active orders the board streams, with throughput (done last hour) + on-shift staff (open time-punches) + live 86 management (restore chips + '86 an item' picker) from GET /api/admin/kds/floor-ops. CHEF (kitchen / staff) get a line strip: their station persists across reloads, focused-station queue depth (tickets in queue + oldest age), and one-tap 86 of an item they've run out of (candidates are the items actually on the active tickets) + restore, via the kitchen-permitted GET/POST /api/admin/kds/eighty-six (audit-logged as menu.item_86). Real-time signals reuse the same active orders the boards read (includeSimulated, so a simulator demo lights every lens up); bump-time P95 reads getKdsStationAnalytics (real kds_tickets only).",
+          caveats:
+            "A persisted expedite / reprioritize action (pin a ticket to the top of every screen) is the remaining enhancement. P95 reads real station tickets, so it shows '—' during a pure-simulator demo. Throughput counts orders completed-and-created in the trailing hour (no separate completedAt timestamp), accurate at truck prep times. The kitchen 86 endpoint can only flip availability (not edit price/menu), and every flip is audit-logged with the actor.",
+        },
       ],
     },
     {
@@ -286,6 +304,15 @@ export default async function CapabilitiesPage() {
             "Flags today's metrics that deviate ±20% from the trailing 28-day average. Surfaced as cards on the Insights → Anomalies tab.",
           caveats:
             "Heuristic, not Claude-backed. Won't separate weekly seasonality from genuine drops. Good enough for daily sanity check; not 'ML anomaly detection'.",
+        },
+        {
+          name: "Menu engineering matrix (standalone)",
+          status: "live",
+          href: "/admin/menu-engineering",
+          summary:
+            "Dedicated, discoverable Kasavana-Smith page (no longer buried behind the simulation feature flag). Computes star / puzzle / plowhorse / dog quadrants over real order line items from computeMenuEngineering() — velocity (units sold) × per-unit gross profit, cut at the median of each. Window selector (30 / 60 / 90 / 180 days); honours the top-bar location switcher (per-location or chain-wide). Each item carries True CM1 (per-unit GP netted against payment fees + waste + refunds + loyalty burn, delivery-only items at a 27% marketplace-commission proxy), a margin-trap / spoilage-risk / prep-heavy flag, and operator role tags (HERO / DRIVER / ANCHOR). Surfaces a KPI strip, the 2×2 matrix, a margin-traps callout, and a sortable all-items table with a recommended action per row. GET /api/admin/menu-engineering?days=&location=, manager+ with per-location scope enforced by withAdmin; cached 60s.",
+          caveats:
+            "Quadrant cuts are median-relative to the menu in scope, so a tiny menu can put nearly everything on a boundary. Spoilage risk is a name-match heuristic (burrata / truffle / tartufata / frozen tiramisù), not a shelf-life field.",
         },
       ],
     },

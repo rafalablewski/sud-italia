@@ -522,6 +522,12 @@ export interface Order {
    *  the right outbound transport — WhatsApp replies for whatsapp
    *  orders, SMS otherwise. */
   channel?: "web" | "whatsapp";
+  /** Synthetic order produced by the KDS live-order simulator. These flow
+   *  into the kitchen display exactly like real tickets but are excluded
+   *  from every financial/CRM aggregation (getOrders filters them out by
+   *  default) and never trigger stock decrement, customer rollups, or
+   *  customer comms. Purged when the simulation toggle is turned off. */
+  simulated?: boolean;
 }
 
 // --- Inventory (per-location stock for an ingredient) ---

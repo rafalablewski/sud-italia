@@ -25,6 +25,7 @@ import {
   Truck,
   Brain,
   LineChart,
+  Zap,
   Map,
   MapPin,
   Settings,
@@ -54,7 +55,7 @@ export interface NavItem {
    * unless the corresponding boolean in /api/admin/settings is true.
    * The page itself still enforces the same check server-side.
    */
-  featureFlag?: "simulation";
+  featureFlag?: "simulation" | "kdsSimulator";
 }
 
 export interface NavSection {
@@ -79,6 +80,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/admin", label: "Dashboard", icon: LayoutDashboard, shortcut: "d" },
       { href: "/admin/orders", label: "Orders", icon: ClipboardList, shortcut: "o", requiredRole: "staff" },
       { href: "/admin/kds", label: "Kitchen Display", icon: ChefHat, shortcut: "k", requiredRole: "kitchen" },
+      { href: "/admin/kds-simulator", label: "Order simulator", icon: Zap, requiredRole: "manager", featureFlag: "kdsSimulator" },
     ],
   },
   {
@@ -150,6 +152,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/admin/locations", label: "Multi-location", icon: Map, requiredRole: "owner" },
       { href: "/admin/locations/manage", label: "Manage locations", icon: MapPin, requiredRole: "owner" },
       { href: "/admin/reports/cohort", label: "Cohort & CLTV", icon: BarChart3, requiredRole: "manager" },
+      { href: "/admin/menu-engineering", label: "Menu engineering", icon: UtensilsCrossed, requiredRole: "manager" },
       { href: "/admin/ai", label: "Insights", icon: Brain, requiredRole: "manager" },
       { href: "/admin/expansion", label: "Expansion", icon: Map, requiredRole: "owner" },
     ],
@@ -184,7 +187,7 @@ export const ALL_NAV_ITEMS: NavItem[] = NAV_SECTIONS.flatMap((s) => s.items);
  */
 export function filterNavForRole(
   role: AdminRole | null,
-  flags?: { simulation?: boolean },
+  flags?: { simulation?: boolean; kdsSimulator?: boolean },
 ): NavSection[] {
   if (!role) return [];
   const userRank = ROLE_RANK[role];
@@ -192,7 +195,7 @@ export function filterNavForRole(
     ...section,
     items: section.items.filter((item) => {
       if (item.requiredRole && ROLE_RANK[item.requiredRole] > userRank) return false;
-      if (item.featureFlag === "simulation" && !flags?.simulation) return false;
+      if (item.featureFlag && !flags?.[item.featureFlag]) return false;
       return true;
     }),
   })).filter((section) => section.items.length > 0);

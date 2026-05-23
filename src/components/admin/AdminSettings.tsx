@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   Sprout,
   Truck,
+  Zap,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useIsMobile } from "./v2/mobile";
@@ -44,6 +45,7 @@ interface Settings {
     vip?: number;
   };
   simulationEnabled?: boolean;
+  kdsSimulatorEnabled?: boolean;
 }
 
 interface AuditEntry {
@@ -91,8 +93,10 @@ function AdminSettingsDesktop() {
   const [thRegular, setThRegular] = useState("");
   const [thVip, setThVip] = useState("");
   const [simulationEnabled, setSimulationEnabled] = useState(false);
+  const [kdsSimulatorEnabled, setKdsSimulatorEnabled] = useState(false);
   const [saving, setSaving] = useState(false);
   const [simBusy, setSimBusy] = useState(false);
+  const [kdsSimBusy, setKdsSimBusy] = useState(false);
 
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [auditLoading, setAuditLoading] = useState(true);
@@ -117,6 +121,7 @@ function AdminSettingsDesktop() {
     setThRegular(typeof t?.regular === "number" ? (t.regular / 100).toFixed(2) : "");
     setThVip(typeof t?.vip === "number" ? (t.vip / 100).toFixed(2) : "");
     setSimulationEnabled(!!data.simulationEnabled);
+    setKdsSimulatorEnabled(!!data.kdsSimulatorEnabled);
   }, []);
 
   const fetchAudit = useCallback(async () => {
@@ -202,6 +207,37 @@ function AdminSettingsDesktop() {
       }
     } finally {
       setSimBusy(false);
+    }
+  };
+
+  const toggleKdsSimulator = async (next: boolean) => {
+    setKdsSimBusy(true);
+    setKdsSimulatorEnabled(next); // optimistic
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kdsSimulatorEnabled: next }),
+      });
+      if (res.ok) {
+        // Turning it off clears the synthetic tickets it left on the board
+        // (purge stays allowed even with the toggle now off).
+        if (!next) {
+          await fetch("/api/admin/kds-simulator", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "purge" }),
+          }).catch(() => {});
+        }
+        toast.success(next ? "Order simulator on — see the tab under Kitchen Display" : "Order simulator off — tab hidden, board cleared");
+        window.dispatchEvent(new Event("sud-admin-settings-updated"));
+        await Promise.all([fetchSettings(), fetchAudit()]);
+      } else {
+        setKdsSimulatorEnabled(!next); // revert
+        toast.error("Could not update toggle");
+      }
+    } finally {
+      setKdsSimBusy(false);
     }
   };
 
@@ -452,6 +488,32 @@ function AdminSettingsDesktop() {
                     {simulationEnabled
                       ? "Visible at /admin/simulation."
                       : "Hidden from the sidebar and command palette. The page redirects here when off."}
+                  </span>
+                </span>
+              </label>
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardHeader
+              title="Order simulator"
+              description="Demo / training tool. Turning this on adds an Order simulator tab under Kitchen Display in the nav — open it to stream synthetic orders (built only from your real menu) onto the KDS and watch them walk through New → Preparing → Ready → Done. Simulated orders are tagged '(sim)' and excluded from every report — never your stock, CRM or customer comms. Turning it off hides the tab and clears any simulated tickets."
+              actions={<Zap className="h-4 w-4 v2-muted" />}
+            />
+            <CardBody>
+              <label className="v2-field">
+                <span className="v2-field-label">Show the Order simulator</span>
+                <span className="inline-flex items-center gap-2 mt-1">
+                  <input
+                    type="checkbox"
+                    checked={kdsSimulatorEnabled}
+                    onChange={(e) => toggleKdsSimulator(e.target.checked)}
+                    disabled={kdsSimBusy}
+                  />
+                  <span className="v2-muted text-sm">
+                    {kdsSimulatorEnabled
+                      ? "On — open the Order simulator tab under Kitchen Display to run a rush."
+                      : "Off — tab hidden and the board shows only real tickets."}
                   </span>
                 </span>
               </label>

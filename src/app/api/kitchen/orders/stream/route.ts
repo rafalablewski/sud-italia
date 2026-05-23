@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
       const sendIfChanged = async () => {
         if (closed) return;
         try {
-          const orders = await getOrders(slug);
+          const orders = await getOrders(slug, undefined, { includeSimulated: true });
           orders.sort(
             (a, b) =>
               new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),

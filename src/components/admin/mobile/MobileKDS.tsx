@@ -112,7 +112,7 @@ export function MobileKDS() {
   const offline = useOfflineQueue({ storageKey: "sud-admin-kds-queue" });
   const timing = useActionTiming();
 
-  const { orders, refresh } = useAdminOrdersStream(location, { paused });
+  const { orders, refresh } = useAdminOrdersStream(location, { paused, includeSimulated: true });
 
   // 1s timer for prep clocks; slows to 5s when hidden.
   useEffect(() => {

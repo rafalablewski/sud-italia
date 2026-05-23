@@ -839,6 +839,7 @@ interface OrderPayload {
   refund?: Order["refund"];
   dispute?: Order["dispute"];
   channel?: Order["channel"];
+  simulated?: Order["simulated"];
 }
 
 function rowToOrder(row: OrderRow): Order {
@@ -871,6 +872,7 @@ function rowToOrder(row: OrderRow): Order {
     refund: payload.refund,
     dispute: payload.dispute,
     channel: payload.channel,
+    simulated: payload.simulated,
   };
 }
 
@@ -885,6 +887,7 @@ function orderToValues(order: Order) {
     refund: order.refund,
     dispute: order.dispute,
     channel: order.channel,
+    simulated: order.simulated,
   };
   return {
     id: order.id,
@@ -1011,7 +1014,13 @@ export async function getOrders(
    *  instead of fetching everything and slicing in memory; matters once the
    *  table grows past a few thousand rows. */
   since?: string,
+  /** KDS-simulator escape hatch. Simulated orders are filtered out of every
+   *  read by default so they never reach reports / CRM / analytics; only the
+   *  kitchen-display + orders-list routes opt in to see them. */
+  opts?: { includeSimulated?: boolean },
 ): Promise<Order[]> {
+  const keepSim = opts?.includeSimulated === true;
+  const stripSim = (list: Order[]): Order[] => (keepSim ? list : list.filter((o) => !o.simulated));
   const db = getDb();
   if (db) {
     try {
@@ -1036,7 +1045,7 @@ export async function getOrders(
       const rows = whereClause
         ? await db.select().from(ordersTable).where(whereClause).orderBy(desc(ordersTable.createdAt))
         : await db.select().from(ordersTable).orderBy(desc(ordersTable.createdAt));
-      if (rows.length > 0) return rows.map(rowToOrder);
+      if (rows.length > 0) return stripSim(rows.map(rowToOrder));
     } catch (err) {
       logger.warn(
         "getOrders DB read failed; falling back to kv_store",
@@ -1062,7 +1071,7 @@ export async function getOrders(
     bumpLazyBackfillHit("orders");
     void Promise.all(filtered.map((o) => dualWriteOrder(o)));
   }
-  return filtered;
+  return stripSim(filtered);
 }
 
 /**
@@ -1097,8 +1106,10 @@ export async function getOrdersByPhone(
         .where(and(...where))
         .orderBy(desc(ordersTable.createdAt));
       // Even when rows.length === 0 we trust the DB result — empty is a
-      // valid answer for a phone with no past orders.
-      return rows.map(rowToOrder);
+      // valid answer for a phone with no past orders. Simulated orders never
+      // count toward a customer's history (defends the rare case where a
+      // simulator phone collides with a real customer).
+      return rows.map(rowToOrder).filter((o) => !o.simulated);
     } catch (err) {
       logger.warn(
         "getOrdersByPhone DB read failed; falling back to kv_store",
@@ -1114,6 +1125,7 @@ export async function getOrdersByPhone(
   return orders.filter(
     (o) =>
       o.customerPhone &&
+      !o.simulated &&
       phonesEqualPl(o.customerPhone, canonical) &&
       (opts?.includePending || o.status !== "pending") &&
       new Date(o.createdAt).getTime() >= sinceMs,
@@ -1246,6 +1258,141 @@ export async function createOrder(order: Order): Promise<Order> {
     await consumeRecipeForOrder(order);
   })();
   return saved;
+}
+
+/**
+ * KDS live-order simulator (admin-gated demo / training tool). Persists a
+ * synthetic-but-real order so it streams into the orders-driven kitchen
+ * display (/admin/kds) exactly like a live ticket — but deliberately SKIPS
+ * every side effect createOrder() runs for a paying customer: no stock
+ * decrement, no customer rollup, no outbox SMS/email, and no station
+ * tickets (kds_tickets has no cascade on order delete, so firing them would
+ * orphan rows on purge). The order carries simulated:true so getOrders()
+ * hides it from every report.
+ */
+export async function createSimulatedOrder(order: Order): Promise<Order> {
+  const sim: Order = { ...order, simulated: true };
+  const db = getDb();
+  if (db) {
+    await dualWriteOrder(sim);
+    void mirrorOrderToKvStore(sim);
+  } else {
+    await withLockScoped("orders", sim.locationSlug, async () => {
+      const orders = await readJSON<Order[]>("orders.json", []);
+      orders.push(sim);
+      await writeJSON("orders.json", orders);
+    });
+  }
+  emitOrderEvent({ kind: "created", orderId: sim.id, locationSlug: sim.locationSlug });
+  return sim;
+}
+
+/**
+ * Advance a simulated order's status. Mirrors updateOrderStatus's persistence
+ * + event emission so the KDS board reacts, but skips the customer rollup +
+ * outbox comms. Guarded — refuses to touch a non-simulated order so it can
+ * never mutate a real ticket.
+ */
+export async function setSimulatedOrderStatus(
+  id: string,
+  status: Order["status"],
+): Promise<Order | null> {
+  const db = getDb();
+  let updated: Order | null = null;
+  if (db) {
+    try {
+      await ensureOrdersTable();
+      const existing = await db.select().from(ordersTable).where(eq(ordersTable.id, id)).limit(1);
+      if (existing.length === 1) {
+        if (!rowToOrder(existing[0]).simulated) return null;
+        const rows = await db
+          .update(ordersTable)
+          .set({ status, updatedAt: new Date() })
+          .where(eq(ordersTable.id, id))
+          .returning();
+        if (rows.length === 1) {
+          updated = rowToOrder(rows[0]);
+          void mirrorOrderToKvStore(updated);
+        }
+      }
+    } catch (err) {
+      logger.warn(
+        "setSimulatedOrderStatus DB update failed; falling back to kv path",
+        { orderId: id, layer: "store.orders" },
+        err,
+      );
+    }
+  }
+  if (!updated) {
+    updated = await withLock("orders.json", async () => {
+      const orders = await readJSON<Order[]>("orders.json", []);
+      const index = orders.findIndex((o) => o.id === id);
+      if (index === -1 || !orders[index].simulated) return null;
+      orders[index].status = status;
+      await writeJSON("orders.json", orders);
+      await dualWriteOrder(orders[index]);
+      return orders[index];
+    });
+  }
+  if (updated) {
+    emitOrderEvent({
+      kind: "status_changed",
+      orderId: updated.id,
+      locationSlug: updated.locationSlug,
+      status,
+    });
+  }
+  return updated;
+}
+
+/**
+ * Purge simulated orders (optionally scoped to one location). Deletes the
+ * rows + KV mirror and emits deleted events so open KDS boards clear, but
+ * skips the slot decrement + customer rollup deleteOrder() runs — a simulated
+ * order never held a real slot or customer. Returns the count removed.
+ */
+export async function deleteSimulatedOrders(locationSlug?: string): Promise<number> {
+  const sims = (await getOrders(locationSlug, undefined, { includeSimulated: true })).filter(
+    (o) => o.simulated,
+  );
+  let removed = 0;
+  for (const o of sims) {
+    const db = getDb();
+    let didDelete = false;
+    if (db) {
+      try {
+        await ensureOrdersTable();
+        const rows = await db.delete(ordersTable).where(eq(ordersTable.id, o.id)).returning();
+        if (rows.length === 1) {
+          didDelete = true;
+          void mirrorOrderDeleteToKvStore(o.id);
+        }
+      } catch (err) {
+        logger.warn(
+          "deleteSimulatedOrders DB delete failed; falling back to kv path",
+          { orderId: o.id, layer: "store.orders" },
+          err,
+        );
+      }
+    }
+    if (!didDelete) {
+      didDelete = await withLock("orders.json", async () => {
+        const orders = await readJSON<Order[]>("orders.json", []);
+        const index = orders.findIndex((x) => x.id === o.id);
+        if (index === -1) return false;
+        orders.splice(index, 1);
+        await writeJSON("orders.json", orders);
+        await dualDeleteOrder(o.id);
+        return true;
+      });
+    }
+    if (didDelete) {
+      await removeNotificationsForOrder(o.id);
+      emitOrderEvent({ kind: "deleted", orderId: o.id, locationSlug: o.locationSlug });
+      removed++;
+    }
+  }
+  return removed;
 }
 
 export async function updateOrderStatus(id: string, status: Order["status"]): Promise<Order | null> {
@@ -2496,6 +2643,11 @@ export interface AppSettings {
   /** Master toggle for /admin/simulation. When false the nav link is
    *  hidden and the page redirects to /admin. */
   simulationEnabled?: boolean;
+  /** Master toggle for the live-order KDS simulator. When true an Order
+   *  simulator tab (/admin/kds-simulator) appears under Kitchen Display; when
+   *  false the tab is hidden and the simulator API rejects spawn/advance
+   *  (purge still works, so disabling can clear leftover sims). */
+  kdsSimulatorEnabled?: boolean;
   /** Display-currency config — customer-side switcher + admin rates.
    *  Charges always settle in PLN; this controls the rendered amount. */
   currency?: CurrencyConfig;
@@ -9940,9 +10092,10 @@ export async function computeCohortSnapshot(
 export async function computeMenuEngineering(
   windowDays = 90,
   scenarioOverride?: { paymentProcessorPct?: number; wastePct?: number; refundPct?: number; loyaltyBurnPct?: number },
+  locationSlug?: string,
 ): Promise<SimulationMenuEngineeringLine[]> {
   const cutoffMs = Date.now() - windowDays * 24 * 60 * 60 * 1000;
-  const all = await getOrders(undefined, new Date(cutoffMs).toISOString());
+  const all = await getOrders(locationSlug, new Date(cutoffMs).toISOString());
   const fulfilled = all.filter((o) => {
     if (o.status === "cancelled") return false;
     const t = Date.parse(o.createdAt);

@@ -13,15 +13,19 @@ const FALLBACK_POLL_MS = 15_000;
  *
  * Pass `paused: true` to halt both the stream and the fallback poll — used by
  * the KDS pause button.
+ *
+ * Pass `includeSimulated: true` to opt into demo-simulator tickets. Only the
+ * KDS board does this; the Orders list (and everything else) leaves it off so
+ * synthetic orders never leak into operational / reporting views.
  */
 export function useAdminOrdersStream(
   location: string | null | undefined,
-  options: { paused?: boolean } = {},
+  options: { paused?: boolean; includeSimulated?: boolean } = {},
 ): { orders: Order[]; loading: boolean; refresh: () => void } {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshTick, setRefreshTick] = useState(0);
-  const { paused } = options;
+  const { paused, includeSimulated } = options;
 
   useEffect(() => {
     if (paused) return;
@@ -30,7 +34,10 @@ export function useAdminOrdersStream(
     let source: EventSource | null = null;
     let pollTimer: ReturnType<typeof setInterval> | null = null;
 
-    const qs = location ? `?location=${encodeURIComponent(location)}` : "";
+    const params = new URLSearchParams();
+    if (location) params.set("location", location);
+    if (includeSimulated) params.set("includeSimulated", "1");
+    const qs = params.toString() ? `?${params.toString()}` : "";
 
     const fetchOnce = async () => {
       try {
@@ -91,7 +98,7 @@ export function useAdminOrdersStream(
       source?.close();
       if (pollTimer) clearInterval(pollTimer);
     };
-  }, [location, paused, refreshTick]);
+  }, [location, paused, includeSimulated, refreshTick]);
 
   return {
     orders,
