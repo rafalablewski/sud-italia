@@ -253,10 +253,19 @@ export interface KdsBoardProps {
 
 /**
  * Full-width banner shown across the top of the Kitchen Display while the
- * order simulator is active, so staff can never mistake the demo rush for
- * real service. Pairs with the per-ticket SIMULATION tag.
+ * order simulator is enabled, so staff can never mistake the demo rush for
+ * real service. Pairs with the per-ticket SIMULATION tag. When add/purge
+ * handlers are passed it also renders the manual Add 1 / Add 5 / Purge all
+ * controls — the only way simulated tickets reach the board (no auto-spawn).
  */
-export function KdsSimBanner() {
+export interface KdsSimBannerProps {
+  busy?: boolean;
+  onAdd?: (count: number) => void;
+  onPurge?: () => void;
+}
+
+export function KdsSimBanner({ busy, onAdd, onPurge }: KdsSimBannerProps = {}) {
+  const showControls = !!onAdd && !!onPurge;
   return (
     <div className="v2-kds-sim-banner" role="status">
       <FlaskConical className="h-4 w-4" aria-hidden />
@@ -265,6 +274,19 @@ export function KdsSimBanner() {
         Tickets marked “SIMULATION” are training data, not real orders — they never touch stock, the
         dashboard, reports or customer comms. Turn it off in Settings → Order simulator.
       </span>
+      {showControls && (
+        <div className="v2-kds-sim-controls">
+          <Button size="sm" variant="secondary" disabled={busy} onClick={() => onAdd!(1)}>
+            Add 1
+          </Button>
+          <Button size="sm" variant="secondary" disabled={busy} onClick={() => onAdd!(5)}>
+            Add 5
+          </Button>
+          <Button size="sm" variant="ghost" disabled={busy} onClick={() => onPurge!()}>
+            Purge all
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

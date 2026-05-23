@@ -160,9 +160,9 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
   const { location } = useAdminLocation();
   const toast = useToast();
 
-  // When the owner-only toggle is on, the board itself streams a marked
-  // SIMULATION rush onto the live KDS (no separate tab).
-  const { enabled: simEnabled } = useKdsSimulator(location);
+  // When the owner-only toggle is on, the board shows manual Add 1 / Add 5 /
+  // Purge all controls (in the simulation banner) for staging a training rush.
+  const { enabled: simEnabled, busy: simBusy, addOrders, purgeAll } = useKdsSimulator(location);
 
   const [station, setStation] = useState<MenuCategory | "all">("all");
 
@@ -553,7 +553,13 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
         ))}
       </div>
 
-      {simEnabled && <KdsSimBanner />}
+      {simEnabled && (
+        <KdsSimBanner
+          busy={simBusy}
+          onAdd={(n) => void addOrders(n).then(() => refresh())}
+          onPurge={() => void purgeAll().then(() => refresh())}
+        />
+      )}
 
       {!kiosk && opsHeader && <KdsManagerOpsHeader orders={orders} location={location} />}
 

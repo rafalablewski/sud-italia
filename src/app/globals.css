@@ -2329,6 +2329,13 @@ html { scroll-behavior: smooth; }
   letter-spacing: 0.06em;
 }
 .v2-kds-sim-banner span { color: var(--fg-muted); }
+.v2-kds-sim-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
 
 /* ----------------------------
    KDS — stage switcher (came in / in prep / done)
