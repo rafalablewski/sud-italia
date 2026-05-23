@@ -151,28 +151,22 @@ export function Ticket({ order, stationFilter, onAdvance, isUpdating, nowMs }: T
     byCategory.set(ci.menuItem.category, arr);
   }
   const itemCount = order.items.reduce((n, ci) => n + ci.quantity, 0);
+  const shortId = order.id.slice(-6).replace(/^[^a-z0-9]+/i, "").toUpperCase();
   const overdue = remaining !== null && remaining < 0;
+  const showSla = remaining !== null && order.status !== "ready";
 
   return (
     <div className={`v2-ticket v2-ticket-${tone}${order.simulated ? " v2-ticket-sim" : ""}`}>
       {order.simulated && (
         <div className="v2-ticket-sim-tag">
-          <FlaskConical className="h-3 w-3" /> SIMULATION — not a real order
+          <FlaskConical className="h-3 w-3" /> Simulation — not a real order
         </div>
       )}
       <header className="v2-ticket-header">
-        <span className="v2-ticket-id mono">#{order.id.slice(-6).toUpperCase()}</span>
-        <span className={`v2-ticket-timer v2-ticket-timer-${tone}`}>
-          <Timer className="h-3 w-3" /> {fmtClock(seconds)}
-          {remaining !== null && order.status !== "ready" && (
-            <span
-              className="v2-ticket-sla"
-              title="Time remaining to promised-ready"
-            >
-              {overdue ? "LATE " : "T-"}
-              {fmtClock(Math.abs(remaining))}
-            </span>
-          )}
+        <span className="v2-ticket-id mono">#{shortId}</span>
+        <span className={`v2-ticket-timer v2-ticket-timer-${tone}`} title="Time since the order was placed">
+          <Timer className="h-3.5 w-3.5" />
+          <span className="tabular">{fmtClock(seconds)}</span>
         </span>
       </header>
       <div className="v2-ticket-body">
@@ -213,7 +207,7 @@ export function Ticket({ order, stationFilter, onAdvance, isUpdating, nowMs }: T
 
         {order.specialInstructions && (
           <div className="v2-ticket-notes">
-            <span className="v2-ticket-notes-label">Order notes</span>
+            <span className="v2-ticket-notes-label">Notes</span>
             <span>{order.specialInstructions}</span>
           </div>
         )}
@@ -221,11 +215,20 @@ export function Ticket({ order, stationFilter, onAdvance, isUpdating, nowMs }: T
         <footer className="v2-ticket-foot">
           <div className="v2-ticket-foot-info">
             <span className="v2-ticket-slot">
-              <Clock className="h-3 w-3" /> Pickup {order.slotTime}
+              <Clock className="h-3 w-3" /> {order.slotTime}
             </span>
             <span className="v2-ticket-count">
               {itemCount} item{itemCount === 1 ? "" : "s"}
             </span>
+            {showSla && (
+              <span
+                className={`v2-ticket-sla v2-ticket-sla-${tone}`}
+                title="Time remaining to promised-ready"
+              >
+                {overdue ? "Late " : "Due "}
+                {fmtClock(Math.abs(remaining))}
+              </span>
+            )}
           </div>
           <Button
             block
