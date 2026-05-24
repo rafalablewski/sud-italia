@@ -62,6 +62,52 @@
   }
   .chip:hover{color:var(--text)}
   .chip[aria-pressed="true"]{background:var(--panel); color:var(--text); box-shadow:var(--shadow)}
+
+  /* Stage switcher */
+  .stages{display:flex; gap:4px; align-items:center; background:#F2F1EC; padding:4px; border-radius:10px}
+  .stage-btn{
+    appearance:none; background:transparent; border:none; color:var(--text-dim);
+    font-family:var(--sans); font-size:12.5px; font-weight:500;
+    padding:6px 12px; border-radius:7px; cursor:pointer;
+    display:flex; align-items:center; gap:7px; transition:background .12s,color .12s,box-shadow .12s;
+  }
+  .stage-btn:hover{color:var(--text)}
+  .stage-btn[aria-pressed="true"]{background:var(--panel); color:var(--text); box-shadow:var(--shadow)}
+  .stage-btn .sc{
+    font-family:var(--mono); font-size:11px; color:var(--text-dim);
+    background:#E7E5DE; border-radius:999px; padding:1px 7px; min-width:18px; text-align:center;
+  }
+  .stage-btn[aria-pressed="true"] .sc{background:#F2F1EC; color:var(--text)}
+
+  /* Header buttons */
+  .hbtn{
+    appearance:none; background:var(--panel); border:1px solid var(--hair-strong);
+    color:var(--text-dim); font-family:var(--sans); font-size:12.5px; font-weight:500;
+    padding:7px 13px; border-radius:9px; cursor:pointer;
+    display:flex; align-items:center; gap:7px; transition:color .12s,border-color .12s,background .12s;
+  }
+  .hbtn:hover{color:var(--text); border-color:var(--text-dim)}
+  .hbtn svg{display:block}
+
+  /* Single-stage full-width grid */
+  main.stage-grid{
+    display:block; overflow-y:auto; padding:var(--s5) var(--s6);
+  }
+  .stage-grid .stage-wrap{
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+    gap:var(--s4); align-content:start;
+  }
+  .stage-grid .empty{grid-column:1/-1}
+
+  /* Fullscreen immersive mode */
+  .is-fullscreen header{height:52px; padding:0 var(--s5)}
+  .is-fullscreen .brand, .is-fullscreen .tag, .is-fullscreen .gallery{display:none}
+  .is-fullscreen .col{padding-top:var(--s4)}
+  .is-fullscreen .oid{font-size:17px}
+  .is-fullscreen .it .nm{font-size:15px}
+  .is-fullscreen .it .q{font-size:14px}
+  .is-fullscreen .sla-pill{font-size:13px}
+
   .clock{font-family:var(--mono); font-size:16px; color:var(--text); letter-spacing:.02em; min-width:80px; text-align:right}
   .gallery{color:var(--text-faint); font-size:11px; text-decoration:none; letter-spacing:.06em; text-transform:uppercase; transition:color .12s}
   .gallery:hover{color:var(--text-dim)}
@@ -160,7 +206,9 @@
     </div>
     <span class="tag">02 · Bianco</span>
     <div class="spacer"></div>
+    <div class="stages" id="stages"></div>
     <div class="filters" id="filters"></div>
+    <button class="hbtn" id="fsbtn" type="button"></button>
     <div class="clock tnum" id="clock">--:--:--</div>
     <a class="gallery" href="index.html">← Gallery</a>
   </header>
@@ -196,9 +244,16 @@ const COLUMNS = [
 ];
 const NEXT_LABEL = { new:"Start prep", prep:"Mark ready", ready:"Bump · Done" };
 const NEXT_STAGE = { new:"prep", prep:"ready", ready:null };
+const STAGES = [
+  { key:"All",   label:"All" },
+  { key:"new",   label:"New" },
+  { key:"prep",  label:"In progress" },
+  { key:"ready", label:"Ready · Expo" },
+];
 
 let tickets = ORDERS.map(o => ({...o, items:o.items.map(i=>({...i})) }));
 let activeFilter = "All";
+let activeStage = "All";
 
 function fmt(sec){
   const neg = sec<0; let s=Math.abs(sec);
@@ -214,6 +269,13 @@ function esc(s){ return String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;'
 
 function passesFilter(t){
   return activeFilter==="All" || t.items.some(i=>i.c===activeFilter);
+}
+
+/* Stage counts respect the station filter but not the stage filter */
+function stageCount(key){
+  const base = tickets.filter(passesFilter);
+  if(key==="All") return base.length;
+  return base.filter(t=>t.status===key).length;
 }
 
 function buildCard(t){
@@ -257,7 +319,25 @@ function buildCard(t){
 
 function render(){
   const board = document.getElementById("board");
+  board.classList.toggle("stage-grid", activeStage!=="All");
   board.innerHTML = "";
+  updateStages();
+
+  if(activeStage!=="All"){
+    // Single stage: full-width wrapping grid of cards
+    const list = tickets.filter(t=>t.status===activeStage && passesFilter(t))
+      .sort((a,b)=>a.sla-b.sla);
+    const wrap = document.createElement("div");
+    wrap.className = "stage-wrap";
+    if(list.length===0){
+      wrap.innerHTML = '<div class="empty">No tickets in this stage</div>';
+    } else {
+      list.forEach(t=>wrap.appendChild(buildCard(t)));
+    }
+    board.appendChild(wrap);
+    return;
+  }
+
   COLUMNS.forEach(col=>{
     const list = tickets.filter(t=>t.status===col.key && passesFilter(t))
       .sort((a,b)=>a.sla-b.sla);
@@ -298,6 +378,58 @@ function toast(msg){
   el.textContent = msg; el.classList.add("show");
   clearTimeout(toastTimer); toastTimer = setTimeout(()=>el.classList.remove("show"),2200);
 }
+
+/* Stage switcher */
+const sc = document.getElementById("stages");
+STAGES.forEach(st=>{
+  const b = document.createElement("button");
+  b.className="stage-btn"; b.dataset.stage=st.key; b.type="button";
+  b.innerHTML = '<span class="sl">'+st.label+'</span><span class="sc tnum">'+stageCount(st.key)+'</span>';
+  b.setAttribute("aria-pressed", st.key===activeStage?"true":"false");
+  b.addEventListener("click", ()=>{
+    activeStage = st.key;
+    [...sc.children].forEach(c=>c.setAttribute("aria-pressed", c.dataset.stage===activeStage?"true":"false"));
+    render();
+  });
+  sc.appendChild(b);
+});
+function updateStages(){
+  [...sc.children].forEach(c=>{
+    c.setAttribute("aria-pressed", c.dataset.stage===activeStage?"true":"false");
+    c.querySelector(".sc").textContent = stageCount(c.dataset.stage);
+  });
+}
+
+/* Fullscreen */
+const SVG_EXPAND = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>';
+const SVG_SHRINK = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>';
+const fsbtn = document.getElementById("fsbtn");
+function syncFs(){
+  const on = document.fullscreenElement != null || document.documentElement.classList.contains("is-fullscreen");
+  fsbtn.innerHTML = (on?SVG_SHRINK:SVG_EXPAND) + '<span>'+(on?"Exit":"Fullscreen")+'</span>';
+}
+fsbtn.addEventListener("click", ()=>{
+  if(document.fullscreenElement){
+    if(document.exitFullscreen) document.exitFullscreen();
+    document.documentElement.classList.remove("is-fullscreen");
+  } else if(document.documentElement.requestFullscreen){
+    document.documentElement.requestFullscreen().then(()=>{
+      document.documentElement.classList.add("is-fullscreen");
+    }).catch(()=>{
+      document.documentElement.classList.toggle("is-fullscreen");
+      syncFs();
+    });
+    document.documentElement.classList.add("is-fullscreen");
+  } else {
+    document.documentElement.classList.toggle("is-fullscreen");
+  }
+  syncFs();
+});
+document.addEventListener("fullscreenchange", ()=>{
+  document.documentElement.classList.toggle("is-fullscreen", document.fullscreenElement != null);
+  syncFs();
+});
+syncFs();
 
 /* Filters */
 const fc = document.getElementById("filters");
@@ -341,6 +473,7 @@ function tick(){
     card.dataset.tone = tn;
   });
   if(needRender) render();
+  else updateStages();
 }
 
 clock(); render();

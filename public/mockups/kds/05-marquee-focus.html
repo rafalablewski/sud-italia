@@ -56,12 +56,54 @@
   }
   .chip:hover{border-color:var(--hair-strong);color:var(--ink)}
   .chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:600}
+
+  /* stage switcher — segmented control */
+  .stages{
+    display:flex;gap:2px;padding:3px;border:1px solid var(--hair);border-radius:999px;
+    background:var(--bg2);
+  }
+  .seg{
+    appearance:none;background:transparent;border:1px solid transparent;color:var(--ink2);
+    font-family:var(--sans);font-size:12px;letter-spacing:0.02em;padding:5px 11px;
+    border-radius:999px;cursor:pointer;transition:all .12s ease;white-space:nowrap;
+    display:inline-flex;align-items:center;gap:6px;
+  }
+  .seg:hover{color:var(--ink)}
+  .seg[aria-pressed="true"]{background:var(--accent);color:#fff;font-weight:600}
+  .seg .seg-n{
+    font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:0.02em;
+    padding:1px 6px;border-radius:999px;background:var(--hair);color:var(--ink2);min-width:18px;text-align:center;
+  }
+  .seg[aria-pressed="true"] .seg-n{background:rgba(255,255,255,0.22);color:#fff}
+
+  /* fullscreen button */
+  .fsbtn{
+    appearance:none;display:inline-flex;align-items:center;gap:6px;
+    background:transparent;border:1px solid var(--hair);color:var(--ink2);
+    font-family:var(--sans);font-size:12px;letter-spacing:0.02em;padding:5px 10px;
+    border-radius:999px;cursor:pointer;transition:all .12s ease;white-space:nowrap;
+  }
+  .fsbtn:hover{border-color:var(--hair-strong);color:var(--ink)}
+  .fsbtn svg{width:14px;height:14px}
   .clock{font-family:var(--mono);font-size:16px;letter-spacing:0.04em;min-width:80px;text-align:right;color:var(--ink)}
   .gallery-link{
     font-size:12px;color:var(--ink3);text-decoration:none;border:1px solid var(--hair);
     padding:5px 9px;border-radius:999px;transition:all .12s ease;
   }
   .gallery-link:hover{color:var(--ink);border-color:var(--hair-strong)}
+
+  /* fullscreen / immersive mode */
+  html.is-fullscreen .design-tag,
+  html.is-fullscreen .kd-label{display:none}
+  html.is-fullscreen footer{display:none}
+  html.is-fullscreen .stage{padding:var(--space-7)}
+  html.is-fullscreen .hero-id{font-size:40px}
+  html.is-fullscreen .hero-cust{font-size:20px}
+  html.is-fullscreen .hero-timer .t-due{font-size:76px}
+  html.is-fullscreen .hero-line .q{font-size:34px;min-width:70px}
+  html.is-fullscreen .hero-line .nm{font-size:30px}
+  html.is-fullscreen .qid{font-size:15px}
+  html.is-fullscreen .qtimer{font-size:23px}
 
   .stage{flex:1 1 auto;display:flex;gap:var(--space-6);padding:var(--space-6);overflow:hidden}
 
@@ -219,7 +261,9 @@
       <span class="kd-label">Kitchen Display</span>
     </div>
     <span class="design-tag">05 · Marquee</span>
+    <div class="stages" id="stages" role="group" aria-label="Stage filter"></div>
     <div class="filters" id="filters" role="group" aria-label="Station filter"></div>
+    <button class="fsbtn" id="fsBtn" type="button" aria-pressed="false"></button>
     <a class="gallery-link" href="index.html">← Gallery</a>
     <div class="clock tnum" id="clock">--:--:--</div>
   </header>
@@ -274,8 +318,20 @@ const ORDERS = [
 
 const STATIONS = ["All","Pizza","Pasta","Antipasti","Panini","Drinks","Desserts"];
 const STAGES = { new:"New", prep:"In progress", ready:"Ready · Expo" };
+const STAGE_DEFS = [
+  {key:"all",   label:"All"},
+  {key:"new",   label:"New"},
+  {key:"prep",  label:"In progress"},
+  {key:"ready", label:"Ready · Expo"},
+];
 let activeFilter="All";
+let activeStage="all";
 let lastBumped=null;
+
+const FS_ICON = {
+  expand:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H3v5"/><path d="M21 8V3h-5"/><path d="M16 21h5v-5"/><path d="M3 16v5h5"/></svg>',
+  exit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h5V4"/><path d="M20 9h-5V4"/><path d="M4 15h5v5"/><path d="M20 15h-5v5"/></svg>',
+};
 
 const ICON={
   takeout:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12l-1 4H7L6 2Z"/><path d="M5 6h14l-1.2 14.5a1.5 1.5 0 0 1-1.5 1.5H7.7a1.5 1.5 0 0 1-1.5-1.5L5 6Z"/></svg>',
@@ -313,9 +369,60 @@ function buildFilters(){
   });
 }
 
+// station-match independent of stage, so stage counts compose with the station filter
+function matchesStation(o){
+  return activeFilter==="All" || o.items.some(it=>it.c===activeFilter);
+}
+function stageCount(key){
+  return ORDERS.filter(o=>matchesStation(o) && (key==="all" || o.status===key)).length;
+}
+function buildStages(){
+  const wrap=document.getElementById("stages");wrap.innerHTML="";
+  STAGE_DEFS.forEach(s=>{
+    const b=document.createElement("button");
+    b.className="seg";b.type="button";
+    b.setAttribute("aria-pressed",String(s.key===activeStage));
+    b.innerHTML=`<span>${s.label}</span><span class="seg-n tnum">${stageCount(s.key)}</span>`;
+    b.onclick=()=>{activeStage=s.key;buildStages();render();};
+    wrap.appendChild(b);
+  });
+}
+function refreshStageCounts(){
+  const segs=document.querySelectorAll("#stages .seg");
+  STAGE_DEFS.forEach((s,i)=>{
+    const n=segs[i]&&segs[i].querySelector(".seg-n");
+    if(n) n.textContent=stageCount(s.key);
+  });
+}
+
+function isFs(){return document.fullscreenElement!=null;}
+function syncFsBtn(){
+  const btn=document.getElementById("fsBtn");
+  const on=document.documentElement.classList.contains("is-fullscreen");
+  btn.innerHTML=(on?FS_ICON.exit:FS_ICON.expand)+`<span>${on?"Exit":"Fullscreen"}</span>`;
+  btn.setAttribute("aria-pressed",String(on));
+}
+function toggleFs(){
+  const root=document.documentElement;
+  if(!isFs() && !root.classList.contains("is-fullscreen")){
+    if(root.requestFullscreen){
+      root.requestFullscreen().catch(()=>{root.classList.add("is-fullscreen");syncFsBtn();});
+    } else { root.classList.add("is-fullscreen"); }
+  } else {
+    if(document.exitFullscreen && isFs()){ document.exitFullscreen().catch(()=>{}); }
+    root.classList.remove("is-fullscreen");
+  }
+  syncFsBtn();
+}
+document.addEventListener("fullscreenchange",()=>{
+  document.documentElement.classList.toggle("is-fullscreen",isFs());
+  syncFsBtn();
+});
+
 function visibleSorted(){
   let list=ORDERS.slice();
   if(activeFilter!=="All") list=list.filter(o=>o.items.some(it=>it.c===activeFilter));
+  if(activeStage!=="all") list=list.filter(o=>o.status===activeStage);
   list.sort((a,b)=>rank(a)-rank(b));
   return list;
 }
@@ -428,10 +535,12 @@ function render(){
   const hero=list[0]||null;
   renderHero(hero);
   renderQueue(list.slice(1));
+  refreshStageCounts();
 }
 
 function tick(){
   document.getElementById("clock").textContent=fmtClock(new Date());
+  refreshStageCounts();
   let needsRender=false;
   ORDERS.forEach(o=>{
     o.elapsed++;
@@ -479,7 +588,11 @@ document.addEventListener("keydown",(e)=>{
   }
 });
 
+document.getElementById("fsBtn").addEventListener("click",toggleFs);
+
 buildFilters();
+buildStages();
+syncFsBtn();
 render();
 tick();
 setInterval(tick,1000);

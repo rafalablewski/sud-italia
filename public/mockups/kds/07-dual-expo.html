@@ -109,6 +109,73 @@
   }
   .gallery-link:hover{color:var(--ink-2);border-color:var(--accent-dim)}
 
+  /* ===== Stage switcher (header segmented control) ===== */
+  .stages{
+    display:flex;
+    align-items:stretch;
+    gap:4px;
+    background:var(--rail);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:4px;
+  }
+  .stage-btn{
+    appearance:none;
+    border:none;
+    background:transparent;
+    color:var(--muted);
+    border-radius:7px;
+    padding:6px 12px;
+    cursor:pointer;
+    font-family:var(--sans);
+    font-size:12px;
+    letter-spacing:.02em;
+    display:flex;
+    align-items:center;
+    gap:7px;
+    transition:background .15s,color .15s;
+  }
+  .stage-btn .sc{
+    font-family:var(--mono);
+    font-variant-numeric:tabular-nums;
+    font-size:11px;
+    min-width:18px;
+    text-align:center;
+    color:var(--faint);
+    background:var(--panel);
+    border-radius:6px;
+    padding:1px 6px;
+    transition:background .15s,color .15s;
+  }
+  .stage-btn:hover{color:var(--ink-2);background:var(--panel)}
+  .stage-btn.active{background:var(--accent);color:#06101f}
+  .stage-btn.active .sc{background:rgba(6,16,31,.18);color:#06101f}
+  .stage-btn.active.stage-ready{background:var(--calm);color:#04130c}
+  .stage-btn.active.stage-ready .sc{background:rgba(4,19,12,.2);color:#04130c}
+
+  /* ===== Fullscreen toggle button ===== */
+  .fs-btn{
+    appearance:none;
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    border:1px solid var(--line);
+    background:transparent;
+    color:var(--ink-2);
+    border-radius:8px;
+    padding:6px 11px;
+    font-family:var(--sans);
+    font-size:11.5px;
+    letter-spacing:.03em;
+    cursor:pointer;
+    transition:color .15s,border-color .15s,background .15s;
+  }
+  .fs-btn svg{width:15px;height:15px;display:block}
+  .fs-btn:hover{color:var(--ink);border-color:var(--accent-dim);background:var(--panel)}
+  .fs-btn .fs-exit{display:none}
+  html.is-fullscreen .fs-btn .fs-enter{display:none}
+  html.is-fullscreen .fs-btn .fs-exit{display:inline-flex;align-items:center;gap:7px}
+
   /* ===== Station rail ===== */
   .rail{
     background:var(--rail);
@@ -351,6 +418,29 @@
   }
   .empty.full{grid-column:1/-1}
 
+  /* ===== Single-pane focus (a stage other than "All" selected) ===== */
+  .panes.focus-cook{grid-template-columns:1fr 0 0}
+  .panes.focus-expo{grid-template-columns:0 0 1fr}
+  .panes.focus-cook .pane-expo,.panes.focus-cook .divider,
+  .panes.focus-expo .pane-cook,.panes.focus-expo .divider{display:none}
+  .panes.focus-expo .pane-expo .pane-body{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+    gap:14px;
+  }
+
+  /* ===== Fullscreen / immersive mode ===== */
+  html.is-fullscreen .gallery-link,
+  html.is-fullscreen .tag{display:none}
+  html.is-fullscreen .app{grid-template-rows:56px 1fr}
+  html.is-fullscreen header{padding:0 16px;gap:16px}
+  html.is-fullscreen .ticket{padding:15px 16px 14px}
+  html.is-fullscreen .t-id .oid{font-size:17px}
+  html.is-fullscreen .t-id .who{font-size:13px}
+  html.is-fullscreen .timer .val{font-size:20px}
+  html.is-fullscreen .item{font-size:14.5px}
+  html.is-fullscreen .pane-title h2{font-size:13.5px}
+
   /* scrollbars */
   ::-webkit-scrollbar{width:9px;height:9px}
   ::-webkit-scrollbar-thumb{background:var(--line);border-radius:6px}
@@ -365,7 +455,12 @@
       <span class="kd-label">Kitchen Display</span>
     </div>
     <span class="tag">07 · Dual Expo</span>
+    <div class="stages" id="stages"></div>
     <div class="head-spacer"></div>
+    <button class="fs-btn" id="fsBtn" type="button" aria-label="Toggle fullscreen">
+      <span class="fs-enter"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>Fullscreen</span>
+      <span class="fs-exit"><svg viewBox="0 0 24 24"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>Exit</span>
+    </button>
     <a class="gallery-link" href="index.html">← Gallery</a>
     <div class="clock">
       <span id="clock">--:--:--</span>
@@ -375,7 +470,7 @@
 
   <nav class="rail" id="rail"></nav>
 
-  <div class="panes">
+  <div class="panes" id="panes">
     <section class="pane pane-cook">
       <div class="pane-head">
         <div class="pane-title"><span class="dot cook"></span><h2>Line · Cooking</h2></div>
@@ -443,7 +538,21 @@ function icon(key){
 }
 
 let activeStation = "All";
+let activeStage = "All";
 let bumping = new Set();
+
+// ---- Stage switcher definitions ----
+const STAGES = [
+  { key:"All",   label:"All" },
+  { key:"new",   label:"New" },
+  { key:"prep",  label:"In progress" },
+  { key:"ready", label:"Ready · Expo" },
+];
+function stageCount(key){
+  const live = ORDERS.filter(o=>!bumping.has(o.id) && matchesStation(o));
+  if(key === "All") return live.length;
+  return live.filter(o=>o.status===key).length;
+}
 
 // ---- Time helpers ----
 function fmt(sec){
@@ -464,6 +573,23 @@ function itemCount(o){ return o.items.reduce((a,i)=>a+i.q,0); }
 function matchesStation(o){
   if(activeStation === "All") return true;
   return o.items.some(i=>i.c === activeStation);
+}
+
+// ---- Stage switcher render ----
+function renderStages(){
+  const wrap = document.getElementById("stages");
+  wrap.innerHTML = "";
+  STAGES.forEach(st=>{
+    const ct = stageCount(st.key);
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "stage-btn"
+      + (activeStage===st.key ? " active":"")
+      + (st.key==="ready" ? " stage-ready":"");
+    b.innerHTML = `<span class="sl">${st.label}</span><span class="sc num">${ct}</span>`;
+    b.onclick = ()=>{ activeStage = st.key; render(); };
+    wrap.appendChild(b);
+  });
 }
 
 // ---- Rail render ----
@@ -606,10 +732,25 @@ function urgencyRank(o){
   if(o.sla < 180) return 1;
   return 2;
 }
+// which cook statuses are shown given the active stage
+function cookStatuses(){
+  if(activeStage === "new") return ["new"];
+  if(activeStage === "prep") return ["prep"];
+  return ["new","prep"]; // "All" (expo stage hides the cook pane)
+}
 function render(){
+  renderStages();
   renderRail();
+
+  // Apply single-pane focus when a specific stage is selected.
+  const panes = document.getElementById("panes");
+  panes.classList.remove("focus-cook","focus-expo");
+  if(activeStage === "new" || activeStage === "prep") panes.classList.add("focus-cook");
+  else if(activeStage === "ready") panes.classList.add("focus-expo");
+
+  const cookSet = cookStatuses();
   const cook = ORDERS
-    .filter(o=>o.status!=="ready" && matchesStation(o))
+    .filter(o=>cookSet.includes(o.status) && matchesStation(o))
     .slice()
     .sort((a,b)=>{
       const r = urgencyRank(a)-urgencyRank(b);
@@ -667,8 +808,9 @@ function tick(){
 }
 let lastSig = "";
 function reorderCook(){
+  const cookSet = cookStatuses();
   const cook = ORDERS
-    .filter(o=>o.status!=="ready" && matchesStation(o))
+    .filter(o=>cookSet.includes(o.status) && matchesStation(o))
     .slice()
     .sort((a,b)=>{
       const r = urgencyRank(a)-urgencyRank(b);
@@ -695,17 +837,48 @@ function clockTick(){
 // ---- Hotkeys 1–9/0 ----
 window.addEventListener("keydown",e=>{
   if(!/^[0-9]$/.test(e.key)) return;
-  const cook = ORDERS
-    .filter(o=>o.status!=="ready" && matchesStation(o))
-    .slice()
-    .sort((a,b)=>{
-      const r = urgencyRank(a)-urgencyRank(b);
-      if(r!==0) return r;
-      return a.sla - b.sla;
-    });
+  // On the Ready · Expo focus the keys target the expo list; otherwise the cook list.
+  let list;
+  if(activeStage === "ready"){
+    list = ORDERS.filter(o=>o.status==="ready" && matchesStation(o));
+  } else {
+    const cookSet = cookStatuses();
+    list = ORDERS
+      .filter(o=>cookSet.includes(o.status) && matchesStation(o))
+      .slice()
+      .sort((a,b)=>{
+        const r = urgencyRank(a)-urgencyRank(b);
+        if(r!==0) return r;
+        return a.sla - b.sla;
+      });
+  }
   const idx = e.key === "0" ? 9 : parseInt(e.key,10)-1;
-  if(cook[idx]) advance(cook[idx].id);
+  if(list[idx]) advance(list[idx].id);
 });
+
+// ---- Fullscreen mode ----
+function syncFullscreen(){
+  const on = !!document.fullscreenElement;
+  document.documentElement.classList.toggle("is-fullscreen", on);
+}
+function toggleFullscreen(){
+  const root = document.documentElement;
+  if(!document.fullscreenElement){
+    const req = root.requestFullscreen && root.requestFullscreen();
+    if(req && req.catch){
+      req.catch(()=>{ root.classList.add("is-fullscreen"); });
+    } else if(!req){
+      // API unavailable — fall back to immersive styling only
+      root.classList.toggle("is-fullscreen");
+    }
+  } else {
+    const exit = document.exitFullscreen && document.exitFullscreen();
+    if(exit && exit.catch){ exit.catch(()=>{}); }
+    root.classList.remove("is-fullscreen");
+  }
+}
+document.getElementById("fsBtn").addEventListener("click", toggleFullscreen);
+document.addEventListener("fullscreenchange", syncFullscreen);
 
 // ---- Init ----
 render();

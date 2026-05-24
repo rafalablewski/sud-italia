@@ -63,12 +63,53 @@
   }
   .chip:hover{border-color:var(--hair-strong);color:var(--text)}
   .chip[aria-pressed="true"]{background:var(--text);color:var(--bg);border-color:var(--text);font-weight:600}
+
+  /* stage switcher — segmented control */
+  .stages{
+    display:flex;gap:2px;padding:3px;border:1px solid var(--hair);border-radius:8px;
+    background:var(--lane);
+  }
+  .seg{
+    appearance:none;background:transparent;border:1px solid transparent;color:var(--text-dim);
+    font-family:var(--sans);font-size:12px;letter-spacing:0.02em;padding:5px 10px;
+    border-radius:6px;cursor:pointer;transition:all .12s ease;white-space:nowrap;
+    display:inline-flex;align-items:center;gap:6px;
+  }
+  .seg:hover{color:var(--text)}
+  .seg[aria-pressed="true"]{background:var(--accent);color:#04101f;font-weight:600}
+  .seg .seg-n{
+    font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:0.02em;
+    padding:1px 6px;border-radius:999px;background:var(--neutral-bg);color:var(--text-dim);min-width:18px;text-align:center;
+  }
+  .seg[aria-pressed="true"] .seg-n{background:rgba(4,16,31,0.22);color:#04101f}
+
+  /* fullscreen button */
+  .fsbtn{
+    appearance:none;display:inline-flex;align-items:center;gap:6px;
+    background:transparent;border:1px solid var(--hair);color:var(--text-dim);
+    font-family:var(--sans);font-size:12px;letter-spacing:0.02em;padding:5px 10px;
+    border-radius:6px;cursor:pointer;transition:all .12s ease;white-space:nowrap;
+  }
+  .fsbtn:hover{border-color:var(--hair-strong);color:var(--text)}
+  .fsbtn svg{width:14px;height:14px}
   .clock{font-family:var(--mono);font-size:15px;letter-spacing:0.04em;min-width:74px;text-align:right}
   .gallery-link{
     font-size:12px;color:var(--text-faint);text-decoration:none;border:1px solid var(--hair);
     padding:5px 9px;border-radius:6px;transition:all .12s ease;
   }
   .gallery-link:hover{color:var(--text);border-color:var(--hair-strong)}
+
+  /* fullscreen / immersive mode */
+  html.is-fullscreen .design-tag,
+  html.is-fullscreen .kd-label{display:none}
+  html.is-fullscreen header{height:62px}
+  html.is-fullscreen .board{padding:var(--space-5) var(--space-6) 0}
+  html.is-fullscreen footer{display:none}
+  html.is-fullscreen .lane{min-height:92px}
+  html.is-fullscreen .bar .bid{font-size:13px}
+  html.is-fullscreen .bar .btimer{font-size:16px}
+  html.is-fullscreen .bar .bsub{font-size:11px}
+  html.is-fullscreen .ready-chip .rc-id{font-size:13px}
 
   /* timeline canvas */
   .board{flex:1 1 auto;display:flex;flex-direction:column;overflow:hidden;padding:var(--space-4) var(--space-5) 0}
@@ -205,7 +246,9 @@
       <span class="kd-label">Kitchen Display</span>
     </div>
     <span class="design-tag">04 · Timeline</span>
+    <div class="stages" id="stages" role="group" aria-label="Stage filter"></div>
     <div class="filters" id="filters" role="group" aria-label="Station filter"></div>
+    <button class="fsbtn" id="fsBtn" type="button" aria-pressed="false"></button>
     <a class="gallery-link" href="index.html">← Gallery</a>
     <div class="clock tnum" id="clock">--:--:--</div>
   </header>
@@ -256,6 +299,18 @@ const ORDERS = [
 
 const STATIONS = ["All","Pizza","Pasta","Antipasti","Panini","Drinks","Desserts"];
 const LANES = ["Pizza","Pasta","Antipasti","Panini","Drinks","Desserts"];
+const STAGE_DEFS = [
+  {key:"all",   label:"All"},
+  {key:"new",   label:"New"},
+  {key:"prep",  label:"In progress"},
+  {key:"ready", label:"Ready · Expo"},
+];
+let activeStage = "all";
+
+const FS_ICON = {
+  expand:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H3v5"/><path d="M21 8V3h-5"/><path d="M16 21h5v-5"/><path d="M3 16v5h5"/></svg>',
+  exit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h5V4"/><path d="M20 9h-5V4"/><path d="M4 15h5v5"/><path d="M20 15h-5v5"/></svg>',
+};
 
 // timeline window: NOW-LEFT_PAD .. NOW + WINDOW seconds
 const WINDOW = 15*60;       // 15 minutes to the right of NOW
@@ -300,6 +355,57 @@ function buildFilters(){
     wrap.appendChild(b);
   });
 }
+
+// station-match independent of stage, so stage counts compose with the station filter
+function matchesStation(o){
+  return activeFilter==="All" || o.items.some(it=>it.c===activeFilter);
+}
+function stageCount(key){
+  return ORDERS.filter(o=>matchesStation(o) && (key==="all" || o.status===key)).length;
+}
+function buildStages(){
+  const wrap=document.getElementById("stages");
+  wrap.innerHTML="";
+  STAGE_DEFS.forEach(s=>{
+    const b=document.createElement("button");
+    b.className="seg";b.type="button";
+    b.setAttribute("aria-pressed",String(s.key===activeStage));
+    b.innerHTML=`<span>${s.label}</span><span class="seg-n tnum">${stageCount(s.key)}</span>`;
+    b.onclick=()=>{activeStage=s.key;buildStages();render();};
+    wrap.appendChild(b);
+  });
+}
+function refreshStageCounts(){
+  const segs=document.querySelectorAll("#stages .seg");
+  STAGE_DEFS.forEach((s,i)=>{
+    const n=segs[i]&&segs[i].querySelector(".seg-n");
+    if(n) n.textContent=stageCount(s.key);
+  });
+}
+
+function isFs(){return document.fullscreenElement!=null;}
+function syncFsBtn(){
+  const btn=document.getElementById("fsBtn");
+  const on=document.documentElement.classList.contains("is-fullscreen");
+  btn.innerHTML=(on?FS_ICON.exit:FS_ICON.expand)+`<span>${on?"Exit":"Fullscreen"}</span>`;
+  btn.setAttribute("aria-pressed",String(on));
+}
+function toggleFs(){
+  const root=document.documentElement;
+  if(!isFs() && !root.classList.contains("is-fullscreen")){
+    if(root.requestFullscreen){
+      root.requestFullscreen().catch(()=>{root.classList.add("is-fullscreen");syncFsBtn();});
+    } else { root.classList.add("is-fullscreen"); }
+  } else {
+    if(document.exitFullscreen && isFs()){ document.exitFullscreen().catch(()=>{}); }
+    root.classList.remove("is-fullscreen");
+  }
+  syncFsBtn();
+}
+document.addEventListener("fullscreenchange",()=>{
+  document.documentElement.classList.toggle("is-fullscreen",isFs());
+  syncFsBtn();
+});
 
 function buildAxis(){
   const axis=document.getElementById("axis");
@@ -366,6 +472,15 @@ function recall(){
 function visibleActive(){
   let list=ORDERS.filter(o=>o.status!=="ready");
   if(activeFilter!=="All") list=list.filter(o=>o.items.some(it=>it.c===activeFilter));
+  // stage filter: "all" keeps every non-ready bar; a specific stage narrows to it
+  if(activeStage!=="all") list=list.filter(o=>o.status===activeStage);
+  return list;
+}
+function visibleReady(){
+  let list=ORDERS.filter(o=>o.status==="ready");
+  if(activeFilter!=="All") list=list.filter(o=>o.items.some(it=>it.c===activeFilter));
+  // ready rail only shows when stage is "all" or "ready"
+  if(activeStage!=="all"&&activeStage!=="ready") return [];
   return list;
 }
 
@@ -415,7 +530,7 @@ function render(){
   }).join("");
 
   // ready rail
-  const ready=ORDERS.filter(o=>o.status==="ready");
+  const ready=visibleReady();
   document.getElementById("readyCount").textContent=ready.length+" waiting";
   document.getElementById("readyChips").innerHTML = ready.length
     ? ready.map(o=>`<div class="ready-chip" data-id="${o.id}" role="button" tabindex="0">
@@ -437,10 +552,13 @@ function render(){
     c.onclick=()=>advance(o);
     c.onkeydown=(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();advance(o);}};
   });
+
+  refreshStageCounts();
 }
 
 function tick(){
   document.getElementById("clock").textContent=fmtClock(new Date());
+  refreshStageCounts();
   let needsRender=false;
   ORDERS.forEach(o=>{
     o.elapsed++;
@@ -476,7 +594,11 @@ document.addEventListener("keydown",(e)=>{
 });
 window.addEventListener("resize",()=>render());
 
+document.getElementById("fsBtn").addEventListener("click",toggleFs);
+
 buildFilters();
+buildStages();
+syncFsBtn();
 render();
 tick();
 setInterval(tick,1000);

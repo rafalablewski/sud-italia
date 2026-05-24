@@ -68,6 +68,39 @@
   }
   .chip:hover{border-color:var(--hair-strong);color:var(--text)}
   .chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#06101f;font-weight:600}
+
+  /* stage segmented control */
+  .stages{
+    display:flex;align-items:stretch;border:1px solid var(--hair);border-radius:7px;
+    overflow:hidden;background:var(--panel-2);
+  }
+  .stage{
+    appearance:none;border:0;background:transparent;cursor:pointer;
+    font-family:var(--mono);font-size:11px;letter-spacing:0.02em;color:var(--text-dim);
+    padding:6px 11px;display:inline-flex;align-items:center;gap:6px;transition:all .12s ease;
+    border-right:1px solid var(--hair);white-space:nowrap;
+  }
+  .stage:last-child{border-right:0}
+  .stage:hover{color:var(--text)}
+  .stage .scount{
+    font-size:10px;font-weight:600;min-width:17px;height:16px;padding:0 4px;border-radius:4px;
+    display:inline-flex;align-items:center;justify-content:center;
+    background:var(--hair);color:var(--text-dim);
+  }
+  .stage[aria-pressed="true"]{background:var(--accent);color:#06101f;font-weight:600}
+  .stage[aria-pressed="true"] .scount{background:rgba(6,16,31,0.22);color:#06101f}
+
+  .fsbtn{
+    appearance:none;cursor:pointer;border:1px solid var(--hair);background:transparent;
+    color:var(--text-dim);font-family:var(--sans);font-size:11px;letter-spacing:0.02em;
+    padding:6px 10px;border-radius:6px;display:inline-flex;align-items:center;gap:6px;
+    transition:all .12s ease;white-space:nowrap;
+  }
+  .fsbtn:hover{color:var(--text);border-color:var(--hair-strong)}
+  .fsbtn svg{width:13px;height:13px;display:block}
+  .fsbtn .fs-on{display:none}
+  .is-fullscreen .fsbtn .fs-on{display:inline}
+  .is-fullscreen .fsbtn .fs-off{display:none}
   .gallery-link{
     font-size:11px;color:var(--text-faint);text-decoration:none;border:1px solid var(--hair);
     padding:5px 9px;border-radius:6px;transition:all .12s ease;
@@ -223,6 +256,38 @@
     color:var(--text-faint);font-size:12px;text-align:center;padding:var(--s6) var(--s4);
     border:1px dashed var(--hair);border-radius:8px;
   }
+
+  /* single-stage view: full-width wrapping grid of condensed tickets */
+  .board.solo{
+    display:flex;flex-direction:column;background:var(--bg);
+  }
+  .board.solo .solo-head{
+    flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:var(--s2);
+    padding:var(--s3) var(--s6);background:var(--panel);border-bottom:1px solid var(--hair);
+  }
+  .board.solo .solo-head .lane-title{font-size:11px}
+  .board.solo .solo-grid{
+    flex:1 1 auto;min-height:0;overflow-y:auto;
+    padding:var(--s4) var(--s6);
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+    gap:var(--s4);align-content:start;
+  }
+  .board.solo .solo-grid::-webkit-scrollbar{width:7px}
+  .board.solo .solo-grid::-webkit-scrollbar-thumb{background:var(--hair-strong);border-radius:4px}
+  .board.solo .ticket{align-self:start}
+  .board.solo .empty{grid-column:1/-1}
+
+  /* ---------- Fullscreen / wall-mounted mode ---------- */
+  .is-fullscreen header{height:46px}
+  .is-fullscreen .kd-label,
+  .is-fullscreen .gallery-link{display:none}
+  .is-fullscreen .metric{padding:var(--s3) var(--s5)}
+  .is-fullscreen .metric .m-val{font-size:34px}
+  .is-fullscreen .t-id{font-size:15px}
+  .is-fullscreen .t-sla{font-size:17px}
+  .is-fullscreen .it{font-size:13px}
+  .is-fullscreen .lane-title{font-size:11px}
+  .is-fullscreen .t-stat .v{font-size:14px}
 </style>
 </head>
 <body>
@@ -233,6 +298,12 @@
     </div>
     <span class="design-tag">10 · Operations</span>
     <div class="filters" id="filters" role="group" aria-label="Station filter"></div>
+    <div class="stages" id="stages" role="group" aria-label="Stage filter"></div>
+    <button class="fsbtn" id="fsbtn" type="button" aria-pressed="false">
+      <svg class="fs-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/></svg>
+      <svg class="fs-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
+      <span class="fs-off">Fullscreen</span><span class="fs-on">Exit</span>
+    </button>
     <a class="gallery-link" href="index.html">&larr; Gallery</a>
     <div class="clock tnum" id="clock">--:--:--</div>
   </header>
@@ -288,6 +359,16 @@
     { key:"prep",  title:"In progress" },
     { key:"ready", title:"Ready · Expo" },
   ];
+  // stage switcher: "all" or a single stage key — filters ONLY the ticket board,
+  // never the metrics / sparklines / station-load analytics above.
+  let activeStage = "all";
+  const STAGE_TABS = [
+    { key:"all",   title:"All" },
+    { key:"new",   title:"New" },
+    { key:"prep",  title:"In progress" },
+    { key:"ready", title:"Ready · Expo" },
+  ];
+  const STAGE_TITLE = { new:"New", prep:"In progress", ready:"Ready · Expo" };
   const NEXT = { new:"prep", prep:"ready", ready:"__done__" };
   const ACTION_LABEL = { new:"Start prep", prep:"Mark ready", ready:"Bump · Done" };
 
@@ -425,8 +506,38 @@
       b.className="chip";
       b.textContent=s;
       b.setAttribute("aria-pressed", String(s===activeStation));
-      b.addEventListener("click", ()=>{ activeStation=s; buildFilters(); render(); });
+      b.addEventListener("click", ()=>{ activeStation=s; buildFilters(); buildStages(); render(); });
       filtersEl.appendChild(b);
+    });
+  }
+
+  /* ---------- stage switcher (filters board only) ---------- */
+  const stagesEl=document.getElementById("stages");
+  function stageCount(key){
+    return tickets.filter(t=>t.status===key && matchesStation(t)).length;
+  }
+  function buildStages(){
+    stagesEl.innerHTML="";
+    STAGE_TABS.forEach(s=>{
+      const b=document.createElement("button");
+      b.className="stage";
+      b.type="button";
+      b.setAttribute("aria-pressed", String(s.key===activeStage));
+      const n = s.key==="all"
+        ? tickets.filter(matchesStation).length
+        : stageCount(s.key);
+      b.innerHTML='<span>'+s.title+'</span><span class="scount tnum" data-stage-count="'+s.key+'">'+n+'</span>';
+      b.addEventListener("click", ()=>{ activeStage=s.key; buildStages(); render(); });
+      stagesEl.appendChild(b);
+    });
+  }
+  function updateStageCounts(){
+    STAGE_TABS.forEach(s=>{
+      const el=stagesEl.querySelector('[data-stage-count="'+s.key+'"]');
+      if(!el) return;
+      el.textContent = s.key==="all"
+        ? tickets.filter(matchesStation).length
+        : stageCount(s.key);
     });
   }
 
@@ -468,27 +579,46 @@
 
   function render(){
     board.innerHTML="";
-    LANES.forEach(lane=>{
-      const laneEl=document.createElement("section");
-      laneEl.className="lane";
+
+    if(activeStage!=="all"){
+      // single stage: full-width wrapping grid; analytics above stay unfiltered
+      board.classList.add("solo");
       const list=tickets
-        .filter(t=>t.status===lane.key && matchesStation(t))
+        .filter(t=>t.status===activeStage && matchesStation(t))
         .sort((a,b)=>a.sla-b.sla);
-      let body = list.length
+      const grid = list.length
         ? list.map(ticketHtml).join("")
-        : '<div class="empty">No tickets.</div>';
-      laneEl.innerHTML=
-        '<div class="lane-head"><span class="lane-title">'+lane.title+'</span>'+
-          '<span class="lane-count tnum">'+pad(list.length)+'</span></div>'+
-        '<div class="lane-body">'+body+'</div>';
-      board.appendChild(laneEl);
-    });
+        : '<div class="empty">No tickets in this stage.</div>';
+      board.innerHTML=
+        '<div class="solo-head"><span class="lane-title">'+STAGE_TITLE[activeStage]+'</span>'+
+          '<span class="lane-count tnum">'+pad(list.length)+' tickets</span></div>'+
+        '<div class="solo-grid">'+grid+'</div>';
+    } else {
+      board.classList.remove("solo");
+      LANES.forEach(lane=>{
+        const laneEl=document.createElement("section");
+        laneEl.className="lane";
+        const list=tickets
+          .filter(t=>t.status===lane.key && matchesStation(t))
+          .sort((a,b)=>a.sla-b.sla);
+        let body = list.length
+          ? list.map(ticketHtml).join("")
+          : '<div class="empty">No tickets.</div>';
+        laneEl.innerHTML=
+          '<div class="lane-head"><span class="lane-title">'+lane.title+'</span>'+
+            '<span class="lane-count tnum">'+pad(list.length)+'</span></div>'+
+          '<div class="lane-body">'+body+'</div>';
+        board.appendChild(laneEl);
+      });
+    }
+
     board.querySelectorAll("[data-advance]").forEach(btn=>{
       const id=btn.closest(".ticket").dataset.id;
       btn.addEventListener("click", ()=>advance(id));
     });
     renderMetrics();
     renderStationLoad();
+    updateStageCounts();
   }
 
   function advance(id){
@@ -538,11 +668,37 @@
     // metrics depend on live timers — refresh every tick
     renderMetrics();
     renderStationLoad();
+    updateStageCounts();
     // if urgency crossed a threshold, re-sort lanes so the worst float up
     if(toneChanged) render();
   }
 
+  /* ---------- fullscreen ---------- */
+  const fsbtn=document.getElementById("fsbtn");
+  function syncFs(){
+    const on=!!document.fullscreenElement;
+    document.documentElement.classList.toggle("is-fullscreen", on);
+    fsbtn.setAttribute("aria-pressed", String(on));
+  }
+  function fallbackToggle(){
+    const on=!document.documentElement.classList.contains("is-fullscreen");
+    document.documentElement.classList.toggle("is-fullscreen", on);
+    fsbtn.setAttribute("aria-pressed", String(on));
+  }
+  fsbtn.addEventListener("click", ()=>{
+    if(document.fullscreenElement){
+      if(document.exitFullscreen) document.exitFullscreen();
+      else fallbackToggle();
+    } else {
+      const req=document.documentElement.requestFullscreen;
+      if(req) req.call(document.documentElement).catch(fallbackToggle);
+      else fallbackToggle();
+    }
+  });
+  document.addEventListener("fullscreenchange", syncFs);
+
   buildFilters();
+  buildStages();
   render();
   tick();
   setInterval(tick,1000);

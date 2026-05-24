@@ -51,12 +51,54 @@
   }
   .chip:hover{border-color:var(--hair-strong);color:var(--text)}
   .chip[aria-pressed="true"]{background:var(--text);color:var(--bg);border-color:var(--text);font-weight:600}
+
+  /* stage switcher — segmented control */
+  .stages{
+    display:flex;gap:2px;padding:3px;border:1px solid var(--hair);border-radius:8px;
+    background:var(--bg2);
+  }
+  .seg{
+    appearance:none;background:transparent;border:1px solid transparent;color:var(--text-dim);
+    font-family:var(--sans);font-size:12px;letter-spacing:0.02em;padding:5px 10px;
+    border-radius:6px;cursor:pointer;transition:all .12s ease;white-space:nowrap;
+    display:inline-flex;align-items:center;gap:6px;
+  }
+  .seg:hover{color:var(--text)}
+  .seg[aria-pressed="true"]{background:var(--text);color:var(--bg);font-weight:600}
+  .seg .seg-n{
+    font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:0.02em;
+    padding:1px 6px;border-radius:999px;background:var(--hair-strong);color:var(--text-dim);min-width:18px;text-align:center;
+  }
+  .seg[aria-pressed="true"] .seg-n{background:rgba(8,10,13,0.20);color:var(--bg)}
+
+  /* fullscreen button */
+  .fsbtn{
+    appearance:none;display:inline-flex;align-items:center;gap:6px;
+    background:transparent;border:1px solid var(--hair);color:var(--text-dim);
+    font-family:var(--sans);font-size:12px;letter-spacing:0.02em;padding:5px 10px;
+    border-radius:6px;cursor:pointer;transition:all .12s ease;white-space:nowrap;
+  }
+  .fsbtn:hover{border-color:var(--hair-strong);color:var(--text)}
+  .fsbtn svg{width:14px;height:14px}
   .clock{font-family:var(--mono);font-size:15px;letter-spacing:0.04em;min-width:74px;text-align:right}
   .gallery-link{
     font-size:12px;color:var(--text-faint);text-decoration:none;border:1px solid var(--hair);
     padding:5px 9px;border-radius:6px;transition:all .12s ease;
   }
   .gallery-link:hover{color:var(--text);border-color:var(--hair-strong)}
+
+  /* fullscreen / immersive mode */
+  html.is-fullscreen .design-tag,
+  html.is-fullscreen .kd-label{display:none}
+  html.is-fullscreen footer{display:none}
+  html.is-fullscreen .grid-wrap{padding:var(--space-5) var(--space-6)}
+  html.is-fullscreen .grid{
+    grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:var(--space-4);
+  }
+  html.is-fullscreen .tile-id{font-size:14px}
+  html.is-fullscreen .tile-timer{font-size:36px}
+  html.is-fullscreen .tile-timer.late{font-size:29px}
+  html.is-fullscreen .stat .num{font-size:28px}
 
   /* totals strip */
   .strip{
@@ -149,7 +191,9 @@
       <span class="kd-label">Kitchen Display</span>
     </div>
     <span class="design-tag">06 · Heat Grid</span>
+    <div class="stages" id="stages" role="group" aria-label="Stage filter"></div>
     <div class="filters" id="filters" role="group" aria-label="Station filter"></div>
+    <button class="fsbtn" id="fsBtn" type="button" aria-pressed="false"></button>
     <a class="gallery-link" href="index.html">← Gallery</a>
     <div class="clock tnum" id="clock">--:--:--</div>
   </header>
@@ -231,8 +275,20 @@ function buildRush(){
 
 const ORDERS = buildRush();
 const STATIONS = ["All","Pizza","Pasta","Antipasti","Panini","Drinks","Desserts"];
+const STAGE_DEFS = [
+  {key:"all",   label:"All"},
+  {key:"new",   label:"New"},
+  {key:"prep",  label:"In progress"},
+  {key:"ready", label:"Ready · Expo"},
+];
 let activeFilter="All";
+let activeStage="all";
 let lastBumped=null;
+
+const FS_ICON = {
+  expand:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H3v5"/><path d="M21 8V3h-5"/><path d="M16 21h5v-5"/><path d="M3 16v5h5"/></svg>',
+  exit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h5V4"/><path d="M20 9h-5V4"/><path d="M4 15h5v5"/><path d="M20 15h-5v5"/></svg>',
+};
 
 const ICON={
   takeout:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12l-1 4H7L6 2Z"/><path d="M5 6h14l-1.2 14.5a1.5 1.5 0 0 1-1.5 1.5H7.7a1.5 1.5 0 0 1-1.5-1.5L5 6Z"/></svg>',
@@ -272,9 +328,61 @@ function buildFilters(){
   });
 }
 
+// station-match independent of stage, so stage counts compose with the station filter.
+// counts reflect the FULL expanded set (ORDERS already holds ~28 tiles)
+function matchesStation(o){
+  return activeFilter==="All" || o.items.some(it=>it.c===activeFilter);
+}
+function stageCount(key){
+  return ORDERS.filter(o=>matchesStation(o) && (key==="all" || o.status===key)).length;
+}
+function buildStages(){
+  const wrap=document.getElementById("stages");wrap.innerHTML="";
+  STAGE_DEFS.forEach(s=>{
+    const b=document.createElement("button");
+    b.className="seg";b.type="button";
+    b.setAttribute("aria-pressed",String(s.key===activeStage));
+    b.innerHTML=`<span>${s.label}</span><span class="seg-n tnum">${stageCount(s.key)}</span>`;
+    b.onclick=()=>{activeStage=s.key;buildStages();render();};
+    wrap.appendChild(b);
+  });
+}
+function refreshStageCounts(){
+  const segs=document.querySelectorAll("#stages .seg");
+  STAGE_DEFS.forEach((s,i)=>{
+    const n=segs[i]&&segs[i].querySelector(".seg-n");
+    if(n) n.textContent=stageCount(s.key);
+  });
+}
+
+function isFs(){return document.fullscreenElement!=null;}
+function syncFsBtn(){
+  const btn=document.getElementById("fsBtn");
+  const on=document.documentElement.classList.contains("is-fullscreen");
+  btn.innerHTML=(on?FS_ICON.exit:FS_ICON.expand)+`<span>${on?"Exit":"Fullscreen"}</span>`;
+  btn.setAttribute("aria-pressed",String(on));
+}
+function toggleFs(){
+  const root=document.documentElement;
+  if(!isFs() && !root.classList.contains("is-fullscreen")){
+    if(root.requestFullscreen){
+      root.requestFullscreen().catch(()=>{root.classList.add("is-fullscreen");syncFsBtn();});
+    } else { root.classList.add("is-fullscreen"); }
+  } else {
+    if(document.exitFullscreen && isFs()){ document.exitFullscreen().catch(()=>{}); }
+    root.classList.remove("is-fullscreen");
+  }
+  syncFsBtn();
+}
+document.addEventListener("fullscreenchange",()=>{
+  document.documentElement.classList.toggle("is-fullscreen",isFs());
+  syncFsBtn();
+});
+
 function visible(){
   let list=ORDERS.slice();
   if(activeFilter!=="All") list=list.filter(o=>o.items.some(it=>it.c===activeFilter));
+  if(activeStage!=="all") list=list.filter(o=>o.status===activeStage);
   // hottest first: late, then by ascending sla; ready last
   list.sort((a,b)=>{
     const ra=a.status==="ready"?1e9+a.sla:a.sla;
@@ -328,6 +436,7 @@ function render(){
   document.getElementById("stLate").textContent=all.filter(o=>o.status!=="ready"&&o.sla<0).length;
   document.getElementById("stSoon").textContent=all.filter(o=>o.status!=="ready"&&o.sla>=0&&o.sla<180).length;
   document.getElementById("stReady").textContent=all.filter(o=>o.status==="ready").length;
+  refreshStageCounts();
 
   if(list.length===0){ grid.innerHTML=`<div class="empty">No tickets for this station.</div>`; return; }
   grid.innerHTML=list.map(tileHtml).join("");
@@ -362,6 +471,7 @@ function tick(){
   // keep totals live even without full re-render
   document.getElementById("stLate").textContent=ORDERS.filter(o=>o.status!=="ready"&&o.sla<0).length;
   document.getElementById("stSoon").textContent=ORDERS.filter(o=>o.status!=="ready"&&o.sla>=0&&o.sla<180).length;
+  refreshStageCounts();
   if(needsRender) render();
 }
 
@@ -374,7 +484,11 @@ document.addEventListener("keydown",(e)=>{
   }
 });
 
+document.getElementById("fsBtn").addEventListener("click",toggleFs);
+
 buildFilters();
+buildStages();
+syncFsBtn();
 render();
 tick();
 setInterval(tick,1000);

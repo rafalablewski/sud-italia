@@ -103,6 +103,41 @@
     background:var(--ink);color:var(--paper-2);border-color:var(--ink);
   }
 
+  /* stage segmented control */
+  .toolrow{display:flex;align-items:center;gap:var(--s5);margin-left:auto}
+  .stages{
+    display:flex;align-items:stretch;border:1px solid var(--hair);border-radius:999px;
+    overflow:hidden;background:var(--card);
+  }
+  .stage{
+    appearance:none;border:0;background:transparent;cursor:pointer;
+    font-family:var(--serif);font-size:12px;letter-spacing:0.06em;color:var(--ink-soft);
+    padding:6px 16px;display:inline-flex;align-items:center;gap:7px;transition:all .15s ease;
+    border-right:1px solid var(--hair-soft);
+  }
+  .stage:last-child{border-right:0}
+  .stage:hover{color:var(--ink)}
+  .stage .scount{
+    font-family:var(--sans);font-size:10px;font-weight:600;letter-spacing:0.02em;
+    min-width:18px;height:18px;padding:0 5px;border-radius:999px;
+    display:inline-flex;align-items:center;justify-content:center;
+    background:var(--hair-soft);color:var(--ink-dim);
+  }
+  .stage[aria-pressed="true"]{background:var(--ink);color:var(--paper-2)}
+  .stage[aria-pressed="true"] .scount{background:rgba(251,248,241,0.22);color:var(--paper-2)}
+
+  .fsbtn{
+    appearance:none;cursor:pointer;border:1px solid var(--hair);background:transparent;
+    color:var(--ink-soft);font-family:var(--sans);font-size:11px;letter-spacing:0.10em;
+    text-transform:uppercase;padding:7px 13px;border-radius:999px;
+    display:inline-flex;align-items:center;gap:7px;transition:all .15s ease;
+  }
+  .fsbtn:hover{border-color:var(--ink-dim);color:var(--ink)}
+  .fsbtn svg{width:14px;height:14px;display:block}
+  .fsbtn .fs-on{display:none}
+  .is-fullscreen .fsbtn .fs-on{display:inline}
+  .is-fullscreen .fsbtn .fs-off{display:none}
+
   /* ---------- Board ---------- */
   main{
     flex:1 1 auto;overflow:hidden;
@@ -110,6 +145,21 @@
     display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s6);
     min-height:0;
   }
+  /* single-stage view: full-width wrapping grid of cards */
+  main.solo{
+    display:block;overflow-y:auto;
+  }
+  main.solo .solo-head{
+    display:flex;align-items:baseline;justify-content:space-between;
+    padding-bottom:var(--s3);margin-bottom:var(--s5);border-bottom:2px solid var(--ink);
+  }
+  main.solo .solo-head .col-title{font-size:22px}
+  main.solo .solo-grid{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));
+    gap:var(--s5);align-content:start;
+  }
+  main.solo .ticket{align-self:start}
+  main.solo .empty{grid-column:1/-1}
   .column{display:flex;flex-direction:column;min-height:0}
   .col-head{
     display:flex;align-items:baseline;justify-content:space-between;
@@ -211,6 +261,19 @@
 
   /* slot pill */
   .slot{font-size:10px;letter-spacing:0.10em;color:var(--ink-dim);font-family:var(--serif);font-style:italic}
+
+  /* ---------- Fullscreen / wall-mounted mode ---------- */
+  .is-fullscreen header{padding:var(--s3) var(--s5) var(--s2)}
+  .is-fullscreen .sub,
+  .is-fullscreen .gallery{display:none}
+  .is-fullscreen .clock{font-size:30px}
+  .is-fullscreen .filterbar{margin-top:var(--s3);padding-top:var(--s2)}
+  .is-fullscreen main{padding:var(--s4) var(--s5) var(--s5);gap:var(--s5)}
+  .is-fullscreen .col-title{font-size:21px}
+  .is-fullscreen .t-id{font-size:22px}
+  .is-fullscreen .item{font-size:16px}
+  .is-fullscreen .timer .val{font-size:24px}
+  .is-fullscreen .wordmark{font-size:20px}
 </style>
 </head>
 <body>
@@ -234,6 +297,14 @@
     <div class="filterbar">
       <span class="filter-label">Station</span>
       <div class="chips" id="chips"></div>
+      <div class="toolrow">
+        <div class="stages" id="stages" role="group" aria-label="Stage filter"></div>
+        <button class="fsbtn" id="fsbtn" type="button" aria-pressed="false">
+          <svg class="fs-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/></svg>
+          <svg class="fs-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
+          <span class="fs-off">Fullscreen</span><span class="fs-on">Exit</span>
+        </button>
+      </div>
     </div>
   </header>
 
@@ -272,6 +343,14 @@
     { key:"prep",  title:"In progress",    kicker:"Cooking" },
     { key:"ready", title:"Ready · Expo",   kicker:"Awaiting handoff" },
   ];
+  // stage switcher: "all" or a single stage key
+  let activeStage = "all";
+  const STAGE_TABS = [
+    { key:"all",   title:"All" },
+    { key:"new",   title:"New" },
+    { key:"prep",  title:"In progress" },
+    { key:"ready", title:"Ready · Expo" },
+  ];
   const NEXT = { new:"prep", prep:"ready", ready:"__done__" };
   const ACTION_LABEL = { new:"Start prep", prep:"Mark ready", ready:"Bump · Done" };
 
@@ -299,7 +378,7 @@
       b.className = "chip";
       b.textContent = st;
       b.setAttribute("aria-pressed", String(st === activeStation));
-      b.addEventListener("click", ()=>{ activeStation = st; buildChips(); render(); });
+      b.addEventListener("click", ()=>{ activeStation = st; buildChips(); buildStages(); render(); });
       chipsEl.appendChild(b);
     });
   }
@@ -309,11 +388,68 @@
     return t.items.some(i=>i.c === activeStation);
   }
 
+  /* ----- stage switcher ----- */
+  const stagesEl = document.getElementById("stages");
+  function stageCount(key){
+    return tickets.filter(t=>t.status === key && ticketMatchesStation(t)).length;
+  }
+  function buildStages(){
+    stagesEl.innerHTML = "";
+    STAGE_TABS.forEach(s=>{
+      const b = document.createElement("button");
+      b.className = "stage";
+      b.type = "button";
+      b.setAttribute("aria-pressed", String(s.key === activeStage));
+      const n = s.key === "all"
+        ? tickets.filter(ticketMatchesStation).length
+        : stageCount(s.key);
+      b.innerHTML = '<span>'+s.title+'</span><span class="scount tnum" data-stage-count="'+s.key+'">'+n+'</span>';
+      b.addEventListener("click", ()=>{ activeStage = s.key; buildStages(); render(); });
+      stagesEl.appendChild(b);
+    });
+  }
+  function updateStageCounts(){
+    STAGE_TABS.forEach(s=>{
+      const el = stagesEl.querySelector('[data-stage-count="'+s.key+'"]');
+      if(!el) return;
+      const n = s.key === "all"
+        ? tickets.filter(ticketMatchesStation).length
+        : stageCount(s.key);
+      el.textContent = n;
+    });
+  }
+
   /* ----- render ----- */
   const board = document.getElementById("board");
 
   function render(){
     board.innerHTML = "";
+
+    if(activeStage !== "all"){
+      // single stage: full-width wrapping grid of cards
+      board.classList.add("solo");
+      const stage = STAGES.find(s=>s.key === activeStage);
+      const list = tickets.filter(t=>t.status === stage.key && ticketMatchesStation(t));
+
+      const head = document.createElement("div");
+      head.className = "solo-head";
+      head.innerHTML =
+        '<div class="col-title"><span class="kicker">'+stage.kicker+'</span>'+stage.title+'</div>'+
+        '<div class="col-count tnum">'+String(list.length).padStart(2,"0")+'</div>';
+      board.appendChild(head);
+
+      const grid = document.createElement("div");
+      grid.className = "solo-grid";
+      if(list.length === 0){
+        grid.innerHTML = '<div class="empty">No tickets in this stage.</div>';
+      } else {
+        list.forEach(t=> grid.appendChild(buildTicket(t)));
+      }
+      board.appendChild(grid);
+      return;
+    }
+
+    board.classList.remove("solo");
     STAGES.forEach(stage=>{
       const col = document.createElement("section");
       col.className = "column";
@@ -404,6 +540,7 @@
       if(nx === "ready"){ t.sla = 0; } // ready tickets neutralize SLA
     }
     render();
+    updateStageCounts();
   }
 
   /* ----- live tick ----- */
@@ -431,7 +568,38 @@
         else if(u==="calm") du.classList.add("calm");
       }
     });
+    updateStageCounts();
   }
+
+  /* ----- fullscreen ----- */
+  const fsbtn = document.getElementById("fsbtn");
+  function syncFs(){
+    const on = !!document.fullscreenElement;
+    document.documentElement.classList.toggle("is-fullscreen", on);
+    fsbtn.setAttribute("aria-pressed", String(on));
+  }
+  fsbtn.addEventListener("click", ()=>{
+    if(document.fullscreenElement){
+      if(document.exitFullscreen) document.exitFullscreen();
+      else { document.documentElement.classList.toggle("is-fullscreen"); fsbtn.setAttribute("aria-pressed", String(document.documentElement.classList.contains("is-fullscreen"))); }
+    } else {
+      const req = document.documentElement.requestFullscreen;
+      if(req){
+        req.call(document.documentElement).catch(()=>{
+          // rejected: fall back to immersive styling
+          const on = !document.documentElement.classList.contains("is-fullscreen");
+          document.documentElement.classList.toggle("is-fullscreen", on);
+          fsbtn.setAttribute("aria-pressed", String(on));
+        });
+      } else {
+        // unavailable: fall back to immersive styling
+        const on = !document.documentElement.classList.contains("is-fullscreen");
+        document.documentElement.classList.toggle("is-fullscreen", on);
+        fsbtn.setAttribute("aria-pressed", String(on));
+      }
+    }
+  });
+  document.addEventListener("fullscreenchange", syncFs);
 
   /* ----- clock ----- */
   const clockEl = document.getElementById("clock");
@@ -444,6 +612,7 @@
   }
 
   buildChips();
+  buildStages();
   render();
   tickClock();
   setInterval(()=>{ tickClock(); tickTimers(); }, 1000);

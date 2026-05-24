@@ -96,10 +96,34 @@
   }
   .gallery-link:hover{color:var(--ink);border-color:#cdd4dc}
 
+  /* ===== Fullscreen toggle button ===== */
+  .fs-btn{
+    appearance:none;
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    border:1px solid var(--line);
+    background:var(--card);
+    color:var(--ink-2);
+    border-radius:9px;
+    padding:6px 12px;
+    font-family:var(--sans);
+    font-size:12px;
+    letter-spacing:.02em;
+    cursor:pointer;
+    white-space:nowrap;
+    transition:color .15s,border-color .15s,background .15s;
+  }
+  .fs-btn svg{width:16px;height:16px;display:block}
+  .fs-btn:hover{color:var(--ink);border-color:#cdd4dc}
+  .fs-btn .fs-exit{display:none}
+  html.is-fullscreen .fs-btn .fs-enter{display:none}
+  html.is-fullscreen .fs-btn .fs-exit{display:inline-flex;align-items:center;gap:7px}
+
   /* ===== Segmented stage control ===== */
   .segments{
     display:grid;
-    grid-template-columns:repeat(3,1fr);
+    grid-template-columns:repeat(4,1fr);
     gap:6px;
     padding:0 20px 12px;
   }
@@ -294,6 +318,39 @@
   }
   .empty .big{display:block;font-size:17px;color:var(--ink-2);margin-bottom:4px;font-weight:600}
 
+  /* ===== Group header (used in "All" view) ===== */
+  .group-head{
+    display:flex;align-items:center;gap:10px;
+    margin:6px 2px -4px;
+  }
+  .group-head:first-child{margin-top:0}
+  .group-head .gl{
+    font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--muted);font-weight:700;
+  }
+  .group-head .gc{
+    font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;
+    color:var(--faint);background:var(--bg-2);border:1px solid var(--line);
+    border-radius:8px;padding:1px 7px;
+  }
+  .group-head .gline{flex:1;height:1px;background:var(--line)}
+  .group-head .dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+  .group-head[data-g="new"] .dot{background:var(--accent)}
+  .group-head[data-g="prep"] .dot{background:var(--warn)}
+  .group-head[data-g="ready"] .dot{background:var(--calm)}
+
+  /* ===== Fullscreen / immersive mode ===== */
+  html.is-fullscreen,html.is-fullscreen body{background:var(--bg-2)}
+  html.is-fullscreen .frame{max-width:none}
+  html.is-fullscreen .tag,
+  html.is-fullscreen .gallery-link{display:none}
+  html.is-fullscreen .head-row{padding:12px 24px 10px}
+  html.is-fullscreen .feed{padding:6px 24px 48px}
+  html.is-fullscreen .c-id .oid{font-size:22px}
+  html.is-fullscreen .tm .v{font-size:27px}
+  html.is-fullscreen .it .nm{font-size:17px}
+  html.is-fullscreen .btn-primary{font-size:18px;padding:20px}
+
   @media (max-width:560px){
     .head-row{flex-wrap:wrap}
     .clock .t{font-size:17px}
@@ -311,6 +368,10 @@
         <span class="tag">08 · Tap Stack</span>
       </div>
       <div class="head-spacer"></div>
+      <button class="fs-btn" id="fsBtn" type="button" aria-label="Toggle fullscreen">
+        <span class="fs-enter"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>Fullscreen</span>
+        <span class="fs-exit"><svg viewBox="0 0 24 24"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>Exit</span>
+      </button>
       <a class="gallery-link" href="index.html">← Gallery</a>
       <div class="clock">
         <span class="t" id="clock">--:--:--</span>
@@ -348,9 +409,10 @@ const ORDERS = [
 
 // ----- Stage + station config -----
 const STAGES = [
+  { key:"All",   label:"All" },
   { key:"new",   label:"New" },
   { key:"prep",  label:"In progress" },
-  { key:"ready", label:"Ready" },
+  { key:"ready", label:"Ready · Expo" },
 ];
 const STATIONS = ["All","Pizza","Pasta","Antipasti","Panini","Drinks","Desserts"];
 
@@ -368,7 +430,7 @@ function stationIcon(key){
   }
 }
 
-let activeStage = "new";
+let activeStage = "All";
 let activeStation = "All";
 const eightySixed = {}; // id -> Set of item indexes
 const bumping = new Set();
@@ -395,6 +457,7 @@ function matchesStation(o){
 }
 function liveOrders(){ return ORDERS.filter(o=>!bumping.has(o.id)); }
 function stageCount(stage){
+  if(stage === "All") return liveOrders().filter(o=>matchesStation(o)).length;
   return liveOrders().filter(o=>o.status===stage && matchesStation(o)).length;
 }
 
@@ -529,8 +592,10 @@ function cardEl(o, hotkey){
 function advance(id){
   const o = ORDERS.find(x=>x.id===id);
   if(!o || bumping.has(id)) return;
-  if(o.status==="new"){ o.status="prep"; activeStage="prep"; render(); }
-  else if(o.status==="prep"){ o.status="ready"; o.sla=0; activeStage="ready"; render(); }
+  // When viewing "All" we stay there; otherwise follow the ticket to its new stage.
+  const follow = activeStage !== "All";
+  if(o.status==="new"){ o.status="prep"; if(follow) activeStage="prep"; render(); }
+  else if(o.status==="prep"){ o.status="ready"; o.sla=0; if(follow) activeStage="ready"; render(); }
   else if(o.status==="ready"){
     bumping.add(id);
     const card = document.querySelector(`.card[data-id="${id}"]`);
@@ -550,7 +615,7 @@ function recallTicket(id){
   if(!o) return;
   o.status = "prep";
   o.sla = 90; // back on the line, tight window
-  activeStage = "prep";
+  if(activeStage !== "All") activeStage = "prep";
   render();
 }
 function eightySix(id){
@@ -563,18 +628,51 @@ function eightySix(id){
 }
 
 // ----- render feed -----
+function sortStage(list, stage){
+  // sort by urgency: late first, then soonest due; ready by longest waiting
+  return list.sort((a,b)=>{
+    if(stage==="ready") return b.elapsed - a.elapsed;
+    return a.sla - b.sla;
+  });
+}
+function groupHeadEl(stageKey, count){
+  const label = (STAGES.find(s=>s.key===stageKey)||{}).label || stageKey;
+  const h = document.createElement("div");
+  h.className = "group-head";
+  h.dataset.g = stageKey;
+  h.innerHTML = `<span class="dot"></span><span class="gl">${label}</span><span class="gc num">${count}</span><span class="gline"></span>`;
+  return h;
+}
 function render(){
   renderSegments();
   renderStations();
   const feed = document.getElementById("feed");
   feed.innerHTML = "";
 
-  let list = liveOrders().filter(o=>o.status===activeStage && matchesStation(o));
-  // sort by urgency: late first, then soonest due; ready by longest waiting
-  list.sort((a,b)=>{
-    if(activeStage==="ready") return b.elapsed - a.elapsed;
-    return a.sla - b.sla;
-  });
+  if(activeStage === "All"){
+    // Full feed of every active ticket, grouped new → prep → ready.
+    const groups = ["new","prep","ready"];
+    let hotkey = 1;
+    let total = 0;
+    groups.forEach(g=>{
+      const list = sortStage(liveOrders().filter(o=>o.status===g && matchesStation(o)), g);
+      if(list.length===0) return;
+      total += list.length;
+      feed.appendChild(groupHeadEl(g, list.length));
+      list.forEach(o=>{
+        feed.appendChild(cardEl(o, hotkey<=10 ? hotkey%10 : null));
+        hotkey++;
+      });
+    });
+    if(total===0){
+      feed.innerHTML = `<div class="empty"><span class="big">No active tickets.</span>${
+        activeStation!=="All" ? "No "+activeStation+" tickets right now." : "Clear for now — nicely done."
+      }</div>`;
+    }
+    return;
+  }
+
+  let list = sortStage(liveOrders().filter(o=>o.status===activeStage && matchesStation(o)), activeStage);
 
   if(list.length===0){
     const stageLabel = (STAGES.find(s=>s.key===activeStage)||{}).label || "";
@@ -633,14 +731,44 @@ function clockTick(){
 // ----- bump-bar hotkeys 1–9/0 -----
 window.addEventListener("keydown", e=>{
   if(!/^[0-9]$/.test(e.key)) return;
-  let list = liveOrders().filter(o=>o.status===activeStage && matchesStation(o));
-  list.sort((a,b)=>{
-    if(activeStage==="ready") return b.elapsed - a.elapsed;
-    return a.sla - b.sla;
-  });
+  let list;
+  if(activeStage === "All"){
+    // Same order the feed is rendered in: new → prep → ready.
+    list = [];
+    ["new","prep","ready"].forEach(g=>{
+      sortStage(liveOrders().filter(o=>o.status===g && matchesStation(o)), g)
+        .forEach(o=>list.push(o));
+    });
+  } else {
+    list = sortStage(liveOrders().filter(o=>o.status===activeStage && matchesStation(o)), activeStage);
+  }
   const idx = e.key==="0" ? 9 : parseInt(e.key,10)-1;
   if(list[idx]) advance(list[idx].id);
 });
+
+// ----- fullscreen mode -----
+function syncFullscreen(){
+  const on = !!document.fullscreenElement;
+  document.documentElement.classList.toggle("is-fullscreen", on);
+}
+function toggleFullscreen(){
+  const root = document.documentElement;
+  if(!document.fullscreenElement){
+    const req = root.requestFullscreen && root.requestFullscreen();
+    if(req && req.catch){
+      req.catch(()=>{ root.classList.add("is-fullscreen"); });
+    } else if(!req){
+      // API unavailable — fall back to immersive styling only
+      root.classList.toggle("is-fullscreen");
+    }
+  } else {
+    const exit = document.exitFullscreen && document.exitFullscreen();
+    if(exit && exit.catch){ exit.catch(()=>{}); }
+    root.classList.remove("is-fullscreen");
+  }
+}
+document.getElementById("fsBtn").addEventListener("click", toggleFullscreen);
+document.addEventListener("fullscreenchange", syncFullscreen);
 
 // ----- init -----
 render();
