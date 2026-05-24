@@ -16,6 +16,7 @@
     --accent: #e0a458;
     --danger: #ff5d5d;
     --warning: #f5b13d;
+    --risk: #8b5cf6;
     --ready: #4ecb8d;
     --radius: 14px;
     --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
@@ -57,9 +58,18 @@
   .dot i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 
   .grid {
-    display: grid; gap: 22px; margin-top: 40px;
+    display: grid; gap: 22px;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   }
+  .group { margin-top: 44px; }
+  .group-title {
+    font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--fg-muted); font-weight: 700; margin: 0;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .group-title::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+  .group-title .sub { color: var(--fg-dim); letter-spacing: 0.04em; text-transform: none; font-weight: 500; }
+  .group .grid { margin-top: 18px; }
   .card {
     display: flex; flex-direction: column; text-decoration: none; color: inherit;
     background: var(--surface); border: 1px solid var(--border);
@@ -108,13 +118,14 @@
   <div class="wrap">
     <header class="masthead">
       <p class="eyebrow">Sud Italia · Kitchen Display System</p>
-      <h1>KDS design shortlist<br><span class="thin">one of these goes into <span style="color:var(--fg)">/admin/kds</span></span></h1>
-      <p class="lede">The three directions still in the running. Each tile opens a <strong>live, fully interactive mockup</strong> — timers tick, urgency colours shift across the SLA thresholds, tapping a ticket advances it through the line, and each has a fullscreen mode plus an All / New / In progress / Ready · Expo lines switcher. Built on the same eight-order rush so they compare like-for-like.</p>
+      <h1>KDS — Kitchen OS drafts<br><span class="thin">one of these goes into <span style="color:var(--fg)">/admin/kds</span></span></h1>
+      <p class="lede">Pre-production directions for the next-gen Kitchen Display. The new drafts implement the <strong>predictive “at-risk” status</strong> — tickets the model forecasts will breach <strong>before</strong> they actually go late (shown in violet). Each tile opens a <strong>live, interactive mockup</strong>: timers tick, urgency shifts across the SLA thresholds, tapping a ticket advances it, and every one has fullscreen plus an All / New / In progress / Ready · Expo lines switcher. Same eight-order rush throughout, so they compare like-for-like.</p>
 
       <div class="meta-row">
         <span class="legend">
           <span class="dot"><i style="background:var(--fg-muted)"></i> On pace</span>
           <span class="dot"><i style="background:var(--warning)"></i> Due &lt; 3 min</span>
+          <span class="dot"><i style="background:var(--risk)"></i> At risk (predicted)</span>
           <span class="dot"><i style="background:var(--danger)"></i> Late</span>
           <span class="dot"><i style="background:var(--ready)"></i> Ready · expo</span>
         </span>
@@ -123,7 +134,15 @@
       </div>
     </header>
 
-    <div class="grid" id="grid"></div>
+    <section class="group">
+      <h2 class="group-title">Kitchen OS — new directions <span class="sub">predictive · operational</span></h2>
+      <div class="grid" id="grid-new"></div>
+    </section>
+
+    <section class="group">
+      <h2 class="group-title">Earlier shortlist <span class="sub">kept from the first round</span></h2>
+      <div class="grid" id="grid-keep"></div>
+    </section>
 
     <footer class="note">
       Served on every deploy at <code>/mockups/kds/</code> (relaxed CSP per <code>next.config.ts</code>). Self-contained HTML — no network, no build step. The winning direction gets ported into <code>src/components/admin</code> for <code>/admin/kds</code>.
@@ -131,8 +150,25 @@
   </div>
 
   <script>
-    const C = { danger: "#ff5d5d", warning: "#f5b13d", ready: "#4ecb8d", neutral: "#8a8f98" };
-    const DESIGNS = [
+    const C = { danger: "#ff5d5d", warning: "#f5b13d", risk: "#8b5cf6", ready: "#4ecb8d", neutral: "#8a8f98" };
+    const NEW = [
+      { file:"11-control-tower.html", n:"11", name:"Control Tower", theme:"Dark · predictive radar", font:"mono",
+        bg:"#0A0C10", ink:"#E9EDF2", accent:"#8b5cf6",
+        desc:"A time-to-breach horizon: every ticket plotted against its promise with a predicted-ready whisker. Air-traffic control for the line — you see the breach forming." },
+      { file:"12-pace.html", n:"12", name:"Pace", theme:"Dark · capacity vs demand", font:"mono",
+        bg:"#0A0C10", ink:"#E9EDF2", accent:"#3B82F6",
+        desc:"The kitchen as a tunable flow engine: per-station pace gauges, an incoming-load forecast, and a capacity meter that glows violet before a breach. Covers/hr and revenue/hr up top." },
+      { file:"13-signal.html", n:"13", name:"Signal", theme:"Dark · line + AI co-pilot", font:"mono",
+        bg:"#0A0C10", ink:"#E9EDF2", accent:"#8b5cf6",
+        desc:"A dense working line beside a permanent AI co-pilot column — a live feed of risk alerts, reroute suggestions and anomalies you can apply. The intelligence isn’t buried." },
+      { file:"14-triage.html", n:"14", name:"Triage", theme:"Dark · Now / Next / Risk", font:"mono",
+        bg:"#0A0C10", ink:"#E9EDF2", accent:"#8b5cf6",
+        desc:"Sorts by what needs attention, not raw status. A bold violet RISK zone (predicted + already-late) is the hero — the board tells the cook where to look, including the future." },
+      { file:"15-atlas.html", n:"15", name:"Atlas", theme:"Dark · fleet command", font:"mono",
+        bg:"#0A0C10", ink:"#E9EDF2", accent:"#3DD68C",
+        desc:"Both trucks side by side with live health scores and cross-truck benchmarking; drill into one full-width. The owner lens — one model, many trucks, each making the others smarter." },
+    ];
+    const KEEP = [
       { file:"05-marquee-focus.html", n:"05", name:"Marquee", theme:"Light · big-type expo focus", font:"sans",
         bg:"#ffffff", ink:"#111111",
         desc:"One hero “on deck” ticket in huge type with a ranked queue beside it. Readable from across a loud kitchen — keynote-grade clarity." },
@@ -156,26 +192,33 @@
     // plain relative paths when opened straight off disk (file://).
     const BASE = location.protocol === "file:" ? "" : "/mockups/kds/";
 
-    const grid = document.getElementById("grid");
-    for (const d of DESIGNS) {
-      const a = document.createElement("a");
-      a.className = "card";
-      a.href = BASE + d.file;
-      const accentDots = `<i style="background:${C.neutral}"></i><i style="background:${C.warning}"></i><i style="background:${C.danger}"></i><i style="background:${C.ready}"></i>`;
-      a.innerHTML = `
-        <div class="band" style="background:${d.bg};color:${d.ink};font-family:${fonts[d.font]}">
-          <span class="num">${d.n}</span>
-          <span class="open" style="color:${d.accent || d.ink}">Open ↗</span>
-          <span class="word"${d.accent ? ` style="color:${d.accent}"` : ""}>${d.name}</span>
-          <span class="swatches">${accentDots}</span>
-        </div>
-        <div class="body">
-          <h3>${d.name}</h3>
-          <p class="theme">${d.theme}</p>
-          <p>${d.desc}</p>
-        </div>`;
-      grid.appendChild(a);
+    function renderInto(targetId, designs, withRisk) {
+      const grid = document.getElementById(targetId);
+      const dots = withRisk
+        ? `<i style="background:${C.neutral}"></i><i style="background:${C.warning}"></i><i style="background:${C.risk}"></i><i style="background:${C.danger}"></i><i style="background:${C.ready}"></i>`
+        : `<i style="background:${C.neutral}"></i><i style="background:${C.warning}"></i><i style="background:${C.danger}"></i><i style="background:${C.ready}"></i>`;
+      for (const d of designs) {
+        const a = document.createElement("a");
+        a.className = "card";
+        a.href = BASE + d.file;
+        a.innerHTML = `
+          <div class="band" style="background:${d.bg};color:${d.ink};font-family:${fonts[d.font]}">
+            <span class="num">${d.n}</span>
+            <span class="open" style="color:${d.accent || d.ink}">Open ↗</span>
+            <span class="word"${d.accent ? ` style="color:${d.accent}"` : ""}>${d.name}</span>
+            <span class="swatches">${dots}</span>
+          </div>
+          <div class="body">
+            <h3>${d.name}</h3>
+            <p class="theme">${d.theme}</p>
+            <p>${d.desc}</p>
+          </div>`;
+        grid.appendChild(a);
+      }
     }
+
+    renderInto("grid-new", NEW, true);
+    renderInto("grid-keep", KEEP, false);
   </script>
 </body>
 </html>

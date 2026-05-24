@@ -14,7 +14,7 @@ reference when reviewing redesigns in real browsers.
 | Path | Purpose |
 |---|---|
 | `cart.html` | Cart + checkout redesign concepts — V7 (animated), V8 (trattoria), V9 (editorial). Built-in tab switcher; each version is a self-contained iframe. |
-| `kds/` | Kitchen Display System redesign — shortlisted design directions (Marquee, Dual Expo, Operations) as separate live files, browsable from `index.html`. Each has fullscreen mode and an All / New / In progress / Ready · Expo lines switcher. |
+| `kds/` | Kitchen Display System redesign — browsable from `index.html`. **Kitchen OS drafts** (Control Tower, Pace, Signal, Triage, Atlas) implement the predictive "at-risk" status; plus the earlier shortlist (Marquee, Dual Expo, Operations). Every direction has fullscreen mode and an All / New / In progress / Ready · Expo lines switcher. |
 | `mobile/` | Mobile admin redesign — clickable screen mockups (see `docs/mobile/`) |
 | `bundle-ladders/` | 10 alternative layouts for the bundle-ladder admin page |
 | `menu-engineering.html` | Menu-engineering customer-facing redesign |

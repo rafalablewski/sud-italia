@@ -1,0 +1,718 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sud Italia KDS — Pace</title>
+<style>
+  :root{
+    --canvas:#0A0C10; --panel:#11151B; --raised:#1A2129;
+    --hair:rgba(255,255,255,.08); --hair-2:rgba(255,255,255,.14);
+    --text:#E9EDF2; --dim:#9098A3; --faint:#5C6571;
+    --queued:#5B6573; --firing:#3B82F6; --warn:#F5A623;
+    --risk:#8B5CF6; --late:#E5484D; --ready:#3DD68C;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,"Roboto Mono",monospace;
+    --u:8px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{
+    background:var(--canvas); color:var(--text);
+    font-family:var(--sans); -webkit-font-smoothing:antialiased;
+    font-size:14px; line-height:1.45;
+    display:flex; flex-direction:column; min-height:100vh;
+  }
+  .mono{font-family:var(--mono); font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1;}
+  button{font-family:inherit; color:inherit; cursor:pointer;}
+
+  /* ===== Header ===== */
+  header.bar{
+    display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+    padding:12px 24px; background:var(--panel);
+    border-bottom:1px solid var(--hair); position:sticky; top:0; z-index:30;
+  }
+  .brand{display:flex; align-items:baseline; gap:10px; padding-right:16px; border-right:1px solid var(--hair);}
+  .wordmark{font-weight:700; letter-spacing:.16em; font-size:15px;}
+  .wordmark .it{color:var(--ready);}
+  .kd-label{font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--dim);}
+  .tag{
+    font-family:var(--mono); font-size:11px; letter-spacing:.06em;
+    color:var(--text); background:var(--raised); border:1px solid var(--hair);
+    padding:4px 9px; border-radius:6px; white-space:nowrap;
+  }
+  .tag b{color:var(--risk);}
+  .clock{
+    font-family:var(--mono); font-size:16px; font-variant-numeric:tabular-nums;
+    letter-spacing:.04em; color:var(--text); padding:0 4px;
+  }
+  .clock .sec{color:var(--dim);}
+  .spacer{flex:1 1 auto;}
+
+  .seg{display:flex; gap:0; background:var(--raised); border:1px solid var(--hair); border-radius:8px; overflow:hidden;}
+  .seg button{
+    background:transparent; border:0; padding:7px 11px; font-size:12.5px; color:var(--dim);
+    display:flex; align-items:center; gap:7px; border-right:1px solid var(--hair);
+    transition:background .16s ease,color .16s ease;
+  }
+  .seg button:last-child{border-right:0;}
+  .seg button:hover{color:var(--text);}
+  .seg button.on{background:#222c38; color:var(--text);}
+  .seg .ct{
+    font-family:var(--mono); font-size:11px; min-width:18px; text-align:center;
+    background:var(--panel); border:1px solid var(--hair); border-radius:5px; padding:1px 4px; color:var(--dim);
+  }
+  .seg button.on .ct{color:var(--text); border-color:var(--hair-2);}
+
+  .stations{display:flex; gap:0; background:var(--raised); border:1px solid var(--hair); border-radius:8px; overflow:hidden;}
+  .stations button{
+    background:transparent; border:0; border-right:1px solid var(--hair);
+    padding:7px 10px; font-size:12px; color:var(--dim);
+    transition:background .16s ease,color .16s ease;
+  }
+  .stations button:last-child{border-right:0;}
+  .stations button:hover{color:var(--text);}
+  .stations button.on{background:#222c38; color:var(--text);}
+
+  .iconbtn{
+    background:var(--raised); border:1px solid var(--hair); border-radius:8px;
+    padding:7px 11px; font-size:12.5px; color:var(--dim);
+    display:inline-flex; align-items:center; gap:7px; transition:border-color .16s,color .16s,background .16s;
+  }
+  .iconbtn:hover{color:var(--text); border-color:var(--hair-2);}
+  .iconbtn svg{width:15px; height:15px;}
+  .gallery{color:var(--faint); text-decoration:none; font-size:12.5px; display:inline-flex; align-items:center; gap:6px;}
+  .gallery:hover{color:var(--dim);}
+  .gallery svg{width:13px; height:13px;}
+
+  /* ===== KPI band ===== */
+  .kpiband{
+    display:grid; grid-template-columns:repeat(5,1fr) 1.5fr; gap:1px;
+    background:var(--hair); border-bottom:1px solid var(--hair);
+  }
+  .kpi{background:var(--panel); padding:12px 20px; display:flex; flex-direction:column; gap:4px;}
+  .kpi .lab{font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--faint); display:flex; align-items:center; gap:6px;}
+  .kpi .val{font-family:var(--mono); font-size:24px; font-variant-numeric:tabular-nums; letter-spacing:-.01em; display:flex; align-items:baseline; gap:6px;}
+  .kpi .val .unit{font-size:12px; color:var(--dim); font-family:var(--sans); letter-spacing:0;}
+  .kpi .trend{display:inline-flex; align-items:center; gap:3px; font-family:var(--mono); font-size:11px;}
+  .kpi .trend.up{color:var(--ready);} .kpi .trend.down{color:var(--late);}
+  .kpi svg.spark{width:46px; height:16px; display:block;}
+
+  /* capacity meter — lives in the KPI band, spans wider cell */
+  .capacity{background:var(--panel); padding:12px 20px; display:flex; flex-direction:column; gap:6px; justify-content:center;}
+  .capacity .top{display:flex; align-items:center; justify-content:space-between; gap:8px;}
+  .capacity .lab{font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--faint);}
+  .capacity .read{font-family:var(--mono); font-size:13px; font-variant-numeric:tabular-nums; color:var(--text);}
+  .capacity .read b{color:var(--text);}
+  .capacity .read .of{color:var(--faint);}
+  .cap-track{position:relative; height:14px; border-radius:7px; background:var(--raised); border:1px solid var(--hair); overflow:hidden;}
+  .cap-fill{position:absolute; inset:0 auto 0 0; border-radius:7px 0 0 7px; transition:width .3s ease,background .3s ease;}
+  .cap-cap-line{position:absolute; top:-2px; bottom:-2px; width:2px; background:var(--text); opacity:.55;}
+  .capacity .note{font-size:11px; color:var(--dim); display:flex; align-items:center; gap:6px; min-height:15px;}
+  .capacity.breach{box-shadow:inset 0 0 0 1px rgba(139,92,246,.5);}
+  .capacity.breach .note{color:var(--risk);}
+
+  /* ===== Insight strip ===== */
+  .insights{display:flex; gap:12px; flex-wrap:wrap; padding:10px 24px; background:var(--canvas); border-bottom:1px solid var(--hair);}
+  .insight{display:flex; align-items:center; gap:9px; font-size:12.5px; color:var(--dim); padding:6px 12px 6px 10px; background:var(--panel); border:1px solid var(--hair); border-radius:8px;}
+  .insight .pin{width:7px; height:7px; border-radius:50%; flex:0 0 auto;}
+  .insight .knd{font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--faint); font-family:var(--mono);}
+  .insight b{color:var(--text); font-weight:600;}
+
+  /* ===== Board ===== */
+  main{flex:1 1 auto; overflow:auto; padding:16px 24px 32px;}
+  .lanes{display:grid; grid-template-columns:repeat(6,minmax(220px,1fr)); gap:16px; align-items:start; min-height:100%;}
+  .lanes.lane-collapsed{grid-template-columns:repeat(auto-fit,minmax(280px,1fr));}
+
+  .lane{background:var(--panel); border:1px solid var(--hair); border-radius:14px; display:flex; flex-direction:column; overflow:hidden;}
+  .lane.dim{opacity:.32; filter:saturate(.6);}
+  .lane-head{padding:12px 14px 12px; border-bottom:1px solid var(--hair); display:flex; flex-direction:column; gap:10px;}
+  .lane-title{display:flex; align-items:center; justify-content:space-between; gap:8px;}
+  .lane-title .nm{font-size:14px; font-weight:650; letter-spacing:.01em; display:flex; align-items:center; gap:8px;}
+  .lane-title .nm svg{width:16px; height:16px; color:var(--dim);}
+  .lane-title .cnt{font-family:var(--mono); font-size:12px; color:var(--dim); background:var(--raised); border:1px solid var(--hair); border-radius:6px; padding:2px 7px;}
+
+  /* pace gauge: radial */
+  .pace-row{display:flex; align-items:center; gap:12px;}
+  .gauge{position:relative; width:46px; height:46px; flex:0 0 auto;}
+  .gauge svg{transform:rotate(-90deg); display:block;}
+  .gauge .gtxt{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1;}
+  .gauge .gtxt .n{font-family:var(--mono); font-size:12px; font-variant-numeric:tabular-nums;}
+  .gauge .gtxt .u{font-size:7px; letter-spacing:.06em; color:var(--faint);}
+  .pace-meta{display:flex; flex-direction:column; gap:3px; min-width:0;}
+  .pace-meta .pl{font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--faint);}
+  .pace-meta .pv{font-family:var(--mono); font-size:12px; color:var(--dim);}
+  .pace-meta .pv b{color:var(--text);}
+  .pace-meta .pv.over b{color:var(--warn);}
+  .pace-meta .pv.crit b{color:var(--risk);}
+
+  /* incoming forecast bar */
+  .forecast{display:flex; flex-direction:column; gap:4px;}
+  .forecast .fhead{display:flex; align-items:center; justify-content:space-between; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--faint);}
+  .forecast .fhead .fnum{font-family:var(--mono); color:var(--dim); letter-spacing:0;}
+  .ftrack{height:6px; border-radius:4px; background:var(--raised); overflow:hidden; position:relative;}
+  .ffill{position:absolute; inset:0 auto 0 0; border-radius:4px; background:linear-gradient(90deg,var(--queued),var(--firing)); transition:width .3s ease;}
+
+  .lane-body{padding:10px; display:flex; flex-direction:column; gap:10px; flex:1 1 auto; min-height:60px;}
+  .lane-empty{font-size:12px; color:var(--faint); text-align:center; padding:18px 8px; font-style:italic;}
+
+  /* ===== Ticket ===== */
+  .ticket{
+    background:var(--raised); border:1px solid var(--hair); border-radius:11px; padding:11px 12px 11px;
+    display:flex; flex-direction:column; gap:9px; position:relative; overflow:hidden;
+    transition:border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+    animation:tin .2s ease;
+  }
+  @keyframes tin{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+  .ticket::before{content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--queued); transition:background .2s ease;}
+  .ticket[data-tone="firing"]::before{background:var(--firing);}
+  .ticket[data-tone="warn"]::before{background:var(--warn);}
+  .ticket[data-tone="risk"]::before{background:var(--risk);}
+  .ticket[data-tone="late"]::before{background:var(--late);}
+  .ticket[data-tone="ready"]::before{background:var(--ready);}
+  /* flood-tint only late & risk */
+  .ticket[data-tone="late"]{background:linear-gradient(180deg,rgba(229,72,77,.16),rgba(229,72,77,.05)); border-color:rgba(229,72,77,.42);}
+  .ticket[data-tone="risk"]{background:linear-gradient(180deg,rgba(139,92,246,.18),rgba(139,92,246,.05)); border-color:rgba(139,92,246,.5); box-shadow:0 0 0 1px rgba(139,92,246,.25),0 8px 28px -16px rgba(139,92,246,.6);}
+  .ticket[data-tone="ready"]{border-color:rgba(61,214,140,.3);}
+
+  .t-top{display:flex; align-items:flex-start; justify-content:space-between; gap:10px;}
+  .t-id{display:flex; flex-direction:column; gap:2px; min-width:0;}
+  .t-id .idr{font-family:var(--mono); font-size:13px; letter-spacing:.04em; color:var(--text); display:flex; align-items:center; gap:7px;}
+  .chan{width:9px; height:9px; border-radius:2px; flex:0 0 auto;}
+  .chan.takeout{background:var(--firing);} .chan.delivery{background:var(--warn);}
+  .t-id .nm{font-size:12px; color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .t-meta{display:flex; gap:8px; font-size:10.5px; color:var(--faint); margin-top:1px; font-family:var(--mono);}
+
+  /* dual timer */
+  .timer{display:flex; align-items:center; gap:9px; flex:0 0 auto;}
+  .elapsed{display:flex; flex-direction:column; align-items:flex-end; line-height:1.1;}
+  .elapsed .e{font-family:var(--mono); font-size:18px; font-variant-numeric:tabular-nums; letter-spacing:.01em;}
+  .elapsed .el{font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:var(--faint);}
+  .ring{position:relative; width:42px; height:42px; flex:0 0 auto;}
+  .ring svg{transform:rotate(-90deg); display:block;}
+  .ring .rtxt{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1;}
+  .ring .rtxt .due{font-family:var(--mono); font-size:10px; font-variant-numeric:tabular-nums;}
+  .ring .rtxt .dl{font-size:6.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--faint);}
+
+  .items{display:flex; flex-direction:column; gap:5px; padding-top:8px; border-top:1px solid var(--hair);}
+  .it{display:flex; gap:8px; align-items:baseline; font-size:13px;}
+  .it .q{font-family:var(--mono); font-size:12px; color:var(--dim); min-width:20px;}
+  .it .n{color:var(--text); flex:1 1 auto;}
+  .it .note{font-size:11px; color:var(--warn); font-style:italic;}
+  .it .badge{font-size:9px; font-family:var(--mono); color:var(--faint); border:1px solid var(--hair); border-radius:4px; padding:0 4px; align-self:center;}
+  .t-note{font-size:11.5px; color:var(--dim); display:flex; gap:6px; align-items:center; padding:6px 8px; background:var(--panel); border-radius:7px; border:1px solid var(--hair);}
+  .t-note svg{width:13px; height:13px; color:var(--faint); flex:0 0 auto;}
+
+  .t-foot{display:flex; align-items:center; gap:8px; margin-top:1px;}
+  .pred-pill{font-family:var(--mono); font-size:11px; color:var(--dim); display:inline-flex; align-items:center; gap:5px; background:var(--panel); border:1px solid var(--hair); border-radius:6px; padding:3px 8px;}
+  .pred-pill .dt{width:5px; height:5px; border-radius:50%; background:var(--firing);}
+  .pred-pill.risk{color:var(--risk); border-color:rgba(139,92,246,.4);} .pred-pill.risk .dt{background:var(--risk);}
+  .pred-pill.late{color:var(--late); border-color:rgba(229,72,77,.4);} .pred-pill.late .dt{background:var(--late);}
+  .act{margin-left:auto;}
+  .act button{
+    background:#222c38; border:1px solid var(--hair-2); border-radius:8px; padding:7px 13px;
+    font-size:12.5px; font-weight:600; color:var(--text); display:inline-flex; align-items:center; gap:6px;
+    transition:background .16s ease, transform .12s ease;
+  }
+  .act button:hover{background:#2c3947;}
+  .act button:active{transform:scale(.97);}
+  .act button.ready-act{background:rgba(61,214,140,.16); border-color:rgba(61,214,140,.45); color:var(--ready);}
+  .act button.ready-act:hover{background:rgba(61,214,140,.26);}
+  .act button svg{width:14px; height:14px;}
+
+  /* fullscreen enlargements */
+  html.is-fullscreen body{font-size:15px;}
+  html.is-fullscreen header.bar{padding:14px 28px;}
+  html.is-fullscreen main{padding:18px 28px 36px;}
+  html.is-fullscreen .lanes{gap:18px;}
+  html.is-fullscreen .elapsed .e{font-size:22px;}
+  html.is-fullscreen .it{font-size:14.5px;}
+  html.is-fullscreen .kpi .val{font-size:27px;}
+  .iconbtn.fs-on{color:var(--ready); border-color:rgba(61,214,140,.4);}
+
+  @media(max-width:1100px){ .kpiband{grid-template-columns:repeat(3,1fr);} .capacity{grid-column:1/-1;} }
+  @media(max-width:760px){ .kpiband{grid-template-columns:repeat(2,1fr);} }
+</style>
+</head>
+<body>
+  <header class="bar">
+    <div class="brand">
+      <span class="wordmark">SUD <span class="it">ITALIA</span></span>
+      <span class="kd-label">Kitchen Display</span>
+    </div>
+    <span class="tag">12 · <b>Pace</b></span>
+    <div class="clock mono" id="clock">--:--<span class="sec">:--</span></div>
+
+    <div class="stations" id="stationFilter" role="group" aria-label="Station filter"></div>
+
+    <div class="spacer"></div>
+
+    <div class="seg" id="lines" role="group" aria-label="Lines switcher"></div>
+
+    <button class="iconbtn" id="fsBtn" title="Fullscreen">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3m13-5v3a2 2 0 0 1-2 2h-3"/></svg>
+      <span id="fsLabel">Fullscreen</span>
+    </button>
+
+    <a class="gallery" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5m0 0l7 7m-7-7l7-7"/></svg>
+      Gallery
+    </a>
+  </header>
+
+  <section class="kpiband" id="kpiband"></section>
+
+  <section class="insights" id="insights"></section>
+
+  <main>
+    <div class="lanes" id="board"></div>
+  </main>
+
+<script>
+"use strict";
+
+const ORDERS = [
+  { id:"A4F9C2", name:"Marco R.",  channel:"takeout",  loc:"Kraków",   slot:"15:20", elapsed:192, sla:150, pred:130, status:"prep",
+    items:[{q:2,n:"Margherita",c:"Pizza"},{q:1,n:"Diavola",c:"Pizza"},{q:1,n:"Espresso",c:"Drinks"}] },
+  { id:"B7K2D1", name:"Giulia M.", channel:"delivery", loc:"Kraków",   slot:"15:15", elapsed:540, sla:-65, pred:80,  status:"prep",
+    items:[{q:1,n:"Quattro Formaggi",c:"Pizza"},{q:1,n:"Spaghetti Carbonara",c:"Pasta",note:"no garlic"},{q:1,n:"Tiramisù",c:"Desserts"}], note:"Leave at reception" },
+  { id:"C1M8X4", name:"Paweł K.",  channel:"takeout",  loc:"Warszawa", slot:"15:30", elapsed:48,  sla:612, pred:300, status:"new",
+    items:[{q:1,n:"Diavola",c:"Pizza"},{q:2,n:"Aranciata",c:"Drinks"}] },
+  { id:"D9P3Q7", name:"Anna W.",   channel:"delivery", loc:"Warszawa", slot:"15:28", elapsed:95,  sla:505, pred:560, status:"new",
+    items:[{q:3,n:"Margherita",c:"Pizza"},{q:1,n:"Penne Arrabbiata",c:"Pasta"},{q:2,n:"Limonata Fresca",c:"Drinks"}] },
+  { id:"E5R6T2", name:"Luca B.",   channel:"takeout",  loc:"Kraków",   slot:"15:22", elapsed:300, sla:120, pred:150, status:"prep",
+    items:[{q:1,n:"Tartufata Reale",c:"Pizza",note:"extra truffle"},{q:1,n:"Burrata con Pomodorini",c:"Antipasti"}] },
+  { id:"F2H4J8", name:"Sofia L.",  channel:"takeout",  loc:"Kraków",   slot:"15:10", elapsed:720, sla:0,   pred:0,   status:"ready",
+    items:[{q:1,n:"Panino Caprese",c:"Panini"},{q:1,n:"Garlic Bread",c:"Antipasti"},{q:1,n:"Espresso",c:"Drinks"}] },
+  { id:"G8L1N5", name:"Tomek Z.",  channel:"delivery", loc:"Warszawa", slot:"15:32", elapsed:150, sla:450, pred:360, status:"new",
+    items:[{q:2,n:"Penne Arrabbiata",c:"Pasta"},{q:1,n:"Linguine al Pesto",c:"Pasta"}] },
+  { id:"H3W7Y9", name:"Elena P.",  channel:"takeout",  loc:"Kraków",   slot:"15:08", elapsed:660, sla:0,   pred:0,   status:"ready",
+    items:[{q:1,n:"Prosciutto e Rucola",c:"Pizza"},{q:1,n:"Arancini (3 pcs)",c:"Antipasti"}] },
+];
+const KPI = { throughputHr:23, coversHr:31, revenueHr:1180, promiseAcc:91, onShift:4 };
+const INSIGHTS = [
+  { kind:"anomaly",  text:"Pasta station 34% slower than its 4-week baseline", tone:"warn" },
+  { kind:"forecast", text:"Pizza: +4 tickets forecast in the next 15 min", tone:"queued" },
+];
+const STATIONS = ["Pizza","Pasta","Antipasti","Panini","Drinks","Desserts"];
+
+// Pace targets — target seconds per ticket per station (used by gauge)
+const PACE_TARGET = { Pizza:140, Pasta:160, Antipasti:90, Panini:80, Drinks:30, Desserts:60 };
+// Forecast — incoming tickets next 15 min per station (0..max)
+const FORECAST = { Pizza:4, Pasta:2, Antipasti:1, Panini:1, Drinks:3, Desserts:1 };
+const FORECAST_MAX = 5;
+
+const COLORS = { queued:"#5B6573", firing:"#3B82F6", warn:"#F5A623", risk:"#8B5CF6", late:"#E5484D", ready:"#3DD68C" };
+
+const STATION_ICONS = {
+  Pizza:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c5 0 9 4 9 9L12 21 3 12c0-5 4-9 9-9z"/><circle cx="10" cy="10" r="1"/><circle cx="14" cy="13" r="1"/></svg>',
+  Pasta:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19a7 7 0 0 1 14 0"/><path d="M7 19c0-5 1-9 2-12M12 19c0-5 0-9 0-12M17 19c0-5-1-9-2-12"/></svg>',
+  Antipasti:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16a8 8 0 0 1 16 0z"/><path d="M2 16h20"/><path d="M11 8V4M11 4l2 1"/></svg>',
+  Panini:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8a8 4 0 0 1 16 0z"/><path d="M4 8v3a8 4 0 0 0 16 0V8"/><path d="M4 14v1a8 4 0 0 0 16 0v-1"/></svg>',
+  Drinks:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l-1 5a5 5 0 0 1-10 0z"/><path d="M12 13v6M8 21h8"/></svg>',
+  Desserts:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21v-5a7 7 0 0 1 14 0v5z"/><path d="M5 16h14"/><circle cx="12" cy="6" r="1.5"/><path d="M12 7.5V11"/></svg>',
+};
+
+// ===== state =====
+let orders = ORDERS.map(o=>({...o, items:o.items.map(i=>({...i}))}));
+let stationFilter = "All";
+let lineFilter = "All";
+const STATION_FILTERS = ["All", ...STATIONS];
+const LINES = [
+  { key:"All",   label:"All" },
+  { key:"new",   label:"New" },
+  { key:"prep",  label:"In progress" },
+  { key:"ready", label:"Ready" },
+  { key:"expo",  label:"Expo" },
+];
+
+// ===== tone =====
+function tone(o){
+  if(o.status==='ready')   return 'ready';
+  if(o.sla < 0)            return 'late';
+  if((o.pred||0) > o.sla)  return 'risk';
+  if(o.sla < 180)          return 'warn';
+  return o.status==='new' ? 'queued' : 'firing';
+}
+
+// ===== helpers =====
+function fmt(sec){
+  const neg = sec < 0;
+  let s = Math.abs(Math.round(sec));
+  const m = Math.floor(s/60); s = s%60;
+  return (neg?'-':'') + m + ':' + String(s).padStart(2,'0');
+}
+function esc(str){ return String(str).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+// "expo" line = ready tickets too, but conceptually the handoff stage. We map:
+//  new -> new, prep -> prep, ready -> both ready & expo lines.
+function inLine(o, key){
+  if(key==='All') return true;
+  if(key==='ready') return o.status==='ready';
+  if(key==='expo')  return o.status==='ready';
+  return o.status===key;
+}
+function lineCount(key){ return orders.filter(o=>inLine(o,key)).length; }
+
+// stations present in an order
+function orderStations(o){
+  const set = new Set();
+  o.items.forEach(i=>set.add(i.c));
+  return [...set];
+}
+
+// ===== render: header controls =====
+function renderStationFilter(){
+  const el = document.getElementById('stationFilter');
+  el.innerHTML = STATION_FILTERS.map(s=>
+    `<button data-st="${esc(s)}" class="${s===stationFilter?'on':''}">${esc(s)}</button>`
+  ).join('');
+  el.querySelectorAll('button').forEach(b=>b.onclick=()=>{ stationFilter=b.dataset.st; render(); });
+}
+function renderLines(){
+  const el = document.getElementById('lines');
+  el.innerHTML = LINES.map(l=>
+    `<button data-ln="${l.key}" class="${l.key===lineFilter?'on':''}">${esc(l.label)} <span class="ct mono">${lineCount(l.key)}</span></button>`
+  ).join('');
+  el.querySelectorAll('button').forEach(b=>b.onclick=()=>{ lineFilter=b.dataset.ln; render(); });
+}
+function updateLineCounts(){
+  document.querySelectorAll('#lines button').forEach(b=>{
+    const c = b.querySelector('.ct'); if(c) c.textContent = lineCount(b.dataset.ln);
+  });
+}
+
+// ===== KPI band =====
+function sparkPath(seed, w, h){
+  let pts=[]; let v=h*0.5;
+  for(let i=0;i<8;i++){ v += Math.sin(seed+i*1.3)*h*0.18; v=Math.max(2,Math.min(h-2,v));
+    pts.push((i/(7))*w + ',' + (h-v).toFixed(1)); }
+  return 'M'+pts.join(' L');
+}
+function renderKPIband(){
+  const band = document.getElementById('kpiband');
+  const defs = [
+    { lab:"Covers / hr",     val:KPI.coversHr,     unit:"",    trend:'up',   d:'+8%',  seed:1.1, col:COLORS.ready },
+    { lab:"Revenue / hr",    val:KPI.revenueHr,    unit:"zł",  trend:'up',   d:'+5%',  seed:2.4, col:COLORS.ready },
+    { lab:"Throughput / hr", val:KPI.throughputHr, unit:"tix", trend:'down', d:'-3%',  seed:3.7, col:COLORS.warn },
+    { lab:"Promise acc.",    val:KPI.promiseAcc,   unit:"%",   trend:'down', d:'-2pt', seed:0.6, col:COLORS.warn },
+    { lab:"On shift",        val:KPI.onShift,      unit:"crew",trend:null,   d:'',     seed:4.2, col:COLORS.firing },
+  ];
+  let html = defs.map(k=>{
+    const v = k.lab==="Revenue / hr" ? Number(k.val).toLocaleString('en-US').replace(/,/g,' ') : k.val;
+    const trend = k.trend ? `<span class="trend ${k.trend} mono">${k.trend==='up'?'▲':'▼'} ${k.d}</span>` : '';
+    return `<div class="kpi">
+      <span class="lab">${k.lab}</span>
+      <span class="val mono">${v}<span class="unit">${k.unit}</span>
+        <svg class="spark" viewBox="0 0 46 16" preserveAspectRatio="none"><path d="${sparkPath(k.seed,46,16)}" fill="none" stroke="${k.col}" stroke-width="1.4" opacity=".8"/></svg>
+      </span>
+      ${trend}
+    </div>`;
+  }).join('');
+
+  // capacity meter cell
+  html += `<div class="capacity" id="capacityCell">
+    <div class="top">
+      <span class="lab">Demand vs capacity</span>
+      <span class="read mono"><b id="capDemand">0</b><span class="of"> / </span><span id="capCap">0</span></span>
+    </div>
+    <div class="cap-track"><div class="cap-fill" id="capFill"></div><div class="cap-cap-line" style="left:80%"></div></div>
+    <div class="note" id="capNote"></div>
+  </div>`;
+  band.innerHTML = html;
+}
+
+// active demand (sec of work outstanding) vs capacity (crew * per-station throughput)
+function computeCapacity(){
+  const active = orders.filter(o=>o.status!=='ready');
+  // demand = sum of predicted remaining seconds across active tickets
+  let demand = active.reduce((s,o)=>s + Math.max(0,o.pred||0), 0);
+  // forecast adds expected load
+  const fcAdd = Object.values(FORECAST).reduce((a,b)=>a+b,0) * 120; // ~2 min each
+  demand += fcAdd;
+  // capacity = crew * 15min window of work seconds they can clear
+  const capacity = KPI.onShift * 15 * 60 * 0.85; // 85% utilization headroom
+  const ratio = demand / capacity;
+  // model forecasts breach if any active ticket is at-risk OR ratio>1
+  const anyRisk = active.some(o=>tone(o)==='risk');
+  const breach = anyRisk || ratio > 1;
+  return { demand, capacity, ratio, breach, anyRisk };
+}
+function updateCapacity(){
+  const c = computeCapacity();
+  const cell = document.getElementById('capacityCell'); if(!cell) return;
+  const fill = document.getElementById('capFill');
+  const pct = Math.min(100, c.ratio*80); // capacity line sits at 80%
+  fill.style.width = pct.toFixed(1)+'%';
+  let col = COLORS.ready;
+  if(c.ratio>1 || c.breach) col = COLORS.risk;
+  else if(c.ratio>0.8) col = COLORS.warn;
+  else if(c.ratio>0.55) col = COLORS.firing;
+  fill.style.background = col;
+  document.getElementById('capDemand').textContent = Math.round(c.demand/60)+'m';
+  document.getElementById('capCap').textContent = Math.round(c.capacity/60)+'m';
+  cell.classList.toggle('breach', c.breach);
+  const note = document.getElementById('capNote');
+  if(c.breach){
+    note.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg> Model forecasts a promise breach — rebalance the line`;
+  } else {
+    note.textContent = 'Balanced — capacity ahead of demand';
+  }
+}
+
+// ===== insights =====
+function renderInsights(){
+  const el = document.getElementById('insights');
+  el.innerHTML = INSIGHTS.map(i=>
+    `<div class="insight">
+      <span class="pin" style="background:${COLORS[i.tone]||COLORS.queued}"></span>
+      <span class="knd">${esc(i.kind)}</span>
+      <span><b>${esc(i.text.split(' ').slice(0,1).join(' '))}</b> ${esc(i.text.split(' ').slice(1).join(' '))}</span>
+    </div>`
+  ).join('');
+}
+
+// ===== pace per station =====
+function stationPace(st){
+  // tickets routed to this station
+  const tix = orders.filter(o=>o.status!=='ready' && orderStations(o).includes(st));
+  // observed pace ~ average predicted remaining over count (proxy for min/ticket)
+  const target = PACE_TARGET[st] || 120;
+  let observed = target;
+  if(tix.length){
+    observed = tix.reduce((s,o)=>s+Math.max(20,o.pred||target),0)/tix.length;
+  }
+  // anomaly: pasta runs slow per the insight
+  if(st==='Pasta') observed = observed*1.34;
+  const ratio = observed/target; // >1 = slower than target
+  return { tix, target, observed, ratio };
+}
+
+// ===== board =====
+function render(){
+  renderStationFilter();
+  renderLines();
+
+  const board = document.getElementById('board');
+  const collapsed = lineFilter!=='All';
+  board.classList.toggle('lane-collapsed', collapsed);
+
+  const visStations = stationFilter==='All' ? STATIONS : [stationFilter];
+
+  board.innerHTML = visStations.map(st=>{
+    const pace = stationPace(st);
+    // tickets shown in this lane: route by category AND respect line filter
+    const tix = orders
+      .filter(o=>orderStations(o).includes(st))
+      .filter(o=>inLine(o,lineFilter))
+      .sort((a,b)=> (a.sla - b.sla));
+
+    // pace gauge ring math
+    const gp = Math.min(1.5, pace.ratio); // cap visual
+    const gpct = Math.min(100, (pace.observed/(pace.target*1.5))*100);
+    let gcol = COLORS.ready;
+    if(pace.ratio>1.25) gcol = COLORS.risk;
+    else if(pace.ratio>1.0) gcol = COLORS.warn;
+    else if(pace.ratio>0.75) gcol = COLORS.firing;
+    const R=18, CIRC=2*Math.PI*R;
+    const dash = (Math.min(1,gpct/100))*CIRC;
+
+    const fc = FORECAST[st]||0;
+    const fpct = (fc/FORECAST_MAX)*100;
+
+    let paceClass = pace.ratio>1.25?'crit':(pace.ratio>1.0?'over':'');
+
+    const ticketsHtml = tix.length
+      ? tix.map(o=>ticketHTML(o, st)).join('')
+      : `<div class="lane-empty">No tickets</div>`;
+
+    return `<section class="lane">
+      <div class="lane-head">
+        <div class="lane-title">
+          <span class="nm">${STATION_ICONS[st]||''}${esc(st)}</span>
+          <span class="cnt mono">${tix.length}</span>
+        </div>
+        <div class="pace-row">
+          <div class="gauge">
+            <svg width="46" height="46" viewBox="0 0 46 46">
+              <circle cx="23" cy="23" r="${R}" fill="none" stroke="rgba(255,255,255,.09)" stroke-width="4"/>
+              <circle cx="23" cy="23" r="${R}" fill="none" stroke="${gcol}" stroke-width="4" stroke-linecap="round"
+                stroke-dasharray="${dash.toFixed(1)} ${CIRC.toFixed(1)}" style="transition:stroke-dasharray .3s ease,stroke .3s ease"/>
+            </svg>
+            <div class="gtxt"><span class="n">${(pace.observed/60).toFixed(1)}</span><span class="u">MIN/TIX</span></div>
+          </div>
+          <div class="pace-meta">
+            <span class="pl">Pace · target ${(pace.target/60).toFixed(1)}m</span>
+            <span class="pv ${paceClass} mono">now <b>${(pace.observed/60).toFixed(1)}m</b> · ${pace.ratio>=1?'+':''}${Math.round((pace.ratio-1)*100)}%</span>
+          </div>
+        </div>
+        <div class="forecast">
+          <div class="fhead"><span>Incoming · next 15m</span><span class="fnum mono">+${fc}</span></div>
+          <div class="ftrack"><div class="ffill" style="width:${fpct}%"></div></div>
+        </div>
+      </div>
+      <div class="lane-body">${ticketsHtml}</div>
+    </section>`;
+  }).join('');
+
+  // wire ticket actions
+  board.querySelectorAll('[data-act]').forEach(b=>{
+    b.onclick = ()=>advance(b.dataset.act);
+  });
+
+  updateLineCounts();
+  updateCapacity();
+}
+
+function ticketHTML(o, st){
+  const t = tone(o);
+  const isReady = o.status==='ready';
+  // SLA ring: deplete toward promise. full at start, empties as sla->0, red past 0
+  const R=18, CIRC=2*Math.PI*R;
+  // fraction of promise remaining (assume original promise ~ elapsed+sla at placement; use sla vs a window)
+  const window = Math.max(60, o.sla + o.elapsed); // crude original promise window
+  let frac = isReady ? 1 : Math.max(0, Math.min(1, o.sla / window));
+  let ringCol = COLORS[t];
+  // ring turns violet when pred>sla (risk), red at breach
+  if(!isReady){
+    if(o.sla<0) ringCol = COLORS.late;
+    else if((o.pred||0) > o.sla) ringCol = COLORS.risk;
+  }
+  const dash = (isReady?1:frac)*CIRC;
+
+  const dueLabel = isReady ? 'Ready' : (o.sla<0 ? 'Late' : 'Due');
+  const dueVal = isReady ? 'OK' : fmt(o.sla);
+
+  // predicted pill class
+  let predClass = '';
+  if(!isReady){
+    if(o.sla<0) predClass='late';
+    else if((o.pred||0)>o.sla) predClass='risk';
+  }
+
+  // items — show all but highlight ones belonging to this lane's station
+  const itemsHtml = o.items.map(i=>{
+    const here = i.c===st;
+    return `<div class="it" style="${here?'':'opacity:.4'}">
+      <span class="q mono">${i.q}×</span>
+      <span class="n">${esc(i.n)}${i.note?` <span class="note">· ${esc(i.note)}</span>`:''}</span>
+      ${here?'':`<span class="badge">${esc(i.c)}</span>`}
+    </div>`;
+  }).join('');
+
+  // primary action label
+  let actLabel='Start', actClass='', actIcon='';
+  if(o.status==='new'){ actLabel='Start'; actIcon='<path d="M5 3l14 9-14 9z"/>'; }
+  else if(o.status==='prep'){ actLabel='Ready'; actIcon='<path d="M20 6 9 17l-5-5"/>'; }
+  else if(o.status==='ready'){ actLabel='Bump'; actClass='ready-act'; actIcon='<path d="M5 12h14M12 5l7 7-7 7"/>'; }
+
+  return `<article class="ticket" data-tone="${t}">
+    <div class="t-top">
+      <div class="t-id">
+        <span class="idr mono"><span class="chan ${o.channel}" title="${o.channel}"></span>${esc(o.id)}</span>
+        <span class="nm">${esc(o.name)}</span>
+        <span class="t-meta"><span>${esc(o.loc)}</span><span>slot ${esc(o.slot)}</span><span>${esc(o.channel)}</span></span>
+      </div>
+      <div class="timer">
+        <div class="elapsed">
+          <span class="e mono" style="color:${isReady?COLORS.ready:(o.sla<0?COLORS.late:'var(--text)')}">${fmt(o.elapsed)}</span>
+          <span class="el">elapsed</span>
+        </div>
+        <div class="ring">
+          <svg width="42" height="42" viewBox="0 0 42 42">
+            <circle cx="21" cy="21" r="${R}" fill="none" stroke="rgba(255,255,255,.10)" stroke-width="4"/>
+            <circle cx="21" cy="21" r="${R}" fill="none" stroke="${ringCol}" stroke-width="4" stroke-linecap="round"
+              stroke-dasharray="${dash.toFixed(1)} ${CIRC.toFixed(1)}" style="transition:stroke-dasharray .3s ease,stroke .3s ease"/>
+          </svg>
+          <div class="rtxt">
+            <span class="due mono" style="color:${ringCol}">${dueVal}</span>
+            <span class="dl">${dueLabel}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="items">${itemsHtml}</div>
+    ${o.note?`<div class="t-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>${esc(o.note)}</div>`:''}
+
+    <div class="t-foot">
+      ${isReady ? `<span class="pred-pill"><span class="dt"></span>done</span>` :
+        `<span class="pred-pill ${predClass}"><span class="dt"></span>pred ${fmt(o.pred)}${(o.pred>o.sla&&o.sla>=0)?' · will miss':''}</span>`}
+      <span class="act"><button data-act="${esc(o.id)}" class="${actClass}">
+        <svg viewBox="0 0 24 24" fill="${o.status==='new'?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${actIcon}</svg>
+        ${actLabel}</button></span>
+    </div>
+  </article>`;
+}
+
+// ===== advance lifecycle =====
+function advance(id){
+  const i = orders.findIndex(o=>o.id===id);
+  if(i<0) return;
+  const o = orders[i];
+  if(o.status==='new'){ o.status='prep'; }
+  else if(o.status==='prep'){ o.status='ready'; o.sla=0; o.pred=0; }
+  else if(o.status==='ready'){ orders.splice(i,1); }
+  render();
+}
+
+// ===== live loop =====
+function tick(){
+  orders.forEach(o=>{
+    if(o.status==='ready') return;
+    o.elapsed += 1;
+    o.sla -= 1;
+    o.pred = Math.max(0, (o.pred||0) - 1);
+  });
+  render();
+}
+
+// live wall clock
+function clockTick(){
+  const d = new Date();
+  const hh = String(d.getHours()).padStart(2,'0');
+  const mm = String(d.getMinutes()).padStart(2,'0');
+  const ss = String(d.getSeconds()).padStart(2,'0');
+  document.getElementById('clock').innerHTML = `${hh}:${mm}<span class="sec">:${ss}</span>`;
+}
+
+// ===== fullscreen =====
+const fsBtn = document.getElementById('fsBtn');
+const fsLabel = document.getElementById('fsLabel');
+function syncFs(){
+  const lit = !!document.fullscreenElement || document.documentElement.classList.contains('is-fullscreen-manual');
+  document.documentElement.classList.toggle('is-fullscreen', lit);
+  fsBtn.classList.toggle('fs-on', lit);
+  fsLabel.textContent = lit ? 'Exit' : 'Fullscreen';
+}
+fsBtn.onclick = ()=>{
+  const docEl = document.documentElement;
+  const isFs = !!document.fullscreenElement;
+  if(!isFs){
+    if(docEl.requestFullscreen){
+      docEl.requestFullscreen().then(()=>{ docEl.classList.remove('is-fullscreen-manual'); syncFs(); })
+        .catch(()=>{ docEl.classList.add('is-fullscreen-manual'); syncFs(); });
+    } else {
+      docEl.classList.add('is-fullscreen-manual'); syncFs();
+    }
+  } else {
+    if(document.exitFullscreen) document.exitFullscreen().catch(()=>{});
+    docEl.classList.remove('is-fullscreen-manual'); syncFs();
+  }
+};
+document.addEventListener('fullscreenchange', ()=>{
+  if(!document.fullscreenElement) document.documentElement.classList.remove('is-fullscreen-manual');
+  syncFs();
+});
+
+// ===== boot =====
+renderKPIband();
+renderInsights();
+render();
+clockTick();
+syncFs();
+setInterval(tick, 1000);
+setInterval(clockTick, 1000);
+</script>
+</body>
+</html>

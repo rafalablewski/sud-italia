@@ -1,0 +1,811 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sud Italia KDS — Triage</title>
+<style>
+  :root{
+    /* surfaces */
+    --canvas:#0A0C10;
+    --panel:#11151B;
+    --raised:#1A2129;
+    --hair:rgba(255,255,255,0.08);
+    --hair-strong:rgba(255,255,255,0.14);
+    /* text */
+    --text:#E9EDF2;
+    --dim:#9098A3;
+    --faint:#5C6571;
+    /* tone palette */
+    --queued:#5B6573;
+    --firing:#3B82F6;
+    --warn:#F5A623;
+    --risk:#8B5CF6;
+    --late:#E5484D;
+    --ready:#3DD68C;
+    /* tone soft tints */
+    --firing-soft:rgba(59,130,246,0.13);
+    --warn-soft:rgba(245,166,35,0.13);
+    --risk-soft:rgba(139,92,246,0.16);
+    --late-soft:rgba(229,72,77,0.15);
+    --ready-soft:rgba(61,214,140,0.13);
+    /* 8px spacing grid */
+    --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--canvas);
+    color:var(--text);
+    font-family:var(--sans);
+    font-size:14px;
+    line-height:1.4;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
+  .tnum{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;font-family:var(--mono)}
+
+  /* ---------------- Header ---------------- */
+  header{
+    flex:0 0 auto;
+    display:flex;align-items:center;gap:var(--s5);
+    height:64px;padding:0 var(--s5);
+    background:var(--panel);
+    border-bottom:1px solid var(--hair);
+  }
+  .brand{display:flex;align-items:baseline;gap:var(--s3);flex:0 0 auto}
+  .wordmark{font-weight:700;font-size:15px;letter-spacing:0.26em;color:var(--text)}
+  .kd-label{font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:var(--faint)}
+  .design-tag{
+    font-family:var(--mono);font-size:11px;letter-spacing:0.04em;color:var(--risk);
+    padding:4px 9px;border:1px solid rgba(139,92,246,0.4);border-radius:6px;
+    background:var(--risk-soft);white-space:nowrap;
+  }
+
+  .grp{display:flex;align-items:center;gap:var(--s1)}
+  .lbl{font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:var(--faint);margin-right:6px}
+
+  /* station filter chips */
+  .filters{display:flex;gap:var(--s1)}
+  .chip{
+    appearance:none;background:transparent;border:1px solid var(--hair);color:var(--dim);
+    font-family:var(--sans);font-size:12px;letter-spacing:0.01em;padding:6px 11px;border-radius:7px;
+    cursor:pointer;transition:all .15s ease;white-space:nowrap;
+  }
+  .chip:hover{border-color:var(--hair-strong);color:var(--text)}
+  .chip[aria-pressed="true"]{background:var(--text);border-color:var(--text);color:#0a0c10;font-weight:600}
+
+  /* lines switcher — segmented control with live counts */
+  .lines{
+    display:flex;align-items:stretch;border:1px solid var(--hair);border-radius:8px;
+    overflow:hidden;background:var(--raised);
+  }
+  .line{
+    appearance:none;border:0;background:transparent;cursor:pointer;
+    font-family:var(--sans);font-size:12px;letter-spacing:0.01em;color:var(--dim);
+    padding:7px 12px;display:inline-flex;align-items:center;gap:7px;transition:all .15s ease;
+    border-right:1px solid var(--hair);white-space:nowrap;
+  }
+  .line:last-child{border-right:0}
+  .line:hover{color:var(--text)}
+  .line .lcount{
+    font-family:var(--mono);font-size:11px;font-weight:600;min-width:18px;height:17px;padding:0 5px;
+    border-radius:5px;display:inline-flex;align-items:center;justify-content:center;
+    background:var(--hair);color:var(--dim);
+  }
+  .line[aria-pressed="true"]{background:var(--firing);color:#06101f;font-weight:600}
+  .line[aria-pressed="true"] .lcount{background:rgba(6,16,31,0.24);color:#06101f}
+
+  .spacer{margin-left:auto}
+
+  .clock{
+    font-family:var(--mono);font-size:16px;letter-spacing:0.05em;color:var(--text);
+    min-width:84px;text-align:right;
+  }
+  .clock .sec{color:var(--dim)}
+
+  .iconbtn,.gallery-link{
+    appearance:none;cursor:pointer;border:1px solid var(--hair);background:transparent;
+    color:var(--dim);font-family:var(--sans);font-size:12px;letter-spacing:0.01em;
+    padding:7px 11px;border-radius:7px;display:inline-flex;align-items:center;gap:7px;
+    transition:all .15s ease;white-space:nowrap;text-decoration:none;
+  }
+  .iconbtn:hover,.gallery-link:hover{color:var(--text);border-color:var(--hair-strong)}
+  .iconbtn svg{width:14px;height:14px;display:block}
+  .fsbtn .fs-on{display:none}
+  .is-fullscreen .fsbtn .fs-on{display:inline-flex}
+  .is-fullscreen .fsbtn .fs-off{display:none}
+
+  /* ---------------- Board ---------------- */
+  .board{
+    flex:1 1 auto;min-height:0;
+    display:flex;flex-direction:column;
+    padding:var(--s5);gap:var(--s4);
+  }
+  .zones{
+    flex:1 1 auto;min-height:0;
+    display:grid;
+    grid-template-columns:1.25fr 1fr 1fr;
+    gap:var(--s4);
+  }
+  /* hide non-relevant zones depending on lines filter */
+  body[data-line="new"] .zones{grid-template-columns:1fr}
+  body[data-line="progress"] .zones{grid-template-columns:1fr 1fr}
+  body[data-line="ready"] .zones{display:none}
+  body[data-line="expo"] .zones{display:none}
+
+  .zone{
+    display:flex;flex-direction:column;min-height:0;
+    background:var(--panel);
+    border:1px solid var(--hair);
+    border-radius:14px;
+    overflow:hidden;
+  }
+  .zone.hide{display:none}
+  .zone-head{
+    flex:0 0 auto;display:flex;align-items:center;gap:var(--s2);
+    padding:var(--s3) var(--s4);
+    border-bottom:1px solid var(--hair);
+  }
+  .zone-title{font-size:13px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:var(--text)}
+  .zone-sub{font-size:11px;color:var(--faint);letter-spacing:0.02em}
+  .zone-count{
+    font-family:var(--mono);font-size:12px;font-weight:700;margin-left:auto;
+    min-width:26px;height:24px;padding:0 8px;border-radius:7px;
+    display:inline-flex;align-items:center;justify-content:center;
+    background:var(--hair);color:var(--text);
+  }
+  .zone-list{
+    flex:1 1 auto;min-height:0;overflow-y:auto;
+    padding:var(--s3);
+    display:flex;flex-direction:column;gap:var(--s3);
+  }
+  .zone-list::-webkit-scrollbar{width:8px}
+  .zone-list::-webkit-scrollbar-thumb{background:var(--hair-strong);border-radius:4px}
+
+  /* RISK zone — the hero */
+  .zone.risk{
+    border-color:rgba(139,92,246,0.45);
+    box-shadow:0 0 0 1px rgba(139,92,246,0.18), 0 24px 60px -30px rgba(139,92,246,0.55);
+    background:linear-gradient(180deg, rgba(139,92,246,0.07), var(--panel) 120px);
+  }
+  .zone.risk .zone-head{border-bottom-color:rgba(139,92,246,0.28)}
+  .zone.risk .zone-title{color:#C9B6FF}
+  .zone.risk .zone-count{background:var(--risk);color:#0a0c10}
+  .zone.risk .zone-pulse{
+    width:9px;height:9px;border-radius:50%;background:var(--risk);
+    box-shadow:0 0 0 0 rgba(139,92,246,0.7);animation:pulse 1.8s infinite;
+  }
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(139,92,246,0.6)}
+    70%{box-shadow:0 0 0 10px rgba(139,92,246,0)}
+    100%{box-shadow:0 0 0 0 rgba(139,92,246,0)}
+  }
+  .zone.now .zone-title{color:#A9C7FF}
+  .zone.next .zone-title{color:var(--dim)}
+
+  .empty{
+    color:var(--faint);font-size:12px;text-align:center;padding:var(--s6) var(--s4);
+    border:1px dashed var(--hair);border-radius:10px;letter-spacing:0.03em;
+  }
+
+  /* ---------------- Ticket card ---------------- */
+  .card{
+    position:relative;
+    background:var(--raised);
+    border:1px solid var(--hair);
+    border-radius:12px;
+    padding:var(--s3) var(--s4);
+    cursor:pointer;
+    transition:transform .16s ease, border-color .16s ease, background .2s ease;
+    animation:cardIn .18s ease;
+  }
+  @keyframes cardIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .card:hover{transform:translateY(-2px);border-color:var(--hair-strong)}
+  .card .edge{
+    position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:12px 0 0 12px;background:var(--queued);
+  }
+  /* tone treatments on the card */
+  .card[data-tone="firing"] .edge{background:var(--firing)}
+  .card[data-tone="warn"]   .edge{background:var(--warn)}
+  .card[data-tone="queued"] .edge{background:var(--queued)}
+  .card[data-tone="ready"]  .edge{background:var(--ready)}
+  /* flood-tint ONLY at-risk + late */
+  .card[data-tone="risk"]{
+    background:linear-gradient(180deg, var(--risk-soft), var(--raised));
+    border-color:rgba(139,92,246,0.5);
+  }
+  .card[data-tone="risk"] .edge{background:var(--risk);width:5px}
+  .card[data-tone="late"]{
+    background:linear-gradient(180deg, var(--late-soft), var(--raised));
+    border-color:rgba(229,72,77,0.5);
+  }
+  .card[data-tone="late"] .edge{background:var(--late);width:5px}
+
+  .card-top{display:flex;align-items:flex-start;gap:var(--s3)}
+  .ident{flex:1 1 auto;min-width:0}
+  .oid{font-family:var(--mono);font-size:15px;font-weight:700;letter-spacing:0.05em;color:var(--text)}
+  .oname{font-size:12px;color:var(--dim);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tags{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+  .tag{
+    font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:var(--dim);
+    border:1px solid var(--hair);padding:2px 6px;border-radius:5px;
+  }
+  .tag.delivery{color:#9bb8 e8}
+  .tag.ch{display:inline-flex;align-items:center;gap:4px}
+  .tag.ch svg{width:11px;height:11px}
+
+  /* timers cluster */
+  .timers{flex:0 0 auto;display:flex;align-items:center;gap:var(--s4)}
+  .elapsed{display:flex;flex-direction:column;align-items:flex-end}
+  .elapsed .big{font-family:var(--mono);font-size:30px;font-weight:700;line-height:1;letter-spacing:0.01em;color:var(--text)}
+  .elapsed .cap{font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--faint);margin-top:3px}
+
+  /* SLA ring */
+  .ring{position:relative;width:56px;height:56px;flex:0 0 auto}
+  .ring svg{width:56px;height:56px;transform:rotate(-90deg)}
+  .ring .track{stroke:var(--hair);}
+  .ring .fill{stroke:var(--firing);transition:stroke-dashoffset .9s linear, stroke .3s ease;stroke-linecap:round}
+  .card[data-tone="warn"]  .ring .fill{stroke:var(--warn)}
+  .card[data-tone="queued"] .ring .fill{stroke:var(--queued)}
+  .card[data-tone="risk"]  .ring .fill{stroke:var(--risk)}
+  .card[data-tone="late"]  .ring .fill{stroke:var(--late)}
+  .card[data-tone="ready"] .ring .fill{stroke:var(--ready)}
+  .ring .due{
+    position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  }
+  .ring .due .t{font-family:var(--mono);font-size:13px;font-weight:700;line-height:1;color:var(--text)}
+  .ring .due .l{font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:var(--faint);margin-top:2px}
+  .card[data-tone="risk"] .ring .due .t{color:#C9B6FF}
+  .card[data-tone="late"] .ring .due .t{color:#FF9A9D}
+
+  /* predictive note — appears for risk */
+  .pred-flag{
+    margin-top:var(--s2);display:none;align-items:center;gap:7px;
+    font-size:11px;letter-spacing:0.01em;color:#C9B6FF;
+    background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.3);
+    padding:5px 9px;border-radius:7px;
+  }
+  .card[data-tone="risk"] .pred-flag{display:flex}
+  .pred-flag svg{width:13px;height:13px;flex:0 0 auto}
+  .late-flag{
+    margin-top:var(--s2);display:none;align-items:center;gap:7px;
+    font-size:11px;letter-spacing:0.01em;color:#FF9A9D;
+    background:rgba(229,72,77,0.12);border:1px solid rgba(229,72,77,0.3);
+    padding:5px 9px;border-radius:7px;
+  }
+  .card[data-tone="late"] .late-flag{display:flex}
+  .late-flag svg{width:13px;height:13px;flex:0 0 auto}
+
+  /* items */
+  .items{margin-top:var(--s3);display:flex;flex-direction:column;gap:4px}
+  .item{display:flex;align-items:baseline;gap:var(--s2);font-size:13px}
+  .item .q{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--firing);min-width:22px}
+  .card[data-tone="risk"] .item .q{color:var(--risk)}
+  .card[data-tone="late"] .item .q{color:var(--late)}
+  .item .n{color:var(--text)}
+  .item .inote{font-size:11px;color:var(--warn);font-style:italic}
+  .ordernote{
+    margin-top:var(--s2);font-size:11px;color:var(--dim);
+    display:flex;gap:6px;align-items:flex-start;
+  }
+  .ordernote svg{width:12px;height:12px;flex:0 0 auto;margin-top:1px;color:var(--faint)}
+
+  /* primary action */
+  .act{
+    margin-top:var(--s3);width:100%;appearance:none;cursor:pointer;
+    border:1px solid var(--hair-strong);background:var(--firing);color:#06101f;
+    font-family:var(--sans);font-size:13px;font-weight:700;letter-spacing:0.03em;
+    padding:9px;border-radius:9px;transition:filter .15s ease,transform .1s ease;
+    display:flex;align-items:center;justify-content:center;gap:7px;
+  }
+  .act:hover{filter:brightness(1.08)}
+  .act:active{transform:scale(0.985)}
+  .act svg{width:14px;height:14px}
+  .card[data-tone="queued"] .act{background:var(--raised);color:var(--text);border-color:var(--hair-strong)}
+  .card[data-tone="risk"] .act{background:var(--risk);color:#0a0c10}
+  .card[data-tone="late"] .act{background:var(--late);color:#0a0c10}
+  .card[data-tone="warn"] .act{background:var(--warn);color:#0a0c10}
+
+  /* compact ticket variant for NEXT */
+  .zone.next .card{padding:var(--s3)}
+  .zone.next .elapsed .big{font-size:24px}
+  .zone.next .ring{width:48px;height:48px}
+  .zone.next .ring svg{width:48px;height:48px}
+
+  /* ---------------- Ready · Expo rail ---------------- */
+  .rail{
+    flex:0 0 auto;
+    background:var(--panel);
+    border:1px solid var(--hair);
+    border-left:3px solid var(--ready);
+    border-radius:14px;
+    padding:var(--s3) var(--s4);
+    display:flex;align-items:center;gap:var(--s4);
+  }
+  body[data-line="new"] .rail,
+  body[data-line="progress"] .rail,
+  body[data-line="risk-only"] .rail{display:none}
+  /* on ready/expo line, expand the rail to fill */
+  body[data-line="ready"] .board,
+  body[data-line="expo"] .board{justify-content:flex-start}
+  body[data-line="ready"] .rail,
+  body[data-line="expo"] .rail{flex:1 1 auto;flex-wrap:wrap;align-items:flex-start;align-content:flex-start;overflow-y:auto}
+
+  .rail-head{flex:0 0 auto;display:flex;flex-direction:column;gap:2px;min-width:120px}
+  .rail-title{font-size:12px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--ready)}
+  .rail-sub{font-size:10px;color:var(--faint);letter-spacing:0.04em}
+  .rail-count{
+    font-family:var(--mono);font-size:13px;font-weight:700;color:var(--text);margin-top:2px;
+  }
+  .rail-list{flex:1 1 auto;display:flex;gap:var(--s3);flex-wrap:wrap;min-width:0}
+  body[data-line="ready"] .rail-list,
+  body[data-line="expo"] .rail-list{width:100%}
+
+  .ready-card{
+    flex:0 0 auto;display:flex;align-items:center;gap:var(--s3);
+    background:linear-gradient(180deg, var(--ready-soft), var(--raised));
+    border:1px solid rgba(61,214,140,0.4);
+    border-radius:10px;padding:var(--s2) var(--s3);
+    animation:cardIn .18s ease;
+  }
+  .ready-card .rid{font-family:var(--mono);font-size:14px;font-weight:700;letter-spacing:0.04em;color:var(--text)}
+  .ready-card .rmeta{font-size:11px;color:var(--dim);margin-top:1px}
+  .ready-card .rtime{font-family:var(--mono);font-size:11px;color:var(--ready);text-align:right}
+  .bump{
+    appearance:none;cursor:pointer;border:0;background:var(--ready);color:#06120c;
+    font-family:var(--sans);font-size:12px;font-weight:700;letter-spacing:0.03em;
+    padding:8px 14px;border-radius:8px;display:inline-flex;align-items:center;gap:6px;
+    transition:filter .15s ease,transform .1s ease;
+  }
+  .bump:hover{filter:brightness(1.08)}
+  .bump:active{transform:scale(0.97)}
+  .bump svg{width:13px;height:13px}
+  .rail-empty{color:var(--faint);font-size:12px;letter-spacing:0.03em}
+
+  /* fullscreen-only emphasis: bigger type edge-to-edge */
+  .is-fullscreen .board{padding:var(--s6)}
+  .is-fullscreen .elapsed .big{font-size:36px}
+  .is-fullscreen .oid{font-size:17px}
+  .is-fullscreen .item{font-size:15px}
+
+  /* responsive fallback */
+  @media (max-width:1100px){
+    .zones{grid-template-columns:1fr 1fr}
+    .zone.next{display:none}
+    body[data-line="all"] .lbl{display:none}
+  }
+</style>
+</head>
+<body data-line="all" data-station="all">
+
+  <header>
+    <div class="brand">
+      <span class="wordmark">SUD ITALIA</span>
+      <span class="kd-label">Kitchen Display</span>
+      <span class="design-tag">14 · Triage</span>
+    </div>
+
+    <div class="grp">
+      <span class="lbl">Station</span>
+      <div class="filters" id="stations"></div>
+    </div>
+
+    <div class="grp spacer">
+      <span class="lbl">Lines</span>
+      <div class="lines" id="lines"></div>
+    </div>
+
+    <div class="clock tnum" id="clock">--:--<span class="sec">:--</span></div>
+
+    <button class="iconbtn fsbtn" id="fsbtn" title="Toggle fullscreen">
+      <span class="fs-off" style="display:inline-flex;align-items:center;gap:7px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+        Fullscreen
+      </span>
+      <span class="fs-on" style="align-items:center;gap:7px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3M16 3v3a2 2 0 0 0 2 2h3M3 16h3a2 2 0 0 1 2 2v3M21 16h-3a2 2 0 0 0-2 2v3"/></svg>
+        Exit
+      </span>
+    </button>
+
+    <a class="gallery-link" href="index.html">&larr; Gallery</a>
+  </header>
+
+  <main class="board">
+    <div class="zones">
+      <section class="zone risk" id="zone-risk">
+        <div class="zone-head">
+          <span class="zone-pulse"></span>
+          <span class="zone-title">Risk</span>
+          <span class="zone-sub">model says it breaches</span>
+          <span class="zone-count tnum" id="count-risk">0</span>
+        </div>
+        <div class="zone-list" id="list-risk"></div>
+      </section>
+
+      <section class="zone now" id="zone-now">
+        <div class="zone-head">
+          <span class="zone-title">Now</span>
+          <span class="zone-sub">fire &amp; finish</span>
+          <span class="zone-count tnum" id="count-now">0</span>
+        </div>
+        <div class="zone-list" id="list-now"></div>
+      </section>
+
+      <section class="zone next" id="zone-next">
+        <div class="zone-head">
+          <span class="zone-title">Next</span>
+          <span class="zone-sub">on pace · upcoming</span>
+          <span class="zone-count tnum" id="count-next">0</span>
+        </div>
+        <div class="zone-list" id="list-next"></div>
+      </section>
+    </div>
+
+    <section class="rail" id="rail">
+      <div class="rail-head">
+        <span class="rail-title">Ready · Expo</span>
+        <span class="rail-sub">hand off to pass</span>
+        <span class="rail-count tnum" id="count-ready">0 plated</span>
+      </div>
+      <div class="rail-list" id="list-ready"></div>
+    </section>
+  </main>
+
+<script>
+"use strict";
+
+/* ---------------- Dataset ---------------- */
+const ORDERS = [
+  { id:"A4F9C2", name:"Marco R.",  channel:"takeout",  loc:"Kraków",   slot:"15:20", elapsed:192, sla:150, pred:130, status:"prep",
+    items:[{q:2,n:"Margherita",c:"Pizza"},{q:1,n:"Diavola",c:"Pizza"},{q:1,n:"Espresso",c:"Drinks"}] },
+  { id:"B7K2D1", name:"Giulia M.", channel:"delivery", loc:"Kraków",   slot:"15:15", elapsed:540, sla:-65, pred:80,  status:"prep",
+    items:[{q:1,n:"Quattro Formaggi",c:"Pizza"},{q:1,n:"Spaghetti Carbonara",c:"Pasta",note:"no garlic"},{q:1,n:"Tiramisù",c:"Desserts"}], note:"Leave at reception" },
+  { id:"C1M8X4", name:"Paweł K.",  channel:"takeout",  loc:"Warszawa", slot:"15:30", elapsed:48,  sla:612, pred:300, status:"new",
+    items:[{q:1,n:"Diavola",c:"Pizza"},{q:2,n:"Aranciata",c:"Drinks"}] },
+  { id:"D9P3Q7", name:"Anna W.",   channel:"delivery", loc:"Warszawa", slot:"15:28", elapsed:95,  sla:505, pred:560, status:"new",
+    items:[{q:3,n:"Margherita",c:"Pizza"},{q:1,n:"Penne Arrabbiata",c:"Pasta"},{q:2,n:"Limonata Fresca",c:"Drinks"}] },
+  { id:"E5R6T2", name:"Luca B.",   channel:"takeout",  loc:"Kraków",   slot:"15:22", elapsed:300, sla:120, pred:150, status:"prep",
+    items:[{q:1,n:"Tartufata Reale",c:"Pizza",note:"extra truffle"},{q:1,n:"Burrata con Pomodorini",c:"Antipasti"}] },
+  { id:"F2H4J8", name:"Sofia L.",  channel:"takeout",  loc:"Kraków",   slot:"15:10", elapsed:720, sla:0,   pred:0,   status:"ready",
+    items:[{q:1,n:"Panino Caprese",c:"Panini"},{q:1,n:"Garlic Bread",c:"Antipasti"},{q:1,n:"Espresso",c:"Drinks"}] },
+  { id:"G8L1N5", name:"Tomek Z.",  channel:"delivery", loc:"Warszawa", slot:"15:32", elapsed:150, sla:450, pred:360, status:"new",
+    items:[{q:2,n:"Penne Arrabbiata",c:"Pasta"},{q:1,n:"Linguine al Pesto",c:"Pasta"}] },
+  { id:"H3W7Y9", name:"Elena P.",  channel:"takeout",  loc:"Kraków",   slot:"15:08", elapsed:660, sla:0,   pred:0,   status:"ready",
+    items:[{q:1,n:"Prosciutto e Rucola",c:"Pizza"},{q:1,n:"Arancini (3 pcs)",c:"Antipasti"}] },
+];
+
+/* working copy with removed flag */
+let orders = ORDERS.map(o => ({ ...o, items: o.items.map(i => ({...i})), removed:false }));
+
+/* ---------------- Tone (implemented EXACTLY) ---------------- */
+function tone(o){
+  if(o.status==='ready')   return 'ready';
+  if(o.sla < 0)            return 'late';
+  if((o.pred||0) > o.sla)  return 'risk';   // model predicts the promise WILL be missed — BEFORE it actually is
+  if(o.sla < 180)          return 'warn';
+  return o.status==='new' ? 'queued' : 'firing';
+}
+
+/* zone membership derived from tone */
+function zoneOf(o){
+  const t = tone(o);
+  if(t === 'ready') return 'ready';
+  if(t === 'risk' || t === 'late') return 'risk';
+  if(t === 'firing' || t === 'warn') return 'now';
+  return 'next'; // queued
+}
+
+const STATIONS = ["All","Pizza","Pasta","Antipasti","Panini","Drinks","Desserts"];
+const LINES = [
+  { key:"all",      label:"All" },
+  { key:"new",      label:"New" },
+  { key:"progress", label:"In progress" },
+  { key:"ready",    label:"Ready" },
+  { key:"expo",     label:"Expo" },
+];
+
+let activeStation = "all";
+let activeLine = "all";
+
+/* ---------------- Helpers ---------------- */
+function fmt(sec){
+  const neg = sec < 0;
+  const a = Math.abs(Math.round(sec));
+  const m = Math.floor(a/60);
+  const s = a%60;
+  return (neg?"-":"") + m + ":" + String(s).padStart(2,"0");
+}
+function svgEl(name){ return document.createElementNS("http://www.w3.org/2000/svg", name); }
+
+/* channel icon */
+function channelIcon(ch){
+  if(ch === "delivery"){
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/><path d="M3 5h2l2.4 9.6a1 1 0 0 0 1 .8h6.8M9 17.5h6"/><path d="M14 8h5l2 4"/></svg>';
+  }
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0"/></svg>';
+}
+
+/* does an order have any item in the active station */
+function matchesStation(o){
+  if(activeStation === "all") return true;
+  return o.items.some(i => i.c === activeStation);
+}
+
+/* does an order belong to the active line filter */
+function matchesLine(o){
+  if(activeLine === "all") return true;
+  const z = zoneOf(o);
+  if(activeLine === "new") return o.status === "new";          // New
+  if(activeLine === "progress") return o.status === "prep";    // In progress
+  if(activeLine === "ready") return o.status === "ready";      // Ready
+  if(activeLine === "expo") return o.status === "ready";       // Expo (handoff stage = ready tickets)
+  return true;
+}
+
+/* ---------------- Build header controls ---------------- */
+const stationsEl = document.getElementById("stations");
+STATIONS.forEach(s => {
+  const b = document.createElement("button");
+  b.className = "chip";
+  b.textContent = s;
+  const key = s.toLowerCase();
+  b.setAttribute("aria-pressed", String(key === activeStation || (s==="All" && activeStation==="all")));
+  b.addEventListener("click", () => {
+    activeStation = (s === "All") ? "all" : s;
+    [...stationsEl.children].forEach(c => c.setAttribute("aria-pressed", String(c.textContent === s)));
+    render();
+  });
+  stationsEl.appendChild(b);
+});
+
+const linesEl = document.getElementById("lines");
+const lineButtons = {};
+LINES.forEach(l => {
+  const b = document.createElement("button");
+  b.className = "line";
+  b.setAttribute("aria-pressed", String(l.key === activeLine));
+  b.innerHTML = '<span class="ltext">'+l.label+'</span><span class="lcount tnum" data-line="'+l.key+'">0</span>';
+  b.addEventListener("click", () => {
+    activeLine = l.key;
+    document.body.setAttribute("data-line", activeLine);
+    [...linesEl.children].forEach((c,i) => c.setAttribute("aria-pressed", String(LINES[i].key === activeLine)));
+    render();
+  });
+  linesEl.appendChild(b);
+  lineButtons[l.key] = b;
+});
+
+/* ---------------- Fullscreen ---------------- */
+const fsbtn = document.getElementById("fsbtn");
+fsbtn.addEventListener("click", () => {
+  const fsActive = document.fullscreenElement;
+  if(!fsActive){
+    const p = document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
+    if(p && p.catch) p.catch(() => { document.documentElement.classList.add("is-fullscreen"); });
+    else if(!document.documentElement.requestFullscreen) document.documentElement.classList.add("is-fullscreen");
+  } else {
+    const p = document.exitFullscreen && document.exitFullscreen();
+    if(p && p.catch) p.catch(() => { document.documentElement.classList.remove("is-fullscreen"); });
+  }
+});
+document.addEventListener("fullscreenchange", () => {
+  document.documentElement.classList.toggle("is-fullscreen", !!document.fullscreenElement);
+});
+
+/* ---------------- Wall clock ---------------- */
+const clockEl = document.getElementById("clock");
+function tickClock(){
+  const d = new Date();
+  const hh = String(d.getHours()).padStart(2,"0");
+  const mm = String(d.getMinutes()).padStart(2,"0");
+  const ss = String(d.getSeconds()).padStart(2,"0");
+  clockEl.innerHTML = hh+":"+mm+'<span class="sec">:'+ss+'</span>';
+}
+
+/* ---------------- Ticket card (active zones) ---------------- */
+const RING_R = 24;
+const RING_C = 2 * Math.PI * RING_R;
+
+function ticketCard(o){
+  const t = tone(o);
+  const card = document.createElement("div");
+  card.className = "card";
+  card.dataset.tone = t;
+  card.dataset.id = o.id;
+
+  const isLate = o.sla < 0;
+  const dueLabel = isLate ? "Late" : "Due";
+  const dueVal = fmt(o.sla);
+
+  // SLA ring depletion: fraction of promise window remaining.
+  // Use the order's max(initial sla, current+) as window baseline; clamp 0..1.
+  const baseline = o._slaBase || Math.max(o.sla, 1);
+  if(!o._slaBase) o._slaBase = baseline;
+  let frac = baseline > 0 ? Math.max(0, Math.min(1, o.sla / baseline)) : 0;
+  if(isLate) frac = 0;
+  const offset = RING_C * (1 - frac);
+
+  const actLabel = o.status === "new" ? "Start" : (o.status === "prep" ? "Ready" : "Bump");
+
+  const itemsHtml = o.items.map(i =>
+    '<div class="item"><span class="q tnum">'+i.q+'&times;</span><span class="n">'+i.n+
+    (i.note ? ' <span class="inote">· '+i.note+'</span>' : '')+'</span></div>'
+  ).join("");
+
+  card.innerHTML =
+    '<span class="edge"></span>'+
+    '<div class="card-top">'+
+      '<div class="ident">'+
+        '<div class="oid tnum">#'+o.id+'</div>'+
+        '<div class="oname">'+o.name+' · '+o.loc+'</div>'+
+        '<div class="tags">'+
+          '<span class="tag ch '+o.channel+'">'+channelIcon(o.channel)+o.channel+'</span>'+
+          '<span class="tag">slot '+o.slot+'</span>'+
+        '</div>'+
+      '</div>'+
+      '<div class="timers">'+
+        '<div class="elapsed">'+
+          '<span class="big tnum">'+fmt(o.elapsed)+'</span>'+
+          '<span class="cap">elapsed</span>'+
+        '</div>'+
+        '<div class="ring">'+
+          '<svg viewBox="0 0 56 56">'+
+            '<circle class="track" cx="28" cy="28" r="'+RING_R+'" fill="none" stroke-width="5"/>'+
+            '<circle class="fill" cx="28" cy="28" r="'+RING_R+'" fill="none" stroke-width="5" '+
+              'stroke-dasharray="'+RING_C.toFixed(2)+'" stroke-dashoffset="'+offset.toFixed(2)+'"/>'+
+          '</svg>'+
+          '<div class="due"><span class="t tnum">'+dueVal+'</span><span class="l">'+dueLabel+'</span></div>'+
+        '</div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="pred-flag">'+
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4"/><circle cx="12" cy="12" r="3"/></svg>'+
+      'Model: ready in '+fmt(o.pred)+' — '+fmt(o.pred - Math.max(o.sla,0))+' past promise'+
+    '</div>'+
+    '<div class="late-flag">'+
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>'+
+      'Breached promise by '+fmt(Math.abs(o.sla))+' — recover now'+
+    '</div>'+
+    '<div class="items">'+itemsHtml+'</div>'+
+    (o.note ? '<div class="ordernote"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'+o.note+'</div>' : '')+
+    '<button class="act">'+
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'+
+      actLabel+
+    '</button>';
+
+  const advance = (e) => { e.stopPropagation(); advanceOrder(o); };
+  card.querySelector(".act").addEventListener("click", advance);
+  card.addEventListener("click", advance);
+  return card;
+}
+
+/* ---------------- Ready · Expo card ---------------- */
+function readyCard(o){
+  const c = document.createElement("div");
+  c.className = "ready-card";
+  c.dataset.id = o.id;
+  const pizzas = o.items.reduce((a,i)=>a+i.q,0);
+  c.innerHTML =
+    '<div>'+
+      '<div class="rid tnum">#'+o.id+'</div>'+
+      '<div class="rmeta">'+o.name+' · '+o.loc+' · '+pizzas+' items</div>'+
+    '</div>'+
+    '<div class="rtime tnum">'+fmt(o.elapsed)+'<br><span style="color:var(--faint);font-size:9px;letter-spacing:.1em">PLATED</span></div>'+
+    '<button class="bump">'+
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'+
+      'Bump · Done'+
+    '</button>';
+  c.querySelector(".bump").addEventListener("click", (e) => { e.stopPropagation(); advanceOrder(o); });
+  return c;
+}
+
+/* ---------------- Advance lifecycle ---------------- */
+function advanceOrder(o){
+  if(o.status === "new"){
+    o.status = "prep";
+    // give it a working SLA baseline if it had a large promise window
+    o._slaBase = Math.max(o.sla, 1);
+  } else if(o.status === "prep"){
+    o.status = "ready";
+    o.sla = 0; o.pred = 0;
+  } else if(o.status === "ready"){
+    o.removed = true;
+  }
+  render();
+}
+
+/* ---------------- Render ---------------- */
+function render(){
+  const visible = orders.filter(o => !o.removed && matchesStation(o) && matchesLine(o));
+
+  // bucket by zone
+  const buckets = { risk:[], now:[], next:[], ready:[] };
+  visible.forEach(o => buckets[zoneOf(o)].push(o));
+
+  // sort: risk -> most overdue/most-predicted-over first; now -> least sla first; next -> least sla first
+  const overBy = o => (o.pred||0) - o.sla;            // how far model says past promise
+  buckets.risk.sort((a,b) => (a.sla - b.sla) || (overBy(b) - overBy(a)));
+  buckets.now.sort((a,b) => a.sla - b.sla);
+  buckets.next.sort((a,b) => a.sla - b.sla);
+  buckets.ready.sort((a,b) => b.elapsed - a.elapsed);
+
+  // populate active-zone lists
+  fillZone("risk", buckets.risk);
+  fillZone("now",  buckets.now);
+  fillZone("next", buckets.next);
+
+  // ready rail
+  const railList = document.getElementById("list-ready");
+  railList.innerHTML = "";
+  if(buckets.ready.length === 0){
+    railList.innerHTML = '<span class="rail-empty">No tickets waiting on the pass.</span>';
+  } else {
+    buckets.ready.forEach(o => railList.appendChild(readyCard(o)));
+  }
+  document.getElementById("count-ready").textContent = buckets.ready.length + " plated";
+
+  // zone counts
+  document.getElementById("count-risk").textContent = buckets.risk.length;
+  document.getElementById("count-now").textContent  = buckets.now.length;
+  document.getElementById("count-next").textContent = buckets.next.length;
+
+  updateLineCounts();
+}
+
+function fillZone(key, list){
+  const el = document.getElementById("list-"+key);
+  el.innerHTML = "";
+  if(list.length === 0){
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = key === "risk" ? "Nothing at risk — board is on pace."
+                      : key === "now"  ? "Nothing to fire right now."
+                      : "No upcoming tickets.";
+    el.appendChild(empty);
+    return;
+  }
+  list.forEach(o => el.appendChild(ticketCard(o)));
+}
+
+/* live counts on the lines switcher — computed against station filter only */
+function updateLineCounts(){
+  const pool = orders.filter(o => !o.removed && matchesStation(o));
+  const counts = {
+    all: pool.length,
+    new: pool.filter(o => o.status === "new").length,
+    progress: pool.filter(o => o.status === "prep").length,
+    ready: pool.filter(o => o.status === "ready").length,
+    expo: pool.filter(o => o.status === "ready").length,
+  };
+  LINES.forEach(l => {
+    const span = lineButtons[l.key].querySelector(".lcount");
+    if(span) span.textContent = counts[l.key];
+  });
+}
+
+/* ---------------- Live loop ---------------- */
+function liveTick(){
+  orders.forEach(o => {
+    if(o.removed || o.status === "ready") return;
+    o.elapsed += 1;
+    o.sla -= 1;
+    o.pred = Math.max(0, (o.pred||0) - 1);
+  });
+  render();
+}
+
+/* ---------------- Boot ---------------- */
+tickClock();
+render();
+setInterval(() => { liveTick(); }, 1000);
+setInterval(tickClock, 1000);
+</script>
+</body>
+</html>
