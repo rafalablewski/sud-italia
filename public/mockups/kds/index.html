@@ -97,9 +97,6 @@
   .body .theme { margin: 0 0 9px; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg-dim); font-weight: 600; }
   .body p { margin: 0; font-size: 13.5px; color: var(--fg-muted); line-height: 1.5; }
 
-  .legacy .band { background: #080b12; color: #cfd6e4; }
-  .legacy .band .word { font-size: 20px; }
-
   footer.note {
     margin-top: 48px; padding-top: 22px; border-top: 1px solid var(--border);
     color: var(--fg-dim); font-size: 12.5px; max-width: 780px;
@@ -111,8 +108,8 @@
   <div class="wrap">
     <header class="masthead">
       <p class="eyebrow">Sud Italia · Kitchen Display System</p>
-      <h1>Ten KDS design directions<br><span class="thin">one of these goes into <span style="color:var(--fg)">/admin/kds</span></span></h1>
-      <p class="lede">Each tile opens a <strong>live, fully interactive mockup</strong> — timers tick, urgency colours shift across the SLA thresholds, and tapping a ticket advances it through the line. Every direction is a genuinely different layout philosophy, built on the same eight-order rush so they compare like-for-like.</p>
+      <h1>KDS design shortlist<br><span class="thin">one of these goes into <span style="color:var(--fg)">/admin/kds</span></span></h1>
+      <p class="lede">The three directions still in the running. Each tile opens a <strong>live, fully interactive mockup</strong> — timers tick, urgency colours shift across the SLA thresholds, tapping a ticket advances it through the line, and each has a fullscreen mode plus an All / New / In progress / Ready · Expo lines switcher. Built on the same eight-order rush so they compare like-for-like.</p>
 
       <div class="meta-row">
         <span class="legend">
@@ -129,40 +126,19 @@
     <div class="grid" id="grid"></div>
 
     <footer class="note">
-      Served on every deploy at <code>/mockups/kds/</code> (relaxed CSP per <code>next.config.ts</code>). Self-contained HTML — no network, no build step. The winning direction gets ported into <code>src/components/admin</code> for <code>/admin/kds</code>. The prior single-file themed concept is preserved as <code>legacy-theme-switcher.html</code>.
+      Served on every deploy at <code>/mockups/kds/</code> (relaxed CSP per <code>next.config.ts</code>). Self-contained HTML — no network, no build step. The winning direction gets ported into <code>src/components/admin</code> for <code>/admin/kds</code>.
     </footer>
   </div>
 
   <script>
     const C = { danger: "#ff5d5d", warning: "#f5b13d", ready: "#4ecb8d", neutral: "#8a8f98" };
     const DESIGNS = [
-      { file:"01-graphite-rail.html", n:"01", name:"Graphite", theme:"Dark · single urgency rail", font:"mono",
-        bg:"#0B0C0E", ink:"#ededf0",
-        desc:"A single horizontal stream of uniform tickets, most-urgent first, with a hairline stage stripe. Linear/Vercel restraint — maximum signal, minimum chrome." },
-      { file:"02-bianco-board.html", n:"02", name:"Bianco", theme:"Light · three-column kanban", font:"sans",
-        bg:"#FAFAF8", ink:"#1a1a1a",
-        desc:"The safe, obviously-clean option: airy New / In progress / Ready columns, soft white cards, a thin accent bar. Calm and premium." },
-      { file:"03-console.html", n:"03", name:"Console", theme:"Dark · keyboard ops terminal", font:"mono",
-        bg:"#0a0f0c", ink:"#7CFFB2",
-        desc:"A monospace command console with a live terminal status line and bracketed bump-bar hotkeys on every ticket. For a line that runs on muscle memory." },
-      { file:"04-timeline.html", n:"04", name:"Timeline", theme:"Slate · SLA Gantt swimlanes", font:"sans",
-        bg:"#11161d", ink:"#e7ecf3",
-        desc:"Tickets plotted as bars on a time axis, one swimlane per station, with a live NOW line. Surfaces the promised-ready deadline, not just elapsed time." },
       { file:"05-marquee-focus.html", n:"05", name:"Marquee", theme:"Light · big-type expo focus", font:"sans",
         bg:"#ffffff", ink:"#111111",
         desc:"One hero “on deck” ticket in huge type with a ranked queue beside it. Readable from across a loud kitchen — keynote-grade clarity." },
-      { file:"06-heat-grid.html", n:"06", name:"Heat Grid", theme:"Dark · density heatmap", font:"mono",
-        bg:"#080A0D", ink:"#E9EDF2",
-        desc:"Dozens of compact tiles tinted by pressure — the eye is pulled straight to the hottest. Built for a heavy rush where you must see everything at once." },
       { file:"07-dual-expo.html", n:"07", name:"Dual Expo", theme:"Slate · cook + handoff split", font:"sans",
         bg:"#0f141a", ink:"#e6ebf2",
         desc:"A commercial-KDS two-pane: cooking on the left, ready-for-expo on the right, with a station rail. Mirrors how a real pass actually works." },
-      { file:"08-tap-stack.html", n:"08", name:"Tap Stack", theme:"Light · tablet-native feed", font:"sans",
-        bg:"#f4f5f7", ink:"#161616",
-        desc:"A single column of large, thumb-reachable cards with a segmented stage switch. Designed for a tablet mounted at the line, not a wall." },
-      { file:"09-editoriale.html", n:"09", name:"Editoriale", theme:"Ivory · boutique serif luxe", font:"serif",
-        bg:"#F6F1E7", ink:"#1A1A1A", accent:"#9c4221",
-        desc:"Tickets as fine printed menu cards — serif headers, letterpress hairlines, one terracotta accent. The “it looks expensive” direction." },
       { file:"10-operations.html", n:"10", name:"Operations", theme:"Dark · analytics + floor", font:"mono",
         bg:"#0a0d12", ink:"#e8edf4",
         desc:"A Bloomberg-terminal for the kitchen: live metric readouts and station load over a condensed ticket lane. The owner/manager command view." },
@@ -200,24 +176,6 @@
         </div>`;
       grid.appendChild(a);
     }
-
-    // Eleventh card — the preserved prior concept, kept discoverable.
-    const legacy = document.createElement("a");
-    legacy.className = "card legacy";
-    legacy.href = BASE + "legacy-theme-switcher.html";
-    legacy.innerHTML = `
-      <div class="band">
-        <span class="num">— —</span>
-        <span class="open">Open ↗</span>
-        <span class="word">Legacy</span>
-        <span class="swatches"><i style="background:#3a4a66"></i><i style="background:#5b6b88"></i></span>
-      </div>
-      <div class="body">
-        <h3>Legacy theme switcher</h3>
-        <p class="theme">Archived · single file</p>
-        <p>The earlier KDS redesign — one file with a 10-theme switcher (premium, minimal, terminal, trattoria…). Kept for reference.</p>
-      </div>`;
-    grid.appendChild(legacy);
   </script>
 </body>
 </html>
