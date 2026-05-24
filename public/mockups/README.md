@@ -14,7 +14,7 @@ reference when reviewing redesigns in real browsers.
 | Path | Purpose |
 |---|---|
 | `cart.html` | Cart + checkout redesign concepts — V7 (animated), V8 (trattoria), V9 (editorial). Built-in tab switcher; each version is a self-contained iframe. |
-| `kds/` | Kitchen Display System redesign — 10 selectable themes (premium, minimal, neat, clean, futuristic, trattoria, contrast, terminal, soft, dense). Single `index.html` with a theme switcher. |
+| `kds/` | Kitchen Display System redesign — 10 distinct design directions (Graphite, Bianco, Console, Timeline, Marquee, Heat Grid, Dual Expo, Tap Stack, Editoriale, Operations) as separate live files, browsable from `index.html`. The earlier single-file theme switcher is preserved as `legacy-theme-switcher.html`. |
 | `mobile/` | Mobile admin redesign — clickable screen mockups (see `docs/mobile/`) |
 | `bundle-ladders/` | 10 alternative layouts for the bundle-ladder admin page |
 | `menu-engineering.html` | Menu-engineering customer-facing redesign |
