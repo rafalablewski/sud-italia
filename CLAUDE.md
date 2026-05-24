@@ -38,6 +38,16 @@ Two active locations: Kraków, Warszawa. Serverless deployment.
 
 Dashboard, Orders, KDS, Menu, Recipes, Slots, Inventory, Suppliers, Purchase orders, Staff, Schedule, Customers, Loyalty, Feedback, Reports, Cash, Growth, Upsell, Truck, Locations, AI, Expansion, Users, Compliance, Audit log, Capabilities, Settings — all at `/admin/*`. Use the v2 `AdminShell` (nav config in `src/components/admin/v2/nav.config.ts`). Use glassmorphism design system (glass-card, glass-input, glass-btn, admin-text classes). The Capabilities page at `/admin/capabilities` is the source of truth for what's deployed — see Rule #9.
 
+## Where Draft Sketches and Test Artifacts Go
+
+All draft sketches, wireframes and design R&D belong in `/tests/`.
+
+- New sketches → `/tests/sketches/<descriptive-name>.html`
+- Standalone exploratory pages (logo concepts, palette tests, competitor comparisons) → top of `/tests/`
+- Never put drafts in `public/assets/` (it ships) or `src/` (it ships). Keep `/tests/` out of the deployed bundle.
+
+See `/tests/README.md` for the full convention and current contents.
+
 ## Key Patterns
 
 - Cross-sell suggestions: `src/lib/upsell.ts` → `getCartSuggestions()`. Always suggest espresso + dessert with pizza/pasta.
