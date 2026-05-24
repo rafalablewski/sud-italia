@@ -460,6 +460,137 @@
   [data-theme="futuristic"] .sb-title,
   [data-theme="futuristic"] .sect-title,
   [data-theme="futuristic"] .switcher-label { color: var(--info); }
+
+  /* ---- 6 · TRATTORIA — warm Italian: espresso, cream, terracotta, basil ---- */
+  [data-theme="trattoria"] {
+    --ink: #1a120c; --panel: #241811; --panel2: #2c1e15; --panel3: #3a281b;
+    --line: rgba(230,200,150,0.14); --line-2: rgba(230,200,150,0.32);
+    --fg: #f5ead3; --fg-muted: #d2bd9a; --fg-subtle: #a08a6a;
+    --brand: #c8302b; --new: #e4572e; --prog: #e0a526; --ready: #5b9d52; --info: #2e9e5b;
+    --radius: 14px;
+    --bar: rgba(36,24,17,0.85); --pane: rgba(36,24,17,0.45); --card-2: rgba(230,200,150,0.05);
+    --ticket-bg: linear-gradient(180deg, rgba(230,200,150,0.045), transparent), var(--panel2);
+  }
+  [data-theme="trattoria"] body {
+    background:
+      radial-gradient(1000px 600px at 12% -10%, rgba(200,48,43,0.18), transparent 55%),
+      radial-gradient(900px 700px at 100% 0%, rgba(91,157,82,0.13), transparent 55%),
+      var(--ink);
+  }
+  [data-theme="trattoria"] .brand-badge { background: linear-gradient(135deg, #c8302b, #7e1c19); box-shadow: 0 8px 22px rgba(200,48,43,0.35); }
+  [data-theme="trattoria"] .status-pill,
+  [data-theme="trattoria"] .btn-amber,
+  [data-theme="trattoria"] .btn-green { color: #1a120c; }
+
+  /* ---- 7 · HIGH-CONTRAST — black / yellow / white for bright kitchens ---- */
+  [data-theme="contrast"] {
+    --ink: #000000; --panel: #000000; --panel2: #0a0a0a; --panel3: #161616;
+    --line: rgba(255,255,255,0.35); --line-2: rgba(255,255,255,0.6);
+    --fg: #ffffff; --fg-muted: #e6e6e6; --fg-subtle: #b0b0b0;
+    --brand: #ffe600; --new: #ff3b30; --prog: #ff9f0a; --ready: #30d158; --info: #ffe600;
+    --radius: 8px;
+    --bar: #000000; --pane: #000000; --card-2: #0a0a0a; --ticket-bg: #0a0a0a;
+    --fill-1: rgba(255,255,255,0.08); --fill-2: rgba(255,255,255,0.14); --fill-3: rgba(255,255,255,0.2);
+    --blur: none; --shadow-card: none;
+  }
+  [data-theme="contrast"] body { background: #000; }
+  [data-theme="contrast"] .brand-badge { background: #ffe600; color: #000; box-shadow: none; }
+  [data-theme="contrast"] .ticket { border: 2px solid var(--line); }
+  [data-theme="contrast"] .ticket.selected { box-shadow: 0 0 0 3px var(--info); }
+  [data-theme="contrast"] .station-block,
+  [data-theme="contrast"] .counter-box,
+  [data-theme="contrast"] .detail-head,
+  [data-theme="contrast"] .ready-card { border-width: 2px; }
+  [data-theme="contrast"] .status-pill,
+  [data-theme="contrast"] .btn-amber,
+  [data-theme="contrast"] .btn-green,
+  [data-theme="contrast"] .qty.multi { color: #000; }
+  [data-theme="contrast"] .btn-info { background: var(--fill-2); color: var(--fg); border-color: var(--line); }
+  [data-theme="contrast"] .sw-btn.active { color: #000; box-shadow: none; }
+  [data-theme="contrast"] .switcher-label,
+  [data-theme="contrast"] .sb-title,
+  [data-theme="contrast"] .sect-title { color: var(--fg); }
+
+  /* ---- 8 · TERMINAL — monospace CRT ops console, green-on-black ---- */
+  [data-theme="terminal"] {
+    --ink: #020604; --panel: #04110a; --panel2: #05160d; --panel3: #0a2414;
+    --line: rgba(57,255,20,0.2); --line-2: rgba(57,255,20,0.45);
+    --fg: #b9ffcf; --fg-muted: #5fd98a; --fg-subtle: #3b9c5e;
+    --brand: #39ff14; --new: #ff5b5b; --prog: #ffd23b; --ready: #39ff14; --info: #39ff14;
+    --radius: 3px;
+    --bar: rgba(4,17,10,0.9); --pane: rgba(4,17,10,0.5); --card-2: rgba(57,255,20,0.04);
+    --ticket-bg: #05160d; --blur: none;
+    --font: "JetBrains Mono", ui-monospace, monospace;   /* whole app goes mono */
+  }
+  [data-theme="terminal"] body { background: radial-gradient(900px 600px at 50% -10%, rgba(57,255,20,0.08), transparent 60%), var(--ink); }
+  [data-theme="terminal"] .brand-badge { background: transparent; color: var(--brand); border: 1px solid var(--brand); box-shadow: 0 0 14px rgba(57,255,20,0.4); }
+  [data-theme="terminal"] .ticket.selected { box-shadow: 0 0 0 1px var(--brand), 0 0 18px rgba(57,255,20,0.35); }
+  [data-theme="terminal"] .status-pill { background: transparent; color: var(--tone, var(--fg)); border: 1px solid currentColor; }
+  [data-theme="terminal"] .btn-amber, [data-theme="terminal"] .btn-green { color: #02160c; }
+  [data-theme="terminal"] .item-name,
+  [data-theme="terminal"] .clock,
+  [data-theme="terminal"] .order-id-lg { text-shadow: 0 0 8px currentColor; }
+
+  /* ---- 9 · SOFT — pastel glassmorphism, gentle, very rounded ---- */
+  [data-theme="soft"] {
+    --ink: #13141f; --panel: #1b1d2e; --panel2: #222540; --panel3: #2c3052;
+    --line: rgba(255,255,255,0.1); --line-2: rgba(183,166,255,0.35);
+    --fg: #f1f0fb; --fg-muted: #c3c0e0; --fg-subtle: #8e8bb5;
+    --brand: #ef6f8e; --new: #f78ca0; --prog: #f7c873; --ready: #7ee0b8; --info: #b7a6ff;
+    --radius: 22px;
+    --bar: rgba(27,29,46,0.6); --pane: rgba(27,29,46,0.4); --card-2: rgba(255,255,255,0.05);
+    --ticket-bg: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02));
+    --blur: blur(18px) saturate(140%); --shadow-card: 0 10px 30px rgba(10,8,30,0.4);
+  }
+  [data-theme="soft"] body {
+    background:
+      radial-gradient(1000px 700px at 0% 0%, rgba(183,166,255,0.18), transparent 55%),
+      radial-gradient(900px 700px at 100% 10%, rgba(239,111,142,0.14), transparent 55%),
+      radial-gradient(900px 700px at 60% 100%, rgba(126,224,184,0.12), transparent 55%),
+      var(--ink);
+  }
+  [data-theme="soft"] .ticket,
+  [data-theme="soft"] .detail-head,
+  [data-theme="soft"] .station-block,
+  [data-theme="soft"] .counter-box { box-shadow: var(--shadow-card); backdrop-filter: var(--blur); }
+  [data-theme="soft"] .queue-pane, [data-theme="soft"] .right-pane { backdrop-filter: var(--blur); }
+  [data-theme="soft"] .status-pill,
+  [data-theme="soft"] .btn-amber,
+  [data-theme="soft"] .btn-green { color: #1c1430; }
+
+  /* ---- 10 · DENSE — compact, information-dense for a busy line ---- */
+  [data-theme="dense"] {
+    --ink: #0b0e14; --panel: #0f131c; --panel2: #141925; --panel3: #1b2230;
+    --line: rgba(255,255,255,0.09); --line-2: rgba(255,255,255,0.18);
+    --fg: #eef1f6; --fg-muted: #aab3c2; --fg-subtle: #737d8e;
+    --brand: #ff7a59; --new: #ff5a5f; --prog: #ffae42; --ready: #22c08a; --info: #56b3ff;
+    --radius: 9px; --blur: none;
+    --bar: rgba(15,19,28,0.85); --pane: rgba(15,19,28,0.5);
+  }
+  [data-theme="dense"] body { background: var(--ink); }
+  [data-theme="dense"] .body { grid-template-columns: 300px minmax(0,1fr) 320px; }
+  [data-theme="dense"] .hdr { padding: 8px 14px; }
+  [data-theme="dense"] .clock { font-size: 24px; }
+  [data-theme="dense"] .queue { padding: 8px; gap: 6px; }
+  [data-theme="dense"] .queue-tools { padding: 8px; gap: 8px; }
+  [data-theme="dense"] .ticket { padding: 8px 8px 8px 10px; }
+  [data-theme="dense"] .ticket .accent { top: 8px; bottom: 8px; width: 4px; }
+  [data-theme="dense"] .ticket-inner { padding-left: 8px; }
+  [data-theme="dense"] .ticket-id { font-size: 15px; }
+  [data-theme="dense"] .ticket-timer { font-size: 16px; }
+  [data-theme="dense"] .ticket-tags { margin-top: 5px; }
+  [data-theme="dense"] .ticket:hover { transform: none; }
+  [data-theme="dense"] .detail-inner { padding: 12px; max-width: none; }
+  [data-theme="dense"] .detail-head { padding: 14px; }
+  [data-theme="dense"] .order-id-lg { font-size: 30px; }
+  [data-theme="dense"] .detail-timer { font-size: 44px; }
+  [data-theme="dense"] .item-row { padding: 6px 0; }
+  [data-theme="dense"] .item-name { font-size: 16px; }
+  [data-theme="dense"] .right-sect { padding: 12px; }
+  [data-theme="dense"] .actionbar { padding: 8px 12px; }
+
+  /* switcher active-pill legibility on themes whose brand is light/red */
+  [data-theme="clean"] .sw-btn.active { color: #fff; }
 </style>
 </head>
 
