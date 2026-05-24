@@ -25,6 +25,8 @@
     --red-soft:rgba(240,82,75,0.14);
     --green:#37D295;
     --green-soft:rgba(55,210,149,0.12);
+    --violet:#8B5CF6;
+    --violet-soft:rgba(139,92,246,0.16);
     --neutral:#646B78;
     --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:28px;
     --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
@@ -114,7 +116,7 @@
   /* ---------- Metrics row ---------- */
   .metrics{
     flex:0 0 auto;
-    display:grid;grid-template-columns:repeat(7,1fr);gap:1px;
+    display:grid;grid-template-columns:repeat(9,1fr);gap:1px;
     background:var(--hair);
     border-bottom:1px solid var(--hair);
   }
@@ -137,10 +139,11 @@
   .metric.alert .m-val{color:var(--red)}
   .metric.warn .m-val{color:var(--amber)}
   .metric.good .m-val{color:var(--green)}
+  .metric.pace .m-val{color:var(--violet)}
   .metric .m-foot{font-size:10px;color:var(--text-faint);letter-spacing:0.02em}
   .metric .m-foot b{color:var(--text-dim);font-weight:600}
 
-  /* ---------- Station load ---------- */
+  /* ---------- Pace · capacity vs demand ---------- */
   .subbar{
     flex:0 0 auto;
     display:flex;align-items:stretch;gap:var(--s6);
@@ -148,23 +151,74 @@
     background:var(--panel);
     border-bottom:1px solid var(--hair);
   }
+
+  /* hero capacity / bottleneck meter */
+  .capmeter{
+    flex:0 0 auto;width:248px;display:flex;flex-direction:column;gap:var(--s2);justify-content:center;
+    padding:var(--s3) var(--s4);border:1px solid var(--hair);border-radius:10px;
+    background:var(--bg-2);transition:border-color .3s ease,box-shadow .3s ease;
+  }
+  .capmeter.breach{
+    border-color:rgba(139,92,246,0.55);
+    box-shadow:0 0 0 1px rgba(139,92,246,0.22),0 0 22px rgba(139,92,246,0.16);
+  }
+  .cap-top{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s2)}
+  .cap-label{font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:var(--text-faint)}
+  .cap-state{
+    font-size:9px;letter-spacing:0.12em;text-transform:uppercase;font-weight:600;color:var(--text-dim);
+    padding:2px 7px;border-radius:999px;border:1px solid var(--hair);
+  }
+  .capmeter.breach .cap-state{color:var(--violet);border-color:rgba(139,92,246,0.5);background:var(--violet-soft)}
+  .cap-val{font-family:var(--mono);font-size:38px;font-weight:600;line-height:0.9;letter-spacing:-0.01em;color:var(--text)}
+  .capmeter.breach .cap-val{color:var(--violet)}
+  .capmeter.warn .cap-val{color:var(--amber)}
+  .cap-row{display:flex;align-items:flex-end;gap:var(--s3)}
+  .cap-bottleneck{font-size:10px;color:var(--text-dim);letter-spacing:0.02em;line-height:1.3}
+  .cap-bottleneck b{color:var(--text);font-weight:600}
+  .cap-bar{
+    position:relative;height:7px;border-radius:4px;background:var(--grid);overflow:hidden;
+  }
+  .cap-bar .cap-100{position:absolute;top:-2px;bottom:-2px;left:62.5%;width:1px;background:var(--hair-strong);z-index:2}
+  .cap-bar .cap-fill{
+    position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--accent);transition:width .3s ease,background-color .3s ease;
+  }
+
   .stationload{flex:1 1 auto;display:flex;flex-direction:column;gap:var(--s3);min-width:0}
   .sl-head{
     font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:var(--text-faint);
     display:flex;align-items:center;justify-content:space-between;
   }
-  .sl-bars{display:flex;align-items:flex-end;gap:var(--s4);height:48px}
+  .sl-bars{display:flex;align-items:flex-end;gap:var(--s4);height:56px}
   .sl-col{display:flex;flex-direction:column;align-items:center;gap:5px;flex:1 1 0;min-width:0}
+  /* per-station pace gauge: bar fills toward capacity, ghost segment = +forecast */
   .sl-track{
-    width:100%;height:36px;background:var(--grid);border-radius:3px;
+    position:relative;width:100%;height:42px;background:var(--grid);border-radius:3px;
     display:flex;align-items:flex-end;overflow:hidden;
   }
+  .sl-cap{
+    position:absolute;left:0;right:0;height:1px;background:var(--hair-strong);z-index:3;pointer-events:none;
+  }
   .sl-fill{
-    width:100%;background:var(--accent);border-radius:3px 3px 0 0;transition:height .3s ease;
-    min-height:2px;
+    position:absolute;left:0;right:0;bottom:0;background:var(--accent);border-radius:3px 3px 0 0;
+    transition:height .3s ease,background-color .3s ease;min-height:2px;z-index:1;
+  }
+  .sl-fill.amber{background:var(--amber)}
+  .sl-fill.violet{background:var(--violet)}
+  /* ghosted forecast segment stacked above current load */
+  .sl-fc{
+    position:absolute;left:0;right:0;border-radius:2px 2px 0 0;z-index:2;
+    background:repeating-linear-gradient(45deg,rgba(255,255,255,0.16) 0 2px,transparent 2px 4px);
+    border-top:1px dashed rgba(255,255,255,0.28);transition:height .3s ease,bottom .3s ease;
   }
   .sl-name{font-size:9px;letter-spacing:0.06em;color:var(--text-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
   .sl-num{font-family:var(--mono);font-size:11px;color:var(--text-dim)}
+  .sl-num .pct{color:var(--text-faint)}
+  .sl-num.amber{color:var(--amber)}
+  .sl-num.violet{color:var(--violet)}
+  .sl-fc-badge{
+    font-family:var(--mono);font-size:9px;letter-spacing:0.02em;color:var(--text-faint);
+    padding:1px 4px;border:1px dashed var(--hair-strong);border-radius:4px;
+  }
 
   .legend{
     flex:0 0 auto;display:flex;flex-direction:column;justify-content:center;gap:6px;
@@ -172,6 +226,10 @@
   }
   .legend span{display:inline-flex;align-items:center;gap:7px;font-size:10px;color:var(--text-dim);letter-spacing:0.02em}
   .swatch{width:9px;height:9px;border-radius:2px;flex:0 0 auto}
+  .swatch.fc{
+    background:repeating-linear-gradient(45deg,rgba(255,255,255,0.30) 0 2px,transparent 2px 4px);
+    border:1px dashed var(--hair-strong);
+  }
 
   /* ---------- Board / lanes ---------- */
   .board{
@@ -282,7 +340,8 @@
   .is-fullscreen .kd-label,
   .is-fullscreen .gallery-link{display:none}
   .is-fullscreen .metric{padding:var(--s3) var(--s5)}
-  .is-fullscreen .metric .m-val{font-size:34px}
+  .is-fullscreen .metric .m-val{font-size:30px}
+  .is-fullscreen .cap-val{font-size:42px}
   .is-fullscreen .t-id{font-size:15px}
   .is-fullscreen .t-sla{font-size:17px}
   .is-fullscreen .it{font-size:13px}
@@ -311,15 +370,26 @@
   <section class="metrics" id="metrics" aria-label="Live operations metrics"></section>
 
   <div class="subbar">
+    <div class="capmeter" id="capMeter" aria-label="Capacity vs demand bottleneck">
+      <div class="cap-top">
+        <span class="cap-label">Capacity · bottleneck</span>
+        <span class="cap-state" id="capState">—</span>
+      </div>
+      <div class="cap-row">
+        <span class="cap-val tnum" id="capVal">—</span>
+        <span class="cap-bottleneck" id="capBottleneck"></span>
+      </div>
+      <div class="cap-bar"><div class="cap-fill" id="capFill"></div><div class="cap-100"></div></div>
+    </div>
     <div class="stationload">
-      <div class="sl-head"><span>Station load · active tickets</span><span class="sl-num tnum" id="slTotal"></span></div>
+      <div class="sl-head"><span>Station pace · demand vs capacity</span><span class="sl-num tnum" id="slTotal"></span></div>
       <div class="sl-bars" id="slBars"></div>
     </div>
     <div class="legend" aria-hidden="true">
-      <span><i class="swatch" style="background:var(--neutral)"></i>On track</span>
-      <span><i class="swatch" style="background:var(--amber)"></i>Due soon</span>
-      <span><i class="swatch" style="background:var(--red)"></i>Late</span>
-      <span><i class="swatch" style="background:var(--green)"></i>Ready · Expo</span>
+      <span><i class="swatch" style="background:var(--accent)"></i>Calm &lt; 80%</span>
+      <span><i class="swatch" style="background:var(--amber)"></i>Tight 80–100%</span>
+      <span><i class="swatch" style="background:var(--violet)"></i>Pre-breach &gt; 100%</span>
+      <span><i class="swatch fc"></i>+ Forecast 15m</span>
     </div>
   </div>
 
@@ -375,6 +445,51 @@
   // fixed operational figures (reasonable, per spec)
   const THROUGHPUT_HR = 23;
   const ON_SHIFT = 4;
+
+  /* ---------- Pace · capacity-vs-demand config ---------- */
+  const PACE = {
+    coversHr: 31,
+    revenueHr: 1180,           // Polish złoty
+    stations: [
+      { id:"Pizza",     cap:10, fc:7 },
+      { id:"Pasta",     cap:8,  fc:6 },
+      { id:"Antipasti", cap:9,  fc:3 },
+      { id:"Panini",    cap:8,  fc:2 },
+      { id:"Drinks",    cap:20, fc:5 },
+      { id:"Desserts",  cap:10, fc:2 },
+    ],
+  };
+
+  // format an integer with thin-grouped thousands, e.g. 1180 -> "1 180"
+  function groupZl(n){ return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g," "); }
+
+  // recompute live per-station pace from the EXISTING active (non-ready) tickets.
+  // currentLoad = sum of quantities of active items whose category === station.
+  function computePace(){
+    const active = tickets.filter(t=>t.status!=="ready");
+    const load = {};
+    PACE.stations.forEach(s=>load[s.id]=0);
+    active.forEach(t=>t.items.forEach(i=>{ if(load[i.c]!==undefined) load[i.c]+=i.q; }));
+    const stations = PACE.stations.map(s=>{
+      const currentLoad = load[s.id];
+      const demand = currentLoad + s.fc;
+      const utilization = demand / s.cap;
+      return { id:s.id, cap:s.cap, fc:s.fc, currentLoad, demand, utilization };
+    });
+    // bottleneck = the station with the MAX utilization
+    const bottleneck = stations.reduce((a,b)=> b.utilization>a.utilization ? b : a, stations[0]);
+    return { stations, bottleneck };
+  }
+  function paceColorVar(util){
+    if(util>1.0) return "var(--violet)";
+    if(util>=0.8) return "var(--amber)";
+    return "var(--accent)";
+  }
+  function paceClass(util){
+    if(util>1.0) return "violet";
+    if(util>=0.8) return "amber";
+    return "";
+  }
 
   const ICON = {
     takeout:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12l-1 4H7L6 2Z"/><path d="M5 6h14l-1.2 14.5a1.5 1.5 0 0 1-1.5 1.5H7.7a1.5 1.5 0 0 1-1.5-1.5L5 6Z"/></svg>',
@@ -462,6 +577,12 @@
       { label:"On shift", val:ON_SHIFT, unit:"line cooks",
         cls:"", art:gauge(ON_SHIFT/6, "var(--accent)"),
         foot:'2 pizza · 1 pasta · 1 expo' },
+      { label:"Covers / hr", val:PACE.coversHr, unit:"covers",
+        cls:"pace", art:sparkline([22,25,24,27,29,28,PACE.coversHr], "var(--violet)"),
+        foot:'projected pace' },
+      { label:"Revenue / hr", val:groupZl(PACE.revenueHr)+'<span class="m-unit"> zł</span>', unit:"zł",
+        cls:"pace", art:sparkline([840,910,880,1010,1080,1120,PACE.revenueHr], "var(--violet)"),
+        foot:'<b>'+groupZl(PACE.revenueHr)+' zł</b> run-rate' },
     ];
     el.innerHTML = cards.map(c=>
       '<div class="metric '+c.cls+'">'+
@@ -475,26 +596,63 @@
     ).join("");
   }
 
-  /* ---------- station load ---------- */
+  /* ---------- station pace gauges (demand vs capacity) ---------- */
   function renderStationLoad(){
-    const active = tickets.filter(t=>t.status!=="ready");
-    const counts = {};
-    LOAD_STATIONS.forEach(s=>counts[s]=0);
-    active.forEach(t=>{
-      const seen=new Set();
-      t.items.forEach(i=>{ if(counts[i.c]!==undefined && !seen.has(i.c)){ counts[i.c]++; seen.add(i.c); } });
-    });
-    const max=Math.max(1,...LOAD_STATIONS.map(s=>counts[s]));
+    const pace = computePace();
+    // scale every gauge against the same ceiling so >100% visibly overflows the cap line
+    const maxUtil = Math.max(1.0, ...pace.stations.map(s=>s.utilization));
+    const TRACK_TOP = 0.96; // fraction of track height the tallest bar can use
     const bars=document.getElementById("slBars");
-    bars.innerHTML=LOAD_STATIONS.map(s=>{
-      const h=Math.round((counts[s]/max)*100);
-      return '<div class="sl-col">'+
-        '<div class="sl-track"><div class="sl-fill" style="height:'+(counts[s]?h:0)+'%"></div></div>'+
-        '<span class="sl-num tnum">'+counts[s]+'</span>'+
-        '<span class="sl-name">'+s+'</span>'+
+    bars.innerHTML=pace.stations.map(s=>{
+      const cls = paceClass(s.utilization);
+      // capacity reference line position (100% util) within the scaled track
+      const capPct  = (1.0 / maxUtil) * 100 * TRACK_TOP;
+      // current-load utilization (without forecast) drives the solid bar base
+      const loadUtil = s.currentLoad / s.cap;
+      const loadPct = (loadUtil / maxUtil) * 100 * TRACK_TOP;
+      const demandPct = (s.utilization / maxUtil) * 100 * TRACK_TOP;
+      const fcPct = Math.max(0, demandPct - loadPct);
+      const utilTxt = Math.round(s.utilization*100)+"%";
+      const figure = s.demand+"/"+s.cap;
+      return '<div class="sl-col" title="'+s.id+' · demand '+s.demand+' of cap '+s.cap+' ('+utilTxt+'), incl. +'+s.fc+' forecast">'+
+        '<span class="sl-fc-badge">+'+s.fc+'</span>'+
+        '<div class="sl-track">'+
+          '<div class="sl-cap" style="bottom:'+capPct.toFixed(1)+'%"></div>'+
+          '<div class="sl-fill '+cls+'" style="height:'+(s.currentLoad?Math.max(loadPct,3):0).toFixed(1)+'%"></div>'+
+          '<div class="sl-fc" style="bottom:'+loadPct.toFixed(1)+'%;height:'+fcPct.toFixed(1)+'%"></div>'+
+        '</div>'+
+        '<span class="sl-num tnum '+cls+'">'+figure+' <span class="pct">'+utilTxt+'</span></span>'+
+        '<span class="sl-name">'+s.id+'</span>'+
       '</div>';
     }).join("");
-    document.getElementById("slTotal").textContent = active.length+" open";
+    const active = tickets.filter(t=>t.status!=="ready");
+    document.getElementById("slTotal").textContent = active.length+" open · +"+
+      pace.stations.reduce((a,s)=>a+s.fc,0)+" forecast";
+
+    renderCapacityMeter(pace);
+  }
+
+  /* ---------- hero capacity meter (bottleneck = max station utilization) ---------- */
+  function renderCapacityMeter(pace){
+    const b = pace.bottleneck;
+    const util = b.utilization;
+    const pct = Math.round(util*100);
+    const meter = document.getElementById("capMeter");
+    const breach = util>1.0;
+    const tight  = !breach && util>=0.8;
+    meter.classList.toggle("breach", breach);
+    meter.classList.toggle("warn", tight);
+
+    document.getElementById("capVal").textContent = pct+"%";
+    document.getElementById("capState").textContent = breach ? "Pre-breach" : tight ? "Tight" : "On pace";
+    document.getElementById("capBottleneck").innerHTML =
+      'bottleneck <b>'+b.id+'</b><br>demand '+b.demand+' · cap '+b.cap+' · +'+b.fc+' next 15m';
+
+    // bar: cap line sits at 62.5% (matches the .cap-100 marker), so 100% util => 62.5% width
+    const fill = document.getElementById("capFill");
+    const w = Math.min(100, (util/1.6)*100); // 160% fills the full bar
+    fill.style.width = w.toFixed(1)+"%";
+    fill.style.background = breach ? "var(--violet)" : tight ? "var(--amber)" : "var(--accent)";
   }
 
   /* ---------- filters ---------- */

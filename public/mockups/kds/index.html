@@ -58,18 +58,9 @@
   .dot i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 
   .grid {
-    display: grid; gap: 22px;
+    display: grid; gap: 22px; margin-top: 40px;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   }
-  .group { margin-top: 44px; }
-  .group-title {
-    font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
-    color: var(--fg-muted); font-weight: 700; margin: 0;
-    display: flex; align-items: center; gap: 14px;
-  }
-  .group-title::after { content: ""; flex: 1; height: 1px; background: var(--border); }
-  .group-title .sub { color: var(--fg-dim); letter-spacing: 0.04em; text-transform: none; font-weight: 500; }
-  .group .grid { margin-top: 18px; }
   .card {
     display: flex; flex-direction: column; text-decoration: none; color: inherit;
     background: var(--surface); border: 1px solid var(--border);
@@ -118,8 +109,8 @@
   <div class="wrap">
     <header class="masthead">
       <p class="eyebrow">Sud Italia · Kitchen Display System</p>
-      <h1>KDS — Kitchen OS drafts<br><span class="thin">one of these goes into <span style="color:var(--fg)">/admin/kds</span></span></h1>
-      <p class="lede">Pre-production directions for the next-gen Kitchen Display. The new drafts implement the <strong>predictive “at-risk” status</strong> — tickets the model forecasts will breach <strong>before</strong> they actually go late (shown in violet). Each tile opens a <strong>live, interactive mockup</strong>: timers tick, urgency shifts across the SLA thresholds, tapping a ticket advances it, and every one has fullscreen plus an All / New / In progress / Ready · Expo lines switcher. Same eight-order rush throughout, so they compare like-for-like.</p>
+      <h1>KDS — four finalist directions<br><span class="thin">one of these goes into <span style="color:var(--fg)">/admin/kds</span></span></h1>
+      <p class="lede">The directions still in the running, each now carrying the <strong>capacity-vs-demand “Pace” layer</strong> — per-station pace gauges, an incoming-load forecast, covers/hr + revenue/hr, and a capacity meter that turns <strong>violet before a breach</strong> (the model predicts you'll fall behind at the bottleneck station). Each tile opens a <strong>live, interactive mockup</strong>: timers tick, urgency shifts across the SLA thresholds, tapping a ticket advances it, and every one has fullscreen plus an All / New / In progress / Ready · Expo lines switcher. Same eight-order rush throughout.</p>
 
       <div class="meta-row">
         <span class="legend">
@@ -134,15 +125,7 @@
       </div>
     </header>
 
-    <section class="group">
-      <h2 class="group-title">Kitchen OS — new directions <span class="sub">predictive · operational</span></h2>
-      <div class="grid" id="grid-new"></div>
-    </section>
-
-    <section class="group">
-      <h2 class="group-title">Earlier shortlist <span class="sub">kept from the first round</span></h2>
-      <div class="grid" id="grid-keep"></div>
-    </section>
+    <div class="grid" id="grid"></div>
 
     <footer class="note">
       Served on every deploy at <code>/mockups/kds/</code> (relaxed CSP per <code>next.config.ts</code>). Self-contained HTML — no network, no build step. The winning direction gets ported into <code>src/components/admin</code> for <code>/admin/kds</code>.
@@ -151,33 +134,19 @@
 
   <script>
     const C = { danger: "#ff5d5d", warning: "#f5b13d", risk: "#8b5cf6", ready: "#4ecb8d", neutral: "#8a8f98" };
-    const NEW = [
-      { file:"11-control-tower.html", n:"11", name:"Control Tower", theme:"Dark · predictive radar", font:"mono",
-        bg:"#0A0C10", ink:"#E9EDF2", accent:"#8b5cf6",
-        desc:"A time-to-breach horizon: every ticket plotted against its promise with a predicted-ready whisker. Air-traffic control for the line — you see the breach forming." },
-      { file:"12-pace.html", n:"12", name:"Pace", theme:"Dark · capacity vs demand", font:"mono",
-        bg:"#0A0C10", ink:"#E9EDF2", accent:"#3B82F6",
-        desc:"The kitchen as a tunable flow engine: per-station pace gauges, an incoming-load forecast, and a capacity meter that glows violet before a breach. Covers/hr and revenue/hr up top." },
-      { file:"13-signal.html", n:"13", name:"Signal", theme:"Dark · line + AI co-pilot", font:"mono",
-        bg:"#0A0C10", ink:"#E9EDF2", accent:"#8b5cf6",
-        desc:"A dense working line beside a permanent AI co-pilot column — a live feed of risk alerts, reroute suggestions and anomalies you can apply. The intelligence isn’t buried." },
-      { file:"14-triage.html", n:"14", name:"Triage", theme:"Dark · Now / Next / Risk", font:"mono",
-        bg:"#0A0C10", ink:"#E9EDF2", accent:"#8b5cf6",
-        desc:"Sorts by what needs attention, not raw status. A bold violet RISK zone (predicted + already-late) is the hero — the board tells the cook where to look, including the future." },
+    const DESIGNS = [
+      { file:"05-marquee-focus.html", n:"05", name:"Marquee", theme:"Light · big-type expo focus", font:"sans",
+        bg:"#ffffff", ink:"#111111", accent:"#7C3AED",
+        desc:"One hero “on deck” ticket in huge type with a ranked queue beside it — readable across a loud kitchen. A Pace bar above the hero carries covers/hr, revenue/hr and the violet pre-breach capacity meter, with a station pace-gauge rail below." },
+      { file:"07-dual-expo.html", n:"07", name:"Dual Expo", theme:"Slate · cook + handoff split", font:"sans",
+        bg:"#0f141a", ink:"#e6ebf2", accent:"#8b5cf6",
+        desc:"A commercial-KDS two-pane (cook left, expo right). The station rail is now a live pace rail — gauge + forecast per station — with covers/hr, revenue/hr and the violet pre-breach capacity meter in the header." },
+      { file:"10-operations.html", n:"10", name:"Operations", theme:"Dark · analytics + floor", font:"mono",
+        bg:"#0a0d12", ink:"#e8edf4", accent:"#8b5cf6",
+        desc:"A Bloomberg-terminal for the kitchen. Metric readouts now include covers/hr + revenue/hr; the station-load chart became per-station pace gauges; a hero capacity meter goes violet at the bottleneck — over a condensed ticket lane." },
       { file:"15-atlas.html", n:"15", name:"Atlas", theme:"Dark · fleet command", font:"mono",
         bg:"#0A0C10", ink:"#E9EDF2", accent:"#3DD68C",
-        desc:"Both trucks side by side with live health scores and cross-truck benchmarking; drill into one full-width. The owner lens — one model, many trucks, each making the others smarter." },
-    ];
-    const KEEP = [
-      { file:"05-marquee-focus.html", n:"05", name:"Marquee", theme:"Light · big-type expo focus", font:"sans",
-        bg:"#ffffff", ink:"#111111",
-        desc:"One hero “on deck” ticket in huge type with a ranked queue beside it. Readable from across a loud kitchen — keynote-grade clarity." },
-      { file:"07-dual-expo.html", n:"07", name:"Dual Expo", theme:"Slate · cook + handoff split", font:"sans",
-        bg:"#0f141a", ink:"#e6ebf2",
-        desc:"A commercial-KDS two-pane: cooking on the left, ready-for-expo on the right, with a station rail. Mirrors how a real pass actually works." },
-      { file:"10-operations.html", n:"10", name:"Operations", theme:"Dark · analytics + floor", font:"mono",
-        bg:"#0a0d12", ink:"#e8edf4",
-        desc:"A Bloomberg-terminal for the kitchen: live metric readouts and station load over a condensed ticket lane. The owner/manager command view." },
+        desc:"Both trucks side by side with live health scores, cross-truck benchmarking and drill-in. Now per-truck Pace too — pace gauges, forecast, covers/hr + revenue/hr and a violet pre-breach capacity meter; the owner lens." },
     ];
 
     const fonts = {
@@ -217,8 +186,7 @@
       }
     }
 
-    renderInto("grid-new", NEW, true);
-    renderInto("grid-keep", KEEP, false);
+    renderInto("grid", DESIGNS, true);
   </script>
 </body>
 </html>

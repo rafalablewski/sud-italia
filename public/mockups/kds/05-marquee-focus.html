@@ -252,6 +252,74 @@
     flex:1 1 auto;display:flex;align-items:center;justify-content:center;
     color:var(--ink3);font-size:18px;text-align:center;
   }
+
+  /* ── PACE ─────────────────────────────────────────────── */
+  :root{
+    --pace-calm:#0E8A5F;
+    --pace-amber:#B5740B;
+    --pace-violet:#7C3AED;
+    --pace-violet-soft:#F1EBFE;
+    --pace-violet-strong:rgba(124,58,237,0.32);
+  }
+  /* pace bar above the hero */
+  .pace-bar{
+    flex:0 0 auto;display:flex;align-items:center;gap:var(--space-5);
+    margin-bottom:var(--space-4);padding:var(--space-3) var(--space-4);
+    background:var(--panel);border:1px solid var(--hair);border-radius:14px;
+    box-shadow:0 1px 0 rgba(20,23,26,0.04);
+  }
+  .pace-stat{display:flex;flex-direction:column;gap:1px;flex:0 0 auto}
+  .pace-stat .lbl{font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink3)}
+  .pace-stat .val{font-family:var(--mono);font-size:22px;font-weight:700;line-height:1;color:var(--ink);letter-spacing:0.01em}
+  .pace-sep{width:1px;align-self:stretch;background:var(--hair);flex:0 0 auto}
+  .cap-meter{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:5px}
+  .cap-top{display:flex;align-items:baseline;justify-content:space-between;gap:var(--space-3)}
+  .cap-label{font-size:11px;letter-spacing:0.10em;text-transform:uppercase;font-weight:700;color:var(--ink2)}
+  .cap-figure{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--ink);letter-spacing:0.01em}
+  .cap-track{height:14px;border-radius:999px;background:var(--bg2);border:1px solid var(--hair);overflow:hidden;position:relative}
+  .cap-fill{height:100%;border-radius:999px;background:var(--pace-calm);transition:width .5s ease,background-color .3s ease}
+  .cap-meter.is-amber .cap-fill{background:var(--pace-amber)}
+  .cap-meter.is-violet .cap-fill{background:var(--pace-violet)}
+  .cap-meter.is-violet{padding:var(--space-2) var(--space-3);margin:-9px -7px;border-radius:12px;background:var(--pace-violet-soft);box-shadow:0 0 0 1px var(--pace-violet-strong),0 8px 24px -10px var(--pace-violet-strong);animation:capPulse 1.6s ease-in-out infinite}
+  .cap-meter.is-violet .cap-label,.cap-meter.is-violet .cap-figure{color:var(--pace-violet)}
+  @keyframes capPulse{0%,100%{box-shadow:0 0 0 1px var(--pace-violet-strong),0 8px 24px -10px var(--pace-violet-strong)}50%{box-shadow:0 0 0 1px var(--pace-violet),0 10px 28px -8px var(--pace-violet-strong)}}
+
+  /* per-station gauge rail */
+  .pace-rail{
+    flex:0 0 auto;margin-top:var(--space-3);
+    display:flex;align-items:stretch;gap:var(--space-2);
+  }
+  .pace-rail-fc{
+    font-size:11px;letter-spacing:0.04em;color:var(--ink2);margin-top:var(--space-2);
+    display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  }
+  .pace-rail-fc .fc-kick{font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink3);font-weight:700}
+  .pace-rail-fc b{color:var(--pace-violet);font-weight:700}
+  .gauge{
+    flex:1 1 0;min-width:0;background:var(--panel);border:1px solid var(--hair);border-radius:12px;
+    padding:var(--space-3) var(--space-3) var(--space-2);display:flex;flex-direction:column;gap:6px;
+    position:relative;transition:border-color .3s ease,box-shadow .3s ease;
+  }
+  .gauge.is-violet{border-color:var(--pace-violet-strong);box-shadow:0 0 0 1px var(--pace-violet-strong),0 8px 20px -14px var(--pace-violet-strong)}
+  .gauge-head{display:flex;align-items:baseline;justify-content:space-between;gap:6px}
+  .gauge-name{font-size:11px;letter-spacing:0.06em;text-transform:uppercase;font-weight:700;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .gauge-pct{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--ink);flex:0 0 auto}
+  .gauge.is-amber .gauge-pct{color:var(--pace-amber)}
+  .gauge.is-violet .gauge-name,.gauge.is-violet .gauge-pct{color:var(--pace-violet)}
+  .gauge-bar{height:8px;border-radius:999px;background:var(--bg2);overflow:hidden}
+  .gauge-bar-fill{height:100%;border-radius:999px;background:var(--pace-calm);transition:width .5s ease,background-color .3s ease}
+  .gauge.is-amber .gauge-bar-fill{background:var(--pace-amber)}
+  .gauge.is-violet .gauge-bar-fill{background:var(--pace-violet)}
+  .gauge-foot{display:flex;align-items:center;justify-content:space-between;gap:6px}
+  .gauge-load{font-family:var(--mono);font-size:11px;color:var(--ink3)}
+  .fc-badge{
+    font-family:var(--mono);font-size:10px;font-weight:700;line-height:1;
+    padding:2px 6px;border-radius:999px;background:var(--accent-soft);color:var(--accent);flex:0 0 auto;
+  }
+  .gauge.is-violet .fc-badge{background:var(--pace-violet-soft);color:var(--pace-violet)}
+
+  html.is-fullscreen .pace-stat .val{font-size:26px}
+  html.is-fullscreen .gauge-name{font-size:12px}
 </style>
 </head>
 <body>
@@ -270,6 +338,25 @@
 
   <div class="stage">
     <div class="hero-wrap">
+      <div class="pace-bar" id="paceBar">
+        <div class="pace-stat">
+          <span class="lbl">Covers / hr</span>
+          <span class="val tnum" id="paceCovers">--</span>
+        </div>
+        <div class="pace-sep"></div>
+        <div class="pace-stat">
+          <span class="lbl">Revenue / hr</span>
+          <span class="val tnum" id="paceRevenue">--</span>
+        </div>
+        <div class="pace-sep"></div>
+        <div class="cap-meter" id="capMeter">
+          <div class="cap-top">
+            <span class="cap-label" id="capLabel">Capacity</span>
+            <span class="cap-figure tnum" id="capFigure">--</span>
+          </div>
+          <div class="cap-track"><div class="cap-fill" id="capFill" style="width:0%"></div></div>
+        </div>
+      </div>
       <div class="hero-kicker">
         <span class="ondeck">On deck</span>
         <span class="pill" id="heroPill">Most urgent active ticket</span>
@@ -283,6 +370,8 @@
         <span class="q-count tnum" id="queueCount">0</span>
       </div>
       <div class="queue" id="queue"></div>
+      <div class="pace-rail" id="paceRail"></div>
+      <div class="pace-rail-fc" id="paceForecast"></div>
     </div>
   </div>
 
@@ -338,6 +427,47 @@ const ICON={
   delivery:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 3h13v11H1z"/><path d="M14 7h4l3 3v4h-7"/><circle cx="6" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>',
   note:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>',
 };
+
+const PACE = {
+  coversHr: 31,
+  revenueHr: 1180,           // Polish złoty — display formatted, e.g. "1 180 zł"
+  stations: [
+    { id:"Pizza",     cap:10, fc:7 },
+    { id:"Pasta",     cap:8,  fc:6 },
+    { id:"Antipasti", cap:9,  fc:3 },
+    { id:"Panini",    cap:8,  fc:2 },
+    { id:"Drinks",    cap:20, fc:5 },
+    { id:"Desserts",  cap:10, fc:2 },
+  ],
+};
+
+function fmtZl(n){
+  // group thousands with a thin/regular space, e.g. 1 180 zł
+  return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g," ")+" zł";
+}
+// utilization → tone bucket: calm <0.8 · amber 0.8–1.0 · violet >1.0 (pre-breach)
+function paceTone(u){ return u>1.0 ? "violet" : (u>=0.8 ? "amber" : "calm"); }
+
+// current load = sum of qty of ACTIVE (non-ready) ticket items in this category
+function stationLoad(id){
+  let load=0;
+  ORDERS.forEach(o=>{
+    if(o.status==="ready") return;
+    o.items.forEach(it=>{ if(it.c===id) load+=it.q; });
+  });
+  return load;
+}
+function computePace(){
+  const stations=PACE.stations.map(s=>{
+    const currentLoad=stationLoad(s.id);
+    const demand=currentLoad+s.fc;
+    const utilization=demand/s.cap;
+    return {...s, currentLoad, demand, utilization, tone:paceTone(utilization)};
+  });
+  let bottleneck=stations[0];
+  stations.forEach(s=>{ if(s.utilization>bottleneck.utilization) bottleneck=s; });
+  return {stations, bottleneck};
+}
 
 function pad(n){return String(n).padStart(2,"0");}
 function fmtClock(d){return pad(d.getHours())+":"+pad(d.getMinutes())+":"+pad(d.getSeconds());}
@@ -530,12 +660,58 @@ function renderQueue(list){
   });
 }
 
+function renderPace(){
+  const p=computePace();
+
+  // headline readouts
+  document.getElementById("paceCovers").textContent=PACE.coversHr;
+  document.getElementById("paceRevenue").textContent=fmtZl(PACE.revenueHr);
+
+  // capacity meter = the bottleneck (max station utilization)
+  const b=p.bottleneck;
+  const meter=document.getElementById("capMeter");
+  meter.classList.remove("is-amber","is-violet");
+  if(b.tone==="violet") meter.classList.add("is-violet");
+  else if(b.tone==="amber") meter.classList.add("is-amber");
+  document.getElementById("capFill").style.width=Math.min(100,Math.round(b.utilization*100))+"%";
+  const capPct=Math.round(b.utilization*100);
+  document.getElementById("capLabel").textContent=
+    b.tone==="violet" ? "Capacity · pre-breach" : "Capacity";
+  document.getElementById("capFigure").textContent=`${capPct}% · bottleneck ${b.id}`;
+
+  // per-station gauge rail
+  const rail=document.getElementById("paceRail");
+  rail.innerHTML=p.stations.map(s=>{
+    const pct=Math.round(s.utilization*100);
+    const w=Math.min(100,pct);
+    const cls = s.tone==="violet" ? " is-violet" : (s.tone==="amber" ? " is-amber" : "");
+    return `<div class="gauge${cls}">
+      <div class="gauge-head">
+        <span class="gauge-name">${s.id}</span>
+        <span class="gauge-pct tnum">${pct}%</span>
+      </div>
+      <div class="gauge-bar"><div class="gauge-bar-fill" style="width:${w}%"></div></div>
+      <div class="gauge-foot">
+        <span class="gauge-load tnum">${s.demand}/${s.cap}</span>
+        <span class="fc-badge tnum">+${s.fc}</span>
+      </div>
+    </div>`;
+  }).join("");
+
+  // forecast one-liner — top incoming loads
+  const top=p.stations.slice().sort((a,b2)=>b2.fc-a.fc).slice(0,3);
+  document.getElementById("paceForecast").innerHTML=
+    `<span class="fc-kick">Forecast · next 15 min</span> `+
+    top.map(s=>`<span>${s.id} <b>+${s.fc}</b></span>`).join(" · ");
+}
+
 function render(){
   const list=visibleSorted();
   const hero=list[0]||null;
   renderHero(hero);
   renderQueue(list.slice(1));
   refreshStageCounts();
+  renderPace();
 }
 
 function tick(){
@@ -573,6 +749,7 @@ function tick(){
       row.classList.add("t-"+newT);
     }
   });
+  renderPace();              // recompute Pace (load/util/bottleneck) live every tick
   if(needsRender) render();
 }
 

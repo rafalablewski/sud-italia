@@ -27,6 +27,8 @@
     --calm:#3fd08a;
     --calm-bg:#10231b;
     --calm-line:#1f4d3a;
+    --violet:#8B5CF6;
+    --violet-dim:#5b3aa6;
     --radius:12px;
     --space:16px;
     --mono:ui-monospace,"SF Mono",SFMono-Regular,"DejaVu Sans Mono",Menlo,Consolas,monospace;
@@ -48,7 +50,7 @@
   /* ===== App shell ===== */
   .app{
     display:grid;
-    grid-template-columns:84px 1fr;
+    grid-template-columns:148px 1fr;
     grid-template-rows:64px 1fr;
     height:100vh;
   }
@@ -89,6 +91,78 @@
     font-family:var(--mono);
   }
   .head-spacer{flex:1}
+
+  /* ===== Pace headline readouts (header band) ===== */
+  .pace-head{display:flex;align-items:stretch;gap:10px}
+  .pace-stat{
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    gap:1px;
+    padding:5px 12px;
+    border:1px solid var(--line);
+    border-radius:9px;
+    background:var(--rail);
+    min-width:84px;
+  }
+  .pace-stat .pl{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+  .pace-stat .pv{
+    font-family:var(--mono);
+    font-variant-numeric:tabular-nums;
+    font-size:17px;
+    letter-spacing:.01em;
+    color:var(--ink);
+  }
+  .pace-stat .pv small{font-size:10px;color:var(--ink-2);margin-left:3px;letter-spacing:.04em}
+
+  /* ===== Capacity meter (bottleneck) ===== */
+  .cap-meter{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    padding:6px 14px;
+    border:1px solid var(--line);
+    border-radius:9px;
+    background:var(--rail);
+    min-width:220px;
+    transition:border-color .25s,box-shadow .25s,background .25s;
+  }
+  .cap-meter .cap-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+  .cap-meter .cap-lab{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+  .cap-meter .cap-lab b{color:var(--ink-2);font-weight:600}
+  .cap-meter .cap-pct{
+    font-family:var(--mono);
+    font-variant-numeric:tabular-nums;
+    font-size:17px;
+    font-weight:600;
+    color:var(--ink);
+  }
+  .cap-track{
+    height:7px;
+    border-radius:5px;
+    background:var(--neutral);
+    overflow:hidden;
+    position:relative;
+  }
+  .cap-fill{
+    height:100%;
+    border-radius:5px;
+    background:var(--calm);
+    transition:width .4s ease,background .25s;
+  }
+  .cap-fill.amber{background:var(--warn)}
+  .cap-fill.violet{background:#8B5CF6}
+  .cap-meter.breach{
+    border-color:rgba(139,92,246,.55);
+    box-shadow:0 0 0 1px rgba(139,92,246,.35),0 0 18px -4px rgba(139,92,246,.6);
+    background:linear-gradient(180deg,rgba(139,92,246,.12),var(--rail));
+    animation:capPulse 2.4s ease-in-out infinite;
+  }
+  .cap-meter.breach .cap-pct{color:#b794ff}
+  @keyframes capPulse{
+    0%,100%{box-shadow:0 0 0 1px rgba(139,92,246,.35),0 0 14px -5px rgba(139,92,246,.5)}
+    50%{box-shadow:0 0 0 1px rgba(139,92,246,.55),0 0 24px -2px rgba(139,92,246,.85)}
+  }
   .clock{
     font-family:var(--mono);
     font-variant-numeric:tabular-nums;
@@ -176,45 +250,100 @@
   html.is-fullscreen .fs-btn .fs-enter{display:none}
   html.is-fullscreen .fs-btn .fs-exit{display:inline-flex;align-items:center;gap:7px}
 
-  /* ===== Station rail ===== */
+  /* ===== Station rail (live pace gauges) ===== */
   .rail{
     background:var(--rail);
     border-right:1px solid var(--line);
     display:flex;
     flex-direction:column;
     align-items:stretch;
-    padding:14px 8px;
-    gap:4px;
+    padding:12px 8px;
+    gap:5px;
     overflow-y:auto;
+  }
+  .rail-cap{
+    font-size:9px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--faint);
+    padding:2px 8px 4px;
   }
   .rail-btn{
     display:flex;
     flex-direction:column;
-    align-items:center;
-    gap:6px;
-    padding:11px 4px;
-    border:none;
+    align-items:stretch;
+    gap:7px;
+    padding:10px 9px;
+    border:1px solid transparent;
     background:transparent;
     color:var(--muted);
     border-radius:10px;
     cursor:pointer;
     font-family:var(--sans);
-    transition:background .15s,color .15s;
+    transition:background .15s,color .15s,border-color .15s;
     position:relative;
+    text-align:left;
   }
-  .rail-btn svg{width:22px;height:22px;display:block}
-  .rail-btn .rl{font-size:10px;letter-spacing:.02em}
+  .rail-btn svg{width:18px;height:18px;display:block;flex:none}
+  .rail-btn .rl{font-size:11px;letter-spacing:.02em;flex:1}
+  .rail-btn .rb-top{display:flex;align-items:center;gap:7px}
   .rail-btn .ct{
     font-family:var(--mono);
     font-variant-numeric:tabular-nums;
-    font-size:10px;
-    position:absolute;
-    top:6px;right:10px;
+    font-size:9.5px;
     color:var(--faint);
+    background:var(--panel);
+    border-radius:5px;
+    padding:0 5px;
+    line-height:15px;
   }
-  .rail-btn:hover{background:var(--panel);color:var(--ink-2)}
-  .rail-btn.active{background:var(--accent);color:#06101f}
-  .rail-btn.active .ct{color:#06101f;opacity:.7}
+  /* pace gauge row */
+  .rb-gauge{display:flex;align-items:center;gap:7px}
+  .gauge-track{
+    flex:1;
+    height:5px;
+    border-radius:4px;
+    background:var(--neutral);
+    overflow:hidden;
+  }
+  .gauge-fill{
+    height:100%;
+    border-radius:4px;
+    background:var(--calm);
+    transition:width .4s ease,background .25s;
+  }
+  .gauge-fill.amber{background:var(--warn)}
+  .gauge-fill.violet{background:var(--violet)}
+  .rb-load{
+    font-family:var(--mono);
+    font-variant-numeric:tabular-nums;
+    font-size:10.5px;
+    color:var(--ink-2);
+    min-width:34px;
+    text-align:right;
+  }
+  .rb-load.violet{color:#b794ff}
+  .rb-load.amber{color:var(--warn)}
+  .fc-badge{
+    font-family:var(--mono);
+    font-variant-numeric:tabular-nums;
+    font-size:9px;
+    letter-spacing:.02em;
+    color:var(--accent);
+    background:var(--accent-dim);
+    border-radius:5px;
+    padding:0 5px;
+    line-height:15px;
+    flex:none;
+  }
+  .rail-btn:hover{background:var(--panel);color:var(--ink-2);border-color:var(--line-soft)}
+  .rail-btn.active{background:var(--panel-2);color:var(--ink);border-color:var(--accent-dim)}
+  .rail-btn.active .rl{color:var(--ink)}
+  .rail-btn.breach{border-color:rgba(139,92,246,.4)}
+  .rail-btn.breach.active{border-color:rgba(139,92,246,.65);box-shadow:0 0 0 1px rgba(139,92,246,.3)}
+
+  /* compact rail in fullscreen keeps the gauges legible */
+  html.is-fullscreen .rail{padding:10px 7px}
 
   /* ===== Panes ===== */
   .panes{
@@ -457,6 +586,25 @@
     <span class="tag">07 · Dual Expo</span>
     <div class="stages" id="stages"></div>
     <div class="head-spacer"></div>
+
+    <div class="pace-head">
+      <div class="pace-stat">
+        <span class="pl">Covers / hr</span>
+        <span class="pv num" id="coversHr">0</span>
+      </div>
+      <div class="pace-stat">
+        <span class="pl">Revenue / hr</span>
+        <span class="pv num" id="revenueHr">0<small>zł</small></span>
+      </div>
+      <div class="cap-meter" id="capMeter">
+        <div class="cap-top">
+          <span class="cap-lab" id="capLab">Capacity</span>
+          <span class="cap-pct num" id="capPct">0%</span>
+        </div>
+        <div class="cap-track"><div class="cap-fill" id="capFill" style="width:0%"></div></div>
+      </div>
+    </div>
+
     <button class="fs-btn" id="fsBtn" type="button" aria-label="Toggle fullscreen">
       <span class="fs-enter"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>Fullscreen</span>
       <span class="fs-exit"><svg viewBox="0 0 24 24"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>Exit</span>
@@ -512,6 +660,43 @@ const ORDERS = [
   { id:"H3W7Y9", name:"Elena P.",  channel:"takeout",  loc:"Kraków",   slot:"15:08", elapsed:660, sla:0,   status:"ready",
     items:[{q:1,n:"Prosciutto e Rucola",c:"Pizza"},{q:1,n:"Arancini (3 pcs)",c:"Antipasti"}] },
 ];
+
+// ---- Pace config (capacity vs demand) ----
+const PACE = {
+  coversHr: 31,
+  revenueHr: 1180,           // Polish złoty
+  stations: [
+    { id:"Pizza",     cap:10, fc:7 },
+    { id:"Pasta",     cap:8,  fc:6 },
+    { id:"Antipasti", cap:9,  fc:3 },
+    { id:"Panini",    cap:8,  fc:2 },
+    { id:"Drinks",    cap:20, fc:5 },
+    { id:"Desserts",  cap:10, fc:2 },
+  ],
+};
+// Format an integer with thin space thousands grouping, e.g. 1180 -> "1 180".
+function groupNum(n){
+  return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+}
+// Current load for a station = sum of quantities of ACTIVE (non-ready) ticket
+// items whose category === station. Excludes bumping tickets.
+function stationLoad(id){
+  let load = 0;
+  ORDERS.forEach(o=>{
+    if(o.status === "ready" || bumping.has(o.id)) return;
+    o.items.forEach(i=>{ if(i.c === id) load += i.q; });
+  });
+  return load;
+}
+// Per-station pace snapshot { id, cap, fc, load, demand, util, level }.
+function paceFor(cfg){
+  const load = stationLoad(cfg.id);
+  const demand = load + cfg.fc;
+  const util = demand / cfg.cap;
+  const level = util > 1.0 ? "violet" : util >= 0.8 ? "amber" : "calm";
+  return { id:cfg.id, cap:cfg.cap, fc:cfg.fc, load, demand, util, level };
+}
+function paceSnapshot(){ return PACE.stations.map(paceFor); }
 
 // ---- Station definitions with inline SVG icons ----
 const STATIONS = [
@@ -592,22 +777,84 @@ function renderStages(){
   });
 }
 
-// ---- Rail render ----
+// ---- Rail render (live per-station pace gauges) ----
+const PACE_BY_ID = Object.fromEntries(PACE.stations.map(s=>[s.id, s]));
 function renderRail(){
   const rail = document.getElementById("rail");
   rail.innerHTML = "";
   STATIONS.forEach(st=>{
-    const live = ORDERS.filter(o=>!bumping.has(o.id));
-    const ct = st.key === "All"
-      ? live.length
-      : live.filter(o=>o.items.some(i=>i.c===st.key)).length;
     const b = document.createElement("button");
-    b.className = "rail-btn" + (activeStation===st.key ? " active":"");
-    b.innerHTML = icon(st.key) + `<span class="rl">${st.label}</span>` +
-      (ct>0 ? `<span class="ct">${ct}</span>` : "");
+
+    if(st.key === "All"){
+      // Plain selector — shows total live ticket count, no pace gauge.
+      const live = ORDERS.filter(o=>!bumping.has(o.id));
+      b.className = "rail-btn" + (activeStation===st.key ? " active":"");
+      b.innerHTML =
+        `<div class="rb-top">${icon(st.key)}<span class="rl">${st.label}</span>` +
+        (live.length>0 ? `<span class="ct">${live.length}</span>` : "") + `</div>`;
+      b.onclick = ()=>{ activeStation = st.key; render(); };
+      rail.appendChild(b);
+
+      const cap = document.createElement("div");
+      cap.className = "rail-cap";
+      cap.textContent = "Station pace";
+      rail.appendChild(cap);
+      return;
+    }
+
+    const cfg = PACE_BY_ID[st.key];
+    const p = cfg ? paceFor(cfg) : null;
+    b.className = "rail-btn"
+      + (activeStation===st.key ? " active":"")
+      + (p && p.level==="violet" ? " breach":"");
+
+    if(p){
+      const pct = Math.round(p.util*100);
+      const w = Math.min(p.util, 1.6) / 1.6 * 100; // scale: 0–160% across the bar
+      b.innerHTML =
+        `<div class="rb-top">${icon(st.key)}<span class="rl">${st.label}</span>` +
+          `<span class="fc-badge">+${p.fc}</span></div>` +
+        `<div class="rb-gauge">` +
+          `<div class="gauge-track"><div class="gauge-fill ${p.level}" style="width:${w.toFixed(0)}%"></div></div>` +
+          `<span class="rb-load ${p.level}">${p.demand}/${p.cap}</span>` +
+        `</div>`;
+    } else {
+      b.innerHTML = `<div class="rb-top">${icon(st.key)}<span class="rl">${st.label}</span></div>`;
+    }
     b.onclick = ()=>{ activeStation = st.key; render(); };
     rail.appendChild(b);
   });
+}
+
+// ---- Capacity meter + headline readouts (bottleneck = max station util) ----
+function renderPace(){
+  document.getElementById("coversHr").textContent = PACE.coversHr;
+  document.getElementById("revenueHr").innerHTML = groupNum(PACE.revenueHr) + `<small>zł</small>`;
+
+  const snap = paceSnapshot();
+  let top = snap[0];
+  snap.forEach(s=>{ if(s.util > top.util) top = s; });
+
+  const pct = Math.round(top.util*100);
+  const level = top.level;
+  const w = Math.min(top.util, 1.6) / 1.6 * 100;
+
+  const meter = document.getElementById("capMeter");
+  const fill = document.getElementById("capFill");
+  const lab = document.getElementById("capLab");
+  const pctEl = document.getElementById("capPct");
+
+  fill.style.width = w.toFixed(0) + "%";
+  fill.classList.remove("amber","violet");
+  if(level === "violet") fill.classList.add("violet");
+  else if(level === "amber") fill.classList.add("amber");
+
+  // Breach = any station over capacity (predicts lateness before tickets are late).
+  const breach = snap.some(s=>s.util > 1.0);
+  meter.classList.toggle("breach", breach);
+
+  pctEl.textContent = pct + "%";
+  lab.innerHTML = `Capacity · bottleneck <b>${top.id}</b>`;
 }
 
 // ---- Ticket markup ----
@@ -741,6 +988,7 @@ function cookStatuses(){
 function render(){
   renderStages();
   renderRail();
+  renderPace();
 
   // Apply single-pane focus when a specific stage is selected.
   const panes = document.getElementById("panes");
@@ -805,6 +1053,8 @@ function tick(){
   });
   // re-sort cook pane if urgency order may have shifted
   reorderCook();
+  // recompute pace (capacity vs demand) live every tick
+  renderPace();
 }
 let lastSig = "";
 function reorderCook(){

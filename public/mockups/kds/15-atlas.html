@@ -358,6 +358,75 @@
   .t-legend span{display:inline-flex;align-items:center;gap:6px;font-size:9.5px;color:var(--dim);letter-spacing:0.02em}
   .t-legend i{width:8px;height:8px;border-radius:2px;flex:0 0 auto}
 
+  /* ====================== Pace (capacity vs demand) ====================== */
+  /* per-truck capacity meter + covers/hr + revenue/hr — lives in truck header */
+  .pace-head{
+    display:flex;align-items:stretch;gap:var(--s4);margin-top:var(--s3);
+    padding-top:var(--s3);border-top:1px solid var(--hair);flex-wrap:wrap;
+  }
+  .pace-rate{display:flex;flex-direction:column;gap:1px;min-width:0}
+  .pace-rate .lab{font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--faint)}
+  .pace-rate .val{font-family:var(--mono);font-size:15px;font-weight:600;color:var(--text)}
+  .pace-rate .val small{font-size:9px;color:var(--faint);letter-spacing:0.04em;font-weight:400}
+
+  .cap-meter{flex:1 1 200px;min-width:160px;display:flex;flex-direction:column;gap:4px}
+  .cap-meter .cm-top{display:flex;align-items:baseline;gap:var(--s2)}
+  .cap-meter .cm-lab{font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--faint)}
+  .cap-meter .cm-pct{
+    font-family:var(--mono);font-size:13px;font-weight:600;color:var(--text);margin-left:auto;
+  }
+  .cap-meter .cm-pct.warn{color:var(--warn)}
+  .cap-meter .cm-pct.risk{color:var(--risk)}
+  .cap-meter .cm-station{font-size:9px;letter-spacing:0.04em;color:var(--dim)}
+  .cap-track{
+    height:8px;background:rgba(255,255,255,0.07);border-radius:4px;overflow:hidden;position:relative;
+  }
+  .cap-fill{height:100%;border-radius:4px;transition:width .3s ease,background .3s ease}
+  .cap-fill.calm{background:var(--ready)}
+  .cap-fill.warn{background:var(--warn)}
+  .cap-fill.risk{background:var(--risk)}
+  .cap-mark{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--text);opacity:.4}
+
+  /* per-station pace gauges row inside the body */
+  .pace-gauges{
+    flex:0 0 auto;display:flex;align-items:stretch;gap:var(--s2);flex-wrap:wrap;
+    padding:var(--s3) var(--s5);background:var(--panel);border-bottom:1px solid var(--hair);
+  }
+  .pg-title{
+    font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:var(--faint);
+    align-self:center;margin-right:var(--s1);white-space:nowrap;
+  }
+  .gauge{
+    flex:1 1 90px;min-width:84px;display:flex;flex-direction:column;gap:4px;
+    padding:var(--s2);border:1px solid var(--hair);border-radius:7px;background:var(--canvas);
+    position:relative;
+  }
+  .gauge.risk{border-color:rgba(139,92,246,0.5)}
+  .gauge.warn{border-color:rgba(245,166,35,0.35)}
+  .gauge .g-top{display:flex;align-items:baseline;gap:5px}
+  .gauge .g-name{font-size:10px;font-weight:600;color:var(--text);letter-spacing:0.01em}
+  .gauge .g-fig{font-family:var(--mono);font-size:10px;color:var(--dim);margin-left:auto}
+  .gauge .g-fig.warn{color:var(--warn)}
+  .gauge .g-fig.risk{color:var(--risk)}
+  .gauge .g-track{height:5px;background:rgba(255,255,255,0.07);border-radius:3px;overflow:hidden;position:relative}
+  .gauge .g-fill{height:100%;border-radius:3px;transition:width .3s ease,background .3s ease}
+  .gauge .g-fill.calm{background:var(--ready)}
+  .gauge .g-fill.warn{background:var(--warn)}
+  .gauge .g-fill.risk{background:var(--risk)}
+  .gauge .g-mark{position:absolute;top:-1px;bottom:-1px;width:2px;background:var(--text);opacity:.35}
+  .fc-badge{
+    position:absolute;top:-7px;right:6px;
+    font-family:var(--mono);font-size:9px;font-weight:600;line-height:14px;
+    padding:0 5px;border-radius:7px;background:var(--raised);border:1px solid var(--hair-strong);
+    color:var(--dim);letter-spacing:0.02em;
+  }
+  .fc-badge.risk{color:var(--risk);border-color:rgba(139,92,246,0.5)}
+  /* in drill, gauges go full width and a touch larger */
+  .truck.is-drill .pace-gauges{padding:var(--s3) var(--s5)}
+  .truck.is-drill .gauge{flex:1 1 130px}
+  .is-fullscreen .gauge .g-name{font-size:11px}
+  .is-fullscreen .pace-rate .val{font-size:16px}
+
   /* ====================== Fullscreen tweaks ====================== */
   .is-fullscreen header{height:50px}
   .is-fullscreen .kd-label,
@@ -425,6 +494,35 @@
     "Kraków":  [16,19,17,21,20,18,22,23],
     "Warszawa":[12,15,14,17,16,15,17,18],
   };
+
+  /* ====================== Pace config (capacity vs demand) ====================== */
+  // per-truck covers/hr + revenue/hr headline rates, plus per-station capacity + forecast
+  const PACE_BY_TRUCK = {
+    "Kraków":   { coversHr:18, revenueHr:690, stations:[
+      {id:"Pizza",cap:6,fc:4},{id:"Pasta",cap:5,fc:3},{id:"Antipasti",cap:5,fc:2},{id:"Panini",cap:4,fc:1},{id:"Drinks",cap:12,fc:3},{id:"Desserts",cap:6,fc:1} ] },
+    "Warszawa": { coversHr:13, revenueHr:490, stations:[
+      {id:"Pizza",cap:5,fc:3},{id:"Pasta",cap:4,fc:3},{id:"Antipasti",cap:4,fc:1},{id:"Panini",cap:4,fc:1},{id:"Drinks",cap:10,fc:2},{id:"Desserts",cap:5,fc:1} ] },
+  };
+  // zł formatting with a thin space thousands separator (matches "1 180 zł")
+  function zl(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g," ")+" zł"; }
+  function paceTier(util){ return util>1.0 ? "risk" : (util>=0.8 ? "warn" : "calm"); }
+
+  // compute each station's live load/demand/utilisation for ONE truck from its ACTIVE tickets
+  function truckPace(loc){
+    const cfg=PACE_BY_TRUCK[loc];
+    const active=truckTickets(loc).filter(t=>t.status!=="ready");
+    const stations=cfg.stations.map(st=>{
+      let currentLoad=0;
+      active.forEach(t=>t.items.forEach(i=>{ if(i.c===st.id) currentLoad+=i.q; }));
+      const demand=currentLoad+st.fc;
+      const util=st.cap>0 ? demand/st.cap : 0;
+      return { id:st.id, cap:st.cap, fc:st.fc, currentLoad, demand, util, tier:paceTier(util) };
+    });
+    // bottleneck = MAX utilisation station → drives the capacity meter
+    let bottleneck=stations[0];
+    stations.forEach(s=>{ if(s.util>bottleneck.util) bottleneck=s; });
+    return { coversHr:cfg.coversHr, revenueHr:cfg.revenueHr, stations, bottleneck };
+  }
 
   // working copy (deep clone so source dataset stays intact)
   let tickets = ORDERS.map(o=>({ ...o, items:o.items.map(i=>({...i})) }));
@@ -572,6 +670,9 @@
     const totalLate=k.late+w.late;
     const totalReady=k.ready+w.ready;
     const totalThru=k.throughputHr+w.throughputHr;
+    // fleet pace totals (covers/hr + revenue/hr) = sum of per-truck rates
+    const fleetCovers=PACE_BY_TRUCK["Kraków"].coversHr+PACE_BY_TRUCK["Warszawa"].coversHr;
+    const fleetRevenue=PACE_BY_TRUCK["Kraków"].revenueHr+PACE_BY_TRUCK["Warszawa"].revenueHr;
     // fleet promise-accuracy = throughput-weighted mean
     const fleetAcc=Math.round((k.promiseAcc*k.throughputHr + w.promiseAcc*w.throughputHr)/totalThru);
     const leader=k.promiseAcc>=w.promiseAcc?"Kraków":"Warszawa";
@@ -613,6 +714,14 @@
       '<div class="fb-cell">'+
         '<div class="fb-label">Throughput</div>'+
         '<div class="fb-val"><span class="fb-num tnum good">'+totalThru+'</span><span class="fb-unit">/ hr fleet</span></div>'+
+      '</div>'+
+      '<div class="fb-cell">'+
+        '<div class="fb-label">Covers / hr</div>'+
+        '<div class="fb-val"><span class="fb-num tnum">'+fleetCovers+'</span><span class="fb-unit">/ hr fleet</span></div>'+
+      '</div>'+
+      '<div class="fb-cell">'+
+        '<div class="fb-label">Revenue / hr</div>'+
+        '<div class="fb-val"><span class="fb-num tnum">'+zl(fleetRevenue)+'</span><span class="fb-unit">/ hr fleet</span></div>'+
       '</div>'+
       '<div class="fb-cell benchmark grow">'+
         '<div class="fb-label">Promise-accuracy · cross-truck benchmark</div>'+
@@ -690,6 +799,34 @@
   }
 
   /* ====================== Truck board ====================== */
+  // capacity meter (bottleneck) + covers/hr + revenue/hr, rendered into the truck header
+  function paceHeadHtml(loc){
+    const p=truckPace(loc);
+    const b=p.bottleneck;
+    const tier=b.tier; // calm | warn | risk
+    const pct=Math.round(b.util*100);
+    const fillW=Math.min(100,pct); // visual cap at 100% of track; mark at the 100% line
+    return '<div class="pace-head" data-pacehead="'+loc+'">'+
+      '<div class="pace-rate">'+
+        '<span class="lab">Covers / hr</span>'+
+        '<span class="val tnum">'+p.coversHr+'</span>'+
+      '</div>'+
+      '<div class="pace-rate">'+
+        '<span class="lab">Revenue / hr</span>'+
+        '<span class="val tnum">'+zl(p.revenueHr)+'</span>'+
+      '</div>'+
+      '<div class="cap-meter" data-capmeter="'+loc+'">'+
+        '<div class="cm-top">'+
+          '<span class="cm-lab">Capacity · bottleneck</span>'+
+          '<span class="cm-pct '+tier+'" data-cappct>'+pct+'%</span>'+
+        '</div>'+
+        '<div class="cap-track"><span class="cap-fill '+tier+'" data-capfill style="width:'+fillW+'%"></span>'+
+          '<span class="cap-mark" style="left:100%"></span></div>'+
+        '<span class="cm-station" data-capstation>Capacity '+pct+'% · '+b.id+'</span>'+
+      '</div>'+
+    '</div>';
+  }
+
   function truckHeadHtml(loc,s){
     const ring=ringSVG(52,s.health/100,s.healthColor,"rgba(255,255,255,0.08)",4);
     return '<div class="t-head" data-truck="'+loc+'">'+
@@ -716,6 +853,31 @@
           sparkline(SPARK[loc],s.healthColor)+
         '</div>'+
       '</div>'+
+      paceHeadHtml(loc)+
+    '</div>';
+  }
+
+  // per-station pace gauges row (sits at the top of the truck body region)
+  function paceGaugesHtml(loc){
+    const p=truckPace(loc);
+    let cells='';
+    p.stations.forEach(st=>{
+      const tier=st.tier;
+      const fillW=Math.min(100,Math.round(st.util*100));
+      const figCls=tier==="risk"?"risk":tier==="warn"?"warn":"";
+      const fcCls=tier==="risk"?"risk":"";
+      cells+='<div class="gauge '+tier+'" data-gauge="'+loc+'|'+st.id+'">'+
+        '<span class="fc-badge '+fcCls+'" data-fc>+'+st.fc+'</span>'+
+        '<div class="g-top">'+
+          '<span class="g-name">'+st.id+'</span>'+
+          '<span class="g-fig '+figCls+'" data-gfig>'+st.demand+'/'+st.cap+'</span>'+
+        '</div>'+
+        '<div class="g-track"><span class="g-fill '+tier+'" data-gfill style="width:'+fillW+'%"></span>'+
+          '<span class="g-mark" style="left:100%"></span></div>'+
+      '</div>';
+    });
+    return '<div class="pace-gauges" data-gauges="'+loc+'">'+
+      '<span class="pg-title">Pace</span>'+cells+
     '</div>';
   }
 
@@ -762,6 +924,7 @@
         : '<div class="empty">No tickets in this view.</div>';
 
       section.innerHTML = truckHeadHtml(loc,s) +
+        paceGaugesHtml(loc) +
         '<div class="t-body">'+body+'</div>' + LEGEND;
       boardsEl.appendChild(section);
     });
@@ -891,6 +1054,43 @@
     });
   }
 
+  // recompute the Pace surfaces (capacity meter + per-station gauges) in place every tick
+  function updatePaceInPlace(){
+    TRUCKS.forEach(loc=>{
+      const p=truckPace(loc);
+
+      // capacity meter (bottleneck)
+      const cm=boardsEl.querySelector('[data-capmeter="'+loc+'"]');
+      if(cm){
+        const b=p.bottleneck, tier=b.tier, pct=Math.round(b.util*100);
+        const fillW=Math.min(100,pct);
+        const fill=cm.querySelector('[data-capfill]');
+        if(fill){ fill.style.width=fillW+'%'; ["calm","warn","risk"].forEach(c=>fill.classList.remove(c)); fill.classList.add(tier); }
+        const pe=cm.querySelector('[data-cappct]');
+        if(pe){ pe.textContent=pct+'%'; ["warn","risk"].forEach(c=>pe.classList.remove(c)); if(tier!=="calm") pe.classList.add(tier); }
+        const stn=cm.querySelector('[data-capstation]');
+        if(stn) stn.textContent='Capacity '+pct+'% · '+b.id;
+      }
+
+      // per-station gauges
+      const wrap=boardsEl.querySelector('[data-gauges="'+loc+'"]');
+      if(wrap){
+        p.stations.forEach(st=>{
+          const g=wrap.querySelector('[data-gauge="'+loc+'|'+st.id+'"]');
+          if(!g) return;
+          const tier=st.tier, fillW=Math.min(100,Math.round(st.util*100));
+          ["calm","warn","risk"].forEach(c=>g.classList.remove(c)); g.classList.add(tier);
+          const fill=g.querySelector('[data-gfill]');
+          if(fill){ fill.style.width=fillW+'%'; ["calm","warn","risk"].forEach(c=>fill.classList.remove(c)); fill.classList.add(tier); }
+          const fig=g.querySelector('[data-gfig]');
+          if(fig){ fig.textContent=st.demand+'/'+st.cap; ["warn","risk"].forEach(c=>fig.classList.remove(c)); if(tier!=="calm") fig.classList.add(tier); }
+          const fc=g.querySelector('[data-fc]');
+          if(fc){ fc.textContent='+'+st.fc; fc.classList.toggle("risk",tier==="risk"); }
+        });
+      }
+    });
+  }
+
   let lastToneSig="";
   function toneSignature(){
     return tickets.map(t=>t.id+tone(t)).join("|");
@@ -916,6 +1116,7 @@
       render();
     } else {
       updateCardsInPlace();
+      updatePaceInPlace();
       renderFleetBar();
       updateLineCounts();
     }
