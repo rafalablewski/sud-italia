@@ -1,7 +1,7 @@
 # Sud Italia — Mobile Admin UX Strategy
 
 **Date:** 2026-05-17
-**Companion docs:** `mobile-audit.md`, `mobile-navigation.md`, `mobile-design-system.md`
+**Companion docs:** `audit.md`, `navigation.md`, `design-system.md`
 **Implementation:** `src/components/admin/v2/mobile/*`, `src/components/admin/mobile/*`
 
 ---
@@ -70,7 +70,7 @@ This is the same logic as Toast's home/orders/menu structure, the same as Square
 └─────────┴─────────┴──────────┴─────────┴─────────┘
 ```
 
-Tabs are role-filtered (see `mobile-navigation.md` for the matrix). The FAB is **context-aware**:
+Tabs are role-filtered (see `navigation.md` for the matrix). The FAB is **context-aware**:
 
 | Current screen | FAB action |
 |---|---|

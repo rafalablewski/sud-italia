@@ -7,7 +7,7 @@
   <style>
     /* ------------------------------------------------------------------
        Production tokens (mirror of src/app/globals.css @theme block)
-       — kept identical to cart-upsell-mockup.html so the two files render
+       — kept identical to cart-upsell.html so the two files render
        in the exact same visual vocabulary.
        ------------------------------------------------------------------ */
     :root {
@@ -207,7 +207,7 @@
 
     /* ==================================================================
        Loyalty status banner — bg-italia-gold/8 border-italia-gold/15
-       (kept identical to cart-upsell-mockup.html)
+       (kept identical to cart-upsell.html)
        ================================================================== */
     .loyalty {
       display: flex; align-items: center; gap: 8px;
@@ -229,7 +229,7 @@
     }
 
     /* ==================================================================
-       Time-of-day banner (mirrors cart-upsell-mockup.html .tod chrome)
+       Time-of-day banner (mirrors cart-upsell.html .tod chrome)
        ================================================================== */
     .tod {
       display: flex; align-items: flex-start; gap: 12px;
@@ -391,7 +391,7 @@
     }
 
     /* ==================================================================
-       "Complete the meal" chips (mirror of cart-upsell-mockup.html)
+       "Complete the meal" chips (mirror of cart-upsell.html)
        ================================================================== */
     .complete-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
     .complete-head .label {
@@ -450,7 +450,7 @@
     @keyframes bounce-in { 0% { transform: scale(0.94); } 60% { transform: scale(1.03); } 100% { transform: scale(1); } }
 
     /* ==================================================================
-       Delivery progress (mirrors cart-upsell-mockup.html)
+       Delivery progress (mirrors cart-upsell.html)
        ================================================================== */
     .delivery {
       padding: 12px; border-radius: 12px;
@@ -566,7 +566,7 @@
     .clear-btn:hover { color: var(--color-italia-red); }
 
     /* ==================================================================
-       Inline add-to-cart toast (mirrors cart-upsell-mockup.html)
+       Inline add-to-cart toast (mirrors cart-upsell.html)
        ================================================================== */
     .toast-host { position: absolute; left: 20px; right: 20px; top: 12px; z-index: 20; pointer-events: none; }
     .toast {
@@ -637,7 +637,7 @@
 </head>
 <body>
 
-<!-- Lucide-style icon symbol sheet — same set as cart-upsell-mockup.html
+<!-- Lucide-style icon symbol sheet — same set as cart-upsell.html
      so identical chrome renders without re-defining icons. -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
@@ -1050,7 +1050,7 @@
 
 <script>
   // ===================================================================
-  // State — same shape as cart-upsell-mockup.html so the recompute path
+  // State — same shape as cart-upsell.html so the recompute path
   // is comparable line-for-line. Adds bundle + team + segment + hour.
   // ===================================================================
   // Cart shape presets — drive the §3.2 family quantity gate. Each preset

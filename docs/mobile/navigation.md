@@ -1,7 +1,7 @@
 # Sud Italia — Mobile Navigation Architecture
 
 **Date:** 2026-05-17
-**Companion:** `mobile-design-system.md`, `mobile-ux-strategy.md`
+**Companion:** `design-system.md`, `ux-strategy.md`
 **Implementation:** `src/components/admin/v2/mobile/BottomNav.tsx`, `MoreDrawer.tsx`, `MobileTopbar.tsx`, `QuickActionSheet.tsx`
 
 ---
