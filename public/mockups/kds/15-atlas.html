@@ -250,10 +250,10 @@
   .t-body{
     flex:1 1 auto;overflow-y:auto;min-height:0;
     padding:var(--s4) var(--s5);
-    display:flex;flex-direction:column;gap:var(--s3);
+    display:flex;flex-direction:column;gap:var(--s4);
   }
   .truck.is-drill .t-body{
-    display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));
     gap:var(--s4);align-content:start;
   }
   .t-body::-webkit-scrollbar{width:7px}
@@ -262,12 +262,12 @@
 
   /* ====================== Ticket card ====================== */
   .ticket{
-    position:relative;background:var(--raised);border:1px solid var(--hair);border-radius:10px;
-    padding:var(--s3) var(--s4);overflow:hidden;
+    position:relative;background:var(--raised);border:1px solid var(--hair);border-radius:12px;
+    padding:var(--s4) var(--s4) var(--s4) calc(var(--s4) + 4px);overflow:hidden;
     transition:border-color .16s ease,background .16s ease;
   }
   .ticket::before{
-    content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--queued);
+    content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--queued);
     transition:background .16s ease;
   }
   .ticket.firing::before{background:var(--firing)}
@@ -281,32 +281,32 @@
   .ticket.ready{border-color:rgba(61,214,140,0.3)}
 
   .t-r1{display:flex;align-items:center;gap:var(--s2)}
-  .t-id{font-family:var(--mono);font-size:13px;font-weight:600;letter-spacing:0.03em;color:var(--text)}
-  .t-chan{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--faint);letter-spacing:0.04em;text-transform:uppercase}
-  .t-chan svg{width:11px;height:11px;opacity:.6}
-  .t-name{margin-left:auto;font-size:12px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .t-id{font-family:var(--mono);font-size:16px;font-weight:700;letter-spacing:0.03em;color:var(--text)}
+  .t-chan{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:var(--faint);letter-spacing:0.04em;text-transform:uppercase}
+  .t-chan svg{width:12px;height:12px;opacity:.6}
+  .t-name{margin-left:auto;font-size:13px;font-weight:500;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:42%}
 
   /* dual timer block */
   .t-timer{
-    display:flex;align-items:center;gap:var(--s3);margin-top:var(--s3);
+    display:flex;align-items:center;gap:var(--s4);margin-top:var(--s4);
   }
-  .timer-ring{position:relative;width:46px;height:46px;flex:0 0 auto}
-  .timer-ring svg{width:46px;height:46px;transform:rotate(-90deg)}
+  .timer-ring{position:relative;width:54px;height:54px;flex:0 0 auto}
+  .timer-ring svg{width:54px;height:54px;transform:rotate(-90deg)}
   .timer-ring .tr-cap{
     position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-    font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:0.02em;color:var(--dim);
+    font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:0.02em;color:var(--dim);
   }
-  .timer-info{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 auto}
+  .timer-info{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1 1 auto}
   .ti-row{display:flex;align-items:baseline;gap:var(--s2)}
-  .ti-elapsed{font-family:var(--mono);font-size:18px;font-weight:600;line-height:1;letter-spacing:0.01em;color:var(--text)}
+  .ti-elapsed{font-family:var(--mono);font-size:24px;font-weight:700;line-height:1;letter-spacing:0.01em;color:var(--text)}
   .ti-elapsed-lab{font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--faint)}
-  .ti-due{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--dim)}
+  .ti-due{font-family:var(--mono);font-size:13.5px;font-weight:600;color:var(--dim)}
   .ti-due.firing{color:var(--firing)}
   .ti-due.warn{color:var(--warn)}
   .ti-due.risk{color:var(--risk)}
   .ti-due.late{color:var(--late)}
   .ti-due.ready{color:var(--ready)}
-  .ti-pred{font-size:10px;color:var(--faint);letter-spacing:0.02em}
+  .ti-pred{font-size:11.5px;color:var(--faint);letter-spacing:0.02em}
   .ti-pred b{color:var(--risk);font-weight:600}
 
   /* risk flag pill */
@@ -318,27 +318,47 @@
   }
   .risk-pill svg{width:9px;height:9px}
 
-  .t-items{margin-top:var(--s3);display:flex;flex-direction:column;gap:3px}
-  .it{display:flex;gap:var(--s2);align-items:baseline;font-size:12px;line-height:1.35}
-  .it .q{font-family:var(--mono);color:var(--dim);min-width:22px;font-size:11px}
-  .it .nm{color:var(--text)}
-  .it .cat{margin-left:auto;font-size:9px;letter-spacing:0.08em;text-transform:uppercase;color:var(--faint);align-self:center}
-  .it .note{display:block;font-size:10.5px;color:var(--warn);margin-top:1px}
-  .order-note{
-    margin-top:var(--s2);padding:5px 8px;background:rgba(255,255,255,0.03);border:1px solid var(--hair);
-    border-radius:6px;font-size:10.5px;color:var(--dim);display:flex;gap:6px;align-items:flex-start;
+  .t-items{margin-top:var(--s4);display:flex;flex-direction:column;gap:var(--s2)}
+  .it{display:flex;flex-direction:column;gap:4px}
+  .it-main{display:flex;gap:var(--s3);align-items:baseline}
+  .it .q{
+    font-family:var(--mono);font-weight:600;font-size:13px;color:var(--text);
+    min-width:34px;text-align:center;background:rgba(255,255,255,0.05);
+    border:1px solid var(--hair);border-radius:5px;padding:2px 6px;flex:0 0 auto;
   }
-  .order-note svg{width:11px;height:11px;flex:0 0 auto;margin-top:1px;opacity:.7}
+  .it .nm{color:var(--text);font-size:14px;font-weight:500;line-height:1.3}
+  .it .cat{margin-left:auto;font-size:9.5px;letter-spacing:0.08em;text-transform:uppercase;color:var(--faint);align-self:center;white-space:nowrap}
+  .it .req{
+    display:inline-flex;align-items:center;gap:6px;margin-left:46px;
+    font-size:12.5px;color:var(--warn);font-weight:500;letter-spacing:0.01em;
+  }
+  .it .req svg{width:13px;height:13px;opacity:.9;flex:0 0 auto}
+  /* Notes & requests block */
+  .t-notes{
+    margin-top:var(--s3);border:1px solid rgba(245,166,35,0.28);background:rgba(245,166,35,0.07);
+    border-radius:8px;padding:var(--s3);display:flex;flex-direction:column;gap:var(--s2);
+  }
+  .tn-head{
+    display:flex;align-items:center;gap:7px;font-size:10px;letter-spacing:0.12em;
+    text-transform:uppercase;color:var(--warn);font-weight:700;
+  }
+  .tn-head svg{width:13px;height:13px;flex:0 0 auto}
+  .tn-line{font-size:13px;color:var(--text);line-height:1.45;padding-left:20px}
+  .tn-alert{
+    display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--late);
+    background:rgba(229,72,77,0.10);border:1px solid rgba(229,72,77,0.32);border-radius:6px;padding:6px 9px;
+  }
+  .tn-alert svg{width:15px;height:15px;flex:0 0 auto}
 
   .t-foot{
-    margin-top:var(--s3);padding-top:var(--s3);border-top:1px solid var(--hair);
+    margin-top:var(--s4);padding-top:var(--s3);border-top:1px solid var(--hair);
     display:flex;align-items:center;gap:var(--s3);
   }
-  .t-meta{font-size:9px;letter-spacing:0.06em;color:var(--faint);text-transform:uppercase}
+  .t-meta{font-size:10px;letter-spacing:0.06em;color:var(--faint);text-transform:uppercase}
   .t-meta b{color:var(--dim);font-weight:600}
   .act{
-    margin-left:auto;appearance:none;cursor:pointer;font-family:var(--sans);font-size:11px;
-    font-weight:600;letter-spacing:0.03em;border-radius:6px;padding:7px 13px;white-space:nowrap;
+    margin-left:auto;appearance:none;cursor:pointer;font-family:var(--sans);font-size:12.5px;
+    font-weight:600;letter-spacing:0.03em;border-radius:7px;padding:9px 17px;white-space:nowrap;
     border:1px solid var(--hair-strong);background:var(--raised);color:var(--text);
     transition:filter .16s ease,background .16s ease,border-color .16s ease;
   }
@@ -434,10 +454,11 @@
   .is-fullscreen header{height:50px}
   .is-fullscreen .kd-label,
   .is-fullscreen .gallery-link{display:none}
-  .is-fullscreen .ti-elapsed{font-size:20px}
+  .is-fullscreen .ti-elapsed{font-size:28px}
   .is-fullscreen .th-loc{font-size:18px}
   .is-fullscreen .fb-num{font-size:26px}
-  .is-fullscreen .it{font-size:13px}
+  .is-fullscreen .it .nm{font-size:15px}
+  .is-fullscreen .tn-line,.is-fullscreen .tn-alert{font-size:14px}
 </style>
 </head>
 <body>
@@ -469,19 +490,23 @@
   /* ====================== Dataset ====================== */
   const ORDERS = [
     { id:"A4F9C2", name:"Marco R.",  channel:"takeout",  loc:"Kraków",   slot:"15:20", elapsed:192, sla:150, pred:130, status:"prep",
-      items:[{q:2,n:"Margherita",c:"Pizza"},{q:1,n:"Diavola",c:"Pizza"},{q:1,n:"Espresso",c:"Drinks"}] },
+      note:"Call on arrival — collecting by bike",
+      items:[{q:2,n:"Margherita",c:"Pizza"},{q:1,n:"Diavola",c:"Pizza",note:"extra spicy · light cheese"},{q:1,n:"Espresso",c:"Drinks"}] },
     { id:"B7K2D1", name:"Giulia M.", channel:"delivery", loc:"Kraków",   slot:"15:15", elapsed:540, sla:-65, pred:80,  status:"prep",
-      items:[{q:1,n:"Quattro Formaggi",c:"Pizza"},{q:1,n:"Spaghetti Carbonara",c:"Pasta",note:"no garlic"},{q:1,n:"Tiramisù",c:"Desserts"}], note:"Leave at reception" },
+      note:"Leave at reception", allergy:"Nut allergy — prep separately",
+      items:[{q:1,n:"Quattro Formaggi",c:"Pizza"},{q:1,n:"Spaghetti Carbonara",c:"Pasta",note:"no garlic"},{q:1,n:"Tiramisù",c:"Desserts"}] },
     { id:"C1M8X4", name:"Paweł K.",  channel:"takeout",  loc:"Warszawa", slot:"15:30", elapsed:48,  sla:612, pred:300, status:"new",
-      items:[{q:1,n:"Diavola",c:"Pizza"},{q:2,n:"Aranciata",c:"Drinks"}] },
+      items:[{q:1,n:"Diavola",c:"Pizza",note:"well done"},{q:2,n:"Aranciata",c:"Drinks"}] },
     { id:"D9P3Q7", name:"Anna W.",   channel:"delivery", loc:"Warszawa", slot:"15:28", elapsed:95,  sla:505, pred:560, status:"new",
-      items:[{q:3,n:"Margherita",c:"Pizza"},{q:1,n:"Penne Arrabbiata",c:"Pasta"},{q:2,n:"Limonata Fresca",c:"Drinks"}] },
+      note:"Ring buzzer 4B · 3rd floor, no lift",
+      items:[{q:3,n:"Margherita",c:"Pizza",note:"1× gluten-free base"},{q:1,n:"Penne Arrabbiata",c:"Pasta"},{q:2,n:"Limonata Fresca",c:"Drinks"}] },
     { id:"E5R6T2", name:"Luca B.",   channel:"takeout",  loc:"Kraków",   slot:"15:22", elapsed:300, sla:120, pred:150, status:"prep",
+      note:"Add cutlery + napkins",
       items:[{q:1,n:"Tartufata Reale",c:"Pizza",note:"extra truffle"},{q:1,n:"Burrata con Pomodorini",c:"Antipasti"}] },
     { id:"F2H4J8", name:"Sofia L.",  channel:"takeout",  loc:"Kraków",   slot:"15:10", elapsed:720, sla:0,   pred:0,   status:"ready",
       items:[{q:1,n:"Panino Caprese",c:"Panini"},{q:1,n:"Garlic Bread",c:"Antipasti"},{q:1,n:"Espresso",c:"Drinks"}] },
     { id:"G8L1N5", name:"Tomek Z.",  channel:"delivery", loc:"Warszawa", slot:"15:32", elapsed:150, sla:450, pred:360, status:"new",
-      items:[{q:2,n:"Penne Arrabbiata",c:"Pasta"},{q:1,n:"Linguine al Pesto",c:"Pasta"}] },
+      items:[{q:2,n:"Penne Arrabbiata",c:"Pasta"},{q:1,n:"Linguine al Pesto",c:"Pasta",note:"no parmesan · vegan"}] },
     { id:"H3W7Y9", name:"Elena P.",  channel:"takeout",  loc:"Kraków",   slot:"15:08", elapsed:660, sla:0,   pred:0,   status:"ready",
       items:[{q:1,n:"Prosciutto e Rucola",c:"Pizza"},{q:1,n:"Arancini (3 pcs)",c:"Antipasti"}] },
   ];
@@ -568,6 +593,8 @@
     takeout:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12l-1 4H7L6 2Z"/><path d="M5 6h14l-1.2 14.5a1.5 1.5 0 0 1-1.5 1.5H7.7a1.5 1.5 0 0 1-1.5-1.5L5 6Z"/></svg>',
     delivery:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 3h13v11H1z"/><path d="M14 7h4l3 3v4h-7"/><circle cx="6" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>',
     note:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>',
+    msg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M8 11h8"/><path d="M8 15h5"/></svg>',
+    req:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 10 4 15 9 20"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/></svg>',
     pin:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>',
     risk:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v6"/><path d="M12 18h.01"/><circle cx="12" cy="12" r="10"/></svg>',
     back:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
@@ -751,11 +778,23 @@
 
     let itemsHtml="";
     t.items.forEach(i=>{
-      itemsHtml+='<div class="it"><span class="q tnum">'+i.q+'×</span><span class="nm">'+i.n+
-        (i.note?'<span class="note">— '+i.note+'</span>':'')+'</span><span class="cat">'+i.c+'</span></div>';
+      itemsHtml+='<div class="it">'+
+        '<div class="it-main">'+
+          '<span class="q tnum">'+i.q+'×</span>'+
+          '<span class="nm">'+i.n+'</span>'+
+          '<span class="cat">'+i.c+'</span>'+
+        '</div>'+
+        (i.note?'<span class="req">'+ICON.req+i.note+'</span>':'')+
+      '</div>';
     });
-    if(t.note){
-      itemsHtml+='<div class="order-note">'+ICON.note+'<span>'+t.note+'</span></div>';
+    // dedicated Notes & requests block — allergen alert + order special instruction
+    let notesHtml="";
+    if(t.allergy || t.note){
+      notesHtml='<div class="t-notes">'+
+        '<div class="tn-head">'+ICON.msg+'Notes &amp; requests</div>'+
+        (t.allergy?'<div class="tn-alert">'+ICON.note+'<span>'+t.allergy+'</span></div>':'')+
+        (t.note?'<div class="tn-line">'+t.note+'</div>':'')+
+      '</div>';
     }
 
     // predicted-ready line; flag the at-risk story explicitly
@@ -781,7 +820,7 @@
       '</div>'+
       '<div class="t-timer">'+
         '<div class="timer-ring" data-ring style="--rc:'+ringColor+'">'+
-          ringSVG(46,frac,ringColor,"rgba(255,255,255,0.09)",4)+
+          ringSVG(54,frac,ringColor,"rgba(255,255,255,0.09)",4)+
           '<span class="tr-cap mono" data-ringcap>'+ringCap+'</span>'+
         '</div>'+
         '<div class="timer-info">'+
@@ -794,6 +833,7 @@
         '</div>'+
       '</div>'+
       '<div class="t-items">'+itemsHtml+'</div>'+
+      notesHtml+
       '<div class="t-foot">'+
         '<span class="t-meta">Slot <b>'+t.slot+'</b> · <b>'+count+'</b> items</span>'+
         '<button class="act'+(t.status==="ready"?" ready":"")+'" data-advance>'+ACTION_LABEL[t.status]+'</button>'+
@@ -1029,7 +1069,7 @@
           ringColor=(tn==="risk")?"var(--risk)":(tn==="warn")?"var(--warn)":"var(--firing)";
         }
         const svg=ring.querySelector("svg");
-        if(svg) svg.outerHTML=ringSVG(46,frac,ringColor,"rgba(255,255,255,0.09)",4);
+        if(svg) svg.outerHTML=ringSVG(54,frac,ringColor,"rgba(255,255,255,0.09)",4);
         const cap=ring.querySelector("[data-ringcap]");
         if(cap) cap.textContent = t.status==="ready"?"OK":(t.sla<0?"LATE":mmss(t.sla));
       }
