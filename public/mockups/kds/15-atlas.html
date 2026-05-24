@@ -318,8 +318,15 @@
   }
   .risk-pill svg{width:9px;height:9px}
 
-  .t-items{margin-top:var(--s4);display:flex;flex-direction:column;gap:var(--s2)}
-  .it{display:flex;flex-direction:column;gap:4px}
+  .t-items{margin-top:var(--s4);display:flex;flex-direction:column;gap:var(--s3)}
+  /* station/category grouping */
+  .it-group{display:flex;flex-direction:column;gap:5px}
+  .it-group.is-dim{opacity:.38}
+  .ig-head{display:flex;align-items:center;gap:9px;font-size:9.5px;letter-spacing:0.13em;text-transform:uppercase;color:var(--faint);font-weight:700}
+  .ig-name{order:0}
+  .ig-head::after{content:"";order:1;flex:1 1 auto;height:1px;background:var(--hair)}
+  .ig-count{order:2;font-family:var(--mono);font-size:9.5px;font-weight:600;color:var(--dim);background:var(--hair);border-radius:4px;padding:0 6px;line-height:15px}
+  .it{display:flex;flex-direction:column;gap:4px;padding-left:2px}
   .it-main{display:flex;gap:var(--s3);align-items:baseline}
   .it .q{
     font-family:var(--mono);font-weight:600;font-size:13px;color:var(--text);
@@ -327,7 +334,6 @@
     border:1px solid var(--hair);border-radius:5px;padding:2px 6px;flex:0 0 auto;
   }
   .it .nm{color:var(--text);font-size:14px;font-weight:500;line-height:1.3}
-  .it .cat{margin-left:auto;font-size:9.5px;letter-spacing:0.08em;text-transform:uppercase;color:var(--faint);align-self:center;white-space:nowrap}
   .it .req{
     display:inline-flex;align-items:center;gap:6px;margin-left:46px;
     font-size:12.5px;color:var(--warn);font-weight:500;letter-spacing:0.01em;
@@ -808,17 +814,24 @@
       ringColor = (tn==="risk")?"var(--risk)" : (tn==="warn")?"var(--warn)" : "var(--firing)";
     }
 
+    // group items by station/category, in canonical station order
     let itemsHtml="";
-    t.items.forEach(i=>{
-      itemsHtml+='<div class="it">'+
-        '<div class="it-main">'+
-          '<span class="q tnum">'+i.q+'×</span>'+
-          '<span class="nm">'+i.n+'</span>'+
-          '<span class="cat">'+i.c+'</span>'+
-        '</div>'+
-        (i.note?'<span class="req">'+ICON.req+i.note+'</span>':'')+
-      '</div>';
-    });
+    {
+      const groups={};
+      t.items.forEach(i=>{ (groups[i.c]=groups[i.c]||[]).push(i); });
+      Object.keys(groups)
+        .sort((a,b)=>{ const ia=STATIONS.indexOf(a), ib=STATIONS.indexOf(b); return (ia<0?99:ia)-(ib<0?99:ib); })
+        .forEach(cat=>{
+          const dim=(activeStation!=="All" && activeStation!==cat)?" is-dim":"";
+          const qty=groups[cat].reduce((s,i)=>s+i.q,0);
+          itemsHtml+='<div class="it-group'+dim+'"><div class="ig-head"><span class="ig-name">'+cat+'</span><span class="ig-count tnum">'+qty+'</span></div>';
+          groups[cat].forEach(i=>{
+            itemsHtml+='<div class="it"><div class="it-main"><span class="q tnum">'+i.q+'×</span><span class="nm">'+i.n+'</span></div>'+
+              (i.note?'<span class="req">'+ICON.req+i.note+'</span>':'')+'</div>';
+          });
+          itemsHtml+='</div>';
+        });
+    }
     // dedicated Notes & requests block — allergen alert + order special instruction
     let notesHtml="";
     if(t.allergy || t.note){
