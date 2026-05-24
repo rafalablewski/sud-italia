@@ -1,0 +1,651 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sud Italia KDS — Tap Stack</title>
+<style>
+  :root{
+    --bg:#f4f5f7;
+    --bg-2:#eceef2;
+    --card:#ffffff;
+    --ink:#16202e;
+    --ink-2:#42505f;
+    --muted:#6c7886;
+    --faint:#97a1ad;
+    --line:#e3e7ec;
+    --line-soft:#edf0f3;
+    --accent:#2f6df0;
+    --accent-soft:#eaf1fe;
+    --accent-ink:#1c4fc0;
+    --warn:#b7791f;
+    --warn-bg:#fdf6e7;
+    --warn-line:#f0dcad;
+    --danger:#c4373a;
+    --danger-bg:#fdeded;
+    --danger-line:#f3c9ca;
+    --calm:#1f8a5b;
+    --calm-bg:#ecf7f1;
+    --calm-line:#bfe3cf;
+    --del:#7a4ed8;
+    --del-bg:#f2edfc;
+    --radius:18px;
+    --space:16px;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,"DejaVu Sans Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --shadow:0 1px 2px rgba(22,32,46,.05),0 6px 18px rgba(22,32,46,.06);
+    --shadow-lift:0 2px 4px rgba(22,32,46,.06),0 14px 34px rgba(22,32,46,.12);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:var(--sans);
+    background:var(--bg);
+    color:var(--ink);
+    font-size:15px;
+    line-height:1.45;
+    -webkit-font-smoothing:antialiased;
+    -webkit-text-size-adjust:100%;
+  }
+  .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;font-family:var(--mono)}
+
+  /* ===== App frame (tablet-first single column) ===== */
+  .frame{
+    max-width:1000px;
+    margin:0 auto;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    background:var(--bg);
+  }
+
+  /* ===== Header ===== */
+  header{
+    position:sticky;
+    top:0;
+    z-index:20;
+    background:rgba(255,255,255,.9);
+    backdrop-filter:saturate(140%) blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .head-row{
+    display:flex;
+    align-items:center;
+    gap:16px;
+    padding:14px 20px 12px;
+  }
+  .brand{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .wordmark{font-weight:700;letter-spacing:.16em;font-size:16px;color:var(--ink)}
+  .kd-label{
+    font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);
+    border-left:1px solid var(--line);padding-left:12px;
+  }
+  .tag{
+    font-size:11px;letter-spacing:.04em;color:var(--accent-ink);
+    background:var(--accent-soft);border:1px solid #cfe0fc;border-radius:999px;
+    padding:3px 11px;font-family:var(--mono);
+  }
+  .head-spacer{flex:1}
+  .clock{text-align:right;line-height:1.15}
+  .clock .t{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:19px;letter-spacing:.02em;color:var(--ink)}
+  .clock .d{display:block;font-size:10.5px;color:var(--faint);letter-spacing:.05em}
+  .gallery-link{
+    font-size:12px;color:var(--muted);text-decoration:none;letter-spacing:.02em;
+    padding:6px 11px;border:1px solid var(--line);border-radius:9px;background:var(--card);
+    transition:color .15s,border-color .15s;white-space:nowrap;
+  }
+  .gallery-link:hover{color:var(--ink);border-color:#cdd4dc}
+
+  /* ===== Segmented stage control ===== */
+  .segments{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:6px;
+    padding:0 20px 12px;
+  }
+  .seg{
+    appearance:none;
+    border:1px solid var(--line);
+    background:var(--card);
+    border-radius:13px;
+    padding:12px 10px;
+    cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+    font-family:var(--sans);
+    transition:border-color .15s,background .15s,box-shadow .15s;
+    min-height:64px;justify-content:center;
+  }
+  .seg .lab{font-size:12.5px;letter-spacing:.03em;color:var(--ink-2);font-weight:600}
+  .seg .ct{
+    font-family:var(--mono);font-variant-numeric:tabular-nums;
+    font-size:20px;color:var(--ink);line-height:1;
+  }
+  .seg:hover{border-color:#cdd4dc}
+  .seg.active{
+    border-color:var(--accent);
+    background:var(--accent-soft);
+    box-shadow:0 0 0 1px var(--accent);
+  }
+  .seg.active .lab{color:var(--accent-ink)}
+  .seg.active .ct{color:var(--accent-ink)}
+  /* badge accent per stage when active */
+  .seg.active[data-stage="ready"]{border-color:var(--calm);box-shadow:0 0 0 1px var(--calm);background:var(--calm-bg)}
+  .seg.active[data-stage="ready"] .lab,.seg.active[data-stage="ready"] .ct{color:var(--calm)}
+
+  /* ===== Station filter (chip row) ===== */
+  .stations{
+    display:flex;gap:8px;overflow-x:auto;
+    padding:2px 20px 14px;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+  }
+  .stations::-webkit-scrollbar{display:none}
+  .chip-f{
+    flex:0 0 auto;
+    border:1px solid var(--line);
+    background:var(--card);
+    color:var(--muted);
+    border-radius:999px;
+    padding:8px 15px;
+    font-size:13px;letter-spacing:.01em;
+    cursor:pointer;
+    display:inline-flex;align-items:center;gap:7px;
+    transition:border-color .15s,color .15s,background .15s;
+  }
+  .chip-f svg{width:16px;height:16px}
+  .chip-f .fc{
+    font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;
+    color:var(--faint);background:var(--bg-2);border-radius:8px;padding:1px 6px;
+  }
+  .chip-f:hover{border-color:#cdd4dc;color:var(--ink-2)}
+  .chip-f.active{background:var(--ink);border-color:var(--ink);color:#fff}
+  .chip-f.active .fc{background:rgba(255,255,255,.18);color:#fff}
+
+  /* ===== Feed ===== */
+  .feed{
+    flex:1;
+    padding:6px 20px 40px;
+    display:flex;flex-direction:column;gap:16px;
+  }
+
+  /* ===== Big touch card ===== */
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    overflow:hidden;
+    position:relative;
+    transition:box-shadow .2s,transform .14s,opacity .28s;
+  }
+  .card::before{
+    content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--line);
+    transition:background .25s;
+  }
+  .card.tone-warn::before{background:var(--warn)}
+  .card.tone-danger::before{background:var(--danger)}
+  .card.tone-calm::before{background:var(--calm)}
+  .card.tone-danger{border-color:var(--danger-line)}
+  .card.tone-calm{border-color:var(--calm-line)}
+  .card.bumping{transform:translateX(46px);opacity:0}
+
+  .c-pad{padding:18px 20px 18px 24px}
+
+  .c-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+  .c-id{display:flex;flex-direction:column;gap:3px;min-width:0}
+  .c-id .oid{font-family:var(--mono);font-size:20px;font-weight:600;letter-spacing:.01em;color:var(--ink)}
+  .c-id .who{font-size:14px;color:var(--ink-2)}
+  .c-tags{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
+  .pill{
+    font-size:11px;letter-spacing:.03em;padding:4px 10px;border-radius:8px;
+    border:1px solid var(--line);color:var(--muted);background:var(--bg-2);
+    text-transform:uppercase;white-space:nowrap;
+  }
+  .pill.del{color:var(--del);border-color:#dccdf6;background:var(--del-bg)}
+  .pill.tak{color:var(--accent-ink);border-color:#cfe0fc;background:var(--accent-soft)}
+
+  /* timers */
+  .c-timers{display:flex;gap:12px;margin-top:14px}
+  .tm{
+    flex:1;border:1px solid var(--line);border-radius:12px;background:var(--bg-2);
+    padding:10px 14px;display:flex;flex-direction:column;gap:2px;
+  }
+  .tm .l{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+  .tm .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:24px;letter-spacing:.01em;color:var(--ink);line-height:1.1}
+  .tm.due .v.warn{color:var(--warn)}
+  .tm.due .v.danger{color:var(--danger)}
+  .tm.due .v.calm{color:var(--calm)}
+
+  /* items */
+  .c-items{margin-top:16px;display:flex;flex-direction:column}
+  .it{display:flex;align-items:baseline;gap:12px;padding:9px 0;border-top:1px solid var(--line-soft)}
+  .it:first-child{border-top:none}
+  .it .q{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--accent-ink);font-size:16px;font-weight:600;min-width:34px}
+  .card.tone-calm .it .q{color:var(--calm)}
+  .it .body{flex:1;min-width:0}
+  .it .nm{font-size:16px;color:var(--ink)}
+  .it .nt{display:block;font-size:13px;color:var(--warn);margin-top:1px}
+  .it .nt::before{content:"— "}
+  .it .cat{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);align-self:center}
+  .it.eod .nm{text-decoration:line-through;color:var(--faint)}
+  .it.eod .q{color:var(--faint)}
+
+  .c-note{
+    margin-top:14px;font-size:14px;color:var(--ink-2);
+    background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:12px;
+    padding:11px 14px;
+  }
+  .c-note .k{display:block;color:var(--warn);text-transform:uppercase;font-size:10px;letter-spacing:.09em;margin-bottom:3px;font-weight:700}
+
+  /* meta strip */
+  .c-strip{
+    margin-top:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;
+    font-size:13px;color:var(--muted);
+  }
+  .c-strip .sub{display:flex;gap:16px;flex-wrap:wrap}
+  .c-strip b{color:var(--ink-2);font-weight:500;font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .mini-btn{
+    border:1px solid var(--line);background:var(--card);color:var(--muted);
+    border-radius:9px;padding:7px 12px;font-size:12.5px;cursor:pointer;
+    transition:color .15s,border-color .15s;font-family:var(--sans);
+  }
+  .mini-btn:hover{color:var(--danger);border-color:var(--danger-line)}
+  .mini-btn.recall:hover{color:var(--accent-ink);border-color:#cfe0fc}
+
+  /* big primary action footer */
+  .c-action{padding:0 16px 16px}
+  .swipe-hint{
+    display:flex;align-items:center;justify-content:center;gap:7px;
+    font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);
+    padding:6px 0 9px;
+  }
+  .swipe-hint svg{width:15px;height:15px}
+  .swipe-hint .chev{display:inline-flex;animation:nudge 1.6s ease-in-out infinite}
+  @keyframes nudge{0%,100%{transform:translateX(0)}50%{transform:translateX(4px)}}
+  .btn-primary{
+    width:100%;
+    border:none;
+    border-radius:14px;
+    padding:18px;
+    font-size:17px;font-weight:650;letter-spacing:.02em;
+    cursor:pointer;
+    background:var(--accent);color:#fff;
+    display:flex;align-items:center;justify-content:center;gap:10px;
+    transition:filter .15s,transform .08s;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .btn-primary svg{width:20px;height:20px}
+  .btn-primary:hover{filter:brightness(1.05)}
+  .btn-primary:active{transform:translateY(1px)}
+  .btn-primary.calm{background:var(--calm)}
+  .btn-primary.warnish{background:var(--warn)}
+  .btn-primary.dangerish{background:var(--danger)}
+
+  .key-tab{
+    position:absolute;top:16px;left:-1px;
+    font-family:var(--mono);font-size:11px;color:#fff;background:var(--ink);
+    padding:2px 8px 2px 7px;border-radius:0 8px 8px 0;letter-spacing:.04em;
+  }
+
+  /* empty */
+  .empty{
+    text-align:center;color:var(--faint);font-size:15px;
+    padding:64px 20px;border:1px dashed var(--line);border-radius:var(--radius);background:var(--card);
+  }
+  .empty .big{display:block;font-size:17px;color:var(--ink-2);margin-bottom:4px;font-weight:600}
+
+  @media (max-width:560px){
+    .head-row{flex-wrap:wrap}
+    .clock .t{font-size:17px}
+    .c-id .oid{font-size:18px}
+  }
+</style>
+</head>
+<body>
+<div class="frame">
+  <header>
+    <div class="head-row">
+      <div class="brand">
+        <span class="wordmark">SUD ITALIA</span>
+        <span class="kd-label">Kitchen Display</span>
+        <span class="tag">08 · Tap Stack</span>
+      </div>
+      <div class="head-spacer"></div>
+      <a class="gallery-link" href="index.html">← Gallery</a>
+      <div class="clock">
+        <span class="t" id="clock">--:--:--</span>
+        <span class="d" id="date"></span>
+      </div>
+    </div>
+    <div class="segments" id="segments"></div>
+    <div class="stations" id="stations"></div>
+  </header>
+
+  <main class="feed" id="feed"></main>
+</div>
+
+<script>
+"use strict";
+
+const ORDERS = [
+  { id:"A4F9C2", name:"Marco R.",  channel:"takeout",  loc:"Kraków",   slot:"15:20", elapsed:192, sla:288, status:"prep",
+    items:[{q:2,n:"Margherita",c:"Pizza"},{q:1,n:"Diavola",c:"Pizza"},{q:1,n:"Espresso",c:"Drinks"}] },
+  { id:"B7K2D1", name:"Giulia M.", channel:"delivery", loc:"Kraków",   slot:"15:15", elapsed:540, sla:-65, status:"prep",
+    items:[{q:1,n:"Quattro Formaggi",c:"Pizza"},{q:1,n:"Spaghetti Carbonara",c:"Pasta",note:"no garlic"},{q:1,n:"Tiramisù",c:"Desserts"}], note:"Leave at reception" },
+  { id:"C1M8X4", name:"Paweł K.",  channel:"takeout",  loc:"Warszawa", slot:"15:30", elapsed:48,  sla:612, status:"new",
+    items:[{q:1,n:"Diavola",c:"Pizza"},{q:2,n:"Aranciata",c:"Drinks"}] },
+  { id:"D9P3Q7", name:"Anna W.",   channel:"delivery", loc:"Warszawa", slot:"15:28", elapsed:95,  sla:505, status:"new",
+    items:[{q:3,n:"Margherita",c:"Pizza"},{q:1,n:"Penne Arrabbiata",c:"Pasta"},{q:2,n:"Limonata Fresca",c:"Drinks"}] },
+  { id:"E5R6T2", name:"Luca B.",   channel:"takeout",  loc:"Kraków",   slot:"15:22", elapsed:300, sla:120, status:"prep",
+    items:[{q:1,n:"Tartufata Reale",c:"Pizza",note:"extra truffle"},{q:1,n:"Burrata con Pomodorini",c:"Antipasti"}] },
+  { id:"F2H4J8", name:"Sofia L.",  channel:"takeout",  loc:"Kraków",   slot:"15:10", elapsed:720, sla:0,   status:"ready",
+    items:[{q:1,n:"Panino Caprese",c:"Panini"},{q:1,n:"Garlic Bread",c:"Antipasti"},{q:1,n:"Espresso",c:"Drinks"}] },
+  { id:"G8L1N5", name:"Tomek Z.",  channel:"delivery", loc:"Warszawa", slot:"15:32", elapsed:150, sla:450, status:"new",
+    items:[{q:2,n:"Penne Arrabbiata",c:"Pasta"},{q:1,n:"Linguine al Pesto",c:"Pasta"}] },
+  { id:"H3W7Y9", name:"Elena P.",  channel:"takeout",  loc:"Kraków",   slot:"15:08", elapsed:660, sla:0,   status:"ready",
+    items:[{q:1,n:"Prosciutto e Rucola",c:"Pizza"},{q:1,n:"Arancini (3 pcs)",c:"Antipasti"}] },
+];
+
+// ----- Stage + station config -----
+const STAGES = [
+  { key:"new",   label:"New" },
+  { key:"prep",  label:"In progress" },
+  { key:"ready", label:"Ready" },
+];
+const STATIONS = ["All","Pizza","Pasta","Antipasti","Panini","Drinks","Desserts"];
+
+function stationIcon(key){
+  const s='stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"';
+  switch(key){
+    case "All":       return `<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5" ${s}/><rect x="14" y="3" width="7" height="7" rx="1.5" ${s}/><rect x="3" y="14" width="7" height="7" rx="1.5" ${s}/><rect x="14" y="14" width="7" height="7" rx="1.5" ${s}/></svg>`;
+    case "Pizza":     return `<svg viewBox="0 0 24 24"><path d="M12 3 4 19a1 1 0 0 0 1.2 1.4L20 16Z" ${s}/><circle cx="11" cy="11" r="1" fill="currentColor" stroke="none"/><circle cx="9" cy="15" r="1" fill="currentColor" stroke="none"/><circle cx="14" cy="13" r="1" fill="currentColor" stroke="none"/></svg>`;
+    case "Pasta":     return `<svg viewBox="0 0 24 24"><path d="M5 21V11a7 7 0 0 1 14 0v10" ${s}/><path d="M9 11V5M12 11V4.5M15 11V5" ${s}/></svg>`;
+    case "Antipasti": return `<svg viewBox="0 0 24 24"><path d="M4 19h16" ${s}/><path d="M5 19a7 7 0 0 1 14 0" ${s}/><path d="M12 12V5M10 5h4" ${s}/></svg>`;
+    case "Panini":    return `<svg viewBox="0 0 24 24"><path d="M4 9a8 4 0 0 1 16 0" ${s}/><path d="M4 9v3a8 4 0 0 0 16 0V9" ${s}/><path d="M7 11h.01M11 11.4h.01M15 11h.01" ${s}/></svg>`;
+    case "Drinks":    return `<svg viewBox="0 0 24 24"><path d="M6 4h12l-1.4 15.2a1 1 0 0 1-1 .8H8.4a1 1 0 0 1-1-.8Z" ${s}/><path d="M6.7 9h10.6" ${s}/></svg>`;
+    case "Desserts":  return `<svg viewBox="0 0 24 24"><path d="M5 21V12h14v9Z" ${s}/><path d="M5 12a7 7 0 0 1 14 0" ${s}/><path d="M12 5V2.5M12 5l-1.6-1.4M12 5l1.6-1.4" ${s}/></svg>`;
+    default:          return "";
+  }
+}
+
+let activeStage = "new";
+let activeStation = "All";
+const eightySixed = {}; // id -> Set of item indexes
+const bumping = new Set();
+
+// ----- helpers -----
+function fmt(sec){
+  const neg = sec < 0;
+  const a = Math.abs(sec);
+  const m = Math.floor(a/60);
+  const s = a % 60;
+  const str = m + ":" + String(s).padStart(2,"0");
+  return neg ? "Late " + str : str;
+}
+function tone(o){
+  if(o.status === "ready") return "calm";
+  if(o.sla < 0) return "danger";
+  if(o.sla < 180) return "warn";
+  return "neutral";
+}
+function itemCount(o){ return o.items.reduce((a,i)=>a+i.q,0); }
+function matchesStation(o){
+  if(activeStation === "All") return true;
+  return o.items.some(i=>i.c === activeStation);
+}
+function liveOrders(){ return ORDERS.filter(o=>!bumping.has(o.id)); }
+function stageCount(stage){
+  return liveOrders().filter(o=>o.status===stage && matchesStation(o)).length;
+}
+
+// ----- segmented control -----
+function renderSegments(){
+  const wrap = document.getElementById("segments");
+  wrap.innerHTML = "";
+  STAGES.forEach(st=>{
+    const b = document.createElement("button");
+    b.className = "seg" + (activeStage===st.key ? " active":"");
+    b.dataset.stage = st.key;
+    b.innerHTML = `<span class="ct num" data-segct="${st.key}">${stageCount(st.key)}</span><span class="lab">${st.label}</span>`;
+    b.onclick = ()=>{ activeStage = st.key; render(); };
+    wrap.appendChild(b);
+  });
+}
+function updateSegCounts(){
+  STAGES.forEach(st=>{
+    const el = document.querySelector(`[data-segct="${st.key}"]`);
+    if(el) el.textContent = stageCount(st.key);
+  });
+}
+
+// ----- station chips -----
+function renderStations(){
+  const wrap = document.getElementById("stations");
+  wrap.innerHTML = "";
+  STATIONS.forEach(key=>{
+    const live = liveOrders();
+    const ct = key==="All"
+      ? live.length
+      : live.filter(o=>o.items.some(i=>i.c===key)).length;
+    const b = document.createElement("button");
+    b.className = "chip-f" + (activeStation===key ? " active":"");
+    b.innerHTML = stationIcon(key) + `<span>${key}</span>` + (ct>0 ? `<span class="fc num">${ct}</span>`:"");
+    b.onclick = ()=>{ activeStation = key; render(); };
+    wrap.appendChild(b);
+  });
+}
+
+// ----- card -----
+const arrowSvg = `<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const checkSvg = `<svg viewBox="0 0 24 24"><path d="M5 13l4 4 10-11" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const chevSvg  = `<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+function cardEl(o, hotkey){
+  const tn = tone(o);
+  const el = document.createElement("article");
+  el.className = "card tone-" + tn + (bumping.has(o.id) ? " bumping" : "");
+  el.dataset.id = o.id;
+
+  const dueClass = tn === "neutral" ? "" : tn;
+  const eod = eightySixed[o.id] || new Set();
+  const itemsHtml = o.items.map((i,idx)=>`
+    <div class="it${eod.has(idx)?" eod":""}">
+      <span class="q num">${i.q}×</span>
+      <span class="body">
+        <span class="nm">${i.n}</span>
+        ${i.note?`<span class="nt">${i.note}</span>`:""}
+      </span>
+      <span class="cat">${i.c}</span>
+    </div>`).join("");
+
+  const actionLabel = o.status==="new" ? "Start prep"
+    : o.status==="prep" ? "Mark ready" : "Bump · Done";
+  const actionIcon = o.status==="ready" ? checkSvg : arrowSvg;
+  const btnTone = o.status==="ready" ? "calm"
+    : tn==="danger" ? "dangerish"
+    : tn==="warn" ? "warnish" : "";
+
+  const swipeHint = o.status==="ready"
+    ? `<div class="swipe-hint"><span>Swipe to bump</span><span class="chev">${chevSvg}</span></div>`
+    : "";
+
+  const trailing = o.status==="ready"
+    ? `<button class="mini-btn recall" data-recall>Recall</button>`
+    : `<button class="mini-btn" data-86 title="86 an item — mark out of stock">86 item</button>`;
+
+  el.innerHTML = `
+    ${hotkey!=null?`<span class="key-tab num">${hotkey}</span>`:""}
+    <div class="c-pad">
+      <div class="c-head">
+        <div class="c-id">
+          <span class="oid">#${o.id}</span>
+          <span class="who">${o.name}</span>
+        </div>
+        <div class="c-tags">
+          <span class="pill ${o.channel==="delivery"?"del":"tak"}">${o.channel==="delivery"?"Delivery":"Takeout"}</span>
+          <span class="pill">${o.loc}</span>
+        </div>
+      </div>
+
+      <div class="c-timers">
+        <div class="tm">
+          <span class="l">Elapsed</span>
+          <span class="v num" data-elapsed>${fmt(o.elapsed)}</span>
+        </div>
+        <div class="tm due">
+          <span class="l">Due</span>
+          <span class="v num ${dueClass}" data-sla>${o.status==="ready"?"Ready":fmt(o.sla)}</span>
+        </div>
+      </div>
+
+      <div class="c-items">${itemsHtml}</div>
+      ${o.note?`<div class="c-note"><span class="k">Special instruction</span>${o.note}</div>`:""}
+
+      <div class="c-strip">
+        <span class="sub">
+          <span>Slot <b>${o.slot}</b></span>
+          <span><b>${itemCount(o)}</b> items</span>
+        </span>
+        ${trailing}
+      </div>
+    </div>
+
+    <div class="c-action">
+      ${swipeHint}
+      <button class="btn-primary ${btnTone}" data-advance>${actionIcon}${actionLabel}</button>
+    </div>
+  `;
+
+  el.querySelector("[data-advance]").onclick = ()=>advance(o.id);
+  const recall = el.querySelector("[data-recall]");
+  if(recall) recall.onclick = ()=>recallTicket(o.id);
+  const e86 = el.querySelector("[data-86]");
+  if(e86) e86.onclick = ()=>eightySix(o.id);
+
+  return el;
+}
+
+// ----- actions -----
+function advance(id){
+  const o = ORDERS.find(x=>x.id===id);
+  if(!o || bumping.has(id)) return;
+  if(o.status==="new"){ o.status="prep"; activeStage="prep"; render(); }
+  else if(o.status==="prep"){ o.status="ready"; o.sla=0; activeStage="ready"; render(); }
+  else if(o.status==="ready"){
+    bumping.add(id);
+    const card = document.querySelector(`.card[data-id="${id}"]`);
+    if(card) card.classList.add("bumping");
+    updateSegCounts();
+    setTimeout(()=>{
+      const i = ORDERS.findIndex(x=>x.id===id);
+      if(i>-1) ORDERS.splice(i,1);
+      bumping.delete(id);
+      delete eightySixed[id];
+      render();
+    }, 300);
+  }
+}
+function recallTicket(id){
+  const o = ORDERS.find(x=>x.id===id);
+  if(!o) return;
+  o.status = "prep";
+  o.sla = 90; // back on the line, tight window
+  activeStage = "prep";
+  render();
+}
+function eightySix(id){
+  const o = ORDERS.find(x=>x.id===id);
+  if(!o) return;
+  const set = eightySixed[id] || (eightySixed[id] = new Set());
+  // 86 the next not-yet-flagged item (out of stock)
+  for(let i=0;i<o.items.length;i++){ if(!set.has(i)){ set.add(i); break; } }
+  render();
+}
+
+// ----- render feed -----
+function render(){
+  renderSegments();
+  renderStations();
+  const feed = document.getElementById("feed");
+  feed.innerHTML = "";
+
+  let list = liveOrders().filter(o=>o.status===activeStage && matchesStation(o));
+  // sort by urgency: late first, then soonest due; ready by longest waiting
+  list.sort((a,b)=>{
+    if(activeStage==="ready") return b.elapsed - a.elapsed;
+    return a.sla - b.sla;
+  });
+
+  if(list.length===0){
+    const stageLabel = (STAGES.find(s=>s.key===activeStage)||{}).label || "";
+    feed.innerHTML = `<div class="empty"><span class="big">Nothing in “${stageLabel}”.</span>${
+      activeStation!=="All" ? "No "+activeStation+" tickets at this stage." : "Clear for now — nicely done."
+    }</div>`;
+    return;
+  }
+  list.forEach((o,idx)=>{
+    feed.appendChild(cardEl(o, idx<10 ? (idx+1)%10 : null));
+  });
+}
+
+// ----- tick loop -----
+function tick(){
+  liveOrders().forEach(o=>{
+    o.elapsed += 1;
+    if(o.status!=="ready") o.sla -= 1;
+  });
+  // in-place timer + tone update for the visible stage
+  document.querySelectorAll(".card").forEach(card=>{
+    const o = ORDERS.find(x=>x.id===card.dataset.id);
+    if(!o) return;
+    const eEl = card.querySelector("[data-elapsed]");
+    const sEl = card.querySelector("[data-sla]");
+    if(eEl) eEl.textContent = fmt(o.elapsed);
+    if(sEl && o.status!=="ready") sEl.textContent = fmt(o.sla);
+
+    const tn = tone(o);
+    card.classList.remove("tone-neutral","tone-warn","tone-danger","tone-calm");
+    card.classList.add("tone-"+tn);
+    if(sEl){
+      sEl.classList.remove("warn","danger","calm");
+      if(o.status!=="ready" && tn!=="neutral") sEl.classList.add(tn);
+    }
+    // keep primary button tone in step with urgency
+    const btn = card.querySelector(".btn-primary");
+    if(btn && o.status!=="ready"){
+      btn.classList.remove("warnish","dangerish");
+      if(tn==="danger") btn.classList.add("dangerish");
+      else if(tn==="warn") btn.classList.add("warnish");
+    }
+  });
+}
+
+// ----- clock -----
+function clockTick(){
+  const d = new Date();
+  const p = n=>String(n).padStart(2,"0");
+  document.getElementById("clock").textContent =
+    p(d.getHours())+":"+p(d.getMinutes())+":"+p(d.getSeconds());
+  document.getElementById("date").textContent =
+    d.toLocaleDateString("en-GB",{weekday:"short",day:"2-digit",month:"short"});
+}
+
+// ----- bump-bar hotkeys 1–9/0 -----
+window.addEventListener("keydown", e=>{
+  if(!/^[0-9]$/.test(e.key)) return;
+  let list = liveOrders().filter(o=>o.status===activeStage && matchesStation(o));
+  list.sort((a,b)=>{
+    if(activeStage==="ready") return b.elapsed - a.elapsed;
+    return a.sla - b.sla;
+  });
+  const idx = e.key==="0" ? 9 : parseInt(e.key,10)-1;
+  if(list[idx]) advance(list[idx].id);
+});
+
+// ----- init -----
+render();
+clockTick();
+setInterval(()=>{ tick(); clockTick(); }, 1000);
+</script>
+</body>
+</html>

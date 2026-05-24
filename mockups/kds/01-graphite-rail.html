@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sud Italia KDS — Graphite</title>
+<style>
+  :root{
+    --bg:#0B0C0E;
+    --panel:#0F1113;
+    --card:#131519;
+    --card-hover:#171A1E;
+    --hair:rgba(255,255,255,0.08);
+    --hair-strong:rgba(255,255,255,0.14);
+    --text:#E7E9EC;
+    --text-dim:#9AA0A6;
+    --text-faint:#6B7177;
+    --amber:#E6A23C;
+    --amber-bg:rgba(230,162,60,0.10);
+    --red:#E5484D;
+    --red-bg:rgba(229,72,77,0.12);
+    --green:#3DD68C;
+    --green-bg:rgba(61,214,140,0.09);
+    --neutral:#6B7177;
+    --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg); color:var(--text); font-family:var(--sans);
+    font-size:14px; line-height:1.4; -webkit-font-smoothing:antialiased;
+    display:flex; flex-direction:column; height:100vh; overflow:hidden;
+    font-variant-numeric:tabular-nums;
+  }
+  .tnum{font-variant-numeric:tabular-nums; font-family:var(--mono)}
+
+  /* Header */
+  header{
+    flex:0 0 auto; display:flex; align-items:center; gap:var(--s5);
+    padding:0 var(--s5); height:56px; border-bottom:1px solid var(--hair);
+    background:linear-gradient(180deg,#0E0F12,#0B0C0E);
+  }
+  .brand{display:flex; align-items:baseline; gap:var(--s3)}
+  .wordmark{
+    font-weight:700; letter-spacing:.16em; font-size:13px; text-transform:uppercase;
+  }
+  .wordmark .a{color:var(--text)} .wordmark .b{color:var(--amber)}
+  .kd{color:var(--text-faint); font-size:11px; letter-spacing:.14em; text-transform:uppercase}
+  .tag{
+    font-family:var(--mono); font-size:11px; color:var(--text-dim);
+    border:1px solid var(--hair); border-radius:999px; padding:3px 10px;
+    letter-spacing:.04em;
+  }
+  .spacer{flex:1}
+  .filters{display:flex; gap:var(--s1); align-items:center}
+  .chip{
+    appearance:none; background:transparent; border:1px solid var(--hair);
+    color:var(--text-dim); font-family:var(--sans); font-size:12px;
+    padding:6px 12px; border-radius:7px; cursor:pointer; letter-spacing:.01em;
+    transition:background .12s,color .12s,border-color .12s;
+  }
+  .chip:hover{background:var(--card); color:var(--text)}
+  .chip[aria-pressed="true"]{background:#1C1F24; color:var(--text); border-color:var(--hair-strong)}
+  .clock{
+    font-family:var(--mono); font-size:15px; color:var(--text);
+    letter-spacing:.02em; min-width:74px; text-align:right;
+  }
+  .gallery{
+    color:var(--text-faint); font-size:11px; text-decoration:none;
+    letter-spacing:.06em; text-transform:uppercase; transition:color .12s;
+  }
+  .gallery:hover{color:var(--text-dim)}
+
+  /* Stream */
+  main{
+    flex:1 1 auto; overflow-x:auto; overflow-y:hidden;
+    display:flex; align-items:stretch; gap:var(--s4);
+    padding:var(--s5);
+  }
+  main::-webkit-scrollbar{height:10px}
+  main::-webkit-scrollbar-thumb{background:#23262B; border-radius:8px; border:2px solid var(--bg)}
+
+  .card{
+    flex:0 0 280px; width:280px; background:var(--card);
+    border:1px solid var(--hair); border-radius:12px;
+    display:flex; flex-direction:column; position:relative; overflow:hidden;
+    transition:border-color .15s, background .15s;
+  }
+  .card:hover{background:var(--card-hover); border-color:var(--hair-strong)}
+  .stripe{
+    position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--neutral);
+  }
+  .card[data-tone="warning"]{border-color:rgba(230,162,60,.30)}
+  .card[data-tone="warning"] .stripe{background:var(--amber)}
+  .card[data-tone="danger"]{border-color:rgba(229,72,77,.40)}
+  .card[data-tone="danger"] .stripe{background:var(--red)}
+  .card[data-tone="ready"] .stripe{background:var(--green)}
+
+  .c-top{
+    display:flex; align-items:flex-start; justify-content:space-between;
+    padding:var(--s4) var(--s4) var(--s3) calc(var(--s4) + 4px);
+    border-bottom:1px solid var(--hair);
+  }
+  .oid{font-family:var(--mono); font-size:15px; font-weight:600; letter-spacing:.02em}
+  .cust{color:var(--text-dim); font-size:12px; margin-top:3px}
+  .badges{display:flex; flex-direction:column; align-items:flex-end; gap:5px}
+  .stage{
+    font-size:10px; letter-spacing:.10em; text-transform:uppercase;
+    color:var(--text-faint); font-weight:600;
+  }
+  .card[data-tone="ready"] .stage{color:var(--green)}
+  .meta-row{display:flex; gap:6px; align-items:center}
+  .pill{
+    font-size:10px; letter-spacing:.04em; color:var(--text-dim);
+    border:1px solid var(--hair); border-radius:5px; padding:2px 6px;
+    text-transform:uppercase;
+  }
+
+  .timers{
+    display:grid; grid-template-columns:1fr 1fr; gap:1px;
+    background:var(--hair); border-bottom:1px solid var(--hair);
+  }
+  .tcell{background:var(--card); padding:var(--s3) var(--s4); padding-left:calc(var(--s4)+4px)}
+  .timers .tcell:nth-child(2){padding-left:var(--s4)}
+  .card:hover .tcell{background:var(--card-hover)}
+  .tlabel{font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--text-faint)}
+  .tval{font-family:var(--mono); font-size:21px; font-weight:600; margin-top:2px; letter-spacing:.01em}
+  .sla.warning{color:var(--amber)}
+  .sla.danger{color:var(--red)}
+  .sla.ready{color:var(--text-dim)}
+
+  .items{
+    flex:1 1 auto; padding:var(--s3) var(--s4) var(--s3) calc(var(--s4)+4px);
+    overflow-y:auto; min-height:0;
+  }
+  .items::-webkit-scrollbar{width:6px}
+  .items::-webkit-scrollbar-thumb{background:#23262B; border-radius:8px}
+  .grp + .grp{margin-top:var(--s3)}
+  .grp-h{
+    font-size:9px; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--text-faint); margin-bottom:5px;
+  }
+  .it{display:flex; gap:8px; align-items:baseline; padding:2px 0}
+  .it .q{font-family:var(--mono); color:var(--text-dim); font-size:13px; min-width:22px}
+  .it .nm{color:var(--text); font-size:13px}
+  .it .note{display:block; color:var(--amber); font-size:11px; margin-top:1px; letter-spacing:.01em}
+  .specials{
+    margin-top:var(--s3); padding:var(--s2) var(--s3);
+    border-left:2px solid var(--amber); background:var(--amber-bg);
+    font-size:11px; color:var(--text); border-radius:0 6px 6px 0;
+  }
+  .specials b{color:var(--amber); font-weight:600; letter-spacing:.06em; text-transform:uppercase; font-size:9px; display:block; margin-bottom:2px}
+
+  .c-foot{
+    border-top:1px solid var(--hair); padding:var(--s3);
+    padding-left:calc(var(--s3)+4px); display:flex; gap:var(--s2); align-items:center;
+  }
+  .act{
+    flex:1; appearance:none; cursor:pointer; font-family:var(--sans);
+    font-size:13px; font-weight:600; letter-spacing:.01em;
+    padding:9px 12px; border-radius:8px; border:1px solid var(--hair-strong);
+    background:#1C1F24; color:var(--text); transition:background .12s, border-color .12s;
+  }
+  .act:hover{background:#252930}
+  .card[data-tone="ready"] .act{background:var(--green-bg); border-color:rgba(61,214,140,.35); color:var(--green)}
+  .card[data-tone="ready"] .act:hover{background:rgba(61,214,140,.16)}
+  .icon-btn{
+    appearance:none; cursor:pointer; background:transparent; border:1px solid var(--hair);
+    color:var(--text-faint); border-radius:8px; width:34px; height:34px;
+    display:flex; align-items:center; justify-content:center; transition:color .12s,border-color .12s;
+  }
+  .icon-btn:hover{color:var(--text-dim); border-color:var(--hair-strong)}
+  .hotkey{
+    font-family:var(--mono); font-size:11px; color:var(--text-faint);
+    border:1px solid var(--hair); border-radius:5px; padding:2px 7px; min-width:24px; text-align:center;
+  }
+
+  .empty{
+    flex:1; display:flex; align-items:center; justify-content:center;
+    color:var(--text-faint); font-size:13px; letter-spacing:.02em;
+  }
+
+  /* Footer legend */
+  footer{
+    flex:0 0 auto; height:38px; border-top:1px solid var(--hair);
+    display:flex; align-items:center; gap:var(--s5); padding:0 var(--s5);
+    background:var(--panel); font-size:11px; color:var(--text-faint);
+  }
+  .leg{display:flex; align-items:center; gap:6px; letter-spacing:.04em}
+  .dot{width:8px; height:8px; border-radius:2px; display:inline-block}
+  .dot.n{background:var(--neutral)} .dot.w{background:var(--amber)}
+  .dot.d{background:var(--red)} .dot.r{background:var(--green)}
+  .khint{margin-left:auto; font-family:var(--mono); letter-spacing:.02em; color:var(--text-dim)}
+  .toast{
+    position:fixed; bottom:54px; left:50%; transform:translateX(-50%) translateY(8px);
+    background:#1C1F24; border:1px solid var(--hair-strong); color:var(--text);
+    font-size:12px; padding:8px 16px; border-radius:8px; opacity:0; pointer-events:none;
+    transition:opacity .2s, transform .2s; z-index:50; letter-spacing:.02em;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span class="wordmark"><span class="a">SUD</span> <span class="b">ITALIA</span></span>
+      <span class="kd">Kitchen Display</span>
+    </div>
+    <span class="tag">01 · Graphite</span>
+    <div class="spacer"></div>
+    <div class="filters" id="filters"></div>
+    <div class="clock tnum" id="clock">--:--:--</div>
+    <a class="gallery" href="index.html">← Gallery</a>
+  </header>
+
+  <main id="stream"></main>
+
+  <footer>
+    <span class="leg"><span class="dot d"></span>Late</span>
+    <span class="leg"><span class="dot w"></span>Due &lt; 3:00</span>
+    <span class="leg"><span class="dot n"></span>On track</span>
+    <span class="leg"><span class="dot r"></span>Ready · Expo</span>
+    <span class="khint">1–9 advance · R recall</span>
+  </footer>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+const ORDERS = [
+  { id:"A4F9C2", name:"Marco R.",  channel:"takeout",  loc:"Kraków",   slot:"15:20", elapsed:192, sla:288, status:"prep",
+    items:[{q:2,n:"Margherita",c:"Pizza"},{q:1,n:"Diavola",c:"Pizza"},{q:1,n:"Espresso",c:"Drinks"}] },
+  { id:"B7K2D1", name:"Giulia M.", channel:"delivery", loc:"Kraków",   slot:"15:15", elapsed:540, sla:-65, status:"prep",
+    items:[{q:1,n:"Quattro Formaggi",c:"Pizza"},{q:1,n:"Spaghetti Carbonara",c:"Pasta",note:"no garlic"},{q:1,n:"Tiramisù",c:"Desserts"}], note:"Leave at reception" },
+  { id:"C1M8X4", name:"Paweł K.",  channel:"takeout",  loc:"Warszawa", slot:"15:30", elapsed:48,  sla:612, status:"new",
+    items:[{q:1,n:"Diavola",c:"Pizza"},{q:2,n:"Aranciata",c:"Drinks"}] },
+  { id:"D9P3Q7", name:"Anna W.",   channel:"delivery", loc:"Warszawa", slot:"15:28", elapsed:95,  sla:505, status:"new",
+    items:[{q:3,n:"Margherita",c:"Pizza"},{q:1,n:"Penne Arrabbiata",c:"Pasta"},{q:2,n:"Limonata Fresca",c:"Drinks"}] },
+  { id:"E5R6T2", name:"Luca B.",   channel:"takeout",  loc:"Kraków",   slot:"15:22", elapsed:300, sla:120, status:"prep",
+    items:[{q:1,n:"Tartufata Reale",c:"Pizza",note:"extra truffle"},{q:1,n:"Burrata con Pomodorini",c:"Antipasti"}] },
+  { id:"F2H4J8", name:"Sofia L.",  channel:"takeout",  loc:"Kraków",   slot:"15:10", elapsed:720, sla:0,   status:"ready",
+    items:[{q:1,n:"Panino Caprese",c:"Panini"},{q:1,n:"Garlic Bread",c:"Antipasti"},{q:1,n:"Espresso",c:"Drinks"}] },
+  { id:"G8L1N5", name:"Tomek Z.",  channel:"delivery", loc:"Warszawa", slot:"15:32", elapsed:150, sla:450, status:"new",
+    items:[{q:2,n:"Penne Arrabbiata",c:"Pasta"},{q:1,n:"Linguine al Pesto",c:"Pasta"}] },
+  { id:"H3W7Y9", name:"Elena P.",  channel:"takeout",  loc:"Kraków",   slot:"15:08", elapsed:660, sla:0,   status:"ready",
+    items:[{q:1,n:"Prosciutto e Rucola",c:"Pizza"},{q:1,n:"Arancini (3 pcs)",c:"Antipasti"}] },
+];
+
+const STATIONS = ["All","Pizza","Pasta","Antipasti","Panini","Drinks","Desserts"];
+const STAGE_LABEL = { new:"New", prep:"In progress", ready:"Ready · Expo" };
+const NEXT_LABEL  = { new:"Start prep", prep:"Mark ready", ready:"Bump · Done" };
+const NEXT_STAGE  = { new:"prep", prep:"ready", ready:null };
+
+let tickets = ORDERS.map(o => ({...o, items:o.items.map(i=>({...i})) }));
+let activeFilter = "All";
+let lastBumped = null;
+
+function fmt(sec){
+  const neg = sec < 0;
+  let s = Math.abs(sec);
+  const m = Math.floor(s/60), ss = s%60;
+  return (neg?"-":"") + m + ":" + String(ss).padStart(2,"0");
+}
+function tone(t){
+  if(t.status === "ready") return "ready";
+  if(t.sla < 0) return "danger";
+  if(t.sla < 180) return "warning";
+  return "neutral";
+}
+const TONE_RANK = { danger:0, warning:1, neutral:2, ready:3 };
+
+function visible(){
+  let list = tickets;
+  if(activeFilter !== "All"){
+    list = list.filter(t => t.items.some(i => i.c === activeFilter));
+  }
+  return list.slice().sort((a,b)=>{
+    const ra = TONE_RANK[tone(a)], rb = TONE_RANK[tone(b)];
+    if(ra !== rb) return ra - rb;
+    return a.sla - b.sla;
+  });
+}
+
+const SVG_RECALL = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>';
+
+function esc(s){ return String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function render(){
+  const stream = document.getElementById("stream");
+  const list = visible();
+  if(list.length === 0){
+    stream.innerHTML = '<div class="empty">No active tickets for this station.</div>';
+    return;
+  }
+  stream.innerHTML = "";
+  list.forEach((t, idx) => {
+    const tn = tone(t);
+    const groups = {};
+    t.items.forEach(i => { (groups[i.c] = groups[i.c]||[]).push(i); });
+
+    const card = document.createElement("div");
+    card.className = "card";
+    card.dataset.tone = tn;
+    card.dataset.id = t.id;
+
+    let itemsHtml = "";
+    for(const [cat, arr] of Object.entries(groups)){
+      itemsHtml += '<div class="grp"><div class="grp-h">'+esc(cat)+'</div>';
+      arr.forEach(i=>{
+        itemsHtml += '<div class="it"><span class="q tnum">'+i.q+'×</span><span class="nm">'+esc(i.n)+
+          (i.note?'<span class="note">'+esc(i.note)+'</span>':'')+'</span></div>';
+      });
+      itemsHtml += '</div>';
+    }
+    const special = t.note ? '<div class="specials"><b>Special instruction</b>'+esc(t.note)+'</div>' : '';
+    const hotkey = idx < 10 ? ((idx+1)%10) : '';
+
+    const slaCls = tn==="ready" ? "ready" : (t.sla<0?"danger":(t.sla<180?"warning":""));
+    const slaText = tn==="ready" ? "—" : (t.sla<0 ? "Late "+fmt(t.sla).replace("-","") : fmt(t.sla));
+
+    card.innerHTML =
+      '<div class="stripe"></div>'+
+      '<div class="c-top">'+
+        '<div><div class="oid">#'+esc(t.id)+'</div><div class="cust">'+esc(t.name)+'</div></div>'+
+        '<div class="badges">'+
+          '<span class="stage">'+STAGE_LABEL[t.status]+'</span>'+
+          '<div class="meta-row"><span class="pill">'+esc(t.channel)+'</span><span class="pill">'+esc(t.loc)+'</span></div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="timers">'+
+        '<div class="tcell"><div class="tlabel">Elapsed</div><div class="tval elapsed">'+fmt(t.elapsed)+'</div></div>'+
+        '<div class="tcell"><div class="tlabel">Due</div><div class="tval sla '+slaCls+'">'+slaText+'</div></div>'+
+      '</div>'+
+      '<div class="items">'+itemsHtml+special+'</div>'+
+      '<div class="c-foot">'+
+        (hotkey!==''?'<span class="hotkey tnum">'+hotkey+'</span>':'')+
+        '<button class="act">'+NEXT_LABEL[t.status]+'</button>'+
+        '<button class="icon-btn" title="Recall last bumped" data-recall="1">'+SVG_RECALL+'</button>'+
+      '</div>';
+
+    card.querySelector(".act").addEventListener("click", ()=>advance(t.id));
+    card.querySelector("[data-recall]").addEventListener("click", recall);
+    stream.appendChild(card);
+  });
+}
+
+function advance(id){
+  const t = tickets.find(x=>x.id===id);
+  if(!t) return;
+  const nx = NEXT_STAGE[t.status];
+  if(nx === null){
+    lastBumped = {...t, items:t.items.map(i=>({...i}))};
+    tickets = tickets.filter(x=>x.id!==id);
+    toast("#"+id+" bumped — order complete");
+  } else {
+    t.status = nx;
+    if(nx === "ready"){ t.sla = 0; }
+    toast("#"+id+" → "+STAGE_LABEL[nx]);
+  }
+  render();
+}
+
+function recall(){
+  if(!lastBumped){ toast("Nothing to recall"); return; }
+  if(tickets.some(x=>x.id===lastBumped.id)){ toast("#"+lastBumped.id+" already active"); return; }
+  lastBumped.status = "prep"; lastBumped.sla = 60;
+  tickets.push(lastBumped);
+  toast("Recalled #"+lastBumped.id);
+  lastBumped = null;
+  render();
+}
+
+let toastTimer;
+function toast(msg){
+  const el = document.getElementById("toast");
+  el.textContent = msg; el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.classList.remove("show"), 2200);
+}
+
+/* Filters */
+const fc = document.getElementById("filters");
+STATIONS.forEach(s=>{
+  const b = document.createElement("button");
+  b.className = "chip"; b.textContent = s;
+  b.setAttribute("aria-pressed", s===activeFilter ? "true":"false");
+  b.addEventListener("click", ()=>{
+    activeFilter = s;
+    [...fc.children].forEach(c=>c.setAttribute("aria-pressed", c.textContent===s?"true":"false"));
+    render();
+  });
+  fc.appendChild(b);
+});
+
+/* Hotkeys */
+document.addEventListener("keydown", e=>{
+  if(/^[0-9]$/.test(e.key)){
+    const idx = e.key === "0" ? 9 : parseInt(e.key,10)-1;
+    const list = visible();
+    if(list[idx]) advance(list[idx].id);
+  } else if(e.key === "r" || e.key === "R"){
+    recall();
+  }
+});
+
+/* Live clock */
+function clock(){
+  const d = new Date();
+  document.getElementById("clock").textContent =
+    String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")+":"+String(d.getSeconds()).padStart(2,"0");
+}
+
+/* Tick loop */
+function tick(){
+  tickets.forEach(t=>{
+    t.elapsed += 1;
+    if(t.status !== "ready") t.sla -= 1;
+  });
+  let needResort = false;
+  document.querySelectorAll(".card").forEach(card=>{
+    const t = tickets.find(x=>x.id===card.dataset.id);
+    if(!t) return;
+    card.querySelector(".elapsed").textContent = fmt(t.elapsed);
+    const slaEl = card.querySelector(".sla");
+    const tn = tone(t);
+    if(card.dataset.tone !== tn){ needResort = true; }
+    if(t.status === "ready"){
+      slaEl.textContent = "—"; slaEl.className = "tval sla ready";
+    } else {
+      slaEl.textContent = t.sla<0 ? "Late "+fmt(t.sla).replace("-","") : fmt(t.sla);
+      slaEl.className = "tval sla " + (t.sla<0?"danger":(t.sla<180?"warning":""));
+    }
+    card.dataset.tone = tn;
+  });
+  if(needResort) render();
+}
+
+clock(); render();
+setInterval(()=>{ clock(); tick(); }, 1000);
+</script>
+</body>
+</html>

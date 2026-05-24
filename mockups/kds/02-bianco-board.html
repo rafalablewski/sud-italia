@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sud Italia KDS — Bianco</title>
+<style>
+  :root{
+    --bg:#FAFAF8;
+    --panel:#FFFFFF;
+    --card:#FFFFFF;
+    --hair:#ECEAE4;
+    --hair-strong:#DCD9D1;
+    --text:#1A1A18;
+    --text-dim:#6B6A64;
+    --text-faint:#9C9A92;
+    --amber:#B7791F;
+    --amber-bg:#FBF4E6;
+    --amber-line:#E0A33B;
+    --red:#C0392B;
+    --red-bg:#FBEDEB;
+    --red-line:#D8624F;
+    --green:#1E7A4D;
+    --green-bg:#EBF5EF;
+    --green-line:#3FA876;
+    --neutral:#B9B6AE;
+    --shadow:0 1px 2px rgba(20,18,12,0.04), 0 4px 12px rgba(20,18,12,0.05);
+    --shadow-h:0 2px 4px rgba(20,18,12,0.06), 0 8px 24px rgba(20,18,12,0.08);
+    --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg); color:var(--text); font-family:var(--sans);
+    font-size:14px; line-height:1.45; -webkit-font-smoothing:antialiased;
+    display:flex; flex-direction:column; height:100vh; overflow:hidden;
+    font-variant-numeric:tabular-nums;
+  }
+  .tnum{font-variant-numeric:tabular-nums; font-family:var(--mono)}
+
+  header{
+    flex:0 0 auto; display:flex; align-items:center; gap:var(--s5);
+    padding:0 var(--s6); height:64px; background:var(--panel);
+    border-bottom:1px solid var(--hair);
+  }
+  .brand{display:flex; align-items:baseline; gap:var(--s3)}
+  .wordmark{font-weight:700; letter-spacing:.14em; font-size:14px; text-transform:uppercase; color:var(--text)}
+  .wordmark .b{color:var(--amber)}
+  .kd{color:var(--text-faint); font-size:11px; letter-spacing:.14em; text-transform:uppercase}
+  .tag{
+    font-family:var(--mono); font-size:11px; color:var(--text-dim);
+    border:1px solid var(--hair-strong); border-radius:999px; padding:4px 11px; letter-spacing:.03em;
+  }
+  .spacer{flex:1}
+  .filters{display:flex; gap:6px; align-items:center; background:#F2F1EC; padding:4px; border-radius:10px}
+  .chip{
+    appearance:none; background:transparent; border:none; color:var(--text-dim);
+    font-family:var(--sans); font-size:12.5px; font-weight:500;
+    padding:6px 13px; border-radius:7px; cursor:pointer; transition:background .12s,color .12s,box-shadow .12s;
+  }
+  .chip:hover{color:var(--text)}
+  .chip[aria-pressed="true"]{background:var(--panel); color:var(--text); box-shadow:var(--shadow)}
+  .clock{font-family:var(--mono); font-size:16px; color:var(--text); letter-spacing:.02em; min-width:80px; text-align:right}
+  .gallery{color:var(--text-faint); font-size:11px; text-decoration:none; letter-spacing:.06em; text-transform:uppercase; transition:color .12s}
+  .gallery:hover{color:var(--text-dim)}
+
+  main{
+    flex:1 1 auto; display:grid; grid-template-columns:repeat(3,1fr);
+    gap:0; min-height:0;
+  }
+  .col{
+    display:flex; flex-direction:column; min-height:0;
+    border-right:1px solid var(--hair); padding:var(--s5) var(--s5) 0;
+  }
+  .col:last-child{border-right:none}
+  .col-head{
+    flex:0 0 auto; display:flex; align-items:center; gap:var(--s3);
+    padding-bottom:var(--s4); margin-bottom:var(--s4); border-bottom:1px solid var(--hair);
+  }
+  .col-title{font-size:13px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--text-dim)}
+  .count{
+    font-family:var(--mono); font-size:12px; color:var(--text-dim);
+    background:#F2F1EC; border-radius:999px; padding:2px 9px; min-width:26px; text-align:center;
+  }
+  .col-body{flex:1 1 auto; overflow-y:auto; padding-bottom:var(--s5); display:flex; flex-direction:column; gap:var(--s4)}
+  .col-body::-webkit-scrollbar{width:8px}
+  .col-body::-webkit-scrollbar-thumb{background:#E2E0D8; border-radius:8px}
+
+  .card{
+    background:var(--card); border:1px solid var(--hair); border-radius:12px;
+    box-shadow:var(--shadow); position:relative; overflow:hidden;
+    display:flex; flex-direction:column; transition:box-shadow .15s, transform .12s;
+  }
+  .card:hover{box-shadow:var(--shadow-h)}
+  .accent{position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--neutral)}
+  .card[data-tone="warning"] .accent{background:var(--amber-line)}
+  .card[data-tone="danger"]  .accent{background:var(--red-line)}
+  .card[data-tone="ready"]   .accent{background:var(--green-line)}
+
+  .c-top{display:flex; align-items:flex-start; justify-content:space-between; padding:var(--s4) var(--s4) var(--s2) calc(var(--s4)+3px)}
+  .oid{font-family:var(--mono); font-size:15px; font-weight:600; color:var(--text); letter-spacing:.01em}
+  .cust{color:var(--text-dim); font-size:12.5px; margin-top:2px}
+  .sla-pill{
+    font-family:var(--mono); font-size:12px; font-weight:600; letter-spacing:.01em;
+    padding:4px 9px; border-radius:7px; white-space:nowrap;
+    color:var(--text-dim); background:#F2F1EC; border:1px solid var(--hair);
+  }
+  .sla-pill.warning{color:var(--amber); background:var(--amber-bg); border-color:#F0E2C5}
+  .sla-pill.danger{color:var(--red); background:var(--red-bg); border-color:#F2D6D1}
+  .sla-pill.ready{color:var(--green); background:var(--green-bg); border-color:#D2E9DC}
+
+  .meta{display:flex; gap:6px; align-items:center; padding:0 var(--s4) var(--s3) calc(var(--s4)+3px); flex-wrap:wrap}
+  .tagm{font-size:11px; color:var(--text-dim); border:1px solid var(--hair); border-radius:6px; padding:2px 8px; letter-spacing:.02em}
+  .tagm.elapsed{font-family:var(--mono); color:var(--text-dim)}
+  .tagm.slot{color:var(--text-faint)}
+
+  .items{padding:0 var(--s4) var(--s3) calc(var(--s4)+3px)}
+  .grp + .grp{margin-top:10px}
+  .grp-h{font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--text-faint); margin-bottom:4px}
+  .it{display:flex; gap:9px; align-items:baseline; padding:2px 0}
+  .it .q{font-family:var(--mono); color:var(--text-dim); font-size:13px; min-width:24px}
+  .it .nm{color:var(--text); font-size:13.5px}
+  .it .note{display:block; color:var(--amber); font-size:11.5px; margin-top:1px}
+  .specials{
+    margin:var(--s2) var(--s4) 0 calc(var(--s4)+3px); padding:var(--s2) var(--s3);
+    background:var(--amber-bg); border:1px solid #F0E2C5; border-radius:8px; font-size:11.5px; color:#7A5512;
+  }
+  .specials b{display:block; font-size:9px; letter-spacing:.08em; text-transform:uppercase; color:var(--amber); margin-bottom:2px; font-weight:700}
+
+  .c-foot{padding:var(--s3) var(--s4) var(--s4); margin-top:auto}
+  .act{
+    width:100%; appearance:none; cursor:pointer; font-family:var(--sans);
+    font-size:13.5px; font-weight:600; letter-spacing:.01em; padding:11px;
+    border-radius:9px; border:1px solid var(--text); background:var(--text); color:#fff;
+    transition:opacity .12s, background .12s;
+  }
+  .act:hover{opacity:.88}
+  .card[data-tone="ready"] .act{background:var(--green); border-color:var(--green)}
+  .card[data-tone="danger"] .act{background:var(--red); border-color:var(--red)}
+
+  .empty{
+    border:1px dashed var(--hair-strong); border-radius:12px; padding:var(--s6) var(--s4);
+    text-align:center; color:var(--text-faint); font-size:12.5px;
+  }
+  .toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(8px);
+    background:var(--text); color:#fff; font-size:12.5px; padding:9px 18px; border-radius:9px;
+    box-shadow:var(--shadow-h); opacity:0; pointer-events:none; transition:opacity .2s, transform .2s; z-index:50;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span class="wordmark">SUD <span class="b">ITALIA</span></span>
+      <span class="kd">Kitchen Display</span>
+    </div>
+    <span class="tag">02 · Bianco</span>
+    <div class="spacer"></div>
+    <div class="filters" id="filters"></div>
+    <div class="clock tnum" id="clock">--:--:--</div>
+    <a class="gallery" href="index.html">← Gallery</a>
+  </header>
+
+  <main id="board"></main>
+  <div class="toast" id="toast"></div>
+
+<script>
+const ORDERS = [
+  { id:"A4F9C2", name:"Marco R.",  channel:"takeout",  loc:"Kraków",   slot:"15:20", elapsed:192, sla:288, status:"prep",
+    items:[{q:2,n:"Margherita",c:"Pizza"},{q:1,n:"Diavola",c:"Pizza"},{q:1,n:"Espresso",c:"Drinks"}] },
+  { id:"B7K2D1", name:"Giulia M.", channel:"delivery", loc:"Kraków",   slot:"15:15", elapsed:540, sla:-65, status:"prep",
+    items:[{q:1,n:"Quattro Formaggi",c:"Pizza"},{q:1,n:"Spaghetti Carbonara",c:"Pasta",note:"no garlic"},{q:1,n:"Tiramisù",c:"Desserts"}], note:"Leave at reception" },
+  { id:"C1M8X4", name:"Paweł K.",  channel:"takeout",  loc:"Warszawa", slot:"15:30", elapsed:48,  sla:612, status:"new",
+    items:[{q:1,n:"Diavola",c:"Pizza"},{q:2,n:"Aranciata",c:"Drinks"}] },
+  { id:"D9P3Q7", name:"Anna W.",   channel:"delivery", loc:"Warszawa", slot:"15:28", elapsed:95,  sla:505, status:"new",
+    items:[{q:3,n:"Margherita",c:"Pizza"},{q:1,n:"Penne Arrabbiata",c:"Pasta"},{q:2,n:"Limonata Fresca",c:"Drinks"}] },
+  { id:"E5R6T2", name:"Luca B.",   channel:"takeout",  loc:"Kraków",   slot:"15:22", elapsed:300, sla:120, status:"prep",
+    items:[{q:1,n:"Tartufata Reale",c:"Pizza",note:"extra truffle"},{q:1,n:"Burrata con Pomodorini",c:"Antipasti"}] },
+  { id:"F2H4J8", name:"Sofia L.",  channel:"takeout",  loc:"Kraków",   slot:"15:10", elapsed:720, sla:0,   status:"ready",
+    items:[{q:1,n:"Panino Caprese",c:"Panini"},{q:1,n:"Garlic Bread",c:"Antipasti"},{q:1,n:"Espresso",c:"Drinks"}] },
+  { id:"G8L1N5", name:"Tomek Z.",  channel:"delivery", loc:"Warszawa", slot:"15:32", elapsed:150, sla:450, status:"new",
+    items:[{q:2,n:"Penne Arrabbiata",c:"Pasta"},{q:1,n:"Linguine al Pesto",c:"Pasta"}] },
+  { id:"H3W7Y9", name:"Elena P.",  channel:"takeout",  loc:"Kraków",   slot:"15:08", elapsed:660, sla:0,   status:"ready",
+    items:[{q:1,n:"Prosciutto e Rucola",c:"Pizza"},{q:1,n:"Arancini (3 pcs)",c:"Antipasti"}] },
+];
+
+const STATIONS = ["All","Pizza","Pasta","Antipasti","Panini","Drinks","Desserts"];
+const COLUMNS = [
+  { key:"new",   title:"New" },
+  { key:"prep",  title:"In progress" },
+  { key:"ready", title:"Ready · Expo" },
+];
+const NEXT_LABEL = { new:"Start prep", prep:"Mark ready", ready:"Bump · Done" };
+const NEXT_STAGE = { new:"prep", prep:"ready", ready:null };
+
+let tickets = ORDERS.map(o => ({...o, items:o.items.map(i=>({...i})) }));
+let activeFilter = "All";
+
+function fmt(sec){
+  const neg = sec<0; let s=Math.abs(sec);
+  return (neg?"-":"") + Math.floor(s/60) + ":" + String(s%60).padStart(2,"0");
+}
+function tone(t){
+  if(t.status==="ready") return "ready";
+  if(t.sla<0) return "danger";
+  if(t.sla<180) return "warning";
+  return "neutral";
+}
+function esc(s){ return String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function passesFilter(t){
+  return activeFilter==="All" || t.items.some(i=>i.c===activeFilter);
+}
+
+function buildCard(t){
+  const tn = tone(t);
+  const groups = {};
+  t.items.forEach(i=>{ (groups[i.c]=groups[i.c]||[]).push(i); });
+  const card = document.createElement("div");
+  card.className = "card"; card.dataset.tone = tn; card.dataset.id = t.id;
+
+  let itemsHtml = "";
+  for(const [cat,arr] of Object.entries(groups)){
+    itemsHtml += '<div class="grp"><div class="grp-h">'+esc(cat)+'</div>';
+    arr.forEach(i=>{
+      itemsHtml += '<div class="it"><span class="q tnum">'+i.q+'×</span><span class="nm">'+esc(i.n)+
+        (i.note?'<span class="note">'+esc(i.note)+'</span>':'')+'</span></div>';
+    });
+    itemsHtml += '</div>';
+  }
+  const special = t.note ? '<div class="specials"><b>Special instruction</b>'+esc(t.note)+'</div>' : '';
+  const slaCls = tn==="ready" ? "ready" : (t.sla<0?"danger":(t.sla<180?"warning":""));
+  const slaText = tn==="ready" ? "Ready" : (t.sla<0 ? "Late "+fmt(t.sla).replace("-","") : "Due "+fmt(t.sla));
+
+  card.innerHTML =
+    '<div class="accent"></div>'+
+    '<div class="c-top">'+
+      '<div><div class="oid">#'+esc(t.id)+'</div><div class="cust">'+esc(t.name)+'</div></div>'+
+      '<span class="sla-pill '+slaCls+'">'+slaText+'</span>'+
+    '</div>'+
+    '<div class="meta">'+
+      '<span class="tagm">'+esc(t.channel)+'</span>'+
+      '<span class="tagm">'+esc(t.loc)+'</span>'+
+      '<span class="tagm slot">Slot '+esc(t.slot)+'</span>'+
+      '<span class="tagm elapsed">'+fmt(t.elapsed)+' elapsed</span>'+
+    '</div>'+
+    '<div class="items">'+itemsHtml+'</div>'+ special +
+    '<div class="c-foot"><button class="act">'+NEXT_LABEL[t.status]+'</button></div>';
+
+  card.querySelector(".act").addEventListener("click", ()=>advance(t.id));
+  return card;
+}
+
+function render(){
+  const board = document.getElementById("board");
+  board.innerHTML = "";
+  COLUMNS.forEach(col=>{
+    const list = tickets.filter(t=>t.status===col.key && passesFilter(t))
+      .sort((a,b)=>a.sla-b.sla);
+    const colEl = document.createElement("section");
+    colEl.className = "col";
+    colEl.innerHTML =
+      '<div class="col-head"><span class="col-title">'+col.title+'</span>'+
+      '<span class="count tnum">'+list.length+'</span></div>'+
+      '<div class="col-body"></div>';
+    const body = colEl.querySelector(".col-body");
+    if(list.length===0){
+      body.innerHTML = '<div class="empty">No tickets</div>';
+    } else {
+      list.forEach(t=>body.appendChild(buildCard(t)));
+    }
+    board.appendChild(colEl);
+  });
+}
+
+function advance(id){
+  const t = tickets.find(x=>x.id===id);
+  if(!t) return;
+  const nx = NEXT_STAGE[t.status];
+  if(nx===null){
+    tickets = tickets.filter(x=>x.id!==id);
+    toast("#"+id+" bumped — order complete");
+  } else {
+    t.status = nx;
+    if(nx==="ready") t.sla = 0;
+    toast("#"+id+" moved to "+COLUMNS.find(c=>c.key===nx).title);
+  }
+  render();
+}
+
+let toastTimer;
+function toast(msg){
+  const el = document.getElementById("toast");
+  el.textContent = msg; el.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>el.classList.remove("show"),2200);
+}
+
+/* Filters */
+const fc = document.getElementById("filters");
+STATIONS.forEach(s=>{
+  const b = document.createElement("button");
+  b.className="chip"; b.textContent=s;
+  b.setAttribute("aria-pressed", s===activeFilter?"true":"false");
+  b.addEventListener("click", ()=>{
+    activeFilter = s;
+    [...fc.children].forEach(c=>c.setAttribute("aria-pressed", c.textContent===s?"true":"false"));
+    render();
+  });
+  fc.appendChild(b);
+});
+
+function clock(){
+  const d = new Date();
+  document.getElementById("clock").textContent =
+    String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")+":"+String(d.getSeconds()).padStart(2,"0");
+}
+
+function tick(){
+  tickets.forEach(t=>{ t.elapsed+=1; if(t.status!=="ready") t.sla-=1; });
+  let needRender = false;
+  document.querySelectorAll(".card").forEach(card=>{
+    const t = tickets.find(x=>x.id===card.dataset.id);
+    if(!t) return;
+    const tn = tone(t);
+    if(card.dataset.tone !== tn) needRender = true;
+    // update elapsed chip
+    const el = card.querySelector(".elapsed");
+    if(el) el.textContent = fmt(t.elapsed)+" elapsed";
+    // update sla pill
+    const pill = card.querySelector(".sla-pill");
+    if(t.status==="ready"){
+      pill.textContent="Ready"; pill.className="sla-pill ready";
+    } else {
+      pill.textContent = t.sla<0 ? "Late "+fmt(t.sla).replace("-","") : "Due "+fmt(t.sla);
+      pill.className = "sla-pill " + (t.sla<0?"danger":(t.sla<180?"warning":""));
+    }
+    card.dataset.tone = tn;
+  });
+  if(needRender) render();
+}
+
+clock(); render();
+setInterval(()=>{ clock(); tick(); }, 1000);
+</script>
+</body>
+</html>

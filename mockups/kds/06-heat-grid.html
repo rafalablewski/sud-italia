@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sud Italia KDS — Heat Grid</title>
+<style>
+  :root{
+    --bg:#080A0D;
+    --bg2:#0D1015;
+    --panel:#11151B;
+    --hair:rgba(255,255,255,0.07);
+    --hair-strong:rgba(255,255,255,0.13);
+    --text:#E9EDF2;
+    --text-dim:#9098A3;
+    --text-faint:#5C6571;
+    --neutral:#46566A;
+    --amber:#E6A23C;
+    --red:#E5484D;
+    --green:#3DD68C;
+    --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:24px;--space-6:32px;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg);color:var(--text);font-family:var(--sans);
+    font-size:14px;line-height:1.4;-webkit-font-smoothing:antialiased;
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+  .tnum{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+
+  header{
+    display:flex;align-items:center;gap:var(--space-5);
+    padding:0 var(--space-5);height:56px;flex:0 0 auto;
+    border-bottom:1px solid var(--hair);background:var(--panel);
+  }
+  .brand{display:flex;align-items:baseline;gap:var(--space-3)}
+  .wordmark{font-weight:700;font-size:15px;letter-spacing:0.18em}
+  .kd-label{font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-faint)}
+  .design-tag{
+    font-family:var(--mono);font-size:11px;letter-spacing:0.08em;color:var(--text-dim);
+    padding:3px 8px;border:1px solid var(--hair);border-radius:4px;
+  }
+  .filters{display:flex;gap:var(--space-1);margin-left:auto}
+  .chip{
+    appearance:none;background:transparent;border:1px solid var(--hair);color:var(--text-dim);
+    font-family:var(--sans);font-size:12px;letter-spacing:0.02em;padding:6px 11px;
+    border-radius:6px;cursor:pointer;transition:all .12s ease;white-space:nowrap;
+  }
+  .chip:hover{border-color:var(--hair-strong);color:var(--text)}
+  .chip[aria-pressed="true"]{background:var(--text);color:var(--bg);border-color:var(--text);font-weight:600}
+  .clock{font-family:var(--mono);font-size:15px;letter-spacing:0.04em;min-width:74px;text-align:right}
+  .gallery-link{
+    font-size:12px;color:var(--text-faint);text-decoration:none;border:1px solid var(--hair);
+    padding:5px 9px;border-radius:6px;transition:all .12s ease;
+  }
+  .gallery-link:hover{color:var(--text);border-color:var(--hair-strong)}
+
+  /* totals strip */
+  .strip{
+    flex:0 0 auto;display:flex;gap:1px;background:var(--hair);
+    border-bottom:1px solid var(--hair);
+  }
+  .stat{
+    flex:1 1 0;background:var(--bg2);padding:10px var(--space-5);display:flex;align-items:baseline;gap:10px;
+  }
+  .stat .num{font-family:var(--mono);font-size:24px;font-weight:700;letter-spacing:0.01em;line-height:1}
+  .stat .lbl{font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-faint)}
+  .stat.active .num{color:var(--text)}
+  .stat.late .num{color:var(--red)}
+  .stat.soon .num{color:var(--amber)}
+  .stat.ready .num{color:var(--green)}
+
+  /* grid */
+  .grid-wrap{flex:1 1 auto;overflow-y:auto;padding:var(--space-4) var(--space-5)}
+  .grid{
+    display:grid;gap:var(--space-3);
+    grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+  }
+  .tile{
+    aspect-ratio:1 / 0.92;border-radius:12px;border:1px solid var(--hair);
+    padding:12px 13px;display:flex;flex-direction:column;cursor:pointer;position:relative;overflow:hidden;
+    transition:transform .12s ease,box-shadow .12s ease,background .4s ease,border-color .4s ease;
+    background:#10151c;
+  }
+  .tile:hover{transform:translateY(-3px);box-shadow:0 14px 30px -14px rgba(0,0,0,0.8);z-index:2}
+  .tile:hover{border-color:var(--hair-strong)}
+
+  /* heat levels — entire tile tinted */
+  .tile.h-calm{background:linear-gradient(155deg,#16202c,#111923);border-color:rgba(70,86,106,0.45)}
+  .tile.h-warm{background:linear-gradient(155deg,#3a2a10,#241a0c);border-color:rgba(230,162,60,0.55)}
+  .tile.h-hot{background:linear-gradient(155deg,#5a1c1c,#3a1414);border-color:rgba(229,72,77,0.7)}
+  .tile.h-late{background:linear-gradient(155deg,#7d1d1d,#4d1111);border-color:rgba(229,72,77,0.9);
+    box-shadow:0 0 0 1px rgba(229,72,77,0.35) inset;animation:throb 1.8s ease-in-out infinite}
+  .tile.h-ready{background:linear-gradient(155deg,#103024,#0c2018);border-color:rgba(61,214,140,0.5)}
+  @keyframes throb{0%,100%{box-shadow:0 0 0 1px rgba(229,72,77,0.35) inset}50%{box-shadow:0 0 0 1px rgba(229,72,77,0.35) inset,0 0 18px rgba(229,72,77,0.35)}}
+
+  .tile-top{display:flex;align-items:center;justify-content:space-between;gap:6px}
+  .tile-id{font-family:var(--mono);font-size:13px;font-weight:600;letter-spacing:0.02em}
+  .tile-stage{
+    width:7px;height:7px;border-radius:50%;flex:0 0 auto;background:var(--neutral);
+  }
+  .tile.s-new .tile-stage{background:var(--neutral)}
+  .tile.s-prep .tile-stage{background:var(--amber)}
+  .tile.s-ready .tile-stage{background:var(--green)}
+
+  .tile-timer{
+    font-family:var(--mono);font-size:30px;font-weight:700;letter-spacing:0.01em;line-height:1;
+    margin-top:auto;color:var(--text);
+  }
+  .tile.h-warm .tile-timer{color:#ffcf85}
+  .tile.h-hot .tile-timer,.tile.h-late .tile-timer{color:#ffb3b5}
+  .tile.h-ready .tile-timer{color:#7af0bd}
+  .tile-timer.late{font-size:24px}
+
+  .tile-foot{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:7px}
+  .tile-count{font-family:var(--mono);font-size:11px;color:var(--text-dim)}
+  .tile-meta{font-size:10px;color:var(--text-faint);letter-spacing:0.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px}
+  .tile-elapsed{font-family:var(--mono);font-size:10px;color:var(--text-faint);margin-top:2px}
+
+  /* chan dot icon (tiny inline) */
+  .tile-chan{display:inline-flex;align-items:center;gap:3px;font-size:10px;color:var(--text-faint)}
+  .tile-chan svg{width:10px;height:10px;opacity:.65}
+
+  .empty{grid-column:1/-1;text-align:center;color:var(--text-faint);padding:var(--space-6);font-size:13px}
+
+  footer{
+    flex:0 0 auto;height:40px;border-top:1px solid var(--hair);background:var(--panel);
+    display:flex;align-items:center;gap:var(--space-5);padding:0 var(--space-5);
+    font-size:11px;color:var(--text-faint);
+  }
+  .legend{display:flex;gap:var(--space-4)}
+  .legend span{display:inline-flex;align-items:center;gap:6px;letter-spacing:0.02em}
+  .swatch{width:9px;height:9px;border-radius:2px}
+  .kbd-hint{margin-left:auto;font-family:var(--mono);letter-spacing:0.04em}
+  .kbd{display:inline-block;padding:1px 5px;border:1px solid var(--hair);border-radius:3px;color:var(--text-dim);margin:0 1px}
+
+  ::-webkit-scrollbar{height:8px;width:8px}
+  ::-webkit-scrollbar-thumb{background:var(--hair-strong);border-radius:4px}
+  ::-webkit-scrollbar-track{background:transparent}
+</style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span class="wordmark">SUD ITALIA</span>
+      <span class="kd-label">Kitchen Display</span>
+    </div>
+    <span class="design-tag">06 · Heat Grid</span>
+    <div class="filters" id="filters" role="group" aria-label="Station filter"></div>
+    <a class="gallery-link" href="index.html">← Gallery</a>
+    <div class="clock tnum" id="clock">--:--:--</div>
+  </header>
+
+  <div class="strip">
+    <div class="stat active"><span class="num tnum" id="stActive">0</span><span class="lbl">Active</span></div>
+    <div class="stat late"><span class="num tnum" id="stLate">0</span><span class="lbl">Late</span></div>
+    <div class="stat soon"><span class="num tnum" id="stSoon">0</span><span class="lbl">Due soon</span></div>
+    <div class="stat ready"><span class="num tnum" id="stReady">0</span><span class="lbl">Ready · Expo</span></div>
+  </div>
+
+  <div class="grid-wrap">
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <footer>
+    <div class="legend">
+      <span><i class="swatch" style="background:#46566A"></i>Calm</span>
+      <span><i class="swatch" style="background:var(--amber)"></i>Warming · due soon</span>
+      <span><i class="swatch" style="background:var(--red)"></i>Hot · late</span>
+      <span><i class="swatch" style="background:var(--green)"></i>Ready · Expo</span>
+    </div>
+    <div class="kbd-hint"><span class="kbd">1</span>–<span class="kbd">9</span>/<span class="kbd">0</span> advance hottest · <span class="kbd">R</span> recall · click tile to advance</div>
+  </footer>
+
+<script>
+const BASE = [
+  { id:"A4F9C2", name:"Marco R.",  channel:"takeout",  loc:"Kraków",   slot:"15:20", elapsed:192, sla:288, status:"prep",
+    items:[{q:2,n:"Margherita",c:"Pizza"},{q:1,n:"Diavola",c:"Pizza"},{q:1,n:"Espresso",c:"Drinks"}] },
+  { id:"B7K2D1", name:"Giulia M.", channel:"delivery", loc:"Kraków",   slot:"15:15", elapsed:540, sla:-65, status:"prep",
+    items:[{q:1,n:"Quattro Formaggi",c:"Pizza"},{q:1,n:"Spaghetti Carbonara",c:"Pasta",note:"no garlic"},{q:1,n:"Tiramisù",c:"Desserts"}], note:"Leave at reception" },
+  { id:"C1M8X4", name:"Paweł K.",  channel:"takeout",  loc:"Warszawa", slot:"15:30", elapsed:48,  sla:612, status:"new",
+    items:[{q:1,n:"Diavola",c:"Pizza"},{q:2,n:"Aranciata",c:"Drinks"}] },
+  { id:"D9P3Q7", name:"Anna W.",   channel:"delivery", loc:"Warszawa", slot:"15:28", elapsed:95,  sla:505, status:"new",
+    items:[{q:3,n:"Margherita",c:"Pizza"},{q:1,n:"Penne Arrabbiata",c:"Pasta"},{q:2,n:"Limonata Fresca",c:"Drinks"}] },
+  { id:"E5R6T2", name:"Luca B.",   channel:"takeout",  loc:"Kraków",   slot:"15:22", elapsed:300, sla:120, status:"prep",
+    items:[{q:1,n:"Tartufata Reale",c:"Pizza",note:"extra truffle"},{q:1,n:"Burrata con Pomodorini",c:"Antipasti"}] },
+  { id:"F2H4J8", name:"Sofia L.",  channel:"takeout",  loc:"Kraków",   slot:"15:10", elapsed:720, sla:0,   status:"ready",
+    items:[{q:1,n:"Panino Caprese",c:"Panini"},{q:1,n:"Garlic Bread",c:"Antipasti"},{q:1,n:"Espresso",c:"Drinks"}] },
+  { id:"G8L1N5", name:"Tomek Z.",  channel:"delivery", loc:"Warszawa", slot:"15:32", elapsed:150, sla:450, status:"new",
+    items:[{q:2,n:"Penne Arrabbiata",c:"Pasta"},{q:1,n:"Linguine al Pesto",c:"Pasta"}] },
+  { id:"H3W7Y9", name:"Elena P.",  channel:"takeout",  loc:"Kraków",   slot:"15:08", elapsed:660, sla:0,   status:"ready",
+    items:[{q:1,n:"Prosciutto e Rucola",c:"Pizza"},{q:1,n:"Arancini (3 pcs)",c:"Antipasti"}] },
+];
+
+// Heat grid needs a dense rush — duplicate the dataset a couple of times with varied
+// timers + ids so the heatmap effect is visible across 20+ tickets. (Still real, derived data.)
+function buildRush(){
+  const out=[];
+  const HEX="0123456789ABCDEF";
+  const slaJitter=[0,   -130, 95,  40,  -210, 0,   210, 0];   // wave 2 sla deltas
+  const slaJitter3=[170,-40, 260, -85, 35,   0,   -150,0];    // wave 3 sla deltas
+  const elJ=[110,260,70,190,330,40,150,90];
+  BASE.forEach((o,i)=>{
+    // wave 1 (verbatim)
+    out.push(JSON.parse(JSON.stringify(o)));
+  });
+  function clone(o,wave,deltaSla,deltaEl){
+    const c=JSON.parse(JSON.stringify(o));
+    // new id: rotate hex chars deterministically per wave
+    c.id=o.id.split("").map((ch,k)=>{
+      const idx=HEX.indexOf(ch.toUpperCase());
+      return idx>=0?HEX[(idx+wave*5+k)%16]:ch;
+    }).join("");
+    if(c.status!=="ready"){ c.sla=o.sla+deltaSla; }
+    c.elapsed=o.elapsed+deltaEl;
+    return c;
+  }
+  BASE.forEach((o,i)=>out.push(clone(o,1,slaJitter[i],elJ[i])));
+  BASE.forEach((o,i)=>out.push(clone(o,2,slaJitter3[i],elJ[(i+3)%8]+60)));
+  // a few extra fresh news to push past 24 tiles
+  BASE.slice(0,4).forEach((o,i)=>{
+    const c=clone(o,3,300+i*40,30+i*25);
+    c.status= i%2? "new":"prep";
+    out.push(c);
+  });
+  return out;
+}
+
+const ORDERS = buildRush();
+const STATIONS = ["All","Pizza","Pasta","Antipasti","Panini","Drinks","Desserts"];
+let activeFilter="All";
+let lastBumped=null;
+
+const ICON={
+  takeout:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12l-1 4H7L6 2Z"/><path d="M5 6h14l-1.2 14.5a1.5 1.5 0 0 1-1.5 1.5H7.7a1.5 1.5 0 0 1-1.5-1.5L5 6Z"/></svg>',
+  delivery:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 3h13v11H1z"/><path d="M14 7h4l3 3v4h-7"/><circle cx="6" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>',
+};
+
+function pad(n){return String(n).padStart(2,"0");}
+function fmtClock(d){return pad(d.getHours())+":"+pad(d.getMinutes())+":"+pad(d.getSeconds());}
+function fmtElapsed(s){const m=Math.floor(s/60);return pad(m)+":"+pad(s%60);}
+function fmtSla(s){
+  if(s<0){const a=Math.abs(s);return "-"+Math.floor(a/60)+":"+pad(a%60);}
+  return pad(Math.floor(s/60))+":"+pad(s%60);
+}
+function tone(o){
+  if(o.status==="ready") return "ready";
+  if(o.sla<0) return "danger";
+  if(o.sla<180) return "warning";
+  return "neutral";
+}
+// heat class: finer gradient than tone for visual heatmap
+function heat(o){
+  if(o.status==="ready") return "h-ready";
+  if(o.sla<0) return "h-late";
+  if(o.sla<180) return "h-hot";   // due very soon = hot red-ish (<3min)
+  if(o.sla<360) return "h-warm";  // warming (<6min)
+  return "h-calm";
+}
+
+function buildFilters(){
+  const wrap=document.getElementById("filters");wrap.innerHTML="";
+  STATIONS.forEach(s=>{
+    const b=document.createElement("button");
+    b.className="chip";b.textContent=s;
+    b.setAttribute("aria-pressed",String(s===activeFilter));
+    b.onclick=()=>{activeFilter=s;buildFilters();render();};
+    wrap.appendChild(b);
+  });
+}
+
+function visible(){
+  let list=ORDERS.slice();
+  if(activeFilter!=="All") list=list.filter(o=>o.items.some(it=>it.c===activeFilter));
+  // hottest first: late, then by ascending sla; ready last
+  list.sort((a,b)=>{
+    const ra=a.status==="ready"?1e9+a.sla:a.sla;
+    const rb=b.status==="ready"?1e9+b.sla:b.sla;
+    return ra-rb;
+  });
+  return list;
+}
+
+function advance(o){
+  if(!o) return;
+  if(o.status==="new"){o.status="prep";}
+  else if(o.status==="prep"){o.status="ready";o.sla=0;}
+  else if(o.status==="ready"){
+    const idx=ORDERS.indexOf(o);lastBumped={order:o,index:idx};ORDERS.splice(idx,1);
+  }
+  render();
+}
+function recall(){
+  if(lastBumped){
+    ORDERS.splice(Math.min(lastBumped.index,ORDERS.length),0,lastBumped.order);
+    lastBumped.order.status="ready";lastBumped=null;render();
+  }
+}
+
+function tileHtml(o){
+  const h=heat(o);
+  const count=o.items.reduce((s,it)=>s+it.q,0);
+  const lateCls = o.sla<0 && o.status!=="ready" ? " late" : "";
+  const timerTxt = o.status==="ready" ? "Ready" : fmtSla(o.sla);
+  return `<div class="tile ${h} s-${o.status}" data-id="${o.id}" role="button" tabindex="0" aria-label="Ticket ${o.id}">
+    <div class="tile-top">
+      <span class="tile-id">#${o.id}</span>
+      <span class="tile-stage" title="${o.status}"></span>
+    </div>
+    <div class="tile-timer tnum${lateCls}" data-sla>${timerTxt}</div>
+    <div class="tile-foot">
+      <span class="tile-count tnum">${count} item${count!==1?"s":""}</span>
+      <span class="tile-chan">${ICON[o.channel]}${o.loc}</span>
+    </div>
+    <div class="tile-elapsed tnum" data-elapsed>${fmtElapsed(o.elapsed)} elapsed</div>
+  </div>`;
+}
+
+function render(){
+  const grid=document.getElementById("grid");
+  const list=visible();
+  // totals (across all, not just filtered, so the strip is a true kitchen gauge)
+  const all=ORDERS;
+  document.getElementById("stActive").textContent=all.filter(o=>o.status!=="ready").length;
+  document.getElementById("stLate").textContent=all.filter(o=>o.status!=="ready"&&o.sla<0).length;
+  document.getElementById("stSoon").textContent=all.filter(o=>o.status!=="ready"&&o.sla>=0&&o.sla<180).length;
+  document.getElementById("stReady").textContent=all.filter(o=>o.status==="ready").length;
+
+  if(list.length===0){ grid.innerHTML=`<div class="empty">No tickets for this station.</div>`; return; }
+  grid.innerHTML=list.map(tileHtml).join("");
+  grid.querySelectorAll(".tile").forEach(t=>{
+    const o=ORDERS.find(x=>x.id===t.dataset.id);
+    t.onclick=()=>advance(o);
+    t.onkeydown=(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();advance(o);}};
+  });
+}
+
+function tick(){
+  document.getElementById("clock").textContent=fmtClock(new Date());
+  let needsRender=false;
+  ORDERS.forEach(o=>{
+    o.elapsed++;
+    if(o.status!=="ready"){
+      const prevHeat=heat(o);
+      o.sla--;
+      if(heat(o)!==prevHeat) needsRender=true; // crossed a heat threshold → recolor + re-sort
+    }
+  });
+  // light per-second timer text updates between full re-renders
+  document.querySelectorAll(".tile").forEach(t=>{
+    const o=ORDERS.find(x=>x.id===t.dataset.id);if(!o)return;
+    const sl=t.querySelector("[data-sla]");
+    if(sl&&o.status!=="ready"){
+      sl.textContent=fmtSla(o.sla);
+      if(o.sla<0) sl.classList.add("late"); else sl.classList.remove("late");
+    }
+    const el=t.querySelector("[data-elapsed]");if(el)el.textContent=fmtElapsed(o.elapsed)+" elapsed";
+  });
+  // keep totals live even without full re-render
+  document.getElementById("stLate").textContent=ORDERS.filter(o=>o.status!=="ready"&&o.sla<0).length;
+  document.getElementById("stSoon").textContent=ORDERS.filter(o=>o.status!=="ready"&&o.sla>=0&&o.sla<180).length;
+  if(needsRender) render();
+}
+
+document.addEventListener("keydown",(e)=>{
+  if(e.key.toLowerCase()==="r"){ recall(); return; }
+  if(/^[1-9]$/.test(e.key)){
+    const list=visible(); const o=list[parseInt(e.key,10)-1]; if(o) advance(o);
+  } else if(e.key==="0"){
+    const list=visible(); const o=list[9]; if(o) advance(o);
+  }
+});
+
+buildFilters();
+render();
+tick();
+setInterval(tick,1000);
+</script>
+</body>
+</html>

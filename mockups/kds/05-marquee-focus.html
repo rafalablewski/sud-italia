@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sud Italia KDS — Marquee</title>
+<style>
+  :root{
+    --bg:#FAFAF8;
+    --bg2:#F2F2EF;
+    --panel:#FFFFFF;
+    --ink:#15171A;
+    --ink2:#4A4F57;
+    --ink3:#8A9099;
+    --hair:rgba(20,23,26,0.10);
+    --hair-strong:rgba(20,23,26,0.18);
+    --accent:#1F6FEB;
+    --accent-soft:rgba(31,111,235,0.10);
+    --neutral:#5A6675;
+    --amber:#B5740B;
+    --amber-soft:#FBF1DE;
+    --red:#C9342B;
+    --red-soft:#FBE7E5;
+    --green:#0E8A5F;
+    --green-soft:#E3F4ED;
+    --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:24px;--space-6:32px;--space-7:48px;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg);color:var(--ink);font-family:var(--sans);
+    font-size:15px;line-height:1.4;-webkit-font-smoothing:antialiased;
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+  .tnum{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+
+  header{
+    display:flex;align-items:center;gap:var(--space-5);
+    padding:0 var(--space-6);height:60px;flex:0 0 auto;
+    border-bottom:1px solid var(--hair);background:var(--panel);
+  }
+  .brand{display:flex;align-items:baseline;gap:var(--space-3)}
+  .wordmark{font-weight:800;font-size:16px;letter-spacing:0.18em;color:var(--ink)}
+  .kd-label{font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink3)}
+  .design-tag{
+    font-family:var(--mono);font-size:11px;letter-spacing:0.08em;color:var(--ink2);
+    padding:3px 8px;border:1px solid var(--hair);border-radius:4px;
+  }
+  .filters{display:flex;gap:var(--space-1);margin-left:auto}
+  .chip{
+    appearance:none;background:transparent;border:1px solid var(--hair);color:var(--ink2);
+    font-family:var(--sans);font-size:12px;letter-spacing:0.02em;padding:6px 11px;
+    border-radius:999px;cursor:pointer;transition:all .12s ease;white-space:nowrap;
+  }
+  .chip:hover{border-color:var(--hair-strong);color:var(--ink)}
+  .chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:600}
+  .clock{font-family:var(--mono);font-size:16px;letter-spacing:0.04em;min-width:80px;text-align:right;color:var(--ink)}
+  .gallery-link{
+    font-size:12px;color:var(--ink3);text-decoration:none;border:1px solid var(--hair);
+    padding:5px 9px;border-radius:999px;transition:all .12s ease;
+  }
+  .gallery-link:hover{color:var(--ink);border-color:var(--hair-strong)}
+
+  .stage{flex:1 1 auto;display:flex;gap:var(--space-6);padding:var(--space-6);overflow:hidden}
+
+  /* HERO — on deck */
+  .hero-wrap{flex:0 0 55%;display:flex;flex-direction:column;overflow:hidden}
+  .hero-kicker{
+    display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-4);flex:0 0 auto;
+  }
+  .hero-kicker .ondeck{
+    font-size:12px;letter-spacing:0.20em;text-transform:uppercase;font-weight:700;color:var(--accent);
+  }
+  .hero-kicker .pill{
+    font-size:11px;letter-spacing:0.10em;text-transform:uppercase;color:var(--ink2);
+    border:1px solid var(--hair);border-radius:999px;padding:3px 10px;
+  }
+  .hero{
+    flex:1 1 auto;background:var(--panel);border:1px solid var(--hair);border-radius:18px;
+    box-shadow:0 1px 0 rgba(20,23,26,0.04),0 24px 60px -28px rgba(20,23,26,0.30);
+    display:flex;flex-direction:column;overflow:hidden;position:relative;
+    border-top:5px solid var(--neutral);transition:border-color .3s ease;
+  }
+  .hero.t-warning{border-top-color:var(--amber)}
+  .hero.t-danger{border-top-color:var(--red)}
+  .hero.t-ready{border-top-color:var(--green)}
+
+  .hero-head{
+    padding:var(--space-5) var(--space-6) var(--space-4);
+    display:flex;align-items:flex-start;justify-content:space-between;gap:var(--space-5);
+    border-bottom:1px solid var(--hair);flex:0 0 auto;
+  }
+  .hero-id-block{min-width:0}
+  .hero-id{font-family:var(--mono);font-size:34px;font-weight:700;letter-spacing:0.01em;line-height:1}
+  .hero-cust{margin-top:8px;font-size:18px;color:var(--ink);font-weight:600}
+  .hero-meta{margin-top:6px;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink2);flex-wrap:wrap}
+  .hero-meta .dot{width:3px;height:3px;border-radius:50%;background:var(--ink3)}
+  .chan{display:inline-flex;align-items:center;gap:5px}
+  .chan svg{width:14px;height:14px;opacity:.7}
+  .hero-stage-tag{
+    font-size:11px;letter-spacing:0.10em;text-transform:uppercase;font-weight:600;color:var(--ink2);
+    border:1px solid var(--hair);border-radius:999px;padding:4px 12px;white-space:nowrap;
+  }
+
+  /* timer block */
+  .hero-timer{
+    text-align:right;flex:0 0 auto;
+  }
+  .hero-timer .t-lbl{font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink3);margin-bottom:2px}
+  .hero-timer .t-due{
+    font-family:var(--mono);font-size:64px;font-weight:700;line-height:0.95;letter-spacing:-0.01em;color:var(--ink);
+  }
+  .hero.t-warning .hero-timer .t-due{color:var(--amber)}
+  .hero.t-danger  .hero-timer .t-due{color:var(--red)}
+  .hero.t-ready   .hero-timer .t-due{color:var(--green)}
+  .hero-timer .t-elapsed{margin-top:6px;font-family:var(--mono);font-size:14px;color:var(--ink2)}
+  .hero-timer .t-elapsed b{color:var(--ink3);font-weight:400}
+
+  .hero-items{flex:1 1 auto;overflow-y:auto;padding:var(--space-5) var(--space-6)}
+  .hero-cat{
+    font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink3);
+    margin:var(--space-4) 0 var(--space-2);padding-bottom:4px;border-bottom:1px dashed var(--hair);
+  }
+  .hero-cat:first-child{margin-top:0}
+  .hero-line{display:flex;align-items:baseline;gap:var(--space-4);padding:8px 0}
+  .hero-line .q{
+    font-family:var(--mono);font-size:30px;font-weight:700;color:var(--accent);min-width:62px;line-height:1;
+  }
+  .hero-line .nm{font-size:26px;font-weight:600;color:var(--ink);line-height:1.15}
+  .hero-line .note{display:block;font-size:15px;font-weight:500;color:var(--amber);margin-top:3px}
+  .hero-ordernote{
+    margin-top:var(--space-4);padding:12px 14px;background:var(--amber-soft);
+    border:1px solid rgba(181,116,11,0.25);border-radius:12px;color:#7a4f08;font-size:15px;
+    display:flex;gap:10px;align-items:flex-start;
+  }
+  .hero-ordernote svg{width:18px;height:18px;flex:0 0 auto;margin-top:1px}
+
+  .hero-foot{
+    flex:0 0 auto;padding:var(--space-4) var(--space-6);border-top:1px solid var(--hair);
+    display:flex;align-items:center;gap:var(--space-4);background:var(--bg2);
+  }
+  .hero-count{font-family:var(--mono);font-size:14px;color:var(--ink2)}
+  .hero-actions{margin-left:auto;display:flex;gap:var(--space-3)}
+  .btn{
+    appearance:none;font-family:var(--sans);font-weight:600;letter-spacing:0.01em;
+    border-radius:12px;cursor:pointer;transition:all .12s ease;white-space:nowrap;border:1px solid var(--hair-strong);
+    background:var(--panel);color:var(--ink);
+  }
+  .btn:hover{background:var(--bg2)}
+  .btn-lg{font-size:18px;padding:14px 28px}
+  .btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn-primary:hover{background:#1a60cf}
+  .btn-ready{background:var(--green);border-color:var(--green);color:#fff}
+  .btn-ready:hover{filter:brightness(.95)}
+  .btn-ghost{font-size:14px;padding:14px 18px;color:var(--ink2)}
+
+  /* QUEUE column */
+  .queue-wrap{flex:1 1 0;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+  .queue-kicker{
+    display:flex;align-items:baseline;justify-content:space-between;margin-bottom:var(--space-4);flex:0 0 auto;
+  }
+  .queue-kicker .q-title{font-size:12px;letter-spacing:0.20em;text-transform:uppercase;font-weight:700;color:var(--ink2)}
+  .queue-kicker .q-count{font-family:var(--mono);font-size:12px;color:var(--ink3)}
+  .queue{flex:1 1 auto;overflow-y:auto;display:flex;flex-direction:column;gap:var(--space-2)}
+  .qrow{
+    background:var(--panel);border:1px solid var(--hair);border-radius:12px;
+    padding:var(--space-3) var(--space-4);display:flex;align-items:center;gap:var(--space-4);
+    cursor:pointer;transition:transform .12s ease,box-shadow .12s ease,border-color .12s ease;
+    position:relative;border-left:4px solid var(--neutral);
+  }
+  .qrow:hover{transform:translateX(2px);box-shadow:0 8px 20px -12px rgba(20,23,26,0.4)}
+  .qrow.t-warning{border-left-color:var(--amber)}
+  .qrow.t-danger{border-left-color:var(--red)}
+  .qrow.t-ready{border-left-color:var(--green)}
+  .qrank{
+    font-family:var(--mono);font-size:13px;font-weight:700;color:var(--ink3);
+    width:22px;text-align:center;flex:0 0 auto;
+  }
+  .qmain{flex:1 1 auto;min-width:0}
+  .qtop{display:flex;align-items:baseline;gap:8px}
+  .qid{font-family:var(--mono);font-size:14px;font-weight:600}
+  .qname{font-size:12px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .qsub{font-size:11px;color:var(--ink3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .qtimer{font-family:var(--mono);font-size:20px;font-weight:700;flex:0 0 auto;color:var(--ink)}
+  .qrow.t-warning .qtimer{color:var(--amber)}
+  .qrow.t-danger .qtimer{color:var(--red)}
+  .qrow.t-ready .qtimer{color:var(--green)}
+  .qstage{font-size:9px;letter-spacing:0.10em;text-transform:uppercase;color:var(--ink3);margin-top:2px;text-align:right}
+
+  .queue-empty{color:var(--ink3);font-size:13px;padding:var(--space-4);text-align:center}
+
+  footer{
+    flex:0 0 auto;height:40px;border-top:1px solid var(--hair);background:var(--panel);
+    display:flex;align-items:center;gap:var(--space-5);padding:0 var(--space-6);
+    font-size:11px;color:var(--ink3);
+  }
+  .legend{display:flex;gap:var(--space-4)}
+  .legend span{display:inline-flex;align-items:center;gap:6px;letter-spacing:0.02em}
+  .swatch{width:9px;height:9px;border-radius:2px}
+  .kbd-hint{margin-left:auto;font-family:var(--mono);letter-spacing:0.04em}
+  .kbd{display:inline-block;padding:1px 5px;border:1px solid var(--hair);border-radius:3px;color:var(--ink2);margin:0 1px}
+
+  ::-webkit-scrollbar{height:8px;width:8px}
+  ::-webkit-scrollbar-thumb{background:var(--hair-strong);border-radius:4px}
+  ::-webkit-scrollbar-track{background:transparent}
+
+  .none-hero{
+    flex:1 1 auto;display:flex;align-items:center;justify-content:center;
+    color:var(--ink3);font-size:18px;text-align:center;
+  }
+</style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span class="wordmark">SUD ITALIA</span>
+      <span class="kd-label">Kitchen Display</span>
+    </div>
+    <span class="design-tag">05 · Marquee</span>
+    <div class="filters" id="filters" role="group" aria-label="Station filter"></div>
+    <a class="gallery-link" href="index.html">← Gallery</a>
+    <div class="clock tnum" id="clock">--:--:--</div>
+  </header>
+
+  <div class="stage">
+    <div class="hero-wrap">
+      <div class="hero-kicker">
+        <span class="ondeck">On deck</span>
+        <span class="pill" id="heroPill">Most urgent active ticket</span>
+      </div>
+      <div id="heroSlot"></div>
+    </div>
+
+    <div class="queue-wrap">
+      <div class="queue-kicker">
+        <span class="q-title">Up next</span>
+        <span class="q-count tnum" id="queueCount">0</span>
+      </div>
+      <div class="queue" id="queue"></div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="legend">
+      <span><i class="swatch" style="background:var(--neutral)"></i>On track</span>
+      <span><i class="swatch" style="background:var(--amber)"></i>Due soon</span>
+      <span><i class="swatch" style="background:var(--red)"></i>Late</span>
+      <span><i class="swatch" style="background:var(--green)"></i>Ready · Expo</span>
+    </div>
+    <div class="kbd-hint"><span class="kbd">Space</span> advance hero · <span class="kbd">1</span>–<span class="kbd">9</span> queue · <span class="kbd">R</span> recall</div>
+  </footer>
+
+<script>
+const ORDERS = [
+  { id:"A4F9C2", name:"Marco R.",  channel:"takeout",  loc:"Kraków",   slot:"15:20", elapsed:192, sla:288, status:"prep",
+    items:[{q:2,n:"Margherita",c:"Pizza"},{q:1,n:"Diavola",c:"Pizza"},{q:1,n:"Espresso",c:"Drinks"}] },
+  { id:"B7K2D1", name:"Giulia M.", channel:"delivery", loc:"Kraków",   slot:"15:15", elapsed:540, sla:-65, status:"prep",
+    items:[{q:1,n:"Quattro Formaggi",c:"Pizza"},{q:1,n:"Spaghetti Carbonara",c:"Pasta",note:"no garlic"},{q:1,n:"Tiramisù",c:"Desserts"}], note:"Leave at reception" },
+  { id:"C1M8X4", name:"Paweł K.",  channel:"takeout",  loc:"Warszawa", slot:"15:30", elapsed:48,  sla:612, status:"new",
+    items:[{q:1,n:"Diavola",c:"Pizza"},{q:2,n:"Aranciata",c:"Drinks"}] },
+  { id:"D9P3Q7", name:"Anna W.",   channel:"delivery", loc:"Warszawa", slot:"15:28", elapsed:95,  sla:505, status:"new",
+    items:[{q:3,n:"Margherita",c:"Pizza"},{q:1,n:"Penne Arrabbiata",c:"Pasta"},{q:2,n:"Limonata Fresca",c:"Drinks"}] },
+  { id:"E5R6T2", name:"Luca B.",   channel:"takeout",  loc:"Kraków",   slot:"15:22", elapsed:300, sla:120, status:"prep",
+    items:[{q:1,n:"Tartufata Reale",c:"Pizza",note:"extra truffle"},{q:1,n:"Burrata con Pomodorini",c:"Antipasti"}] },
+  { id:"F2H4J8", name:"Sofia L.",  channel:"takeout",  loc:"Kraków",   slot:"15:10", elapsed:720, sla:0,   status:"ready",
+    items:[{q:1,n:"Panino Caprese",c:"Panini"},{q:1,n:"Garlic Bread",c:"Antipasti"},{q:1,n:"Espresso",c:"Drinks"}] },
+  { id:"G8L1N5", name:"Tomek Z.",  channel:"delivery", loc:"Warszawa", slot:"15:32", elapsed:150, sla:450, status:"new",
+    items:[{q:2,n:"Penne Arrabbiata",c:"Pasta"},{q:1,n:"Linguine al Pesto",c:"Pasta"}] },
+  { id:"H3W7Y9", name:"Elena P.",  channel:"takeout",  loc:"Kraków",   slot:"15:08", elapsed:660, sla:0,   status:"ready",
+    items:[{q:1,n:"Prosciutto e Rucola",c:"Pizza"},{q:1,n:"Arancini (3 pcs)",c:"Antipasti"}] },
+];
+
+const STATIONS = ["All","Pizza","Pasta","Antipasti","Panini","Drinks","Desserts"];
+const STAGES = { new:"New", prep:"In progress", ready:"Ready · Expo" };
+let activeFilter="All";
+let lastBumped=null;
+
+const ICON={
+  takeout:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12l-1 4H7L6 2Z"/><path d="M5 6h14l-1.2 14.5a1.5 1.5 0 0 1-1.5 1.5H7.7a1.5 1.5 0 0 1-1.5-1.5L5 6Z"/></svg>',
+  delivery:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 3h13v11H1z"/><path d="M14 7h4l3 3v4h-7"/><circle cx="6" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>',
+  note:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>',
+};
+
+function pad(n){return String(n).padStart(2,"0");}
+function fmtClock(d){return pad(d.getHours())+":"+pad(d.getMinutes())+":"+pad(d.getSeconds());}
+function fmtElapsed(s){const m=Math.floor(s/60);return pad(m)+":"+pad(s%60);}
+function fmtSla(s){
+  if(s<0){const a=Math.abs(s);return "Late "+Math.floor(a/60)+":"+pad(a%60);}
+  return pad(Math.floor(s/60))+":"+pad(s%60);
+}
+function tone(o){
+  if(o.status==="ready") return "ready";
+  if(o.sla<0) return "danger";
+  if(o.sla<180) return "warning";
+  return "neutral";
+}
+function rank(o){
+  // most urgent first: late, then due soon, then on-track by sla; ready last
+  if(o.status==="ready") return 1e9 + o.sla;
+  return o.sla;
+}
+
+function buildFilters(){
+  const wrap=document.getElementById("filters");wrap.innerHTML="";
+  STATIONS.forEach(s=>{
+    const b=document.createElement("button");
+    b.className="chip";b.textContent=s;
+    b.setAttribute("aria-pressed",String(s===activeFilter));
+    b.onclick=()=>{activeFilter=s;buildFilters();render();};
+    wrap.appendChild(b);
+  });
+}
+
+function visibleSorted(){
+  let list=ORDERS.slice();
+  if(activeFilter!=="All") list=list.filter(o=>o.items.some(it=>it.c===activeFilter));
+  list.sort((a,b)=>rank(a)-rank(b));
+  return list;
+}
+
+function advance(o){
+  if(!o) return;
+  if(o.status==="new"){o.status="prep";}
+  else if(o.status==="prep"){o.status="ready";o.sla=0;}
+  else if(o.status==="ready"){
+    const idx=ORDERS.indexOf(o);lastBumped={order:o,index:idx};ORDERS.splice(idx,1);
+  }
+  render();
+}
+function recall(){
+  if(lastBumped){
+    ORDERS.splice(Math.min(lastBumped.index,ORDERS.length),0,lastBumped.order);
+    lastBumped.order.status="ready";lastBumped=null;render();
+  }
+}
+function actionLabel(o){
+  if(o.status==="new") return "Start prep";
+  if(o.status==="prep") return "Mark ready";
+  return "Bump · Done";
+}
+
+function heroItemsHtml(o){
+  const groups=[];
+  o.items.forEach(it=>{let g=groups.find(x=>x.c===it.c);if(!g){g={c:it.c,items:[]};groups.push(g);}g.items.push(it);});
+  let html="";
+  groups.forEach(g=>{
+    html+=`<div class="hero-cat">${g.c}</div>`;
+    g.items.forEach(it=>{
+      html+=`<div class="hero-line"><span class="q tnum">${it.q}×</span><span class="nm">${it.n}${it.note?`<span class="note">— ${it.note}</span>`:""}</span></div>`;
+    });
+  });
+  if(o.note) html+=`<div class="hero-ordernote">${ICON.note}<span>${o.note}</span></div>`;
+  return html;
+}
+
+function renderHero(o){
+  const slot=document.getElementById("heroSlot");
+  if(!o){
+    slot.innerHTML=`<div class="hero"><div class="none-hero">No active tickets for this station.<br>The line is clear.</div></div>`;
+    document.getElementById("heroPill").textContent="—";
+    return;
+  }
+  const t=tone(o);
+  const count=o.items.reduce((s,it)=>s+it.q,0);
+  document.getElementById("heroPill").textContent = t==="danger"?"Behind schedule":t==="warning"?"Due soon":t==="ready"?"Awaiting handoff":"Most urgent active ticket";
+  const btnCls = o.status==="ready"?"btn btn-lg btn-ready":"btn btn-lg btn-primary";
+  slot.innerHTML=`<div class="hero t-${t}" data-id="${o.id}">
+    <div class="hero-head">
+      <div class="hero-id-block">
+        <div class="hero-id">#${o.id}</div>
+        <div class="hero-cust">${o.name}</div>
+        <div class="hero-meta">
+          <span class="chan">${ICON[o.channel]}${o.channel==="takeout"?"Takeout":"Delivery"}</span>
+          <span class="dot"></span><span>${o.loc}</span>
+          <span class="dot"></span><span class="tnum">Slot ${o.slot}</span>
+          <span class="hero-stage-tag">${STAGES[o.status]}</span>
+        </div>
+      </div>
+      <div class="hero-timer">
+        <div class="t-lbl">${o.status==="ready"?"Ready":"Due"}</div>
+        <div class="t-due tnum" data-sla>${o.status==="ready"?"Ready":fmtSla(o.sla)}</div>
+        <div class="t-elapsed tnum"><b>Elapsed</b> <span data-elapsed>${fmtElapsed(o.elapsed)}</span></div>
+      </div>
+    </div>
+    <div class="hero-items">${heroItemsHtml(o)}</div>
+    <div class="hero-foot">
+      <span class="hero-count tnum">${count} item${count!==1?"s":""}</span>
+      ${o.status==="prep"?`<button class="btn btn-ghost" data-act="86">86 an item</button>`:""}
+      <div class="hero-actions">
+        <button class="${btnCls}" data-act="advance">${actionLabel(o)}</button>
+      </div>
+    </div>
+  </div>`;
+  slot.querySelector('[data-act="advance"]').onclick=()=>advance(o);
+  slot.querySelector(".hero").onclick=(e)=>{ if(!e.target.closest("button")) advance(o); };
+}
+
+function renderQueue(list){
+  const q=document.getElementById("queue");
+  document.getElementById("queueCount").textContent=list.length;
+  if(list.length===0){ q.innerHTML=`<div class="queue-empty">Nothing waiting.</div>`; return; }
+  q.innerHTML=list.map((o,i)=>{
+    const t=tone(o);
+    const count=o.items.reduce((s,it)=>s+it.q,0);
+    const summary=o.items.map(it=>it.q+"× "+it.n).join(" · ");
+    return `<div class="qrow t-${t}" data-id="${o.id}">
+      <span class="qrank tnum">${i+1}</span>
+      <div class="qmain">
+        <div class="qtop"><span class="qid">#${o.id}</span><span class="qname">${o.name} · ${o.loc}</span></div>
+        <div class="qsub">${count}× · ${summary}</div>
+      </div>
+      <div>
+        <div class="qtimer tnum" data-sla>${o.status==="ready"?"Ready":fmtSla(o.sla)}</div>
+        <div class="qstage">${STAGES[o.status]}</div>
+      </div>
+    </div>`;
+  }).join("");
+  q.querySelectorAll(".qrow").forEach(row=>{
+    const o=ORDERS.find(x=>x.id===row.dataset.id);
+    row.onclick=()=>advance(o);
+  });
+}
+
+function render(){
+  const list=visibleSorted();
+  const hero=list[0]||null;
+  renderHero(hero);
+  renderQueue(list.slice(1));
+}
+
+function tick(){
+  document.getElementById("clock").textContent=fmtClock(new Date());
+  let needsRender=false;
+  ORDERS.forEach(o=>{
+    o.elapsed++;
+    if(o.status!=="ready"){
+      const prev=tone(o);
+      o.sla--;
+      if(tone(o)!==prev) needsRender=true; // recolor + possible re-rank into/out of hero
+    }
+  });
+  // light updates
+  const heroEl=document.querySelector(".hero[data-id]");
+  if(heroEl){
+    const o=ORDERS.find(x=>x.id===heroEl.dataset.id);
+    if(o){
+      const sl=heroEl.querySelector("[data-sla]");if(sl&&o.status!=="ready")sl.textContent=fmtSla(o.sla);
+      const el=heroEl.querySelector("[data-elapsed]");if(el)el.textContent=fmtElapsed(o.elapsed);
+      const newT=tone(o);
+      if(!heroEl.classList.contains("t-"+newT)){
+        heroEl.classList.remove("t-neutral","t-warning","t-danger","t-ready");
+        heroEl.classList.add("t-"+newT);
+      }
+    }
+  }
+  document.querySelectorAll(".qrow").forEach(row=>{
+    const o=ORDERS.find(x=>x.id===row.dataset.id);if(!o)return;
+    const sl=row.querySelector("[data-sla]");if(sl&&o.status!=="ready")sl.textContent=fmtSla(o.sla);
+    const newT=tone(o);
+    if(!row.classList.contains("t-"+newT)){
+      row.classList.remove("t-neutral","t-warning","t-danger","t-ready");
+      row.classList.add("t-"+newT);
+    }
+  });
+  if(needsRender) render();
+}
+
+document.addEventListener("keydown",(e)=>{
+  if(e.code==="Space"){ e.preventDefault(); const list=visibleSorted(); advance(list[0]); return; }
+  if(e.key.toLowerCase()==="r"){ recall(); return; }
+  if(/^[1-9]$/.test(e.key)){
+    const list=visibleSorted();
+    const o=list[parseInt(e.key,10)]; // 1 => first queue row (index 1 overall)
+    if(o) advance(o);
+  } else if(e.key==="0"){
+    const list=visibleSorted(); const o=list[10]; if(o) advance(o);
+  }
+});
+
+buildFilters();
+render();
+tick();
+setInterval(tick,1000);
+</script>
+</body>
+</html>
