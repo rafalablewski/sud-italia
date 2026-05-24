@@ -72,8 +72,9 @@ One-shot verification harnesses (not part of CI) live in
 │   └── store/            Zustand client stores
 ├── migrations/           Drizzle SQL + metadata (do not hand-edit)
 ├── docs/                 Design + audit documents — see docs/README.md
+├── tests/                Non-shipping drafts, sketches + design R&D — see tests/README.md
 ├── public/
-│   ├── mockups/          Live HTML design mockups — see public/mockups/README.md
+│   ├── mockups/          Served HTML design mockups — see public/mockups/README.md
 │   ├── sw.js             Service worker
 │   └── manifest.json     PWA manifest
 ├── scripts/

@@ -14,11 +14,17 @@ reference when reviewing redesigns in real browsers.
 | Path | Purpose |
 |---|---|
 | `cart.html` | Cart + checkout redesign concepts — V7 (animated), V8 (trattoria), V9 (editorial). Built-in tab switcher; each version is a self-contained iframe. |
+| `kds/` | Kitchen Display System redesign — 10 selectable themes (premium, minimal, neat, clean, futuristic, trattoria, contrast, terminal, soft, dense). Single `index.html` with a theme switcher. |
 | `mobile/` | Mobile admin redesign — clickable screen mockups (see `docs/mobile/`) |
 | `bundle-ladders/` | 10 alternative layouts for the bundle-ladder admin page |
 | `menu-engineering.html` | Menu-engineering customer-facing redesign |
 | `cart-upsell.html` | Cart upsell pattern exploration |
 | `cross-sell-psychology.html` | Cross-sell suggestion behaviour |
+
+> **Note:** `public/mockups/` is for *served* preview artifacts —
+> browser-loadable design mockups referenced from `docs/`. Throwaway
+> drafts, wireframes and design R&D that should **not** ship belong in
+> the top-level `/tests/` directory instead (see `tests/README.md`).
 
 ## Browsing
 
