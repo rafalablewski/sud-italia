@@ -174,11 +174,17 @@
       sans: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
     };
 
+    // Resolve links from the served root so they work whether the gallery URL
+    // has a trailing slash or not (Vercel serves it at /mockups/kds with none,
+    // which would otherwise resolve siblings against /mockups/). Falls back to
+    // plain relative paths when opened straight off disk (file://).
+    const BASE = location.protocol === "file:" ? "" : "/mockups/kds/";
+
     const grid = document.getElementById("grid");
     for (const d of DESIGNS) {
       const a = document.createElement("a");
       a.className = "card";
-      a.href = d.file;
+      a.href = BASE + d.file;
       const accentDots = `<i style="background:${C.neutral}"></i><i style="background:${C.warning}"></i><i style="background:${C.danger}"></i><i style="background:${C.ready}"></i>`;
       a.innerHTML = `
         <div class="band" style="background:${d.bg};color:${d.ink};font-family:${fonts[d.font]}">
@@ -198,7 +204,7 @@
     // Eleventh card — the preserved prior concept, kept discoverable.
     const legacy = document.createElement("a");
     legacy.className = "card legacy";
-    legacy.href = "legacy-theme-switcher.html";
+    legacy.href = BASE + "legacy-theme-switcher.html";
     legacy.innerHTML = `
       <div class="band">
         <span class="num">— —</span>
