@@ -459,6 +459,38 @@
   .is-fullscreen .fb-num{font-size:26px}
   .is-fullscreen .it .nm{font-size:15px}
   .is-fullscreen .tn-line,.is-fullscreen .tn-alert{font-size:14px}
+
+  /* ====================== Responsive ====================== */
+  /* Tablet & below: drop the fixed-viewport "wall" model for a scrollable
+     document, stack the two trucks into one column, and let the header
+     controls + fleet bar reflow / scroll instead of overflowing. */
+  @media (max-width:1024px){
+    html,body{height:auto}
+    body{overflow:visible}
+    header{height:auto;flex-wrap:wrap;padding:10px var(--s4);row-gap:10px}
+    .spacer{flex-basis:100%;height:0;margin:0}
+    .filters,.lines{min-width:0;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+    .filters::-webkit-scrollbar,.lines::-webkit-scrollbar{display:none}
+    .clock{margin-left:auto}
+    .fleetbar{flex-wrap:wrap}
+    .fb-cell{flex:1 1 150px}
+    .fb-cell.benchmark{flex:1 1 100%}
+    .boards{display:flex;flex-direction:column}
+    .truck{min-height:0}
+    .t-body{overflow:visible}            /* grow with content; the page scrolls */
+  }
+  /* Phone: trim secondary chrome, tighten spacing, two-up the small tiles. */
+  @media (max-width:560px){
+    .kd-label,.design-tag,.gallery-link{display:none}
+    header{padding:8px 12px;gap:8px}
+    .t-body{padding:var(--s3) var(--s4)}
+    .pace-gauges{padding:var(--s3) var(--s4)}
+    .fb-cell{flex:1 1 calc(50% - 1px);padding:var(--s2) var(--s4)}
+    .fb-num{font-size:20px}
+    .th-stats{gap:var(--s4)}
+    .gauge{flex:1 1 calc(50% - var(--s2))}
+    .t-name{max-width:36%}
+  }
 </style>
 </head>
 <body>
