@@ -26,7 +26,7 @@ import {
 } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
 import { formatSlotDate } from "@/lib/format";
-import { fulfillmentLabel } from "@/lib/fulfillment";
+import { fulfillmentLabel, formatPartySize } from "@/lib/fulfillment";
 import { FulfillmentIcon } from "@/components/FulfillmentIcon";
 import dynamic from "next/dynamic";
 import { useAdminLocation } from "./v2/LocationContext";
@@ -778,7 +778,7 @@ function OrderDetail({ order, onClose, onStatusChange, onRequestDelete, onReques
             <div className="v2-detail-row">
               <Users className="h-3.5 w-3.5 v2-muted" />
               <span className="v2-detail-key">Party size</span>
-              <span>{order.partySize} {order.partySize === 1 ? "guest" : "guests"}</span>
+              <span>{formatPartySize(order.partySize)}</span>
             </div>
           ) : null}
           {order.deliveryAddress && (

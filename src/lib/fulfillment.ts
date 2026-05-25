@@ -12,3 +12,10 @@ export const FULFILLMENT_LABELS: Record<FulfillmentType, string> = {
 export function fulfillmentLabel(type: FulfillmentType): string {
   return FULFILLMENT_LABELS[type] ?? FULFILLMENT_LABELS.takeout;
 }
+
+/** "1 guest" / "4 guests" — the dine-in party size in human form. Single
+ *  source so every surface (order tracker, KDS, admin order detail) reads
+ *  identically and a future locale switch only touches this one place. */
+export function formatPartySize(size: number): string {
+  return `${size} ${size === 1 ? "guest" : "guests"}`;
+}

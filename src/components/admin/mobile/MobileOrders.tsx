@@ -424,7 +424,7 @@ function OrderDetail({
       >
         <DetailTile label="Status" value={STATUS_LABEL[order.status]} tone={STATUS_TONE[order.status]} />
         <DetailTile label="Fulfilment" value={order.fulfillmentType === "dine-in" && order.partySize ? `${fulfillmentLabel(order.fulfillmentType)} · ${order.partySize}` : fulfillmentLabel(order.fulfillmentType)} />
-        <DetailTile label="Slot" value={`${order.slotDate} ${order.slotTime}`} />
+        <DetailTile label={order.fulfillmentType === "dine-in" ? "Table" : "Slot"} value={`${order.slotDate} ${order.slotTime}`} />
         <DetailTile label="Total" value={formatPrice(order.totalAmount)} />
       </div>
 

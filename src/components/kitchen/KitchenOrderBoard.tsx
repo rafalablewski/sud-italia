@@ -14,7 +14,7 @@ import {
   ChefHat,
   ShoppingBag,
 } from "lucide-react";
-import { fulfillmentLabel } from "@/lib/fulfillment";
+import { fulfillmentLabel, formatPartySize } from "@/lib/fulfillment";
 import { FulfillmentIcon } from "@/components/FulfillmentIcon";
 import {
   parseKitchenCartPresencePayload,
@@ -356,7 +356,7 @@ export function KitchenOrderBoard({ locationName, slug }: Props) {
                   {order.fulfillmentType === "dine-in" && order.partySize && (
                     <span className="flex items-center gap-1">
                       <Users className="h-4 w-4" />
-                      {order.partySize} {order.partySize === 1 ? "guest" : "guests"}
+                      {formatPartySize(order.partySize)}
                     </span>
                   )}
                   {order.deliveryAddress && (
