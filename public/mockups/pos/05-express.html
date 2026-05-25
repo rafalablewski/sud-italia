@@ -1,0 +1,840 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sud Italia POS — Express</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  :root{
+    --bg:#FAFAF8;
+    --bg2:#F2F2EF;
+    --panel:#FFFFFF;
+    --ink:#15171A;
+    --ink2:#4A4F57;
+    --ink3:#8A9099;
+    --hair:rgba(20,23,26,0.10);
+    --hair-strong:rgba(20,23,26,0.18);
+    --accent:#0E8A5F;           /* green-forward — speed / quick-service */
+    --accent-soft:rgba(14,138,95,0.10);
+    --accent-tint:#E3F4ED;
+    --accent2:#1F6FEB;
+    --amber:#B5740B;
+    --amber-soft:#FBF1DE;
+    --red:#C9342B;
+    --red-soft:#FBE7E5;
+    --violet:#7C3AED;
+    --violet-soft:#F1EBFE;
+    --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:24px;--space-6:32px;--space-7:48px;
+    --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Monaco,"Cascadia Code",monospace;
+    --sans:"Inter",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg);color:var(--ink);font-family:var(--sans);
+    font-size:15px;line-height:1.4;-webkit-font-smoothing:antialiased;
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+  .tnum{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+
+  /* ====================== Header ====================== */
+  header{
+    display:flex;align-items:center;gap:var(--space-4);
+    padding:0 var(--space-6);height:60px;flex:0 0 auto;
+    border-bottom:1px solid var(--hair);background:var(--panel);
+  }
+  .brand{display:flex;align-items:baseline;gap:var(--space-3)}
+  .wordmark{font-weight:800;font-size:16px;letter-spacing:0.18em;color:var(--ink)}
+  .kd-label{font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink3)}
+  .design-tag{
+    font-family:var(--mono);font-size:11px;letter-spacing:0.08em;color:var(--ink2);
+    padding:3px 8px;border:1px solid var(--hair);border-radius:4px;white-space:nowrap;
+  }
+
+  /* segmented controls (location + channel) */
+  .seg-group{
+    display:flex;gap:2px;padding:3px;border:1px solid var(--hair);border-radius:999px;
+    background:var(--bg2);
+  }
+  .seg{
+    appearance:none;background:transparent;border:1px solid transparent;color:var(--ink2);
+    font-family:var(--sans);font-size:12px;letter-spacing:0.02em;padding:5px 12px;
+    border-radius:999px;cursor:pointer;transition:all .12s ease;white-space:nowrap;
+    display:inline-flex;align-items:center;gap:6px;
+  }
+  .seg:hover{color:var(--ink)}
+  .seg[aria-pressed="true"]{background:var(--accent);color:#fff;font-weight:600}
+  .seg svg{width:13px;height:13px}
+
+  .ctl-stack{display:flex;align-items:center;gap:var(--space-3);margin-left:auto}
+  .ctl-lbl{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink3);margin-right:2px}
+
+  .fsbtn{
+    appearance:none;display:inline-flex;align-items:center;gap:6px;
+    background:transparent;border:1px solid var(--hair);color:var(--ink2);
+    font-family:var(--sans);font-size:12px;letter-spacing:0.02em;padding:6px 11px;
+    border-radius:999px;cursor:pointer;transition:all .12s ease;white-space:nowrap;
+  }
+  .fsbtn:hover{border-color:var(--hair-strong);color:var(--ink)}
+  .fsbtn svg{width:14px;height:14px}
+  .clock{font-family:var(--mono);font-size:16px;letter-spacing:0.04em;min-width:84px;text-align:right;color:var(--ink)}
+  .gallery-link{
+    font-size:12px;color:var(--ink3);text-decoration:none;border:1px solid var(--hair);
+    padding:6px 10px;border-radius:999px;transition:all .12s ease;white-space:nowrap;
+  }
+  .gallery-link:hover{color:var(--ink);border-color:var(--hair-strong)}
+
+  /* fullscreen trims */
+  html.is-fullscreen .design-tag,
+  html.is-fullscreen .kd-label{display:none}
+  html.is-fullscreen footer{display:none}
+
+  /* ====================== Stage ====================== */
+  .stage{flex:1 1 auto;display:flex;gap:var(--space-5);padding:var(--space-5) var(--space-6);overflow:hidden}
+
+  /* LEFT — products */
+  .menu-wrap{flex:1 1 auto;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+
+  .fav-kicker{
+    display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-3);flex:0 0 auto;
+  }
+  .fav-kicker .fk-title{font-size:12px;letter-spacing:0.20em;text-transform:uppercase;font-weight:700;color:var(--accent)}
+  .fav-kicker .fk-sub{font-size:12px;color:var(--ink3)}
+  .fav-kicker .bolt{display:inline-flex;width:18px;height:18px;color:var(--accent)}
+  .fav-kicker .bolt svg{width:18px;height:18px}
+
+  /* Hero one-tap row */
+  .fav-row{
+    flex:0 0 auto;display:grid;grid-template-columns:repeat(5,1fr);gap:var(--space-3);
+    margin-bottom:var(--space-3);
+  }
+  .fav-btn{
+    appearance:none;cursor:pointer;text-align:left;font-family:var(--sans);
+    background:var(--panel);border:1px solid var(--hair);border-radius:14px;
+    padding:var(--space-3) var(--space-4);display:flex;flex-direction:column;gap:6px;
+    transition:transform .1s ease,box-shadow .12s ease,border-color .12s ease;
+    box-shadow:0 1px 0 rgba(20,23,26,0.04);position:relative;min-height:92px;
+  }
+  .fav-btn:hover{transform:translateY(-2px);box-shadow:0 12px 24px -14px rgba(20,23,26,0.4);border-color:var(--hair-strong)}
+  .fav-btn:active{transform:translateY(0) scale(.98)}
+  .fav-emoji{font-size:24px;line-height:1}
+  .fav-name{font-size:14px;font-weight:600;color:var(--ink);line-height:1.2}
+  .fav-price{font-family:var(--mono);font-size:13px;color:var(--ink2);margin-top:auto}
+  .fav-btn .flash{
+    position:absolute;inset:0;border-radius:14px;background:var(--accent);opacity:0;
+    pointer-events:none;
+  }
+  .fav-btn.added .flash{animation:flash .4s ease}
+  @keyframes flash{0%{opacity:.22}100%{opacity:0}}
+
+  /* combo one-tap buttons */
+  .combo-btn{
+    border-color:rgba(14,138,95,0.32);background:linear-gradient(160deg,var(--accent-tint),var(--panel));
+  }
+  .combo-btn .fav-name{color:var(--accent)}
+  .combo-tag{
+    position:absolute;top:8px;right:8px;font-family:var(--mono);font-size:9px;font-weight:700;
+    letter-spacing:0.04em;color:var(--accent);background:var(--accent-soft);
+    border:1px solid rgba(14,138,95,0.3);border-radius:5px;padding:1px 5px;
+  }
+  .combo-desc{font-size:11px;color:var(--ink3);line-height:1.25}
+  .combo-off{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--accent);margin-top:auto}
+
+  /* category chips */
+  .cats{
+    flex:0 0 auto;display:flex;gap:var(--space-1);margin-bottom:var(--space-3);flex-wrap:wrap;
+  }
+  .chip{
+    appearance:none;background:transparent;border:1px solid var(--hair);color:var(--ink2);
+    font-family:var(--sans);font-size:12.5px;letter-spacing:0.01em;padding:7px 13px;
+    border-radius:999px;cursor:pointer;transition:all .12s ease;white-space:nowrap;
+    display:inline-flex;align-items:center;gap:6px;
+  }
+  .chip:hover{border-color:var(--hair-strong);color:var(--ink)}
+  .chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:600}
+  .chip .cemoji{font-size:13px}
+
+  /* compact menu grid */
+  .grid-scroll{flex:1 1 auto;overflow-y:auto;padding-right:4px;min-height:0}
+  .grid{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:var(--space-3);
+    align-content:start;
+  }
+  .card{
+    appearance:none;cursor:pointer;text-align:left;font-family:var(--sans);
+    background:var(--panel);border:1px solid var(--hair);border-radius:12px;
+    padding:var(--space-3) var(--space-4);display:flex;flex-direction:column;gap:5px;
+    transition:transform .1s ease,box-shadow .12s ease,border-color .12s ease;position:relative;
+    box-shadow:0 1px 0 rgba(20,23,26,0.03);min-height:96px;
+  }
+  .card:hover{transform:translateY(-2px);box-shadow:0 10px 22px -14px rgba(20,23,26,0.4);border-color:var(--hair-strong)}
+  .card:active{transform:translateY(0) scale(.98)}
+  .card.added .flash{animation:flash .4s ease}
+  .card .flash{position:absolute;inset:0;border-radius:12px;background:var(--accent);opacity:0;pointer-events:none}
+  .card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:6px}
+  .card-emoji{font-size:18px;line-height:1}
+  .card-name{font-size:13.5px;font-weight:600;color:var(--ink);line-height:1.25}
+  .card-price{font-family:var(--mono);font-size:13px;color:var(--ink2);margin-top:auto}
+  .card-tags{display:flex;gap:4px;flex-wrap:wrap}
+  .tag{
+    font-size:9px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;
+    padding:1px 5px;border-radius:4px;line-height:1.5;
+  }
+  .tag.veg{background:var(--accent-soft);color:var(--accent)}
+  .tag.vegan{background:var(--accent-soft);color:var(--accent)}
+  .tag.spicy{background:var(--red-soft);color:var(--red)}
+  .tag.gf{background:var(--amber-soft);color:var(--amber)}
+  .role-badge{
+    font-size:9px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;
+    padding:1px 6px;border-radius:5px;flex:0 0 auto;
+  }
+  .role-hero{background:var(--accent2);color:#fff}
+  .role-profit{background:var(--accent);color:#fff}
+  .role-anchor{background:var(--violet);color:#fff}
+  .lto-dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--amber);margin-left:4px;vertical-align:middle}
+
+  /* RIGHT — order ticket */
+  .ticket-wrap{
+    flex:0 0 380px;display:flex;flex-direction:column;overflow:hidden;
+    background:var(--panel);border:1px solid var(--hair);border-radius:18px;
+    box-shadow:0 1px 0 rgba(20,23,26,0.04),0 24px 60px -34px rgba(20,23,26,0.28);
+  }
+
+  /* speed indicator */
+  .speed-bar{
+    flex:0 0 auto;padding:var(--space-4) var(--space-5);border-bottom:1px solid var(--hair);
+    display:flex;align-items:center;gap:var(--space-4);background:var(--bg2);border-radius:18px 18px 0 0;
+  }
+  .speed-timer{display:flex;flex-direction:column;gap:2px}
+  .speed-timer .st-lbl{
+    font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink3);
+    display:inline-flex;align-items:center;gap:5px;
+  }
+  .speed-timer .st-lbl .dot{width:7px;height:7px;border-radius:50%;background:var(--ink3);transition:background .2s ease}
+  .speed-bar.live .speed-timer .st-lbl .dot{background:var(--accent);animation:pulse 1.2s ease-in-out infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(14,138,95,0.5)}50%{box-shadow:0 0 0 5px rgba(14,138,95,0)}}
+  .speed-timer .st-val{font-family:var(--mono);font-size:26px;font-weight:700;line-height:1;color:var(--ink);letter-spacing:0.01em}
+  .speed-bar.live .speed-timer .st-val{color:var(--accent)}
+  .speed-count{
+    margin-left:auto;text-align:right;display:flex;flex-direction:column;gap:2px;
+  }
+  .speed-count .sc-lbl{font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink3)}
+  .speed-count .sc-val{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--ink);line-height:1}
+
+  .ticket-head{
+    flex:0 0 auto;padding:var(--space-3) var(--space-5) 0;
+    display:flex;align-items:baseline;justify-content:space-between;
+  }
+  .ticket-head .th-title{font-size:12px;letter-spacing:0.18em;text-transform:uppercase;font-weight:700;color:var(--ink2)}
+  .ticket-head .th-meta{font-size:11px;color:var(--ink3);font-family:var(--mono)}
+
+  .lines{flex:1 1 auto;overflow-y:auto;padding:var(--space-3) var(--space-5);min-height:0;display:flex;flex-direction:column;gap:var(--space-2)}
+  .empty-ticket{
+    flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    color:var(--ink3);text-align:center;gap:8px;padding:var(--space-6);
+  }
+  .empty-ticket .e-emoji{font-size:32px;opacity:.5}
+  .empty-ticket .e-text{font-size:14px}
+  .empty-ticket .e-sub{font-size:12px;color:var(--ink3)}
+
+  .line{
+    display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) 0;
+    border-bottom:1px dashed var(--hair);
+  }
+  .line:last-child{border-bottom:0}
+  .line-body{flex:1 1 auto;min-width:0}
+  .line-name{font-size:14px;font-weight:600;color:var(--ink);line-height:1.2}
+  .line-each{font-family:var(--mono);font-size:11px;color:var(--ink3);margin-top:2px}
+  .stepper{display:flex;align-items:center;gap:2px;flex:0 0 auto}
+  .step-btn{
+    appearance:none;cursor:pointer;width:28px;height:28px;border-radius:8px;
+    border:1px solid var(--hair);background:var(--panel);color:var(--ink);
+    font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;
+    transition:all .1s ease;
+  }
+  .step-btn:hover{background:var(--bg2);border-color:var(--hair-strong)}
+  .step-btn:active{transform:scale(.92)}
+  .step-q{font-family:var(--mono);font-size:14px;font-weight:700;min-width:26px;text-align:center;color:var(--ink)}
+  .line-total{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--ink);min-width:64px;text-align:right;flex:0 0 auto}
+
+  /* combo applied chip */
+  .combo-applied{
+    display:flex;align-items:center;gap:8px;padding:var(--space-2) var(--space-3);
+    background:var(--accent-soft);border:1px solid rgba(14,138,95,0.28);border-radius:10px;margin-top:var(--space-2);
+  }
+  .combo-applied .ca-name{font-size:12.5px;font-weight:600;color:var(--accent);flex:1 1 auto}
+  .combo-applied .ca-off{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--accent)}
+  .combo-applied .ca-x{
+    appearance:none;cursor:pointer;border:0;background:transparent;color:var(--accent);
+    font-size:16px;line-height:1;padding:0 2px;opacity:.7;
+  }
+  .combo-applied .ca-x:hover{opacity:1}
+
+  /* totals + charge */
+  .totals{flex:0 0 auto;padding:var(--space-4) var(--space-5);border-top:1px solid var(--hair);background:var(--bg2)}
+  .trow{display:flex;align-items:baseline;justify-content:space-between;font-size:13px;color:var(--ink2);padding:3px 0}
+  .trow.discount{color:var(--accent);font-weight:600}
+  .trow .tv{font-family:var(--mono)}
+  .trow.grand{font-size:18px;color:var(--ink);font-weight:700;padding-top:var(--space-2);margin-top:var(--space-2);border-top:1px solid var(--hair)}
+  .trow.grand .tv{font-size:22px;font-weight:700}
+
+  .charge-area{flex:0 0 auto;padding:0 var(--space-5) var(--space-5)}
+  .btn{
+    appearance:none;font-family:var(--sans);font-weight:700;letter-spacing:0.01em;
+    border-radius:14px;cursor:pointer;transition:all .12s ease;white-space:nowrap;width:100%;
+    border:1px solid var(--accent);background:var(--accent);color:#fff;
+    font-size:18px;padding:16px 24px;display:flex;align-items:center;justify-content:center;gap:10px;
+  }
+  .btn:hover{filter:brightness(.95)}
+  .btn:active{transform:scale(.99)}
+  .btn:disabled{background:var(--bg2);border-color:var(--hair);color:var(--ink3);cursor:not-allowed;filter:none}
+  .btn svg{width:18px;height:18px}
+
+  /* tender panel (modal-ish, in-panel) */
+  .tender{
+    position:absolute;inset:0;background:rgba(20,23,26,0.06);backdrop-filter:blur(2px);
+    display:none;align-items:flex-end;justify-content:center;border-radius:18px;overflow:hidden;
+  }
+  .tender.open{display:flex}
+  .tender-sheet{
+    width:100%;background:var(--panel);border-top:1px solid var(--hair);
+    border-radius:18px 18px 0 0;padding:var(--space-5);box-shadow:0 -20px 50px -24px rgba(20,23,26,0.4);
+    animation:slideUp .22s ease;
+  }
+  @keyframes slideUp{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
+  .tender-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:var(--space-4)}
+  .tender-head .te-title{font-size:14px;letter-spacing:0.04em;font-weight:700;color:var(--ink)}
+  .tender-head .te-amt{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--ink)}
+  .tender-opts{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3);margin-bottom:var(--space-3)}
+  .tender-opt{
+    appearance:none;cursor:pointer;font-family:var(--sans);font-size:15px;font-weight:600;
+    border:1px solid var(--hair-strong);background:var(--panel);color:var(--ink);
+    border-radius:14px;padding:18px;display:flex;flex-direction:column;align-items:center;gap:8px;
+    transition:all .12s ease;
+  }
+  .tender-opt:hover{border-color:var(--accent);background:var(--accent-soft)}
+  .tender-opt:active{transform:scale(.97)}
+  .tender-opt svg{width:26px;height:26px;color:var(--accent)}
+  .tender-cancel{
+    appearance:none;cursor:pointer;width:100%;border:1px solid var(--hair);background:transparent;
+    color:var(--ink2);font-family:var(--sans);font-size:13px;padding:11px;border-radius:12px;
+  }
+  .tender-cancel:hover{background:var(--bg2)}
+
+  /* paid state */
+  .paid{
+    position:absolute;inset:0;background:var(--panel);display:none;flex-direction:column;
+    align-items:center;justify-content:center;gap:var(--space-4);text-align:center;
+    padding:var(--space-6);border-radius:18px;
+  }
+  .paid.open{display:flex;animation:fadeIn .25s ease}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  .paid-check{
+    width:84px;height:84px;border-radius:50%;background:var(--accent-tint);
+    display:flex;align-items:center;justify-content:center;color:var(--accent);
+    animation:pop .35s cubic-bezier(.2,.8,.3,1.2);
+  }
+  @keyframes pop{0%{transform:scale(.3);opacity:0}100%{transform:scale(1);opacity:1}}
+  .paid-check svg{width:42px;height:42px}
+  .paid-title{font-size:24px;font-weight:700;color:var(--ink)}
+  .paid-sub{font-size:14px;color:var(--ink2)}
+  .paid-sub .ps-mono{font-family:var(--mono);font-weight:700;color:var(--accent)}
+  .paid-method{font-size:12px;color:var(--ink3);letter-spacing:0.06em;text-transform:uppercase}
+  .btn-next{
+    border-color:var(--ink);background:var(--ink);color:var(--bg);width:auto;padding:14px 32px;margin-top:var(--space-2);
+  }
+  .btn-next:hover{filter:brightness(1.15)}
+
+  .ticket-inner{position:relative;flex:1 1 auto;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+
+  /* footer */
+  footer{
+    flex:0 0 auto;height:40px;border-top:1px solid var(--hair);background:var(--panel);
+    display:flex;align-items:center;gap:var(--space-5);padding:0 var(--space-6);
+    font-size:11px;color:var(--ink3);
+  }
+  .legend{display:flex;gap:var(--space-4);flex-wrap:wrap}
+  .legend span{display:inline-flex;align-items:center;gap:6px;letter-spacing:0.02em}
+  .swatch{width:9px;height:9px;border-radius:3px}
+  .kbd-hint{margin-left:auto;font-family:var(--mono);letter-spacing:0.04em}
+  .kbd{display:inline-block;padding:1px 5px;border:1px solid var(--hair);border-radius:3px;color:var(--ink2);margin:0 1px}
+
+  ::-webkit-scrollbar{height:8px;width:8px}
+  ::-webkit-scrollbar-thumb{background:var(--hair-strong);border-radius:4px}
+  ::-webkit-scrollbar-track{background:transparent}
+
+  @media (max-width:1100px){
+    .fav-row{grid-template-columns:repeat(4,1fr)}
+    .ticket-wrap{flex-basis:340px}
+  }
+</style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span class="wordmark">SUD ITALIA</span>
+      <span class="kd-label">Point of Sale</span>
+    </div>
+    <span class="design-tag">05 · Express</span>
+    <div class="ctl-stack">
+      <span class="ctl-lbl">Location</span>
+      <div class="seg-group" id="locGroup" role="group" aria-label="Location"></div>
+      <span class="ctl-lbl">Channel</span>
+      <div class="seg-group" id="chanGroup" role="group" aria-label="Channel"></div>
+      <button class="fsbtn" id="fsBtn" type="button" aria-pressed="false"></button>
+      <a class="gallery-link" href="index.html">&larr; Gallery</a>
+      <div class="clock tnum" id="clock">--:--:--</div>
+    </div>
+  </header>
+
+  <div class="stage">
+    <div class="menu-wrap">
+      <div class="fav-kicker">
+        <span class="bolt"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4.5 13.5H11l-1 8.5 8.5-11.5H12l1-8.5Z"/></svg></span>
+        <span class="fk-title">One-tap favorites</span>
+        <span class="fk-sub">Highest-velocity SKUs &amp; combos — fewest taps to ring</span>
+      </div>
+      <div class="fav-row" id="favRow"></div>
+
+      <div class="cats" id="cats" role="group" aria-label="Category filter"></div>
+      <div class="grid-scroll">
+        <div class="grid" id="grid"></div>
+      </div>
+    </div>
+
+    <div class="ticket-wrap">
+      <div class="speed-bar" id="speedBar">
+        <div class="speed-timer">
+          <span class="st-lbl"><i class="dot"></i><span id="speedLbl">Ready</span></span>
+          <span class="st-val tnum" id="speedVal">00:00</span>
+        </div>
+        <div class="speed-count">
+          <span class="sc-lbl">Items</span>
+          <span class="sc-val tnum" id="speedCount">0</span>
+        </div>
+      </div>
+      <div class="ticket-inner">
+        <div class="ticket-head">
+          <span class="th-title">Order</span>
+          <span class="th-meta" id="ticketMeta">Takeout · Kraków</span>
+        </div>
+        <div class="lines" id="lines"></div>
+        <div class="totals" id="totals">
+          <div class="trow"><span>Subtotal</span><span class="tv tnum" id="subtotal">0,00 zł</span></div>
+          <div class="trow discount" id="discountRow" style="display:none"><span id="discountLbl">Combo discount</span><span class="tv tnum" id="discount">−0,00 zł</span></div>
+          <div class="trow grand"><span>Total</span><span class="tv tnum" id="grand">0,00 zł</span></div>
+        </div>
+        <div class="charge-area">
+          <button class="btn" id="chargeBtn" type="button" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+            <span id="chargeLbl">Charge 0,00 zł</span>
+          </button>
+        </div>
+
+        <!-- tender -->
+        <div class="tender" id="tender">
+          <div class="tender-sheet">
+            <div class="tender-head">
+              <span class="te-title">Take payment</span>
+              <span class="te-amt tnum" id="tenderAmt">0,00 zł</span>
+            </div>
+            <div class="tender-opts">
+              <button class="tender-opt" data-method="Cash" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg>
+                Cash
+              </button>
+              <button class="tender-opt" data-method="Card" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+                Card
+              </button>
+            </div>
+            <button class="tender-cancel" id="tenderCancel" type="button">Cancel</button>
+          </div>
+        </div>
+
+        <!-- paid -->
+        <div class="paid" id="paid">
+          <div class="paid-check">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+          </div>
+          <div class="paid-title">Paid ✓</div>
+          <div class="paid-sub">Rung in <span class="ps-mono" id="paidTime">00:00</span></div>
+          <div class="paid-method" id="paidMethod">Card</div>
+          <button class="btn btn-next" id="nextBtn" type="button">Next order</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="legend">
+      <span><i class="swatch" style="background:var(--accent2)"></i>Hero</span>
+      <span><i class="swatch" style="background:var(--accent)"></i>Profit driver</span>
+      <span><i class="swatch" style="background:var(--violet)"></i>Anchor · LTO</span>
+      <span><i class="swatch" style="background:var(--accent-soft)"></i>Veg / Vegan</span>
+    </div>
+    <div class="kbd-hint">Tap a favorite or combo · <span class="kbd">F</span> fullscreen · <span class="kbd">Esc</span> cancel tender</div>
+  </footer>
+
+<script>
+"use strict";
+
+/* ====================== Sample data ====================== */
+let LOC = "Kraków";
+const fmtPLN = g => (g/100).toFixed(2).replace(".",",")+" zł";
+const CATS = ["Pizza","Pasta","Antipasti","Panini","Drinks","Desserts"];
+const CAT_EMOJI = {Pizza:"🍕",Pasta:"🍝",Antipasti:"🥖",Panini:"🥪",Drinks:"☕",Desserts:"🍰"};
+const MENU = [
+  {id:"margherita", n:"Margherita",              cat:"Pizza",     price:2790, tags:["veg"],         role:"hero"},
+  {id:"quattro",    n:"Quattro Formaggi",        cat:"Pizza",     price:3390, tags:["veg"],         role:"profit"},
+  {id:"diavola",    n:"Diavola",                 cat:"Pizza",     price:3290, tags:["spicy"]},
+  {id:"prosciutto", n:"Prosciutto e Rucola",     cat:"Pizza",     price:3590, tags:[]},
+  {id:"ortolana",   n:"Ortolana",                cat:"Pizza",     price:3090, tags:["veg"]},
+  {id:"pizzaiolo",  n:"Pizza del Pizzaiolo",     cat:"Pizza",     price:4990, tags:["veg"],         role:"anchor", lto:true},
+  {id:"tartufata",  n:"Tartufata Reale",         cat:"Pizza",     price:7990, tags:[],              role:"anchor", lto:true},
+  {id:"personale",  n:'Margherita Personale 8"', cat:"Pizza",     price:1890, tags:["veg"]},
+  {id:"slice",      n:"Slice (Margherita)",      cat:"Pizza",     price:1190, tags:["veg"]},
+  {id:"carbonara",  n:"Spaghetti Carbonara",     cat:"Pasta",     price:2895, tags:[]},
+  {id:"arrabbiata", n:"Penne Arrabbiata",        cat:"Pasta",     price:2390, tags:["vegan","spicy"]},
+  {id:"pesto",      n:"Linguine al Pesto",       cat:"Pasta",     price:2695, tags:["veg"],         role:"profit"},
+  {id:"bolognese",  n:"Tagliatelle Bolognese",   cat:"Pasta",     price:2995, tags:[]},
+  {id:"bruschetta", n:"Bruschetta Classica",     cat:"Antipasti", price:1590, tags:["vegan"]},
+  {id:"garlic",     n:"Garlic Bread",            cat:"Antipasti", price:990,  tags:["veg"],         role:"profit"},
+  {id:"burrata",    n:"Burrata con Pomodorini",  cat:"Antipasti", price:2195, tags:["veg","gf"]},
+  {id:"arancini",   n:"Arancini (3 pcs)",        cat:"Antipasti", price:1790, tags:[]},
+  {id:"caprese",    n:"Panino Caprese",          cat:"Panini",    price:1990, tags:["veg"]},
+  {id:"milano",     n:"Panino Milano",           cat:"Panini",    price:2290, tags:[]},
+  {id:"espresso",   n:"Espresso",                cat:"Drinks",    price:990,  tags:["vegan","gf"],  role:"profit"},
+  {id:"limonata",   n:"Limonata Fresca",         cat:"Drinks",    price:1190, tags:["vegan","gf"]},
+  {id:"aranciata",  n:"Aranciata S.Pellegrino",  cat:"Drinks",    price:990,  tags:["vegan","gf"]},
+  {id:"water",      n:"Acqua Minerale",          cat:"Drinks",    price:590,  tags:["vegan","gf"]},
+  {id:"limonata1l", n:"Limonata 1L",             cat:"Drinks",    price:1990, tags:["vegan","gf"]},
+  {id:"tiramisu",   n:"Tiramisù",                cat:"Desserts",  price:1800, tags:["veg"]},
+  {id:"cannoli",    n:"Cannoli Siciliani (2)",   cat:"Desserts",  price:1600, tags:["veg"]},
+  {id:"pannacotta", n:"Panna Cotta",             cat:"Desserts",  price:1500, tags:["veg","gf"],    role:"profit"},
+];
+const COMBOS = [
+  {id:"lunch",  n:"Lunch Combo",    desc:"Any pizza + any drink",       off:300, items:["margherita","limonata"]},
+  {id:"trio",   n:"Pizzaiolo Trio", desc:"Pizza + espresso + tiramisù", off:400, items:["pizzaiolo","espresso","tiramisu"]},
+  {id:"family", n:"Family Pack",    desc:"2 pizzas + Limonata 1L",      off:800, items:["margherita","diavola","limonata1l"]},
+];
+// favorites = highest-velocity SKUs for the one-tap row
+const FAV_IDS = ["slice","espresso","margherita","garlic","limonata"];
+
+const byId = id => MENU.find(m=>m.id===id);
+
+/* ====================== State ====================== */
+let cart = [];          // [{id, q}]
+let appliedCombos = []; // [comboId]
+let channel = "Takeout";
+let startTime = null;    // ms when first item added
+let elapsedFrozen = 0;   // seconds — frozen at payment
+
+/* ====================== Format helpers ====================== */
+function pad(n){return String(n).padStart(2,"0");}
+function fmtClock(d){return pad(d.getHours())+":"+pad(d.getMinutes())+":"+pad(d.getSeconds());}
+function mmss(s){return pad(Math.floor(s/60))+":"+pad(s%60);}
+function elapsedSecs(){
+  if(startTime===null) return 0;
+  return Math.floor((Date.now()-startTime)/1000);
+}
+
+/* ====================== Cart ops ====================== */
+function addItem(id){
+  if(startTime===null) startTime=Date.now();
+  const line=cart.find(l=>l.id===id);
+  if(line) line.q++; else cart.push({id,q:1});
+  render();
+}
+function changeQty(id,delta){
+  const line=cart.find(l=>l.id===id);
+  if(!line) return;
+  line.q+=delta;
+  if(line.q<=0) cart=cart.filter(l=>l.id!==id);
+  if(cart.length===0){ startTime=null; appliedCombos=[]; }
+  render();
+}
+function addCombo(c){
+  if(startTime===null) startTime=Date.now();
+  c.items.forEach(id=>{
+    const line=cart.find(l=>l.id===id);
+    if(line) line.q++; else cart.push({id,q:1});
+  });
+  if(!appliedCombos.includes(c.id)) appliedCombos.push(c.id);
+  render();
+}
+function removeCombo(id){
+  appliedCombos=appliedCombos.filter(c=>c!==id);
+  render();
+}
+
+function subtotalG(){ return cart.reduce((s,l)=>s+byId(l.id).price*l.q,0); }
+function discountG(){ return appliedCombos.reduce((s,id)=>s+(COMBOS.find(c=>c.id===id)?.off||0),0); }
+function grandG(){ return Math.max(0, subtotalG()-discountG()); }
+function itemCount(){ return cart.reduce((s,l)=>s+l.q,0); }
+
+/* ====================== Render: favorites ====================== */
+function renderFavorites(){
+  const row=document.getElementById("favRow");
+  let html="";
+  FAV_IDS.forEach(id=>{
+    const m=byId(id);
+    html+=`<button class="fav-btn" data-add="${m.id}" type="button">
+      <span class="flash"></span>
+      <span class="fav-emoji">${CAT_EMOJI[m.cat]}</span>
+      <span class="fav-name">${m.n}</span>
+      <span class="fav-price tnum">${fmtPLN(m.price)}</span>
+    </button>`;
+  });
+  COMBOS.forEach(c=>{
+    html+=`<button class="fav-btn combo-btn" data-combo="${c.id}" type="button">
+      <span class="flash"></span>
+      <span class="combo-tag">Combo</span>
+      <span class="fav-name">${c.n}</span>
+      <span class="combo-desc">${c.desc}</span>
+      <span class="combo-off tnum">−${fmtPLN(c.off)}</span>
+    </button>`;
+  });
+  row.innerHTML=html;
+  row.querySelectorAll("[data-add]").forEach(b=>{
+    b.onclick=()=>{ addItem(b.dataset.add); flash(b); };
+  });
+  row.querySelectorAll("[data-combo]").forEach(b=>{
+    b.onclick=()=>{ addCombo(COMBOS.find(c=>c.id===b.dataset.combo)); flash(b); };
+  });
+}
+function flash(el){ el.classList.remove("added"); void el.offsetWidth; el.classList.add("added"); }
+
+/* ====================== Render: category chips ====================== */
+let activeCat="Pizza";
+function renderCats(){
+  const wrap=document.getElementById("cats");
+  wrap.innerHTML="";
+  CATS.forEach(cat=>{
+    const b=document.createElement("button");
+    b.className="chip";b.type="button";
+    b.setAttribute("aria-pressed",String(cat===activeCat));
+    b.innerHTML=`<span class="cemoji">${CAT_EMOJI[cat]}</span><span>${cat}</span>`;
+    b.onclick=()=>{activeCat=cat;renderCats();renderGrid();};
+    wrap.appendChild(b);
+  });
+}
+
+/* ====================== Render: menu grid ====================== */
+function tagHtml(tags){
+  return tags.map(t=>`<span class="tag ${t}">${t}</span>`).join("");
+}
+function roleHtml(m){
+  if(!m.role) return "";
+  const lbl={hero:"Hero",profit:"Profit",anchor:"Anchor"}[m.role];
+  return `<span class="role-badge role-${m.role}">${lbl}${m.lto?'<span class="lto-dot"></span>':""}</span>`;
+}
+function renderGrid(){
+  const grid=document.getElementById("grid");
+  const items=MENU.filter(m=>m.cat===activeCat);
+  grid.innerHTML=items.map(m=>`
+    <button class="card" data-add="${m.id}" type="button">
+      <span class="flash"></span>
+      <div class="card-top">
+        <span class="card-emoji">${CAT_EMOJI[m.cat]}</span>
+        ${roleHtml(m)}
+      </div>
+      <span class="card-name">${m.n}</span>
+      ${m.tags.length?`<div class="card-tags">${tagHtml(m.tags)}</div>`:""}
+      <span class="card-price tnum">${fmtPLN(m.price)}</span>
+    </button>`).join("");
+  grid.querySelectorAll("[data-add]").forEach(b=>{
+    b.onclick=()=>{ addItem(b.dataset.add); flash(b); };
+  });
+}
+
+/* ====================== Render: ticket ====================== */
+function renderTicket(){
+  const lines=document.getElementById("lines");
+  if(cart.length===0){
+    lines.innerHTML=`<div class="empty-ticket">
+      <span class="e-emoji">🧾</span>
+      <span class="e-text">No items yet</span>
+      <span class="e-sub">Tap a favorite, combo, or menu item to start ringing.</span>
+    </div>`;
+  } else {
+    let html="";
+    cart.forEach(l=>{
+      const m=byId(l.id);
+      html+=`<div class="line" data-id="${m.id}">
+        <div class="line-body">
+          <div class="line-name">${m.n}</div>
+          <div class="line-each tnum">${fmtPLN(m.price)} each</div>
+        </div>
+        <div class="stepper">
+          <button class="step-btn" data-dec="${m.id}" type="button" aria-label="Decrease">−</button>
+          <span class="step-q tnum">${l.q}</span>
+          <button class="step-btn" data-inc="${m.id}" type="button" aria-label="Increase">+</button>
+        </div>
+        <span class="line-total tnum">${fmtPLN(m.price*l.q)}</span>
+      </div>`;
+    });
+    appliedCombos.forEach(id=>{
+      const c=COMBOS.find(x=>x.id===id);
+      html+=`<div class="combo-applied">
+        <span class="ca-name">✓ ${c.n}</span>
+        <span class="ca-off tnum">−${fmtPLN(c.off)}</span>
+        <button class="ca-x" data-rmcombo="${c.id}" type="button" aria-label="Remove combo">×</button>
+      </div>`;
+    });
+    lines.innerHTML=html;
+    lines.querySelectorAll("[data-inc]").forEach(b=>b.onclick=()=>changeQty(b.dataset.inc,1));
+    lines.querySelectorAll("[data-dec]").forEach(b=>b.onclick=()=>changeQty(b.dataset.dec,-1));
+    lines.querySelectorAll("[data-rmcombo]").forEach(b=>b.onclick=()=>removeCombo(b.dataset.rmcombo));
+  }
+
+  const sub=subtotalG(), disc=discountG(), grand=grandG();
+  document.getElementById("subtotal").textContent=fmtPLN(sub);
+  const dRow=document.getElementById("discountRow");
+  if(disc>0){
+    dRow.style.display="flex";
+    document.getElementById("discount").textContent="−"+fmtPLN(disc);
+    const names=appliedCombos.map(id=>COMBOS.find(c=>c.id===id).n).join(" · ");
+    document.getElementById("discountLbl").textContent="Combo discount · "+names;
+  } else {
+    dRow.style.display="none";
+  }
+  document.getElementById("grand").textContent=fmtPLN(grand);
+
+  const charge=document.getElementById("chargeBtn");
+  charge.disabled=cart.length===0;
+  document.getElementById("chargeLbl").textContent="Charge "+fmtPLN(grand);
+
+  document.getElementById("ticketMeta").textContent=channel+" · "+LOC;
+}
+
+/* ====================== Speed indicator ====================== */
+function renderSpeed(){
+  const bar=document.getElementById("speedBar");
+  const live=startTime!==null && cart.length>0;
+  bar.classList.toggle("live",live);
+  document.getElementById("speedLbl").textContent=live?"Ringing":"Ready";
+  document.getElementById("speedVal").textContent=mmss(live?elapsedSecs():0);
+  document.getElementById("speedCount").textContent=itemCount();
+}
+
+function render(){
+  renderTicket();
+  renderSpeed();
+}
+
+/* ====================== Charge / tender / paid ====================== */
+function openTender(){
+  if(cart.length===0) return;
+  document.getElementById("tenderAmt").textContent=fmtPLN(grandG());
+  document.getElementById("tender").classList.add("open");
+}
+function closeTender(){ document.getElementById("tender").classList.remove("open"); }
+function pay(method){
+  elapsedFrozen=elapsedSecs();
+  closeTender();
+  document.getElementById("paidTime").textContent=mmss(elapsedFrozen);
+  document.getElementById("paidMethod").textContent=method+" · "+fmtPLN(grandG())+" · "+channel;
+  document.getElementById("paid").classList.add("open");
+}
+function nextOrder(){
+  cart=[]; appliedCombos=[]; startTime=null; elapsedFrozen=0;
+  document.getElementById("paid").classList.remove("open");
+  render();
+}
+
+/* ====================== Location / channel switchers ====================== */
+const LOCS=["Kraków","Warszawa"];
+const CHANS=[
+  {k:"Takeout",  i:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12l-1 4H7L6 2Z"/><path d="M5 6h14l-1.2 14.5a1.5 1.5 0 0 1-1.5 1.5H7.7a1.5 1.5 0 0 1-1.5-1.5L5 6Z"/></svg>'},
+  {k:"Delivery", i:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 3h13v11H1z"/><path d="M14 7h4l3 3v4h-7"/><circle cx="6" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>'},
+  {k:"Dine-in",  i:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v7a3 3 0 0 0 6 0V3"/><path d="M6 3v18"/><path d="M17 3c-1.5 0-3 2-3 5s1.5 4 3 4v9"/></svg>'},
+];
+function buildLocSwitcher(){
+  const g=document.getElementById("locGroup");g.innerHTML="";
+  LOCS.forEach(l=>{
+    const b=document.createElement("button");
+    b.className="seg";b.type="button";b.textContent=l;
+    b.setAttribute("aria-pressed",String(l===LOC));
+    b.onclick=()=>{LOC=l;buildLocSwitcher();render();};
+    g.appendChild(b);
+  });
+}
+function buildChanSwitcher(){
+  const g=document.getElementById("chanGroup");g.innerHTML="";
+  CHANS.forEach(c=>{
+    const b=document.createElement("button");
+    b.className="seg";b.type="button";
+    b.innerHTML=c.i+`<span>${c.k}</span>`;
+    b.setAttribute("aria-pressed",String(c.k===channel));
+    b.onclick=()=>{channel=c.k;buildChanSwitcher();render();};
+    g.appendChild(b);
+  });
+}
+
+/* ====================== Fullscreen ====================== */
+const FS_ICON={
+  expand:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H3v5"/><path d="M21 8V3h-5"/><path d="M16 21h5v-5"/><path d="M3 16v5h5"/></svg>',
+  exit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h5V4"/><path d="M20 9h-5V4"/><path d="M4 15h5v5"/><path d="M20 15h-5v5"/></svg>',
+};
+function isFs(){return document.fullscreenElement!=null;}
+function syncFsBtn(){
+  const btn=document.getElementById("fsBtn");
+  const on=document.documentElement.classList.contains("is-fullscreen");
+  btn.innerHTML=(on?FS_ICON.exit:FS_ICON.expand)+`<span>${on?"Exit":"Fullscreen"}</span>`;
+  btn.setAttribute("aria-pressed",String(on));
+}
+function toggleFs(){
+  const root=document.documentElement;
+  if(!isFs() && !root.classList.contains("is-fullscreen")){
+    if(root.requestFullscreen){
+      root.requestFullscreen().catch(()=>{root.classList.add("is-fullscreen");syncFsBtn();});
+    } else { root.classList.add("is-fullscreen"); }
+  } else {
+    if(document.exitFullscreen && isFs()){ document.exitFullscreen().catch(()=>{}); }
+    root.classList.remove("is-fullscreen");
+  }
+  syncFsBtn();
+}
+document.addEventListener("fullscreenchange",()=>{
+  document.documentElement.classList.toggle("is-fullscreen",isFs());
+  syncFsBtn();
+});
+
+/* ====================== Wire up ====================== */
+document.getElementById("fsBtn").addEventListener("click",toggleFs);
+document.getElementById("chargeBtn").addEventListener("click",openTender);
+document.getElementById("tenderCancel").addEventListener("click",closeTender);
+document.getElementById("nextBtn").addEventListener("click",nextOrder);
+document.querySelectorAll(".tender-opt").forEach(b=>{
+  b.addEventListener("click",()=>pay(b.dataset.method));
+});
+document.addEventListener("keydown",(e)=>{
+  if(e.key.toLowerCase()==="f"){ toggleFs(); }
+  if(e.key==="Escape"){ closeTender(); }
+});
+
+/* ====================== Live clock + speed tick ====================== */
+function tick(){
+  document.getElementById("clock").textContent=fmtClock(new Date());
+  if(startTime!==null && cart.length>0 && !document.getElementById("paid").classList.contains("open")){
+    document.getElementById("speedVal").textContent=mmss(elapsedSecs());
+  }
+}
+
+/* ====================== Boot ====================== */
+buildLocSwitcher();
+buildChanSwitcher();
+renderFavorites();
+renderCats();
+renderGrid();
+syncFsBtn();
+render();
+tick();
+setInterval(tick,1000);
+</script>
+</body>
+</html>

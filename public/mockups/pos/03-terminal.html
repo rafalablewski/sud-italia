@@ -1,0 +1,827 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sud Italia POS — Terminal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  :root{
+    --bg:#0A0C10;
+    --bg2:#0E1117;
+    --panel:#11151C;
+    --panel2:#141922;
+    --card:#151B25;
+    --hair:rgba(255,255,255,0.07);
+    --hair-strong:rgba(255,255,255,0.12);
+    --grid:rgba(255,255,255,0.04);
+    --text:#E8EBF0;
+    --text-dim:#9097A3;
+    --text-faint:#646B78;
+    --accent:#4C8DFF;
+    --accent-soft:rgba(76,141,255,0.14);
+    --amber:#E8A33D;
+    --amber-soft:rgba(232,163,61,0.12);
+    --red:#F0524B;
+    --red-soft:rgba(240,82,75,0.14);
+    --green:#37D295;
+    --green-soft:rgba(55,210,149,0.12);
+    --violet:#8B5CF6;
+    --violet-soft:rgba(139,92,246,0.16);
+    --neutral:#646B78;
+    --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:28px;
+    --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Monaco,"Cascadia Code",monospace;
+    --sans:"Inter",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    font-size:13px;
+    line-height:1.4;
+    -webkit-font-smoothing:antialiased;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
+  .tnum{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+  .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+  /* ---------- Header ---------- */
+  header{
+    flex:0 0 auto;
+    display:flex;align-items:center;gap:var(--s4);
+    height:52px;padding:0 var(--s6);
+    background:var(--panel);
+    border-bottom:1px solid var(--hair);
+  }
+  .brand{display:flex;align-items:baseline;gap:var(--s3);min-width:max-content}
+  .wordmark{font-weight:700;font-size:14px;letter-spacing:0.22em;color:var(--text)}
+  .kd-label{
+    font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:var(--text-faint);
+    border-left:1px solid var(--hair);padding-left:var(--s3);
+  }
+  .design-tag{
+    font-family:var(--mono);font-size:11px;letter-spacing:0.06em;color:var(--text-dim);
+    padding:3px 8px;border:1px solid var(--hair);border-radius:5px;white-space:nowrap;
+  }
+  .seg{
+    display:flex;align-items:stretch;border:1px solid var(--hair);border-radius:7px;
+    overflow:hidden;background:var(--panel2);
+  }
+  .seg button{
+    appearance:none;border:0;background:transparent;cursor:pointer;
+    font-family:var(--mono);font-size:11px;letter-spacing:0.02em;color:var(--text-dim);
+    padding:6px 11px;display:inline-flex;align-items:center;gap:6px;transition:all .12s ease;
+    border-right:1px solid var(--hair);white-space:nowrap;
+  }
+  .seg button:last-child{border-right:0}
+  .seg button:hover{color:var(--text)}
+  .seg button[aria-pressed="true"]{background:var(--accent);color:#06101f;font-weight:600}
+  .seg.warm button[aria-pressed="true"]{background:var(--amber);color:#1a1206}
+  .spacer{margin-left:auto}
+  .fsbtn{
+    appearance:none;cursor:pointer;border:1px solid var(--hair);background:transparent;
+    color:var(--text-dim);font-family:var(--sans);font-size:11px;letter-spacing:0.02em;
+    padding:6px 10px;border-radius:6px;display:inline-flex;align-items:center;gap:6px;
+    transition:all .12s ease;white-space:nowrap;
+  }
+  .fsbtn:hover{color:var(--text);border-color:var(--hair-strong)}
+  .fsbtn svg{width:13px;height:13px;display:block}
+  .fsbtn .fs-on{display:none}
+  .is-fullscreen .fsbtn .fs-on{display:inline}
+  .is-fullscreen .fsbtn .fs-off{display:none}
+  .gallery-link{
+    font-size:11px;color:var(--text-faint);text-decoration:none;border:1px solid var(--hair);
+    padding:5px 9px;border-radius:6px;transition:all .12s ease;white-space:nowrap;
+  }
+  .gallery-link:hover{color:var(--text);border-color:var(--hair-strong)}
+  .clock{
+    font-family:var(--mono);font-size:14px;letter-spacing:0.04em;color:var(--text);
+    min-width:74px;text-align:right;
+  }
+
+  /* ---------- Main work area ---------- */
+  .work{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:1fr 392px;gap:1px;background:var(--hair)}
+
+  /* ----- Left: command + results ----- */
+  .left{background:var(--bg);display:flex;flex-direction:column;min-height:0;min-width:0}
+  .cmdbar{
+    flex:0 0 auto;padding:var(--s4) var(--s6);background:var(--panel);border-bottom:1px solid var(--hair);
+    display:flex;flex-direction:column;gap:var(--s3);
+  }
+  .cmd-wrap{position:relative;display:flex;align-items:center}
+  .cmd-prompt{
+    position:absolute;left:14px;font-family:var(--mono);font-size:16px;color:var(--accent);
+    pointer-events:none;font-weight:600;
+  }
+  .cmd{
+    flex:1 1 auto;appearance:none;background:var(--bg2);border:1px solid var(--hair-strong);
+    border-radius:8px;color:var(--text);font-family:var(--mono);font-size:16px;letter-spacing:0.01em;
+    padding:13px 14px 13px 38px;outline:none;transition:border-color .12s ease,box-shadow .12s ease;
+  }
+  .cmd::placeholder{color:var(--text-faint)}
+  .cmd:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .cmd-meta{display:flex;align-items:center;gap:var(--s3);font-family:var(--mono);font-size:11px;color:var(--text-faint)}
+  .cmd-meta .pill{
+    padding:2px 8px;border:1px solid var(--hair);border-radius:5px;color:var(--text-dim);
+    cursor:pointer;transition:all .12s ease;
+  }
+  .cmd-meta .pill:hover{border-color:var(--hair-strong);color:var(--text)}
+  .cmd-meta .pill[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+  .cmd-meta .grow{margin-left:auto}
+  .cmd-meta b{color:var(--text-dim);font-weight:600}
+
+  /* ----- column header for the dense list ----- */
+  .res-head{
+    flex:0 0 auto;display:grid;grid-template-columns:30px 1fr 64px 92px;gap:var(--s3);
+    padding:8px var(--s6);background:var(--bg2);border-bottom:1px solid var(--hair);
+    font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-faint);
+  }
+  .res-head .ra{text-align:right}
+
+  .results{flex:1 1 auto;overflow-y:auto;min-height:0;padding:6px 0}
+  .results::-webkit-scrollbar{width:8px}
+  .results::-webkit-scrollbar-thumb{background:var(--hair-strong);border-radius:4px}
+  .results::-webkit-scrollbar-track{background:transparent}
+  .row{
+    display:grid;grid-template-columns:30px 1fr 64px 92px;gap:var(--s3);align-items:center;
+    padding:9px var(--s6);cursor:pointer;border-left:2px solid transparent;
+    transition:background .08s ease;position:relative;
+  }
+  .row:hover{background:var(--panel)}
+  .row.hl{background:var(--accent-soft);border-left-color:var(--accent)}
+  .row .idx{
+    font-family:var(--mono);font-size:11px;color:var(--text-faint);text-align:center;
+    border:1px solid var(--hair);border-radius:4px;line-height:18px;height:18px;
+  }
+  .row.hl .idx{border-color:var(--accent);color:var(--accent)}
+  .row .nm{font-family:var(--mono);font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:8px}
+  .row .nm .cz{color:var(--text-faint)}
+  .row .badge{
+    font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;
+    padding:1px 5px;border-radius:4px;border:1px solid;white-space:nowrap;
+  }
+  .badge.hero{color:var(--accent);border-color:rgba(76,141,255,0.4);background:var(--accent-soft)}
+  .badge.profit{color:var(--green);border-color:rgba(55,210,149,0.4);background:var(--green-soft)}
+  .badge.anchor{color:var(--violet);border-color:rgba(139,92,246,0.45);background:var(--violet-soft)}
+  .badge.lto{color:var(--amber);border-color:rgba(232,163,61,0.45);background:var(--amber-soft)}
+  .row .cat{font-family:var(--mono);font-size:11px;color:var(--text-faint);text-align:left;letter-spacing:0.02em}
+  .row .price{font-family:var(--mono);font-size:13px;color:var(--text-dim);text-align:right;font-weight:500}
+  .row .tags{display:flex;gap:4px;margin-left:2px}
+  .row .tag{font-size:8px;letter-spacing:0.04em;color:var(--text-faint);text-transform:uppercase;border:1px solid var(--hair);border-radius:3px;padding:0 4px;line-height:14px}
+  .tag.spicy{color:var(--red);border-color:rgba(240,82,75,0.35)}
+  .tag.veg,.tag.vegan{color:var(--green);border-color:rgba(55,210,149,0.3)}
+  .tag.gf{color:var(--amber);border-color:rgba(232,163,61,0.3)}
+  .res-empty{padding:var(--s6);text-align:center;color:var(--text-faint);font-family:var(--mono);font-size:12px}
+
+  /* ----- Right: order ticket ----- */
+  .order{background:var(--panel);display:flex;flex-direction:column;min-height:0;min-width:0}
+  .ord-head{
+    flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:var(--s2);
+    padding:var(--s4) var(--s5);border-bottom:1px solid var(--hair);background:var(--bg2);
+  }
+  .ord-title{font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:var(--text-dim);font-weight:600}
+  .ord-id{font-family:var(--mono);font-size:12px;color:var(--text-faint)}
+  .ord-stats{
+    flex:0 0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--hair);border-bottom:1px solid var(--hair);
+  }
+  .ord-stat{background:var(--panel);padding:9px var(--s4);display:flex;flex-direction:column;gap:3px}
+  .ord-stat .lab{font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-faint)}
+  .ord-stat .v{font-family:var(--mono);font-size:18px;font-weight:600;color:var(--text);line-height:1}
+
+  .ord-body{flex:1 1 auto;overflow-y:auto;min-height:0;padding:6px 0}
+  .ord-body::-webkit-scrollbar{width:8px}
+  .ord-body::-webkit-scrollbar-thumb{background:var(--hair-strong);border-radius:4px}
+  .ord-empty{
+    margin:var(--s5);padding:var(--s6) var(--s4);text-align:center;color:var(--text-faint);
+    border:1px dashed var(--hair);border-radius:8px;font-family:var(--mono);font-size:12px;line-height:1.7;
+  }
+  .ord-empty kbd{
+    font-family:var(--mono);font-size:11px;color:var(--text-dim);background:var(--bg2);
+    border:1px solid var(--hair-strong);border-radius:4px;padding:1px 6px;
+  }
+  .line{
+    display:grid;grid-template-columns:auto 1fr auto;gap:var(--s3);align-items:center;
+    padding:8px var(--s5);border-bottom:1px solid var(--grid);transition:background .08s ease;
+  }
+  .line:hover{background:var(--panel2)}
+  .line.flash{animation:flash .5s ease}
+  @keyframes flash{0%{background:var(--accent-soft)}100%{background:transparent}}
+  .stepper{display:flex;align-items:center;border:1px solid var(--hair);border-radius:6px;overflow:hidden;background:var(--bg2)}
+  .stepper button{
+    appearance:none;border:0;background:transparent;cursor:pointer;color:var(--text-dim);
+    font-family:var(--mono);font-size:14px;width:24px;height:26px;transition:all .1s ease;
+  }
+  .stepper button:hover{background:var(--hair);color:var(--text)}
+  .stepper .q{font-family:var(--mono);font-size:13px;color:var(--text);min-width:24px;text-align:center;font-weight:600}
+  .line .ln-nm{font-family:var(--mono);font-size:12px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .line .ln-nm .each{color:var(--text-faint);font-size:11px}
+  .line .ln-price{font-family:var(--mono);font-size:13px;color:var(--text-dim);text-align:right;font-weight:500}
+
+  .combo-line{
+    display:flex;align-items:center;justify-content:space-between;gap:var(--s2);
+    padding:7px var(--s5);background:var(--green-soft);border-bottom:1px solid var(--grid);
+  }
+  .combo-line .cl-nm{font-size:11px;color:var(--green);display:flex;align-items:center;gap:7px;font-weight:600}
+  .combo-line .cl-nm svg{width:13px;height:13px}
+  .combo-line .cl-off{font-family:var(--mono);font-size:13px;color:var(--green);font-weight:600}
+
+  .ord-foot{flex:0 0 auto;border-top:1px solid var(--hair);background:var(--bg2)}
+  .totals{padding:var(--s4) var(--s5) var(--s3);display:flex;flex-direction:column;gap:7px}
+  .tline{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--text-dim)}
+  .tline .tv{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .tline.disc{color:var(--green)}
+  .tline.disc .tv{color:var(--green)}
+  .tline.grand{
+    margin-top:5px;padding-top:var(--s3);border-top:1px solid var(--hair);
+    font-size:13px;color:var(--text);font-weight:600;
+  }
+  .tline.grand .tlab{font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-dim)}
+  .tline.grand .tv{font-size:26px;font-weight:700;letter-spacing:-0.01em;color:var(--text)}
+  .ord-actions{display:flex;gap:var(--s2);padding:0 var(--s5) var(--s5)}
+  .btn-charge{
+    flex:1 1 auto;appearance:none;cursor:pointer;border:1px solid var(--accent);background:var(--accent);
+    color:#06101f;font-family:var(--sans);font-size:14px;font-weight:700;letter-spacing:0.03em;
+    border-radius:8px;padding:14px;transition:all .12s ease;display:flex;align-items:center;justify-content:center;gap:8px;
+  }
+  .btn-charge:hover{filter:brightness(1.08)}
+  .btn-charge:disabled{opacity:.4;cursor:not-allowed;filter:none}
+  .btn-charge kbd{font-family:var(--mono);font-size:10px;background:rgba(6,16,31,0.25);border-radius:4px;padding:1px 5px}
+  .btn-clear{
+    appearance:none;cursor:pointer;border:1px solid var(--hair);background:transparent;color:var(--text-dim);
+    font-family:var(--sans);font-size:12px;border-radius:8px;padding:0 14px;transition:all .12s ease;
+  }
+  .btn-clear:hover{border-color:var(--red);color:var(--red)}
+
+  /* ---------- Footer hotkey legend ---------- */
+  footer{
+    flex:0 0 auto;display:flex;align-items:center;gap:var(--s4);flex-wrap:wrap;
+    padding:7px var(--s6);background:var(--panel);border-top:1px solid var(--hair);
+  }
+  footer .hk{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;color:var(--text-dim);letter-spacing:0.02em}
+  footer kbd{
+    font-family:var(--mono);font-size:10px;color:var(--text);background:var(--bg2);
+    border:1px solid var(--hair-strong);border-bottom-width:2px;border-radius:4px;padding:1px 6px;min-width:16px;text-align:center;
+  }
+  footer .fsep{width:1px;height:13px;background:var(--hair)}
+  footer .fmeta{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--text-faint);letter-spacing:0.04em}
+
+  /* ---------- Tender overlay ---------- */
+  .overlay{
+    position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;
+    background:rgba(5,7,11,0.72);backdrop-filter:blur(3px);
+  }
+  .overlay.open{display:flex}
+  .tender{
+    width:440px;max-width:calc(100vw - 32px);background:var(--card);border:1px solid var(--hair-strong);
+    border-radius:14px;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,0.6);
+  }
+  .tender-head{
+    padding:var(--s5);border-bottom:1px solid var(--hair);display:flex;align-items:flex-start;justify-content:space-between;gap:var(--s3);
+  }
+  .tender-head .th-lab{font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:var(--text-faint)}
+  .tender-head .th-amt{font-family:var(--mono);font-size:34px;font-weight:700;color:var(--text);line-height:1;margin-top:6px}
+  .tender-close{
+    appearance:none;cursor:pointer;border:1px solid var(--hair);background:transparent;color:var(--text-dim);
+    width:30px;height:30px;border-radius:7px;font-size:15px;transition:all .12s ease;flex:0 0 auto;
+  }
+  .tender-close:hover{border-color:var(--red);color:var(--red)}
+  .tender-body{padding:var(--s5);display:flex;flex-direction:column;gap:var(--s4)}
+  .tender-methods{display:grid;grid-template-columns:1fr 1fr;gap:var(--s3)}
+  .tm{
+    appearance:none;cursor:pointer;border:1px solid var(--hair-strong);background:var(--bg2);color:var(--text);
+    border-radius:10px;padding:var(--s5) var(--s4);display:flex;flex-direction:column;align-items:center;gap:9px;
+    transition:all .12s ease;
+  }
+  .tm:hover{border-color:var(--accent);background:var(--accent-soft)}
+  .tm svg{width:30px;height:30px;color:var(--text-dim)}
+  .tm:hover svg{color:var(--accent)}
+  .tm .tm-lab{font-size:14px;font-weight:600;letter-spacing:0.02em}
+  .tm .tm-hint{font-family:var(--mono);font-size:10px;color:var(--text-faint)}
+  .tender-note{font-family:var(--mono);font-size:10.5px;color:var(--text-faint);text-align:center;letter-spacing:0.02em}
+
+  /* paid state */
+  .paid{display:none;flex-direction:column;align-items:center;gap:var(--s4);padding:var(--s6) var(--s5) var(--s5);text-align:center}
+  .tender.is-paid .tender-body{display:none}
+  .tender.is-paid .tender-head{border-bottom:0}
+  .tender.is-paid .paid{display:flex}
+  .paid .check{
+    width:74px;height:74px;border-radius:50%;background:var(--green-soft);border:2px solid var(--green);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .paid .check svg{width:38px;height:38px;color:var(--green)}
+  .paid .paid-title{font-size:22px;font-weight:700;color:var(--green);letter-spacing:0.02em}
+  .paid .paid-sub{font-family:var(--mono);font-size:12px;color:var(--text-dim);line-height:1.7}
+  .paid .paid-sub b{color:var(--text)}
+  .btn-new{
+    appearance:none;cursor:pointer;border:1px solid var(--accent);background:var(--accent);color:#06101f;
+    font-family:var(--sans);font-size:13px;font-weight:700;letter-spacing:0.03em;border-radius:8px;
+    padding:13px 26px;margin-top:var(--s2);transition:all .12s ease;
+  }
+  .btn-new:hover{filter:brightness(1.08)}
+  .btn-new kbd{font-family:var(--mono);font-size:10px;background:rgba(6,16,31,0.25);border-radius:4px;padding:1px 5px;margin-left:6px}
+
+  /* ---------- Fullscreen tweaks ---------- */
+  .is-fullscreen header{height:46px}
+  .is-fullscreen .kd-label,.is-fullscreen .gallery-link{display:none}
+  .is-fullscreen .cmd{font-size:17px}
+  .is-fullscreen .tline.grand .tv{font-size:28px}
+</style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span class="wordmark">SUD ITALIA</span>
+      <span class="kd-label">Point of Sale</span>
+    </div>
+    <span class="design-tag">03 · Terminal</span>
+    <div class="seg" id="locSeg" role="group" aria-label="Location"></div>
+    <div class="seg" id="chanSeg" role="group" aria-label="Channel"></div>
+    <div class="spacer"></div>
+    <button class="fsbtn" id="fsbtn" type="button" aria-pressed="false" aria-label="Toggle fullscreen">
+      <svg class="fs-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/></svg>
+      <svg class="fs-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
+      <span class="fs-off">Fullscreen</span><span class="fs-on">Exit</span>
+    </button>
+    <a class="gallery-link" href="index.html">&larr; Gallery</a>
+    <div class="clock tnum" id="clock">--:--:--</div>
+  </header>
+
+  <div class="work">
+    <section class="left">
+      <div class="cmdbar">
+        <div class="cmd-wrap">
+          <span class="cmd-prompt">&gt;</span>
+          <input class="cmd" id="cmd" type="text" autocomplete="off" spellcheck="false"
+            placeholder="Search menu — type to filter, Enter adds top match, 1–9 quick-add…" aria-label="Command search">
+        </div>
+        <div class="cmd-meta">
+          <span class="pill" data-catfilter="" aria-pressed="true">all</span>
+          <span class="grow"></span>
+          <span id="resStatus">—</span>
+        </div>
+      </div>
+      <div class="res-head">
+        <span>#</span><span>Item</span><span>Cat</span><span class="ra">Price</span>
+      </div>
+      <div class="results" id="results"></div>
+    </section>
+
+    <aside class="order">
+      <div class="ord-head">
+        <span class="ord-title">Order Ticket</span>
+        <span class="ord-id mono" id="ordId">#———————</span>
+      </div>
+      <div class="ord-stats">
+        <div class="ord-stat"><span class="lab">Items</span><span class="v tnum" id="stItems">0</span></div>
+        <div class="ord-stat"><span class="lab">Lines</span><span class="v tnum" id="stLines">0</span></div>
+        <div class="ord-stat"><span class="lab">Avg / item</span><span class="v tnum" id="stAvg">0,00</span></div>
+      </div>
+      <div class="ord-body" id="ordBody"></div>
+      <div class="ord-foot">
+        <div class="totals" id="totals"></div>
+        <div class="ord-actions">
+          <button class="btn-charge" id="btnCharge" type="button" disabled>
+            Charge <span class="tnum" id="chargeAmt">0,00 zł</span> <kbd>F2</kbd>
+          </button>
+          <button class="btn-clear" id="btnClear" type="button" title="Void order (Esc)">Void</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <span class="hk"><kbd>/</kbd> focus search</span>
+    <span class="fsep"></span>
+    <span class="hk"><kbd>&uarr;</kbd><kbd>&darr;</kbd> move</span>
+    <span class="hk"><kbd>Enter</kbd> add top match</span>
+    <span class="hk"><kbd>1</kbd>–<kbd>9</kbd> quick-add</span>
+    <span class="fsep"></span>
+    <span class="hk"><kbd>+</kbd><kbd>&minus;</kbd> qty last line</span>
+    <span class="hk"><kbd>F2</kbd> charge</span>
+    <span class="hk"><kbd>F11</kbd> fullscreen</span>
+    <span class="hk"><kbd>Esc</kbd> void / close</span>
+    <span class="fmeta" id="footMeta"></span>
+  </footer>
+
+  <!-- Tender overlay -->
+  <div class="overlay" id="overlay" aria-hidden="true">
+    <div class="tender" id="tender" role="dialog" aria-modal="true" aria-label="Tender">
+      <div class="tender-head">
+        <div>
+          <div class="th-lab">Amount due</div>
+          <div class="th-amt tnum" id="tenderAmt">0,00 zł</div>
+        </div>
+        <button class="tender-close" id="tenderClose" type="button" aria-label="Close">&times;</button>
+      </div>
+      <div class="tender-body">
+        <div class="tender-methods">
+          <button class="tm" data-method="cash" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>
+            <span class="tm-lab">Cash</span><span class="tm-hint">F1</span>
+          </button>
+          <button class="tm" data-method="card" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M6 15h4"/></svg>
+            <span class="tm-lab">Card</span><span class="tm-hint">F3</span>
+          </button>
+        </div>
+        <div class="tender-note">Select tender · <kbd style="all:unset;font-family:var(--mono)">Esc</kbd> to cancel</div>
+      </div>
+      <div class="paid">
+        <div class="check">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div class="paid-title">PAID &check;</div>
+        <div class="paid-sub" id="paidSub"></div>
+        <button class="btn-new" id="btnNew" type="button">New order <kbd>Enter</kbd></button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  "use strict";
+
+  /* ====================== SHARED SAMPLE DATA ====================== */
+  const LOC = "Kraków";
+  const fmtPLN = g => (g/100).toFixed(2).replace(".",",")+" zł";
+  const CATS = ["Pizza","Pasta","Antipasti","Panini","Drinks","Desserts"];
+  const CAT_EMOJI = {Pizza:"🍕",Pasta:"🍝",Antipasti:"🥖",Panini:"🥪",Drinks:"☕",Desserts:"🍰"};
+  const MENU = [
+    {id:"margherita", n:"Margherita",              cat:"Pizza",     price:2790, tags:["veg"],         role:"hero"},
+    {id:"quattro",    n:"Quattro Formaggi",        cat:"Pizza",     price:3390, tags:["veg"],         role:"profit"},
+    {id:"diavola",    n:"Diavola",                 cat:"Pizza",     price:3290, tags:["spicy"]},
+    {id:"prosciutto", n:"Prosciutto e Rucola",     cat:"Pizza",     price:3590, tags:[]},
+    {id:"ortolana",   n:"Ortolana",                cat:"Pizza",     price:3090, tags:["veg"]},
+    {id:"pizzaiolo",  n:"Pizza del Pizzaiolo",     cat:"Pizza",     price:4990, tags:["veg"],         role:"anchor", lto:true},
+    {id:"tartufata",  n:"Tartufata Reale",         cat:"Pizza",     price:7990, tags:[],              role:"anchor", lto:true},
+    {id:"personale",  n:'Margherita Personale 8"', cat:"Pizza",     price:1890, tags:["veg"]},
+    {id:"slice",      n:"Slice (Margherita)",      cat:"Pizza",     price:1190, tags:["veg"]},
+    {id:"carbonara",  n:"Spaghetti Carbonara",     cat:"Pasta",     price:2895, tags:[]},
+    {id:"arrabbiata", n:"Penne Arrabbiata",        cat:"Pasta",     price:2390, tags:["vegan","spicy"]},
+    {id:"pesto",      n:"Linguine al Pesto",       cat:"Pasta",     price:2695, tags:["veg"],         role:"profit"},
+    {id:"bolognese",  n:"Tagliatelle Bolognese",   cat:"Pasta",     price:2995, tags:[]},
+    {id:"bruschetta", n:"Bruschetta Classica",     cat:"Antipasti", price:1590, tags:["vegan"]},
+    {id:"garlic",     n:"Garlic Bread",            cat:"Antipasti", price:990,  tags:["veg"],         role:"profit"},
+    {id:"burrata",    n:"Burrata con Pomodorini",  cat:"Antipasti", price:2195, tags:["veg","gf"]},
+    {id:"arancini",   n:"Arancini (3 pcs)",        cat:"Antipasti", price:1790, tags:[]},
+    {id:"caprese",    n:"Panino Caprese",          cat:"Panini",    price:1990, tags:["veg"]},
+    {id:"milano",     n:"Panino Milano",           cat:"Panini",    price:2290, tags:[]},
+    {id:"espresso",   n:"Espresso",                cat:"Drinks",    price:990,  tags:["vegan","gf"],  role:"profit"},
+    {id:"limonata",   n:"Limonata Fresca",         cat:"Drinks",    price:1190, tags:["vegan","gf"]},
+    {id:"aranciata",  n:"Aranciata S.Pellegrino",  cat:"Drinks",    price:990,  tags:["vegan","gf"]},
+    {id:"water",      n:"Acqua Minerale",          cat:"Drinks",    price:590,  tags:["vegan","gf"]},
+    {id:"limonata1l", n:"Limonata 1L",             cat:"Drinks",    price:1990, tags:["vegan","gf"]},
+    {id:"tiramisu",   n:"Tiramisù",                cat:"Desserts",  price:1800, tags:["veg"]},
+    {id:"cannoli",    n:"Cannoli Siciliani (2)",   cat:"Desserts",  price:1600, tags:["veg"]},
+    {id:"pannacotta", n:"Panna Cotta",             cat:"Desserts",  price:1500, tags:["veg","gf"],    role:"profit"},
+  ];
+  const COMBOS = [
+    {id:"lunch",  n:"Lunch Combo",    desc:"Any pizza + any drink",       off:300},
+    {id:"trio",   n:"Pizzaiolo Trio", desc:"Pizza + espresso + tiramisù", off:400},
+    {id:"family", n:"Family Pack",    desc:"2 pizzas + Limonata 1L",      off:800},
+  ];
+  // role badges: hero / profit / anchor (lto=limited). tags: veg/vegan/spicy/gf.
+
+  /* ====================== State ====================== */
+  let curLoc = LOC;
+  let curChan = "takeout";
+  let query = "";
+  let catFilter = "";        // "" = all
+  let hlIndex = 0;           // highlighted result index
+  let filtered = [];         // current filtered MENU
+  let order = [];            // [{id, qty}]
+  const ROLE_LABEL = {hero:"Hero", profit:"Profit", anchor:"Signature"};
+  const byId = id => MENU.find(m=>m.id===id);
+
+  /* ====================== Order id ====================== */
+  function newOrderId(){
+    const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let s=""; for(let i=0;i<6;i++) s+=chars[Math.floor(Math.random()*chars.length)];
+    return s;
+  }
+  let orderId = newOrderId();
+
+  /* ====================== Header segmented controls ====================== */
+  function buildSeg(elId, items, getActive, onPick, warm){
+    const el=document.getElementById(elId);
+    el.classList.toggle("warm", !!warm);
+    el.innerHTML="";
+    items.forEach(it=>{
+      const b=document.createElement("button");
+      b.type="button";
+      b.textContent=it.label;
+      b.setAttribute("aria-pressed", String(getActive()===it.value));
+      b.addEventListener("click", ()=>{ onPick(it.value); });
+      el.appendChild(b);
+    });
+  }
+  function renderSegs(){
+    buildSeg("locSeg",
+      [{label:"Kraków",value:"Kraków"},{label:"Warszawa",value:"Warszawa"}],
+      ()=>curLoc, v=>{ curLoc=v; renderSegs(); },
+      false);
+    buildSeg("chanSeg",
+      [{label:"Takeout",value:"takeout"},{label:"Delivery",value:"delivery"},{label:"Dine-in",value:"dinein"}],
+      ()=>curChan, v=>{ curChan=v; renderSegs(); },
+      true);
+  }
+
+  /* ====================== Filtering / results list ====================== */
+  function computeFiltered(){
+    const q=query.trim().toLowerCase();
+    filtered = MENU.filter(m=>{
+      if(catFilter && m.cat!==catFilter) return false;
+      if(q && !m.n.toLowerCase().includes(q)) return false;
+      return true;
+    });
+    if(hlIndex >= filtered.length) hlIndex = Math.max(0, filtered.length-1);
+  }
+
+  const resultsEl=document.getElementById("results");
+  function renderResults(){
+    computeFiltered();
+    if(!filtered.length){
+      resultsEl.innerHTML='<div class="res-empty">No items match &ldquo;'+query+'&rdquo; — press Esc to clear.</div>';
+      document.getElementById("resStatus").innerHTML='<b>0</b> of '+MENU.length;
+      return;
+    }
+    resultsEl.innerHTML = filtered.map((m,i)=>{
+      const qnum = i<9 ? (i+1) : "";
+      const badge = m.lto ? '<span class="badge lto">Limited</span>'
+                  : m.role ? '<span class="badge '+m.role+'">'+ROLE_LABEL[m.role]+'</span>' : "";
+      const tags = m.tags.map(t=>'<span class="tag '+t+'">'+t+'</span>').join("");
+      return '<div class="row'+(i===hlIndex?" hl":"")+'" data-i="'+i+'" data-id="'+m.id+'">'+
+        '<span class="idx">'+qnum+'</span>'+
+        '<span class="nm">'+m.n+badge+(tags?'<span class="tags">'+tags+'</span>':'')+'</span>'+
+        '<span class="cat">'+m.cat+'</span>'+
+        '<span class="price tnum">'+fmtPLN(m.price)+'</span>'+
+      '</div>';
+    }).join("");
+    document.getElementById("resStatus").innerHTML='<b>'+filtered.length+'</b> of '+MENU.length+(query?' · "'+query+'"':"");
+    // wire clicks
+    resultsEl.querySelectorAll(".row").forEach(r=>{
+      r.addEventListener("click", ()=>{ addItem(r.dataset.id); hlIndex=+r.dataset.i; });
+      r.addEventListener("mousemove", ()=>{ if(hlIndex!==+r.dataset.i){ hlIndex=+r.dataset.i; paintHl(); } });
+    });
+  }
+  function paintHl(){
+    resultsEl.querySelectorAll(".row").forEach(r=>{
+      const on = +r.dataset.i===hlIndex;
+      r.classList.toggle("hl", on);
+      if(on) r.scrollIntoView({block:"nearest"});
+    });
+  }
+
+  /* ====================== Category filter pills ====================== */
+  function buildCatPills(){
+    const meta=document.querySelector(".cmd-meta");
+    // remove existing extra pills (keep first 'all' + grow + status)
+    meta.querySelectorAll('[data-catfilter]').forEach(p=>p.remove());
+    const before=meta.querySelector(".grow");
+    const mk=(label,val)=>{
+      const s=document.createElement("span");
+      s.className="pill"; s.dataset.catfilter=val; s.textContent=label;
+      s.setAttribute("aria-pressed", String(catFilter===val));
+      s.addEventListener("click", ()=>{ catFilter = (catFilter===val?"":val); buildCatPills(); hlIndex=0; renderResults(); });
+      meta.insertBefore(s, before);
+      return s;
+    };
+    mk("all","");
+    CATS.forEach(c=>mk(c.toLowerCase(),c));
+  }
+
+  /* ====================== Order ticket ====================== */
+  function orderQty(){ return order.reduce((s,l)=>s+l.qty,0); }
+  function subtotal(){ return order.reduce((s,l)=>s+byId(l.id).price*l.qty,0); }
+
+  // combo detection — list of {combo, off} that currently apply, discount SUBTRACTED from total.
+  function activeCombos(){
+    const has = pred => order.some(l=>pred(byId(l.id)));
+    const qtyOf = pred => order.filter(l=>pred(byId(l.id))).reduce((s,l)=>s+l.qty,0);
+    const out=[];
+    const hasPizza = has(m=>m.cat==="Pizza");
+    const hasDrink = has(m=>m.cat==="Drinks");
+    const pizzaCount = qtyOf(m=>m.cat==="Pizza");
+    if(hasPizza && hasDrink) out.push(COMBOS[0]);                        // Lunch Combo
+    if(hasPizza && order.some(l=>l.id==="espresso") && order.some(l=>l.id==="tiramisu"))
+      out.push(COMBOS[1]);                                              // Pizzaiolo Trio
+    if(pizzaCount>=2 && order.some(l=>l.id==="limonata1l")) out.push(COMBOS[2]); // Family Pack
+    return out;
+  }
+  function comboDiscount(){ return activeCombos().reduce((s,c)=>s+c.off,0); }
+  function grandTotal(){ return Math.max(0, subtotal()-comboDiscount()); }
+
+  const ordBody=document.getElementById("ordBody");
+  function renderOrder(){
+    document.getElementById("ordId").textContent="#"+orderId;
+    if(!order.length){
+      ordBody.innerHTML='<div class="ord-empty">Order is empty.<br>Type to search, press <kbd>Enter</kbd> to add the top match,<br>or <kbd>1</kbd>–<kbd>9</kbd> to quick-add a visible row.</div>';
+    } else {
+      let html="";
+      order.forEach(l=>{
+        const m=byId(l.id);
+        html+='<div class="line" data-id="'+l.id+'">'+
+          '<div class="stepper">'+
+            '<button data-dec aria-label="Decrease">&minus;</button>'+
+            '<span class="q tnum">'+l.qty+'</span>'+
+            '<button data-inc aria-label="Increase">+</button>'+
+          '</div>'+
+          '<div class="ln-nm">'+m.n+(l.qty>1?' <span class="each">@ '+fmtPLN(m.price)+'</span>':"")+'</div>'+
+          '<div class="ln-price tnum">'+fmtPLN(m.price*l.qty)+'</div>'+
+        '</div>';
+      });
+      // applied combos rendered inline
+      activeCombos().forEach(c=>{
+        html+='<div class="combo-line"><span class="cl-nm">'+
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v10H4V12"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>'+
+          c.n+' · '+c.desc+'</span><span class="cl-off tnum">&minus;'+fmtPLN(c.off)+'</span></div>';
+      });
+      ordBody.innerHTML=html;
+      ordBody.querySelectorAll(".line").forEach(line=>{
+        const id=line.dataset.id;
+        line.querySelector("[data-inc]").addEventListener("click", ()=>changeQty(id,+1));
+        line.querySelector("[data-dec]").addEventListener("click", ()=>changeQty(id,-1));
+      });
+    }
+    renderTotals();
+    renderStats();
+  }
+
+  function renderTotals(){
+    const sub=subtotal(), disc=comboDiscount(), tot=grandTotal();
+    const combos=activeCombos();
+    let html='<div class="tline"><span>Subtotal</span><span class="tv">'+fmtPLN(sub)+'</span></div>';
+    combos.forEach(c=>{
+      html+='<div class="tline disc"><span>&minus; '+c.n+'</span><span class="tv">&minus;'+fmtPLN(c.off)+'</span></div>';
+    });
+    html+='<div class="tline grand"><span class="tlab">Total</span><span class="tv tnum">'+fmtPLN(tot)+'</span></div>';
+    document.getElementById("totals").innerHTML=html;
+    document.getElementById("chargeAmt").textContent=fmtPLN(tot);
+    document.getElementById("btnCharge").disabled = order.length===0;
+  }
+  function renderStats(){
+    const items=orderQty(), lines=order.length, tot=grandTotal();
+    document.getElementById("stItems").textContent=items;
+    document.getElementById("stLines").textContent=lines;
+    document.getElementById("stAvg").textContent= items ? fmtPLN(Math.round(tot/items)).replace(" zł","") : "0,00";
+    document.getElementById("footMeta").textContent=
+      curLoc+" · "+({takeout:"Takeout",delivery:"Delivery",dinein:"Dine-in"}[curChan])+" · #"+orderId;
+  }
+
+  /* ====================== Mutations ====================== */
+  function addItem(id){
+    if(!byId(id)) return;
+    const ex=order.find(l=>l.id===id);
+    if(ex) ex.qty++; else order.push({id,qty:1});
+    renderOrder();
+    flashLine(id);
+  }
+  function changeQty(id, delta){
+    const l=order.find(x=>x.id===id);
+    if(!l) return;
+    l.qty+=delta;
+    if(l.qty<=0) order=order.filter(x=>x.id!==id);
+    renderOrder();
+    if(delta>0) flashLine(id);
+  }
+  function flashLine(id){
+    const line=ordBody.querySelector('.line[data-id="'+id+'"]');
+    if(line){ line.classList.remove("flash"); void line.offsetWidth; line.classList.add("flash"); }
+  }
+  function voidOrder(){
+    order=[];
+    orderId=newOrderId();
+    renderOrder();
+  }
+
+  /* ====================== Tender overlay ====================== */
+  const overlay=document.getElementById("overlay");
+  const tender=document.getElementById("tender");
+  function openTender(){
+    if(!order.length) return;
+    document.getElementById("tenderAmt").textContent=fmtPLN(grandTotal());
+    tender.classList.remove("is-paid");
+    overlay.classList.add("open");
+    overlay.setAttribute("aria-hidden","false");
+  }
+  function closeTender(){
+    overlay.classList.remove("open");
+    overlay.setAttribute("aria-hidden","true");
+    tender.classList.remove("is-paid");
+  }
+  function pay(method){
+    const total=grandTotal(), items=orderQty();
+    const ml = method==="cash" ? "Cash" : "Card";
+    document.getElementById("paidSub").innerHTML=
+      'Order <b>#'+orderId+'</b> · '+ml+'<br><b>'+fmtPLN(total)+'</b> · '+items+' item'+(items===1?"":"s")+
+      '<br>'+curLoc+' · '+({takeout:"Takeout",delivery:"Delivery",dinein:"Dine-in"}[curChan]);
+    tender.classList.add("is-paid");
+  }
+  function finishNewOrder(){
+    closeTender();
+    voidOrder();
+    document.getElementById("cmd").focus();
+  }
+  tender.querySelectorAll(".tm").forEach(b=>b.addEventListener("click", ()=>pay(b.dataset.method)));
+  document.getElementById("tenderClose").addEventListener("click", closeTender);
+  overlay.addEventListener("click", e=>{ if(e.target===overlay) closeTender(); });
+  document.getElementById("btnNew").addEventListener("click", finishNewOrder);
+  document.getElementById("btnCharge").addEventListener("click", openTender);
+  document.getElementById("btnClear").addEventListener("click", voidOrder);
+
+  /* ====================== Keyboard ====================== */
+  const cmd=document.getElementById("cmd");
+  cmd.addEventListener("input", ()=>{ query=cmd.value; hlIndex=0; renderResults(); });
+
+  document.addEventListener("keydown", e=>{
+    // overlay-specific keys first
+    if(overlay.classList.contains("open")){
+      if(tender.classList.contains("is-paid")){
+        if(e.key==="Enter"){ e.preventDefault(); finishNewOrder(); }
+        else if(e.key==="Escape"){ e.preventDefault(); finishNewOrder(); }
+        return;
+      }
+      if(e.key==="Escape"){ e.preventDefault(); closeTender(); }
+      else if(e.key==="F1"){ e.preventDefault(); pay("cash"); }
+      else if(e.key==="F3"){ e.preventDefault(); pay("card"); }
+      return;
+    }
+
+    // F2 charge — works regardless of focus
+    if(e.key==="F2"){ e.preventDefault(); openTender(); return; }
+
+    // "/" focuses search (only when not already typing in it)
+    if(e.key==="/" && document.activeElement!==cmd){ e.preventDefault(); cmd.focus(); cmd.select(); return; }
+
+    const typing = document.activeElement===cmd;
+
+    if(e.key==="ArrowDown"){ e.preventDefault(); if(filtered.length){ hlIndex=Math.min(filtered.length-1,hlIndex+1); paintHl(); } return; }
+    if(e.key==="ArrowUp"){ e.preventDefault(); if(filtered.length){ hlIndex=Math.max(0,hlIndex-1); paintHl(); } return; }
+    if(e.key==="Enter"){
+      if(filtered.length){ e.preventDefault(); addItem(filtered[hlIndex].id); }
+      return;
+    }
+    if(e.key==="Escape"){
+      e.preventDefault();
+      if(query){ query=""; cmd.value=""; hlIndex=0; renderResults(); }
+      else voidOrder();
+      return;
+    }
+    // number keys 1-9 quick-add Nth visible result (only when search empty-ish or via Alt? — spec: number keys add Nth)
+    if(/^[1-9]$/.test(e.key) && !typing){
+      const n=+e.key-1;
+      if(filtered[n]){ e.preventDefault(); addItem(filtered[n].id); hlIndex=n; paintHl(); }
+      return;
+    }
+    // +/- adjust qty of the LAST line
+    if((e.key==="+"||e.key==="=") && order.length){ e.preventDefault(); changeQty(order[order.length-1].id,+1); return; }
+    if((e.key==="-"||e.key==="_") && order.length){ e.preventDefault(); changeQty(order[order.length-1].id,-1); return; }
+  });
+
+  /* ====================== Fullscreen ====================== */
+  const fsbtn=document.getElementById("fsbtn");
+  function syncFs(){
+    const on=!!document.fullscreenElement;
+    document.documentElement.classList.toggle("is-fullscreen",on);
+    fsbtn.setAttribute("aria-pressed",String(on));
+  }
+  function fallbackToggle(){
+    const on=!document.documentElement.classList.contains("is-fullscreen");
+    document.documentElement.classList.toggle("is-fullscreen",on);
+    fsbtn.setAttribute("aria-pressed",String(on));
+  }
+  fsbtn.addEventListener("click", ()=>{
+    if(document.fullscreenElement){
+      if(document.exitFullscreen) document.exitFullscreen().catch(fallbackToggle);
+      else fallbackToggle();
+    } else {
+      const req=document.documentElement.requestFullscreen;
+      if(req) req.call(document.documentElement).catch(fallbackToggle);
+      else fallbackToggle();
+    }
+  });
+  document.addEventListener("fullscreenchange", syncFs);
+
+  /* ====================== Clock ====================== */
+  function pad(n){ return String(n).padStart(2,"0"); }
+  function tickClock(){
+    const d=new Date();
+    document.getElementById("clock").textContent=pad(d.getHours())+":"+pad(d.getMinutes())+":"+pad(d.getSeconds());
+  }
+
+  /* ====================== Boot ====================== */
+  renderSegs();
+  buildCatPills();
+  renderResults();
+  renderOrder();
+  tickClock();
+  setInterval(tickClock,1000);
+  cmd.focus();
+</script>
+</body>
+</html>
