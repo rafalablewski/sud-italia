@@ -22,10 +22,10 @@ export function LocationTabs({ value, onChange, includeAll = false }: LocationTa
         <button
           key={l.slug}
           onClick={() => onChange(l.slug)}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
             value === l.slug
-              ? "bg-[var(--surface-3)] text-[var(--fg)] border border-[var(--border-strong)]"
-              : "text-[var(--fg-subtle)] border border-transparent hover:text-[var(--fg)] hover:bg-[var(--surface-hover)]"
+              ? "bg-[var(--brand-soft)] text-[var(--brand)] border border-[color-mix(in_oklab,var(--brand)_40%,transparent)]"
+              : "text-[var(--fg-subtle)] border border-[var(--border)] hover:text-[var(--fg)] hover:bg-[var(--surface-hover)]"
           }`}
         >
           <MapPin className="h-3.5 w-3.5" />
