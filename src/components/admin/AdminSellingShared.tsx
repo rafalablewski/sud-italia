@@ -451,7 +451,7 @@ export function ItemMultiSelect({
                   onChange([...selected, m.id]);
                   setAdding(false);
                 }}
-                className="block w-full text-left px-3 py-2 text-sm rounded-md transition-colors hover:bg-[var(--surface-hover)]"
+                className="block w-full text-left px-3 py-2 text-sm rounded-[var(--radius-md)] transition-colors hover:bg-[var(--surface-hover)]"
               >
                 <span className="text-xs text-[var(--fg-subtle)] mr-2">[{m.category}]</span>
                 {m.name} — {(m.price / 100).toFixed(0)} PLN

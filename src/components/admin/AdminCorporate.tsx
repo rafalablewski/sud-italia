@@ -182,7 +182,7 @@ function CorporateRow({
   if (!corporate) return null;
 
   return (
-    <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3">
+    <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-2)] p-3">
       <div className="flex items-start gap-3 flex-wrap">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -228,7 +228,7 @@ function PromoteRow({
   const [open, setOpen] = useState(false);
   const eligible = wallet.memberCount >= 6;
   return (
-    <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3">
+    <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-2)] p-3">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <p className="admin-text text-sm font-medium">
