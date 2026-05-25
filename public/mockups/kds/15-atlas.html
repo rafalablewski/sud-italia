@@ -491,9 +491,14 @@
     header{padding:8px 12px;gap:8px}
     .t-body{padding:var(--s3) var(--s4)}
     .pace-gauges{padding:var(--s3) var(--s4)}
-    .fb-cell{flex:1 1 calc(50% - 1px);padding:var(--s2) var(--s4)}
+    /* fleet bar → a compact, swipeable metric strip instead of a tall wrap */
+    .fleetbar{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+    .fleetbar::-webkit-scrollbar{display:none}
+    .fb-cell{flex:0 0 auto;min-width:118px;padding:var(--s2) var(--s4)}
+    .fb-cell.benchmark{flex:0 0 auto;min-width:250px}
     .fb-num{font-size:20px}
     .th-stats{gap:var(--s4)}
+    .th-spark{display:none}
     .gauge{flex:1 1 calc(50% - var(--s2))}
     .t-name{max-width:36%}
   }
