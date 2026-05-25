@@ -174,7 +174,7 @@
     border:1px solid var(--ready);border-radius:3px;padding:0 4px;line-height:13px;
   }
   .bm-track{flex:1 1 auto;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;position:relative}
-  .bm-fill{height:100%;border-radius:3px;transition:width .3s ease,background .3s ease}
+  .bm-fill{display:block;height:100%;border-radius:3px;transition:width .3s ease,background .3s ease}
   .bm-mark{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--text);opacity:.5}
   .bm-pct{font-family:var(--mono);font-size:12px;color:var(--text);min-width:40px;text-align:right}
   .bm-foot{font-size:10px;color:var(--faint);letter-spacing:0.02em;margin-top:2px}
@@ -416,7 +416,7 @@
     height:10px;background:rgba(255,255,255,0.05);border:1px solid var(--hair);
     border-radius:6px;overflow:hidden;position:relative;
   }
-  .cap-fill{height:100%;border-radius:6px 0 0 6px;transition:width .35s ease,background .3s ease}
+  .cap-fill{display:block;height:100%;border-radius:6px 0 0 6px;transition:width .35s ease,background .3s ease}
   .cap-fill.calm{background:linear-gradient(90deg,rgba(61,214,140,0.5),var(--ready))}
   .cap-fill.warn{background:linear-gradient(90deg,rgba(245,166,35,0.5),var(--warn))}
   .cap-fill.risk{background:linear-gradient(90deg,rgba(139,92,246,0.5),var(--risk));box-shadow:0 0 14px rgba(139,92,246,0.55)}
@@ -431,12 +431,12 @@
 
   /* per-station pace gauges row inside the body */
   .pace-gauges{
-    flex:0 0 auto;display:flex;align-items:stretch;gap:var(--s2);flex-wrap:wrap;
-    padding:var(--s3) var(--s5);background:var(--panel);border-bottom:1px solid var(--hair);
+    flex:0 0 auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:var(--s2);
+    padding:var(--s3) var(--s5) var(--s4);background:var(--panel);border-bottom:1px solid var(--hair);
   }
   .pg-title{
-    font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:var(--faint);
-    align-self:center;margin-right:var(--s1);white-space:nowrap;
+    grid-column:1/-1;font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:var(--faint);
+    white-space:nowrap;margin-bottom:2px;
   }
   .gauge{
     flex:1 1 130px;min-width:120px;display:flex;flex-direction:column;gap:7px;
@@ -451,7 +451,7 @@
   .g-pct.warn{color:var(--warn)}
   .g-pct.risk{color:var(--risk)}
   .g-track{height:7px;background:rgba(255,255,255,0.05);border:1px solid var(--hair);border-radius:4px;overflow:hidden;position:relative}
-  .g-fill{height:100%;border-radius:4px 0 0 4px;transition:width .35s ease,background .3s ease}
+  .g-fill{display:block;height:100%;border-radius:4px 0 0 4px;transition:width .35s ease,background .3s ease}
   .g-fill.calm{background:var(--ready)}
   .g-fill.warn{background:var(--warn)}
   .g-fill.risk{background:var(--risk);box-shadow:0 0 10px rgba(139,92,246,0.5)}
@@ -504,7 +504,7 @@
     .ft-val{font-size:19px}
     .th-stats{gap:var(--s4)}
     .th-spark{display:none}
-    .gauge{flex:1 1 calc(50% - var(--s2))}
+    .pace-gauges{grid-template-columns:repeat(2,1fr)}
     .t-name{max-width:36%}
   }
 </style>
