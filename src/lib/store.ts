@@ -7710,6 +7710,85 @@ export async function getKdsStationAnalytics(
   }
 }
 
+export interface KdsServiceHistory {
+  /** Tickets that finished on or before their promised-ready time. */
+  onTime: number;
+  /** Total finished tickets with a promise to measure against. */
+  total: number;
+  /** Promise-accuracy %, rounded. Null when there's nothing to measure yet. */
+  promiseAccuracy: number | null;
+  /** Per-bucket finished-ticket counts, oldest → newest, for a sparkline. */
+  throughputSeries: number[];
+}
+
+/**
+ * Real KDS service history over a window (Atlas fleet command). Reads
+ * kds_tickets once and derives:
+ *   - promise-accuracy: finished (bumped/ready) tickets whose actual finish
+ *     was on or before the promised-ready time,
+ *   - a throughput sparkline: finished tickets bucketed evenly across the
+ *     window.
+ * Bumped/ready tickets only — fired-but-not-finished don't count. No
+ * fabricated numbers; everything comes from the kds_tickets ledger.
+ */
+export async function getKdsServiceHistory(
+  locationSlug: string,
+  fromIso: string,
+  toIso: string,
+  buckets = 8,
+): Promise<KdsServiceHistory> {
+  const empty: KdsServiceHistory = {
+    onTime: 0,
+    total: 0,
+    promiseAccuracy: null,
+    throughputSeries: new Array(Math.max(1, buckets)).fill(0),
+  };
+  const db = getDb();
+  if (!db) return empty;
+  try {
+    await ensureKdsTables();
+    const from = new Date(fromIso);
+    const to = new Date(toIso);
+    if (!Number.isFinite(from.getTime()) || !Number.isFinite(to.getTime())) return empty;
+    const rows = await db
+      .select()
+      .from(kdsTicketsTable)
+      .where(
+        and(
+          eq(kdsTicketsTable.locationSlug, locationSlug),
+          gte(kdsTicketsTable.firedAt, from),
+          lte(kdsTicketsTable.firedAt, to),
+        ),
+      );
+    const span = Math.max(1, to.getTime() - from.getTime());
+    const n = Math.max(1, buckets);
+    const series = new Array(n).fill(0);
+    let onTime = 0;
+    let total = 0;
+    for (const r of rows) {
+      const finished = r.bumpedAt ?? r.readyAt;
+      if (!finished) continue;
+      // throughput bucket
+      const idx = Math.min(n - 1, Math.max(0, Math.floor(((finished.getTime() - from.getTime()) / span) * n)));
+      series[idx] += 1;
+      // promise accuracy (only when there was a promise to measure)
+      if (r.promisedReadyAt) {
+        total += 1;
+        if (finished.getTime() <= r.promisedReadyAt.getTime()) onTime += 1;
+      }
+    }
+    return {
+      onTime,
+      total,
+      promiseAccuracy: total > 0 ? Math.round((onTime / total) * 100) : null,
+      throughputSeries: series,
+    };
+  } catch (err) {
+    logger.warn("getKdsServiceHistory failed", { locationSlug, layer: "store.kds" }, err);
+    return empty;
+  }
+}
+
 // --- Phase 3: brands + franchisees + location assignments (m3_1, m3_2) ---
 
 const BRANDS_DDL = [
