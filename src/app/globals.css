@@ -7926,6 +7926,12 @@ select.pub-input {
 .kds-atlas .ka-ticket.risk { border-color: rgba(139,92,246,0.45); background: #2C2A4A; }
 .kds-atlas .ka-ticket.late { border-color: rgba(229,72,77,0.5); background: #3B272F; }
 .kds-atlas .ka-ticket.ready { border-color: rgba(61,214,140,0.3); }
+/* Sandbox / simulator tickets: a dashed frame + slim tag so a SIMULATION rush
+   can never be confused with real service (mirrors the floor board). The neutral
+   treatment stays out of the way of the red "late" / violet "at-risk" signals. */
+.kds-atlas .ka-ticket-sim { border-style: dashed; border-color: var(--ka-faint); }
+.kds-atlas .ka-ticket-sim::before { opacity: 0.4; }
+.kds-atlas .ka-t-sim-tag { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 0 0 10px; padding: 3px 8px; background: rgba(255,255,255,0.04); border: 1px dashed var(--ka-hair); border-radius: 6px; color: var(--ka-faint); font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 .kds-atlas .ka-t-r1 { display: flex; align-items: center; gap: 8px; }
 .kds-atlas .ka-t-id { font-size: 16px; font-weight: 700; letter-spacing: 0.03em; }
 .kds-atlas .ka-t-chan { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; color: var(--ka-faint); text-transform: uppercase; }

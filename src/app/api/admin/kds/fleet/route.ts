@@ -17,12 +17,15 @@ import {
  * every active truck, plus the predicted-ready engine and the capacity-vs-
  * demand Pace layer, all from real data:
  *
- *   - active tickets + counts read the same real orders the KDS boards do
- *     (getOrders strips simulated demo tickets by default — fleet stays real),
+ *   - active tickets + counts read the same real orders the KDS boards do.
+ *     getOrders strips simulated demo tickets by default; the Atlas board opts
+ *     in with ?includeSimulated=1 (like the floor board) so a marked SIMULATION
+ *     rush lights up the ticket stacks, counts and Pace layer for demos/training,
  *   - predicted-ready + at-risk come from analyzeTruck (prep times + live queue),
- *   - covers/hr, revenue/hr, throughput from real completed orders,
+ *   - covers/hr, revenue/hr, throughput from completed orders in the window,
  *   - promise-accuracy + the throughput sparkline from the kds_tickets ledger
- *     (getKdsServiceHistory),
+ *     (getKdsServiceHistory) — sims never write that ledger, so those benchmarks
+ *     stay real even when sandbox tickets are on the board,
  *   - on-shift from real open time-punches (getLaborCostInRange).
  *
  * Owner-only and inherently cross-location, so no locationParam.
@@ -45,7 +48,8 @@ function ticketItems(o: Order) {
   }));
 }
 
-export const GET = withAdmin({ roles: ["owner"] }, async () => {
+export const GET = withAdmin({ roles: ["owner"] }, async (req) => {
+  const includeSimulated = req.nextUrl.searchParams.get("includeSimulated") === "1";
   const now = Date.now();
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
@@ -59,7 +63,7 @@ export const GET = withAdmin({ roles: ["owner"] }, async () => {
 
   const tiles = await Promise.all(
     locations.map(async (loc) => {
-      const orders = await getOrders(loc.slug, fromIso);
+      const orders = await getOrders(loc.slug, fromIso, { includeSimulated });
       const active = orders.filter((o) => ACTIVE.has(o.status));
 
       const analysis = analyzeTruck(active, now);
@@ -104,6 +108,7 @@ export const GET = withAdmin({ roles: ["owner"] }, async () => {
           predictedReadyAtMs: p?.predictedReadyAtMs ?? now,
           predSeconds: p?.predSeconds ?? 0,
           atRisk: p?.atRisk ?? false,
+          simulated: o.simulated ?? false,
         };
       });
 

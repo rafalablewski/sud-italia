@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   AlertTriangle,
+  FlaskConical,
   ChevronLeft,
   MapPin,
   Maximize2,
@@ -53,6 +54,7 @@ interface WireTicket {
   predictedReadyAtMs: number;
   predSeconds: number;
   atRisk: boolean;
+  simulated?: boolean;
 }
 interface WireTile {
   slug: string;
@@ -183,7 +185,9 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => voi
     if (inFlight.current) return;
     inFlight.current = true;
     try {
-      const res = await fetch("/api/admin/kds/fleet");
+      // Opt into sandbox tickets like the floor board — a no-op when the
+      // simulator is off (sims are purged then), a marked SIMULATION rush when on.
+      const res = await fetch("/api/admin/kds/fleet?includeSimulated=1");
       if (!res.ok) throw new Error(`Request failed (${res.status})`);
       setData((await res.json()) as FleetPayload);
       setError(null);
@@ -822,7 +826,12 @@ function TicketCard({
     );
 
   return (
-    <article className={`ka-ticket ${tone}`}>
+    <article className={`ka-ticket ${tone}${t.simulated ? " ka-ticket-sim" : ""}`}>
+      {t.simulated && (
+        <div className="ka-t-sim-tag">
+          <FlaskConical className="h-3 w-3" /> SIMULATION — not a real order
+        </div>
+      )}
       <div className="ka-t-r1">
         <span className="ka-t-id">#{t.shortId}</span>
         <span className="ka-t-chan">
