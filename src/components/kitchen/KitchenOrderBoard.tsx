@@ -5,8 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { statusBadgeClass } from "@/lib/admin-utils";
 import {
-  Package,
-  Truck,
+  Users,
   Clock,
   ClipboardList,
   RefreshCw,
@@ -15,6 +14,8 @@ import {
   ChefHat,
   ShoppingBag,
 } from "lucide-react";
+import { fulfillmentLabel, formatPartySize } from "@/lib/fulfillment";
+import { FulfillmentIcon } from "@/components/FulfillmentIcon";
 import {
   parseKitchenCartPresencePayload,
   type KitchenCartPresenceEntry,
@@ -345,17 +346,19 @@ export function KitchenOrderBoard({ locationName, slug }: Props) {
 
                 <div className="flex flex-wrap items-center gap-4 text-sm admin-text-muted mb-3">
                   <span className="flex items-center gap-1">
-                    {order.fulfillmentType === "delivery" ? (
-                      <Truck className="h-4 w-4" />
-                    ) : (
-                      <Package className="h-4 w-4" />
-                    )}
-                    {order.fulfillmentType === "delivery" ? "Delivery" : "Takeout"}
+                    <FulfillmentIcon type={order.fulfillmentType} className="h-4 w-4" />
+                    {fulfillmentLabel(order.fulfillmentType)}
                   </span>
                   <span className="flex items-center gap-1">
                     <Clock className="h-4 w-4" />
                     {formatSlotDate(order.slotDate)} at {order.slotTime}
                   </span>
+                  {order.fulfillmentType === "dine-in" && order.partySize && (
+                    <span className="flex items-center gap-1">
+                      <Users className="h-4 w-4" />
+                      {formatPartySize(order.partySize)}
+                    </span>
+                  )}
                   {order.deliveryAddress && (
                     <span className="flex items-center gap-1 min-w-0">
                       <MapPin className="h-4 w-4 flex-shrink-0" />

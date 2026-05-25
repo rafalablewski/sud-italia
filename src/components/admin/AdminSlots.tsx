@@ -10,6 +10,7 @@ import {
   RefreshCw,
   Trash2,
   Truck,
+  Utensils,
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { getActiveLocations } from "@/data/locations";
@@ -388,6 +389,7 @@ function AdminSlotsDesktop() {
                               <span className="v2-slot-channels">
                                 {s.fulfillmentTypes.includes("takeout") && <Package className="h-3 w-3" />}
                                 {s.fulfillmentTypes.includes("delivery") && <Truck className="h-3 w-3" />}
+                                {s.fulfillmentTypes.includes("dine-in") && <Utensils className="h-3 w-3" />}
                               </span>
                             </div>
                           </button>
@@ -594,6 +596,14 @@ function SlotDialog({ open, mode, slot, onClose, onSubmit, onToggle, onDelete }:
               />
               <span>Delivery</span>
             </label>
+            <label className="v2-toggle">
+              <input
+                type="checkbox"
+                checked={fulfillmentTypes.includes("dine-in")}
+                onChange={() => toggleType("dine-in")}
+              />
+              <span>Dine-in</span>
+            </label>
           </div>
         </div>
         <Select
@@ -718,6 +728,10 @@ function BulkSlotDialog({ open, defaultFromDate, onClose, onSubmit }: BulkProps)
             <label className="v2-toggle">
               <input type="checkbox" checked={fulfillmentTypes.includes("delivery")} onChange={() => toggleType("delivery")} />
               <span>Delivery</span>
+            </label>
+            <label className="v2-toggle">
+              <input type="checkbox" checked={fulfillmentTypes.includes("dine-in")} onChange={() => toggleType("dine-in")} />
+              <span>Dine-in</span>
             </label>
           </div>
         </div>

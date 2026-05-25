@@ -3,13 +3,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { Order } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
+import { fulfillmentLabel, formatPartySize } from "@/lib/fulfillment";
+import { FulfillmentIcon } from "@/components/FulfillmentIcon";
 import {
   CheckCircle,
   ChefHat,
   ShoppingBag,
   Clock,
-  Package,
-  Truck,
   RefreshCw,
 } from "lucide-react";
 
@@ -252,12 +252,11 @@ export function OrderTracker({ orderId, locationSlug }: OrderTrackerProps) {
               Order summary
             </p>
             <div className="flex items-center gap-1.5 text-xs text-italia-gray">
-              {order.fulfillmentType === "delivery" ? (
-                <Truck className="h-3.5 w-3.5" />
-              ) : (
-                <Package className="h-3.5 w-3.5" />
-              )}
-              {order.fulfillmentType === "delivery" ? "Delivery" : "Takeout"}
+              <FulfillmentIcon type={order.fulfillmentType} className="h-3.5 w-3.5" />
+              {fulfillmentLabel(order.fulfillmentType)}
+              {order.fulfillmentType === "dine-in" && order.partySize
+                ? ` · ${formatPartySize(order.partySize)}`
+                : ""}
             </div>
           </div>
           <div className="space-y-2">

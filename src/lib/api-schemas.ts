@@ -66,11 +66,14 @@ export const checkoutBodySchema = z
     locationSlug,
     customerName: z.string().min(1).max(120),
     customerPhone: phoneInput,
-    fulfillmentType: z.enum(["takeout", "delivery"]),
+    fulfillmentType: z.enum(["takeout", "delivery", "dine-in"]),
     slotId: stableId,
     slotDate: isoDate,
     slotTime: wallTime,
     deliveryAddress: z.string().max(500).optional(),
+    /** Guests for a dine-in reservation. Required (≥1) when
+     *  fulfillmentType is "dine-in"; ignored otherwise. */
+    partySize: z.number().int().positive().max(50).optional(),
     tipAmount: z.number().int().nonnegative().max(100_000).optional(),
     /** When set, the cart was checked out as a §3.2 bundle. The server
      *  re-resolves the bundle by id and recomputes its price, but caps
@@ -93,6 +96,15 @@ export const checkoutBodySchema = z
     {
       message: "Delivery address is required when fulfillmentType is 'delivery'",
       path: ["deliveryAddress"],
+    },
+  )
+  .refine(
+    (data) =>
+      data.fulfillmentType !== "dine-in" ||
+      (typeof data.partySize === "number" && data.partySize > 0),
+    {
+      message: "Party size is required when fulfillmentType is 'dine-in'",
+      path: ["partySize"],
     },
   );
 
@@ -143,7 +155,7 @@ export const refundBodySchema = z
 
 // --- Admin: slots --------------------------------------------------------
 
-export const fulfillmentTypeSchema = z.enum(["takeout", "delivery"]);
+export const fulfillmentTypeSchema = z.enum(["takeout", "delivery", "dine-in"]);
 
 /**
  * POST /api/admin/slots — accepts either a single slot (time + maxOrders) or
@@ -155,7 +167,7 @@ export const slotCreateSchema = z
   .object({
     locationSlug,
     date: isoDate,
-    fulfillmentTypes: z.array(fulfillmentTypeSchema).min(1).max(2),
+    fulfillmentTypes: z.array(fulfillmentTypeSchema).min(1).max(3),
     time: wallTime.optional(),
     maxOrders: z.number().int().positive().max(500).optional(),
     bulk: z

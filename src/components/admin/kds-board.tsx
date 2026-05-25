@@ -4,12 +4,13 @@ import {
   Clock,
   FlaskConical,
   MapPin,
-  Package,
   Timer,
-  Truck,
+  Users,
 } from "lucide-react";
 import type { MenuCategory, Order, OrderStatus } from "@/data/types";
 import { MENU_CATEGORY_LABELS } from "@/data/types";
+import { fulfillmentLabel } from "@/lib/fulfillment";
+import { FulfillmentIcon } from "@/components/FulfillmentIcon";
 import { Badge, Button } from "./v2/ui";
 
 /**
@@ -173,8 +174,13 @@ export function Ticket({ order, stationFilter, onAdvance, isUpdating, nowMs }: T
         <div className="v2-ticket-meta">
           <span className="v2-ticket-customer">{order.customerName || "Guest"}</span>
           <span className="v2-ticket-channel">
-            {order.fulfillmentType === "delivery" ? <Truck className="h-3 w-3" /> : <Package className="h-3 w-3" />}
-            {order.fulfillmentType === "delivery" ? "Delivery" : "Takeout"}
+            <FulfillmentIcon type={order.fulfillmentType} className="h-3 w-3" />
+            {fulfillmentLabel(order.fulfillmentType)}
+            {order.fulfillmentType === "dine-in" && order.partySize ? (
+              <span className="v2-ticket-party">
+                <Users className="h-3 w-3" /> {order.partySize}
+              </span>
+            ) : null}
             <span className="v2-ticket-loc">
               <MapPin className="h-3 w-3" /> {order.locationSlug}
             </span>

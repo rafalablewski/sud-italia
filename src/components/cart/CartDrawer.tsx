@@ -29,6 +29,10 @@ import {
   Trash2,
   Package,
   Truck,
+  Utensils,
+  Users,
+  Minus,
+  Plus,
   Star,
   Clock,
   Check,
@@ -62,6 +66,8 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
   const selectedSlotDate = useCartStore((s) => s.selectedSlotDate);
   const deliveryAddress = useCartStore((s) => s.deliveryAddress);
   const setDeliveryAddress = useCartStore((s) => s.setDeliveryAddress);
+  const partySize = useCartStore((s) => s.partySize);
+  const setPartySize = useCartStore((s) => s.setPartySize);
 
   const { customer: loyaltyCustomer } = useCustomer();
 
@@ -282,7 +288,8 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
     isPhoneValid &&
     selectedSlotId !== null &&
     unavailableItems.length === 0 &&
-    (fulfillmentType !== "delivery" || deliveryAddress.trim().length > 0);
+    (fulfillmentType !== "delivery" || deliveryAddress.trim().length > 0) &&
+    (fulfillmentType !== "dine-in" || partySize >= 1);
 
   // Pre-fill checkout fields from loyalty identity
   useEffect(() => {
@@ -377,6 +384,7 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
           slotDate: selectedSlotDate,
           slotTime: selectedSlotTime,
           deliveryAddress: fulfillmentType === "delivery" ? deliveryAddress.trim() : undefined,
+          partySize: fulfillmentType === "dine-in" ? partySize : undefined,
           customerEmail: customerEmail.trim() || undefined,
           specialInstructions: specialInstructions.trim() || undefined,
           tipAmount: tipAmount > 0 ? tipAmount : undefined,
@@ -600,10 +608,10 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
         <p className="text-xs font-semibold text-italia-gray uppercase tracking-wide mb-2">
           How would you like your order?
         </p>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           <button
             onClick={() => setFulfillmentType("takeout")}
-            className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
+            className={`flex flex-col items-center justify-center gap-1.5 px-2 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
               fulfillmentType === "takeout"
                 ? "border-italia-green bg-italia-green/5 text-italia-green"
                 : "border-gray-200 text-italia-gray hover:border-gray-300"
@@ -614,7 +622,7 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
           </button>
           <button
             onClick={() => setFulfillmentType("delivery")}
-            className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
+            className={`flex flex-col items-center justify-center gap-1.5 px-2 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
               fulfillmentType === "delivery"
                 ? "border-italia-red bg-italia-red/5 text-italia-red"
                 : "border-gray-200 text-italia-gray hover:border-gray-300"
@@ -622,6 +630,17 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
           >
             <Truck className="h-4 w-4" />
             Delivery
+          </button>
+          <button
+            onClick={() => setFulfillmentType("dine-in")}
+            className={`flex flex-col items-center justify-center gap-1.5 px-2 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
+              fulfillmentType === "dine-in"
+                ? "border-italia-gold bg-italia-gold/5 text-italia-gold-dark"
+                : "border-gray-200 text-italia-gray hover:border-gray-300"
+            }`}
+          >
+            <Utensils className="h-4 w-4" />
+            Dine-in
           </button>
         </div>
       </div>
@@ -641,6 +660,54 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
             autoComplete="street-address"
             className="pub-input min-h-[44px]"
           />
+        </div>
+      )}
+
+      {/* Dine-in reservation — reserve a table and pre-choose the food.
+           The time slot picker below doubles as the booking time. */}
+      {fulfillmentType === "dine-in" && (
+        <div className="px-5 mb-3">
+          <div className="flex items-start gap-2.5 rounded-xl border border-italia-gold/25 bg-italia-gold/5 px-3 py-2.5">
+            <Utensils className="h-4 w-4 flex-shrink-0 text-italia-gold-dark mt-0.5" aria-hidden />
+            <p className="text-[11px] leading-relaxed text-italia-dark">
+              <span className="font-semibold">Reserve your table.</span>{" "}
+              Pick how many are coming and a time below — your food is prepared
+              for when you sit down.
+            </p>
+          </div>
+          <div className="mt-3 flex items-center justify-between">
+            <label htmlFor="checkout-party-size" className="flex items-center gap-1.5 text-sm font-medium text-italia-dark">
+              <Users className="h-4 w-4 text-italia-gray" />
+              Party size
+            </label>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setPartySize(partySize - 1)}
+                disabled={partySize <= 1}
+                aria-label="Fewer guests"
+                className="w-9 h-9 flex items-center justify-center rounded-full border border-gray-200 text-italia-dark disabled:opacity-40 hover:border-gray-300 active:scale-95 transition"
+              >
+                <Minus className="h-4 w-4" />
+              </button>
+              <span
+                id="checkout-party-size"
+                className="min-w-[2ch] text-center text-base font-bold text-italia-dark tabular-nums"
+                aria-live="polite"
+              >
+                {partySize}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPartySize(partySize + 1)}
+                disabled={partySize >= 50}
+                aria-label="More guests"
+                className="w-9 h-9 flex items-center justify-center rounded-full border border-gray-200 text-italia-dark disabled:opacity-40 hover:border-gray-300 active:scale-95 transition"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -669,10 +736,14 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
                     />
                     <div className="min-w-0">
                       <p className="text-xs font-semibold text-italia-dark leading-snug">
-                        Pick your pickup time
+                        {fulfillmentType === "dine-in"
+                          ? "Pick your table time"
+                          : fulfillmentType === "delivery"
+                            ? "Pick your delivery time"
+                            : "Pick your pickup time"}
                       </p>
                       <p className="text-[11px] text-italia-gray mt-1 leading-relaxed">
-                        Popular pickup windows fill up fast — choose yours below.
+                        Popular times fill up fast — choose yours below.
                       </p>
                     </div>
                   </div>
@@ -692,7 +763,11 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
                   <p className="text-xs leading-snug text-italia-dark">
                     <span className="font-semibold">Time selected.</span>{" "}
                     <span className="text-italia-gray font-normal">
-                      Complete checkout to confirm your pickup window.
+                      {fulfillmentType === "dine-in"
+                        ? "Complete checkout to confirm your table."
+                        : fulfillmentType === "delivery"
+                          ? "Complete checkout to confirm your delivery window."
+                          : "Complete checkout to confirm your pickup window."}
                     </span>
                   </p>
                 </div>

@@ -2278,6 +2278,7 @@ html { scroll-behavior: smooth; }
 .v2-ticket-customer { font-weight: 600; color: var(--fg); font-size: var(--text-sm); }
 .v2-ticket-channel { display: inline-flex; align-items: center; gap: 6px; }
 .v2-ticket-loc { display: inline-flex; align-items: center; gap: 3px; text-transform: capitalize; }
+.v2-ticket-party { display: inline-flex; align-items: center; gap: 3px; font-weight: 600; color: var(--fg); }
 
 .v2-ticket-stations { display: flex; flex-direction: column; gap: 9px; }
 .v2-ticket-station { transition: opacity var(--duration-fast); }

@@ -11,12 +11,14 @@ import {
   PauseCircle,
   PlayCircle,
   Timer,
+  Users,
 } from "lucide-react";
 import { useAdminOrdersStream } from "@/lib/useAdminOrdersStream";
 import { useKdsSimulator } from "@/lib/useKdsSimulator";
 import { KdsSimBanner } from "../kds-board";
 import type { Order, OrderStatus, MenuCategory } from "@/data/types";
 import { MENU_CATEGORY_LABELS } from "@/data/types";
+import { fulfillmentLabel, formatPartySize } from "@/lib/fulfillment";
 import { useAdminLocation } from "../v2/LocationContext";
 import { useToast } from "../v2/ui/Toast";
 import {
@@ -435,6 +437,12 @@ function TicketCard({
           <div style={{ fontSize: 16, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {order.customerName}
           </div>
+          {order.fulfillmentType === "dine-in" && (
+            <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 13, fontWeight: 600, color: "var(--brand)" }}>
+              <Users className="h-3.5 w-3.5" aria-hidden />
+              Dine-in{order.partySize ? ` · ${formatPartySize(order.partySize)}` : ""}
+            </div>
+          )}
         </div>
         <div
           className="tabular"
@@ -524,7 +532,7 @@ function TicketCard({
               {fmtClock(Math.abs(remaining))}
             </span>
           ) : (
-            <span>{order.fulfillmentType}</span>
+            <span>{fulfillmentLabel(order.fulfillmentType)}</span>
           )}
         </div>
         {next && (

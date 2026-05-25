@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getActiveComboDeals, type UpsellConfig } from "@/lib/upsell";
-import { CartItem, MENU_CATEGORY_LABELS, MenuItem } from "@/data/types";
+import { CartItem, MENU_CATEGORY_LABELS, MenuItem, FulfillmentType } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
 import { useCartStore } from "@/store/cart";
 import { Gift, Check, Sparkles } from "lucide-react";
@@ -11,7 +11,7 @@ interface ComboDealBannerProps {
   cartItems: CartItem[];
   /** Cart fulfillment type — drives channel-aware combo filtering
    *  (audit §3 — channel economics). Optional so legacy callers still work. */
-  fulfillmentType?: "takeout" | "delivery";
+  fulfillmentType?: FulfillmentType;
   /** Menu items available at the current location. Required for click-to-apply
    *  — the banner looks up the missing required-item suffixes / cheapest item
    *  per missing category against this list. Without it the banner stays in

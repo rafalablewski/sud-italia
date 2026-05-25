@@ -350,7 +350,7 @@ export interface CartItem {
   selectedModifiers?: SelectedModifier[];
 }
 
-export type FulfillmentType = "takeout" | "delivery";
+export type FulfillmentType = "takeout" | "delivery" | "dine-in";
 
 export type SlotStatus = "draft" | "active";
 
@@ -487,6 +487,10 @@ export interface Order {
   customerPhone: string;
   fulfillmentType: FulfillmentType;
   deliveryAddress?: string;
+  /** Number of guests for a dine-in reservation. Set only when
+   *  fulfillmentType === "dine-in"; the slot doubles as the table booking
+   *  time and the cart is the pre-chosen food. */
+  partySize?: number;
   specialInstructions?: string;
   slotId: string;
   slotDate: string;

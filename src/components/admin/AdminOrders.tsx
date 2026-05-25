@@ -12,9 +12,9 @@ import {
   RefreshCw,
   RotateCcw,
   Search,
-  Truck,
   TableProperties,
   Trash2,
+  Users,
   User,
 } from "lucide-react";
 import {
@@ -26,6 +26,8 @@ import {
 } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
 import { formatSlotDate } from "@/lib/format";
+import { fulfillmentLabel, formatPartySize } from "@/lib/fulfillment";
+import { FulfillmentIcon } from "@/components/FulfillmentIcon";
 import dynamic from "next/dynamic";
 import { useAdminLocation } from "./v2/LocationContext";
 import { useIsMobile } from "./v2/mobile";
@@ -497,8 +499,8 @@ function KanbanCard({ order, onOpen, onAdvance, isUpdating }: KanbanCardProps) {
       <div className="v2-kanban-card-customer">{order.customerName || "Guest"}</div>
       <div className="v2-kanban-card-meta">
         <span>
-          {order.fulfillmentType === "delivery" ? <Truck className="h-3 w-3" /> : <Package className="h-3 w-3" />}
-          {order.fulfillmentType === "delivery" ? "Delivery" : "Takeout"}
+          <FulfillmentIcon type={order.fulfillmentType} className="h-3 w-3" />
+          {fulfillmentLabel(order.fulfillmentType)}
         </span>
         <span>
           <Clock className="h-3 w-3" /> {order.slotTime}
@@ -569,8 +571,8 @@ function OrdersTable({ rows, onOpen, selectedIds, onSelectionChange }: TableProp
       header: "Channel",
       cell: (o) => (
         <span className="v2-inline">
-          {o.fulfillmentType === "delivery" ? <Truck className="h-3 w-3" /> : <Package className="h-3 w-3" />}
-          {o.fulfillmentType === "delivery" ? "Delivery" : "Takeout"}
+          <FulfillmentIcon type={o.fulfillmentType} className="h-3 w-3" />
+          {fulfillmentLabel(o.fulfillmentType)}
         </span>
       ),
       sortValue: (o) => o.fulfillmentType,
@@ -763,15 +765,22 @@ function OrderDetail({ order, onClose, onStatusChange, onRequestDelete, onReques
             <span className="mono">{order.customerPhone}</span>
           </div>
           <div className="v2-detail-row">
-            {order.fulfillmentType === "delivery" ? <Truck className="h-3.5 w-3.5 v2-muted" /> : <Package className="h-3.5 w-3.5 v2-muted" />}
+            <FulfillmentIcon type={order.fulfillmentType} className="h-3.5 w-3.5 v2-muted" />
             <span className="v2-detail-key">Channel</span>
-            <span>{order.fulfillmentType === "delivery" ? "Delivery" : "Takeout"}</span>
+            <span>{fulfillmentLabel(order.fulfillmentType)}</span>
           </div>
           <div className="v2-detail-row">
             <Clock className="h-3.5 w-3.5 v2-muted" />
-            <span className="v2-detail-key">Slot</span>
+            <span className="v2-detail-key">{order.fulfillmentType === "dine-in" ? "Table" : "Slot"}</span>
             <span>{formatSlotDate(order.slotDate)} · {order.slotTime}</span>
           </div>
+          {order.fulfillmentType === "dine-in" && order.partySize ? (
+            <div className="v2-detail-row">
+              <Users className="h-3.5 w-3.5 v2-muted" />
+              <span className="v2-detail-key">Party size</span>
+              <span>{formatPartySize(order.partySize)}</span>
+            </div>
+          ) : null}
           {order.deliveryAddress && (
             <div className="v2-detail-row">
               <MapPin className="h-3.5 w-3.5 v2-muted" />

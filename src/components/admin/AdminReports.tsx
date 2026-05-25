@@ -48,6 +48,7 @@ interface DailyData {
   avgOrderValue: number;
   takeoutCount: number;
   deliveryCount: number;
+  dineInCount: number;
   categoryBreakdown: Record<string, { revenue: number; cost: number; count: number }>;
   topItems: { name: string; quantity: number; revenue: number }[];
 }
@@ -62,6 +63,7 @@ interface SummaryData {
   avgOrderValue: number;
   takeoutCount: number;
   deliveryCount: number;
+  dineInCount: number;
   dailyStats: DailyData[];
   categoryBreakdown: Record<string, { revenue: number; cost: number; count: number }>;
   topItems: { name: string; quantity: number; revenue: number }[];
@@ -238,7 +240,7 @@ function AdminReportsDesktop() {
   const handleExport = () => {
     if (!summary) return;
     const rows: (string | number)[][] = [
-      ["Date", "Revenue (PLN)", "Cost (PLN)", "Profit (PLN)", "Margin %", "Orders", "Items", "AOV (PLN)", "Takeout", "Delivery"],
+      ["Date", "Revenue (PLN)", "Cost (PLN)", "Profit (PLN)", "Margin %", "Orders", "Items", "AOV (PLN)", "Takeout", "Delivery", "Dine-in"],
       ...summary.dailyStats.map((d) => [
         d.date,
         (d.revenue / 100).toFixed(2),
@@ -250,6 +252,7 @@ function AdminReportsDesktop() {
         (d.avgOrderValue / 100).toFixed(2),
         d.takeoutCount,
         d.deliveryCount,
+        d.dineInCount,
       ]),
     ];
     downloadCsv(`reports-${from}_${to}.csv`, rows);
@@ -287,9 +290,11 @@ function AdminReportsDesktop() {
   const channelMix = useMemo(() => {
     const t = summary?.takeoutCount ?? 0;
     const d = summary?.deliveryCount ?? 0;
+    const di = summary?.dineInCount ?? 0;
     return [
       { name: "Takeout", value: t },
       { name: "Delivery", value: d },
+      { name: "Dine-in", value: di },
     ].filter((r) => r.value > 0);
   }, [summary]);
 

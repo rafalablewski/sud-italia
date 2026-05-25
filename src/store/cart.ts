@@ -86,6 +86,9 @@ interface CartStore {
   selectedSlotTime: string | null;
   selectedSlotDate: string | null;
   deliveryAddress: string;
+  /** Guests for a dine-in reservation. Only meaningful when
+   *  fulfillmentType === "dine-in"; defaults to 2. */
+  partySize: number;
   /** Tip in grosze; defaults to 0 (no tip selected). Survives refresh via the
    *  persisted store, gets cleared on clearCart so it doesn't leak between
    *  orders. */
@@ -99,6 +102,7 @@ interface CartStore {
   setFulfillmentType: (type: FulfillmentType) => void;
   setSelectedSlot: (id: string | null, time: string | null, date: string | null) => void;
   setDeliveryAddress: (address: string) => void;
+  setPartySize: (size: number) => void;
   setTipAmount: (grosze: number) => void;
   addItem: (item: MenuItem, locationSlug: string) => void;
   removeItem: (itemId: string) => void;
@@ -131,6 +135,7 @@ export const useCartStore = create<CartStore>()(
       selectedSlotTime: null,
       selectedSlotDate: null,
       deliveryAddress: "",
+      partySize: 2,
       tipAmount: 0,
       appliedBundleId: null,
       bundlePriceGrosze: 0,
@@ -142,6 +147,9 @@ export const useCartStore = create<CartStore>()(
         set({ selectedSlotId: id, selectedSlotTime: time, selectedSlotDate: date }),
 
       setDeliveryAddress: (address: string) => set({ deliveryAddress: address }),
+
+      setPartySize: (size: number) =>
+        set({ partySize: Math.max(1, Math.min(50, Math.round(size))) }),
 
       setTipAmount: (grosze: number) =>
         set({ tipAmount: Math.max(0, Math.round(grosze)) }),
@@ -250,6 +258,7 @@ export const useCartStore = create<CartStore>()(
           selectedSlotTime: null,
           selectedSlotDate: null,
           deliveryAddress: "",
+          partySize: 2,
           tipAmount: 0,
           appliedBundleId: null,
           bundlePriceGrosze: 0,
