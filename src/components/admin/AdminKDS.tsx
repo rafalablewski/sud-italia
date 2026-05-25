@@ -501,10 +501,6 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
           ))}
         </div>
         <div className="ka-spacer" />
-        <button type="button" className="ka-fsbtn" onClick={refresh} title="Refresh now">
-          <RefreshCw className="h-3.5 w-3.5" />
-          <span>Refresh</span>
-        </button>
         <button
           type="button"
           className="ka-fsbtn"
@@ -514,6 +510,10 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
         >
           {kiosk ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
           <span>{kiosk ? "Exit" : "Fullscreen"}</span>
+        </button>
+        <button type="button" className="ka-fsbtn" onClick={refresh} title="Refresh now">
+          <RefreshCw className="h-3.5 w-3.5" />
+          <span>Refresh</span>
         </button>
         <div className="ka-clock tabular">{clock}</div>
       </header>
