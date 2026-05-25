@@ -15,7 +15,7 @@ reference when reviewing redesigns in real browsers.
 |---|---|
 | `cart.html` | Cart + checkout redesign concepts — V7 (animated), V8 (trattoria), V9 (editorial). Built-in tab switcher; each version is a self-contained iframe. |
 | `kds/` | Kitchen Display System redesign — four finalist directions (Marquee, Dual Expo, Operations, Atlas), browsable from `index.html`. Each carries the capacity-vs-demand "Pace" layer (per-station pace gauges, incoming-load forecast, covers/hr + revenue/hr, a violet pre-breach capacity meter), plus fullscreen and an All / New / In progress / Ready · Expo lines switcher. |
-| `pos/` | Point-of-Sale (cashier order-entry) directions — ten interactive concepts (Counter, Register, Terminal, Tiles, Express, Tabs, Flow, Split, Pad, Loyalty), browsable from `index.html`. All reuse the KDS visual language; each is a working terminal (tap to ring up, combo discounts, charge flow) over the real Kraków menu in złoty. |
+| `pos/` | Point-of-Sale (cashier order-entry) — the chosen direction, **Tabs** (manage multiple concurrent open checks), browsable from `index.html`. Selected from ten explored concepts; reuses the KDS visual language and runs end to end (tap to ring up, combo discounts, charge flow) over the real Kraków menu in złoty. |
 | `mobile/` | Mobile admin redesign — clickable screen mockups (see `docs/mobile/`) |
 | `bundle-ladders/` | 10 alternative layouts for the bundle-ladder admin page |
 | `menu-engineering.html` | Menu-engineering customer-facing redesign |

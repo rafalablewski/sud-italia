@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Sud Italia · POS design directions</title>
+<title>Sud Italia · POS direction</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
@@ -16,7 +16,7 @@
     --fg: #ededf0;
     --fg-muted: #9aa0a8;
     --fg-dim: #6b7178;
-    --accent: #e0a458;
+    --accent: #3DD68C;
     --danger: #ff5d5d;
     --warning: #f5b13d;
     --risk: #8b5cf6;
@@ -24,7 +24,6 @@
     --radius: 14px;
     --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Monaco, "Cascadia Code", monospace;
     --sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    --serif: Georgia, "Times New Roman", serif;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; }
@@ -62,7 +61,7 @@
 
   .grid {
     display: grid; gap: 22px; margin-top: 40px;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(320px, 480px));
   }
   .card {
     display: flex; flex-direction: column; text-decoration: none; color: inherit;
@@ -74,10 +73,8 @@
     border-color: var(--border-strong); transform: translateY(-3px);
     box-shadow: 0 18px 40px -20px rgba(0,0,0,0.8);
   }
-  /* Theme band — a representative swatch of each direction's canvas + type,
-     rendered in pure CSS so it needs no framing (works on Vercel + offline). */
   .band {
-    position: relative; height: 132px; padding: 16px 18px;
+    position: relative; height: 150px; padding: 18px 20px;
     display: flex; flex-direction: column; justify-content: space-between;
     border-bottom: 1px solid var(--border);
   }
@@ -86,23 +83,29 @@
     letter-spacing: 0.06em; opacity: 0.85;
   }
   .band .word {
-    font-size: 26px; font-weight: 650; letter-spacing: -0.01em; line-height: 1;
+    font-size: 30px; font-weight: 650; letter-spacing: -0.01em; line-height: 1;
+  }
+  .band .chosen {
+    position: absolute; top: 16px; right: 18px; font-family: var(--mono);
+    font-size: 10px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase;
+    color: #06140d; background: var(--accent); padding: 3px 9px; border-radius: 999px;
   }
   .band .swatches { display: flex; gap: 6px; }
-  .band .swatches i { width: 22px; height: 6px; border-radius: 3px; display: block; }
-  .open {
-    position: absolute; top: 14px; right: 16px; font-size: 12px; font-weight: 600;
-    opacity: 0; transition: opacity .18s ease;
-  }
-  .card:hover .open { opacity: 0.9; }
+  .band .swatches i { width: 24px; height: 6px; border-radius: 3px; display: block; }
 
-  .body { padding: 16px 18px 18px; flex: 1; display: flex; flex-direction: column; }
-  .body h3 { margin: 0 0 5px; font-size: 16px; font-weight: 620; letter-spacing: -0.01em; }
-  .body .theme { margin: 0 0 9px; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg-dim); font-weight: 600; }
-  .body p { margin: 0; font-size: 13.5px; color: var(--fg-muted); line-height: 1.5; }
+  .body { padding: 18px 20px 20px; flex: 1; display: flex; flex-direction: column; }
+  .body h3 { margin: 0 0 5px; font-size: 17px; font-weight: 620; letter-spacing: -0.01em; }
+  .body .theme { margin: 0 0 10px; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg-dim); font-weight: 600; }
+  .body p { margin: 0 0 16px; font-size: 13.5px; color: var(--fg-muted); line-height: 1.55; }
+  .body .open {
+    margin-top: auto; align-self: flex-start; font-size: 13px; font-weight: 600;
+    color: #06140d; background: var(--accent); padding: 9px 16px; border-radius: 10px;
+    transition: filter .15s ease;
+  }
+  .card:hover .body .open { filter: brightness(1.06); }
 
   footer.note {
-    margin-top: 48px; padding-top: 22px; border-top: 1px solid var(--border);
+    margin-top: 44px; padding-top: 22px; border-top: 1px solid var(--border);
     color: var(--fg-dim); font-size: 12.5px; max-width: 820px;
   }
   footer.note code { font-family: var(--mono); color: var(--fg-muted); }
@@ -113,15 +116,15 @@
   <div class="wrap">
     <header class="masthead">
       <p class="eyebrow">Sud Italia · Point of Sale</p>
-      <h1>POS — ten design directions<br><span class="thin">cashier order-entry, in the <span style="color:var(--fg)">KDS</span> visual language</span></h1>
-      <p class="lede">Ten ways to build the counter-side terminal that takes the order before it hits the kitchen. Every direction reuses the <strong>Kitchen Display System</strong> design language — the same Inter + JetBrains Mono type, the same dark/light canvases, tone palette and chrome — so POS and KDS read as one system. Each tile opens a <strong>live, interactive mockup</strong>: tap a product to ring it up, quantities step, combo discounts subtract from the total, and the charge flow runs to a paid confirmation. Every one has a fullscreen toggle, a live clock, and the same eight-table Kraków menu with real prices.</p>
+      <h1>POS — the chosen direction<br><span class="thin">selected from ten: <span style="color:var(--fg)">Tabs</span></span></h1>
+      <p class="lede"><strong>Tabs</strong> is the POS direction we're taking forward. It reuses the <strong>Kitchen Display System</strong> visual language — the same Inter + JetBrains Mono type, the Atlas dark canvas, the tone palette and the header/footer chrome — so POS and KDS read as one system. The thesis: a busy truck window juggles several orders at once, so the terminal puts a rail of <strong>open checks</strong> front and centre — each its own running total and status — that you switch between, park, and send to the KDS independently. Open the live mockup below; it's interactive end to end.</p>
 
       <div class="meta-row">
         <span class="legend">
-          <span class="dot"><i style="background:var(--accent)"></i> Pizza · pasta · antipasti</span>
-          <span class="dot"><i style="background:var(--ready)"></i> Paid · settled</span>
-          <span class="dot"><i style="background:var(--risk)"></i> Loyalty · member</span>
-          <span class="dot"><i style="background:var(--warning)"></i> Combo discount</span>
+          <span class="dot"><i style="background:var(--accent)"></i> Open</span>
+          <span class="dot"><i style="background:var(--warning)"></i> Parked</span>
+          <span class="dot"><i style="background:var(--risk)"></i> Ready to pay</span>
+          <span class="dot"><i style="background:var(--ready)"></i> Paid</span>
         </span>
         <span>Money: <b>Polish złoty</b></span>
         <span>Menu: <b>27 SKUs</b> · 6 categories · real prices</span>
@@ -131,76 +134,47 @@
     <div class="grid" id="grid"></div>
 
     <footer class="note">
-      Served on every deploy at <code>/mockups/pos/</code> (relaxed CSP per <code>next.config.ts</code>). Self-contained HTML — no network, no build step, only Google Fonts. Companion to the KDS gallery at <a href="../kds/">/mockups/kds/</a>. A winning direction would get ported into <code>src/components/admin</code> for an <code>/admin/pos</code> surface.
+      Served on every deploy at <code>/mockups/pos/</code> (relaxed CSP per <code>next.config.ts</code>). Self-contained HTML — no network, no build step, only Google Fonts. Companion to the KDS gallery at <a href="../kds/">/mockups/kds/</a>. Next step: port Tabs into <code>src/components/admin</code> for an <code>/admin/pos</code> surface.
     </footer>
   </div>
 
   <script>
     const fonts = {
       mono: "'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Monaco, monospace",
-      serif: "Georgia, 'Times New Roman', serif",
       sans: "'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
     };
 
-    const DESIGNS = [
-      { file:"01-counter.html", n:"01", name:"Counter", theme:"Light · classic two-pane touch register", font:"sans",
-        bg:"#ffffff", ink:"#15171A", accent:"#1F6FEB", sw:["#1F6FEB","#0E8A5F","#B5740B","#C9342B"],
-        desc:"The register everyone already knows. A category-tabbed product grid on the left, a live order ticket on the right — qty steppers, a Lunch-Combo discount that fires when a pizza meets a drink, and a big Charge button into a Cash/Card tender. The safe default." },
-      { file:"02-register.html", n:"02", name:"Register", theme:"Slate · register with a cash keypad", font:"sans",
-        bg:"#161d28", ink:"#eef3f9", accent:"#5b9dff", sw:["#5b9dff","#3fd08a","#f2b53b","#ff5d5d"],
-        desc:"A commercial cash register. An icon category rail, a product grid, and an order column whose lower half is a real numeric tender keypad — type the cash given, watch change due in big mono. Card runs a Stripe-style approve flow." },
-      { file:"03-terminal.html", n:"03", name:"Terminal", theme:"Dark · keyboard-first command terminal", font:"mono", isMono:true,
-        bg:"#0E1117", ink:"#E8EBF0", accent:"#4C8DFF", sw:["#4C8DFF","#37D295","#E8A33D","#F0524B"],
-        desc:"A Bloomberg-terminal for the till. Type to filter the menu, Enter to add, number keys to quick-add, +/− on quantity, F2 to charge — hands never leave the keyboard. Dense monospace lines, gridlines, an order-stats strip. For the fast operator." },
-      { file:"04-tiles.html", n:"04", name:"Tiles", theme:"Dark · kiosk-grade big tiles", font:"sans",
-        bg:"#141518", ink:"#ededf0", accent:"#e0a458", sw:["#e0a458","#4ecb8d","#8b5cf6","#ff5d5d"],
-        desc:"Oversized, colourful product tiles with a glyph and a big price — kiosk-grade tap targets that pop on add. Category pills with counts, chunky quantity steppers, signature/limited badges. Warm gold accent. Touch-first and forgiving." },
-      { file:"05-express.html", n:"05", name:"Express", theme:"Light · quick-service favourites & combos", font:"sans",
-        bg:"#ffffff", ink:"#15171A", accent:"#0E8A5F", sw:["#0E8A5F","#1F6FEB","#B5740B","#C9342B"],
-        desc:"Fewest taps to ring a common order. A one-tap row of the highest-velocity SKUs and the three combos up top, the full menu below, and a speed timer counting the seconds since the order opened. Built for the lunch rush." },
-      { file:"06-tabs.html", n:"06", name:"Tabs", theme:"Dark · multiple open checks", font:"sans",
-        bg:"#11151B", ink:"#E9EDF2", accent:"#3DD68C", sw:["#3DD68C","#3B82F6","#F5A623","#E5484D"],
-        desc:"The busy-window multitasker. A rail of open checks — each its own running total and status — that you switch between, park, and send to the KDS independently. When several orders are in flight at once, nothing gets lost." },
-      { file:"07-flow.html", n:"07", name:"Flow", theme:"Slate · guided checkout wizard", font:"sans",
-        bg:"#161d28", ink:"#eef3f9", accent:"#5b9dff", sw:["#5b9dff","#3fd08a","#f2b53b","#8B5CF6"],
-        desc:"A step rail — Items → Customer → Pay → Done — that never lets a new hire miss a step. Build the order, look up the phone (or skip), choose tender and tip, land on a success screen with points earned. Training wheels that don't slow a pro." },
-      { file:"08-split.html", n:"08", name:"Split", theme:"Dark · bill-splitting & multi-tender", font:"mono", isMono:true,
-        bg:"#11151C", ink:"#E8EBF0", accent:"#4C8DFF", sw:["#4C8DFF","#37D295","#E8A33D","#F0524B"],
-        desc:"Divide a check across guests and settle it with several payments. Assign items to seats or split evenly, add a tip, then knock down the remaining balance tender by tender until it reads 0,00 zł — settled. For the shared table." },
-      { file:"09-pad.html", n:"09", name:"Pad", theme:"Slate · portrait handheld / line-buster", font:"sans",
-        bg:"#0e1218", ink:"#eef3f9", accent:"#5b9dff", sw:["#5b9dff","#3fd08a","#f2b53b","#ff5d5d"],
-        desc:"A phone-sized handheld for working the queue or the tableside. A single thumb-reachable column inside a device frame: scroll the menu, add with one tap, and a sticky bottom bar slides up the tender sheet. Take the order to the customer." },
-      { file:"10-loyalty.html", n:"10", name:"Loyalty", theme:"Light · customer-identity-first", font:"sans",
-        bg:"#ffffff", ink:"#15171A", accent:"#7C3AED", sw:["#7C3AED","#1F6FEB","#0E8A5F","#B5740B"],
-        desc:"Loyalty at the point of sale, zero-friction. Lead with a phone number — a known member's card and redeemable rewards apply against the total, an unknown number auto-enrols on the spot. The order shows points earned before you charge." },
-    ];
+    const DESIGN = {
+      file:"06-tabs.html", n:"06", name:"Tabs", theme:"Dark · multiple open checks", font:"sans",
+      bg:"#11151B", ink:"#E9EDF2", accent:"#3DD68C", sw:["#3DD68C","#3B82F6","#F5A623","#E5484D"],
+      desc:"The busy-window multitasker. A rail of open checks — each with its own running total and status — that you switch between, park, and send to the KDS independently. When several orders are in flight at once, nothing gets lost.",
+    };
 
-    // Resolve links from the served root so they work whether the gallery URL
-    // has a trailing slash or not (Vercel serves it at /mockups/pos with none).
-    // Falls back to plain relative paths when opened straight off disk (file://).
+    // Resolve the link from the served root so it works whether the URL has a
+    // trailing slash or not; falls back to a relative path off disk (file://).
     const BASE = location.protocol === "file:" ? "" : "/mockups/pos/";
 
     function render() {
+      const d = DESIGN;
       const grid = document.getElementById("grid");
-      for (const d of DESIGNS) {
-        const a = document.createElement("a");
-        a.className = "card";
-        a.href = BASE + d.file;
-        const swatches = d.sw.map(c => `<i style="background:${c}"></i>`).join("");
-        a.innerHTML = `
-          <div class="band" style="background:${d.bg};color:${d.ink};font-family:${fonts[d.font]}">
-            <span class="num">${d.n}</span>
-            <span class="open" style="color:${d.accent}">Open ↗</span>
-            <span class="word" style="color:${d.accent}${d.isMono ? ";font-family:" + fonts.mono : ""}">${d.name}</span>
-            <span class="swatches">${swatches}</span>
-          </div>
-          <div class="body">
-            <h3>${d.name}</h3>
-            <p class="theme">${d.theme}</p>
-            <p>${d.desc}</p>
-          </div>`;
-        grid.appendChild(a);
-      }
+      const a = document.createElement("a");
+      a.className = "card";
+      a.href = BASE + d.file;
+      const swatches = d.sw.map(c => `<i style="background:${c}"></i>`).join("");
+      a.innerHTML = `
+        <div class="band" style="background:${d.bg};color:${d.ink};font-family:${fonts[d.font]}">
+          <span class="num">${d.n}</span>
+          <span class="chosen">Chosen</span>
+          <span class="word" style="color:${d.accent}">${d.name}</span>
+          <span class="swatches">${swatches}</span>
+        </div>
+        <div class="body">
+          <h3>${d.name}</h3>
+          <p class="theme">${d.theme}</p>
+          <p>${d.desc}</p>
+          <span class="open">Open the POS →</span>
+        </div>`;
+      grid.appendChild(a);
     }
     render();
   </script>
