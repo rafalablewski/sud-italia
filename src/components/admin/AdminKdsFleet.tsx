@@ -17,6 +17,7 @@ import { ticketTone, computeHealth, type PaceTier, type TicketTone } from "@/lib
 import { KdsTicketCard, Ring } from "./kds/KdsTicketCard";
 import { KdsStatGrid, type KdsStat } from "./kds/KdsStatGrid";
 import type { KdsTicket } from "@/lib/kds-ticket";
+import { useKdsSimulator } from "@/lib/useKdsSimulator";
 
 /* ============================ Wire types ============================ */
 
@@ -118,6 +119,9 @@ function Sparkline({ points, color }: { points: number[]; color: string }) {
 
 export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => void }) {
   const toast = useToast();
+  // The sandbox simulator is a global setting, so the fleet wall flags it the
+  // same way the floor board does (the fleet feed opts into simulated tickets).
+  const { enabled: simEnabled } = useKdsSimulator(null);
   const [data, setData] = useState<FleetPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -282,6 +286,7 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => voi
         <div className="ka-brand">
           <span className="ka-wordmark">SUD ITALIA</span>
           <span className="ka-kd-label">Fleet command</span>
+          {simEnabled && <span className="ka-sandbox">Sandbox</span>}
         </div>
         <div className="ka-filters" role="group" aria-label="Station filter">
           {STATIONS.map((s) => (

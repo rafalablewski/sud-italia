@@ -8087,6 +8087,8 @@ select.pub-input {
 .kds-atlas .ka-fsbtn:disabled { opacity: 0.5; cursor: default; }
 .kds-atlas .ka-recall { flex: 0 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 20px; border-bottom: 1px solid var(--ka-hair); background: var(--ka-panel); }
 .kds-atlas .ka-recall-lab { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ka-faint); font-weight: 700; }
+.kds-atlas .ka-subbar { flex: 0 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 20px; border-bottom: 1px solid var(--ka-hair); background: var(--ka-panel); }
+.kds-atlas .ka-subbar-sep { align-self: stretch; width: 1px; margin: 2px 4px; background: var(--ka-hair); }
 
 /* ---- states ---- */
 .kds-atlas .ka-loading { padding: 48px 24px; text-align: center; color: var(--ka-dim); font-size: 13px; }
@@ -8109,7 +8111,7 @@ select.pub-input {
   .kds-atlas .ka-head { gap: 8px; padding: 8px 12px; }
   .kds-atlas .ka-filters, .kds-atlas .ka-lines { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
   .kds-atlas .ka-filters::-webkit-scrollbar, .kds-atlas .ka-lines::-webkit-scrollbar { display: none; }
-  .kds-atlas .ka-fleetbar, .kds-atlas .ka-thead, .kds-atlas .ka-tbody, .kds-atlas .ka-pace-gauges { padding-left: 14px; padding-right: 14px; }
+  .kds-atlas .ka-fleetbar, .kds-atlas .ka-thead, .kds-atlas .ka-tbody, .kds-atlas .ka-pace-gauges, .kds-atlas .ka-subbar { padding-left: 14px; padding-right: 14px; }
   .kds-atlas .ka-fb-grid { grid-template-columns: repeat(2, 1fr); }
   .kds-atlas .ka-pace-gauges { grid-template-columns: repeat(2, 1fr); }
   .kds-atlas .ka-th-spark { display: none; }

@@ -501,6 +501,26 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
           ))}
         </div>
         <div className="ka-spacer" />
+        <button type="button" className="ka-fsbtn" onClick={refresh} title="Refresh now">
+          <RefreshCw className="h-3.5 w-3.5" />
+          <span>Refresh</span>
+        </button>
+        <button
+          type="button"
+          className="ka-fsbtn"
+          aria-pressed={kiosk}
+          onClick={kiosk ? exitKiosk : enterKiosk}
+          title={kiosk ? "Exit fullscreen kitchen display (Esc)" : "Open fullscreen kitchen display"}
+        >
+          {kiosk ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+          <span>{kiosk ? "Exit" : "Fullscreen"}</span>
+        </button>
+        <div className="ka-clock tabular">{clock}</div>
+      </header>
+
+      {/* Board controls — sound / pause (and sandbox sim) live on a thin strip
+          under the header so the header keeps just refresh, fullscreen + clock. */}
+      <div className="ka-subbar" role="group" aria-label="Board controls">
         <button
           type="button"
           className="ka-fsbtn"
@@ -515,12 +535,9 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
           {paused ? <PlayCircle className="h-3.5 w-3.5" /> : <PauseCircle className="h-3.5 w-3.5" />}
           <span>{paused ? "Resume" : "Pause"}</span>
         </button>
-        <button type="button" className="ka-fsbtn" onClick={refresh} title="Refresh now">
-          <RefreshCw className="h-3.5 w-3.5" />
-          <span>Refresh</span>
-        </button>
         {simEnabled && (
           <>
+            <span className="ka-subbar-sep" />
             <button type="button" className="ka-fsbtn" disabled={simBusy} onClick={() => void addOrders(1).then(() => refresh())}>
               Add 1
             </button>
@@ -532,18 +549,7 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
             </button>
           </>
         )}
-        <button
-          type="button"
-          className="ka-fsbtn"
-          aria-pressed={kiosk}
-          onClick={kiosk ? exitKiosk : enterKiosk}
-          title={kiosk ? "Exit fullscreen kitchen display (Esc)" : "Open fullscreen kitchen display"}
-        >
-          {kiosk ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
-          <span>{kiosk ? "Exit" : "Fullscreen"}</span>
-        </button>
-        <div className="ka-clock tabular">{clock}</div>
-      </header>
+      </div>
 
       {!kiosk && opsHeader && <KdsManagerOpsHeader orders={orders} location={location} />}
 
