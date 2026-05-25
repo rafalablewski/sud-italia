@@ -110,7 +110,7 @@ export function AdminScheduledBundles() {
       />
 
       {err && (
-        <div className="glass-card p-4 text-sm text-red-300 flex items-center gap-2 mt-3">
+        <div className="glass-card p-4 text-sm text-[var(--danger)] flex items-center gap-2 mt-3">
           <AlertCircle className="h-4 w-4" />
           {err}
           <button onClick={() => setErr(null)} className="ml-auto text-xs underline">Dismiss</button>
@@ -124,7 +124,7 @@ export function AdminScheduledBundles() {
         </div>
       ) : sorted.length === 0 ? (
         <div className="glass-card p-8 text-center mt-3">
-          <Calendar className="h-8 w-8 text-italia-gold/50 mx-auto mb-2" />
+          <Calendar className="h-8 w-8 text-[var(--warning)] mx-auto mb-2" />
           <p className="text-sm admin-text">No {statusFilter === "all" ? "" : statusFilter + " "}intents.</p>
           <p className="text-xs admin-text-secondary mt-1">
             Customers opt in via the cart drawer when a bundle is applied.
@@ -146,10 +146,10 @@ export function AdminScheduledBundles() {
               </thead>
               <tbody>
                 {sorted.map((s) => (
-                  <tr key={s.id} className="border-t border-white/5">
+                  <tr key={s.id} className="border-t border-[var(--border)]">
                     <td className="py-2 pr-3 admin-text">
                       <span className="capitalize">{s.weekday}</span>
-                      <span className="text-italia-gold-dark ml-1">· {s.readyAt}</span>
+                      <span className="text-[var(--warning)] ml-1">· {s.readyAt}</span>
                     </td>
                     <td className="py-2 pr-3 admin-text font-mono text-xs">{s.customerPhone}</td>
                     <td className="py-2 pr-3 admin-text">{s.bundleName}</td>
@@ -214,12 +214,12 @@ export function AdminScheduledBundles() {
 function StatusPill({ status }: { status: Status }) {
   const cls =
     status === "active"
-      ? "bg-italia-green/20 text-italia-green border-italia-green/30"
+      ? "bg-[var(--success-soft)] text-[var(--success)] border-[color-mix(in_oklab,var(--success)_30%,transparent)]"
       : status === "pending"
-        ? "bg-italia-gold/20 text-italia-gold-dark border-italia-gold/30"
+        ? "bg-[var(--warning-soft)] text-[var(--warning)] border-[color-mix(in_oklab,var(--warning)_30%,transparent)]"
         : status === "paused"
-          ? "bg-slate-500/20 text-slate-300 border-slate-500/30"
-          : "bg-red-500/20 text-red-300 border-red-500/30";
+          ? "bg-[var(--surface-3)] text-[var(--fg-muted)] border-[var(--border-strong)]"
+          : "bg-[var(--danger-soft)] text-[var(--danger)] border-[color-mix(in_oklab,var(--danger)_30%,transparent)]";
   return (
     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${cls}`}>
       {status}
@@ -242,10 +242,10 @@ function ActionBtn({
 }) {
   const cls =
     tone === "primary"
-      ? "bg-italia-green/15 text-italia-green hover:bg-italia-green/25"
+      ? "bg-[var(--success-soft)] text-[var(--success)] hover:bg-[color-mix(in_oklab,var(--success)_22%,transparent)]"
       : tone === "amber"
-        ? "bg-italia-gold/15 text-italia-gold-dark hover:bg-italia-gold/25"
-        : "bg-red-500/10 text-red-300 hover:bg-red-500/20";
+        ? "bg-[var(--warning-soft)] text-[var(--warning)] hover:bg-[color-mix(in_oklab,var(--warning)_22%,transparent)]"
+        : "bg-[var(--danger-soft)] text-[var(--danger)] hover:bg-[color-mix(in_oklab,var(--danger)_22%,transparent)]";
   return (
     <button
       type="button"

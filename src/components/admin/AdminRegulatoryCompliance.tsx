@@ -210,8 +210,8 @@ export function AdminRegulatoryCompliance() {
                     onClick={() => setActiveSlug(loc.slug)}
                     className={`px-3 py-1.5 rounded-full text-sm font-medium transition ${
                       isActive
-                        ? "bg-italia-red text-white"
-                        : "bg-white/5 admin-text hover:bg-white/10"
+                        ? "bg-[var(--brand)] text-[var(--brand-fg)]"
+                        : "bg-[var(--surface-2)] admin-text hover:bg-[var(--surface-3)]"
                     }`}
                   >
                     {loc.city} · {ZONE_SHORT[z]}

@@ -190,8 +190,8 @@ export function OpsAgentChat({ gatewayConfigured }: OpsAgentChatProps) {
                   setActiveId(c.id);
                   setTurns([]);
                 }}
-                className={`w-full text-left flex items-center justify-between rounded-md px-2 py-1.5 hover:bg-white/5 ${
-                  activeId === c.id ? "bg-white/10" : ""
+                className={`w-full text-left flex items-center justify-between rounded-md px-2 py-1.5 hover:bg-[var(--surface-2)] ${
+                  activeId === c.id ? "bg-[var(--surface-3)]" : ""
                 }`}
               >
                 <span className="text-sm admin-text">{c.title}</span>
@@ -275,7 +275,7 @@ function TurnView({
           return (
             <div
               key={i}
-              className="rounded-2xl bg-white/5 text-sm px-3 py-2 max-w-[85%] whitespace-pre-wrap admin-text"
+              className="rounded-2xl bg-[var(--surface-2)] text-sm px-3 py-2 max-w-[85%] whitespace-pre-wrap admin-text"
             >
               {event.text}
             </div>
@@ -326,7 +326,7 @@ function TurnView({
                 <summary className="cursor-pointer admin-text-secondary text-[10px]">
                   <ChevronRight className="inline h-3 w-3" /> details
                 </summary>
-                <pre className="mt-1 max-h-32 overflow-auto bg-black/30 rounded p-2 text-[10px] admin-text">
+                <pre className="mt-1 max-h-32 overflow-auto bg-[var(--surface-2)] rounded p-2 text-[10px] admin-text">
                   {JSON.stringify({ input: t.input, output: t.result }, null, 2)}
                 </pre>
               </details>

@@ -40,9 +40,9 @@ export function ModifierInventory() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-lg border border-italia-gold/30 bg-italia-gold/5 p-4">
+      <div className="rounded-lg border border-[color-mix(in_oklab,var(--warning)_30%,transparent)] bg-[var(--warning-soft)] p-4">
         <div className="flex items-start gap-3">
-          <Sparkles className="h-5 w-5 text-italia-gold mt-0.5 flex-shrink-0" />
+          <Sparkles className="h-5 w-5 text-[var(--warning)] mt-0.5 flex-shrink-0" />
           <div>
             <p className="admin-text font-semibold text-sm">
               Item modifiers — live
@@ -52,14 +52,14 @@ export function ModifierInventory() {
               in the item detail drawer. Selections add a priceDelta to the
               line and a costDelta to the food-cost basis used by the bundle
               margin alert. Modifiers flagged with{" "}
-              <span className="inline-block px-1.5 py-0.5 rounded bg-italia-red/15 text-italia-red font-medium text-[10px]">
+              <span className="inline-block px-1.5 py-0.5 rounded bg-[var(--brand-soft)] text-[var(--brand)] font-medium text-[10px]">
                 KDS
               </span>{" "}
               surface as highlighted callouts on the kitchen ticket.
             </p>
             <p className="admin-text-secondary text-xs mt-2">
               Editing modifiers happens on{" "}
-              <code className="text-italia-gold">/admin/menu</code> — the
+              <code className="text-[var(--warning)]">/admin/menu</code> — the
               per-item dialog carries the modifier-group editor. This view
               is the operator&apos;s read-only inventory.
             </p>
@@ -69,7 +69,7 @@ export function ModifierInventory() {
 
       {totalItems === 0 && (
         <div className="glass-card p-6 text-center">
-          <AlertTriangle className="h-6 w-6 text-amber-400 mx-auto mb-2" />
+          <AlertTriangle className="h-6 w-6 text-[var(--warning)] mx-auto mb-2" />
           <p className="admin-text text-sm">
             No items have modifier groups configured.
           </p>
@@ -108,7 +108,7 @@ export function ModifierInventory() {
 
 function ItemModifierCard({ item }: { item: MenuItem }) {
   return (
-    <div className="rounded-lg border border-white/10 bg-white/5 p-4 space-y-3">
+    <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-4 space-y-3">
       <div className="flex items-baseline justify-between gap-2">
         <p className="admin-text font-semibold text-sm leading-tight">
           {item.name}
@@ -133,7 +133,7 @@ function ModifierGroupView({ group }: { group: ModifierGroup }) {
   const isMulti = max > 1;
 
   return (
-    <div className="rounded-md border border-white/5 bg-black/20 p-3">
+    <div className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-3">
       <div className="flex items-baseline justify-between gap-2 mb-2">
         <p className="admin-text text-xs font-semibold">{group.label}</p>
         <span className="admin-text-secondary text-[10px] uppercase tracking-wide">
@@ -149,7 +149,7 @@ function ModifierGroupView({ group }: { group: ModifierGroup }) {
             <span className="admin-text">
               {opt.label}
               {opt.flagOnKds && (
-                <span className="ml-2 inline-block px-1.5 py-0.5 rounded bg-italia-red/15 text-italia-red font-medium text-[10px]">
+                <span className="ml-2 inline-block px-1.5 py-0.5 rounded bg-[var(--brand-soft)] text-[var(--brand)] font-medium text-[10px]">
                   KDS
                 </span>
               )}

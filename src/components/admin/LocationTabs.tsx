@@ -24,8 +24,8 @@ export function LocationTabs({ value, onChange, includeAll = false }: LocationTa
           onClick={() => onChange(l.slug)}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
             value === l.slug
-              ? "bg-white/10 text-white border border-white/15"
-              : "text-slate-400 border border-transparent hover:text-slate-200 hover:bg-white/5"
+              ? "bg-[var(--surface-3)] text-[var(--fg)] border border-[var(--border-strong)]"
+              : "text-[var(--fg-subtle)] border border-transparent hover:text-[var(--fg)] hover:bg-[var(--surface-hover)]"
           }`}
         >
           <MapPin className="h-3.5 w-3.5" />

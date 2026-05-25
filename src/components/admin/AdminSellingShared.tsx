@@ -10,13 +10,20 @@ import {
   ChevronDown,
   ChevronRight,
   RotateCcw,
-  Lock,
 } from "lucide-react";
 import { krakowMenu } from "@/data/menus/krakow";
 import { warszawaMenu } from "@/data/menus/warszawa";
 import { DEFAULT_COMBO_DEALS, DEFAULT_TIME_WINDOWS } from "@/lib/upsell";
 import { DEFAULT_BUNDLES } from "@/lib/bundles";
-import { useToast } from "./v2/ui/Toast";
+import {
+  Button,
+  Chip,
+  IconButton,
+  Select,
+  Switch,
+  Tag,
+  useToast,
+} from "./v2/ui";
 import type { MenuItem, MenuCategory } from "@/data/types";
 
 // ─── Types ───────────────────────────────────────────────────────────────
@@ -404,44 +411,33 @@ export function ItemMultiSelect({
 
   return (
     <div>
-      <label className="text-xs font-semibold admin-text uppercase tracking-wide mb-2 block">{label}</label>
+      <label className="v2-field-label mb-2 block">{label}</label>
       <div className="flex flex-wrap gap-2 mb-2">
         {(intrinsicIds ?? []).map((id) => {
           const item = itemsById.get(id);
           return (
-            <span
-              key={`intrinsic-${id}`}
-              title={intrinsicHint}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-italia-gold/10 text-sm admin-text border border-italia-gold/30"
-            >
-              <span className="text-xs text-italia-gold-dark">{item?.category}</span>
+            <Tag key={`intrinsic-${id}`} locked title={intrinsicHint} meta={item?.category}>
               {item?.name || id}
-              <Lock className="h-3 w-3 text-italia-gold-dark/70" />
-            </span>
+            </Tag>
           );
         })}
         {userSelected.map((id) => {
           const item = itemsById.get(id);
           return (
-            <span key={id} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/8 text-sm admin-text border border-white/10">
-              <span className="text-xs text-slate-400">{item?.category}</span>
+            <Tag
+              key={id}
+              meta={item?.category}
+              onRemove={() => onChange(selected.filter((s) => s !== id))}
+              removeLabel={`Remove ${item?.name || id}`}
+            >
               {item?.name || id}
-              <button
-                onClick={() => onChange(selected.filter((s) => s !== id))}
-                className="ml-1 text-red-400 hover:text-red-300"
-              >
-                <Trash2 className="h-3 w-3" />
-              </button>
-            </span>
+            </Tag>
           );
         })}
         {!adding && (
-          <button
-            onClick={() => setAdding(true)}
-            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-dashed border-white/20 text-sm text-slate-400 hover:text-white hover:border-white/40 transition-colors"
-          >
+          <Chip className="v2-chip-add" onClick={() => setAdding(true)}>
             <Plus className="h-3 w-3" /> Add
-          </button>
+          </Chip>
         )}
       </div>
       {adding && (
@@ -455,15 +451,15 @@ export function ItemMultiSelect({
                   onChange([...selected, m.id]);
                   setAdding(false);
                 }}
-                className="block w-full text-left px-3 py-2 text-sm admin-text hover:bg-white/8 rounded-lg transition-colors"
+                className="block w-full text-left px-3 py-2 text-sm rounded-md transition-colors hover:bg-[var(--surface-hover)]"
               >
-                <span className="text-xs text-slate-400 mr-2">[{m.category}]</span>
+                <span className="text-xs text-[var(--fg-subtle)] mr-2">[{m.category}]</span>
                 {m.name} — {(m.price / 100).toFixed(0)} PLN
               </button>
             ))}
           <button
             onClick={() => setAdding(false)}
-            className="block w-full text-left px-3 py-2 text-xs text-slate-500 hover:text-slate-300"
+            className="block w-full text-left px-3 py-2 text-xs text-[var(--fg-subtle)] hover:text-[var(--fg-muted)]"
           >
             Cancel
           </button>
@@ -487,24 +483,23 @@ export function ItemSingleSelect({
   icon: typeof Coffee;
 }) {
   return (
-    <div>
-      <label className="text-xs font-semibold admin-text uppercase tracking-wide mb-1.5 flex items-center gap-1.5 block">
-        <Icon className="h-3.5 w-3.5 text-slate-400" />
-        {label}
-      </label>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="glass-input w-full text-sm"
-      >
-        <option value="">None</option>
-        {items.map((m) => (
-          <option key={m.id} value={m.id}>
-            [{m.category}] {m.name}
-          </option>
-        ))}
-      </select>
-    </div>
+    <Select
+      label={
+        <span className="inline-flex items-center gap-1.5">
+          <Icon className="h-3.5 w-3.5 text-[var(--fg-subtle)]" />
+          {label}
+        </span>
+      }
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    >
+      <option value="">None</option>
+      {items.map((m) => (
+        <option key={m.id} value={m.id}>
+          [{m.category}] {m.name}
+        </option>
+      ))}
+    </Select>
   );
 }
 
@@ -547,25 +542,21 @@ export function ComboEditor({
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <label className="text-xs font-semibold admin-text uppercase tracking-wide">Combo Deals</label>
-        <button
-          onClick={addCombo}
-          className="glass-btn"
-        >
-          <Plus className="h-3 w-3" /> Add Combo
-        </button>
+        <label className="v2-field-label">Combo Deals</label>
+        <Button variant="primary" size="sm" onClick={addCombo} leadingIcon={<Plus className="h-3 w-3" />}>
+          Add Combo
+        </Button>
       </div>
       <div className="space-y-3">
         {combos.map((combo, i) => (
           <div key={combo.id} className={`glass-card p-4 space-y-3 ${!combo.active ? "opacity-50" : ""}`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <button
-                  onClick={() => updateCombo(i, { active: !combo.active })}
-                  className={`w-10 h-5 rounded-full transition-colors relative ${combo.active ? "bg-emerald-500" : "bg-white/15"}`}
-                >
-                  <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${combo.active ? "left-[22px]" : "left-0.5"}`} />
-                </button>
+                <Switch
+                  checked={combo.active}
+                  onChange={(v) => updateCombo(i, { active: v })}
+                  label={combo.active ? "Disable combo" : "Enable combo"}
+                />
                 <input
                   type="text"
                   value={combo.name}
@@ -573,12 +564,14 @@ export function ComboEditor({
                   className="glass-input text-sm font-semibold w-40"
                 />
               </div>
-              <button
+              <IconButton
+                tone="danger"
+                size="sm"
+                label="Remove combo"
                 onClick={() => removeCombo(i)}
-                className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
               >
                 <Trash2 className="h-4 w-4" />
-              </button>
+              </IconButton>
             </div>
 
             <input
@@ -591,7 +584,7 @@ export function ComboEditor({
 
             <div className="flex flex-wrap items-center gap-3">
               <div>
-                <label className="text-[10px] text-slate-400 block mb-1">Discount %</label>
+                <label className="text-[10px] text-[var(--fg-subtle)] block mb-1">Discount %</label>
                 <input
                   type="number"
                   min={1}
@@ -602,7 +595,7 @@ export function ComboEditor({
                 />
               </div>
               <div>
-                <label className="text-[10px] text-slate-400 block mb-1">Min items</label>
+                <label className="text-[10px] text-[var(--fg-subtle)] block mb-1">Min items</label>
                 <input
                   type="number"
                   min={1}
@@ -613,7 +606,7 @@ export function ComboEditor({
                 />
               </div>
               <div>
-                <label className="text-[10px] text-slate-400 block mb-1">Channel</label>
+                <label className="text-[10px] text-[var(--fg-subtle)] block mb-1">Channel</label>
                 <select
                   value={combo.channel ?? ""}
                   onChange={(e) =>
@@ -634,28 +627,24 @@ export function ComboEditor({
             </div>
 
             <div>
-              <label className="text-[10px] text-slate-400 block mb-1.5">Required categories</label>
+              <label className="text-[10px] text-[var(--fg-subtle)] block mb-1.5">Required categories</label>
               <div className="flex flex-wrap gap-1.5">
                 {CATEGORIES.map((cat) => {
                   const selected = combo.categories.includes(cat);
                   return (
-                    <button
+                    <Chip
                       key={cat}
+                      selected={selected}
                       onClick={() => {
                         const cats = selected
                           ? combo.categories.filter((c) => c !== cat)
                           : [...combo.categories, cat];
                         updateCombo(i, { categories: cats, minItems: Math.min(combo.minItems, cats.length) });
                       }}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
-                        selected
-                          ? "bg-italia-red/20 text-italia-red border border-italia-red/30"
-                          : "bg-white/5 text-slate-400 border border-white/10 hover:border-white/25"
-                      }`}
                     >
-                      {selected && <Check className="h-3 w-3 inline mr-1" />}
+                      {selected && <Check className="h-3 w-3" />}
                       {cat}
-                    </button>
+                    </Chip>
                   );
                 })}
               </div>
@@ -669,7 +658,7 @@ export function ComboEditor({
           </div>
         ))}
         {combos.length === 0 && (
-          <p className="text-sm text-slate-500 text-center py-4">No combo deals configured for this location.</p>
+          <p className="text-sm text-[var(--fg-subtle)] text-center py-4">No combo deals configured for this location.</p>
         )}
       </div>
     </div>
@@ -726,11 +715,11 @@ function RequiredItemsEditor({
 
   return (
     <div>
-      <label className="text-[10px] text-slate-400 block mb-1.5">
+      <label className="text-[10px] text-[var(--fg-subtle)] block mb-1.5">
         Specific items required (optional — overrides &ldquo;any of category&rdquo;)
       </label>
       {list.length === 0 ? (
-        <p className="text-[11px] text-slate-500 mb-2">
+        <p className="text-[11px] text-[var(--fg-subtle)] mb-2">
           Generic combo: any item in the selected categories qualifies. Add a specific item below to lock the deal
           to particular menu items (e.g. Italian Classic = Margherita + Limonata + Tiramisù).
         </p>
@@ -775,27 +764,22 @@ function RequiredItemsEditor({
                   placeholder="Display label"
                   onChange={(e) => update(i, { label: e.target.value })}
                 />
-                <button
-                  type="button"
+                <IconButton
+                  size="sm"
+                  tone="danger"
                   onClick={() => remove(i)}
-                  className="text-red-400 hover:text-red-300 p-1"
-                  aria-label="Remove required item"
+                  label="Remove required item"
                 >
                   <Trash2 className="h-3 w-3" />
-                </button>
+                </IconButton>
               </div>
             );
           })}
         </div>
       )}
-      <button
-        type="button"
-        onClick={add}
-        disabled={menu.length === 0}
-        className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-dashed border-white/20 text-[11px] admin-text-secondary hover:bg-white/5 w-fit disabled:opacity-50 disabled:cursor-not-allowed"
-      >
+      <Chip className="v2-chip-add" onClick={add} disabled={menu.length === 0}>
         <Plus className="h-3 w-3" /> Add specific item
-      </button>
+      </Chip>
     </div>
   );
 }
@@ -866,11 +850,11 @@ export function TimeWindowsEditor({
     <div>
       <div className="flex items-start justify-between gap-3 mb-3">
         <div>
-          <label className="text-xs font-semibold admin-text uppercase tracking-wide flex items-center gap-1.5">
-            <Clock className="h-3.5 w-3.5 text-italia-gold" />
+          <label className="v2-field-label flex items-center gap-1.5">
+            <Clock className="h-3.5 w-3.5 text-[var(--warning)]" />
             Time-of-day Banners
           </label>
-          <p className="text-[11px] text-slate-400 mt-1">
+          <p className="text-[11px] text-[var(--fg-subtle)] mt-1">
             One banner at a time, picked by local hour. {usingDefaults
               ? "Showing the five hardcoded defaults — edit any row to override."
               : "Override active for this location. Reset to revert."}{" "}
@@ -879,13 +863,19 @@ export function TimeWindowsEditor({
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {!usingDefaults && (
-            <button onClick={resetToDefaults} className="glass-btn" title="Discard overrides and use the five defaults">
-              <RotateCcw className="h-3 w-3" /> Reset to defaults
-            </button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={resetToDefaults}
+              title="Discard overrides and use the five defaults"
+              leadingIcon={<RotateCcw className="h-3 w-3" />}
+            >
+              Reset to defaults
+            </Button>
           )}
-          <button onClick={addWindow} className="glass-btn">
-            <Plus className="h-3 w-3" /> Add window
-          </button>
+          <Button variant="primary" size="sm" onClick={addWindow} leadingIcon={<Plus className="h-3 w-3" />}>
+            Add window
+          </Button>
         </div>
       </div>
 
@@ -899,21 +889,21 @@ export function TimeWindowsEditor({
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <button
+                  <IconButton
+                    size="sm"
                     onClick={() => toggleExpanded(w.id)}
-                    className="p-1 text-slate-400 hover:text-white transition-colors flex-shrink-0"
-                    aria-label={isOpen ? "Collapse window" : "Expand window"}
+                    label={isOpen ? "Collapse window" : "Expand window"}
                     aria-expanded={isOpen}
+                    className="flex-shrink-0"
                   >
                     {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                  </button>
-                  <button
-                    onClick={() => updateWindow(i, { active: !w.active })}
-                    className={`w-10 h-5 rounded-full transition-colors relative flex-shrink-0 ${w.active ? "bg-emerald-500" : "bg-white/15"}`}
-                    aria-label={w.active ? "Disable window" : "Enable window"}
-                  >
-                    <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${w.active ? "left-[22px]" : "left-0.5"}`} />
-                  </button>
+                  </IconButton>
+                  <Switch
+                    checked={w.active}
+                    onChange={(v) => updateWindow(i, { active: v })}
+                    label={w.active ? "Disable window" : "Enable window"}
+                    className="flex-shrink-0"
+                  />
 
                   {isOpen ? (
                     <>
@@ -926,7 +916,7 @@ export function TimeWindowsEditor({
                           <option key={v} value={v}>{v}</option>
                         ))}
                       </select>
-                      <div className="flex items-center gap-1 text-xs text-slate-400 flex-shrink-0">
+                      <div className="flex items-center gap-1 text-xs text-[var(--fg-subtle)] flex-shrink-0">
                         <input
                           type="number"
                           min={0}
@@ -953,13 +943,13 @@ export function TimeWindowsEditor({
                   ) : (
                     <button
                       onClick={() => toggleExpanded(w.id)}
-                      className="flex items-center gap-2 min-w-0 text-left hover:text-white transition-colors"
+                      className="flex items-center gap-2 min-w-0 text-left hover:text-[var(--fg)] transition-colors"
                       title="Expand to edit"
                     >
-                      <span className="text-xs font-semibold uppercase tracking-wide text-italia-gold flex-shrink-0">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-[var(--warning)] flex-shrink-0">
                         {w.variant}
                       </span>
-                      <span className="text-xs text-slate-400 flex-shrink-0">
+                      <span className="text-xs text-[var(--fg-subtle)] flex-shrink-0">
                         {w.startHour}–{w.endHour}
                       </span>
                       <span className="text-sm admin-text truncate">
@@ -968,13 +958,15 @@ export function TimeWindowsEditor({
                     </button>
                   )}
                 </div>
-                <button
+                <IconButton
+                  size="sm"
+                  tone="danger"
                   onClick={() => removeWindow(i)}
-                  className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors flex-shrink-0"
-                  aria-label="Remove window"
+                  label="Remove window"
+                  className="flex-shrink-0"
                 >
                   <Trash2 className="h-4 w-4" />
-                </button>
+                </IconButton>
               </div>
 
               {isOpen && (
@@ -996,7 +988,7 @@ export function TimeWindowsEditor({
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div>
-                      <label className="text-[10px] text-slate-400 block mb-1">Badge</label>
+                      <label className="text-[10px] text-[var(--fg-subtle)] block mb-1">Badge</label>
                       <input
                         type="text"
                         value={w.badge}
@@ -1006,7 +998,7 @@ export function TimeWindowsEditor({
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] text-slate-400 block mb-1">CTA</label>
+                      <label className="text-[10px] text-[var(--fg-subtle)] block mb-1">CTA</label>
                       <input
                         type="text"
                         value={w.cta}
@@ -1016,7 +1008,7 @@ export function TimeWindowsEditor({
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] text-slate-400 block mb-1">
+                      <label className="text-[10px] text-[var(--fg-subtle)] block mb-1">
                         Add-item id suffix
                       </label>
                       <input
@@ -1036,7 +1028,7 @@ export function TimeWindowsEditor({
           );
         })}
         {list.length === 0 && (
-          <p className="text-sm text-slate-500 text-center py-4">
+          <p className="text-sm text-[var(--fg-subtle)] text-center py-4">
             No windows configured. &ldquo;Add window&rdquo; to create one.
           </p>
         )}
@@ -1132,23 +1124,14 @@ export function CompositionEditor({
                 update(i, { quantity: Math.max(1, Number(e.target.value) || 1) })
               }
             />
-            <button
-              type="button"
-              onClick={() => remove(i)}
-              className="text-red-400 hover:text-red-300"
-              aria-label="Remove slot"
-            >
+            <IconButton size="sm" tone="danger" onClick={() => remove(i)} label="Remove slot">
               <Trash2 className="h-3 w-3" />
-            </button>
+            </IconButton>
           </div>
         ))}
-        <button
-          type="button"
-          onClick={add}
-          className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-dashed border-white/20 text-[11px] admin-text-secondary hover:bg-white/5 w-fit"
-        >
+        <Chip className="v2-chip-add" onClick={add}>
           <Plus className="h-3 w-3" /> Add slot
-        </button>
+        </Chip>
       </div>
     </div>
   );
@@ -1176,7 +1159,7 @@ export function ExperimentEditor({
   // tune. Avoids requiring JSON literacy to set up the first A/B.
   if (!experiment) {
     return (
-      <div className="rounded-lg border border-white/10 bg-white/5 p-4 space-y-3">
+      <div className="glass-card p-4 space-y-3">
         <div>
           <p className="admin-text font-semibold text-sm">No experiment running</p>
           <p className="text-xs admin-text-secondary mt-1">
@@ -1185,8 +1168,11 @@ export function ExperimentEditor({
             so BundleAnalyticsCard can show AOV uplift per variant.
           </p>
         </div>
-        <button
-          type="button"
+        <Button
+          variant="primary"
+          size="sm"
+          className="w-fit"
+          leadingIcon={<Plus className="h-3 w-3" />}
           onClick={() =>
             onChange({
               id: `exp_${Math.random().toString(36).slice(2, 8)}`,
@@ -1205,10 +1191,9 @@ export function ExperimentEditor({
               ],
             })
           }
-          className="v2-btn v2-btn-primary v2-btn-sm w-fit"
         >
-          <Plus className="h-3 w-3" /> Start an experiment
-        </button>
+          Start an experiment
+        </Button>
       </div>
     );
   }
@@ -1244,7 +1229,7 @@ export function ExperimentEditor({
   };
 
   return (
-    <div className="rounded-lg border border-white/10 bg-white/5 p-4 space-y-4">
+    <div className="glass-card p-4 space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex-1 min-w-0">
           <input
@@ -1255,26 +1240,21 @@ export function ExperimentEditor({
           />
           <p className="text-[10px] admin-text-secondary mt-1">id: {experiment.id}</p>
         </div>
-        <label className="flex items-center gap-1 text-xs admin-text-secondary">
-          <input
-            type="checkbox"
+        <label className="flex items-center gap-2 text-xs admin-text-secondary">
+          <Switch
             checked={experiment.active}
-            onChange={(e) => update({ active: e.target.checked })}
+            onChange={(v) => update({ active: v })}
+            label="Toggle experiment active"
           />
           Active
         </label>
-        <button
-          type="button"
-          onClick={() => onChange(null)}
-          className="text-red-400 hover:text-red-300"
-          title="Delete experiment"
-        >
+        <IconButton tone="danger" size="sm" onClick={() => onChange(null)} label="Delete experiment">
           <Trash2 className="h-4 w-4" />
-        </button>
+        </IconButton>
       </div>
 
       {!weightBalanced && (
-        <p className="text-[11px] text-amber-300">
+        <p className="text-[11px] text-[var(--warning)]">
           Variant weights sum to {totalWeight}, not 100. Customers are still bucketed via
           normalized weight, but balance them at 100 for clarity.
         </p>
@@ -1292,13 +1272,9 @@ export function ExperimentEditor({
         ))}
       </div>
 
-      <button
-        type="button"
-        onClick={addVariant}
-        className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-dashed border-white/20 text-[11px] admin-text-secondary hover:bg-white/5"
-      >
+      <Chip className="v2-chip-add" onClick={addVariant}>
         <Plus className="h-3 w-3" /> Add variant
-      </button>
+      </Chip>
     </div>
   );
 }
@@ -1329,7 +1305,7 @@ function ExperimentVariantRow({
   };
 
   return (
-    <div className="rounded-md border border-white/10 bg-black/20 p-3 space-y-2">
+    <div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-2)] p-3 space-y-2">
       <div className="grid gap-2 md:grid-cols-[1fr_1fr_100px_auto] items-center">
         <input
           className="glass-input"
@@ -1354,14 +1330,9 @@ function ExperimentVariantRow({
             onChange={(e) => onChange({ weight: clampHour(Number(e.target.value) || 0, 100) })}
           />
         </label>
-        <button
-          type="button"
-          onClick={onRemove}
-          className="text-red-400 hover:text-red-300"
-          aria-label="Remove variant"
-        >
+        <IconButton size="sm" tone="danger" onClick={onRemove} label="Remove variant">
           <Trash2 className="h-3.5 w-3.5" />
-        </button>
+        </IconButton>
       </div>
 
       <div>
@@ -1370,7 +1341,7 @@ function ExperimentVariantRow({
         </p>
         <div className="space-y-1.5">
           {overridableBundles.length === 0 && (
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[11px] text-[var(--fg-subtle)]">
               No dynamic bundles in this location to override. Configure dynamic-mode bundles first.
             </p>
           )}
@@ -1438,14 +1409,14 @@ function ExperimentVariantRow({
                   }}
                   className="glass-input text-right"
                 />
-                <span className={`text-[10px] ${hasOverride ? "text-italia-gold-dark" : "text-slate-600"}`}>
+                <span className={`text-[10px] ${hasOverride ? "text-[var(--warning)]" : "text-[var(--fg-disabled)]"}`}>
                   {hasOverride ? "override" : "default"}
                 </span>
               </div>
             );
           })}
         </div>
-        <p className="text-[10px] text-slate-500 mt-1">
+        <p className="text-[10px] text-[var(--fg-subtle)] mt-1">
           Single &ldquo;disc %&rdquo; replaces the blended discount; split mains/add-ons overrides take precedence.
         </p>
       </div>
@@ -1464,7 +1435,7 @@ export function BundleRulesEditor({
     <div>
       <div className="flex items-center justify-between mb-3">
         <div>
-          <label className="text-xs font-semibold admin-text uppercase tracking-wide">
+          <label className="v2-field-label">
             Bundle availability
           </label>
           <p className="text-xs admin-text-secondary mt-0.5">
@@ -1476,7 +1447,7 @@ export function BundleRulesEditor({
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
-        <div className="rounded-lg border border-white/10 bg-white/5 p-3">
+        <div className="glass-card p-3">
           <p className="admin-text font-semibold text-sm mb-2">Lunch ladder window</p>
           <div className="grid grid-cols-2 gap-2">
             <label className="block">
@@ -1517,7 +1488,7 @@ export function BundleRulesEditor({
           </p>
         </div>
 
-        <div className="rounded-lg border border-white/10 bg-white/5 p-3">
+        <div className="glass-card p-3">
           <p className="admin-text font-semibold text-sm mb-2">Family Feast quantity gate</p>
           <div className="grid grid-cols-2 gap-2">
             <label className="block">
