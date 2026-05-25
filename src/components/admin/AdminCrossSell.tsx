@@ -55,12 +55,12 @@ export function AdminCrossSell() {
     return (
       <div className="v2-page">
         <div className="glass-card p-8 text-center max-w-lg mx-auto">
-          <AlertTriangle className="h-8 w-8 text-red-400 mx-auto mb-3" />
+          <AlertTriangle className="h-8 w-8 text-[var(--danger)] mx-auto mb-3" />
           <h2 className="font-heading font-bold text-lg admin-text mb-2">
             Could not load cross-sell settings
           </h2>
           <p className="text-sm admin-text-secondary mb-4">{loadError}</p>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-[var(--fg-subtle)]">
             Editing is disabled — saving now would overwrite production settings with defaults. Refresh to retry.
           </p>
         </div>
@@ -80,7 +80,7 @@ export function AdminCrossSell() {
           <h1 className="v2-page-title">Cross-sell</h1>
           <p className="v2-page-subtitle">
             Suggest complementary items alongside what&rsquo;s in the cart — pairings, combos, and contextual nudges.
-            {dirtyHint && <span className="ml-2 text-italia-gold">· {dirtyHint}</span>}
+            {dirtyHint && <span className="ml-2 text-[var(--warning)]">· {dirtyHint}</span>}
           </p>
         </div>
         <div className="v2-page-actions">
@@ -123,10 +123,10 @@ export function AdminCrossSell() {
         <div className="glass-card p-6 space-y-5">
           <div>
             <h2 className="font-heading font-bold text-lg admin-text flex items-center gap-2">
-              <Star className="h-5 w-5 text-italia-gold" />
+              <Star className="h-5 w-5 text-[var(--warning)]" />
               Complete your meal — {loc.name}
             </h2>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-[var(--fg-subtle)] mt-1">
               Four fixed slots that customers see as a horizontal slider above
               the cart subtotal. Slot 1 (Coffee) → Slot 2 (Dessert) → Slot 3
               (Side / Garlic Bread) → Slot 4 (Drink). Each slot is one
@@ -191,17 +191,17 @@ export function AdminCrossSell() {
         <div className="space-y-6">
           <div className="glass-card p-6">
             <h2 className="font-heading font-bold text-lg admin-text flex items-center gap-2">
-              <Tag className="h-5 w-5 text-italia-gold" />
+              <Tag className="h-5 w-5 text-[var(--warning)]" />
               Menu badges — {loc.name}
             </h2>
-            <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+            <p className="text-xs text-[var(--fg-subtle)] mt-1 leading-relaxed">
               Every chip that appears next to a menu item — both in the admin
               menu list and on the customer-facing menu — is controlled here.
               Hero / Pizzaiolo&rsquo;s Choice / Chef&rsquo;s Signature drive
               the §4.3 menu-engineering hierarchy; Popular / Staff Pick / New
               are editorial highlights that sit alongside.
             </p>
-            <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+            <p className="text-xs text-[var(--fg-subtle)] mt-2 leading-relaxed">
               Gold chips with a lock icon are set by the item&rsquo;s{" "}
               <span className="font-mono text-[11px]">menuRole</span> in the
               menu data file — they badge on the homepage automatically. Edit

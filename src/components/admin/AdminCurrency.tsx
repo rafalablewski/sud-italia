@@ -197,8 +197,8 @@ export function AdminCurrency() {
                     key={c}
                     className={`flex items-center justify-between gap-3 rounded-lg border p-3 cursor-pointer transition ${
                       on
-                        ? "border-emerald-400/40 bg-emerald-500/5"
-                        : "border-white/10 bg-white/5"
+                        ? "border-[color-mix(in_oklab,var(--success)_35%,transparent)] bg-[var(--success-soft)]"
+                        : "border-[var(--border)] bg-[var(--surface-2)]"
                     }`}
                   >
                     <div className="flex flex-col">

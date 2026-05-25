@@ -1306,16 +1306,16 @@ interface CapabilityGroup {
 function CapabilityCard({ item }: { item: Capability }) {
   const toneClass =
     item.status === "live"
-      ? "border-emerald-400/30 bg-emerald-500/5"
+      ? "border-[color-mix(in_oklab,var(--success)_35%,transparent)] bg-[var(--success-soft)]"
       : item.status === "needs-config"
-        ? "border-amber-400/30 bg-amber-500/5"
-        : "border-white/10 bg-white/5";
+        ? "border-[color-mix(in_oklab,var(--warning)_35%,transparent)] bg-[var(--warning-soft)]"
+        : "border-[var(--border)] bg-[var(--surface-2)]";
   const dotClass =
     item.status === "live"
-      ? "bg-emerald-400"
+      ? "bg-[var(--success)]"
       : item.status === "needs-config"
-        ? "bg-amber-400"
-        : "bg-gray-500";
+        ? "bg-[var(--warning)]"
+        : "bg-[var(--surface-3)]";
   const label =
     item.status === "live"
       ? "live"
@@ -1334,7 +1334,7 @@ function CapabilityCard({ item }: { item: Capability }) {
       </div>
       <p className="admin-text-secondary text-xs leading-relaxed">{item.summary}</p>
       {item.caveats && (
-        <p className="mt-2 rounded border border-amber-400/30 bg-amber-500/10 px-2 py-1.5 text-[11px] text-amber-100 leading-relaxed">
+        <p className="mt-2 rounded border border-[color-mix(in_oklab,var(--warning)_35%,transparent)] bg-[var(--warning-soft)] px-2 py-1.5 text-[11px] text-[var(--warning)] leading-relaxed">
           <span className="font-semibold uppercase tracking-wide">Caveat:</span>{" "}
           {item.caveats}
         </p>
@@ -1342,14 +1342,14 @@ function CapabilityCard({ item }: { item: Capability }) {
       {item.envVars && item.envVars.length > 0 && item.status !== "live" && (
         <p className="mt-2 text-[10px] admin-text-secondary">
           Set:{" "}
-          <code className="font-mono text-amber-200">
+          <code className="font-mono text-[var(--warning)]">
             {item.envVars.join(", ")}
           </code>
         </p>
       )}
       {item.href && (
         <p className="mt-2 text-[11px]">
-          <span className="text-blue-300 underline">{item.href}</span>
+          <span className="text-[var(--info)] underline">{item.href}</span>
         </p>
       )}
     </div>

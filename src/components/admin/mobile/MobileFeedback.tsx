@@ -11,7 +11,6 @@ import {
   MobilePage,
   PageHeader,
   PullToRefresh,
-  SegmentControl,
 } from "../v2/mobile";
 
 type AiSentiment = "positive" | "neutral" | "negative";
@@ -116,17 +115,12 @@ export function MobileFeedback() {
       <MobilePage
         toolbar={
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <SegmentControl<Status>
-              value={status}
-              onChange={setStatus}
-              options={[
-                { value: "all", label: `All (${counts.all})` },
-                { value: "new", label: `New (${counts.new})` },
-                { value: "reviewed", label: `Reviewed (${counts.reviewed})` },
-                { value: "responded", label: `Done (${counts.responded})` },
-              ]}
-              ariaLabel="Status filter"
-            />
+            <ChipStrip ariaLabel="Status filter">
+              <Chip label="All" active={status === "all"} count={counts.all} onClick={() => setStatus("all")} />
+              <Chip label="New" active={status === "new"} count={counts.new} onClick={() => setStatus("new")} />
+              <Chip label="Reviewed" active={status === "reviewed"} count={counts.reviewed} onClick={() => setStatus("reviewed")} />
+              <Chip label="Done" active={status === "responded"} count={counts.responded} onClick={() => setStatus("responded")} />
+            </ChipStrip>
             <ChipStrip ariaLabel="Min rating">
               <Chip label="All ratings" active={minRating === null} onClick={() => setMinRating(null)} />
               {[5, 4, 3, 2, 1].map((r) => (

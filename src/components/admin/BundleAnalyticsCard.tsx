@@ -71,7 +71,7 @@ export function BundleAnalyticsCard({ locationSlug, days = 30 }: { locationSlug?
   }
   if (err || !data) {
     return (
-      <div className="glass-card p-4 text-sm text-red-300 flex items-center gap-2">
+      <div className="glass-card p-4 text-sm text-[var(--danger)] flex items-center gap-2">
         <AlertCircle className="h-4 w-4" />
         {err ?? "No data"}
       </div>
@@ -92,7 +92,7 @@ export function BundleAnalyticsCard({ locationSlug, days = 30 }: { locationSlug?
   return (
     <div className="glass-card p-4">
       <div className="flex items-center gap-2 mb-3">
-        <Sparkles className="h-4 w-4 text-italia-gold" />
+        <Sparkles className="h-4 w-4 text-[var(--warning)]" />
         <h3 className="font-heading font-bold text-base admin-text">
           Bundle analytics
         </h3>
@@ -138,11 +138,11 @@ export function BundleAnalyticsCard({ locationSlug, days = 30 }: { locationSlug?
                   </thead>
                   <tbody>
                     {data.byBundle.map((b) => (
-                      <tr key={b.bundleId} className="border-t border-white/5">
+                      <tr key={b.bundleId} className="border-t border-[var(--border)]">
                         <td className="py-1 pr-2 admin-text">{b.bundleName}</td>
                         <td className="py-1 pr-2 text-right admin-text">{b.count}</td>
                         <td className="py-1 pr-2 text-right admin-text">{zl(b.avgFinalGrosze)}</td>
-                        <td className="py-1 pr-2 text-right text-italia-green">{zl(b.avgSavingsGrosze)}</td>
+                        <td className="py-1 pr-2 text-right text-[var(--success)]">{zl(b.avgSavingsGrosze)}</td>
                         <td className="py-1 pr-2 text-right admin-text-secondary">
                           {(b.effectiveDiscount * 100).toFixed(0)}%
                         </td>
@@ -175,11 +175,11 @@ export function BundleAnalyticsCard({ locationSlug, days = 30 }: { locationSlug?
                     </thead>
                     <tbody>
                       {data.byVariant.map((v) => (
-                        <tr key={v.variantId} className="border-t border-white/5">
+                        <tr key={v.variantId} className="border-t border-[var(--border)]">
                           <td className="py-1 pr-2 admin-text font-semibold">{v.variantId}</td>
                           <td className="py-1 pr-2 text-right admin-text">{v.count}</td>
                           <td className="py-1 pr-2 text-right admin-text">{zl(v.avgFinalGrosze)}</td>
-                          <td className="py-1 pr-2 text-right text-italia-green">{zl(v.avgSavingsGrosze)}</td>
+                          <td className="py-1 pr-2 text-right text-[var(--success)]">{zl(v.avgSavingsGrosze)}</td>
                           <td className="py-1 pr-2 text-right admin-text">{zl(v.totalRevenueGrosze)}</td>
                         </tr>
                       ))}
@@ -191,7 +191,7 @@ export function BundleAnalyticsCard({ locationSlug, days = 30 }: { locationSlug?
 
             {decoyRow && (
               <p className="text-[11px] admin-text-secondary">
-                Decoy click-through: <span className={decoyPct <= 12 ? "text-italia-green" : "text-amber-300"}>{decoyPct.toFixed(0)}%</span>
+                Decoy click-through: <span className={decoyPct <= 12 ? "text-[var(--success)]" : "text-[var(--warning)]"}>{decoyPct.toFixed(0)}%</span>
                 {" — "}
                 target ≤ 12% (decoy should be dominated by the anchor, not chosen).
               </p>
@@ -212,26 +212,26 @@ export function BundleAnalyticsCard({ locationSlug, days = 30 }: { locationSlug?
                       </tr>
                     </thead>
                     <tbody>
-                      <tr className="border-t border-white/5">
+                      <tr className="border-t border-[var(--border)]">
                         <td className="py-1 pr-2 admin-text">Impressions</td>
                         <td className="py-1 pr-2 text-right admin-text">{data.funnel.impressions}</td>
                         <td className="py-1 pr-2 text-right admin-text-secondary">—</td>
                       </tr>
-                      <tr className="border-t border-white/5">
+                      <tr className="border-t border-[var(--border)]">
                         <td className="py-1 pr-2 admin-text">Composer opens</td>
                         <td className="py-1 pr-2 text-right admin-text">{data.funnel.composerOpens}</td>
                         <td className="py-1 pr-2 text-right admin-text-secondary">
                           {(data.funnel.composerOpenRate * 100).toFixed(1)}%
                         </td>
                       </tr>
-                      <tr className="border-t border-white/5">
+                      <tr className="border-t border-[var(--border)]">
                         <td className="py-1 pr-2 admin-text">Applied</td>
                         <td className="py-1 pr-2 text-right admin-text">{data.funnel.applies}</td>
-                        <td className="py-1 pr-2 text-right text-italia-green">
+                        <td className="py-1 pr-2 text-right text-[var(--success)]">
                           {(data.funnel.applyFromComposerRate * 100).toFixed(1)}%
                         </td>
                       </tr>
-                      <tr className="border-t border-white/5 admin-text-secondary">
+                      <tr className="border-t border-[var(--border)] admin-text-secondary">
                         <td className="py-1 pr-2">Composer abandons</td>
                         <td className="py-1 pr-2 text-right">{data.funnel.composerAbandons}</td>
                         <td className="py-1 pr-2 text-right">—</td>
@@ -258,7 +258,7 @@ export function BundleAnalyticsCard({ locationSlug, days = 30 }: { locationSlug?
                     </thead>
                     <tbody>
                       {data.byCohort.map((c) => (
-                        <tr key={c.cohort} className="border-t border-white/5">
+                        <tr key={c.cohort} className="border-t border-[var(--border)]">
                           <td className="py-1 pr-2 admin-text capitalize">{c.cohort}</td>
                           <td className="py-1 pr-2 text-right admin-text">{c.count}</td>
                           <td className="py-1 pr-2 text-right admin-text">{zl(c.avgFinalGrosze)}</td>
@@ -292,14 +292,14 @@ function Kpi({
 }) {
   const toneClass =
     tone === "green"
-      ? "text-italia-green"
+      ? "text-[var(--success)]"
       : tone === "amber"
-        ? "text-amber-300"
+        ? "text-[var(--warning)]"
         : tone === "red"
-          ? "text-red-300"
+          ? "text-[var(--danger)]"
           : "admin-text";
   return (
-    <div className="rounded-md border border-white/10 bg-white/5 px-3 py-2">
+    <div className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2">
       <p className="text-[10px] uppercase tracking-wide admin-text-secondary">{label}</p>
       <p className={`font-heading font-bold text-base mt-0.5 ${toneClass}`}>{value}</p>
       {hint && <p className="text-[10px] admin-text-secondary mt-0.5 leading-snug">{hint}</p>}

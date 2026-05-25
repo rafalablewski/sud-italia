@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Building2, Plus, Save, Trash2, Link2 } from "lucide-react";
+import { Button } from "./v2/ui";
 
 interface CorporatePayload {
   slug: string;
@@ -115,19 +116,14 @@ export function AdminCorporate() {
             landing at /corporate/[slug].
           </p>
         </div>
-        <button
-          type="button"
-          onClick={refresh}
-          className="glass-btn"
-          disabled={loading}
-        >
+        <Button variant="secondary" onClick={refresh} disabled={loading}>
           {loading ? "Loading…" : "Refresh"}
-        </button>
+        </Button>
       </header>
 
       {error && (
-        <div className="glass-card p-3 mb-4 border-italia-red/30">
-          <p className="text-sm admin-text">{error}</p>
+        <div className="glass-card p-3 mb-4 border-[color-mix(in_oklab,var(--danger)_30%,transparent)]">
+          <p className="text-sm text-[var(--danger)]">{error}</p>
         </div>
       )}
 
@@ -186,7 +182,7 @@ function CorporateRow({
   if (!corporate) return null;
 
   return (
-    <div className="rounded-lg border border-white/10 bg-white/5 p-3">
+    <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3">
       <div className="flex items-start gap-3 flex-wrap">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -195,7 +191,7 @@ function CorporateRow({
               href={`/corporate/${corporate.slug}`}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-blue-300 hover:underline"
+              className="inline-flex items-center gap-1 text-xs text-[var(--info)] hover:underline"
             >
               <Link2 className="h-3 w-3" /> /corporate/{corporate.slug}
             </a>
@@ -213,13 +209,9 @@ function CorporateRow({
             </p>
           )}
         </div>
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          className="glass-btn text-xs"
-        >
+        <Button variant="secondary" size="sm" onClick={() => setOpen((o) => !o)}>
           {open ? "Close" : "Edit"}
-        </button>
+        </Button>
       </div>
       {open && <CorporateEditor summary={summary} onSaved={onChanged} />}
     </div>
@@ -236,7 +228,7 @@ function PromoteRow({
   const [open, setOpen] = useState(false);
   const eligible = wallet.memberCount >= 6;
   return (
-    <div className="rounded-lg border border-white/10 bg-white/5 p-3">
+    <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <p className="admin-text text-sm font-medium">
@@ -245,21 +237,21 @@ function PromoteRow({
           <p className="admin-text-secondary text-xs mt-0.5">
             {wallet.memberCount} member{wallet.memberCount === 1 ? "" : "s"}
             {!eligible && (
-              <span className="text-italia-gold-dark ml-1">
+              <span className="text-[var(--warning)] ml-1">
                 · needs 6+ to promote
               </span>
             )}
           </p>
         </div>
-        <button
-          type="button"
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={() => setOpen((o) => !o)}
-          className="glass-btn text-xs"
           disabled={!eligible}
           title={eligible ? undefined : "Corporate accounts require at least 6 members"}
         >
           {open ? "Cancel" : "Promote"}
-        </button>
+        </Button>
       </div>
       {open && (
         <CorporateEditor
@@ -442,29 +434,27 @@ function CorporateEditor({
       </Field>
 
       {error && (
-        <p className="text-sm text-italia-red md:col-span-2">{error}</p>
+        <p className="text-sm text-[var(--danger)] md:col-span-2">{error}</p>
       )}
 
       <div className="md:col-span-2 flex items-center gap-2">
-        <button
-          type="button"
-          className="glass-btn flex items-center gap-1.5"
+        <Button
+          variant="primary"
           onClick={save}
           disabled={saving || !name.trim() || !slug.trim()}
+          leadingIcon={<Save className="h-4 w-4" />}
         >
-          <Save className="h-4 w-4" />
           {saving ? "Saving…" : seed ? "Save changes" : "Create corporate account"}
-        </button>
+        </Button>
         {seed && (
-          <button
-            type="button"
-            className="glass-btn flex items-center gap-1.5 text-italia-red"
+          <Button
+            variant="danger"
             onClick={remove}
             disabled={saving}
+            leadingIcon={<Trash2 className="h-4 w-4" />}
           >
-            <Trash2 className="h-4 w-4" />
             Remove corporate account
-          </button>
+          </Button>
         )}
       </div>
     </div>

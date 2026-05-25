@@ -695,7 +695,7 @@ function MetricTile({
   hint?: string;
 }) {
   return (
-    <div className="rounded-lg border border-white/10 bg-white/5 p-3">
+    <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3">
       <div className="flex items-center gap-2 admin-text-secondary text-xs">
         {icon}
         <span>{label}</span>
@@ -715,8 +715,8 @@ function FunnelBar({ stages, total }: { stages: { label: string; value: number }
         return (
           <div key={s.label} className="flex items-center gap-2 text-xs">
             <span className="admin-text-secondary w-28 shrink-0">{s.label}</span>
-            <div className="flex-1 h-2 rounded bg-white/5 overflow-hidden">
-              <div className="h-full bg-emerald-400/60" style={{ width: `${w}%` }} />
+            <div className="flex-1 h-2 rounded bg-[var(--surface-2)] overflow-hidden">
+              <div className="h-full bg-[var(--success-soft)]" style={{ width: `${w}%` }} />
             </div>
             <span className="admin-text w-12 text-right tabular-nums">
               {s.value}
@@ -835,7 +835,7 @@ function ConversationDialog({
       <div className="space-y-3">
         <div
           ref={transcriptRef}
-          className="rounded-lg border border-white/10 bg-black/20 p-3 max-h-[420px] overflow-y-auto space-y-2"
+          className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3 max-h-[420px] overflow-y-auto space-y-2"
         >
           {loading ? (
             <p className="admin-text-secondary text-sm">Loading transcript…</p>
@@ -904,10 +904,10 @@ function MessageBubble({ message }: { message: WaMessage }) {
         : "Bot";
   const tone =
     message.actor === "operator"
-      ? "bg-emerald-500/15 border-emerald-400/30"
+      ? "bg-[var(--success-soft)] border-[color-mix(in_oklab,var(--success)_35%,transparent)]"
       : isOutbound
-        ? "bg-indigo-500/10 border-indigo-400/20"
-        : "bg-white/10 border-white/15";
+        ? "bg-[var(--info-soft)] border-[color-mix(in_oklab,var(--info)_35%,transparent)]"
+        : "bg-[var(--surface-3)] border-[var(--border-strong)]";
   const kindLabel =
     message.kind === "cta_url"
       ? `(CTA → ${typeof message.meta?.url === "string" ? message.meta.url : "link"})`

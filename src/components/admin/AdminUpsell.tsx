@@ -45,12 +45,12 @@ export function AdminUpsell() {
     return (
       <div className="v2-page">
         <div className="glass-card p-8 text-center max-w-lg mx-auto">
-          <AlertTriangle className="h-8 w-8 text-red-400 mx-auto mb-3" />
+          <AlertTriangle className="h-8 w-8 text-[var(--danger)] mx-auto mb-3" />
           <h2 className="font-heading font-bold text-lg admin-text mb-2">
             Could not load upsell settings
           </h2>
           <p className="text-sm admin-text-secondary mb-4">{loadError}</p>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-[var(--fg-subtle)]">
             Editing is disabled — saving now would overwrite production settings with defaults. Refresh to retry.
           </p>
         </div>
@@ -70,7 +70,7 @@ export function AdminUpsell() {
           <h1 className="v2-page-title">Upsell</h1>
           <p className="v2-page-subtitle">
             Lift the value of what they&rsquo;re already buying — tiered bundle ladders and gating rules.
-            {dirtyHint && <span className="ml-2 text-italia-gold">· {dirtyHint}</span>}
+            {dirtyHint && <span className="ml-2 text-[var(--warning)]">· {dirtyHint}</span>}
           </p>
         </div>
         <div className="v2-page-actions">

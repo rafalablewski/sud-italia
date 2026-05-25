@@ -164,7 +164,7 @@ export function OpsAgentChat({ gatewayConfigured }: OpsAgentChatProps) {
     <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Bot className="h-7 w-7 text-purple-300" />
+          <Bot className="h-7 w-7 text-[var(--info)]" />
           <div>
             <h1 className="text-2xl font-semibold admin-text">Ops Agent</h1>
             <p className="text-sm admin-text-secondary">
@@ -190,8 +190,8 @@ export function OpsAgentChat({ gatewayConfigured }: OpsAgentChatProps) {
                   setActiveId(c.id);
                   setTurns([]);
                 }}
-                className={`w-full text-left flex items-center justify-between rounded-md px-2 py-1.5 hover:bg-white/5 ${
-                  activeId === c.id ? "bg-white/10" : ""
+                className={`w-full text-left flex items-center justify-between rounded-md px-2 py-1.5 hover:bg-[var(--surface-2)] ${
+                  activeId === c.id ? "bg-[var(--surface-3)]" : ""
                 }`}
               >
                 <span className="text-sm admin-text">{c.title}</span>
@@ -224,7 +224,7 @@ export function OpsAgentChat({ gatewayConfigured }: OpsAgentChatProps) {
             </div>
 
             {error && (
-              <div className="mt-3 rounded-md bg-red-500/10 border border-red-500/30 text-red-200 text-sm px-3 py-2">
+              <div className="mt-3 rounded-md bg-[var(--danger-soft)] border border-[color-mix(in_oklab,var(--danger)_35%,transparent)] text-[var(--danger)] text-sm px-3 py-2">
                 {error}
               </div>
             )}
@@ -265,7 +265,7 @@ function TurnView({
   return (
     <div className="space-y-3">
       <div className="flex justify-end">
-        <div className="rounded-2xl bg-purple-500/20 text-sm px-3 py-2 max-w-[80%]">
+        <div className="rounded-2xl bg-[color-mix(in_oklab,var(--info)_20%,transparent)] text-sm px-3 py-2 max-w-[80%]">
           {turn.userText}
         </div>
       </div>
@@ -275,7 +275,7 @@ function TurnView({
           return (
             <div
               key={i}
-              className="rounded-2xl bg-white/5 text-sm px-3 py-2 max-w-[85%] whitespace-pre-wrap admin-text"
+              className="rounded-2xl bg-[var(--surface-2)] text-sm px-3 py-2 max-w-[85%] whitespace-pre-wrap admin-text"
             >
               {event.text}
             </div>
@@ -289,10 +289,10 @@ function TurnView({
               key={i}
               className={`rounded-lg border text-xs px-3 py-2 max-w-[85%] ${
                 pending
-                  ? "border-amber-400/40 bg-amber-500/10"
+                  ? "border-[color-mix(in_oklab,var(--warning)_35%,transparent)] bg-[var(--warning-soft)]"
                   : t.error
-                    ? "border-red-400/40 bg-red-500/10"
-                    : "border-emerald-400/30 bg-emerald-500/10"
+                    ? "border-[color-mix(in_oklab,var(--danger)_35%,transparent)] bg-[var(--danger-soft)]"
+                    : "border-[color-mix(in_oklab,var(--success)_35%,transparent)] bg-[var(--success-soft)]"
               }`}
             >
               <div className="flex items-center justify-between gap-2 mb-1">
@@ -311,7 +311,7 @@ function TurnView({
               {t.preview && (
                 <p className="admin-text mb-2">{t.preview}</p>
               )}
-              {t.error && <p className="text-red-200">{t.error}</p>}
+              {t.error && <p className="text-[var(--danger)]">{t.error}</p>}
               {pending && (
                 <Button
                   size="sm"
@@ -326,7 +326,7 @@ function TurnView({
                 <summary className="cursor-pointer admin-text-secondary text-[10px]">
                   <ChevronRight className="inline h-3 w-3" /> details
                 </summary>
-                <pre className="mt-1 max-h-32 overflow-auto bg-black/30 rounded p-2 text-[10px] admin-text">
+                <pre className="mt-1 max-h-32 overflow-auto bg-[var(--surface-2)] rounded p-2 text-[10px] admin-text">
                   {JSON.stringify({ input: t.input, output: t.result }, null, 2)}
                 </pre>
               </details>
@@ -337,7 +337,7 @@ function TurnView({
           return (
             <div
               key={i}
-              className="rounded-md border border-red-400/40 bg-red-500/10 text-sm text-red-200 px-3 py-2"
+              className="rounded-md border border-[color-mix(in_oklab,var(--danger)_35%,transparent)] bg-[var(--danger-soft)] text-sm text-[var(--danger)] px-3 py-2"
             >
               {event.text}
             </div>

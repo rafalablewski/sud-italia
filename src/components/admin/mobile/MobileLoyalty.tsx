@@ -5,6 +5,8 @@ import { Award, Gift, Star, Users } from "lucide-react";
 import type { LoyaltyTier } from "@/lib/loyalty";
 import { formatPrice } from "@/lib/utils";
 import {
+  Chip,
+  ChipStrip,
   MobileList,
   MobilePage,
   PageHeader,
@@ -126,18 +128,18 @@ export function MobileLoyalty() {
               ariaLabel="Loyalty tab"
             />
             {tab === "members" && (
-              <SegmentControl<TierFilter>
-                value={tier}
-                onChange={setTier}
-                options={[
-                  { value: "all", label: "All tiers" },
-                  ...TIERS.map((t) => ({
-                    value: t,
-                    label: `${t} (${members.filter((m) => m.tier === t).length})`,
-                  })),
-                ]}
-                ariaLabel="Tier filter"
-              />
+              <ChipStrip ariaLabel="Tier filter">
+                <Chip label="All tiers" active={tier === "all"} onClick={() => setTier("all")} />
+                {TIERS.map((t) => (
+                  <Chip
+                    key={t}
+                    label={t}
+                    active={tier === t}
+                    count={members.filter((m) => m.tier === t).length}
+                    onClick={() => setTier(t)}
+                  />
+                ))}
+              </ChipStrip>
             )}
           </div>
         }

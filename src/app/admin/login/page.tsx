@@ -76,7 +76,7 @@ export default function AdminLoginPage() {
             />
 
             {error && (
-              <p className="text-sm text-red-400 text-center bg-red-500/10 rounded-lg py-2">{error}</p>
+              <p className="text-sm text-[var(--danger)] text-center bg-[var(--danger-soft)] rounded-lg py-2">{error}</p>
             )}
 
             <button
