@@ -242,16 +242,23 @@
 
   /* truck stat row */
   .th-stats{
-    display:flex;align-items:center;gap:var(--s5);margin-top:var(--s3);
+    display:flex;align-items:stretch;gap:var(--s2);margin-top:var(--s3);
     padding-top:var(--s3);border-top:1px solid var(--hair);flex-wrap:wrap;
   }
-  .th-stat{display:flex;flex-direction:column;gap:1px;min-width:0}
-  .th-stat .lab{font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--faint)}
-  .th-stat .val{font-family:var(--mono);font-size:15px;font-weight:600;color:var(--text)}
-  .th-stat .val.risk{color:var(--risk)}
-  .th-stat .val.alert{color:var(--late)}
-  .th-stat .val.good{color:var(--ready)}
-  .th-spark{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+  .th-stat{
+    flex:1 1 auto;min-width:62px;display:flex;flex-direction:column;gap:5px;
+    padding:8px 12px;border:1px solid var(--hair);border-radius:9px;background:var(--canvas);
+    position:relative;overflow:hidden;
+  }
+  .th-stat .lab{font-size:8.5px;letter-spacing:0.1em;text-transform:uppercase;color:var(--faint)}
+  .th-stat .val{font-family:var(--mono);font-size:21px;font-weight:700;line-height:1;letter-spacing:-0.01em;color:var(--text)}
+  .th-stat.is-risk{border-color:rgba(139,92,246,0.4);background:linear-gradient(180deg,var(--risk-soft),var(--canvas) 78%)}
+  .th-stat.is-risk .val{color:var(--risk)}
+  .th-stat.is-alert{border-color:rgba(229,72,77,0.4);background:linear-gradient(180deg,var(--late-soft),var(--canvas) 78%)}
+  .th-stat.is-alert .val{color:var(--late)}
+  .th-stat.is-good{border-color:rgba(61,214,140,0.35);background:linear-gradient(180deg,var(--ready-soft),var(--canvas) 78%)}
+  .th-stat.is-good .val{color:var(--ready)}
+  .th-spark{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:3px;padding-left:var(--s3)}
   .th-spark .sp-lab{font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--faint)}
 
   /* ----- truck body / ticket stack ----- */
@@ -957,9 +964,9 @@
       '</div>'+
       '<div class="th-stats">'+
         '<div class="th-stat"><span class="lab">Active</span><span class="val">'+s.active+'</span></div>'+
-        '<div class="th-stat"><span class="lab">At risk</span><span class="val '+(s.risk?"risk":"")+'">'+s.risk+'</span></div>'+
-        '<div class="th-stat"><span class="lab">Late</span><span class="val '+(s.late?"alert":"")+'">'+s.late+'</span></div>'+
-        '<div class="th-stat"><span class="lab">Ready</span><span class="val '+(s.ready?"good":"")+'">'+s.ready+'</span></div>'+
+        '<div class="th-stat'+(s.risk?" is-risk":"")+'"><span class="lab">At risk</span><span class="val">'+s.risk+'</span></div>'+
+        '<div class="th-stat'+(s.late?" is-alert":"")+'"><span class="lab">Late</span><span class="val">'+s.late+'</span></div>'+
+        '<div class="th-stat'+(s.ready?" is-good":"")+'"><span class="lab">Ready</span><span class="val">'+s.ready+'</span></div>'+
         '<div class="th-stat"><span class="lab">On shift</span><span class="val">'+s.onShift+'</span></div>'+
         '<div class="th-spark">'+
           '<span class="sp-lab">'+s.throughputHr+' / hr</span>'+
