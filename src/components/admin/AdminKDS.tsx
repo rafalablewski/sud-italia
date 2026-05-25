@@ -470,7 +470,7 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
   }, [orders, now]);
 
   const page = (
-    <div className={`v2-page v2-kds-page${kiosk ? " v2-kds-kiosk kds-os" : ""}`}>
+    <div className={`v2-page v2-kds-page kds-floor-dark${kiosk ? " v2-kds-kiosk kds-os" : ""}`}>
       <header className="v2-page-header">
         <div className="v2-page-title-row">
           <div className="flex items-center gap-2 flex-wrap">

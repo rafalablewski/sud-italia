@@ -242,6 +242,7 @@ export function MobileKDS() {
   return (
     <PullToRefresh onRefresh={() => refresh()} disabled={paused}>
     <MobilePage
+      className="kds-floor-dark"
       toolbar={
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <SegmentControl<OrderStatus>

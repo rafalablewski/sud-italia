@@ -2523,6 +2523,56 @@ html { scroll-behavior: smooth; }
 }
 
 /* ----------------------------
+   KDS floor board — Atlas fleet-command theme
+   ----------------------------
+   The floor board (desktop .v2-kds-page + mobile .v2-m-page) renders on the
+   same dark fleet-command surface as the Atlas fleet board, regardless of the
+   admin light/dark toggle, so Fleet ↔ Floor reads as one product. Implemented
+   as a scoped remap of the v2 design tokens to the Atlas (--ka-*) palette, so
+   the board, columns, tickets AND the ops/chef header chrome retheme in one
+   shot. Declared BEFORE .kds-os so the kiosk's own palette still wins when both
+   classes are present. */
+.kds-floor-dark {
+  color-scheme: dark;
+  --bg: #0a0c10;
+  --kds-bg: #0a0c10;
+  --surface-1: #1a2129;
+  --surface-2: #11151b;
+  --surface-3: #232c36;
+  --surface-hover: #232c36;
+  --fg: #e9edf2;
+  --fg-muted: #9098a3;
+  --fg-subtle: #5c6571;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --warning: #f5a623;
+  --warning-soft: rgba(245, 166, 35, 0.13);
+  --info: #3b82f6;
+  --info-soft: rgba(59, 130, 246, 0.14);
+  --success: #3dd68c;
+  --success-soft: rgba(61, 214, 140, 0.13);
+  --danger: #e5484d;
+  --danger-soft: rgba(229, 72, 77, 0.14);
+  background: var(--bg);
+  color: var(--fg);
+}
+/* The bump/advance button is brand red (#c8102e) — too dark to read on the
+   near-black surface, so brighten it (matches the kiosk treatment). */
+.kds-floor-dark .v2-ticket-foot .v2-btn-primary {
+  color: #ff5d5d;
+  border-color: #ff5d5d;
+  background: rgba(255, 93, 93, 0.12);
+  box-shadow: none;
+}
+.kds-floor-dark .v2-ticket-foot .v2-btn-primary:hover:not(:disabled):not(.is-loading) {
+  background: rgba(255, 93, 93, 0.22);
+  color: #ff5d5d;
+}
+/* On mobile the page is content-sized inside the shell; stretch it so the dark
+   surface fills the viewport instead of leaving a light gap under short lists. */
+.v2-m-page.kds-floor-dark { min-height: 100%; }
+
+/* ----------------------------
    KDS — fullscreen kiosk + dark "kitchen OS" theme
    ----------------------------
    Edge-to-edge display surface, portaled to <body>. Pairs with .kds-os, a
