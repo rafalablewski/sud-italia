@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { useAdminOrdersStream } from "@/lib/useAdminOrdersStream";
 import { useKdsSimulator } from "@/lib/useKdsSimulator";
-import { KdsSimBanner } from "../kds-board";
+import { Badge } from "../v2/ui";
 import type { Order, OrderStatus, MenuCategory } from "@/data/types";
 import { MENU_CATEGORY_LABELS } from "@/data/types";
 import { fulfillmentLabel, formatPartySize } from "@/lib/fulfillment";
@@ -293,7 +293,16 @@ export function MobileKDS() {
         </div>
       )}
       <PageHeader
-        title="Kitchen"
+        title={
+          <span className="flex items-center gap-2">
+            Kitchen
+            {simEnabled && (
+              <Badge tone="warning" variant="soft" dot>
+                Sandbox — not real orders
+              </Badge>
+            )}
+          </span>
+        }
         subtitle={`${filtered.length} ticket${filtered.length === 1 ? "" : "s"} • ${LANES[currentLaneIdx]?.label}`}
         actions={
           <div style={{ display: "inline-flex", gap: 4 }}>
@@ -318,11 +327,32 @@ export function MobileKDS() {
       />
 
       {simEnabled && (
-        <KdsSimBanner
-          busy={simBusy}
-          onAdd={(n) => void addOrders(n).then(() => refresh())}
-          onPurge={() => void purgeAll().then(() => refresh())}
-        />
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            type="button"
+            className="v2-m-btn"
+            disabled={simBusy}
+            onClick={() => void addOrders(1).then(() => refresh())}
+          >
+            Add 1
+          </button>
+          <button
+            type="button"
+            className="v2-m-btn"
+            disabled={simBusy}
+            onClick={() => void addOrders(5).then(() => refresh())}
+          >
+            Add 5
+          </button>
+          <button
+            type="button"
+            className="v2-m-btn v2-m-btn-ghost"
+            disabled={simBusy}
+            onClick={() => void purgeAll().then(() => refresh())}
+          >
+            Purge all
+          </button>
+        </div>
       )}
 
       {filtered.length === 0 ? (

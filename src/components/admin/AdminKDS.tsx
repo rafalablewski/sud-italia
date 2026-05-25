@@ -34,7 +34,6 @@ import {
   KDS_COLUMNS,
   KdsBoard,
   KdsLane,
-  KdsSimBanner,
   STATION_FILTERS,
   fmtClock,
   groupByColumn,
@@ -469,7 +468,14 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
     <div className={`v2-page v2-kds-page${kiosk ? " v2-kds-kiosk kds-os" : ""}`}>
       <header className="v2-page-header">
         <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Kitchen Display</h1>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="v2-page-title">Kitchen Display</h1>
+            {simEnabled && (
+              <Badge tone="warning" variant="soft" dot>
+                Sandbox — not real orders
+              </Badge>
+            )}
+          </div>
           <p className="v2-page-subtitle">
             {location ? `${location.toUpperCase()} · ` : "All locations · "}
             Live tickets · streaming updates
@@ -513,6 +519,34 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
           >
             Refresh
           </Button>
+          {simEnabled && (
+            <>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={simBusy}
+                onClick={() => void addOrders(1).then(() => refresh())}
+              >
+                Add 1
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={simBusy}
+                onClick={() => void addOrders(5).then(() => refresh())}
+              >
+                Add 5
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={simBusy}
+                onClick={() => void purgeAll().then(() => refresh())}
+              >
+                Purge all
+              </Button>
+            </>
+          )}
           <Button
             variant={kiosk ? "primary" : "secondary"}
             size="sm"
@@ -552,14 +586,6 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
           </button>
         ))}
       </div>
-
-      {simEnabled && (
-        <KdsSimBanner
-          busy={simBusy}
-          onAdd={(n) => void addOrders(n).then(() => refresh())}
-          onPurge={() => void purgeAll().then(() => refresh())}
-        />
-      )}
 
       {!kiosk && opsHeader && <KdsManagerOpsHeader orders={orders} location={location} />}
 

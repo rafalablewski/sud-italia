@@ -81,7 +81,7 @@ export function MobileSettings() {
         toast.error("Could not update toggle");
         return;
       }
-      toast.success(next ? "Simulation enabled" : "Simulation disabled");
+      toast.success(next ? "Calculator enabled" : "Calculator disabled");
       window.dispatchEvent(new Event("sud-admin-settings-updated"));
     } finally {
       setSimBusy(false);
@@ -184,26 +184,25 @@ export function MobileSettings() {
               </div>
             </Section>
 
-            <Section title="Finance simulation (sandbox)">
-              <ToggleField
-                label="Show Simulation in the Finance nav"
-                description="Sandbox monthly P&L modeller. Nothing here writes to your real business-costs ledger."
-                checked={!!settings.simulationEnabled}
-                disabled={simBusy}
-                onChange={toggleSimulation}
-                icon={<FlaskConical className="h-4 w-4" aria-hidden />}
-              />
-            </Section>
-
-            <Section title="KDS live-order simulator">
-              <ToggleField
-                label="Run the order simulator"
-                description="Adds Add 1 / Add 5 / Purge all controls to the Kitchen Display banner so you can drop synthetic orders (real menu items only) onto the board on demand for demos — each clearly marked SIMULATION, worked through with the normal ticket buttons. They never reach the dashboard or any report; never touch stock, CRM or comms. Off clears them."
-                checked={!!settings.kdsSimulatorEnabled}
-                disabled={kdsSimBusy}
-                onChange={toggleKdsSimulator}
-                icon={<Zap className="h-4 w-4" aria-hidden />}
-              />
+            <Section title="Simulator">
+              <div className="v2-stack-12">
+                <ToggleField
+                  label="KDS"
+                  description="Demo / training tool. Adds Add 1 / Add 5 / Purge all controls to the Kitchen Display banner so you can drop synthetic orders (real menu items only) onto the board on demand for demos — each clearly marked SIMULATION, worked through with the normal ticket buttons. They never reach the dashboard or any report; never touch stock, CRM or comms. Off clears them."
+                  checked={!!settings.kdsSimulatorEnabled}
+                  disabled={kdsSimBusy}
+                  onChange={toggleKdsSimulator}
+                  icon={<Zap className="h-4 w-4" aria-hidden />}
+                />
+                <ToggleField
+                  label="Financials"
+                  description="Sandbox monthly P&L modeller (the Calculator tab). Nothing here writes to your real business-costs ledger."
+                  checked={!!settings.simulationEnabled}
+                  disabled={simBusy}
+                  onChange={toggleSimulation}
+                  icon={<FlaskConical className="h-4 w-4" aria-hidden />}
+                />
+              </div>
             </Section>
 
             <button

@@ -1913,7 +1913,7 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
         <strong>Reality check:</strong> {price.toFixed(2)} zł for an espresso is well
         above the Polish market (Costa, Starbucks, Green Caffè Nero cap at ~13–14 zł
         for specialty drinks; standalone espresso usually sits at 8–12 zł).
-        The simulation will over-state your monthly upside — real attach will
+        The calculator will over-state your monthly upside — real attach will
         collapse at this price point.
       </>
     ),
@@ -1959,7 +1959,7 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
           60–65% in evening service, but for a pizza truck / pizzeria with
           mixed lunch + dinner + takeaway, 50–55% is the upper bound where
           roughly every other customer takes a coffee. Above 55% the
-          simulation is modelling fantasy demand.
+          calculator is modelling fantasy demand.
         </>
       ),
       priceRationale: (
@@ -1983,7 +1983,7 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
         <>
           Barista time and queue impact at peak. A coffee-heavy rush can slow
           pizza service if you don&apos;t have a dedicated machine. The
-          simulation also doesn&apos;t deduct espresso-machine depreciation
+          calculator also doesn&apos;t deduct espresso-machine depreciation
           (~150 zł/month for a prosumer setup) — fold that into fixed costs
           if you&apos;re comparing &quot;coffee on vs. off&quot;.
         </>
@@ -2268,7 +2268,7 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
       notModelled: (
         <>
           Antipasti-station capacity. A heavy starter rush during prime
-          time can delay pizza output — the simulation doesn&apos;t deduct
+          time can delay pizza output — the calculator doesn&apos;t deduct
           for that. Test attach increases against your kitchen throughput
           KPI before pushing in production.
         </>
@@ -2557,7 +2557,7 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
           Menu cognitive load. Every additional premium topping competes
           with the previous ones for customer attention — past 4–5
           choices, attach drops because customers default to plain. The
-          simulation treats all premium toppings as one undifferentiated
+          calculator treats all premium toppings as one undifferentiated
           attach.
         </>
       ),
@@ -2702,7 +2702,7 @@ const ATTACH_HELP: Record<AttachLeverKind, AttachHelpProfile> = {
         <>
           Pasta-station throughput. Every order needs its own pan +
           burner — at &gt;6 orders / hour a single induction station
-          chokes. The simulation also doesn&apos;t account for the
+          chokes. The calculator also doesn&apos;t account for the
           extra prep labor (dough vs. sauce reduction is a different
           skill), so heavy attach can require a second hire.
         </>
@@ -3569,7 +3569,7 @@ const HELP = {
           <p style={{ margin: 0 }}>
             <strong>Not modelled:</strong> hybrid models (a truck that does
             Takeaway at lunch + Aperitivo at dinner is a real archetype
-            but isn&apos;t a single preset). Run the simulation twice with
+            but isn&apos;t a single preset). Run the calculator twice with
             different presets and weight the results manually.
           </p>
         </Methodology>
@@ -3586,7 +3586,7 @@ const HELP = {
           Instead of typing one flat average ticket, you describe
           customer behavior with levers like &quot;25% of orders add a
           coffee&quot; or &quot;20% of mains convert to a combo&quot;.
-          The simulator does the math on top of the base ticket.
+          The calculator does the math on top of the base ticket.
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
@@ -3797,7 +3797,7 @@ const HELP = {
         <p>
           A <em>downside</em> stress lever. Customers under price
           pressure shift toward Margherita and Marinara (the cheapest
-          pies); the simulator drops AOV and COGS proportionally to the
+          pies); the calculator drops AOV and COGS proportionally to the
           pp share that moves.
         </p>
         <InstitutionalAnalysis>
@@ -3881,7 +3881,7 @@ const HELP = {
             <strong>Not modelled:</strong> the cross-price elasticity
             between menu items (some customers downshift on price but
             up-attach on coffee — &quot;treat&quot; behaviour). The
-            simulation treats the price-shift as pure ticket loss
+            calculator treats the price-shift as pure ticket loss
             without compensating attach changes.
           </p>
         </Methodology>
@@ -3898,7 +3898,7 @@ const HELP = {
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
             More delivery = more volume but worse per-order margin —
-            the central trade-off. The simulator treats channel mix as
+            the central trade-off. The calculator treats channel mix as
             substitution (delivery replaces dine-in 1:1), but a chunk
             of platform orders are genuinely incremental demand
             (customers who wouldn&apos;t have walked in). Validate the
@@ -4561,7 +4561,7 @@ const HELP = {
         <p>
           Jul-Aug: schools closed, offices half-empty, lunch covers drop.
           Default multiplier 0.85 = 15% lunch haircut for those two months
-          (the simulator averages 2/12 of the year for the headline).
+          (the calculator averages 2/12 of the year for the headline).
         </p>
         <InstitutionalAnalysis>
           <p style={{ margin: 0 }}>
@@ -4614,7 +4614,7 @@ const HELP = {
         <Methodology>
           <p style={{ margin: "0 0 6px" }}>
             <strong>Inputs:</strong> single multiplier (default 0.85 = 15%
-            lunch volume haircut). Applies only to Jul-Aug; the simulator
+            lunch volume haircut). Applies only to Jul-Aug; the calculator
             averages across the 2/12 months of the year for the headline
             monthly figure.
           </p>
@@ -5342,7 +5342,7 @@ const HELP = {
             <li>
               <strong>Watch the min-wage announcement:</strong> Polish
               min-wage is published Sep for next year. Re-run the
-              simulation with new labor rates before approving budgets.
+              calculator with new labor rates before approving budgets.
             </li>
             <li>
               <strong>Lock seasonal staffing 90 days out:</strong>
@@ -6735,7 +6735,7 @@ const HELP = {
             A 70-pizza/hr kitchen drops to <strong>~45 effective orders/hr</strong>
             when half the orders are pasta primo (90s extra per dish, separate
             station). The model bakes this in. Push pasta attach high without
-            raising this multiplier and the simulator will lie to you — your
+            raising this multiplier and the calculator will lie to you — your
             &quot;capacity&quot; looks bigger than it actually is.
           </p>
         </PlainTalk>
@@ -10723,7 +10723,7 @@ export function AdminSimulation() {
   );
 
   if (loading || !scenario || !computed) {
-    return <div className="v2-page-loading">Loading simulation…</div>;
+    return <div className="v2-page-loading">Loading calculator…</div>;
   }
 
   const seedFromHistory = async () => {
@@ -10961,7 +10961,7 @@ export function AdminSimulation() {
       <header className="v2-page-header">
         <div className="v2-page-title-row">
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="v2-page-title">Simulation</h1>
+            <h1 className="v2-page-title">Calculator</h1>
             <Badge tone="warning" variant="soft" dot>
               Sandbox — not the real ledger
             </Badge>
@@ -12649,7 +12649,7 @@ export function AdminSimulation() {
         onClose={() => setSeedConfirmOpen(false)}
         onConfirm={seedFromHistory}
         title="Seed from the last 30 days?"
-        description="Populates the simulator with payroll and fixed costs derived from your active business-costs ledger. The ledger is read-only here — none of your real cost data changes."
+        description="Populates the calculator with payroll and fixed costs derived from your active business-costs ledger. The ledger is read-only here — none of your real cost data changes."
         confirmLabel="Seed scenario"
       />
       <ConfirmDialog
@@ -17241,7 +17241,7 @@ function AiEnhancementsCard({ scenario, computed }: AiEnhancementsCardProps) {
             <AlertTriangle className="h-4 w-4" aria-hidden style={{ flexShrink: 0, marginTop: 2 }} />
             <div>
               <strong>AI not configured.</strong> Set <code>ANTHROPIC_API_KEY</code> in your
-              environment to enable Claude-powered suggestions. The simulator works fine
+              environment to enable Claude-powered suggestions. The calculator works fine
               without it — every chart and KPI on this page is computed locally.
             </div>
           </div>
