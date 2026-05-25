@@ -103,20 +103,26 @@ export function AdminKDS() {
     }
   }, []);
 
-  if (ready && isMobile) {
-    return <MobileKDS />;
-  }
-
   // Managers + franchisees get the floor-control ops header; kitchen/staff
   // get the chef line strip (station focus + queue depth + quick 86); the
   // pre-resolve null state gets the plain board.
   const managerControls = role === "manager" || role === "franchisee";
   const chef = role === "kitchen" || role === "staff";
 
-  // Only owners get the Fleet ↔ Floor switcher.
+  // Only owners get the Atlas fleet lens + the Fleet ↔ Floor switcher. Everyone
+  // else (incl. the pre-resolve null state) gets the floor board: the dedicated
+  // mobile KDS on a phone, the desktop floor board otherwise.
   if (role !== "owner") {
+    if (ready && isMobile) {
+      return <MobileKDS />;
+    }
     return <AdminKDSDesktop opsHeader={managerControls} chefStrip={chef} />;
   }
+
+  // Owner — Atlas fleet command, with a switch down to the floor board. The
+  // Atlas board reflows to its responsive layout on a phone; its floor view is
+  // the dedicated mobile KDS there and the desktop floor board otherwise.
+  const floorView = ready && isMobile ? <MobileKDS /> : <AdminKDSDesktop opsHeader />;
 
   return (
     <div>
@@ -146,8 +152,7 @@ export function AdminKDS() {
           }}
         />
       ) : (
-        // An owner dropping into a truck gets the manager floor controls too.
-        <AdminKDSDesktop opsHeader />
+        floorView
       )}
     </div>
   );

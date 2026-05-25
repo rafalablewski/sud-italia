@@ -7982,9 +7982,22 @@ select.pub-input {
 @media (max-width: 1024px) {
   .kds-atlas .ka-fb-grid { grid-template-columns: repeat(4, 1fr); }
   .kds-atlas .ka-boards { display: flex; flex-direction: column; }
+  /* On narrow viewports (incl. the mobile shell) drop the fixed-height wall
+     model: let the board grow with content and the page scroll, instead of
+     trapping ticket lists in nested overflow regions. Fullscreen keeps the
+     bounded scroll so the wall display still fills the screen. */
+  .kds-atlas:not(.is-fullscreen) { min-height: auto; }
+  .kds-atlas:not(.is-fullscreen) .ka-tbody { overflow: visible; }
+  .kds-atlas .ka-head { position: sticky; top: 0; z-index: 2; }
 }
 @media (max-width: 560px) {
   .kds-atlas .ka-kd-label, .kds-atlas .ka-clock { display: none; }
+  .kds-atlas .ka-head { gap: 8px; padding: 8px 12px; }
+  .kds-atlas .ka-filters, .kds-atlas .ka-lines { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .kds-atlas .ka-filters::-webkit-scrollbar, .kds-atlas .ka-lines::-webkit-scrollbar { display: none; }
+  .kds-atlas .ka-fleetbar, .kds-atlas .ka-thead, .kds-atlas .ka-tbody, .kds-atlas .ka-pace-gauges { padding-left: 14px; padding-right: 14px; }
   .kds-atlas .ka-fb-grid { grid-template-columns: repeat(2, 1fr); }
   .kds-atlas .ka-pace-gauges { grid-template-columns: repeat(2, 1fr); }
+  .kds-atlas .ka-th-spark { display: none; }
+  .kds-atlas .ka-t-name { max-width: 36%; }
 }
