@@ -36,12 +36,14 @@ import {
   KdsLane,
   STATION_FILTERS,
   fmtClock,
-  groupByColumn,
+  groupTicketsByColumn,
   nextStatus,
   remainingSlaSeconds,
   ticketCategories,
   totalPrepSeconds,
 } from "./kds-board";
+import { analyzeTruck } from "@/lib/kds-prediction";
+import { buildKdsTicket, type KdsTicket } from "@/lib/kds-ticket";
 import { useKdsSimulator } from "@/lib/useKdsSimulator";
 import type { AdminRole } from "@/lib/admin-roles";
 
@@ -311,7 +313,14 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
     // hasn't changed.
   }, [orders, soundOn, now]);
 
-  const visibleByStatus = useMemo(() => groupByColumn(orders, station), [orders, station]);
+  // Build the shared KDS tickets from the live orders + the predictive engine
+  // (the same analyzeTruck the Atlas fleet board runs), then group into lanes.
+  // The cards and their tones are now identical to Fleet.
+  const visibleByStatus = useMemo(() => {
+    const analysis = analyzeTruck(orders, now);
+    const tickets = orders.map((o) => buildKdsTicket(o, analysis.predictions.get(o.id), now));
+    return groupTicketsByColumn(tickets, station);
+  }, [orders, station, now]);
 
   // Per-lane ticket counts (after the station filter) for the stage switcher.
   const laneCounts = useMemo(() => {
@@ -348,7 +357,7 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
       const arr = visibleByStatus.get(col.id) || [];
       if (arr.length > 0) return arr;
     }
-    return [] as Order[];
+    return [] as KdsTicket[];
   }, [visibleByStatus, lane]);
   const orderById = useMemo(() => {
     const m = new Map<string, Order>();
@@ -359,7 +368,9 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
   // Keyboard handler — kept stable so the listener attaches once.
   // advanceRef points at the latest `advance` closure so the hotkey
   // always uses fresh state (orders, updatingId).
-  const advanceRef = useRef<(o: Order) => Promise<void>>(async () => {});
+  const advanceRef = useRef<(o: { id: string; status: OrderStatus; customerName?: string }) => Promise<void>>(
+    async () => {},
+  );
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
@@ -380,7 +391,7 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
   }, [ticketColumnFlat]);
   void orderById;
 
-  const advance = async (o: Order) => {
+  const advance = async (o: { id: string; status: OrderStatus; customerName?: string }) => {
     const next = nextStatus(o.status);
     if (!next) return;
     setUpdatingId(o.id);

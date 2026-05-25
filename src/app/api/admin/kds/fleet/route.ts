@@ -3,7 +3,7 @@ import { withAdmin } from "@/lib/api-middleware";
 import { getKdsServiceHistory, getLaborCostInRange, getOrders } from "@/lib/store";
 import { getActiveLocationsAsync } from "@/lib/locations-store";
 import { MENU_CATEGORY_LABELS } from "@/data/types";
-import type { MenuCategory, Order } from "@/data/types";
+import { buildKdsTicket } from "@/lib/kds-ticket";
 import {
   analyzeTruck,
   computeHealth,
@@ -32,21 +32,6 @@ import {
  */
 
 const ACTIVE = new Set(["confirmed", "preparing", "ready"]);
-
-function shortId(id: string): string {
-  return id.slice(-6).replace(/^[^a-z0-9]+/i, "").toUpperCase();
-}
-
-function ticketItems(o: Order) {
-  return o.items.map((ci) => ({
-    name: ci.menuItem.name,
-    quantity: ci.quantity,
-    category: ci.menuItem.category as MenuCategory,
-    categoryLabel: MENU_CATEGORY_LABELS[ci.menuItem.category] ?? ci.menuItem.category,
-    notes: ci.notes,
-    allergens: ci.menuItem.allergens ?? [],
-  }));
-}
 
 export const GET = withAdmin({ roles: ["owner"] }, async (req) => {
   const includeSimulated = req.nextUrl.searchParams.get("includeSimulated") === "1";
@@ -90,27 +75,7 @@ export const GET = withAdmin({ roles: ["owner"] }, async (req) => {
         promiseAcc: promiseAccuracy,
       });
 
-      const tickets = active.map((o) => {
-        const p = analysis.predictions.get(o.id);
-        return {
-          id: o.id,
-          shortId: shortId(o.id),
-          customerName: o.customerName || "Guest",
-          fulfillmentType: o.fulfillmentType,
-          partySize: o.partySize,
-          status: o.status,
-          slotTime: o.slotTime,
-          specialInstructions: o.specialInstructions,
-          itemCount: o.items.reduce((n, ci) => n + ci.quantity, 0),
-          items: ticketItems(o),
-          paidAtMs: Date.parse(o.paidAt ?? o.createdAt) || now,
-          promisedReadyAtMs: p?.promisedReadyAtMs ?? null,
-          predictedReadyAtMs: p?.predictedReadyAtMs ?? now,
-          predSeconds: p?.predSeconds ?? 0,
-          atRisk: p?.atRisk ?? false,
-          simulated: o.simulated ?? false,
-        };
-      });
+      const tickets = active.map((o) => buildKdsTicket(o, analysis.predictions.get(o.id), now));
 
       const stations = analysis.stations.map((s) => ({
         id: s.id,

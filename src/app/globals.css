@@ -2534,6 +2534,26 @@ html { scroll-behavior: smooth; }
    classes are present. */
 .kds-floor-dark {
   color-scheme: dark;
+  /* Atlas (--ka-*) palette so the shared KdsTicketCard renders identically to
+     the fleet board (the card CSS is scoped to both .kds-atlas and this class). */
+  --ka-canvas: #0a0c10;
+  --ka-panel: #11151b;
+  --ka-raised: #1a2129;
+  --ka-hair: rgba(255, 255, 255, 0.08);
+  --ka-hair-strong: rgba(255, 255, 255, 0.14);
+  --ka-text: #e9edf2;
+  --ka-dim: #9098a3;
+  --ka-faint: #5c6571;
+  --ka-queued: #5b6573;
+  --ka-firing: #3b82f6;
+  --ka-warn: #f5a623;
+  --ka-risk: #8b5cf6;
+  --ka-late: #e5484d;
+  --ka-ready: #3dd68c;
+  --ka-risk-soft: rgba(139, 92, 246, 0.16);
+  --ka-warn-soft: rgba(245, 166, 35, 0.13);
+  --ka-late-soft: rgba(229, 72, 77, 0.14);
+  --ka-ready-soft: rgba(61, 214, 140, 0.13);
   --bg: #0a0c10;
   --kds-bg: #0a0c10;
   --surface-1: #1a2129;
@@ -2556,21 +2576,14 @@ html { scroll-behavior: smooth; }
   background: var(--bg);
   color: var(--fg);
 }
-/* The bump/advance button is brand red (#c8102e) — too dark to read on the
-   near-black surface, so brighten it (matches the kiosk treatment). */
-.kds-floor-dark .v2-ticket-foot .v2-btn-primary {
-  color: #ff5d5d;
-  border-color: #ff5d5d;
-  background: rgba(255, 93, 93, 0.12);
-  box-shadow: none;
-}
-.kds-floor-dark .v2-ticket-foot .v2-btn-primary:hover:not(:disabled):not(.is-loading) {
-  background: rgba(255, 93, 93, 0.22);
-  color: #ff5d5d;
-}
 /* On mobile the page is content-sized inside the shell; stretch it so the dark
    surface fills the viewport instead of leaving a light gap under short lists. */
 .v2-m-page.kds-floor-dark { min-height: 100%; }
+
+/* The floor board lays the shared KdsTicketCards out in its lane columns; give
+   the lane grid / column body room for the richer card and keep the dark column
+   surface from the token remap above. */
+.kds-floor-dark .v2-kds-lane-grid { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
 
 /* ----------------------------
    KDS — fullscreen kiosk + dark "kitchen OS" theme
@@ -2703,6 +2716,13 @@ html { scroll-behavior: smooth; }
   color: #ff5d5d;
 }
 .kds-os .v2-kds-stats { display: none; }
+/* Fullscreen kiosk now renders the shared KdsTicketCard; scale it up so the
+   wall display stays glanceable across a hot, bright line. */
+.kds-os .ka-t-id { font-size: 19px; }
+.kds-os .ka-ti-elapsed { font-size: 30px; }
+.kds-os .ka-nm { font-size: 16px; }
+.kds-os .ka-q { font-size: 14px; }
+.kds-os .ka-act { min-height: 52px; font-size: 14px; padding: 12px 22px; }
 
 /* ============================
    ADMIN v2 — MENU
@@ -7966,69 +7986,69 @@ select.pub-input {
 .kds-atlas .ka-tbody::-webkit-scrollbar { width: 7px; }
 .kds-atlas .ka-tbody::-webkit-scrollbar-thumb { background: var(--ka-hair-strong); border-radius: 4px; }
 .kds-atlas .ka-empty { color: var(--ka-faint); font-size: 12px; text-align: center; padding: 32px 16px; border: 1px dashed var(--ka-hair); border-radius: 8px; }
-.kds-atlas .ka-ticket { position: relative; background: var(--ka-raised); border: 1px solid var(--ka-hair); border-radius: 12px; padding: 16px 16px 16px 20px; overflow: hidden; transition: border-color .16s, background .16s; }
-.kds-atlas .ka-ticket::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--ka-queued); transition: background .16s; }
-.kds-atlas .ka-ticket.firing::before { background: var(--ka-firing); }
-.kds-atlas .ka-ticket.warn::before { background: var(--ka-warn); }
-.kds-atlas .ka-ticket.risk::before { background: var(--ka-risk); }
-.kds-atlas .ka-ticket.late::before { background: var(--ka-late); }
-.kds-atlas .ka-ticket.ready::before { background: var(--ka-ready); }
-.kds-atlas .ka-ticket.risk { border-color: rgba(139,92,246,0.45); background: #2C2A4A; }
-.kds-atlas .ka-ticket.late { border-color: rgba(229,72,77,0.5); background: #3B272F; }
-.kds-atlas .ka-ticket.ready { border-color: rgba(61,214,140,0.3); }
+:is(.kds-atlas, .kds-floor-dark) .ka-ticket { position: relative; background: var(--ka-raised); border: 1px solid var(--ka-hair); border-radius: 12px; padding: 16px 16px 16px 20px; overflow: hidden; transition: border-color .16s, background .16s; }
+:is(.kds-atlas, .kds-floor-dark) .ka-ticket::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--ka-queued); transition: background .16s; }
+:is(.kds-atlas, .kds-floor-dark) .ka-ticket.firing::before { background: var(--ka-firing); }
+:is(.kds-atlas, .kds-floor-dark) .ka-ticket.warn::before { background: var(--ka-warn); }
+:is(.kds-atlas, .kds-floor-dark) .ka-ticket.risk::before { background: var(--ka-risk); }
+:is(.kds-atlas, .kds-floor-dark) .ka-ticket.late::before { background: var(--ka-late); }
+:is(.kds-atlas, .kds-floor-dark) .ka-ticket.ready::before { background: var(--ka-ready); }
+:is(.kds-atlas, .kds-floor-dark) .ka-ticket.risk { border-color: rgba(139,92,246,0.45); background: #2C2A4A; }
+:is(.kds-atlas, .kds-floor-dark) .ka-ticket.late { border-color: rgba(229,72,77,0.5); background: #3B272F; }
+:is(.kds-atlas, .kds-floor-dark) .ka-ticket.ready { border-color: rgba(61,214,140,0.3); }
 /* Sandbox / simulator tickets: a dashed frame + slim tag so a SIMULATION rush
    can never be confused with real service (mirrors the floor board). The neutral
    treatment stays out of the way of the red "late" / violet "at-risk" signals. */
-.kds-atlas .ka-ticket-sim { border-style: dashed; border-color: var(--ka-faint); }
-.kds-atlas .ka-ticket-sim::before { opacity: 0.4; }
-.kds-atlas .ka-t-sim-tag { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 0 0 10px; padding: 3px 8px; background: rgba(255,255,255,0.04); border: 1px dashed var(--ka-hair); border-radius: 6px; color: var(--ka-faint); font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
-.kds-atlas .ka-t-r1 { display: flex; align-items: center; gap: 8px; }
-.kds-atlas .ka-t-id { font-size: 16px; font-weight: 700; letter-spacing: 0.03em; }
-.kds-atlas .ka-t-chan { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; color: var(--ka-faint); text-transform: uppercase; }
-.kds-atlas .ka-t-name { margin-left: auto; font-size: 13px; font-weight: 500; color: var(--ka-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 42%; }
-.kds-atlas .ka-risk-pill { display: inline-flex; align-items: center; gap: 4px; font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ka-risk); background: var(--ka-risk-soft); border: 1px solid rgba(139,92,246,0.4); padding: 2px 6px; border-radius: 5px; }
-.kds-atlas .ka-t-timer { display: flex; align-items: center; gap: 16px; margin-top: 16px; }
-.kds-atlas .ka-timer-ring { position: relative; width: 54px; height: 54px; flex: 0 0 auto; }
-.kds-atlas .ka-timer-ring svg { width: 54px; height: 54px; }
-.kds-atlas .ka-tr-cap { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; color: var(--ka-dim); }
-.kds-atlas .ka-timer-info { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1 1 auto; }
-.kds-atlas .ka-ti-row { display: flex; align-items: baseline; gap: 8px; }
-.kds-atlas .ka-ti-elapsed { font-size: 24px; font-weight: 700; line-height: 1; }
-.kds-atlas .ka-ti-elapsed-lab { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ka-faint); }
-.kds-atlas .ka-ti-due { margin-left: auto; font-size: 13.5px; font-weight: 600; color: var(--ka-dim); }
-.kds-atlas .ka-ti-due.firing { color: var(--ka-firing); }
-.kds-atlas .ka-ti-due.warn { color: var(--ka-warn); }
-.kds-atlas .ka-ti-due.risk { color: var(--ka-risk); }
-.kds-atlas .ka-ti-due.late { color: var(--ka-late); }
-.kds-atlas .ka-ti-due.ready { color: var(--ka-ready); }
-.kds-atlas .ka-ti-pred { font-size: 11.5px; color: var(--ka-faint); }
-.kds-atlas .ka-ti-pred.is-risk b { color: var(--ka-risk); font-weight: 600; }
-.kds-atlas .ka-t-items { margin-top: 16px; display: flex; flex-direction: column; gap: 12px; }
-.kds-atlas .ka-it-group { display: flex; flex-direction: column; gap: 5px; }
-.kds-atlas .ka-it-group.is-dim { opacity: .38; }
-.kds-atlas .ka-ig-head { display: flex; align-items: center; gap: 9px; font-size: 9.5px; letter-spacing: 0.13em; text-transform: uppercase; color: var(--ka-faint); font-weight: 700; }
-.kds-atlas .ka-ig-head::after { content: ""; flex: 1 1 auto; height: 1px; background: var(--ka-hair); order: 1; }
-.kds-atlas .ka-ig-name { order: 0; }
-.kds-atlas .ka-ig-count { order: 2; font-size: 9.5px; font-weight: 600; color: var(--ka-dim); background: var(--ka-hair); border-radius: 4px; padding: 0 6px; line-height: 15px; }
-.kds-atlas .ka-it { display: flex; flex-direction: column; gap: 4px; padding-left: 2px; }
-.kds-atlas .ka-it-main { display: flex; gap: 12px; align-items: baseline; }
-.kds-atlas .ka-q { font-weight: 600; font-size: 13px; min-width: 34px; text-align: center; background: rgba(255,255,255,0.05); border: 1px solid var(--ka-hair); border-radius: 5px; padding: 2px 6px; flex: 0 0 auto; }
-.kds-atlas .ka-nm { font-size: 14px; font-weight: 500; line-height: 1.3; }
-.kds-atlas .ka-req { display: inline-flex; align-items: center; gap: 6px; margin-left: 46px; font-size: 12.5px; color: var(--ka-warn); font-weight: 500; }
-.kds-atlas .ka-t-allergy { margin-top: 12px; border: 1px solid rgba(229,72,77,0.45); background: rgba(229,72,77,0.11); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 5px; }
-.kds-atlas .ka-ta-head { display: flex; align-items: center; gap: 7px; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ka-late); font-weight: 700; }
-.kds-atlas .ka-ta-body { font-size: 13px; font-weight: 600; line-height: 1.4; padding-left: 20px; text-transform: capitalize; }
-.kds-atlas .ka-t-notes { margin-top: 12px; border: 1px solid rgba(245,166,35,0.28); background: rgba(245,166,35,0.07); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
-.kds-atlas .ka-tn-head { display: flex; align-items: center; gap: 7px; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ka-warn); font-weight: 700; }
-.kds-atlas .ka-tn-line { font-size: 13px; line-height: 1.45; }
-.kds-atlas .ka-t-foot { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--ka-hair); display: flex; align-items: center; gap: 12px; }
-.kds-atlas .ka-t-meta { font-size: 10px; letter-spacing: 0.06em; color: var(--ka-faint); text-transform: uppercase; }
-.kds-atlas .ka-t-meta b { color: var(--ka-dim); }
-.kds-atlas .ka-act { margin-left: auto; appearance: none; cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 600; border-radius: 7px; padding: 9px 17px; white-space: nowrap; border: 1px solid var(--ka-hair-strong); background: var(--ka-raised); color: var(--ka-text); transition: background .16s, border-color .16s; }
-.kds-atlas .ka-act:hover { border-color: var(--ka-text); background: rgba(255,255,255,0.06); }
-.kds-atlas .ka-act:disabled { opacity: .5; cursor: default; }
-.kds-atlas .ka-act.ready { color: var(--ka-ready); border-color: rgba(61,214,140,0.5); }
-.kds-atlas .ka-act.ready:hover { background: var(--ka-ready-soft); }
+:is(.kds-atlas, .kds-floor-dark) .ka-ticket-sim { border-style: dashed; border-color: var(--ka-faint); }
+:is(.kds-atlas, .kds-floor-dark) .ka-ticket-sim::before { opacity: 0.4; }
+:is(.kds-atlas, .kds-floor-dark) .ka-t-sim-tag { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 0 0 10px; padding: 3px 8px; background: rgba(255,255,255,0.04); border: 1px dashed var(--ka-hair); border-radius: 6px; color: var(--ka-faint); font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+:is(.kds-atlas, .kds-floor-dark) .ka-t-r1 { display: flex; align-items: center; gap: 8px; }
+:is(.kds-atlas, .kds-floor-dark) .ka-t-id { font-size: 16px; font-weight: 700; letter-spacing: 0.03em; }
+:is(.kds-atlas, .kds-floor-dark) .ka-t-chan { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; color: var(--ka-faint); text-transform: uppercase; }
+:is(.kds-atlas, .kds-floor-dark) .ka-t-name { margin-left: auto; font-size: 13px; font-weight: 500; color: var(--ka-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 42%; }
+:is(.kds-atlas, .kds-floor-dark) .ka-risk-pill { display: inline-flex; align-items: center; gap: 4px; font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ka-risk); background: var(--ka-risk-soft); border: 1px solid rgba(139,92,246,0.4); padding: 2px 6px; border-radius: 5px; }
+:is(.kds-atlas, .kds-floor-dark) .ka-t-timer { display: flex; align-items: center; gap: 16px; margin-top: 16px; }
+:is(.kds-atlas, .kds-floor-dark) .ka-timer-ring { position: relative; width: 54px; height: 54px; flex: 0 0 auto; }
+:is(.kds-atlas, .kds-floor-dark) .ka-timer-ring svg { width: 54px; height: 54px; }
+:is(.kds-atlas, .kds-floor-dark) .ka-tr-cap { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; color: var(--ka-dim); }
+:is(.kds-atlas, .kds-floor-dark) .ka-timer-info { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1 1 auto; }
+:is(.kds-atlas, .kds-floor-dark) .ka-ti-row { display: flex; align-items: baseline; gap: 8px; }
+:is(.kds-atlas, .kds-floor-dark) .ka-ti-elapsed { font-size: 24px; font-weight: 700; line-height: 1; }
+:is(.kds-atlas, .kds-floor-dark) .ka-ti-elapsed-lab { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ka-faint); }
+:is(.kds-atlas, .kds-floor-dark) .ka-ti-due { margin-left: auto; font-size: 13.5px; font-weight: 600; color: var(--ka-dim); }
+:is(.kds-atlas, .kds-floor-dark) .ka-ti-due.firing { color: var(--ka-firing); }
+:is(.kds-atlas, .kds-floor-dark) .ka-ti-due.warn { color: var(--ka-warn); }
+:is(.kds-atlas, .kds-floor-dark) .ka-ti-due.risk { color: var(--ka-risk); }
+:is(.kds-atlas, .kds-floor-dark) .ka-ti-due.late { color: var(--ka-late); }
+:is(.kds-atlas, .kds-floor-dark) .ka-ti-due.ready { color: var(--ka-ready); }
+:is(.kds-atlas, .kds-floor-dark) .ka-ti-pred { font-size: 11.5px; color: var(--ka-faint); }
+:is(.kds-atlas, .kds-floor-dark) .ka-ti-pred.is-risk b { color: var(--ka-risk); font-weight: 600; }
+:is(.kds-atlas, .kds-floor-dark) .ka-t-items { margin-top: 16px; display: flex; flex-direction: column; gap: 12px; }
+:is(.kds-atlas, .kds-floor-dark) .ka-it-group { display: flex; flex-direction: column; gap: 5px; }
+:is(.kds-atlas, .kds-floor-dark) .ka-it-group.is-dim { opacity: .38; }
+:is(.kds-atlas, .kds-floor-dark) .ka-ig-head { display: flex; align-items: center; gap: 9px; font-size: 9.5px; letter-spacing: 0.13em; text-transform: uppercase; color: var(--ka-faint); font-weight: 700; }
+:is(.kds-atlas, .kds-floor-dark) .ka-ig-head::after { content: ""; flex: 1 1 auto; height: 1px; background: var(--ka-hair); order: 1; }
+:is(.kds-atlas, .kds-floor-dark) .ka-ig-name { order: 0; }
+:is(.kds-atlas, .kds-floor-dark) .ka-ig-count { order: 2; font-size: 9.5px; font-weight: 600; color: var(--ka-dim); background: var(--ka-hair); border-radius: 4px; padding: 0 6px; line-height: 15px; }
+:is(.kds-atlas, .kds-floor-dark) .ka-it { display: flex; flex-direction: column; gap: 4px; padding-left: 2px; }
+:is(.kds-atlas, .kds-floor-dark) .ka-it-main { display: flex; gap: 12px; align-items: baseline; }
+:is(.kds-atlas, .kds-floor-dark) .ka-q { font-weight: 600; font-size: 13px; min-width: 34px; text-align: center; background: rgba(255,255,255,0.05); border: 1px solid var(--ka-hair); border-radius: 5px; padding: 2px 6px; flex: 0 0 auto; }
+:is(.kds-atlas, .kds-floor-dark) .ka-nm { font-size: 14px; font-weight: 500; line-height: 1.3; }
+:is(.kds-atlas, .kds-floor-dark) .ka-req { display: inline-flex; align-items: center; gap: 6px; margin-left: 46px; font-size: 12.5px; color: var(--ka-warn); font-weight: 500; }
+:is(.kds-atlas, .kds-floor-dark) .ka-t-allergy { margin-top: 12px; border: 1px solid rgba(229,72,77,0.45); background: rgba(229,72,77,0.11); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 5px; }
+:is(.kds-atlas, .kds-floor-dark) .ka-ta-head { display: flex; align-items: center; gap: 7px; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ka-late); font-weight: 700; }
+:is(.kds-atlas, .kds-floor-dark) .ka-ta-body { font-size: 13px; font-weight: 600; line-height: 1.4; padding-left: 20px; text-transform: capitalize; }
+:is(.kds-atlas, .kds-floor-dark) .ka-t-notes { margin-top: 12px; border: 1px solid rgba(245,166,35,0.28); background: rgba(245,166,35,0.07); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+:is(.kds-atlas, .kds-floor-dark) .ka-tn-head { display: flex; align-items: center; gap: 7px; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ka-warn); font-weight: 700; }
+:is(.kds-atlas, .kds-floor-dark) .ka-tn-line { font-size: 13px; line-height: 1.45; }
+:is(.kds-atlas, .kds-floor-dark) .ka-t-foot { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--ka-hair); display: flex; align-items: center; gap: 12px; }
+:is(.kds-atlas, .kds-floor-dark) .ka-t-meta { font-size: 10px; letter-spacing: 0.06em; color: var(--ka-faint); text-transform: uppercase; }
+:is(.kds-atlas, .kds-floor-dark) .ka-t-meta b { color: var(--ka-dim); }
+:is(.kds-atlas, .kds-floor-dark) .ka-act { margin-left: auto; appearance: none; cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 600; border-radius: 7px; padding: 9px 17px; white-space: nowrap; border: 1px solid var(--ka-hair-strong); background: var(--ka-raised); color: var(--ka-text); transition: background .16s, border-color .16s; }
+:is(.kds-atlas, .kds-floor-dark) .ka-act:hover { border-color: var(--ka-text); background: rgba(255,255,255,0.06); }
+:is(.kds-atlas, .kds-floor-dark) .ka-act:disabled { opacity: .5; cursor: default; }
+:is(.kds-atlas, .kds-floor-dark) .ka-act.ready { color: var(--ka-ready); border-color: rgba(61,214,140,0.5); }
+:is(.kds-atlas, .kds-floor-dark) .ka-act.ready:hover { background: var(--ka-ready-soft); }
 
 /* ---- states ---- */
 .kds-atlas .ka-loading { padding: 48px 24px; text-align: center; color: var(--ka-dim); font-size: 13px; }

@@ -7,18 +7,18 @@ import {
   ChevronLeft,
   ChevronRight,
   Flame,
-  FlaskConical,
   PauseCircle,
   PlayCircle,
-  Timer,
-  Users,
 } from "lucide-react";
 import { useAdminOrdersStream } from "@/lib/useAdminOrdersStream";
 import { useKdsSimulator } from "@/lib/useKdsSimulator";
 import { Badge } from "../v2/ui";
 import type { Order, OrderStatus, MenuCategory } from "@/data/types";
 import { MENU_CATEGORY_LABELS } from "@/data/types";
-import { fulfillmentLabel, formatPartySize } from "@/lib/fulfillment";
+import { analyzeTruck } from "@/lib/kds-prediction";
+import { buildKdsTicket } from "@/lib/kds-ticket";
+import { KdsTicketCard } from "../kds/KdsTicketCard";
+import { toneForTicket } from "../kds-board";
 import { useAdminLocation } from "../v2/LocationContext";
 import { useToast } from "../v2/ui/Toast";
 import {
@@ -58,38 +58,11 @@ function nextStatus(s: OrderStatus): OrderStatus | null {
   return null;
 }
 
-function fmtClock(s: number): string {
-  const abs = Math.abs(s);
-  const m = Math.floor(abs / 60);
-  const r = abs % 60;
-  const sign = s < 0 ? "-" : "";
-  return `${sign}${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
-}
-
-function elapsedSec(order: Order): number {
-  const base = order.paidAt ? new Date(order.paidAt).getTime() : new Date(order.createdAt).getTime();
-  return Math.max(0, Math.round((Date.now() - base) / 1000));
-}
-
 function remainingSec(order: Order): number | null {
   if (!order.estimatedReadyAt) return null;
   const target = new Date(order.estimatedReadyAt).getTime();
   if (!Number.isFinite(target)) return null;
   return Math.round((target - Date.now()) / 1000);
-}
-
-function tone(order: Order): "neutral" | "warning" | "danger" {
-  const r = remainingSec(order);
-  const el = elapsedSec(order);
-  if (order.status === "ready") return "neutral";
-  if (r !== null) {
-    if (r < 0) return "danger";
-    if (r < 180) return "warning";
-    return "neutral";
-  }
-  if (el > 900) return "danger";
-  if (el > 600) return "warning";
-  return "neutral";
 }
 
 /**
@@ -106,7 +79,7 @@ export function MobileKDS() {
   const [muted, setMuted] = useState(false);
   const [lane, setLane] = useState<OrderStatus>("confirmed");
   const [station, setStation] = useState<MenuCategory | "all">("all");
-  const [, forceTick] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
   const lastIdsRef = useRef<Set<string>>(new Set());
   const overdueAnnouncedRef = useRef<Set<string>>(new Set());
   const readyAnnouncedRef = useRef<Set<string>>(new Set());
@@ -126,7 +99,7 @@ export function MobileKDS() {
     let interval = 1000;
     let handle: ReturnType<typeof setInterval> | null = null;
     const start = () => {
-      handle = setInterval(() => forceTick((t) => t + 1), interval);
+      handle = setInterval(() => setNow(Date.now()), interval);
     };
     const stop = () => {
       if (handle) clearInterval(handle);
@@ -203,7 +176,15 @@ export function MobileKDS() {
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   }, [orders, lane, station]);
 
-  const advance = async (order: Order) => {
+  // Shared KDS tickets for the visible lane, built off the predictive engine
+  // (the same analyzeTruck the Atlas fleet board runs) so the cards + tones
+  // match Fleet exactly.
+  const filteredTickets = useMemo(() => {
+    const analysis = analyzeTruck(orders, now);
+    return filtered.map((o) => buildKdsTicket(o, analysis.predictions.get(o.id), now));
+  }, [filtered, orders, now]);
+
+  const advance = async (order: { id: string; status: OrderStatus }) => {
     const target = nextStatus(order.status);
     if (!target) return;
     setBusy(order.id);
@@ -366,12 +347,15 @@ export function MobileKDS() {
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {filtered.map((o) => (
-            <TicketCard
-              key={o.id}
-              order={o}
-              onAdvance={() => advance(o)}
-              busy={busy === o.id}
+          {filteredTickets.map((t) => (
+            <KdsTicketCard
+              key={t.id}
+              t={t}
+              now={now}
+              tone={toneForTicket(t, now)}
+              station={station}
+              advancing={busy === t.id}
+              onAdvance={advance}
             />
           ))}
         </div>
@@ -407,177 +391,5 @@ export function MobileKDS() {
       </div>
     </MobilePage>
     </PullToRefresh>
-  );
-}
-
-function TicketCard({
-  order,
-  onAdvance,
-  busy,
-}: {
-  order: Order;
-  onAdvance: () => void;
-  busy: boolean;
-}) {
-  const elapsed = elapsedSec(order);
-  const remaining = remainingSec(order);
-  const sev = tone(order);
-  const next = nextStatus(order.status);
-
-  return (
-    <article
-      style={{
-        background:
-          sev === "danger"
-            ? "color-mix(in oklab, var(--danger) 12%, var(--surface-1))"
-            : sev === "warning"
-              ? "color-mix(in oklab, var(--warning) 10%, var(--surface-1))"
-              : "var(--surface-1)",
-        border: `1px solid ${
-          sev === "danger"
-            ? "color-mix(in oklab, var(--danger) 40%, transparent)"
-            : sev === "warning"
-              ? "color-mix(in oklab, var(--warning) 35%, transparent)"
-              : "var(--border)"
-        }`,
-        borderRadius: "var(--m-card-radius)",
-        padding: 14,
-        display: "flex",
-        flexDirection: "column",
-        gap: 10,
-        boxShadow: "var(--m-elev-1)",
-      }}
-    >
-      {order.simulated && (
-        <div className="v2-ticket-sim-tag">
-          <FlaskConical className="h-3 w-3" /> SIMULATION — not a real order
-        </div>
-      )}
-      <header
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 12,
-        }}
-      >
-        <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
-          <div style={{ fontSize: 13, color: "var(--fg-subtle)", textTransform: "uppercase", letterSpacing: 0.06 }}>
-            #{order.id.slice(-6)}
-          </div>
-          <div style={{ fontSize: 16, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {order.customerName}
-          </div>
-          {order.fulfillmentType === "dine-in" && (
-            <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 13, fontWeight: 600, color: "var(--brand)" }}>
-              <Users className="h-3.5 w-3.5" aria-hidden />
-              Dine-in{order.partySize ? ` · ${formatPartySize(order.partySize)}` : ""}
-            </div>
-          )}
-        </div>
-        <div
-          className="tabular"
-          style={{
-            fontSize: "var(--m-text-mega)",
-            fontWeight: 700,
-            letterSpacing: -0.04,
-            lineHeight: 1,
-            color: sev === "danger" ? "var(--danger)" : sev === "warning" ? "var(--warning)" : "var(--fg)",
-          }}
-        >
-          {fmtClock(elapsed)}
-        </div>
-      </header>
-
-      <ul role="list" style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 4 }}>
-        {order.items.map((it, i) => (
-          <li
-            key={`${it.menuItem.id}-${i}`}
-            style={{
-              display: "flex",
-              alignItems: "baseline",
-              gap: 8,
-              fontSize: 15,
-              fontWeight: 500,
-              color: "var(--fg)",
-            }}
-          >
-            <span
-              className="tabular"
-              style={{
-                fontWeight: 700,
-                color: "var(--brand)",
-                minWidth: 26,
-              }}
-            >
-              {it.quantity}×
-            </span>
-            <span style={{ flex: 1 }}>{it.menuItem.name}</span>
-            {it.menuItem.category && (
-              <span
-                style={{
-                  fontSize: 11,
-                  textTransform: "uppercase",
-                  letterSpacing: 0.06,
-                  color: "var(--fg-subtle)",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {it.menuItem.category}
-              </span>
-            )}
-          </li>
-        ))}
-      </ul>
-
-      {order.specialInstructions && (
-        <div
-          style={{
-            padding: 8,
-            borderRadius: 8,
-            background: "var(--warning-soft)",
-            color: "var(--warning)",
-            fontSize: 13,
-            fontWeight: 600,
-          }}
-        >
-          ⚠ {order.specialInstructions}
-        </div>
-      )}
-
-      <footer
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          justifyContent: "space-between",
-          paddingTop: 6,
-          borderTop: "1px solid var(--border)",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--fg-muted)" }}>
-          <Timer className="h-3.5 w-3.5" aria-hidden />
-          {remaining !== null ? (
-            <span className="tabular">
-              {remaining < 0 ? "Overdue " : "Due in "}
-              {fmtClock(Math.abs(remaining))}
-            </span>
-          ) : (
-            <span>{fulfillmentLabel(order.fulfillmentType)}</span>
-          )}
-        </div>
-        {next && (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={onAdvance}
-            className="v2-m-btn v2-m-btn-primary"
-            style={{ minWidth: 132 }}
-          >
-            {order.status === "confirmed" ? "Start prep" : order.status === "preparing" ? "Mark ready" : "Bump"}
-          </button>
-        )}
-      </footer>
-    </article>
   );
 }
