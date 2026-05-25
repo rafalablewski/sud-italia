@@ -132,32 +132,40 @@
     min-width:78px;text-align:right;
   }
 
-  /* ====================== Fleet benchmark bar ====================== */
+  /* ====================== Fleet command bar ====================== */
   .fleetbar{
-    flex:0 0 auto;
-    display:flex;align-items:stretch;gap:1px;
-    background:var(--hair);
-    border-bottom:1px solid var(--hair);
+    flex:0 0 auto;background:var(--panel);border-bottom:1px solid var(--hair);
+    padding:var(--s3) var(--s5);display:flex;flex-direction:column;gap:var(--s3);
   }
-  .fb-cell{
-    background:var(--panel);
-    padding:var(--s3) var(--s5);
-    display:flex;flex-direction:column;gap:5px;min-width:0;
-  }
-  .fb-cell.grow{flex:1 1 auto}
-  .fb-label{
-    font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:var(--faint);
-    display:flex;align-items:center;gap:6px;
-  }
-  .fb-val{display:flex;align-items:baseline;gap:7px}
-  .fb-num{font-family:var(--mono);font-size:24px;font-weight:600;line-height:1;letter-spacing:-0.01em;color:var(--text)}
-  .fb-unit{font-size:10px;color:var(--faint);letter-spacing:0.04em}
-  .fb-num.alert{color:var(--late)}
-  .fb-num.risk{color:var(--risk)}
-  .fb-num.good{color:var(--ready)}
+  .fb-eyebrow{display:flex;align-items:center;gap:var(--s3)}
+  .fb-brandline{display:flex;align-items:center;gap:7px;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:var(--dim);font-weight:700;white-space:nowrap}
+  .fb-brandline svg{width:13px;height:13px;opacity:.7;flex:0 0 auto}
+  .fb-sep{flex:1 1 auto;height:1px;background:var(--hair)}
+  .fb-trucks{font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--faint);white-space:nowrap}
+  .fb-trucks b{color:var(--text);font-weight:700}
 
-  /* benchmark cell — cross-truck comparison */
-  .benchmark{flex:2 1 auto}
+  .fb-grid{
+    display:grid;grid-template-columns:repeat(7,1fr);gap:1px;
+    background:var(--hair);border:1px solid var(--hair);border-radius:9px;overflow:hidden;
+  }
+  .ftile{
+    position:relative;background:var(--panel);padding:var(--s3) var(--s3) var(--s3) var(--s4);
+    display:flex;flex-direction:column;gap:3px;min-width:0;
+  }
+  .ftile::before{content:"";position:absolute;left:0;top:9px;bottom:9px;width:3px;border-radius:0 2px 2px 0;background:var(--queued);opacity:.45}
+  .ftile.risk::before{background:var(--risk);opacity:1}
+  .ftile.alert::before{background:var(--late);opacity:1}
+  .ftile.good::before{background:var(--ready);opacity:.9}
+  .ft-lab{font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ft-val{font-family:var(--mono);font-size:22px;font-weight:600;line-height:1;letter-spacing:-0.01em;color:var(--text)}
+  .ft-val.risk{color:var(--risk)}
+  .ft-val.alert{color:var(--late)}
+  .ft-val.good{color:var(--ready)}
+  .ft-sub{font-size:9.5px;color:var(--faint);letter-spacing:0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  /* cross-truck benchmark block */
+  .fb-benchmark{display:flex;flex-direction:column;gap:var(--s2)}
+  .fb-bm-lab{font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--faint)}
   .bm-rows{display:flex;flex-direction:column;gap:var(--s2);margin-top:2px}
   .bm-row{display:flex;align-items:center;gap:var(--s3)}
   .bm-name{font-size:11px;color:var(--dim);min-width:78px;display:flex;align-items:center;gap:6px}
@@ -390,31 +398,36 @@
   /* ====================== Pace (capacity vs demand) ====================== */
   /* per-truck capacity meter + covers/hr + revenue/hr — lives in truck header */
   .pace-head{
-    display:flex;align-items:stretch;gap:var(--s4);margin-top:var(--s3);
+    display:flex;align-items:stretch;gap:var(--s5);margin-top:var(--s3);
     padding-top:var(--s3);border-top:1px solid var(--hair);flex-wrap:wrap;
   }
-  .pace-rate{display:flex;flex-direction:column;gap:1px;min-width:0}
+  .pace-rate{display:flex;flex-direction:column;gap:2px;min-width:0}
   .pace-rate .lab{font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--faint)}
-  .pace-rate .val{font-family:var(--mono);font-size:15px;font-weight:600;color:var(--text)}
+  .pace-rate .val{font-family:var(--mono);font-size:16px;font-weight:600;color:var(--text)}
   .pace-rate .val small{font-size:9px;color:var(--faint);letter-spacing:0.04em;font-weight:400}
 
-  .cap-meter{flex:1 1 200px;min-width:160px;display:flex;flex-direction:column;gap:4px}
-  .cap-meter .cm-top{display:flex;align-items:baseline;gap:var(--s2)}
-  .cap-meter .cm-lab{font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--faint)}
-  .cap-meter .cm-pct{
-    font-family:var(--mono);font-size:13px;font-weight:600;color:var(--text);margin-left:auto;
-  }
-  .cap-meter .cm-pct.warn{color:var(--warn)}
-  .cap-meter .cm-pct.risk{color:var(--risk)}
-  .cap-meter .cm-station{font-size:9px;letter-spacing:0.04em;color:var(--dim)}
+  .cap-meter{flex:1 1 240px;min-width:200px;display:flex;flex-direction:column;gap:6px}
+  .cm-top{display:flex;align-items:center;gap:var(--s2)}
+  .cm-lab{font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--faint)}
+  .cm-pct{font-family:var(--mono);font-size:17px;font-weight:700;color:var(--text);margin-left:auto;line-height:1}
+  .cm-pct.warn{color:var(--warn)}
+  .cm-pct.risk{color:var(--risk)}
   .cap-track{
-    height:8px;background:rgba(255,255,255,0.07);border-radius:4px;overflow:hidden;position:relative;
+    height:10px;background:rgba(255,255,255,0.05);border:1px solid var(--hair);
+    border-radius:6px;overflow:hidden;position:relative;
   }
-  .cap-fill{height:100%;border-radius:4px;transition:width .3s ease,background .3s ease}
-  .cap-fill.calm{background:var(--ready)}
-  .cap-fill.warn{background:var(--warn)}
-  .cap-fill.risk{background:var(--risk)}
-  .cap-mark{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--text);opacity:.4}
+  .cap-fill{height:100%;border-radius:6px 0 0 6px;transition:width .35s ease,background .3s ease}
+  .cap-fill.calm{background:linear-gradient(90deg,rgba(61,214,140,0.5),var(--ready))}
+  .cap-fill.warn{background:linear-gradient(90deg,rgba(245,166,35,0.5),var(--warn))}
+  .cap-fill.risk{background:linear-gradient(90deg,rgba(139,92,246,0.5),var(--risk));box-shadow:0 0 14px rgba(139,92,246,0.55)}
+  .cap-mark{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--text);opacity:.5}
+  .cm-foot{display:flex;align-items:center;gap:var(--s2)}
+  .cm-station{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:600;color:var(--dim)}
+  .cm-station .dotb{width:7px;height:7px;border-radius:2px;background:var(--dim);flex:0 0 auto}
+  .cm-station.warn{color:var(--warn)} .cm-station.warn .dotb{background:var(--warn)}
+  .cm-station.risk{color:var(--risk)} .cm-station.risk .dotb{background:var(--risk)}
+  .cm-hint{margin-left:auto;font-size:9.5px;color:var(--faint);letter-spacing:0.02em}
+  .cm-hint.risk{color:var(--risk)}
 
   /* per-station pace gauges row inside the body */
   .pace-gauges{
@@ -426,35 +439,32 @@
     align-self:center;margin-right:var(--s1);white-space:nowrap;
   }
   .gauge{
-    flex:1 1 90px;min-width:84px;display:flex;flex-direction:column;gap:4px;
-    padding:var(--s2);border:1px solid var(--hair);border-radius:7px;background:var(--canvas);
+    flex:1 1 130px;min-width:120px;display:flex;flex-direction:column;gap:7px;
+    padding:var(--s3);border:1px solid var(--hair);border-radius:8px;background:var(--canvas);
     position:relative;
   }
-  .gauge.risk{border-color:rgba(139,92,246,0.5)}
-  .gauge.warn{border-color:rgba(245,166,35,0.35)}
-  .gauge .g-top{display:flex;align-items:baseline;gap:5px}
-  .gauge .g-name{font-size:10px;font-weight:600;color:var(--text);letter-spacing:0.01em}
-  .gauge .g-fig{font-family:var(--mono);font-size:10px;color:var(--dim);margin-left:auto}
-  .gauge .g-fig.warn{color:var(--warn)}
-  .gauge .g-fig.risk{color:var(--risk)}
-  .gauge .g-track{height:5px;background:rgba(255,255,255,0.07);border-radius:3px;overflow:hidden;position:relative}
-  .gauge .g-fill{height:100%;border-radius:3px;transition:width .3s ease,background .3s ease}
-  .gauge .g-fill.calm{background:var(--ready)}
-  .gauge .g-fill.warn{background:var(--warn)}
-  .gauge .g-fill.risk{background:var(--risk)}
-  .gauge .g-mark{position:absolute;top:-1px;bottom:-1px;width:2px;background:var(--text);opacity:.35}
-  .fc-badge{
-    position:absolute;top:-7px;right:6px;
-    font-family:var(--mono);font-size:9px;font-weight:600;line-height:14px;
-    padding:0 5px;border-radius:7px;background:var(--raised);border:1px solid var(--hair-strong);
-    color:var(--dim);letter-spacing:0.02em;
-  }
-  .fc-badge.risk{color:var(--risk);border-color:rgba(139,92,246,0.5)}
+  .gauge.warn{border-color:rgba(245,166,35,0.4)}
+  .gauge.risk{border-color:rgba(139,92,246,0.55);background:linear-gradient(180deg,var(--risk-soft),var(--canvas) 72%)}
+  .g-top{display:flex;align-items:baseline;gap:6px}
+  .g-name{font-size:12px;font-weight:600;color:var(--text);letter-spacing:0.01em}
+  .g-pct{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--dim);margin-left:auto;line-height:1}
+  .g-pct.warn{color:var(--warn)}
+  .g-pct.risk{color:var(--risk)}
+  .g-track{height:7px;background:rgba(255,255,255,0.05);border:1px solid var(--hair);border-radius:4px;overflow:hidden;position:relative}
+  .g-fill{height:100%;border-radius:4px 0 0 4px;transition:width .35s ease,background .3s ease}
+  .g-fill.calm{background:var(--ready)}
+  .g-fill.warn{background:var(--warn)}
+  .g-fill.risk{background:var(--risk);box-shadow:0 0 10px rgba(139,92,246,0.5)}
+  .g-mark{position:absolute;top:-1px;bottom:-1px;width:2px;background:var(--text);opacity:.45}
+  .g-foot{display:flex;align-items:center;gap:6px}
+  .g-fig{font-family:var(--mono);font-size:10px;color:var(--faint)}
+  .g-fc{margin-left:auto;font-family:var(--mono);font-size:9.5px;font-weight:600;color:var(--dim);background:var(--hair);border-radius:5px;padding:1px 6px;letter-spacing:0.02em;white-space:nowrap}
+  .g-fc.risk{color:var(--risk);background:var(--risk-soft)}
   /* in drill, gauges go full width and a touch larger */
-  .truck.is-drill .pace-gauges{padding:var(--s3) var(--s5)}
-  .truck.is-drill .gauge{flex:1 1 130px}
-  .is-fullscreen .gauge .g-name{font-size:11px}
-  .is-fullscreen .pace-rate .val{font-size:16px}
+  .truck.is-drill .pace-gauges{padding:var(--s4) var(--s5)}
+  .truck.is-drill .gauge{flex:1 1 160px}
+  .is-fullscreen .gauge .g-name{font-size:13px}
+  .is-fullscreen .pace-rate .val{font-size:18px}
 
   /* ====================== Fullscreen tweaks ====================== */
   .is-fullscreen header{height:50px}
@@ -462,7 +472,7 @@
   .is-fullscreen .gallery-link{display:none}
   .is-fullscreen .ti-elapsed{font-size:28px}
   .is-fullscreen .th-loc{font-size:18px}
-  .is-fullscreen .fb-num{font-size:26px}
+  .is-fullscreen .ft-val{font-size:24px}
   .is-fullscreen .it .nm{font-size:15px}
   .is-fullscreen .tn-line,.is-fullscreen .tn-alert{font-size:14px}
 
@@ -478,9 +488,7 @@
     .filters,.lines{min-width:0;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
     .filters::-webkit-scrollbar,.lines::-webkit-scrollbar{display:none}
     .clock{margin-left:auto}
-    .fleetbar{flex-wrap:wrap}
-    .fb-cell{flex:1 1 150px}
-    .fb-cell.benchmark{flex:1 1 100%}
+    .fb-grid{grid-template-columns:repeat(4,1fr)}
     .boards{display:flex;flex-direction:column}
     .truck{min-height:0}
     .t-body{overflow:visible}            /* grow with content; the page scrolls */
@@ -489,14 +497,11 @@
   @media (max-width:560px){
     .kd-label,.design-tag,.gallery-link{display:none}
     header{padding:8px 12px;gap:8px}
+    .fleetbar{padding:var(--s3) var(--s4)}
     .t-body{padding:var(--s3) var(--s4)}
     .pace-gauges{padding:var(--s3) var(--s4)}
-    /* fleet bar → a compact, swipeable metric strip instead of a tall wrap */
-    .fleetbar{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
-    .fleetbar::-webkit-scrollbar{display:none}
-    .fb-cell{flex:0 0 auto;min-width:118px;padding:var(--s2) var(--s4)}
-    .fb-cell.benchmark{flex:0 0 auto;min-width:250px}
-    .fb-num{font-size:20px}
+    .fb-grid{grid-template-columns:repeat(2,1fr)}
+    .ft-val{font-size:19px}
     .th-stats{gap:var(--s4)}
     .th-spark{display:none}
     .gauge{flex:1 1 calc(50% - var(--s2))}
@@ -592,7 +597,12 @@
     // bottleneck = MAX utilisation station → drives the capacity meter
     let bottleneck=stations[0];
     stations.forEach(s=>{ if(s.util>bottleneck.util) bottleneck=s; });
-    return { coversHr:cfg.coversHr, revenueHr:cfg.revenueHr, stations, bottleneck };
+    // shared scale so every bar in this truck is comparable and the 100% mark
+    // lines up; bars fill past the mark when a station is over capacity.
+    const maxScale=Math.max(1.5, bottleneck.util);
+    const markLeft=+((1/maxScale)*100).toFixed(1);
+    stations.forEach(s=>{ s.pct=Math.round(s.util*100); s.fillW=+Math.min(100,(s.util/maxScale)*100).toFixed(1); });
+    return { coversHr:cfg.coversHr, revenueHr:cfg.revenueHr, stations, bottleneck, maxScale, markLeft };
   }
 
   // working copy (deep clone so source dataset stays intact)
@@ -752,7 +762,6 @@
     const lagger=leader==="Kraków"?"Warszawa":"Kraków";
     const gap=Math.abs(k.promiseAcc-w.promiseAcc);
 
-    const accCls=fleetAcc>=PROMISE_TARGET?"good":fleetAcc>=PROMISE_TARGET-5?"":"alert";
     const riskCls=totalRisk>0?"risk":"";
     const lateCls=totalLate>0?"alert":"good";
 
@@ -766,38 +775,31 @@
         '<span class="bm-pct tnum">'+stats.promiseAcc+'%</span>'+
       '</div>';
     }
+    function tile(lab,val,sub,cls){
+      return '<div class="ftile '+(cls||'')+'">'+
+        '<span class="ft-lab">'+lab+'</span>'+
+        '<span class="ft-val tnum '+(cls||'')+'">'+val+'</span>'+
+        '<span class="ft-sub">'+sub+'</span>'+
+      '</div>';
+    }
 
     document.getElementById("fleetbar").innerHTML =
-      '<div class="fb-cell">'+
-        '<div class="fb-label">'+ICON.pin+' Fleet · trucks</div>'+
-        '<div class="fb-val"><span class="fb-num tnum">2</span><span class="fb-unit">live</span></div>'+
+      '<div class="fb-eyebrow">'+
+        '<span class="fb-brandline">'+ICON.pin+'Fleet command</span>'+
+        '<span class="fb-sep"></span>'+
+        '<span class="fb-trucks"><b>2</b> trucks live</span>'+
       '</div>'+
-      '<div class="fb-cell">'+
-        '<div class="fb-label">Active</div>'+
-        '<div class="fb-val"><span class="fb-num tnum">'+totalActive+'</span><span class="fb-unit">'+totalReady+' ready</span></div>'+
+      '<div class="fb-grid">'+
+        tile("Active", totalActive, totalReady+" ready", "")+
+        tile("At risk", totalRisk, "predicted miss", riskCls)+
+        tile("Late", totalLate, "over SLA", lateCls)+
+        tile("Ready", totalReady, "for expo", totalReady?"good":"")+
+        tile("Throughput", totalThru, "/ hr fleet", "good")+
+        tile("Covers", fleetCovers, "/ hr fleet", "")+
+        tile("Revenue", zl(fleetRevenue), "/ hr fleet", "")+
       '</div>'+
-      '<div class="fb-cell">'+
-        '<div class="fb-label">At risk</div>'+
-        '<div class="fb-val"><span class="fb-num tnum '+riskCls+'">'+totalRisk+'</span><span class="fb-unit">predicted miss</span></div>'+
-      '</div>'+
-      '<div class="fb-cell">'+
-        '<div class="fb-label">Late</div>'+
-        '<div class="fb-val"><span class="fb-num tnum '+lateCls+'">'+totalLate+'</span><span class="fb-unit">over SLA</span></div>'+
-      '</div>'+
-      '<div class="fb-cell">'+
-        '<div class="fb-label">Throughput</div>'+
-        '<div class="fb-val"><span class="fb-num tnum good">'+totalThru+'</span><span class="fb-unit">/ hr fleet</span></div>'+
-      '</div>'+
-      '<div class="fb-cell">'+
-        '<div class="fb-label">Covers / hr</div>'+
-        '<div class="fb-val"><span class="fb-num tnum">'+fleetCovers+'</span><span class="fb-unit">/ hr fleet</span></div>'+
-      '</div>'+
-      '<div class="fb-cell">'+
-        '<div class="fb-label">Revenue / hr</div>'+
-        '<div class="fb-val"><span class="fb-num tnum">'+zl(fleetRevenue)+'</span><span class="fb-unit">/ hr fleet</span></div>'+
-      '</div>'+
-      '<div class="fb-cell benchmark grow">'+
-        '<div class="fb-label">Promise-accuracy · cross-truck benchmark</div>'+
+      '<div class="fb-benchmark">'+
+        '<span class="fb-bm-lab">Promise-accuracy · cross-truck benchmark</span>'+
         '<div class="bm-rows">'+ bmRow("Kraków",k)+bmRow("Warszawa",w) +'</div>'+
         '<div class="bm-foot">Kraków <b>'+k.promiseAcc+'%</b> · Warszawa <b>'+w.promiseAcc+'%</b> · fleet <b>'+fleetAcc+'%</b> — '+
           '<b style="color:var(--ready)">'+leader+'</b> leads '+lagger+' by '+gap+' pts (target '+PROMISE_TARGET+'%)</div>'+
@@ -898,7 +900,8 @@
     const b=p.bottleneck;
     const tier=b.tier; // calm | warn | risk
     const pct=Math.round(b.util*100);
-    const fillW=Math.min(100,pct); // visual cap at 100% of track; mark at the 100% line
+    const fillW=Math.min(100,+((b.util/p.maxScale)*100).toFixed(1));
+    const hint=tier==="risk"?"predicted to fall behind":tier==="warn"?"nearing capacity":"within capacity";
     return '<div class="pace-head" data-pacehead="'+loc+'">'+
       '<div class="pace-rate">'+
         '<span class="lab">Covers / hr</span>'+
@@ -914,8 +917,11 @@
           '<span class="cm-pct '+tier+'" data-cappct>'+pct+'%</span>'+
         '</div>'+
         '<div class="cap-track"><span class="cap-fill '+tier+'" data-capfill style="width:'+fillW+'%"></span>'+
-          '<span class="cap-mark" style="left:100%"></span></div>'+
-        '<span class="cm-station" data-capstation>Capacity '+pct+'% · '+b.id+'</span>'+
+          '<span class="cap-mark" data-capmark style="left:'+p.markLeft+'%" title="100% capacity"></span></div>'+
+        '<div class="cm-foot">'+
+          '<span class="cm-station '+tier+'" data-capstation><span class="dotb"></span>'+b.id+'</span>'+
+          '<span class="cm-hint'+(tier==="risk"?" risk":"")+'" data-caphint>'+hint+'</span>'+
+        '</div>'+
       '</div>'+
     '</div>';
   }
@@ -956,21 +962,22 @@
     let cells='';
     p.stations.forEach(st=>{
       const tier=st.tier;
-      const fillW=Math.min(100,Math.round(st.util*100));
       const figCls=tier==="risk"?"risk":tier==="warn"?"warn":"";
-      const fcCls=tier==="risk"?"risk":"";
       cells+='<div class="gauge '+tier+'" data-gauge="'+loc+'|'+st.id+'">'+
-        '<span class="fc-badge '+fcCls+'" data-fc>+'+st.fc+'</span>'+
         '<div class="g-top">'+
           '<span class="g-name">'+st.id+'</span>'+
-          '<span class="g-fig '+figCls+'" data-gfig>'+st.demand+'/'+st.cap+'</span>'+
+          '<span class="g-pct '+figCls+'" data-gpct>'+st.pct+'%</span>'+
         '</div>'+
-        '<div class="g-track"><span class="g-fill '+tier+'" data-gfill style="width:'+fillW+'%"></span>'+
-          '<span class="g-mark" style="left:100%"></span></div>'+
+        '<div class="g-track"><span class="g-fill '+tier+'" data-gfill style="width:'+st.fillW+'%"></span>'+
+          '<span class="g-mark" data-gmark style="left:'+p.markLeft+'%"></span></div>'+
+        '<div class="g-foot">'+
+          '<span class="g-fig" data-gfig>'+st.demand+'/'+st.cap+'</span>'+
+          '<span class="g-fc'+(tier==="risk"?" risk":"")+'" data-fc>+'+st.fc+' / 15m</span>'+
+        '</div>'+
       '</div>';
     });
     return '<div class="pace-gauges" data-gauges="'+loc+'">'+
-      '<span class="pg-title">Pace</span>'+cells+
+      '<span class="pg-title">Pace · next 15m</span>'+cells+
     '</div>';
   }
 
@@ -1156,13 +1163,16 @@
       const cm=boardsEl.querySelector('[data-capmeter="'+loc+'"]');
       if(cm){
         const b=p.bottleneck, tier=b.tier, pct=Math.round(b.util*100);
-        const fillW=Math.min(100,pct);
+        const fillW=Math.min(100,+((b.util/p.maxScale)*100).toFixed(1));
         const fill=cm.querySelector('[data-capfill]');
         if(fill){ fill.style.width=fillW+'%'; ["calm","warn","risk"].forEach(c=>fill.classList.remove(c)); fill.classList.add(tier); }
+        const mk=cm.querySelector('[data-capmark]'); if(mk) mk.style.left=p.markLeft+'%';
         const pe=cm.querySelector('[data-cappct]');
         if(pe){ pe.textContent=pct+'%'; ["warn","risk"].forEach(c=>pe.classList.remove(c)); if(tier!=="calm") pe.classList.add(tier); }
         const stn=cm.querySelector('[data-capstation]');
-        if(stn) stn.textContent='Capacity '+pct+'% · '+b.id;
+        if(stn){ ["warn","risk"].forEach(c=>stn.classList.remove(c)); if(tier!=="calm") stn.classList.add(tier); stn.innerHTML='<span class="dotb"></span>'+b.id; }
+        const hint=cm.querySelector('[data-caphint]');
+        if(hint){ hint.textContent=(tier==="risk"?"predicted to fall behind":tier==="warn"?"nearing capacity":"within capacity"); hint.classList.toggle("risk",tier==="risk"); }
       }
 
       // per-station gauges
@@ -1171,14 +1181,17 @@
         p.stations.forEach(st=>{
           const g=wrap.querySelector('[data-gauge="'+loc+'|'+st.id+'"]');
           if(!g) return;
-          const tier=st.tier, fillW=Math.min(100,Math.round(st.util*100));
+          const tier=st.tier;
           ["calm","warn","risk"].forEach(c=>g.classList.remove(c)); g.classList.add(tier);
           const fill=g.querySelector('[data-gfill]');
-          if(fill){ fill.style.width=fillW+'%'; ["calm","warn","risk"].forEach(c=>fill.classList.remove(c)); fill.classList.add(tier); }
+          if(fill){ fill.style.width=st.fillW+'%'; ["calm","warn","risk"].forEach(c=>fill.classList.remove(c)); fill.classList.add(tier); }
+          const mk=g.querySelector('[data-gmark]'); if(mk) mk.style.left=p.markLeft+'%';
+          const pc=g.querySelector('[data-gpct]');
+          if(pc){ pc.textContent=st.pct+'%'; ["warn","risk"].forEach(c=>pc.classList.remove(c)); if(tier!=="calm") pc.classList.add(tier); }
           const fig=g.querySelector('[data-gfig]');
-          if(fig){ fig.textContent=st.demand+'/'+st.cap; ["warn","risk"].forEach(c=>fig.classList.remove(c)); if(tier!=="calm") fig.classList.add(tier); }
+          if(fig){ fig.textContent=st.demand+'/'+st.cap; }
           const fc=g.querySelector('[data-fc]');
-          if(fc){ fc.textContent='+'+st.fc; fc.classList.toggle("risk",tier==="risk"); }
+          if(fc){ fc.textContent='+'+st.fc+' / 15m'; fc.classList.toggle("risk",tier==="risk"); }
         });
       }
     });
