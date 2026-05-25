@@ -2458,6 +2458,26 @@ html { scroll-behavior: smooth; }
 }
 .v2-kds-chef-station svg { color: var(--fg-subtle); }
 
+/* On the KDS floor board the ops / chef header is a flush chrome strip — a
+   bottom-hairline bar like ka-head / ka-fleetbar / ka-recall — not a rounded
+   floating card, so its corners match the rest of the board. */
+:is(.kds-atlas, .kds-floor-dark) .v2-kds-ops,
+:is(.kds-atlas, .kds-floor-dark) .v2-kds-chef {
+  border: 0;
+  border-bottom: 1px solid var(--ka-hair);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+:is(.kds-atlas, .kds-floor-dark) .v2-kds-ops > .v2-card-body,
+:is(.kds-atlas, .kds-floor-dark) .v2-kds-chef > .v2-card-body {
+  padding: 12px 20px;
+}
+:is(.kds-atlas, .kds-floor-dark) :is(.v2-kds-ops, .v2-kds-chef) :is(.v2-input-wrap, .v2-select-wrap, .v2-btn) {
+  border-radius: 6px;
+}
+:is(.kds-atlas, .kds-floor-dark) :is(.v2-kds-ops, .v2-kds-chef) .ka-fb-eyebrow { margin-bottom: 10px; }
+
 /* ----------------------------
    KDS — stage switcher (came in / in prep / done)
    ---------------------------- */
@@ -7874,14 +7894,16 @@ select.pub-input {
 .kds-atlas .ka-fb-sep { flex: 1 1 auto; height: 1px; background: var(--ka-hair); }
 .kds-atlas .ka-fb-trucks { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ka-faint); white-space: nowrap; }
 .kds-atlas .ka-fb-trucks b { color: var(--ka-text); }
-.kds-atlas .ka-fb-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--ka-hair); border: 1px solid var(--ka-hair); border-radius: 9px; overflow: hidden; }
-.kds-atlas .ka-ftile { background: var(--ka-panel); padding: 12px 12px 12px 16px; display: flex; flex-direction: column; gap: 3px; min-width: 0; position: relative; }
+.kds-atlas .ka-fb-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0; background: var(--ka-panel); border: 1px solid var(--ka-hair); border-radius: 9px; overflow: hidden; }
+.kds-atlas .ka-ftile { background: transparent; padding: 12px 14px; display: flex; flex-direction: column; gap: 3px; min-width: 0; position: relative; }
 .kds-atlas .ka-ftile::before { content: ""; position: absolute; left: 0; top: 9px; bottom: 9px; width: 3px; border-radius: 0 2px 2px 0; background: var(--ka-queued); opacity: .4; }
+.kds-atlas .ka-ftile.warn::before { background: var(--ka-warn); opacity: 1; }
 .kds-atlas .ka-ftile.risk::before { background: var(--ka-risk); opacity: 1; }
 .kds-atlas .ka-ftile.alert::before { background: var(--ka-late); opacity: 1; }
 .kds-atlas .ka-ftile.good::before { background: var(--ka-ready); opacity: .9; }
 .kds-atlas .ka-ft-lab { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ka-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .kds-atlas .ka-ft-val { font-size: 22px; font-weight: 600; line-height: 1; }
+.kds-atlas .ka-ft-val.warn { color: var(--ka-warn); }
 .kds-atlas .ka-ft-val.risk { color: var(--ka-risk); }
 .kds-atlas .ka-ft-val.alert { color: var(--ka-late); }
 .kds-atlas .ka-ft-val.good { color: var(--ka-ready); }
@@ -8065,6 +8087,8 @@ select.pub-input {
 .kds-atlas .ka-fsbtn:disabled { opacity: 0.5; cursor: default; }
 .kds-atlas .ka-recall { flex: 0 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 20px; border-bottom: 1px solid var(--ka-hair); background: var(--ka-panel); }
 .kds-atlas .ka-recall-lab { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ka-faint); font-weight: 700; }
+.kds-atlas .ka-subbar { flex: 0 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 20px; border-bottom: 1px solid var(--ka-hair); background: var(--ka-panel); }
+.kds-atlas .ka-subbar-sep { align-self: stretch; width: 1px; margin: 2px 4px; background: var(--ka-hair); }
 
 /* ---- states ---- */
 .kds-atlas .ka-loading { padding: 48px 24px; text-align: center; color: var(--ka-dim); font-size: 13px; }
@@ -8087,7 +8111,7 @@ select.pub-input {
   .kds-atlas .ka-head { gap: 8px; padding: 8px 12px; }
   .kds-atlas .ka-filters, .kds-atlas .ka-lines { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
   .kds-atlas .ka-filters::-webkit-scrollbar, .kds-atlas .ka-lines::-webkit-scrollbar { display: none; }
-  .kds-atlas .ka-fleetbar, .kds-atlas .ka-thead, .kds-atlas .ka-tbody, .kds-atlas .ka-pace-gauges { padding-left: 14px; padding-right: 14px; }
+  .kds-atlas .ka-fleetbar, .kds-atlas .ka-thead, .kds-atlas .ka-tbody, .kds-atlas .ka-pace-gauges, .kds-atlas .ka-subbar { padding-left: 14px; padding-right: 14px; }
   .kds-atlas .ka-fb-grid { grid-template-columns: repeat(2, 1fr); }
   .kds-atlas .ka-pace-gauges { grid-template-columns: repeat(2, 1fr); }
   .kds-atlas .ka-th-spark { display: none; }
