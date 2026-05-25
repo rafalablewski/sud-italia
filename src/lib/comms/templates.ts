@@ -12,6 +12,8 @@
  * SMS keeps under 160 chars where possible to fit a single segment.
  */
 
+import type { FulfillmentType } from "@/data/types";
+
 export type Locale = "pl" | "en";
 
 const DEFAULT_LOCALE: Locale = "pl";
@@ -21,16 +23,17 @@ export interface OrderPlacedPayload {
   customerName: string;
   /** PLN amount as a display string, e.g. "32.50". */
   totalDisplay: string;
-  /** When the customer can pick up / receive delivery. "12:30" or "12:30–12:45". */
+  /** When the customer can pick up / receive delivery / sit down. "12:30" or "12:30–12:45". */
   slotDisplay?: string;
-  fulfillmentType: "takeout" | "delivery";
+  fulfillmentType: FulfillmentType;
 }
 
 export interface OrderReadyPayload {
   orderId: string;
   customerName: string;
-  /** "pickup" | "delivery" — drives the wording. */
-  fulfillmentType: "takeout" | "delivery";
+  /** Drives the wording: delivery → "on the way", dine-in → "your table is
+   *  ready", takeout → "ready for pickup". */
+  fulfillmentType: FulfillmentType;
   locationName: string;
 }
 
@@ -100,14 +103,18 @@ export function orderReadySms(
       body:
         p.fulfillmentType === "delivery"
           ? `Sud Italia: ${p.customerName}, your order ${p.orderId} is on the way!`
-          : `Sud Italia: ${p.customerName}, your order ${p.orderId} is ready for pickup at ${p.locationName}.`,
+          : p.fulfillmentType === "dine-in"
+            ? `Sud Italia: ${p.customerName}, your table at ${p.locationName} is ready and order ${p.orderId} is being served.`
+            : `Sud Italia: ${p.customerName}, your order ${p.orderId} is ready for pickup at ${p.locationName}.`,
     };
   }
   return {
     body:
       p.fulfillmentType === "delivery"
         ? `Sud Italia: ${p.customerName}, zamówienie ${p.orderId} jest w drodze!`
-        : `Sud Italia: ${p.customerName}, zamówienie ${p.orderId} czeka do odbioru w ${p.locationName}.`,
+        : p.fulfillmentType === "dine-in"
+          ? `Sud Italia: ${p.customerName}, Twój stolik w ${p.locationName} jest gotowy, a zamówienie ${p.orderId} jest podawane.`
+          : `Sud Italia: ${p.customerName}, zamówienie ${p.orderId} czeka do odbioru w ${p.locationName}.`,
   };
 }
 

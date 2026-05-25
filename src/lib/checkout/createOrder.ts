@@ -56,6 +56,9 @@ export interface CreateOrderInput {
   slotDate: string;
   slotTime: string;
   deliveryAddress?: string;
+  /** Guests for a dine-in reservation. Persisted only when
+   *  fulfillmentType === "dine-in". */
+  partySize?: number;
   tipAmount?: number;
   appliedBundleId?: string;
   /** Client-shown bundle price snapshot. Server caps the charged amount
@@ -296,6 +299,10 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
     fulfillmentType: input.fulfillmentType,
     deliveryAddress:
       input.fulfillmentType === "delivery" ? (input.deliveryAddress ?? "").trim() : undefined,
+    partySize:
+      input.fulfillmentType === "dine-in" && typeof input.partySize === "number"
+        ? Math.max(1, Math.min(50, Math.round(input.partySize)))
+        : undefined,
     slotId: input.slotId,
     slotDate: input.slotDate,
     slotTime: input.slotTime,

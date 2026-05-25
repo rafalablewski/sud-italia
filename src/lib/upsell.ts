@@ -1,4 +1,4 @@
-import { MenuItem, MenuCategory, CartItem, MenuRole, ModifierOption } from "@/data/types";
+import { MenuItem, MenuCategory, CartItem, MenuRole, ModifierOption, FulfillmentType } from "@/data/types";
 
 // --- Contextual pairing graph (audit §3.1) -----------------------------
 //
@@ -591,7 +591,7 @@ export function getActiveComboDeals(
    *  preview where the channel isn't pinned yet. When passed, dine-in
    *  combos only fire on "takeout" / dine-in carts and delivery combos
    *  only fire on "delivery" carts. */
-  fulfillmentType?: "takeout" | "delivery" | null,
+  fulfillmentType?: FulfillmentType | null,
 ): ComboDealResult {
   const allCombos: ComboDeal[] = config?.combos
     ? config.combos
@@ -821,7 +821,7 @@ export function getDeliveryProgress(cartTotal: number): {
  */
 export function computeDeliveryFee(
   cartSubtotal: number,
-  fulfillmentType: "takeout" | "delivery",
+  fulfillmentType: FulfillmentType,
   /** Per-customer threshold override (audit §2.5). Defaults to the standard
    *  60 PLN bar; callers that know the customer should pass the segmented
    *  threshold so the displayed bar and the actual charge stay in sync. */
@@ -1162,7 +1162,7 @@ const CATEGORY_PACKAGING_COST_FALLBACK: Record<MenuCategory, number> = {
  *  truck for dine-in. */
 export function packagingCostFor(
   item: MenuItem,
-  fulfillmentType: "takeout" | "delivery",
+  fulfillmentType: FulfillmentType,
 ): number {
   if (fulfillmentType !== "delivery") return 0;
   if (typeof item.packagingCost === "number") return item.packagingCost;
@@ -1175,7 +1175,7 @@ export function packagingCostFor(
  *  packaging cost, not naked plate cost. */
 export function totalPackagingCost(
   cartItems: CartItem[],
-  fulfillmentType: "takeout" | "delivery",
+  fulfillmentType: FulfillmentType,
 ): number {
   if (fulfillmentType !== "delivery") return 0;
   return cartItems.reduce(

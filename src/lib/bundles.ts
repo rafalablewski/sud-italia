@@ -1,4 +1,4 @@
-import { MenuItem, MenuCategory, CartItem } from "@/data/types";
+import { MenuItem, MenuCategory, CartItem, FulfillmentType } from "@/data/types";
 
 /**
  * Bundle architecture (audit §3.2 — decoy + anchor).
@@ -601,7 +601,7 @@ export function isBundleActiveNow(bundle: BundleTier, now: Date = new Date()): b
 export function resolveBundles(
   configBundles?: BundleTier[] | null,
   now: Date = new Date(),
-  fulfillmentType?: "takeout" | "delivery" | null,
+  fulfillmentType?: FulfillmentType | null,
 ): BundleTier[] {
   const source = configBundles && configBundles.length > 0 ? configBundles : DEFAULT_BUNDLES;
   return source

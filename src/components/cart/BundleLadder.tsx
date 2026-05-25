@@ -18,7 +18,7 @@ import {
 } from "@/lib/bundles";
 import { resolveClientVariant, type Experiment } from "@/lib/experiments";
 import { useCustomer } from "@/store/customer";
-import type { CartItem, MenuItem } from "@/data/types";
+import type { CartItem, MenuItem, FulfillmentType } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
 import { BundleComposerSheet } from "./BundleComposerSheet";
 
@@ -38,7 +38,7 @@ interface BundleLadderProps {
   /** Cart fulfillment type — drives channel-aware bundle filtering
    *  (audit §3). Delivery-exclusive bundles only render when this is
    *  "delivery"; dine-in-only bundles only render otherwise. */
-  fulfillmentType?: "takeout" | "delivery";
+  fulfillmentType?: FulfillmentType;
   /** Active combo discount (grosze). When > 0 the bundle CTA shows the
    *  *incremental* savings ("save X more than your current Italian
    *  Classic 10%") so the customer doesn't feel like applying the

@@ -492,7 +492,7 @@ export async function getAvailableSlots(
   return (await getSlots(locationSlug, date)).filter((s) => {
     if ((s.status ?? "active") !== "active") return false;
     if (s.currentOrders >= s.maxOrders) return false;
-    if (fulfillmentType && !s.fulfillmentTypes.includes(fulfillmentType as "takeout" | "delivery")) return false;
+    if (fulfillmentType && !s.fulfillmentTypes.includes(fulfillmentType as TimeSlot["fulfillmentTypes"][number])) return false;
     return true;
   });
 }
@@ -831,6 +831,7 @@ type OrderRow = typeof ordersTable.$inferSelect;
  */
 interface OrderPayload {
   items: Order["items"];
+  partySize?: Order["partySize"];
   specialInstructions?: Order["specialInstructions"];
   queuePosition?: Order["queuePosition"];
   estimatedReadyAt?: Order["estimatedReadyAt"];
@@ -864,6 +865,7 @@ function rowToOrder(row: OrderRow): Order {
     createdAt: row.createdAt.toISOString(),
     paidAt: row.paidAt ? row.paidAt.toISOString() : undefined,
     items: payload.items ?? [],
+    partySize: payload.partySize,
     specialInstructions: payload.specialInstructions,
     queuePosition: payload.queuePosition,
     estimatedReadyAt: payload.estimatedReadyAt,
@@ -879,6 +881,7 @@ function rowToOrder(row: OrderRow): Order {
 function orderToValues(order: Order) {
   const payload: OrderPayload = {
     items: order.items,
+    partySize: order.partySize,
     specialInstructions: order.specialInstructions,
     queuePosition: order.queuePosition,
     estimatedReadyAt: order.estimatedReadyAt,
@@ -1782,6 +1785,7 @@ export interface DailyStats {
   avgOrderValue: number;
   takeoutCount: number;
   deliveryCount: number;
+  dineInCount: number;
   categoryBreakdown: Record<string, { revenue: number; cost: number; count: number }>;
   topItems: { name: string; quantity: number; revenue: number }[];
 }
@@ -1813,13 +1817,15 @@ export async function getAnalytics(
     let itemCount = 0;
     let takeoutCount = 0;
     let deliveryCount = 0;
+    let dineInCount = 0;
     const categoryMap: Record<string, { revenue: number; cost: number; count: number }> = {};
     const itemMap = new Map<string, { name: string; quantity: number; revenue: number }>();
 
     for (const order of dayOrders) {
       revenue += order.totalAmount;
-      if (order.fulfillmentType === "takeout") takeoutCount++;
-      else deliveryCount++;
+      if (order.fulfillmentType === "delivery") deliveryCount++;
+      else if (order.fulfillmentType === "dine-in") dineInCount++;
+      else takeoutCount++;
 
       for (const ci of order.items) {
         const itemCost = (ci.menuItem.cost || 0) * ci.quantity;
@@ -1860,6 +1866,7 @@ export async function getAnalytics(
       avgOrderValue: dayOrders.length > 0 ? Math.round(revenue / dayOrders.length) : 0,
       takeoutCount,
       deliveryCount,
+      dineInCount,
       categoryBreakdown: categoryMap,
       topItems,
     });
@@ -1879,6 +1886,7 @@ export interface SummaryStats {
   avgOrderValue: number;
   takeoutCount: number;
   deliveryCount: number;
+  dineInCount: number;
   dailyStats: DailyStats[];
   categoryBreakdown: Record<string, { revenue: number; cost: number; count: number }>;
   topItems: { name: string; quantity: number; revenue: number }[];
@@ -1897,6 +1905,7 @@ export async function getSummary(
   let totalItems = 0;
   let takeoutCount = 0;
   let deliveryCount = 0;
+  let dineInCount = 0;
   const categoryMap: Record<string, { revenue: number; cost: number; count: number }> = {};
   const itemMap = new Map<string, { name: string; quantity: number; revenue: number }>();
 
@@ -1907,6 +1916,7 @@ export async function getSummary(
     totalItems += day.itemCount;
     takeoutCount += day.takeoutCount;
     deliveryCount += day.deliveryCount;
+    dineInCount += day.dineInCount;
 
     for (const [cat, data] of Object.entries(day.categoryBreakdown)) {
       if (!categoryMap[cat]) categoryMap[cat] = { revenue: 0, cost: 0, count: 0 };
@@ -1940,6 +1950,7 @@ export async function getSummary(
     avgOrderValue: totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0,
     takeoutCount,
     deliveryCount,
+    dineInCount,
     dailyStats,
     categoryBreakdown: categoryMap,
     topItems,
@@ -1968,6 +1979,7 @@ export interface LocationComparison {
   avgItemsPerOrder: number;
   takeoutCount: number;
   deliveryCount: number;
+  dineInCount: number;
   cancelledCount: number;
   cancellationRate: number;
 }
@@ -2052,11 +2064,13 @@ export async function getInsights(dateFrom?: string, dateTo?: string): Promise<I
     let totalItems = 0;
     let takeout = 0;
     let delivery = 0;
+    let dineIn = 0;
 
     for (const order of completed) {
       revenue += order.totalAmount;
-      if (order.fulfillmentType === "takeout") takeout++;
-      else delivery++;
+      if (order.fulfillmentType === "delivery") delivery++;
+      else if (order.fulfillmentType === "dine-in") dineIn++;
+      else takeout++;
       for (const ci of order.items) {
         cost += (ci.menuItem.cost || 0) * ci.quantity;
         totalItems += ci.quantity;
@@ -2075,6 +2089,7 @@ export async function getInsights(dateFrom?: string, dateTo?: string): Promise<I
       avgItemsPerOrder: completed.length > 0 ? Math.round((totalItems / completed.length) * 10) / 10 : 0,
       takeoutCount: takeout,
       deliveryCount: delivery,
+      dineInCount: dineIn,
       cancelledCount: cancelled.length,
       cancellationRate: locOrders.length > 0 ? Math.round((cancelled.length / locOrders.length) * 100) : 0,
     });

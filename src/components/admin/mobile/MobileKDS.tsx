@@ -17,6 +17,7 @@ import { useKdsSimulator } from "@/lib/useKdsSimulator";
 import { KdsSimBanner } from "../kds-board";
 import type { Order, OrderStatus, MenuCategory } from "@/data/types";
 import { MENU_CATEGORY_LABELS } from "@/data/types";
+import { fulfillmentLabel } from "@/lib/fulfillment";
 import { useAdminLocation } from "../v2/LocationContext";
 import { useToast } from "../v2/ui/Toast";
 import {
@@ -524,7 +525,7 @@ function TicketCard({
               {fmtClock(Math.abs(remaining))}
             </span>
           ) : (
-            <span>{order.fulfillmentType}</span>
+            <span>{fulfillmentLabel(order.fulfillmentType)}</span>
           )}
         </div>
         {next && (

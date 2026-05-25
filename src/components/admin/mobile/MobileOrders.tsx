@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import type { Order, OrderStatus } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
+import { fulfillmentLabel } from "@/lib/fulfillment";
 import { useAdminLocation } from "../v2/LocationContext";
 import {
   BottomSheet,
@@ -175,7 +176,7 @@ export function MobileOrders() {
       icon: o.fulfillmentType === "delivery" ? Clock : CheckCircle2,
       iconTone: STATUS_TONE[o.status],
       title: `${o.customerName} · ${formatPrice(o.totalAmount)}`,
-      subtitle: `${o.id.slice(-6)} · ${fmtAgo(o.createdAt)} · ${o.fulfillmentType}`,
+      subtitle: `${o.id.slice(-6)} · ${fmtAgo(o.createdAt)} · ${fulfillmentLabel(o.fulfillmentType)}`,
       status: { label: STATUS_LABEL[o.status], tone: STATUS_TONE[o.status] },
       onTap: () => setDetail(o),
       onLongPress: () => multi.toggle(o.id),
@@ -422,7 +423,7 @@ function OrderDetail({
         }}
       >
         <DetailTile label="Status" value={STATUS_LABEL[order.status]} tone={STATUS_TONE[order.status]} />
-        <DetailTile label="Fulfilment" value={order.fulfillmentType} />
+        <DetailTile label="Fulfilment" value={order.fulfillmentType === "dine-in" && order.partySize ? `${fulfillmentLabel(order.fulfillmentType)} · ${order.partySize}` : fulfillmentLabel(order.fulfillmentType)} />
         <DetailTile label="Slot" value={`${order.slotDate} ${order.slotTime}`} />
         <DetailTile label="Total" value={formatPrice(order.totalAmount)} />
       </div>

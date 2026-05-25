@@ -407,6 +407,13 @@ export default async function CapabilitiesPage() {
           summary: "Auto-enrolment on checkout via the sud-italia-customer cookie + /api/customer/identify. No password.",
         },
         {
+          name: "Three ordering modes (takeout / delivery / dine-in)",
+          status: "live",
+          href: "/admin/slots",
+          summary:
+            "Cart drawer offers Takeout, Delivery, and Dine-in. Dine-in is reserve-a-table-and-pre-choose-food: the customer sets a party size, picks a time slot (the booking time), and the cart is the food prepared for when they sit down. Party size persists on the order (Order.partySize) and surfaces on the order tracker, KDS ticket, and admin order detail. A mode only shows time slots the operator has opened for it — enable dine-in slots at /admin/slots by ticking the Dine-in fulfillment type. Reports + the channel-mix pie split orders three ways.",
+        },
+        {
           name: "Customer order history",
           status: "live",
           href: "/api/orders/history",
