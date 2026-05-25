@@ -2476,6 +2476,7 @@ html { scroll-behavior: smooth; }
 :is(.kds-atlas, .kds-floor-dark) :is(.v2-kds-ops, .v2-kds-chef) :is(.v2-input-wrap, .v2-select-wrap, .v2-btn) {
   border-radius: 6px;
 }
+:is(.kds-atlas, .kds-floor-dark) :is(.v2-kds-ops, .v2-kds-chef) .ka-fb-eyebrow { margin-bottom: 10px; }
 
 /* ----------------------------
    KDS — stage switcher (came in / in prep / done)
@@ -7896,11 +7897,13 @@ select.pub-input {
 .kds-atlas .ka-fb-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0; background: var(--ka-panel); border: 1px solid var(--ka-hair); border-radius: 9px; overflow: hidden; }
 .kds-atlas .ka-ftile { background: transparent; padding: 12px 14px; display: flex; flex-direction: column; gap: 3px; min-width: 0; position: relative; }
 .kds-atlas .ka-ftile::before { content: ""; position: absolute; left: 0; top: 9px; bottom: 9px; width: 3px; border-radius: 0 2px 2px 0; background: var(--ka-queued); opacity: .4; }
+.kds-atlas .ka-ftile.warn::before { background: var(--ka-warn); opacity: 1; }
 .kds-atlas .ka-ftile.risk::before { background: var(--ka-risk); opacity: 1; }
 .kds-atlas .ka-ftile.alert::before { background: var(--ka-late); opacity: 1; }
 .kds-atlas .ka-ftile.good::before { background: var(--ka-ready); opacity: .9; }
 .kds-atlas .ka-ft-lab { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ka-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .kds-atlas .ka-ft-val { font-size: 22px; font-weight: 600; line-height: 1; }
+.kds-atlas .ka-ft-val.warn { color: var(--ka-warn); }
 .kds-atlas .ka-ft-val.risk { color: var(--ka-risk); }
 .kds-atlas .ka-ft-val.alert { color: var(--ka-late); }
 .kds-atlas .ka-ft-val.good { color: var(--ka-ready); }

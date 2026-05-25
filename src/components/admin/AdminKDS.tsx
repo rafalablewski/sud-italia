@@ -4,13 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAdminOrdersStream } from "@/lib/useAdminOrdersStream";
 import {
-  AlertTriangle,
   Bell,
   BellOff,
-  CheckCircle2,
   ChefHat,
-  Clock,
   Flame,
+  MapPin,
   Maximize2,
   Minimize2,
   PauseCircle,
@@ -19,7 +17,6 @@ import {
   RotateCcw,
   Timer,
   Truck,
-  Users,
 } from "lucide-react";
 import type { Order, MenuCategory, OrderStatus } from "@/data/types";
 import dynamic from "next/dynamic";
@@ -41,6 +38,7 @@ import {
   ticketCategories,
   totalPrepSeconds,
 } from "./kds-board";
+import { KdsStatGrid, type KdsStat } from "./kds/KdsStatGrid";
 import { analyzeTruck } from "@/lib/kds-prediction";
 import { buildKdsTicket, type KdsTicket } from "@/lib/kds-ticket";
 import { useKdsSimulator } from "@/lib/useKdsSimulator";
@@ -692,18 +690,29 @@ function KdsManagerOpsHeader({ orders, location }: { orders: Order[]; location: 
   const eightySixed = (ops?.menu ?? []).filter((m) => !m.available);
   const availableItems = (ops?.menu ?? []).filter((m) => m.available);
 
+  const stats: KdsStat[] = [
+    { label: "Open", value: orders.length, sub: "active tickets" },
+    { label: "Late", value: late, sub: "over SLA", tone: late > 0 ? "alert" : "good" },
+    { label: "Due soon", value: soon, sub: "< 3 min", tone: soon > 0 ? "warn" : undefined },
+    { label: "Oldest", value: orders.length > 0 ? fmtClock(oldest) : "—", sub: "ticket age" },
+    { label: "Avg age", value: orders.length > 0 ? fmtClock(avg) : "—", sub: "per ticket" },
+    { label: "Done", value: ops ? ops.throughputLastHour : "…", sub: "last hr" },
+    { label: "On shift", value: ops ? ops.onShift : "…", sub: "staff" },
+  ];
+
   return (
     <Card padding="compact" className="v2-kds-ops">
       <CardBody>
-        <div className="v2-kds-ops-stats">
-          <OpsStat icon={<ChefHat className="h-4 w-4" />} value={String(orders.length)} label="Open" />
-          <OpsStat icon={<Flame className="h-4 w-4" />} value={String(late)} label="Late" tone={late > 0 ? "danger" : undefined} />
-          <OpsStat icon={<AlertTriangle className="h-4 w-4" />} value={String(soon)} label="Due soon" tone={soon > 0 ? "warning" : undefined} />
-          <OpsStat icon={<Timer className="h-4 w-4" />} value={orders.length > 0 ? fmtClock(oldest) : "—"} label="Oldest" />
-          <OpsStat icon={<Clock className="h-4 w-4" />} value={orders.length > 0 ? fmtClock(avg) : "—"} label="Avg age" />
-          <OpsStat icon={<CheckCircle2 className="h-4 w-4" />} value={ops ? String(ops.throughputLastHour) : "…"} label="Done · last hr" />
-          <OpsStat icon={<Users className="h-4 w-4" />} value={ops ? String(ops.onShift) : "…"} label="On shift" />
+        <div className="ka-fb-eyebrow">
+          <span className="ka-fb-brandline">
+            <MapPin className="h-3 w-3" /> Floor command
+          </span>
+          <span className="ka-fb-sep" />
+          <span className="ka-fb-trucks">
+            <b>{orders.length}</b> open
+          </span>
         </div>
+        <KdsStatGrid stats={stats} />
 
         <div className="v2-kds-ops-86">
           <span className="v2-kds-ops-86-label">86&apos;d</span>

@@ -15,6 +15,7 @@ import { formatPricePLN } from "@/lib/utils";
 import { useToast } from "./v2/ui/Toast";
 import { ticketTone, computeHealth, type PaceTier, type TicketTone } from "@/lib/kds-prediction";
 import { KdsTicketCard, Ring } from "./kds/KdsTicketCard";
+import { KdsStatGrid, type KdsStat } from "./kds/KdsStatGrid";
 import type { KdsTicket } from "@/lib/kds-ticket";
 
 /* ============================ Wire types ============================ */
@@ -405,13 +406,15 @@ function FleetBar({
   void now;
   const { totals, benchmark, promiseTarget } = data;
 
-  const tile = (lab: string, val: React.ReactNode, sub: string, cls = "") => (
-    <div className={`ka-ftile ${cls}`}>
-      <span className="ka-ft-lab">{lab}</span>
-      <span className={`ka-ft-val tabular ${cls}`}>{val}</span>
-      <span className="ka-ft-sub">{sub}</span>
-    </div>
-  );
+  const stats: KdsStat[] = [
+    { label: "Active", value: active, sub: `${ready} ready` },
+    { label: "At risk", value: risk, sub: "predicted miss", tone: risk > 0 ? "risk" : undefined },
+    { label: "Late", value: late, sub: "over SLA", tone: late > 0 ? "alert" : "good" },
+    { label: "Ready", value: ready, sub: "for expo", tone: ready > 0 ? "good" : undefined },
+    { label: "Throughput", value: totals.throughputHr, sub: "/ hr fleet", tone: "good" },
+    { label: "Covers", value: totals.coversHr, sub: "/ hr fleet" },
+    { label: "Revenue", value: zl(totals.revenueHr), sub: "/ hr fleet" },
+  ];
 
   return (
     <section className="ka-fleetbar" aria-label="Fleet aggregate metrics">
@@ -424,15 +427,7 @@ function FleetBar({
           <b>{data.tiles.length}</b> {data.tiles.length === 1 ? "truck" : "trucks"} live
         </span>
       </div>
-      <div className="ka-fb-grid">
-        {tile("Active", active, `${ready} ready`)}
-        {tile("At risk", risk, "predicted miss", risk > 0 ? "risk" : "")}
-        {tile("Late", late, "over SLA", late > 0 ? "alert" : "good")}
-        {tile("Ready", ready, "for expo", ready > 0 ? "good" : "")}
-        {tile("Throughput", totals.throughputHr, "/ hr fleet", "good")}
-        {tile("Covers", totals.coversHr, "/ hr fleet")}
-        {tile("Revenue", zl(totals.revenueHr), "/ hr fleet")}
-      </div>
+      <KdsStatGrid stats={stats} />
       <div className="ka-fb-benchmark">
         <span className="ka-fb-bm-lab">Promise-accuracy · cross-truck benchmark</span>
         <div className="ka-bm-rows">
