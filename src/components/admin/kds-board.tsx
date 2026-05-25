@@ -68,6 +68,14 @@ export function fmtClock(s: number): string {
   return `${sign}${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
 }
 
+/** Wall-clock HH:MM:SS (24h), shared by the fleet + floor KDS headers so both
+ *  read identically regardless of locale. */
+export function fmtWallClock(ms: number): string {
+  const d = new Date(ms);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
 export function ticketCategories(order: Order): MenuCategory[] {
   const set = new Set<MenuCategory>();
   for (const ci of order.items) set.add(ci.menuItem.category);

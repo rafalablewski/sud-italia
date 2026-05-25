@@ -16,6 +16,7 @@ import { useToast } from "./v2/ui/Toast";
 import { ticketTone, computeHealth, type PaceTier, type TicketTone } from "@/lib/kds-prediction";
 import { KdsTicketCard, Ring } from "./kds/KdsTicketCard";
 import { KdsStatGrid, type KdsStat } from "./kds/KdsStatGrid";
+import { fmtWallClock } from "./kds-board";
 import type { KdsTicket } from "@/lib/kds-ticket";
 import { useKdsSimulator } from "@/lib/useKdsSimulator";
 
@@ -85,9 +86,6 @@ const NEXT_STATUS: Record<string, OrderStatus | null> = { confirmed: "preparing"
 
 /* ============================ Format helpers ============================ */
 
-function pad(n: number) {
-  return String(n).padStart(2, "0");
-}
 function zl(grosze: number): string {
   return formatPricePLN(grosze);
 }
@@ -274,10 +272,7 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => voi
     return counts;
   }, [data, matchesStation]);
 
-  const clock = useMemo(() => {
-    const d = new Date(now);
-    return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-  }, [now]);
+  const clock = useMemo(() => fmtWallClock(now), [now]);
 
   const board = (
     <div className={`kds-atlas${fullscreen ? " is-fullscreen" : ""}`}>

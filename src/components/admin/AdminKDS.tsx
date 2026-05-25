@@ -32,6 +32,7 @@ import {
   KdsLane,
   STATION_FILTERS,
   fmtClock,
+  fmtWallClock,
   groupTicketsByColumn,
   nextStatus,
   remainingSlaSeconds,
@@ -334,10 +335,7 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
 
   // Wall-clock shown in the kiosk header — a glanceable institutional touch.
   // Keyed off `now` so it ticks with the live timers already running.
-  const clock = useMemo(
-    () => new Date(now).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-    [now],
-  );
+  const clock = useMemo(() => fmtWallClock(now), [now]);
 
   // Bump-bar hotkeys (audit §3 — "button-click only" was costing ~3s
   // per bump at rush). Number keys 1-9 advance the corresponding
