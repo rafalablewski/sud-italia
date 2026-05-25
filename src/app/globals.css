@@ -2402,27 +2402,6 @@ html { scroll-behavior: smooth; }
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
-.v2-kds-sim-banner {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  padding: 9px 14px;
-  border-radius: var(--radius-lg);
-  border: 1px dashed var(--border-strong);
-  background: var(--surface-2);
-  color: var(--fg-muted);
-  font-size: var(--text-sm);
-}
-.v2-kds-sim-banner span { color: var(--fg-muted); }
-.v2-kds-sim-controls {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin-left: auto;
-  flex-wrap: wrap;
-}
-
 /* ----------------------------
    KDS — manager floor-ops header + chef line strip
    A refined metric bar: each stat is a value/label pair separated by hairline
@@ -2570,8 +2549,7 @@ html { scroll-behavior: smooth; }
   background: var(--kds-bg);
 }
 .v2-kds-kiosk > .v2-page-header,
-.v2-kds-kiosk > .v2-kds-lanebar,
-.v2-kds-kiosk > .v2-kds-sim-banner { flex: 0 0 auto; }
+.v2-kds-kiosk > .v2-kds-lanebar { flex: 0 0 auto; }
 .v2-kds-kiosk > .v2-page-header { align-items: center; }
 
 .kds-os {

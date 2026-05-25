@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 /**
  * KDS order-simulator controls. When the owner flips the `kdsSimulatorEnabled`
  * toggle in Settings, the Kitchen Display shows manual Add 1 / Add 5 / Purge
- * all controls (rendered by KdsSimBanner) so staff can stage a training rush on
+ * all controls in its top toolbar so staff can stage a training rush on
  * demand — there is no auto-spawning trickle. Added tickets are clearly marked
  * SIMULATION; the cook works them through the board with the normal ticket
  * buttons. The server tags every ticket simulated:true, so they stay off the
