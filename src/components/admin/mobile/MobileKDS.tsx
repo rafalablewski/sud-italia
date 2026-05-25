@@ -1,18 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Bell,
-  BellOff,
-  ChevronLeft,
-  ChevronRight,
-  Flame,
-  PauseCircle,
-  PlayCircle,
-} from "lucide-react";
+import { Bell, BellOff, CloudOff, PauseCircle, PlayCircle } from "lucide-react";
 import { useAdminOrdersStream } from "@/lib/useAdminOrdersStream";
 import { useKdsSimulator } from "@/lib/useKdsSimulator";
-import { Badge } from "../v2/ui";
 import type { Order, OrderStatus, MenuCategory } from "@/data/types";
 import { MENU_CATEGORY_LABELS } from "@/data/types";
 import { analyzeTruck } from "@/lib/kds-prediction";
@@ -21,19 +12,10 @@ import { KdsTicketCard } from "../kds/KdsTicketCard";
 import { toneForTicket } from "../kds-board";
 import { useAdminLocation } from "../v2/LocationContext";
 import { useToast } from "../v2/ui/Toast";
-import {
-  Chip,
-  ChipStrip,
-  MobilePage,
-  PageHeader,
-  PullToRefresh,
-  SegmentControl,
-  useOfflineQueue,
-} from "../v2/mobile";
+import { PullToRefresh, useOfflineQueue } from "../v2/mobile";
 import { useActionTiming } from "../v2/mobile/useActionTiming";
 import { haptic } from "../v2/mobile/haptics";
 import { playKdsCue } from "../v2/mobile/kdsAudio";
-import { CloudOff } from "lucide-react";
 
 const LANES: { id: OrderStatus; label: string; tone: "warning" | "info" | "success" }[] = [
   { id: "confirmed", label: "New", tone: "warning" },
@@ -218,178 +200,112 @@ export function MobileKDS() {
     return map;
   }, [orders]);
 
-  const currentLaneIdx = LANES.findIndex((l) => l.id === lane);
-
   return (
     <PullToRefresh onRefresh={() => refresh()} disabled={paused}>
-    <MobilePage
-      className="kds-floor-dark"
-      toolbar={
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <SegmentControl<OrderStatus>
-            value={lane}
-            onChange={(v) => setLane(v)}
-            options={LANES.map((l) => ({
-              value: l.id,
-              label: `${l.label} (${laneCounts.get(l.id) ?? 0})`,
-            }))}
-            ariaLabel="KDS lane"
-          />
-          <ChipStrip ariaLabel="Station filter">
+      {/* Atlas chrome — the mobile floor board matches the fleet board exactly:
+          same dark panel, station chips and lane switcher, only the lanes differ. */}
+      <div className="kds-atlas kds-floor-dark">
+        <header className="ka-head">
+          <div className="ka-brand">
+            <span className="ka-wordmark">SUD ITALIA</span>
+            <span className="ka-kd-label">{location ? `${location} · floor` : "Floor"}</span>
+            {simEnabled && <span className="ka-sandbox">Sandbox</span>}
+          </div>
+          <div className="ka-filters" role="group" aria-label="Station filter">
             {STATIONS.map((s) => (
-              <Chip
+              <button
                 key={s.id}
-                label={s.label}
-                active={station === s.id}
+                type="button"
+                className="ka-chip"
+                aria-pressed={station === s.id}
                 onClick={() => setStation(s.id)}
-              />
+              >
+                {s.label}
+              </button>
             ))}
-          </ChipStrip>
-        </div>
-      }
-    >
-      {(!offline.online || offline.pending > 0) && (
-        <div
-          role="status"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "8px 12px",
-            background: offline.online ? "var(--info-soft)" : "var(--warning-soft)",
-            color: offline.online ? "var(--info)" : "var(--warning)",
-            border: `1px solid ${
-              offline.online
-                ? "color-mix(in oklab, var(--info) 30%, transparent)"
-                : "color-mix(in oklab, var(--warning) 30%, transparent)"
-            }`,
-            borderRadius: 10,
-            fontSize: 12.5,
-            fontWeight: 500,
-          }}
-        >
-          <CloudOff className="h-4 w-4" aria-hidden />
-          {offline.online
-            ? `Syncing ${offline.pending} queued action${offline.pending === 1 ? "" : "s"}…`
-            : `Offline · ${offline.pending} queued · syncs on reconnect`}
-        </div>
-      )}
-      <PageHeader
-        title={
-          <span className="flex items-center gap-2">
-            Kitchen
-            {simEnabled && (
-              <Badge tone="warning" variant="soft" dot>
-                Sandbox — not real orders
-              </Badge>
-            )}
-          </span>
-        }
-        subtitle={`${filtered.length} ticket${filtered.length === 1 ? "" : "s"} • ${LANES[currentLaneIdx]?.label}`}
-        actions={
-          <div style={{ display: "inline-flex", gap: 4 }}>
-            <button
-              type="button"
-              aria-label={muted ? "Unmute" : "Mute"}
-              className="v2-m-icon-btn"
-              onClick={() => setMuted((m) => !m)}
-            >
-              {muted ? <BellOff className="h-5 w-5" /> : <Bell className="h-5 w-5" />}
-            </button>
-            <button
-              type="button"
-              aria-label={paused ? "Resume" : "Pause"}
-              className={`v2-m-icon-btn ${paused ? "is-active" : ""}`}
-              onClick={() => setPaused((p) => !p)}
-            >
-              {paused ? <PlayCircle className="h-5 w-5" /> : <PauseCircle className="h-5 w-5" />}
-            </button>
           </div>
-        }
-      />
-
-      {simEnabled && (
-        <div style={{ display: "flex", gap: 8 }}>
-          <button
-            type="button"
-            className="v2-m-btn"
-            disabled={simBusy}
-            onClick={() => void addOrders(1).then(() => refresh())}
-          >
-            Add 1
-          </button>
-          <button
-            type="button"
-            className="v2-m-btn"
-            disabled={simBusy}
-            onClick={() => void addOrders(5).then(() => refresh())}
-          >
-            Add 5
-          </button>
-          <button
-            type="button"
-            className="v2-m-btn v2-m-btn-ghost"
-            disabled={simBusy}
-            onClick={() => void purgeAll().then(() => refresh())}
-          >
-            Purge all
-          </button>
-        </div>
-      )}
-
-      {filtered.length === 0 ? (
-        <div className="v2-m-empty">
-          <Flame className="h-6 w-6" aria-hidden />
-          <div className="v2-m-empty-title">No tickets</div>
-          <div className="v2-m-empty-desc">
-            {paused ? "Stream is paused. Resume to keep updating." : "All clear on this lane."}
+          <div className="ka-lines" role="group" aria-label="Stage focus">
+            {LANES.map((l) => (
+              <button
+                key={l.id}
+                type="button"
+                className="ka-line"
+                data-line={l.id === "ready" ? "ready" : l.id === "preparing" ? "prep" : "new"}
+                aria-pressed={lane === l.id}
+                onClick={() => setLane(l.id)}
+              >
+                <span>{l.label}</span>
+                <span className="ka-lcount tabular">{laneCounts.get(l.id) ?? 0}</span>
+              </button>
+            ))}
           </div>
-        </div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {filteredTickets.map((t) => (
-            <KdsTicketCard
-              key={t.id}
-              t={t}
-              now={now}
-              tone={toneForTicket(t, now)}
-              station={station}
-              advancing={busy === t.id}
-              onAdvance={advance}
-            />
-          ))}
-        </div>
-      )}
+          <div className="ka-spacer" />
+          <button
+            type="button"
+            className="ka-fsbtn"
+            aria-label={muted ? "Unmute" : "Mute"}
+            aria-pressed={!muted}
+            onClick={() => setMuted((m) => !m)}
+          >
+            {muted ? <BellOff className="h-3.5 w-3.5" /> : <Bell className="h-3.5 w-3.5" />}
+          </button>
+          <button
+            type="button"
+            className="ka-fsbtn"
+            aria-label={paused ? "Resume" : "Pause"}
+            aria-pressed={paused}
+            onClick={() => setPaused((p) => !p)}
+          >
+            {paused ? <PlayCircle className="h-3.5 w-3.5" /> : <PauseCircle className="h-3.5 w-3.5" />}
+          </button>
+          {simEnabled && (
+            <>
+              <button type="button" className="ka-fsbtn" disabled={simBusy} onClick={() => void addOrders(1).then(() => refresh())}>
+                Add 1
+              </button>
+              <button type="button" className="ka-fsbtn" disabled={simBusy} onClick={() => void addOrders(5).then(() => refresh())}>
+                Add 5
+              </button>
+              <button type="button" className="ka-fsbtn" disabled={simBusy} onClick={() => void purgeAll().then(() => refresh())}>
+                Purge
+              </button>
+            </>
+          )}
+        </header>
 
-      {/* Lane navigation arrows for low-attention swipe alternative. */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          paddingTop: 4,
-        }}
-      >
-        <button
-          type="button"
-          className="v2-m-btn v2-m-btn-ghost"
-          onClick={() => setLane(LANES[Math.max(0, currentLaneIdx - 1)].id)}
-          disabled={currentLaneIdx === 0}
-        >
-          <ChevronLeft className="h-4 w-4" aria-hidden /> Prev lane
-        </button>
-        <button
-          type="button"
-          className="v2-m-btn v2-m-btn-ghost"
-          onClick={() =>
-            setLane(LANES[Math.min(LANES.length - 1, currentLaneIdx + 1)].id)
-          }
-          disabled={currentLaneIdx === LANES.length - 1}
-        >
-          Next lane <ChevronRight className="h-4 w-4" aria-hidden />
-        </button>
+        {(!offline.online || offline.pending > 0) && (
+          <div className="ka-recall" role="status">
+            <span className="ka-recall-lab">
+              <CloudOff className="h-3.5 w-3.5" />
+              {offline.online
+                ? `Syncing ${offline.pending} queued action${offline.pending === 1 ? "" : "s"}…`
+                : `Offline · ${offline.pending} queued · syncs on reconnect`}
+            </span>
+          </div>
+        )}
+
+        <div className="ka-floor-body">
+          {filtered.length === 0 ? (
+            <div className="ka-empty">
+              {paused ? "Stream is paused — resume to keep updating." : "All clear on this lane."}
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {filteredTickets.map((t) => (
+                <KdsTicketCard
+                  key={t.id}
+                  t={t}
+                  now={now}
+                  tone={toneForTicket(t, now)}
+                  station={station}
+                  advancing={busy === t.id}
+                  onAdvance={advance}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
-    </MobilePage>
     </PullToRefresh>
   );
 }

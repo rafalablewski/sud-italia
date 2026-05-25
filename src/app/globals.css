@@ -8050,6 +8050,22 @@ select.pub-input {
 :is(.kds-atlas, .kds-floor-dark) .ka-act.ready { color: var(--ka-ready); border-color: rgba(61,214,140,0.5); }
 :is(.kds-atlas, .kds-floor-dark) .ka-act.ready:hover { background: var(--ka-ready-soft); }
 
+/* ---- floor board body (lane columns inside the Atlas panel) ---- */
+/* The floor board renders the v2-kds-board lane grid inside the Atlas shell;
+   it scrolls as one body like the fleet ticket stack, and the columns drop
+   their own max-height so the panel owns the scroll. */
+.kds-atlas .ka-floor-body { flex: 1 1 auto; overflow-y: auto; min-height: 0; padding: 16px 20px; }
+.kds-atlas .ka-floor-body::-webkit-scrollbar { width: 7px; }
+.kds-atlas .ka-floor-body::-webkit-scrollbar-thumb { background: var(--ka-hair-strong); border-radius: 4px; }
+.kds-atlas .ka-floor-body .v2-kds-board { gap: 14px; }
+.kds-atlas .ka-floor-body .v2-kds-col { background: var(--ka-panel); border-color: var(--ka-hair); }
+.kds-atlas .ka-floor-body .v2-kds-col-body { max-height: none; }
+.kds-atlas .ka-floor-body .v2-kds-lane-grid { max-height: none; }
+.kds-atlas .ka-sandbox { font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ka-warn); background: var(--ka-warn-soft); border: 1px solid rgba(245, 166, 35, 0.4); border-radius: 5px; padding: 2px 7px; }
+.kds-atlas .ka-fsbtn:disabled { opacity: 0.5; cursor: default; }
+.kds-atlas .ka-recall { flex: 0 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 20px; border-bottom: 1px solid var(--ka-hair); background: var(--ka-panel); }
+.kds-atlas .ka-recall-lab { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ka-faint); font-weight: 700; }
+
 /* ---- states ---- */
 .kds-atlas .ka-loading { padding: 48px 24px; text-align: center; color: var(--ka-dim); font-size: 13px; }
 .kds-atlas .ka-error { color: var(--ka-late); display: flex; align-items: center; justify-content: center; gap: 8px; }
@@ -8063,7 +8079,7 @@ select.pub-input {
      trapping ticket lists in nested overflow regions. Fullscreen keeps the
      bounded scroll so the wall display still fills the screen. */
   .kds-atlas:not(.is-fullscreen) { min-height: auto; }
-  .kds-atlas:not(.is-fullscreen) .ka-tbody { overflow: visible; }
+  .kds-atlas:not(.is-fullscreen) .ka-tbody, .kds-atlas:not(.is-fullscreen) .ka-floor-body { overflow: visible; }
   .kds-atlas .ka-head { position: sticky; top: 0; z-index: 2; }
 }
 @media (max-width: 560px) {

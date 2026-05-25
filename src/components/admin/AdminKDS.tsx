@@ -11,7 +11,6 @@ import {
   ChefHat,
   Clock,
   Flame,
-  LayoutGrid,
   Maximize2,
   Minimize2,
   PauseCircle,
@@ -27,7 +26,7 @@ import dynamic from "next/dynamic";
 import { useAdminLocation } from "./v2/LocationContext";
 import { useIsMobile } from "./v2/mobile";
 import { useToast } from "./v2/ui/Toast";
-import { Badge, Button, Card, CardBody, EmptyState, Select, Tabs } from "./v2/ui";
+import { Badge, Button, Card, CardBody, Select } from "./v2/ui";
 import { AdminKdsFleet } from "./AdminKdsFleet";
 import {
   ACTIVE_STATUSES,
@@ -462,256 +461,139 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
     }
   };
 
-  // Avoid the live timer recomputing this every second by keying off `now`.
-  const aggregateMetrics = useMemo(() => {
-    const all = orders;
-    const inFlight = all.filter((o) => o.status !== "ready");
-    const ready = all.filter((o) => o.status === "ready").length;
-    let oldestSeconds = 0;
-    let totalSeconds = 0;
-    for (const o of inFlight) {
-      const s = totalPrepSeconds(o);
-      if (s > oldestSeconds) oldestSeconds = s;
-      totalSeconds += s;
-    }
-    const avgSeconds = inFlight.length > 0 ? Math.round(totalSeconds / inFlight.length) : 0;
-    return { active: inFlight.length, ready, oldestSeconds, avgSeconds };
-    // Recompute when `now` ticks so timers stay live
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orders, now]);
-
   const page = (
-    <div className={`v2-page v2-kds-page kds-floor-dark${kiosk ? " v2-kds-kiosk kds-os" : ""}`}>
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="v2-page-title">Kitchen Display</h1>
-            {simEnabled && (
-              <Badge tone="warning" variant="soft" dot>
-                Sandbox — not real orders
-              </Badge>
-            )}
-          </div>
-          <p className="v2-page-subtitle">
-            {location ? `${location.toUpperCase()} · ` : "All locations · "}
-            Live tickets · streaming updates
-          </p>
+    <div className={`kds-atlas kds-floor-dark${kiosk ? " is-fullscreen" : ""}`}>
+      {/* Atlas chrome — same shell, chips and lane switcher the fleet board uses. */}
+      <header className="ka-head">
+        <div className="ka-brand">
+          <span className="ka-wordmark">SUD ITALIA</span>
+          <span className="ka-kd-label">{location ? `${location} · floor` : "Floor"}</span>
+          {simEnabled && <span className="ka-sandbox">Sandbox</span>}
         </div>
-        <div className="v2-page-actions">
-          {kiosk && (
-            <span className="v2-kds-clock tabular" aria-label="Current time">
-              {clock}
-            </span>
-          )}
-          <Tabs
-            value={station}
-            onChange={(v) => setStation(v as MenuCategory | "all")}
-            tabs={STATION_FILTERS.map((s) => ({ value: s.id, label: s.label }))}
-            variant="pill"
-            ariaLabel="Station filter"
-          />
-          <Button
-            variant="ghost"
-            size="sm"
-            leadingIcon={soundOn ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
-            onClick={() => setSoundOn((s) => !s)}
-            title={soundOn ? "Mute new-ticket chime" : "Enable new-ticket chime"}
-          >
-            {soundOn ? "Sound on" : "Muted"}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            leadingIcon={paused ? <PlayCircle className="h-3.5 w-3.5" /> : <PauseCircle className="h-3.5 w-3.5" />}
-            onClick={() => setPaused((p) => !p)}
-          >
-            {paused ? "Resume" : "Pause"}
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            leadingIcon={<RefreshCw className="h-3.5 w-3.5" />}
-            onClick={refresh}
-          >
-            Refresh
-          </Button>
-          {simEnabled && (
-            <>
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={simBusy}
-                onClick={() => void addOrders(1).then(() => refresh())}
-              >
-                Add 1
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={simBusy}
-                onClick={() => void addOrders(5).then(() => refresh())}
-              >
-                Add 5
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={simBusy}
-                onClick={() => void purgeAll().then(() => refresh())}
-              >
-                Purge all
-              </Button>
-            </>
-          )}
-          <Button
-            variant={kiosk ? "primary" : "secondary"}
-            size="sm"
-            leadingIcon={kiosk ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
-            onClick={kiosk ? exitKiosk : enterKiosk}
-            title={kiosk ? "Exit fullscreen kitchen display (Esc)" : "Open fullscreen kitchen display"}
-          >
-            {kiosk ? "Exit" : "Fullscreen"}
-          </Button>
+        <div className="ka-filters" role="group" aria-label="Station filter">
+          {STATION_FILTERS.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              className="ka-chip"
+              aria-pressed={s.id === station}
+              onClick={() => setStation(s.id as MenuCategory | "all")}
+            >
+              {s.label}
+            </button>
+          ))}
         </div>
-      </header>
-
-      {/* Stage switcher — the primary "came in / in prep / done" focus control. */}
-      <div className="v2-kds-lanebar" role="tablist" aria-label="Stage focus">
+        <div className="ka-lines" role="group" aria-label="Stage focus">
+          <button type="button" className="ka-line" aria-pressed={lane === "all"} onClick={() => setLane("all")}>
+            <span>All</span>
+            <span className="ka-lcount tabular">{laneCounts.all}</span>
+          </button>
+          {KDS_COLUMNS.map((col) => (
+            <button
+              key={col.id}
+              type="button"
+              className="ka-line"
+              data-line={col.id === "ready" ? "ready" : col.id === "preparing" ? "prep" : "new"}
+              aria-pressed={lane === col.id}
+              onClick={() => setLane(col.id)}
+            >
+              <span>{col.label}</span>
+              <span className="ka-lcount tabular">{laneCounts[col.id]}</span>
+            </button>
+          ))}
+        </div>
+        <div className="ka-spacer" />
         <button
           type="button"
-          role="tab"
-          aria-selected={lane === "all"}
-          className={`v2-kds-lane-btn${lane === "all" ? " is-active" : ""}`}
-          onClick={() => setLane("all")}
+          className="ka-fsbtn"
+          aria-pressed={soundOn}
+          onClick={() => setSoundOn((s) => !s)}
+          title={soundOn ? "Mute new-ticket chime" : "Enable new-ticket chime"}
         >
-          <LayoutGrid className="h-4 w-4" aria-hidden />
-          <span className="v2-kds-lane-label">All lanes</span>
-          <span className="v2-kds-lane-count tabular">{laneCounts.all}</span>
+          {soundOn ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
+          <span>{soundOn ? "Sound" : "Muted"}</span>
         </button>
-        {KDS_COLUMNS.map((col) => (
-          <button
-            key={col.id}
-            type="button"
-            role="tab"
-            aria-selected={lane === col.id}
-            className={`v2-kds-lane-btn v2-kds-lane-${col.tone}${lane === col.id ? " is-active" : ""}`}
-            onClick={() => setLane(col.id)}
-          >
-            <span className="v2-kds-lane-label">{col.label}</span>
-            <span className="v2-kds-lane-count tabular">{laneCounts[col.id]}</span>
-          </button>
-        ))}
-      </div>
+        <button type="button" className="ka-fsbtn" aria-pressed={paused} onClick={() => setPaused((p) => !p)}>
+          {paused ? <PlayCircle className="h-3.5 w-3.5" /> : <PauseCircle className="h-3.5 w-3.5" />}
+          <span>{paused ? "Resume" : "Pause"}</span>
+        </button>
+        <button type="button" className="ka-fsbtn" onClick={refresh} title="Refresh now">
+          <RefreshCw className="h-3.5 w-3.5" />
+          <span>Refresh</span>
+        </button>
+        {simEnabled && (
+          <>
+            <button type="button" className="ka-fsbtn" disabled={simBusy} onClick={() => void addOrders(1).then(() => refresh())}>
+              Add 1
+            </button>
+            <button type="button" className="ka-fsbtn" disabled={simBusy} onClick={() => void addOrders(5).then(() => refresh())}>
+              Add 5
+            </button>
+            <button type="button" className="ka-fsbtn" disabled={simBusy} onClick={() => void purgeAll().then(() => refresh())}>
+              Purge
+            </button>
+          </>
+        )}
+        <button
+          type="button"
+          className="ka-fsbtn"
+          aria-pressed={kiosk}
+          onClick={kiosk ? exitKiosk : enterKiosk}
+          title={kiosk ? "Exit fullscreen kitchen display (Esc)" : "Open fullscreen kitchen display"}
+        >
+          {kiosk ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+          <span>{kiosk ? "Exit" : "Fullscreen"}</span>
+        </button>
+        <div className="ka-clock tabular">{clock}</div>
+      </header>
 
       {!kiosk && opsHeader && <KdsManagerOpsHeader orders={orders} location={location} />}
 
       {!kiosk && chefStrip && <KdsChefStrip orders={orders} station={station} location={location} />}
 
       {!kiosk && bumpHistory.length > 0 && (
-        <div
-          role="region"
-          aria-label="Recently bumped"
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            alignItems: "center",
-            gap: "0.5rem",
-            padding: "0.5rem 0.75rem",
-            margin: "0.5rem 0 0.25rem",
-            borderRadius: "0.5rem",
-            background: "var(--surface-2)",
-            border: "1px solid var(--border)",
-            fontSize: "0.8125rem",
-          }}
-        >
-          <span style={{ fontWeight: 600, color: "var(--fg-muted)" }}>
-            <RotateCcw className="h-3.5 w-3.5" style={{ display: "inline", marginRight: "0.375rem", verticalAlign: "-2px" }} />
-            Just bumped:
+        <div className="ka-recall" role="region" aria-label="Recently bumped">
+          <span className="ka-recall-lab">
+            <RotateCcw className="h-3.5 w-3.5" /> Just bumped:
           </span>
           {bumpHistory.map((entry) => (
-            <Button
+            <button
               key={entry.orderId}
-              size="sm"
-              variant="ghost"
+              type="button"
+              className="ka-fsbtn"
               disabled={updatingId === entry.orderId}
               onClick={() => recall(entry.orderId)}
               title={`Recall ${entry.label} to the expo column`}
             >
               {entry.label} · Recall
-            </Button>
+            </button>
           ))}
         </div>
       )}
 
-      {/* Decorative quick-stats above the board */}
-      <section className="v2-kds-stats">
-        <Card padding="compact">
-          <div className="v2-kds-stat">
-            <ChefHat className="h-4 w-4 v2-muted" />
-            <div>
-              <div className="v2-kds-stat-value tabular">{aggregateMetrics.active}</div>
-              <div className="v2-kds-stat-label">Active tickets</div>
-            </div>
-          </div>
-        </Card>
-        <Card padding="compact">
-          <div className="v2-kds-stat">
-            <CheckCircle2 className="h-4 w-4 v2-muted" />
-            <div>
-              <div className="v2-kds-stat-value tabular">{aggregateMetrics.ready}</div>
-              <div className="v2-kds-stat-label">Ready for pickup</div>
-            </div>
-          </div>
-        </Card>
-        <Card padding="compact">
-          <div className="v2-kds-stat">
-            <Timer className="h-4 w-4 v2-muted" />
-            <div>
-              <div className="v2-kds-stat-value tabular">{fmtClock(aggregateMetrics.avgSeconds)}</div>
-              <div className="v2-kds-stat-label">Average wait</div>
-            </div>
-          </div>
-        </Card>
-        <Card padding="compact">
-          <div className="v2-kds-stat">
-            <Clock className="h-4 w-4 v2-muted" />
-            <div>
-              <div className="v2-kds-stat-value tabular">{fmtClock(aggregateMetrics.oldestSeconds)}</div>
-              <div className="v2-kds-stat-label">Oldest in flight</div>
-            </div>
-          </div>
-        </Card>
-      </section>
-
-      {loading ? (
-        <div className="v2-page-loading">Loading queue…</div>
-      ) : orders.length === 0 ? (
-        <Card>
-          <CardBody>
-            <EmptyState
-              icon={Flame}
-              title="Kitchen is clear"
-              description="No active tickets right now. New paid orders show up here within seconds."
-            />
-          </CardBody>
-        </Card>
-      ) : lane === "all" ? (
-        <KdsBoard
-          columns={visibleByStatus}
-          stationFilter={station}
-          nowMs={now}
-          updatingId={updatingId}
-          onAdvance={advance}
-        />
-      ) : (
-        <KdsLane
-          tickets={visibleByStatus.get(lane) || []}
-          stationFilter={station}
-          nowMs={now}
-          updatingId={updatingId}
-          onAdvance={advance}
-        />
-      )}
+      <div className="ka-floor-body">
+        {loading ? (
+          <div className="ka-loading">Loading queue…</div>
+        ) : orders.length === 0 ? (
+          <div className="ka-empty">Kitchen is clear — new paid orders show up here within seconds.</div>
+        ) : lane === "all" ? (
+          <KdsBoard
+            columns={visibleByStatus}
+            stationFilter={station}
+            nowMs={now}
+            updatingId={updatingId}
+            onAdvance={advance}
+          />
+        ) : (
+          <KdsLane
+            tickets={visibleByStatus.get(lane) || []}
+            stationFilter={station}
+            nowMs={now}
+            updatingId={updatingId}
+            onAdvance={advance}
+          />
+        )}
+      </div>
 
       {/* Chime audio. Public-domain short bell — bundled in /public if available,
           otherwise falls back to a data: WAV so the file does not 404. */}
