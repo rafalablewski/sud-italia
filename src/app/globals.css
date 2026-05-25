@@ -2473,7 +2473,7 @@ html { scroll-behavior: smooth; }
 :is(.kds-atlas, .kds-floor-dark) .v2-kds-chef > .v2-card-body {
   padding: 12px 20px;
 }
-:is(.kds-atlas, .kds-floor-dark) :is(.v2-kds-ops, .v2-kds-chef) :is(.v2-input-wrap, .v2-btn) {
+:is(.kds-atlas, .kds-floor-dark) :is(.v2-kds-ops, .v2-kds-chef) :is(.v2-input-wrap, .v2-select-wrap, .v2-btn) {
   border-radius: 6px;
 }
 
