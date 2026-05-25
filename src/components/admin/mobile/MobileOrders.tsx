@@ -23,7 +23,6 @@ import {
   MobileList,
   PageHeader,
   PullToRefresh,
-  SegmentControl,
   useMultiSelect,
   type MobileListItem,
 } from "../v2/mobile";
@@ -225,12 +224,17 @@ export function MobileOrders() {
       <MobilePage
         toolbar={
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <SegmentControl<Filter>
-              value={filter}
-              onChange={setFilter}
-              options={FILTERS.map((f) => ({ value: f.value, label: f.label }))}
-              ariaLabel="Order filter"
-            />
+            <ChipStrip ariaLabel="Order filter">
+              {FILTERS.map((f) => (
+                <Chip
+                  key={f.value}
+                  label={f.label}
+                  active={filter === f.value}
+                  count={counts.get(f.value)}
+                  onClick={() => setFilter(f.value)}
+                />
+              ))}
+            </ChipStrip>
             <label
               style={{
                 display: "flex",
@@ -267,19 +271,6 @@ export function MobileOrders() {
         <PageHeader
           title="Orders"
           subtitle={`${filtered.length} ${filter === "done" ? "completed" : "active"}`}
-          actions={
-            <ChipStrip>
-              {FILTERS.map((f) => (
-                <Chip
-                  key={f.value}
-                  label={f.label}
-                  active={filter === f.value}
-                  count={counts.get(f.value)}
-                  onClick={() => setFilter(f.value)}
-                />
-              ))}
-            </ChipStrip>
-          }
         />
 
         <MobileList
