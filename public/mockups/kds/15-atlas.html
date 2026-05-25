@@ -358,11 +358,17 @@
   }
   .tn-head svg{width:13px;height:13px;flex:0 0 auto}
   .tn-line{font-size:13px;color:var(--text);line-height:1.45;padding-left:20px}
-  .tn-alert{
-    display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--late);
-    background:rgba(229,72,77,0.10);border:1px solid rgba(229,72,77,0.32);border-radius:6px;padding:6px 9px;
+  /* Allergen alert — distinct, safety-critical, kept separate from notes */
+  .t-allergy{
+    margin-top:var(--s3);border:1px solid rgba(229,72,77,0.45);background:rgba(229,72,77,0.11);
+    border-radius:8px;padding:var(--s3);display:flex;flex-direction:column;gap:5px;
   }
-  .tn-alert svg{width:15px;height:15px;flex:0 0 auto}
+  .ta-head{
+    display:flex;align-items:center;gap:7px;font-size:10px;letter-spacing:0.12em;
+    text-transform:uppercase;color:var(--late);font-weight:700;
+  }
+  .ta-head svg{width:14px;height:14px;flex:0 0 auto}
+  .ta-body{font-size:13px;font-weight:600;color:var(--text);line-height:1.4;padding-left:21px}
 
   .t-foot{
     margin-top:var(--s4);padding-top:var(--s3);border-top:1px solid var(--hair);
@@ -474,7 +480,7 @@
   .is-fullscreen .th-loc{font-size:18px}
   .is-fullscreen .ft-val{font-size:24px}
   .is-fullscreen .it .nm{font-size:15px}
-  .is-fullscreen .tn-line,.is-fullscreen .tn-alert{font-size:14px}
+  .is-fullscreen .tn-line,.is-fullscreen .ta-body{font-size:14px}
 
   /* ====================== Responsive ====================== */
   /* Tablet & below: drop the fixed-viewport "wall" model for a scrollable
@@ -839,13 +845,20 @@
           itemsHtml+='</div>';
         });
     }
-    // dedicated Notes & requests block — allergen alert + order special instruction
+    // allergen alert — safety-critical, its own block, kept separate from notes
+    let allergyHtml="";
+    if(t.allergy){
+      allergyHtml='<div class="t-allergy">'+
+        '<div class="ta-head">'+ICON.note+'Allergen alert</div>'+
+        '<div class="ta-body">'+t.allergy+'</div>'+
+      '</div>';
+    }
+    // notes & requests block — order special instructions only
     let notesHtml="";
-    if(t.allergy || t.note){
+    if(t.note){
       notesHtml='<div class="t-notes">'+
         '<div class="tn-head">'+ICON.msg+'Notes &amp; requests</div>'+
-        (t.allergy?'<div class="tn-alert">'+ICON.note+'<span>'+t.allergy+'</span></div>':'')+
-        (t.note?'<div class="tn-line">'+t.note+'</div>':'')+
+        '<div class="tn-line">'+t.note+'</div>'+
       '</div>';
     }
 
@@ -885,6 +898,7 @@
         '</div>'+
       '</div>'+
       '<div class="t-items">'+itemsHtml+'</div>'+
+      allergyHtml+
       notesHtml+
       '<div class="t-foot">'+
         '<span class="t-meta">Slot <b>'+t.slot+'</b> · <b>'+count+'</b> items</span>'+
