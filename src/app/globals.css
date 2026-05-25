@@ -2545,7 +2545,7 @@ html { scroll-behavior: smooth; }
   border: 0;
   border-bottom: 1px solid var(--ka-hair);
   border-radius: 0;
-  background: transparent;
+  background: var(--ka-panel);
   box-shadow: none;
 }
 :is(.kds-atlas, .kds-floor-dark) .v2-kds-ops > .v2-card-body,
