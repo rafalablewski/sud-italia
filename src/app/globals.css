@@ -2414,11 +2414,6 @@ html { scroll-behavior: smooth; }
   color: var(--fg-muted);
   font-size: var(--text-sm);
 }
-.v2-kds-sim-banner strong {
-  color: var(--fg);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
 .v2-kds-sim-banner span { color: var(--fg-muted); }
 .v2-kds-sim-controls {
   display: inline-flex;

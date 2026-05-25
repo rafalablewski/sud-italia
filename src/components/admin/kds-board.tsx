@@ -277,11 +277,12 @@ export function KdsSimBanner({ busy, onAdd, onPurge }: KdsSimBannerProps = {}) {
   const showControls = !!onAdd && !!onPurge;
   return (
     <div className="v2-kds-sim-banner" role="status">
-      <FlaskConical className="h-4 w-4" aria-hidden />
-      <strong>Simulation mode</strong>
+      <Badge tone="warning" variant="soft" dot>
+        Sandbox — not real orders
+      </Badge>
       <span>
         Tickets marked “SIMULATION” are training data, not real orders — they never touch stock, the
-        dashboard, reports or customer comms. Turn it off in Settings → Order simulator.
+        dashboard, reports or customer comms. Turn it off in Settings → Simulator.
       </span>
       {showControls && (
         <div className="v2-kds-sim-controls">
