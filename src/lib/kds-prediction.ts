@@ -134,6 +134,13 @@ export function analyzeTruck(orders: Order[], nowMs: number): TruckAnalysis {
   const active = orders.filter((o) => ACTIVE.includes(o.status));
   const working = active.filter((o) => o.status !== "ready");
 
+  // Typical per-unit prep per station depends only on the `working` snapshot,
+  // so compute it once here rather than re-scanning `working` for every station
+  // and again for every category of every ticket below. `unitsByCategory`
+  // restricts to PACE_STATIONS, so this covers every category used downstream.
+  const avgPrepByStation = new Map<MenuCategory, number>();
+  for (const id of PACE_STATIONS) avgPrepByStation.set(id, stationPerUnitMinutes(working, id));
+
   // --- Per-station pace -----------------------------------------------------
   const load = new Map<MenuCategory, number>(); // preparing (on the line)
   const forecast = new Map<MenuCategory, number>(); // confirmed (queued, incoming)
@@ -148,7 +155,7 @@ export function analyzeTruck(orders: Order[], nowMs: number): TruckAnalysis {
     const demand = currentLoad + forecastUnits;
     // Single-server capacity over the window: how many units this station can
     // clear in PACE_WINDOW_MIN at the typical per-unit prep for its queue.
-    const perUnitMin = stationPerUnitMinutes(working, id);
+    const perUnitMin = avgPrepByStation.get(id) ?? DEFAULT_PREP_MIN;
     const capacity = perUnitMin > 0 ? PACE_WINDOW_MIN / perUnitMin : 0;
     const util = capacity > 0 ? demand / capacity : demand > 0 ? Infinity : 0;
     return { id, currentLoad, forecast: forecastUnits, demand, capacity, util, tier: paceTier(util) };
@@ -178,7 +185,7 @@ export function analyzeTruck(orders: Order[], nowMs: number): TruckAnalysis {
     let finishMs = nowMs;
 
     for (const [c, q] of units) {
-      let svcSec = q * stationPerUnitMinutes(working, c) * 60;
+      let svcSec = q * (avgPrepByStation.get(c) ?? DEFAULT_PREP_MIN) * 60;
       // Work already absorbed by an in-progress ticket shortens its remaining
       // service (it's been cooking since it was fired).
       if (o.status === "preparing") svcSec = Math.max(0, svcSec - elapsedSec);
