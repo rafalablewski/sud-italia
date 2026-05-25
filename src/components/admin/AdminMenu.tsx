@@ -833,7 +833,7 @@ function AdminMenuDesktop() {
             borderRadius: "0.5rem",
             background: "var(--surface-1)",
             border: "1px solid var(--border)",
-            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.06)",
+            boxShadow: "var(--shadow-md)",
           }}
         >
           <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>

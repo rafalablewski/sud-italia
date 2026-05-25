@@ -237,7 +237,7 @@ export function AdminRegulatoryCompliance() {
                 </div>
 
                 {active.zone === "NYC" && (
-                  <div className="grid gap-4 rounded-lg border border-blue-400/30 bg-blue-500/5 p-4">
+                  <div className="grid gap-4 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-4">
                     <div className="admin-text text-sm font-semibold">
                       NYC disclosures (Health Code §81.50/§81.51 + FRESH Act)
                     </div>
@@ -315,7 +315,7 @@ export function AdminRegulatoryCompliance() {
                 )}
 
                 {active.zone === "SG" && (
-                  <div className="grid gap-4 rounded-lg border border-purple-400/30 bg-purple-500/5 p-4">
+                  <div className="grid gap-4 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-4">
                     <div className="admin-text text-sm font-semibold">
                       Singapore disclosures (NEA + MUIS + IRAS + PDPA)
                     </div>
@@ -437,7 +437,7 @@ export function AdminRegulatoryCompliance() {
                 )}
 
                 {active.zone === "EU" && (
-                  <div className="grid gap-3 rounded-lg border border-emerald-400/30 bg-emerald-500/5 p-4">
+                  <div className="grid gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-4">
                     <div className="admin-text text-sm font-semibold">
                       EU / Poland defaults
                     </div>

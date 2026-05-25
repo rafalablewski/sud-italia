@@ -538,7 +538,7 @@ function AdminDashboardDesktop() {
         const actionable = filtered.filter((p) => Math.abs(p.today.gapHours) >= 2);
         if (actionable.length === 0) return null;
         return (
-          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 space-y-2">
+          <div className="rounded-lg border border-[color-mix(in_oklab,var(--warning)_35%,transparent)] bg-[var(--warning-soft)] p-4 space-y-2">
             <div className="flex items-center gap-2 text-sm font-semibold">
               <CalendarRange size={16} /> Schedule vs forecast — today
             </div>
@@ -553,7 +553,7 @@ function AdminDashboardDesktop() {
                     {" vs "}
                     <strong>{p.today.impliedHoursNeeded}h needed</strong>
                     {" "}
-                    <span className={over ? "text-amber-400" : "text-red-400"}>
+                    <span className={over ? "text-[var(--warning)]" : "text-[var(--danger)]"}>
                       ({over ? "+" : ""}{p.today.gapHours.toFixed(1)}h)
                     </span>
                     {" · "}
