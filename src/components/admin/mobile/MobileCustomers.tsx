@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import { Search, User } from "lucide-react";
 import { useAdminLocation } from "../v2/LocationContext";
 import {
+  Chip,
+  ChipStrip,
   MobilePage,
   MobileList,
   PageHeader,
   PullToRefresh,
-  SegmentControl,
   type MobileListItem,
 } from "../v2/mobile";
 import { MobileListSkeleton } from "../v2/mobile/Skeleton";
@@ -162,17 +163,12 @@ export function MobileCustomers() {
       <MobilePage
         toolbar={
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <SegmentControl<Filter>
-              value={filter}
-              onChange={setFilter}
-              options={[
-                { value: "all", label: `All (${counts.all})` },
-                { value: "active", label: `Active (${counts.active})` },
-                { value: "repeat", label: `Repeat (${counts.repeat})` },
-                { value: "lapsed", label: `Lapsed (${counts.lapsed})` },
-              ]}
-              ariaLabel="Customer filter"
-            />
+            <ChipStrip ariaLabel="Customer filter">
+              <Chip label="All" active={filter === "all"} count={counts.all} onClick={() => setFilter("all")} />
+              <Chip label="Active" active={filter === "active"} count={counts.active} onClick={() => setFilter("active")} />
+              <Chip label="Repeat" active={filter === "repeat"} count={counts.repeat} onClick={() => setFilter("repeat")} />
+              <Chip label="Lapsed" active={filter === "lapsed"} count={counts.lapsed} onClick={() => setFilter("lapsed")} />
+            </ChipStrip>
             <label
               style={{
                 display: "flex",

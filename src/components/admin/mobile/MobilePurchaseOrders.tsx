@@ -7,11 +7,12 @@ import { formatPrice } from "@/lib/utils";
 import { useToast } from "../v2/ui/Toast";
 import {
   BottomSheet,
+  Chip,
+  ChipStrip,
   MobileList,
   MobilePage,
   PageHeader,
   PullToRefresh,
-  SegmentControl,
   type MobileListItem,
 } from "../v2/mobile";
 
@@ -98,15 +99,17 @@ export function MobilePurchaseOrders() {
     <PullToRefresh onRefresh={refresh}>
       <MobilePage
         toolbar={
-          <SegmentControl<Filter>
-            value={filter}
-            onChange={setFilter}
-            options={FILTERS.map((f) => ({
-              value: f,
-              label: `${f === "all" ? "All" : f} (${f === "all" ? rows.length : rows.filter((r) => r.status === f).length})`,
-            }))}
-            ariaLabel="PO status"
-          />
+          <ChipStrip ariaLabel="PO status">
+            {FILTERS.map((f) => (
+              <Chip
+                key={f}
+                label={f === "all" ? "All" : f}
+                active={filter === f}
+                count={f === "all" ? rows.length : rows.filter((r) => r.status === f).length}
+                onClick={() => setFilter(f)}
+              />
+            ))}
+          </ChipStrip>
         }
       >
         <PageHeader title="Purchase orders" subtitle={`${filtered.length} of ${rows.length}`} />

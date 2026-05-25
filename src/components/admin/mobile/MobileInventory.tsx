@@ -17,6 +17,8 @@ import { useAdminLocation } from "../v2/LocationContext";
 import { useToast } from "../v2/ui/Toast";
 import {
   BottomSheet,
+  Chip,
+  ChipStrip,
   MobilePage,
   PageHeader,
   PullToRefresh,
@@ -173,17 +175,12 @@ export function MobileInventory() {
       <MobilePage
         toolbar={
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <SegmentControl<StatusFilter>
-              value={filter}
-              onChange={setFilter}
-              options={[
-                { value: "all", label: `All (${counts.all})` },
-                { value: "out", label: `Out (${counts.out})` },
-                { value: "low", label: `Low (${counts.low})` },
-                { value: "ok", label: `OK (${counts.ok})` },
-              ]}
-              ariaLabel="Stock status filter"
-            />
+            <ChipStrip ariaLabel="Stock status filter">
+              <Chip label="All" active={filter === "all"} count={counts.all} onClick={() => setFilter("all")} />
+              <Chip label="Out" active={filter === "out"} count={counts.out} onClick={() => setFilter("out")} />
+              <Chip label="Low" active={filter === "low"} count={counts.low} onClick={() => setFilter("low")} />
+              <Chip label="OK" active={filter === "ok"} count={counts.ok} onClick={() => setFilter("ok")} />
+            </ChipStrip>
             <label
               style={{
                 display: "flex",
